@@ -11,6 +11,7 @@ shared_library("audio-dispatcher-pool") {
   sources = [
     "debug-logging.h",
     "dispatcher-channel.cpp",
+    "dispatcher-event-source.cpp",
     "dispatcher-thread.cpp",
   ]
 

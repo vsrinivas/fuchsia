@@ -14,30 +14,6 @@ DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::audio::DispatcherChannelAllocTraits, 0x1
 
 namespace audio {
 
-// Static storage
-fbl::Mutex DispatcherChannel::active_channels_lock_;
-fbl::WAVLTree<uint64_t, fbl::RefPtr<DispatcherChannel>> DispatcherChannel::active_channels_;
-
-// Translation unit local vars (hidden in an anon namespace)
-namespace {
-static fbl::atomic_uint64_t driver_channel_id_gen(1u);
-}
-
-DispatcherChannel::DispatcherChannel(uintptr_t owner_ctx)
-    : client_thread_active_(DispatcherThread::AddClient() == ZX_OK),
-      bind_id_(driver_channel_id_gen.fetch_add(1u)),
-      owner_ctx_(owner_ctx) {
-}
-
-DispatcherChannel::~DispatcherChannel() {
-    if (client_thread_active_)
-        DispatcherThread::RemoveClient();
-
-    ZX_DEBUG_ASSERT(owner_ == nullptr);
-    ZX_DEBUG_ASSERT(!InOwnersList());
-    ZX_DEBUG_ASSERT(!InActiveChannelSet());
-}
-
 zx_status_t DispatcherChannel::Activate(fbl::RefPtr<Owner>&& owner,
                                         zx::channel* client_channel_out) {
     // Arg and constant state checks first
@@ -70,33 +46,23 @@ zx_status_t DispatcherChannel::Activate(fbl::RefPtr<Owner>&& owner,
    return res;
 }
 
-zx_status_t DispatcherChannel::WaitOnPortLocked(const zx::port& port) {
-    return channel_.wait_async(DispatcherThread::port(),
-                               bind_id(),
-                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                               ZX_WAIT_ASYNC_ONCE);
-}
-
 zx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::channel&& channel) {
     if (!channel.is_valid())
         return ZX_ERR_INVALID_ARGS;
 
-    if ((client_thread_active_ == false) ||
-        (channel_ != ZX_HANDLE_INVALID)  ||
+    if ((client_thread_active() == false) ||
+        (handle_  != ZX_HANDLE_INVALID)  ||
         (owner_   != nullptr))
         return ZX_ERR_BAD_STATE;
 
     // Add ourselves to the set of active channels so that users can fetch
     // references to us.
-    {
-        fbl::AutoLock channels_lock(&active_channels_lock_);
-        if (!active_channels_.insert_or_find(fbl::WrapRefPtr(this)))
-            return ZX_ERR_BAD_STATE;
-
-    }
+    zx_status_t res = AddToActiveEventSources(fbl::WrapRefPtr(this));
+    if (res != ZX_OK)
+        return res;
 
     // Take ownership of the channel reference given to us.
-    channel_ = fbl::move(channel);
+    handle_ = fbl::move(channel);
 
     // Make sure we remove ourselves from the active channel set and release our
     // channel reference if anything goes wrong.
@@ -114,91 +80,42 @@ zx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::ch
     //
     // For now, just disable thread analysis for this lambda.
     auto cleanup = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
-        channel_.reset();
-        fbl::AutoLock channels_lock(&active_channels_lock_);
-        ZX_DEBUG_ASSERT(InActiveChannelSet());
-        active_channels_.erase(*this);
+        handle_.reset();
+        RemoveFromActiveEventSources();
     });
 
     // Setup our initial async wait operation on our thread pool's port.
-    zx_status_t res = WaitOnPortLocked(DispatcherThread::port());
+    res = WaitOnPortLocked(DispatcherThread::port());
     if (res != ZX_OK)
         return res;
 
-    // Finally, add ourselves to our Owner's list of channels. Note; if this
-    // operation fails, leaving the active channels set will be handle by the
+    // Finally, add ourselves to our Owner's list of event sources. Note; if this
+    // operation fails, leaving the active event sources set will be handled by the
     // cleanup AutoCall and canceling the async wait operation should occur as a
     // side effect of channel being auto closed as it goes out of scope.
-    res = owner->AddChannel(fbl::WrapRefPtr(this));
+    res = owner->AddEventSource(fbl::WrapRefPtr(this));
     if (res != ZX_OK)
         return res;
 
     // Success, take ownership of our owner reference and cancel our
     // cleanup routine.
-    owner_   = fbl::move(owner);
+    owner_ = fbl::move(owner);
     cleanup.cancel();
     return res;
 }
 
-void DispatcherChannel::Deactivate(bool do_notify) {
-    fbl::RefPtr<Owner> old_owner;
-
-    {
-        fbl::AutoLock obj_lock(&obj_lock_);
-
-        {
-            fbl::AutoLock channels_lock(&active_channels_lock_);
-            if (InActiveChannelSet()) {
-                active_channels_.erase(*this);
-            } else {
-                // Right now, the only way to leave the active channel set (once
-                // successfully Activated) is to Deactivate.  Because of this,
-                // if we are not in the channel set when this is triggered, we
-                // should be able to ASSERT that we have no owner, and that our
-                // channel_ handle has been closed.
-                //
-                // If this assumption ever changes (eg, if there is ever a way
-                // to leave the active channel set without being removed from
-                // our owner's set or closing our channel handle), we will need
-                // to come back and fix this code.
-                ZX_DEBUG_ASSERT(owner_ == nullptr);
-                ZX_DEBUG_ASSERT(!channel_.is_valid());
-                return;
-            }
-        }
-
-        if (owner_ != nullptr) {
-            owner_->RemoveChannel(this);
-            old_owner = fbl::move(owner_);
-        }
-
-        channel_.reset();
-    }
-
-    if (do_notify && (old_owner != nullptr))
-        old_owner->NotifyChannelDeactivated(*this);
+void DispatcherChannel::NotifyDeactivated(const fbl::RefPtr<Owner>& owner) {
+    ZX_DEBUG_ASSERT(owner != nullptr);
+    owner->NotifyChannelDeactivated(*this);
 }
 
-zx_status_t DispatcherChannel::Process(const zx_port_packet_t& port_packet) {
+zx_status_t DispatcherChannel::ProcessInternal(const fbl::RefPtr<Owner>& owner,
+                                               const zx_port_packet_t& port_packet) {
     zx_status_t res = ZX_OK;
 
     // No one should be calling us if we have no messages to read.
-    ZX_DEBUG_ASSERT(port_packet.signal.observed & ZX_CHANNEL_READABLE);
+    ZX_DEBUG_ASSERT(port_packet.signal.observed & process_signal_mask());
     ZX_DEBUG_ASSERT(port_packet.signal.count);
-
-    // If our owner still exists, take a reference to them and call their
-    // ProcessChannel handler.
-    //
-    // If the owner has gone away, then we should already be in the process
-    // of shutting down.  Don't bother to report an error, we are already
-    // being cleaned up.
-    fbl::RefPtr<Owner> owner;
-    {
-        fbl::AutoLock obj_lock(&obj_lock_);
-        if (owner_ == nullptr)
-            return ZX_OK;
-        owner = owner_;
-    }
 
     // Process all of the pending messages in the channel before re-joining the
     // thread pool.  If our owner becomes deactivated during processing, just
@@ -228,11 +145,14 @@ zx_status_t DispatcherChannel::Read(void*       buf,
     fbl::AutoLock obj_lock(&obj_lock_);
 
     uint32_t rxed_handle_count = 0;
-    return channel_.read(0,
-                         buf, buf_len, bytes_read_out,
-                         rxed_handle ? rxed_handle->reset_and_get_address() : nullptr,
-                         rxed_handle ? 1 : 0,
-                         &rxed_handle_count);
+    return zx_channel_read(handle_.get(),
+                           0,
+                           buf,
+                           rxed_handle ? rxed_handle->reset_and_get_address() : nullptr,
+                           buf_len,
+                           rxed_handle ? 1 : 0,
+                           bytes_read_out,
+                           &rxed_handle_count);
 }
 
 zx_status_t DispatcherChannel::Write(const void*  buf,
@@ -244,81 +164,14 @@ zx_status_t DispatcherChannel::Write(const void*  buf,
 
     fbl::AutoLock obj_lock(&obj_lock_);
     if (!tx_handle.is_valid())
-        return channel_.write(0, buf, buf_len, nullptr, 0);
+        return zx_channel_write(handle_.get(), 0, buf, buf_len, nullptr, 0);
 
     zx_handle_t h = tx_handle.release();
-    res = channel_.write(0, buf, buf_len, &h, 1);
+    res = zx_channel_write(handle_.get(), 0, buf, buf_len, &h, 1);
     if (res != ZX_OK)
         tx_handle.reset(h);
 
     return res;
-}
-
-void DispatcherChannel::Owner::ShutdownDispatcherChannels() {
-    // Flag ourselves as deactivated.  This will prevent any new channels from
-    // being added to the channels_ list.  We can then swap the contents of the
-    // channels_ list with a temp list, leave the lock and deactivate all of the
-    // channels at our leisure.
-    fbl::DoublyLinkedList<fbl::RefPtr<DispatcherChannel>> to_deactivate;
-
-    {
-        fbl::AutoLock activation_lock(&channels_lock_);
-        if (deactivated_) {
-            ZX_DEBUG_ASSERT(channels_.is_empty());
-            return;
-        }
-
-        deactivated_ = true;
-        to_deactivate.swap(channels_);
-    }
-
-    // Now deactivate all of our channels and release all of our references.
-    for (auto& channel : to_deactivate) {
-        channel.Deactivate(true);
-    }
-
-    to_deactivate.clear();
-}
-
-zx_status_t DispatcherChannel::Owner::AddChannel(fbl::RefPtr<DispatcherChannel>&& channel) {
-    if (channel == nullptr)
-        return ZX_ERR_INVALID_ARGS;
-
-    // This check is a bit sketchy...  This channel should *never* be in any
-    // Owner's channel list at this point in time, however if it is, we don't
-    // really know what lock we need to obtain to make this observation
-    // atomically.  That said, the check will not mutate any state, so it should
-    // be safe.  It just might not catch a bad situation which should never
-    // happen.
-    ZX_DEBUG_ASSERT(!channel->InOwnersList());
-
-    // If this Owner has become deactivated, then it is not accepting any new
-    // channels.  Fail the request to add this channel.
-    fbl::AutoLock channels_lock(&channels_lock_);
-    if (deactivated_)
-        return ZX_ERR_BAD_STATE;
-
-    // We are still active.  Transfer the reference to this channel to our set
-    // of channels.
-    channels_.push_front(fbl::move(channel));
-    return ZX_OK;
-}
-
-void DispatcherChannel::Owner::RemoveChannel(DispatcherChannel* channel) {
-    fbl::AutoLock channels_lock(&channels_lock_);
-
-    // Has this DispatcherChannel::Owner become deactivated?  If so, then this
-    // channel may still be on a list (the local 'to_deactivate' list in
-    // ShutdownDispatcherChannels), but it is not in the Owner's channels_ list, so
-    // there is nothing to do here.
-    if (deactivated_) {
-        ZX_DEBUG_ASSERT(channels_.is_empty());
-        return;
-    }
-
-    // If the channel has not already been removed from the owners list, do so now.
-    if (channel->InOwnersList())
-        channels_.erase(*channel);
 }
 
 }  // namespace audio

@@ -5,10 +5,8 @@
 #pragma once
 
 #include <zircon/compiler.h>
-#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 #include <zx/channel.h>
-#include <zx/handle.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -16,6 +14,8 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
 #include <unistd.h>
+
+#include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
 
 namespace audio {
 
@@ -109,160 +109,47 @@ using DispatcherChannelAllocator = fbl::SlabAllocator<DispatcherChannelAllocTrai
 // DispatcherChannels are one-time-activation only so that users cannot make
 // this mistake.
 //
-class DispatcherChannel : public fbl::RefCounted<DispatcherChannel>,
+class DispatcherChannel : public DispatcherEventSource,
                           public fbl::SlabAllocated<DispatcherChannelAllocTraits> {
 public:
-    // class DispatcherChannel::Owner
-    //
-    // DispatcherChannel::Owner defines the interface implemented by users of
-    // DispatcherChannels in order to receive notifications of channels having
-    // messages ready to be processed, and of channels being closed.  @see
-    // DispatcherChannel for more details.  In addition to the information
-    // highlighted there, note that...
-    //
-    // ## DispatcherChannel::Owners are ref-counted objects, and that the
-    //    ref-count is implemented by by the DispatcherChannel::Owner base
-    //    class.
-    // ## DispatcherChannel::Owners *must* implement ProcessChannel.
-    // ## DispatcherChannel::Owners *may* implement NotifyChannelDeactivated,
-    //    but are not required to.
-    class Owner : public fbl::RefCounted<Owner> {
-    protected:
-        friend class fbl::RefPtr<Owner>;
-        friend class DispatcherChannel;
-
-        virtual ~Owner() {
-            // Assert that the Owner implementation properly deactivated itself
-            // before destructing.
-            ZX_DEBUG_ASSERT(deactivated_);
-            ZX_DEBUG_ASSERT(channels_.is_empty());
-        }
-
-        void ShutdownDispatcherChannels() __TA_EXCLUDES(channels_lock_);
-
-        // ProcessChannel
-        //
-        // Called by the thread pool infrastructure to notify an owner that
-        // there is a message pending on the channel.  Returning any error at
-        // this point in time will cause the channel to be deactivated and
-        // be released.
-        virtual zx_status_t ProcessChannel(DispatcherChannel* channel)
-            __TA_EXCLUDES(channels_lock_) = 0;
-
-        // NotifyChannelDeactivated.
-        //
-        // Called by the thread pool infrastructure to notify an owner that a
-        // channel is has become deactivated.  No new ProcessChannel callbacks
-        // will arrive from 'channel', but it is possible that there are still
-        // some callbacks currently in flight.  DispatcherChannel::Owner
-        // implementers should take whatever synchronization steps are
-        // appropriate.
-        virtual void NotifyChannelDeactivated(const DispatcherChannel& channel)
-            __TA_EXCLUDES(channels_lock_) { }
-
-    private:
-        zx_status_t AddChannel(fbl::RefPtr<DispatcherChannel>&& channel)
-            __TA_EXCLUDES(channels_lock_);
-        void RemoveChannel(DispatcherChannel* channel)
-            __TA_EXCLUDES(channels_lock_);
-
-        // Allow the deactivated flag to be checked without obtaining the
-        // channels_lock_.
-        //
-        // The deactivated_ flag may never be cleared once set.  It needs to be
-        // checked and held static during operations like adding and removing
-        // channels, as well as deactivating the owner.  While processing and
-        // dispatching messages, however (DispatcherChannel::Process), a
-        // channel's owner might become deactivated, and it should be OK to
-        // perform a simple spot check (without obtaining the lock) and
-        // fast-abort if the owner was disabled.
-        bool deactivated() const __TA_NO_THREAD_SAFETY_ANALYSIS {
-            return static_cast<volatile bool>(deactivated_);
-        }
-
-        fbl::Mutex channels_lock_;
-        bool deactivated_ __TA_GUARDED(channels_lock_) = false;
-        fbl::DoublyLinkedList<fbl::RefPtr<DispatcherChannel>> channels_
-            __TA_GUARDED(channels_lock_);
-    };
-
-    static fbl::RefPtr<DispatcherChannel> GetActiveChannel(uint64_t id)
-        __TA_EXCLUDES(active_channels_lock_) {
-        fbl::AutoLock channels_lock(&active_channels_lock_);
-        return GetActiveChannelLocked(id);
-    }
-
-    uint64_t  bind_id()            const { return bind_id_; }
-    uint64_t  GetKey()             const { return bind_id(); }
-    uintptr_t owner_ctx()          const { return owner_ctx_; }
-    bool      InOwnersList()       const { return dll_node_state_.InContainer(); }
-    bool      InActiveChannelSet() const { return wavl_node_state_.InContainer(); }
-
-    zx_status_t WaitOnPort(const zx::port& port) __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
-        fbl::AutoLock obj_lock(&obj_lock_);
-        return WaitOnPortLocked(port);
-    }
-
     zx_status_t Activate(fbl::RefPtr<Owner>&& owner, zx::channel* client_channel_out)
-        __TA_EXCLUDES(obj_lock_, active_channels_lock_);
+        __TA_EXCLUDES(obj_lock_, active_sources_lock());
 
     zx_status_t Activate(fbl::RefPtr<Owner>&& owner, zx::channel&& client_channel)
-        __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
+        __TA_EXCLUDES(obj_lock_, active_sources_lock()) {
         fbl::AutoLock obj_lock(&obj_lock_);
         return ActivateLocked(fbl::move(owner), fbl::move(client_channel));
     }
 
-    void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_, active_channels_lock_);
-    zx_status_t Process(const zx_port_packet_t& port_packet)
-        __TA_EXCLUDES(obj_lock_, active_channels_lock_);
     zx_status_t Read(void* buf,
                      uint32_t buf_len,
                      uint32_t* bytes_read_out,
                      zx::handle* rxed_handle = nullptr) const
-        __TA_EXCLUDES(obj_lock_, active_channels_lock_);
+        __TA_EXCLUDES(obj_lock_, active_sources_lock());
+
     zx_status_t Write(const void* buf,
                       uint32_t buf_len,
                       zx::handle&& tx_handle = zx::handle()) const
-        __TA_EXCLUDES(obj_lock_, active_channels_lock_);
+        __TA_EXCLUDES(obj_lock_, active_sources_lock());
+
+protected:
+    zx_status_t ProcessInternal(const fbl::RefPtr<Owner>& owner,
+                                const zx_port_packet_t& port_packet)
+        __TA_EXCLUDES(obj_lock_, active_sources_lock()) override;
+
+    void NotifyDeactivated(const fbl::RefPtr<Owner>& owner)
+        __TA_EXCLUDES(obj_lock_, active_sources_lock()) override;
 
 private:
     friend DispatcherChannelAllocator;
-    friend class  fbl::RefPtr<DispatcherChannel>;
-    friend struct fbl::DefaultDoublyLinkedListTraits<fbl::RefPtr<DispatcherChannel>>;
-    friend struct fbl::DefaultWAVLTreeTraits<fbl::RefPtr<DispatcherChannel>>;
 
-    static fbl::RefPtr<DispatcherChannel> GetActiveChannelLocked(uint64_t id)
-        __TA_REQUIRES(active_channels_lock_) {
-        auto iter = active_channels_.find(id);
-        return iter.IsValid() ? iter.CopyPointer() : nullptr;
-    }
-
-    DispatcherChannel(uintptr_t owner_ctx = 0);
-    ~DispatcherChannel();
-
-    zx_status_t WaitOnPortLocked(const zx::port& port)
-        __TA_REQUIRES(obj_lock_);
+    DispatcherChannel(uintptr_t owner_ctx = 0)
+        : DispatcherEventSource(ZX_CHANNEL_READABLE,
+                                ZX_CHANNEL_PEER_CLOSED,
+                                owner_ctx) { }
 
     zx_status_t ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::channel&& channel)
         __TA_REQUIRES(obj_lock_);
-
-    fbl::RefPtr<Owner>  owner_    __TA_GUARDED(obj_lock_);
-    zx::channel          channel_  __TA_GUARDED(obj_lock_);
-    mutable fbl::Mutex  obj_lock_ __TA_ACQUIRED_BEFORE(active_channels_lock_,
-                                                        owner_->channels_lock_);
-    const bool           client_thread_active_;
-    const uint64_t       bind_id_;
-    const uintptr_t      owner_ctx_;
-
-    // Node state for existing on the Owner's channels_ list.
-    fbl::DoublyLinkedListNodeState<fbl::RefPtr<DispatcherChannel>> dll_node_state_;
-
-    // Node state for in the active_channels_ set.
-    fbl::WAVLTreeNodeState<fbl::RefPtr<DispatcherChannel>> wavl_node_state_;
-
-    static fbl::Mutex active_channels_lock_;
-    static fbl::WAVLTree<uint64_t, fbl::RefPtr<DispatcherChannel>>
-        active_channels_ __TA_GUARDED(active_channels_lock_);
 };
 
 }  // namespace audio
