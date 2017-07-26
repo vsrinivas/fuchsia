@@ -6,7 +6,7 @@
 #include <zircon/syscalls/port.h>
 #include <stdio.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
 
 #include "debug-logging.h"
@@ -119,48 +119,49 @@ int DispatcherThread::Main() {
             continue;
         }
 
-        // Look of the channel which woke up this thread.  If the channel is no
-        // longer in the active set, then it is in the process of being torn
-        // down and this message should be ignored.
+        // Look of the event source which woke up this thread.  If the event
+        // source is no longer in the active set, then it is in the process of
+        // being torn down and this message should be ignored.
         //
         // TODO(johngro) : When we have sorted out kernel assisted ref-counting
-        // of keyed objects who post ativity on ports, switch to just using the
-        // key of the message for O(1) lookup of the active channel, instead of
-        // doing this O(log) lookup.
-        auto channel = DispatcherChannel::GetActiveChannel(pkt.key);
-        if (channel != nullptr) {
+        // of keyed objects who post activity on ports, switch to just using the
+        // key of the message for O(1) lookup of the active event source,
+        // instead of doing this O(log) lookup.
+        auto event_source = DispatcherEventSource::GetActiveEventSource(pkt.key);
+        if (event_source != nullptr) {
             zx_status_t res = ZX_OK;
 
-            // Start by processing all of the pending messages a channel has.
-            if ((pkt.signal.observed & ZX_CHANNEL_READABLE) != 0) {
-                res = channel->Process(pkt);
+            // Start by processing all of the pending messages a event_source has.
+            if ((pkt.signal.observed & event_source->process_signal_mask()) != 0) {
+                res = event_source->Process(pkt);
             }
 
-            // If the channel has been closed on the other end, or if the client
-            // ran into trouble during processing, deactivate the channel.
-            // Otherwise, if the channel has not been deactivated, set up the
-            // next wait operation.
-            if ((res != ZX_OK) || (pkt.signal.observed & ZX_CHANNEL_PEER_CLOSED) != 0) {
+            // If the event source has been signalled for shutdown, or if the
+            // client ran into trouble during processing, deactivate the event
+            // source.  Otherwise, if the event source has not been deactivated,
+            // set up the next wait operation.
+            if ((res != ZX_OK) ||
+                (pkt.signal.observed & event_source->shutdown_signal_mask()) != 0) {
                 if (res != ZX_OK) {
-                    DEBUG_LOG("Process error (%d), deactivating channel %" PRIu64 " \n",
+                    DEBUG_LOG("Process error (%d), deactivating event source %" PRIu64 " \n",
                               res, pkt.key);
                 } else {
-                    DEBUG_LOG("Peer closed, deactivating channel %" PRIu64 "\n", pkt.key);
+                    DEBUG_LOG("Peer closed, deactivating event source %" PRIu64 "\n", pkt.key);
                 }
-                channel->Deactivate(true);
+                event_source->Deactivate(true);
             } else
-            if (channel->InActiveChannelSet()) {
-                res = channel->WaitOnPort(port_);
+            if (event_source->InActiveEventSourceSet()) {
+                res = event_source->WaitOnPort(port_);
                 if (res != ZX_OK) {
-                    DEBUG_LOG("Failed to re-arm channel wait (error %d), "
-                              "deactivating channel %" PRIu64 " \n",
+                    DEBUG_LOG("Failed to re-arm event source wait (error %d), "
+                              "deactivating event source %" PRIu64 " \n",
                               res, pkt.key);
-                    channel->Deactivate(true);
+                    event_source->Deactivate(true);
                 }
             }
 
-            // Release our channel reference.
-            channel = nullptr;
+            // Release our event source reference.
+            event_source = nullptr;
         }
     }
 
