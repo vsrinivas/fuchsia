@@ -57,6 +57,8 @@ static mx_protocol_device_t platform_dev_proto = {
 };
 
 mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* device_node) {
+    uint32_t vid = bus->vid;
+    uint32_t pid = bus->pid;
     uint32_t did = 0;
     uint32_t mmio_count = 0;
     uint32_t irq_count = 0;
@@ -68,6 +70,12 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
         switch (mdi_id(&node)) {
         case MDI_NAME:
             name = mdi_node_string(&node);
+            break;
+        case MDI_PLATFORM_DEVICE_VID:
+            mdi_node_uint32(&node, &vid);
+            break;
+        case MDI_PLATFORM_DEVICE_PID:
+            mdi_node_uint32(&node, &pid);
             break;
         case MDI_PLATFORM_DEVICE_DID:
             mdi_node_uint32(&node, &did);
@@ -107,8 +115,8 @@ mx_status_t platform_bus_publish_device(platform_bus_t* bus, mdi_node_ref_t* dev
     }
 
     mx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, bus->vid},
-        {BIND_PLATFORM_DEV_PID, 0, bus->pid},
+        {BIND_PLATFORM_DEV_VID, 0, vid},
+        {BIND_PLATFORM_DEV_PID, 0, pid},
         {BIND_PLATFORM_DEV_DID, 0, did},
     };
 
