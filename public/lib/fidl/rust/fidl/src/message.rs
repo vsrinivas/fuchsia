@@ -4,6 +4,8 @@
 
 //! Message types and utilities
 
+use std::borrow::{Borrow, BorrowMut};
+
 use byteorder::{ByteOrder, LittleEndian};
 
 use magenta::{Handle, MessageBuf};
@@ -138,6 +140,10 @@ impl DecodeBuf {
         }
     }
 
+    pub fn get_buf(&self) -> &MessageBuf {
+        &self.inner
+    }
+
     pub fn get_mut_buf(&mut self) -> &mut MessageBuf {
         &mut self.inner
     }
@@ -171,6 +177,18 @@ impl DecodeBuf {
     // RequestExpectsResponse or Response.
     pub fn get_message_id(&self) -> u64 {
         LittleEndian::read_u64(&self.get_bytes()[16..24])
+    }
+}
+
+impl Borrow<MessageBuf> for DecodeBuf {
+    fn borrow(&self) -> &MessageBuf {
+        self.get_buf()
+    }
+}
+
+impl BorrowMut<MessageBuf> for DecodeBuf {
+    fn borrow_mut(&mut self) -> &mut MessageBuf {
+        self.get_mut_buf()
     }
 }
 

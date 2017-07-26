@@ -12,15 +12,25 @@ const GenerateEndpoint = `
 
 pub struct {{$endpoint}}(::magenta::Channel);
 
-impl ::magenta::HandleBase for {{$endpoint}} {
-    fn get_ref(&self) -> ::magenta::HandleRef {
+impl ::magenta::HandleRef for {{$endpoint}} {
+    fn as_handle_ref(&self) -> ::magenta::HandleRef {
         self.0.get_ref()
     }
+}
 
-    fn from_handle(handle: ::magenta::Handle) -> Self {
-        {{$endpoint}}(::magenta::Channel::from_handle(handle))
+impl Into<::magenta::Handle> for {{$endpoint}} {
+    fn into(self) -> ::magenta::Handle {
+        {{$endpoint}}(::magenta::Channel::from(handle))
     }
 }
+
+impl From<::magenta::Handle> for {{$endpoint}} {
+    fn from(hande: ::magenta::Handle) -> Self {
+        self.0.into()
+    }
+}
+
+impl ::magenta::HandleBased for {{$endpoint}}
 
 impl_codable_handle!({{$endpoint}});
 
@@ -33,50 +43,67 @@ const GenerateInterface = `
 {{- $interface := . -}}
 // --- {{$interface.Name}} ---
 
-pub trait {{$interface.Name}} {
-{{range $message := $interface.Messages}}    fn {{$message.Name}}(&mut self
+pub use {{$interface.Name}}::I as {{$interface.Name}}_I;
+
+pub mod {{$interface.Name}} {
+    use fidl::{self, DecodeBuf, EncodeBuf, EncodablePtr, DecodablePtr, Stub};
+    use futures::{BoxFuture, Future, future};
+    use magenta;
+    use tokio_core::reactor;
+    use super::*;
+    pub const SERVICE_NAME: &'static str = "{{$interface.ServiceName}}";
+    pub const VERSION: u32 = {{$interface.Version}};
+
+    pub struct Marker;
+
+    pub trait I {
+{{range $message := $interface.Messages}}        fn {{$message.Name}}(&mut self
 {{- range $index, $field := $message.RequestStruct.Fields -}}
     , {{$field.Name}}: {{$field.Type}}
 {{- end -}}
 )
-    {{- if ne $message.ResponseStruct.Name "" }} -> ::fidl::Future<{{template "GenerateResponseType" $message.ResponseStruct}}, ::fidl::Error>{{end}};
-{{end -}}
-}
+    {{- if ne $message.ResponseStruct.Name "" }} -> BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}, fidl::Error>{{end}};
+{{end}}    }
 
-pub trait {{$interface.Name}}_Stub : {{$interface.Name}} {
-    fn dispatch_with_response_Impl(&mut self, request: &mut ::fidl::DecodeBuf) -> ::fidl::Future<::fidl::EncodeBuf, ::fidl::Error> {
-        let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
-        match name {
-{{range $message := $interface.Messages}}{{if ne $message.ResponseStruct.Name ""}}            {{$message.MessageOrdinal}} => self.
-    {{- $message.RawName}}_Raw(request),
-{{end}}{{end}}            _ => ::fidl::Future::failed(::fidl::Error::UnknownOrdinal)
+    pub struct Dispatcher<T: self::I>(pub T);
+
+    impl<T: self::I> Stub for Dispatcher<T> {
+        fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> BoxFuture<EncodeBuf, fidl::Error> {
+            let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
+            match name {
+{{range $message := $interface.Messages}}{{if ne $message.ResponseStruct.Name ""}}                {{$message.MessageOrdinal}} => self.
+    {{- $message.RawName}}(request),
+{{end}}{{end}}                _ => Box::new(future::err(fidl::Error::UnknownOrdinal))
+            }
+        }
+
+        fn dispatch(&mut self, request: &mut ::fidl::DecodeBuf) -> Result<(), fidl::Error> {
+            let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
+            match name {
+{{range $message := $interface.Messages}}{{if eq $message.ResponseStruct.Name ""}}                {{$message.MessageOrdinal}} => self.
+    {{- $message.RawName}}(request),
+{{end}}{{end}}                _ => Err(::fidl::Error::UnknownOrdinal)
+            }
         }
     }
 
-    fn dispatch_Impl(&mut self, request: &mut ::fidl::DecodeBuf) -> Result<(), ::fidl::Error> {
-        let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
-        match name {
-{{range $message := $interface.Messages}}{{if eq $message.ResponseStruct.Name ""}}            {{$message.MessageOrdinal}} => self.
-    {{- $message.RawName}}_Raw(request),
-{{end}}{{end}}            _ => Err(::fidl::Error::UnknownOrdinal)
-        }
-    }
-{{range $message := $interface.Messages}}
-    fn {{$message.RawName}}_Raw(&mut self, request: &mut ::fidl::DecodeBuf)
-        {{- if eq $message.ResponseStruct.Name "" }} -> Result<(), ::fidl::Error> {
-        let request: {{$message.RequestStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(request, 16));
-        self.{{$message.Name}}(
+    impl<T: self::I> Dispatcher<T> {
+{{- range $message := $interface.Messages}}
+        fn {{$message.RawName}}(&mut self, request: &mut fidl::DecodeBuf)
+            {{- if eq $message.ResponseStruct.Name "" }} -> Result<(), fidl::Error> {
+            let request: {{$message.RequestStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(request, 16));
+            self.0.{{$message.Name}}(
 {{- range $index, $field := $message.RequestStruct.Fields -}}
     {{- if $index}}, {{end -}}
     request.{{- $field.Name -}}
 {{- end -}}
-            );
-        Ok(())
-    }
-    {{- else}} -> ::fidl::Future<::fidl::EncodeBuf, ::fidl::Error> {
-        let r: ::fidl::Result<{{$message.RequestStruct.Name}}> = ::fidl::DecodablePtr::decode_obj(request, 24);
-        match r {
-            Ok(request) => self.{{$message.Name}}(
+                );
+            Ok(())
+        }
+        {{- else}} -> BoxFuture<EncodeBuf, fidl::Error> {
+            let r: ::fidl::Result<{{$message.RequestStruct.Name}}> = ::fidl::DecodablePtr::decode_obj(request, 24);
+            match r {
+                Ok(request) => Box::new(self.0.{{$message.Name}}(
 {{- range $index, $field := $message.RequestStruct.Fields -}}
     {{- if $index}}, {{end -}}
     request.{{- $field.Name -}}
@@ -88,86 +115,66 @@ pub trait {{$interface.Name}}_Stub : {{$interface.Name}} {
     {{- $field.Name -}}
 {{- end -}}
 {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ) {{- end -}}
-                | {
-                let response = {{$message.ResponseStruct.Name}} {
-{{range $field := $message.ResponseStruct.Fields}}                    {{$field.Name}}: {{$field.Name}},
-{{end}}                };
-                let mut encode_buf = ::fidl::EncodeBuf::new_response({{$message.MessageOrdinal}});
-                ::fidl::EncodablePtr::encode_obj(response, &mut encode_buf);
-                encode_buf
-                }),
-            Err(error) => ::fidl::Future::failed(error)
-        }
-    }{{end}}
-{{end -}}
-}
+                    | {
+                    let response = {{$message.ResponseStruct.Name}} {
+{{range $field := $message.ResponseStruct.Fields}}                        {{$field.Name}}: {{$field.Name}},
+{{end}}                    };
+                    let mut encode_buf = ::fidl::EncodeBuf::new_response({{$message.MessageOrdinal}});
+                    ::fidl::EncodablePtr::encode_obj(response, &mut encode_buf);
+                    encode_buf
+                })),
+                Err(error) => Box::new(future::err(error))
+            }
+        }{{end}}
+{{end}}    }
 
-pub struct {{$interface.Name}}_Proxy(::fidl::Client);
 
-impl {{$interface.Name}} for {{$interface.Name}}_Proxy {
-{{- range $message := $interface.Messages}}
-    fn {{$message.Name}}(&mut self
-{{- range $field := $message.RequestStruct.Fields}}, {{$field.Name}}: {{$field.Type}}
-{{- end -}} )
-{{- if ne $message.ResponseStruct.Name "" }} -> ::fidl::Future<{{template "GenerateResponseType" $message.ResponseStruct}}, ::fidl::Error>
-{{- end}} {
-        let request = {{$message.RequestStruct.Name}} {
-{{range $field := $message.RequestStruct.Fields}}            {{$field.Name}}: {{$field.Name}},
-{{end}}        };
-        let mut encode_buf = ::fidl::EncodeBuf::new_request{{if ne $message.ResponseStruct.Name "" -}}
-            _expecting_response
-        {{- end}}({{$message.MessageOrdinal}});
-        ::fidl::EncodablePtr::encode_obj(request, &mut encode_buf);
-{{if eq $message.ResponseStruct.Name ""}}        self.0.send_msg(&mut encode_buf);
-{{else}}        self.0.send_msg_expect_response(&mut encode_buf).and_then(|mut decode_buf| {
-            let r: {{$message.ResponseStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(&mut decode_buf, 24));
-            Ok(
+    pub struct Proxy(fidl::Client);
+
+    // This is implemented as a module-level function because Proxy::new could collide with fidl methods.
+    pub fn new_proxy(client_end: fidl::ClientEnd<Marker>, handle: &reactor::Handle) -> Result<Proxy, ::fidl::Error> {
+        let channel = ::tokio_fuchsia::Channel::from_channel(::magenta::Channel::from(
+            <fidl::ClientEnd<Marker> as Into<::magenta::Handle>>::into(client_end)
+        ), handle)?;
+        Ok(Proxy(fidl::Client::new(channel, handle)))
+    }
+
+    pub fn new_pair(handle: &reactor::Handle) -> Result<(Proxy, fidl::ServerEnd<Marker>), ::fidl::Error> {
+        let (s1, s2) = magenta::Channel::create(magenta::ChannelOpts::Normal).unwrap();
+        let client_end = fidl::ClientEnd::new(s1);
+        let server_end = fidl::ServerEnd::new(s2);
+        Ok((new_proxy(client_end, handle)?, server_end))
+    }
+
+    impl I for Proxy {
+    {{- range $message := $interface.Messages}}
+        fn {{$message.Name}}(&mut self
+    {{- range $field := $message.RequestStruct.Fields}}, {{$field.Name}}: {{$field.Type}}
+    {{- end -}} )
+    {{- if ne $message.ResponseStruct.Name "" }} -> BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}, fidl::Error>
+    {{- end}} {
+            let request = {{$message.RequestStruct.Name}} {
+{{range $field := $message.RequestStruct.Fields}}                {{$field.Name}}: {{$field.Name}},
+{{end}}            };
+            let mut encode_buf = ::fidl::EncodeBuf::new_request{{if ne $message.ResponseStruct.Name "" -}}
+                _expecting_response
+            {{- end}}({{$message.MessageOrdinal}});
+            ::fidl::EncodablePtr::encode_obj(request, &mut encode_buf);
+{{if eq $message.ResponseStruct.Name ""}}            self.0.send_msg(&mut encode_buf);
+{{else}}            Box::new(self.0.send_msg_expect_response(encode_buf).and_then(|mut decode_buf| {
+                let r: {{$message.ResponseStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(&mut decode_buf, 24));
+                Ok(
 {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ( {{- end -}}
 {{- range $index, $field := $message.ResponseStruct.Fields -}}
 {{- if $index}}, {{end -}}
 r.{{- $field.Name -}}
 {{- end -}}
 {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ) {{- end -}}
-            )
-        })
+                )
+            }))
+{{end}}        }
 {{end}}    }
-{{end -}}
-}
 
-pub mod {{$interface.Name}}_Metadata {
-    pub const SERVICE_NAME: &'static str = "{{$interface.ServiceName}}";
-    pub const VERSION: u32 = {{$interface.Version}};
-}
-
-{{$client := $interface.Client -}}
-{{template "GenerateEndpoint" $client}}
-
-pub fn {{$interface.Name}}_new_Proxy(client: {{$interface.Client.Name}}) -> {{$interface.Name}}_Proxy {
-    let client = ::fidl::Client::new(client.0);
-    {{$interface.Name}}_Proxy(client)
-}
-
-{{$server := $interface.Server -}}
-{{template "GenerateEndpoint" $server}}
-
-impl {{$interface.Server.Name}} {
-    pub fn into_interface_ptr(self) -> ::fidl::InterfacePtr<Self> {
-        ::fidl::InterfacePtr {
-            inner: self,
-            version: {{$interface.Name}}_Metadata::VERSION,
-        }
-    }
-
-    pub fn into_channel(self) -> ::magenta::Channel {
-        self.0
-    }
-}
-
-pub fn {{$interface.Name}}_new_pair() -> ({{$interface.Name}}_Proxy, {{$interface.Server.Name}}) {
-    use ::magenta::HandleBase;
-    let (s1, s2) = ::magenta::Channel::create(::magenta::ChannelOpts::Normal).unwrap();
-    let client = {{$interface.Client.Name}}::from_handle(s1.into_handle());
-    ({{$interface.Name}}_new_Proxy(client), {{$interface.Server.Name}}(s2))
 }
 
 // Enums

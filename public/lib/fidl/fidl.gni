@@ -417,6 +417,8 @@ template("fidl") {
       deps += [
         "//lib/fidl/rust/fidl",
         "//rust/magenta-rs:magenta",
+        "//rust/tokio-fuchsia",
+        "//third_party/rust-crates:futures-0.1.15",
       ]
 
       non_rust_deps = [ ":${rust_crate_target_name}" ]

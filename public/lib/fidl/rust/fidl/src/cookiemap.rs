@@ -32,6 +32,10 @@ impl<T> CookieMap<T> {
     pub fn remove(&mut self, key: u64) -> Option<T> {
         self.inner.remove(&key)
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 impl<T> IntoIterator for CookieMap<T> {

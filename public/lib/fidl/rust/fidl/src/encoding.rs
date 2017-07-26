@@ -689,7 +689,7 @@ macro_rules! impl_codable_handle {
         $(
         impl $crate::Encodable for $codable_ty {
             fn encode(self, buf: &mut $crate::EncodeBuf, base: usize, offset: usize) {
-                $crate::encode_handle(::magenta::HandleBase::into_handle(self), buf, base, offset);
+                $crate::encode_handle(self.into(), buf, base, offset);
             }
             fn encodable_type() -> $crate::EncodableType {
                 $crate::EncodableType::Handle
@@ -704,7 +704,7 @@ macro_rules! impl_codable_handle {
         }
         impl $crate::Decodable for $codable_ty {
             fn decode(buf: &mut $crate::DecodeBuf, base: usize, offset: usize) -> $crate::Result<Self> {
-                $crate::decode_handle(buf, base, offset).map(::magenta::HandleBase::from_handle)
+                $crate::decode_handle(buf, base, offset).map(From::from)
             }
         }
         impl $crate::DecodableNullable for $codable_ty {

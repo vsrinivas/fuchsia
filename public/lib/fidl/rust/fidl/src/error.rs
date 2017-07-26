@@ -4,10 +4,14 @@
 
 //! Error (common to all fidl operations)
 
-pub type Result<T> = ::std::result::Result<T, Error>;
+use std::io;
+use std::result;
 
-#[derive(Debug, PartialEq, Eq)]
+pub type Result<T> = result::Result<T, Error>;
+
+#[derive(Debug)]
 pub enum Error {
+    InvalidHeader,
     Invalid,
     OutOfRange,
     NotNullable,
@@ -16,4 +20,11 @@ pub enum Error {
     UnknownOrdinal,
     UnknownUnionTag,
     RemoteClosed,
+    IoError(io::Error),
+}
+
+impl From<io::Error> for Error {
+    fn from(error: io::Error) -> Error {
+        Error::IoError(error)
+    }
 }

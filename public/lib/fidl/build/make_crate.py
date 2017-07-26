@@ -27,7 +27,9 @@ def make_crate(output, gen_dir, inputs, srcroot, dep_inputs):
   cargo_f.write('name = "%s"\n' % longname)
   cargo_f.write('version = "0.1.0"\n')
   cargo_f.write('\n')
-
+  cargo_f.write('[dependencies]\n')
+  cargo_f.write('futures = "0.1"\n')
+  cargo_f.write('tokio-core = "0.1.9"\n')
 
   lib_fn = os.path.join(cargo_toml_dir, 'src', 'lib.rs')
   src_f = file(lib_fn, 'w')
@@ -35,6 +37,9 @@ def make_crate(output, gen_dir, inputs, srcroot, dep_inputs):
   src_f.write('#[macro_use]\n')
   src_f.write('extern crate fidl;\n')
   src_f.write('extern crate magenta;\n')
+  src_f.write('extern crate futures;\n')
+  src_f.write('extern crate tokio_core;\n')
+  src_f.write('extern crate tokio_fuchsia;\n')
   for dep in dep_inputs:
     crate = label_to_crate(dep)
     # TODO: distinguish deps from public_deps, and only do "pub" for the latter.
