@@ -16,11 +16,11 @@
 namespace app {
 
 ServiceNamespace::ServiceNamespace()
-    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir(&dispatcher_))) {}
+    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir())) {}
 
 ServiceNamespace::ServiceNamespace(
     fidl::InterfaceRequest<app::ServiceProvider> request)
-    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir(&dispatcher_))) {
+    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir())) {
   AddBinding(std::move(request));
 }
 
@@ -53,7 +53,7 @@ void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {
 }
 
 bool ServiceNamespace::ServeDirectory(mx::channel channel) {
-  return mtl::VFSServe(directory_, std::move(channel));
+  return mtl::VFSServe(directory_, &dispatcher_, std::move(channel));
 }
 
 int ServiceNamespace::OpenAsFileDescriptor() {

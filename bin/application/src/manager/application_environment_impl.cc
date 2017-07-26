@@ -64,12 +64,11 @@ mx::channel TakeAppServices(ApplicationLaunchInfoPtr& launch_info) {
 // don't publish the root environment's services. We should consider
 // reorganizing the boot process so that the root environment's services are
 // the ones we want to publish.
-void PublishServicesForFirstNestedEnvironment(
-    const ServiceProviderBridge& services) {
+void PublishServicesForFirstNestedEnvironment(ServiceProviderBridge* services) {
   static mx_handle_t request = mx_get_startup_handle(PA_SERVICE_REQUEST);
   if (request == MX_HANDLE_INVALID)
     return;
-  services.ServeDirectory(mx::channel(request));
+  services->ServeDirectory(mx::channel(request));
   request = MX_HANDLE_INVALID;
 }
 
@@ -267,7 +266,7 @@ void ApplicationEnvironmentImpl::CreateNestedEnvironment(
   child->AddBinding(std::move(environment));
   children_.emplace(child, std::move(controller));
 
-  PublishServicesForFirstNestedEnvironment(child->services_);
+  PublishServicesForFirstNestedEnvironment(&child->services_);
 }
 
 void ApplicationEnvironmentImpl::GetApplicationLauncher(

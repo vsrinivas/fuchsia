@@ -57,7 +57,7 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   }
 
   void AddBinding(fidl::InterfaceRequest<app::ServiceProvider> request);
-  bool ServeDirectory(mx::channel channel) const;
+  bool ServeDirectory(mx::channel channel);
 
   mx::channel OpenAsDirectory();
   int OpenAsFileDescriptor();
