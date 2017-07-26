@@ -418,7 +418,8 @@ void UserRunnerImpl::LogoutAndResetLedgerState() {
       std::move(ledger_token_provider_for_erase),
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "EraseRepository failed: " << status;
+          FTL_LOG(ERROR) << "EraseRepository failed: " << status
+                         << "Logging out.";
         }
         user_context_->Logout();
       });
@@ -433,9 +434,10 @@ void UserRunnerImpl::SetupLedger() {
   ledger_app_client_ =
       std::make_unique<AppClient<ledger::LedgerRepositoryFactory>>(
           user_scope_->GetLauncher(), std::move(ledger_config));
-  ledger_app_client_->SetAppErrorHandler([] {
-    FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly."
-                   << "Logging out.";
+  ledger_app_client_->SetAppErrorHandler([this] {
+    FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
+                   << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+    Logout();
   });
 
   // Get a token provider instance to pass to ledger.
@@ -451,9 +453,14 @@ void UserRunnerImpl::SetupLedger() {
   ledger_app_client_->primary_service()->GetRepository(
       GetLedgerPath(account_), std::move(firebase_config),
       std::move(ledger_token_provider), ledger_repository_.NewRequest(),
-      [](ledger::Status status) {
-        FTL_DCHECK(status == ledger::Status::OK)
-            << "GetRepository failed: " << status;
+      [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR)
+              << "LedgerRepositoryFactory.GetRepository() failed: "
+              << LedgerStatusToString(status) << std::endl
+              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+          Logout();
+        }
       });
 
   // If ledger state is erased from underneath us (happens when the cloud store
@@ -461,27 +468,36 @@ void UserRunnerImpl::SetupLedger() {
   ledger_repository_.set_connection_error_handler([this] { Logout(); });
 
   // Open Ledger.
-  ledger_repository_->GetLedger(to_array(kAppId), ledger_.NewRequest(),
-                                [](ledger::Status status) {
-                                  FTL_CHECK(status == ledger::Status::OK)
-                                      << "LedgerRepository.GetLedger() failed: "
-                                      << LedgerStatusToString(status);
-                                });
+  ledger_repository_->GetLedger(
+      to_array(kAppId), ledger_.NewRequest(), [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR)
+              << "LedgerRepository.GetLedger() failed: "
+              << LedgerStatusToString(status) << std::endl
+              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+          Logout();
+        }
+      });
 
   // This must be the first call after GetLedger, otherwise the Ledger
   // starts with one reconciliation strategy, then switches to another.
   ledger_->SetConflictResolverFactory(
-      conflict_resolver_.AddBinding(), [](ledger::Status status) {
+      conflict_resolver_.AddBinding(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Ledger.SetConflictResolverFactory() failed: "
-                         << LedgerStatusToString(status);
+          FTL_LOG(ERROR)
+              << "Ledger.SetConflictResolverFactory() failed: "
+              << LedgerStatusToString(status) << std::endl
+              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+          Logout();
         }
       });
 
-  ledger_->GetRootPage(root_page_.NewRequest(), [](ledger::Status status) {
+  ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
     if (status != ledger::Status::OK) {
       FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
-                     << LedgerStatusToString(status);
+                     << LedgerStatusToString(status) << std::endl
+                     << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+      Logout();
     }
   });
 }

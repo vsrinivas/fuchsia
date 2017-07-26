@@ -25,12 +25,12 @@ void Init(app::ApplicationContext* app_context, const std::string& identity) {
       app_context->ConnectToEnvironmentService<test_runner::TestRunner>();
   g_test_runner.set_connection_error_handler([] {
     if (g_connected) {
-      FTL_LOG(FATAL) << "Lost connection to TestRunner. Did the active test "
+      FTL_LOG(ERROR) << "Lost connection to TestRunner. Did the active test "
                         "call Logout() while modules were still running?";
     } else {
       FTL_LOG(ERROR) << "This application must be run under test_runner.";
-      exit(1);
     }
+    exit(1);
   });
   g_test_runner->Identify(identity, [] { g_connected = true; });
   g_test_runner->SetTestPointCount(g_test_points.size());
