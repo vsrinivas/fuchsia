@@ -102,6 +102,7 @@ static void usb_bus_unbind(void* ctx) {
             bus->devices[i] = NULL;
         }
     }
+    device_remove(bus->mxdev);
 }
 
 static void usb_bus_release(void* ctx) {
