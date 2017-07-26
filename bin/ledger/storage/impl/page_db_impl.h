@@ -5,6 +5,10 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_PAGE_DB_IMPL_H_
 
+#include <memory>
+#include <vector>
+#include <string>
+
 #include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/leveldb.h"
 #include "apps/ledger/src/storage/impl/page_db.h"
