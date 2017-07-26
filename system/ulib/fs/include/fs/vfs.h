@@ -326,13 +326,14 @@ struct Vfs {
     static mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock);
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
     static mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h);
+
+    // Serves a Vnode over the specified handle.
+    static mx_status_t ServeFilesystem(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
+                                       mx_handle_t h);
 #endif  // ifdef __Fuchsia__
 };
 
 } // namespace fs
-
-// vfs dispatch  (NOTE: only used for mounted roots)
-mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<fs::Vnode> vn);
 
 #endif // ifdef __cplusplus
 

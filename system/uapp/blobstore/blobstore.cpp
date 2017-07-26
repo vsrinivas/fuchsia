@@ -618,9 +618,13 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
         return status;
     }
 
-    if ((status = fs::MxioDispatcher::Create(&blobstore_global_dispatcher)) != MX_OK) {
+    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
         return status;
     }
+    dispatcher->StartThread();
+    blobstore_global_dispatcher = mxtl::move(dispatcher);
+
     AllocChecker ac;
     mxtl::RefPtr<Blobstore> fs = mxtl::AdoptRef(new (&ac) Blobstore(fd, info));
     if (!ac.check()) {

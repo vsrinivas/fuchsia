@@ -67,7 +67,10 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
 // Initialize the global root VFS node and dispatcher
 void vfs_global_init(VnodeDir* root) {
     memfs::global_vfs_root = root;
-    fs::MxioDispatcher::Create(&memfs::memfs_global_dispatcher);
+    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    fs::MxioDispatcher::Create(&dispatcher);
+    dispatcher->StartThread();
+    memfs::memfs_global_dispatcher = mxtl::move(dispatcher);
 }
 
 // Return a RIO handle to the global root

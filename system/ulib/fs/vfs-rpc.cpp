@@ -153,6 +153,36 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
     return MX_OK;
 }
 
+mx_status_t Vfs::ServeFilesystem(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
+                                 mx_handle_t h) {
+    mx_status_t r;
+
+    // Tell the calling process that we've mounted
+    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != MX_OK) {
+        return r;
+    }
+
+    // TODO(jeffbrown): Pass the dispatcher through.  We can't quite do this
+    // yet, so the following code is duplicated from Vnode::Serve.  Clean
+    // this up after refactoring the API a little.
+    // return vn->Serve(h, O_ADMIN, dispatcher);
+    vfs_iostate_t* ios;
+
+    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
+        mx_handle_close(h);
+        return MX_ERR_NO_MEMORY;
+    }
+    ios->vn = mxtl::move(vn);
+    ios->io_flags = O_ADMIN;
+
+    if ((r = dispatcher->AddVFSHandler(h, vfs_handler, ios)) < 0) {
+        mx_handle_close(h);
+        free(ios);
+        return r;
+    }
+    return MX_OK;
+}
+
 } // namespace fs
 
 #define TOKEN_RIGHTS (MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER)
@@ -182,7 +212,7 @@ static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx
     return sizeof(mx_handle_t);
 }
 
-mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
+static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -586,35 +616,4 @@ mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie) {
     mxtl::RefPtr<fs::Vnode> vn = ios->vn;
     mx_status_t status = vfs_handler_vn(msg, mxtl::move(vn), ios);
     return status;
-}
-
-mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<fs::Vnode> vn) {
-    vfs_iostate_t* ios;
-    mx_status_t r;
-
-    if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == NULL)
-        return MX_ERR_NO_MEMORY;
-    ios->vn = mxtl::move(vn);  // reference passed in by caller
-    ios->io_flags = O_ADMIN;
-
-    mxio_dispatcher_t* vfs_dispatcher;
-    if ((r = mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler)) < 0) {
-        free(ios);
-        return r;
-    }
-
-    // Tell the calling process that we've mounted
-    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != MX_OK) {
-        free(ios);
-        return r;
-    }
-
-    if ((r = mxio_dispatcher_add(vfs_dispatcher, h, (void*) vfs_handler, ios)) < 0) {
-        free(ios);
-        return r;
-    }
-
-    // calling thread blocks
-    mxio_dispatcher_run(vfs_dispatcher);
-    return MX_OK;
 }

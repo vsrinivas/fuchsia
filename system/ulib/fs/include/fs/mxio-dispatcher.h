@@ -19,12 +19,25 @@ namespace fs {
 // MxioDispatcher wraps the C-based single-threaded mxio dispatcher.
 class MxioDispatcher final : public fs::Dispatcher {
 public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(MxioDispatcher);
-    static mx_status_t Create(mxtl::unique_ptr<fs::Dispatcher>* out);
-    mx_status_t AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate);
+    // Creates the dispatcher.
+    // This should eventually be followed by a call to Start() or Run() depending
+    // on which thread the dispatcher should run on.
+    static mx_status_t Create(mxtl::unique_ptr<fs::MxioDispatcher>* out);
+
+    // Starts the dispatcher on a new thread.
+    mx_status_t StartThread();
+
+    // Runs the dispatcher on the current thread.
+    void RunOnCurrentThread();
+
+    mx_status_t AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) override;
+
 private:
     MxioDispatcher();
+
     mxio_dispatcher_t* dispatcher_;
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(MxioDispatcher);
 };
 
 } // namespace fs

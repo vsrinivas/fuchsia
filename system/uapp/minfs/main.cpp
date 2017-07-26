@@ -18,6 +18,10 @@
 #include <magenta/processargs.h>
 #include <mxtl/unique_ptr.h>
 
+#ifdef __Fuchsia__
+#include "fs/mxio-dispatcher.h"
+#endif
+
 #include "minfs-private.h"
 #ifndef __Fuchsia__
 #include "host.h"
@@ -54,7 +58,15 @@ int do_minfs_mount(mxtl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return MX_ERR_BAD_STATE;
     }
 
-    vfs_rpc_server(h, vn);
+    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    mx_status_t status;
+    if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
+        return status;
+    }
+    if ((status = fs::Vfs::ServeFilesystem(vn, dispatcher.get(), h)) != MX_OK) {
+        return status;
+    }
+    dispatcher->RunOnCurrentThread(); // blocks
     return 0;
 }
 #else

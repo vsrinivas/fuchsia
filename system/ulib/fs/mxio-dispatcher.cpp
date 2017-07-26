@@ -14,7 +14,7 @@
 
 namespace fs {
 
-mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::Dispatcher>* out) {
+mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::MxioDispatcher>* out) {
     AllocChecker ac;
     mxtl::unique_ptr<MxioDispatcher> d(new (&ac) MxioDispatcher());
     if (!ac.check()) {
@@ -24,9 +24,16 @@ mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::Dispatcher>* out) {
     if (status != MX_OK) {
         return status;
     }
-    mxio_dispatcher_start(d->dispatcher_, "mxio-dispatcher");
     *out = mxtl::move(d);
     return MX_OK;
+}
+
+mx_status_t MxioDispatcher::StartThread() {
+    return mxio_dispatcher_start(dispatcher_, "mxio-dispatcher");
+}
+
+void MxioDispatcher::RunOnCurrentThread() {
+    mxio_dispatcher_run(dispatcher_);
 }
 
 mx_status_t MxioDispatcher::AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) {

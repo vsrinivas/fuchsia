@@ -16,6 +16,7 @@
 #include <mxtl/ref_ptr.h>
 
 #include "blobstore-private.h"
+#include "fs/mxio-dispatcher.h"
 #include "fs/vfs.h"
 
 namespace {
@@ -32,7 +33,16 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
         FS_TRACE_ERROR("blobstore: Could not access startup handle to mount point\n");
         return h;
     }
-    vfs_rpc_server(h, vn);
+
+    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    mx_status_t status;
+    if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
+        return status;
+    }
+    if ((status = fs::Vfs::ServeFilesystem(vn, dispatcher.get(), h)) != MX_OK) {
+        return status;
+    }
+    dispatcher->RunOnCurrentThread(); // blocks
     return 0;
 }
 
