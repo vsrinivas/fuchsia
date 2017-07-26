@@ -8,12 +8,14 @@ namespace shadertoy_client {
 
 ExampleScene::ExampleScene(mozart::client::Session* session,
                            const mozart::client::Material& material,
-                           float width,
-                           float height)
-    : width_(width),
-      height_(height),
+                           float scene_width,
+                           float scene_height,
+                           float rect_width,
+                           float rect_height)
+    : width_(scene_width),
+      height_(scene_height),
       renderer_(session),
-      shape_(session, 640, 480, 80, 80, 80, 80),
+      shape_(session, rect_width, rect_height, 80, 80, 80, 80),
       background_(session),
       rect0_(session),
       rect1_(session),
@@ -24,20 +26,26 @@ ExampleScene::ExampleScene(mozart::client::Session* session,
       rect6_(session),
       rect7_(session),
       rect8_(session),
-      rect9_(session) {
+      rect9_(session),
+      rect10_(session),
+      rect11_(session),
+      rect12_(session),
+      rect13_(session),
+      rect14_(session),
+      rect15_(session) {
   mozart::client::Scene scene(session);
   renderer_.SetCamera(mozart::client::Camera(scene));
 
   mozart::client::EntityNode root(session);
   scene.AddChild(root);
 
-  mozart::client::Rectangle background_shape(session, width, height);
+  mozart::client::Rectangle background_shape(session, width_, height_);
   mozart::client::Material background_material(session);
   background_material.SetColor(125, 179, 204, 1.0);
 
   background_.SetShape(background_shape);
   background_.SetMaterial(background_material);
-  background_.SetTranslation(width * 0.5f, height * 0.5f, 0.f);
+  background_.SetTranslation(width_ * 0.5f, height_ * 0.5f, 0.f);
 
   root.AddChild(background_);
   root.AddChild(rect0_);
@@ -50,6 +58,12 @@ ExampleScene::ExampleScene(mozart::client::Session* session,
   root.AddChild(rect7_);
   root.AddChild(rect8_);
   root.AddChild(rect9_);
+  root.AddChild(rect10_);
+  root.AddChild(rect11_);
+  root.AddChild(rect12_);
+  root.AddChild(rect13_);
+  root.AddChild(rect14_);
+  root.AddChild(rect15_);
 
   rect0_.SetShape(shape_);
   rect0_.SetMaterial(material);
@@ -71,20 +85,35 @@ ExampleScene::ExampleScene(mozart::client::Session* session,
   rect8_.SetMaterial(material);
   rect9_.SetShape(shape_);
   rect9_.SetMaterial(material);
+  rect10_.SetShape(shape_);
+  rect10_.SetMaterial(material);
+  rect11_.SetShape(shape_);
+  rect11_.SetMaterial(material);
+  rect12_.SetShape(shape_);
+  rect12_.SetMaterial(material);
+  rect13_.SetShape(shape_);
+  rect13_.SetMaterial(material);
+  rect14_.SetShape(shape_);
+  rect14_.SetMaterial(material);
+  rect15_.SetShape(shape_);
+  rect15_.SetMaterial(material);
 }
 
 void ExampleScene::Update(float seconds) {
-  mozart::client::ShapeNode* shapes[] = {&rect0_, &rect1_, &rect2_, &rect3_,
-                                         &rect4_, &rect5_, &rect6_, &rect7_,
-                                         &rect8_, &rect9_};
+  mozart::client::ShapeNode* shapes[] = {
+      &rect0_,  &rect1_,  &rect2_,  &rect3_, &rect4_,  &rect5_,
+      &rect6_,  &rect7_,  &rect8_,  &rect9_, &rect10_, &rect11_,
+      &rect12_, &rect13_, &rect14_, &rect15_};
 
-  const float kCenterX = width_ * 0.5f;
-  const float kCenterY = height_ * 0.5f;
+  const float kHalfWidth = width_ * 0.5f;
+  const float kHalfHeight = height_ * 0.5f;
 
-  for (int i = 0; i < 10; ++i) {
-    float secs = seconds + (2.0 * i);
-    shapes[i]->SetTranslation(kCenterX + sin(secs * 0.8) * 500.f,
-                              kCenterY + sin(secs * 0.6) * 570.f, 2.0 + i);
+  for (int i = 0; i < 16; ++i) {
+    // Each rect has a slightly different speed.
+    float animation_time = seconds * (32 + i) / 32.f;
+    shapes[i]->SetTranslation(
+        kHalfWidth + sin(animation_time * 0.8) * kHalfWidth * 0.8,
+        kHalfHeight + sin(animation_time * 0.6) * kHalfHeight * 0.9, 2.0 + i);
   }
 }
 

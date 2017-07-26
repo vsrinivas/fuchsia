@@ -50,7 +50,9 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
   });
 
   // Set the GLSL source code for the Shadertoy.
-  shadertoy_->SetResolution(640, 480);
+  constexpr uint32_t kWidth = 512;
+  constexpr uint32_t kHeight = 384;
+  shadertoy_->SetResolution(kWidth, kHeight);
   shadertoy_->SetShaderCode(GetSeascapeSourceCode(), [this](bool success) {
     if (success) {
       FTL_LOG(INFO) << "GLSL code was successfully compiled.";
@@ -70,9 +72,12 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
   material.SetTexture(image_pipe_id);
   session_.ReleaseResource(image_pipe_id);
 
-  const float width = static_cast<float>(display_info->physical_width);
-  const float height = static_cast<float>(display_info->physical_height);
-  scene_ = std::make_unique<ExampleScene>(&session_, material, width, height);
+  const float scene_width = static_cast<float>(display_info->physical_width);
+  const float scene_height = static_cast<float>(display_info->physical_height);
+  const float rect_width = static_cast<float>(kWidth);
+  const float rect_height = static_cast<float>(kHeight);
+  scene_ = std::make_unique<ExampleScene>(
+      &session_, material, scene_width, scene_height, rect_width, rect_height);
 
   start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
   Update(start_time_);

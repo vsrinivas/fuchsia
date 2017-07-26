@@ -15,8 +15,10 @@ class ExampleScene {
  public:
   ExampleScene(mozart::client::Session* session,
                const mozart::client::Material& material,
-               float width,
-               float height);
+               float scene_width,
+               float scene_height,
+               float rect_width,
+               float rect_height);
 
   void Update(float animation_time);
 
@@ -36,6 +38,12 @@ class ExampleScene {
   mozart::client::ShapeNode rect7_;
   mozart::client::ShapeNode rect8_;
   mozart::client::ShapeNode rect9_;
+  mozart::client::ShapeNode rect10_;
+  mozart::client::ShapeNode rect11_;
+  mozart::client::ShapeNode rect12_;
+  mozart::client::ShapeNode rect13_;
+  mozart::client::ShapeNode rect14_;
+  mozart::client::ShapeNode rect15_;
 };
 
 }  // namespace shadertoy_client
