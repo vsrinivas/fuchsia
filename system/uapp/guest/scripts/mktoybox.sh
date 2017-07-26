@@ -74,7 +74,7 @@ if [ ! -f "$IRDIR/initrd.gz" ]; then
 mount -t proc none /proc
 mount -t sysfs none /sys
 echo "Launched toybox"
-exec /bin/sh
+/bin/sh
 _EOF
 
   chmod +x "$IRDIR_FS/init"
