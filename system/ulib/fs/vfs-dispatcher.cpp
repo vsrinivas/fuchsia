@@ -98,7 +98,7 @@ void VfsDispatcher::DisconnectHandler(Handler* handler, bool need_close_cb) {
     }
 }
 
-int VfsDispatcher::Loop() {
+void VfsDispatcher::RunOnCurrentThread() {
     mx_status_t r;
 
     // when draining queue, limit the number of messages you take
@@ -112,7 +112,7 @@ int VfsDispatcher::Loop() {
 
         if ((r = port_.wait(MX_TIME_INFINITE, &packet, 0u)) < 0) {
             xprintf("mxio_dispatcher: port wait failed %d, worker exiting\n", r);
-            return MX_OK;
+            return;
         }
 
         xprintf("port_wait: thread %s \n", tname);
@@ -126,7 +126,7 @@ int VfsDispatcher::Loop() {
             }
             // exit thread
             xprintf("%s: suicide\n", tname);
-            return r;
+            return;
         }
 
         xprintf("thrd_: port_wait: returns key %p effective:%#x \n",
@@ -158,13 +158,10 @@ int VfsDispatcher::Loop() {
         }
 
     }
-
-    // fatal error -- exiting thread
-    return MX_OK;
 }
 
 mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
-                                  mxtl::unique_ptr<fs::Dispatcher>* out) {
+                                  mxtl::unique_ptr<fs::VfsDispatcher>* out) {
     AllocChecker ac;
     mxtl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher(cb, pool_size));
     if (!ac.check()) {
@@ -200,7 +197,8 @@ mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
 
 static int mxio_dispatcher_thread(void* arg) {
     VfsDispatcher* md = reinterpret_cast<VfsDispatcher*>(arg);
-    return md->Loop();
+    md->RunOnCurrentThread();
+    return 0;
 }
 
 mx_status_t VfsDispatcher::Start(const char* name) {

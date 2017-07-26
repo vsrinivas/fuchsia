@@ -58,15 +58,16 @@ int do_minfs_mount(mxtl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return MX_ERR_BAD_STATE;
     }
 
-    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    static const uint32_t kPoolSize = 4;
+    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher;
     mx_status_t status;
-    if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
+    if ((status = fs::VfsDispatcher::Create(mxrio_handler, kPoolSize, &dispatcher)) != MX_OK) {
         return status;
     }
     if ((status = fs::Vfs::ServeDirectory(vn, dispatcher.get(), mx::channel(h))) != MX_OK) {
         return status;
     }
-    dispatcher->RunOnCurrentThread(); // blocks
+    dispatcher->RunOnCurrentThread(); // Blocks
     return 0;
 }
 #else

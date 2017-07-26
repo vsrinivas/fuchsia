@@ -158,7 +158,7 @@ bool test_multi_basic(void) {
     // create dispatcher
     mx_status_t status;
 
-    mxtl::unique_ptr<fs::Dispatcher> disp;
+    mxtl::unique_ptr<fs::VfsDispatcher> disp;
     ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
 
     // create a channel; write to one end, bind the other to the server port
@@ -274,7 +274,7 @@ bool test_multi_multi(void) {
     // create dispatcher
     mx_status_t status;
 
-    mxtl::unique_ptr<fs::Dispatcher> disp;
+    mxtl::unique_ptr<fs::VfsDispatcher> disp;
     ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
 
     // create a channel; write to one end, bind the other to the server port

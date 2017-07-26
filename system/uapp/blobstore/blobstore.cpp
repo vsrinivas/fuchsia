@@ -13,7 +13,6 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
-#include <fs/mxio-dispatcher.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mxalloc/new.h>
@@ -54,8 +53,6 @@ mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, si
 } // namespace
 
 namespace blobstore {
-
-mxtl::unique_ptr<fs::Dispatcher> blobstore_global_dispatcher;
 
 blobstore_inode_t* Blobstore::GetNode(size_t index) const {
     return &reinterpret_cast<blobstore_inode_t*>(node_map_->GetData())[index];
@@ -613,13 +610,6 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
         fprintf(stderr, "blobstore: Check info failure\n");
         return status;
     }
-
-    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
-    if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
-        return status;
-    }
-    dispatcher->StartThread();
-    blobstore_global_dispatcher = mxtl::move(dispatcher);
 
     AllocChecker ac;
     mxtl::RefPtr<Blobstore> fs = mxtl::AdoptRef(new (&ac) Blobstore(fd, info));

@@ -352,10 +352,6 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
     de->name[1] = '.';
 }
 
-#ifdef __Fuchsia__
-static const unsigned kPoolSize = 4;
-#endif
-
 mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     uint32_t blocks = bc->Maxblk();
     uint32_t inodes = info->inode_count;
@@ -370,12 +366,6 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
-#ifdef __Fuchsia__
-    if ((status = fs::VfsDispatcher::Create(mxrio_handler, kPoolSize,
-                                            &fs->dispatcher_)) != MX_OK) {
-        return status;
-    }
-#endif
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
     fs->abmblks_ = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;

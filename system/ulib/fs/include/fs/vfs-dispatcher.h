@@ -59,12 +59,12 @@ public:
     ~VfsDispatcher();
 
     static mx_status_t Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
-                              mxtl::unique_ptr<fs::Dispatcher>* out);
+                              mxtl::unique_ptr<fs::VfsDispatcher>* out);
     void DisconnectHandler(Handler*, bool);
-    int Loop();
+    void RunOnCurrentThread();
+    mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) final;
 private:
     VfsDispatcher(mxio_dispatcher_cb_t cb, uint32_t pool_size);
-    mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) final;
     mx_status_t Start(const char* name);
 
     mxio_dispatcher_cb_t cb_;

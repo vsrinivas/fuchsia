@@ -10,7 +10,6 @@
 
 #include <fs/vfs.h>
 
-#include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
