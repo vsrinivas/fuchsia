@@ -38,6 +38,7 @@ static_library("escher") {
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+    "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
   ]
 
   public_deps = [
@@ -212,6 +213,7 @@ static_library("escher") {
 
   include_dirs = [
     "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/spirv-tools/include",
   ]
 
   public_configs = [

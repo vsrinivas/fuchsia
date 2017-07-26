@@ -10,6 +10,8 @@
 #include "SPIRV/GlslangToSpv.h"
 #include "StandAlone/ResourceLimits.h"
 #include "glslang/Public/ShaderLang.h"
+#include "spirv-tools/libspirv.hpp"
+#include "spirv-tools/optimizer.hpp"
 
 #include "escher/util/trace_macros.h"
 #include "ftl/logging.h"
@@ -144,6 +146,28 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
   if (spirv.empty()) {
     FTL_LOG(WARNING) << "failed to generate SPIR-V from GLSL IR: "
                      << logger.getAllMessages();
+  }
+
+  // TODO(ES-24): Find a central place for all code that makes reference to a
+  // particular version of Vulkan.
+  const char* kVulkanMinorVersion = "42";
+
+  spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
+  optimizer.RegisterPass(spvtools::CreateSetSpecConstantDefaultValuePass(
+      {{1, kVulkanMinorVersion}}));
+  optimizer.RegisterPass(spvtools::CreateFreezeSpecConstantValuePass());
+  optimizer.RegisterPass(spvtools::CreateFoldSpecConstantOpAndCompositePass());
+  optimizer.RegisterPass(spvtools::CreateEliminateDeadConstantPass());
+  optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());
+  auto optimizer_error_logger = [](spv_message_level_t, const char*,
+                                   const spv_position_t&, const char* m) {
+    FTL_LOG(WARNING) << "Error while running SPIR-V optimizer: " << m;
+  };
+  optimizer.SetMessageConsumer(optimizer_error_logger);
+
+  if (!optimizer.Run(spirv.data(), spirv.size(), &spirv)) {
+    FTL_LOG(WARNING) << "failed to optimize SPIR-V";
+    return SpirvData();
   }
   return spirv;
 }
