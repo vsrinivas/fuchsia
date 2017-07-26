@@ -183,3 +183,28 @@
 // to indicate it did not "consume" an item passed to it,
 // but by choice, not due to an error condition.
 #define MX_ERR_NEXT (-61)
+
+// ======== Network-related errors ========
+
+// MX_ERR_PROTOCOL_NOT_SUPPORTED: Specified protocol is not
+// supported.
+#define MX_ERR_PROTOCOL_NOT_SUPPORTED (-70)
+
+// MX_ERR_ADDRESS_UNREACHEABLE: Host is unreachable.
+#define MX_ERR_ADDRESS_UNREACHEABLE (-71)
+
+// MX_ERR_ADDRESS_IN_USE: Address is being used by someone else.
+#define MX_ERR_ADDRESS_IN_USE (-72)
+
+// MX_ERR_NOT_CONNECTED: Socket is not connected.
+#define MX_ERR_NOT_CONNECTED (-73)
+
+// MX_ERR_CONNECTION_REFUSED: Remote peer rejected the connection.
+#define MX_ERR_CONNECTION_REFUSED (-74)
+
+// MX_ERR_CONNECTION_RESET: Connection was reset.
+#define MX_ERR_CONNECTION_RESET (-75)
+
+// MX_ERR_CONNECTION_ABORTED: Connection was aborted.
+#define MX_ERR_CONNECTION_ABORTED (-76)
+

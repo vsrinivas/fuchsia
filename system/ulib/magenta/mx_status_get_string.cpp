@@ -43,6 +43,13 @@ const char* _mx_status_get_string(mx_status_t status) {
     case MX_ERR_NO_SPACE: return "MX_ERR_NO_SPACE";
     case MX_ERR_STOP: return "MX_ERR_STOP";
     case MX_ERR_NEXT: return "MX_ERR_NEXT";
+    case MX_ERR_PROTOCOL_NOT_SUPPORTED: return "MX_ERR_PROTOCOL_NOT_SUPPORTED";
+    case MX_ERR_ADDRESS_UNREACHEABLE: return "MX_ERR_ADDRESS_UNREACHEABLE";
+    case MX_ERR_ADDRESS_IN_USE: return "MX_ERR_ADDRESS_IN_USE";
+    case MX_ERR_NOT_CONNECTED: return "MX_ERR_NOT_CONNECTED";
+    case MX_ERR_CONNECTION_REFUSED: return "MX_ERR_CONNECTION_REFUSED";
+    case MX_ERR_CONNECTION_RESET: return "MX_ERR_CONNECTION_RESET";
+    case MX_ERR_CONNECTION_ABORTED: return "MX_ERR_CONNECTION_ABORTED";
     default: return "(UNKNOWN)";
 
     // TODO(mcgrathr): Having this extra case here (a value far away from
