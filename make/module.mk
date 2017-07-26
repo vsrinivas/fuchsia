@@ -144,6 +144,22 @@ MODULE_COMPILEFLAGS += -include $(MODULE_CONFIG)
 
 MODULE_SRCDEPS += $(MODULE_CONFIG)
 
+MODULE_ELIDED := false
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
+ifneq ($(MODULE_TYPE),userlib)
+MODULE_ELIDED := true
+endif
+endif
+
+ifeq ($(MODULE_ELIDED),true)
+
+# Ignore additions just made by this module.
+EXTRA_BUILDDEPS := $(SAVED_EXTRA_BUILDDEPS)
+GENERATED := $(SAVED_GENERATED)
+USER_MANIFEST_LINES := $(SAVED_USER_MANIFEST_LINES)
+
+else # MODULE_ELIDED
+
 # include compile rules appropriate to module type
 # typeless modules are kernel modules
 ifeq ($(MODULE_TYPE),)
@@ -197,11 +213,12 @@ else
 include make/module-$(patsubst %-static,%,$(MODULE_TYPE)).mk
 endif
 
-
+endif # MODULE_ELIDED
 
 
 # empty out any vars set here
 MODULE :=
+MODULE_ELIDED :=
 MODULE_SRCDIR :=
 MODULE_BUILDDIR :=
 MODULE_DEPS :=
@@ -229,3 +246,8 @@ MODULE_INSTALL_PATH :=
 MODULE_SO_INSTALL_NAME :=
 MODULE_HOST_LIBS :=
 MODULE_HOST_SYSLIBS :=
+
+# Save these before the next module.
+SAVED_EXTRA_BUILDDEPS := $(EXTRA_BUILDDEPS)
+SAVED_GENERATED := $(GENERATED)
+SAVED_USER_MANIFEST_LINES := $(USER_MANIFEST_LINES)

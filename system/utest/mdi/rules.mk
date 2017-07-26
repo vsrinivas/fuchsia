@@ -18,7 +18,6 @@ MODULE_LIBS := system/ulib/unittest system/ulib/mdi system/ulib/mxio system/ulib
 # for including MDI_HEADER
 MODULE_COMPILEFLAGS := -I$(BUILDDIR)/utest/mdi
 
-MDIGEN := $(BUILDDIR)/tools/mdigen
 MDI_TEST_SRCS := $(LOCAL_DIR)/test.mdi
 MDI_TEST_DEPS := $(LOCAL_DIR)/test-defs.mdi
 MDI_TEST_BIN := $(BUILDDIR)/utest/mdi/mdi-test.bin

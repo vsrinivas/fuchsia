@@ -9,8 +9,6 @@ GEN_HEADER_DIR := $(BUILDDIR)/gen/include
 MDI_HEADER_DIR := $(GEN_HEADER_DIR)/mdi
 MDI_HEADER := $(MDI_HEADER_DIR)/mdi-defs.h
 
-MDIGEN := $(BUILDDIR)/tools/mdigen
-
 ifneq ($(MDI_SRCS),)
 # rule for building MDI binary blob
 $(MDI_BIN): $(MDIGEN) $(MDI_SRCS) $(MDI_INCLUDES)

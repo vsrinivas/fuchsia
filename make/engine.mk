@@ -25,6 +25,7 @@ ENABLE_BUILD_SYSROOT := $(call TOBOOL,$(ENABLE_BUILD_SYSROOT))
 ENABLE_NEW_FB := true
 ENABLE_ACPI_BUS ?= true
 DISABLE_UTEST ?= false
+ENABLE_ULIB_ONLY ?= false
 USE_ASAN ?= false
 USE_SANCOV ?= false
 USE_CLANG ?= $(USE_ASAN)
@@ -41,6 +42,13 @@ endif
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
+
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),true)
+ENABLE_BUILD_SYSROOT := false
+ifeq (,$(strip $(TOOLS)))
+$(error ENABLE_ULIB_ONLY=true requires TOOLS=build-.../tools on command line)
+endif
+endif
 
 # If no build directory suffix has been explicitly supplied by the environment,
 # generate a default based on build options.  Start with no suffix, then add
@@ -374,6 +382,12 @@ USER_MANIFEST_DEBUG_INPUTS :=
 # if someone defines this, the build id will be pulled into lib/version
 BUILDID ?=
 
+# Tool locations.
+TOOLS := $(BUILDDIR)/tools
+MDIGEN := $(TOOLS)/mdigen
+MKBOOTFS := $(TOOLS)/mkbootfs
+SYSGEN := $(TOOLS)/sysgen
+
 # set V=1 in the environment if you want to see the full command line of every command
 ifeq ($(V),1)
 NOECHO :=
@@ -455,12 +469,19 @@ else
 NO_SANCOV :=
 endif
 
+# Save these for the first module.mk iteration to see.
+SAVED_EXTRA_BUILDDEPS := $(EXTRA_BUILDDEPS)
+SAVED_GENERATED := $(GENERATED)
+SAVED_USER_MANIFEST_LINES := $(USER_MANIFEST_LINES)
+
 # recursively include any modules in the MODULE variable, leaving a trail of included
 # modules in the ALLMODULES list
 include make/recurse.mk
 
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 # rules for generating MDI header and binary
 include make/mdi.mk
+endif
 
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
@@ -542,9 +563,8 @@ $(BUILDDIR)/sysroot.list.stamp: FORCE
 
 GENERATED += $(BUILDDIR)/sysroot.list $(BUILDDIR)/sysroot.list.stamp
 EXTRA_BUILDDEPS += $(BUILDDIR)/sysroot.list.stamp
-endif
-
 EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
+endif
 
 # make the build depend on all of the user apps
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
@@ -562,8 +582,13 @@ else
 kern: $(OUTLKBIN)
 endif
 
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 # add the kernel to the build
 all:: kern
+else
+# No kernel, but we want the bootdata.bin containing the shared libraries.
+all:: $(USER_BOOTDATA)
+endif
 
 # add some automatic configuration defines
 KERNEL_DEFINES += \
@@ -722,10 +747,6 @@ ifneq ($(HOST_SYSROOT),)
 HOST_COMPILEFLAGS += --sysroot=$(HOST_SYSROOT)
 endif
 
-# tool locations
-MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
-MDIGEN := $(BUILDDIR)/tools/mdigen
-
 # the logic to compile and link stuff is in here
 include make/build.mk
 
@@ -767,10 +788,12 @@ HOST_DEFINES += HOST_LDFLAGS=\"$(subst $(SPACE),_,$(HOST_LDFLAGS))\"
 #$(info GLOBAL_COMPILEFLAGS = $(GLOBAL_COMPILEFLAGS))
 #$(info GLOBAL_OPTFLAGS = $(GLOBAL_OPTFLAGS))
 
+ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
 # bootloader (x86-64 only for now)
 # This needs to be after CC et al are set above.
 ifeq ($(ARCH),x86)
 include bootloader/build.mk
+endif
 endif
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS

@@ -4,7 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-SYSGEN_APP := $(BUILDDIR)/tools/sysgen
 SYSCALLS_SRC := system/public/magenta/syscalls.sysgen
 
 GEN_DIR := $(BUILDDIR)/gen
@@ -37,10 +36,10 @@ SG_SYSROOT_HEADER := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.h
 SG_SYSROOT_RUST := $(SG_SYSROOT_MAGENTA)/syscalls/definitions.rs
 
 # STAMPY ultimately generates most of the files and paths here.
-$(STAMPY): $(SYSGEN_APP) $(SYSCALLS_SRC)
+$(STAMPY): $(SYSGEN) $(SYSCALLS_SRC)
 	$(call BUILDECHO,generating syscall files from $(SYSCALLS_SRC))
 	$(NOECHO) mkdir -p $(SG_SYSCALLS)
-	$(NOECHO) $(SYSGEN_APP) \
+	$(NOECHO) $(SYSGEN) \
 		-kernel-code $(SG_KERNEL_CODE) \
 		-trace $(SG_KERNEL_TRACE) \
 		-category $(SG_KERNEL_CATEGORY) \
