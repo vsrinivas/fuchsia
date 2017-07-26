@@ -25,3 +25,5 @@ typedef struct {
     mx_txid_t what;
     mx_status_t status;
 } minip_cmd_t;
+
+void minipr_thread_loop(mx_handle_t channel, uintptr_t fnptr);
