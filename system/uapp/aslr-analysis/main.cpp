@@ -42,7 +42,7 @@ unsigned int AnalyzeField(const mxtl::Array<ReportInfo>& reports,
                           uintptr_t ReportInfo::*field);
 double ApproxBinomialCdf(double p, double N, double n);
 int TestRunMain(int argc, char** argv);
-mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h);
+mx_status_t LaunchTestRun(const char* bin, mx_handle_t h, mx_handle_t* out);
 int JoinProcess(mx_handle_t proc);
 } // namespace
 
@@ -162,10 +162,10 @@ int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
             return -1;
         }
 
-        mx_handle_t proc = LaunchTestRun(test_bin, handles[1]);
-        if (proc < 0) {
+        mx_handle_t proc;
+        if ((status = LaunchTestRun(test_bin, handles[1], &proc)) != MX_OK) {
             mx_handle_close(handles[0]);
-            printf("Failed to launch testrun: %d\n", proc);
+            printf("Failed to launch testrun: %d\n", status);
             return -1;
         }
 
@@ -217,7 +217,7 @@ int TestRunMain(int argc, char** argv) {
 }
 
 // This function unconditionally consumes the handle h.
-mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
+mx_status_t LaunchTestRun(const char* bin, mx_handle_t h, mx_handle_t* out) {
     launchpad_t* lp;
     mx_handle_t proc;
     mx_handle_t hnd[1];
@@ -244,7 +244,8 @@ mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
         return status;
     }
 
-    return proc;
+    *out = proc;
+    return MX_OK;
 }
 
 int JoinProcess(mx_handle_t proc) {
