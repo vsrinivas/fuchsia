@@ -26,6 +26,4 @@ MODULE_SRCS += \
 
 MODULE_LIBS := system/ulib/magenta
 
-MODULE_COMPILEFLAGS := $(NO_SAFESTACK)
-
 include make/module.mk
