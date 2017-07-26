@@ -61,7 +61,7 @@ var components = []component{
 	},
 	{
 		sysroot,
-		"out/release-x86-64/sysroot",
+		"out/build-magenta/build-magenta-pc-x86-64/sysroot",
 		"sysroot/x86_64-fuchsia",
 		dir,
 		nil,
