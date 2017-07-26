@@ -32,7 +32,7 @@ public:
     ~VnodeFile() override;
 
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) final;
+    mx_status_t Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,

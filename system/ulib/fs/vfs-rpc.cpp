@@ -50,7 +50,7 @@ static bool readable(uint32_t flags) {
 namespace fs {
 namespace {
 
-static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
+static void txn_handoff_open(mx_handle_t srv, mx::channel channel,
                              const char* path, uint32_t flags, uint32_t mode) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
@@ -60,11 +60,11 @@ static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
     msg.arg2.mode = mode;
     msg.datalen = static_cast<uint32_t>(len) + 1;
     memcpy(msg.data, path, len + 1);
-    mxrio_txn_handoff(srv, rh, &msg);
+    mxrio_txn_handoff(srv, channel.release(), &msg);
 }
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
-void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, Dispatcher* dispatcher,
+void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, mxtl::RefPtr<Vnode> vn, Dispatcher* dispatcher,
                   const char* path, uint32_t flags, uint32_t mode) {
     mx_status_t r;
 
@@ -86,7 +86,7 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, Disp
         goto done;
     } else if (r > 0) {
         // Remote handoff, either to a remote device or a remote filesystem node.
-        txn_handoff_open(r, rh, path, flags, mode);
+        txn_handoff_open(r, mxtl::move(channel), path, flags, mode);
         return;
     }
 
@@ -107,7 +107,6 @@ done:
             mx_handle_close(obj.handle[r]);
         }
         vn->Close();
-        mx_handle_close(rh);
         return;
     }
 
@@ -115,60 +114,62 @@ done:
         // Describe the VFS object to the caller in the non-pipelined case.
         obj.status = (r < 0) ? r : MX_OK;
         obj.hcount = (r > 0) ? r : 0;
-        mx_channel_write(rh, 0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
-                         obj.handle, obj.hcount);
+        channel.write(0, &obj, static_cast<uint32_t>(MXRIO_OBJECT_MINSIZE + obj.esize),
+                      obj.handle, obj.hcount);
     }
 
     if (r < 0) {
-        mx_handle_close(rh);
         return;
     }
 
-    vn->Serve(dispatcher, rh, open_flags);
+    vn->Serve(dispatcher, mxtl::move(channel), open_flags);
 }
 
-// Consumes rh.
-void mxrio_reply_channel_status(mx_handle_t rh, mx_status_t status) {
+void mxrio_reply_channel_status(mx::channel channel, mx_status_t status) {
     struct {
         mx_status_t status;
         uint32_t type;
     } reply = {status, 0};
-    mx_channel_write(rh, 0, &reply, MXRIO_OBJECT_MINSIZE, nullptr, 0);
-    mx_handle_close(rh);
+    channel.write(0, &reply, MXRIO_OBJECT_MINSIZE, nullptr, 0);
 }
 
-} // namespace anonymous
+} // namespace
 
-mx_status_t Vnode::Serve(Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
+mx_status_t Vnode::Serve(Dispatcher* dispatcher, mx::channel channel, uint32_t flags) {
     mx_status_t r;
     vfs_iostate_t* ios;
 
     if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
-        mx_handle_close(h);
         return MX_ERR_NO_MEMORY;
     }
     ios->vn = mxtl::RefPtr<Vnode>(this);
     ios->io_flags = flags;
     ios->dispatcher = dispatcher;
 
-    if ((r = dispatcher->AddVFSHandler(h, vfs_handler, ios)) < 0) {
-        mx_handle_close(h);
+    if ((r = dispatcher->AddVFSHandler(mxtl::move(channel), vfs_handler, ios)) < 0) {
         free(ios);
         return r;
     }
     return MX_OK;
 }
 
-mx_status_t Vfs::ServeFilesystem(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
-                                 mx_handle_t h) {
+mx_status_t Vfs::ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
+                                mx::channel channel) {
     mx_status_t r;
 
-    // Tell the calling process that we've mounted
-    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != MX_OK) {
+    // Make sure the Vnode really is a directory.
+    if ((r = vn->Open(O_DIRECTORY)) != MX_OK) {
         return r;
     }
 
-    return vn->Serve(dispatcher, h, O_ADMIN);
+    // Tell the calling process that we've mounted the directory.
+    if ((r = channel.signal_peer(0, MX_USER_SIGNAL_0)) != MX_OK) {
+        return r;
+    }
+
+    r = vn->Serve(dispatcher, mxtl::move(channel), O_ADMIN);
+    vn->Close();
+    return r;
 }
 
 } // namespace fs
@@ -217,14 +218,15 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_OPEN: {
         char* path = (char*)msg->data;
+        mx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
-            fs::mxrio_reply_channel_status(msg->handle[0], MX_ERR_INVALID_ARGS);
+            fs::mxrio_reply_channel_status(mxtl::move(channel), MX_ERR_INVALID_ARGS);
         } else if ((arg & O_ADMIN) && !(ios->io_flags & O_ADMIN)) {
-            fs::mxrio_reply_channel_status(msg->handle[0], MX_ERR_ACCESS_DENIED);
+            fs::mxrio_reply_channel_status(mxtl::move(channel), MX_ERR_ACCESS_DENIED);
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-            fs::vfs_rpc_open(msg, msg->handle[0], vn, ios->dispatcher, path, arg, msg->arg2.mode);
+            fs::vfs_rpc_open(msg, mxtl::move(channel), vn, ios->dispatcher, path, arg, msg->arg2.mode);
         }
         return ERR_DISPATCHER_INDIRECT;
     }
@@ -254,13 +256,14 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         return status;
     }
     case MXRIO_CLONE: {
+        mx::channel channel(msg->handle[0]); // take ownership
         if (!(arg & O_PIPELINE)) {
             mxrio_object_t obj;
             memset(&obj, 0, MXRIO_OBJECT_MINSIZE);
             obj.type = MXIO_PROTOCOL_REMOTE;
-            mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
+            channel.write(0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
         }
-        vn->Serve(ios->dispatcher, msg->handle[0], ios->io_flags);
+        vn->Serve(ios->dispatcher, mxtl::move(channel), ios->io_flags);
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {
@@ -519,7 +522,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
     case MXRIO_LINK: {
         // Regardless of success or failure, we'll close the client-provided
         // vnode token handle.
-        auto ac = mxtl::MakeAutoCall([&msg](){ mx_handle_close(msg->handle[0]); });
+        auto ac = mxtl::MakeAutoCall([&msg]() { mx_handle_close(msg->handle[0]); });
 
         if (len < 4) { // At least one byte for src + dst + null terminators
             return MX_ERR_INVALID_ARGS;
@@ -550,7 +553,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         }
 
         mxtl::RefPtr<fs::Vnode> target_parent =
-                mxtl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
+            mxtl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
         switch (MXRIO_OP(msg->op)) {
         case MXRIO_RENAME:
             return fs::Vfs::Rename(mxtl::move(vn), mxtl::move(target_parent), oldname, newname);

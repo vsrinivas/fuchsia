@@ -60,13 +60,12 @@ mx_status_t VnodeSvc::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeSvc::Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
+mx_status_t VnodeSvc::Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) {
     if (!provider_) {
-        mx_handle_close(h);
         return MX_ERR_UNAVAILABLE;
     }
 
-    provider_->Connect(name_.get(), name_.size(), mx::channel(h));
+    provider_->Connect(name_.get(), name_.size(), mxtl::move(channel));
 
     // If node_id_ is zero, this vnode was created during |Lookup| and doesn't
     // have a parent. Without a parent, there isn't anyone to clean up the raw

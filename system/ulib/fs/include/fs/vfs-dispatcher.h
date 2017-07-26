@@ -26,8 +26,8 @@ namespace fs {
 
 class Handler : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Handler>> {
 public:
-    Handler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* cookie) :
-        h_(h), cb_(cb), cookie_(cookie) {
+    Handler(mx::channel channel, vfs_dispatcher_cb_t cb, void* cookie) :
+        channel_(mxtl::move(channel)), cb_(cb), cookie_(cookie) {
     }
     ~Handler();
 
@@ -35,7 +35,7 @@ public:
     mx_status_t CancelAsyncCallback(const mx::port& dispatch_port);
 
     mx_status_t ExecuteCallback(mxio_dispatcher_cb_t dispatch_cb) {
-        return dispatch_cb(h_.get(), (void*) cb_, cookie_);
+        return dispatch_cb(channel_.get(), (void*) cb_, cookie_);
     }
 
     void ExecuteCloseCallback(mxio_dispatcher_cb_t dispatch_cb) {
@@ -47,7 +47,7 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Handler);
 
-    mx::handle h_;
+    mx::channel channel_;
     vfs_dispatcher_cb_t cb_;
     void* cookie_;
 };
@@ -64,7 +64,7 @@ public:
     int Loop();
 private:
     VfsDispatcher(mxio_dispatcher_cb_t cb, uint32_t pool_size);
-    mx_status_t AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) final;
+    mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) final;
     mx_status_t Start(const char* name);
 
     mxio_dispatcher_cb_t cb_;

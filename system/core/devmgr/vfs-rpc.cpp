@@ -47,21 +47,16 @@ mx_status_t VnodeDir::WatchDirV2(const vfs_watch_dir_t* cmd) {
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
 mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     mx_status_t r;
-    if ((r = vn->Open(O_DIRECTORY)) < 0) {
+    mx::channel h1, h2;
+    if ((r = mx::channel::create(0, &h1, &h2)) != MX_OK) {
         return r;
     }
-    mx_handle_t h1, h2;
-    if ((r = mx_channel_create(0, &h1, &h2)) < 0) {
-        vn->Close();
+    if ((r = fs::Vfs::ServeDirectory(mxtl::RefPtr<fs::Vnode>(vn),
+                                      memfs::memfs_global_dispatcher.get(),
+                                      mxtl::move(h1))) != MX_OK) {
         return r;
     }
-
-    if ((r = vn->Serve(memfs::memfs_global_dispatcher.get(), h1, O_ADMIN)) < 0) { // Consumes 'h1'
-        vn->Close();
-        mx_handle_close(h2);
-        return r;
-    }
-    return h2;
+    return h2.release();
 }
 
 // Initialize the global root VFS node and dispatcher

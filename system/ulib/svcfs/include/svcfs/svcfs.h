@@ -41,7 +41,7 @@ public:
     ~VnodeSvc() override;
 
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) final;
+    mx_status_t Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
     const mxtl::Array<char>& name() const { return name_; }

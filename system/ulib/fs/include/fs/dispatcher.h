@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
+#include <mx/channel.h>
 #include <mxtl/ref_counted.h>
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
@@ -25,9 +26,9 @@ public:
     virtual ~Dispatcher() {};
 
     // Add a new object to be handled to the dispatcher.
-    // The dispatcher will read from 'h', and pass the
+    // The dispatcher will read from 'channel', and pass the
     // message to the dispatcher callback 'cb'.
-    virtual mx_status_t AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) = 0;
+    virtual mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) = 0;
 };
 
 } // namespace fs

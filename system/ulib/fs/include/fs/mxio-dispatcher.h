@@ -30,7 +30,7 @@ public:
     // Runs the dispatcher on the current thread.
     void RunOnCurrentThread();
 
-    mx_status_t AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) override;
+    mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) override;
 
 private:
     MxioDispatcher();

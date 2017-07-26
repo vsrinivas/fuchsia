@@ -150,9 +150,7 @@ public:
 #ifdef __Fuchsia__
     // Allocate iostate and register the transferred handle with a dispatcher.
     // Allows Vnode to act as server.
-    //
-    // Serve ALWAYS consumes 'h'.
-    virtual mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags);
+    virtual mx_status_t Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.
     // Returns the number of handles which should be returned on the requesting handle.
@@ -324,8 +322,8 @@ struct Vfs {
     static mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h);
 
     // Serves a Vnode over the specified handle.
-    static mx_status_t ServeFilesystem(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
-                                       mx_handle_t h);
+    static mx_status_t ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatcher,
+                                      mx::channel channel);
 #endif  // ifdef __Fuchsia__
 };
 

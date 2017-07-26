@@ -104,8 +104,7 @@ mx_status_t VnodeVmo::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeVmo::Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
-    mx_handle_close(h);
+mx_status_t VnodeVmo::Serve(fs::Dispatcher* dispatcher, mx::channel channel, uint32_t flags) {
     return MX_OK;
 }
 

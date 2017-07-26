@@ -13,7 +13,6 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
-#include <fs/mxio-dispatcher.h>
 #include <mxalloc/new.h>
 #include <mxio/debug.h>
 

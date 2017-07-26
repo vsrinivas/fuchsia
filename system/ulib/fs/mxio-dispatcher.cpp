@@ -36,8 +36,8 @@ void MxioDispatcher::RunOnCurrentThread() {
     mxio_dispatcher_run(dispatcher_);
 }
 
-mx_status_t MxioDispatcher::AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* iostate) {
-    return mxio_dispatcher_add(dispatcher_, h, (void*) cb, iostate);
+mx_status_t MxioDispatcher::AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) {
+    return mxio_dispatcher_add(dispatcher_, channel.release(), (void*) cb, iostate);
 }
 
 MxioDispatcher::MxioDispatcher() {}

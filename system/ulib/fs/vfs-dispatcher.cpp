@@ -34,18 +34,18 @@ Handler::~Handler() {
 }
 
 mx_status_t Handler::SetAsyncCallback(const mx::port& dispatch_port) {
-    // queue a message on port whenever h_ is readable or closed
-    return h_.wait_async(dispatch_port, (uint64_t)(uintptr_t)this,
-                         MX_CHANNEL_READABLE|MX_CHANNEL_PEER_CLOSED,
-                         MX_WAIT_ASYNC_ONCE);
+    // queue a message on port whenever the channel is readable or closed
+    return channel_.wait_async(dispatch_port, (uint64_t)(uintptr_t)this,
+                               MX_CHANNEL_READABLE|MX_CHANNEL_PEER_CLOSED,
+                               MX_WAIT_ASYNC_ONCE);
 }
 
 mx_status_t Handler::CancelAsyncCallback(const mx::port& dispatch_port) {
-    return dispatch_port.cancel(h_.get(), (uint64_t)(uintptr_t)this);
+    return dispatch_port.cancel(channel_.get(), (uint64_t)(uintptr_t)this);
 }
 
 void Handler::Close() {
-    h_.reset();
+    channel_.reset();
 }
 
 VfsDispatcher::VfsDispatcher(mxio_dispatcher_cb_t cb, uint32_t pool_size) :
@@ -234,9 +234,9 @@ mx_status_t VfsDispatcher::Start(const char* name) {
     return MX_OK;
 }
 
-mx_status_t VfsDispatcher::AddVFSHandler(mx_handle_t h, vfs_dispatcher_cb_t cb, void* cookie) {
+mx_status_t VfsDispatcher::AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* cookie) {
     AllocChecker ac;
-    mxtl::unique_ptr<Handler> handler(new (&ac) Handler(h, cb, cookie));
+    mxtl::unique_ptr<Handler> handler(new (&ac) Handler(mxtl::move(channel), cb, cookie));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }

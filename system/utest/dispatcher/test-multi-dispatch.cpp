@@ -162,31 +162,29 @@ bool test_multi_basic(void) {
     ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
 
     // create a channel; write to one end, bind the other to the server port
-    mx_handle_t ch[2];
-    status = mx_channel_create(0u, &ch[0], &ch[1]);
+    mx::channel ch[2];
+    status = mx::channel::create(0u, &ch[0], &ch[1]);
     ASSERT_EQ(status, MX_OK, "");
 
     // associate a handler object that will track state
     Handler handler(1);
-    status = disp->AddVFSHandler(ch[1], handler_cb, &handler);
+    status = disp->AddVFSHandler(mxtl::move(ch[1]), handler_cb, &handler);
     ASSERT_EQ(status, MX_OK, "");
 
     // write MAX_MSG messages -- should result in all handler counts == 1
     for (auto msgno=0; msgno<MAX_MSG; msgno++) {
         Msg omsg(msgno, STR_DATA, 0);
-        status = mx_channel_write(ch[0], 0u, &omsg, sizeof(omsg), nullptr, 0u);
+        status = ch[0].write(0u, &omsg, sizeof(omsg), nullptr, 0u);
         ASSERT_EQ(status, MX_OK, "");
         thrd_yield();
     }
-    signal_finished(ch[0]);
+    signal_finished(ch[0].get());
 
     handler.wait_for_finish();
 
     // tear down the dispatcher object (closes and waits for thread pool)
     disp = nullptr;
-
-    status = mx_handle_close(ch[0]);
-    ASSERT_EQ(status, MX_OK, "");
+    ch[0].reset();
 
     // when all callbacks have finished, the handler counts
     // should all have been bumped
@@ -280,13 +278,13 @@ bool test_multi_multi(void) {
     ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
 
     // create a channel; write to one end, bind the other to the server port
-    mx_handle_t ch[2];
-    status = mx_channel_create(0u, &ch[0], &ch[1]);
+    mx::channel ch[2];
+    status = mx::channel::create(0u, &ch[0], &ch[1]);
     ASSERT_EQ(status, MX_OK, "");
 
     // associate a handler object that will track state
     Handler handler(WRITER_POOL_SIZE);
-    status = disp->AddVFSHandler(ch[1], handler_cb, &handler);
+    status = disp->AddVFSHandler(mxtl::move(ch[1]), handler_cb, &handler);
     ASSERT_EQ(status, MX_OK, "");
 
     // make sure the counters get bumped in random order
@@ -302,13 +300,11 @@ bool test_multi_multi(void) {
         idx[i2] = tmp;
     }
 
-    parallel_write(ch[0], &handler, idx, mxtl::count_of(idx), WRITER_POOL_SIZE, WRITE_ITER);
+    parallel_write(ch[0].get(), &handler, idx, mxtl::count_of(idx), WRITER_POOL_SIZE, WRITE_ITER);
 
     // tear down the dispatcher object (closes and waits for thread pool)
     disp = nullptr;
-
-    status = mx_handle_close(ch[0]);
-    ASSERT_EQ(status, MX_OK, "");
+    ch[0].reset();
 
     // all counts should be bumped == WRITE_ITER
     for (auto i=0; i<MAX_MSG; i++) {

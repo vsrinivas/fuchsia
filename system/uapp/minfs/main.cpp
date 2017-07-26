@@ -63,7 +63,7 @@ int do_minfs_mount(mxtl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
     if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
         return status;
     }
-    if ((status = fs::Vfs::ServeFilesystem(vn, dispatcher.get(), h)) != MX_OK) {
+    if ((status = fs::Vfs::ServeDirectory(vn, dispatcher.get(), mx::channel(h))) != MX_OK) {
         return status;
     }
     dispatcher->RunOnCurrentThread(); // blocks

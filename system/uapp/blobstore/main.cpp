@@ -16,8 +16,11 @@
 #include <mxtl/ref_ptr.h>
 
 #include "blobstore-private.h"
-#include "fs/mxio-dispatcher.h"
 #include "fs/vfs.h"
+
+#ifdef __Fuchsia__
+#include "fs/mxio-dispatcher.h"
+#endif
 
 namespace {
 
@@ -39,7 +42,7 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
     if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
         return status;
     }
-    if ((status = fs::Vfs::ServeFilesystem(vn, dispatcher.get(), h)) != MX_OK) {
+    if ((status = fs::Vfs::ServeDirectory(vn, dispatcher.get(), mx::channel(h))) != MX_OK) {
         return status;
     }
     dispatcher->RunOnCurrentThread(); // blocks
