@@ -229,10 +229,11 @@ int unittest_set_verbosity_level(int new_level);
 #define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
 
 /**
- * Registers the process as expected to crash. Tests utilizing this should be run
- * with RUN_TEST_ENABLE_CRASH_HANDLER. If a crash occurs and matches a
- * registered process, it is not bubbled up to the crashlogger and the test
- * continues. If any crash was registered but did not occur, the test fails.
+ * Registers the process or thread as expected to crash. Tests utilizing this
+ * should be run with RUN_TEST_ENABLE_CRASH_HANDLER. If a crash occurs and
+ * matches a registered process or thread, it is not bubbled up to the crashlogger
+ * and the test continues. If any crash was registered but did not occur,
+ * the test fails.
  * Unregistered crashes will also fail the test.
  *
  * A use case could be as follows:
@@ -254,8 +255,8 @@ int unittest_set_verbosity_level(int new_level);
  *      END_TEST;
  * }
  */
-#define REGISTER_CRASH(process_handle) \
-    crash_list_register(current_test_info->crash_list, process_handle)
+#define REGISTER_CRASH(handle) \
+    crash_list_register(current_test_info->crash_list, handle)
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
@@ -495,6 +496,27 @@ int unittest_set_verbosity_level(int new_level);
 /* For comparing uint64_t, like hw_id_t. */
 #define ASSERT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, RET_FALSE)
 
+/**
+ * Runs the given function in a separate thread, and fails if the function does not crash.
+ * This is a blocking call.
+ *
+ * static void crash(void* arg) {
+ *      ...trigger the crash...
+ * }
+ *
+ * static bool test_crash(void)
+ * {
+ *      BEGIN_TEST;
+ *
+ *      ...construct arg...
+ *
+ *      ASSERT_DEATH(crash, arg, "msg about crash");
+ *
+ *      END_TEST;
+ * }
+ */
+#define ASSERT_DEATH(fn, arg, msg) ASSERT_TRUE(unittest_run_death_fn(fn, arg), msg)
+
 /*
  * The list of test cases is made up of these elements.
  */
@@ -547,5 +569,7 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                              test_type_t test_type,
                              struct test_info** current_test_info,
                              bool* all_success, bool enable_crash_handler);
+
+bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
 
 __END_CDECLS

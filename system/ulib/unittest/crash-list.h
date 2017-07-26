@@ -10,16 +10,16 @@ __BEGIN_CDECLS
 
 typedef struct crash_list* crash_list_t;
 
-/** Returns a new list for registering processes expected to crash. */
+/** Returns a new list for registering processes and threads expected to crash. */
 crash_list_t crash_list_new(void);
 
 /**
- * Registers the process as expected to crash.
+ * Registers the process or thread as expected to crash.
  */
-void crash_list_register(crash_list_t crash_list, mx_handle_t process);
+void crash_list_register(crash_list_t crash_list, mx_handle_t handle);
 
 /**
- * Deletes the node with the given koid and returns the process handle, or
+ * Deletes the node with the given koid and returns the process or thread handle, or
  * MX_HANDLE_INVALID if no match was found.
  */
 mx_handle_t crash_list_delete_koid(crash_list_t crash_list,

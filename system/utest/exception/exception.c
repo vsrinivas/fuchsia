@@ -1167,6 +1167,77 @@ static bool kill_while_stopped_at_start_test(void)
     END_TEST;
 }
 
+static void write_to_addr(void* addr)
+{
+    *(int*) addr = 42;
+}
+
+static bool death_test(void)
+{
+    BEGIN_TEST;
+
+    int* addr = 0;
+    ASSERT_DEATH(write_to_addr, addr, "registered death: write to address 0x0");
+
+    END_TEST;
+}
+
+static bool self_death_test(void)
+{
+    BEGIN_TEST;
+
+    REGISTER_CRASH(mx_thread_self());
+    crash_me();
+
+    END_TEST;
+}
+
+typedef struct thread_info {
+    mx_handle_t our_channel, their_channel;
+    mx_handle_t thread_handle;
+} thread_info_t;
+
+static bool multiple_threads_registered_death_test(void)
+{
+    BEGIN_TEST;
+
+    const unsigned int num_threads = 5;
+
+    thread_info_t thread_info[num_threads];
+
+    // Create some threads and register them as expected to crash.
+    // This tests the crash list can handle multiple registered
+    // handles.
+    for (unsigned int i = 0; i < num_threads; i++) {
+        tu_channel_create(&thread_info[i].our_channel,
+                          &thread_info[i].their_channel);
+        thrd_t thread;
+        tu_thread_create_c11(&thread, thread_func,
+                             (void*)(uintptr_t)thread_info[i].their_channel,
+                             "registered-death-thread");
+        thread_info[i].thread_handle = thrd_get_mx_handle(thread);
+        REGISTER_CRASH(thread_info[i].thread_handle);
+    }
+
+    // Make each thread crash. As they are registered, they will be
+    // silently handled by the crash handler and the test should complete
+    // without error.
+    for (unsigned int i = 0; i < num_threads; i++) {
+        send_msg(thread_info[i].our_channel, MSG_CRASH);
+
+        ASSERT_EQ(mx_object_wait_one(thread_info[i].thread_handle,
+                                     MX_THREAD_TERMINATED,
+                                     mx_deadline_after(MX_MSEC(500)), NULL),
+                  MX_OK, "failed to wait for thread termination");
+
+        tu_handle_close(thread_info[i].thread_handle);
+        tu_handle_close(thread_info[i].our_channel);
+        tu_handle_close(thread_info[i].their_channel);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(process_debugger_set_close_set_test);
@@ -1190,6 +1261,9 @@ RUN_TEST(trigger_test);
 RUN_TEST(unbind_while_stopped_test);
 RUN_TEST(unbind_rebind_while_stopped_test);
 RUN_TEST(kill_while_stopped_at_start_test);
+RUN_TEST(death_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(multiple_threads_registered_death_test);
 END_TEST_CASE(exceptions_tests)
 
 static void check_verbosity(int argc, char** argv)

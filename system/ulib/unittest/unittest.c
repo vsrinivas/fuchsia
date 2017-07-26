@@ -92,6 +92,12 @@ int unittest_set_verbosity_level(int new_level) {
     return out;
 }
 
+bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
+    test_result_t test_result;
+    mx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
+    return status == MX_OK && test_result == TEST_CRASHED;
+}
+
 void unittest_run_named_test(const char* name, bool (*test)(void),
                              test_type_t test_type,
                              struct test_info** current_test_info,
@@ -105,8 +111,14 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
         // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
         if (enable_crash_handler) {
             test_info.crash_list = crash_list_new();
-            if (!run_test_with_crash_handler(&test_info, test))
+
+            test_result_t test_result;
+            mx_status_t status = run_test_with_crash_handler(test_info.crash_list,
+                                                             test,
+                                                             &test_result);
+            if (status != MX_OK || test_result == TEST_FAILED) {
                 test_info.all_ok = false;
+            }
 
             // Check if there were any processes registered to crash but didn't.
             bool missing_crash = crash_list_delete(test_info.crash_list);

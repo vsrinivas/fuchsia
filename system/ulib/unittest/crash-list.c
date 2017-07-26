@@ -12,7 +12,7 @@
 #include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 
-// Details of process registered as expected to crash.
+// Details of process or thread registered as expected to crash.
 typedef struct crash_proc {
     mx_handle_t handle;
     mx_koid_t koid;
@@ -44,23 +44,23 @@ crash_list_t crash_list_new(void) {
     return crash_list;
 }
 
-void crash_list_register(crash_list_t crash_list, mx_handle_t process) {
+void crash_list_register(crash_list_t crash_list, mx_handle_t handle) {
     if (crash_list == NULL) {
         UNITTEST_TRACEF("FATAL: crash list was NULL, run test with RUN_TEST_ENABLE_CRASH_HANDLER\n");
         exit(MX_ERR_INTERNAL);
     }
     mx_info_handle_basic_t info;
-    mx_status_t status = mx_object_get_info(process, MX_INFO_HANDLE_BASIC,
+    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC,
                                             &info, sizeof(info), NULL, NULL);
     if (status != MX_OK) {
-        UNITTEST_TRACEF("FATAL: could not get process info : error %s\n",
+        UNITTEST_TRACEF("FATAL: could not get handle info : error %s\n",
             mx_status_get_string(status));
         exit(MX_ERR_INTERNAL);
     }
     mx_handle_t copy;
-    status = mx_handle_duplicate(process, MX_RIGHT_SAME_RIGHTS, &copy);
+    status = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS, &copy);
     if (status != MX_OK) {
-        UNITTEST_TRACEF("FATAL: could not duplicate process handle : error %s\n",
+        UNITTEST_TRACEF("FATAL: could not duplicate handle : error %s\n",
             mx_status_get_string(status));
         exit(MX_ERR_INTERNAL);
     }
