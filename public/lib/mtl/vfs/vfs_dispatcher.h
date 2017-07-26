@@ -21,7 +21,9 @@ class FTL_EXPORT VFSDispatcher : public fs::Dispatcher {
   VFSDispatcher();
   ~VFSDispatcher() override;
 
-  mx_status_t AddVFSHandler(mx_handle_t h, fs::vfs_dispatcher_cb_t callback, void* iostate) final;
+  mx_status_t AddVFSHandler(mx::channel channel,
+                            fs::vfs_dispatcher_cb_t callback,
+                            void* iostate) final;
   void Stop(VFSHandler* handler);
 
  private:

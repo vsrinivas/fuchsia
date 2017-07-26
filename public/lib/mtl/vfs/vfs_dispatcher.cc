@@ -17,11 +17,11 @@ VFSDispatcher::~VFSDispatcher() {
     delete handler;
 }
 
-mx_status_t VFSDispatcher::AddVFSHandler(mx_handle_t channel,
+mx_status_t VFSDispatcher::AddVFSHandler(mx::channel channel,
                                          fs::vfs_dispatcher_cb_t callback,
                                          void* iostate) {
   VFSHandler* handler = new VFSHandler(this);
-  handler->Start(mx::channel(channel), callback, iostate);
+  handler->Start(std::move(channel), callback, iostate);
   handlers_.insert(handler);
   return MX_OK;
 }

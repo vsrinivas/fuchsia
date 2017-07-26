@@ -10,17 +10,11 @@ source_set("vfs") {
     "vfs_dispatcher.h",
     "vfs_handler.cc",
     "vfs_handler.h",
-    "vfs_serve.cc",
-    "vfs_serve.h",
   ]
 
-  libs = [
-    "mxio",
-  ]
+  libs = [ "mxio" ]
 
-  defines = [
-    "_ALL_SOURCE=1",
-  ]
+  defines = [ "_ALL_SOURCE=1" ]
 
   public_deps = [
     "//lib/ftl",
