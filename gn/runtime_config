@@ -8,6 +8,7 @@
             "file": "application/src/initial.config"
         },
         {
+            "default": "true",
             "bootfs_path": "data/bootstrap/services.config",
             "file": "application/src/bootstrap/services.config"
         },
