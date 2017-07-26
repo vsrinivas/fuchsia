@@ -110,8 +110,6 @@ mx::process Launch(const mx::job& job,
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
   // print out load addresses so we can understand crashes.
-  // TODO(vardhan): The job passed to the child process (which will be
-  // duplicated from this |job|) should not be killable.
   launchpad_t* lp;
   launchpad_create(job.get(), label.c_str(), &lp);
   launchpad_clone(lp, what);
