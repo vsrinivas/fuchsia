@@ -37,8 +37,7 @@ SyncTest::LedgerPtrHolder::LedgerPtrHolder(
 SyncTest::LedgerPtrHolder::~LedgerPtrHolder() {}
 
 SyncTest::SyncTest()
-    : ::test::AppTest(),
-      token_provider_impl_("",
+    : token_provider_impl_("",
                            "sync_user",
                            "sync_user@google.com",
                            "client_id") {}

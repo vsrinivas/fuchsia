@@ -84,8 +84,6 @@ class ConvergenceTest : public SyncTest,
     }
   }
 
-  void TearDown() override { SyncTest::TearDown(); }
-
  protected:
   std::unique_ptr<PageWatcherImpl> WatchPageContents(ledger::PagePtr* page) {
     std::unique_ptr<PageWatcherImpl> watcher =
