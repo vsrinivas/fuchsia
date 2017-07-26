@@ -25,6 +25,11 @@
 
 typedef struct vfs_iostate {
     mxtl::RefPtr<fs::Vnode> vn;
+    // The dispatcher associated with this handle.
+    // TODO(jeffbrown): We should be able to eliminate this state if we make
+    // the dispatcher send its own pointer as an argument to the handler callback.
+    // This may be easier with libasync which already works that way.
+    fs::Dispatcher* dispatcher;
     // Handle to event which allows client to refer to open vnodes in multi-patt
     // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
     // Validated on the server side using cookies.
@@ -59,8 +64,8 @@ static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
 }
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
-void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, const char* path, uint32_t flags,
-                  uint32_t mode) {
+void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, mxtl::RefPtr<Vnode> vn, Dispatcher* dispatcher,
+                  const char* path, uint32_t flags, uint32_t mode) {
     mx_status_t r;
 
     // The pipeline directive instructs the VFS layer to open the vnode
@@ -119,7 +124,7 @@ done:
         return;
     }
 
-    vn->Serve(rh, open_flags);
+    vn->Serve(dispatcher, rh, open_flags);
 }
 
 // Consumes rh.
@@ -134,7 +139,7 @@ void mxrio_reply_channel_status(mx_handle_t rh, mx_status_t status) {
 
 } // namespace anonymous
 
-mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
+mx_status_t Vnode::Serve(Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
     mx_status_t r;
     vfs_iostate_t* ios;
 
@@ -144,8 +149,9 @@ mx_status_t Vnode::Serve(mx_handle_t h, uint32_t flags) {
     }
     ios->vn = mxtl::RefPtr<Vnode>(this);
     ios->io_flags = flags;
+    ios->dispatcher = dispatcher;
 
-    if ((r = GetDispatcher()->AddVFSHandler(h, vfs_handler, ios)) < 0) {
+    if ((r = dispatcher->AddVFSHandler(h, vfs_handler, ios)) < 0) {
         mx_handle_close(h);
         free(ios);
         return r;
@@ -162,25 +168,7 @@ mx_status_t Vfs::ServeFilesystem(mxtl::RefPtr<fs::Vnode> vn, Dispatcher* dispatc
         return r;
     }
 
-    // TODO(jeffbrown): Pass the dispatcher through.  We can't quite do this
-    // yet, so the following code is duplicated from Vnode::Serve.  Clean
-    // this up after refactoring the API a little.
-    // return vn->Serve(h, O_ADMIN, dispatcher);
-    vfs_iostate_t* ios;
-
-    if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
-        mx_handle_close(h);
-        return MX_ERR_NO_MEMORY;
-    }
-    ios->vn = mxtl::move(vn);
-    ios->io_flags = O_ADMIN;
-
-    if ((r = dispatcher->AddVFSHandler(h, vfs_handler, ios)) < 0) {
-        mx_handle_close(h);
-        free(ios);
-        return r;
-    }
-    return MX_OK;
+    return vn->Serve(dispatcher, h, O_ADMIN);
 }
 
 } // namespace fs
@@ -236,7 +224,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-            fs::vfs_rpc_open(msg, msg->handle[0], vn, path, arg, msg->arg2.mode);
+            fs::vfs_rpc_open(msg, msg->handle[0], vn, ios->dispatcher, path, arg, msg->arg2.mode);
         }
         return ERR_DISPATCHER_INDIRECT;
     }
@@ -272,7 +260,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
             obj.type = MXIO_PROTOCOL_REMOTE;
             mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
         }
-        vn->Serve(msg->handle[0], ios->io_flags);
+        vn->Serve(ios->dispatcher, msg->handle[0], ios->io_flags);
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {

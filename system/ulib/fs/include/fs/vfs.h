@@ -152,7 +152,7 @@ public:
     // Allows Vnode to act as server.
     //
     // Serve ALWAYS consumes 'h'.
-    virtual mx_status_t Serve(mx_handle_t h, uint32_t flags);
+    virtual mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags);
 
     // Extract handle(s), type, and extra info from a vnode.
     // Returns the number of handles which should be returned on the requesting handle.
@@ -265,10 +265,6 @@ public:
     }
 
     virtual ~Vnode() {};
-
-#ifdef __Fuchsia__
-    virtual Dispatcher* GetDispatcher() = 0;
-#endif
 
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
     virtual mx_status_t AttachRemote(mx_handle_t h) { return MX_ERR_NOT_SUPPORTED; }

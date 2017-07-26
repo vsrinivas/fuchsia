@@ -57,10 +57,6 @@ namespace blobstore {
 
 mxtl::unique_ptr<fs::Dispatcher> blobstore_global_dispatcher;
 
-fs::Dispatcher* VnodeBlob::GetDispatcher() {
-    return blobstore_global_dispatcher.get();
-}
-
 blobstore_inode_t* Blobstore::GetNode(size_t index) const {
     return &reinterpret_cast<blobstore_inode_t*>(node_map_->GetData())[index];
 }

@@ -43,23 +43,12 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
 
 ServiceProvider::~ServiceProvider() = default;
 
-// Vnode -----------------------------------------------------------------------
-
-Vnode::Vnode(fs::Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
-
-Vnode::~Vnode() = default;
-
-fs::Dispatcher* Vnode::GetDispatcher() {
-    return dispatcher_;
-}
-
 // VnodeSvc --------------------------------------------------------------------
 
-VnodeSvc::VnodeSvc(fs::Dispatcher* dispatcher,
-                   uint64_t node_id,
+VnodeSvc::VnodeSvc(uint64_t node_id,
                    mxtl::Array<char> name,
                    ServiceProvider* provider)
-    : Vnode(dispatcher), node_id_(node_id), name_(mxtl::move(name)), provider_(provider) {
+    : node_id_(node_id), name_(mxtl::move(name)), provider_(provider) {
 }
 
 VnodeSvc::~VnodeSvc() = default;
@@ -71,7 +60,7 @@ mx_status_t VnodeSvc::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeSvc::Serve(mx_handle_t h, uint32_t flags) {
+mx_status_t VnodeSvc::Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
     if (!provider_) {
         mx_handle_close(h);
         return MX_ERR_UNAVAILABLE;
@@ -98,8 +87,8 @@ void VnodeSvc::ClearProvider() {
 
 // VnodeDir --------------------------------------------------------------------
 
-VnodeDir::VnodeDir(fs::Dispatcher* dispatcher)
-    : Vnode(dispatcher), next_node_id_(2) {}
+VnodeDir::VnodeDir()
+    : next_node_id_(2) {}
 
 VnodeDir::~VnodeDir() = default;
 
@@ -174,7 +163,7 @@ bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provide
     CopyToArray(name, len, &array);
 
     mxtl::RefPtr<VnodeSvc> vn = mxtl::AdoptRef(new VnodeSvc(
-        dispatcher_, next_node_id_++, mxtl::move(array), provider));
+        next_node_id_++, mxtl::move(array), provider));
 
     services_.push_back(mxtl::move(vn));
     Notify(name, len, VFS_WATCH_EVT_ADDED);
@@ -201,8 +190,8 @@ void VnodeDir::RemoveAllServices() {
 
 // VnodeProviderDir --------------------------------------------------------------------
 
-VnodeProviderDir::VnodeProviderDir(fs::Dispatcher* dispatcher)
-    : Vnode(dispatcher), provider_(nullptr) {}
+VnodeProviderDir::VnodeProviderDir()
+    : provider_(nullptr) {}
 
 VnodeProviderDir::~VnodeProviderDir() = default;
 
@@ -225,7 +214,7 @@ mx_status_t VnodeProviderDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* n
     mxtl::Array<char> array;
     CopyToArray(name, len, &array);
 
-    *out = mxtl::AdoptRef(new VnodeSvc(dispatcher_, 0, mxtl::move(array), provider_));
+    *out = mxtl::AdoptRef(new VnodeSvc(0, mxtl::move(array), provider_));
     return MX_OK;
 }
 

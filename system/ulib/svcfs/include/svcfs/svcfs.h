@@ -22,17 +22,7 @@ protected:
     virtual ~ServiceProvider();
 };
 
-class Vnode : public fs::Vnode {
-public:
-    fs::Dispatcher* GetDispatcher() final;
-
-    ~Vnode() override;
-
-protected:
-    explicit Vnode(fs::Dispatcher* dispatcher);
-
-    fs::Dispatcher* dispatcher_;
-};
+using Vnode = fs::Vnode;
 
 class VnodeSvc : public Vnode {
 public:
@@ -45,14 +35,13 @@ public:
         }
     };
 
-    VnodeSvc(fs::Dispatcher* dispatcher,
-             uint64_t node_id,
+    VnodeSvc(uint64_t node_id,
              mxtl::Array<char> name,
              ServiceProvider* provider);
     ~VnodeSvc() override;
 
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(mx_handle_t h, uint32_t flags) final;
+    mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) final;
 
     uint64_t node_id() const { return node_id_; }
     const mxtl::Array<char>& name() const { return name_; }
@@ -74,7 +63,7 @@ private:
 
 class VnodeDir : public Vnode {
 public:
-    explicit VnodeDir(fs::Dispatcher* dispatcher);
+    explicit VnodeDir();
     ~VnodeDir() override;
 
     mx_status_t Open(uint32_t flags) final;
@@ -104,7 +93,7 @@ private:
 // Similar to VnodeDir, but doesn't support enumeration or watching.
 class VnodeProviderDir : public Vnode {
 public:
-    explicit VnodeProviderDir(fs::Dispatcher* dispatcher);
+    explicit VnodeProviderDir();
     ~VnodeProviderDir() override;
 
     mx_status_t Open(uint32_t flags) final;

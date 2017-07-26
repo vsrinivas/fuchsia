@@ -54,10 +54,6 @@ VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
 VnodeMemfs::~VnodeMemfs() {
 }
 
-fs::Dispatcher* VnodeMemfs::GetDispatcher() {
-    return memfs_global_dispatcher.get();
-}
-
 VnodeFile::VnodeFile() : vmo_(MX_HANDLE_INVALID), length_(0) {}
 VnodeFile::VnodeFile(mx_handle_t vmo, mx_off_t length) : vmo_(vmo), length_(length) {}
 
@@ -108,7 +104,7 @@ mx_status_t VnodeVmo::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeVmo::Serve(mx_handle_t h, uint32_t flags) {
+mx_status_t VnodeVmo::Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
     mx_handle_close(h);
     return MX_OK;
 }

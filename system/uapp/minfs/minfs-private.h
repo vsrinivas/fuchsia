@@ -241,8 +241,6 @@ private:
     mx_status_t ForEachDirent(DirArgs* args, const DirentCallback func);
 
 #ifdef __Fuchsia__
-    fs::Dispatcher* GetDispatcher() final;
-
     // The following functionality interacts with handles directly, and are not applicable outside
     // Fuchsia (since there is no "handle-equivalent" in host-side tools).
 

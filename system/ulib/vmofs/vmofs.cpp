@@ -30,7 +30,7 @@ static_assert(sizeof(dircookie_t) <= sizeof(vdircookie_t),
 
 // Vnode -----------------------------------------------------------------------
 
-Vnode::Vnode(fs::Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
+Vnode::Vnode() = default;
 
 Vnode::~Vnode() = default;
 
@@ -38,17 +38,12 @@ mx_status_t Vnode::Close() {
     return MX_OK;
 }
 
-fs::Dispatcher* Vnode::GetDispatcher() {
-    return dispatcher_;
-}
-
 // VnodeFile --------------------------------------------------------------------
 
-VnodeFile::VnodeFile(fs::Dispatcher* dispatcher,
-                     mx_handle_t vmo,
+VnodeFile::VnodeFile(mx_handle_t vmo,
                      mx_off_t offset,
                      mx_off_t length)
-    : Vnode(dispatcher), vmo_(vmo), offset_(offset), length_(length),
+    : vmo_(vmo), offset_(offset), length_(length),
       have_local_clone_(false) {}
 
 VnodeFile::~VnodeFile() {
@@ -73,8 +68,7 @@ mx_status_t VnodeFile::Open(uint32_t flags) {
     return MX_OK;
 }
 
-
-mx_status_t VnodeFile::Serve(mx_handle_t h, uint32_t flags) {
+mx_status_t VnodeFile::Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) {
     mx_handle_close(h);
     return MX_OK;
 }
@@ -140,11 +134,9 @@ mx_status_t VnodeFile::GetHandles(uint32_t flags, mx_handle_t* hnds,
 
 // VnodeDir --------------------------------------------------------------------
 
-VnodeDir::VnodeDir(fs::Dispatcher* dispatcher,
-                   mxtl::Array<mxtl::StringPiece> names,
+VnodeDir::VnodeDir(mxtl::Array<mxtl::StringPiece> names,
                    mxtl::Array<mxtl::RefPtr<Vnode>> children)
-    : Vnode(dispatcher),
-      names_(mxtl::move(names)),
+    : names_(mxtl::move(names)),
       children_(mxtl::move(children)) {
     MX_DEBUG_ASSERT(names_.size() == children_.size());
 }

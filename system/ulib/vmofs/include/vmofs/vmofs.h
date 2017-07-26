@@ -16,29 +16,23 @@ namespace vmofs {
 class Vnode : public fs::Vnode {
 public:
     mx_status_t Close() final;
-    fs::Dispatcher* GetDispatcher() final;
 
+    Vnode();
     ~Vnode() override;
 
     virtual uint32_t GetVType() = 0;
-
-protected:
-    explicit Vnode(fs::Dispatcher* dispatcher);
-
-    fs::Dispatcher* dispatcher_;
 };
 
 class VnodeFile : public Vnode {
 public:
     // The creator retains ownership of |vmo|.
-    VnodeFile(fs::Dispatcher* dispatcher,
-              mx_handle_t vmo,
+    VnodeFile(mx_handle_t vmo,
               mx_off_t offset,
               mx_off_t length);
     ~VnodeFile() override;
 
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Serve(mx_handle_t h, uint32_t flags) final;
+    mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,
@@ -57,8 +51,7 @@ class VnodeDir : public Vnode {
 public:
     // |names| must be sorted in ascending order and must have the same length
     // as |children|.
-    VnodeDir(fs::Dispatcher* dispatcher,
-             mxtl::Array<mxtl::StringPiece> names,
+    VnodeDir(mxtl::Array<mxtl::StringPiece> names,
              mxtl::Array<mxtl::RefPtr<Vnode>> children);
     ~VnodeDir() override;
 

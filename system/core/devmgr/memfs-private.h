@@ -35,7 +35,6 @@ public:
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) override;
     mx_status_t AttachRemote(mx_handle_t h) final;
-    fs::Dispatcher* GetDispatcher() final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
     // VnodeDirs can be unlinked, and this method will subsequently return false.
@@ -137,7 +136,7 @@ public:
     virtual mx_status_t Open(uint32_t flags) override;
 
 private:
-    mx_status_t Serve(mx_handle_t h, uint32_t flags) final;
+    mx_status_t Serve(fs::Dispatcher* dispatcher, mx_handle_t h, uint32_t flags) final;
     ssize_t Read(void* data, size_t len, size_t off) final;
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t GetHandles(uint32_t flags, mx_handle_t* hnds,

@@ -497,12 +497,6 @@ mx_status_t Minfs::Unmount() {
     return MX_OK;
 }
 
-#ifdef __Fuchsia__
-fs::Dispatcher* VnodeMinfs::GetDispatcher() {
-    return fs_->GetDispatcher();
-}
-#endif
-
 int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     uint32_t blocks = bc->Maxblk();
     uint32_t inodes = 32768;
