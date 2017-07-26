@@ -21,6 +21,8 @@ MODULE_STATIC_LIBS := system/ulib/elfload
 
 MODULE_LIBS := system/ulib/magenta system/ulib/c system/ulib/mxio
 
+MODULE_COMPILEFLAGS += $(NO_SANCOV)
+
 include make/module.mk
 
 
@@ -44,6 +46,6 @@ MODULE_EXPORT := so
 
 MODULE_SO_NAME := mini-process-subprocess
 
-MODULE_COMPILEFLAGS += $(NO_SANITIZERS)
+MODULE_COMPILEFLAGS += $(NO_SANCOV)
 
 include make/module.mk

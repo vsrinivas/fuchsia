@@ -7,6 +7,10 @@
 #include <mini-process/mini-process.h>
 
 // This function is the entire program that the child process will execute.
+__NO_SAFESTACK
+#ifdef __clang__
+__attribute__((no_sanitize("all")))
+#endif
 void _start(mx_handle_t channel, uintptr_t fnptr) {
     if (fnptr == 0) {
         // In this mode we don't have a VDSO so we don't care what the handle is
