@@ -31,6 +31,8 @@
 #define XHCI_RH_USB_3 1 // index of USB 2.0 virtual root hub device
 #define XHCI_RH_COUNT 2 // number of virtual root hub devices
 
+#define ISOCH_INTERRUPTER 1
+
 // state for endpoint's current transfer
 typedef struct {
     iotxn_phys_iter_t   phys_iter;
@@ -90,7 +92,11 @@ struct xhci {
     usb_bus_interface_t bus;
 
     bool legacy_irq_mode;
-    mx_handle_t irq_handle;
+    // Desired number of interrupters. This may be greater than what is
+    // supported by hardware. The actual number of interrupts configured
+    // will not exceed this, and is stored in num_interrupts.
+#define INTERRUPTER_COUNT 2
+    mx_handle_t irq_handles[INTERRUPTER_COUNT];
     mx_handle_t mmio_handle;
     mx_handle_t cfg_handle;
     thrd_t irq_thread;
@@ -113,18 +119,21 @@ struct xhci {
     mtx_t command_ring_lock;
     xhci_command_context_t* command_contexts[COMMAND_RING_SIZE];
 
-    // One event ring for now, but we will have multiple if we use multiple interrupters
-#define INTERRUPTER_COUNT 1
+    // Each interrupter has an event ring.
+    // Only indices up to num_interrupts will be populated.
     xhci_event_ring_t event_rings[INTERRUPTER_COUNT];
     erst_entry_t* erst_arrays[INTERRUPTER_COUNT];
     mx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT];
 
     size_t page_size;
     size_t max_slots;
-    size_t max_interrupters;
+    uint32_t num_interrupts;
     size_t context_size;
     // true if controller supports large ESIT payloads
     bool large_esit;
+
+    // For reading and writing to the USBSTS register from completer threads.
+    mtx_t usbsts_lock;
 
     // total number of ports for the root hub
     uint32_t rh_num_ports;
@@ -177,10 +186,14 @@ struct xhci {
     mx_vaddr_t scratch_pad_index_virt;
 };
 
+// Initializes num_interrupts field of xhci. The number of interrupts
+// is constrained by the number of interrupters supported by XHCI,
+// number of interrupts supported by MSI, and INTERRUPTER_COUNT.
+void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interrupts);
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
 int xhci_get_ep_ctx_state(xhci_endpoint_t* ep);
 mx_status_t xhci_start(xhci_t* xhci);
-void xhci_handle_interrupt(xhci_t* xhci, bool legacy);
+void xhci_handle_interrupt(xhci_t* xhci, bool legacy, uint32_t interrupter);
 void xhci_post_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint32_t control_bits,
                        xhci_command_context_t* context);
 void xhci_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected);

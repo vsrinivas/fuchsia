@@ -25,6 +25,9 @@
 
 #define MAX_SLOTS 255
 
+#define DEFAULT_PRIORITY 16
+#define HIGH_PRIORITY    24
+
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed) {
     xprintf("xhci_add_new_device\n");
 
@@ -169,15 +172,67 @@ static mx_protocol_device_t xhci_device_proto = {
     .release = xhci_release,
 };
 
-static int xhci_irq_thread(void* arg) {
+typedef struct completer {
+    uint32_t interrupter;
+    xhci_t *xhci;
+    uint32_t priority;
+} completer_t;
+
+static int completer_thread(void *arg) {
+    completer_t* completer = (completer_t*)arg;
+    mx_handle_t irq_handle = completer->xhci->irq_handles[completer->interrupter];
+
+    // TODO(johngro) : See MG-940.  Get rid of this.  For now we need thread
+    // priorities so that realtime transactions use the completer which ends
+    // up getting realtime latency guarantees.
+    mx_thread_set_priority(completer->priority);
+
+    while (1) {
+        mx_status_t wait_res;
+
+        wait_res = mx_interrupt_wait(irq_handle);
+        if (wait_res != MX_OK) {
+            printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
+            mx_interrupt_complete(irq_handle);
+            break;
+        }
+        mx_interrupt_complete(irq_handle);
+        xhci_handle_interrupt(completer->xhci, completer->xhci->legacy_irq_mode,
+                              completer->interrupter);
+    }
+    xprintf("xhci completer %u thread done\n", completer->interrupter);
+    free(completer);
+    return 0;
+}
+
+static int xhci_start_thread(void* arg) {
     xhci_t* xhci = (xhci_t*)arg;
-    xprintf("xhci_irq_thread start\n");
+    xprintf("xhci_start_thread start\n");
+
+    mx_status_t status;
+    completer_t* completers[xhci->num_interrupts];
+    uint32_t num_completers_initialized = 0;
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        completer_t *completer = calloc(1, sizeof(completer_t));
+        if (completer == NULL) {
+            status = MX_ERR_NO_MEMORY;
+            goto error_return;
+        }
+        completers[i] = completer;
+        completer->interrupter = i;
+        completer->xhci = xhci;
+        // We need a high priority thread for isochronous transfers.
+        // If there is only one interrupt available, that thread will need
+        // to be high priority.
+        completer->priority = (i == ISOCH_INTERRUPTER || xhci->num_interrupts == 1) ?
+                              HIGH_PRIORITY : DEFAULT_PRIORITY;
+        num_completers_initialized++;
+    }
 
     // xhci_start will block, so do this part here instead of in usb_xhci_bind
-    mx_status_t status = xhci_start(xhci);
+    status = xhci_start(xhci);
     if (status != MX_OK) {
-        free(xhci);
-        return status;
+        goto error_return;
     }
 
    device_add_args_t args = {
@@ -191,40 +246,31 @@ static int xhci_irq_thread(void* arg) {
 
     status = device_add(xhci->parent, &args, &xhci->mxdev);
     if (status != MX_OK) {
-        free(xhci);
-        return status;
+        goto error_return;
     }
 
-    // TODO(johngro) : See MG-940.  Get rid of this.  No matter how we approach
-    // the problem of realtime latency in magenta, clearly not all XHCI
-    // transactions are high priority.  At the very least, we need to split this
-    // system so that there are at least two completers bound to two IRQs, and
-    // that only realtime transactions use the completer which ends up getting
-    // realtime latency guarantees.
-    mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-
-    while (1) {
-        mx_status_t wait_res;
-
-        wait_res = mx_interrupt_wait(xhci->irq_handle);
-        if (wait_res != MX_OK) {
-            printf("unexpected pci_wait_interrupt failure (%d)\n", wait_res);
-            mx_interrupt_complete(xhci->irq_handle);
-            break;
-        }
-
-        mx_interrupt_complete(xhci->irq_handle);
-        xhci_handle_interrupt(xhci, xhci->legacy_irq_mode);
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        thrd_t thread;
+        thrd_create_with_name(&thread, completer_thread, completers[i], "completer_thread");
+        thrd_detach(thread);
     }
-    xprintf("xhci_irq_thread done\n");
+
+    xprintf("xhci_start_thread done\n");
     return 0;
+
+error_return:
+    free(xhci);
+    for (uint32_t i = 0; i < num_completers_initialized; i++) {
+        free(completers[i]);
+    }
+    return status;
 }
 
 static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    mx_handle_t irq_handle = MX_HANDLE_INVALID;
     mx_handle_t mmio_handle = MX_HANDLE_INVALID;
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;
     xhci_t* xhci = NULL;
+    uint32_t num_irq_handles_initialized = 0;
     mx_status_t status;
 
     pci_protocol_t pci;
@@ -253,8 +299,16 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
          goto error_return;
     }
 
+    uint32_t irq_cnt = 0;
+    status = pci_query_irq_mode_caps(&pci, MX_PCIE_IRQ_MODE_MSI, &irq_cnt);
+    if (status != MX_OK) {
+        printf("pci_query_irq_mode_caps failed %d\n", status);
+        goto error_return;
+    }
+    xhci_num_interrupts_init(xhci, mmio, irq_cnt);
+
     // select our IRQ mode
-    status = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_MSI, 1);
+    status = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_MSI, xhci->num_interrupts);
     if (status < 0) {
         mx_status_t status_legacy = pci_set_irq_mode(&pci, MX_PCIE_IRQ_MODE_LEGACY, 1);
 
@@ -266,16 +320,18 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
         }
 
         xhci->legacy_irq_mode = true;
+        xhci->num_interrupts = 1;
     }
 
-    // register for interrupts
-    status = pci_map_interrupt(&pci, 0, &irq_handle);
-    if (status != MX_OK) {
-        printf("usb_xhci_bind map_interrupt failed %d\n", status);
-        goto error_return;
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        // register for interrupts
+        status = pci_map_interrupt(&pci, i, &xhci->irq_handles[i]);
+        if (status != MX_OK) {
+            printf("usb_xhci_bind map_interrupt failed %d\n", status);
+            goto error_return;
+        }
+        num_irq_handles_initialized++;
     }
-
-    xhci->irq_handle = irq_handle;
     xhci->mmio_handle = mmio_handle;
     xhci->cfg_handle = cfg_handle;
 
@@ -290,7 +346,7 @@ static mx_status_t usb_xhci_bind(void* ctx, mx_device_t* dev, void** cookie) {
     }
 
     thrd_t thread;
-    thrd_create_with_name(&thread, xhci_irq_thread, xhci, "xhci_irq_thread");
+    thrd_create_with_name(&thread, xhci_start_thread, xhci, "xhci_start_thread");
     thrd_detach(thread);
 
     return MX_OK;
@@ -299,8 +355,8 @@ error_return:
     if (xhci) {
         free(xhci);
     }
-    if (irq_handle != MX_HANDLE_INVALID) {
-        mx_handle_close(irq_handle);
+    for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
+        mx_handle_close(xhci->irq_handles[i]);
     }
     if (mmio_handle != MX_HANDLE_INVALID) {
         mx_handle_close(mmio_handle);

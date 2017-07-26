@@ -240,7 +240,11 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
 
     if (isochronous) {
         if (length == 0) return MX_ERR_INVALID_ARGS;
+        if (xhci->num_interrupts > 1) {
+            interrupter_target = ISOCH_INTERRUPTER;
+        }
     }
+
     if (frame != 0) {
         if (!isochronous) {
             printf("frame scheduling only supported for isochronous transfers\n");

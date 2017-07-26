@@ -21,7 +21,12 @@
 //#define TRACE 1
 #include "xhci-debug.h"
 
-#define PAGE_ROUNDUP(x) ((x + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+#define ROUNDUP_TO(x, multiple) ((x + multiple - 1) & ~(multiple - 1))
+#define PAGE_ROUNDUP(x) ROUNDUP_TO(x, PAGE_SIZE)
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 // The Interrupter Moderation Interval prevents the controller from sending interrupts too often.
 // According to XHCI Rev 1.1 4.17.2, the default is 4000 (= 1 ms). We set it to 1000 (= 250 us) to
@@ -189,11 +194,22 @@ static void xhci_vmo_release(mx_handle_t handle, mx_vaddr_t virt) {
     mx_handle_close(handle);
 }
 
+void xhci_num_interrupts_init(xhci_t* xhci, void* mmio, uint32_t num_msi_interrupts) {
+    xhci_cap_regs_t* cap_regs = (xhci_cap_regs_t*)mmio;
+    volatile uint32_t* hcsparams1 = &cap_regs->hcsparams1;
+
+    uint32_t max_interrupters = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
+                                                HCSPARAMS1_MAX_INTRS_BITS);
+    xhci->num_interrupts = MIN(num_msi_interrupts,
+                               MIN(INTERRUPTER_COUNT, max_interrupters));
+}
+
 mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     mx_status_t result = MX_OK;
     mx_paddr_t* phys_addrs = NULL;
 
     list_initialize(&xhci->command_queue);
+    mtx_init(&xhci->usbsts_lock, mtx_plain);
     mtx_init(&xhci->command_ring_lock, mtx_plain);
     mtx_init(&xhci->command_queue_mutex, mtx_plain);
     mtx_init(&xhci->mfindex_mutex, mtx_plain);
@@ -211,8 +227,6 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
 
     xhci->max_slots = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_SLOTS_START,
                                       HCSPARAMS1_MAX_SLOTS_BITS);
-    xhci->max_interrupters = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
-                                             HCSPARAMS1_MAX_INTRS_BITS);
     xhci->rh_num_ports = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_PORTS_START,
                                          HCSPARAMS1_MAX_PORTS_BITS);
     xhci->context_size = (XHCI_READ32(hccparams1) & HCCPARAMS1_CSZ ? 64 : 32);
@@ -300,8 +314,23 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
 
     // DCBAA can only be 256 * sizeof(uint64_t) = 2048 bytes, so we have room for ERST array after DCBAA
     mx_off_t erst_offset = 256 * sizeof(uint64_t);
-    xhci->erst_arrays[0] = (void *)xhci->dcbaa + erst_offset;
-    xhci->erst_arrays_phys[0] = xhci->dcbaa_phys + erst_offset;
+
+    size_t array_bytes = ERST_ARRAY_SIZE * sizeof(erst_entry_t);
+    // MSI only supports up to 32 interupts, so the required ERST arrays will fit
+    // within the page. Potentially more pages will need to be allocated for MSI-X.
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        // Ran out of space in page.
+        if (erst_offset + array_bytes > PAGE_SIZE) {
+            printf("only have space for %u ERST arrays, want %u\n", i, xhci->num_interrupts);
+            goto fail;
+        }
+        xhci->erst_arrays[i] = (void *)xhci->dcbaa + erst_offset;
+        xhci->erst_arrays_phys[i] = xhci->dcbaa_phys + erst_offset;
+        // ERST arrays must be 64 byte aligned - see Table 54 in XHCI spec.
+        // dcbaa_phys is already page (and hence 64 byte) aligned, so only
+        // need to round the offset.
+        erst_offset = ROUNDUP_TO(erst_offset + array_bytes, 64);
+    }
 
     if (scratch_pad_bufs > 0) {
         uint64_t* scratch_pad_index = (uint64_t *)xhci->scratch_pad_index_virt;
@@ -337,10 +366,12 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         goto fail;
     }
 
-    result = xhci_event_ring_init(xhci, 0, EVENT_RING_SIZE);
-    if (result != MX_OK) {
-        printf("xhci_event_ring_init failed\n");
-        goto fail;
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        result = xhci_event_ring_init(xhci, i, EVENT_RING_SIZE);
+        if (result != MX_OK) {
+            printf("xhci_event_ring_init failed\n");
+            goto fail;
+        }
     }
 
     // initialize slots and endpoints
@@ -372,7 +403,9 @@ fail:
     }
     free(xhci->rh_map);
     free(xhci->rh_port_map);
-    xhci_event_ring_free(xhci, 0);
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        xhci_event_ring_free(xhci, i);
+    }
     xhci_transfer_ring_free(&xhci->command_ring);
     xhci_vmo_release(xhci->dcbaa_erst_handle, xhci->dcbaa_erst_virt);
     xhci_vmo_release(xhci->input_context_handle, xhci->input_context_virt);
@@ -461,8 +494,10 @@ mx_status_t xhci_start(xhci_t* xhci) {
     XHCI_SET_BITS32(&op_regs->config, CONFIG_MAX_SLOTS_ENABLED_START,
                     CONFIG_MAX_SLOTS_ENABLED_BITS, xhci->max_slots);
 
-    // initialize interrupter (only using one for now)
-    xhci_interrupter_init(xhci, 0);
+    // initialize interrupters
+    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+        xhci_interrupter_init(xhci, i);
+    }
 
     // start the controller with interrupts and mfindex wrap events enabled
     uint32_t start_flags = USBCMD_RS | USBCMD_INTE | USBCMD_EWE;
@@ -575,13 +610,23 @@ static void xhci_handle_events(xhci_t* xhci, int interrupter) {
     }
 }
 
-void xhci_handle_interrupt(xhci_t* xhci, bool legacy) {
+void xhci_handle_interrupt(xhci_t* xhci, bool legacy, uint32_t interrupter) {
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
-    const int interrupter = 0;
+
+    mtx_lock(&xhci->usbsts_lock);
 
     uint32_t status = XHCI_READ32(usbsts);
     uint32_t clear = status & USBSTS_CLEAR_BITS;
+    // Port Status Change Event TRBs will only appear on the primary interrupter.
+    // See section 4.9.4.3 of the XHCI spec.
+    // We don't want to be handling these on the high priority thread, so
+    // wait until we get the interrupt from interrupter 0.
+    if (interrupter != 0) {
+        clear &= ~USBSTS_PCD;
+    }
     XHCI_WRITE32(usbsts, clear);
+
+    mtx_unlock(&xhci->usbsts_lock);
 
     // If we are in legacy IRQ mode, clear the IP (Interrupt Pending) bit
     // from the IMAN register of our interrupter.
@@ -590,10 +635,12 @@ void xhci_handle_interrupt(xhci_t* xhci, bool legacy) {
         XHCI_SET32(&intr_regs->iman, IMAN_IP, IMAN_IP);
     }
 
-    if (status & USBSTS_EINT) {
-        xhci_handle_events(xhci, interrupter);
-    }
-    if (status & USBSTS_PCD) {
+    // Different interrupts might happen at the same time, so the USBSTS_EINT
+    // flag might be cleared even though there is an event on the event ring.
+    xhci_handle_events(xhci, interrupter);
+
+    if (interrupter == 0 && status & USBSTS_PCD) {
+        // All root hub ports will be scanned to avoid missing superspeed devices.
         xhci_handle_root_hub_change(xhci);
     }
 }
