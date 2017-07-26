@@ -405,14 +405,6 @@ mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldnam
 
     if (!IsDirectory() || !newdir->IsDirectory())
         return MX_ERR_BAD_STATE;
-    if ((oldlen == 1) && (oldname[0] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((oldlen == 2) && (oldname[0] == '.') && (oldname[1] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((newlen == 1) && (newname[0] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((newlen == 2) && (newname[0] == '.') && (newname[1] == '.'))
-        return MX_ERR_BAD_STATE;
 
     mxtl::RefPtr<Dnode> olddn;
     mx_status_t r;
@@ -484,11 +476,7 @@ mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldnam
 mx_status_t VnodeDir::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) {
     auto vn = mxtl::RefPtr<VnodeMemfs>::Downcast(mxtl::move(target));
 
-    if ((len == 1) && (name[0] == '.')) {
-        return MX_ERR_BAD_STATE;
-    } else if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
-        return MX_ERR_BAD_STATE;
-    } else if (!IsDirectory()) {
+    if (!IsDirectory()) {
         // Empty, unlinked parent
         return MX_ERR_BAD_STATE;
     }

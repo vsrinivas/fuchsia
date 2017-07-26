@@ -13,14 +13,6 @@
 
 namespace vmofs {
 
-static bool IsDot(const char* name, size_t len) {
-    return (len == 1) && (name[0] == '.');
-}
-
-static bool IsDotDot(const char* name, size_t len) {
-    return (len == 2) && (name[0] == '.') && (name[1] == '.');
-}
-
 struct dircookie_t {
     uint64_t last_id;
 };
@@ -151,13 +143,6 @@ mx_status_t VnodeDir::Open(uint32_t flags) {
 }
 
 mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    if (IsDot(name, len)) {
-        *out = mxtl::RefPtr<fs::Vnode>(this);
-        return MX_OK;
-    } else if (IsDotDot(name, len)) {
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
     mxtl::StringPiece value(name, len);
     auto* it = mxtl::lower_bound(names_.begin(), names_.end(), value);
     if (it == names_.end() || *it != value) {

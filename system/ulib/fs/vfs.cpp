@@ -29,6 +29,18 @@ mtx_t vfs_lock = MTX_INIT;
 namespace fs {
 namespace {
 
+bool is_dot(const char* name, size_t len) {
+    return len == 1 && strncmp(name, ".", len) == 0;
+}
+
+bool is_dot_dot(const char* name, size_t len) {
+    return len == 2 && strncmp(name, "..", len) == 0;
+}
+
+bool is_dot_or_dot_dot(const char* name, size_t len) {
+    return is_dot(name, len) || is_dot_dot(name, len);
+}
+
 // Trim a name before sending it to internal filesystem functions.
 // Trailing '/' characters imply that the name must refer to a directory.
 mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* dir_out) {
@@ -48,6 +60,17 @@ mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* d
     *len_out = len;
     *dir_out = is_dir;
     return MX_OK;
+}
+
+mx_status_t vfs_lookup(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+                       const char* name, size_t len) {
+    if (is_dot_dot(name, len)) {
+        return MX_ERR_NOT_SUPPORTED;
+    } else if (is_dot(name, len)) {
+        *out = mxtl::move(vn);
+        return MX_OK;
+    }
+    return vn->Lookup(out, name, len);
 }
 
 } // namespace anonymous
@@ -114,12 +137,17 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
     bool must_be_dir = false;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
         return r;
+    } else if (is_dot_dot(path, len)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     if (flags & O_CREAT) {
         if (must_be_dir && !S_ISDIR(mode)) {
             return MX_ERR_INVALID_ARGS;
+        } else if (is_dot(path, len)) {
+            return MX_ERR_NOT_SUPPORTED;
         }
+
         if ((r = vndir->Create(&vn, path, len, mode)) < 0) {
             if ((r == MX_ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
@@ -134,7 +162,7 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
         vndir->Notify(path, len, VFS_WATCH_EVT_ADDED);
     } else {
     try_open:
-        r = vndir->Lookup(&vn, path, len);
+        r = vfs_lookup(mxtl::move(vndir), &vn, path, len);
         if (r < 0) {
             return r;
         }
@@ -172,7 +200,12 @@ mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len)
     mx_status_t r;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
         return r;
+    } else if (is_dot(path, len)) {
+        return MX_ERR_UNAVAILABLE;
+    } else if (is_dot_dot(path, len)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
+
     return vndir->Unlink(path, len, must_be_dir);
 }
 
@@ -188,12 +221,18 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
         return r;
     } else if (old_must_be_dir) {
         return MX_ERR_NOT_DIR;
+    } else if (is_dot(oldname, oldlen)) {
+        return MX_ERR_UNAVAILABLE;
+    } else if (is_dot_dot(oldname, oldlen)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != MX_OK) {
         return r;
     } else if (new_must_be_dir) {
         return MX_ERR_NOT_DIR;
+    } else if (is_dot_or_dot_dot(newname, newlen)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
 
     // Look up the target vnode
@@ -219,10 +258,19 @@ mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpa
     mx_status_t r;
     if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != MX_OK) {
         return r;
+    } else if (is_dot(oldname, oldlen)) {
+        return MX_ERR_UNAVAILABLE;
+    } else if (is_dot_dot(oldname, oldlen)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
+
+
     if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != MX_OK) {
         return r;
+    } else if (is_dot_or_dot_dot(newname, newlen)) {
+        return MX_ERR_NOT_SUPPORTED;
     }
+
     r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
                           old_must_be_dir, new_must_be_dir);
     if (r != MX_OK) {
@@ -393,9 +441,7 @@ mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
             // traverse to the next segment
             size_t len = nextpath - path;
             nextpath++;
-            r = vn->Lookup(&vn, path, len);
-            assert(r <= 0);
-            if (r < 0) {
+            if ((r = vfs_lookup(mxtl::move(vn), &vn, path, len)) < 0) {
                 return r;
             }
             path = nextpath;

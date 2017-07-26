@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -897,14 +896,14 @@ mx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         if ((status = GetBno(txn, n, &bno)) != MX_OK) {
             return status;
         }
-        assert(bno != 0);
+        MX_DEBUG_ASSERT(bno != 0);
         txn->Enqueue(vmoid_, n, bno, 1);
 #else
         uint32_t bno;
         if ((status = GetBno(txn, n, &bno)) != MX_OK) {
             goto done;
         }
-        assert(bno != 0);
+        MX_DEBUG_ASSERT(bno != 0);
         char wdata[kMinfsBlockSize];
         if (fs_->bc_->Readblk(bno, wdata)) {
             return MX_ERR_IO;
@@ -942,16 +941,10 @@ done:
 
 mx_status_t VnodeMinfs::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     FS_TRACE(MINFS, "minfs_lookup() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
-    assert(len <= kMinfsMaxNameSize);
-    assert(memchr(name, '/', len) == NULL);
+    MX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
 
     if (!IsDirectory()) {
         FS_TRACE_ERROR("not directory\n");
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
-    if (len == 2 && name[0] == '.' && name[1] == '.') {
-        // ".." --> "." when every directory is its own root.
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -1076,7 +1069,7 @@ done:
     dc->off = off;
     dc->seqno = inode_.seq_num;
     r = df.BytesFilled();
-    assert(r <= len); // Otherwise, we're overflowing the input buffer.
+    MX_DEBUG_ASSERT(r <= len); // Otherwise, we're overflowing the input buffer.
     return static_cast<mx_status_t>(r);
 
 fail:
@@ -1128,8 +1121,8 @@ mx_status_t VnodeMinfs::AllocateHollow(Minfs* fs, mxtl::RefPtr<VnodeMinfs>* out)
 mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
     FS_TRACE(MINFS, "minfs_create() vn=%p(#%u) name='%.*s' mode=%#x\n",
           this, ino_, (int)len, name, mode);
-    assert(len <= kMinfsMaxNameSize);
-    assert(memchr(name, '/', len) == NULL);
+    MX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+
     if (!IsDirectory()) {
         return MX_ERR_NOT_SUPPORTED;
     }
@@ -1137,11 +1130,6 @@ mx_status_t VnodeMinfs::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, s
         return MX_ERR_BAD_STATE;
     }
 
-    if ((len == 1) && (name[0] == '.')) {
-        return MX_ERR_INVALID_ARGS;
-    } else if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
-        return MX_ERR_INVALID_ARGS;
-    }
     DirArgs args = DirArgs();
     args.name = name;
     args.len = len;
@@ -1231,16 +1219,10 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
 
 mx_status_t VnodeMinfs::Unlink(const char* name, size_t len, bool must_be_dir) {
     FS_TRACE(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
-    assert(len <= kMinfsMaxNameSize);
-    assert(memchr(name, '/', len) == NULL);
+    MX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+
     if (!IsDirectory()) {
         return MX_ERR_NOT_SUPPORTED;
-    }
-    if ((len == 1) && (name[0] == '.')) {
-        return MX_ERR_BAD_STATE;
-    }
-    if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
-        return MX_ERR_BAD_STATE;
     }
     WriteTxn txn(fs_->bc_.get());
     DirArgs args = DirArgs();
@@ -1371,23 +1353,12 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
     auto newdir = mxtl::RefPtr<VnodeMinfs>::Downcast(_newdir);
     FS_TRACE(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
           this, ino_, newdir.get(), newdir->ino_, (int)oldlen, oldname, (int)newlen, newname);
-    assert(oldlen <= kMinfsMaxNameSize);
-    assert(memchr(oldname, '/', oldlen) == NULL);
-    assert(newlen <= kMinfsMaxNameSize);
-    assert(memchr(newname, '/', newlen) == NULL);
+    MX_DEBUG_ASSERT(fs::vfs_valid_name(oldname, oldlen));
+    MX_DEBUG_ASSERT(fs::vfs_valid_name(newname, newlen));
+
     // ensure that the vnodes containing oldname and newname are directories
     if (!(IsDirectory() && newdir->IsDirectory()))
         return MX_ERR_NOT_SUPPORTED;
-
-    // rule out any invalid new/old names
-    if ((oldlen == 1) && (oldname[0] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((oldlen == 2) && (oldname[0] == '.') && (oldname[1] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((newlen == 1) && (newname[0] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((newlen == 2) && (newname[0] == '.') && (newname[1] == '.'))
-        return MX_ERR_BAD_STATE;
 
     mx_status_t status;
     mxtl::RefPtr<VnodeMinfs> oldvn = nullptr;
@@ -1455,19 +1426,13 @@ mx_status_t VnodeMinfs::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldn
 
 mx_status_t VnodeMinfs::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> _target) {
     FS_TRACE(MINFS, "minfs_link() vndir=%p(#%u) name='%.*s'\n", this, ino_, (int)len, name);
-    assert(len <= kMinfsMaxNameSize);
-    assert(memchr(name, '/', len) == NULL);
+    MX_DEBUG_ASSERT(fs::vfs_valid_name(name, len));
+
     if (!IsDirectory()) {
         return MX_ERR_NOT_SUPPORTED;
     } else if (IsDeletedDirectory()) {
         return MX_ERR_BAD_STATE;
     }
-
-    // rule out any invalid names
-    if ((len == 1) && (name[0] == '.'))
-        return MX_ERR_BAD_STATE;
-    if ((len == 2) && (name[0] == '.') && (name[1] == '.'))
-        return MX_ERR_BAD_STATE;
 
     auto target = mxtl::RefPtr<VnodeMinfs>::Downcast(_target);
     if (target->IsDirectory()) {

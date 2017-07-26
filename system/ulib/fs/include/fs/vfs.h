@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 
 #include <magenta/assert.h>
@@ -135,16 +136,24 @@ private:
     const size_t len_;
 };
 
+inline bool vfs_valid_name(const char* name, size_t len) {
+    return (len <= NAME_MAX &&
+            memchr(name, '/', len) == nullptr &&
+            (len != 1 || strncmp(name, ".", 1)) &&
+            (len != 2 || strncmp(name, "..", 2)));
+}
+
 // The VFS interface declares a default abtract Vnode class with
 // common operations that may be overwritten.
 //
 // The ops are used for dispatch and the lifecycle of Vnodes are owned
 // by RefPtrs.
 //
+// All names passed to the Vnode class are valid according to "vfs_valid_name".
+//
 // The lower half of flags (V_FLAG_RESERVED_MASK) is reserved
 // for usage by fs::Vnode, but the upper half of flags may
 // be used by subclasses of Vnode.
-
 class Vnode : public mxtl::RefCounted<Vnode> {
 public:
 #ifdef __Fuchsia__

@@ -97,16 +97,6 @@ void Dnode::AddChild(mxtl::RefPtr<Dnode> parent, mxtl::RefPtr<Dnode> child) {
 }
 
 mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out) const {
-    if ((len == 1) && (name[0] == '.')) {
-        if (out != nullptr) {
-            *out = nullptr;
-        }
-        return MX_OK;
-    }
-    if ((len == 2) && (name[0] == '.') && (name[1] == '.')) {
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
     auto dn = children_.find_if([&name, &len](const Dnode& elem) -> bool {
         return elem.NameMatch(name, len);
     });

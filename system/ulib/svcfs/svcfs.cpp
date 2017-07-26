@@ -96,13 +96,6 @@ mx_status_t VnodeDir::Open(uint32_t flags) {
 }
 
 mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    if (IsDot(name, len)) {
-        *out = mxtl::RefPtr<fs::Vnode>(this);
-        return MX_OK;
-    } else if (IsDotDot(name, len)) {
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
     mxtl::RefPtr<VnodeSvc> vn = nullptr;
     for (auto& child : services_) {
         if (child.NameMatch(name, len)) {
@@ -199,13 +192,6 @@ mx_status_t VnodeProviderDir::Open(uint32_t flags) {
 }
 
 mx_status_t VnodeProviderDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    if (IsDot(name, len)) {
-        *out = mxtl::RefPtr<fs::Vnode>(this);
-        return MX_OK;
-    } else if (IsDotDot(name, len)) {
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
     if (!IsValidServiceName(name, len)) {
         return MX_ERR_NOT_FOUND;
     }
