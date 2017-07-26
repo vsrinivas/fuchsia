@@ -20,6 +20,7 @@ ORIGINAL_CWD="$(pwd)"
 # These are the default checkers for clang and are always on by defualt,
 # unless they are explicitley disabled
 CHECKERS_DEFAULT_ON="\
+  apiModeling.google.GTest \
   core.CallAndMessage \
   core.DynamicTypePropagation \
   core.DivideZero \
@@ -28,8 +29,6 @@ CHECKERS_DEFAULT_ON="\
   core.StackAddressEscape \
   core.UndefinedBinaryOperatorResult \
   core.VLASize \
-  core.builtin.BuiltinFunctions \
-  core.builtin.NoReturnFunctions \
   core.uninitialized.ArraySubscript \
   core.uninitialized.Assign \
   core.uninitialized.Branch \
@@ -58,6 +57,10 @@ CHECKERS_DEFAULT_ON="\
 
 # Magenta specific checkers
 # Content may change in the future
+# TODO: This checker will only work after https://reviews.llvm.org/D36024 lands.
+CHECKERS_MAGENTA="alpha.magenta.MagentaHandleChecker"
+
+# Checkers that should be enabled
 CHECKERS_TO_ENABLE=""
 
 # Checkers that should be disabled
@@ -95,15 +98,16 @@ func_trap_handler() {
 # Register trap
 trap func_trap_handler SIGHUP SIGINT SIGTERM EXIT
 
+# Analyzer run mode. clang|magenta|all
+RUN_MODE="clang"
 # Path to python version of scan_build
 SCAN_BUILD_PY=""
 # Path to CC wrapper of scan_build_py
 SCAN_BUILD_PY_CC=""
 # Path to CXX wrapper of scan_build_py
 SCAN_BUILD_PY_CXX=""
-
-# Path to perl version of scan_build
-SCAN_BUILD_PERL=""
+# Build target
+BUILD_TARGET=""
 
 # Path to clang
 CLANG_PATH=""
@@ -117,12 +121,22 @@ TOOLCHAIN_PREFIX=""
 # Path to directory that contains scan-build-py/bin
 SCAN_BUILD_PY_PREFIX=""
 
+# Do not process unit tests flag
+DISABLE_UTEST=false
+
 function func_help {
   echo "help:"
   echo "-p <toolchain prefix>     : path to the directory containing bin/clang"
   echo "-s <scan-build-py prefix> : path to the directory bin/scan-build"
   echo "-o <output dir>           : path to output dir (default: AnalysisResult)"
-  echo "-h for help"
+  echo "-m <clang|magenta|all>    : run mode. clang mode will only enable checkers that"
+  echo "                            is enabled by default. magenta mode will only enable"
+  echo "                            magenta related checkers. all mode will enable both"
+  echo "                            default checkers and magenta related checkers."
+  echo "                            Default value is clang."
+  echo "-t <target>               : build target. Default is magenta-pc-x86-64"
+  echo "-n                        : do not run analyzer on unit tests"
+  echo "-h                        : for help"
   exit 1
 }
 
@@ -141,12 +155,15 @@ MAGENTA_ROOT="$SCRIPT_DIR/.."
 OUT_DIR="$MAGENTA_ROOT/AnalysisResult"
 
 # Read args from command line
-while getopts "p:s:o:h" opt; do
+while getopts "p:s:t:o:m:hn" opt; do
   case $opt in
     p) TOOLCHAIN_PREFIX="$OPTARG";;
     s) SCAN_BUILD_PY_PREFIX="$OPTARG";;
+    t) BUILD_TARGET="$OPTARG";;
     o) OUT_DIR="$OPTARG";;
+    m) RUN_MODE="${OPTARG,,}";;
     h) func_help;;
+    n) DISABLE_UTEST=true;;
     \?)
       echo "Inavlid option"
       func_help
@@ -203,6 +220,12 @@ func_test_exist "$SCAN_BUILD_PY_CC"
 func_test_exist "$SCAN_BUILD_PY_CXX"
 
 # Construct Checker Args that should be passed to scan-build
+if [ "$RUN_MODE" = "magenta" ]; then
+  CHECKERS_TO_DISABLE="${CHECKERS_TO_DISABLE} ${CHECKERS_DEFAULT_ON}"
+  CHECKERS_TO_ENABLE="${CHECKERS_TO_ENABLE} ${CHECKERS_MAGENTA}"
+elif [ "$RUN_MODE" = "all" ]; then
+  CHECKERS_TO_ENABLE="${CHECKERS_TO_ENABLE} ${CHECKERS_MAGENTA}"
+fi
 func_disable_checkers
 func_enable_checkers
 
@@ -210,17 +233,28 @@ func_enable_checkers
 # Change dir to magenta
 cd "$MAGENTA_ROOT"
 # Run scan-build on make
-make USE_CLANG=true clean &> /dev/null
+if [ ! -z "${BUILD_TARGET}" ]; then
+  make USE_CLANG=true "${BUILD_TARGET}" clean &> /dev/null
+else
+  make USE_CLANG=true clean &> /dev/null
+fi
 
 CMDL="${SCAN_BUILD_PY}"
-CMDL="$CMDL --use-cc ${CLANG_PATH}"
-CMDL="$CMDL --use-c++ ${CLANGXX_PATH}"
-CMDL="$CMDL -o ${OUT_DIR}"
-CMDL="$CMDL $CHECKERS"
-CMDL="$CMDL make USE_CLANG=true"
+CMDL="${CMDL} --use-cc ${CLANG_PATH}"
+CMDL="${CMDL} --use-c++ ${CLANGXX_PATH}"
+CMDL="${CMDL} --use-analyzer ${CLANGXX_PATH}"
+CMDL="${CMDL} -o ${OUT_DIR}"
+CMDL="${CMDL} ${CHECKERS}"
+CMDL="${CMDL} make USE_CLANG=true"
+if [ "${DISABLE_UTEST}" = true ]; then
+  CMDL="$CMDL DISABLE_UTEST=true"
+fi
 CMDL="$CMDL CC=${SCAN_BUILD_PY_CC}"
 CMDL="$CMDL CXX=${SCAN_BUILD_PY_CXX}"
 CMDL="$CMDL -j32"
+if [ ! -z "${BUILD_TARGET}" ]; then
+  CMDL="$CMDL ${BUILD_TARGET}"
+fi
 
 # Execute
 $CMDL
