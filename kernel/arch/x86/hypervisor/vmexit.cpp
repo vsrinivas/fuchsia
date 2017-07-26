@@ -89,7 +89,7 @@ static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
 /* Removes the highest priority interrupt from the bitmap, and returns it. */
 static uint32_t local_apic_pop_interrupt(LocalApicState* local_apic_state) {
     // TODO(abdulla): Handle interrupt masking.
-    AutoSpinLock lock(local_apic_state->interrupt_lock);
+    AutoSpinLock lock(&local_apic_state->interrupt_lock);
     size_t vector = local_apic_state->interrupt_bitmap.Scan(0, kNumInterrupts, false);
     if (vector == kNumInterrupts)
         return kNumInterrupts;
@@ -99,7 +99,7 @@ static uint32_t local_apic_pop_interrupt(LocalApicState* local_apic_state) {
 }
 
 static void local_apic_pending_interrupt(LocalApicState* local_apic_state, uint32_t vector) {
-    AutoSpinLock lock(local_apic_state->interrupt_lock);
+    AutoSpinLock lock(&local_apic_state->interrupt_lock);
     // We reverse the value, as RawBitmapGeneric::Scan will return the
     // lowest priority interrupt, but we need the highest priority.
     local_apic_state->interrupt_bitmap.SetOne(X86_MAX_INT - vector);

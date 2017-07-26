@@ -239,7 +239,7 @@ status_t UserThread::set_name(const char* name, size_t len) {
     if (len >= MX_MAX_NAME_LEN)
         len = MX_MAX_NAME_LEN - 1;
 
-    AutoSpinLock lock(name_lock_);
+    AutoSpinLock lock(&name_lock_);
     memcpy(thread_.name, name, len);
     memset(thread_.name + len, 0, MX_MAX_NAME_LEN - len);
     return MX_OK;
@@ -248,7 +248,7 @@ status_t UserThread::set_name(const char* name, size_t len) {
 void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
     canary_.Assert();
 
-    AutoSpinLock lock(name_lock_);
+    AutoSpinLock lock(&name_lock_);
     memcpy(out_name, thread_.name, MX_MAX_NAME_LEN);
 }
 

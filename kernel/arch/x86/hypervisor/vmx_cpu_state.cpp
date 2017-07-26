@@ -253,7 +253,7 @@ VmxCpuState::~VmxCpuState() {
 }
 
 status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
-    AutoSpinLock lock(vpid_lock_);
+    AutoSpinLock lock(&vpid_lock_);
     size_t first_unset;
     bool all_set = vpid_bitmap_.Get(0, kNumVpids, &first_unset);
     if (all_set)
@@ -265,7 +265,7 @@ status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
 }
 
 status_t VmxCpuState::ReleaseVpid(uint16_t vpid) {
-    AutoSpinLock lock(vpid_lock_);
+    AutoSpinLock lock(&vpid_lock_);
     if (vpid == 0 || !vpid_bitmap_.GetOne(vpid - 1))
         return MX_ERR_INVALID_ARGS;
     return vpid_bitmap_.ClearOne(vpid - 1);

@@ -120,7 +120,7 @@ status_t hpet_timer_disable(uint n)
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
     hpet_regs->timers[n].conf_caps &= ~TIMER_CONF_INT_EN;
 
     return MX_OK;
@@ -133,7 +133,7 @@ uint64_t hpet_get_value(void)
 
 status_t hpet_set_value(uint64_t v)
 {
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
 
     if (hpet_regs->general_config & GEN_CONF_EN) {
         return MX_ERR_BAD_STATE;
@@ -149,7 +149,7 @@ status_t hpet_timer_configure_irq(uint n, uint irq)
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
 
     uint32_t irq_bitmap = TIMER_CAP_IRQS(hpet_regs->timers[n].conf_caps);
     if (irq >= 32 || !BIT_SET(irq_bitmap, irq)) {
@@ -170,7 +170,7 @@ status_t hpet_timer_set_oneshot(uint n, uint64_t deadline)
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
 
     uint64_t difference = deadline - hpet_get_value();
     if (unlikely(difference > (1ULL>>63))) {
@@ -195,7 +195,7 @@ status_t hpet_timer_set_periodic(uint n, uint64_t period)
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
 
     if (!TIMER_CAP_PERIODIC(hpet_regs->timers[n].conf_caps)) {
         return MX_ERR_NOT_SUPPORTED;
@@ -225,7 +225,7 @@ void hpet_enable(void)
 {
     DEBUG_ASSERT(hpet_is_present());
 
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
     hpet_regs->general_config |= GEN_CONF_EN;
 }
 
@@ -233,7 +233,7 @@ void hpet_disable(void)
 {
     DEBUG_ASSERT(hpet_is_present());
 
-    AutoSpinLock guard(lock);
+    AutoSpinLock guard(&lock);
     hpet_regs->general_config &= ~GEN_CONF_EN;
 }
 

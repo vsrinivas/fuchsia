@@ -16,8 +16,14 @@
 
 class TA_SCOPED_CAP AutoSpinLock {
 public:
-    explicit AutoSpinLock(spin_lock_t& lock) : spinlock_(&lock) { acquire(); }
-    explicit AutoSpinLock(SpinLock& lock) : spinlock_(lock.GetInternal()) { acquire(); }
+    explicit AutoSpinLock(spin_lock_t* lock) : spinlock_(lock) {
+        DEBUG_ASSERT(lock);
+        acquire();
+    }
+    explicit AutoSpinLock(SpinLock* lock) : spinlock_(lock->GetInternal()) {
+        DEBUG_ASSERT(lock);
+        acquire();
+    }
     ~AutoSpinLock() { release(); }
 
     void release() TA_REL() {
@@ -37,8 +43,14 @@ private:
 
 class AutoSpinLockIrqSave {
 public:
-    explicit AutoSpinLockIrqSave(spin_lock_t& lock) : spinlock_(&lock) { acquire(); }
-    explicit AutoSpinLockIrqSave(SpinLock& lock) : spinlock_(lock.GetInternal()) { acquire(); }
+    explicit AutoSpinLockIrqSave(spin_lock_t* lock) : spinlock_(lock) {
+        DEBUG_ASSERT(lock);
+        acquire();
+    }
+    explicit AutoSpinLockIrqSave(SpinLock* lock) : spinlock_(lock->GetInternal()) {
+        DEBUG_ASSERT(lock);
+        acquire();
+    }
     ~AutoSpinLockIrqSave() { release(); }
 
     void release() {
