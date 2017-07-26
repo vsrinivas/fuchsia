@@ -7,6 +7,7 @@
 #include <string.h>
 #include <time.h>
 
+#include <hypervisor/bits.h>
 #include <hypervisor/block.h>
 #include <hypervisor/decode.h>
 #include <hypervisor/ports.h>
@@ -99,44 +100,8 @@
 #define PM1A_REGISTER_STATUS                    0x0
 #define PM1A_REGISTER_ENABLE                    (ACPI_PM1_REGISTER_WIDTH / 8)
 
-/* PCI BAR register addresses. */
-#define PCI_REGISTER_BAR_0                      0x10
-#define PCI_REGISTER_BAR_1                      0x14
-#define PCI_REGISTER_BAR_2                      0x18
-#define PCI_REGISTER_BAR_3                      0x1c
-#define PCI_REGISTER_BAR_4                      0x20
-#define PCI_REGISTER_BAR_5                      0x24
-
-/* PCI configuration constants. */
-#define PCI_BAR_IO_TYPE_PIO                     0x01
-#define PCI_VENDOR_ID_VIRTIO                    0x1af4
-#define PCI_VENDOR_ID_INTEL                     0x8086
-#define PCI_DEVICE_ID_VIRTIO_BLOCK              0x1042
-#define PCI_DEVICE_ID_INTEL_Q35                 0x29c0
-#define PCI_CLASS_BRIDGE_HOST                   0x0600
-
-/* PCI device constants. */
-#define PCI_DEVICE_INVALID                      UINT16_MAX
-
-/* PCI macros. */
-// From a given address, get the PCI device index.
-#define PCI_DEVICE(addr)                        (((addr - PCI_PHYS_BASE(0, 0, 0)) >> 15) & 0x1f)
-
-// Get the PCI type 1 address for a register.
-#define PCI_TYPE1_ADDR(bus, device, function, reg) \
-    (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) | (reg))
-
-/* Bit macros. */
-#define CLEAR_BITS(x, nbits, shift)             ((x) & (~(((1lu << (nbits)) - 1) << (shift))))
-#define BIT_MASK(nbits)                         ((1lu << (nbits)) - 1)
-
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT                        0xd
-
-static const uint16_t kPciDeviceBarSize[] = {
-    0x10,   // PCI_DEVICE_ROOT_COMPLEX
-    0x40,   // PCI_DEVICE_VIRTIO_BLOCK
-};
 
 static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
                                      const mx_guest_memory_t* memory, instruction_t* inst) {
@@ -221,69 +186,98 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t handle_pci_device(pci_device_state_t* pci_device_state,
-                                     const mx_guest_memory_t* memory, instruction_t* inst,
-                                     uint8_t device, uint16_t vendor_id, uint16_t device_id) {
-    MX_ASSERT(memory->addr >= PCI_PHYS_BASE(0, device, 0));
-    mx_vaddr_t offset = memory->addr - PCI_PHYS_BASE(0, device, 0);
-    switch (offset) {
-    case PCI_CONFIG_VENDOR_ID:
-        return inst_read16(inst, vendor_id);
-    case PCI_CONFIG_DEVICE_ID:
-        return inst_read16(inst, device_id);
-    case PCI_CONFIG_COMMAND:
-        return inst_rw16(inst, &pci_device_state->command);
-    case PCI_CONFIG_STATUS:
-        switch (inst->type) {
-        case INST_MOV_READ:
-            return inst_read16(inst, PCI_STATUS_INTERRUPT);
-        case INST_TEST:
-            return inst_test8(inst, PCI_STATUS_NEW_CAPS, PCI_STATUS_INTERRUPT);
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    case PCI_CONFIG_HEADER_TYPE:
-        return inst_read8(inst, PCI_HEADER_TYPE_STANDARD);
-    case PCI_CONFIG_INTERRUPT_PIN:
-        return inst_read8(inst, 1);
-    case PCI_CONFIG_CAPABILITIES:
-    case PCI_CONFIG_CLASS_CODE:
-    case PCI_CONFIG_CLASS_CODE_BASE:
-    case PCI_CONFIG_CLASS_CODE_SUB:
-    case PCI_CONFIG_REVISION_ID:
-        return inst_read8(inst, 0);
-    case PCI_REGISTER_BAR_0: {
-        uint32_t* bar = &pci_device_state->bar[0];
-        const uint32_t value = (pci_device_state->command & PCI_COMMAND_IO_EN) ?
-                               *bar | PCI_BAR_IO_TYPE_PIO : UINT32_MAX;
-        switch (inst->type) {
-        case INST_MOV_READ:
-            return inst_read32(inst, value);
-        case INST_MOV_WRITE: {
-            mx_status_t status = inst_write32(inst, bar);
-            if (status != MX_OK)
-                return status;
-            // We zero bits in the BAR in order to set the size.
-            *bar &= ~(kPciDeviceBarSize[device] - 1);
-            *bar |= PCI_BAR_IO_TYPE_PIO;
-            return MX_OK;
-        }
-        case INST_TEST:
-            return inst_test8(inst, PCI_BAR_IO_TYPE_PIO, value);
+static mx_status_t handle_pci_config_read(guest_state_t* guest_state,
+                                          uint8_t bus, uint8_t device,
+                                          uint8_t function, uint8_t reg,
+                                          size_t len, uint32_t* value) {
+    // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
+    //
+    // The host bus to PCI bridge must unambiguously report attempts to read the
+    // Vendor ID of non-existent devices. Since 0 FFFFh is an invalid Vendor ID,
+    // it is adequate for the host bus to PCI bridge to return a value of all
+    // 1's on read accesses to Configuration Space registers of non-existent
+    // devices.
+    if (device >= PCI_MAX_DEVICES) {
+        *value = (uint32_t) BIT_MASK(len * 8);
+        return MX_OK;
+    }
+
+    pci_device_state_t* device_state = &guest_state->pci_device_state[device];
+    return pci_config_read(device_state, bus, device, function, reg,
+                           len, value);
+}
+
+static mx_status_t handle_pci_config_write(guest_state_t* guest_state,
+                                           uint8_t bus, uint8_t device,
+                                           uint8_t function, uint8_t reg,
+                                           size_t len, uint32_t value) {
+    // We don't expect software to ever write to an unimplemented device.
+    if (device >= PCI_MAX_DEVICES)
+        return MX_ERR_OUT_OF_RANGE;
+
+    pci_device_state_t* device_state = &guest_state->pci_device_state[device];
+    return pci_config_write(device_state, bus, device, function, reg,
+                            len, value);
+}
+
+static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
+                                          uint8_t device, instruction_t* inst,
+                                          const mx_guest_memory_t* memory) {
+    mx_status_t status;
+    uint32_t offset = memory->addr - PCI_PHYS_BASE(0, device, 0);
+    switch (inst->type) {
+    case INST_TEST: {
+        uint32_t result = 0;
+        status = handle_pci_config_read(guest_state, 0, device, 0, offset,
+                                        inst->mem, &result);
+        if (status != MX_OK)
+            return status;
+
+        switch (inst->mem) {
+        case 1:
+            return inst_test8(inst, inst->imm, result);
         default:
             return MX_ERR_NOT_SUPPORTED;
         }
     }
-    case PCI_REGISTER_BAR_1:
-    case PCI_REGISTER_BAR_2:
-    case PCI_REGISTER_BAR_3:
-    case PCI_REGISTER_BAR_4:
-    case PCI_REGISTER_BAR_5: {
-        uint32_t default_bar = 0;
-        return inst_rw32(inst, &default_bar);
-    }}
+    case INST_MOV_READ: {
+        uint32_t result = 0;
+        status = handle_pci_config_read(guest_state, 0, device, 0, offset,
+                                        inst->mem, &result);
+        if (status != MX_OK)
+            return status;
 
-    fprintf(stderr, "Unhandled PCI device %d %#lx\n", device, offset);
+        switch (inst->mem) {
+        case 1:
+            return inst_read8(inst, result);
+        case 2:
+            return inst_read16(inst, result);
+        case 4:
+            return inst_read32(inst, result);
+        default:
+            return MX_ERR_NOT_SUPPORTED;
+        }
+    }
+    case INST_MOV_WRITE: {
+        uint32_t value = 0;
+        switch (inst->mem) {
+        case 2: {
+            status = inst_write16(inst, (uint16_t*) &value);
+            break;
+        }
+        case 4:
+            status = inst_write32(inst, &value);
+            break;
+        default:
+            status = MX_ERR_NOT_SUPPORTED;
+            break;
+        }
+        if (status != MX_OK)
+            return status;
+
+        return handle_pci_config_write(guest_state, 0, device, 0, offset,
+                                       inst->mem, value);
+    }}
     return MX_ERR_NOT_SUPPORTED;
 }
 
@@ -331,20 +325,18 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
         case PCI_PHYS_BASE(0, PCI_DEVICE_ROOT_COMPLEX, 0) ...
              PCI_PHYS_TOP(0, PCI_DEVICE_ROOT_COMPLEX, 0): {
             mtx_lock(&guest_state->mutex);
-            pci_device_state_t* pci_device_state =
-                &guest_state->pci_device_state[PCI_DEVICE_ROOT_COMPLEX];
-            status = handle_pci_device(pci_device_state, memory, &inst, PCI_DEVICE_ROOT_COMPLEX,
-                                       PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_Q35);
+            status = handle_pci_mmio_access(vcpu_context->guest_state,
+                                            PCI_DEVICE_ROOT_COMPLEX, &inst,
+                                            memory);
             mtx_unlock(&guest_state->mutex);
             break;
         }
         case PCI_PHYS_BASE(0, PCI_DEVICE_VIRTIO_BLOCK, 0) ...
              PCI_PHYS_TOP(0, PCI_DEVICE_VIRTIO_BLOCK, 0): {
             mtx_lock(&guest_state->mutex);
-            pci_device_state_t* pci_device_state =
-                &guest_state->pci_device_state[PCI_DEVICE_VIRTIO_BLOCK];
-            status = handle_pci_device(pci_device_state, memory, &inst, PCI_DEVICE_VIRTIO_BLOCK,
-                                       PCI_VENDOR_ID_VIRTIO, PCI_DEVICE_ID_VIRTIO_BLOCK);
+            status = handle_pci_mmio_access(vcpu_context->guest_state,
+                                            PCI_DEVICE_VIRTIO_BLOCK, &inst,
+                                            memory);
             mtx_unlock(&guest_state->mutex);
             break;
         }
@@ -409,24 +401,6 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     return MX_OK;
 }
 
-// TODO(abdulla): Introduce a syscall to associate a port range with a FIFO, so
-// that we can directly communicate with the handler and remove this function.
-static uint16_t pci_device(pci_device_state_t* pci_device_state, uint16_t port,
-                           uint16_t* port_off) {
-    for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
-        uint16_t bar0 = pci_device_state[i].bar[0];
-        if (!(bar0 & PCI_BAR_IO_TYPE_PIO))
-            continue;
-        uint16_t bar_base = bar0 & ~PCI_BAR_IO_TYPE_PIO;
-        uint16_t bar_size = kPciDeviceBarSize[i];
-        if (port >= bar_base && port < bar_base + bar_size) {
-            *port_off = port - bar_base;
-            return i;
-        }
-    }
-    return PCI_DEVICE_INVALID;
-}
-
 static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
 #if __x86_64__
     mx_vcpu_io_t vcpu_io;
@@ -464,30 +438,42 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
         uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
         uint32_t addr = io_port_state->pci_config_address >> bit_offset;
-        uint32_t bit_mask = BIT_MASK(io->access_size * 8);
+        uint32_t bit_mask = (uint32_t) BIT_MASK(io->access_size * 8);
         vcpu_io.access_size = io->access_size;
         vcpu_io.u32 = (vcpu_io.u32 & ~bit_mask) | (addr & bit_mask);
         break;
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
-        // TODO(tjdetwiler): Temporarily stub out these ports to appease linux
-        // with broken PCI until they're wired into accessing the virtual PCI
-        // bus. Linux wants to find a host bridge so we'll give it one.
-        switch (io_port_state->pci_config_address) {
-        case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_VENDOR_ID):
-            vcpu_io.access_size = io->access_size;
-            vcpu_io.u16 = PCI_VENDOR_ID_INTEL;
+    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
+        size_t offset = io->port - PCI_CONFIG_DATA_PORT_BASE;
+        uint32_t addr = io_port_state->pci_config_address;
+        uint32_t register_value = 0;
+        status = handle_pci_config_read(vcpu_context->guest_state,
+                                        PCI_TYPE1_BUS(addr),
+                                        PCI_TYPE1_DEVICE(addr),
+                                        PCI_TYPE1_FUNCTION(addr),
+                                        PCI_TYPE1_REGISTER(addr) + offset,
+                                        io->access_size, &register_value);
+        if (status != MX_OK) {
+            return status;
+        }
+
+        switch (io->access_size) {
+        case 1:
+            vcpu_io.u8 = register_value;
             break;
-        case PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_CLASS_CODE_SUB):
-            vcpu_io.access_size = 2;
-            vcpu_io.u16 = PCI_CLASS_BRIDGE_HOST;
+        case 2:
+            vcpu_io.u16 = register_value;
+            break;
+        case 4:
+            vcpu_io.u32 = register_value;
             break;
         default:
-            vcpu_io.access_size = io->access_size;
-            vcpu_io.u32 = UINT32_MAX;
-            break;
+            fprintf(stderr, "Unhandled port in %#x\n", io->port);
+            return MX_ERR_NOT_SUPPORTED;
         }
+        vcpu_io.access_size = io->access_size;
         break;
+    }
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
         vcpu_io.access_size = 2;
         vcpu_io.u16 = 0;
@@ -551,7 +537,7 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         // portions of the 32bit register without trampling the other bits.
         uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
         uint32_t bit_size = io->access_size * 8;
-        uint32_t bit_mask = BIT_MASK(bit_size);
+        uint32_t bit_mask = (uint32_t) BIT_MASK(bit_size);
 
         // Clear out the bits we'll be modifying.
         io_port_state->pci_config_address = CLEAR_BITS(io_port_state->pci_config_address,
@@ -561,9 +547,17 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         io_port_state->pci_config_address |= ((io->u32 & bit_mask) << bit_offset);
         return MX_OK;
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
-        // TODO(tjdetwiler): Temporarily stub out these ports.
-        return MX_OK;
+    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
+        size_t offset = io->port - PCI_CONFIG_DATA_PORT_BASE;
+        uint32_t addr = io_port_state->pci_config_address;
+        return handle_pci_config_write(vcpu_context->guest_state,
+                                       PCI_TYPE1_BUS(addr),
+                                       PCI_TYPE1_DEVICE(addr),
+                                       PCI_TYPE1_FUNCTION(addr),
+                                       PCI_TYPE1_REGISTER(addr) + offset,
+                                       io->access_size, io->u32);
+    }
+
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;

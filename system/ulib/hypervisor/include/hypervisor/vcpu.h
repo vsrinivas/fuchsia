@@ -6,15 +6,11 @@
 
 #include <threads.h>
 
+#include <hypervisor/pci.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
-
-#define PCI_DEVICE_ROOT_COMPLEX     0u
-#define PCI_DEVICE_VIRTIO_BLOCK     1u
-#define PCI_MAX_DEVICES             2u
-#define PCI_MAX_BARS                1u
 
 struct vring_desc;
 struct vring_avail;
@@ -65,14 +61,6 @@ typedef struct virtio_queue {
     volatile struct vring_used* used;   // guest-controlled
     volatile uint16_t* avail_event;     // guest-controlled
 } virtio_queue_t;
-
-/* Stores the state of PCI devices across VM exists. */
-typedef struct pci_device_state {
-    // Command register.
-    uint16_t command;
-    // Base address registers.
-    uint32_t bar[PCI_MAX_BARS];
-} pci_device_state_t;
 
 typedef struct guest_state {
     mx_handle_t guest;

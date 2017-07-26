@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <hw/pci.h>
+#include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/ports.h>
 #include <hypervisor/vcpu.h>
@@ -136,7 +138,7 @@ static bool write_pci_config_addr_port(void) {
 
     test_t test;
     mx_guest_packet_t packet = {};
-    ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
+    ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test.\n");
 
     // 32 bit write.
     packet.type = MX_GUEST_PKT_IO;
@@ -187,7 +189,7 @@ static bool read_pci_config_addr_port(void) {
 
     test_t test;
     mx_guest_packet_t packet = {};
-    ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
+    ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test.\n");
     test.guest_state.io_port_state.pci_config_address = 0x12345678;
 
     // 32 bit read (bits 31..0).
@@ -196,6 +198,7 @@ static bool read_pci_config_addr_port(void) {
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
     packet.io.access_size = 4;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    EXPECT_EQ(4, test.vcpu_io.access_size, "Incorrect IO access_size.\n");
     EXPECT_EQ(
         0x12345678u,
         test.vcpu_io.u32,
@@ -208,6 +211,7 @@ static bool read_pci_config_addr_port(void) {
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
     packet.io.access_size = 2;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    EXPECT_EQ(2, test.vcpu_io.access_size, "Incorrect IO access_size.\n");
     EXPECT_EQ(
         0x1234u,
         test.vcpu_io.u16,
@@ -220,10 +224,66 @@ static bool read_pci_config_addr_port(void) {
     packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
     packet.io.access_size = 1;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    EXPECT_EQ(1, test.vcpu_io.access_size, "Incorrect IO access_size.\n");
     EXPECT_EQ(
         0x56u,
         test.vcpu_io.u8,
         "Incorrect address read from PCI address port.\n");
+
+    tear_down(&test);
+    END_TEST;
+}
+
+/* The address written to the data port (0xcf8) is 4b aligned. The offset into
+ * the data port range 0xcfc-0xcff is added to the address to access partial
+ * words.
+ */
+static bool read_pci_config_data_port(void) {
+    BEGIN_TEST;
+
+    test_t test;
+    uint32_t expected_value;
+    mx_guest_packet_t packet = {};
+    ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test.\n");
+
+    // 16-bit read.
+    test.guest_state.io_port_state.pci_config_address = PCI_TYPE1_ADDR(0, 0, 0, 0);
+    packet.type = MX_GUEST_PKT_IO;
+    packet.io.input = true;
+    packet.io.port = PCI_CONFIG_DATA_PORT_BASE;
+    packet.io.access_size = 2;
+    expected_value = PCI_VENDOR_ID_INTEL;
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    EXPECT_EQ(2, test.vcpu_io.access_size, "Incorrect IO access_size.\n");
+    EXPECT_EQ(
+        (uint32_t)PCI_VENDOR_ID_INTEL,
+        test.vcpu_io.u16,
+        "Incorrect value read from PCI data port.\n");
+
+    // 32-bit read from same address. Result should now contain the Device ID
+    // in the upper 16 bits
+    packet.io.access_size = 4;
+    expected_value = PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    EXPECT_EQ(4, test.vcpu_io.access_size, "Incorrect IO access_size.\n");
+    EXPECT_EQ(expected_value, test.vcpu_io.u32, "Incorrect value read from PCI data port.\n");
+
+    // 16-bit read of upper half-word.
+    //
+    // Device ID is 2b aligned and the PCI config address register can only hold
+    // a 4b aligned address. The offset into the word addressed by the PCI
+    // address port is added to the data port address.
+    test.vcpu_io.u32 = 0;
+    packet.io.access_size = 2;
+    expected_value = PCI_DEVICE_ID_INTEL_Q35;
+    test.guest_state.io_port_state.pci_config_address = PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID);
+    // Verify we're using a 4b aligned register address.
+    EXPECT_EQ(0u, test.guest_state.io_port_state.pci_config_address & BIT_MASK(2), "");
+    // Add the register offset to the data port base address.
+    packet.io.port = PCI_CONFIG_DATA_PORT_BASE + (PCI_CONFIG_DEVICE_ID & BIT_MASK(2));
+    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    EXPECT_EQ(2, test.vcpu_io.access_size, "Incorrect IO access_size.\n");
+    EXPECT_EQ(expected_value, test.vcpu_io.u16, "Incorrect value read from PCI data port.\n");
 
     tear_down(&test);
     END_TEST;
@@ -234,4 +294,5 @@ RUN_TEST(handle_input_packet);
 RUN_TEST(handle_output_packet);
 RUN_TEST(read_pci_config_addr_port)
 RUN_TEST(write_pci_config_addr_port)
+RUN_TEST(read_pci_config_data_port)
 END_TEST_CASE(vcpu)
