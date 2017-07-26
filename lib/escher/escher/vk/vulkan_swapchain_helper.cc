@@ -8,6 +8,7 @@
 #include "escher/renderer/framebuffer.h"
 #include "escher/scene/camera.h"
 #include "escher/scene/stage.h"
+#include "escher/util/trace_macros.h"
 
 namespace escher {
 
@@ -34,20 +35,26 @@ void VulkanSwapchainHelper::DrawFrame(Renderer* renderer,
   auto& render_finished_semaphore =
       render_finished_semaphores_[next_semaphore_index_];
 
-  auto result =
-      device_.acquireNextImageKHR(swapchain_.swapchain, UINT64_MAX,
-                                  image_available_semaphore->value(), nullptr);
+  uint32_t swapchain_index;
+  {
+    TRACE_DURATION("gfx", "escher::VulkanSwapchain::Acquire");
 
-  if (result.result == vk::Result::eSuboptimalKHR) {
-    FTL_DLOG(WARNING) << "suboptimal swapchain configuration";
-  } else if (result.result != vk::Result::eSuccess) {
-    FTL_LOG(WARNING) << "failed to acquire next swapchain image"
-                     << " : " << to_string(result.result);
-    return;
+    auto result = device_.acquireNextImageKHR(
+        swapchain_.swapchain, UINT64_MAX, image_available_semaphore->value(),
+        nullptr);
+
+    if (result.result == vk::Result::eSuboptimalKHR) {
+      FTL_DLOG(WARNING) << "suboptimal swapchain configuration";
+    } else if (result.result != vk::Result::eSuccess) {
+      FTL_LOG(WARNING) << "failed to acquire next swapchain image"
+                       << " : " << to_string(result.result);
+      return;
+    }
+
+    swapchain_index = result.value;
+    next_semaphore_index_ =
+        (next_semaphore_index_ + 1) % swapchain_.images.size();
   }
-  uint32_t swapchain_index = result.value;
-  next_semaphore_index_ =
-      (next_semaphore_index_ + 1) % swapchain_.images.size();
 
   // Render the scene.  The Renderer will wait for acquireNextImageKHR() to
   // signal the semaphore.
@@ -57,6 +64,7 @@ void VulkanSwapchainHelper::DrawFrame(Renderer* renderer,
                       nullptr);
 
   // When the image is completely rendered, present it.
+  TRACE_DURATION("gfx", "escher::VulkanSwapchain::Present");
   vk::PresentInfoKHR info;
   info.waitSemaphoreCount = 1;
   auto sema = render_finished_semaphore->value();

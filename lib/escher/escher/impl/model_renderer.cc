@@ -21,6 +21,7 @@
 #include "escher/scene/shape.h"
 #include "escher/scene/stage.h"
 #include "escher/util/image_utils.h"
+#include "escher/util/trace_macros.h"
 
 namespace escher {
 namespace impl {
@@ -61,6 +62,9 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     uint32_t sample_count,
     const TexturePtr& illumination_texture,
     CommandBuffer* command_buffer) {
+  TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList",
+                 "object_count", model.objects().size());
+
   const std::vector<Object>& objects = model.objects();
 
   // The alternative isn't implemented.
@@ -84,6 +88,8 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
       opaque_objects.push_back(i);
     }
   } else {
+    TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[sort]");
+
     // Sort all objects into bins.  Then, iterate over each bin in arbitrary
     // order, without additional sorting within the bin.
     std::unordered_map<ModelPipelineSpec, std::vector<size_t>,
@@ -111,6 +117,8 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
   }
   FTL_DCHECK(opaque_objects.size() == objects.size());
 
+  TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[build]");
+
   ModelDisplayListBuilder builder(
       device_, stage, model, camera, scale, !use_depth_prepass, white_texture_,
       illumination_texture, model_data_, this, pipeline_cache_.get(),
@@ -125,6 +133,8 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 void ModelRenderer::Draw(const Stage& stage,
                          const ModelDisplayListPtr& display_list,
                          CommandBuffer* command_buffer) {
+  TRACE_DURATION("gfx", "escher::ModelRenderer::Draw");
+
   vk::CommandBuffer vk_command_buffer = command_buffer->get();
 
   for (const TexturePtr& texture : display_list->textures()) {

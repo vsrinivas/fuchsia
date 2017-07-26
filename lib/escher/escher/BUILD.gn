@@ -189,6 +189,7 @@ static_library("escher") {
     "util/image_utils.cc",
     "util/image_utils.h",
     "util/stopwatch.h",
+    "util/trace_macros.h",
     "vk/buffer.cc",
     "vk/buffer.h",
     "vk/buffer_factory.cc",
@@ -221,6 +222,7 @@ static_library("escher") {
 
   if (is_fuchsia) {
     public_deps += [ "//magma:vulkan" ]
+    deps += [ "//apps/tracing/lib/trace" ]
   }
 
   if (is_linux) {

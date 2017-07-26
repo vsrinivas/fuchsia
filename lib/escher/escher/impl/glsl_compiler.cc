@@ -4,13 +4,15 @@
 
 #include "escher/impl/glsl_compiler.h"
 
-#include "glslang/Public/ShaderLang.h"
-#include "StandAlone/ResourceLimits.h"
-#include "SPIRV/GlslangToSpv.h"
-#include "ftl/logging.h"
-
 #include <string>
 #include <thread>
+
+#include "SPIRV/GlslangToSpv.h"
+#include "StandAlone/ResourceLimits.h"
+#include "glslang/Public/ShaderLang.h"
+
+#include "escher/util/trace_macros.h"
+#include "ftl/logging.h"
 
 namespace escher {
 namespace impl {
@@ -45,6 +47,8 @@ SpirvData GlslToSpirvCompiler::SynchronousCompile(
     std::vector<std::string> source_code,
     std::string preamble,
     std::string entry_point) {
+  TRACE_DURATION("gfx", "escher::GlslToSpirvCompiler::SynchronousCompile");
+
   // SynchronousCompileImpl has many return points; wrap it so that we don't
   // forget to --active_compile_count_ at one of them.
   auto result =
@@ -144,5 +148,5 @@ SpirvData GlslToSpirvCompiler::SynchronousCompileImpl(
   return spirv;
 }
 
-}  // namespace escher
 }  // namespace impl
+}  // namespace escher

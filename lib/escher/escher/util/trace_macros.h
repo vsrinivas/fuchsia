@@ -1,0 +1,12 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "lib/ftl/build_config.h"
+
+#ifdef OS_FUCHSIA
+#include "apps/tracing/lib/trace/event.h"
+#else
+// No-op placeholders.
+#define TRACE_DURATION(category, name, args...)
+#endif

@@ -9,6 +9,7 @@
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/shape/mesh.h"
+#include "escher/util/trace_macros.h"
 
 #include "ftl/macros.h"
 
@@ -40,6 +41,8 @@ void CommandBuffer::Begin(uint64_t sequence_number) {
 
 bool CommandBuffer::Submit(vk::Queue queue,
                            CommandBufferFinishedCallback callback) {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::Submit");
+
   FTL_DCHECK(is_active_ && !is_submitted_);
   is_submitted_ = true;
   callback_ = std::move(callback);

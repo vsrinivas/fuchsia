@@ -12,6 +12,7 @@
 #include "escher/renderer/texture.h"
 #include "escher/renderer/timestamper.h"
 #include "escher/resources/resource_recycler.h"
+#include "escher/util/trace_macros.h"
 #include "escher/vk/buffer.h"
 
 namespace escher {
@@ -381,6 +382,7 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(CommandBuffer* command_buffer,
     return GenerateNullLookupTable(command_buffer, depth_texture, image_flags,
                                    timestamper);
   }
+  TRACE_DURATION("gfx", "escher::SsdoAccelerator::GenerateLookupTable");
 
   uint32_t width = depth_texture->width();
   uint32_t height = depth_texture->height();

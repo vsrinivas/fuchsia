@@ -14,6 +14,7 @@
 #include "escher/renderer/image.h"
 #include "escher/scene/stage.h"
 #include "escher/util/stopwatch.h"
+#include "escher/util/trace_macros.h"
 
 namespace escher {
 
@@ -34,6 +35,8 @@ Renderer::~Renderer() {
 }
 
 void Renderer::BeginFrame() {
+  TRACE_DURATION("gfx", "escher::Renderer::BeginFrame");
+
   FTL_DCHECK(!current_frame_);
   ++frame_number_;
   current_frame_ = pool_->GetCommandBuffer();
@@ -48,6 +51,7 @@ void Renderer::BeginFrame() {
 }
 
 void Renderer::SubmitPartialFrame() {
+  TRACE_DURATION("gfx", "escher::Renderer::SubmitPartialFrame");
   FTL_DCHECK(current_frame_);
   current_frame_->Submit(context_.queue, nullptr);
   current_frame_ = pool_->GetCommandBuffer();
@@ -55,6 +59,8 @@ void Renderer::SubmitPartialFrame() {
 
 void Renderer::EndFrame(const SemaphorePtr& frame_done,
                         FrameRetiredCallback frame_retired_callback) {
+  TRACE_DURATION("gfx", "escher::Renderer::EndFrame");
+
   FTL_DCHECK(current_frame_);
   current_frame_->AddSignalSemaphore(frame_done);
   if (profiler_) {

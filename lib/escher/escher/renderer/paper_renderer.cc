@@ -21,6 +21,7 @@
 #include "escher/renderer/image.h"
 #include "escher/util/depth_to_color.h"
 #include "escher/util/image_utils.h"
+#include "escher/util/trace_macros.h"
 
 // If 1 uses a compute kernel to perform SSDO sampling, otherwise uses a
 // fragment shader.  For not-yet-understood reasons, the compute kernel is
@@ -82,6 +83,9 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
                                      const Stage& stage,
                                      const Model& model,
                                      const Camera& camera) {
+  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawDepthPrePass", "width",
+                 depth_image->width(), "height", depth_image->height());
+
   auto command_buffer = current_frame();
 
   FramebufferPtr framebuffer = ftl::MakeRefCounted<Framebuffer>(
@@ -110,6 +114,8 @@ void PaperRenderer::DrawSsdoPasses(const ImagePtr& depth_in,
                                    const ImagePtr& color_aux,
                                    const TexturePtr& accelerator_texture,
                                    const Stage& stage) {
+  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawSsdoPasses");
+
   FTL_DCHECK(color_out->width() == color_aux->width() &&
              color_out->height() == color_aux->height());
   uint32_t width = color_out->width();
@@ -250,6 +256,9 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                                      const Stage& stage,
                                      const Model& model,
                                      const Camera& camera) {
+  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawLightingPass", "width",
+                 framebuffer->width(), "height", framebuffer->height());
+
   auto command_buffer = current_frame();
   command_buffer->KeepAlive(framebuffer);
 
@@ -353,6 +362,8 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                               const ImagePtr& color_image_out,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
+  TRACE_DURATION("gfx", "escher::PaperRenderer::DrawFrame");
+
   UpdateModelRenderer(color_image_out->format(), color_image_out->format());
 
   uint32_t width = color_image_out->width();

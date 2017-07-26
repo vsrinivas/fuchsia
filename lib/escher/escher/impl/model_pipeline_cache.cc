@@ -9,6 +9,7 @@
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_pipeline.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/util/trace_macros.h"
 
 namespace escher {
 namespace impl {
@@ -395,6 +396,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
 
 std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
     const ModelPipelineSpec& spec) {
+  TRACE_DURATION("gfx", "escher::ModelPipelineCache::NewPipeline");
   // TODO: create customized pipelines for different shapes/materials/etc.
 
   std::future<SpirvData> vertex_spirv_future;
