@@ -133,12 +133,14 @@ bootfs or system partition, it will never be launched.
 
 ## kernel.oom.enable=\<bool>
 
-This option (false by default) turns on the out-of-memory (OOM) kernel thread,
+This option (true by default) turns on the out-of-memory (OOM) kernel thread,
 which kills processes when the PMM has less than `kernel.oom.redline_mb` free
 memory, sleeping for `kernel.oom.sleep_sec` between checks.
 
 The OOM thread can be manually started/stopped at runtime with the `k oom start`
 and `k oom stop` commands, and `k oom info` will show the current state.
+
+See `k oom` for a list of all OOM kernel commands.
 
 ## kernel.oom.sleep-sec=\<num>
 
@@ -150,7 +152,7 @@ parameters.
 
 ## kernel.oom.redline-mb=\<num>
 
-This option (10 MB by default) specifies the free-memory threshold at which the
+This option (50 MB by default) specifies the free-memory threshold at which the
 out-of-memory (OOM) thread will trigger a low-memory event and begin killing
 processes.
 

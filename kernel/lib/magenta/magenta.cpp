@@ -510,9 +510,9 @@ void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     root_job = JobDispatcher::CreateRootJob();
     policy_manager = PolicyManager::Create();
     // Be sure to update kernel_cmdline.md if any of these defaults change.
-    oom_init(cmdline_get_bool("kernel.oom.enable", false),
+    oom_init(cmdline_get_bool("kernel.oom.enable", true),
              LK_SEC(cmdline_get_uint64("kernel.oom.sleep-sec", 1)),
-             cmdline_get_uint64("kernel.oom.redline-mb", 10) * MB,
+             cmdline_get_uint64("kernel.oom.redline-mb", 50) * MB,
              oom_lowmem);
 }
 
