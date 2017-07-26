@@ -227,7 +227,7 @@ public:
     // Accessors
     bool is64Bit() const { return is_64_bit_; }
     bool has_pvm() const { return has_pvm_; }
-    bool max_irqs() const { return max_irqs_; }
+    unsigned int max_irqs() const { return max_irqs_; }
     PciReg16 ctrl_reg() const { return ctrl_; }
     PciReg32 addr_reg() const { return addr_; }
     PciReg32 addr_upper_reg() const { return addr_upper_; }
