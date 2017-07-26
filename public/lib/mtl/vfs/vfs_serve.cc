@@ -8,12 +8,14 @@
 
 namespace mtl {
 
-bool VFSServe(mxtl::RefPtr<fs::Vnode> directory, mx::channel request) {
+bool VFSServe(mxtl::RefPtr<fs::Vnode> directory,
+              fs::Dispatcher* dispatcher,
+              mx::channel request) {
   if (directory->Open(O_DIRECTORY) < 0)
     return false;
 
   mx_handle_t h = request.release();
-  if (directory->Serve(h, 0) < 0) {
+  if (directory->Serve(dispatcher, h, 0) < 0) {
     directory->Close();
     return false;
   }

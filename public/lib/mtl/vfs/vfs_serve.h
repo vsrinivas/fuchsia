@@ -13,6 +13,7 @@
 namespace mtl {
 
 FTL_EXPORT bool VFSServe(mxtl::RefPtr<fs::Vnode> directory,
+                         fs::Dispatcher* dispatcher,
                          mx::channel request);
 
 }  // namespace mtl
