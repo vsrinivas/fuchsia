@@ -977,11 +977,6 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
 status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
     canary_.Assert();
 
-    // test to make sure this is a user pointer
-    if (!ptr.is_user_address()) {
-        return MX_ERR_INVALID_ARGS;
-    }
-
     // read routine that uses copy_to_user
     auto read_routine = [ptr](const void* src, size_t offset, size_t len) -> status_t {
         return ptr.byte_offset(offset).copy_array_to_user(src, len);
@@ -993,11 +988,6 @@ status_t VmObjectPaged::ReadUser(user_ptr<void> ptr, uint64_t offset, size_t len
 status_t VmObjectPaged::WriteUser(user_ptr<const void> ptr, uint64_t offset, size_t len,
                                   size_t* bytes_written) {
     canary_.Assert();
-
-    // test to make sure this is a user pointer
-    if (!ptr.is_user_address()) {
-        return MX_ERR_INVALID_ARGS;
-    }
 
     // write routine that uses copy_from_user
     auto write_routine = [ptr](void* dst, size_t offset, size_t len) -> status_t {

@@ -37,10 +37,6 @@ public:
                     : user_ptr(nullptr);
     }
 
-    // check that the address is inside user space
-    // TODO(vtl): Make this more robust -- this only checks the initial address.
-    bool is_user_address() const { return ::is_user_address(reinterpret_cast<vaddr_t>(ptr_)); }
-
     // Copies a single T to user memory. (Using this will fail to compile if T is |void|.)
     // Note: The templatization is simply to allow the class to compile if T is |void|.
     template <typename S = T>
