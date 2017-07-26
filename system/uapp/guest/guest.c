@@ -190,7 +190,7 @@ int main(int argc, char** argv) {
     }
 
     vcpu_context_t vcpu_context;
-    memset(&vcpu_context, 0, sizeof(vcpu_context));
+    vcpu_init(&vcpu_context);
     vcpu_context.vcpu = vcpu;
 #if __x86_64__
     vcpu_context.local_apic_state.apic_addr = (void*)apic_addr;

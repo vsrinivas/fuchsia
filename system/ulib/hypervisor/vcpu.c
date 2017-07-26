@@ -283,8 +283,7 @@ static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, instruction
 
 static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_memory_t* memory) {
     mx_vcpu_state_t vcpu_state;
-    mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
-                                          NULL, 0, &vcpu_state, sizeof(vcpu_state));
+    mx_status_t status = vcpu_context->read_state(vcpu_context, &vcpu_state);
     if (status != MX_OK)
         return status;
 
@@ -348,8 +347,7 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
                                 &vector, sizeof(vector), NULL, 0);
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
-        return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
-                                &vcpu_state, sizeof(vcpu_state), NULL, 0);
+        return vcpu_context->write_state(vcpu_context, &vcpu_state);
     }
     return status;
 }
@@ -419,8 +417,7 @@ static uint16_t pci_device(pci_device_state_t* pci_device_state, uint16_t port,
 static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
 #if __x86_64__
     mx_vcpu_state_t state;
-    mx_status_t status = mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
-                                          NULL, 0, &state, sizeof(state));
+    mx_status_t status = vcpu_context->read_state(vcpu_context, &state);
     if (status != MX_OK)
         return status;
 
@@ -491,8 +488,7 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
         }
     }}
 
-    return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
-                            &state, sizeof(state), NULL, 0);
+    return vcpu_context->write_state(vcpu_context, &state);
 #else // __x86_64__
     return MX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
@@ -635,6 +631,24 @@ static int serial_loop(void* arg) {
     }
 }
 
+static mx_status_t vcpu_state_read(vcpu_context_t* vcpu_context,
+                                   mx_vcpu_state_t* vcpu_state) {
+    return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_READ_STATE,
+                            NULL, 0, vcpu_state, sizeof(*vcpu_state));
+}
+
+static mx_status_t vcpu_state_write(vcpu_context_t* vcpu_context,
+                                    mx_vcpu_state_t* vcpu_state) {
+    return mx_hypervisor_op(vcpu_context->vcpu, MX_HYPERVISOR_OP_VCPU_WRITE_STATE,
+                            vcpu_state, sizeof(*vcpu_state), NULL, 0);
+}
+
+void vcpu_init(vcpu_context_t* vcpu_context) {
+    memset(vcpu_context, 0, sizeof(*vcpu_context));
+    vcpu_context->read_state = &vcpu_state_read;
+    vcpu_context->write_state = &vcpu_state_write;
+}
+
 mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
     thrd_t serial_thread;
     int ret = thrd_create(&serial_thread, serial_loop, &vcpu_context->guest_state->guest);
@@ -654,20 +668,23 @@ mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
                                               NULL, 0, &packet, sizeof(packet));
         if (status != MX_OK)
             return status;
-        switch (packet.type) {
-        case MX_GUEST_PKT_TYPE_MEMORY:
-            status = handle_memory(vcpu_context, &packet.memory);
-            break;
-        case MX_GUEST_PKT_TYPE_IO:
-            status = handle_io(vcpu_context, &packet.io);
-            break;
-        default:
-            fprintf(stderr, "Unhandled guest packet %d\n", packet.type);
-            return MX_ERR_NOT_SUPPORTED;
-        }
+        status = vcpu_handle_packet(vcpu_context, &packet);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
             return status;
         }
+    }
+}
+
+mx_status_t vcpu_handle_packet(vcpu_context_t* vcpu_context,
+                               mx_guest_packet_t* packet) {
+    switch (packet->type) {
+    case MX_GUEST_PKT_TYPE_MEMORY:
+        return handle_memory(vcpu_context, &packet->memory);
+    case MX_GUEST_PKT_TYPE_IO:
+        return handle_io(vcpu_context, &packet->io);
+    default:
+        fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
+        return MX_ERR_NOT_SUPPORTED;
     }
 }
