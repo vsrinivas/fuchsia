@@ -10,8 +10,6 @@
 
 #include <utility>
 
-#include "lib/mtl/vfs/vfs_serve.h"
-
 namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
@@ -34,7 +32,8 @@ void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
 }
 
 bool ServiceProviderBridge::ServeDirectory(mx::channel channel) {
-  return mtl::VFSServe(directory_, &dispatcher_, std::move(channel));
+  return fs::Vfs::ServeDirectory(directory_, &dispatcher_,
+                                 std::move(channel)) == MX_OK;
 }
 
 mx::channel ServiceProviderBridge::OpenAsDirectory() {

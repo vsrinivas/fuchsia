@@ -6,8 +6,6 @@
 
 #include <fcntl.h>
 
-#include "lib/mtl/vfs/vfs_serve.h"
-
 namespace archive {
 namespace {
 
@@ -100,8 +98,8 @@ FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()) {
 FileSystem::~FileSystem() = default;
 
 bool FileSystem::Serve(mx::channel channel) {
-  return directory_ &&
-         mtl::VFSServe(directory_, &dispatcher_, std::move(channel));
+  return directory_ && fs::Vfs::ServeDirectory(directory_, &dispatcher_,
+                                               std::move(channel)) == MX_OK;
 }
 
 mx::channel FileSystem::OpenAsDirectory() {

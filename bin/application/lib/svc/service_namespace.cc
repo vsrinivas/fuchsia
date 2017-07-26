@@ -11,7 +11,6 @@
 #include <utility>
 
 #include "lib/ftl/files/unique_fd.h"
-#include "lib/mtl/vfs/vfs_serve.h"
 
 namespace app {
 
@@ -53,7 +52,8 @@ void ServiceNamespace::RemoveServiceForName(const std::string& service_name) {
 }
 
 bool ServiceNamespace::ServeDirectory(mx::channel channel) {
-  return mtl::VFSServe(directory_, &dispatcher_, std::move(channel));
+  return fs::Vfs::ServeDirectory(directory_, &dispatcher_,
+                                 std::move(channel)) == MX_OK;
 }
 
 int ServiceNamespace::OpenAsFileDescriptor() {
