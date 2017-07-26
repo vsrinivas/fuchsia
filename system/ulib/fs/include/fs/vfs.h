@@ -334,12 +334,6 @@ struct Vfs {
 // vfs dispatch  (NOTE: only used for mounted roots)
 mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<fs::Vnode> vn);
 
-using Vnode = fs::Vnode;
-
-#else  // ifdef __cplusplus
-
-typedef struct Vnode Vnode;
-
 #endif // ifdef __cplusplus
 
 __BEGIN_CDECLS

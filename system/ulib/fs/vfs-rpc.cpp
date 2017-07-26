@@ -24,7 +24,7 @@
 #define MXDEBUG 0
 
 typedef struct vfs_iostate {
-    mxtl::RefPtr<Vnode> vn;
+    mxtl::RefPtr<fs::Vnode> vn;
     // Handle to event which allows client to refer to open vnodes in multi-patt
     // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
     // Validated on the server side using cookies.
@@ -182,7 +182,7 @@ static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx
     return sizeof(mx_handle_t);
 }
 
-mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate* ios) {
+mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -531,8 +531,8 @@ mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<Vnode> vn, vfs_iostate
             return MX_ERR_INVALID_ARGS;
         }
 
-        mxtl::RefPtr<Vnode> target_parent =
-                mxtl::RefPtr<Vnode>(reinterpret_cast<Vnode*>(vcookie));
+        mxtl::RefPtr<fs::Vnode> target_parent =
+                mxtl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
         switch (MXRIO_OP(msg->op)) {
         case MXRIO_RENAME:
             return fs::Vfs::Rename(mxtl::move(vn), mxtl::move(target_parent), oldname, newname);
@@ -583,12 +583,12 @@ mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
     mxtl::AutoLock lock(&vfs_big_lock);
-    mxtl::RefPtr<Vnode> vn = ios->vn;
+    mxtl::RefPtr<fs::Vnode> vn = ios->vn;
     mx_status_t status = vfs_handler_vn(msg, mxtl::move(vn), ios);
     return status;
 }
 
-mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<Vnode> vn) {
+mx_handle_t vfs_rpc_server(mx_handle_t h, mxtl::RefPtr<fs::Vnode> vn) {
     vfs_iostate_t* ios;
     mx_status_t r;
 

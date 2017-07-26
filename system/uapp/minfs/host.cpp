@@ -21,7 +21,7 @@
 #include "minfs.h"
 #include "minfs-private.h"
 
-static mx_status_t do_stat(mxtl::RefPtr<Vnode> vn, struct stat* s) {
+static mx_status_t do_stat(mxtl::RefPtr<fs::Vnode> vn, struct stat* s) {
     vnattr_t a;
     mx_status_t status = vn->Getattr(&a);
     if (status == MX_OK) {
@@ -36,7 +36,7 @@ static mx_status_t do_stat(mxtl::RefPtr<Vnode> vn, struct stat* s) {
 }
 
 typedef struct {
-    mxtl::RefPtr<Vnode> vn;
+    mxtl::RefPtr<fs::Vnode> vn;
     uint64_t off;
     vdircookie_t dircookie;
 } file_t;
@@ -94,7 +94,7 @@ int status_to_errno(mx_status_t status) {
             return name(args);         \
     } while (0)
 
-mxtl::RefPtr<Vnode> fake_root;
+mxtl::RefPtr<fs::Vnode> fake_root;
 
 static inline int check_path(const char* path) {
     if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == nullptr)) {
@@ -115,7 +115,7 @@ int emu_open(const char* path, int flags, mode_t mode) {
             if (status < 0) {
                 STATUS(status);
             }
-            fdtab[fd].vn = mxtl::RefPtr<Vnode>::Downcast(vn_fs);
+            fdtab[fd].vn = mxtl::RefPtr<fs::Vnode>::Downcast(vn_fs);
             return fd | FD_MAGIC;
         }
     }
@@ -226,8 +226,8 @@ int emu_rename(const char* oldpath, const char* newpath) {
 
 int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
-    mxtl::RefPtr<Vnode> vn = fake_root;
-    mxtl::RefPtr<Vnode> cur = fake_root;
+    mxtl::RefPtr<fs::Vnode> vn = fake_root;
+    mxtl::RefPtr<fs::Vnode> cur = fake_root;
     mx_status_t status;
     const char* nextpath = nullptr;
     size_t len;
@@ -251,7 +251,7 @@ int emu_stat(const char* fn, struct stat* s) {
         if (status != MX_OK) {
             return -ENOENT;
         }
-        vn = mxtl::RefPtr<Vnode>::Downcast(vn_fs);
+        vn = mxtl::RefPtr<fs::Vnode>::Downcast(vn_fs);
         if (cur != fake_root) {
             cur->Close();
         }
@@ -270,7 +270,7 @@ int emu_stat(const char* fn, struct stat* s) {
 
 typedef struct MINDIR {
     uint64_t magic;
-    mxtl::RefPtr<Vnode> vn;
+    mxtl::RefPtr<fs::Vnode> vn;
     vdircookie_t cookie;
     uint8_t* ptr;
     uint8_t data[DIR_BUFSIZE];
@@ -287,7 +287,7 @@ DIR* emu_opendir(const char* name) {
     }
     MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
     dir->magic = minfs::kMinfsMagic0;
-    dir->vn = mxtl::RefPtr<Vnode>::Downcast(vn);
+    dir->vn = mxtl::RefPtr<fs::Vnode>::Downcast(vn);
     return (DIR*) dir;
 }
 
