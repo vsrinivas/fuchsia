@@ -940,6 +940,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   }
 
  private:
+
   // |Operation|
   void Run() override {
     // No FlowToken used here; calling Done() directly is more suitable,
@@ -954,6 +955,8 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     web_request_delegate_bindings_.AddBinding(
         this, web_request_delegate.NewRequest());
     web_view_->SetWebRequestDelegate(std::move(web_request_delegate));
+
+    web_view_->ClearCookies();
 
     const std::vector<std::string> scopes(kScopes.begin(), kScopes.end());
     std::string joined_scopes = ftl::JoinStrings(scopes, "+");
