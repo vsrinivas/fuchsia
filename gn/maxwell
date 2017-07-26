@@ -29,10 +29,6 @@
             "bootfs_path": "apps/agents/ideas"
         },
         {
-            "binary": "agents/module_suggester",
-            "bootfs_path": "apps/agents/module_suggester"
-        },
-        {
             "binary": "agents/module_suggester.dartx",
             "bootfs_path": "apps/agents/module_suggester.dartx"
         },
