@@ -80,7 +80,7 @@ private:
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumVpids>> vpid_bitmap_;
     mxtl::Array<VmxPage> vmxon_pages_;
 
-    VmxCpuState() = default;
+    explicit VmxCpuState(mxtl::Array<VmxPage> vmxon_pages);
 };
 
 status_t alloc_vpid(uint16_t* vpid);

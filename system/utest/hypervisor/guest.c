@@ -83,7 +83,7 @@ static bool setup(test_t *test, const char *start, const char *end) {
     status = mx_hypervisor_op(test->guest, MX_HYPERVISOR_OP_VCPU_CREATE,
                               &vcpu_create_args, sizeof(vcpu_create_args),
                               &test->vcpu, sizeof(test->vcpu));
-
+    test->supported = status != MX_ERR_NOT_SUPPORTED;
     return true;
 }
 

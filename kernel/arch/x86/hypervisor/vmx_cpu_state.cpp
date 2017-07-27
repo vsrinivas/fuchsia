@@ -211,24 +211,16 @@ static void vmxoff_task(void* arg) {
 
 // static
 status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
-    AllocChecker ac;
-    mxtl::unique_ptr<VmxCpuState> op(new (&ac) VmxCpuState);
-    if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-
-    status_t status = op->vpid_bitmap_.Reset(kNumVpids);
-    if (status != MX_OK)
-        return status;
-
     // Allocate a VMXON page for each CPU.
     size_t num_cpus = arch_max_num_cpus();
+    AllocChecker ac;
     VmxPage* pages = new (&ac) VmxPage[num_cpus];
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
     mxtl::Array<VmxPage> vmxon_pages(pages, num_cpus);
     VmxInfo vmx_info;
     for (auto& page : vmxon_pages) {
-        status = page.Alloc(vmx_info, 0);
+        status_t status = page.Alloc(vmx_info, 0);
         if (status != MX_OK)
             return status;
     }
@@ -240,13 +232,22 @@ status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
     mp_cpu_mask_t cpu_mask = vmxon_ctx.cpu_mask.load();
     if (cpu_mask != online_mask) {
         mp_sync_exec(cpu_mask, vmxoff_task, nullptr);
-        return MX_ERR_INTERNAL;
+        return MX_ERR_NOT_SUPPORTED;
     }
 
-    op->vmxon_pages_ = mxtl::move(vmxon_pages);
-    *out = mxtl::move(op);
+    mxtl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState(mxtl::move(vmxon_pages)));
+    if (!ac.check())
+        return MX_ERR_NO_MEMORY;
+    status_t status = vmx_cpu_state->vpid_bitmap_.Reset(kNumVpids);
+    if (status != MX_OK)
+        return status;
+
+    *out = mxtl::move(vmx_cpu_state);
     return MX_OK;
 }
+
+VmxCpuState::VmxCpuState(mxtl::Array<VmxPage> vmxon_pages)
+    : vmxon_pages_(mxtl::move(vmxon_pages)) {}
 
 VmxCpuState::~VmxCpuState() {
     mp_sync_exec(MP_CPU_ALL, vmxoff_task, nullptr);
