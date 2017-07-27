@@ -193,7 +193,7 @@ mx_status_t sys_log_create(uint32_t options, user_ptr<mx_handle_t> out) {
 }
 
 mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const void> _ptr, uint32_t options) {
-    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr.get());
+    LTRACEF("log handle %x, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr.get());
 
     if (len > DLOG_MAX_DATA)
         return MX_ERR_OUT_OF_RANGE;
@@ -214,7 +214,7 @@ mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const v
 }
 
 mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> _ptr, uint32_t options) {
-    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr.get());
+    LTRACEF("log handle %x, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr.get());
 
     if (len < DLOG_MAX_RECORD)
         return MX_ERR_BUFFER_TOO_SMALL;

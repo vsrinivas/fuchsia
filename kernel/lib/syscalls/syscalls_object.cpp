@@ -111,7 +111,7 @@ mx_status_t single_record_result(user_ptr<void> _buffer, size_t buffer_size,
 mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                                 user_ptr<void> _buffer, size_t buffer_size,
                                 user_ptr<size_t> _actual, user_ptr<size_t> _avail) {
-    LTRACEF("handle %d topic %u\n", handle, topic);
+    LTRACEF("handle %x topic %u\n", handle, topic);
 
     ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
 
@@ -657,7 +657,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
 }
 
 mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -670,7 +670,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
 }
 
 mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;

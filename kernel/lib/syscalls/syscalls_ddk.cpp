@@ -70,7 +70,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
 }
 
 mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
@@ -82,7 +82,7 @@ mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
 }
 
 mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
@@ -94,7 +94,7 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
 }
 
 mx_status_t sys_interrupt_signal(mx_handle_t handle_value) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
@@ -280,7 +280,7 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
 mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
                                     user_ptr<uintptr_t> _out_vaddr,
                                     user_ptr<uint64_t> _out_size) {
-    LTRACEF("handle %d\n", handle);
+    LTRACEF("handle %x\n", handle);
 
     if (!_out_vaddr || !_out_size)
         return MX_ERR_INVALID_ARGS;

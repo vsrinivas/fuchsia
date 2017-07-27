@@ -61,7 +61,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
 }
 
 mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, size_t size) {
-    LTRACEF("handle %d\n", handle);
+    LTRACEF("handle %x\n", handle);
 
     if (size != 0u)
         return MX_ERR_INVALID_ARGS;
@@ -82,7 +82,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, siz
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
                           user_ptr<void> _packet, size_t size) {
-    LTRACEF("handle %d\n", handle);
+    LTRACEF("handle %x\n", handle);
 
     if (size != 0u)
         return MX_ERR_INVALID_ARGS;

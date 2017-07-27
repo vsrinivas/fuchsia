@@ -19,7 +19,7 @@
 #define LOCAL_TRACE 0
 
 mx_status_t sys_handle_close(mx_handle_t handle_value) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     // Closing the "never a handle" invalid handle is not an error
     // It's like free(NULL).
@@ -34,7 +34,7 @@ mx_status_t sys_handle_close(mx_handle_t handle_value) {
 
 static mx_status_t handle_dup_replace(
     bool is_replace, mx_handle_t handle_value, mx_rights_t rights, user_ptr<mx_handle_t> _out) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
 

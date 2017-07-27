@@ -95,7 +95,7 @@ private:
 
 mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
 
-    LTRACEF("handle %d mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, mmio, base, len, add);
+    LTRACEF("handle %x mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, mmio, base, len, add);
 
     // TODO: finer grained validation
     // TODO(security): Add additional access checks
@@ -272,7 +272,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc,
      * @param index Device index
      * @param out_info Device info (BDF address, vendor id, etc...)
      */
-    LTRACEF("handle %d index %u\n", hrsrc, index);
+    LTRACEF("handle %x index %u\n", hrsrc, index);
 
     // TODO: finer grained validation
     mx_status_t status;
@@ -312,7 +312,7 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t dev_handle, bool enable) {
      * @param handle Handle associated with a PCI device
      * @param enable true if bus mastering should be enabled.
      */
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -330,7 +330,7 @@ mx_status_t sys_pci_enable_pio(mx_handle_t dev_handle, bool enable) {
      * @param handle Handle associated with a PCI device
      * @param enable true if PIO access should be enabled.
      */
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -347,7 +347,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t dev_handle) {
      * Resets the PCI device associated with the handle.
      * @param handle Handle associated with a PCI device
      */
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -366,7 +366,7 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
     mx_pci_resource_t bar;
     mx_status_t status;
 
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
     if (!dev_handle || !out_bar || bar_num >= PCIE_MAX_BAR_REGS) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -568,7 +568,7 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
      * interrupts
      * @param out_handle pointer to a handle to associate with the interrupt mapping
      */
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
     if (!out_handle) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -609,7 +609,7 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
 mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
                                         uint32_t mode,
                                         user_ptr<uint32_t> out_max_irqs) {
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -640,7 +640,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
 mx_status_t sys_pci_set_irq_mode(mx_handle_t dev_handle,
                                  uint32_t mode,
                                  uint32_t requested_irq_count) {
-    LTRACEF("handle %d\n", dev_handle);
+    LTRACEF("handle %x\n", dev_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 

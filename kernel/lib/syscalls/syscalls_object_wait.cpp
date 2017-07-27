@@ -36,7 +36,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
                                 mx_signals_t signals,
                                 mx_time_t deadline,
                                 user_ptr<mx_signals_t> _observed) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     WaitEvent event;
 
@@ -167,7 +167,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
 
 mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_handle,
                                   uint64_t key, mx_signals_t signals, uint32_t options) {
-    LTRACEF("handle %d\n", handle_value);
+    LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
 

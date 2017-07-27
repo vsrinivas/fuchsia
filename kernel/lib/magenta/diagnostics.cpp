@@ -178,7 +178,7 @@ void DumpProcessHandles(mx_koid_t id) {
     uint32_t total = 0;
     pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
                           mxtl::RefPtr<Dispatcher> disp) {
-        printf("%9d %7" PRIu64 " : %s\n",
+        printf("%9x %7" PRIu64 " : %s\n",
             handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
         ++total;
         return MX_OK;

@@ -67,7 +67,7 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
 mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
                              user_ptr<const void> _buffer, size_t size,
                              user_ptr<size_t> _actual) {
-    LTRACEF("handle %d\n", handle);
+    LTRACEF("handle %x\n", handle);
 
     if ((size > 0u) && !_buffer)
         return MX_ERR_INVALID_ARGS;
@@ -102,7 +102,7 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
 mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
                             user_ptr<void> _buffer, size_t size,
                             user_ptr<size_t> _actual) {
-    LTRACEF("handle %d\n", handle);
+    LTRACEF("handle %x\n", handle);
 
     if (options)
         return MX_ERR_INVALID_ARGS;

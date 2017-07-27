@@ -27,7 +27,12 @@ __BEGIN_CDECLS
 // ask clang format not to mess up the indentation:
 // clang-format off
 
+#ifdef _KERNEL
+typedef uint32_t mx_handle_t;
+#else
 typedef int32_t mx_handle_t;
+#endif
+
 #define MX_HANDLE_INVALID         ((mx_handle_t)0)
 
 // Same as kernel status_t

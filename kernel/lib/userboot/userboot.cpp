@@ -152,11 +152,13 @@ static mx_status_t get_resource_handle(Handle** ptr) {
 
 // Create a channel and write the bootstrap message down one side of
 // it, returning the handle to the other side.
-static mx_handle_t make_bootstrap_channel(
+static mx_status_t make_bootstrap_channel(
     mxtl::RefPtr<ProcessDispatcher> process,
-    mxtl::unique_ptr<MessagePacket> msg) {
+    mxtl::unique_ptr<MessagePacket> msg,
+    mx_handle_t* out) {
     HandleOwner user_channel_handle;
     mxtl::RefPtr<ChannelDispatcher> kernel_channel;
+    *out = MX_HANDLE_INVALID;
     {
         mxtl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
@@ -175,7 +177,8 @@ static mx_handle_t make_bootstrap_channel(
     mx_handle_t hv = process->MapHandleToValue(user_channel_handle);
     process->AddHandle(mxtl::move(user_channel_handle));
 
-    return hv;
+    *out = hv;
+    return MX_OK;
 }
 
 enum bootstrap_handle_index {
@@ -374,9 +377,10 @@ static int attempt_userboot() {
     DEBUG_ASSERT(thread);
 
     // All the handles are in place, so we can send the bootstrap message.
-    mx_handle_t hv = make_bootstrap_channel(proc, mxtl::move(msg));
-    if (hv < 0)
-        return hv;
+    mx_handle_t hv;
+    status = make_bootstrap_channel(proc, mxtl::move(msg), &hv);
+    if (status != MX_OK)
+        return status;
 
     dprintf(SPEW, "userboot: %-23s @ %#" PRIxPTR "\n", "entry point", entry);
 

@@ -74,7 +74,7 @@ LK_INIT_HOOK(thread_set_priority_experiment,
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               user_ptr<const char> _name, uint32_t name_len,
                               uint32_t options, user_ptr<mx_handle_t> _out) {
-    LTRACEF("process handle %d, options %#x\n", process_handle, options);
+    LTRACEF("process handle %x, options %#x\n", process_handle, options);
 
     // currently, the only valid option value is 0
     if (options != 0)
@@ -127,7 +127,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
 
 mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
                              uintptr_t stack, uintptr_t arg1, uintptr_t arg2) {
-    LTRACEF("handle %d, entry %#" PRIxPTR ", sp %#" PRIxPTR
+    LTRACEF("handle %x, entry %#" PRIxPTR ", sp %#" PRIxPTR
             ", arg1 %#" PRIxPTR ", arg2 %#" PRIxPTR "\n",
             thread_handle, entry, stack, arg1, arg2);
 
@@ -151,7 +151,7 @@ void sys_thread_exit() {
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
                                   user_ptr<void> _buffer,
                                   uint32_t buffer_len, user_ptr<uint32_t> _actual) {
-    LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
+    LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -190,7 +190,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
 
 mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
                                    user_ptr<const void> _buffer, uint32_t buffer_len) {
-    LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
+    LTRACEF("handle %x, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -256,7 +256,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
                                user_ptr<const char> _name, uint32_t name_len,
                                uint32_t options, user_ptr<mx_handle_t> _proc_handle,
                                user_ptr<mx_handle_t> _vmar_handle) {
-    LTRACEF("job handle %d, options %#x\n", job_handle, options);
+    LTRACEF("job handle %x, options %#x\n", job_handle, options);
 
     // currently, the only valid option value is 0
     if (options != 0)
@@ -335,8 +335,8 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
 mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_handle,
                               uintptr_t pc, uintptr_t sp,
                               mx_handle_t arg_handle_value, uintptr_t arg2) {
-    LTRACEF("phandle %d, thandle %d, pc %#" PRIxPTR ", sp %#" PRIxPTR
-            ", arg_handle %d, arg2 %#" PRIxPTR "\n",
+    LTRACEF("phandle %x, thandle %x, pc %#" PRIxPTR ", sp %#" PRIxPTR
+            ", arg_handle %x, arg2 %#" PRIxPTR "\n",
             process_handle, thread_handle, pc, sp, arg_handle_value, arg2);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -533,7 +533,7 @@ static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher) {
 }
 
 mx_status_t sys_task_kill(mx_handle_t task_handle) {
-    LTRACEF("handle %d\n", task_handle);
+    LTRACEF("handle %x\n", task_handle);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -556,7 +556,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
 }
 
 mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, user_ptr<mx_handle_t> _out) {
-    LTRACEF("parent: %d\n", parent_job);
+    LTRACEF("parent: %x\n", parent_job);
 
     if (options != 0u)
         return MX_ERR_INVALID_ARGS;

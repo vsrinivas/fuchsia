@@ -65,7 +65,7 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
 
 mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
                          uint64_t offset, size_t len, user_ptr<size_t> _actual) {
-    LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#zx\n",
+    LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, _data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -107,7 +107,7 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
 
 mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
                           uint64_t offset, size_t len, user_ptr<size_t> _actual) {
-    LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#zx\n",
+    LTRACEF("handle %x, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, _data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -148,7 +148,7 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
 }
 
 mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
-    LTRACEF("handle %d, sizep %p\n", handle, _size.get());
+    LTRACEF("handle %x, sizep %p\n", handle, _size.get());
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -172,7 +172,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
 }
 
 mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
-    LTRACEF("handle %d, size %#" PRIx64 "\n", handle, size);
+    LTRACEF("handle %x, size %#" PRIx64 "\n", handle, size);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -188,7 +188,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
 
 mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
                              user_ptr<void> _buffer, size_t buffer_size) {
-    LTRACEF("handle %d op %u offset %#" PRIx64 " size %#" PRIx64
+    LTRACEF("handle %x op %u offset %#" PRIx64 " size %#" PRIx64
             " buffer %p buffer_size %zu\n",
             handle, op, offset, size, _buffer.get(), buffer_size);
 
@@ -225,7 +225,7 @@ mx_status_t sys_vmo_set_cache_policy(mx_handle_t handle, uint32_t cache_policy) 
 
 mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset, uint64_t size,
         user_ptr<mx_handle_t>(_out_handle)) {
-    LTRACEF("handle %d options %#x offset %#" PRIx64 " size %#" PRIx64 "\n",
+    LTRACEF("handle %x options %#x offset %#" PRIx64 " size %#" PRIx64 "\n",
             handle, options, offset, size);
 
     auto up = ProcessDispatcher::GetCurrent();
