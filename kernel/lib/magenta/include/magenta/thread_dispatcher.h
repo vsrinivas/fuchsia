@@ -159,10 +159,7 @@ public:
     uint32_t get_num_state_kinds() const;
     // TODO(dje): Consider passing an Array<uint8_t> here and in WriteState.
     status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
-    // |priv| = true -> allow setting privileged values, otherwise leave them unchanged
-    // This is useful for, for example, flags registers that consist of both
-    // privileged and unprivileged fields.
-    status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv);
+    status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len);
 
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }

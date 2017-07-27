@@ -214,8 +214,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
     if (status != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    // TODO(dje): Setting privileged values in registers.
-    status = thread->WriteState(state_kind, bytes.get(), buffer_len, false);
+    status = thread->WriteState(state_kind, bytes.get(), buffer_len);
     return status;
 }
 

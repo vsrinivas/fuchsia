@@ -22,9 +22,6 @@ struct thread;
 uint arch_num_regsets(void);
 
 status_t arch_get_regset(struct thread *thread, uint regset, void* regs, uint* buf_size);
-// |priv| = true -> allow setting privileged values, otherwise leave them unchanged
-// This is useful for, for example, flags registers that consist of both
-// privileged and unprivileged fields.
-status_t arch_set_regset(struct thread *thread, uint regset, const void* regs, uint buf_size, bool priv);
+status_t arch_set_regset(struct thread *thread, uint regset, const void* regs, uint buf_size);
 
 __END_CDECLS

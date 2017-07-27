@@ -931,7 +931,7 @@ status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t
 
 // Note: buffer must be sufficiently aligned
 
-status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len, bool priv) {
+status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -946,7 +946,7 @@ status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, u
     switch (state_kind)
     {
     case MX_THREAD_STATE_REGSET0 ... MX_THREAD_STATE_REGSET9:
-        return arch_set_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len, priv);
+        return arch_set_regset(&thread_, state_kind - MX_THREAD_STATE_REGSET0, buffer, buffer_len);
     default:
         return MX_ERR_INVALID_ARGS;
     }

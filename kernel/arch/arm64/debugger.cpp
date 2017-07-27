@@ -100,7 +100,7 @@ status_t arch_get_regset(struct thread *thread, uint regset, void *regs, uint32_
 
 // The caller is responsible for making sure the thread is in an exception
 // or is suspended, and stays so.
-status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size, bool priv)
+status_t arch_set_regset(struct thread *thread, uint regset, const void *regs, uint32_t buf_size)
 {
     switch (regset)
     {
