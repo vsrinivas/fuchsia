@@ -188,13 +188,25 @@ static int i2c_hid_irq_thread(void* arg) {
     uint16_t len = letoh16(dev->hiddesc->wMaxInputLength);
     uint8_t* buf = malloc(len);
 
+    mx_time_t last_timeout_warning = 0;
+    const mx_duration_t kMinTimeBetweenWarnings = MX_SEC(10);
+
     // Until we have a way to map the GPIO associated with an i2c slave to an
     // IRQ, we just poll.
     while (true) {
         usleep(I2C_POLL_INTERVAL_USEC);
         size_t actual = 0;
         mx_status_t status = device_read(dev->i2cdev, buf, len, 0, &actual);
-        if (status < 0) {
+        if (status != MX_OK) {
+            if (status == MX_ERR_TIMED_OUT) {
+                mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+                if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
+                    printf("i2c-hid: device_read timed out\n");
+                    last_timeout_warning = now;
+                }
+                continue;
+            }
+            printf("i2c-hid: fatal device_read failure %d\n", status);
             return status;
         }
         if (actual < 2) {
