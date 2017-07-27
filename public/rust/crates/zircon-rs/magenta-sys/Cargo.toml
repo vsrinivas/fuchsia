@@ -1,6 +1,6 @@
 [package]
 name = "magenta-sys"
-version = "0.1.0"
+version = "0.1.1"
 license = "BSD-3-Clause"
 authors = ["Raph Levien <raph@google.com>"]
 description = "Low-level Rust bindings for the Magenta kernel"
