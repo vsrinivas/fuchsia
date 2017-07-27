@@ -122,7 +122,10 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
             // added.
             std::string account_id;
             for (const auto& account : accounts) {
-              if (account->display_name == settings_.user) {
+              FTL_LOG(INFO) << "Found user " << account->display_name;
+              if (account->display_name.size() >= settings_.user.size() &&
+                  account->display_name.get().substr(settings_.user.size()) ==
+                      settings_.user) {
                 account_id = account->id;
                 break;
               }
