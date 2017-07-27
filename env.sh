@@ -606,6 +606,12 @@ function fbuild-sync() {
   rm -f "${batch_file}"
 }
 
+### fsyncvol: update a persistent fuchsia system
+
+fsyncvol() {
+  $FUCHSIA_SCRIPTS_DIR/make-fuchsia-vol/sync-fuchsia-vol.sh
+}
+
 ### fboot: run fuchsia bootserver
 
 function fboot-usage() {
