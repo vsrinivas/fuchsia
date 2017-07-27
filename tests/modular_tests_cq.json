@@ -23,6 +23,15 @@
       }
     },
     {
+      "name":"link_update",
+      "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_link_update --story_shell=dev_story_shell",
+      "copy":{
+        "/system/apps":[
+          "test_link_update"
+        ]
+      }
+    },
+    {
       "name":"story_importance",
       "exec":"device_runner --test --device_shell=dev_device_shell --user_shell=test_story_importance --story_shell=dev_story_shell",
       "copy":{
