@@ -12,10 +12,6 @@ namespace bluetooth {
 namespace common {
 namespace {
 
-// TODO(armansito): Since Google C++ Style (and clang's static analyzer) forbids
-// us from having exit-time destructors, we cannot use a std::map here. It would
-// be nice if ftl hade the equivalent of base::LazyInstance for such cases.
-
 // The company identifiers have been taken from the Bluetooth SIG Assigned
 // Numbers document. See
 // https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers.
