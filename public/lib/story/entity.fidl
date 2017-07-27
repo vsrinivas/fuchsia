@@ -1,0 +1,30 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition of Entity.
+//
+// STATUS: Draft / Heavy WIP: expect significant changes.
+
+//
+// WORK IN PROGRESS, NOT YET PART OF THE BUILD
+//
+
+module modular;
+
+interface Entity {
+  // Each entry in |type| references an Entity schema that is published in a
+  // Fuchsia package.
+  //
+  // See <TODO insert doc link> for more information.
+  GetTypes() => array<EntityType> types;
+
+  GetContent(EntityType for_type) => array<uint8> content;
+
+  GetContentAsStream(EntityType for_type) => stream<uint8> content;
+};
+
+struct EntityType {
+  string package_id;
+  string name;
+};

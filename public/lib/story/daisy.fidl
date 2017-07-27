@@ -1,0 +1,46 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//
+// WORK IN PROGRESS, NOT YET PART OF THE BUILD
+//
+
+import "entity.fidl";
+
+module modular;
+
+// The Daisy struct is a runtime descriptor for an abstract action to be initiated
+// in Fuchsia. For details please see docs/daisy.md.
+struct Daisy {
+  Verb? verb;
+
+  // A list of zero or more "nouns". In the basic case, when a |verb| is
+  // provided above, each of |nouns| here corresponds to the noun in the verb
+  // template (see docs/manifest/verb_template.md) at the same position in the
+  // list.
+  //
+  // When |verb| is not provided, the positional nature of each of |nouns| has
+  // no inherent meaning. Additionally, when |verb| is not provided, the client
+  // which created this Daisy and ultimately receives a Link to another Module
+  // based on resolution (see docs/module_resolution.md) of this Daisy will be
+  // restricted to a read-only view of the Link.
+  array<Noun> nouns;
+
+  // string json_parameters;
+  // array<string> required_services;
+}
+
+struct Verb {
+  // The ID of the package in which verb |name| is defined.
+  string package_id;
+
+  // The name of the verb published in package |package_id|.
+  string name;
+};
+
+union Noun {
+  Entity entity;
+  string text;
+  // string context_topic;
+}
