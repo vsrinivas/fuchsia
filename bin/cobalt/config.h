@@ -137,6 +137,7 @@ element {
       category: "Commits-received-out-of-order"
       category: "Commits-merged"
       category: "Merged-commits-merged"
+      category: "Commits-received-out-of-order-not-recovered"
     }
   }
 }
