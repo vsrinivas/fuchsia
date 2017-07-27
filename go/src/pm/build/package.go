@@ -24,14 +24,17 @@ import (
 // Init initializes package metadata in the output directory. A manifest
 // is generated with a name matching the output directory name.
 func Init(cfg *Config) error {
-	pkgName := filepath.Base(cfg.OutputDir)
-	if pkgName == "." {
-		var err error
-		pkgName, err = filepath.Abs(pkgName)
-		if err != nil {
-			return fmt.Errorf("build: unable to compute package name from directory: %s", err)
+	pkgName := cfg.PkgName
+	if pkgName == "" {
+		pkgName = filepath.Base(cfg.OutputDir)
+		if pkgName == "." {
+			var err error
+			pkgName, err = filepath.Abs(pkgName)
+			if err != nil {
+				return fmt.Errorf("build: unable to compute package name from directory: %s", err)
+			}
+			pkgName = filepath.Base(pkgName)
 		}
-		pkgName = filepath.Base(pkgName)
 	}
 	metadir := filepath.Join(cfg.OutputDir, "meta")
 	os.MkdirAll(metadir, os.ModePerm)

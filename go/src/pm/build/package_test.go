@@ -40,12 +40,34 @@ func TestInit(t *testing.T) {
 	}
 	f.Close()
 
-	if want := filepath.Base(cfg.OutputDir); p.Name != want {
+	if want := cfg.PkgName; p.Name != want {
 		t.Errorf("got %q, want %q", p.Name, want)
 	}
 
 	if want := "0"; p.Version != want {
 		t.Errorf("got %q, want %q", p.Version, want)
+	}
+	os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	// test condition where package name is empty, name should match the
+	// name of the output directory
+	cfg.PkgName = ""
+	if err = Init(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err = os.Open(filepath.Join(cfg.OutputDir, "meta", "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = json.NewDecoder(f).Decode(&p); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	if want := filepath.Base(cfg.OutputDir); p.Name != want {
+		t.Errorf("got %q, want %q", p.Name, want)
 	}
 }
 

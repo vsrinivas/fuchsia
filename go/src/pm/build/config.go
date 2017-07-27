@@ -19,6 +19,7 @@ type Config struct {
 	ManifestPath string
 	KeyPath      string
 	TempDir      string
+	PkgName      string
 
 	// the manifest is memoized lazily, on the first call to Manifest()
 	manifest *Manifest
@@ -31,6 +32,7 @@ func NewConfig() *Config {
 		ManifestPath: ".",
 		KeyPath:      "",
 		TempDir:      os.TempDir(),
+		PkgName:      "",
 	}
 	return cfg
 }
@@ -48,6 +50,7 @@ func TestConfig() *Config {
 		ManifestPath: filepath.Join(d, "manifest"),
 		KeyPath:      filepath.Join(d, "key"),
 		TempDir:      filepath.Join(d, "tmp"),
+		PkgName:      filepath.Join(d, "pkg"),
 	}
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
 		os.MkdirAll(d, os.ModePerm)
@@ -61,6 +64,7 @@ func (c *Config) InitFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.ManifestPath, "m", c.ManifestPath, "build manifest (or package directory)")
 	fs.StringVar(&c.KeyPath, "k", c.KeyPath, "signing key")
 	fs.StringVar(&c.TempDir, "t", c.TempDir, "temporary directory")
+	fs.StringVar(&c.PkgName, "n", c.PkgName, "name of the packages")
 }
 
 // PrivateKey loads the configured private key
