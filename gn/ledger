@@ -6,7 +6,8 @@
         "boringssl_libssl",
         "cobalt_client",
         "ftl",
-        "mtl"
+        "mtl",
+        "url"
     ],
     "labels": [
         "//apps/ledger",
