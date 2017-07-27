@@ -144,10 +144,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<LinkImpl> user_shell_link_;
 
   AgentControllerPtr home_work_agent_controller_;
-  AgentControllerPtr walking_agent_controller_;
 
   app::ServiceProviderPtr home_work_agent_services_;
-  app::ServiceProviderPtr walking_agent_services_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };

@@ -252,11 +252,6 @@ void UserRunnerImpl::Initialize(
                                 home_work_agent_services_.NewRequest(),
                                 home_work_agent_controller_.NewRequest());
 
-  agent_runner_->ConnectToAgent("file:///system/apps/user_runner",
-                                "file:///system/apps/agents/walking_agent",
-                                walking_agent_services_.NewRequest(),
-                                walking_agent_controller_.NewRequest());
-
   ComponentContextInfo component_context_info{message_queue_manager_.get(),
                                               agent_runner_.get(),
                                               ledger_repository_.get()};
