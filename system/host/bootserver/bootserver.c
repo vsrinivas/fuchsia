@@ -354,7 +354,8 @@ int main(int argc, char** argv) {
             continue;
         if (msg->cmd != NB_ADVERTISE)
             continue;
-        if (msg->arg != NB_VERSION_CURRENT) {
+        if ((use_tftp && (msg->arg < NB_VERSION_1_2)) ||
+            (!use_tftp && (msg->arg < NB_VERSION_1_1))) {
             fprintf(stderr, "%s: Incompatible version 0x%08X of bootloader detected from [%s]%d, "
                             "please upgrade your bootloader\n",
                     appname, msg->arg, inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),

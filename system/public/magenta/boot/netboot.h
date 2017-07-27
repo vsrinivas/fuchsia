@@ -47,7 +47,8 @@
 
 #define NB_VERSION_1_0  0x0001000
 #define NB_VERSION_1_1  0x0001010
-#define NB_VERSION_CURRENT NB_VERSION_1_1
+#define NB_VERSION_1_2  0x0001020
+#define NB_VERSION_CURRENT NB_VERSION_1_2
 
 typedef struct nbmsg_t {
     uint32_t magic;
