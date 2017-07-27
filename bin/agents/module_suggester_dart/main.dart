@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:convert' show JSON;
-import 'dart:io';
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.dart/decomposition.dart';
 import 'package:apps.maxwell.services.suggestion/ask_handler.fidl.dart';
@@ -89,35 +88,6 @@ class _AskHandlerImpl extends AskHandler {
           color: 0xFF4285F4,
         ),
       );
-    }
-
-    if ((query.text?.length ?? 0) >= 4) {
-      void scanDirectory(Directory directory) {
-        directory
-            .listSync(recursive: true, followLinks: false)
-            .map((FileSystemEntity fileSystemEntity) => fileSystemEntity.path)
-            .where((String path) =>
-                Uri.parse(path).pathSegments.last.contains(query.text))
-            .where((String path) => FileSystemEntity.isFileSync(path))
-            .forEach((String path) {
-          String name = Uri.parse(path).pathSegments.last;
-          proposals.add(
-            _createProposal(
-              id: 'open $name',
-              appUrl: 'file://$path',
-              headline: 'Launch $name',
-              // TODO(design): Find a better way to add indicators to the
-              // suggestions about their provenance, lack of safety, etc. that
-              // would be useful for developers but not distracting in demos
-              // subheadline: '(This is potentially unsafe)',
-              color: 0xFF000000 + (name.hashCode % 0xFFFFFF),
-            ),
-          );
-        });
-      }
-
-      scanDirectory(new Directory('/system/apps/'));
-      scanDirectory(new Directory('/system/pkgs/'));
     }
 
     if (query.text?.contains(_musicPatternKanye) ?? false) {
