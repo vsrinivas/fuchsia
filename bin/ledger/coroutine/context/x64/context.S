@@ -43,6 +43,17 @@ FUNCTION(_ZN7context10GetContextEPNS_15InternalContextE)
 // - All callee saved registers.
 // - SP, Unsafe SP, LR and ARG0.
 FUNCTION(_ZN7context10SetContextEPNS_15InternalContextE)
+    // The sanitizer runtime wants to be informed of non-local exits.
+    // Call __asan_handle_no_return() before doing the actual longjmp.
+#if __has_feature(address_sanitizer)
+    // Save our incoming argument registers on the stack around calling
+    // __asan_handle_no_return.  The incoming stack is misaligned by one
+    // word, so we need to move the stack by an odd number of words.
+    push_reg %rdi
+    call __asan_handle_no_return@PLT
+    pop_reg %rdi
+#endif
+
     movq RBX_O(%rdi), %rbx
     movq RBP_O(%rdi), %rbp
     movq R12_O(%rdi), %r12
