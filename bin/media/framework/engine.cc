@@ -51,32 +51,35 @@ void Engine::FlushOutput(Output* output) {
   });
 }
 
-void Engine::RequestUpdate(Stage* stage) {
+void Engine::StageNeedsUpdate(Stage* stage) {
   FTL_DCHECK(stage);
-  ftl::MutexLocker locker(&mutex_);
-  Update(stage);
-  Update();
-}
-
-void Engine::PushToSupplyBacklog(Stage* stage) {
-  mutex_.AssertHeld();
-  FTL_DCHECK(stage);
-
-  packets_produced_ = true;
-  if (!stage->in_supply_backlog_) {
-    supply_backlog_.push(stage);
-    stage->in_supply_backlog_ = true;
+  if (PushToUpdateBacklog(stage) && update_callback_) {
+    update_callback_();
   }
 }
 
-void Engine::PushToDemandBacklog(Stage* stage) {
-  mutex_.AssertHeld();
-  FTL_DCHECK(stage);
-
-  if (!stage->in_demand_backlog_) {
-    demand_backlog_.push(stage);
-    stage->in_demand_backlog_ = true;
+bool Engine::UpdateOne() {
+  Stage* stage = PopFromUpdateBacklog();
+  if (!stage) {
+    return false;
   }
+
+  stage->UpdateUntilDone();
+  return true;
+}
+
+void Engine::UpdateUntilDone() {
+  {
+    ftl::MutexLocker locker(&mutex_);
+    FTL_DCHECK(!suppress_update_callbacks_) << "re-entered UpdateUntilDone.";
+    suppress_update_callbacks_ = true;
+  }
+
+  while (UpdateOne()) {
+    // Do nothing.
+  }
+
+  // suppress_update_callbacks_ is set to false when |UpdateOne| returns false.
 }
 
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
@@ -123,66 +126,24 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
   }
 }
 
-void Engine::Update() {
-  mutex_.AssertHeld();
-
-  while (true) {
-    Stage* stage = PopFromSupplyBacklog();
-    if (stage != nullptr) {
-      Update(stage);
-      continue;
-    }
-
-    stage = PopFromDemandBacklog();
-    if (stage != nullptr) {
-      Update(stage);
-      continue;
-    }
-
-    break;
-  }
-}
-
-void Engine::Update(Stage* stage) {
-  mutex_.AssertHeld();
-
+bool Engine::PushToUpdateBacklog(Stage* stage) {
   FTL_DCHECK(stage);
-
-  packets_produced_ = false;
-
-  stage->Update();
-
-  // If the stage produced packets, it may need to reevaluate demand later.
-  if (packets_produced_) {
-    PushToDemandBacklog(stage);
-  }
+  ftl::MutexLocker locker(&mutex_);
+  update_backlog_.push(stage);
+  return !suppress_update_callbacks_;
 }
 
-Stage* Engine::PopFromSupplyBacklog() {
-  mutex_.AssertHeld();
+Stage* Engine::PopFromUpdateBacklog() {
+  ftl::MutexLocker locker(&mutex_);
 
-  if (supply_backlog_.empty()) {
+  if (update_backlog_.empty()) {
+    suppress_update_callbacks_ = false;
     return nullptr;
   }
 
-  Stage* stage = supply_backlog_.front();
-  supply_backlog_.pop();
-  FTL_DCHECK(stage->in_supply_backlog_);
-  stage->in_supply_backlog_ = false;
-  return stage;
-}
+  Stage* stage = update_backlog_.front();
+  update_backlog_.pop();
 
-Stage* Engine::PopFromDemandBacklog() {
-  mutex_.AssertHeld();
-
-  if (demand_backlog_.empty()) {
-    return nullptr;
-  }
-
-  Stage* stage = demand_backlog_.top();
-  demand_backlog_.pop();
-  FTL_DCHECK(stage->in_demand_backlog_);
-  stage->in_demand_backlog_ = false;
   return stage;
 }
 

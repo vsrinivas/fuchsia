@@ -14,7 +14,7 @@ ActiveSinkStage::ActiveSinkStage(Engine* engine,
   demand_function_ = [this](Demand demand) {
     if (sink_demand_ != demand) {
       sink_demand_ = demand;
-      RequestUpdate();
+      NeedsUpdate();
     }
   };
 
@@ -56,8 +56,7 @@ void ActiveSinkStage::Update() {
   FTL_DCHECK(sink_);
 
   if (input_.packet_from_upstream()) {
-    sink_demand_ =
-        sink_->SupplyPacket(std::move(input_.packet_from_upstream()));
+    sink_demand_ = sink_->SupplyPacket(input_.TakePacketFromUpstream());
   }
 
   input_.SetDemand(sink_demand_);

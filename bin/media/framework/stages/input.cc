@@ -21,11 +21,23 @@ void Input::Connect(Output* output) {
   mate_ = output;
 }
 
+PacketPtr Input::TakePacketFromUpstream() {
+  FTL_DCHECK(mate_);
+
+  PacketPtr packet = std::move(packet_from_upstream_);
+
+  if (mate_->demand() != Demand::kNegative) {
+    mate_->stage()->NeedsUpdate();
+  }
+
+  return packet;
+}
+
 void Input::SetDemand(Demand demand) const {
   FTL_DCHECK(mate_);
 
   if (mate_->UpdateDemandFromInput(demand)) {
-    stage_->engine()->PushToDemandBacklog(mate_->stage());
+    mate_->stage()->NeedsUpdate();
   }
 }
 

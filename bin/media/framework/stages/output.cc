@@ -62,7 +62,7 @@ void Output::SupplyPacket(PacketPtr packet) const {
   }
 
   if (mate_->SupplyPacketFromOutput(std::move(packet))) {
-    stage_->engine()->PushToSupplyBacklog(mate_->stage());
+    mate_->stage()->NeedsUpdate();
   }
 }
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <vector>
+#include <atomic>
 
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
@@ -20,15 +20,10 @@ class Stage {
  public:
   using UpstreamCallback = std::function<void(size_t input_index)>;
   using DownstreamCallback = std::function<void(size_t output_index)>;
-  using UpdateCallback = std::function<void(Stage* stage)>;
 
   Stage(Engine* engine);
 
   virtual ~Stage();
-
-  void SetUpdateCallback(const UpdateCallback& update_callback) {
-    update_callback_ = update_callback;
-  }
 
   // Returns the number of input connections.
   virtual size_t input_count() const = 0;
@@ -70,22 +65,32 @@ class Stage {
   // Flushes an output.
   virtual void FlushOutput(size_t index) = 0;
 
-  Engine* engine() { return engine_; }
+  // Queues the stage for update if it isn't already queued. This method may
+  // be called on any thread.
+  void NeedsUpdate();
+
+  // Calls |Update| until no more updates are required. This method may be
+  // called by any thread that has obtained the stage from the engine's update
+  // backlog.
+  void UpdateUntilDone();
 
  protected:
+  Engine* engine() { return engine_; }
+
   // Updates packet supply and demand.
   virtual void Update() = 0;
 
-  void RequestUpdate() {
-    FTL_DCHECK(update_callback_);
-    update_callback_(this);
-  }
-
  private:
   Engine* const engine_;
-  UpdateCallback update_callback_;
-  bool in_supply_backlog_;
-  bool in_demand_backlog_;
+
+  // Used for ensuring the stage is properly updated. This value is zero
+  // initially, indicating that there's no need to update the stage. When the
+  // stage needs updating, the counter is incremented. A transition from 0 to
+  // 1 indicates that the stage should be enqueued. Before the update occurs,
+  // this value is set to 1. If it's no longer 1 after update completes, it is
+  // updated again. When an update completes and the counter is still 1, the
+  // counter is reset to 0.
+  std::atomic_uint32_t update_counter_;
 
   friend class Engine;
 };

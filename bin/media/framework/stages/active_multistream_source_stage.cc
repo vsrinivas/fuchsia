@@ -45,7 +45,7 @@ ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
       // have one before. Request an update. Update will request another
       // packet, if needed.
       mutex_.Unlock();
-      RequestUpdate();
+      NeedsUpdate();
     } else {
       // We got a packet, but it doesn't change matters, either because the
       // output in question already had a packet queued or because that output

@@ -60,9 +60,8 @@ void ActiveMultistreamSinkStage::Update() {
     FTL_DCHECK(*iter < inputs_.size());
     StageInput* input = inputs_[*iter].get();
     if (input->input_.packet_from_upstream()) {
-      input->demand_ =
-          sink_->SupplyPacket(input->input_.index(),
-                              std::move(input->input_.packet_from_upstream()));
+      input->demand_ = sink_->SupplyPacket(
+          input->input_.index(), input->input_.TakePacketFromUpstream());
 
       if (input->demand_ == Demand::kNegative) {
         auto remove_iter = iter;
@@ -154,7 +153,7 @@ void ActiveMultistreamSinkStage::UpdateDemand(size_t input_index,
     pending_inputs_.push_back(input_index);
   }
 
-  RequestUpdate();
+  NeedsUpdate();
 }
 
 }  // namespace media

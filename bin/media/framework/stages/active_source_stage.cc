@@ -15,7 +15,7 @@ ActiveSourceStage::ActiveSourceStage(Engine* engine,
     bool packets_was_empty_ = packets_.empty();
     packets_.push_back(std::move(packet));
     if (packets_was_empty_ && prepared_) {
-      RequestUpdate();
+      NeedsUpdate();
     }
   };
 

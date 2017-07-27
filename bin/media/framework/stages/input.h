@@ -48,7 +48,10 @@ class Input {
   void set_prepared(bool prepared) { prepared_ = prepared; }
 
   // A packet supplied from upstream.
-  PacketPtr& packet_from_upstream() { return packet_from_upstream_; }
+  const PacketPtr& packet_from_upstream() { return packet_from_upstream_; }
+
+  // Takes ownership of the packet supplied from upstream.
+  PacketPtr TakePacketFromUpstream();
 
   // Updates mate's demand. Called only by Stage::Update implementations.
   void SetDemand(Demand demand) const;

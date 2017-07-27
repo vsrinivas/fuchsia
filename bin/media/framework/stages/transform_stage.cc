@@ -68,7 +68,7 @@ void TransformStage::Update() {
     if (transform_->TransformPacket(input_.packet_from_upstream(),
                                     input_packet_is_new_, allocator_,
                                     &output_packet)) {
-      input_.packet_from_upstream().reset();
+      input_.TakePacketFromUpstream();
       input_packet_is_new_ = true;
     } else {
       input_packet_is_new_ = false;

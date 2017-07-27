@@ -14,6 +14,7 @@
 #include "apps/media/src/framework/stages/multistream_source_stage.h"
 #include "apps/media/src/framework/stages/stage.h"
 #include "apps/media/src/framework/stages/transform_stage.h"
+#include "lib/ftl/synchronization/mutex.h"
 
 namespace media {
 
@@ -190,7 +191,7 @@ class Graph {
   std::list<Stage*> sinks_;
 
   Engine engine_;
-  Stage::UpdateCallback update_function_;
+  mutable ftl::Mutex update_mutex_;
 };
 
 }  // namespace media

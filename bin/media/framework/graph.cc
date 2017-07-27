@@ -7,7 +7,11 @@
 namespace media {
 
 Graph::Graph() {
-  update_function_ = [this](Stage* stage) { engine_.RequestUpdate(stage); };
+  // TODO(dalesat): Replace with proper dispatching model.
+  engine_.SetUpdateCallback([this]() {
+    ftl::MutexLocker locker(&update_mutex_);
+    engine_.UpdateUntilDone();
+  });
 }
 
 Graph::~Graph() {
@@ -34,8 +38,6 @@ void Graph::RemoveNode(NodeRef node) {
       DisconnectOutput(OutputRef(&output));
     }
   }
-
-  stage->SetUpdateCallback(nullptr);
 
   sources_.remove(stage);
   sinks_.remove(stage);
@@ -217,8 +219,6 @@ NodeRef Graph::Add(Stage* stage) {
   if (stage->output_count() == 0) {
     sinks_.push_back(stage);
   }
-
-  stage->SetUpdateCallback(update_function_);
 
   return NodeRef(stage);
 }
