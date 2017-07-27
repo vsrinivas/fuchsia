@@ -16,7 +16,7 @@ class TestSuggestionListener : public maxwell::SuggestionListener {
   void OnRemove(const fidl::String& uuid) override;
   void OnRemoveAll() override;
 
-  int suggestion_count() const { return naive_suggestion_count_; }
+  int suggestion_count() const { return (signed)ordered_suggestions_.size(); }
 
   // Exposes a pointer to the only suggestion in this listener. Retains
   // ownership of the pointer.

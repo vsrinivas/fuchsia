@@ -14,7 +14,6 @@ bool suggestion_less(const maxwell::Suggestion* a,
 void TestSuggestionListener::OnAdd(
     fidl::Array<maxwell::SuggestionPtr> suggestions) {
   FTL_LOG(INFO) << "OnAdd(" << suggestions << ")";
-  naive_suggestion_count_ += suggestions.size();
 
   // Since OnAdd receives a snapshot of changes with self-consistent ordering
   // (TODO(rosswang): behavior not documented), we don't have to re-search from
@@ -28,12 +27,12 @@ void TestSuggestionListener::OnAdd(
     suggestions_by_id_[suggestion->uuid] = std::move(suggestion);
   }
 
-  EXPECT_EQ(naive_suggestion_count_, (signed)suggestions_by_id_.size());
+  EXPECT_EQ((signed)ordered_suggestions_.size(),
+            (signed)suggestions_by_id_.size());
 }
 
 void TestSuggestionListener::OnRemove(const fidl::String& uuid) {
   FTL_LOG(INFO) << "OnRemove(" << uuid << ")";
-  naive_suggestion_count_--;
   auto it = suggestions_by_id_.find(uuid);
   auto range =
       std::equal_range(ordered_suggestions_.begin(), ordered_suggestions_.end(),
@@ -42,12 +41,12 @@ void TestSuggestionListener::OnRemove(const fidl::String& uuid) {
       std::remove(range.first, range.second, it->second.get()), range.second);
   suggestions_by_id_.erase(it);
 
-  EXPECT_EQ(naive_suggestion_count_, (signed)suggestions_by_id_.size());
+  EXPECT_EQ((signed)ordered_suggestions_.size(),
+            (signed)suggestions_by_id_.size());
 }
 
 void TestSuggestionListener::OnRemoveAll() {
   FTL_LOG(INFO) << "OnRemoveAll";
-  naive_suggestion_count_ = 0;
   ordered_suggestions_.clear();
   suggestions_by_id_.clear();
 }

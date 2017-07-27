@@ -93,6 +93,48 @@ class Proposinator {
   ProposalPublisherPtr out_;
 };
 
+class AskProposinator : public Proposinator, public AskHandler {
+ public:
+  AskProposinator(SuggestionEngine* suggestion_engine,
+                  const fidl::String& url = "AskProposinator")
+      : Proposinator(suggestion_engine, url), ask_binding_(this) {
+    fidl::InterfaceHandle<AskHandler> ask_handle;
+    ask_binding_.Bind(&ask_handle);
+    out_->RegisterAskHandler(std::move(ask_handle));
+  }
+
+  void Ask(UserInputPtr query, const AskCallback& callback) override {
+    query_ = std::move(query);
+    ask_callback_ = callback;
+    ask_proposals_.resize(0);
+  }
+
+  void Commit() { ask_callback_(std::move(ask_proposals_)); }
+
+  fidl::String query() const { return query_ ? query_->get_text() : NULL; }
+
+  void ProposeForAsk(
+      const std::string& id,
+      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
+    ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
+  }
+
+  void ProposeForAsk(
+      const std::string& id,
+      const std::string& headline,
+      maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
+      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
+    ask_proposals_.push_back(
+        CreateProposal(id, headline, std::move(actions), annoyance));
+  }
+
+ private:
+  fidl::Binding<AskHandler> ask_binding_;
+  UserInputPtr query_;
+  fidl::Array<ProposalPtr> ask_proposals_;
+  AskCallback ask_callback_;
+};
+
 // maintains the number of proposals specified by the context field "n"
 class NProposals : public Proposinator, public ContextListener {
  public:
@@ -601,213 +643,137 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   ASYNC_EQ(module_id, story_provider()->story_controller().last_added_module());
 }
 
-
 TEST_F(AskTest, DefaultAsk) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("1");
+  AskProposinator p(suggestion_engine());
 
   InitiateAsk();
   SetQuery("test query");
+  Sleep();
+  p.ProposeForAsk("1");
+  p.Commit();
   Sleep();
 
   SetResultCount(10);
   CHECK_RESULT_COUNT(1);
 
-  p.Propose("2");
   SetQuery("test query 2");
   Sleep();
+  p.ProposeForAsk("2");
+  p.Commit();
+  Sleep();
 
-  CHECK_RESULT_COUNT(2);
+  CHECK_RESULT_COUNT(1);
   EnsureDebugMatches();
 }
 
-#define CHECK_TOP_HEADLINE(h)                       \
+#define CHECK_TOP_HEADLINE(h) \
   ASYNC_CHECK(listener()->GetTopSuggestion()->display->headline == h)
 
 TEST_F(AskTest, AskDifferentQueries) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("Mozart's Ghost");
-  p.Propose("The Hottest Band on the Internet");
+  AskProposinator p(suggestion_engine());
 
   InitiateAsk();
   SetResultCount(10);
+
   SetQuery("The Hottest Band on the Internet");
+  Sleep();
+  p.ProposeForAsk("Mozart's Ghost");
+  p.ProposeForAsk("The Hottest Band on the Internet");
+  p.Commit();
   Sleep();
 
   CHECK_TOP_HEADLINE("The Hottest Band on the Internet");
 
   SetQuery("Mozart's Ghost");
   Sleep();
+  p.ProposeForAsk("Mozart's Ghost");
+  p.ProposeForAsk("The Hottest Band on the Internet");
+  p.Commit();
+  Sleep();
 
   CHECK_TOP_HEADLINE("Mozart's Ghost");
   EnsureDebugMatches();
 }
 
-TEST_F(AskTest, RemoveAskFallback) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("Esc");
-
-  InitiateAsk();
-  SetResultCount(10);
-
-  SetQuery("test query");
-  Sleep();
-
-  CHECK_RESULT_COUNT(1);
-  EnsureDebugMatches();
-
-  p.Remove("Esc");
-  Sleep();
-
-  CHECK_RESULT_COUNT(0);
-  EnsureDebugMatches();
-}
-
-TEST_F(AskTest, ChangeFallback) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("E-mail");
-  InitiateAsk();
-  SetResultCount(10);
-  SetQuery("test query");
-  Sleep();
-
-  CHECK_RESULT_COUNT(1);
-
-  p.Propose("E-mail", "E-vite");
-  SetQuery("test query");
-  Sleep();
-
-  CHECK_TOP_HEADLINE("E-vite");
-  EnsureDebugMatches();
-
-  // Make sure we're still alive; historical crash above
-  SetQuery("X");
-  Sleep();
-  CHECK_RESULT_COUNT(1);
-}
-
-TEST_F(AskTest, ChangeSameRank) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("E-mail");
-  p.Propose("Music");
-
-  InitiateAsk();
-  SetQuery("test query");
-  Sleep();
-
-  SetResultCount(10);
-  CHECK_RESULT_COUNT(2);
-  EnsureDebugMatches();
-
-  p.Propose("E-mail", "E-vite");  // E-mail and E-vite are equidistant from E
-  SetQuery("E");
-  Sleep();
-
-  CHECK_TOP_HEADLINE("E-vite");
-  EnsureDebugMatches();
-
-  // Make sure we're still alive; historical crash above
-  SetQuery("X");
-  Sleep();
-  CHECK_RESULT_COUNT(2);
-}
-
 TEST_F(AskTest, ChangeHeadlineRank) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("E-mail", "E-mail");
-  p.Propose("E-vite", "E-vite");
-  p.Propose("E-card", "E-card");
-  p.Propose("Music", "Music");
+  AskProposinator p(suggestion_engine());
 
   InitiateAsk();
-  SetQuery("test query");
   SetResultCount(10);
+
+  SetQuery("test query");
+  Sleep();
+  p.ProposeForAsk("E-mail", "E-mail");
+  p.ProposeForAsk("E-vite", "E-vite");
+  p.ProposeForAsk("E-card", "E-card");
+  p.ProposeForAsk("Music", "Music");
+  p.Commit();
   Sleep();
 
   CHECK_RESULT_COUNT(4);
 
   SetQuery("Ca");
   Sleep();
+  p.ProposeForAsk("E-mail", "E-mail");
+  p.ProposeForAsk("E-vite", "E-vite");
+  p.ProposeForAsk("E-card", "E-card");
+  p.ProposeForAsk("Music", "Music");
+  p.Commit();
+  Sleep();
 
   // E-card has a 'ca' in the 3rd position, so should be ranked highest.
   CHECK_TOP_HEADLINE("E-card");
 
-  p.Propose("E-mail", "Cam");
   SetQuery("Ca");
+  Sleep();
+  p.ProposeForAsk("E-mail", "E-mail");
+  p.ProposeForAsk("E-mail", "Cam");
+  p.ProposeForAsk("E-vite", "E-vite");
+  p.ProposeForAsk("E-card", "E-card");
+  p.ProposeForAsk("Music", "Music");
+  p.Commit();
   Sleep();
 
   CHECK_TOP_HEADLINE("Cam");
   EnsureDebugMatches();
-  CHECK_RESULT_COUNT(4);  // historical assertion failure by now
-  // Note that we can't just have removed one and checked that because on
-  // assertion failure, one remove will have happened (at least as of the
-  // 11/29/16 codebase).
-}
-
-TEST_F(AskTest, ChangeWorseSameOrder) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("E-mail");
-  p.Propose("Music");
-
-  InitiateAsk();
-  SetQuery("test query");
-  Sleep();
-
-  SetResultCount(10);
-  CHECK_RESULT_COUNT(2);
-
-  SetQuery("E");
-  Sleep();
-
-  CHECK_RESULT_COUNT(2);
-
-  p.Propose("E-mail", "Messaging");  // Messaging is a worse match than E-mail
-  SetQuery("E");
-  Sleep();
-
-  CHECK_TOP_HEADLINE("Messaging");
-  EnsureDebugMatches();
-
-  // Make sure we're still alive; historical crash above
-  SetQuery("X");
-  Sleep();
-  CHECK_RESULT_COUNT(2);
+  CHECK_RESULT_COUNT(4);
 }
 
 #define HEADLINE_EQ(expected, index) \
   EXPECT_EQ(expected, (*listener())[index]->display->headline)
 
 TEST_F(AskTest, AskRanking) {
-  Proposinator p(suggestion_engine());
-
-  p.Propose("View E-mail");
-  p.Propose("Compose E-mail");
-  p.Propose("Reply to E-mail");
-  p.Propose("Send E-vites");
-  p.Propose("E-mail Guests");
+  AskProposinator p(suggestion_engine());
 
   InitiateAsk();
-  SetQuery("X");
+  SetQuery("");
+  Sleep();
+  p.ProposeForAsk("View E-mail");
+  p.ProposeForAsk("Compose E-mail");
+  p.ProposeForAsk("Reply to E-mail");
+  p.ProposeForAsk("Send E-vites");
+  p.ProposeForAsk("E-mail Guests");
+  p.Commit();
   Sleep();
 
   SetResultCount(10);
   CHECK_RESULT_COUNT(5);
   // Results should be ranked by timestamp at this point.
-  HEADLINE_EQ("View E-mail", 4);
-  HEADLINE_EQ("Compose E-mail", 3);
+  HEADLINE_EQ("View E-mail", 0);
+  HEADLINE_EQ("Compose E-mail", 1);
   HEADLINE_EQ("Reply to E-mail", 2);
-  HEADLINE_EQ("Send E-vites", 1);
-  HEADLINE_EQ("E-mail Guests", 0);
+  HEADLINE_EQ("Send E-vites", 3);
+  HEADLINE_EQ("E-mail Guests", 4);
   EnsureDebugMatches();
 
   SetQuery("e-mail");
+  Sleep();
+  p.ProposeForAsk("View E-mail");
+  p.ProposeForAsk("Compose E-mail");
+  p.ProposeForAsk("Reply to E-mail");
+  p.ProposeForAsk("Send E-vites");
+  p.ProposeForAsk("E-mail Guests");
+  p.Commit();
   Sleep();
 
   CHECK_RESULT_COUNT(5);
@@ -825,98 +791,17 @@ TEST_F(AskTest, AskRanking) {
   SetResultCount(1);
   SetQuery("Compose");
   Sleep();
+  p.ProposeForAsk("View E-mail");
+  p.ProposeForAsk("Compose E-mail");
+  p.ProposeForAsk("Reply to E-mail");
+  p.ProposeForAsk("Send E-vites");
+  p.ProposeForAsk("E-mail Guests");
+  p.Commit();
+  Sleep();
 
   CHECK_RESULT_COUNT(1);
   HEADLINE_EQ("Compose E-mail", 0);
   EnsureDebugMatches();
-}
-
-class AskProposinator : public Proposinator, public AskHandler {
- public:
-  AskProposinator(SuggestionEngine* suggestion_engine,
-                  const fidl::String& url = "AskProposinator")
-      : Proposinator(suggestion_engine, url), ask_binding_(this) {
-    fidl::InterfaceHandle<AskHandler> ask_handle;
-    ask_binding_.Bind(&ask_handle);
-    out_->RegisterAskHandler(std::move(ask_handle));
-  }
-
-  void Ask(UserInputPtr query, const AskCallback& callback) override {
-    query_ = std::move(query);
-    ask_callback_ = callback;
-    ask_proposals_.resize(0);
-  }
-
-  void Commit() { ask_callback_(std::move(ask_proposals_)); }
-
-  fidl::String query() const { return query_ ? query_->get_text() : NULL; }
-
-  void ProposeForAsk(
-      const std::string& id,
-      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
-  }
-
-  void ProposeForAsk(
-      const std::string& id,
-      const std::string& headline,
-      maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      fidl::Array<ActionPtr> actions = fidl::Array<ActionPtr>::New(0)) {
-    ask_proposals_.push_back(CreateProposal(id, headline, std::move(actions), annoyance));
-  }
-
- private:
-  fidl::Binding<AskHandler> ask_binding_;
-  UserInputPtr query_;
-  fidl::Array<ProposalPtr> ask_proposals_;
-  AskCallback ask_callback_;
-};
-
-// Ensure that proposals made while handling an Ask query:
-// * are not textwise filtered by the query (unlike Next).
-// * fully replace any proposals made while handling a previous Ask query.
-TEST_F(AskTest, ReactiveAsk) {
-  AskProposinator p(suggestion_engine());
-
-  InitiateAsk();
-  SetResultCount(10);
-  SetQuery("Hello");
-  Sleep();
-
-  ASYNC_EQ("Hello", p.query());
-  p.ProposeForAsk("Hi, how can I help?");
-  p.ProposeForAsk("What can you do?");
-  p.Commit();
-
-  CHECK_RESULT_COUNT(2);
-  EnsureDebugMatches();
-
-  SetQuery("Stuff happens.");
-  Sleep();
-
-  ASYNC_EQ("Stuff happens.", p.query());
-  p.ProposeForAsk("What can you do?");
-  p.Commit();
-
-  CHECK_RESULT_COUNT(1);
-  EnsureDebugMatches();
-}
-
-// Ensure that Ask continues to work even if the Next publisher has
-// disconnected.
-TEST_F(AskTest, AskWithoutPublisher) {
-  AskProposinator p(suggestion_engine());
-  p.KillPublisher();
-
-  InitiateAsk();
-  SetResultCount(10);
-  SetQuery("I have a pen. I have an apple.");
-
-  ASYNC_EQ("I have a pen. I have an apple.", p.query());
-  p.ProposeForAsk("Apple pen!");
-  p.Commit();
-
-  CHECK_RESULT_COUNT(1);
 }
 
 class SuggestionFilteringTest : public NextTest {};

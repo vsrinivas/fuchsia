@@ -99,12 +99,6 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   ask_suggestions_->UpdateRankingFunction(
       maxwell::ranking::GetAskRankingFunction(query));
 
-  // TODO(andrewosh): It should ultimately be the responsibility of
-  // Ask/Next listeners to merge their suggestion channels.
-  for (auto suggestion : *(next_suggestions_->GetSuggestions())) {
-    ask_suggestions_->AddSuggestion(suggestion->prototype);
-  }
-
   if (ask_handlers_.size() == 0) {
     return debug_.OnAskStart(query, ask_suggestions_);
   }

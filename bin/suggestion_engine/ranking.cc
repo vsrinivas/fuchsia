@@ -22,7 +22,7 @@ int64_t GetDefaultRank(const SuggestionPrototype* prototype) {
   // TODO(andrewosh): Kronk suggestions are downranked for now (low quality).
   if (prototype->source_url.find("kronk") != std::string::npos)
     return kMaxRank;
-  return (ftl::TimePoint::Now() - prototype->timestamp).ToNanoseconds();
+  return kMaxRank - prototype->timestamp.ToEpochDelta().ToNanoseconds();
 }
 
 // TODO(andrewosh): Ross' comment copied from AskChannel.h
