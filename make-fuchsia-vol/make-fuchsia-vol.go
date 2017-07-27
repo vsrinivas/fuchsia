@@ -98,24 +98,25 @@ func main() {
 	}
 
 	b, err := ioutil.ReadFile(*packages)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, packageName := range strings.Split(string(b), "\n") {
-		path := filepath.Join(*packagesDir, packageName, "system_manifest")
-		// TODO(raggi): remove the size check hack here once packages declare
-		// explicit manifests to include.
-		if info, err := os.Stat(path); err == nil {
-			if info.Size() > 0 {
-				systemManifests = append(systemManifests, path)
+	if err == nil {
+		for _, packageName := range strings.Split(string(b), "\n") {
+			path := filepath.Join(*packagesDir, packageName, "system_manifest")
+			// TODO(raggi): remove the size check hack here once packages declare
+			// explicit manifests to include.
+			if info, err := os.Stat(path); err == nil {
+				if info.Size() > 0 {
+					systemManifests = append(systemManifests, path)
+				}
+			}
+			path = filepath.Join(*packagesDir, packageName, "boot_manifest")
+			if info, err := os.Stat(path); err == nil {
+				if info.Size() > 0 {
+					bootManifests = append(bootManifests, path)
+				}
 			}
 		}
-		path = filepath.Join(*packagesDir, packageName, "boot_manifest")
-		if info, err := os.Stat(path); err == nil {
-			if info.Size() > 0 {
-				bootManifests = append(bootManifests, path)
-			}
-		}
+	} else {
+		log.Printf("Packages file %q could not be opened (%s), ignoring", *packages, err)
 	}
 
 	tempDir, err := ioutil.TempDir("", "make-fuchsia-vol")
