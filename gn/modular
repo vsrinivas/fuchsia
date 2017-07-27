@@ -193,6 +193,10 @@
             "bootfs_path": "apps/test_link_data"
         },
         {
+            "binary": "test_link_update",
+            "bootfs_path": "apps/test_link_update"
+        },
+        {
             "binary": "test_story_importance",
             "bootfs_path": "apps/test_story_importance"
         },
