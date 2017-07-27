@@ -31,15 +31,24 @@ namespace l2cap {
 // accessed on multiple threads.
 class PDU final {
  public:
-  PDU() = default;
+  using FragmentList = mxtl::DoublyLinkedList<std::unique_ptr<hci::ACLDataPacket>>;
+
+  PDU();
   ~PDU() = default;
 
   // Allow move operations.
-  PDU(PDU&& other) = default;
-  PDU& operator=(PDU&& other) = default;
+  PDU(PDU&& other);
+  PDU& operator=(PDU&& other);
 
   // An unpopulated PDU is considered invalid, which is the default-constructed state.
-  bool is_valid() const { return !fragments_.is_empty(); }
+  bool is_valid() const {
+    FTL_DCHECK(fragments_.is_empty() && !fragment_count_ ||
+               !fragments_.is_empty() && fragment_count_);
+    return !fragments_.is_empty();
+  }
+
+  // The number of fragments that are currently a part of this PDU.
+  size_t fragment_count() const { return fragment_count_; }
 
   // Returns the number of bytes that are currently contained in this PDU, excluding the Basic L2CAP
   // header.
@@ -69,6 +78,10 @@ class PDU final {
   size_t Read(common::MutableByteBuffer* out_buffer, size_t pos = 0,
               size_t size = std::numeric_limits<std::size_t>::max()) const;
 
+  // Relinquishes ownership of the underlying list of fragments and returns it. Once this is called,
+  // the PDU will become invalid.
+  void ReleaseFragments(FragmentList* out_list);
+
  private:
   friend class Recombiner;
 
@@ -79,10 +92,13 @@ class PDU final {
   // checks on |fragment| have already been performed.
   void AppendFragment(std::unique_ptr<hci::ACLDataPacket> fragment);
 
+  // The number of fragments currently stored in this PDU.
+  size_t fragment_count_;
+
   // ACL data fragments that currently form this PDU. In a complete PDU, it is expected that the sum
   // of the payload sizes of all elements in |fragments_| is equal to the length of the frame
   // (i.e. length() + sizeof(BasicHeader)).
-  mxtl::DoublyLinkedList<std::unique_ptr<hci::ACLDataPacket>> fragments_;
+  FragmentList fragments_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PDU);
 };

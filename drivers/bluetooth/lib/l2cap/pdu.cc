@@ -9,19 +9,21 @@
 namespace bluetooth {
 namespace l2cap {
 
-const BasicHeader& PDU::basic_header() const {
-  FTL_DCHECK(!fragments_.is_empty());
-  const auto& fragment = *fragments_.begin();
+PDU::PDU() : fragment_count_(0u) {}
 
-  FTL_DCHECK(fragment.packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment);
-  return fragment.view().payload<BasicHeader>();
+PDU::PDU(PDU&& other) {
+  // NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
+  // |other.fragment_count_|.
+  fragment_count_ = other.fragment_count_;
+  other.ReleaseFragments(&fragments_);
 }
 
-void PDU::AppendFragment(std::unique_ptr<hci::ACLDataPacket> fragment) {
-  FTL_DCHECK(fragment);
-  FTL_DCHECK(!is_valid() ||
-             fragments_.begin()->connection_handle() == fragment->connection_handle());
-  fragments_.push_back(std::move(fragment));
+PDU& PDU::operator=(PDU&& other) {
+  // NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
+  // |other.fragment_count_|.
+  fragment_count_ = other.fragment_count_;
+  other.ReleaseFragments(&fragments_);
+  return *this;
 }
 
 size_t PDU::Read(common::MutableByteBuffer* out_buffer, size_t pos, size_t size) const {
@@ -56,6 +58,8 @@ size_t PDU::Read(common::MutableByteBuffer* out_buffer, size_t pos, size_t size)
 
     // Calculate how much to read from the current fragment
     size_t write_size = std::min(payload.size() - pos, remaining);
+
+    // Read the fragment into out_buffer->mutable_data() + offset.
     out_buffer->Write(payload.data() + pos, write_size, offset);
 
     // Clear |pos| after using it on the first fragment as all successive fragments are read from
@@ -67,6 +71,31 @@ size_t PDU::Read(common::MutableByteBuffer* out_buffer, size_t pos, size_t size)
   }
 
   return offset;
+}
+
+void PDU::ReleaseFragments(FragmentList* out_list) {
+  FTL_DCHECK(out_list);
+
+  *out_list = std::move(fragments_);
+  fragment_count_ = 0u;
+
+  FTL_DCHECK(!is_valid());
+}
+
+const BasicHeader& PDU::basic_header() const {
+  FTL_DCHECK(!fragments_.is_empty());
+  const auto& fragment = *fragments_.begin();
+
+  FTL_DCHECK(fragment.packet_boundary_flag() != hci::ACLPacketBoundaryFlag::kContinuingFragment);
+  return fragment.view().payload<BasicHeader>();
+}
+
+void PDU::AppendFragment(std::unique_ptr<hci::ACLDataPacket> fragment) {
+  FTL_DCHECK(fragment);
+  FTL_DCHECK(!is_valid() ||
+             fragments_.begin()->connection_handle() == fragment->connection_handle());
+  fragments_.push_back(std::move(fragment));
+  fragment_count_++;
 }
 
 }  // namespace l2cap

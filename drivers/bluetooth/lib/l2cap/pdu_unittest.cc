@@ -7,6 +7,7 @@
 
 #include "gtest/gtest.h"
 
+#include "apps/bluetooth/lib/common/test_helpers.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/packet.h"
 
@@ -46,6 +47,7 @@ TEST(L2CAP_PduTest, Move) {
   PDU pdu;
   EXPECT_TRUE(recombiner.Release(&pdu));
   EXPECT_TRUE(pdu.is_valid());
+  EXPECT_EQ(1u, pdu.fragment_count());
 
   common::StaticByteBuffer<4> pdu_data;
 
@@ -55,7 +57,9 @@ TEST(L2CAP_PduTest, Move) {
 
   PDU move_cted(std::move(pdu));
   EXPECT_FALSE(pdu.is_valid());
+  EXPECT_EQ(0u, pdu.fragment_count());
   EXPECT_TRUE(move_cted.is_valid());
+  EXPECT_EQ(1u, move_cted.fragment_count());
 
   pdu_data.SetToZeros();
   EXPECT_EQ(4u, move_cted.Read(&pdu_data));
@@ -63,11 +67,60 @@ TEST(L2CAP_PduTest, Move) {
 
   PDU move_assigned = std::move(move_cted);
   EXPECT_FALSE(move_cted.is_valid());
+  EXPECT_EQ(0u, move_cted.fragment_count());
   EXPECT_TRUE(move_assigned.is_valid());
+  EXPECT_EQ(1u, move_assigned.fragment_count());
 
   pdu_data.SetToZeros();
   EXPECT_EQ(4u, move_assigned.Read(&pdu_data));
   EXPECT_EQ("Test", pdu_data.AsString());
+}
+
+TEST(L2CAP_PduTest, ReleaseFragments) {
+  Recombiner recombiner;
+
+  // clang-format off
+
+  auto packet0 = PacketFromBytes(
+    // ACL data header
+    0x01, 0x00, 0x08, 0x00,
+
+    // Basic L2CAP header
+    0x04, 0x00, 0xFF, 0xFF, 'T', 'e', 's', 't'
+  );
+
+  // clang-format on
+
+  EXPECT_TRUE(recombiner.AddFragment(std::move(packet0)));
+
+  PDU pdu;
+  EXPECT_TRUE(recombiner.Release(&pdu));
+  EXPECT_TRUE(pdu.is_valid());
+  EXPECT_EQ(1u, pdu.fragment_count());
+
+  PDU::FragmentList fragments;
+  pdu.ReleaseFragments(&fragments);
+
+  EXPECT_FALSE(pdu.is_valid());
+  ASSERT_FALSE(fragments.is_empty());
+  EXPECT_EQ(0u, pdu.fragment_count());
+
+  // Directly count the elements in |fragments| to make sure the count is correct.
+  size_t count = 0;
+  for (__UNUSED const auto& f : fragments) count++;
+  EXPECT_EQ(1u, count);
+
+  // Check that the fragment we got out is identical to the one we fed in.
+  EXPECT_TRUE(common::ContainersEqual(
+    common::CreateStaticByteBuffer(
+      // ACL data header
+      0x01, 0x00, 0x08, 0x00,
+
+      // Basic L2CAP header
+      0x04, 0x00, 0xFF, 0xFF, 'T', 'e', 's', 't'
+    ),
+    fragments.begin()->view().data()
+  ));
 }
 
 TEST(L2CAP_PduTest, ReadSingleFragment) {
@@ -162,6 +215,7 @@ TEST(L2CAP_PduTest, ReadMultipleFragments) {
   PDU pdu;
   EXPECT_TRUE(recombiner.Release(&pdu));
   EXPECT_TRUE(pdu.is_valid());
+  EXPECT_EQ(4u, pdu.fragment_count());
 
   common::StaticByteBuffer<15> pdu_data;
 
