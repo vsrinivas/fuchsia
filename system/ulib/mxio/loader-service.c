@@ -148,7 +148,7 @@ static int open_from_libpath(const char* prefix, const char* fn) {
     return fd;
 }
 
-static mx_handle_t default_load_object(void* cookie,
+static mx_status_t default_load_object(void* cookie,
                                        uint32_t load_op,
                                        mx_handle_t request_handle,
                                        const char* fn,
