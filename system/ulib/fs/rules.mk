@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mount.cpp \
     $(LOCAL_DIR)/unmount.cpp \
     $(LOCAL_DIR)/vfs.cpp \
+    $(LOCAL_DIR)/vmo-file.cpp \
     $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/watcher.cpp \
 

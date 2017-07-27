@@ -18,6 +18,7 @@ static_library("fs") {
     "include/fs/remote.h",
     "include/fs/trace.h",
     "include/fs/vfs.h",
+    "include/fs/vmo-file.h",
     "include/fs/vnode.h",
     "include/fs/watcher.h",
     "managed-vfs.cpp",
@@ -25,6 +26,7 @@ static_library("fs") {
     "mount.cpp",
     "unmount.cpp",
     "vfs.cpp",
+    "vmo-file.cpp",
     "vnode.cpp",
     "watcher.cpp",
   ]
