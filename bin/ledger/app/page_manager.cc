@@ -65,8 +65,7 @@ void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
         .Init(std::move(on_done));
     return;
   }
-  page_requests_.push_back(
-      std::make_pair(std::move(page_request), std::move(on_done)));
+  page_requests_.emplace_back(std::move(page_request), std::move(on_done));
 }
 
 void PageManager::BindPageSnapshot(

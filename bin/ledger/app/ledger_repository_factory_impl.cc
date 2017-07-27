@@ -91,7 +91,7 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
 // LedgerManager.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  LedgerRepositoryContainer(
+  explicit LedgerRepositoryContainer(
       std::unique_ptr<cloud_sync::AuthProvider> auth_provider)
       : status_(Status::OK), auth_provider_(std::move(auth_provider)) {}
   ~LedgerRepositoryContainer() {
@@ -120,8 +120,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
       callback(status_);
       return;
     }
-    requests_.push_back(
-        std::make_pair(std::move(request), std::move(callback)));
+    requests_.emplace_back(std::move(request), std::move(callback));
   }
 
   // Sets the implementation or the error status for the container. This
@@ -132,11 +131,11 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     FTL_DCHECK(status != Status::OK || ledger_repository);
     status_ = status;
     ledger_repository_ = std::move(ledger_repository);
-    for (auto it = requests_.begin(); it != requests_.end(); ++it) {
+    for (auto& request : requests_) {
       if (ledger_repository_) {
-        ledger_repository_->BindRepository(std::move(it->first));
+        ledger_repository_->BindRepository(std::move(request.first));
       }
-      it->second(status_);
+      request.second(status_);
     }
     requests_.clear();
     if (on_empty_callback_) {

@@ -22,7 +22,7 @@ namespace ledger {
 
 class LedgerRepositoryImpl : public LedgerRepository {
  public:
-  LedgerRepositoryImpl(const std::string& base_storage_dir,
+  LedgerRepositoryImpl(std::string base_storage_dir,
                        Environment* environment,
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<cloud_sync::UserSync> user_sync);

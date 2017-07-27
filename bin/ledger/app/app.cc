@@ -59,9 +59,8 @@ ftl::AutoCall<ftl::Closure> SetupCobalt(
     app::ApplicationContext* application_context) {
   if (disable_statistics) {
     return ftl::MakeAutoCall<ftl::Closure>([] {});
-  } else {
-    return InitializeCobalt(std::move(task_runner), application_context);
   }
+  return InitializeCobalt(std::move(task_runner), application_context);
 };
 
 // App is the main entry point of the Ledger application.
@@ -73,7 +72,7 @@ ftl::AutoCall<ftl::Closure> SetupCobalt(
 class App : public LedgerController,
             public LedgerRepositoryFactoryImpl::Delegate {
  public:
-  App(AppParams app_params)
+  explicit App(AppParams app_params)
       : app_params_(std::move(app_params)),
         application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
@@ -85,7 +84,7 @@ class App : public LedgerController,
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
-  ~App() {}
+  ~App() override {}
 
   bool Start() {
     if (app_params_.no_network_for_testing) {

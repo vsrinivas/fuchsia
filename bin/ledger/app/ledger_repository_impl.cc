@@ -12,11 +12,11 @@
 namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
-    const std::string& base_storage_dir,
+    std::string base_storage_dir,
     Environment* environment,
     std::unique_ptr<SyncWatcherSet> watchers,
     std::unique_ptr<cloud_sync::UserSync> user_sync)
-    : base_storage_dir_(base_storage_dir),
+    : base_storage_dir_(std::move(base_storage_dir)),
       environment_(environment),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)) {
@@ -47,7 +47,7 @@ void LedgerRepositoryImpl::GetLedger(
     const GetLedgerCallback& callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
-  if (ledger_name.size() == 0) {
+  if (ledger_name.empty()) {
     callback(Status::AUTHENTICATION_ERROR);
     return;
   }
