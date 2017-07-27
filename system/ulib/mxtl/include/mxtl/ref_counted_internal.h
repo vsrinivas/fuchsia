@@ -27,14 +27,14 @@ public:
         magic_ = 0;
     }
 
-    void Adopt() {
+    void Adopt() const {
         AssertMagic(kStartingMagic);
         magic_ = kAdoptedMagic;
     }
-    void ValidateAddRef() {
+    void ValidateAddRef() const {
         AssertMagic(kAdoptedMagic);
     }
-    void ValidateRelease() {
+    void ValidateRelease() const {
         AssertMagic(kAdoptedMagic);
     }
 
@@ -52,15 +52,15 @@ private:
     // The object has been constructed and adopted, but not destroyed.
     static constexpr uint32_t kAdoptedMagic = mxtl::magic("RcAD");
 
-    volatile uint32_t magic_ = kStartingMagic;
+    mutable volatile uint32_t magic_ = kStartingMagic;
 };
 
 template <>
 class AdoptionValidator<false> {
 public:
-    void Adopt() {}
-    void ValidateAddRef() {}
-    void ValidateRelease() {}
+    void Adopt() const {}
+    void ValidateAddRef() const {}
+    void ValidateRelease() const {}
 };
 
 template <bool EnableAdoptionValidator>
@@ -69,7 +69,7 @@ protected:
     constexpr RefCountedBase()
         : ref_count_(1) {}
     ~RefCountedBase() {}
-    void AddRef() {
+    void AddRef() const {
         adoption_validator_.ValidateAddRef();
         const int rc = ref_count_.fetch_add(1, memory_order_relaxed);
         if (EnableAdoptionValidator) {
@@ -85,7 +85,7 @@ protected:
         }
     }
     // Returns true if the object should self-delete.
-    bool Release() __WARN_UNUSED_RESULT {
+    bool Release() const __WARN_UNUSED_RESULT {
         adoption_validator_.ValidateRelease();
         const int rc = ref_count_.fetch_sub(1, memory_order_release);
         if (EnableAdoptionValidator) {
@@ -100,7 +100,7 @@ protected:
         return false;
     }
 
-    void Adopt() {
+    void Adopt() const {
         adoption_validator_.Adopt();
     }
 
@@ -110,7 +110,7 @@ protected:
     }
 
 private:
-    mxtl::atomic_int ref_count_;
+    mutable mxtl::atomic_int ref_count_;
     AdoptionValidator<EnableAdoptionValidator> adoption_validator_;
 };
 

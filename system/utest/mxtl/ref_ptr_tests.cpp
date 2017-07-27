@@ -568,6 +568,48 @@ static bool ref_ptr_adopt_null_test() {
     END_TEST;
 }
 
+static bool ref_ptr_to_const_test() {
+    BEGIN_TEST;
+
+    class C : public mxtl::RefCounted<C> {
+    public:
+        explicit C(int x) : x_(x) {}
+
+        int get_x() const { return x_; }
+
+    private:
+        int x_;
+    };
+
+    AllocChecker ac;
+    mxtl::RefPtr<C> refptr = mxtl::AdoptRef<C>(new (&ac) C(23));
+    ASSERT_TRUE(ac.check(), "");
+
+    // Copy a ref-ptr to a ref-ptr-to-const.
+    mxtl::RefPtr<const C> const_refptr = refptr;
+    // refptr should have been copied, not moved.
+    ASSERT_NONNULL(refptr.get(), "");
+
+    // Call a const member function on a ref-ptr-to-const.
+    EXPECT_NONNULL(const_refptr.get(), "");
+    EXPECT_EQ(const_refptr->get_x(), 23, "");
+
+    // Move a ref-ptr to a ref-ptr-to-const.
+    mxtl::RefPtr<const C> moved_const_refptr = mxtl::move(refptr);
+    ASSERT_NONNULL(moved_const_refptr.get(), "");
+    // Now refptr should have been nulled out.
+    ASSERT_NULL(refptr.get(), "");
+
+    // Move a ref-ptr-to-const into another ref-ptr-to-const.
+    const_refptr.reset();
+    ASSERT_NULL(const_refptr, "");
+    const_refptr = mxtl::move(moved_const_refptr);
+    ASSERT_NONNULL(const_refptr, "");
+    ASSERT_NULL(moved_const_refptr, "");
+
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(ref_ptr_tests)
@@ -575,4 +617,5 @@ RUN_NAMED_TEST("Ref Pointer", ref_ptr_test)
 RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
 RUN_NAMED_TEST("Ref Pointer Upcast", upcasting::ref_ptr_upcast_test)
 RUN_NAMED_TEST("Ref Pointer Adopt null", ref_ptr_adopt_null_test)
+RUN_NAMED_TEST("Ref Pointer To Const", ref_ptr_to_const_test)
 END_TEST_CASE(ref_ptr_tests);

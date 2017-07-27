@@ -70,9 +70,12 @@ public:
               typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
     RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
-                     (!is_class<T>::value || has_virtual_destructor<T>::value),
+                      (!is_class<T>::value ||
+                       has_virtual_destructor<T>::value ||
+                       is_same<T, const U>::value),
                 "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
-                "nor U are class/struct types, or T has a virtual destructor");
+                "nor U are class/struct types, or T has a virtual destructor,"
+                "or T == const U.");
     }
 
     // Assignment
@@ -102,9 +105,12 @@ public:
               typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
     RefPtr(RefPtr<U>&& r) : ptr_(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
-                     (!is_class<T>::value || has_virtual_destructor<T>::value),
+                      (!is_class<T>::value ||
+                       has_virtual_destructor<T>::value ||
+                       is_same<T, const U>::value),
                 "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
-                "nor U are class/struct types, or T has a virtual destructor");
+                "nor U are class/struct types, or T has a virtual destructor,"
+                "or T == const U");
 
         r.ptr_ = nullptr;
     }
