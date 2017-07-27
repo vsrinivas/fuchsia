@@ -113,10 +113,10 @@ class DispatcherChannel : public DispatcherEventSource,
                           public fbl::SlabAllocated<DispatcherChannelAllocTraits> {
 public:
     zx_status_t Activate(fbl::RefPtr<Owner>&& owner, zx::channel* client_channel_out)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock());
+        __TA_EXCLUDES(obj_lock_);
 
     zx_status_t Activate(fbl::RefPtr<Owner>&& owner, zx::channel&& client_channel)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock()) {
+        __TA_EXCLUDES(obj_lock_) {
         fbl::AutoLock obj_lock(&obj_lock_);
         return ActivateLocked(fbl::move(owner), fbl::move(client_channel));
     }
@@ -125,20 +125,20 @@ public:
                      uint32_t buf_len,
                      uint32_t* bytes_read_out,
                      zx::handle* rxed_handle = nullptr) const
-        __TA_EXCLUDES(obj_lock_, active_sources_lock());
+        __TA_EXCLUDES(obj_lock_);
 
     zx_status_t Write(const void* buf,
                       uint32_t buf_len,
                       zx::handle&& tx_handle = zx::handle()) const
-        __TA_EXCLUDES(obj_lock_, active_sources_lock());
+        __TA_EXCLUDES(obj_lock_);
 
 protected:
     zx_status_t ProcessInternal(const fbl::RefPtr<Owner>& owner,
                                 const zx_port_packet_t& port_packet)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock()) override;
+        __TA_EXCLUDES(obj_lock_) override;
 
     void NotifyDeactivated(const fbl::RefPtr<Owner>& owner)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock()) override;
+        __TA_EXCLUDES(obj_lock_) override;
 
 private:
     friend DispatcherChannelAllocator;

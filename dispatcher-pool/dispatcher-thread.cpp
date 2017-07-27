@@ -108,8 +108,6 @@ int DispatcherThread::Main() {
 
         // Wait for there to be work to dispatch.  If we encounter an error
         // while waiting, it is time to shut down.
-        //
-        // TODO(johngro) : consider adding a timeout, JiC
         res = port_.wait(ZX_TIME_INFINITE, &pkt, 0);
         if (res != ZX_OK)
             break;
@@ -119,51 +117,52 @@ int DispatcherThread::Main() {
             continue;
         }
 
-        // Look of the event source which woke up this thread.  If the event
-        // source is no longer in the active set, then it is in the process of
-        // being torn down and this message should be ignored.
-        //
-        // TODO(johngro) : When we have sorted out kernel assisted ref-counting
-        // of keyed objects who post activity on ports, switch to just using the
-        // key of the message for O(1) lookup of the active event source,
-        // instead of doing this O(log) lookup.
-        auto event_source = DispatcherEventSource::GetActiveEventSource(pkt.key);
-        if (event_source != nullptr) {
-            zx_status_t res = ZX_OK;
+        // Reclaim our event source reference from the kernel.
+        static_assert(sizeof(pkt.key) >= sizeof(DispatcherEventSource*),
+                      "Port packet keys are not large enough to hold a pointer!");
+        auto event_source =
+            fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<DispatcherEventSource*>(pkt.key));
 
-            // Start by processing all of the pending messages a event_source has.
-            if ((pkt.signal.observed & event_source->process_signal_mask()) != 0) {
-                res = event_source->Process(pkt);
+        // Start by processing all of the pending messages a event_source has.
+        ZX_DEBUG_ASSERT(event_source != nullptr);
+        res = event_source->Process(pkt);
+
+        // If process returned an error or any of the observed signals match the
+        // shutdown mask, deactivate our event source and do not bother to wait
+        // again.
+        if ((res != ZX_OK) ||
+            (pkt.signal.observed & event_source->shutdown_signal_mask()) != 0) {
+            if (res != ZX_OK) {
+                DEBUG_LOG("Process error (%d), deactivating event source %" PRIu64 " \n",
+                          res, pkt.key);
+            } else {
+                DEBUG_LOG("Shutdown signaled, deactivating event source %" PRIu64 "\n", pkt.key);
             }
-
-            // If the event source has been signalled for shutdown, or if the
-            // client ran into trouble during processing, deactivate the event
-            // source.  Otherwise, if the event source has not been deactivated,
-            // set up the next wait operation.
-            if ((res != ZX_OK) ||
-                (pkt.signal.observed & event_source->shutdown_signal_mask()) != 0) {
-                if (res != ZX_OK) {
-                    DEBUG_LOG("Process error (%d), deactivating event source %" PRIu64 " \n",
-                              res, pkt.key);
-                } else {
-                    DEBUG_LOG("Peer closed, deactivating event source %" PRIu64 "\n", pkt.key);
-                }
+            event_source->Deactivate(true);
+        } else {
+            // If we fail to set up the next wait operation, deactivate our
+            // event source and do not bother to wait again.
+            res = event_source->WaitOnPort(port_);
+            if (res != ZX_OK) {
+                DEBUG_LOG("Failed to re-arm event source wait (error %d), "
+                          "deactivating event source %" PRIu64 " \n",
+                          res, pkt.key);
                 event_source->Deactivate(true);
-            } else
-            if (event_source->InActiveEventSourceSet()) {
-                res = event_source->WaitOnPort(port_);
-                if (res != ZX_OK) {
-                    DEBUG_LOG("Failed to re-arm event source wait (error %d), "
-                              "deactivating event source %" PRIu64 " \n",
-                              res, pkt.key);
-                    event_source->Deactivate(true);
-                }
             }
-
-            // Release our event source reference.
-            event_source = nullptr;
         }
+
+        // Release our event source reference.
+        event_source = nullptr;
     }
+
+    // TODO(johngro) : In a debug build, we should keep a count of the number of
+    // wait operations we have in flight at all times and sanity check it here.
+    // We should never reach the point of shutting down the thread pool while we
+    // still have pending wait operations in flight.  If that ever happens, we
+    // have one or more implicit references to objects in our address space
+    // which are being held by the kernel, and which will never be returned to
+    // us.  This is basically a fatal situation as we have leaked references and
+    // have no way of knowing what got leaked.
 
     DEBUG_LOG("Client work thread shutting down\n");
 

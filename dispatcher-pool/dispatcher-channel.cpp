@@ -55,17 +55,11 @@ zx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::ch
         (owner_   != nullptr))
         return ZX_ERR_BAD_STATE;
 
-    // Add ourselves to the set of active channels so that users can fetch
-    // references to us.
-    zx_status_t res = AddToActiveEventSources(fbl::WrapRefPtr(this));
-    if (res != ZX_OK)
-        return res;
-
-    // Take ownership of the channel reference given to us.
+    // Take ownership of the owner and channel references given to us.
+    owner_  = fbl::move(owner);
     handle_ = fbl::move(channel);
 
-    // Make sure we remove ourselves from the active channel set and release our
-    // channel reference if anything goes wrong.
+    // Make sure we deactivate ourselves if anything goes wrong.
     //
     // NOTE: This auto-call lambda needs to be flagged as not-subject to thread
     // analysis.  Currently, clang it not quite smart enough to know that since
@@ -80,12 +74,11 @@ zx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::ch
     //
     // For now, just disable thread analysis for this lambda.
     auto cleanup = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
-        handle_.reset();
-        RemoveFromActiveEventSources();
+        DeactivateLocked();
     });
 
     // Setup our initial async wait operation on our thread pool's port.
-    res = WaitOnPortLocked(DispatcherThread::port());
+    zx_status_t res = WaitOnPortLocked(DispatcherThread::port());
     if (res != ZX_OK)
         return res;
 
@@ -93,13 +86,11 @@ zx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::ch
     // operation fails, leaving the active event sources set will be handled by the
     // cleanup AutoCall and canceling the async wait operation should occur as a
     // side effect of channel being auto closed as it goes out of scope.
-    res = owner->AddEventSource(fbl::WrapRefPtr(this));
+    res = owner_->AddEventSource(fbl::WrapRefPtr(this));
     if (res != ZX_OK)
         return res;
 
-    // Success, take ownership of our owner reference and cancel our
-    // cleanup routine.
-    owner_ = fbl::move(owner);
+    // Success!  Cancel our cleanup routine.
     cleanup.cancel();
     return res;
 }
