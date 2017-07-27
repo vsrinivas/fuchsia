@@ -773,9 +773,11 @@ function fsftp() {
 function fcmd() {
   local host="$(netaddr --fuchsia)"
   fssh -q "${host}" $*
-  if [ $? -ne 0 ]; then
+  local r=$?
+  if [ $r -ne 0 ]; then
     echo "fssh exited with a non-zero status."
   fi
+  return $r
 }
 
 function fcp-usage() {
