@@ -138,8 +138,6 @@ class SuggestionEngineImpl : public SuggestionEngine,
   modular::StoryProviderPtr story_provider_;
   fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
 
-  ContextPublisherPtr context_publisher_;
-
   // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
   // for Proposals on all channels, and notifies when there are changes so that
   // we can re-filter Proposals.
@@ -180,7 +178,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
 
   // The ContextPublisher that publishes the current user query to the
   // ContextEngine.
-  ContextPublisherPtr publisher_;
+  ContextPublisherPtr context_publisher_;
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;

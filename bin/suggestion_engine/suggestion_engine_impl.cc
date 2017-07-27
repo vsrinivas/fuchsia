@@ -11,6 +11,7 @@
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
@@ -91,6 +92,12 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   std::string query = input->get_text();
 
   std::transform(query.begin(), query.end(), query.begin(), ::tolower);
+
+  if (!query.empty()) {
+    std::string formattedQuery;
+    modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
+    context_publisher_->Publish(kQueryContextKey, formattedQuery);
+  }
 
   // TODO(andrewosh): Include/exclude logic improves upon this, but with
   // increased complexity.
@@ -201,9 +208,7 @@ void SuggestionEngineImpl::Initialize(
     fidl::InterfaceHandle<ContextPublisher> context_publisher) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
-
-  ContextPublisherPtr context_publisher_ptr;
-  context_publisher_ptr.Bind(std::move(context_publisher));
+  context_publisher_.Bind(std::move(context_publisher));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
 }
