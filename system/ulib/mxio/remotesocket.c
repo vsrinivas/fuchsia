@@ -128,15 +128,11 @@ static ssize_t mxsio_recvmsg_stream(mxio_t* io, struct msghdr* msg, int flags) {
         // TODO: support MSG_OOB
         return MX_ERR_NOT_SUPPORTED;
     }
-    // TODO: support flags and control messages
-    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
-        // if connected, can't specify address
-        if (msg->msg_name != NULL || msg->msg_namelen != 0) {
-            return MX_ERR_ALREADY_EXISTS;
-        }
-    } else {
+    if (!(io->flags & MXIO_FLAG_SOCKET_CONNECTED)) {
         return MX_ERR_BAD_STATE;
     }
+    // we ignore msg_name and msg_namelen members.
+    // (this is a consistent behavior with other OS implementations for TCP protocol)
     ssize_t total = 0;
     for (int i = 0; i < msg->msg_iovlen; i++) {
         struct iovec *iov = &msg->msg_iov[i];
