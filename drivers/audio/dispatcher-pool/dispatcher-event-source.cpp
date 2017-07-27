@@ -11,21 +11,10 @@
 
 namespace audio {
 
-// Static storage
-fbl::Mutex DispatcherEventSource::active_sources_lock_;
-fbl::WAVLTree<uint64_t, fbl::RefPtr<DispatcherEventSource>>
-    DispatcherEventSource::active_sources_;
-
-// Translation unit local vars (hidden in an anon namespace)
-namespace {
-static fbl::atomic_uint64_t driver_event_source_id_gen(1u);
-}
-
 DispatcherEventSource::DispatcherEventSource(zx_signals_t process_signal_mask,
                                              zx_signals_t shutdown_signal_mask,
                                              uintptr_t owner_ctx)
     : client_thread_active_(DispatcherThread::AddClient() == ZX_OK),
-      bind_id_(driver_event_source_id_gen.fetch_add(1u)),
       process_signal_mask_(process_signal_mask),
       shutdown_signal_mask_(shutdown_signal_mask),
       owner_ctx_(owner_ctx) {
@@ -37,7 +26,6 @@ DispatcherEventSource::~DispatcherEventSource() {
 
     ZX_DEBUG_ASSERT(owner_ == nullptr);
     ZX_DEBUG_ASSERT(!InOwnersList());
-    ZX_DEBUG_ASSERT(!InActiveEventSourceSet());
 }
 
 void DispatcherEventSource::Deactivate(bool do_notify) {
@@ -45,79 +33,124 @@ void DispatcherEventSource::Deactivate(bool do_notify) {
 
     {
         fbl::AutoLock obj_lock(&obj_lock_);
-
-        {
-            fbl::AutoLock sources_lock(&active_sources_lock_);
-            if (InActiveEventSourceSet()) {
-                active_sources_.erase(*this);
-            } else {
-                // Right now, the only way to leave the active event source set
-                // (once successfully Activated) is to Deactivate.  Because of
-                // this, if we are not in the event source set when this is
-                // triggered, we should be able to ASSERT that we have no owner,
-                // and that our event source handle has been closed.
-                //
-                // If this assumption ever changes (eg, if there is ever a way
-                // to leave the active event source set without being removed
-                // from our owner's set or closing our handle), we will need to
-                // come back and fix this code.
-                ZX_DEBUG_ASSERT(owner_ == nullptr);
-                ZX_DEBUG_ASSERT(!handle_.is_valid());
-                return;
-            }
-        }
-
-        if (owner_ != nullptr) {
-            owner_->RemoveEventSource(this);
-            old_owner = fbl::move(owner_);
-        }
-
-        handle_.reset();
+        old_owner = DeactivateLocked();
     }
 
     if (do_notify && (old_owner != nullptr))
         NotifyDeactivated(old_owner);
 }
 
-zx_status_t DispatcherEventSource::Process(const zx_port_packet_t& port_packet) {
-    // If our owner still exists, take a reference to them and call our source
-    // specific process handler.
+fbl::RefPtr<DispatcherEventSource::Owner> DispatcherEventSource::DeactivateLocked() {
+    // If our handle has been closed, then we must have already been
+    // deactivated.  We can fast-abort, and should also be able to assert
+    // that...
     //
-    // If the owner has gone away, then we should already be in the process
-    // of shutting down.  Don't bother to report an error, we are already
-    // being cleaned up.
+    // 1) There is no pending wait operation.
+    // 2) We have no owner.
+    //
+    if (!handle_.is_valid()) {
+        ZX_DEBUG_ASSERT(owner_ == nullptr);
+        ZX_DEBUG_ASSERT(!wait_pending_);
+        return nullptr;
+
+    }
+
+    // If we still have an owner, remove ourselves from the owner's event
+    // source list.
+    if (owner_ != nullptr) {
+        owner_->RemoveEventSource(this);
+    }
+
+    // If there is a wait operation currently pending, attempt to cancel it.
+    //
+    // If we succeed, manually drop the unmanaged reference which the
+    // kernel was holding, clear the wait_pending_ flag, and close the handle.
+    //
+    // If we fail, it must be because the wait has completed and is being
+    // dispatched on another thread.  Do not close our handle, clear our
+    // wait_pending flag, or release the kernel reference.  This will happen
+    // naturally when the other thread reclaims the reference from the
+    // kernel, and attempts to process the wakeup cause.
+    if (wait_pending_) {
+        zx_status_t res;
+        res = DispatcherThread::port().cancel(handle_.get(), reinterpret_cast<uint64_t>(this));
+
+        if (res == ZX_OK) {
+            __UNUSED bool should_destruct;
+
+            wait_pending_ = false;
+            should_destruct = this->Release();
+
+            ZX_DEBUG_ASSERT(should_destruct == false);
+        } else {
+            ZX_DEBUG_ASSERT(res == ZX_ERR_NOT_FOUND);
+        }
+    }
+
+    if (!wait_pending_) {
+        handle_.reset();
+    }
+
+    // Return our reference the owner we may have once had to the caller.  The
+    // user-facing Deactivate call will use it to notify the owner that this
+    // event source has become deactivated.
+    return fbl::move(owner_);
+}
+
+zx_status_t DispatcherEventSource::Process(const zx_port_packet_t& pkt) {
+    // Something interesting happened.  Enter the lock and...
+    //
+    // 1) Sanity check, then reset wait_pending_.  There is no longer a wait pending.
+    // 2) Assert that something interesting happened.  If none of the
+    //    interesting things which happened are in the process_signal_mask_,
+    //    abort with an indication that we are shutting down.
+    // 3) Take a reference to our owner, if they still exist.  If we have no
+    //    owner, then we are in the process of dying.  Return an error so that
+    //    we are not re-queued to our port.
+    //
     fbl::RefPtr<Owner> owner;
     {
         fbl::AutoLock obj_lock(&obj_lock_);
+
+        ZX_DEBUG_ASSERT(wait_pending_);
+        wait_pending_ = false;
+
+        ZX_DEBUG_ASSERT(pkt.signal.observed & (process_signal_mask() | shutdown_signal_mask()));
+        if (!(pkt.signal.observed & process_signal_mask()))
+            return ZX_ERR_CANCELED;
+
         if (owner_ == nullptr)
-            return ZX_OK;
+            return ZX_ERR_BAD_STATE;
+
         owner = owner_;
     }
 
-    return ProcessInternal(owner, port_packet);
+    return ProcessInternal(owner, pkt);
 }
 
 zx_status_t DispatcherEventSource::WaitOnPortLocked(const zx::port& port) {
-    return handle_.wait_async(DispatcherThread::port(),
-                              bind_id(),
-                              process_signal_mask() | shutdown_signal_mask(),
-                              ZX_WAIT_ASYNC_ONCE);
-}
+    // If we are attempting to wait, we should not already have a wait pending.
+    ZX_DEBUG_ASSERT(!wait_pending_);
 
-zx_status_t DispatcherEventSource::AddToActiveEventSources(
-        fbl::RefPtr<DispatcherEventSource>&& source) {
-    fbl::AutoLock sources_lock(&active_sources_lock_);
-
-    if (!active_sources_.insert_or_find(fbl::move(source)))
+    // Attempting to wait when our owner is null indicates that we are in the
+    // process of dying, and the wait should be denied.
+    if (owner_ == nullptr)
         return ZX_ERR_BAD_STATE;
 
-    return ZX_OK;
-}
+    zx_status_t res = handle_.wait_async(DispatcherThread::port(),
+                                         reinterpret_cast<uint64_t>(this),
+                                         process_signal_mask() | shutdown_signal_mask(),
+                                         ZX_WAIT_ASYNC_ONCE);
 
-void DispatcherEventSource::RemoveFromActiveEventSources() {
-    fbl::AutoLock sources_lock(&active_sources_lock_);
-    ZX_DEBUG_ASSERT(InActiveEventSourceSet());
-    active_sources_.erase(*this);
+    // If the wait async succeeded, then we now have a pending wait operation,
+    // and the kernel is now holding an unmanaged reference to us.  Flag the
+    // pending wait, and manually bump our ref count.
+    if (res == ZX_OK) {
+        wait_pending_ = true;
+        this->AddRef();
+    }
+
+    return res;
 }
 
 void DispatcherEventSource::Owner::ShutdownDispatcherEventSources() {

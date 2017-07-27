@@ -104,28 +104,19 @@ public:
             __TA_GUARDED(sources_lock_);
     };
 
-    static fbl::RefPtr<DispatcherEventSource> GetActiveEventSource(uint64_t id)
-        __TA_EXCLUDES(active_sources_lock_) {
-        fbl::AutoLock active_sources_lock(&active_sources_lock_);
-        return GetActiveEventSourceLocked(id);
-    }
-
-    uint64_t     bind_id()                const { return bind_id_; }
-    uint64_t     GetKey()                 const { return bind_id(); }
     zx_signals_t process_signal_mask()    const { return process_signal_mask_; }
     zx_signals_t shutdown_signal_mask()   const { return shutdown_signal_mask_; }
     uintptr_t    owner_ctx()              const { return owner_ctx_; }
     bool         InOwnersList()           const { return dll_node_state_.InContainer(); }
-    bool         InActiveEventSourceSet() const { return wavl_node_state_.InContainer(); }
 
-    zx_status_t WaitOnPort(const zx::port& port) __TA_EXCLUDES(obj_lock_, active_sources_lock_) {
+    zx_status_t WaitOnPort(const zx::port& port) __TA_EXCLUDES(obj_lock_) {
         fbl::AutoLock obj_lock(&obj_lock_);
         return WaitOnPortLocked(port);
     }
 
-    void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_, active_sources_lock_);
-    zx_status_t Process(const zx_port_packet_t& port_packet)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock_);
+    void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_);
+
+    zx_status_t Process(const zx_port_packet_t& port_packet) __TA_EXCLUDES(obj_lock_);
 
 protected:
     DispatcherEventSource(zx_signals_t process_signal_mask,
@@ -133,23 +124,18 @@ protected:
                           uintptr_t owner_ctx);
     virtual ~DispatcherEventSource();
 
+    bool client_thread_active() const { return client_thread_active_; }
+    fbl::RefPtr<Owner> DeactivateLocked() __TA_REQUIRES(obj_lock_);
+    zx_status_t WaitOnPortLocked(const zx::port& port) __TA_REQUIRES(obj_lock_);
+
     virtual zx_status_t ProcessInternal(const fbl::RefPtr<Owner>& owner,
                                         const zx_port_packet_t& port_packet)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock_) = 0;
+        __TA_EXCLUDES(obj_lock_) = 0;
 
     virtual void NotifyDeactivated(const fbl::RefPtr<Owner>& owner)
-        __TA_EXCLUDES(obj_lock_, active_sources_lock_) = 0;
+        __TA_EXCLUDES(obj_lock_) = 0;
 
-    bool client_thread_active() const { return client_thread_active_; }
-    const fbl::Mutex& active_sources_lock() const { return active_sources_lock_; }
-
-    zx_status_t WaitOnPortLocked(const zx::port& port) __TA_REQUIRES(obj_lock_);
-    zx_status_t AddToActiveEventSources(fbl::RefPtr<DispatcherEventSource>&& source)
-        __TA_EXCLUDES(active_sources_lock_);
-    void RemoveFromActiveEventSources() __TA_EXCLUDES(active_sources_lock_);
-
-    mutable fbl::Mutex obj_lock_ __TA_ACQUIRED_BEFORE(active_sources_lock_,
-                                                       owner_->sources_lock_);
+    mutable fbl::Mutex obj_lock_ __TA_ACQUIRED_BEFORE(owner_->sources_lock_);
     fbl::RefPtr<Owner> owner_    __TA_GUARDED(obj_lock_);
     zx::handle          handle_   __TA_GUARDED(obj_lock_);
 
@@ -158,27 +144,15 @@ private:
     friend struct fbl::DefaultDoublyLinkedListTraits<fbl::RefPtr<DispatcherEventSource>>;
     friend struct fbl::DefaultWAVLTreeTraits<fbl::RefPtr<DispatcherEventSource>>;
 
-    static fbl::RefPtr<DispatcherEventSource> GetActiveEventSourceLocked(uint64_t id)
-        __TA_REQUIRES(active_sources_lock_) {
-        auto iter = active_sources_.find(id);
-        return iter.IsValid() ? iter.CopyPointer() : nullptr;
-    }
-
     const bool          client_thread_active_;
-    const uint64_t      bind_id_;
     const zx_signals_t  process_signal_mask_;
     const zx_signals_t  shutdown_signal_mask_;
     const uintptr_t     owner_ctx_;
 
+    bool wait_pending_ __TA_GUARDED(obj_lock_) = false;
+
     // Node state for existing on the Owner's channels_ list.
     fbl::DoublyLinkedListNodeState<fbl::RefPtr<DispatcherEventSource>> dll_node_state_;
-
-    // Node state for in the active_sources_ set.
-    fbl::WAVLTreeNodeState<fbl::RefPtr<DispatcherEventSource>> wavl_node_state_;
-
-    static fbl::Mutex active_sources_lock_;
-    static fbl::WAVLTree<uint64_t, fbl::RefPtr<DispatcherEventSource>>
-        active_sources_ __TA_GUARDED(active_sources_lock_);
 };
 
 }  // namespace audio
