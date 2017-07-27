@@ -83,6 +83,11 @@ template <typename O, typename L> static inline bool Intersects(O offset1, L len
     static_assert(mxtl::numeric_limits<O>::is_signed == false, "Intersects requires unsigned type O");
     static_assert(mxtl::numeric_limits<L>::is_signed == false, "Intersects requires unsigned type L");
 
+    // Can't overlap a zero-length region.
+    if (len1 == 0 || len2 == 0) {
+        return false;
+    }
+
     if (offset1 <= offset2) {
         // doesn't intersect, 1 is completely below 2
         if (offset1 + len1 <= offset2)
