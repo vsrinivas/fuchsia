@@ -7,8 +7,8 @@
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/user_input.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
-#include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -20,8 +20,10 @@ namespace maxwell {
 
 bool IsInterruption(const SuggestionPrototype* suggestion) {
   return ((suggestion->proposal->display) &&
-         ((suggestion->proposal->display->annoyance == maxwell::AnnoyanceType::INTERRUPT) ||
-          (suggestion->proposal->display->annoyance == maxwell::AnnoyanceType::PEEK)));
+          ((suggestion->proposal->display->annoyance ==
+            maxwell::AnnoyanceType::INTERRUPT) ||
+           (suggestion->proposal->display->annoyance ==
+            maxwell::AnnoyanceType::PEEK)));
 }
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
@@ -115,7 +117,8 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
         // ask_handlers_ can be modified during this iteration.
         // Replace ask_handlers_ with a map + validation when BoundPtrSet is
         // removed.
-        [this, remainingHandlers, query, ask](fidl::Array<ProposalPtr> proposals) {
+        [this, remainingHandlers, query,
+         ask](fidl::Array<ProposalPtr> proposals) {
           for (auto& proposal : proposals) {
             AddAskProposal((*ask)->publisher.get(), std::move(proposal));
           }
@@ -130,7 +133,8 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<SuggestionListener> listener) {
-  InterruptionsSubscriber* subscriber = new InterruptionsSubscriber(std::move(listener));
+  InterruptionsSubscriber* subscriber =
+      new InterruptionsSubscriber(std::move(listener));
   // New InterruptionsSubscribers are initially sent the existing set of Next
   // suggestions. AnnoyanceType filtering happens in the subscriber.
   for (const auto& suggestion : next_suggestions_->Get()) {
@@ -311,8 +315,7 @@ void SuggestionEngineImpl::PerformActions(
           const auto& module_url = add_module_to_story->module_url;
           const auto& link_name = add_module_to_story->link_name;
           const auto& module_path = add_module_to_story->module_path;
-          const auto& surface_relation =
-                              add_module_to_story->surface_relation;
+          const auto& surface_relation = add_module_to_story->surface_relation;
 
           FTL_LOG(INFO) << "Adding module " << module_url << " to story "
                         << story_id;

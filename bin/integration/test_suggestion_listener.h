@@ -6,8 +6,8 @@
 
 #include <unordered_map>
 
-#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/debug.fidl.h"
+#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "gtest/gtest.h"
 
 class TestSuggestionListener : public maxwell::SuggestionListener {
@@ -46,52 +46,61 @@ class TestSuggestionListener : public maxwell::SuggestionListener {
   }
 
  private:
-  int naive_suggestion_count_ = 0;
   std::unordered_map<std::string, maxwell::SuggestionPtr> suggestions_by_id_;
   std::vector<maxwell::Suggestion*> ordered_suggestions_;
 };
 
 class TestProposalListener {
  public:
-   const std::vector<maxwell::ProposalSummaryPtr>& GetProposals() {
-     return proposals_;
-   }
-   int proposal_count() const { return proposals_.size(); }
+  const std::vector<maxwell::ProposalSummaryPtr>& GetProposals() {
+    return proposals_;
+  }
+  int proposal_count() const { return proposals_.size(); }
+
  protected:
-   void UpdateProposals(fidl::Array<maxwell::ProposalSummaryPtr> proposals) {
-     proposals_.clear();
-     for (auto& proposal: proposals) {
-       proposals_.push_back(std::move(proposal));
-     }
-   }
-   std::vector<maxwell::ProposalSummaryPtr> proposals_;
-};
-
-class TestDebugNextListener : public maxwell::NextProposalListener, public TestProposalListener {
-  public:
-   void OnNextUpdate(fidl::Array<maxwell::ProposalSummaryPtr> proposals) override {
-     UpdateProposals(std::move(proposals));
-   }
-};
-
-class TestDebugAskListener: public maxwell::AskProposalListener, public TestProposalListener {
-  public:
-    void OnAskStart(const fidl::String& query, fidl::Array<maxwell::ProposalSummaryPtr> proposals)
-        override {
-      UpdateProposals(std::move(proposals));
-      query_ = query.get();
+  void UpdateProposals(fidl::Array<maxwell::ProposalSummaryPtr> proposals) {
+    proposals_.clear();
+    for (auto& proposal : proposals) {
+      proposals_.push_back(std::move(proposal));
     }
-    void OnProposalSelected(maxwell::ProposalSummaryPtr selectedProposal) override {
-      selected_proposal_ = selectedProposal.get();
-    }
-    const std::string get_query() { return query_; }
-    maxwell::ProposalSummary* get_selected_proposal() { return selected_proposal_; }
-  private:
-    std::string query_;
-    maxwell::ProposalSummary* selected_proposal_;
+  }
+  std::vector<maxwell::ProposalSummaryPtr> proposals_;
 };
 
-class TestDebugInterruptionListener: public maxwell::InterruptionProposalListener {
+class TestDebugNextListener : public maxwell::NextProposalListener,
+                              public TestProposalListener {
+ public:
+  void OnNextUpdate(
+      fidl::Array<maxwell::ProposalSummaryPtr> proposals) override {
+    FTL_LOG(INFO) << "In OnNextUpdate debug";
+    UpdateProposals(std::move(proposals));
+  }
+};
+
+class TestDebugAskListener : public maxwell::AskProposalListener,
+                             public TestProposalListener {
+ public:
+  void OnAskStart(const fidl::String& query,
+                  fidl::Array<maxwell::ProposalSummaryPtr> proposals) override {
+    UpdateProposals(std::move(proposals));
+    query_ = query.get();
+  }
+  void OnProposalSelected(
+      maxwell::ProposalSummaryPtr selectedProposal) override {
+    selected_proposal_ = selectedProposal.get();
+  }
+  const std::string get_query() { return query_; }
+  maxwell::ProposalSummary* get_selected_proposal() {
+    return selected_proposal_;
+  }
+
+ private:
+  std::string query_;
+  maxwell::ProposalSummary* selected_proposal_;
+};
+
+class TestDebugInterruptionListener
+    : public maxwell::InterruptionProposalListener {
  public:
   void OnInterrupt(maxwell::ProposalSummaryPtr interruptionProposal) override {
     interrupt_proposal_ = std::move(interruptionProposal);
@@ -99,7 +108,7 @@ class TestDebugInterruptionListener: public maxwell::InterruptionProposalListene
   maxwell::ProposalSummaryPtr get_interrupt_proposal() {
     return interrupt_proposal_.Clone();
   }
+
  private:
   maxwell::ProposalSummaryPtr interrupt_proposal_;
-
 };

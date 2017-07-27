@@ -4,18 +4,18 @@
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/debug.fidl.h"
+#include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/src/agents/ideas.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "apps/maxwell/src/integration/test_suggestion_listener.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/story_provider_mock.h"
+#include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
-#include "gtest/gtest.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -134,7 +134,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         app::ConnectToService<SuggestionEngine>(suggestion_services.get());
     suggestion_provider_ =
         app::ConnectToService<SuggestionProvider>(suggestion_services.get());
-    suggestion_debug_ = app::ConnectToService<SuggestionDebug>(suggestion_services.get());
+    suggestion_debug_ =
+        app::ConnectToService<SuggestionDebug>(suggestion_services.get());
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
@@ -147,7 +148,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     fidl::InterfaceHandle<maxwell::ContextPublisher> context_publisher_handle;
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetPublisher(std::move(scope), context_publisher_handle.NewRequest());
+    context_engine()->GetPublisher(std::move(scope),
+                                   context_publisher_handle.NewRequest());
 
     suggestion_engine()->Initialize(std::move(story_provider_handle),
                                     std::move(focus_provider_handle),
@@ -157,7 +159,9 @@ class SuggestionEngineTest : public ContextEngineTestBase {
  protected:
   SuggestionEngine* suggestion_engine() { return suggestion_engine_.get(); }
 
-  SuggestionProvider* suggestion_provider() { return suggestion_provider_.get(); }
+  SuggestionProvider* suggestion_provider() {
+    return suggestion_provider_.get();
+  }
 
   SuggestionDebug* suggestion_debug() { return suggestion_debug_.get(); }
 
@@ -208,10 +212,10 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
 class AskTest : public virtual SuggestionEngineTest {
  public:
-  AskTest() : listener_binding_(&listener_),
-              debug_listener_binding_(&debug_listener_) {
-   suggestion_debug()->WatchAskProposals(
-        debug_listener_binding_.NewBinding());
+  AskTest()
+      : listener_binding_(&listener_),
+        debug_listener_binding_(&debug_listener_) {
+    suggestion_debug()->WatchAskProposals(debug_listener_binding_.NewBinding());
   }
 
   void InitiateAsk() {
@@ -242,10 +246,12 @@ class AskTest : public virtual SuggestionEngineTest {
       auto& suggestion = subscriberAsks[i];
       auto& proposal = debugAsks[i];
       EXPECT_EQ(suggestion->display->headline, proposal->display->headline);
-      EXPECT_EQ(suggestion->display->subheadline, proposal->display->subheadline);
+      EXPECT_EQ(suggestion->display->subheadline,
+                proposal->display->subheadline);
       EXPECT_EQ(suggestion->display->details, proposal->display->details);
     }
   }
+
  private:
   TestSuggestionListener listener_;
   TestDebugAskListener debug_listener_;
@@ -254,16 +260,16 @@ class AskTest : public virtual SuggestionEngineTest {
   AskControllerPtr ctl_;
 };
 
-class InterruptionTest: public virtual SuggestionEngineTest {
+class InterruptionTest : public virtual SuggestionEngineTest {
  public:
-  InterruptionTest():
-    listener_binding_(&listener_),
-    debug_listener_binding_(&debug_listener_) {
-      suggestion_provider()->SubscribeToInterruptions(
-          listener_binding_.NewBinding());
-      suggestion_debug()->WatchInterruptionProposals(
-          debug_listener_binding_.NewBinding());
-    }
+  InterruptionTest()
+      : listener_binding_(&listener_),
+        debug_listener_binding_(&debug_listener_) {
+    suggestion_provider()->SubscribeToInterruptions(
+        listener_binding_.NewBinding());
+    suggestion_debug()->WatchInterruptionProposals(
+        debug_listener_binding_.NewBinding());
+  }
 
   TestDebugInterruptionListener* debugListener() { return &debug_listener_; }
   TestSuggestionListener* listener() { return &listener_; }
@@ -276,8 +282,10 @@ class InterruptionTest: public virtual SuggestionEngineTest {
     auto lastInterruption = debug_listener_.get_interrupt_proposal();
     EXPECT_GE(subscriberNexts.size(), (size_t)1);
     auto& suggestion = subscriberNexts[0];
-    EXPECT_EQ(suggestion->display->headline, lastInterruption->display->headline);
-    EXPECT_EQ(suggestion->display->subheadline, lastInterruption->display->subheadline);
+    EXPECT_EQ(suggestion->display->headline,
+              lastInterruption->display->headline);
+    EXPECT_EQ(suggestion->display->subheadline,
+              lastInterruption->display->subheadline);
     EXPECT_EQ(suggestion->display->details, lastInterruption->display->details);
   }
 
@@ -291,12 +299,13 @@ class InterruptionTest: public virtual SuggestionEngineTest {
 
 class NextTest : public virtual SuggestionEngineTest {
  public:
-  NextTest() :
-    listener_binding_(&listener_),
-    debug_listener_binding_(&debug_listener_) {
-      suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
-                                             ctl_.NewRequest());
-      suggestion_debug()->WatchNextProposals(debug_listener_binding_.NewBinding());
+  NextTest()
+      : listener_binding_(&listener_),
+        debug_listener_binding_(&debug_listener_) {
+    suggestion_provider()->SubscribeToNext(listener_binding_.NewBinding(),
+                                           ctl_.NewRequest());
+    suggestion_debug()->WatchNextProposals(
+        debug_listener_binding_.NewBinding());
   }
 
   TestDebugNextListener* debugListener() { return &debug_listener_; }
@@ -321,7 +330,8 @@ class NextTest : public virtual SuggestionEngineTest {
       auto& suggestion = subscriberNexts[i];
       auto& proposal = debugNexts[i];
       EXPECT_EQ(suggestion->display->headline, proposal->display->headline);
-      EXPECT_EQ(suggestion->display->subheadline, proposal->display->subheadline);
+      EXPECT_EQ(suggestion->display->subheadline,
+                proposal->display->subheadline);
       EXPECT_EQ(suggestion->display->details, proposal->display->details);
     }
   }

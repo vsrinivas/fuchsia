@@ -77,7 +77,8 @@ RankedSuggestion* RankedSuggestions::GetSuggestion(
 RankedSuggestion* RankedSuggestions::GetSuggestion(
     const std::string& component_url,
     const std::string& proposal_id) const {
-  return GetMatchingSuggestion(GetSuggestionMatcher(component_url, proposal_id));
+  return GetMatchingSuggestion(
+      GetSuggestionMatcher(component_url, proposal_id));
 }
 
 void RankedSuggestions::RemoveAllSuggestions() {

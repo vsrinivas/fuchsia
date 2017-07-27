@@ -16,22 +16,20 @@ class InterruptionsSubscriber : public SuggestionSubscriber {
   InterruptionsSubscriber(fidl::InterfaceHandle<SuggestionListener> listener)
       : SuggestionSubscriber(std::move(listener)) {}
 
-  void OnAddSuggestion(
-      const RankedSuggestion& ranked_suggestion) override {
+  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) override {
     if (ranked_suggestion.prototype->proposal->display->annoyance !=
         AnnoyanceType::NONE) {
       DispatchAdd(ranked_suggestion);
     }
   }
 
- void OnRemoveSuggestion(
-      const RankedSuggestion& ranked_suggestion) override {
+  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) override {
     if (ranked_suggestion.prototype->proposal->display->annoyance !=
         AnnoyanceType::NONE) {
       DispatchRemove(ranked_suggestion);
     }
   }
 
- void Invalidate() override {}
+  void Invalidate() override { return; }
 };
 }  // namespace maxwell
