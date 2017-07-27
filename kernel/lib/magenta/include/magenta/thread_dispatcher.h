@@ -142,7 +142,7 @@ public:
     void OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport);
     // Return true if waiting for an exception response.
     // |exception_wait_lock_| must be held.
-    bool InExceptionLocked();
+    bool InExceptionLocked() TA_REQ(exception_wait_lock_);
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns MX_ERR_BAD_STATE if not in an exception.
