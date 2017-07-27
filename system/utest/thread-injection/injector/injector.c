@@ -17,7 +17,7 @@
 
 int main(void) {
     mx_handle_t h = mx_get_startup_handle(PA_HND(PA_USER0, 0));
-    if (h < 0) {
+    if (h == MX_HANDLE_INVALID) {
         fprintf(stderr, "mx_get_startup_handle: %d\n", h);
         return 1;
     }

@@ -331,7 +331,7 @@ static bool debugger_test(void)
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
                               debugger_test_exception_handler);
-    EXPECT_GT(eport, 0, "");
+    EXPECT_NEQ(eport, MX_HANDLE_INVALID, "");
     expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
     if (!start_inferior(lp))
@@ -376,7 +376,7 @@ static bool debugger_thread_list_test(void)
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
                               debugger_test_exception_handler);
-    EXPECT_GT(eport, 0, "");
+    EXPECT_NEQ(eport, MX_HANDLE_INVALID, "");
 
     if (!start_inferior(lp))
         return false;

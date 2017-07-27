@@ -335,7 +335,7 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
 
     // Note: |inferior| is a borrowed handle here.
     mx_handle_t inferior = launchpad_get_process_handle(lp);
-    ASSERT_GT(inferior, 0, "can't get launchpad process handle");
+    ASSERT_NEQ(inferior, MX_HANDLE_INVALID, "can't get launchpad process handle");
 
     mx_info_handle_basic_t process_info;
     tu_handle_get_basic_info(inferior, &process_info);

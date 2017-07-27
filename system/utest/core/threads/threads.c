@@ -76,9 +76,9 @@ static bool start_thread(mxr_thread_entry_t entry, void* arg,
                          mxr_thread_t* thread_out, mx_handle_t* thread_h) {
     // TODO: Don't leak these when the thread dies.
     const size_t stack_size = 256u << 10;
-    mx_handle_t thread_stack_vmo;
+    mx_handle_t thread_stack_vmo = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_vmo_create(stack_size, 0, &thread_stack_vmo), MX_OK, "");
-    ASSERT_GT(thread_stack_vmo, 0, "");
+    ASSERT_NEQ(thread_stack_vmo, MX_HANDLE_INVALID, "");
 
     uintptr_t stack = 0u;
     ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, thread_stack_vmo, 0, stack_size,

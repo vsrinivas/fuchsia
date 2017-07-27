@@ -435,7 +435,7 @@ static int watchdog_thread_func(void* arg)
 static bool test_set_close_set(const char* kind, mx_handle_t object,
                                bool debugger) {
     unittest_printf("%s exception handler set-close-set test\n", kind);
-    ASSERT_GT(object, 0, "invalid handle");
+    ASSERT_NEQ(object, MX_HANDLE_INVALID, "invalid handle");
     uint32_t options = debugger ? MX_EXCEPTION_PORT_DEBUGGER : 0;
 
     // Bind an exception port to the object.
@@ -512,7 +512,7 @@ static bool create_non_running_process(const char* name, proc_handles* ph) {
     mx_status_t status = mx_process_create(
         mx_job_default(), name, strlen(name), 0, &ph->proc, &ph->vmar);
     ASSERT_EQ(status, MX_OK, "mx_process_create");
-    ASSERT_GT(ph->proc, 0, "proc handle");
+    ASSERT_NEQ(ph->proc, MX_HANDLE_INVALID, "proc handle");
     return true;
 }
 
@@ -564,11 +564,11 @@ static bool non_running_thread_set_close_set_test(void) {
     ASSERT_TRUE(create_non_running_process(__func__, &ph), "");
 
     // Create but do not start a thread in that process.
-    mx_handle_t thread;
+    mx_handle_t thread = MX_HANDLE_INVALID;
     mx_status_t status =
         mx_thread_create(ph.proc, __func__, sizeof(__func__)-1, 0, &thread);
     ASSERT_EQ(status, MX_OK, "mx_thread_create");
-    ASSERT_GT(thread, 0, "thread handle");
+    ASSERT_NEQ(thread, MX_HANDLE_INVALID, "thread handle");
 
     // Make sure binding and unbinding behaves.
     test_set_close_set(__func__, thread, /* debugger */ false);
@@ -675,13 +675,13 @@ static bool dead_thread_unbind_helper(bool bind_while_alive) {
     tu_thread_create_c11(&cthread, thread_func, (void*)(uintptr_t)their_channel,
                          "thread-set-close-set");
     mx_handle_t thread = thrd_get_mx_handle(cthread);
-    ASSERT_GT(thread, 0, "failed to get thread handle");
+    ASSERT_NEQ(thread, MX_HANDLE_INVALID, "failed to get thread handle");
 
     // Duplicate the thread's handle. thrd_join() will close the |thread|
     // handle, but we need to be able to refer to the thread after that.
     mx_handle_t thread_copy = MX_HANDLE_INVALID;
     mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, &thread_copy);
-    ASSERT_GT(thread_copy, 0, "failed to copy thread handle");
+    ASSERT_NEQ(thread_copy, MX_HANDLE_INVALID, "failed to copy thread handle");
 
     // Possibly bind an eport to it.
     mx_handle_t eport = MX_HANDLE_INVALID;

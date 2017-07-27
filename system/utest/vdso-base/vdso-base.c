@@ -101,7 +101,7 @@ bool vdso_map_test(void) {
     BEGIN_TEST;
 
     mx_handle_t vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
-    ASSERT_GT(vmo, 0, "mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
+    ASSERT_NEQ(vmo, MX_HANDLE_INVALID, "mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
 
     // Since we already have a vDSO mapping, loading it again should fail.
     void* h = dlopen_vmo(vmo, RTLD_LOCAL);

@@ -20,7 +20,8 @@ int print_fail(void) {
 // create a thread using the raw magenta api.
 // cannot use a higher level api because they'll use trampoline functions that'll trash
 // registers on entry.
-mx_handle_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg)
+mx_status_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg,
+                               mx_handle_t* out)
 {
     // preallocated stack to satisfy the thread we create
     static uint8_t stack[1024] __ALIGNED(16);
@@ -38,16 +39,18 @@ mx_handle_t raw_thread_create(void (*thread_entry)(uintptr_t arg), uintptr_t arg
         return status;
     }
 
-    return handle;
+    *out = handle;
+    return MX_OK;
 }
 
 bool tis_test(void) {
     BEGIN_TEST;
     uintptr_t arg = 0x1234567890abcdef;
-    mx_handle_t handle = raw_thread_create(thread_entry, arg);
-    ASSERT_GE(handle, 0, "Error while thread creation");
+    mx_handle_t handle = MX_HANDLE_INVALID;
+    mx_status_t status = raw_thread_create(thread_entry, arg, & handle);
+    ASSERT_EQ(status, MX_OK, "Error while thread creation");
 
-    mx_status_t status = mx_object_wait_one(handle, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL);
+    status = mx_object_wait_one(handle, MX_THREAD_TERMINATED, MX_TIME_INFINITE, NULL);
     ASSERT_GE(status, 0, "Error while thread wait");
     END_TEST;
 }

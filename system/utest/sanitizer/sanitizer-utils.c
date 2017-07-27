@@ -55,7 +55,7 @@ bool publish_data_test(void) {
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_GT(old, 0, "dl_set_loader_service");
+    EXPECT_NEQ(old, MX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Make up a VMO to publish.
     mx_handle_t vmo;
@@ -122,7 +122,7 @@ bool debug_config_test(void) {
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_GT(old, 0, "dl_set_loader_service");
+    EXPECT_NEQ(old, MX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Make up a VMO that we'll get back from the service.
     ASSERT_EQ(mx_vmo_create(0, 0, &test_config_vmo), MX_OK, "");

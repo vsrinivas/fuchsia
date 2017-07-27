@@ -76,10 +76,10 @@ static mx_status_t my_loader_service(void* arg, uint32_t load_op,
         return MX_HANDLE_INVALID;
     }
 
-    mx_handle_t vmo;
+    mx_handle_t vmo = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_vmo_from_file(arg, &vmo);
     EXPECT_EQ(status, MX_OK, "");
-    EXPECT_GT(vmo, 0, "launchpad_vmo_from_file");
+    EXPECT_NEQ(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
     if (status < 0) {
         return status;
     }
@@ -109,7 +109,7 @@ bool loader_service_test(void) {
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_GT(old, 0, "dl_set_loader_service");
+    EXPECT_NEQ(old, MX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Now to a lookup that should go through our service.  It
     // should load up the new copy of the file, find that its
@@ -155,13 +155,13 @@ bool ioctl_test(void) {
     int fd = open(DMCTL_PATH, O_RDONLY);
     ASSERT_GE(fd, 0, "can't open " DMCTL_PATH);
 
-    mx_handle_t h;
+    mx_handle_t h = MX_HANDLE_INVALID;
     ssize_t s = ioctl_dmctl_get_loader_service_channel(fd, &h);
     close(fd);
 
     EXPECT_EQ(s, (ssize_t)sizeof(mx_handle_t),
               "unexpected return value from ioctl");
-    EXPECT_GT(h, 0, "invalid handle from ioctl");
+    EXPECT_NEQ(h, MX_HANDLE_INVALID, "invalid handle from ioctl");
 
     mx_handle_close(h);
 

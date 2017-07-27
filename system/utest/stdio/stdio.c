@@ -59,7 +59,7 @@ static bool stdio_launchpad_pipe_test(void)
     launchpad_t* lp = NULL;
 
     mx_handle_t mxio_job = mx_job_default();
-    ASSERT_GT(mxio_job, 0, "no mxio job object");
+    ASSERT_NEQ(mxio_job, MX_HANDLE_INVALID, "no mxio job object");
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_handle_duplicate(mxio_job, MX_RIGHT_SAME_RIGHTS, &job_copy),
@@ -101,8 +101,10 @@ static bool stdio_launchpad_pipe_test(void)
               "failed to transfer stderr pipe to child process");
 
     // Start the process
-    mx_handle_t p = launchpad_start(lp);
-    ASSERT_GT(p, 0, "process handle > 0");
+    mx_handle_t p = MX_HANDLE_INVALID;
+    mx_status_t status = launchpad_go(lp, &p, NULL);
+    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_NEQ(p, MX_HANDLE_INVALID, "process handle != 0");
 
     // Read the stdio
     uint8_t* out = NULL;
@@ -139,7 +141,6 @@ static bool stdio_launchpad_pipe_test(void)
     ASSERT_EQ(proc_info.return_code, 0, "lsusb must return 0");
 
     mx_handle_close(p);
-    launchpad_destroy(lp);
 
     END_TEST;
 }
