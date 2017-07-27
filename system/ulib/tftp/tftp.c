@@ -136,7 +136,7 @@ static void set_error(tftp_session* session, uint16_t opcode, tftp_msg* resp, si
 tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, void* cookie) {
     session->offset = (session->block_number + session->window_index) * session->block_size;
     *outlen = 0;
-    if (session->offset < session->file_size) {
+    if (session->offset <= session->file_size) {
         session->window_index++;
         OPCODE(resp, OPCODE_DATA);
         resp->block = session->block_number + session->window_index;
@@ -144,11 +144,13 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
         xprintf(" -> Copying block #%d (size:%zu/%d) from %zu/%zu [%d/%d]\n",
                 session->block_number + session->window_index, len, session->block_size,
                 session->offset, session->file_size, session->window_index, session->window_size);
-        // TODO(tkilbourn): assert that these function pointers are set
-        tftp_status s = session->file_interface.read(resp->data, &len, session->offset, cookie);
-        if (s < 0) {
-            xprintf("Err reading: %d\n", s);
-            return s;
+        if (len > 0) {
+            // TODO(tkilbourn): assert that these function pointers are set
+            tftp_status s = session->file_interface.read(resp->data, &len, session->offset, cookie);
+            if (s < 0) {
+                xprintf("Err reading: %d\n", s);
+                return s;
+            }
         }
         *outlen = sizeof(*resp) + len;
 
@@ -393,7 +395,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             session->options.requested |= TIMEOUT_OPTION;
         } else if (!strncmp(option, kTsize, strlen(kTsize))) { // RFC 2349
             long val = atol(value);
-            if (val < 1) {
+            if (val < 0) {
                 xprintf("invalid file size\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -507,12 +509,16 @@ tftp_status tftp_handle_data(tftp_session* session,
     if (block_delta == 1) {
         xprintf("Advancing normally + 1\n");
         size_t wr = msg_len - sizeof(tftp_data_msg);
-        // TODO(tkilbourn): assert that these function pointers are set
-        tftp_status ret = session->file_interface.write(data->data, &wr,
-                session->block_number * session->block_size, cookie);
-        if (ret < 0) {
-            xprintf("Error writing: %d\n", ret);
-            return ret;
+        if (wr > 0) {
+            tftp_status ret;
+            // TODO(tkilbourn): assert that these function pointers are set
+            ret = session->file_interface.write(data->data, &wr,
+                                                session->block_number * session->block_size,
+                                                cookie);
+            if (ret < 0) {
+                xprintf("Error writing: %d\n", ret);
+                return ret;
+            }
         }
         session->block_number++;
         session->window_index++;
@@ -524,13 +530,13 @@ tftp_status tftp_handle_data(tftp_session* session,
     }
 
     if (session->window_index == session->window_size ||
-            session->block_number * session->block_size >= session->file_size) {
+            session->block_number * session->block_size > session->file_size) {
         xprintf(" -> Ack %d\n", session->block_number);
         session->window_index = 0;
         OPCODE(ack_data, OPCODE_ACK);
         ack_data->block = session->block_number & 0xffff;
         *resp_len = sizeof(*ack_data);
-        if (session->block_number * session->block_size >= session->file_size) {
+        if (session->block_number * session->block_size > session->file_size) {
             return TFTP_TRANSFER_COMPLETED;
         }
     } else {
@@ -572,7 +578,7 @@ tftp_status tftp_handle_ack(tftp_session* session,
     session->block_number += block_offset;
     session->window_index = 0;
 
-    if (((session->block_number + session->window_index) * session->block_size) >=
+    if (((session->block_number + session->window_index) * session->block_size) >
         session->file_size) {
         *resp_len = 0;
         return TFTP_TRANSFER_COMPLETED;
@@ -769,7 +775,7 @@ tftp_status tftp_prepare_data(tftp_session* session,
                               void* cookie) {
     tftp_data_msg* resp_data = outgoing;
 
-    if ((session->block_number + session->window_index) * session->block_size >= session->file_size) {
+    if ((session->block_number + session->window_index) * session->block_size > session->file_size) {
         *outlen = 0;
         return TFTP_TRANSFER_COMPLETED;
     }

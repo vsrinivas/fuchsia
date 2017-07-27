@@ -700,10 +700,15 @@ static bool test_tftp_receive_data_final_block(void) {
     td.expected.offset = DEFAULT_BLOCKSIZE;
 
     status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(TFTP_TRANSFER_COMPLETED, status, "receive data failed");
+    EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
     EXPECT_TRUE(verify_write_data(data_buf + 4, td), "bad write data");
 
+    // Last data packet. Empty, indicating end of data.
+    data_buf[2]++;
+    status = tftp_process_msg(ts.session, data_buf, 4, ts.out, &ts.outlen, &ts.timeout, nullptr);
+    EXPECT_EQ(TFTP_TRANSFER_COMPLETED, status, "receive data failed");
+    ASSERT_TRUE(verify_response_opcode(ts, OPCODE_ACK), "bad response");
     END_TEST;
 }
 
@@ -1092,8 +1097,14 @@ static bool test_tftp_send_data_receive_final_ack(void) {
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
     EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
 
+    // second block
     ack_buf[2]++;
+    status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "receive block 2 error");
+    EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg), "block 3 not empty");
+
     // Do not expect any more sends.
+    ack_buf[2]++;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     EXPECT_EQ(TFTP_TRANSFER_COMPLETED, status, "tftp transfer should be complete");
     EXPECT_EQ(ts.outlen, 0, "no outgoing message expected");
