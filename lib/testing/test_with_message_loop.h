@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(alhaad): This file has been copied from Ledger and Mozart. Reconcile
+// all copies to a common place.
+
 #ifndef APPS_MODULAR_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
 #define APPS_MODULAR_LIB_TESTING_TEST_WITH_MESSAGE_LOOP_H_
 
