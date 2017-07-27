@@ -205,8 +205,9 @@ bool handle_wait_test(void) {
               "thread creation failed");
     unittest_printf("threads started\n");
 
+    event_handle = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_event_create(0u, &event_handle), 0, "");
-    ASSERT_GT(event_handle, 0, "event creation failed");
+    ASSERT_NEQ(event_handle, MX_HANDLE_INVALID, "event creation failed");
 
     enum message msg;
     send_msg(thread1_channel[0], MSG_PING);
@@ -225,10 +226,10 @@ bool handle_wait_test(void) {
     // TODO(vtl): This is a flaky assumption, though the following sleep should help.
     mx_nanosleep(mx_deadline_after(MX_MSEC(20)));
 
-    mx_handle_t event_handle_dup;
+    mx_handle_t event_handle_dup = MX_HANDLE_INVALID;
     mx_status_t status = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS, &event_handle_dup);
     ASSERT_EQ(status, MX_OK, "");
-    ASSERT_GE(event_handle_dup, 0, "handle duplication failed");
+    ASSERT_NEQ(event_handle_dup, MX_HANDLE_INVALID, "handle duplication failed");
     ASSERT_EQ(mx_handle_close(event_handle), MX_OK, "handle close failed");
 
     ASSERT_TRUE(recv_msg(thread1_channel[0], &msg), "Error while receiving msg");

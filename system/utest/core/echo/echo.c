@@ -132,7 +132,7 @@ bool echo_test(void) {
             4,          // array header: num elems
             0x42424143, // array contents: 'CABB'
         };
-        mx_handle_t status = mx_channel_write(handles[1], 0u, (void*)buf, sizeof(buf), NULL, 0u);
+        mx_status_t status = mx_channel_write(handles[1], 0u, (void*)buf, sizeof(buf), NULL, 0u);
         ASSERT_EQ(status, MX_OK, "could not write echo request");
 
         ASSERT_TRUE(serve_echo_request(handles[0]), "serve_echo_request failed");

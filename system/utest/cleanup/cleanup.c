@@ -57,10 +57,10 @@ bool cleanup_test(void) {
     ASSERT_EQ(r, 0, "cleanup-test: channel create 1 failed");
     mx_handle_close(p1[1]);
 
-    mx_handle_t event;
+    mx_handle_t event = MX_HANDLE_INVALID;
     r = mx_event_create(0u, &event);
     ASSERT_EQ(r, 0, "");
-    ASSERT_GE(event, 0, "cleanup-test: event create failed");
+    ASSERT_NEQ(event, MX_HANDLE_INVALID, "cleanup-test: event create failed");
     r = mx_channel_write(p1[0], 0, &msg, sizeof(msg), &event, 1);
     ASSERT_EQ(r, MX_ERR_PEER_CLOSED, "cleanup-test: unexpected message_write return code");
 

@@ -20,8 +20,8 @@ static bool create_test(void) {
     {
         mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
         ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), MX_OK, "eventpair_create failed");
-        ASSERT_GT(h[0], 0, "invalid handle from eventpair_create");
-        ASSERT_GT(h[1], 0, "invalid handle from eventpair_create");
+        ASSERT_NEQ(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+        ASSERT_NEQ(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
         mx_info_handle_basic_t info;
         memset(&info, 0, sizeof(info));

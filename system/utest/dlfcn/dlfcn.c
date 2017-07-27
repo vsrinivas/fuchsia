@@ -26,10 +26,10 @@
 bool dlopen_vmo_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t vmo;
+    mx_handle_t vmo = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_vmo_from_file(LIBPREFIX "liblaunchpad.so", &vmo);
     EXPECT_EQ(status, MX_OK, "");
-    EXPECT_GT(vmo, 0, "launchpad_vmo_from_file");
+    EXPECT_NEQ(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
 
     void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
     EXPECT_NONNULL(obj, "dlopen_vmo");
