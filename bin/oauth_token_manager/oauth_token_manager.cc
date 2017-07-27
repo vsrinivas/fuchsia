@@ -1374,7 +1374,8 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
 
     if (attributes.HasMember("displayName")) {
       account_->display_name = attributes["displayName"].GetString();
-    } else {
+    }
+    if (account_->display_name.is_null()) {
       account_->display_name = "";
     }
 
@@ -1460,6 +1461,9 @@ void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
   auto account = auth::Account::New();
   account->id = GenerateAccountId();
   account->identity_provider = identity_provider;
+  account->display_name = "";
+  account->url = "";
+  account->image_url = "";
 
   switch (identity_provider) {
     case IdentityProvider::DEV:

@@ -33,6 +33,9 @@ auth::AccountPtr Convert(const UserStorage* user) {
                         << user->identity_provider();
   }
   account->display_name = user->display_name()->str();
+  if (account->display_name.is_null()) {
+    account->display_name = "";
+  }
   account->url = user->profile_url()->str();
   account->image_url = user->image_url()->str();
   return account;
