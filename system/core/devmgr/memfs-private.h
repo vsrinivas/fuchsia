@@ -32,7 +32,7 @@ public:
     virtual mx_status_t Sync() final;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
                   size_t in_len, void* out_buf, size_t out_len) override;
-    mx_status_t AttachRemote(mx_handle_t h) final;
+    mx_status_t AttachRemote(fs::MountChannel h) final;
 
     // To be more specific: Is this vnode connected into the directory hierarchy?
     // VnodeDirs can be unlinked, and this method will subsequently return false.
@@ -89,15 +89,15 @@ public:
 
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
-    mx_status_t WatchDir(mx_handle_t* out) final;
+    mx_status_t WatchDir(mx::channel* out) final;
     mx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
-    virtual mx_handle_t DetachRemote() final;
+    virtual mx::channel DetachRemote() final;
     virtual mx_handle_t WaitForRemote() final;
     virtual mx_handle_t GetRemote() const final;
-    virtual void SetRemote(mx_handle_t remote) final;
+    virtual void SetRemote(mx::channel remote) final;
 
 private:
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;

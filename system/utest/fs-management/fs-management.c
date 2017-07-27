@@ -148,7 +148,7 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     ASSERT_GT(mountfd, 0, "");
     // Wait a sec, that was a file, not a directory! We can't mount that!
     ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_async),
+                      launch_stdio_async),
                MX_OK, "");
     ASSERT_NEQ(fumount(mountfd), MX_OK, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close file not-mount point");

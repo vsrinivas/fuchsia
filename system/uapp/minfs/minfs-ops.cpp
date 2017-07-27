@@ -430,9 +430,11 @@ mx_status_t VnodeMinfs::CanUnlink() const {
         if (inode_.dirent_count != 2) {
             // if we have more than "." and "..", not empty, cannot unlink
             return MX_ERR_NOT_EMPTY;
+#ifdef __Fuchsia__
         } else if (IsRemote()) {
             // we cannot unlink mount points
             return MX_ERR_UNAVAILABLE;
+#endif
         }
     }
     return MX_OK;
@@ -1082,16 +1084,16 @@ VnodeMinfs::VnodeMinfs(Minfs* fs) :
     fs_(fs), vmo_(MX_HANDLE_INVALID), vmo_indirect_(nullptr) {}
 
 void VnodeMinfs::Notify(const char* name, size_t len, unsigned event) { watcher_.Notify(name, len, event); }
-mx_status_t VnodeMinfs::WatchDir(mx_handle_t* out) { return watcher_.WatchDir(out); }
+mx_status_t VnodeMinfs::WatchDir(mx::channel* out) { return watcher_.WatchDir(out); }
 mx_status_t VnodeMinfs::WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) {
     return watcher_.WatchDirV2(vfs, this, cmd);
 }
 
 bool VnodeMinfs::IsRemote() const { return remoter_.IsRemote(); }
-mx_handle_t VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(flags_); }
+mx::channel VnodeMinfs::DetachRemote() { return remoter_.DetachRemote(flags_); }
 mx_handle_t VnodeMinfs::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
 mx_handle_t VnodeMinfs::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeMinfs::SetRemote(mx_handle_t remote) { return remoter_.SetRemote(remote); }
+void VnodeMinfs::SetRemote(mx::channel remote) { return remoter_.SetRemote(mxtl::move(remote)); }
 
 #else
 VnodeMinfs::VnodeMinfs(Minfs* fs) : fs_(fs) {}
@@ -1469,14 +1471,16 @@ mx_status_t VnodeMinfs::Sync() {
     return fs_->bc_->Sync();
 }
 
-mx_status_t VnodeMinfs::AttachRemote(mx_handle_t h) {
+#ifdef __Fuchsia__
+mx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {
     if (!IsDirectory() || IsDeletedDirectory()) {
         return MX_ERR_NOT_DIR;
     } else if (IsRemote()) {
         return MX_ERR_ALREADY_BOUND;
     }
-    SetRemote(h);
+    SetRemote(mxtl::move(h.TakeChannel()));
     return MX_OK;
 }
+#endif
 
 } // namespace minfs

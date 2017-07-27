@@ -55,7 +55,7 @@ mx_status_t WatchBuffer::Send(const mx::channel& c) {
     return MX_OK;
 }
 
-mx_status_t WatcherContainer::WatchDir(mx_handle_t* out) {
+mx_status_t WatcherContainer::WatchDir(mx::channel* out) {
     AllocChecker ac;
     mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
                                                                   VFS_WATCH_MASK_ADDED));
@@ -68,7 +68,7 @@ mx_status_t WatcherContainer::WatchDir(mx_handle_t* out) {
     }
     mxtl::AutoLock lock(&lock_);
     watch_list_.push_back(mxtl::move(watcher));
-    *out = out_channel.release();
+    *out = mxtl::move(out_channel);
     return MX_OK;
 }
 

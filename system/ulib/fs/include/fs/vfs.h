@@ -38,6 +38,9 @@ __BEGIN_CDECLS
 
 typedef struct vfs_iostate vfs_iostate_t;
 
+// Send an unmount signal on a handle to a filesystem and await a response.
+mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t deadline);
+
 __END_CDECLS
 
 #ifdef __cplusplus
@@ -46,6 +49,7 @@ __END_CDECLS
 #include <fs/dispatcher.h>
 #include <mx/channel.h>
 #include <mx/event.h>
+#include <mx/vmo.h>
 #include <mxtl/mutex.h>
 #endif  // __Fuchsia__
 
@@ -60,21 +64,20 @@ namespace fs {
 class Vnode;
 class Vfs;
 
+#ifdef __Fuchsia__
 // RemoteContainer adds support for mounting remote handles on nodes.
 class RemoteContainer {
 public:
     bool IsRemote() const;
-    mx_handle_t DetachRemote(uint32_t &flags_);
+    mx::channel DetachRemote(uint32_t &flags_);
     // Access the remote handle if it's ready -- otherwise, return an error.
     mx_handle_t WaitForRemote(uint32_t &flags_);
     mx_handle_t GetRemote() const;
-    void SetRemote(mx_handle_t remote);
-    constexpr RemoteContainer() : remote_(MX_HANDLE_INVALID) {};
+    void SetRemote(mx::channel remote);
+    constexpr RemoteContainer() {};
 private:
-    mx_handle_t remote_;
+    mx::channel remote_;
 };
-
-#ifdef __Fuchsia__
 
 struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
 public:
@@ -103,12 +106,38 @@ private:
 
 class WatcherContainer {
 public:
-    mx_status_t WatchDir(mx_handle_t* out);
+    mx_status_t WatchDir(mx::channel* out);
     mx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
     void Notify(const char* name, size_t len, unsigned event);
 private:
     mxtl::Mutex lock_;
     mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
+};
+
+// MountChannel functions exactly the same as a channel, except that it
+// intentionally destructs by sending a clean "shutdown" signal to the
+// underlying filesystem. Up until the point that a remote handle is
+// attached to a vnode, this wrapper guarantees not only that the
+// underlying handle gets closed on error, but also that the sub-filesystem
+// is released (which cleans up the underlying connection to the block
+// device).
+class MountChannel {
+public:
+    constexpr MountChannel() = default;
+    explicit MountChannel(mx_handle_t handle) : channel_(handle) {}
+    explicit MountChannel(mx::channel channel) : channel_(mxtl::move(channel)) {}
+    MountChannel(MountChannel&& other) : channel_(mxtl::move(other.channel_)) {}
+
+    mx::channel TakeChannel() { return mxtl::move(channel_); }
+
+    ~MountChannel() {
+        if (channel_.is_valid()) {
+            vfs_unmount_handle(channel_.release(), 0);
+        }
+    }
+
+private:
+    mx::channel channel_;
 };
 
 #endif // __Fuchsia__
@@ -166,12 +195,12 @@ public:
         *type = MXIO_PROTOCOL_REMOTE;
         return 0;
     }
-#endif
 
-    virtual mx_status_t WatchDir(mx_handle_t* out) { return MX_ERR_NOT_SUPPORTED; }
+    virtual mx_status_t WatchDir(mx::channel* out) { return MX_ERR_NOT_SUPPORTED; }
     virtual mx_status_t WatchDirV2(Vfs* vfs, const vfs_watch_dir_t* cmd) {
         return MX_ERR_NOT_SUPPORTED;
     }
+#endif
     virtual void Notify(const char* name, size_t len, unsigned event) {}
 
     // Ensure that it is valid to open vn.
@@ -271,8 +300,9 @@ public:
 
     virtual ~Vnode() {};
 
+#ifdef __Fuchsia__
     // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-    virtual mx_status_t AttachRemote(mx_handle_t h) { return MX_ERR_NOT_SUPPORTED; }
+    virtual mx_status_t AttachRemote(MountChannel h) { return MX_ERR_NOT_SUPPORTED; }
 
     // The following methods are required to mount sub-filesystems. The logic
     // (and storage) necessary to implement these functions exists within the
@@ -281,10 +311,10 @@ public:
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const { return false; }
-    virtual mx_handle_t DetachRemote() { return MX_HANDLE_INVALID; }
-    virtual mx_handle_t WaitForRemote() { return MX_ERR_UNAVAILABLE; }
+    virtual mx::channel DetachRemote() { return mx::channel(); }
+    virtual mx_handle_t WaitForRemote() { return MX_HANDLE_INVALID; }
     virtual mx_handle_t GetRemote() const { return MX_HANDLE_INVALID; }
-    virtual void SetRemote(mx_handle_t remote) { MX_DEBUG_ASSERT(false); }
+    virtual void SetRemote(mx::channel remote) { MX_DEBUG_ASSERT(false); }
 
     // The vnode is a device. Devices may opt to reveal themselves as directories
     // or endpoints, depending on context. For the purposes of our VFS layer,
@@ -296,6 +326,7 @@ public:
         flags_ |= V_FLAG_DEVICE_DETACHED;
     }
     bool IsDetachedDevice() const { return (flags_ & V_FLAG_DEVICE_DETACHED); }
+#endif
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
     Vnode() : flags_(0) {};
@@ -303,6 +334,7 @@ protected:
     uint32_t flags_;
 };
 
+#ifdef __Fuchsia__
 // Non-intrusive node in linked list of vnodes acting as mount points
 class MountNode final : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MountNode>> {
 public:
@@ -315,9 +347,9 @@ public:
         vn_ = vn;
     }
 
-    mx_handle_t ReleaseRemote() {
+    mx::channel ReleaseRemote() {
         MX_DEBUG_ASSERT(vn_ != nullptr);
-        mx_handle_t h = vn_->DetachRemote();
+        mx::channel h = vn_->DetachRemote();
         vn_ = nullptr;
         return h;
     }
@@ -330,6 +362,8 @@ public:
 private:
     mxtl::RefPtr<Vnode> vn_;
 };
+
+#endif
 
 // The Vfs object contains global per-filesystem state, which
 // may be valid across a collection of Vnodes.
@@ -371,14 +405,14 @@ public:
     mx_status_t ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, mx::channel channel);
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
-    mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
 
     // Create and mount a directory with a provided name
     mx_status_t MountMkdir(mxtl::RefPtr<Vnode> vn,
                            const mount_mkdir_config_t* config) __TA_EXCLUDES(vfs_lock_);
 
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
-    mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx::channel* h) __TA_EXCLUDES(vfs_lock_);
 
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
@@ -395,9 +429,9 @@ private:
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
 #ifdef __Fuchsia__
     mx_status_t TokenToVnode(mx::event token, mxtl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
-    mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock_);
+    mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
     mx_status_t UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn,
-                                      mx_handle_t* h) __TA_REQUIRES(vfs_lock_);
+                                      mx::channel* h) __TA_REQUIRES(vfs_lock_);
 
     // The mount list is a global static variable, but it only uses
     // constexpr constructors during initialization. As a consequence,
@@ -425,8 +459,5 @@ typedef struct vdircookie {
 
 // Handle incoming mxrio messages, dispatching them to vnode operations.
 mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie);
-
-// Send an unmount signal on a handle to a filesystem and await a response.
-mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t deadline);
 
 __END_CDECLS

@@ -230,10 +230,10 @@ mx_status_t VnodeDir::Mmap(int flags, size_t len, size_t* off, mx_handle_t* out)
 }
 
 bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
-mx_handle_t VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
+mx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
 mx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
 mx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeDir::SetRemote(mx_handle_t remote) { return remoter_.SetRemote(remote); }
+void VnodeDir::SetRemote(mx::channel remote) { return remoter_.SetRemote(mxtl::move(remote)); }
 
 mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (!IsDirectory()) {
@@ -581,13 +581,13 @@ ssize_t VnodeDir::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
     }
 }
 
-mx_status_t VnodeMemfs::AttachRemote(mx_handle_t h) {
+mx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     if (!IsDirectory()) {
         return MX_ERR_NOT_DIR;
     } else if (IsRemote()) {
         return MX_ERR_ALREADY_BOUND;
     }
-    SetRemote(h);
+    SetRemote(mxtl::move(h.TakeChannel()));
     return MX_OK;
 }
 
@@ -746,7 +746,7 @@ mxtl::RefPtr<memfs::VnodeDir> BootfsRoot() {
 }
 
 mx_status_t devfs_mount(mx_handle_t h) {
-    return DevfsRoot()->AttachRemote(h);
+    return DevfsRoot()->AttachRemote(fs::MountChannel(h));
 }
 
 VnodeDir* systemfs_get_root() {

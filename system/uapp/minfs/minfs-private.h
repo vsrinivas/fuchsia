@@ -217,9 +217,9 @@ private:
     mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
     mx_status_t Truncate(size_t len) final;
     mx_status_t Sync() final;
-    mx_status_t AttachRemote(mx_handle_t) final;
 
 #ifdef __Fuchsia__
+    mx_status_t AttachRemote(fs::MountChannel h) final;
     mx_status_t InitVmo();
     mx_status_t InitIndirectVmo();
 #endif
@@ -260,15 +260,15 @@ private:
 
     // Use the watcher container to implement a directory watcher
     void Notify(const char* name, size_t len, unsigned event) final;
-    mx_status_t WatchDir(mx_handle_t* out) final;
+    mx_status_t WatchDir(mx::channel* out) final;
     mx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     // The vnode is acting as a mount point for a remote filesystem or device.
     virtual bool IsRemote() const final;
-    virtual mx_handle_t DetachRemote() final;
+    virtual mx::channel DetachRemote() final;
     virtual mx_handle_t WaitForRemote() final;
     virtual mx_handle_t GetRemote() const final;
-    virtual void SetRemote(mx_handle_t remote) final;
+    virtual void SetRemote(mx::channel remote) final;
 
     fs::RemoteContainer remoter_{};
     fs::WatcherContainer watcher_{};

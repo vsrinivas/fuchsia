@@ -91,48 +91,46 @@ mx_status_t vfs_validate_flags(uint32_t flags) {
 
 } // namespace anonymous
 
+#ifdef __Fuchsia__
+
 bool RemoteContainer::IsRemote() const {
-    return remote_ > 0;
+    return remote_.is_valid();
 }
 
-mx_handle_t RemoteContainer::DetachRemote(uint32_t &flags_) {
-    mx_handle_t h = remote_;
-    remote_ = MX_HANDLE_INVALID;
+mx::channel RemoteContainer::DetachRemote(uint32_t &flags_) {
     flags_ &= ~V_FLAG_MOUNT_READY;
-    return h;
+    return mxtl::move(remote_);
 }
 
 // Access the remote handle if it's ready -- otherwise, return an error.
 mx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
-#ifdef __Fuchsia__
-    if (remote_ == 0) {
+    if (!remote_.is_valid()) {
         // Trying to get remote on a non-remote vnode
         return MX_ERR_UNAVAILABLE;
     } else if (!(flags_ & V_FLAG_MOUNT_READY)) {
         mx_signals_t observed;
-        mx_status_t status = mx_object_wait_one(remote_,
-                                                MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
-                                                0,
-                                                &observed);
+        mx_status_t status = remote_.wait_one(MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
+                                              0,
+                                              &observed);
         if ((status != MX_OK) || (observed & MX_CHANNEL_PEER_CLOSED)) {
             // Not set (or otherwise remote is bad)
             return MX_ERR_UNAVAILABLE;
         }
         flags_ |= V_FLAG_MOUNT_READY;
     }
-    return remote_;
-#else
-    return MX_ERR_NOT_SUPPORTED;
-#endif
+    return remote_.get();
 }
 
 mx_handle_t RemoteContainer::GetRemote() const {
-    return remote_;
+    return remote_.get();
 }
 
-void RemoteContainer::SetRemote(mx_handle_t remote) {
-    remote_ = remote;
+void RemoteContainer::SetRemote(mx::channel remote) {
+    MX_DEBUG_ASSERT(!remote_.is_valid());
+    remote_ = mxtl::move(remote);
 }
+
+#endif
 
 Vfs::Vfs() = default;
 
@@ -201,6 +199,7 @@ mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
         if (r < 0) {
             return r;
         }
+#ifdef __Fuchsia__
         if (!(flags & O_NOREMOTE) && vn->IsRemote() && !vn->IsDevice()) {
             // Opening a mount point: Traverse across remote.
             // Devices are different, even though they also have remotes.  Ignore them.
@@ -209,17 +208,18 @@ mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
             return r;
         }
 
-#ifdef __Fuchsia__
         flags |= (must_be_dir ? O_DIRECTORY : 0);
 #endif
         if ((r = vn->Open(flags)) < 0) {
             return r;
         }
+#ifdef __Fuchsia__
         if (vn->IsDevice() && !(flags & O_DIRECTORY)) {
             *pathout = ".";
             r = vn->GetRemote();
             return r;
         }
+#endif
         if ((flags & O_TRUNC) && ((r = vn->Truncate(0)) < 0)) {
             return r;
         }
@@ -409,17 +409,8 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
         if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
             return MX_ERR_INVALID_ARGS;
         }
-        mx_handle_t h = *reinterpret_cast<const mx_handle_t*>(in_buf);
-        mx_status_t status = Vfs::InstallRemote(vn, h);
-        if (status < 0) {
-            // If we can't install the filesystem, we shoot off a quick "unmount"
-            // signal to the filesystem process, since we are the owner of its
-            // root handle.
-            // TODO(smklein): Transfer the mountpoint back to the caller on error,
-            // so they can decide what to do with it.
-            vfs_unmount_handle(h, 0);
-        }
-        return status;
+        MountChannel h = MountChannel(*reinterpret_cast<const mx_handle_t*>(in_buf));
+        return Vfs::InstallRemote(vn, mxtl::move(h));
     }
     case IOCTL_VFS_MOUNT_MKDIR_FS: {
         size_t namelen = in_len - sizeof(mount_mkdir_config_t);
@@ -438,7 +429,10 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t* h = (mx_handle_t*)out_buf;
-        return Vfs::UninstallRemote(vn, h);
+        mx::channel c;
+        mx_status_t s = Vfs::UninstallRemote(vn, &c);
+        *h = c.release();
+        return s;
     }
     case IOCTL_VFS_UNMOUNT_FS: {
         Vfs::UninstallAll(MX_TIME_INFINITE);
@@ -496,6 +490,7 @@ mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
             // convert empty initial path of final path segment to "."
             path = ".";
         }
+#ifdef __Fuchsia__
         if (vn->IsRemote() && !vn->IsDevice()) {
             // remote filesystem mount, caller must resolve
             // devices are different, so ignore them even though they can have vn->remote
@@ -506,6 +501,7 @@ mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
             *pathout = path;
             return r;
         }
+#endif
 
         const char* nextpath = strchr(path, '/');
         bool additional_segment = false;

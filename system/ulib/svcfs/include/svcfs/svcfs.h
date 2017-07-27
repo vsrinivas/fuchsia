@@ -71,7 +71,7 @@ public:
     mx_status_t Getattr(vnattr_t* a) final;
 
     void Notify(const char* name, size_t len, unsigned event) final;
-    mx_status_t WatchDir(mx_handle_t* out) final;
+    mx_status_t WatchDir(mx::channel* out) final;
     mx_status_t WatchDirV2(fs::Vfs* vfs, const vfs_watch_dir_t* cmd) final;
 
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
