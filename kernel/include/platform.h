@@ -13,6 +13,8 @@
 
 __BEGIN_CDECLS;
 
+#define BOOT_CPU_ID 0
+
 typedef enum {
     HALT_ACTION_HALT = 0,       // Spin forever.
     HALT_ACTION_REBOOT,         // Reset the CPU.
