@@ -91,8 +91,9 @@ class BranchTracker::PageWatcherContainer {
   std::vector<PageChangePtr> PaginateChanges(PageChangePtr change) {
     std::vector<PageChangePtr> changes;
 
-    size_t fidl_size;
-    size_t handle_count;
+    // These are initialized to valid values in the first run of the loop.
+    size_t fidl_size = -1;
+    size_t handle_count = -1;
     size_t timestamp = change->timestamp;
     auto entries = std::move(change->changes);
     auto deletions = std::move(change->deleted_keys);
