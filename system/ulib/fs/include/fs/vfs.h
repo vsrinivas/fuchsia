@@ -366,14 +366,15 @@ public:
     mx_status_t ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, mx::channel channel);
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
-    mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h);
+    mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_EXCLUDES(vfs_lock_);
     mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock_);
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
-    mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h);
+    mx_status_t UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn,
+                                      mx_handle_t* h) __TA_REQUIRES(vfs_lock_);
 
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
-    mx_status_t UninstallAll(mx_time_t deadline);
+    mx_status_t UninstallAll(mx_time_t deadline) __TA_EXCLUDES(vfs_lock_);
 
     // A lock which should be used to protect lookup and walk operations
     // TODO(smklein): Encapsulate the lock; make it private.

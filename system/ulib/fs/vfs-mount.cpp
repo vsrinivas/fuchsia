@@ -72,10 +72,9 @@ mx_status_t Vfs::InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) {
 
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list_, and sends its corresponding filesystem an 'unmount' signal.
-mx_status_t Vfs::UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h) {
+mx_status_t Vfs::UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t* h) {
     mxtl::unique_ptr<MountNode> mount_point;
     {
-        mxtl::AutoLock lock(&vfs_lock_);
         mount_point = remote_list_.erase_if([&vn](const MountNode& node) {
             return node.VnodeMatch(vn);
         });

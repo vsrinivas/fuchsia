@@ -306,7 +306,6 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             // TODO(smklein): Transfer the mountpoint back to the caller on error,
             // so they can decide what to do with it.
             vfs_unmount_handle(h, 0);
-            mx_handle_close(h);
         }
         return status;
     }
@@ -331,9 +330,8 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
                 // There is an old remote handle on this vnode; shut it down and
                 // replace it with our own.
                 mx_handle_t old_remote;
-                Vfs::UninstallRemote(vn, &old_remote);
+                Vfs::UninstallRemoteLocked(vn, &old_remote);
                 vfs_unmount_handle(old_remote, 0);
-                mx_handle_close(old_remote);
             } else {
                 return MX_ERR_BAD_STATE;
             }
@@ -348,7 +346,6 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             // TODO(smklein): Transfer the mountpoint back to the caller on error,
             // so they can decide what to do with it.
             vfs_unmount_handle(h, 0);
-            mx_handle_close(h);
         }
         return status;
     }
@@ -357,7 +354,8 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             return MX_ERR_INVALID_ARGS;
         }
         mx_handle_t* h = (mx_handle_t*)out_buf;
-        return Vfs::UninstallRemote(vn, h);
+        mxtl::AutoLock lock(&vfs_lock_);
+        return Vfs::UninstallRemoteLocked(vn, h);
     }
     case IOCTL_VFS_UNMOUNT_FS: {
         Vfs::UninstallAll(MX_TIME_INFINITE);
