@@ -3,7 +3,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source "$FUCHSIA_ROOT/scripts/env.sh"
+# Find the directory that this script lives in.
+if [[ -n "${ZSH_VERSION}" ]]; then
+  thisdir=${${(%):-%x}:a:h}
+else
+  thisdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+# Our parent dir is $FUCHSIA_DIR/scripts.
+scriptsdir="$(dirname "${thisdir}")"
+
+if [[ -z "${FUCHSIA_BUILD_DIR+x}" || ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
+    # FUCHSIA_BUILD_DIR is unset or doesn't point to a directory. Although we
+    # source env.sh below, we can't guess which args the user would want to pass
+    # to fset.
+    echo 'fatal: This script requires that you define FUCHSIA_BUILD_DIR, or:' >&2
+    echo "       - source ${scriptsdir}/env.sh" >&2
+    echo '       - run "fset" with the desired args' >&2
+    exit 1
+fi
+
+# This script uses some env.sh functions, which won't be defined here even
+# if the calling shell has them.
+source "${scriptsdir}/env.sh"
 
 packagedir="$FUCHSIA_BUILD_DIR/package"
 bootdata="$FUCHSIA_BUILD_DIR/bootdata.bin"
