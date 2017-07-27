@@ -623,6 +623,21 @@ done:
     THREAD_UNLOCK(state);
 }
 
+/* Migrates the current thread to the CPU identified by target_cpuid. */
+void thread_migrate_cpu(const uint target_cpuid) {
+    thread_t *self = get_current_thread();
+    thread_set_pinned_cpu(self, target_cpuid);
+
+    mp_reschedule(1 << target_cpuid, 0);
+
+    // When we return from this call, we should have migrated to the target cpu
+    thread_yield();
+
+    // Make sure that we have actually migrated.
+    const uint current_cpu_id = thread_last_cpu(self);
+    DEBUG_ASSERT(current_cpu_id == target_cpuid);
+}
+
 // thread_lock must be held when calling this function.  This function will
 // not return if it decides to kill the thread.
 static void check_kill_signal(thread_t *current_thread,

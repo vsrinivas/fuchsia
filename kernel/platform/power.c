@@ -43,6 +43,11 @@ __WEAK void platform_halt_cpu(void)
 {
 }
 
+__WEAK void platform_halt_secondary_cpus(void)
+{
+    PANIC_UNIMPLEMENTED;
+}
+
 #if WITH_LIB_CONSOLE
 
 #include <lib/console.h>

@@ -41,17 +41,6 @@ extern void mexec_asm(void);
 extern void mexec_asm_end(void);
 __END_CDECLS
 
-/* Returns the cpuid of the boot cpu.
- *
- * The boot cpu is the cpu responsible for
- * booting the system in start.S, secondary cpus are brought up afterwards.
- * For now we assume that cpuid=0 is the boot cpu but this may change for some
- * SOCs in the future.
- */
-static uint get_boot_cpu_id(void) {
-    return 0;
-}
-
 /* Allocates a page of memory that has the same physical and virtual addressresses.
  */
 static mx_status_t identity_page_allocate(void** result_addr) {
@@ -91,46 +80,6 @@ static mx_status_t identity_page_allocate(void** result_addr) {
     *result_addr = identity_address;
 
     return MX_OK;
-}
-
-/* Migrates the current thread to the CPU identified by target_cpuid. */
-static void thread_migrate_cpu(const uint target_cpuid) {
-    thread_t *self = get_current_thread();
-    const uint old_cpu_id = thread_last_cpu(self);
-    LTRACEF("currently on %u, migrating to %u\n", old_cpu_id, target_cpuid);
-
-    thread_set_pinned_cpu(self, target_cpuid);
-
-    mp_reschedule(1 << target_cpuid, 0);
-
-    // When we return from this call, we should have migrated to the target cpu
-    thread_yield();
-
-    // Make sure that we have actually migrated.
-    const uint current_cpu_id = thread_last_cpu(self);
-    DEBUG_ASSERT(current_cpu_id == target_cpuid);
-
-    LTRACEF("previously on %u, migrated to %u\n", old_cpu_id, current_cpu_id);
-}
-
-// One of these threads is spun up per CPU and calls halt which does not return.
-static int park_cpu_thread(void* arg) {
-    // Make sure we're not lopping off the top bits of the arg
-    DEBUG_ASSERT(((uintptr_t)arg & 0xffffffff00000000) == 0);
-    uint32_t cpu_id = (uint32_t)((uintptr_t)arg & 0xffffffff);
-
-    // From hereon in, this thread will always be assigned to the pinned cpu.
-    thread_migrate_cpu(cpu_id);
-
-    LTRACEF("parking cpuid = %u\n", cpu_id);
-
-    arch_disable_ints();
-
-    // This method will not return because the target cpu has halted.
-    platform_halt_cpu();
-
-    panic("control should never reach here");
-    return -1;
 }
 
 /* Takes all the pages in a VMO and creates a copy of them where all the pages
@@ -215,13 +164,6 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
                              mx_handle_t bootimage_vmo) {
     mx_status_t result;
 
-    // We assume that when the system starts, only one CPU is running. We denote
-    // this as the boot CPU.
-    // We want to make sure that this is the CPU that eventually branches into
-    // the new kernel so we attempt to migrate this thread to that cpu.
-    const uint boot_cpu_id = get_boot_cpu_id();
-    thread_migrate_cpu(boot_cpu_id);
-
     paddr_t new_kernel_addr;
     size_t new_kernel_len;
     result = vmo_coalesce_pages(kernel_vmo, &new_kernel_addr, &new_kernel_len);
@@ -251,26 +193,12 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     LTRACEF("mx_system_mexec allocated identity mapped page at %p\n",
             id_page_addr);
 
-    // Create one thread per core to park each core.
-    thread_t** park_thread =
-        (thread_t**)calloc(arch_max_num_cpus(), sizeof(*park_thread));
-    for (uint i = 0; i < arch_max_num_cpus(); i++) {
-        // The boot cpu is going to be performing the remainder of the mexec
-        // for us so we don't want to park that one.
-        if (i == get_boot_cpu_id()) {
-            continue;
-        }
-
-        char park_thread_name[20];
-        snprintf(park_thread_name, sizeof(park_thread_name), "park %u", i);
-        park_thread[i] = thread_create(park_thread_name, park_cpu_thread,
-                                       (void*)(uintptr_t)i, DEFAULT_PRIORITY,
-                                       DEFAULT_STACK_SIZE);
-        thread_resume(park_thread[i]);
-    }
-
-    // TODO(gkalsi): Wait for the secondaries to shutdown rather than sleeping
-    thread_sleep_relative(LK_SEC(2));
+    // We assume that when the system starts, only one CPU is running. We denote
+    // this as the boot CPU.
+    // We want to make sure that this is the CPU that eventually branches into
+    // the new kernel so we attempt to migrate this thread to that cpu.
+    thread_migrate_cpu(BOOT_CPU_ID);
+    platform_halt_secondary_cpus();
 
     // We're going to copy this into our identity page, make sure it's not
     // longer than a single page.

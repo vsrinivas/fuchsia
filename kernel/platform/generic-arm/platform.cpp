@@ -371,6 +371,47 @@ void platform_halt_cpu(void) {
 
 #endif
 
+// One of these threads is spun up per CPU and calls halt which does not return.
+static int park_cpu_thread(void* arg) {
+    // Make sure we're not lopping off the top bits of the arg
+    DEBUG_ASSERT(((uintptr_t)arg & 0xffffffff00000000) == 0);
+    uint32_t cpu_id = (uint32_t)((uintptr_t)arg & 0xffffffff);
+
+    // From hereon in, this thread will always be assigned to the pinned cpu.
+    thread_migrate_cpu(cpu_id);
+
+    arch_disable_ints();
+
+    // This method will not return because the target cpu has halted.
+    platform_halt_cpu();
+
+    panic("control should never reach here");
+    return -1;
+}
+
+void platform_halt_secondary_cpus(void) {
+    // Create one thread per core to park each core.
+    thread_t** park_thread =
+        (thread_t**)calloc(arch_max_num_cpus(), sizeof(*park_thread));
+    for (uint i = 0; i < arch_max_num_cpus(); i++) {
+        // The boot cpu is going to be performing the remainder of the mexec
+        // for us so we don't want to park that one.
+        if (i == BOOT_CPU_ID) {
+            continue;
+        }
+
+        char park_thread_name[20];
+        snprintf(park_thread_name, sizeof(park_thread_name), "park %u", i);
+        park_thread[i] = thread_create(park_thread_name, park_cpu_thread,
+                                       (void*)(uintptr_t)i, DEFAULT_PRIORITY,
+                                       DEFAULT_STACK_SIZE);
+        thread_resume(park_thread[i]);
+    }
+
+    // TODO(gkalsi): Wait for the secondaries to shutdown rather than sleeping
+    thread_sleep_relative(LK_SEC(2));
+}
+
 static void platform_start_cpu(uint cluster, uint cpu) {
 #if BCM2837
     uintptr_t sec_entry = reinterpret_cast<uintptr_t>(&arm_reset) - KERNEL_ASPACE_BASE;

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <magenta/compiler.h>
 
 typedef struct e820entry {
     uint64_t addr;

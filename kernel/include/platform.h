@@ -82,6 +82,12 @@ void platform_halt(platform_halt_action suggested_action,
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
 
+/* optionally stop the secondary cpus in a way the platform finds appropriate.
+ * Secondary cpus are defined as cpus that are not the boot cpu (as defined
+ * above).
+ */
+void platform_halt_secondary_cpus(void);
+
 /* called during chain loading to make sure drivers and platform is put into a stopped state */
 void platform_quiesce(void);
 

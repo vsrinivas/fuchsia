@@ -194,6 +194,7 @@ status_t thread_suspend(thread_t *);
 void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t *);
+void thread_migrate_cpu(const uint target_cpuid);
 
 status_t thread_detach(thread_t *t);
 status_t thread_join(thread_t *t, int *retcode, lk_time_t deadline);
