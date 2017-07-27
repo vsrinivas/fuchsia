@@ -4,6 +4,8 @@
 
 static_library("l2cap") {
   sources = [
+    "fragmenter.cc",
+    "fragmenter.h",
     "l2cap.h",
     "pdu.cc",
     "pdu.h",
@@ -21,6 +23,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "fragmenter_unittest.cc",
     "pdu_unittest.cc",
     "recombiner_unittest.cc",
   ]

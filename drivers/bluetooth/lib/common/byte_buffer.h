@@ -99,7 +99,9 @@ class MutableByteBuffer : public ByteBuffer {
     Write(data.data(), data.size(), pos);
   }
 
-  // Writes |size| octets of data starting from |data| into this buffer starting at |pos|.
+  // Writes |size| octets of data starting from |data| into this buffer starting at |pos|. |data|
+  // must point to a valid piece of memory if |size| is non-zero. If |size| is zero, then this
+  // operation is a NOP.
   void Write(const uint8_t* data, size_t size, size_t pos = 0);
 
   // Behaves exactly like ByteBuffer::View but returns the result in a MutableBufferView instead.

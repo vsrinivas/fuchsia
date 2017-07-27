@@ -32,6 +32,8 @@ std::string ByteBuffer::ToString() const {
 }
 
 void MutableByteBuffer::Write(const uint8_t* data, size_t size, size_t pos) {
+  if (!size) return;
+
   FTL_DCHECK(data);
   FTL_DCHECK(pos <= this->size()) << "|pos| contains an invalid offset!";
   FTL_DCHECK(size <= this->size() - pos)

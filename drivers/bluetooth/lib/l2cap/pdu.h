@@ -83,6 +83,7 @@ class PDU final {
   void ReleaseFragments(FragmentList* out_list);
 
  private:
+  friend class Fragmenter;
   friend class Recombiner;
 
   // Methods accessed by friends.

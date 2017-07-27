@@ -17,6 +17,9 @@ namespace l2cap {
 // logical link.
 using ChannelId = uint16_t;
 
+// The maximum length of a L2CAP B-frame information payload.
+constexpr size_t kMaxBasicFramePayloadSize = 65535;
+
 // Fixed channel identifiers used in BR/EDR & AMP (i.e. ACL-U, ASB-U, and AMP-U logical links)
 // (see Core Spec v5.0, Vol 3, Part A, Section 2.1)
 constexpr ChannelId kSignalingChannelId = 0x0001;
