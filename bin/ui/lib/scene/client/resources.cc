@@ -265,5 +265,35 @@ void DisplayRenderer::SetCamera(uint32_t camera_id) {
   session()->Enqueue(mozart::NewSetCameraOp(id(), camera_id));
 }
 
+Layer::Layer(Session* session) : Resource(session) {
+  session->Enqueue(mozart::NewCreateLayerOp(id()));
+}
+
+Layer::~Layer() = default;
+
+void Layer::SetRenderer(uint32_t renderer_id) {
+  session()->Enqueue(mozart::NewSetRendererOp(id(), renderer_id));
+}
+
+LayerStack::LayerStack(Session* session) : Resource(session) {
+  session->Enqueue(mozart::NewCreateLayerStackOp(id()));
+}
+
+LayerStack::~LayerStack() = default;
+
+void LayerStack::AddLayer(uint32_t layer_id) {
+  session()->Enqueue(mozart::NewAddLayerOp(id(), layer_id));
+}
+
+DisplayCompositor::DisplayCompositor(Session* session) : Resource(session) {
+  session->Enqueue(mozart::NewCreateDisplayCompositorOp(id()));
+}
+
+DisplayCompositor::~DisplayCompositor() = default;
+
+void DisplayCompositor::SetLayerStack(uint32_t layer_stack_id) {
+  session()->Enqueue(mozart::NewSetLayerStackOp(id(), layer_stack_id));
+}
+
 }  // namespace client
 }  // namespace mozart

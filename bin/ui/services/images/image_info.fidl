@@ -27,6 +27,19 @@ struct ImageInfo {
     GPU_OPTIMAL = 1,
   };
 
+  // Specifies how alpha information should be interpreted.
+  enum AlphaFormat {
+    // Image is considered to be opaque.  Alpha channel is ignored.
+    // Blend function is: src.RGB
+    OPAQUE = 0,
+    // Color channels have been premultiplied by alpha.
+    // Blend function is: src.RGB + (dest.RGB * (1 - src.A))
+    PREMULTIPLIED = 1,
+    // Color channels have not been premultiplied by alpha.
+    // Blend function is: (src.RGB * src.A) + (dest.RGB * (1 - src.A))
+    NON_PREMULTIPLIED = 2,
+  };
+
   // The width and height of the image in pixels.
   uint32 width;
   uint32 height;
@@ -42,4 +55,7 @@ struct ImageInfo {
 
   // The pixel arrangement in memory.
   Tiling tiling = Tiling.LINEAR;
+
+  // Specifies the interpretion of the alpha channel, if one exists.
+  AlphaFormat alpha_format = AlphaFormat.OPAQUE;
 };

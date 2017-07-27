@@ -62,6 +62,12 @@ void Resource::RemoveImport(Import* import) {
   imports_.erase(it);
 }
 
+bool Resource::Detach() {
+  error_reporter()->ERROR()
+      << "Resources of type: " << type_name() << " do not support Detach().";
+  return false;
+}
+
 Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
 }

@@ -85,6 +85,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetRotationOp(op->get_set_rotation());
     case mozart2::Op::Tag::SET_ANCHOR:
       return ApplySetAnchorOp(op->get_set_anchor());
+    case mozart2::Op::Tag::SET_SIZE:
+      return ApplySetSizeOp(op->get_set_size());
     case mozart2::Op::Tag::SET_SHAPE:
       return ApplySetShapeOp(op->get_set_shape());
     case mozart2::Op::Tag::SET_MATERIAL:
@@ -103,6 +105,12 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetTextureOp(op->get_set_texture());
     case mozart2::Op::Tag::SET_COLOR:
       return ApplySetColorOp(op->get_set_color());
+    case mozart2::Op::Tag::ADD_LAYER:
+      return ApplyAddLayerOp(op->get_add_layer());
+    case mozart2::Op::Tag::SET_LAYER_STACK:
+      return ApplySetLayerStackOp(op->get_set_layer_stack());
+    case mozart2::Op::Tag::SET_RENDERER:
+      return ApplySetRendererOp(op->get_set_renderer());
     case mozart2::Op::Tag::SET_EVENT_MASK:
       return ApplySetEventMaskOp(op->get_set_event_mask());
     case mozart2::Op::Tag::SET_LABEL:
@@ -142,6 +150,8 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
     case mozart2::Resource::Tag::IMAGE_PIPE_RENDERER:
       return ApplyCreateImagePipeRenderer(
           id, op->resource->get_image_pipe_renderer());
+    case mozart2::Resource::Tag::RENDERER:
+      return ApplyCreateRenderer(id, op->resource->get_renderer());
     case mozart2::Resource::Tag::DIRECTIONAL_LIGHT:
       return ApplyCreateDirectionalLight(id,
                                          op->resource->get_directional_light());
@@ -162,6 +172,16 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateEntityNode(id, op->resource->get_entity_node());
     case mozart2::Resource::Tag::SHAPE_NODE:
       return ApplyCreateShapeNode(id, op->resource->get_shape_node());
+    case mozart2::Resource::Tag::DISPLAY_COMPOSITOR:
+      return ApplyCreateDisplayCompositor(
+          id, op->resource->get_display_compositor());
+    case mozart2::Resource::Tag::IMAGE_PIPE_COMPOSITOR:
+      return ApplyCreateImagePipeCompositor(
+          id, op->resource->get_image_pipe_compositor());
+    case mozart2::Resource::Tag::LAYER_STACK:
+      return ApplyCreateLayerStack(id, op->resource->get_layer_stack());
+    case mozart2::Resource::Tag::LAYER:
+      return ApplyCreateLayer(id, op->resource->get_layer());
     case mozart2::Resource::Tag::VARIABLE:
       return ApplyCreateVariable(id, op->resource->get_variable());
     case mozart2::Resource::Tag::__UNKNOWN__:
@@ -210,8 +230,8 @@ bool Session::ApplyAddPartOp(const mozart2::AddPartOpPtr& op) {
 }
 
 bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
-  if (auto node = resources_.FindResource<Node>(op->node_id)) {
-    return Node::Detach(node);
+  if (auto resource = resources_.FindResource<Resource>(op->id)) {
+    return resource->Detach();
   }
   return false;
 }
@@ -277,6 +297,13 @@ bool Session::ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op) {
     }
     return node->SetAnchor(UnwrapVector3(op->value));
   }
+  return false;
+}
+
+bool Session::ApplySetSizeOp(const mozart2::SetSizeOpPtr& op) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR() << "scene_manager::Session::ApplySetSizeOp() "
+                              "is unimplemented (MZ-179)";
   return false;
 }
 
@@ -368,6 +395,27 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
     material->SetColor(red, green, blue, alpha);
     return true;
   }
+  return false;
+}
+
+bool Session::ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR() << "scene_manager::Session::ApplyAddLayerOp() "
+                              "is unimplemented (MZ-179)";
+  return false;
+}
+
+bool Session::ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR() << "scene_manager::Session::ApplySetLayerStackOp() "
+                              "is unimplemented (MZ-179)";
+  return false;
+}
+
+bool Session::ApplySetRendererOp(const mozart2::SetRendererOpPtr& op) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR() << "scene_manager::Session::ApplySetRendererOp() "
+                              "is unimplemented (MZ-179)";
   return false;
 }
 
@@ -478,6 +526,12 @@ bool Session::ApplyCreateImagePipeRenderer(
     mozart::ResourceId id,
     const mozart2::ImagePipeRendererPtr& args) {
   auto renderer = CreateImagePipeRenderer(id, args);
+  return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
+}
+
+bool Session::ApplyCreateRenderer(mozart::ResourceId id,
+                                  const mozart2::RendererPtr& args) {
+  auto renderer = CreateRenderer(id, args);
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
@@ -603,6 +657,42 @@ bool Session::ApplyCreateShapeNode(mozart::ResourceId id,
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
+bool Session::ApplyCreateDisplayCompositor(
+    mozart::ResourceId id,
+    const mozart2::DisplayCompositorPtr& args) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyCreateDisplayCompositor() "
+         "is unimplemented (MZ-179)";
+  return false;
+}
+
+bool Session::ApplyCreateImagePipeCompositor(
+    mozart::ResourceId id,
+    const mozart2::ImagePipeCompositorPtr& args) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyCreateImagePipeCompositor() "
+         "is unimplemented (MZ-179)";
+  return false;
+}
+
+bool Session::ApplyCreateLayerStack(mozart::ResourceId id,
+                                    const mozart2::LayerStackPtr& args) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR() << "scene_manager::Session::ApplyCreateLayerStack() "
+                              "is unimplemented (MZ-179)";
+  return false;
+}
+
+bool Session::ApplyCreateLayer(mozart::ResourceId id,
+                               const mozart2::LayerPtr& args) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR() << "scene_manager::Session::ApplyCreateLayer() "
+                              "is unimplemented (MZ-179)";
+  return false;
+}
+
 bool Session::ApplyCreateVariable(mozart::ResourceId id,
                                   const mozart2::VariablePtr& args) {
   error_reporter_->ERROR()
@@ -665,6 +755,13 @@ ResourcePtr Session::CreateImagePipeRenderer(
   error_reporter_->ERROR()
       << "scene_manager::Session::CreateImagePipeRenderer(): "
          "unimplemented.";
+  return ResourcePtr();
+}
+
+ResourcePtr Session::CreateRenderer(mozart::ResourceId id,
+                                    const mozart2::RendererPtr& args) {
+  error_reporter_->ERROR() << "scene_manager::Session::CreateRenderer(): "
+                              "unimplemented.";
   return ResourcePtr();
 }
 

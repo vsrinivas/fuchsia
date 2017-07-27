@@ -3,10 +3,11 @@
 A collection of services and applications to support the graphical
 user interface.
 
-## Compositor
+## Scenic, the scene manager.
 
-A service which renders graphical content expressed by applications in
-the form of a composable scene graph.
+Scenic's primary mission is to allow client apps to present graphical content on
+the screen.  This is achieved by providing controlled access to a shared scene
+graph.
 
 ## View Manager
 

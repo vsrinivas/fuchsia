@@ -21,6 +21,8 @@ class Scene final : public Node {
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
+  bool Detach() override;
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };

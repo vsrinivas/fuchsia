@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(MZ-235): rename to "module scenic".
 module mozart2;
 
 import "apps/mozart/services/scene/nodes.fidl";
@@ -34,9 +35,18 @@ union Resource {
   EntityNode entity_node;
   ShapeNode shape_node;
 
+  // Layers.
+  DisplayCompositor display_compositor;
+  ImagePipeCompositor image_pipe_compositor;
+  LayerStack layer_stack;
+  Layer layer;
+
   // Scene representation and display.
   Scene scene;
   Camera camera;
+  Renderer renderer;
+  // TODO(MZ-??): in the implementation CL, Display/ImagePipeRenderer will go
+  // away.
   DisplayRenderer display_renderer;
   ImagePipeRenderer image_pipe_renderer;
 
@@ -79,6 +89,43 @@ struct Buffer {
   uint32 num_bytes;
 };
 
+// A DisplayCompositor draws its attached |LayerStack| into an image that is
+// presented on a display.
+struct DisplayCompositor {
+};
+
+// An ImagePipeCompositor draws its attached |LayerStack| into an image that is
+// presented on an image-pipe.
+struct ImagePipeCompositor {
+  ImagePipe target;
+};
+
+// A LayerStack is a stack of layers that are attached to a Compositor, which
+// draws them in order of increasing Z-order (or rather, presents the illusion
+// of drawing them in that order: it may apply any optimizations that don't
+// affect the output).
+//
+// Supported operations:
+// - AddLayer
+struct LayerStack {
+};
+
+// Supported operations:
+// - Detach
+// - SetCamera
+// - SetColor
+// - SetTexture
+// - SetSize (depth must be zero)
+// - SetSize
+// - SetTranslation (z component determines the relative Z-ordering of layers)
+// - SetRotation (must rotate around Z-axis)
+// - SetScale
+//
+// A layer is not drawn unless it has a camera, texture, or color.
+struct Layer {
+};
+
+
 // A Scene is the root of a scene-graph, and defines the rendering environment
 // (lighting, etc.) for the tree of nodes beneath it.  The following operations
 // may be  applied to a Scene (see ops.fidl):
@@ -95,6 +142,12 @@ struct Scene {
 struct Camera {
   // The scene that the camera is viewing.
   uint32 scene_id;
+};
+
+// A Renderer renders a Scene via a Camera.  The following operations may be
+// applied to a Renderer (see ops.fidl):
+//   - SetCamera
+struct Renderer {
 };
 
 // Renderers render a Scene via a Camera.  DisplayRenderer presents the rendered

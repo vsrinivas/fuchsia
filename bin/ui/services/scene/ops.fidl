@@ -2,31 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(MZ-235): rename to "module scenic".
 module mozart2;
 
 import "apps/mozart/services/scene/events.fidl";
 import "apps/mozart/services/scene/resources.fidl";
 
 // Operations that are used to modify the state of a |Session|.
+// TODO(MZ-237): reorder Op definitions to match the order in this union.
 union Op {
   CreateResourceOp create_resource;
+  ReleaseResourceOp release_resource;
   ExportResourceOp export_resource;
   ImportResourceOp import_resource;
-  ReleaseResourceOp release_resource;
 
   // Tagging operations.
   SetTagOp set_tag;
+
+  // Grouping operations.
+  DetachOp detach;
 
   // Spatial operations.
   SetTranslationOp set_translation;
   SetScaleOp set_scale;
   SetRotationOp set_rotation;
   SetAnchorOp set_anchor;
+  SetSizeOp set_size;
 
   // Node-specific operations.
   AddChildOp add_child; // TODO: Should we require a DetachOp before re-parenting?
   AddPartOp add_part;
-  DetachOp detach;
   DetachChildrenOp detach_children;
   SetShapeOp set_shape;
   SetMaterialOp set_material;
@@ -40,6 +45,11 @@ union Op {
 
   SetTextureOp set_texture;
   SetColorOp set_color;
+
+  // Layer operations.
+  AddLayerOp add_layer;
+  SetLayerStackOp set_layer_stack;
+  SetRendererOp set_renderer;
 
   // Events.
   SetEventMaskOp set_event_mask;
@@ -157,16 +167,18 @@ struct AddPartOp {
   uint32 part_id;
 };
 
-// Detaches a node from its parent.
+// Detaches a parentable object from its parent (e.g. a node from a parent node,
+// or a layer from a layer stack).  It is illegal to apply this op to a
+// non-parentable object.  No-op if the target object currently has no parent.
 //
 // Constraints:
-// - |id| refs a Node.
+// - |id| refs a parentable object
 //
 // Discussion:
-// This works regardless of the node is a part or a child of its parent, and
-// also if the node has no parent (in the last case, it is a no-op).
+// For nodes, this op will detach a node from its parent, regardless of whether
+// it is a part or a child of its parent.
 struct DetachOp {
-  uint32 node_id;
+  uint32 id;
 };
 
 // Detaches all of a node's children (but not its parts).
@@ -225,6 +237,17 @@ struct SetRotationOp {
 // Constraints:
 // - |id| refs a Resource with the has_transform characteristic.
 struct SetAnchorOp {
+  uint32 id;
+  Vector3Value value;
+};
+
+// Sets an object's size.
+//
+// Constraints:
+// - |id| refs a resizeable object.
+// - some objects that support this op may have additional constraints (e.g.
+//   in some cases |depth| must be zero).
+struct SetSizeOp {
   uint32 id;
   Vector3Value value;
 };
@@ -367,6 +390,35 @@ struct SetTextureOp {
 struct SetColorOp {
   uint32 material_id;
   ColorRgbaValue color;
+};
+
+// Add a layer to a layer stack.
+// Constraints:
+// - |layer_stack_id| refs a |LayerStack|.
+// - |layer_id| refs a |Layer|.
+// - The layer must not already belong to a different stack; it must first be
+//   detached.
+struct AddLayerOp {
+  uint32 layer_stack_id;
+  uint32 layer_id;
+};
+
+// Set a compositor's layer stack, replacing the current stack (if any).
+// Constraints:
+// - |compositor_id| refs a |DisplayCompositor| or |ImagePipeCompositor|.
+// - |layer_stack_id| refs a |LayerStack|.
+struct SetLayerStackOp {
+  uint32 compositor_id;
+  uint32 layer_stack_id;
+};
+
+// Set a layer's renderer, replacing the current renderer (if any).
+// Constraints:
+// - |layer_id| refs a |Layer|.
+// - |renderer_id| refs a |Renderer|.
+struct SetRendererOp {
+  uint32 layer_id;
+  uint32 renderer_id;
 };
 
 // Sets which events a resource should deliver to the session listener.

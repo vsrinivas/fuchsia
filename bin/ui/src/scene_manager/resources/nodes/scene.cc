@@ -12,4 +12,8 @@ const ResourceTypeInfo Scene::kTypeInfo = {
 Scene::Scene(Session* session, mozart::ResourceId node_id)
     : Node(session, node_id, Scene::kTypeInfo) {}
 
+bool Scene::Detach() {
+  return Resource::Detach();
+}
+
 }  // namespace scene_manager

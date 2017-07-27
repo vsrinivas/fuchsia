@@ -94,6 +94,33 @@ mozart2::OpPtr NewCreateBufferOp(uint32_t id,
   return NewCreateResourceOp(id, std::move(resource));
 }
 
+mozart2::OpPtr NewCreateDisplayCompositorOp(uint32_t id) {
+  auto display_compositor = mozart2::DisplayCompositor::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_display_compositor(std::move(display_compositor));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateLayerStackOp(uint32_t id) {
+  auto layer_stack = mozart2::LayerStack::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_layer_stack(std::move(layer_stack));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
+mozart2::OpPtr NewCreateLayerOp(uint32_t id) {
+  auto layer = mozart2::Layer::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_layer(std::move(layer));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
 mozart2::OpPtr NewCreateSceneOp(uint32_t id) {
   auto scene = mozart2::Scene::New();
 
@@ -402,9 +429,9 @@ mozart2::OpPtr NewAddPartOp(uint32_t node_id, uint32_t part_id) {
   return op;
 }
 
-mozart2::OpPtr NewDetachOp(uint32_t node_id) {
+mozart2::OpPtr NewDetachOp(uint32_t id) {
   auto detach = mozart2::DetachOp::New();
-  detach->node_id = node_id;
+  detach->id = id;
 
   auto op = mozart2::Op::New();
   op->set_detach(std::move(detach));
@@ -591,6 +618,37 @@ mozart2::OpPtr NewSetColorOp(uint32_t material_id,
   auto op = mozart2::Op::New();
   op->set_set_color(std::move(set_color));
 
+  return op;
+}
+
+mozart2::OpPtr NewAddLayerOp(uint32_t layer_stack_id, uint32_t layer_id) {
+  auto add_layer = mozart2::AddLayerOp::New();
+  add_layer->layer_stack_id = layer_stack_id;
+  add_layer->layer_id = layer_id;
+
+  auto op = mozart2::Op::New();
+  op->set_add_layer(std::move(add_layer));
+  return op;
+}
+
+mozart2::OpPtr NewSetLayerStackOp(uint32_t compositor_id,
+                                  uint32_t layer_stack_id) {
+  auto set_layer_stack = mozart2::SetLayerStackOp::New();
+  set_layer_stack->compositor_id = compositor_id;
+  set_layer_stack->layer_stack_id = layer_stack_id;
+
+  auto op = mozart2::Op::New();
+  op->set_set_layer_stack(std::move(set_layer_stack));
+  return op;
+}
+
+mozart2::OpPtr NewSetRendererOp(uint32_t layer_id, uint32_t renderer_id) {
+  auto set_renderer = mozart2::SetRendererOp::New();
+  set_renderer->layer_id = layer_id;
+  set_renderer->renderer_id = renderer_id;
+
+  auto op = mozart2::Op::New();
+  op->set_set_renderer(std::move(set_renderer));
   return op;
 }
 

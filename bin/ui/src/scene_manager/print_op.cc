@@ -29,6 +29,8 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
       return stream << "SET_ROTATION";
     case Op::Tag::SET_ANCHOR:
       return stream << "SET_ANCHOR";
+    case Op::Tag::SET_SIZE:
+      return stream << "SET_SIZE";
     case Op::Tag::SET_TAG:
       return stream << "SET_TAG";
     case Op::Tag::ADD_CHILD:
@@ -57,6 +59,12 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
       return stream << "SET_TEXTURE";
     case Op::Tag::SET_COLOR:
       return stream << "SET_COLOR";
+    case Op::Tag::ADD_LAYER:
+      return stream << "ADD_LAYER";
+    case Op::Tag::SET_LAYER_STACK:
+      return stream << "SET_LAYER_STACK";
+    case Op::Tag::SET_RENDERER:
+      return stream << "SET_RENDERER";
     case Op::Tag::SET_EVENT_MASK:
       return stream << "SET_EVENT_MASK";
     case Op::Tag::SET_LABEL:
@@ -94,6 +102,9 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::IMAGE_PIPE_RENDERER:
       stream << "ImagePipeRenderer";
       break;
+    case Resource::Tag::RENDERER:
+      stream << "Renderer";
+      break;
     case Resource::Tag::DIRECTIONAL_LIGHT:
       stream << "DirectionalLight";
       break;
@@ -120,6 +131,18 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case Resource::Tag::SHAPE_NODE:
       stream << "ShapeNode";
+      break;
+    case Resource::Tag::DISPLAY_COMPOSITOR:
+      stream << "DisplayCompositor";
+      break;
+    case Resource::Tag::IMAGE_PIPE_COMPOSITOR:
+      stream << "ImagePipeCompositor";
+      break;
+    case Resource::Tag::LAYER_STACK:
+      stream << "LayerStack";
+      break;
+    case Resource::Tag::LAYER:
+      stream << "Layer";
       break;
     case Resource::Tag::VARIABLE:
       stream << "Variable";

@@ -114,6 +114,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetScaleOp(const mozart2::SetScaleOpPtr& op);
   bool ApplySetRotationOp(const mozart2::SetRotationOpPtr& op);
   bool ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op);
+  bool ApplySetSizeOp(const mozart2::SetSizeOpPtr& op);
   bool ApplySetShapeOp(const mozart2::SetShapeOpPtr& op);
   bool ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op);
   bool ApplySetClipOp(const mozart2::SetClipOpPtr& op);
@@ -123,6 +124,9 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
   bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
   bool ApplySetColorOp(const mozart2::SetColorOpPtr& op);
+  bool ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op);
+  bool ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op);
+  bool ApplySetRendererOp(const mozart2::SetRendererOpPtr& op);
   bool ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op);
   bool ApplySetLabelOp(const mozart2::SetLabelOpPtr& op);
 
@@ -138,6 +142,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                                   const mozart2::DisplayRendererPtr& args);
   bool ApplyCreateImagePipeRenderer(mozart::ResourceId id,
                                     const mozart2::ImagePipeRendererPtr& args);
+  bool ApplyCreateRenderer(mozart::ResourceId id,
+                           const mozart2::RendererPtr& args);
   bool ApplyCreateDirectionalLight(mozart::ResourceId id,
                                    const mozart2::DirectionalLightPtr& args);
   bool ApplyCreateRectangle(mozart::ResourceId id,
@@ -154,6 +160,14 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                              const mozart2::EntityNodePtr& args);
   bool ApplyCreateShapeNode(mozart::ResourceId id,
                             const mozart2::ShapeNodePtr& args);
+  bool ApplyCreateDisplayCompositor(mozart::ResourceId id,
+                                    const mozart2::DisplayCompositorPtr& args);
+  bool ApplyCreateImagePipeCompositor(
+      mozart::ResourceId id,
+      const mozart2::ImagePipeCompositorPtr& args);
+  bool ApplyCreateLayerStack(mozart::ResourceId id,
+                             const mozart2::LayerStackPtr& args);
+  bool ApplyCreateLayer(mozart::ResourceId id, const mozart2::LayerPtr& args);
   bool ApplyCreateVariable(mozart::ResourceId id,
                            const mozart2::VariablePtr& args);
 
@@ -171,6 +185,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateImagePipeRenderer(
       mozart::ResourceId id,
       const mozart2::ImagePipeRendererPtr& args);
+  ResourcePtr CreateRenderer(mozart::ResourceId id,
+                             const mozart2::RendererPtr& args);
   ResourcePtr CreateDirectionalLight(mozart::ResourceId id,
                                      escher::vec3 direction,
                                      float intensity);

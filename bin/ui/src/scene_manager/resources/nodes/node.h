@@ -55,10 +55,8 @@ class Node : public Resource {
     reported_metrics_ = metrics;
   }
 
-  // This is a static method so that it can be passed a NodePtr&, to facilitate
-  // look-up in the node's parent.  No-op if node has no parent.  Always returns
-  // true.
-  static bool Detach(const NodePtr& node_to_detach_from_parent);
+  // |Resource|.
+  bool Detach() override;
 
   Node* parent() const { return parent_; }
 
@@ -91,6 +89,9 @@ class Node : public Resource {
  private:
   void InvalidateGlobalTransform();
   void ComputeGlobalTransform() const;
+
+  void ErasePart(Node* part);
+  void EraseChild(Node* child);
 
   // Describes the manner in which a node is related to its parent.
   enum class ParentRelation { kNone, kChild, kPart, kImportDelegate };

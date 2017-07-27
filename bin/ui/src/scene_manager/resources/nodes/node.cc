@@ -70,7 +70,7 @@ bool Node::AddChild(NodePtr child_node) {
       child_node->parent_ == this) {
     return true;  // no change
   }
-  Detach(child_node);
+  child_node->Detach();
 
   // Add child to its new parent (i.e. us).
   child_node->parent_relation_ = ParentRelation::kChild;
@@ -91,7 +91,7 @@ bool Node::AddPart(NodePtr part_node) {
       part_node->parent_ == this) {
     return true;  // no change
   }
-  Detach(part_node);
+  part_node->Detach();
 
   // Add part to its new parent (i.e. us).
   part_node->parent_relation_ = ParentRelation::kPart;
@@ -101,45 +101,44 @@ bool Node::AddPart(NodePtr part_node) {
   return true;
 }
 
-bool Node::Detach(const NodePtr& node_to_detach_from_parent) {
-  FTL_DCHECK(node_to_detach_from_parent);
-
-  if (node_to_detach_from_parent->type_flags() & ResourceType::kScene) {
-    node_to_detach_from_parent->error_reporter()->ERROR()
-        << "A Scene cannot be detached.";
-    return false;
-  }
-
-  if (auto parent = node_to_detach_from_parent->parent_) {
-    switch (node_to_detach_from_parent->parent_relation_) {
-      case ParentRelation::kChild: {
-        auto it = std::find(parent->children_.begin(), parent->children_.end(),
-                            node_to_detach_from_parent);
-        FTL_DCHECK(it != parent->children_.end());
-        parent->children_.erase(it);
+bool Node::Detach() {
+  if (parent_) {
+    switch (parent_relation_) {
+      case ParentRelation::kChild:
+        parent_->EraseChild(this);
         break;
-      }
-      case ParentRelation::kPart: {
-        auto it = std::find(parent->parts_.begin(), parent->parts_.end(),
-                            node_to_detach_from_parent);
-        FTL_DCHECK(it != parent->parts_.end());
-        parent->parts_.erase(it);
+      case ParentRelation::kPart:
+        parent_->ErasePart(this);
         break;
-      }
       case ParentRelation::kImportDelegate:
-        node_to_detach_from_parent->error_reporter()->ERROR()
-            << "An imported node cannot be detached.";
+        error_reporter()->ERROR() << "An imported node cannot be detached.";
         return false;
       case ParentRelation::kNone:
         FTL_NOTREACHED();
         break;
     }
 
-    node_to_detach_from_parent->parent_relation_ = ParentRelation::kNone;
-    node_to_detach_from_parent->parent_ = nullptr;
-    node_to_detach_from_parent->InvalidateGlobalTransform();
+    parent_relation_ = ParentRelation::kNone;
+    parent_ = nullptr;
+    InvalidateGlobalTransform();
   }
   return true;
+}
+
+void Node::ErasePart(Node* part) {
+  auto it =
+      std::find_if(parts_.begin(), parts_.end(),
+                   [part](const NodePtr& ptr) { return part == ptr.get(); });
+  FTL_DCHECK(it != parts_.end());
+  parts_.erase(it);
+}
+
+void Node::EraseChild(Node* child) {
+  auto it =
+      std::find_if(children_.begin(), children_.end(),
+                   [child](const NodePtr& ptr) { return child == ptr.get(); });
+  FTL_DCHECK(it != children_.end());
+  children_.erase(it);
 }
 
 bool Node::DetachChildren() {

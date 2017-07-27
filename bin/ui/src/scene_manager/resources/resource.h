@@ -80,6 +80,11 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   /// Removes the import resource from the list of importers of this resource.
   virtual void RemoveImport(Import* import);
 
+  // Detach the resource from its parent.  Return false if this fails for some
+  // reason (including if this is an object for which the operation makes no
+  // sense).
+  virtual bool Detach();
+
  protected:
   Resource(Session* session,
            mozart::ResourceId id,

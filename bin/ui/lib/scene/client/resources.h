@@ -299,7 +299,7 @@ class OpacityNode : public ContainerNode {
   FTL_DISALLOW_COPY_AND_ASSIGN(OpacityNode);
 };
 
-// Represents a scene resource is a session.
+// Represents a scene resource in a session.
 class Scene : public ContainerNode {
  public:
   explicit Scene(Session* session);
@@ -311,7 +311,7 @@ class Scene : public ContainerNode {
   FTL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };
 
-// Represents a camera resource is a session.
+// Represents a camera resource in a session.
 class Camera : public Resource {
  public:
   explicit Camera(const Scene& scene);
@@ -328,7 +328,21 @@ class Camera : public Resource {
   FTL_DISALLOW_COPY_AND_ASSIGN(Camera);
 };
 
-// Represents a display renderer resource is a session.
+// Represents a renderer resource in a session.
+class Renderer : public Resource {
+ public:
+  explicit Renderer(Session* session);
+  ~Renderer();
+
+  // Sets the camera whose view will be rendered.
+  void SetCamera(const Camera& camera) { SetCamera(camera.id()); }
+  void SetCamera(uint32_t camera_id);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
+};
+
+// Represents a display renderer resource in a session.
 class DisplayRenderer : public Resource {
  public:
   explicit DisplayRenderer(Session* session);
@@ -340,6 +354,54 @@ class DisplayRenderer : public Resource {
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(DisplayRenderer);
+};
+
+// Represents a layer resource in a session.
+class Layer : public Resource {
+ public:
+  explicit Layer(Session* session);
+  ~Layer();
+
+  // Sets the layer's XY translation and Z-order.
+  void SetTranslation(float tx, float ty, float tz) {
+    SetTranslation((float[3]){tx, ty, tz});
+  }
+  void SetTranslation(const float translation[3]);
+
+  void SetRenderer(const Renderer& renderer) { SetRenderer(renderer.id()); }
+  void SetRenderer(uint32_t renderer_id);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(Layer);
+};
+
+// Represents a layer-stack resource in a session.
+class LayerStack : public Resource {
+ public:
+  explicit LayerStack(Session* session);
+  ~LayerStack();
+
+  void AddLayer(const Layer& layer) { AddLayer(layer.id()); }
+  void AddLayer(uint32_t layer_id);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(LayerStack);
+};
+
+// Represents a display-compositor resource in a session.
+class DisplayCompositor : public Resource {
+ public:
+  explicit DisplayCompositor(Session* session);
+  ~DisplayCompositor();
+
+  // Sets the layer-stack that is to be composited.
+  void SetLayerStack(const LayerStack& layer_stack) {
+    SetLayerStack(layer_stack.id());
+  }
+  void SetLayerStack(uint32_t layer_stack_id);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayCompositor);
 };
 
 }  // namespace client
