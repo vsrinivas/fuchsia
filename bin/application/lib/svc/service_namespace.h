@@ -120,6 +120,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
 
   std::unordered_map<std::string, ServiceConnector> name_to_service_connector_;
 
+  fs::Vfs vfs_;
   mtl::VFSDispatcher dispatcher_;
   mxtl::RefPtr<svcfs::VnodeDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;

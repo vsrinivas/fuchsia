@@ -13,7 +13,7 @@
 namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
-    : directory_(mxtl::AdoptRef(new svcfs::VnodeProviderDir())) {
+    : vfs_(&dispatcher_), directory_(mxtl::AdoptRef(new svcfs::VnodeProviderDir())) {
   directory_->SetServiceProvider(this);
 }
 
@@ -32,8 +32,7 @@ void ServiceProviderBridge::AddServiceForName(ServiceConnector connector,
 }
 
 bool ServiceProviderBridge::ServeDirectory(mx::channel channel) {
-  return fs::Vfs::ServeDirectory(directory_, &dispatcher_,
-                                 std::move(channel)) == MX_OK;
+  return vfs_.ServeDirectory(directory_, std::move(channel)) == MX_OK;
 }
 
 mx::channel ServiceProviderBridge::OpenAsDirectory() {

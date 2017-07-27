@@ -83,7 +83,7 @@ void LeaveDirectory(ftl::StringView name, std::vector<DirRecord>* stack) {
 
 }  // namespace
 
-FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()) {
+FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()), vfs_(&dispatcher_) {
   uint64_t num_bytes = 0;
   mx_status_t status = vmo.get_size(&num_bytes);
   if (status != MX_OK)
@@ -98,8 +98,8 @@ FileSystem::FileSystem(mx::vmo vmo) : vmo_(vmo.get()) {
 FileSystem::~FileSystem() = default;
 
 bool FileSystem::Serve(mx::channel channel) {
-  return directory_ && fs::Vfs::ServeDirectory(directory_, &dispatcher_,
-                                               std::move(channel)) == MX_OK;
+  return directory_ && vfs_.ServeDirectory(directory_,
+                                           std::move(channel)) == MX_OK;
 }
 
 mx::channel FileSystem::OpenAsDirectory() {

@@ -70,6 +70,7 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   void ConnectToService(const fidl::String& service_name,
                         mx::channel channel) override;
 
+  fs::Vfs vfs_;
   mtl::VFSDispatcher dispatcher_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
   mxtl::RefPtr<svcfs::VnodeProviderDir> directory_;

@@ -47,6 +47,7 @@ class FileSystem {
   // The owning reference to the vmo is stored inside |reader_| as a file
   /// descriptor.
   mx_handle_t vmo_;
+  fs::Vfs vfs_;
   mtl::VFSDispatcher dispatcher_;
   std::unique_ptr<ArchiveReader> reader_;
   mxtl::RefPtr<vmofs::VnodeDir> directory_;
