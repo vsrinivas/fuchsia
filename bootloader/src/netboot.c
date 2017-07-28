@@ -197,11 +197,13 @@ static tftp_status buffer_write(const void* data, size_t* len, off_t offset, voi
     }
     memcpy(&nb_buf_info->data[offset], data, *len);
     nb_buf_info->offset = offset + *len;
-    unsigned int progress_pct = offset / (file_info->file_size / 100);
-    if ((progress_pct > file_info->progress_reported) &&
-        (progress_pct - file_info->progress_reported >= 5)) {
-        printf("%u%%... ", progress_pct);
-        file_info->progress_reported = progress_pct;
+    if (file_info->file_size >= 100) {
+        unsigned int progress_pct = offset / (file_info->file_size / 100);
+        if ((progress_pct > file_info->progress_reported) &&
+            (progress_pct - file_info->progress_reported >= 5)) {
+            printf("%u%%... ", progress_pct);
+            file_info->progress_reported = progress_pct;
+        }
     }
     return TFTP_NO_ERROR;
 }
