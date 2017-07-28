@@ -8,10 +8,11 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
+#include <zx/event.h>
 #include <zx/handle.h>
 #include <zx/port.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
-#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -19,44 +20,39 @@
 #include <unistd.h>
 
 namespace audio {
+namespace dispatcher {
 
-class DispatcherChannel;
+class Channel;
+class ExecutionDomain;
+class ThreadPool;
 
-class DispatcherEventSource : public fbl::RefCounted<DispatcherEventSource> {
+// class EventSource
+//
+// EventSource is the base class of all things which can be dispatched in the
+// dispatcher framework, including Channels, Timers, and so on.
+//
+// All EventSources begin life after being instantiated by their derived class
+// in an un-initialized state.  The transition from un-initialized to activated
+// happens when the specific event source type becomes Activated.  Regardless of
+// the specifics, during activation, all EventSources become associated with an
+// ExecutionDomain.  Any time there is an interesting event to be dispatched, it
+// will be dispatched in the execution domain which was associated with the
+// EventSource at the point of activation.  When an event source is no longer
+// needed, it may be Deactivated and finally destroyed.  An event source may not
+// be re-activated once it has been deactivated.
+//
+class EventSource : public fbl::RefCounted<EventSource> {
 public:
-    // class DispatcherEventSource::Owner
-    //
-    // DispatcherEventSource::Owner defines the interface implemented by users of
-    // DispatcherEventSources in order to receive notifications of channels having
-    // messages ready to be processed, and of channels being closed.  @see
-    // DispatcherEventSource for more details.  In addition to the information
-    // highlighted there, note that...
-    //
-    // ## DispatcherEventSource::Owners are ref-counted objects, and that the
-    //    ref-count is implemented by by the DispatcherEventSource::Owner base
-    //    class.
-    // ## DispatcherEventSource::Owners *must* implement ProcessChannel.
-    // ## DispatcherEventSource::Owners *may* implement NotifyChannelDeactivated,
-    //    but are not required to.
+    // TODO(johngro) : Remove this once users have been updated
     class Owner : public fbl::RefCounted<Owner> {
     protected:
         friend class fbl::RefPtr<Owner>;
-        friend class DispatcherChannel;
-        friend class DispatcherEventSource;
+        friend class Channel;
 
-        virtual ~Owner() {
-            // Assert that the Owner implementation properly deactivated itself
-            // before destructing.
-            ZX_DEBUG_ASSERT(deactivated_);
-            ZX_DEBUG_ASSERT(sources_.is_empty());
-        }
+        Owner();
+        virtual ~Owner();
 
-        void ShutdownDispatcherEventSources() __TA_EXCLUDES(sources_lock_);
-
-        // TODO(johngro) : Remove this once users have been updated
-        void ShutdownDispatcherChannels() __TA_EXCLUDES(sources_lock_) {
-            ShutdownDispatcherEventSources();
-        }
+        void ShutdownDispatcherChannels();
 
         // ProcessChannel
         //
@@ -64,95 +60,93 @@ public:
         // there is a message pending on the channel.  Returning any error at
         // this point in time will cause the channel to be deactivated and
         // be released.
-        virtual zx_status_t ProcessChannel(DispatcherChannel* channel)
-            __TA_EXCLUDES(sources_lock_) = 0;
+        virtual zx_status_t ProcessChannel(Channel* channel) { return ZX_ERR_INTERNAL; }
 
         // NotifyChannelDeactivated.
         //
         // Called by the thread pool infrastructure to notify an owner that a
-        // channel is has become deactivated.  No new ProcessChannel callbacks
-        // will arrive from 'channel', but it is possible that there are still
-        // some callbacks currently in flight.  DispatcherEventSource::Owner
-        // implementers should take whatever synchronization steps are
-        // appropriate.
-        virtual void NotifyChannelDeactivated(const DispatcherChannel& channel)
-            __TA_EXCLUDES(sources_lock_) { }
+        // channel is has become deactivated.
+        virtual void NotifyChannelDeactivated(const Channel& channel) { }
 
     private:
-        zx_status_t AddEventSource(fbl::RefPtr<DispatcherEventSource>&& source)
-            __TA_EXCLUDES(sources_lock_);
-        void RemoveEventSource(DispatcherEventSource* source)
-            __TA_EXCLUDES(sources_lock_);
-
-        // Allow the deactivated flag to be checked without obtaining the
-        // sources_lock_.
-        //
-        // The deactivated_ flag may never be cleared once set.  It needs to be
-        // checked and held static during operations like adding and removing
-        // channels, as well as deactivating the owner.  While processing and
-        // dispatching messages, however (DispatcherEventSource::Process), a
-        // channel's owner might become deactivated, and it should be OK to
-        // perform a simple spot check (without obtaining the lock) and
-        // fast-abort if the owner was disabled.
-        bool deactivated() const __TA_NO_THREAD_SAFETY_ANALYSIS {
-            return static_cast<volatile bool>(deactivated_);
-        }
-
-        fbl::Mutex sources_lock_;
-        bool deactivated_ __TA_GUARDED(sources_lock_) = false;
-        fbl::DoublyLinkedList<fbl::RefPtr<DispatcherEventSource>> sources_
-            __TA_GUARDED(sources_lock_);
+        fbl::RefPtr<ExecutionDomain> default_domain_;
     };
 
     zx_signals_t process_signal_mask()    const { return process_signal_mask_; }
-    zx_signals_t shutdown_signal_mask()   const { return shutdown_signal_mask_; }
     uintptr_t    owner_ctx()              const { return owner_ctx_; }
-    bool         InOwnersList()           const { return dll_node_state_.InContainer(); }
+    bool         InExecutionDomain()      const { return sources_node_state_.InContainer(); }
+    bool         InPendingList()          const { return pending_work_node_state_.InContainer(); }
 
-    zx_status_t WaitOnPort(const zx::port& port) __TA_EXCLUDES(obj_lock_) {
-        fbl::AutoLock obj_lock(&obj_lock_);
-        return WaitOnPortLocked(port);
-    }
+    virtual void Deactivate() __TA_EXCLUDES(obj_lock_) = 0;
 
-    void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_);
-
-    zx_status_t Process(const zx_port_packet_t& port_packet) __TA_EXCLUDES(obj_lock_);
+    fbl::RefPtr<ExecutionDomain> ScheduleDispatch(const zx_port_packet_t& port_packet)
+        __TA_EXCLUDES(obj_lock_);
 
 protected:
-    DispatcherEventSource(zx_signals_t process_signal_mask,
-                          zx_signals_t shutdown_signal_mask,
-                          uintptr_t owner_ctx);
-    virtual ~DispatcherEventSource();
+    enum class DispatchState {
+        Idle,
+        WaitingOnPort,
+        DispatchPending,
+        Dispatching,
+    };
 
-    bool client_thread_active() const { return client_thread_active_; }
-    fbl::RefPtr<Owner> DeactivateLocked() __TA_REQUIRES(obj_lock_);
-    zx_status_t WaitOnPortLocked(const zx::port& port) __TA_REQUIRES(obj_lock_);
+    EventSource(zx_signals_t process_signal_mask, uintptr_t owner_ctx_);
+    virtual ~EventSource();
 
-    virtual zx_status_t ProcessInternal(const fbl::RefPtr<Owner>& owner,
-                                        const zx_port_packet_t& port_packet)
-        __TA_EXCLUDES(obj_lock_) = 0;
+    bool is_active() const __TA_REQUIRES(obj_lock_) { return domain_ != nullptr; }
+    DispatchState dispatch_state() const __TA_REQUIRES(obj_lock_) { return dispatch_state_; }
+    void InternalDeactivateLocked() __TA_REQUIRES(obj_lock_);
 
-    virtual void NotifyDeactivated(const fbl::RefPtr<Owner>& owner)
-        __TA_EXCLUDES(obj_lock_) = 0;
+    zx_status_t ActivateLocked(zx::handle handle, fbl::RefPtr<ExecutionDomain> domain)
+        __TA_REQUIRES(obj_lock_);
+    zx_status_t WaitOnPortLocked() __TA_REQUIRES(obj_lock_);
+    zx_status_t CancelPendingLocked() __TA_REQUIRES(obj_lock_);
 
-    mutable fbl::Mutex obj_lock_ __TA_ACQUIRED_BEFORE(owner_->sources_lock_);
-    fbl::RefPtr<Owner> owner_    __TA_GUARDED(obj_lock_);
-    zx::handle          handle_   __TA_GUARDED(obj_lock_);
+    // Transition to the dispatching state and return true if...
+    //
+    // 1) We are currently in the DispatchPending state.
+    // 2) We still have a domain.
+    // 3) We are still in our domain's pending work queue.
+    //
+    // Otherwise, return false.
+    bool BeginDispatching() __TA_EXCLUDES(obj_lock_);
+
+    virtual void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) = 0;
+
+    mutable fbl::Mutex           obj_lock_;
+    fbl::RefPtr<ExecutionDomain> domain_  __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<ThreadPool>      thread_pool_  __TA_GUARDED(obj_lock_);
+    zx::handle                   handle_  __TA_GUARDED(obj_lock_);
+    DispatchState                dispatch_state_ __TA_GUARDED(obj_lock_) = DispatchState::Idle;
+    zx_port_packet_t             pending_pkt_;
 
 private:
-    friend class  fbl::RefPtr<DispatcherEventSource>;
-    friend struct fbl::DefaultDoublyLinkedListTraits<fbl::RefPtr<DispatcherEventSource>>;
-    friend struct fbl::DefaultWAVLTreeTraits<fbl::RefPtr<DispatcherEventSource>>;
+    friend class fbl::RefPtr<EventSource>;
+    friend class ExecutionDomain;
 
-    const bool          client_thread_active_;
-    const zx_signals_t  process_signal_mask_;
-    const zx_signals_t  shutdown_signal_mask_;
-    const uintptr_t     owner_ctx_;
+    struct SourcesListTraits {
+        static fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>>&
+            node_state(EventSource& event_source) {
+            return event_source.sources_node_state_;
+        }
+    };
 
-    bool wait_pending_ __TA_GUARDED(obj_lock_) = false;
+    struct PendingWorkListTraits {
+        static fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>>&
+            node_state(EventSource& event_source) {
+            return event_source.pending_work_node_state_;
+        }
+    };
 
-    // Node state for existing on the Owner's channels_ list.
-    fbl::DoublyLinkedListNodeState<fbl::RefPtr<DispatcherEventSource>> dll_node_state_;
+    const zx_signals_t process_signal_mask_;
+    const uintptr_t    owner_ctx_;
+
+    // Node state for existing on the domain's sources_ list.
+    fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>> sources_node_state_;
+
+    // Node state for existing on the domain's pending_work_ list.
+    fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>> pending_work_node_state_;
 };
 
+}  // namespace dispatcher
 }  // namespace audio
