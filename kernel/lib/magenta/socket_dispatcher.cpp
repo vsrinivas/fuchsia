@@ -72,8 +72,7 @@ SocketDispatcher::SocketDispatcher(uint32_t flags)
       peer_koid_(0u),
       state_tracker_(MX_SOCKET_WRITABLE),
       head_(nullptr),
-      size_(0u),
-      half_closed_{false, false} {
+      size_(0u) {
 }
 
 SocketDispatcher::~SocketDispatcher() {
@@ -140,29 +139,69 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
     return MX_OK;
 }
 
-status_t SocketDispatcher::HalfClose() {
+status_t SocketDispatcher::Shutdown(uint32_t how) {
     canary_.Assert();
+
+    LTRACE_ENTRY;
+
+    const bool shutdown_read = how & MX_SOCKET_SHUTDOWN_READ;
+    const bool shutdown_write = how & MX_SOCKET_SHUTDOWN_WRITE;
 
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
-        if (half_closed_[0])
+        mx_signals_t signals = state_tracker_.GetSignalsState();
+        // If we're already shut down in the requested way, return immediately.
+        const uint32_t want_signals =
+            (shutdown_read ? MX_SOCKET_READ_DISABLED : 0) |
+            (shutdown_write ? MX_SOCKET_WRITE_DISABLED : 0);
+        const uint32_t have_signals = signals & (MX_SOCKET_READ_DISABLED | MX_SOCKET_WRITE_DISABLED);
+        if (want_signals == have_signals) {
             return MX_OK;
-        if (!other_)
-            return MX_ERR_PEER_CLOSED;
+        }
         other = other_;
-        half_closed_[0] = true;
-        state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
+        mx_signals_t clear_mask = 0u;
+        mx_signals_t set_mask = 0u;
+        if (shutdown_read) {
+            clear_mask |= MX_SOCKET_READABLE;
+            set_mask |= MX_SOCKET_READ_DISABLED;
+        }
+        if (shutdown_write) {
+            clear_mask |= MX_SOCKET_WRITABLE;
+            set_mask |= MX_SOCKET_WRITE_DISABLED;
+        }
+        state_tracker_.UpdateState(clear_mask, set_mask);
     }
-    return other->HalfCloseOther();
+    // Our peer already be closed - if so, we've already updated our own bits so we are done. If the
+    // peer is done, we need to notify them of the state change.
+    if (other) {
+        return other->ShutdownOther(how);
+    } else {
+        return MX_OK;
+    }
 }
 
-status_t SocketDispatcher::HalfCloseOther() {
+status_t SocketDispatcher::ShutdownOther(uint32_t how) {
     canary_.Assert();
 
+    const bool shutdown_read = how & MX_SOCKET_SHUTDOWN_READ;
+    const bool shutdown_write = how & MX_SOCKET_SHUTDOWN_WRITE;
+
     AutoLock lock(&lock_);
-    half_closed_[1] = true;
-    state_tracker_.UpdateState(0u, MX_SOCKET_PEER_CLOSED);
+    mx_signals_t clear_mask = 0u;
+    mx_signals_t set_mask = 0u;
+    if (shutdown_read) {
+        // If the other end shut down reading, we can't write any more.
+        clear_mask |= MX_SOCKET_WRITABLE;
+        set_mask |= MX_SOCKET_WRITE_DISABLED;
+    }
+    if (shutdown_write) {
+        // If the other end shut down writing, we can't read any more than already exists in the
+        // buffer. Read() will clear the MX_SOCKET_READABLE bit when the socket is empty.
+        set_mask |= MX_SOCKET_READ_DISABLED;
+    }
+
+    state_tracker_.UpdateState(clear_mask, set_mask);
     return MX_OK;
 }
 
@@ -170,12 +209,15 @@ mx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
                                     size_t* nwritten) {
     canary_.Assert();
 
+    LTRACE_ENTRY;
+
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
             return MX_ERR_PEER_CLOSED;
-        if (half_closed_[0])
+        mx_signals_t signals = state_tracker_.GetSignalsState();
+        if (signals & MX_SOCKET_WRITE_DISABLED)
             return MX_ERR_BAD_STATE;
         other = other_;
     }
@@ -312,6 +354,8 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
                                    size_t* nread) {
     canary_.Assert();
 
+    LTRACE_ENTRY;
+
     AutoLock lock(&lock_);
 
     // Just query for bytes outstanding.
@@ -323,10 +367,18 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
     if (len != (size_t)((uint32_t)len))
         return MX_ERR_INVALID_ARGS;
 
-    bool closed = half_closed_[1] || !other_;
+    mx_signals_t signals = state_tracker_.GetSignalsState();
+    const bool read_disabled = signals & MX_SOCKET_READ_DISABLED;
 
-    if (is_empty())
-        return closed ? MX_ERR_PEER_CLOSED : MX_ERR_SHOULD_WAIT;
+    if (is_empty()) {
+        if (!other_)
+            return MX_ERR_PEER_CLOSED;
+        // If reading is disabled on our end or writing is disabled on our peer, we'll never
+        // become readable again. Return a different error to let the caller know.
+        if (read_disabled)
+            return MX_ERR_BAD_STATE;
+        return MX_ERR_SHOULD_WAIT;
+    }
 
     if (flags_ == MX_SOCKET_DATAGRAM && len > tail_.front().pkt_len_)
         len = tail_.front().pkt_len_;
@@ -338,7 +390,7 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
     if (is_empty())
         state_tracker_.UpdateState(MX_SOCKET_READABLE, 0u);
 
-    if (!closed && was_full && (st > 0))
+    if (other_ && !read_disabled && was_full && (st > 0))
         other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
     *nread = static_cast<size_t>(st);

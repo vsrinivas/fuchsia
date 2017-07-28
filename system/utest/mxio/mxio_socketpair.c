@@ -5,8 +5,11 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/types.h>
+#include <poll.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <threads.h>
 #include <unistd.h>
 
 #include <unittest/unittest.h>
@@ -175,9 +178,83 @@ bool socketpair_shutdown_rdwr_test(void) {
     END_TEST;
 }
 
+typedef struct poll_for_read_args {
+    int fd;
+    int poll_result;
+    mx_time_t poll_time;
+} poll_for_read_args_t;
+
+int poll_for_read_with_timeout(void* arg) {
+    poll_for_read_args_t* poll_args = (poll_for_read_args_t*) arg;
+    struct pollfd pollfd;
+    pollfd.fd = poll_args->fd;
+    pollfd.events = POLLIN;
+    pollfd.revents = 0;
+
+    int timeout_ms = 100;
+    mx_time_t time_before = mx_time_get(CLOCK_MONOTONIC);
+    poll_args->poll_result = poll(&pollfd, 1, timeout_ms);
+    mx_time_t time_after = mx_time_get(CLOCK_MONOTONIC);
+    poll_args->poll_time = time_after - time_before;
+
+    int num_readable = 0;
+    EXPECT_EQ(ioctl(poll_args->fd, FIONREAD, &num_readable), 0, "ioctl(FIONREAD)");
+    EXPECT_EQ(num_readable, 0, "");
+
+    return 0;
+}
+
+
+bool socketpair_shutdown_self_wr_poll_test(void) {
+    BEGIN_TEST;
+
+    int fds[2];
+    socketpair_shutdown_setup(fds);
+
+    poll_for_read_args_t poll_args = {};
+    poll_args.fd = fds[0];
+    thrd_t poll_thread;
+    int thrd_create_result = thrd_create(&poll_thread, poll_for_read_with_timeout, &poll_args);
+    ASSERT_EQ(thrd_create_result, thrd_success, "create blocking read thread");
+
+    shutdown(fds[0], SHUT_RDWR);
+
+    ASSERT_EQ(thrd_join(poll_thread, NULL), thrd_success, "join blocking read thread");
+
+    EXPECT_EQ(poll_args.poll_result, 1, "poll should have one entry");
+    EXPECT_LT(poll_args.poll_time, 100u * 1000 * 1000, "poll should not have timed out");
+
+    END_TEST;
+}
+
+bool socketpair_shutdown_peer_wr_poll_test(void) {
+    BEGIN_TEST;
+
+    int fds[2];
+    socketpair_shutdown_setup(fds);
+
+    poll_for_read_args_t poll_args = {};
+    poll_args.fd = fds[0];
+    thrd_t poll_thread;
+    int thrd_create_result = thrd_create(&poll_thread, poll_for_read_with_timeout, &poll_args);
+    ASSERT_EQ(thrd_create_result, thrd_success, "create blocking read thread");
+
+    shutdown(fds[1], SHUT_RDWR);
+
+    ASSERT_EQ(thrd_join(poll_thread, NULL), thrd_success, "join blocking read thread");
+
+    EXPECT_EQ(poll_args.poll_result, 1, "poll should have one entry");
+    EXPECT_LT(poll_args.poll_time, 100u * 1000 * 1000, "poll should not have timed out");
+
+    END_TEST;
+}
+
+
 BEGIN_TEST_CASE(mxio_socketpair_test)
 RUN_TEST(socketpair_test);
 RUN_TEST(socketpair_shutdown_rd_test);
 RUN_TEST(socketpair_shutdown_wr_test);
 RUN_TEST(socketpair_shutdown_rdwr_test);
+RUN_TEST(socketpair_shutdown_self_wr_poll_test);
+RUN_TEST(socketpair_shutdown_peer_wr_poll_test);
 END_TEST_CASE(mxio_socketpair_test)
