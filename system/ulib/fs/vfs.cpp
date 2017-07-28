@@ -69,6 +69,22 @@ mx_status_t vfs_lookup(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
     return vn->Lookup(out, name, len);
 }
 
+// Validate open flags as much as they can be validated
+// independently of the target node.
+mx_status_t vfs_validate_flags(uint32_t flags) {
+    switch (flags & 3) {
+    case O_RDONLY:
+        if (flags & O_TRUNC) {
+            return MX_ERR_INVALID_ARGS;
+        }
+    case O_WRONLY:
+    case O_RDWR:
+        return MX_OK;
+    default:
+        return MX_ERR_INVALID_ARGS;
+    }
+}
+
 } // namespace anonymous
 
 bool RemoteContainer::IsRemote() const {
@@ -124,6 +140,9 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
                       const char** pathout, uint32_t flags, uint32_t mode) {
     FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path, flags);
     mx_status_t r;
+    if ((r = vfs_validate_flags(flags)) != MX_OK) {
+        return r;
+    }
     if ((r = Vfs::Walk(vndir, &vndir, path, &path)) < 0) {
         return r;
     }

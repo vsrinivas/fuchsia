@@ -84,7 +84,31 @@ bool test_access_writable(void) {
     END_TEST;
 }
 
+bool test_access_badflags(void) {
+    BEGIN_TEST;
+
+    const char* filename = "::foobar";
+
+    // No creation with "RDWR + WRONLY"
+    ASSERT_LT(open(filename, O_RDWR | O_WRONLY | O_CREAT, 0644), 0, "");
+
+    int fd = open(filename, O_RDWR | O_CREAT, 0644);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+
+    // No re-opening with "RDWR + WRONLY"
+    ASSERT_LT(open(filename, O_RDWR | O_WRONLY, 0644), 0, "");
+
+    // No read-only truncation
+    ASSERT_LT(open(filename, O_RDONLY | O_TRUNC | O_CREAT, 0644), 0, "");
+
+    ASSERT_EQ(unlink(filename), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(access_tests,
     RUN_TEST_MEDIUM(test_access_readable)
     RUN_TEST_MEDIUM(test_access_writable)
+    RUN_TEST_MEDIUM(test_access_badflags)
 )
