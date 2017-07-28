@@ -26,19 +26,13 @@ void Output::SetCopyAllocator(PayloadAllocator* copy_allocator) {
 
 Demand Output::demand() const {
   FTL_DCHECK(mate_);
-
-  // Return negative demand if mate() already has a packet.
-  // We check demand_ here to possibly avoid the second check.
-  if (demand_ == Demand::kNegative || mate_->packet_from_upstream()) {
-    return Demand::kNegative;
-  }
-
-  return demand_;
+  return mate_->demand();
 }
 
 void Output::SupplyPacket(PacketPtr packet) const {
   FTL_DCHECK(packet);
   FTL_DCHECK(mate_);
+  FTL_DCHECK(demand() != Demand::kNegative);
 
   if (copy_allocator_ != nullptr) {
     // Need to copy the packet due to an allocation conflict.
@@ -61,21 +55,7 @@ void Output::SupplyPacket(PacketPtr packet) const {
                        packet->end_of_stream(), size, buffer, copy_allocator_);
   }
 
-  if (mate_->SupplyPacketFromOutput(std::move(packet))) {
-    mate_->stage()->NeedsUpdate();
-  }
-}
-
-bool Output::UpdateDemandFromInput(Demand demand) {
-  if (demand_ == demand) {
-    return false;
-  }
-  demand_ = demand;
-  return true;
-}
-
-void Output::Flush() {
-  demand_ = Demand::kNegative;
+  mate_->PutPacket(std::move(packet));
 }
 
 }  // namespace media

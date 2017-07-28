@@ -95,7 +95,6 @@ void ActiveSourceStage::FlushInput(size_t index,
 
 void ActiveSourceStage::FlushOutput(size_t index) {
   FTL_DCHECK(source_);
-  output_.Flush();
   source_->Flush();
   packets_.clear();
 }

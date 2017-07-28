@@ -51,17 +51,10 @@ class Output {
   // Supplies a packet to mate. Called only by Stage::Update implementations.
   void SupplyPacket(PacketPtr packet) const;
 
-  // Updates packet demand. Called only by Input instances.
-  bool UpdateDemandFromInput(Demand demand);
-
-  // Flushes retained media.
-  void Flush();
-
  private:
   Stage* stage_;
   size_t index_;
   Input* mate_ = nullptr;
-  Demand demand_ = Demand::kNegative;
   PayloadAllocator* copy_allocator_ = nullptr;
 };
 

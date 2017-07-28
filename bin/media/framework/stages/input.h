@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "apps/media/src/framework/models/demand.h"
 #include "apps/media/src/framework/packet.h"
 
@@ -42,34 +44,45 @@ class Input {
   bool connected() const { return mate_; }
 
   // Determines if the input is prepared.
-  bool prepared() { return prepared_; }
+  bool prepared() const { return prepared_; }
 
   // Changes the prepared state of the input.
   void set_prepared(bool prepared) { prepared_ = prepared; }
 
+  // Indicates current demand. Called only by the upstream |Output|.
+  Demand demand() const;
+
+  // Updates packet. Called only by the upstream |Output|.
+  void PutPacket(PacketPtr packet);
+
   // A packet supplied from upstream.
-  const PacketPtr& packet_from_upstream() { return packet_from_upstream_; }
+  const PacketPtr& packet() { return packet_; }
 
-  // Takes ownership of the packet supplied from upstream.
-  PacketPtr TakePacketFromUpstream();
+  // Takes ownership of the packet supplied from upstream and sets the demand
+  // to the indicated value.
+  PacketPtr TakePacket(Demand demand);
 
-  // Updates mate's demand. Called only by Stage::Update implementations.
-  void SetDemand(Demand demand) const;
-
-  // Updates packet_from_upstream. Return value indicates whether the stage for
-  // this input should be added to the supply backlog. Called only by
-  // Output instances.
-  bool SupplyPacketFromOutput(PacketPtr packet);
+  // Updates mate's demand if |packet()| is empty. Called only by the downstream
+  // stage.
+  void SetDemand(Demand demand);
 
   // Flushes retained media.
   void Flush();
 
  private:
+  enum class State {
+    kDemandsPacket,
+    kAllowsPacket,
+    kRefusesPacket,
+    kHasPacket
+  };
+
   Stage* stage_;
   size_t index_;
   Output* mate_ = nullptr;
   bool prepared_ = false;
-  PacketPtr packet_from_upstream_;
+  PacketPtr packet_;
+  std::atomic<State> state_;
 };
 
 }  // namespace media

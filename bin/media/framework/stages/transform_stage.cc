@@ -62,13 +62,11 @@ void TransformStage::UnprepareOutput(size_t index,
 void TransformStage::Update() {
   FTL_DCHECK(allocator_);
 
-  while (input_.packet_from_upstream() &&
-         output_.demand() != Demand::kNegative) {
+  while (input_.packet() && output_.demand() != Demand::kNegative) {
     PacketPtr output_packet;
-    if (transform_->TransformPacket(input_.packet_from_upstream(),
-                                    input_packet_is_new_, allocator_,
-                                    &output_packet)) {
-      input_.TakePacketFromUpstream();
+    if (transform_->TransformPacket(input_.packet(), input_packet_is_new_,
+                                    allocator_, &output_packet)) {
+      input_.TakePacket(Demand::kNegative);
       input_packet_is_new_ = true;
     } else {
       input_packet_is_new_ = false;
@@ -92,7 +90,6 @@ void TransformStage::FlushInput(size_t index,
 void TransformStage::FlushOutput(size_t index) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(transform_);
-  output_.Flush();
   transform_->Flush();
   input_packet_is_new_ = true;
 }

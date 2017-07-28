@@ -55,8 +55,8 @@ void ActiveSinkStage::PrepareOutput(size_t index,
 void ActiveSinkStage::Update() {
   FTL_DCHECK(sink_);
 
-  if (input_.packet_from_upstream()) {
-    sink_demand_ = sink_->SupplyPacket(input_.TakePacketFromUpstream());
+  if (input_.packet()) {
+    sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
   }
 
   input_.SetDemand(sink_demand_);

@@ -59,9 +59,9 @@ void ActiveMultistreamSinkStage::Update() {
   for (auto iter = pending_inputs_.begin(); iter != pending_inputs_.end();) {
     FTL_DCHECK(*iter < inputs_.size());
     StageInput* input = inputs_[*iter].get();
-    if (input->input_.packet_from_upstream()) {
+    if (input->input_.packet()) {
       input->demand_ = sink_->SupplyPacket(
-          input->input_.index(), input->input_.TakePacketFromUpstream());
+          input->input_.index(), input->input_.TakePacket(Demand::kNegative));
 
       if (input->demand_ == Demand::kNegative) {
         auto remove_iter = iter;
@@ -84,7 +84,6 @@ void ActiveMultistreamSinkStage::FlushInput(
   sink_->Flush();
 
   ftl::MutexLocker locker(&mutex_);
-  inputs_[index]->demand_ = Demand::kNegative;
   inputs_[index]->input_.Flush();
 
   pending_inputs_.remove(index);

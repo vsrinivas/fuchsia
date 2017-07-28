@@ -147,7 +147,6 @@ void ActiveMultistreamSourceStage::FlushOutput(size_t index) {
   ftl::MutexLocker locker(&mutex_);
   FTL_DCHECK(index < outputs_.size());
   FTL_DCHECK(source_);
-  outputs_[index].Flush();
   packets_per_output_[index].clear();
   ended_streams_ = 0;
   packet_request_outstanding_ = false;
