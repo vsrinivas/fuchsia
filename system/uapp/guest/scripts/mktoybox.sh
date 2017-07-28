@@ -73,7 +73,7 @@ if [ ! -f "$IRDIR/initrd.gz" ]; then
 #!/bin/sh
 mount -t proc none /proc
 mount -t sysfs none /sys
-echo "Launched toybox"
+echo Launched toybox
 /bin/sh
 _EOF
 

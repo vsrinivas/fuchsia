@@ -7,10 +7,11 @@
 /* UART ports. */
 #define UART_RECEIVE_PORT               0x3f8
 #define UART_INTERRUPT_ENABLE_PORT      0x3f9
-#define UART_INTERRUPT_PORT             0x3fa
+#define UART_INTERRUPT_ID_PORT          0x3fa
 #define UART_LINE_CONTROL_PORT          0x3fb
 #define UART_MODEM_CONTROL_PORT         0x3fc
 #define UART_LINE_STATUS_PORT           0x3fd
+#define UART_MODEM_STATUS_PORT          0x3fe
 #define UART_SCR_SCRATCH_PORT           0x3ff
 
 /* RTC ports. */

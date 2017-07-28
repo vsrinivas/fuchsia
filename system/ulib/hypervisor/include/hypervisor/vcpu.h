@@ -40,6 +40,10 @@ typedef struct io_port_state {
     uint8_t i8042_command;
     // State of power management enable register.
     uint16_t pm1_enable;
+    // State of the UART interrupt enable register.
+    uint8_t uart_interrupt_enable;
+    // State of the UART interrupt id register.
+    uint8_t uart_interrupt_id;
     // State of the UART line control register.
     uint8_t uart_line_control;
     // Selected address in PCI config space.
@@ -109,4 +113,7 @@ mx_status_t vcpu_loop(vcpu_context_t* context);
 mx_status_t vcpu_handle_packet(vcpu_context_t* context, mx_guest_packet_t* packet);
 
 /* Processes a single UART IO packet. */
-mx_status_t vcpu_handle_uart(mx_guest_io_t* io, mtx_t* mutex, io_port_state_t* io_port_state);
+mx_status_t vcpu_handle_uart(mx_guest_io_t* io, guest_state_t* guest_state, mx_handle_t vcpu);
+
+/* Returns the redirected IRQ for the given global one. */
+uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq);

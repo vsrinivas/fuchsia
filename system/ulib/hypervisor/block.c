@@ -59,11 +59,6 @@ mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
     return MX_ERR_NOT_SUPPORTED;
 }
 
-// Returns the redirect interrupt associated with the global interrupt.
-static uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq) {
-    return io_apic_state->redirect[global_irq * 2] & UINT8_MAX;
-}
-
 mx_status_t handle_virtio_block_write(vcpu_context_t* vcpu_context, uint16_t port,
                                       const mx_guest_io_t* io) {
     void* mem_addr = vcpu_context->guest_state->mem_addr;

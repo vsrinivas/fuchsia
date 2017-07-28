@@ -103,7 +103,7 @@ static bool handle_output_packet(void) {
     io.access_size = 1;
     io.u8 = 0xaf;
     EXPECT_EQ(
-        vcpu_handle_uart(&io, &test.guest_state.mutex, &test.guest_state.io_port_state),
+        vcpu_handle_uart(&io, &test.guest_state, 0),
         MX_OK,
         "Failed to handle UART IO packet.\n");
 

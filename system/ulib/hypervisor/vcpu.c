@@ -77,6 +77,10 @@
 #define UART_BUFFER_SIZE                        512u
 
 /* UART configuration flags. */
+#define UART_INTERRUPT_ENABLE_THR_EMPTY         (1u << 1)
+#define UART_INTERRUPT_ID_NONE                  (1u << 0)
+#define UART_INTERRUPT_ID_THR_EMPTY             (1u << 1)
+#define UART_INTERRUPT_ID_NO_FIFO_MASK          0x0f
 #define UART_STATUS_EMPTY                       (1u << 5)
 #define UART_STATUS_IDLE                        (1u << 6)
 
@@ -107,6 +111,7 @@
 #define PM1A_REGISTER_ENABLE                    (ACPI_PM1_REGISTER_WIDTH / 8)
 
 /* Interrupt vectors. */
+#define X86_INT_UART                            0x4
 #define X86_INT_GP_FAULT                        0xd
 
 static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
@@ -401,20 +406,39 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     return MX_OK;
 }
 
+uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq) {
+    return io_apic_state->redirect[global_irq * 2] & UINT8_MAX;
+}
+
 static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
 #if __x86_64__
     mx_vcpu_io_t vcpu_io;
     memset(&vcpu_io, 0, sizeof(vcpu_io));
     io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
     switch (io->port) {
+    case UART_RECEIVE_PORT:
+    case UART_MODEM_CONTROL_PORT:
+    case UART_MODEM_STATUS_PORT:
+    case UART_SCR_SCRATCH_PORT:
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = 0;
+        break;
+    case UART_INTERRUPT_ENABLE_PORT:
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = io_port_state->uart_interrupt_enable;
+        break;
+    case UART_INTERRUPT_ID_PORT:
+        vcpu_io.access_size = 1;
+        vcpu_io.u8 = UART_INTERRUPT_ID_NO_FIFO_MASK & io_port_state->uart_interrupt_id;
+        // Technically, we should always reset the interrupt id register to UART_INTERRUPT_ID_NONE
+        // after a read, but this requires us to take a lock on every THR output (to set
+        // interrupt_id to UART_INTERRUPT_ID_THR_EMPTY before we fire the interrupt).
+        // We aren't too fussed about being perfect here, so instead we will reset it when
+        // UART_INTERRUPT_ENABLE_THR_EMPTY is disabled below.
+        break;
     case UART_LINE_CONTROL_PORT:
         vcpu_io.access_size = 1;
         vcpu_io.u8 = io_port_state->uart_line_control;
-        break;
-    case UART_INTERRUPT_ENABLE_PORT:
-    case UART_MODEM_CONTROL_PORT:
-        vcpu_io.access_size = 1;
-        vcpu_io.u8 = 0;
         break;
     case UART_LINE_STATUS_PORT:
         vcpu_io.access_size = 1;
@@ -606,9 +630,24 @@ static mx_status_t fifo_wait(mx_handle_t fifo, mx_signals_t signals) {
     return MX_OK;
 }
 
-mx_status_t vcpu_handle_uart(mx_guest_io_t* io, mtx_t* mutex, io_port_state_t* io_port_state) {
+static mx_status_t raise_thr_empty_interrupt(mx_handle_t vcpu, io_apic_state_t* io_apic_state) {
+    uint32_t interrupt = irq_redirect(io_apic_state, X86_INT_UART);
+    // UART IRQs overlap with CPU exception handlers, so they need to be remapped.
+    // If that hasn't happened yet, don't fire the interrupt - it would be bad.
+    if (interrupt == 0) {
+        return MX_OK;
+    }
+    return mx_vcpu_interrupt(vcpu, interrupt);
+}
+
+mx_status_t vcpu_handle_uart(mx_guest_io_t* io, guest_state_t* guest_state, mx_handle_t vcpu) {
     static uint8_t buffer[UART_BUFFER_SIZE] = {};
     static uint16_t offset = 0;
+    static bool interrupt_on_thr_empty = false;
+
+    mtx_t* mutex = &guest_state->mutex;
+    io_port_state_t* io_port_state = &guest_state->io_port_state;
+    io_apic_state_t* io_apic_state = &guest_state->io_apic_state;
 
     switch (io->port) {
     case UART_RECEIVE_PORT:
@@ -619,9 +658,23 @@ mx_status_t vcpu_handle_uart(mx_guest_io_t* io, mtx_t* mutex, io_port_state_t* i
                 offset = 0;
             }
         }
+        if (interrupt_on_thr_empty) {
+            return raise_thr_empty_interrupt(vcpu, io_apic_state);
+        }
         break;
-    case UART_INTERRUPT_ENABLE_PORT ... UART_INTERRUPT_PORT:
-    case UART_MODEM_CONTROL_PORT ... UART_SCR_SCRATCH_PORT:
+    case UART_INTERRUPT_ENABLE_PORT:
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        interrupt_on_thr_empty = io->u8 & UART_INTERRUPT_ENABLE_THR_EMPTY;
+        mtx_lock(mutex);
+        io_port_state->uart_interrupt_enable = io->u8;
+        io_port_state->uart_interrupt_id =
+                interrupt_on_thr_empty ? UART_INTERRUPT_ID_THR_EMPTY : UART_INTERRUPT_ID_NONE;
+        mtx_unlock(mutex);
+
+        if (interrupt_on_thr_empty) {
+            return raise_thr_empty_interrupt(vcpu, io_apic_state);
+        }
         break;
     case UART_LINE_CONTROL_PORT:
         if (io->access_size != 1)
@@ -629,6 +682,9 @@ mx_status_t vcpu_handle_uart(mx_guest_io_t* io, mtx_t* mutex, io_port_state_t* i
         mtx_lock(mutex);
         io_port_state->uart_line_control = io->u8;
         mtx_unlock(mutex);
+        break;
+    case UART_INTERRUPT_ID_PORT:
+    case UART_MODEM_CONTROL_PORT ... UART_SCR_SCRATCH_PORT:
         break;
     default:
         return MX_ERR_INTERNAL;
@@ -638,8 +694,8 @@ mx_status_t vcpu_handle_uart(mx_guest_io_t* io, mtx_t* mutex, io_port_state_t* i
 }
 
 static int uart_loop(void* arg) {
-    guest_state_t* guest_state = arg;
-
+    vcpu_context_t* vcpu_context = arg;
+    guest_state_t* guest_state = vcpu_context->guest_state;
     mx_handle_t user_fifo;
     mx_handle_t kernel_fifo;
     mx_status_t status = fifo_create(&user_fifo, &kernel_fifo);
@@ -649,7 +705,7 @@ static int uart_loop(void* arg) {
     }
 
     const mx_vaddr_t addr = UART_RECEIVE_PORT;
-    const size_t len = UART_SCR_SCRATCH_PORT - addr;
+    const size_t len = (UART_SCR_SCRATCH_PORT - addr) + 1;
     status = mx_guest_set_trap(guest_state->guest, MX_GUEST_TRAP_IO, addr, len, kernel_fifo);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to set trap for UART FIFO %d\n", status);
@@ -676,8 +732,7 @@ static int uart_loop(void* arg) {
                 fprintf(stderr, "Invalid packet type for UART %d\n", packets[i].type);
                 goto cleanup;
             }
-            status = vcpu_handle_uart(&packets[i].io, &guest_state->mutex,
-                                      &guest_state->io_port_state);
+            status = vcpu_handle_uart(&packets[i].io, guest_state, vcpu_context->vcpu);
             if (status != MX_OK) {
                 fprintf(stderr, "Unable to handle packet for UART %d\n", status);
                 goto cleanup;
@@ -709,7 +764,7 @@ void vcpu_init(vcpu_context_t* vcpu_context) {
 
 mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
     thrd_t uart_thread;
-    int ret = thrd_create(&uart_thread, uart_loop, vcpu_context->guest_state);
+    int ret = thrd_create(&uart_thread, uart_loop, vcpu_context);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create UART thread %d\n", ret);
         return MX_ERR_INTERNAL;
