@@ -7,7 +7,6 @@ import("//build/rust/rust_library.gni")
 rust_library("magenta") {
   deps = [
     "//rust/magenta-rs/magenta-sys",
-    "//third_party/rust-crates:num-traits-0.1.39",
   ]
 
   with_tests = true
