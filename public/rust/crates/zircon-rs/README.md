@@ -5,4 +5,4 @@ This repository contains Rust language bindings for Magenta kernel syscalls. The
 main crate contains type-safe wrappers, while the inner "sys" crate contains the
 raw types and FFI declarations.
 
-To get started, see the [GETTING_STARTED](GETTING_STARTED.md) documentation.
+There are two ways to build Rust artifacts targeting Fuchsia; using the [Fargo](https://fuchsia.googlesource.com/fargo/) cross compiling tool or including your [artifact in the GN build](https://fuchsia.googlesource.com/docs/+/master/rust.md). Of the two, the Fargo is likely better for exploration and experimentation.
