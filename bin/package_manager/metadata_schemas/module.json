@@ -8,7 +8,8 @@
         "binary": { "type": "string" },
         "local_name": { "type": "string" },
         "verb": { "$ref": "#/definitions/verbId" },
-        "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" }
+        "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" },
+        "return_types": { "$ref": "#/definitions/returnTypeArray" }
       },
       "required": [ "binary", "local_name", "verb" ],
       "additionalProperties": false
@@ -29,7 +30,23 @@
       "required": [ "name", "types" ],
       "additionalProperties": false
     },
-    "entityAndVerbId": {
+    "returnTypeArray": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/returnType" },
+      "additionalItems": false,
+      "uniqueItems": true,
+      "minItems": 1
+    },
+    "returnType": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/alphaNumString" },
+        "type": { "$ref": "#/definitions/entityOrVerbId" }
+      },
+      "required": [ "name", "type" ]
+      "additionalProperties": false
+    },
+    "entityOrVerbId": {
       "type": "object",
       "properties": {
         "package": { "type": "string" },
@@ -38,10 +55,10 @@
       "required": [ "package", "name" ],
       "additionalProperties": false
     },
-    "verbId": { "$ref": "#/definitions/entityAndVerbId" },
+    "verbId": { "$ref": "#/definitions/entityOrVerbId" },
     "entityTypeIdArray": {
       "type": "array",
-      "items": { "$ref": "#/definitions/entityAndVerbId" },
+      "items": { "$ref": "#/definitions/entityOrVerbId" },
       "additionalItems": false,
       "uniqueItems": true,
       "minItems": 1

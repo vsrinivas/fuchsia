@@ -12,6 +12,12 @@
           "uniqueItems": true,
           "additionalItems": false
         },
+        "return": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/return" }
+          "uniqueItems": true,
+          "additionalItems": false
+        }
         "doc": {
           "type": "string"
         }
@@ -27,6 +33,14 @@
           "type": "boolean",
           "default": false
         }
+      },
+      "required": [ "name" ],
+      "additionalProperties": false
+    },
+    "return": {
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/alphaNumString" }
       },
       "required": [ "name" ],
       "additionalProperties": false

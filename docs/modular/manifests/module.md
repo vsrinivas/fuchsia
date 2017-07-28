@@ -14,12 +14,13 @@ schema [available here](../src/package_manager/metadata_schemas/module.json)).
 Each element in the array defines a single verb implementation.
 
 ## Example `module` metadata file
-The following sample `module` file describes a `Module` that implements a single `verb` (`Preview` in `https://fuchsia.io/package/coreVerbs`).
+The following sample `module` file describes a `Module` that implements a
+single `verb` (`Preview` in `https://fuchsia.io/package/coreVerbs`).
 
 ```javascript
 [
   {
-    "binary": "bin/myPreviewer",
+    "binary": "bin/myPersonPreviewer",
     "local_name": "previewPerson",
     "verb": {
       "package": "https://fuchsia.io/package/coreVerbs",
@@ -38,6 +39,34 @@ The following sample `module` file describes a `Module` that implements a single
             "name": "Friend"
           }
         ]
+      }
+    ]
+  },
+  {
+    "binary": "bin/myContactPicker",
+    "local_name": "pickContact",
+    "verb": {
+      "package": "https://fuchsia.io/package/coreVerbs",
+      "name": "Pick"
+    },
+    "noun_constraints": [
+      {
+        "name": "source",
+        "types": [
+          {
+            "package": "https://fuchsia.instagram.com/types",
+            "name": "FriendRepository"
+          }
+        ]
+      }
+    ],
+    "return_types": [
+      {
+        "name": "picked",
+        "type": {
+          "package": "https://fuchsia.instagram.com/types",
+          "name": "Friend"
+        }
       }
     ]
   }
@@ -92,7 +121,8 @@ qualified verb name consists of two parts:
 The `package` is the unique ID of a Fuchsia package (**TODO:** link). It
 identifies where the verb template associated with the `name` is defined.
 
-The `name` must match a `verb` name in the referenced package's [`meta/verb_template`](verb_template.md) file. 
+The `name` must match a `verb` name in the referenced package's
+[`meta/verb_template`](verb_template.md) file. 
 
 #### noun constraints
 
@@ -132,7 +162,24 @@ is made up of the following fields:
 
 #### return types
 
-TODO
+```javascript
+"return_types": [
+  {
+    "name": "picked",
+    "type": {
+      "package": "https://fuchsia.instagram.com/types",
+      "name": "Friend"
+    }
+  }
+]
+```
+
+Some [verb templates](veb_template.md) indicate that implementers should provide return 
+values. At runtime, these return values are [`Entities`](entity.md). This section informs 
+the platform what type of `Entity` will be returned from this `Module`.
+
+`return_types` contains a list of dictionaries, one for or each entry in the
+[verb template's](verb_template.md) `"return"` section.
 
 #### outgoing services
 

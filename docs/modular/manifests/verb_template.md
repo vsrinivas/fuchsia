@@ -20,20 +20,25 @@ well as the verb itself.
 
 ## The `meta/verb_template` file
 
-Verb templates are defined in the `verb_template` metadata file (**TODO: link**) of a
-Fuchsia package. The content of the metadata file is a JSON array of
-dictionaries. The full JSON schema, for reference, can be [found
+Verb templates are defined in the `verb_template` metadata file (**TODO:
+link**) of a Fuchsia package. The content of the metadata file is a JSON array
+of dictionaries. The full JSON schema, for reference, can be [found
 here](../src/package_manager/metadata_schemas/verb_template.json).
 
 Below is an example, followed by a detailed breakdown of the properties.
 
 ## Example
 
-The following `meta/verb_template` file defines two verbs: `Preview` and `Navigate`.
+The following `meta/verb_template` file defines two verbs: `Preview` and
+`Navigate`.
 
-`Preview` accepts a single required argument (called a "noun"), which represents the `Entity` that will be previewed.
+`Preview` accepts a single required argument (called a "noun"), which
+represents the `Entity` that will be previewed.
 
 `Navigate` accepts two nouns, one of which (the *destination*) is required.
+
+`Pick` accepts an optional source (from which to pick an item), and returns a
+single "picked" entity.
 
 ```javascript
 [
@@ -62,7 +67,21 @@ The following `meta/verb_template` file defines two verbs: `Preview` and `Naviga
         "required": true
       }
     ],
-    "doc_file": "docs/navigate.md"
+    "doc": "docs/navigate.md"
+  },
+  {
+    "name": "Pick",
+    "nouns": [
+      {
+        "name": "source"
+      }
+    ],
+    "return": [
+      {
+        "name": "picked"
+      }
+    ],
+    "doc": "docs/pick.md"
   }
 ]
 ```
@@ -83,8 +102,10 @@ This is the verb's name, unique within the `verb_template` file. Verb names are
 constrained to the following characters: `[a-zA-Z0-9_]`. It is convention to use
 camel-case with the first letter capitalized.
 
-Verb names allow `Module` [metadata files](module.md) to reference this verb template when they declare that they provide an implementation. When referencing, the developer will
-include both the package containing this `meta/verb_template` file, as well as the `name`.  
+Verb names allow `Module` [metadata files](module.md) to reference this verb
+template when they declare that they provide an implementation. When
+referencing, the developer will include both the package containing this
+`meta/verb_template` file, as well as the `name`.  
 
 ### nouns
 
@@ -110,14 +131,31 @@ Each noun declared here has the following properties:
 * `required`: `true` or `false`. Default: `false`
 
 Note that nouns do not specify `Entity` types here. These are
-defined at the time of declaring a specific implementation of this `verb`
+defined at the time of declaring an implementation of this `verb`
 by a `Module`, which is done in a [`Module` metadata file](module.md).
+
+### return value
+
+```javascript
+"return": [
+  {
+    "name": "picked"
+  }
+```
+
+> TODO: allow for lists as well as single Entities in the return statement.
+
+Similar to the `nouns` block, the `return` block names return values but does
+not assign them types. Types are assigned at the time of verb implementation by
+a `Module`.
+
+The above block indicates that this `verb` has a single return value named `"picked"`.
 
 ### JSON parameters
 
 TODO
 
-### return nouns & return JSON
+### return JSON
 
 TODO
 
