@@ -511,8 +511,9 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
         vcpu_io.u8 = PIC_INVALID;
         break;
     default: {
-        uint16_t port_off;
-        switch (pci_device(vcpu_context->guest_state->pci_device_state, io->port, &port_off)) {
+        uint32_t port_off;
+        pci_device_state_t* devices = vcpu_context->guest_state->pci_device_state;
+        switch (pci_device(devices, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK: {
             mx_status_t status = handle_virtio_block_read(vcpu_context->guest_state, port_off,
                                                           &vcpu_io);
@@ -589,11 +590,12 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         return MX_OK;
     }
 
-    uint16_t port_off;
-    switch (pci_device(vcpu_context->guest_state->pci_device_state, io->port, &port_off)) {
-    case PCI_DEVICE_VIRTIO_BLOCK:
+    uint32_t port_off;
+    pci_device_state_t* devices = vcpu_context->guest_state->pci_device_state;
+    switch (pci_device(devices, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
+    case PCI_DEVICE_VIRTIO_BLOCK: {
         return handle_virtio_block_write(vcpu_context, port_off, io);
-    }
+    }}
 
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
     return MX_ERR_NOT_SUPPORTED;

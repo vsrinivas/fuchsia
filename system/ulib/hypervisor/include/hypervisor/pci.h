@@ -16,6 +16,7 @@
 // PCI configuration constants.
 #define PCI_BAR_IO_TYPE_MASK                    0x0001
 #define PCI_BAR_IO_TYPE_PIO                     0x0001
+#define PCI_BAR_IO_TYPE_MMIO                    0x0000
 #define PCI_VENDOR_ID_VIRTIO                    0x1af4
 #define PCI_VENDOR_ID_INTEL                     0x8086
 #define PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY       0x1001
@@ -76,10 +77,11 @@ mx_status_t pci_config_write(pci_device_state_t* pci_device_state,
                              size_t len, uint32_t value);
 
 /* Return the device number for the PCI device that has a BAR mapped to the
- * given IO port. Returns PCI_DEVICE_INVALID if no mapping exists.
+ * given address with the specified IO type. Returns PCI_DEVICE_INVALID if no
+ * mapping exists or IO is disabled for the mapping.
  */
-uint16_t pci_device(pci_device_state_t* pci_device_states, uint16_t port,
-                    uint16_t* port_off);
+uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type,
+                    uint32_t address, uint32_t* offset);
 
 /* Returns the bar size for the device. The device is the same value used to
  * index the device in PCI config space.

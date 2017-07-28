@@ -18,6 +18,10 @@
 #define PCI_REGISTER_BAR_4                      0x20
 #define PCI_REGISTER_BAR_5                      0x24
 
+// Different io types have different address bits in the BAR.
+#define PCI_BAR_PIO_ADDRESS_MASK                (~BIT_MASK(2))
+#define PCI_BAR_MMIO_ADDRESS_MASK               (~BIT_MASK(4))
+
 typedef struct pci_attr {
     uint16_t device_id;
     uint16_t vendor_id;
@@ -47,18 +51,47 @@ static const pci_attr_t kPciDeviceAttributes[] = {
     },
 };
 
+static bool pci_device_io_enabled(pci_device_state_t* device, uint8_t io_type) {
+    switch (io_type) {
+    case PCI_BAR_IO_TYPE_PIO:
+        return device->command & PCI_COMMAND_IO_EN;
+    case PCI_BAR_IO_TYPE_MMIO:
+        return device->command & PCI_COMMAND_MEM_EN;
+    }
+    return false;
+}
+
+static uint32_t pci_bar_address(uint32_t bar, uint8_t io_type) {
+    switch (io_type) {
+    case PCI_BAR_IO_TYPE_PIO:
+        return bar & PCI_BAR_PIO_ADDRESS_MASK;
+    case PCI_BAR_IO_TYPE_MMIO:
+        return bar & PCI_BAR_MMIO_ADDRESS_MASK;
+    }
+    return 0;
+}
+
 // TODO(abdulla): Introduce a syscall to associate a port range with a FIFO, so
 // that we can directly communicate with the handler and remove this function.
-uint16_t pci_device(pci_device_state_t* pci_device_states, uint16_t port,
-                    uint16_t* port_off) {
+uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type,
+                    uint32_t addr, uint32_t* offset) {
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
-        uint16_t bar0 = pci_device_states[i].bar[0];
-        if (!(bar0 & PCI_BAR_IO_TYPE_PIO))
+        pci_device_state_t* pci_device = &pci_device_states[i];
+
+        // Check if the BAR is implemented and configured for the requested
+        // io type.
+        uint16_t bar0 = pci_device->bar[0];
+        if (!bar0 || (bar0 & PCI_BAR_IO_TYPE_MASK) != io_type)
             continue;
-        uint16_t bar_base = bar0 & ~PCI_BAR_IO_TYPE_PIO;
+
+        // Ensure IO operations are enabled for this device.
+        if (!pci_device_io_enabled(pci_device, io_type))
+            continue;
+
+        uint16_t bar_base = pci_bar_address(bar0, io_type);
         uint16_t bar_size = kPciDeviceAttributes[i].bar_size;
-        if (port >= bar_base && port < bar_base + bar_size) {
-            *port_off = port - bar_base;
+        if (addr >= bar_base && addr < bar_base + bar_size) {
+            *offset = addr - bar_base;
             return i;
         }
     }
@@ -111,8 +144,7 @@ static mx_status_t pci_config_read_word(pci_device_state_t* pci_device_state,
         return MX_OK;
     case PCI_REGISTER_BAR_0: {
         uint32_t* bar = &pci_device_state->bar[0];
-        *value = (pci_device_state->command & PCI_COMMAND_IO_EN) ?
-                               *bar | PCI_BAR_IO_TYPE_PIO : UINT32_MAX;
+        *value = *bar | PCI_BAR_IO_TYPE_PIO;
         return MX_OK;
     }
     //  -------------------------------------------------------------
