@@ -274,5 +274,14 @@ enum Method {
     // Args: DisassociateIndication
     DISASSOCIATE_indication,
 
-    LAST = DISASSOCIATE_indication,
+
+
+    // Custom primitives extending 802.11 MLME SAP interface.
+    // See: wlan_mlme_ext.fidl
+
+    // Args: SignalReportIndication
+    SIGNAL_REPORT_indication,
+
+
+    LAST = SIGNAL_REPORT_indication,
 };

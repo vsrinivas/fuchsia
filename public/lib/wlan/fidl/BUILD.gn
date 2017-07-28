@@ -13,5 +13,6 @@ fidl("services") {
 fidl("mlme") {
   sources = [
     "wlan_mlme.fidl",
+    "wlan_mlme_ext.fidl",
   ]
 }

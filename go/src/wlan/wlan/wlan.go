@@ -7,6 +7,7 @@ package wlan
 import (
 	"apps/netstack/eth"
 	mlme "apps/wlan/services/wlan_mlme"
+	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 	bindings "fidl/bindings"
 	"fmt"
 	"log"
@@ -209,6 +210,12 @@ func parseResponse(buf []byte) (interface{}, error) {
 		var ind mlme.DisassociateIndication
 		if err := ind.Decode(dec); err != nil {
 			return nil, fmt.Errorf("could not decode DisassociateIndication: %v", err)
+		}
+		return &ind, nil
+	case int32(mlme.Method_SignalReportIndication):
+		var ind mlme_ext.SignalReportIndication
+		if err := ind.Decode(dec); err != nil {
+			return nil, fmt.Errorf("could not decode SignalReportIndication: %v", err)
 		}
 		return &ind, nil
 	default:

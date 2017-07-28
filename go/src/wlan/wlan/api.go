@@ -6,6 +6,7 @@ package wlan
 
 import (
 	mlme "apps/wlan/services/wlan_mlme"
+	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 	bindings "fidl/bindings"
 	"fmt"
 	"log"
@@ -199,4 +200,9 @@ func PrintDeauthenticateIndication(ind *mlme.DeauthenticateIndication) {
 	// TODO(tkilbourn): map reason codes to strings
 	log.Print("  Reason code: ", ind.ReasonCode)
 
+}
+
+func PrintSignalReportIndication(ind *mlme_ext.SignalReportIndication) {
+	log.Print("SignalReportIndication")
+	log.Printf("  RSSI: %d", ind.Rssi)
 }

@@ -6,6 +6,7 @@ package wlan
 
 import (
 	mlme "apps/wlan/services/wlan_mlme"
+	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 
 	"fmt"
 	"log"
@@ -284,6 +285,11 @@ func (s *associatedState) handleMsg(msg interface{}, c *Client) (state, error) {
 			PrintDeauthenticateIndication(v)
 		}
 		return newAuthState(), nil
+	case *mlme_ext.SignalReportIndication:
+		if debug {
+			PrintSignalReportIndication(v)
+		}
+		return s, nil
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)
 	}
