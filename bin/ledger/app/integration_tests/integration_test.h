@@ -27,6 +27,32 @@ namespace integration_tests {
 // separate thread.
 class IntegrationTest : public test::TestWithMessageLoop {
  public:
+  class LedgerAppInstance {
+   public:
+    LedgerAppInstance() {}
+    virtual ~LedgerAppInstance() {}
+
+    // Returns the LedgerRepositoryFactory associated with this application
+    // instance.
+    virtual LedgerRepositoryFactory* ledger_repository_factory() = 0;
+    // Returns a default Ledger object.
+    virtual Ledger* ledger() = 0;
+    // Builds and returns a new connection to the default Ledger object.
+    virtual LedgerPtr GetTestLedger() = 0;
+    // Builds and returns a new connection to a new random page on the default
+    // Ledger object.
+    virtual PagePtr GetTestPage() = 0;
+    // Returns a connection to the given page on the default Ledger object.
+    virtual PagePtr GetPage(const fidl::Array<uint8_t>& page_id,
+                            Status expected_status) = 0;
+    // Deletes the given page on the default Ledger object.
+    virtual void DeletePage(const fidl::Array<uint8_t>& page_id,
+                            Status expected_status) = 0;
+
+   private:
+    FTL_DISALLOW_COPY_AND_ASSIGN(LedgerAppInstance);
+  };
+
   IntegrationTest() {}
   virtual ~IntegrationTest() override {}
 
@@ -38,55 +64,29 @@ class IntegrationTest : public test::TestWithMessageLoop {
   mx::socket StreamDataToSocket(std::string data);
 
   LedgerRepositoryFactory* ledger_repository_factory() {
-    return ledger_repository_factory_.get();
+    return default_instance_->ledger_repository_factory();
   }
 
-  Ledger* ledger() { return ledger_.get(); }
+  Ledger* ledger() { return default_instance_->ledger(); }
 
-  LedgerPtr GetTestLedger();
-  PagePtr GetTestPage();
-  PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status);
-  void DeletePage(const fidl::Array<uint8_t>& page_id, Status expected_status);
+  LedgerPtr GetTestLedger() { return default_instance_->GetTestLedger(); }
+
+  PagePtr GetTestPage() { return default_instance_->GetTestPage(); }
+
+  PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status) {
+    return default_instance_->GetPage(page_id, expected_status);
+  }
+
+  void DeletePage(const fidl::Array<uint8_t>& page_id, Status expected_status) {
+    default_instance_->DeletePage(page_id, expected_status);
+  }
+
+  std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance();
 
  private:
-  class LedgerRepositoryFactoryContainer
-      : public LedgerRepositoryFactoryImpl::Delegate {
-   public:
-    LedgerRepositoryFactoryContainer(
-        ftl::RefPtr<ftl::TaskRunner> task_runner,
-        const std::string& path,
-        fidl::InterfaceRequest<LedgerRepositoryFactory> request)
-        : network_service_(task_runner),
-          environment_(task_runner, &network_service_),
-          factory_impl_(this,
-                        &environment_,
-                        LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET),
-          factory_binding_(&factory_impl_, std::move(request)) {}
-    ~LedgerRepositoryFactoryContainer() {}
-
-   private:
-    // LedgerRepositoryFactoryImpl::Delegate:
-    void EraseRepository(
-        EraseRemoteRepositoryOperation erase_remote_repository_operation,
-        std::function<void(bool)> callback) override {
-      FTL_NOTIMPLEMENTED();
-      callback(false);
-    }
-
-    FakeNetworkService network_service_;
-    Environment environment_;
-    LedgerRepositoryFactoryImpl factory_impl_;
-    fidl::Binding<LedgerRepositoryFactory> factory_binding_;
-  };
-
-  files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
-  std::thread thread_;
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::thread socket_thread_;
   ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
-  LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  LedgerPtr ledger_;
+  std::unique_ptr<LedgerAppInstance> default_instance_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);
 };

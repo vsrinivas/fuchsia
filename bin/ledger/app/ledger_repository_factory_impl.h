@@ -26,7 +26,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
   class Delegate {
    public:
     Delegate() {}
-    ~Delegate() {}
+    virtual ~Delegate() {}
 
     virtual void EraseRepository(
         EraseRemoteRepositoryOperation erase_remote_repository_operation,

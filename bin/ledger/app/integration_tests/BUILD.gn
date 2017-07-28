@@ -10,6 +10,7 @@ executable("integration_tests") {
   sources = [
     "integration_test.cc",
     "integration_test.h",
+    "integration_test_tests.cc",
     "ledger_repository_tests.cc",
     "merging_tests.cc",
     "page_snapshot_tests.cc",
