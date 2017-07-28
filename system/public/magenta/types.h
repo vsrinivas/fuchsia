@@ -157,8 +157,8 @@ typedef uint64_t mx_koid_t;
 typedef uint32_t mx_txid_t;
 
 typedef struct {
-    void* wr_bytes;
-    mx_handle_t* wr_handles;
+    const void* wr_bytes;
+    const mx_handle_t* wr_handles;
     void *rd_bytes;
     mx_handle_t* rd_handles;
     uint32_t wr_num_bytes;
