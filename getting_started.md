@@ -53,9 +53,9 @@ shortcut to setup the build environment. For that, add this to your shell startu
 script (e.g. `~/.bashrc`):
 
 ```
-export FUCHSIA_ROOT=/path/to/my/fuchsia/source
+export FUCHSIA_DIR=/path/to/my/fuchsia/source
 function fuchsia() {
-  source $FUCHSIA_ROOT/scripts/env.sh && envprompt && fgo && fset x86-64 "$@"
+  source $FUCHSIA_DIR/scripts/env.sh && envprompt && fgo && fset x86-64 "$@"
 }
 ```
 
