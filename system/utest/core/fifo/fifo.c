@@ -108,6 +108,16 @@ static bool basic_test(void) {
     END_TEST;
 }
 
+static bool options_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t fifos[2];
+    ASSERT_EQ(mx_fifo_create(23, 8, 8, &fifos[0], &fifos[1]),
+              MX_ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fifo_tests)
 RUN_TEST(basic_test)
 END_TEST_CASE(fifo_tests)

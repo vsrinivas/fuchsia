@@ -26,45 +26,48 @@ status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t opti
         ((count * elemsize) > kMaxSizeBytes)) {
         return MX_ERR_OUT_OF_RANGE;
     }
+
     AllocChecker ac;
-    auto fifo0 = mxtl::AdoptRef(new (&ac) FifoDispatcher(count, elemsize, options));
+    auto data0 = mxtl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto fifo1 = mxtl::AdoptRef(new (&ac) FifoDispatcher(count, elemsize, options));
+    auto fifo0 = mxtl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, mxtl::move(data0)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    mx_status_t status;
-    if ((status = fifo0->Init(fifo1)) != MX_OK)
-        return status;
-    if ((status = fifo1->Init(fifo0)) != MX_OK)
-        return status;
+    auto data1 = mxtl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
+    if (!ac.check())
+        return MX_ERR_NO_MEMORY;
+
+    auto fifo1 = mxtl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, mxtl::move(data1)));
+    if (!ac.check())
+        return MX_ERR_NO_MEMORY;
+
+    fifo0->Init(fifo1);
+    fifo1->Init(fifo0);
 
     *rights = MX_DEFAULT_FIFO_RIGHTS;
-    *dispatcher0 = mxtl::RefPtr<Dispatcher>(fifo0.get());
-    *dispatcher1 = mxtl::RefPtr<Dispatcher>(fifo1.get());
+    *dispatcher0 = mxtl::move(fifo0);
+    *dispatcher1 = mxtl::move(fifo1);
     return MX_OK;
 }
 
-FifoDispatcher::FifoDispatcher(uint32_t count, uint32_t elem_size, uint32_t /*options*/)
+FifoDispatcher::FifoDispatcher(uint32_t /*options*/, uint32_t count, uint32_t elem_size,
+                               mxtl::unique_ptr<uint8_t[]> data)
     : elem_count_(count), elem_size_(elem_size), mask_(count - 1),
       peer_koid_(0u), state_tracker_(MX_FIFO_WRITABLE),
-      head_(0u), tail_(0u) {
+      head_(0u), tail_(0u), data_(mxtl::move(data)) {
 }
 
 FifoDispatcher::~FifoDispatcher() {
-    free(data_);
 }
 
 // Thread safety analysis disabled as this happens during creation only,
 // when no other thread could be accessing the object.
-mx_status_t FifoDispatcher::Init(mxtl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
+void FifoDispatcher::Init(mxtl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     other_ = mxtl::move(other);
     peer_koid_ = other_->get_koid();
-    if ((data_ = (uint8_t*) calloc(elem_count_, elem_size_)) == nullptr)
-        return MX_ERR_NO_MEMORY;
-    return MX_OK;
 }
 
 mx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
@@ -192,7 +195,7 @@ mx_status_t FifoDispatcher::WriteSelf(const uint8_t* ptr, size_t bytelen, uint32
         // number of slots we can actually copy
         size_t to_copy = (count > n) ? n : count;
 
-        mx_status_t status = copy_from_fn(ptr, data_ + offset * elem_size_, to_copy * elem_size_);
+        mx_status_t status = copy_from_fn(ptr, &data_[offset * elem_size_], to_copy * elem_size_);
         if (status != MX_OK) {
             // roll back, in case this is the second copy
             head_ = old_head;
@@ -250,7 +253,7 @@ mx_status_t FifoDispatcher::Read(uint8_t* ptr, size_t bytelen, uint32_t* actual,
         // number of slots we can actually copy
         size_t to_copy = (count > n) ? n : count;
 
-        mx_status_t status = copy_to_fn(ptr, data_ + offset * elem_size_, to_copy * elem_size_);
+        mx_status_t status = copy_to_fn(ptr, &data_[offset * elem_size_], to_copy * elem_size_);
         if (status != MX_OK) {
             // roll back, in case this is the second copy
             tail_ = old_tail;

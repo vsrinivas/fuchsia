@@ -42,8 +42,9 @@ public:
     mx_status_t ReadToUser(uint8_t* dst, size_t len, uint32_t* actual);
 
 private:
-    FifoDispatcher(uint32_t elem_count, uint32_t elem_size, uint32_t options);
-    mx_status_t Init(mxtl::RefPtr<FifoDispatcher> other);
+    FifoDispatcher(uint32_t options, uint32_t elem_count, uint32_t elem_size,
+                   mxtl::unique_ptr<uint8_t[]> data);
+    void Init(mxtl::RefPtr<FifoDispatcher> other);
     mx_status_t Write(const uint8_t* ptr, size_t len, uint32_t* actual,
                       fifo_copy_from_fn_t copy_from_fn);
     mx_status_t WriteSelf(const uint8_t* ptr, size_t len, uint32_t* actual,
@@ -65,7 +66,7 @@ private:
     mxtl::RefPtr<FifoDispatcher> other_ TA_GUARDED(lock_);
     uint32_t head_ TA_GUARDED(lock_);
     uint32_t tail_ TA_GUARDED(lock_);
-    uint8_t* data_ TA_GUARDED(lock_);
+    mxtl::unique_ptr<uint8_t[]> data_ TA_GUARDED(lock_);
 
     static constexpr uint32_t kMaxSizeBytes = PAGE_SIZE;
 };
