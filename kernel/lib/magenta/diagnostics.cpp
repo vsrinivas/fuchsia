@@ -91,7 +91,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
                                  uint32_t* handle_type, size_t size) {
     uint32_t total = 0;
     pd.ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
-                         mxtl::RefPtr<Dispatcher> disp) {
+                         mxtl::RefPtr<const Dispatcher> disp) {
         if (handle_type) {
             uint32_t type = static_cast<uint32_t>(disp->get_type());
             if (size > type) {
@@ -176,7 +176,7 @@ void DumpProcessHandles(mx_koid_t id) {
 
     uint32_t total = 0;
     pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
-                          mxtl::RefPtr<Dispatcher> disp) {
+                          mxtl::RefPtr<const Dispatcher> disp) {
         printf("%9x %7" PRIu64 " : %s\n",
             handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
         ++total;
@@ -352,8 +352,8 @@ static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
     uint64_t total_size = 0;
     uint64_t total_alloc = 0;
     pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
-                          mxtl::RefPtr<Dispatcher> disp) {
-        auto vmod = DownCastDispatcher<VmObjectDispatcher>(&disp);
+                          mxtl::RefPtr<const Dispatcher> disp) {
+        auto vmod = DownCastDispatcher<const VmObjectDispatcher>(&disp);
         if (vmod == nullptr) {
             return MX_OK;
         }

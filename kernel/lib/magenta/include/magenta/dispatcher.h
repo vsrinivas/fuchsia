@@ -95,9 +95,16 @@ private:
     uint32_t handle_count_;
 };
 
-// Checks if a RefPtr<Dispatcher> points to a dispatcher of a given dispatcher subclass T and, if
-// so, moves the reference to a RefPtr<T>, otherwise it leaves the RefPtr<Dispatcher> alone.
-// Must be called with a pointer to a valid (non-null) dispatcher.
+// DownCastDispatcher checks if a RefPtr<Dispatcher> points to a
+// dispatcher of a given dispatcher subclass T and, if so, moves the
+// reference to a RefPtr<T>, otherwise it leaves the
+// RefPtr<Dispatcher> alone.  Must be called with a pointer to a valid
+// (non-null) dispatcher.
+
+// Note that the Dispatcher -> Dispatcher versions come up in generic
+// code, and so aren't totally vacuous.
+
+// Dispatcher -> FooDispatcher
 template <typename T>
 mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
     return (likely(DispatchTag<T>::ID == (*disp)->get_type())) ?
@@ -105,7 +112,23 @@ mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
             nullptr;
 }
 
+// Dispatcher -> Dispatcher
 template <>
 inline mxtl::RefPtr<Dispatcher> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
+    return mxtl::move(*disp);
+}
+
+// const Dispatcher -> const FooDispatcher
+template <typename T>
+mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<const Dispatcher>* disp) {
+    static_assert(mxtl::is_const<T>::value, "");
+    return (likely(DispatchTag<typename mxtl::remove_const<T>::type>::ID == (*disp)->get_type())) ?
+            mxtl::RefPtr<T>::Downcast(mxtl::move(*disp)) :
+            nullptr;
+}
+
+// const Dispatcher -> const Dispatcher
+template <>
+inline mxtl::RefPtr<const Dispatcher> DownCastDispatcher(mxtl::RefPtr<const Dispatcher>* disp) {
     return mxtl::move(*disp);
 }
