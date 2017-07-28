@@ -12,6 +12,7 @@
 namespace ledger {
 
 const uint32_t kMaxRedirectCount = 32;
+const int32_t kInvalidArgument = -4;
 const int32_t kTooManyRedirectErrorCode = -310;
 const int32_t kInvalidResponseErrorCode = -320;
 
@@ -62,6 +63,12 @@ class NetworkServiceImpl::RunningRequest {
       return;
 
     auto request = request_factory_();
+
+    if (!request) {
+      callback_(NewErrorResponse(kInvalidArgument,
+                                 "Factory didn't returns a request."));
+      return;
+    }
 
     // If last response was a redirect, follow it.
     if (!next_url_.empty())

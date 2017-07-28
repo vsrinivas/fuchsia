@@ -8,11 +8,11 @@
 #include <utility>
 
 #include "apps/ledger/src/glue/socket/socket_drainer_client.h"
-#include "apps/ledger/src/glue/socket/socket_pair.h"
-#include "apps/ledger/src/glue/socket/socket_writer.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/join_strings.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace firebase {
 
@@ -23,27 +23,35 @@ std::function<network::URLRequestPtr()> MakeRequest(
     const std::string& method,
     const std::string& message,
     bool stream_request = false) {
-  return [url, method, message, stream_request]() {
-    network::URLRequestPtr request(network::URLRequest::New());
-    request->url = url;
-    request->method = method;
-    request->auto_follow_redirects = true;
-    if (!message.empty()) {
-      glue::SocketPair socket;
-      // Deletes itself.
-      glue::StringSocketWriter* writer = new glue::StringSocketWriter();
-      writer->Start(message, std::move(socket.socket1));
-      request->body = network::URLBody::New();
-      request->body->set_stream(std::move(socket.socket2));
+  mx::vmo body;
+  if (!message.empty()) {
+    if (!mtl::VmoFromString(message, &body)) {
+      FTL_LOG(ERROR) << "Unable to create VMO from string.";
+      return nullptr;
     }
-    if (stream_request) {
-      auto accept_header = network::HttpHeader::New();
-      accept_header->name = "Accept";
-      accept_header->value = "text/event-stream";
-      request->headers.push_back(std::move(accept_header));
-    }
-    return request;
-  };
+  }
+
+  return ftl::MakeCopyable(
+      [ url, method, body = std::move(body), stream_request ]() {
+        network::URLRequestPtr request(network::URLRequest::New());
+        request->url = url;
+        request->method = method;
+        request->auto_follow_redirects = true;
+        if (body) {
+          mx::vmo duplicated_body;
+          body.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ,
+                         &duplicated_body);
+          request->body = network::URLBody::New();
+          request->body->set_buffer(std::move(duplicated_body));
+        }
+        if (stream_request) {
+          auto accept_header = network::HttpHeader::New();
+          accept_header->name = "Accept";
+          accept_header->value = "text/event-stream";
+          request->headers.push_back(std::move(accept_header));
+        }
+        return request;
+      });
 }
 
 }  // namespace
