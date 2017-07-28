@@ -711,10 +711,19 @@ function freboot() {
       return 1
   fi
 
+  # Add timeout for OS X users so they can click the network connection warning
+  # dialog.
+  local timeout_flag
+  if [[ "$(uname -s)" = "Darwin" ]]; then
+    timeout_flag="--timeout=3000"
+  else
+    timeout_flag="--nowait"
+  fi
+
   freboot_host=${1:-":"}
   fcheck || return 1
   echo "Rebooting system..."
-  netruncmd --nowait "${freboot_host}" "dm reboot"
+  netruncmd $timeout_flag "${freboot_host}" "dm reboot"
 }
 
 ### ftrace: collects and presents traces
