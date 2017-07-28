@@ -29,7 +29,7 @@ public:
 
 private:
     explicit EventPairDispatcher();
-    void Init(EventPairDispatcher* other);
+    void Init(mxtl::RefPtr<EventPairDispatcher> other);
 
     CookieJar cookie_jar_;
 

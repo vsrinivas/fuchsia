@@ -20,22 +20,20 @@ status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
                                      mxtl::RefPtr<Dispatcher>* dispatcher1,
                                      mx_rights_t* rights) {
     AllocChecker ac;
-    auto disp0 = new (&ac) EventPairDispatcher();
+    auto disp0 = mxtl::AdoptRef(new (&ac) EventPairDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto disp1 = new (&ac) EventPairDispatcher();
-    if (!ac.check()) {
-        delete disp0;
+    auto disp1 = mxtl::AdoptRef(new (&ac) EventPairDispatcher());
+    if (!ac.check())
         return MX_ERR_NO_MEMORY;
-    }
-
-    *rights = MX_DEFAULT_EVENT_PAIR_RIGHTS;
-    *dispatcher0 = mxtl::AdoptRef<Dispatcher>(disp0);
-    *dispatcher1 = mxtl::AdoptRef<Dispatcher>(disp1);
 
     disp0->Init(disp1);
     disp1->Init(disp0);
+
+    *rights = MX_DEFAULT_EVENT_PAIR_RIGHTS;
+    *dispatcher0 = mxtl::move(disp0);
+    *dispatcher1 = mxtl::move(disp1);
 
     return MX_OK;
 }
@@ -78,10 +76,10 @@ EventPairDispatcher::EventPairDispatcher()
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
 // initializing the event pair, so it does not need locking.
-void EventPairDispatcher::Init(EventPairDispatcher* other) TA_NO_THREAD_SAFETY_ANALYSIS {
+void EventPairDispatcher::Init(mxtl::RefPtr<EventPairDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(other);
     // No need to take |lock_| here.
     DEBUG_ASSERT(!other_);
     other_koid_ = other->get_koid();
-    other_ = mxtl::RefPtr<EventPairDispatcher>(other);
+    other_ = mxtl::move(other);
 }
