@@ -111,6 +111,14 @@ template<class T> struct enable_if<true, T> {
     typedef T type;
 };
 
+// conditional:
+
+template<bool B, class T, class F>
+struct conditional { typedef T type; };
+
+template<class T, class F>
+struct conditional<false, T, F> { typedef F type; };
+
 // is_integral.  By default, T is not integral (aka, not an integer)
 template <typename T>
 struct is_integral : false_type {};

@@ -226,3 +226,10 @@ static_assert(!icp<int*, unsigned int*>::value, "Should not convert int* --> uns
 static_assert(!icp<float*, double*>::value,     "Should not convert float* --> double*");
 
 }  // namespace is_convertible_tests
+
+namespace conditional_tests {
+
+static_assert(mxtl::is_same<mxtl::conditional<true, int, bool>::type, int>::value, "wrong type");
+static_assert(mxtl::is_same<mxtl::conditional<false, int, bool>::type, bool>::value, "wrong type");
+
+}  // namespace conditional_tests
