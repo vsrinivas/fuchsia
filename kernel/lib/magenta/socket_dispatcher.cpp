@@ -45,6 +45,10 @@ status_t SocketDispatcher::Create(uint32_t flags,
                                   mx_rights_t* rights) {
     LTRACE_ENTRY;
 
+    if (flags != MX_SOCKET_STREAM && flags != MX_SOCKET_DATAGRAM) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
     AllocChecker ac;
     auto socket0 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
@@ -54,15 +58,12 @@ status_t SocketDispatcher::Create(uint32_t flags,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    mx_status_t status;
-    if ((status = socket0->Init(socket1)) != MX_OK)
-        return status;
-    if ((status = socket1->Init(socket0)) != MX_OK)
-        return status;
+    socket0->Init(socket1);
+    socket1->Init(socket0);
 
     *rights = MX_DEFAULT_SOCKET_RIGHTS;
-    *dispatcher0 = mxtl::RefPtr<Dispatcher>(socket0.get());
-    *dispatcher1 = mxtl::RefPtr<Dispatcher>(socket1.get());
+    *dispatcher0 = mxtl::move(socket0);
+    *dispatcher1 = mxtl::move(socket1);
     return MX_OK;
 }
 
@@ -84,13 +85,9 @@ SocketDispatcher::~SocketDispatcher() {
 
 // This is called before either SocketDispatcher is accessible from threads other than the one
 // initializing the socket, so it does not need locking.
-mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
+void SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     other_ = mxtl::move(other);
     peer_koid_ = other_->get_koid();
-    if (flags_ != MX_SOCKET_STREAM && flags_ != MX_SOCKET_DATAGRAM) {
-        return MX_ERR_INVALID_ARGS;
-    }
-    return MX_OK;
 }
 
 void SocketDispatcher::on_zero_handles() {

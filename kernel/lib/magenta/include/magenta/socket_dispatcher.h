@@ -74,7 +74,7 @@ private:
     static_assert(sizeof(MBuf) == kMBufSize, "");
 
     SocketDispatcher(uint32_t flags);
-    mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
+    void Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
