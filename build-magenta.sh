@@ -32,9 +32,11 @@ build() {
 
   case "${target}" in
     "x86_64") local magenta_target="magenta-pc-x86-64" ;;
-    "aarch64") local magenta_target="magenta-qemu-arm64" ;;
+    "aarch64"|"arm64") local magenta_target="magenta-qemu-arm64" ;;
     "rpi3") local magenta_target="magenta-rpi3-arm64" ;;
-    "*") echo "unknown target '${target}'" 1>&2 && exit 1;;
+    "odroidc2") local magenta_target="magenta-odroidc2-arm64" ;;
+    "hikey960") local magenta_target="magenta-hikey960-arm64" ;;
+    *) echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
 
   pushd "${ROOT_DIR}/magenta" > /dev/null
@@ -55,7 +57,7 @@ declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare VERBOSE="${VERBOSE:-false}"
 
-while getopts "cd:t:o:v" opt; do
+while getopts "cd:ht:o:v" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
     o) OUTDIR="${OPTARG}" ;;

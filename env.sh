@@ -103,7 +103,7 @@ fi
 
 function mset-usage() {
   cat >&2 <<END
-Usage: mset x86-64|arm64|rpi3
+Usage: mset x86-64|arm64|rpi3|odroidc2|hikey960
 Sets magenta build options.
 END
 }
@@ -131,6 +131,16 @@ function mset() {
       export MAGENTA_PROJECT=magenta-rpi3-arm64
       export MAGENTA_ARCH=arm64
       export MAGENTA_BUILD_TARGET=rpi3
+      ;;
+    odroidc2)
+      export MAGENTA_PROJECT=magenta-odroidc2-arm64
+      export MAGENTA_ARCH=arm64
+      export MAGENTA_BUILD_TARGET=odroidc2
+      ;;
+    hikey960)
+      export MAGENTA_PROJECT=magenta-hikey960-arm64
+      export MAGENTA_ARCH=arm64
+      export MAGENTA_BUILD_TARGET=hikey960
       ;;
     *)
       mset-usage
@@ -284,7 +294,8 @@ fi
 function fset-usage() {
   # Note: if updating the syntax here please update zsh-completion/_fset to match
   cat >&2 <<END
-Usage: fset x86-64|arm64|rpi3 [--release] [--modules m1,m2...]
+Usage: fset x86-64|arm64|rpi3|odroidc2|hikey960
+                              [--release] [--modules m1,m2...]
                               [--goma|--no-goma] [--no-ensure-goma]
                               [--goma-dir path]
                               [--ccache|--no-ccache]
@@ -317,7 +328,7 @@ function fset() {
       # TODO(jeffbrown): we should really align these
       export FUCHSIA_GEN_TARGET=x86-64
       ;;
-    arm64|rpi3)
+    arm64|rpi3|odroidc2|hikey960)
       mset $1
       export FUCHSIA_GEN_TARGET=aarch64
       ;;
