@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_SRCS += \
     $(LOCAL_DIR)/pseudo-dir-tests.cpp \
     $(LOCAL_DIR)/pseudo-file-tests.cpp \
+    $(LOCAL_DIR)/service-tests.cpp \
     $(LOCAL_DIR)/vmo-file-tests.cpp \
     $(LOCAL_DIR)/main.c
 
