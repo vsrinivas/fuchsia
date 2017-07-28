@@ -187,8 +187,6 @@ VnodeDir* vfs_create_global_root(void) TA_NO_THREAD_SAFETY_ANALYSIS;
 // Create a generic root to memfs
 VnodeDir* vfs_create_root(void);
 
-// shared among all memory filesystems
-mx_status_t memfs_create_directory(const char* path, uint32_t flags);
 void memfs_mount(VnodeDir* parent, VnodeDir* subtree);
 
 void devmgr_vfs_exit(void);

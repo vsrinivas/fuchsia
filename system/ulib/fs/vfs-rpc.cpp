@@ -11,12 +11,12 @@
 
 #include <fs/vfs.h>
 #include <magenta/process.h>
+#include <mx/event.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
-#include <mxtl/auto_call.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 
@@ -31,7 +31,7 @@ typedef struct vfs_iostate {
     // Handle to event which allows client to refer to open vnodes in multi-patt
     // operations (see: link, rename). Defaults to MX_HANDLE_INVALID.
     // Validated on the server side using cookies.
-    mx_handle_t token;
+    mx::event token;
     vdircookie_t dircookie;
     size_t io_off;
     uint32_t io_flags;
@@ -72,10 +72,7 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, mxtl::RefPtr<Vnode> vn,
     bool pipeline = flags & O_PIPELINE;
     uint32_t open_flags = flags & (~O_PIPELINE);
 
-    {
-        mxtl::AutoLock lock(&ios->vfs->vfs_lock_);
-        r = ios->vfs->Open(mxtl::move(vn), &vn, path, &path, open_flags, mode);
-    }
+    r = ios->vfs->Open(mxtl::move(vn), &vn, path, &path, open_flags, mode);
 
     mxrio_object_t obj;
     memset(&obj, 0, sizeof(obj));
@@ -173,33 +170,6 @@ mx_status_t Vfs::ServeDirectory(mxtl::RefPtr<fs::Vnode> vn,
 
 } // namespace fs
 
-#define TOKEN_RIGHTS (MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER)
-
-static mx_status_t iostate_get_token(uint64_t vnode_cookie, vfs_iostate* ios, mx_handle_t* out) {
-    mxtl::AutoLock lock(&ios->vfs->vfs_lock_);
-    mx_status_t r;
-
-    if (ios->token != MX_HANDLE_INVALID) {
-        // Token has already been set for this iostate
-        if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != MX_OK)) {
-            return r;
-        }
-        return MX_OK;
-    } else if ((r = mx_event_create(0, &ios->token)) != MX_OK) {
-        return r;
-    } else if ((r = mx_handle_duplicate(ios->token, TOKEN_RIGHTS, out) != MX_OK)) {
-        mx_handle_close(ios->token);
-        ios->token = MX_HANDLE_INVALID;
-        return r;
-    } else if ((r = mx_object_set_cookie(ios->token, mx_process_self(), vnode_cookie)) != MX_OK) {
-        mx_handle_close(*out);
-        mx_handle_close(ios->token);
-        ios->token = MX_HANDLE_INVALID;
-        return r;
-    }
-    return sizeof(mx_handle_t);
-}
-
 static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
@@ -230,24 +200,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_CLOSE: {
-        {
-            mxtl::AutoLock lock(&ios->vfs->vfs_lock_);
-            if (ios->token != MX_HANDLE_INVALID) {
-                // The token is nullified here to prevent the following race condition:
-                // 1) Open
-                // 2) GetToken
-                // 3) Close + Release Vnode
-                // 4) Use token handle to access defunct vnode (or a different vnode,
-                //    if the memory for it is reallocated).
-                //
-                // By nullifying the token cookie, any remaining handles to the event will
-                // be ignored by the filesystem server.
-                mx_object_set_cookie(ios->token, mx_process_self(), 0);
-                mx_handle_close(ios->token);
-                ios->token = MX_HANDLE_INVALID;
-            }
-        }
-
+        ios->vfs->TokenDiscard(&ios->token);
         // this will drop the ref on the vn
         mx_status_t status = vn->Close();
         ios->vn = nullptr;
@@ -471,8 +424,13 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
             if (arg != sizeof(mx_handle_t)) {
                 r = MX_ERR_INVALID_ARGS;
             } else {
-                mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
-                r = iostate_get_token(reinterpret_cast<uint64_t>(vn.get()), ios, out);
+                mx::event token;
+                r = ios->vfs->VnodeToToken(mxtl::move(vn), &ios->token, &token);
+                if (r == MX_OK) {
+                    r = sizeof(mx_handle_t);
+                    mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
+                    *out = token.release();
+                }
             }
             break;
         }
@@ -523,7 +481,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
     case MXRIO_LINK: {
         // Regardless of success or failure, we'll close the client-provided
         // vnode token handle.
-        auto ac = mxtl::MakeAutoCall([&msg]() { mx_handle_close(msg->handle[0]); });
+        mx::event token(msg->handle[0]);
 
         if (len < 4) { // At least one byte for src + dst + null terminators
             return MX_ERR_INVALID_ARGS;
@@ -539,27 +497,13 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
             return MX_ERR_INVALID_ARGS;
         }
 
-        mx_status_t r;
-        uint64_t vcookie;
-
-        mxtl::AutoLock lock(&ios->vfs->vfs_lock_);
-        if ((r = mx_object_get_cookie(msg->handle[0], mx_process_self(), &vcookie)) < 0) {
-            // TODO(smklein): Return a more specific error code for "token not from this server"
-            return MX_ERR_INVALID_ARGS;
-        }
-
-        if (vcookie == 0) {
-            // Client closed the channel associated with the token
-            return MX_ERR_INVALID_ARGS;
-        }
-
-        mxtl::RefPtr<fs::Vnode> target_parent =
-            mxtl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
         switch (MXRIO_OP(msg->op)) {
         case MXRIO_RENAME:
-            return ios->vfs->Rename(mxtl::move(vn), mxtl::move(target_parent), oldname, newname);
+            return ios->vfs->Rename(mxtl::move(token), mxtl::move(vn),
+                                    oldname, newname);
         case MXRIO_LINK:
-            return ios->vfs->Link(mxtl::move(vn), mxtl::move(target_parent), oldname, newname);
+            return ios->vfs->Link(mxtl::move(token), mxtl::move(vn),
+                                  oldname, newname);
         }
         assert(false);
     }

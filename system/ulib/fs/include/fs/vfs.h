@@ -45,6 +45,7 @@ __END_CDECLS
 #ifdef __Fuchsia__
 #include <fs/dispatcher.h>
 #include <mx/channel.h>
+#include <mx/event.h>
 #include <mxtl/mutex.h>
 #endif  // __Fuchsia__
 
@@ -340,21 +341,25 @@ public:
     // Walk from vn --> out until either only one path segment remains or we
     // encounter a remote filesystem.
     mx_status_t Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
-                     const char* path, const char** pathout);
+                     const char* path, const char** pathout) __TA_REQUIRES(vfs_lock_);
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
     mx_status_t Open(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
                      const char* path, const char** pathout,
-                     uint32_t flags, uint32_t mode);
+                     uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
     mx_status_t Unlink(mxtl::RefPtr<Vnode> vn, const char* path, size_t len);
-    mx_status_t Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
-                     const char* oldname, const char* newname);
-    mx_status_t Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newparent,
-                       const char* oldname, const char* newname);
     ssize_t Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
-                  void* out_buf, size_t out_len);
+                  void* out_buf, size_t out_len) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
+    void TokenDiscard(mx::event* ios_token) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t VnodeToToken(mxtl::RefPtr<Vnode> vn, mx::event* ios_token,
+                             mx::event* out) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t Link(mx::event token, mxtl::RefPtr<Vnode> oldparent,
+                     const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
+                       const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
+
     Vfs(Dispatcher* dispatcher);
 
     void SetDispatcher(Dispatcher* dispatcher) { dispatcher_ = dispatcher; }
@@ -367,10 +372,13 @@ public:
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
     mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock_);
+
+    // Create and mount a directory with a provided name
+    mx_status_t MountMkdir(mxtl::RefPtr<Vnode> vn,
+                           const mount_mkdir_config_t* config) __TA_EXCLUDES(vfs_lock_);
+
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
-    mx_status_t UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn,
-                                      mx_handle_t* h) __TA_REQUIRES(vfs_lock_);
+    mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx_handle_t* h) __TA_EXCLUDES(vfs_lock_);
 
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
@@ -379,8 +387,18 @@ public:
     // A lock which should be used to protect lookup and walk operations
     // TODO(smklein): Encapsulate the lock; make it private.
     mtx_t vfs_lock_{};
+#endif
 
 private:
+    mx_status_t OpenLocked(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+                           const char* path, const char** pathout,
+                           uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
+#ifdef __Fuchsia__
+    mx_status_t TokenToVnode(mx::event token, mxtl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
+    mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, mx_handle_t h) __TA_REQUIRES(vfs_lock_);
+    mx_status_t UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn,
+                                      mx_handle_t* h) __TA_REQUIRES(vfs_lock_);
+
     // The mount list is a global static variable, but it only uses
     // constexpr constructors during initialization. As a consequence,
     // the .init_array section of the compiled vfs-mount object file is

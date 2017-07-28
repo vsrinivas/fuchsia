@@ -69,4 +69,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/mxtl/include \
     -Isystem/ulib/fs/include \
 
+MODULE_DEFINES := DISABLE_THREAD_ANNOTATIONS
+
 include make/module.mk

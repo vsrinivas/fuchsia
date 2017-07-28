@@ -675,8 +675,11 @@ mx_status_t VnodeDir::AttachVnode(mxtl::RefPtr<VnodeMemfs> vn, const char* name,
 // The following functions exist outside the memfs namespace so they can
 // be exposed to C:
 
+// Unsafe function to create a new directory.
+// Should be called exclusively during initialization stages of filesystem,
+// when it cannot be externally manipulated.
 // postcondition: new vnode linked into namespace
-mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
+static mx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flags) __TA_NO_THREAD_SAFETY_ANALYSIS {
     mx_status_t r;
     const char* pathout;
     mxtl::RefPtr<fs::Vnode> parent_vn;
@@ -763,9 +766,9 @@ VnodeDir* vfs_create_global_root() {
         memfs_mount_locked(memfs::vfs_root, BootfsRoot());
         memfs_mount_locked(memfs::vfs_root, MemfsRoot());
 
-        memfs_create_directory("/data", 0);
-        memfs_create_directory("/volume", 0);
-        memfs_create_directory("/dev/socket", 0);
+        memfs_create_directory_unsafe("/data", 0);
+        memfs_create_directory_unsafe("/volume", 0);
+        memfs_create_directory_unsafe("/dev/socket", 0);
     }
     return memfs::vfs_root.get();
 }

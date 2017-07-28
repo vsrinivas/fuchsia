@@ -40,7 +40,11 @@
 #else
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
+#ifndef DISABLE_THREAD_ANNOTATIONS
 #define __THREAD_ANNOTATION(x) __attribute__((x))
+#else
+#define __THREAD_ANNOTATION(x)
+#endif
 #define __NO_SAFESTACK __attribute__((no_sanitize("safe-stack")))
 #endif
 
