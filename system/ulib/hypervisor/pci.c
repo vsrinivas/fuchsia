@@ -34,7 +34,7 @@ static const pci_attr_t kPciDeviceAttributes[] = {
     },
     [PCI_DEVICE_VIRTIO_BLOCK] = {
         .vendor_id = PCI_VENDOR_ID_VIRTIO,
-        .device_id = PCI_DEVICE_ID_VIRTIO_BLOCK,
+        .device_id = PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY,
         .class_code = PCI_CLASS_MASS_STORAGE,
         .bar_size = 0x40,
     },

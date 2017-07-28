@@ -18,7 +18,7 @@
 #define PCI_BAR_IO_TYPE_PIO                     0x0001
 #define PCI_VENDOR_ID_VIRTIO                    0x1af4
 #define PCI_VENDOR_ID_INTEL                     0x8086
-#define PCI_DEVICE_ID_VIRTIO_BLOCK              0x1042
+#define PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY       0x1001
 #define PCI_DEVICE_ID_INTEL_Q35                 0x29c0
 #define PCI_CLASS_BRIDGE_HOST                   0x0600
 #define PCI_CLASS_MASS_STORAGE                  0x0100
