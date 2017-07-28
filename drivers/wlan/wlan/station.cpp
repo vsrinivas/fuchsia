@@ -699,6 +699,29 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
     return status;
 }
 
+mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
+    debugfn();
+    auto ind = SignalReportIndication::New();
+    ind->rssi = rssi;
+
+    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::SIGNAL_REPORT_indication, ind);
+    if (status != MX_OK) {
+        errorf("could not serialize SignalReportIndication: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
+    return status;
+}
+
 mx_status_t Station::PreChannelChange(wlan_channel_t chan) {
     debugfn();
     if (state_ != WlanState::kAssociated) {

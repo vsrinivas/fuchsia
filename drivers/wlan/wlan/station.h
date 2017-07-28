@@ -8,6 +8,7 @@
 #include "mac_frame.h"
 
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
+#include <apps/wlan/services/wlan_mlme_ext.fidl-common.h>
 #include <ddk/protocol/wlan.h>
 #include <magenta/types.h>
 #include <mxtl/unique_ptr.h>
@@ -78,6 +79,8 @@ class Station {
     mx_status_t SendDeauthIndication(uint16_t code);
     mx_status_t SendAssocResponse(AssociateResultCodes code);
     mx_status_t SendDisassociateIndication(uint16_t code);
+
+    mx_status_t SendSignalReportIndication(uint8_t rssi);
 
     mx_status_t SetPowerManagementMode(bool ps_mode);
     mx_status_t SendPsPoll();
