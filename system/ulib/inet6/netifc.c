@@ -253,6 +253,12 @@ static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         netfd = -1;
         return MX_OK;
     }
+    if (info.features & ETH_FEATURE_WLAN) {
+        // Don't run netsvc for wireless network devices
+        close(netfd);
+        netfd = -1;
+        return MX_OK;
+    }
     memcpy(netmac, info.mac, sizeof(netmac));
     netmtu = info.mtu;
 
