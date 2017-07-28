@@ -61,7 +61,7 @@ mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* d
 mx_status_t vfs_lookup(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
                        const char* name, size_t len) {
     if (is_dot_dot(name, len)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     } else if (is_dot(name, len)) {
         *out = mxtl::move(vn);
         return MX_OK;
@@ -159,14 +159,14 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
         return r;
     } else if (is_dot_dot(path, len)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if (flags & O_CREAT) {
         if (must_be_dir && !S_ISDIR(mode)) {
             return MX_ERR_INVALID_ARGS;
         } else if (is_dot(path, len)) {
-            return MX_ERR_NOT_SUPPORTED;
+            return MX_ERR_INVALID_ARGS;
         }
 
         if ((r = vndir->Create(&vn, path, len, mode)) < 0) {
@@ -174,7 +174,7 @@ mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out, const
                 goto try_open;
             }
             if (r == MX_ERR_NOT_SUPPORTED) {
-                // filesystem may not supporte create (like devfs)
+                // filesystem may not support create (like devfs)
                 // in which case we should still try to open() the file
                 goto try_open;
             }
@@ -224,7 +224,7 @@ mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len)
     } else if (is_dot(path, len)) {
         return MX_ERR_UNAVAILABLE;
     } else if (is_dot_dot(path, len)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     }
 
     return vndir->Unlink(path, len, must_be_dir);
@@ -245,7 +245,7 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
     } else if (is_dot(oldname, oldlen)) {
         return MX_ERR_UNAVAILABLE;
     } else if (is_dot_dot(oldname, oldlen)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     }
 
     if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != MX_OK) {
@@ -253,7 +253,7 @@ mx_status_t Vfs::Link(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpare
     } else if (new_must_be_dir) {
         return MX_ERR_NOT_DIR;
     } else if (is_dot_or_dot_dot(newname, newlen)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     }
 
     // Look up the target vnode
@@ -282,14 +282,14 @@ mx_status_t Vfs::Rename(mxtl::RefPtr<Vnode> oldparent, mxtl::RefPtr<Vnode> newpa
     } else if (is_dot(oldname, oldlen)) {
         return MX_ERR_UNAVAILABLE;
     } else if (is_dot_dot(oldname, oldlen)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     }
 
 
     if ((r = vfs_name_trim(newname, newlen, &newlen, &new_must_be_dir)) != MX_OK) {
         return r;
     } else if (is_dot_or_dot_dot(newname, newlen)) {
-        return MX_ERR_NOT_SUPPORTED;
+        return MX_ERR_INVALID_ARGS;
     }
 
     r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
