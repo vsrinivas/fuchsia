@@ -39,6 +39,8 @@ public:
     using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
     using internal::RefCountedBase<EnableAdoptionValidator>::Release;
     using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
+    // Don't use this method. See the relevant RefPtr implementation for details.
+    using internal::RefCountedBase<EnableAdoptionValidator>::AddRefMaybeInDestructor;
 
     // RefCounted<> instances may not be copied, assigned or moved.
     DISALLOW_COPY_ASSIGN_AND_MOVE(RefCounted);

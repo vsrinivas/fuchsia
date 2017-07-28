@@ -235,13 +235,27 @@ void JobDispatcher::Kill() {
         state_ = State::KILLING;
 
         // Convert our raw pointers into refcounted. We will do the killing
-        // outside the lock.
+        // outside the lock.  This is tricky and requires special logic on
+        // the RefPtr class to handle a refcount that can be zero.
+        //
+        // The main requirement is that |lock_| is both controlling child
+        // list lookup and also making sure that the child destructor cannot
+        // make progress when doing so.  In other words, when inspecting
+        // the |jobs_| or |procs_| list we can be sure that a given child
+        // process or child job is either
+        //   - alive, with refcount > 0
+        //   - in destruction process but blocked, refcount == 0
+        //
         for (auto& j : jobs_) {
-            jobs_to_kill.push_front(mxtl::RefPtr<JobDispatcher>(&j));
+            auto jd = ::mxtl::internal::MakeRefPtrUpgradeFromRaw(&j, lock_);
+            if (jd)
+                jobs_to_kill.push_front(mxtl::move(jd));
         }
 
         for (auto& p : procs_) {
-            procs_to_kill.push_front(mxtl::RefPtr<ProcessDispatcher>(&p));
+            auto pd = ::mxtl::internal::MakeRefPtrUpgradeFromRaw(&p, lock_);
+            if (pd)
+                procs_to_kill.push_front(mxtl::move(pd));
         }
     }
 

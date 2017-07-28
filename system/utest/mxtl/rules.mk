@@ -45,5 +45,6 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/mxio \
     system/ulib/unittest \
+    system/ulib/magenta \
 
 include make/module.mk

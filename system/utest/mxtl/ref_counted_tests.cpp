@@ -4,10 +4,16 @@
 
 #include <pthread.h>
 
+#include <magenta/syscalls.h>
+
 #include <mxalloc/new.h>
+
 #include <mxtl/algorithm.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+
 #include <unittest/unittest.h>
 
 // If set, will run tests that expect the process to die (usually due to a
@@ -190,6 +196,87 @@ static bool unadopted_release_asserts() {
     END_TEST;
 }
 
+namespace {
+class RawUpgradeTester : public mxtl::RefCounted<RawUpgradeTester> {
+public:
+    RawUpgradeTester(mxtl::Mutex* mutex, bool* destroying)
+        : mutex_(mutex), destroying_(destroying) {}
+
+    ~RawUpgradeTester() {
+        *destroying_ = true;
+        mxtl::AutoLock al(mutex_);
+    }
+
+private:
+    mxtl::Mutex* mutex_;
+    bool* destroying_;
+};
+
+void* adopt_and_reset(void* arg) {
+    mxtl::RefPtr<RawUpgradeTester> rc_client =
+        mxtl::AdoptRef(reinterpret_cast<RawUpgradeTester*>(arg));
+    // The reset() which will call the dtor, which we expect to
+    // block because upgrade_fail_test() is holding the mutex.
+    rc_client.reset();
+    return NULL;
+}
+
+} // namespace
+
+static bool upgrade_fail_test() {
+    BEGIN_TEST;
+
+    mxtl::Mutex mutex;
+    AllocChecker ac;
+    bool destroying = false;
+
+    auto raw = new (&ac) RawUpgradeTester(&mutex, &destroying);
+    EXPECT_TRUE(ac.check(), "");
+
+    pthread_t thread;
+    {
+        mxtl::AutoLock al(&mutex);
+        int res = pthread_create(&thread, NULL, &adopt_and_reset, raw);
+        ASSERT_LE(0, res, "");
+        mx_nanosleep(mx_deadline_after(MX_MSEC(300)));
+        EXPECT_TRUE(destroying);
+        // The RawUpgradeTester must be blocked in the destructor, the upgrade will fail.
+        auto upgrade1 = mxtl::internal::MakeRefPtrUpgradeFromRaw(raw, mutex);
+        EXPECT_FALSE(upgrade1);
+        // Verify that the previous upgrade attempt did not change the refcount.
+        auto upgrade2 = mxtl::internal::MakeRefPtrUpgradeFromRaw(raw, mutex);
+        EXPECT_FALSE(upgrade2);
+    }
+
+    pthread_join(thread, NULL);
+    END_TEST;
+}
+
+static bool upgrade_success_test() {
+    BEGIN_TEST;
+
+    mxtl::Mutex mutex;
+    AllocChecker ac;
+    bool destroying = false;
+
+    auto ref = mxtl::AdoptRef(new (&ac) RawUpgradeTester(&mutex, &destroying));
+    EXPECT_TRUE(ac.check(), "");
+    auto raw = ref.get();
+
+    {
+        mxtl::AutoLock al(&mutex);
+        // RawUpgradeTester is not in the destructor so the upgrade should
+        // succeed.
+        auto upgrade = mxtl::internal::MakeRefPtrUpgradeFromRaw(raw, mutex);
+        EXPECT_TRUE(upgrade);
+    }
+
+    ref.reset();
+    EXPECT_TRUE(destroying);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ref_counted_tests)
 RUN_NAMED_TEST("Ref Counted", ref_counted_test)
 RUN_NAMED_TEST("Wrapping dead pointer should assert", wrap_dead_pointer_asserts)
@@ -200,4 +287,6 @@ RUN_NAMED_TEST("AddRef on unadopted object should assert",
                unadopted_add_ref_asserts)
 RUN_NAMED_TEST("Release on unadopted object should assert",
                unadopted_release_asserts)
+RUN_NAMED_TEST("Fail to upgrade raw pointer ", upgrade_fail_test)
+RUN_NAMED_TEST("Upgrade raw pointer", upgrade_success_test)
 END_TEST_CASE(ref_counted_tests);
