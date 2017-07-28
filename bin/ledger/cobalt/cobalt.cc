@@ -25,6 +25,8 @@ std::string ToObservation(CobaltEvent event) {
       return "Ledger-startup";
     case CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER:
       return "Commits-received-out-of-order";
+    case CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED:
+      return "Commits-received-out-of-order-not-recovered";
     case CobaltEvent::COMMITS_MERGED:
       return "Commits-merged";
     case CobaltEvent::MERGED_COMMITS_MERGED:

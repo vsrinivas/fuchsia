@@ -627,6 +627,7 @@ void PageStorageImpl::AddCommits(
   // If commits arrive out of order, some commits might be skipped. Continue
   // trying adding commits as long as at least one commit is added on each
   // iteration.
+  bool commits_were_out_of_order = false;
   bool continue_trying = true;
   while (continue_trying && !commits.empty()) {
     continue_trying = false;
@@ -696,13 +697,19 @@ void PageStorageImpl::AddCommits(
     }
 
     if (!remaining_commits.empty()) {
-      // If |remaining_commits| is not empty, some commits were our of order.
-      ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
+      // If |remaining_commits| is not empty, some commits were out of order.
+      commits_were_out_of_order = true;
     }
     std::swap(commits, remaining_commits);
   }
 
+  if (commits_were_out_of_order) {
+    ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
+  }
   if (!commits.empty()) {
+    FTL_DCHECK(commits_were_out_of_order);
+    ledger::ReportEvent(
+        ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
     FTL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
                    << " orphaned commits.";
     callback(Status::ILLEGAL_STATE);
