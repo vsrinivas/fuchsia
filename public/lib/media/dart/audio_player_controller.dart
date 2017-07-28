@@ -100,6 +100,7 @@ class AudioPlayerController {
 
     _netMediaService.createNetMediaPlayerProxy(
         device, service, _netMediaPlayer.ctrl.request());
+    _netMediaPlayer.ctrl.onConnectionError = _handleConnectionError;
 
     _handlePlayerStatusUpdates(NetMediaPlayer.kInitialStatus, null);
     updateCallback?.call();
@@ -119,6 +120,7 @@ class AudioPlayerController {
 
     if (_netMediaPlayer != null) {
       _netMediaPlayer.ctrl.close();
+      _netMediaPlayer.ctrl.onConnectionError = null;
     }
 
     if (_audioRenderer != null) {
@@ -161,6 +163,7 @@ class AudioPlayerController {
 
     _netMediaService.createNetMediaPlayer(
         serviceName, mediaPlayer.passHandle(), _netMediaPlayer.ctrl.request());
+    _netMediaPlayer.ctrl.onConnectionError = _handleConnectionError;
 
     _netMediaPlayer.setUrl(uri.toString());
   }
@@ -345,6 +348,18 @@ class AudioPlayerController {
     }
 
     _netMediaPlayer.getStatus(version, _handlePlayerStatusUpdates);
+  }
+
+  /// Called when the connection to the NetMediaPlayer fails.
+  void _handleConnectionError() {
+    _problem = new Problem();
+    _problem.type = Problem.kProblemConnectionFailed;
+
+    if (updateCallback != null) {
+      scheduleMicrotask(() {
+        updateCallback();
+      });
+    }
   }
 
   /// Captures information required to implement the progress bar.

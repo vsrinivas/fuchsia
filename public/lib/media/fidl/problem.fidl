@@ -19,6 +19,7 @@ struct Problem {
   const string kProblemAssetNotFound = "ProblemAssetNotFound";
   const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
   const string kProblemMediaTypeNotSupported = "ProblemMediaTypeNotSupported";
+  const string kProblemConnectionFailed = "ProblemConnectionFailed";
 
   // The type of problem. This is a string for extensibility.
   string type;

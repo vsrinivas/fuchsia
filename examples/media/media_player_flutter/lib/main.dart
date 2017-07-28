@@ -133,6 +133,10 @@ void _playLeafAsset(Asset asset) {
 
   _leafAssetToPlay = asset;
 
+  if (_controller.problem?.type == Problem.kProblemConnectionFailed) {
+    _controller.close();
+  }
+
   if (_leafAssetToPlay.type == AssetType.remote) {
     _controller.connectToRemote(
       device: _leafAssetToPlay.device,
@@ -208,6 +212,9 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
           case Problem.kProblemMediaTypeNotSupported:
             text = 'The requested content is in an unsupported format';
             break;
+          case Problem.kProblemConnectionFailed:
+            text = 'Connection to player failed';
+            break;
           default:
             text = 'Unrecognized problem type ${problem.type}';
             break;
@@ -215,7 +222,10 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
       }
 
       _addLabel(text, Colors.white, 20.0, to);
-      _addLabel(_leafAssetToPlay.uri.toString(), Colors.grey[800], 15.0, to);
+
+      if (_leafAssetToPlay != null && _leafAssetToPlay.uri != null) {
+        _addLabel(_leafAssetToPlay.uri.toString(), Colors.grey[800], 15.0, to);
+      }
     }
   }
 
