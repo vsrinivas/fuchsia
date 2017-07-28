@@ -85,6 +85,12 @@ def main():
     env['GOARCH'] = goarch
     env['GOOS'] = goos
     env['GOPATH'] = gopath + ":" + os.path.abspath(os.path.join(args.root_out_dir, "gen/go"))
+
+    # the gcc wrappers need to know about some Magenta build paths for some cases (e.g. arm & rpi)
+    for k in os.environ:
+      if k.startswith("MAGENTA_"):
+        env[k] = os.environ.get(k)
+
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from
     # /usr/bin.
