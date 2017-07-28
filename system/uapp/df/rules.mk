@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 
-MODULE_NAME := lsfs
+MODULE_NAME := df
 
 # app main
 MODULE_SRCS := \
