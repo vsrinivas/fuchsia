@@ -2,7 +2,7 @@
   "tests": [
     {
       "name": "cobalt_apptests",
-      "exec": "/system/test/cobalt_apptests"
+      "exec": "/system/bin/report_result /system/test/cobalt_apptests"
     }
   ]
 }

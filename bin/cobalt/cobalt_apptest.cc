@@ -42,7 +42,7 @@ class CobaltAppTest {
   CobaltAppTest()
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {}
 
-  void RunTests() {
+  bool RunTests() {
     // Start and connect to the cobalt fidl service.
     app::ServiceProviderPtr services;
     auto launch_info = app::ApplicationLaunchInfo::New();
@@ -62,12 +62,11 @@ class CobaltAppTest {
       encoder_->AddStringObservation(kRareEventMetricId, kRareEventEncodingId,
                                      kRareEventObservation1, &status);
       FTL_LOG(INFO) << "Add(Rare-event-1) => " << StatusToString(status);
+      if (status != cobalt::Status::OK) {
+        return false;
+      }
     }
-
-    // Don't send the observations because this is an apptest.
-    //encoder_->SendObservations(&status);
-    //FTL_LOG(INFO) << "SendObservations => " << StatusToString(status);
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    return true;
   }
 
  private:
@@ -82,12 +81,10 @@ class CobaltAppTest {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  FTL_LOG(INFO) << "CobaltAppTest";
   mtl::MessageLoop loop;
   CobaltAppTest app;
-  app.RunTests();
-  FTL_LOG(INFO) << "Start";
-  loop.Run();
-  FTL_LOG(INFO) << "Done";
+  if (!app.RunTests()) {
+    return 1;
+  }
   return 0;
 }
