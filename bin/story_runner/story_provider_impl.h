@@ -179,9 +179,12 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // Used to preload story shell before it is requested.
   AppConfigPtr story_shell_;
-  app::ApplicationControllerPtr story_shell_controller_;
-  app::ServiceProviderPtr story_shell_services_;
-  mozart::ViewOwnerPtr story_shell_view_;
+  struct StoryShellConnection {
+    app::ApplicationControllerPtr story_shell_controller;
+    app::ServiceProviderPtr story_shell_services;
+    mozart::ViewOwnerPtr story_shell_view;
+  };
+  std::unique_ptr<StoryShellConnection> preloaded_story_shell_;
 
   // Holds the story shell view proxies for running story shells.
   ProxySet proxies_;
