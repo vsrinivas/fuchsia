@@ -4,15 +4,18 @@
 
 shared_library("audio-dispatcher-pool") {
   public = [
-    "dispatcher-thread.h",
     "dispatcher-channel.h",
+    "dispatcher-event-source.h",
+    "dispatcher-execution-domain.h",
+    "dispatcher-thread-pool.h",
   ]
 
   sources = [
     "debug-logging.h",
     "dispatcher-channel.cpp",
     "dispatcher-event-source.cpp",
-    "dispatcher-thread.cpp",
+    "dispatcher-execution-domain.cpp",
+    "dispatcher-thread-pool.cpp",
   ]
 
   deps = [

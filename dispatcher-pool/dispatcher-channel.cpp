@@ -7,20 +7,25 @@
 #include <fbl/auto_call.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
-#include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
 // Instantiate storage for the static allocator.
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::audio::DispatcherChannelAllocTraits, 0x100, true);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::audio::dispatcher::ChannelAllocTraits, 0x100, true);
 
 namespace audio {
+namespace dispatcher {
 
-zx_status_t DispatcherChannel::Activate(fbl::RefPtr<Owner>&& owner,
-                                        zx::channel* client_channel_out) {
+zx_status_t Channel::Activate(zx::channel* client_channel_out,
+                              fbl::RefPtr<ExecutionDomain> domain,
+                              ProcessHandler process_handler,
+                              ChannelClosedHandler channel_closed_handler) {
     // Arg and constant state checks first
     if ((client_channel_out == nullptr) || client_channel_out->is_valid())
         return ZX_ERR_INVALID_ARGS;
 
-    if (owner == nullptr)
+    if (domain == nullptr)
         return ZX_ERR_INVALID_ARGS;
 
     // Create the channel endpoints.
@@ -31,12 +36,11 @@ zx_status_t DispatcherChannel::Activate(fbl::RefPtr<Owner>&& owner,
     if (res != ZX_OK)
         return res;
 
-    // Lock and attempt to activate.
-    {
-        fbl::AutoLock obj_lock(&obj_lock_);
-        res = ActivateLocked(fbl::move(owner), fbl::move(channel));
-    }
-    ZX_DEBUG_ASSERT(channel == ZX_HANDLE_INVALID);
+    // Attempt to activate.
+    res = Activate(fbl::move(channel),
+                   fbl::move(domain),
+                   fbl::move(process_handler),
+                   fbl::move(channel_closed_handler));
 
     // If something went wrong, make sure we close the channel endpoint we were
     // going to give back to the caller.
@@ -46,94 +50,195 @@ zx_status_t DispatcherChannel::Activate(fbl::RefPtr<Owner>&& owner,
    return res;
 }
 
-zx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, zx::channel&& channel) {
-    if (!channel.is_valid())
+zx_status_t Channel::Activate(zx::channel channel,
+                              fbl::RefPtr<ExecutionDomain> domain,
+                              ProcessHandler process_handler,
+                              ChannelClosedHandler channel_closed_handler) {
+    // In order to activate, the supplied execution domain and channel, and
+    // process handler must all be valid.  Only the deactivate handler is
+    // optional.
+    if ((domain == nullptr) || !channel.is_valid() || (process_handler == nullptr))
         return ZX_ERR_INVALID_ARGS;
 
-    if ((client_thread_active() == false) ||
-        (handle_  != ZX_HANDLE_INVALID)  ||
-        (owner_   != nullptr))
-        return ZX_ERR_BAD_STATE;
+    zx_status_t ret;
+    {
+        fbl::AutoLock obj_lock(&obj_lock_);
+        if ((process_handler_ != nullptr) || (channel_closed_handler_ != nullptr))
+            return ZX_ERR_BAD_STATE;
 
-    // Take ownership of the owner and channel references given to us.
-    owner_  = fbl::move(owner);
-    handle_ = fbl::move(channel);
+        ret = ActivateLocked(fbl::move(channel), fbl::move(domain));
+        // If we succeeded, take control of the handlers provided by our caller.
+        // Otherwise, wait until we are outside of our lock before we let the
+        // handler state go out of scope and destruct.
+        if (ret == ZX_OK) {
+            ZX_DEBUG_ASSERT(process_handler_ == nullptr);
+            ZX_DEBUG_ASSERT(channel_closed_handler_ == nullptr);
+            process_handler_ = fbl::move(process_handler);
+            channel_closed_handler_ = fbl::move(channel_closed_handler);
+        }
+    }
+    return ret;
+}
 
-    // Make sure we deactivate ourselves if anything goes wrong.
-    //
-    // NOTE: This auto-call lambda needs to be flagged as not-subject to thread
-    // analysis.  Currently, clang it not quite smart enough to know that since
-    // the obj_lock_ is being held for the duration of ActivateLocked, and the
-    // AutoCall lambda will execute during the unwind of ActicateLocked, that
-    // the lock will be held during execution of the lambda.
-    //
-    // You can mark the lambda as __TA_REQUIRES(obj_lock_), but clang still
-    // cannot seem to figure out that the lock is properly held during the
-    // destruction of AutoCall object (probably because of the indirection
-    // introduced by AutoCall::~AutoCall() --> Lambda().)
-    //
-    // For now, just disable thread analysis for this lambda.
-    auto cleanup = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
-        DeactivateLocked();
+zx_status_t Channel::Activate(fbl::RefPtr<Owner> owner, zx::channel* client_channel_out) {
+    ProcessHandler phandler([owner_ref = owner](Channel* channel) {
+        return owner_ref->ProcessChannel(channel);
     });
 
-    // Setup our initial async wait operation on our thread pool's port.
-    zx_status_t res = WaitOnPortLocked(DispatcherThread::port());
-    if (res != ZX_OK)
-        return res;
+    ChannelClosedHandler chandler([owner_ref = owner](const Channel* channel) {
+        return owner_ref->NotifyChannelDeactivated(*channel);
+    });
 
-    // Finally, add ourselves to our Owner's list of event sources. Note; if this
-    // operation fails, leaving the active event sources set will be handled by the
-    // cleanup AutoCall and canceling the async wait operation should occur as a
-    // side effect of channel being auto closed as it goes out of scope.
-    res = owner_->AddEventSource(fbl::WrapRefPtr(this));
-    if (res != ZX_OK)
-        return res;
-
-    // Success!  Cancel our cleanup routine.
-    cleanup.cancel();
-    return res;
+    return Activate(client_channel_out,
+                    owner->default_domain_,
+                    fbl::move(phandler),
+                    fbl::move(chandler));
 }
 
-void DispatcherChannel::NotifyDeactivated(const fbl::RefPtr<Owner>& owner) {
-    ZX_DEBUG_ASSERT(owner != nullptr);
-    owner->NotifyChannelDeactivated(*this);
+zx_status_t Channel::Activate(fbl::RefPtr<Owner> owner, zx::channel channel) {
+    ProcessHandler phandler([owner_ref = owner](Channel* channel) {
+        return owner_ref->ProcessChannel(channel);
+    });
+
+    ChannelClosedHandler chandler([owner_ref = owner](const Channel* channel) {
+        return owner_ref->NotifyChannelDeactivated(*channel);
+    });
+
+    return Activate(fbl::move(channel),
+                    owner->default_domain_,
+                    fbl::move(phandler),
+                    fbl::move(chandler));
 }
 
-zx_status_t DispatcherChannel::ProcessInternal(const fbl::RefPtr<Owner>& owner,
-                                               const zx_port_packet_t& port_packet) {
-    zx_status_t res = ZX_OK;
+void Channel::Deactivate() {
+    ProcessHandler       old_process_handler;
+    ChannelClosedHandler old_channel_closed_handler;
 
-    // No one should be calling us if we have no messages to read.
-    ZX_DEBUG_ASSERT(port_packet.signal.observed & process_signal_mask());
-    ZX_DEBUG_ASSERT(port_packet.signal.count);
+    {
+        fbl::AutoLock obj_lock(&obj_lock_);
+        InternalDeactivateLocked();
 
-    // Process all of the pending messages in the channel before re-joining the
-    // thread pool.  If our owner becomes deactivated during processing, just
-    // get out early.  Don't bother to signal an error; if our owner was
-    // deativated then we are in the process of shutting down already.
-    //
-    // TODO(johngro) : Start to establish some sort of fair scheduler-like
-    // behavior.  We do not want to dominate the thread pool processing a single
-    // channel for a single client.
-    for (uint64_t i = 0; (i < port_packet.signal.count) && (res == ZX_OK); ++i) {
-        if (!owner->deactivated()) {
-            res = owner->ProcessChannel(this);
+        // If we are in the process of actively dispatching, do not discard our
+        // handlers just yet.  They are currently being used by the dispatch
+        // thread.  Instead, wait until the dispatch thread unwinds and allow it
+        // to clean up the handlers.
+        //
+        // Otherwise, transfer the handler state into local storage and let them
+        // destruct after we have released the object lock.
+        if (dispatch_state() != DispatchState::Dispatching) {
+            ZX_DEBUG_ASSERT((dispatch_state() == DispatchState::Idle) ||
+                            (dispatch_state() == DispatchState::WaitingOnPort));
+            old_process_handler = fbl::move(process_handler_);
+            old_channel_closed_handler = fbl::move(channel_closed_handler_);
         }
+    }
+}
+
+zx_status_t Channel::ActivateLocked(zx::channel channel, fbl::RefPtr<ExecutionDomain> domain) {
+    ZX_DEBUG_ASSERT((domain != nullptr) && channel.is_valid());
+
+    // Take ownership of the channel resource and execution domain reference.
+    zx_status_t res = EventSource::ActivateLocked(fbl::move(channel), fbl::move(domain));
+    if (res != ZX_OK) {
+        return res;
+    }
+
+    // Setup our initial async wait operation on our thread pool's port.
+    res = WaitOnPortLocked();
+    if (res != ZX_OK) {
+        InternalDeactivateLocked();
+        return res;
     }
 
     return res;
 }
 
-zx_status_t DispatcherChannel::Read(void*       buf,
-                                    uint32_t    buf_len,
-                                    uint32_t*   bytes_read_out,
-                                    zx::handle* rxed_handle) const {
+void Channel::Dispatch(ExecutionDomain* domain) {
+    // No one should be calling us if we have no messages to read.
+    ZX_DEBUG_ASSERT(domain != nullptr);
+    ZX_DEBUG_ASSERT(process_handler_ != nullptr);
+    ZX_DEBUG_ASSERT(pending_pkt_.signal.observed & process_signal_mask());
+    bool signal_channel_closed = (pending_pkt_.signal.observed & ZX_CHANNEL_PEER_CLOSED);
+
+    // Do we have messages to dispatch?
+    if (pending_pkt_.signal.observed & ZX_CHANNEL_READABLE) {
+        // Process all of the pending messages in the channel before re-joining
+        // the thread pool.
+        //
+        // TODO(johngro) : Start to establish some sort of fair scheduler-like
+        // behavior.  We do not want to dominate the thread pool processing a
+        // single channel for a single client.
+        ZX_DEBUG_ASSERT(pending_pkt_.signal.count);
+        for (uint64_t i = 0; i < pending_pkt_.signal.count; ++i) {
+            if (domain->deactivated())
+                break;
+
+            if (process_handler_(this) != ZX_OK)
+                signal_channel_closed = true;
+                break;
+        }
+    }
+
+    // If the other side has closed our channel, or there was an error during
+    // dispatch, attempt to call our deactivate handler (if it still exists).
+    if (signal_channel_closed && (channel_closed_handler_ != nullptr)) {
+        channel_closed_handler_(this);
+    }
+
+    // Ok, for better or worse, dispatch is now complete.  Enter the lock and
+    // deal with state transition.  If things are still healthy, attempt to wait
+    // on our thread-pool's port.  If things are not healthy, go through the
+    // process of deactivation.
+    ProcessHandler       old_process_handler;
+    ChannelClosedHandler old_channel_closed_handler;
+    {
+        fbl::AutoLock obj_lock(&obj_lock_);
+        ZX_DEBUG_ASSERT(dispatch_state() == DispatchState::Dispatching);
+        dispatch_state_ = DispatchState::Idle;
+
+        // If we had an error during processing, or our peer closed their end of
+        // the channel, make sure that we have released our handle and our
+        // domain reference.
+        if (signal_channel_closed) {
+            InternalDeactivateLocked();
+        }
+
+        // If we are still active, attempt to set up the next wait opertaion.
+        // If this fails (it should never fail) then automatically deactivate
+        // ourselves.
+        if (is_active()) {
+            ZX_DEBUG_ASSERT(handle_.is_valid());
+            zx_status_t res = WaitOnPortLocked();
+            if (res != ZX_OK) {
+                // TODO(johngro) : Log something about this.
+                InternalDeactivateLocked();
+            } else {
+                ZX_DEBUG_ASSERT(dispatch_state() == DispatchState::WaitingOnPort);
+            }
+        }
+
+        // If we have become deactivated for any reason, transfer our handler
+        // state to local storage so that the handlers can destruct from outside
+        // of our main lock.
+        if (!is_active()) {
+            old_process_handler = fbl::move(process_handler_);
+            old_channel_closed_handler = fbl::move(channel_closed_handler_);
+        }
+    }
+}
+
+zx_status_t Channel::Read(void*       buf,
+                          uint32_t    buf_len,
+                          uint32_t*   bytes_read_out,
+                          zx::handle* rxed_handle) const {
     if (!buf || !buf_len || !bytes_read_out ||
        ((rxed_handle != nullptr) && rxed_handle->is_valid()))
         return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock obj_lock(&obj_lock_);
+
+    if (!handle_.is_valid())
+        return ZX_ERR_BAD_HANDLE;
 
     uint32_t rxed_handle_count = 0;
     return zx_channel_read(handle_.get(),
@@ -146,14 +251,17 @@ zx_status_t DispatcherChannel::Read(void*       buf,
                            &rxed_handle_count);
 }
 
-zx_status_t DispatcherChannel::Write(const void*  buf,
-                                     uint32_t     buf_len,
-                                     zx::handle&& tx_handle) const {
+zx_status_t Channel::Write(const void*  buf,
+                           uint32_t     buf_len,
+                           zx::handle&& tx_handle) const {
     zx_status_t res;
     if (!buf || !buf_len)
         return ZX_ERR_INVALID_ARGS;
 
     fbl::AutoLock obj_lock(&obj_lock_);
+    if (!handle_.is_valid())
+        return ZX_ERR_BAD_HANDLE;
+
     if (!tx_handle.is_valid())
         return zx_channel_write(handle_.get(), 0, buf, buf_len, nullptr, 0);
 
@@ -165,4 +273,5 @@ zx_status_t DispatcherChannel::Write(const void*  buf,
     return res;
 }
 
+}  // namespace dispatcher
 }  // namespace audio
