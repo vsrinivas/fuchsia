@@ -262,7 +262,8 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ChannelDispatcher> channel;
-    mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
+    mx_status_t result =
+        up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE | MX_RIGHT_READ, &channel);
     if (result != MX_OK)
         return result;
 
