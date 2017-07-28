@@ -264,9 +264,10 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     return MX_OK;
 }
 
-mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc,
+mx_status_t sys_pci_get_nth_device(mx_handle_t hrsrc,
                                    uint32_t index,
-                                   user_ptr<mx_pcie_device_info_t> out_info) {
+                                   user_ptr<mx_pcie_device_info_t> out_info,
+                                   user_ptr<mx_handle_t> out_handle) {
     /**
      * Returns the pci config of a device.
      * @param index Device index
@@ -280,30 +281,34 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc,
         return status;
     }
 
-    if (!out_info)
+    if (!out_info || !out_handle) {
         return MX_ERR_INVALID_ARGS;
+    }
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_pcie_device_info_t info;
     status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
-    if (result != MX_OK)
+    if (result != MX_OK) {
         return result;
+    }
 
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
-    if (!handle)
+    if (!handle) {
         return MX_ERR_NO_MEMORY;
+    }
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t handle_value = up->MapHandleToValue(handle);
 
-    // TODO(andymutton): Change to use user_ptr copy
-    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info.get()),
-                            &info, sizeof(mx_pcie_device_info_t)) != MX_OK)
+    // If everything is successful add the handle to the process
+    if (out_info.copy_to_user(info) != MX_OK ||
+            out_handle.copy_to_user(handle_value) != MX_OK) {
         return MX_ERR_INVALID_ARGS;
+    }
 
     up->AddHandle(mxtl::move(handle));
-    return handle_value;
+    return MX_OK;
 }
 
 mx_status_t sys_pci_enable_bus_master(mx_handle_t dev_handle, bool enable) {
@@ -661,7 +666,8 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
     return MX_ERR_NOT_SUPPORTED;
 }
 
-mx_handle_t sys_pci_get_nth_device(mx_handle_t, uint32_t, user_ptr<mx_pcie_device_info_t>) {
+mx_status_t sys_pci_get_nth_device(mx_handle_t, uint32_t, user_ptr<mx_pcie_device_info_t>,
+                                   user_ptr<mx_handle_t>) {
     return MX_ERR_NOT_SUPPORTED;
 }
 

@@ -40,10 +40,11 @@ static mx_protocol_device_t kpci_device_proto = {
 static mx_status_t kpci_init_child(mx_device_t* parent, uint32_t index, bool save_handle,
                                    mx_device_t** out) {
     mx_pcie_device_info_t info;
+    mx_handle_t handle;
 
-    mx_handle_t handle = mx_pci_get_nth_device(get_root_resource(), index, &info);
-    if (handle < 0) {
-        return handle;
+    mx_status_t status = mx_pci_get_nth_device(get_root_resource(), index, &info, &handle);
+    if (status != MX_OK) {
+        return status;
     }
 
     kpci_device_t* device = calloc(1, sizeof(kpci_device_t));
@@ -84,7 +85,6 @@ static mx_status_t kpci_init_child(mx_device_t* parent, uint32_t index, bool sav
 
     memcpy(device->props, device_props, sizeof(device->props));
 
-    mx_status_t status;
     if (parent) {
         char busdev_args[64];
         snprintf(busdev_args, sizeof(busdev_args),

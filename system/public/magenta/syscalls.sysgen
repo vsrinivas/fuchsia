@@ -556,7 +556,7 @@ syscall set_framebuffer_vmo
 
 syscall pci_get_nth_device
     (handle: mx_handle_t, index: uint32_t)
-    returns (mx_handle_t, out_info: mx_pcie_device_info_t);
+    returns (mx_status_t, out_info: mx_pcie_device_info_t, out_handle: mx_handle_t);
 
 syscall pci_enable_bus_master
     (handle: mx_handle_t, enable: bool)
