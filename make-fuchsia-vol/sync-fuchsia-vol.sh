@@ -134,11 +134,25 @@ mount-writable-parts() {
 
 sftp-batch-updated-efi-files() {
   local stamp="$1"
-  find "$MAGENTA_BUILD_DIR/magenta.bin" \
-       "$FUCHSIA_BUILD_DIR"/{cmdline,bootdata.bin} \
-       -newer $stamp |
-  while read f; do
-    echo put $f /efi/$(basename $f)
+  local files=(
+    "$MAGENTA_BUILD_DIR/magenta.bin"
+    "$FUCHSIA_BUILD_DIR/cmdline"
+    "$FUCHSIA_BUILD_DIR/bootdata.bin"
+  )
+  for f in "${files[@]}"; do
+    local added=0
+    # Only include files that exist.
+    if [[ -f "$f" ]]; then
+      # If there's a stamp file, only include files newer than it.
+      if [[ ! -e "$stamp" || "$f" -nt "$stamp" ]]; then
+        echo "info: including $f" >&2
+        echo put $f /efi/$(basename $f)
+        added=1
+      fi
+    fi
+    if (( !added )); then
+        echo "info: skipping $f" >&2
+    fi
   done
 }
 
