@@ -75,17 +75,11 @@ class FfmpegDemuxImpl : public FfmpegDemux {
    public:
     static PacketPtr Create(ffmpeg::AvPacketPtr av_packet,
                             TimelineRate pts_rate) {
-      return PacketPtr(new DemuxPacket(std::move(av_packet), pts_rate));
+      return std::make_shared<DemuxPacket>(std::move(av_packet), pts_rate);
     }
 
     AVPacket& av_packet() { return *av_packet_; }
 
-   protected:
-    ~DemuxPacket() override {}
-
-    void Release() override { delete this; }
-
-   private:
     DemuxPacket(ffmpeg::AvPacketPtr av_packet, TimelineRate pts_rate)
         : Packet(
               (av_packet->pts == AV_NOPTS_VALUE) ? kUnknownPts : av_packet->pts,
@@ -98,6 +92,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
       FTL_DCHECK(av_packet_->size >= 0);
     }
 
+   private:
     ffmpeg::AvPacketPtr av_packet_;
   };
 

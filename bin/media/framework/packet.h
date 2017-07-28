@@ -16,17 +16,12 @@ namespace media {
 
 class Packet;
 
-// Used for PacketPtr.
-struct PacketDeleter {
-  void operator()(Packet* ptr) const;
-};
-
-// Unique pointer for packets.
-typedef std::unique_ptr<Packet, PacketDeleter> PacketPtr;
+// Shared pointer for packets.
+typedef std::shared_ptr<Packet> PacketPtr;
 
 // Media packet abstract base class. Subclasses may be defined as needed.
-// Packet::Create and Packet::CreateEndOfStream use an implementation with
-// no special behavior.
+// |Packet::Create|, |Packet::CreateNoAllocator| and |Packet::CreateEndOfStream|
+// use an implementation with no special behavior.
 // TODO(dalesat): Revisit this definition:
 // 1) We probably need an extensible way to add metadata to packets.
 // 2) The relationship to the allocator could be clearer.
@@ -56,6 +51,8 @@ class Packet {
 
   // Creates an end-of-stream packet with no payload.
   static PacketPtr CreateEndOfStream(int64_t pts, TimelineRate pts_rate);
+
+  virtual ~Packet();
 
   // Returns the presentation timestamp of the packet where the duration of a
   // tick is given by pts_rate().
@@ -108,10 +105,6 @@ class Packet {
          size_t size,
          void* payload);
 
-  virtual ~Packet() {}
-
-  virtual void Release() = 0;
-
  private:
   int64_t pts_;
   TimelineRate pts_rate_;
@@ -120,13 +113,6 @@ class Packet {
   size_t size_;
   void* payload_;
   std::unique_ptr<StreamType> revised_stream_type_;
-
-  friend PacketDeleter;
 };
-
-inline void PacketDeleter::operator()(Packet* ptr) const {
-  FTL_DCHECK(ptr);
-  ptr->Release();
-}
 
 }  // namespace media

@@ -24,6 +24,8 @@ Packet::Packet(int64_t pts,
   FTL_DCHECK((size == 0) == (payload == nullptr));
 }
 
+Packet::~Packet() {}
+
 int64_t Packet::GetPts(TimelineRate pts_rate) {
   // We're asking for an inexact product here, because, in some cases,
   // pts_rate / pts_rate_ can't be represented exactly as a TimelineRate.
@@ -57,19 +59,14 @@ class PacketImpl : public Packet {
       : Packet(pts, pts_rate, keyframe, end_of_stream, size, payload),
         allocator_(allocator) {}
 
- protected:
-  ~PacketImpl() override{};
-
-  void Release() override {
+  ~PacketImpl() override {
     // In the default implementation, payload() will be nullptr if and only if
-    // allocator_ is nullptr. Subclasses have the option of having a non-null
-    // payload() and handling deallocation themselves, so allocator_ can be
-    // nullptr even when payload() is not.
-    if (payload() != nullptr && allocator_ != nullptr) {
+    // allocator_ is nullptr.
+    if (payload()) {
+      FTL_DCHECK(allocator_);
       allocator_->ReleasePayloadBuffer(payload());
     }
-    delete this;
-  }
+  };
 
  private:
   PayloadAllocator* allocator_;
@@ -84,8 +81,8 @@ PacketPtr Packet::Create(int64_t pts,
                          void* payload,
                          PayloadAllocator* allocator) {
   FTL_DCHECK(payload == nullptr || allocator != nullptr);
-  return PacketPtr(new PacketImpl(pts, pts_rate, keyframe, end_of_stream, size,
-                                  payload, allocator));
+  return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
+                                      size, payload, allocator);
 }
 
 // static
@@ -95,18 +92,18 @@ PacketPtr Packet::CreateNoAllocator(int64_t pts,
                                     bool end_of_stream,
                                     size_t size,
                                     void* payload) {
-  return PacketPtr(new PacketImpl(pts, pts_rate, keyframe, end_of_stream, size,
-                                  payload, nullptr));
+  return std::make_shared<PacketImpl>(pts, pts_rate, keyframe, end_of_stream,
+                                      size, payload, nullptr);
 }
 
 // static
 PacketPtr Packet::CreateEndOfStream(int64_t pts, TimelineRate pts_rate) {
-  return PacketPtr(new PacketImpl(pts, pts_rate,
-                                  false,      // keyframe
-                                  true,       // end_of_stream
-                                  0,          // size
-                                  nullptr,    // payload
-                                  nullptr));  // allocator
+  return std::make_shared<PacketImpl>(pts, pts_rate,
+                                      false,     // keyframe
+                                      true,      // end_of_stream
+                                      0,         // size
+                                      nullptr,   // payload
+                                      nullptr);  // allocator
 }
 
 }  // namespace media

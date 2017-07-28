@@ -57,17 +57,12 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   class PacketImpl : public Packet {
    public:
     static PacketPtr Create(std::unique_ptr<SuppliedPacket> supplied_packet) {
-      return PacketPtr(new PacketImpl(std::move(supplied_packet)));
+      return std::make_shared<PacketImpl>(std::move(supplied_packet));
     }
 
-   protected:
-    void Release() override;
-
-   private:
     PacketImpl(std::unique_ptr<SuppliedPacket> supplied_packet);
 
-    ~PacketImpl() override;
-
+   private:
     std::unique_ptr<SuppliedPacket> supplied_packet_;
   };
 

@@ -37,7 +37,7 @@ bool Input::SupplyPacketFromOutput(PacketPtr packet) {
 }
 
 void Input::Flush() {
-  packet_from_upstream_.reset(nullptr);
+  packet_from_upstream_.reset();
 }
 
 }  // namespace media

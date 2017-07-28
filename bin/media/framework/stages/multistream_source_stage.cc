@@ -106,7 +106,7 @@ void MultistreamSourceStage::FlushOutput(size_t index) {
   FTL_DCHECK(source_);
   outputs_[index].Flush();
   source_->Flush();
-  cached_packet_.reset(nullptr);
+  cached_packet_.reset();
   cached_packet_output_index_ = 0;
   ended_streams_ = 0;
 }

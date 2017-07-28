@@ -89,10 +89,4 @@ FidlPacketConsumer::PacketImpl::PacketImpl(
              supplied_packet->payload()),
       supplied_packet_(std::move(supplied_packet)) {}
 
-FidlPacketConsumer::PacketImpl::~PacketImpl() {}
-
-void FidlPacketConsumer::PacketImpl::Release() {
-  delete this;
-}
-
 }  // namespace media

@@ -41,16 +41,12 @@ class FfmpegDecoderBase : public Decoder {
                             TimelineRate pts_rate,
                             bool keyframe,
                             AVBufferRef* av_buffer_ref) {
-      return PacketPtr(
-          new DecoderPacket(pts, pts_rate, keyframe, av_buffer_ref));
+      return std::make_shared<DecoderPacket>(pts, pts_rate, keyframe,
+                                             av_buffer_ref);
     }
 
-   protected:
     ~DecoderPacket() override;
 
-    void Release() override;
-
-   private:
     DecoderPacket(int64_t pts,
                   TimelineRate pts_rate,
                   bool keyframe,
@@ -65,6 +61,7 @@ class FfmpegDecoderBase : public Decoder {
       FTL_DCHECK(av_buffer_ref->size >= 0);
     }
 
+   private:
     AVBufferRef* av_buffer_ref_;
   };
 
