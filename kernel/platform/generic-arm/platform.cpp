@@ -61,6 +61,8 @@ static size_t ramdisk_size;
 static uint cpu_cluster_count = 0;
 static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
+static bool halt_on_panic = false;
+
 /* initial memory mappings. parsed by start.S */
 struct mmu_initial_mapping mmu_initial_mappings[] = {
  /* 1GB of sdram space */
@@ -502,7 +504,6 @@ static void process_bootdata(bootdata_t* root) {
     if (!mdi_found) {
         panic("No MDI found in ramdisk\n");
     }
-
 }
 
 extern int _end;
@@ -542,6 +543,9 @@ void platform_early_init(void)
     }
 
     process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
+
+    // Read cmdline after processing bootdata, which may contain cmdline data.
+    halt_on_panic = cmdline_get_bool("kernel.halt_on_panic", false);
 
     /* add the main memory arena */
     if (arena_size) {
@@ -628,11 +632,7 @@ status_t display_get_info(struct display_info *info) {
     return MX_ERR_NOT_FOUND;
 }
 
-void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
-{
-
-    if (suggested_action == HALT_ACTION_REBOOT) {
-
+static void reboot() {
 #if BCM2837
 #define PM_PASSWORD 0x5a000000
 #define PM_RSTC_WRCFG_FULL_RESET 0x00000020
@@ -647,6 +647,15 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         *REG32(paddr_to_kvaddr(MSM8998_PSHOLD_PHYS)) = 0;
 #endif
 #endif
+}
+
+
+void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
+{
+
+    if (suggested_action == HALT_ACTION_REBOOT) {
+        reboot();
+        printf("reboot failed\n");
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
         // XXX shutdown seem to not work through psci
         // implement shutdown via pmic
@@ -664,13 +673,17 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     dlog_bluescreen_halt();
 #endif
 
-#if ENABLE_PANIC_SHELL
     if (reason == HALT_REASON_SW_PANIC) {
+        if (!halt_on_panic) {
+            reboot();
+            printf("reboot failed\n");
+        }
+#if ENABLE_PANIC_SHELL
         dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", reason);
         arch_disable_ints();
         panic_shell_start();
-    }
 #endif  // ENABLE_PANIC_SHELL
+    }
 
     dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
 
