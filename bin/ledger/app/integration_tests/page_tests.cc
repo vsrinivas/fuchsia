@@ -9,6 +9,7 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/integration_tests/integration_test.h"
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -32,10 +33,10 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
   files::ScopedTempDir tmp_dir;
   Status status;
   LedgerRepositoryPtr repository;
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory()->GetRepository(
       tmp_dir.path(), nullptr, nullptr, repository.NewRequest(),
-      [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
   LedgerRepositoryPtr duplicated_repository;
@@ -46,14 +47,15 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
 }
 
 TEST_F(PageIntegrationTest, GetLedger) {
-  EXPECT_NE(nullptr, ledger_.get());
+  EXPECT_NE(nullptr, ledger());
 }
 
 TEST_F(PageIntegrationTest, GetRootPage) {
   Status status;
   PagePtr page;
-  ledger_->GetRootPage(page.NewRequest(), [&status](Status s) { status = s; });
-  EXPECT_TRUE(ledger_.WaitForIncomingResponse());
+  ledger()->GetRootPage(page.NewRequest(),
+                        callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 }
 

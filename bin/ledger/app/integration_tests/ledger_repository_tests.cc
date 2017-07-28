@@ -73,7 +73,7 @@ TEST_F(LedgerRepositoryIntegrationTest, ShutDownOnTokenProviderError) {
   firebase_config->api_key = "";
 
   LedgerRepositoryPtr repository;
-  ledger_repository_factory_->GetRepository(
+  ledger_repository_factory()->GetRepository(
       tmp_dir.path(), std::move(firebase_config), std::move(token_provider_ptr),
       repository.NewRequest(), callback::Capture(MakeQuitTask(), &status));
   ASSERT_FALSE(RunLoopWithTimeout(timeout));

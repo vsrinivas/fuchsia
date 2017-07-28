@@ -37,13 +37,16 @@ class IntegrationTest : public test::TestWithMessageLoop {
 
   mx::socket StreamDataToSocket(std::string data);
 
+  LedgerRepositoryFactory* ledger_repository_factory() {
+    return ledger_repository_factory_.get();
+  }
+
+  Ledger* ledger() { return ledger_.get(); }
+
   LedgerPtr GetTestLedger();
   PagePtr GetTestPage();
   PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status);
   void DeletePage(const fidl::Array<uint8_t>& page_id, Status expected_status);
-
-  LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  LedgerPtr ledger_;
 
  private:
   class LedgerRepositoryFactoryContainer
@@ -82,6 +85,8 @@ class IntegrationTest : public test::TestWithMessageLoop {
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::thread socket_thread_;
   ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
+  LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  LedgerPtr ledger_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);
 };
