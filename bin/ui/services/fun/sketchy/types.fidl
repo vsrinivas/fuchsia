@@ -1,0 +1,24 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module sketchy;
+
+import "apps/mozart/services/scene/types.fidl";
+
+struct Touch {
+  mozart2.vec2 position;
+  uint32 nanoseconds;
+  float pressure;
+};
+
+struct CubicBezier2 {
+  mozart2.vec2 pt0;
+  mozart2.vec2 pt1;
+  mozart2.vec2 pt2;
+  mozart2.vec2 pt3;
+};
+
+struct StrokePath {
+  array<CubicBezier2> segments;
+};
