@@ -10,7 +10,6 @@
 #include <magenta/types.h>
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
-#define IO_BUFFER_SIZE              512u
 
 #define PCI_DEVICE_ROOT_COMPLEX     0u
 #define PCI_DEVICE_VIRTIO_BLOCK     1u
@@ -39,10 +38,6 @@ typedef struct io_apic_state {
 
 /* Stores the IO port state across VM exits. */
 typedef struct io_port_state {
-    // Buffer containing the output.
-    uint8_t buffer[IO_BUFFER_SIZE];
-    // Write position within the buffer.
-    uint16_t offset;
     // Index of the RTC register to use.
     uint8_t rtc_index;
     // Command being issued to the i8042 controller.

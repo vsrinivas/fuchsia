@@ -65,6 +65,9 @@
 /* PIC configuration constants. */
 #define PIC_INVALID                             UINT8_MAX
 
+/* UART configuration constants. */
+#define UART_BUFFER_SIZE                        512u
+
 /* UART configuration flags. */
 #define UART_STATUS_EMPTY                       (1u << 5)
 #define UART_STATUS_IDLE                        (1u << 6)
@@ -593,7 +596,7 @@ static int serial_loop(void* arg) {
         return status;
     }
 
-    uint8_t buffer[IO_BUFFER_SIZE];
+    uint8_t buffer[UART_BUFFER_SIZE];
     uint16_t offset = 0;
     mx_guest_packet_t packets[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
     while (true) {
@@ -622,7 +625,7 @@ static int serial_loop(void* arg) {
             }
             for (int i = 0; i < io->access_size; i++) {
                 buffer[offset++] = io->data[i];
-                if (offset == IO_BUFFER_SIZE || io->data[i] == '\r') {
+                if (offset == UART_BUFFER_SIZE || io->data[i] == '\r') {
                     printf("%.*s", offset, buffer);
                     offset = 0;
                 }
