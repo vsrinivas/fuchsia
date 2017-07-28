@@ -57,9 +57,7 @@ class AgentRunnerTest : public TestWithMessageLoop {
   void SetUp() override {
     ledger_repo_for_testing_->ledger_repository()->GetLedger(
         to_array("agent_ledger_test"), agent_ledger_.NewRequest(),
-        [](ledger::Status status) {
-          ASSERT_EQ(ledger::Status::OK, status);
-        });
+        [](ledger::Status status) { ASSERT_EQ(ledger::Status::OK, status); });
 
     agent_ledger_->GetPage(to_array("0123456789123456"),
                            message_queue_page_.NewRequest(),
@@ -87,6 +85,10 @@ class AgentRunnerTest : public TestWithMessageLoop {
   MessageQueueManager* message_queue_manager() { return mqm_.get(); }
 
  protected:
+  AgentRunner* agent_runner() { return agent_runner_.get(); }
+  FakeApplicationLauncher* launcher() { return &launcher_; }
+
+ private:
   FakeApplicationLauncher launcher_;
   LedgerRepositoryForTesting* ledger_repo_for_testing_;
 
@@ -115,6 +117,8 @@ class MyDummyAgent : public Agent, public app::ApplicationController {
     outgoing_services_.AddBinding(std::move(outgoing_services));
   }
 
+  void KillApplication() { app_controller_.Close(); }
+
  private:
   // |ApplicationController|
   void Kill() override {}
@@ -122,21 +126,23 @@ class MyDummyAgent : public Agent, public app::ApplicationController {
   void Detach() override {}
 
   // |Agent|
-  void Initialize(::fidl::InterfaceHandle<modular::AgentContext> agent_context,
+  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
                   const InitializeCallback& callback) override {
     agent_initialized = true;
     callback();
   }
 
-  void Connect(
-      const ::fidl::String& requestor_url,
-      ::fidl::InterfaceRequest<app::ServiceProvider> services) override {
+  // |Agent|
+  void Connect(const fidl::String& requestor_url,
+               fidl::InterfaceRequest<app::ServiceProvider> services) override {
     agent_connected = true;
   }
 
-  void RunTask(const ::fidl::String& task_id,
+  // |Agent|
+  void RunTask(const fidl::String& task_id,
                const RunTaskCallback& callback) override {}
 
+  // |Agent|
   void Stop(const StopCallback& callback) override {
     agent_stopped = true;
     callback();
@@ -163,7 +169,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
 
   std::unique_ptr<MyDummyAgent> dummy_agent;
   constexpr char kMyAgentUrl[] = "file:///my_agent";
-  launcher_.RegisterApplication(
+  launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent, &agent_launched](
           app::ApplicationLaunchInfoPtr launch_info,
@@ -175,9 +181,9 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
 
   app::ServiceProviderPtr incoming_services;
   AgentControllerPtr agent_controller;
-  agent_runner_->ConnectToAgent("requestor_url", kMyAgentUrl,
-                                incoming_services.NewRequest(),
-                                agent_controller.NewRequest());
+  agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
+                                 incoming_services.NewRequest(),
+                                 agent_controller.NewRequest());
 
   RunLoopUntil([&agent_launched] { return agent_launched; });
   EXPECT_TRUE(agent_launched);
@@ -196,14 +202,42 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
 
   AgentControllerPtr agent_controller2;
   app::ServiceProviderPtr incoming_services2;
-  agent_runner_->ConnectToAgent("requestor_url2", kMyAgentUrl,
-                                incoming_services2.NewRequest(),
-                                agent_controller2.NewRequest());
+  agent_runner()->ConnectToAgent("requestor_url2", kMyAgentUrl,
+                                 incoming_services2.NewRequest(),
+                                 agent_controller2.NewRequest());
 
   RunLoopUntil([&dummy_agent] { return dummy_agent->agent_connected; });
   EXPECT_FALSE(agent_launched);
   EXPECT_FALSE(dummy_agent->agent_initialized);
   EXPECT_TRUE(dummy_agent->agent_connected);
+}
+
+// Test that if an agent application dies, it is removed from agent runner
+// (which means outstanding AgentControllers are closed).
+TEST_F(AgentRunnerTest, AgentController) {
+  std::unique_ptr<MyDummyAgent> dummy_agent;
+  constexpr char kMyAgentUrl[] = "file:///my_agent";
+  launcher()->RegisterApplication(
+      kMyAgentUrl,
+      [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
+                     fidl::InterfaceRequest<app::ApplicationController> ctrl) {
+        dummy_agent.reset(new MyDummyAgent(std::move(launch_info->services),
+                                           std::move(ctrl)));
+      });
+
+  app::ServiceProviderPtr incoming_services;
+  AgentControllerPtr agent_controller;
+  agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
+                                 incoming_services.NewRequest(),
+                                 agent_controller.NewRequest());
+
+  dummy_agent->KillApplication();
+
+  // Agent application died, so check that AgentController dies here.
+  agent_controller.set_connection_error_handler(
+      [&agent_controller] { agent_controller.reset(); });
+  RunLoopUntil([&agent_controller] { return !agent_controller.is_bound(); });
+  EXPECT_FALSE(agent_controller.is_bound());
 }
 
 }  // namespace
