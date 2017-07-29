@@ -73,7 +73,10 @@ mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_o
     if (status != MX_OK) return status;
 
     status = mx_vmo_get_size(vmo_handle, &size);
-    if (status != MX_OK) return status;
+    if (status != MX_OK) {
+        mx_handle_close(vmo_handle);
+        return status;
+    }
 
     return io_buffer_init_common(buffer, vmo_handle, size, offset, flags);
 }
