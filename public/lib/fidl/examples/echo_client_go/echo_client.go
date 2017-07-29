@@ -19,15 +19,16 @@ type EchoClientApp struct {
 }
 
 func (a *EchoClientApp) Start() {
-	r, p := echo.NewChannel()
-	a.ctx.ConnectToEnvironmentService(r.Name(), bindings.InterfaceRequest(r))
-	a.echo = echo.NewProxy(p, bindings.GetAsyncWaiter())
+	r, p := a.echo.NewRequest(bindings.GetAsyncWaiter())
+	a.echo = p
+	a.ctx.ConnectToEnvService(r)
 
-	resp, err := a.echo.EchoString(bindings.StringPointer("Hello, Go world!"))
+	s := "Hello, Go World"
+	resp, err := a.echo.EchoString(&s)
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		fmt.Printf("client: %s\n", *resp)
+		fmt.Printf("Response: %s\n", *resp)
 	}
 
 	a.echo.Close()

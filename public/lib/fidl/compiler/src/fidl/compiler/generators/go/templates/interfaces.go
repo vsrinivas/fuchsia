@@ -67,6 +67,11 @@ const interfaceOtherDeclTmplText = `
 {{- $interface := . -}}
 type Request bindings.InterfaceRequest
 
+func (r Request) PassChannel() mx.Handle {
+	i := bindings.InterfaceRequest(r)
+	return i.PassChannel()
+}
+
 type Pointer bindings.InterfacePointer
 
 type ServiceBinder struct{
@@ -103,6 +108,15 @@ func NewProxy(p Pointer, waiter bindings.AsyncWaiter) *Proxy {
 
 func (p *Proxy) Close() {
 	p.router.Close()
+}
+
+func (p *Proxy) NewRequest(waiter bindings.AsyncWaiter) (Request, *Proxy) {
+	r, ptr := NewChannel()
+	if p != nil {
+		p.Close()
+	}
+	p = NewProxy(ptr, waiter)
+	return r, p
 }
 
 type Stub struct {
@@ -291,11 +305,11 @@ const serviceDeclTmplText = `
 {{- $interface := . -}}
 const {{$interface.PrivateName}}_Name string = "{{$interface.ServiceName}}"
 
-func (r *Request) Name() string {
+func (r Request) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 
-func (p *Pointer) Name() string {
+func (p Pointer) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 
