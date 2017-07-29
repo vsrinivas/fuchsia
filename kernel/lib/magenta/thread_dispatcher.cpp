@@ -178,7 +178,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
     return MX_OK;
 }
 
-};
+} // namespace
 
 // complete initialization of the thread object outside of the constructor
 status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
