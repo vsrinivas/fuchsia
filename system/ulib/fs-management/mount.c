@@ -102,7 +102,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
                                     uint32_t* ids, size_t n, mountpoint_t* mp, mx_handle_t root) {
     mx_status_t status;
     if ((status = cb(argc, argv, hnd, ids, n)) != MX_OK) {
-        return status;
+        goto fail;
     }
 
     if (options->wait_until_ready) {
@@ -118,7 +118,7 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
 
     // Install remote handle.
     if (options->create_mountpoint) {
-        int fd = open("/", O_RDONLY | O_DIRECTORY);
+        int fd = open("/", O_RDONLY | O_DIRECTORY | O_ADMIN);
         if (fd < 0) {
             goto fail;
         }
@@ -132,23 +132,14 @@ static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* op
         config->fs_root = root;
         config->flags = mp->flags;
         strcpy(config->name, mp->path);
+        // Ioctl will close root for us if an error occurs
         status = ioctl_vfs_mount_mkdir_fs(fd, config, config_size);
-        // Currently, the recipient of the ioctl is sending the unmount signal
-        // if an error occurs.
         close(fd);
         free(config);
         return status;
-    } else {
-        if ((status = ioctl_vfs_mount_fs(mp->fd, &root)) != MX_OK) {
-            // TODO(smklein): Retreive the root handle if mounting fails.
-            // Currently, the recipient of the ioctl is sending the unmount signal
-            // if an error occurs.
-            return status;
-        }
     }
-
-    return MX_OK;
-
+    // Ioctl will close root for us if an error occurs
+    return ioctl_vfs_mount_fs(mp->fd, &root);
 fail:
     // We've entered a failure case where the filesystem process (which may or may not be alive)
     // had a *chance* to be spawned, but cannot be attached to a vnode (for whatever reason).

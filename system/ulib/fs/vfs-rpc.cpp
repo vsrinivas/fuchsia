@@ -437,6 +437,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
 
         switch (msg->arg2.op) {
         case IOCTL_VFS_MOUNT_FS:
+        case IOCTL_VFS_MOUNT_MKDIR_FS:
             // Mounting requires iostate privileges
             if (!(ios->io_flags & O_ADMIN)) {
                 vfs_unmount_handle(msg->handle[0], 0);
