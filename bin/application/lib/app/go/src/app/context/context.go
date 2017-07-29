@@ -19,17 +19,17 @@ import (
 )
 
 type Context struct {
-	Environment          *application_environment.Proxy
-	OutgoingService      *svcns.Namespace
-	serviceRoot          mx.Handle
-	Launcher             *application_launcher.Proxy
-	appServices          mx.Handle
+	Environment     *application_environment.Proxy
+	OutgoingService *svcns.Namespace
+	serviceRoot     mx.Handle
+	Launcher        *application_launcher.Proxy
+	appServices     mx.Handle
 }
 
 // TODO: define these in syscall/mx/mxruntime
 const (
-	HandleServiceRequest  mxruntime.HandleType = 0x3B
-	HandleAppServices     mxruntime.HandleType = 0x43
+	HandleServiceRequest mxruntime.HandleType = 0x3B
+	HandleAppServices    mxruntime.HandleType = 0x43
 )
 
 func getServiceRoot() mx.Handle {
@@ -54,13 +54,13 @@ func New(serviceRoot, serviceRequest, appServices mx.Handle) *Context {
 
 	c.OutgoingService = svcns.New()
 
-	r, p := application_environment.NewChannel()
-	c.ConnectToEnvironmentService(r.Name(), bindings.InterfaceRequest(r))
-	c.Environment = application_environment.NewProxy(p, bindings.GetAsyncWaiter())
+	r, p := c.Environment.NewRequest(bindings.GetAsyncWaiter())
+	c.Environment = p
+	c.ConnectToEnvService(r)
 
-	r2, p2 := application_launcher.NewChannel()
-	c.ConnectToEnvironmentService(r2.Name(), bindings.InterfaceRequest(r2))
-	c.Launcher = application_launcher.NewProxy(p2, bindings.GetAsyncWaiter())
+	r2, p2 := c.Launcher.NewRequest(bindings.GetAsyncWaiter())
+	c.Launcher = p2
+	c.ConnectToEnvService(r2)
 
 	if serviceRequest.IsValid() {
 		c.OutgoingService.ServeDirectory(serviceRequest)
@@ -89,14 +89,19 @@ func (c *Context) Serve() {
 	}
 }
 
-func (c *Context) Close() {
-	// TODO: should do something here?
+type interfaceRequest interface {
+	Name() string
+	PassChannel() mx.Handle
 }
 
-func (c *Context) ConnectToEnvironmentService(name string, r bindings.InterfaceRequest) {
-	err := rio.ServiceConnectAt(c.serviceRoot, name, r.PassChannel())
+func (c *Context) ConnectToEnvService(r interfaceRequest) {
+	c.ConnectToEnvServiceAt(r.Name(), r.PassChannel())
+}
+
+func (c *Context) ConnectToEnvServiceAt(name string, h mx.Handle) {
+	err := rio.ServiceConnectAt(c.serviceRoot, name, h)
 	if err != nil {
-		panic(fmt.Sprintf("ConnectToEnvironmentService: %v", err))
+		panic(fmt.Sprintf("ConnectToEnvService: %v: %v", name, err))
 	}
 }
 
