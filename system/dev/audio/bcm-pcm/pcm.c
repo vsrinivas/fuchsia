@@ -477,11 +477,15 @@ static mx_status_t pcm_get_buffer(bcm_pcm_t* ctx, audio_rb_cmd_get_buffer_req_t 
                                                 BCM_DMA_FLAGS_CIRCULAR);
     if (status != MX_OK) {
         xprintf("VMO dma linking failed (%d)\n", status);
+        mx_handle_close(ret_handle);
         goto gb_fail;
     }
     resp.result = status;
     status = mx_channel_write(ctx->buffer_ch, 0, &resp, sizeof(resp), &ret_handle, 1);
     mtx_unlock(&ctx->pcm_lock);
+    if (status != MX_OK) {
+        mx_handle_close(ret_handle);
+    }
     return status;
 
 gb_fail:
