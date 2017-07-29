@@ -1216,6 +1216,7 @@ mx_handle_t launchpad_start(launchpad_t* lp) {
     if (status == MX_OK)
         return proc;
 
+    mx_handle_close(proc);
     mx_handle_close(child_bootstrap);
     return status;
 }
