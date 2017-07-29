@@ -19,7 +19,7 @@ namespace {
 fbl::atomic<zx_koid_t> global_koid(1024ULL);
 
 zx_koid_t GenerateKernelObjectId() {
-    return global_koid.fetch_add(1ULL);
+    return global_koid.fetch_add(1ULL, fbl::memory_order_relaxed);
 }
 
 }  // namespace
