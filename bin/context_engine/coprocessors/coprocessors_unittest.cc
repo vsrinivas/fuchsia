@@ -16,8 +16,12 @@ class CoprocessorsTest : public ::testing::Test {
  public:
   CoprocessorsTest() = default;
 
-  std::string Set(const std::string& topic, const std::string& value) {
-    repository_->Set(topic, value);
+  std::string Set(const std::string& topic,
+                  const std::string& json,
+                  ContextMetadataPtr meta = ContextMetadata::New()) {
+    ContextValue value(json);
+    value.meta = std::move(meta);
+    repository_->Set(topic, std::move(value));
     return topic;
   }
 
@@ -32,13 +36,13 @@ class CoprocessorsTest : public ::testing::Test {
     repository_.reset(new ContextRepository());
   }
 
-  std::map<std::string, std::string> output() { return output_; }
+  std::map<std::string, ContextValue>& output() { return output_; }
 
  protected:
   std::unique_ptr<ContextCoprocessor> coprocessor_;
   std::unique_ptr<ContextRepository> repository_;
 
-  std::map<std::string, std::string> output_;
+  std::map<std::string, ContextValue> output_;
 };
 
 ///////////////////////////////////////////
@@ -50,8 +54,14 @@ TEST_F(AggregateTest, All) {
 
   auto wrong_topic =
       Set(MakeModuleScopeTopic("story1", "module1", "not_the_topic"), "foo");
-  auto right_topic =
-      Set(MakeModuleScopeTopic("story1", "module1", kTopic), "[1]");
+
+  // Set some meta on the first value -- we'll show that it is copied to the
+  // aggregate value.  This is not perfect, but will change in the future.
+  ContextMetadataPtr meta = ContextMetadata::New();
+  meta->story = StoryMetadata::New();
+  meta->story->id = "story1";
+  auto right_topic = Set(MakeModuleScopeTopic("story1", "module1", kTopic),
+                         "[1]", std::move(meta));
   Set(MakeModuleScopeTopic("story1", "module2", kTopic), "2");
   Set(MakeModuleScopeTopic("story1", "module3", kTopic), "[{\"k\":5},6]");
   auto other_story =
@@ -66,14 +76,19 @@ TEST_F(AggregateTest, All) {
   Run({right_topic});
   ASSERT_EQ(1lu, output().size());
   EXPECT_EQ("[1,2,{\"k\":5},6]",
-            output()[MakeStoryScopeTopic("story1", kTopic)]);
+            output()[MakeStoryScopeTopic("story1", kTopic)].json);
+  ASSERT_FALSE(output()[MakeStoryScopeTopic("story1", kTopic)].meta.is_null());
+  ASSERT_FALSE(
+      output()[MakeStoryScopeTopic("story1", kTopic)].meta->story.is_null());
+  ASSERT_EQ("story1",
+            output()[MakeStoryScopeTopic("story1", kTopic)].meta->story->id);
 
   // Similarly, if we indicate that the same topic for story2 was updated, we
   // should see an aggregation for story2.
   Run({other_story});
   ASSERT_EQ(1lu, output().size());
   EXPECT_EQ("[\"other story\"]",
-            output()[MakeStoryScopeTopic("story2", kTopic)]);
+            output()[MakeStoryScopeTopic("story2", kTopic)].json);
 }
 
 ///////////////////////////////////////////
@@ -107,8 +122,8 @@ TEST_F(FocusedStoryTest, All) {
   Set(focused_id, "\"1\"");
   Run({focused_id});
   ASSERT_EQ(2lu, output().size());
-  EXPECT_EQ("11", output()[focused_1]);
-  EXPECT_EQ("12", output()[focused_2]);
+  EXPECT_EQ("11", output()[focused_1].json);
+  EXPECT_EQ("12", output()[focused_2].json);
 
   // The focused story is now "1". Set some values in it.
   Set(topic1_1, "111");
@@ -116,8 +131,8 @@ TEST_F(FocusedStoryTest, All) {
   // Tell it topics from story 3 changed also.
   Run({topic1_1, topic1_3, topic2_1});
   ASSERT_EQ(2lu, output().size());
-  EXPECT_EQ("111", output()[focused_1]);
-  EXPECT_EQ("43", output()[focused_3]);
+  EXPECT_EQ("111", output()[focused_1].json);
+  EXPECT_EQ("43", output()[focused_3].json);
 
   // Finally set focused_id to null, and we should see all values in the
   // focused story scope set to null.
@@ -126,8 +141,8 @@ TEST_F(FocusedStoryTest, All) {
   Set(focused_2, "bar");
   Run({focused_id});
   ASSERT_EQ(2lu, output().size());
-  EXPECT_EQ("null", output()[focused_1]);
-  EXPECT_EQ("null", output()[focused_2]);
+  EXPECT_EQ("null", output()[focused_1].json);
+  EXPECT_EQ("null", output()[focused_2].json);
 }
 
 }  // namespace maxwell

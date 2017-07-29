@@ -45,23 +45,29 @@ ContextQueryPtr CreateWildcardQuery() {
 
 }  // namespace
 
-TEST_F(ContextRepositoryTest, GetSetRemove) {
+TEST_F(ContextRepositoryTest, GetSet) {
   // Values that don't exist shouldn't return a value.
   EXPECT_EQ(nullptr, repository_.Get("topic"));
 
   // Show that when we set values, we can get them back.
   repository_.Set("topic", "value");
-  EXPECT_EQ("value", *repository_.Get("topic"));
+  EXPECT_EQ("value", repository_.Get("topic")->json);
 
   // Setting another value doesn't affect the original value.
   repository_.Set("topic2", "value2");
-  EXPECT_EQ("value", *repository_.Get("topic"));
-  EXPECT_EQ("value2", *repository_.Get("topic2"));
+  EXPECT_EQ("value", repository_.Get("topic")->json);
+  EXPECT_EQ("value2", repository_.Get("topic2")->json);
+}
 
-  // Removing a value means it can't be fetched any more.
-  repository_.Remove("topic");
-  EXPECT_EQ(nullptr, repository_.Get("topic"));
-  EXPECT_EQ("value2", *repository_.Get("topic2"));
+TEST_F(ContextRepositoryTest, GetSet_Metadata) {
+  // Show that if we set metadata, we get it back.
+  ContextValue value;
+  value.json = "1";
+  value.meta->story = StoryMetadata::New();
+  value.meta->story->id = "s";
+
+  repository_.Set("topic", std::move(value));
+  EXPECT_EQ("s", repository_.Get("topic")->meta->story->id);
 }
 
 TEST_F(ContextRepositoryTest, Listener_Basic) {
@@ -263,12 +269,12 @@ TEST_F(ContextRepositoryTest, Filter_ForEach) {
 class TestCoprocessor : public ContextCoprocessor {
   using ProcessCall = std::function<void(const ContextRepository*,
                                          const std::set<std::string>&,
-                                         std::map<std::string, std::string>*)>;
+                                         std::map<std::string, ContextValue>*)>;
 
  public:
   void ProcessTopicUpdate(const ContextRepository* repository,
                           const std::set<std::string>& topics_updated,
-                          std::map<std::string, std::string>* out) override {
+                          std::map<std::string, ContextValue>* out) override {
     ASSERT_FALSE(process_calls_.empty());
     auto f = process_calls_.front();
     process_calls_.pop_front();
@@ -304,26 +310,26 @@ TEST_F(ContextRepositoryTest, Coprocessor_Basic) {
   coprocessor1->AddExpectedProcessCall(
       [this](const ContextRepository* repository,
              const std::set<std::string>& topics,
-             std::map<std::string, std::string>* out) {
+             std::map<std::string, ContextValue>* out) {
         ASSERT_FALSE(out == nullptr);
         ASSERT_EQ(&repository_, repository);
         EXPECT_EQ(1ul, topics.size());
         EXPECT_EQ("topic1", *topics.begin());
-        EXPECT_EQ("hello", *repository->Get("topic1"));
-        (*out)["topic2"] = "foobar";
+        EXPECT_EQ("hello", repository->Get("topic1")->json);
+        (*out)["topic2"] = ContextValue("foobar");
       });
   // The second coprocessor should see both "topic1" and "topic2" changes.
   coprocessor2->AddExpectedProcessCall(
       [](const ContextRepository* repository,
          const std::set<std::string>& topics,
-         std::map<std::string, std::string>* out) {
+         std::map<std::string, ContextValue>* out) {
         ASSERT_FALSE(out == nullptr);
         EXPECT_EQ(2ul, topics.size());
         EXPECT_EQ("topic1", *topics.begin());
-        EXPECT_EQ("hello", *repository->Get("topic1"));
+        EXPECT_EQ("hello", repository->Get("topic1")->json);
 
         EXPECT_EQ("topic2", *++topics.begin());
-        EXPECT_EQ("foobar", *repository->Get("topic2"));
+        EXPECT_EQ("foobar", repository->Get("topic2")->json);
       });
 
   // Before setting "topic1", we want to show that a listener for "topic2" (set

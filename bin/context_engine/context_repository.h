@@ -32,11 +32,12 @@ class ContextRepository {
   ContextRepository();
   ~ContextRepository();
 
+  // TODO(thatguy): Deprecate this as part of MW-137.
   void Set(const std::string& topic, const std::string& json_value);
-  // Returns nullptr if |topic| does not exist.
-  const std::string* Get(const std::string& topic) const;
 
-  void Remove(const std::string& topic);
+  void Set(const std::string& topic, ContextValue value);
+  // Returns nullptr if |topic| does not exist.
+  const ContextValue* Get(const std::string& topic) const;
 
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned SubscriptionId.
@@ -54,14 +55,14 @@ class ContextRepository {
   // Modules within the scope of a specific Story.
   void GetAllValuesInStoryScope(const std::string& story_id,
                                 const std::string& topic,
-                                std::vector<std::string>* output) const;
+                                std::vector<const ContextValue*>* output) const;
 
   // Stores into |output| all context topics with the given string prefix.
   void GetAllTopicsWithPrefix(const std::string& prefix,
                               std::vector<std::string>* output) const;
 
  private:
-  void SetInternal(const std::string& topic, const std::string* json_value);
+  void SetInternal(const std::string& topic, ContextValue value);
 
   bool EvaluateQueryAndBuildUpdate(const ContextQueryPtr& query,
                                    ContextUpdatePtr* update_output);
@@ -102,13 +103,16 @@ class ContextCoprocessor {
   // with additional topics and values to update.
   virtual void ProcessTopicUpdate(const ContextRepository* repository,
                                   const std::set<std::string>& topics_updated,
-                                  std::map<std::string, std::string>* out) = 0;
+                                  std::map<std::string, ContextValue>* out) = 0;
 };
 
 struct ContextValue {
   ContextValue();
+  explicit ContextValue(const std::string& json);
 
-  std::string value;
+  ContextValue Clone() const;
+
+  std::string json;
   ContextMetadataPtr meta;
 };
 

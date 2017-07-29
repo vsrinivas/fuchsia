@@ -14,18 +14,24 @@ namespace {
 const char kFocusedStoryTopic[] = "/story/focused_id";
 const char kJsonNull[] = "null";
 
+ContextValue MakeNullValue() {
+  ContextValue null_value;
+  null_value.json = kJsonNull;
+  return null_value;
+}
+
 // Returns an empty string if no Story is currently focused. Otherwise
 // returns the ID.
 std::string GetFocusedStoryId(const ContextRepository* repository) {
-  const std::string* focused_story_ptr = repository->Get(kFocusedStoryTopic);
+  const auto* focused_story_ptr = repository->Get(kFocusedStoryTopic);
   if (focused_story_ptr == nullptr)
     return "";
 
   rapidjson::Document d;
-  d.Parse(*focused_story_ptr);
+  d.Parse(focused_story_ptr->json);
   if (d.HasParseError()) {
     FTL_LOG(WARNING) << "Failed to parse JSON from context topic "
-                     << kFocusedStoryTopic << ": " << *focused_story_ptr;
+                     << kFocusedStoryTopic << ": " << focused_story_ptr->json;
     return "";
   }
 
@@ -34,7 +40,7 @@ std::string GetFocusedStoryId(const ContextRepository* repository) {
 
   if (!d.IsString()) {
     FTL_LOG(WARNING) << "JSON from context topic " << kFocusedStoryTopic
-                     << " is not a string: " << *focused_story_ptr;
+                     << " is not a string: " << focused_story_ptr->json;
     return "";
   }
 
@@ -44,7 +50,7 @@ std::string GetFocusedStoryId(const ContextRepository* repository) {
 void MaybeCopyTopic(const ContextRepository* repository,
                     const std::string& focused_story_id,
                     const std::string& topic,
-                    std::map<std::string, std::string>* out) {
+                    std::map<std::string, ContextValue>* out) {
   // Copy the updated values from the focused story's namespace to the
   // focused alias namespace.
   std::string story_id;
@@ -54,12 +60,12 @@ void MaybeCopyTopic(const ContextRepository* repository,
     return;
   }
 
-  const std::string* value = repository->Get(topic);
+  const ContextValue* value = repository->Get(topic);
   const std::string focused_scope_topic = MakeFocusedStoryScopeTopic(rel_topic);
   if (value == nullptr) {
-    (*out)[focused_scope_topic] = kJsonNull;
+    out->emplace(focused_scope_topic, MakeNullValue());
   } else {
-    (*out)[focused_scope_topic] = *value;
+    out->emplace(focused_scope_topic, value->Clone());
   }
 }
 
@@ -72,7 +78,7 @@ FocusedStoryCoprocessor::~FocusedStoryCoprocessor() = default;
 void FocusedStoryCoprocessor::ProcessTopicUpdate(
     const ContextRepository* repository,
     const std::set<std::string>& topics_updated,
-    std::map<std::string, std::string>* out) {
+    std::map<std::string, ContextValue>* out) {
   // Either:
   // a) The focused story has changed, in which case we need to copy
   //    everything over, and remove what's there already, or
@@ -88,7 +94,7 @@ void FocusedStoryCoprocessor::ProcessTopicUpdate(
     repository->GetAllTopicsWithPrefix(MakeFocusedStoryScopeTopic("/"),
                                        &topics);
     for (const auto& topic : topics) {
-      (*out)[topic] = kJsonNull;
+      out->emplace(topic, MakeNullValue());
     }
 
     // Step 2: copy in all new values, if relevant

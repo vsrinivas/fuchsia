@@ -24,7 +24,7 @@ class FocusedStoryCoprocessor : public ContextCoprocessor {
 
   void ProcessTopicUpdate(const ContextRepository* repository,
                           const std::set<std::string>& topics_updated,
-                          std::map<std::string, std::string>* out) override;
+                          std::map<std::string, ContextValue>* out) override;
 
  private:
   std::string current_focused_id_;

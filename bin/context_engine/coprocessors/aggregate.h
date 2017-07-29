@@ -21,7 +21,7 @@ class AggregateCoprocessor : public ContextCoprocessor {
   // with additional topics and values to update.
   void ProcessTopicUpdate(const ContextRepository* repository,
                           const std::set<std::string>& topics_updated,
-                          std::map<std::string, std::string>* out) override;
+                          std::map<std::string, ContextValue>* out) override;
 
  private:
   const std::string topic_to_aggregate_;

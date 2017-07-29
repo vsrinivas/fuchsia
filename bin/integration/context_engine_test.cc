@@ -50,9 +50,7 @@ class TestListener : public ContextListener {
     return binding_.NewBinding();
   }
 
-  void Reset() {
-    last_update_.reset();
-  }
+  void Reset() { last_update_.reset(); }
 
  private:
   ContextUpdatePtr last_update_;
@@ -83,9 +81,11 @@ class ContextEngineTest : public ContextEngineTestBase {
   ContextPublisherPtr publisher_;
 };
 
-ContextQueryPtr CreateQuery(const std::string& topic) {
+ContextQueryPtr CreateQuery(const std::vector<std::string> topics) {
   auto query = ContextQuery::New();
-  query->topics.push_back(topic);
+  for (const auto& topic : topics) {
+    query->topics.push_back(topic);
+  }
   return query;
 }
 
@@ -99,7 +99,7 @@ TEST_F(ContextEngineTest, PublishAndSubscribe) {
   publisher_->Publish("a_different_topic", "2");
 
   TestListener listener;
-  reader_->Subscribe(CreateQuery("topic"), listener.GetHandle());
+  reader_->Subscribe(CreateQuery({"topic"}), listener.GetHandle());
   listener.WaitForUpdate();
 
   ContextUpdatePtr update;
@@ -117,8 +117,8 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   // should be notified of new values.
   TestListener listener1;
   TestListener listener2;
-  reader_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
-  reader_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+  reader_->Subscribe(CreateQuery({"topic"}), listener1.GetHandle());
+  reader_->Subscribe(CreateQuery({"topic"}), listener2.GetHandle());
 
   publisher_->Publish("topic", "1");
   WAIT_UNTIL(listener1.PopLast());
@@ -130,8 +130,8 @@ TEST_F(ContextEngineTest, CloseListener) {
   TestListener listener2;
   {
     TestListener listener1;
-    reader_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
-    reader_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+    reader_->Subscribe(CreateQuery({"topic"}), listener1.GetHandle());
+    reader_->Subscribe(CreateQuery({"topic"}), listener2.GetHandle());
   }
 
   publisher_->Publish("topic", "\"don't crash\"");
@@ -141,14 +141,14 @@ TEST_F(ContextEngineTest, CloseListener) {
 TEST_F(ContextEngineTest, CloseProvider) {
   // After a provider is closed, its listeners should no longer recieve updates.
   TestListener listener1;
-  reader_->Subscribe(CreateQuery("topic"), listener1.GetHandle());
+  reader_->Subscribe(CreateQuery({"topic"}), listener1.GetHandle());
 
   // Close the provider and open a new one to ensure we're still running.
   InitProvider(MakeGlobalScope());
 
   publisher_->Publish("topic", "\"please don't crash\"");
   TestListener listener2;
-  reader_->Subscribe(CreateQuery("topic"), listener2.GetHandle());
+  reader_->Subscribe(CreateQuery({"topic"}), listener2.GetHandle());
 
   WAIT_UNTIL(listener2.PopLast());
   // Since the ContextReader owns subscriptions, and we closed it
@@ -174,18 +174,36 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
   InitProvider(MakeGlobalScope());
 
   publisher_->Publish("/topic", "1");
+  publisher_->Publish("/topic_type", R"({"@type": "type", "foo": "bar"})");
+  publisher_->Publish("/topic_type_array",
+                      R"({"@type": ["t1", "t2"], "foo": "bar"})");
 
   TestListener listener;
   // This is the 5-char prefix of the sha1 of url.
   const char kSha1OfUrl[] = "81736";
   const std::string kTopicString =
       MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic");
-  reader_->Subscribe(CreateQuery(kTopicString), listener.GetHandle());
+  const std::string kTopicStringType =
+      MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic_type");
+  const std::string kTopicStringTypeArray =
+      MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic_type_array");
+  reader_->Subscribe(
+      CreateQuery({kTopicString, kTopicStringType, kTopicStringTypeArray}),
+      listener.GetHandle());
   listener.WaitForUpdate();
 
   ContextUpdatePtr update;
   ASSERT_TRUE((update = listener.PopLast()));
   EXPECT_EQ("1", update->values[kTopicString]);
+
+  ASSERT_FALSE(update->meta[kTopicStringType]->entity.is_null());
+  ASSERT_EQ(1u, update->meta[kTopicStringType]->entity->type.size());
+  EXPECT_EQ("type", update->meta[kTopicStringType]->entity->type[0]);
+
+  ASSERT_FALSE(update->meta[kTopicStringTypeArray]->entity.is_null());
+  ASSERT_EQ(2u, update->meta[kTopicStringTypeArray]->entity->type.size());
+  EXPECT_EQ("t1", update->meta[kTopicStringTypeArray]->entity->type[0]);
+  EXPECT_EQ("t2", update->meta[kTopicStringTypeArray]->entity->type[1]);
 }
 
 }  // namespace maxwell

@@ -13,13 +13,14 @@ namespace maxwell {
 
 namespace {
 
-std::string AggregateJSONStrings(const std::vector<std::string>& json_values) {
+ContextValue AggregateJSONStrings(
+    const std::vector<const ContextValue*>& values) {
   rapidjson::Document out(rapidjson::kArrayType);
-  for (const auto& json : json_values) {
+  for (const auto* value : values) {
     rapidjson::Document d;
-    d.Parse(json);
+    d.Parse(value->json);
     if (d.HasParseError()) {
-      FTL_LOG(ERROR) << "JSON parse error: " << json;
+      FTL_LOG(ERROR) << "JSON parse error: " << value->json;
       continue;
     }
 
@@ -40,7 +41,13 @@ std::string AggregateJSONStrings(const std::vector<std::string>& json_values) {
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   out.Accept(writer);
-  return buffer.GetString();
+
+  // TODO(thatguy): this is just a hold-over to preserve any metadata.
+  // It's terrible. Fix it along with MW-137.
+  ContextValue new_value;
+  new_value.json = buffer.GetString();
+  new_value.meta = values[0]->meta.Clone();
+  return new_value;
 }
 
 }  // namespace
@@ -54,7 +61,7 @@ AggregateCoprocessor::~AggregateCoprocessor() = default;
 void AggregateCoprocessor::ProcessTopicUpdate(
     const ContextRepository* repository,
     const std::set<std::string>& topics_updated,
-    std::map<std::string, std::string>* out) {
+    std::map<std::string, ContextValue>* out) {
   for (const auto& topic : topics_updated) {
     std::string story_id;
     std::string module_id;
@@ -66,12 +73,12 @@ void AggregateCoprocessor::ProcessTopicUpdate(
     if (local_topic_id == topic_to_aggregate_) {
       // Get all |topic_to_aggregate_| across the same story, and aggregate
       // them.
-      std::vector<std::string> values;
+      std::vector<const ContextValue*> values;
       repository->GetAllValuesInStoryScope(story_id, topic_to_aggregate_,
                                            &values);
 
-      (*out)[MakeStoryScopeTopic(story_id, topic_to_aggregate_)] =
-          AggregateJSONStrings(values);
+      out->emplace(MakeStoryScopeTopic(story_id, topic_to_aggregate_),
+                   AggregateJSONStrings(values));
     }
   }
 }

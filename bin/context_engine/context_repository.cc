@@ -97,7 +97,8 @@ bool EvaluateFilter(const ContextFilterPtr& filter,
                     const rapidjson::Value& value,
                     rapidjson::Document* output_value) {
   FTL_CHECK(output_value != nullptr);
-  if (!filter) return false;
+  if (!filter)
+    return false;
 
   FilterFunction func;
   if (filter->is_partial_eq()) {
@@ -125,6 +126,15 @@ bool EvaluateFilter(const ContextFilterPtr& filter,
 
 //// ContextValue
 ContextValue::ContextValue() : meta(ContextMetadata::New()) {}
+ContextValue::ContextValue(const std::string& json)
+    : json(json), meta(ContextMetadata::New()) {}
+
+ContextValue ContextValue::Clone() const {
+  ContextValue new_value;
+  new_value.json = json;
+  new_value.meta = meta.Clone();
+  return new_value;
+}
 
 //// ContextRepository
 ContextRepository::ContextRepository() : next_subscription_id_(0) {}
@@ -132,20 +142,20 @@ ContextRepository::~ContextRepository() = default;
 
 void ContextRepository::Set(const std::string& topic,
                             const std::string& json_value) {
-  SetInternal(topic, &json_value);
+  ContextValue value;
+  value.json = json_value;
+  SetInternal(topic, std::move(value));
 }
 
-const std::string* ContextRepository::Get(const std::string& topic) const {
+void ContextRepository::Set(const std::string& topic, ContextValue value) {
+  SetInternal(topic, std::move(value));
+}
+
+const ContextValue* ContextRepository::Get(const std::string& topic) const {
   auto it = values_.find(topic);
   if (it == values_.end())
     return nullptr;
-  return &it->second.value;
-}
-
-// TODO(thatguy): Remove() is only used in tests. Deprecate in favor of
-// clients just setting the value to JSON null.
-void ContextRepository::Remove(const std::string& topic) {
-  SetInternal(topic, nullptr);
+  return &it->second;
 }
 
 ContextRepository::SubscriptionId ContextRepository::AddSubscription(
@@ -202,7 +212,7 @@ void ContextRepository::AddCoprocessor(ContextCoprocessor* coprocessor) {
 void ContextRepository::GetAllValuesInStoryScope(
     const std::string& story_id,
     const std::string& topic,
-    std::vector<std::string>* output) const {
+    std::vector<const ContextValue*>* output) const {
   FTL_DCHECK(output != nullptr);
   // TODO(thatguy): This is currently O(n), where n = the number of topics in
   // the repository.  To say the least, this is low-hanging fruit for
@@ -220,7 +230,7 @@ void ContextRepository::GetAllValuesInStoryScope(
     }
 
     if (entry_story_id == story_id && entry_local_topic == topic) {
-      output->push_back(entry.second.value);
+      output->push_back(&entry.second);
     }
   }
 }
@@ -238,26 +248,22 @@ void ContextRepository::GetAllTopicsWithPrefix(
 }
 
 void ContextRepository::SetInternal(const std::string& topic,
-                                    const std::string* json_value) {
+                                    ContextValue value) {
   FTL_DCHECK(topic.find('\'') == std::string::npos) << topic;
-  if (json_value != nullptr) {
-    FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << "|"
-                  << topic.length() << " = " << *json_value;
-    values_[topic].value = *json_value;
-  } else {
-    FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << " = null";
-    values_.erase(topic);
-  }
+
+  FTL_VLOG(4) << "ContextRepository::SetInternal(): " << topic << "|"
+              << topic.length() << " = " << value.json;
+  values_[topic] = std::move(value);
 
   // Run all the coprocessors we have registered.
   std::set<std::string> topics_updated{topic};
   for (auto& coprocessor : coprocessors_) {
-    std::map<std::string, std::string> new_updates;
+    std::map<std::string, ContextValue> new_updates;
     coprocessor->ProcessTopicUpdate(this, topics_updated, &new_updates);
     // Apply any new updates we are instructed to do.
     for (const auto& entry : new_updates) {
       topics_updated.insert(entry.first);
-      values_[entry.first].value = entry.second;
+      values_[entry.first] = entry.second.Clone();
     }
   }
 
@@ -291,27 +297,27 @@ bool ContextRepository::EvaluateQueryAndBuildUpdate(
     for (const auto& entry : values_) {
       if (!(*update_output))
         *update_output = ContextUpdate::New();
-      (*update_output)->values[entry.first] = entry.second.value;
+      (*update_output)->values[entry.first] = entry.second.json;
       (*update_output)->meta[entry.first] = entry.second.meta.Clone();
     }
     return true;
   }
 
   for (const auto& topic : query->topics) {
-    const std::string* current_value = Get(topic);
+    const ContextValue* current_value = Get(topic);
     if (current_value == nullptr) {
       // If a topic listed in the topics doesn't exist, return false.
       // TODO(thatguy): Revisit this. Instead, use the filters to gate updates.
       return false;
     }
-    std::string value_to_send = *current_value;
+    std::string value_to_send = current_value->json;
     if (query->filters) {
       auto it = query->filters.find(topic);
       if (it != query->filters.end()) {
         const auto& filter = it.GetValue();
 
         rapidjson::Document json_value;
-        json_value.Parse(*current_value);
+        json_value.Parse(current_value->json);
         FTL_CHECK(!json_value.HasParseError());
 
         rapidjson::Document filtered_value;
