@@ -734,9 +734,10 @@ static mx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, mx_devi
 
     uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
-    dev->irq = mx_interrupt_create(get_root_resource(), interrupt, MX_FLAG_REMAP_IRQ);
-    if (dev->irq < 0) {
-        return dev->irq;
+    mx_status_t status = mx_interrupt_create(get_root_resource(), interrupt, MX_FLAG_REMAP_IRQ,
+                                             &(dev->irq));
+    if (status != MX_OK) {
+        return status;
     }
 
         // create irq thread

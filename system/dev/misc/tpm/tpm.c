@@ -181,9 +181,8 @@ mx_status_t tpm_bind(void* ctx, mx_device_t* parent, void** cookie) {
         goto cleanup_device;
     }
 
-    irq_handle = mx_interrupt_create(get_root_resource(), 10, MX_FLAG_REMAP_IRQ);
-    if (irq_handle < 0) {
-        status = irq_handle;
+    status = mx_interrupt_create(get_root_resource(), 10, MX_FLAG_REMAP_IRQ, &irq_handle);
+    if (status != MX_OK) {
         goto cleanup_device;
     }
 

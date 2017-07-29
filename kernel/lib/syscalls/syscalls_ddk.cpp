@@ -47,7 +47,8 @@ static_assert(MX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
-mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t options) {
+mx_status_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t options,
+                                 user_ptr<mx_handle_t> out_handle) {
     LTRACEF("vector %u options 0x%x\n", vector, options);
 
     mx_status_t status;
@@ -65,6 +66,11 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle);
+
+    if (out_handle.copy_to_user(hv) != MX_OK) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
     up->AddHandle(mxtl::move(handle));
     return hv;
 }

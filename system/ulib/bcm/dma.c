@@ -108,13 +108,13 @@ mx_status_t bcm_dma_init(bcm_dma_t* dma, uint32_t ch) {
     dma->callback = NULL;
 
     xprintf("Initializing interrupt handler\n");
-    irq_handle = mx_interrupt_create(get_root_resource(),
+    status = mx_interrupt_create(get_root_resource(),
                                      INTERRUPT_DMA0 + ch,
-                                     MX_FLAG_REMAP_IRQ);
-    if (irq_handle < 0) {
+                                     MX_FLAG_REMAP_IRQ,
+                                     &irq_handle);
+    if (status != MX_OK) {
         xprintf("bcm-dma: failed to create interrupt handle, handle = %d\n",
-                irq_handle);
-        status = irq_handle; //clean up
+                status);
         goto dma_init_err;
     }
 

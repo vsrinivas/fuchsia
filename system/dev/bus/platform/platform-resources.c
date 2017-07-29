@@ -67,13 +67,12 @@ fail:
 
 mx_status_t platform_map_interrupt(platform_resources_t* resources, uint32_t index,
                                    mx_handle_t* out_handle) {
-    if (index >= resources->irq_count) {
+    if (index >= resources->irq_count || !out_handle) {
         return MX_ERR_INVALID_ARGS;
     }
     platform_irq_t* irq = &resources->irqs[index];
 
-    *out_handle = mx_interrupt_create(irq->resource, irq->irq, MX_FLAG_REMAP_IRQ);
-    return MX_OK;
+    return mx_interrupt_create(irq->resource, irq->irq, MX_FLAG_REMAP_IRQ, out_handle);
 }
 
 static mx_status_t platform_add_mmios(platform_bus_t* bus, mdi_node_ref_t* list_node,

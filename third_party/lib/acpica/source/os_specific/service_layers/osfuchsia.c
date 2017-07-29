@@ -885,8 +885,10 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
         return AE_NO_MEMORY;
     }
 
-    mx_handle_t handle = mx_interrupt_create(root_resource_handle, InterruptLevel, MX_FLAG_REMAP_IRQ);
-    if (handle < 0) {
+    mx_handle_t handle;
+    mx_status_t status = mx_interrupt_create(root_resource_handle, InterruptLevel,
+                                             MX_FLAG_REMAP_IRQ, &handle);
+    if (status != MX_OK) {
         free(arg);
         return AE_ERROR;
     }

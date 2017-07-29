@@ -504,7 +504,7 @@ syscall debug_send_command no_wrap
 
 syscall interrupt_create
     (handle: mx_handle_t, vector: uint32_t, options: uint32_t)
-    returns (mx_handle_t);
+    returns (mx_status_t, out_handle: mx_handle_t);
 
 syscall interrupt_complete
     (handle: mx_handle_t)
