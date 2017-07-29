@@ -83,18 +83,18 @@ string TargetTriple(const string& cmd) {
 }
 
 // Given the path to the command, calculate the matching sysroot
-string SysrootPath(const string& self_path) {
+string SysrootPath(const string& triple, const string& self_path) {
   const string out_dir_name = "out/";
   size_t pos = self_path.find(out_dir_name);
   if (pos != string::npos) {
-    size_t end_pos = self_path.find("/", pos+out_dir_name.length() + 1);
-    if (end_pos != string::npos) {
-        string sysroot_path = self_path.substr(0, end_pos) + "/sysroot";
-        struct stat stat_buf;
-        int status = stat(sysroot_path.c_str(), &stat_buf);
-        if (status == 0) {
-            return sysroot_path;
-        }
+    string out_path = self_path.substr(0, pos + out_dir_name.length());
+    string magenta_name = triple == "x86_64-unknown-fuchsia" ?
+      "build-magenta-pc-x86-64" : "build-magenta-qemu-arm64";
+    string sysroot_path = out_path + "build-magenta/" + magenta_name + "/sysroot";
+    struct stat stat_buf;
+    int status = stat(sysroot_path.c_str(), &stat_buf);
+    if (status == 0) {
+      return sysroot_path;
     }
   }
   return "";
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
   vector<string> args = CollectArgs(argc, argv);
 
   string newcmd = root + "buildtools/toolchain/clang+llvm-" + host + "/bin/" + tool;
-  string sysroot = SysrootPath(self_path);
+  string sysroot = SysrootPath(triple, self_path);
   if (sysroot.empty()) {
     Die("Can't find sysroot from wrapper path");
   }
