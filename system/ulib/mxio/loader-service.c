@@ -268,6 +268,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h,
         msg->arg = MX_OK;
         break;
     case LOADER_SVC_OP_DONE:
+        mx_handle_close(request_handle);
         return MX_ERR_PEER_CLOSED;
     default:
         fprintf(stderr, "dlsvc: invalid opcode 0x%x\n", msg->opcode);
