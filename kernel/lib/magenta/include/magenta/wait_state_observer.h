@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include <kernel/event.h>
+
 #include <magenta/dispatcher.h>
 #include <magenta/state_observer.h>
 #include <magenta/types.h>
@@ -15,7 +17,7 @@
 #include <mxtl/canary.h>
 #include <mxtl/ref_ptr.h>
 
-class WaitEvent;
+class Event;
 
 class WaitStateObserver final : public StateObserver {
 public:
@@ -23,8 +25,8 @@ public:
     ~WaitStateObserver();
 
     // This should be called under the handle table lock. If this succeeds, End() must be called
-    // (before the WaitEvent is destroyed).
-    mx_status_t Begin(WaitEvent* event,
+    // (before the Event is destroyed).
+    mx_status_t Begin(Event* event,
                       Handle* handle,
                       mx_signals_t watched_signals);
 
@@ -42,7 +44,7 @@ private:
 
     mxtl::Canary<mxtl::magic("WTSO")> canary_;
 
-    WaitEvent* event_ = nullptr;
+    Event* event_ = nullptr;
     Handle* handle_ = nullptr;
     mx_signals_t watched_signals_ = 0u;
     mx_signals_t wakeup_reasons_;

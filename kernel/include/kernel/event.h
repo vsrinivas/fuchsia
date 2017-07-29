@@ -8,8 +8,12 @@
 #ifndef __KERNEL_EVENT_H
 #define __KERNEL_EVENT_H
 
+#pragma once
+
+#include <err.h>
 #include <magenta/compiler.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <kernel/thread.h>
 
@@ -75,3 +79,42 @@ __END_CDECLS;
 
 #endif
 
+#ifdef __cplusplus
+
+// C++ wrapper. This should be waited on from only a single thread, but may be
+// signaled from many threads (Signal() is thread-safe).
+class Event {
+public:
+    Event(uint32_t opts = 0) {
+        event_init(&event_, false, opts);
+    }
+    ~Event() {
+        event_destroy(&event_);
+    }
+
+    Event(const Event&) = delete;
+    Event& operator=(const Event&) = delete;
+
+    // Returns:
+    // MX_OK - signaled
+    // MX_ERR_TIMED_OUT - time out expired
+    // MX_ERR_INTERNAL_INTR_KILLED - thread killed
+    // Or the |status| which the caller specified in Event::Signal(status)
+    status_t Wait(lk_time_t deadline) {
+        return event_wait_deadline(&event_, deadline, true);
+    }
+
+    // returns number of ready threads
+    int Signal(status_t status = MX_OK) {
+        return event_signal_etc(&event_, false, status);
+    }
+
+    status_t Unsignal() {
+        return event_unsignal(&event_);
+    }
+
+private:
+    event_t event_;
+};
+
+#endif // __cplusplus

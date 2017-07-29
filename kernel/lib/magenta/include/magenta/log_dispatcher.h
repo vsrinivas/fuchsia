@@ -10,7 +10,6 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
-#include <magenta/wait_event.h>
 #include <mxtl/canary.h>
 
 class LogDispatcher final : public Dispatcher {

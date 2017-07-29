@@ -9,6 +9,7 @@
 #include <trace.h>
 
 #include <kernel/auto_lock.h>
+#include <kernel/event.h>
 #include <platform.h>
 
 #include <lib/ktrace.h>
@@ -17,7 +18,6 @@
 #include <magenta/magenta.h>
 #include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
-#include <magenta/wait_event.h>
 #include <magenta/wait_state_observer.h>
 
 #include <mxtl/inline_array.h>
@@ -38,7 +38,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
                                 user_ptr<mx_signals_t> _observed) {
     LTRACEF("handle %x\n", handle_value);
 
-    WaitEvent event;
+    Event event;
 
     status_t result;
     WaitStateObserver wait_state_observer;
@@ -113,7 +113,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    WaitEvent event;
+    Event event;
 
     // We may need to unwind (which can be done outside the lock).
     status_t result = MX_OK;

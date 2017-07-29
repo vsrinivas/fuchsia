@@ -8,8 +8,9 @@
 
 #include <assert.h>
 
+#include <kernel/event.h>
+
 #include <magenta/state_tracker.h>
-#include <magenta/wait_event.h>
 
 #include <mxtl/type_support.h>
 
@@ -17,7 +18,7 @@ WaitStateObserver::~WaitStateObserver() {
     DEBUG_ASSERT(!dispatcher_);
 }
 
-mx_status_t WaitStateObserver::Begin(WaitEvent* event,
+mx_status_t WaitStateObserver::Begin(Event* event,
                                      Handle* handle,
                                      mx_signals_t watched_signals) {
     canary_.Assert();
@@ -102,4 +103,3 @@ StateObserver::Flags WaitStateObserver::OnCancel(Handle* handle) {
         return 0;
     }
 }
-

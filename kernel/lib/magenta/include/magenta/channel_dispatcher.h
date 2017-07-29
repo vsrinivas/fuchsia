@@ -8,11 +8,12 @@
 
 #include <stdint.h>
 
+#include <kernel/event.h>
+
 #include <magenta/dispatcher.h>
 #include <magenta/message_packet.h>
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
-#include <magenta/wait_event.h>
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -87,7 +88,7 @@ public:
         mxtl::unique_ptr<MessagePacket> msg_;
         // TODO(teisenbe/swetland): Investigate hoisting this outside to reduce
         // userthread size
-        WaitEvent event_;
+        Event event_;
         mx_txid_t txid_;
         mx_status_t status_;
     };

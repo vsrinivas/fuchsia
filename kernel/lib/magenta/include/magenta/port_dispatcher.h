@@ -13,7 +13,6 @@
 #include <magenta/state_observer.h>
 #include <magenta/syscalls/port.h>
 #include <magenta/types.h>
-#include <magenta/wait_event.h>
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>

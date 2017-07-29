@@ -7,7 +7,6 @@
 #include <magenta/state_tracker.h>
 
 #include <kernel/auto_lock.h>
-#include <magenta/wait_event.h>
 
 namespace {
 
