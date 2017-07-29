@@ -805,10 +805,8 @@ mx_status_t launchpad_add_vdso_vmo(launchpad_t* lp) {
     mx_status_t status;
     if ((status = launchpad_get_vdso_vmo(&vdso)) != MX_OK)
         return lp_error(lp, status, "add_vdso_vmo: get_vdso_vmo failed");
-    status = launchpad_add_handle(lp, vdso, PA_HND(PA_VMO_VDSO, 0));
-    if (status != MX_OK)
-        mx_handle_close(vdso);
-    return status;
+    // Takes ownership of 'vdso'.
+    return launchpad_add_handle(lp, vdso, PA_HND(PA_VMO_VDSO, 0));
 }
 
 mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo) {
