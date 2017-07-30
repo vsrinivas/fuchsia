@@ -63,6 +63,10 @@ class StoryStorageImpl : PageClient {
 
   void Sync(const SyncCallback& callback);
 
+  // When callback is invoked, all watcher notifications for pending changes are
+  // guaranteed to have been received.
+  void FlushWatchers(const SyncCallback& callback);
+
   void WatchLink(const LinkPathPtr& link_path,
                  LinkImpl* impl,
                  const DataCallback& watcher);
@@ -91,6 +95,7 @@ class StoryStorageImpl : PageClient {
   // Operations implemented here.
   class ReadLinkDataCall;
   class WriteLinkDataCall;
+  class FlushWatchersCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

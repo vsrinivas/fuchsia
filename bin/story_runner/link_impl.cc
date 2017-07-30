@@ -18,12 +18,11 @@ namespace modular {
 namespace {
 
 template <typename Doc>
-rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
+rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromPath(
     const Doc& doc,
-    typename fidl::Array<fidl::String>::Iterator begin,
-    typename fidl::Array<fidl::String>::Iterator end) {
+    const fidl::Array<fidl::String>& path) {
   rapidjson::GenericPointer<typename Doc::ValueType> pointer;
-  for (auto it = begin; it != end; ++it) {
+  for (auto it = path.begin(); it != path.end(); ++it) {
     pointer = pointer.Append(it->get(), nullptr);
   }
   return pointer;
@@ -31,18 +30,394 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
 
 }  // namespace
 
+class LinkImpl::ReadCall : Operation<> {
+ public:
+  ReadCall(OperationContainer* const container,
+           LinkImpl* const impl,
+           ResultCall result_call)
+      : Operation("LinkImpl::ReadCall",
+                  container,
+                  std::move(result_call)),
+        impl_(impl) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    impl_->story_storage_->ReadLinkData(
+        impl_->link_path_,
+        [this, flow](const fidl::String& json) {
+          if (!json.is_null()) {
+            impl_->doc_.Parse(json.get());
+          }
+        });
+  }
+
+  LinkImpl* const impl_;  // not owned
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ReadCall);
+};
+
+class LinkImpl::WriteCall : Operation<> {
+ public:
+  WriteCall(OperationContainer* const container,
+            LinkImpl* const impl,
+            const uint32_t src,
+            ResultCall result_call)
+      : Operation("LinkImpl::WriteCall",
+                  container,
+                  std::move(result_call)),
+        impl_(impl),
+        src_(src) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    FTL_CHECK(!impl_->pending_write_call_);
+    impl_->pending_write_call_ = true;
+
+    impl_->story_storage_->WriteLinkData(
+        impl_->link_path_, JsonValueToString(impl_->doc_), [this, flow] {
+          Cont1(flow);
+        });
+  }
+
+  void Cont1(FlowToken flow) {
+    FTL_CHECK(impl_->pending_write_call_);
+    impl_->story_storage_->FlushWatchers(
+        [this, flow] {
+          Cont2(flow);
+        });
+  }
+
+  void Cont2(FlowToken flow) {
+    FTL_CHECK(impl_->pending_write_call_);
+    impl_->pending_write_call_ = false;
+    impl_->NotifyWatchers(src_);
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const uint32_t src_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(WriteCall);
+};
+
+class LinkImpl::SetSchemaCall : Operation<> {
+ public:
+  SetSchemaCall(OperationContainer* const container,
+                LinkImpl* const impl,
+                const fidl::String& json_schema)
+      : Operation("LinkImpl::SetSchemaCall", container, []{}),
+        impl_(impl),
+        json_schema_(json_schema) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    rapidjson::Document doc;
+    doc.Parse(json_schema_.get());
+    if (doc.HasParseError()) {
+      FTL_LOG(ERROR) << "LinkImpl::SetSchema() " << EncodeLinkPath(impl_->link_path_)
+                     << " JSON parse failed error #" << doc.GetParseError()
+                     << std::endl
+                     << json_schema_;
+      return;
+    }
+
+    impl_->schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::String json_schema_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(SetSchemaCall);
+};
+
+class LinkImpl::GetCall : Operation<fidl::String> {
+ public:
+  GetCall(OperationContainer* const container,
+          LinkImpl* const impl,
+          fidl::Array<fidl::String> path,
+          ResultCall result_call)
+      : Operation("LinkImpl::GetCall",
+                  container,
+                  std::move(result_call)),
+        impl_(impl),
+        path_(std::move(path)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this, &result_};
+
+    auto p = CreatePointerFromPath(impl_->doc_, path_).Get(impl_->doc_);
+
+    if (p != nullptr) {
+      result_ = fidl::String(JsonValueToString(*p));
+    }
+  }
+
+  LinkImpl* const impl_;  // not owned
+  fidl::Array<fidl::String> path_;
+  fidl::String result_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetCall);
+};
+
+class LinkImpl::SetCall : Operation<> {
+ public:
+  SetCall(OperationContainer* const container,
+          LinkImpl* const impl,
+          fidl::Array<fidl::String> path,
+          const fidl::String& json,
+          const uint32_t src)
+      : Operation("LinkImpl::SetCall",
+                  container,
+                  []{}),
+        impl_(impl),
+        path_(std::move(path)),
+        json_(json),
+        src_(src) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    CrtJsonDoc new_value;
+    new_value.Parse(json_);
+    if (new_value.HasParseError()) {
+      FTL_LOG(ERROR) << "LinkImpl::Set() " << EncodeLinkPath(impl_->link_path_)
+                     << " JSON parse failed error #" << new_value.GetParseError()
+                     << std::endl
+                     << json_;
+      return;
+    }
+
+    bool dirty = true;
+    bool alreadyExist = false;
+
+    CrtJsonPointer ptr = CreatePointerFromPath(impl_->doc_, path_);
+    CrtJsonValue& current_value =
+      ptr.Create(impl_->doc_, impl_->doc_.GetAllocator(), &alreadyExist);
+    if (alreadyExist) {
+      dirty = new_value != current_value;
+    }
+
+    if (dirty) {
+      ptr.Set(impl_->doc_, new_value);
+      impl_->ValidateSchema("LinkImpl::Set", ptr, json_.get());
+      new WriteCall(&operation_queue_, impl_, src_, [this, flow]{
+          FTL_LOG(INFO) << "SET DONE " << json_;
+        });
+    }
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::Array<fidl::String> path_;
+  const fidl::String json_;
+  const uint32_t src_;
+
+  // WriteCall is executed here.
+  OperationQueue operation_queue_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(SetCall);
+};
+
+class LinkImpl::UpdateObjectCall : Operation<> {
+ public:
+  UpdateObjectCall(OperationContainer* const container,
+                   LinkImpl* const impl,
+                   fidl::Array<fidl::String> path,
+                   const fidl::String& json,
+                   const uint32_t src)
+      : Operation("LinkImpl::UpdateObjectCall",
+                  container,
+                  []{}),
+        impl_(impl),
+        path_(std::move(path)),
+        json_(json),
+        src_(src) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    CrtJsonDoc new_value;
+    new_value.Parse(json_);
+    if (new_value.HasParseError()) {
+      FTL_LOG(ERROR) << "LinkImpl::UpdateObject() " << EncodeLinkPath(impl_->link_path_)
+                     << " JSON parse failed error #" << new_value.GetParseError()
+                     << std::endl
+                     << json_;
+      return;
+    }
+
+    auto ptr = CreatePointerFromPath(impl_->doc_, path_);
+    CrtJsonValue& current_value = ptr.Create(impl_->doc_);
+
+    const bool dirty =
+      MergeObject(current_value, std::move(new_value), impl_->doc_.GetAllocator());
+    if (dirty) {
+      impl_->ValidateSchema("LinkImpl::UpdateObject", ptr, json_.get());
+      new WriteCall(&operation_queue_, impl_, src_, [flow]{});
+    }
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::Array<fidl::String> path_;
+  const fidl::String json_;
+  const uint32_t src_;
+
+  // WriteCall is executed here.
+  OperationQueue operation_queue_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(UpdateObjectCall);
+};
+
+class LinkImpl::EraseCall : Operation<> {
+ public:
+  EraseCall(OperationContainer* const container,
+            LinkImpl* const impl,
+            fidl::Array<fidl::String> path,
+            const uint32_t src)
+      : Operation("LinkImpl::EraseCall", container, []{}),
+        impl_(impl),
+        path_(std::move(path)),
+        src_(src) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+    auto ptr = CreatePointerFromPath(impl_->doc_, path_);
+    auto value = ptr.Get(impl_->doc_);
+    if (value != nullptr && ptr.Erase(impl_->doc_)) {
+      impl_->ValidateSchema("LinkImpl::Erase", ptr, std::string());
+      new WriteCall(&operation_queue_, impl_, src_, [flow]{});
+    }
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::Array<fidl::String> path_;
+  const uint32_t src_;
+
+  // WriteCall is executed here.
+  OperationQueue operation_queue_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(EraseCall);
+};
+
+class LinkImpl::WatchCall : Operation<> {
+ public:
+  WatchCall(OperationContainer* const container,
+            LinkImpl* const impl,
+            fidl::InterfaceHandle<LinkWatcher> watcher,
+            const uint32_t conn)
+      : Operation("LinkImpl::WatchCall", container, []{}),
+        impl_(impl),
+        watcher_(LinkWatcherPtr::Create(std::move(watcher))),
+        conn_(conn) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // TODO(jimbe): We need to send an initial notification of state until there
+    // is snapshot information that can be used by clients to query the state at
+    // this instant. Otherwise there is no sequence information about total
+    // state versus incremental changes.
+    //
+    // TODO(mesch): We should adopt the pattern from ledger to read the value
+    // and register a watcher for subsequent changes in the same operation, so
+    // that we don't have to send the current value to the watcher.
+    watcher_->Notify(JsonValueToString(impl_->doc_));
+
+    impl_->watchers_.emplace_back(
+        std::make_unique<LinkWatcherConnection>(
+            impl_, std::move(watcher_), conn_));
+  }
+
+  LinkImpl* const impl_;  // not owned
+  LinkWatcherPtr watcher_;
+  const uint32_t conn_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(WatchCall);
+};
+
+class LinkImpl::ChangeCall : Operation<> {
+ public:
+  ChangeCall(OperationContainer* const container,
+          LinkImpl* const impl,
+          const fidl::String& json)
+      : Operation("LinkImpl::ChangeCall",
+                  container,
+                  []{}),
+        impl_(impl),
+        json_(json) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // NOTE(jimbe) With rapidjson, the opposite check is more expensive, O(n^2),
+    // so we won't do it for now. See case kObjectType in operator==() in
+    // include/rapidjson/document.h.
+    //
+    //  if (doc_.Equals(json)) {
+    //    return;
+    //  }
+    //
+    // Since all json in a link was written by the same serializer, this check
+    // is mostly accurate. This test has false negatives when only order
+    // differs.
+    if (json_ == JsonValueToString(impl_->doc_)) {
+      return;
+    }
+
+    // TODO(mesch): This caused FW-208 earlier, and is still not correct because
+    // it might cause local changes to get lost. The new value needs to be
+    // merged, but likely not here but in a conflict resolver.
+    impl_->doc_.Parse(json_);
+    impl_->NotifyWatchers(kOnChangeConnectionId);
+  }
+
+  LinkImpl* const impl_;  // not owned
+  const fidl::String json_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
+};
+
+
+
 LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
                    const LinkPathPtr& link_path)
     : link_path_(link_path.Clone()),
-      story_storage_(story_storage),
-      write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
-  ReadLinkData([this] {
-    for (auto& request : requests_) {
-      LinkConnection::New(this, next_connection_id_++, std::move(request));
-    }
-    requests_.clear();
-    ready_ = true;
-  });
+      story_storage_(story_storage) {
+  new ReadCall(&operation_queue_, this, [this] {
+      for (auto& request : requests_) {
+        LinkConnection::New(this, next_connection_id_++, std::move(request));
+      }
+      requests_.clear();
+      ready_ = true;
+    });
 
   story_storage_->WatchLink(
       link_path, this, [this](const fidl::String& json) { OnChange(json); });
@@ -61,111 +436,48 @@ void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
 }
 
 void LinkImpl::SetSchema(const fidl::String& json_schema) {
-  rapidjson::Document doc;
-  doc.Parse(json_schema.get());
-  if (doc.HasParseError()) {
-    // TODO(jimbe, mesch): This method needs a success status,
-    // otherwise clients have no way to know they sent bogus data.
-    FTL_LOG(ERROR) << "LinkImpl::SetSchema() " << EncodeLinkPath(link_path_)
-                   << " JSON parse failed error #" << doc.GetParseError()
-                   << std::endl
-                   << json_schema;
-    return;
-  }
-  schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
+  // TODO(jimbe, mesch): This method needs a success status,
+  // otherwise clients have no way to know they sent bogus data.
+  new SetSchemaCall(&operation_queue_, this, json_schema);
 }
 
-// The |src| identifies which client made the call to Set() or Update(), so it
-// notifies either all clients or all other clients, depending on whether
-// WatchAll() or Watch() was called, respectively.
+void LinkImpl::Get(fidl::Array<fidl::String> path,
+                   const std::function<void(fidl::String)>& callback) {
+  new GetCall(&operation_queue_, this, std::move(path), callback);
+}
+
+// The |src| argument identifies which client made the call to Set() or
+// Update(), so that it notifies either all clients or all other clients,
+// depending on whether WatchAll() or Watch() was called, respectively.
 //
 // When a watcher is registered, it first receives an OnChange() call with the
 // current value. Thus, when a client first calls Set() and then Watch(), its
 // LinkWatcher receives the value that was just Set(). This should not be
 // surprising, and clients should register their watchers first before setting
-// the link value. TODO(mesch): We should adopt the pattern from ledger to read
-// the value and register a watcher for subsequent changes in the same
-// operation, so that we don't have to send the current value to the watcher.
+// the link value.
 void LinkImpl::Set(fidl::Array<fidl::String> path,
                    const fidl::String& json,
                    const uint32_t src) {
-  CrtJsonDoc new_value;
-  new_value.Parse(json);
-  if (new_value.HasParseError()) {
-    // TODO(jimbe, mesch): This method needs a success status,
-    // otherwise clients have no way to know they sent bogus data.
-    FTL_LOG(ERROR) << "LinkImpl::Set() " << EncodeLinkPath(link_path_)
-                   << " JSON parse failed error #" << new_value.GetParseError()
-                   << std::endl
-                   << json.get();
-    return;
-  }
-
-  bool dirty = true;
-  bool alreadyExist = false;
-
-  CrtJsonPointer ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
-  CrtJsonValue& current_value =
-      ptr.Create(doc_, doc_.GetAllocator(), &alreadyExist);
-  if (alreadyExist) {
-    dirty = new_value != current_value;
-  }
-
-  if (dirty) {
-    ptr.Set(doc_, new_value);
-    ValidateSchema("LinkImpl::Set", ptr, json.get());
-    DatabaseChanged(src);
-  }
-}
-
-void LinkImpl::Get(fidl::Array<fidl::String> path,
-                   const std::function<void(fidl::String)>& callback) {
-  auto p = CreatePointerFromArray(doc_, path.begin(), path.end()).Get(doc_);
-  if (p == nullptr) {
-    callback(fidl::String());
-  } else {
-    callback(fidl::String(JsonValueToString(*p)));
-  }
+  // TODO(jimbe, mesch): This method needs a success status, otherwise clients
+  // have no way to know they sent bogus data.
+  new SetCall(&operation_queue_, this, std::move(path), json, src);
 }
 
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
                             const fidl::String& json,
                             const uint32_t src) {
-  CrtJsonDoc new_value;
-  new_value.Parse(json);
-  if (new_value.HasParseError()) {
-    // TODO(jimbe, mesch): This method needs a success status,
-    // otherwise clients have no way to know they sent bogus data.
-    FTL_LOG(ERROR) << "LinkImpl::UpdateObject() " << EncodeLinkPath(link_path_)
-                   << " JSON parse failed error #" << new_value.GetParseError()
-                   << std::endl
-                   << json.get();
-    return;
-  }
-
-  auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
-  CrtJsonValue& current_value = ptr.Create(doc_);
-
-  const bool dirty =
-      MergeObject(current_value, std::move(new_value), doc_.GetAllocator());
-  if (dirty) {
-    ValidateSchema("LinkImpl::UpdateObject", ptr, json.get());
-    DatabaseChanged(src);
-  }
+  // TODO(jimbe, mesch): This method needs a success status,
+  // otherwise clients have no way to know they sent bogus data.
+  new UpdateObjectCall(&operation_queue_, this, std::move(path), json, src);
 }
 
 void LinkImpl::Erase(fidl::Array<fidl::String> path,
                      const uint32_t src) {
-  auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
-  auto value = ptr.Get(doc_);
-  if (value != nullptr && ptr.Erase(doc_)) {
-    ValidateSchema("LinkImpl::Erase", ptr, std::string());
-    DatabaseChanged(src);
-  }
+  new EraseCall(&operation_queue_, this, std::move(path), src);
 }
 
 void LinkImpl::Sync(const std::function<void()>& callback) {
-  story_storage_->Sync(callback);
+  new SyncCall(&operation_queue_, callback);
 }
 
 // Merges source into target. The values will be move()'d out of |source|.
@@ -202,32 +514,6 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
   return diff;
 }
 
-void LinkImpl::ReadLinkData(const std::function<void()>& done) {
-  story_storage_->ReadLinkData(link_path_,
-                               [this, done](const fidl::String& json) {
-                                 if (!json.is_null()) {
-                                   doc_.Parse(json.get());
-                                 }
-
-                                 done();
-                               });
-}
-
-void LinkImpl::WriteLinkData(const std::function<void()>& done) {
-  write_link_data_(done);
-}
-
-void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
-  story_storage_->WriteLinkData(link_path_, JsonValueToString(doc_), done);
-}
-
-void LinkImpl::DatabaseChanged(const uint32_t src) {
-  // src is only used to compare its value. If the connection was
-  // deleted before the callback is invoked, it will also be removed
-  // from connections_.
-  WriteLinkData([this, src] { NotifyWatchers(src); });
-}
-
 void LinkImpl::ValidateSchema(const char* const entry_point,
                               const CrtJsonPointer& pointer,
                               const std::string& json) {
@@ -258,28 +544,16 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
 }
 
 void LinkImpl::OnChange(const fidl::String& json) {
-  // NOTE(jimbe) With rapidjson, the opposite check is more expensive,
-  // O(n^2), so we won't do it for now. See case kObjectType in
-  // operator==() in include/rapidjson/document.h.
-  //
-  //  if (doc_.Equals(json)) {
-  //    return;
-  //  }
-  //
-  // Since all json in a link was written by the same serializer, this
-  // check is mostly accurate. This test has false negatives when only
-  // order differs.
-  if (json == JsonValueToString(doc_)) {
+  if (pending_write_call_) {
+    // During a pending write, all change notifications are ignored. These are
+    // the change notifications for the write, but potentially also the change
+    // notifications from network updates.
+    //
+    // TODO(mesch): The latter really need to be merged.
     return;
   }
 
-  // TODO(jimbe): Decide how these changes should be merged into the current
-  // CrtJsonDoc. In this first iteration, we'll do a wholesale replace.
-  //
-  // NOTE(mesch): This causes FW-208.
-  doc_.Parse(json);
-
-  NotifyWatchers(kOnChangeConnectionId);
+  new ChangeCall(&operation_queue_, this, json);
 }
 
 void LinkImpl::NotifyWatchers(const uint32_t src) {
@@ -331,17 +605,7 @@ void LinkImpl::RemoveConnection(LinkWatcherConnection* const connection) {
 
 void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
                      const uint32_t conn) {
-  LinkWatcherPtr watcher_ptr;
-  watcher_ptr.Bind(std::move(watcher));
-
-  // TODO(jimbe): We need to send an initial notification of state until there
-  // is snapshot information that can be used by clients to query the state at
-  // this instant. Otherwise there is no sequence information about total state
-  // versus incremental changes.
-  watcher_ptr->Notify(JsonValueToString(doc_));
-
-  watchers_.emplace_back(std::make_unique<LinkWatcherConnection>(
-      this, std::move(watcher_ptr), conn));
+  new WatchCall(&operation_queue_, this, std::move(watcher), conn);
 }
 
 void LinkImpl::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {

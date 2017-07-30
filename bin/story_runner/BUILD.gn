@@ -34,7 +34,6 @@ source_set("story_runner") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:bottleneck",
     "//apps/modular/lib/fidl:context",
     "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:operation",

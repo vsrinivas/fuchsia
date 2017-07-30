@@ -5,7 +5,7 @@
 #ifndef APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 #define APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 
-#include "apps/modular/lib/fidl/bottleneck.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -89,11 +89,7 @@ class LinkImpl {
                           CrtJsonValue&& source,
                           CrtJsonValue::AllocatorType& allocator);
 
-  void DatabaseChanged(uint32_t src);
   void NotifyWatchers(uint32_t src);
-  void ReadLinkData(const std::function<void()>& callback);
-  void WriteLinkData(const std::function<void()>& callback);
-  void WriteLinkDataImpl(const std::function<void()>& callback);
   void OnChange(const fidl::String& json);
   void ValidateSchema(const char* entry_point,
                       const CrtJsonPointer& pointer,
@@ -145,10 +141,25 @@ class LinkImpl {
   // A JSON schema to be applied to the Link value.
   std::unique_ptr<rapidjson::SchemaDocument> schema_doc_;
 
-  // Helps to defer asynchronous notification of updated values until after they
-  // have been written to Ledger, and not have been updated while they were
-  // written.
-  Bottleneck write_link_data_;
+  OperationQueue operation_queue_;
+
+  // Operations implemented here.
+  class ReadCall;
+  class WriteCall;
+  class GetCall;
+  class SetCall;
+  class SetSchemaCall;
+  class UpdateObjectCall;
+  class EraseCall;
+  class WatchCall;
+  class ChangeCall;
+
+  // While a write call is pending, all watcher notfications are ignored. This
+  // includes watcher nofitications from network updates.
+  //
+  // TODO(mesch): We really want to handle this using LE-278, and also merge
+  // network updates.
+  bool pending_write_call_{};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };

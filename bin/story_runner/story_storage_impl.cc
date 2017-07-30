@@ -163,6 +163,50 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
+class StoryStorageImpl::FlushWatchersCall : Operation<> {
+ public:
+  FlushWatchersCall(OperationContainer* const container,
+                    ledger::Page* const page,
+                    ResultCall result_call)
+      : Operation("StoryStorageImpl::FlushWatchersCall",
+                  container,
+                  std::move(result_call)),
+        page_(page) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // Cf. the documentation in ledger.fidl: Before StartTransaction() returns,
+    // all pending watcher notifications on the same connection are guaranteed
+    // to have returned. If we execute this Operation after a WriteLinkData()
+    // call, then all link watcher notifications are guaranteed to have been
+    // received when this Operation is Done().
+
+    page_->StartTransaction([this, flow](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "FlushWatchersCall()"
+                         << " Page.StartTransaction() " << status;
+          return;
+        }
+
+        page_->Commit([this, flow](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "FlushWatchersCall()"
+                             << " Page.Commit() " << status;
+              return;
+            }
+          });
+      });
+  }
+
+  ledger::Page* const page_;  // not owned
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FlushWatchersCall);
+};
+
 StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
     : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
       story_page_(story_page) {}
@@ -251,6 +295,10 @@ void StoryStorageImpl::ReadLog(const LogCallback& callback) {
 
 void StoryStorageImpl::Sync(const SyncCallback& callback) {
   new SyncCall(&operation_queue_, callback);
+}
+
+void StoryStorageImpl::FlushWatchers(const SyncCallback& callback) {
+  new FlushWatchersCall(&operation_queue_, story_page_, callback);
 }
 
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,

@@ -104,8 +104,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     link_watcher_.Continue([this] { user_shell_context_->Logout(); });
     link_watcher_.Watch(&root_link_);
 
-    // TODO(mesch): Doesn't work yet because of FW-208.
-    //root_link_->Set(nullptr, "1");
+    root_link_->Set(nullptr, "1");
     root_link_->Set(nullptr, "2");
   }
 
