@@ -16,7 +16,7 @@
 
 typedef struct {
     mx_handle_t h;
-    char name[32];
+    char name[64];
 } dmctl_cmd_t;
 
 // Execute a dmctl command, returning output via provided
