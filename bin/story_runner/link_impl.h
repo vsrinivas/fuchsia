@@ -16,7 +16,6 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace modular {
@@ -62,18 +61,19 @@ class LinkImpl {
   void SetSchema(const fidl::String& json_schema);
   void UpdateObject(fidl::Array<fidl::String> path,
                     const fidl::String& json,
-                    LinkConnection* src);
+                    uint32_t src);
   void Set(fidl::Array<fidl::String> path,
            const fidl::String& json,
-           LinkConnection* src);
+           uint32_t src);
   void Get(fidl::Array<fidl::String> path,
            const std::function<void(fidl::String)>& callback);
-  void Erase(fidl::Array<fidl::String> path, LinkConnection* src);
+  void Erase(fidl::Array<fidl::String> path, uint32_t src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   void Sync(const std::function<void()>& callback);
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
-             ftl::WeakPtr<LinkConnection> connection);
+             uint32_t connection);
+  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher);
 
   // Used by LinkWatcherConnection.
   void RemoveConnection(LinkWatcherConnection* conn);
@@ -89,8 +89,8 @@ class LinkImpl {
                           CrtJsonValue&& source,
                           CrtJsonValue::AllocatorType& allocator);
 
-  void DatabaseChanged(LinkConnection* src);
-  void NotifyWatchers(LinkConnection* src);
+  void DatabaseChanged(uint32_t src);
+  void NotifyWatchers(uint32_t src);
   void ReadLinkData(const std::function<void()>& callback);
   void WriteLinkData(const std::function<void()>& callback);
   void WriteLinkDataImpl(const std::function<void()>& callback);
@@ -98,6 +98,13 @@ class LinkImpl {
   void ValidateSchema(const char* entry_point,
                       const CrtJsonPointer& pointer,
                       const std::string& json);
+
+  // Counter for LinkConnection IDs. ID 0 is never used so it can be used as
+  // pseudo connection ID for WatchAll() watchers. ID 1 is used as the source ID
+  // for updates from the Ledger.
+  uint32_t next_connection_id_{2};
+  static constexpr uint32_t kWatchAllConnectionId{0};
+  static constexpr uint32_t kOnChangeConnectionId{1};
 
   // We can only accept connection requests once the instance is fully
   // initalized. So we queue them up initially.
@@ -154,13 +161,14 @@ class LinkConnection : Link {
   // given LinkImpl, which takes ownership. It cannot be on the stack
   // because it destroys itself when its fidl connection closes. The
   // constructor is therefore private and only accessible from here.
-  static void New(LinkImpl* const impl, fidl::InterfaceRequest<Link> request) {
-    new LinkConnection(impl, std::move(request));
+  static void New(LinkImpl* const impl, const uint32_t id,
+                  fidl::InterfaceRequest<Link> request) {
+    new LinkConnection(impl, id, std::move(request));
   }
 
  private:
   // Private so it cannot be created on the stack.
-  LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> request);
+  LinkConnection(LinkImpl* impl, uint32_t id, fidl::InterfaceRequest<Link> request);
 
   // |Link|
   void SetSchema(const fidl::String& json_schema) override;
@@ -177,28 +185,15 @@ class LinkConnection : Link {
   LinkImpl* const impl_;
   fidl::Binding<Link> binding_;
 
-  // Weak pointers are used to identify a LinkConnection during notifications of
+  // The ID is used to identify a LinkConnection during notifications of
   // LinkWatchers about value changes, if a LinkWatcher requests to be notified
   // only of changes to the Link value made through other LinkConnections than
   // the one the LinkWatcher was registered through.
   //
-  // A weak pointer from this factory is never dereferenced, only compared to
-  // the naked pointer of the LinkConnection of an incoming change in order to
-  // establish whether a value update is from the same LinkConnection or not.
-  //
-  // The only reason to use a weak pointer and not a naked pointer is the
-  // possibility that a LinkConnection could be deleted, and another
-  // LinkConnection instance could be created at the same address as the
-  // previous one. During comparison, we must recognize such a new instance
-  // as different from the old instance, and a weak pointer to the old instance
-  // becomes null in that situation, thus allowing to recognize the instances as
-  // different.
-  //
-  // A value update will never originate from a deleted LinkConnection instance,
-  // so deleted LinkConnection instances don't need to be distinguishable from
-  // each other, only from non-deleted LinkConnection instances, and a weak
-  // nullptr allows to make that distinction too.
-  ftl::WeakPtrFactory<LinkConnection> weak_ptr_factory_;
+  // An ID is unique within one LinkImpl instance over its whole life time. Thus
+  // if a LinkConnection is closed its ID and is never reused for new
+  // LinkConnection instances.
+  const uint32_t id_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };
@@ -206,24 +201,22 @@ class LinkConnection : Link {
 class LinkWatcherConnection {
  public:
   LinkWatcherConnection(LinkImpl* impl,
-                        ftl::WeakPtr<LinkConnection> conn,
-                        LinkWatcherPtr watcher);
+                        LinkWatcherPtr watcher,
+                        uint32_t conn);
   ~LinkWatcherConnection();
 
   // Notifies the LinkWatcher in this connection, unless src is the
-  // LinkConnection associated with this.
-  void Notify(const fidl::String& value, LinkConnection* src);
+  // LinkConnection this Watcher was registered on.
+  void Notify(const fidl::String& value, uint32_t src);
 
  private:
   // The LinkImpl this instance belongs to.
   LinkImpl* const impl_;
 
-  // The LinkConnection through which the LinkWatcher was registered. It is a
-  // weak pointer because it may be deleted before the LinkWatcher is
-  // disconnected.
-  ftl::WeakPtr<LinkConnection> conn_;
-
   LinkWatcherPtr watcher_;
+
+  // The ID of the LinkConnection this LinkWatcher was registered on.
+  const uint32_t conn_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherConnection);
 };

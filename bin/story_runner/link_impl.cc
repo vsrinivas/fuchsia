@@ -38,7 +38,7 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData([this] {
     for (auto& request : requests_) {
-      LinkConnection::New(this, std::move(request));
+      LinkConnection::New(this, next_connection_id_++, std::move(request));
     }
     requests_.clear();
     ready_ = true;
@@ -54,7 +54,7 @@ LinkImpl::~LinkImpl() {
 
 void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
   if (ready_) {
-    LinkConnection::New(this, std::move(request));
+    LinkConnection::New(this, next_connection_id_++, std::move(request));
   } else {
     requests_.emplace_back(std::move(request));
   }
@@ -75,9 +75,9 @@ void LinkImpl::SetSchema(const fidl::String& json_schema) {
   schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
 }
 
-// The |LinkConnection| object knows which client made the call to Set() or
-// Update(), so it notifies either all clients or all other clients, depending
-// on whether WatchAll() or Watch() was called, respectively.
+// The |src| identifies which client made the call to Set() or Update(), so it
+// notifies either all clients or all other clients, depending on whether
+// WatchAll() or Watch() was called, respectively.
 //
 // When a watcher is registered, it first receives an OnChange() call with the
 // current value. Thus, when a client first calls Set() and then Watch(), its
@@ -88,7 +88,7 @@ void LinkImpl::SetSchema(const fidl::String& json_schema) {
 // operation, so that we don't have to send the current value to the watcher.
 void LinkImpl::Set(fidl::Array<fidl::String> path,
                    const fidl::String& json,
-                   LinkConnection* const src) {
+                   const uint32_t src) {
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -130,7 +130,7 @@ void LinkImpl::Get(fidl::Array<fidl::String> path,
 
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
                             const fidl::String& json,
-                            LinkConnection* const src) {
+                            const uint32_t src) {
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -155,7 +155,7 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
 }
 
 void LinkImpl::Erase(fidl::Array<fidl::String> path,
-                     LinkConnection* const src) {
+                     const uint32_t src) {
   auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
   auto value = ptr.Get(doc_);
   if (value != nullptr && ptr.Erase(doc_)) {
@@ -221,7 +221,7 @@ void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
   story_storage_->WriteLinkData(link_path_, JsonValueToString(doc_), done);
 }
 
-void LinkImpl::DatabaseChanged(LinkConnection* const src) {
+void LinkImpl::DatabaseChanged(const uint32_t src) {
   // src is only used to compare its value. If the connection was
   // deleted before the callback is invoked, it will also be removed
   // from connections_.
@@ -279,14 +279,10 @@ void LinkImpl::OnChange(const fidl::String& json) {
   // NOTE(mesch): This causes FW-208.
   doc_.Parse(json);
 
-  // TODO(mesch): This does not notify WatchAll() watchers, because they are
-  // registered with a null connection, and watchers on closed
-  // connections. Introduced in
-  // https://fuchsia-review.googlesource.com/#/c/36552/.
-  NotifyWatchers(nullptr);
+  NotifyWatchers(kOnChangeConnectionId);
 }
 
-void LinkImpl::NotifyWatchers(LinkConnection* const src) {
+void LinkImpl::NotifyWatchers(const uint32_t src) {
   const fidl::String value = JsonValueToString(doc_);
   for (auto& dst : watchers_) {
     dst->Notify(value, src);
@@ -334,7 +330,7 @@ void LinkImpl::RemoveConnection(LinkWatcherConnection* const connection) {
 }
 
 void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
-                     ftl::WeakPtr<LinkConnection> conn) {
+                     const uint32_t conn) {
   LinkWatcherPtr watcher_ptr;
   watcher_ptr.Bind(std::move(watcher));
 
@@ -345,14 +341,19 @@ void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
   watcher_ptr->Notify(JsonValueToString(doc_));
 
   watchers_.emplace_back(std::make_unique<LinkWatcherConnection>(
-      this, std::move(conn), std::move(watcher_ptr)));
+      this, std::move(watcher_ptr), conn));
+}
+
+void LinkImpl::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
+  Watch(std::move(watcher), kWatchAllConnectionId);
 }
 
 LinkConnection::LinkConnection(LinkImpl* const impl,
+                               const uint32_t id,
                                fidl::InterfaceRequest<Link> link_request)
     : impl_(impl),
       binding_(this, std::move(link_request)),
-      weak_ptr_factory_(this) {
+      id_(id) {
   impl_->AddConnection(this);
   binding_.set_connection_error_handler(
       [this] { impl_->RemoveConnection(this); });
@@ -362,19 +363,17 @@ LinkConnection::~LinkConnection() = default;
 
 void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
   // This watcher stays associated with the connection it was registered
-  // through. The pointer is used to block notifications for updates that
-  // originate at the same connection. If the connection goes away, the weak
-  // pointer becomes null and protects against another LinkConnection getting
-  // allocated at the same address.
-  impl_->Watch(std::move(watcher), weak_ptr_factory_.GetWeakPtr());
+  // through. The ID is used to block notifications for updates that originate
+  // at the same connection.
+  impl_->Watch(std::move(watcher), id_);
 }
 
 void LinkConnection::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
   // This watcher is not associated with the connection it was registered
-  // through. The connection is recorded as null (see above for why it's a weak
-  // pointer), which never equals any connection that originates an update, so
-  // no update notification is ever blocked.
-  impl_->Watch(std::move(watcher), ftl::WeakPtr<LinkConnection>());
+  // through. The connection is recorded as 0, which never identifies any
+  // connection that originates an update, so no update notification is ever
+  // blocked.
+  impl_->WatchAll(std::move(watcher));
 }
 
 void LinkConnection::Sync(const SyncCallback& callback) {
@@ -387,16 +386,16 @@ void LinkConnection::SetSchema(const fidl::String& json_schema) {
 
 void LinkConnection::UpdateObject(fidl::Array<fidl::String> path,
                                   const fidl::String& json) {
-  impl_->UpdateObject(std::move(path), json, this);
+  impl_->UpdateObject(std::move(path), json, id_);
 }
 
 void LinkConnection::Set(fidl::Array<fidl::String> path,
                          const fidl::String& json) {
-  impl_->Set(std::move(path), json, this);
+  impl_->Set(std::move(path), json, id_);
 }
 
 void LinkConnection::Erase(fidl::Array<fidl::String> path) {
-  impl_->Erase(std::move(path), this);
+  impl_->Erase(std::move(path), id_);
 }
 
 void LinkConnection::Get(fidl::Array<fidl::String> path,
@@ -405,9 +404,9 @@ void LinkConnection::Get(fidl::Array<fidl::String> path,
 }
 
 LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
-                                             ftl::WeakPtr<LinkConnection> conn,
-                                             LinkWatcherPtr watcher)
-    : impl_(impl), conn_(std::move(conn)), watcher_(std::move(watcher)) {
+                                             LinkWatcherPtr watcher,
+                                             const uint32_t conn)
+    : impl_(impl), watcher_(std::move(watcher)), conn_(conn) {
   watcher_.set_connection_error_handler(
       [this] { impl_->RemoveConnection(this); });
 }
@@ -415,8 +414,8 @@ LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
 LinkWatcherConnection::~LinkWatcherConnection() = default;
 
 void LinkWatcherConnection::Notify(const fidl::String& value,
-                                   LinkConnection* const src) {
-  if (conn_.get() != src) {
+                                   const uint32_t src) {
+  if (conn_ != src) {
     watcher_->Notify(value);
   }
 }
