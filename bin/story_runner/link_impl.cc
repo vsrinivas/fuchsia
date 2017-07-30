@@ -29,13 +29,6 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
   return pointer;
 }
 
-//// Take an Array of fidl::String and convert it to "/a/b/c" form for display.
-//// For debugging/logging purposes only.
-// inline std::string PrettyPrintPath(const fidl::Array<fidl::String>& path) {
-//  return (path.is_null() || path.storage().empty())
-//             ? std::string("/")
-//             : modular::PrettyPrintPath(path.To<std::vector<std::string>>());
-//}
 }  // namespace
 
 LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
@@ -43,7 +36,7 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
     : link_path_(link_path.Clone()),
       story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
-  ReadLinkData([this]() {
+  ReadLinkData([this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, std::move(request));
     }
@@ -76,7 +69,7 @@ void LinkImpl::SetSchema(const fidl::String& json_schema) {
     FTL_LOG(ERROR) << "LinkImpl::SetSchema() " << EncodeLinkPath(link_path_)
                    << " JSON parse failed error #" << doc.GetParseError()
                    << std::endl
-                   << json_schema.get();
+                   << json_schema;
     return;
   }
   schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
@@ -86,16 +79,16 @@ void LinkImpl::SetSchema(const fidl::String& json_schema) {
 // Update(), so it notifies either all clients or all other clients, depending
 // on whether WatchAll() or Watch() was called, respectively.
 //
-// TODO(jimbe) This mechanism breaks if the call to Watch() is made
-// *after* the call to SetAllDocument(). Need to find a way to improve
-// this.
-
+// When a watcher is registered, it first receives an OnChange() call with the
+// current value. Thus, when a client first calls Set() and then Watch(), its
+// LinkWatcher receives the value that was just Set(). This should not be
+// surprising, and clients should register their watchers first before setting
+// the link value. TODO(mesch): We should adopt the pattern from ledger to read
+// the value and register a watcher for subsequent changes in the same
+// operation, so that we don't have to send the current value to the watcher.
 void LinkImpl::Set(fidl::Array<fidl::String> path,
                    const fidl::String& json,
                    LinkConnection* const src) {
-  //  FTL_LOG(INFO) << "**** Set()" << std::endl
-  //                << "PATH " << PrettyPrintPath(path) << std::endl
-  //                << "JSON " << json;
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -123,7 +116,6 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
     ValidateSchema("LinkImpl::Set", ptr, json.get());
     DatabaseChanged(src);
   }
-  // FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
 }
 
 void LinkImpl::Get(fidl::Array<fidl::String> path,
@@ -139,9 +131,6 @@ void LinkImpl::Get(fidl::Array<fidl::String> path,
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
                             const fidl::String& json,
                             LinkConnection* const src) {
-  //  FTL_LOG(INFO) << "**** UpdateObject() starting" << std::endl
-  //                << "PATH " << PrettyPrintPath(path) << std::endl
-  //                << "JSON " << json;
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -163,14 +152,10 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
     ValidateSchema("LinkImpl::UpdateObject", ptr, json.get());
     DatabaseChanged(src);
   }
-  //  FTL_LOG(INFO) << "LinkImpl::UpdateObject() result "
-  //                << JsonValueToPrettyString(doc_);
 }
 
 void LinkImpl::Erase(fidl::Array<fidl::String> path,
                      LinkConnection* const src) {
-  //  FTL_LOG(INFO) << "LinkImpl::Erase() "
-  //                << "PATH " << PrettyPrintPath(path) << std::endl;
   auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
   auto value = ptr.Get(doc_);
   if (value != nullptr && ptr.Erase(doc_)) {
@@ -183,14 +168,14 @@ void LinkImpl::Sync(const std::function<void()>& callback) {
   story_storage_->Sync(callback);
 }
 
-// Merge source into target. The values will be move()'d.
+// Merges source into target. The values will be move()'d out of |source|.
 // Returns true if the merge operation caused any changes.
 bool LinkImpl::MergeObject(CrtJsonValue& target,
                            CrtJsonValue&& source,
                            CrtJsonValue::AllocatorType& allocator) {
   if (!source.IsObject()) {
     FTL_LOG(INFO) << "LinkImpl::MergeObject() - source is not an object "
-                  << JsonValueToPrettyString(doc_);
+                  << JsonValueToPrettyString(source);
     return false;
   }
 
@@ -222,10 +207,6 @@ void LinkImpl::ReadLinkData(const std::function<void()>& done) {
                                [this, done](const fidl::String& json) {
                                  if (!json.is_null()) {
                                    doc_.Parse(json.get());
-                                   // FTL_LOG(INFO) << "LinkImpl::ReadLinkData()
-                                   // "
-                                   //              <<
-                                   //              JsonValueToPrettyString(doc_);
                                  }
 
                                  done();
@@ -280,6 +261,7 @@ void LinkImpl::OnChange(const fidl::String& json) {
   // NOTE(jimbe) With rapidjson, the opposite check is more expensive,
   // O(n^2), so we won't do it for now. See case kObjectType in
   // operator==() in include/rapidjson/document.h.
+  //
   //  if (doc_.Equals(json)) {
   //    return;
   //  }
@@ -291,14 +273,21 @@ void LinkImpl::OnChange(const fidl::String& json) {
     return;
   }
 
-  // TODO(jimbe) Decide how these changes should be merged into the current
+  // TODO(jimbe): Decide how these changes should be merged into the current
   // CrtJsonDoc. In this first iteration, we'll do a wholesale replace.
+  //
+  // NOTE(mesch): This causes FW-208.
   doc_.Parse(json);
+
+  // TODO(mesch): This does not notify WatchAll() watchers, because they are
+  // registered with a null connection, and watchers on closed
+  // connections. Introduced in
+  // https://fuchsia-review.googlesource.com/#/c/36552/.
   NotifyWatchers(nullptr);
 }
 
 void LinkImpl::NotifyWatchers(LinkConnection* const src) {
-  fidl::String value = JsonValueToString(doc_);
+  const fidl::String value = JsonValueToString(doc_);
   for (auto& dst : watchers_) {
     dst->Notify(value, src);
   }
@@ -349,10 +338,10 @@ void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
   LinkWatcherPtr watcher_ptr;
   watcher_ptr.Bind(std::move(watcher));
 
-  // TODO(jimbe) We need to send an initial notification of state until
-  // there is snapshot information that can be used by clients to query the
-  // state at this instant. Otherwise there is no sequence information about
-  // total state versus incremental changes.
+  // TODO(jimbe): We need to send an initial notification of state until there
+  // is snapshot information that can be used by clients to query the state at
+  // this instant. Otherwise there is no sequence information about total state
+  // versus incremental changes.
   watcher_ptr->Notify(JsonValueToString(doc_));
 
   watchers_.emplace_back(std::make_unique<LinkWatcherConnection>(

@@ -85,9 +85,9 @@ class LinkImpl {
   }
 
  private:
-  bool MergeObject(CrtJsonValue& target,
-                   CrtJsonValue&& source,
-                   CrtJsonValue::AllocatorType& allocator);
+  static bool MergeObject(CrtJsonValue& target,
+                          CrtJsonValue&& source,
+                          CrtJsonValue::AllocatorType& allocator);
 
   void DatabaseChanged(LinkConnection* src);
   void NotifyWatchers(LinkConnection* src);
@@ -184,12 +184,12 @@ class LinkConnection : Link {
   //
   // A weak pointer from this factory is never dereferenced, only compared to
   // the naked pointer of the LinkConnection of an incoming change in order to
-  // establish whether a value upate is from the same LinkConnection or not.
+  // establish whether a value update is from the same LinkConnection or not.
   //
   // The only reason to use a weak pointer and not a naked pointer is the
   // possibility that a LinkConnection could be deleted, and another
   // LinkConnection instance could be created at the same address as the
-  // previous one. During comparison, we must recognize the such a new instance
+  // previous one. During comparison, we must recognize such a new instance
   // as different from the old instance, and a weak pointer to the old instance
   // becomes null in that situation, thus allowing to recognize the instances as
   // different.
