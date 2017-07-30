@@ -372,13 +372,10 @@ static int multiboot_range_init(boot_addr_range_t *range,
     seq->mmap = NULL;
     seq->count = 0;
 
-    // Qemu does not set MB_INFO_MMAP flag, but does provide a
-    // mmap table, which is necessary to see memory above 2GB.
-    // Grub always sets both
-    //
-    // NOTE: We may misbehave under a bootloader that does not provide
-    // a mmap table but does have a nonzero address and length.
-    if ((seq->info->mmap_addr != 0) && (seq->info->mmap_length > 0)) {
+    // if the MMAP flag is set and the address/length seems sane, parse the multiboot
+    // memory map table
+    if ((seq->info->flags & MB_INFO_MMAP)
+            && (seq->info->mmap_addr != 0) && (seq->info->mmap_length > 0)) {
 
         void* mmap_addr = (void*)X86_PHYS_TO_VIRT(seq->info->mmap_addr);
 

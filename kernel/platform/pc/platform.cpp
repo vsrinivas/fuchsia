@@ -40,7 +40,6 @@ extern "C" {
 #include <efi/system-table.h>
 };
 
-
 #define LOCAL_TRACE 0
 
 extern multiboot_info_t* _multiboot_info;
@@ -163,7 +162,7 @@ extern bool halt_on_panic;
 static void platform_save_bootloader_data(void) {
     if (_multiboot_info != NULL) {
         multiboot_info_t* mi = (multiboot_info_t*) X86_PHYS_TO_VIRT(_multiboot_info);
-        printf("multiboot: info @ %p\n", mi);
+        printf("multiboot: info @ %p flags %#x\n", mi, mi->flags);
 
         if ((mi->flags & MB_INFO_CMD_LINE) && mi->cmdline) {
             const char* cmdline = (const char*) X86_PHYS_TO_VIRT(mi->cmdline);
