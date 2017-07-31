@@ -35,6 +35,7 @@ fidl("module_controller") {
 
 fidl("module_data") {
   sources = [
+    "link_path.fidl",
     "module_data.fidl",
   ]
 

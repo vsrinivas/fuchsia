@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/modular/services/module/link_path.fidl";
 import "apps/modular/services/surface/surface.fidl";
 
 // Information about modules in a Story.
@@ -31,15 +32,6 @@ struct ModuleData {
   //
   // TODO(vardhan): Does this need to be device-scoped?
   bool module_stopped;
-};
-
-// Addresses a Link within a story.
-struct LinkPath {
-  // The module_path of the module this link was created under.
-  array<string> module_path;
-
-  // Name of the link itself.
-  string link_name;
 };
 
 enum ModuleSource {

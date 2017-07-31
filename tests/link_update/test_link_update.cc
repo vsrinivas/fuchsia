@@ -23,8 +23,8 @@
 
 namespace {
 
-// A simple link watcher implementation that is used to push the test sequence
-// forward when a condition is met.
+// A simple link watcher implementation allows to specify the actual
+// notification callback as a lambda and update it dynamically.
 class LinkWatcherImpl : modular::LinkWatcher {
  public:
   LinkWatcherImpl() : binding_(this) {}
@@ -36,20 +36,17 @@ class LinkWatcherImpl : modular::LinkWatcher {
     (*link)->WatchAll(binding_.NewBinding());
   }
 
-  // Sets the function where to continue after enough changes were observed on
-  // the link.
-  void Continue(std::function<void()> at) { continue_ = at; }
+  // Sets the function that's called for a notification.
+  void Continue(std::function<void(const fidl::String&)> at) { continue_ = at; }
 
  private:
   // |LinkWatcher|
   void Notify(const fidl::String& json) override {
     FTL_LOG(INFO) << "LinkWatcher: " << json;
-    if (json == "2") {
-      continue_();
-    }
+    continue_(json);
   }
 
-  std::function<void()> continue_;
+  std::function<void(const fidl::String&)> continue_;
   fidl::Binding<modular::LinkWatcher> binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
@@ -99,12 +96,87 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
     story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
                                root_link_.NewRequest());
+    story_provider_->GetLinkPeer(story_id, nullptr, "root", root_peer_.NewRequest());
 
-    link_watcher_.Continue([this] { user_shell_context_->Logout(); });
     link_watcher_.Watch(&root_link_);
+
+    SequentialSet();
+  }
+
+  // Both updates 1 and 2 are guaranteed to be delivered, and in the order they
+  // were issued.
+  TestPoint notify_1_{"Notify() 1"};
+  TestPoint notify_2_{"Notify() 2"};
+
+  void SequentialSet() {
+    link_watcher_.Continue([this](const fidl::String& json) {
+        if (json == "1") {
+          notify_1_.Pass();
+        } else if (json == "2") {
+          notify_2_.Pass();
+          PeerSet();
+        }
+      });
 
     root_link_->Set(nullptr, "1");
     root_link_->Set(nullptr, "2");
+  }
+
+  // Only update 4 is guaranteed to be delivered. It may happen that 3 is
+  // stomped on by 4 in the ledger before the remote notification is
+  // delivered. If 3 is delivered at all, then it's before 4.
+  TestPoint notify_4_{"Notify() 4"};
+
+  void PeerSet() {
+    link_watcher_.Continue([this](const fidl::String& json) {
+        if (json == "4") {
+          notify_4_.Pass();
+          ConcurrentSet();
+        }
+      });
+
+    // Watch the log to see what values actually arrive.
+    root_peer_->Set(nullptr, "3");
+    root_peer_->Set(nullptr, "4");
+  }
+
+  // The local update 6 is the only one currently guaranteed to be seen
+  // locally. The remote update 5 may be ignored if it arrives while a local
+  // update is in progress.
+  //
+  // TODO(mesch): Concurrently arriving updates we want to properly reconcile,
+  // rather than just let them stomp on each other. (In the case of conflicting
+  // scalar data, the reconciliation will most of the time just be to pick one,
+  // as it is now, but it doesn't have to be.)
+  //
+  // NOTE(mesch): There is no ordering guarantee between the two updates. This
+  // is as intended as far as production behavior is concerned. For testing, we
+  // would like to be able to force an ordering, or a conflict, but right now we
+  // cannot.
+  TestPoint notify_6_{"Notify() 6"};
+
+  void ConcurrentSet() {
+    link_watcher_.Continue([this](const fidl::String& json) {
+        if (json == "6") {
+          notify_6_.Pass();
+        }
+      });
+
+    // Watch the log to see what values actually arrive, and in which order.
+    root_peer_->Set(nullptr, "5");
+    root_link_->Set(nullptr, "6");
+
+    // We log out after Link updates are written to ledger. The local one is
+    // guaranteed to be delivered locally by then.
+    root_peer_->Sync([this] {
+        root_link_->Sync([this] {
+            Logout();
+          });
+      });
+  }
+
+  void Logout() {
+    user_shell_context_->Logout();
   }
 
   TestPoint terminate_{"Terminate"};
@@ -121,6 +193,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::LinkPtr root_link_;
+  modular::LinkPtr root_peer_;
   modular::StoryInfoPtr story_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);

@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/story_controller.fidl";
 import "apps/modular/services/story/story_state.fidl";
 
@@ -74,6 +75,13 @@ interface StoryProvider {
 
   // Creates a duplicate connection to this StoryProvider.
   Duplicate(StoryProvider& request);
+
+  // Obtains a connection to a Link that behaves for the purpose of sending
+  // updates to it as if the updates come from another device. This is available
+  // only in developer mode and is mainly useful for testing. Note right now
+  // there is only developer mode, i.e. this is always available.
+  GetLinkPeer(string story_id, array<string>? module_path, string link_name,
+              Link& request);
 };
 
 // This interface is implemented by clients of StoryProvider.

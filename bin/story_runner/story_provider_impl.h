@@ -143,6 +143,12 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // |StoryProvider|
   void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
 
+  // |StoryProvider|
+  void GetLinkPeer(const fidl::String& story_id,
+                   fidl::Array<fidl::String> module_path,
+                   const fidl::String& link_path,
+                   fidl::InterfaceRequest<Link> request) override;
+
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
 
@@ -220,6 +226,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   fidl::Binding<FocusWatcher> focus_watcher_binding_;
   fidl::InterfacePtrSet<StoryImportanceWatcher> importance_watchers_;
 
+  // Machinery to support StoryProvider.GetLinkPeer().
+  struct LinkPeer;
+  std::vector<std::unique_ptr<LinkPeer>> link_peers_;
+
   // This is a container of all operations that are currently enqueued to run in
   // a FIFO manner. All operations exposed via |StoryProvider| interface are
   // queued here.
@@ -243,6 +253,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   class GetControllerCall;
   class TeardownCall;
   class GetImportanceCall;
+  class GetLinkPeerCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

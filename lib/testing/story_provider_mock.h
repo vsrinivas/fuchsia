@@ -101,6 +101,14 @@ class StoryProviderMock : public StoryProvider {
     FTL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
   }
 
+  // |StoryProvider|
+  void GetLinkPeer(const fidl::String& story_id,
+                   fidl::Array<fidl::String> module_path,
+                   const fidl::String& link_path,
+                   fidl::InterfaceRequest<Link> request) override {
+    FTL_LOG(FATAL) << "StoryProviderMock::GetLinkPeer() not implemented.";
+  }
+
   std::string last_created_story_;
   modular::StoryControllerMock controller_mock_;
   fidl::BindingSet<modular::StoryController> binding_set_;

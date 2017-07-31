@@ -14,6 +14,8 @@
 #include "apps/modular/lib/ledger/operations.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/services/module/link_path.fidl.h"
+#include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/focus.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
@@ -449,6 +451,94 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetImportanceCall);
 };
 
+struct StoryProviderImpl::LinkPeer {
+  ledger::PagePtr page;
+  std::unique_ptr<StoryStorageImpl> storage;
+  std::unique_ptr<LinkImpl> link;
+};
+
+class StoryProviderImpl::GetLinkPeerCall : Operation<> {
+ public:
+  GetLinkPeerCall(OperationContainer* const container,
+                  StoryProviderImpl* const impl,
+                  const fidl::String& story_id,
+                  fidl::Array<fidl::String> module_path,
+                  const fidl::String& link_name,
+                  fidl::InterfaceRequest<Link> request)
+      : Operation("StoryProviderImpl::GetLinkPeerCall", container, [] {}),
+        impl_(impl),
+        story_id_(story_id),
+        module_path_(std::move(module_path)),
+        link_name_(link_name),
+        request_(std::move(request)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    MakeGetStoryDataCall(&operation_queue_, impl_->root_page_,
+                         story_id_,
+                         [this, flow](StoryDataPtr story_data) {
+                           if (story_data) {
+                             story_data_ = std::move(story_data);
+                             Cont1(flow);
+                           }
+                         });
+  }
+
+  void Cont1(FlowToken flow) {
+    impl_->ledger_->GetPage(
+        story_data_->story_page_id.Clone(),
+        page_.NewRequest(),
+        [this, flow](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "GetLinkPeerCall() " << story_id_
+                           << " Ledger.GetPage() " << status;
+            return;
+          }
+          Cont2(flow);
+        });
+  }
+
+  void Cont2(FlowToken flow) {
+    auto link_peer = std::make_unique<LinkPeer>();
+
+    link_peer->page = std::move(page_);
+    auto* const page = link_peer->page.get();
+
+    link_peer->storage.reset(new StoryStorageImpl(page));
+    auto* const storage = link_peer->storage.get();
+
+    auto link_path = LinkPath::New();
+    link_path->module_path = module_path_.Clone();
+    link_path->link_name = link_name_;
+
+    link_peer->link.reset(new LinkImpl(storage, std::move(link_path)));
+    link_peer->link->Connect(std::move(request_));
+
+    impl_->link_peers_.emplace_back(std::move(link_peer));
+
+    // TODO(mesch): Set an orphaned handler so that link peers get dropped
+    // earlier than at logout.
+  }
+
+  StoryProviderImpl* const impl_;  // not owned
+  const fidl::String story_id_;
+  const fidl::Array<fidl::String> module_path_;
+  const fidl::String link_name_;
+  fidl::InterfaceRequest<Link> request_;
+
+  StoryDataPtr story_data_;
+  ledger::PagePtr page_;
+
+  // Sub operations run in this queue.
+  OperationQueue operation_queue_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetLinkPeerCall);
+};
+
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope,
     std::string device_id,
@@ -788,6 +878,14 @@ StoryContextLogPtr StoryProviderImpl::MakeLogEntry(const StorySignal signal) {
   log_entry->signal = signal;
 
   return log_entry;
-};
+}
+
+void StoryProviderImpl::GetLinkPeer(const fidl::String& story_id,
+                                    fidl::Array<fidl::String> module_path,
+                                    const fidl::String& link_name,
+                                    fidl::InterfaceRequest<Link> request) {
+  new GetLinkPeerCall(&operation_queue_, this, story_id, std::move(module_path),
+                      link_name, std::move(request));
+}
 
 }  // namespace modular
