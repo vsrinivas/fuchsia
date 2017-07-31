@@ -37,7 +37,9 @@ func Init(cfg *Config) error {
 		}
 	}
 	metadir := filepath.Join(cfg.OutputDir, "meta")
-	os.MkdirAll(metadir, os.ModePerm)
+	if err := os.MkdirAll(metadir, os.ModePerm); err != nil {
+		return err
+	}
 
 	meta := filepath.Join(metadir, "package.json")
 	if _, err := os.Stat(meta); os.IsNotExist(err) {
@@ -235,21 +237,22 @@ func Validate(cfg *Config) error {
 }
 
 // Seal archives meta/ into a FAR archive named meta.far.
-func Seal(cfg *Config) error {
+func Seal(cfg *Config) (string, error) {
 	manifest, err := cfg.Manifest()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err := Validate(cfg); err != nil {
-		return err
+		return "", err
 	}
 
-	archive, err := os.Create(filepath.Join(cfg.OutputDir, "meta.far"))
+	farPath := filepath.Join(cfg.OutputDir, "meta.far")
+	archive, err := os.Create(farPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	far.Write(archive, manifest.Meta())
-	return archive.Close()
+	return farPath, archive.Close()
 }

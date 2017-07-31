@@ -81,7 +81,20 @@ func (c *Config) PrivateKey() (ed25519.PrivateKey, error) {
 func (c *Config) Manifest() (*Manifest, error) {
 	var err error
 	if c.manifest == nil {
-		c.manifest, err = NewManifest(c.ManifestPath)
+		sources := []string{}
+
+		if c.ManifestPath != "" {
+			sources = append(sources, c.ManifestPath)
+		}
+
+		if c.OutputDir != "" {
+			sources = append(sources, c.OutputDir)
+		}
+
+		if len(sources) == 0 {
+			err = os.ErrNotExist
+		}
+		c.manifest, err = NewManifest(sources)
 	}
 	return c.manifest, err
 }

@@ -20,34 +20,42 @@ import (
 
 // Manifest describes the list of files that are to become the contents of a package
 type Manifest struct {
-	// Path is the manifest source path provided by a user, it may be either a directory or a manifest file
-	Path string
+	// Srcs is a set of manifests and/or directories that are the contents of the package
+	Srcs []string
 	// Paths is the fully computed contents of a package in the form of "destination": "source"
 	Paths map[string]string
 }
 
-// NewManifest initializes a manifest from the given path. If path is a
+// NewManifest initializes a manifest from the given paths. If a path is a
 // directory, it is globbed and the manifest includes all unignored files under
 // that directory. If the path is a manifest file, the file is parsed and all
 // files are mapped as described by the manifest file. Manifest files contain
 // lines with "destination=source". Lines that do not match this pattern are
 // ignored.
-func NewManifest(path string) (*Manifest, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
+func NewManifest(paths []string) (*Manifest, error) {
 	m := &Manifest{
-		Path: path,
-	}
-	if info.IsDir() {
-		m.Paths, err = walk(path)
-	} else {
-		m.Paths, err = parseManifest(path)
+		Srcs:  paths,
+		Paths: make(map[string]string),
 	}
 
-	return m, err
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, err
+		}
+
+		var newPaths map[string]string
+		if info.IsDir() {
+			newPaths, err = walk(path)
+		} else {
+			newPaths, err = parseManifest(path)
+		}
+		for k, v := range newPaths {
+			m.Paths[k] = v
+		}
+	}
+
+	return m, nil
 }
 
 // Meta provides the list of files from the manifest that are to be included in

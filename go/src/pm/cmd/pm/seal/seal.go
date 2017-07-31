@@ -12,5 +12,6 @@ import (
 // Run first delegates to sign.Run to generate a fresh signature for the
 // package in packageDir, then archives the meta/ directory into meta.far.
 func Run(cfg *build.Config) error {
-	return build.Seal(cfg)
+	_, err := build.Seal(cfg)
+	return err
 }

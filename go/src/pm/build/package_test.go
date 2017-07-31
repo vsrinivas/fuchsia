@@ -301,7 +301,7 @@ func TestSeal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Seal(cfg); err != nil {
+	if _, err := Seal(cfg); err != nil {
 		t.Fatal(err)
 	}
 

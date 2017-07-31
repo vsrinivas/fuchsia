@@ -166,7 +166,7 @@ func TestAddPackage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = build.Seal(cfg)
+	_, err = build.Seal(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

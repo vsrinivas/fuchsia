@@ -197,7 +197,7 @@ type Reader struct {
 	pathData     PathData
 }
 
-// NewReader wraps the given io.ReaderAt and reutrns a struct that provides indexed access to the FAR contents.
+// NewReader wraps the given io.ReaderAt and returns a struct that provides indexed access to the FAR contents.
 func NewReader(s io.ReaderAt) (*Reader, error) {
 	r := &Reader{source: s}
 	if err := r.readIndex(); err != nil {

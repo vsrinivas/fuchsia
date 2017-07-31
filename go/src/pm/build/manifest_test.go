@@ -14,12 +14,54 @@ import (
 	"testing"
 )
 
-func TestNewManifest_withDirectory(t *testing.T) {
+func makeTestManifestFile(t *testing.T) (string, map[string]string) {
+	f, err := ioutil.TempFile("", t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	wantPaths := map[string]string{
+		"a": "/somepath/a",
+		"1": "/somepath/b",
+	}
+
+	for k, v := range wantPaths {
+		_, err := fmt.Fprintf(f, "%s=%s\n", k, v)
+		if err != nil {
+			f.Close()
+			os.Remove(f.Name())
+			t.Fatal(err)
+		}
+	}
+	// write some junk
+	fmt.Fprint(f, "\na\n")
+
+	return f.Name(), wantPaths
+}
+
+func validateMapping(t *testing.T, m *Manifest, f map[string]string) {
+	if len(m.Paths) != len(f) {
+		t.Errorf("lengths differ: got %d, want %d", len(m.Paths), len(f))
+	}
+
+	for wantDest, wantSource := range f {
+		source, ok := m.Paths[wantDest]
+		if !ok {
+			t.Errorf("manifest is missing file %q", wantDest)
+		}
+
+		if source != wantSource {
+			t.Errorf("source: got %q, want %q", source, wantSource)
+		}
+	}
+}
+
+func makeTestFileDir(t *testing.T) (string, []string) {
 	d, err := ioutil.TempDir("", t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(d)
 
 	files := []string{"a", "b", "dir/c"}
 	for _, f := range files {
@@ -27,12 +69,39 @@ func TestNewManifest_withDirectory(t *testing.T) {
 		os.MkdirAll(filepath.Dir(path), os.ModePerm)
 		f, err := os.Create(path)
 		if err != nil {
+			os.RemoveAll(d)
 			t.Fatal(err)
 		}
 		f.Close()
 	}
 
-	m, err := NewManifest(d)
+	return d, files
+}
+
+func TestNewManifest_withManifestAndDirectory(t *testing.T) {
+	dir, wantFiles := makeTestFileDir(t)
+	defer os.RemoveAll(dir)
+	manifestFile, wantPaths := makeTestManifestFile(t)
+	defer os.Remove(manifestFile)
+
+	manifest, err := NewManifest([]string{manifestFile, dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, f := range wantFiles {
+		wantPaths[f] = filepath.Join(dir, f)
+	}
+
+	validateMapping(t, manifest, wantPaths)
+
+}
+
+func TestNewManifest_withDirectory(t *testing.T) {
+	d, files := makeTestFileDir(t)
+	defer os.RemoveAll(d)
+
+	m, err := NewManifest([]string{d})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,50 +120,18 @@ func TestNewManifest_withDirectory(t *testing.T) {
 			t.Errorf("source: got %q, want %q", source, want)
 		}
 	}
-
 }
 
 func TestNewManifest_withManifest(t *testing.T) {
-	f, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(f.Name())
+	f, wantPaths := makeTestManifestFile(t)
+	defer os.Remove(f)
 
-	wantPaths := map[string]string{
-		"a": "/somepath/a",
-		"b": "/somepath/b",
-	}
-
-	for k, v := range wantPaths {
-		_, err := fmt.Fprintf(f, "%s=%s\n", k, v)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	// write some junk
-	fmt.Fprint(f, "\na\n")
-	f.Close()
-
-	m, err := NewManifest(f.Name())
+	m, err := NewManifest([]string{f})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(wantPaths) != len(m.Paths) {
-		t.Errorf("incorrect length from parsed manifest")
-	}
-
-	for wantDest, wantSource := range wantPaths {
-		source, ok := m.Paths[wantDest]
-		if !ok {
-			t.Errorf("manifest is missing file %q", wantDest)
-		}
-
-		if source != wantSource {
-			t.Errorf("source: got %q, want %q", source, wantSource)
-		}
-	}
+	validateMapping(t, m, wantPaths)
 }
 
 func TestManifestMeta(t *testing.T) {
