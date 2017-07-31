@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -95,13 +96,19 @@ typedef struct {
     struct sockaddr_in6 target_addr;
 } transport_state;
 
+#define SEND_TIMEOUT_US 1000
+
 int transport_send(void* data, size_t len, void* cookie) {
     transport_state* state = cookie;
     ssize_t send_result;
     do {
-        fd_set write_descriptors;
-        FD_ZERO(&write_descriptors);
-        FD_SET(state->socket, &write_descriptors);
+        struct pollfd poll_fds = {.fd = state->socket,
+                                  .events = POLLOUT,
+                                  .revents = 0};
+        int poll_result = poll(&poll_fds, 1, SEND_TIMEOUT_US);
+        if (poll_result < 0) {
+            return TFTP_ERR_IO;
+        }
         if (!state->connected) {
             state->target_addr.sin6_port = htons(NB_TFTP_INCOMING_PORT);
             send_result = sendto(state->socket, data, len, 0, (struct sockaddr*)&state->target_addr,
@@ -109,7 +116,8 @@ int transport_send(void* data, size_t len, void* cookie) {
         } else {
             send_result = send(state->socket, data, len, 0);
         }
-    } while ((send_result < 0) && ((errno == EAGAIN) || (errno == EWOULDBLOCK)));
+    } while ((send_result < 0) &&
+             ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == ENOBUFS)));
     if (send_result < 0) {
         fprintf(stderr, "\n%s: Send failed with errno = %d\n", appname, (int)errno);
         return TFTP_ERR_IO;
