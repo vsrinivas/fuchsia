@@ -11,6 +11,7 @@
 #include <magenta/process.h>
 #include <magenta/types.h>
 #include <mxalloc/new.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/array.h>
 #include <mxtl/macros.h>
 
@@ -72,7 +73,7 @@ public:
 
     mx_status_t Allocate(size_t size) {
         Release();
-        size_ = size;
+        size_ = mxtl::roundup(size, static_cast<size_t>(PAGE_SIZE));
         mx_status_t status;
         if ((status = mx::vmo::create(size_, 0, &vmo_)) != MX_OK) {
             return status;

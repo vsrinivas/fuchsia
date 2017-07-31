@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,7 +28,7 @@ bool test_vmo_create(void) {
     int dirfd = open("::dir", O_DIRECTORY | O_RDONLY);
     ASSERT_GT(dirfd, 0);
 
-    size_t vmosize = 512;
+    size_t vmosize = PAGE_SIZE;
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(vmosize, 0, &vmo), MX_OK);
 
@@ -59,7 +60,7 @@ bool test_vmo_resizable_create(void) {
     int dirfd = open("::dir", O_DIRECTORY | O_RDONLY);
     ASSERT_GT(dirfd, 0);
 
-    size_t vmosize = 512;
+    size_t vmosize = PAGE_SIZE;
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(vmosize, 0, &vmo), MX_OK);
     mx_handle_t backup_handle;

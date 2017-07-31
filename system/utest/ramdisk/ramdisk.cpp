@@ -534,7 +534,7 @@ bool close_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, txnid_t txn
 bool ramdisk_test_fifo_multiple_vmo(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
@@ -604,7 +604,7 @@ int fifo_vmo_thread(void* arg) {
 bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
     mx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
@@ -653,7 +653,7 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
 bool ramdisk_test_fifo_unclean_shutdown(void) {
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -722,7 +722,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
 bool ramdisk_test_fifo_large_ops_count(void) {
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -768,7 +768,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
 bool ramdisk_test_fifo_too_many_ops(void) {
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -844,7 +844,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -882,7 +882,7 @@ bool ramdisk_test_fifo_bad_client_txnid(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -916,7 +916,7 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -974,7 +974,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     // Try to flex the server's error handling by sending 'malicious' client requests.
     BEGIN_TEST;
     // Set up the ramdisk
-    const size_t kBlockSize = 512;
+    const size_t kBlockSize = PAGE_SIZE;
     int fd = get_ramdisk(kBlockSize, 1 << 18);
 
     // Create a connection to the ramdisk
@@ -987,9 +987,8 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
-    // Create a vmo which is not block aligned
     test_vmo_object_t obj;
-    obj.vmo_size = kBlockSize - 1;
+    obj.vmo_size = kBlockSize;
     ASSERT_EQ(mx_vmo_create(obj.vmo_size, 0, &obj.vmo), MX_OK,
               "Failed to create vmo");
     AllocChecker ac;
@@ -1012,12 +1011,16 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     request.txnid      = txnid;
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = static_cast<uint32_t>(kBlockSize);
+    request.length     = static_cast<uint32_t>(kBlockSize - 1);
     request.vmo_offset = 0;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
+    request.length     = static_cast<uint32_t>(kBlockSize + 1);
     // Do the same thing, but for reading
     request.opcode     = BLOCKIO_READ;
+    request.length     = static_cast<uint32_t>(kBlockSize - 1);
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
+    request.length     = static_cast<uint32_t>(kBlockSize + 1);
     ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
 
     block_fifo_release_client(client);

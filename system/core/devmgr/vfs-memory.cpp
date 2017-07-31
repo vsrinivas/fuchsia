@@ -146,6 +146,8 @@ mx_status_t VnodeVmo::GetHandles(uint32_t flags, mx_handle_t* hnds,
 ssize_t VnodeFile::Read(void* data, size_t len, size_t off) {
     if ((off >= length_) || (vmo_ == MX_HANDLE_INVALID)) {
         return 0;
+    } else if (len > length_ - off) {
+        len = length_ - off;
     }
 
     size_t actual;
@@ -173,17 +175,16 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     mx_status_t status;
     size_t newlen = off + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
+    size_t alignedLen = mxtl::roundup(newlen, static_cast<size_t>(PAGE_SIZE));
 
-    // TODO(smklein): Round up to PAGE_SIZE increments to reduce overhead on a series of small
-    // writes.
     if (vmo_ == MX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        if ((status = mx_vmo_create(newlen, 0, &vmo_)) != MX_OK) {
+        if ((status = mx_vmo_create(alignedLen, 0, &vmo_)) != MX_OK) {
             return status;
         }
-    } else if (newlen > length_) {
+    } else if (newlen > mxtl::roundup(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
-        if ((status = mx_vmo_set_size(vmo_, newlen)) != MX_OK) {
+        if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
             return status;
         }
     }
@@ -370,15 +371,14 @@ mx_status_t VnodeFile::Truncate(size_t len) {
         return MX_ERR_INVALID_ARGS;
     }
 
+    size_t alignedLen = mxtl::roundup(len, static_cast<size_t>(PAGE_SIZE));
+
     if (vmo_ == MX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        if ((status = mx_vmo_create(len, 0, &vmo_)) != MX_OK) {
+        if ((status = mx_vmo_create(alignedLen, 0, &vmo_)) != MX_OK) {
             return status;
         }
     } else if ((len < length_) && (len % PAGE_SIZE != 0)) {
-        // TODO(smklein): Remove this case when the VMO system causes 'shrinking to a partial page'
-        // to fill the end of that page with zeroes.
-        //
         // Currently, if the file is truncated to a 'partial page', an later re-expanded, then the
         // partial page is *not necessarily* filled with zeroes. As a consequence, we manually must
         // fill the portion between "len" and the next highest page (or vn->length, whichever
@@ -391,10 +391,10 @@ mx_status_t VnodeFile::Truncate(size_t len) {
         status = mx_vmo_write(vmo_, buf, len, ppage_size, &actual);
         if ((status != MX_OK) || (actual != ppage_size)) {
             return status != MX_OK ? MX_ERR_IO : status;
-        } else if ((status = mx_vmo_set_size(vmo_, len)) != MX_OK) {
+        } else if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
             return status;
         }
-    } else if ((status = mx_vmo_set_size(vmo_, len)) != MX_OK) {
+    } else if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
         return status;
     }
 
