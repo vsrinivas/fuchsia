@@ -12,16 +12,19 @@ by any commits introduced on the local branch are formatted.
 
 import argparse
 import os
-import paths
 import platform
 import subprocess
 import sys
+
+import git_utils
+import paths
 
 clangos = "linux"
 if platform.platform().startswith("Darwin"):
     clangos = "darwin"
 CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
-                           "clang+llvm-x86_64-%s" % clangos, "bin", "clang-format")
+                          "clang+llvm-x86_64-%s" % clangos, "bin",
+                          "clang-format")
 DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 gotoolos = "linux64"
@@ -29,7 +32,10 @@ if platform.platform().startswith("Darwin"):
     gotoolos = "mac"
 GO_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, gotoolos, "go", "bin", "gofmt")
 
-C_CMD = [CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-sort-includes", "-i"]
+C_CMD = [
+    CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-sort-includes",
+    "-i"
+]
 DART_CMD = [DART_TOOL, "-w"]
 GN_CMD = [GN_TOOL, "format"]
 GO_CMD = [GO_TOOL, "-w"]
@@ -45,32 +51,6 @@ EXT_TO_COMMAND = {
     ".hh": C_CMD,
     ".hpp": C_CMD,
 }
-
-
-def _get_diff_base():
-    """Returns the newest local commit that is also in the upstream branch, or
-    "HEAD" if there is no upstream branch.
-    """
-    try:
-        upstream = subprocess.check_output(["git", "rev-parse", "--abbrev-ref",
-                                        "--symbolic-full-name", "@{u}"]).strip()
-        # Get local commits not in upstream.
-        local_commits = filter(len, subprocess.check_output([
-            "git", "rev-list", "HEAD", "^" + upstream, "--"]).split("\n"))
-        if not local_commits:
-          return "HEAD"
-
-        # Return parent of the oldest commit.
-        return subprocess.check_output(["git", "rev-parse",
-                                        local_commits[-1] + "^"]).strip()
-
-    except subprocess.CalledProcessError:
-        return "HEAD"
-
-def _cd_to_root():
-    path = subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"]).strip()
-    os.chdir(path)
 
 
 def main():
@@ -95,28 +75,21 @@ def main():
         help="format all files in the repo, not just the modified ones")
     args = parser.parse_args()
 
-    # `cd` to the root of the git repository. git diff-index returns
-    # paths relative to this dir.
-    _cd_to_root()
-
     # Find the files to be formatted.
-    diff_base = _get_diff_base()
-    if args.verbose:
-      print "Diff base: " + diff_base
-
-    list_command = ["git", "ls-files"] if args.all else [
-        "git", "diff-index", "--name-only", diff_base]
-    files = filter(len, subprocess.check_output(list_command).split("\n"))
+    if args.all:
+        files = git_utils.get_all_files()
+    else:
+        files = git_utils.get_diff_files()
 
     if args.verbose:
-      print
-      print "Files to be formatted:"
-      if not files:
-          print " (no files)"
-          return
+        print
+        print "Files to be formatted:"
+        if not files:
+            print " (no files)"
+            return
 
-      for file in files:
-          print " - " + file
+        for file in files:
+            print " - " + file
 
     # Run the formatters.
     if args.dry_run:

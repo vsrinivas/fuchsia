@@ -1,0 +1,141 @@
+#!/usr/bin/env python
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""Runs clang-tidy on modified files.
+
+The tool uses `git diff-index` against the newest parent commit in the upstream
+branch (or against HEAD if there is no upstream branch) in order to find the
+files to be formatted. In result, the tool lints files that are locally
+modified, staged or touched by any commits introduced on the local branch.
+"""
+
+import argparse
+import os
+import platform
+import re
+import subprocess
+import sys
+
+import git_utils
+import paths
+
+clang_os = "linux"
+if platform.platform().startswith("Darwin"):
+    clang_os = "darwin"
+CLANG_TIDY_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
+                               "clang+llvm-x86_64-%s" % clang_os, "bin",
+                               "clang-tidy")
+NINJA_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "ninja")
+
+
+def get_out_dir(args):
+    if os.environ.get("FUCHSIA_BUILD_DIR"):
+        return os.environ.get("FUCHSIA_BUILD_DIR")
+
+    if args.out_dir:
+        out_dir = args.out_dir
+
+        if not os.path.isabs(out_dir):
+            out_dir = os.path.join(paths.FUCHSIA_ROOT, out_dir)
+
+        if not os.path.isdir(out_dir):
+            print out_dir + " is not a directory"
+            sys.exit(-1)
+        return out_dir
+
+    print("Couldn't find the output directory, pass --out-dir " +
+          "(absolute or relative to Fuchsia root) or set FUCHSIA_BUILD_DIR.")
+    sys.exit(-1)
+
+
+def generate_db(out_dir):
+    cmd = [NINJA_TOOL, "-C", out_dir, "-t", "compdb", "cc", "cxx"]
+    db = subprocess.check_output(
+        cmd, cwd=paths.FUCHSIA_ROOT, universal_newlines=True)
+
+    # Strip away `gomacc` from the compile commands. This seems to fix problems
+    # with clang-tidy not being able to load system headers.
+    db = re.sub("\"/[\S]+/gomacc ", "\"", db)
+
+    with open(os.path.join(out_dir, "compile_commands.json"), "w+") as db_file:
+        db_file.write(db)
+
+
+def go(args):
+    out_dir = get_out_dir(args)
+
+    # generate the compilation database
+    generate_db(out_dir)
+
+    # Find the files to be formatted.
+    if args.all:
+        files = git_utils.get_all_files()
+    else:
+        files = git_utils.get_diff_files()
+
+    if args.verbose:
+        print
+        print "Files to be formatted:"
+        for file in files:
+            print " - " + file
+        if not files:
+            print " (no files)"
+        print
+
+    # change the working directory to Fuchsia root.
+    os.chdir(paths.FUCHSIA_ROOT)
+
+    for file_path in files:
+        # Skip deleted files.
+        if not os.path.isfile(file_path):
+            if args.verbose:
+               print "skipping " + file_path + " (deleted)"
+            continue
+
+        _, extension = os.path.splitext(file_path)
+        if extension == ".cc":
+            relpath = os.path.relpath(file_path)
+            cmd = [CLANG_TIDY_TOOL, "-p", out_dir, relpath]
+            if args.checks:
+                cmd.append("-checks=" + args.checks)
+            if args.fix:
+                cmd.append("-fix")
+
+            if args.verbose:
+              print "checking " + file_path + ": " + str(cmd)
+            subprocess.check_call(cmd, cwd=paths.FUCHSIA_ROOT)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Lint modified files.")
+    parser.add_argument(
+        "--all",
+        dest="all",
+        action="store_true",
+        default=False,
+        help="process all files in the repo under current working directory")
+    parser.add_argument(
+        "--fix",
+        dest="fix",
+        action="store_true",
+        default=False,
+        help="automatically generate fixes when possible")
+    parser.add_argument("--checks", help="overrides the list of checks to use")
+    parser.add_argument(
+        "--out-dir",
+        help="Output directory, needed to generate compilation db for clang.")
+    parser.add_argument(
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="tell me what you're doing")
+    args = parser.parse_args()
+    go(args)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
