@@ -381,7 +381,7 @@ public:
     mx_status_t Open(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
                      const char* path, const char** pathout,
                      uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Unlink(mxtl::RefPtr<Vnode> vn, const char* path, size_t len);
+    mx_status_t Unlink(mxtl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
     ssize_t Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                   void* out_buf, size_t out_len) __TA_EXCLUDES(vfs_lock_);
 

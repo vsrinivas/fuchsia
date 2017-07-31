@@ -72,19 +72,11 @@ mx_status_t WatcherContainer::WatchDir(mx::channel* out) {
     return MX_OK;
 }
 
-constexpr uint32_t kSupportedMasks = VFS_WATCH_MASK_ADDED |
-                                     VFS_WATCH_MASK_EXISTING |
-                                     VFS_WATCH_MASK_IDLE;
-
 mx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd) {
     mx::channel c = mx::channel(cmd->channel);
     if ((cmd->mask & VFS_WATCH_MASK_ALL) == 0) {
         // No events to watch
         return MX_ERR_INVALID_ARGS;
-    }
-    if (cmd->mask & ~kSupportedMasks) {
-        // Asking for an unsupported event
-        return MX_ERR_NOT_SUPPORTED;
     }
 
     AllocChecker ac;
@@ -152,6 +144,7 @@ void WatcherContainer::Notify(const char* name, size_t len, unsigned event) {
 
     for (auto it = watch_list_.begin(); it != watch_list_.end();) {
         if (!(it->mask & VFS_WATCH_EVT_MASK(event))) {
+            ++it;
             continue;
         }
 

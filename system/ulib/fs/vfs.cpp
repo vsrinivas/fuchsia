@@ -241,7 +241,17 @@ mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len)
         return MX_ERR_INVALID_ARGS;
     }
 
-    return vndir->Unlink(path, len, must_be_dir);
+    {
+#ifdef __Fuchsia__
+        mxtl::AutoLock lock(&vfs_lock_);
+#endif
+        r = vndir->Unlink(path, len, must_be_dir);
+    }
+    if (r != MX_OK) {
+        return r;
+    }
+    vndir->Notify(path, len, VFS_WATCH_EVT_REMOVED);
+    return MX_OK;
 }
 
 #ifdef __Fuchsia__
@@ -312,18 +322,12 @@ mx_status_t Vfs::TokenToVnode(mx::event token, mxtl::RefPtr<Vnode>* out) {
 
 mx_status_t Vfs::Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
                         const char* oldname, const char* newname) {
-    mxtl::AutoLock lock(&vfs_lock_);
-    mxtl::RefPtr<fs::Vnode> newparent;
-    mx_status_t r;
-    if ((r = TokenToVnode(mxtl::move(token), &newparent)) != MX_OK) {
-        printf("Couldn't get Vnode from token\n");
-        return r;
-    }
     // Local filesystem
     size_t oldlen = strlen(oldname);
     size_t newlen = strlen(newname);
     bool old_must_be_dir;
     bool new_must_be_dir;
+    mx_status_t r;
     if ((r = vfs_name_trim(oldname, oldlen, &oldlen, &old_must_be_dir)) != MX_OK) {
         return r;
     } else if (is_dot(oldname, oldlen)) {
@@ -339,11 +343,20 @@ mx_status_t Vfs::Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
         return MX_ERR_INVALID_ARGS;
     }
 
-    r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
-                          old_must_be_dir, new_must_be_dir);
+    mxtl::RefPtr<fs::Vnode> newparent;
+    {
+        mxtl::AutoLock lock(&vfs_lock_);
+        if ((r = TokenToVnode(mxtl::move(token), &newparent)) != MX_OK) {
+            return r;
+        }
+
+        r = oldparent->Rename(newparent, oldname, oldlen, newname, newlen,
+                              old_must_be_dir, new_must_be_dir);
+    }
     if (r != MX_OK) {
         return r;
     }
+    oldparent->Notify(oldname, oldlen, VFS_WATCH_EVT_REMOVED);
     newparent->Notify(newname, newlen, VFS_WATCH_EVT_ADDED);
     return MX_OK;
 }

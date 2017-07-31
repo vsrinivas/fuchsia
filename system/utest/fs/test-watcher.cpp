@@ -203,7 +203,7 @@ bool test_watcher_existing(void) {
     END_TEST;
 }
 
-bool test_watcher_unsupported(void) {
+bool test_watcher_removed(void) {
     BEGIN_TEST;
 
     if (!test_info->supports_watchers) {
@@ -216,13 +216,34 @@ bool test_watcher_unsupported(void) {
     mx_handle_t h;
     vfs_watch_dir_t request;
 
-    // Ask to watch an unsupported event
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK, "");
-    request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_DELETED;
+    request.mask = VFS_WATCH_MASK_ADDED | VFS_WATCH_MASK_REMOVED;
     request.options = 0;
-    ASSERT_NEQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK, "");
-    mx_handle_close(h);
 
+    watch_buffer_t wb;
+    memset(&wb, 0, sizeof(wb));
+    ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK, "");
+
+    ASSERT_TRUE(check_for_empty(&wb, h), "");
+
+    int fd = openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+
+    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED), "");
+    ASSERT_TRUE(check_for_empty(&wb, h), "");
+
+    ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0, "");
+
+    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_REMOVED), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED), "");
+    ASSERT_TRUE(check_for_empty(&wb, h), "");
+
+    ASSERT_EQ(unlink("::dir/bar"), 0, "");
+    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_REMOVED), "");
+    ASSERT_TRUE(check_for_empty(&wb, h), "");
+
+    mx_handle_close(h);
     ASSERT_EQ(closedir(dir), 0, "");
     ASSERT_EQ(rmdir("::dir"), 0, "");
 
@@ -232,5 +253,5 @@ bool test_watcher_unsupported(void) {
 RUN_FOR_ALL_FILESYSTEMS(directory_watcher_tests,
     RUN_TEST_MEDIUM(test_watcher_add)
     RUN_TEST_MEDIUM(test_watcher_existing)
-    RUN_TEST_MEDIUM(test_watcher_unsupported)
+    RUN_TEST_MEDIUM(test_watcher_removed)
 )
