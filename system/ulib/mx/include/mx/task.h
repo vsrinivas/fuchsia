@@ -11,7 +11,7 @@ namespace mx {
 
 template <typename T = void> class task : public object<T> {
 public:
-    task() = default;
+    constexpr task() = default;
 
     explicit task(mx_handle_t value) : object<T>(value) {}
 

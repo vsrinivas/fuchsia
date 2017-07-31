@@ -15,7 +15,7 @@ class timer : public object<timer> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_TIMER;
 
-    timer() = default;
+    constexpr timer() = default;
 
     explicit timer(mx_handle_t value) : object(value) {}
 

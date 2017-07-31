@@ -17,7 +17,7 @@ class port;
 // wrapper is destroyed.
 template <typename T> class object {
 public:
-    object() : value_(MX_HANDLE_INVALID) {}
+    constexpr object() : value_(MX_HANDLE_INVALID) {}
 
     explicit object(mx_handle_t value) : value_(value) {}
 

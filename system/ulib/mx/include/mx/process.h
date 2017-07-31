@@ -18,7 +18,7 @@ class process : public task<process> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_PROCESS;
 
-    process() = default;
+    constexpr process() = default;
 
     explicit process(mx_handle_t value) : task(value) {}
 

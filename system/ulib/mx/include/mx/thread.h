@@ -15,7 +15,7 @@ class thread : public task<thread> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_THREAD;
 
-    thread() = default;
+    constexpr thread() = default;
 
     explicit thread(mx_handle_t value) : task(value) {}
 

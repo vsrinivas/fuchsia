@@ -13,7 +13,7 @@ class event : public object<event> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_EVENT;
 
-    event() = default;
+    constexpr event() = default;
 
     explicit event(mx_handle_t value) : object(value) {}
 

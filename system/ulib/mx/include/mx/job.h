@@ -13,7 +13,7 @@ class job : public task<job> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_JOB;
 
-    job() = default;
+    constexpr job() = default;
 
     explicit job(mx_handle_t value) : task(value) {}
 

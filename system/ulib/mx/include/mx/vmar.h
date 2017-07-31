@@ -16,7 +16,7 @@ class vmar : public object<vmar> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_VMAR;
 
-    vmar() = default;
+    constexpr vmar() = default;
 
     explicit vmar(mx_handle_t value) : object(value) {}
 

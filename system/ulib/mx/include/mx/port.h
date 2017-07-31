@@ -13,7 +13,7 @@ class port : public object<port> {
 public:
     static constexpr mx_obj_type_t TYPE = MX_OBJ_TYPE_PORT;
 
-    port() = default;
+    constexpr port() = default;
 
     explicit port(mx_handle_t value) : object(value) {}
 
