@@ -152,8 +152,6 @@ static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
 
 _Noreturn void pthread_exit(void* result) {
     pthread_t self = __pthread_self();
-    // TODO(kulakowski) Signals?
-    // sigset_t set;
 
     self->result = result;
 
