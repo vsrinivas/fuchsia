@@ -10,6 +10,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <utility>
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
@@ -100,10 +101,7 @@ std::string UrlEncode(const std::string& value) {
   escaped.fill('0');
   escaped << std::hex;
 
-  for (std::string::const_iterator i = value.begin(), n = value.end(); i != n;
-       ++i) {
-    std::string::value_type c = (*i);
-
+  for (char c : value) {
     // Keep alphanumeric and other accepted characters intact
     if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '=' ||
         c == '&' || c == '+') {
@@ -113,7 +111,7 @@ std::string UrlEncode(const std::string& value) {
 
     // Any other characters are percent-encoded
     escaped << std::uppercase;
-    escaped << '%' << std::setw(2) << int((unsigned char)c);
+    escaped << '%' << std::setw(2) << int(static_cast<unsigned char>(c));
     escaped << std::nouppercase;
   }
 
@@ -295,9 +293,9 @@ void Post(const std::string& request_body,
     if (result) {
       success_callback();
     } else {
-      failure_callback(Status::BAD_RESPONSE,
-                       "Invalid response: " +
-                           modular::JsonValueToPrettyString(std::move(doc)));
+      failure_callback(
+          Status::BAD_RESPONSE,
+          "Invalid response: " + modular::JsonValueToPrettyString(doc));
     }
     return;
   });
@@ -376,9 +374,9 @@ void Get(
     if (result) {
       success_callback();
     } else {
-      failure_callback(Status::BAD_RESPONSE,
-                       "Invalid response: " +
-                           modular::JsonValueToPrettyString(std::move(doc)));
+      failure_callback(
+          Status::BAD_RESPONSE,
+          "Invalid response: " + modular::JsonValueToPrettyString(doc));
     }
   });
 }
@@ -492,7 +490,7 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
  private:
   // |TokenProviderFactory|
   void GetTokenProvider(
-      const fidl::String& application_url,
+      const fidl::String& /*application_url*/,
       fidl::InterfaceRequest<TokenProvider> request) override {
     // TODO(alhaad/ukode): Current implementation is agnostic about which
     // agent is requesting what token. Fix this.
@@ -551,17 +549,17 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     : Operation<modular::auth::FirebaseTokenPtr, modular::auth::AuthErrPtr> {
  public:
   GoogleFirebaseTokensCall(OperationContainer* const container,
-                           const std::string& account_id,
-                           const std::string& firebase_api_key,
-                           const std::string& id_token,
+                           std::string account_id,
+                           std::string firebase_api_key,
+                           std::string id_token,
                            OAuthTokenManagerApp* const app,
                            const FirebaseTokenCallback& callback)
       : Operation("OAuthTokenManagerApp::GoogleFirebaseTokensCall",
                   container,
                   callback),
-        account_id_(account_id),
-        firebase_api_key_(firebase_api_key),
-        id_token_(id_token),
+        account_id_(std::move(account_id)),
+        firebase_api_key_(std::move(firebase_api_key)),
+        id_token_(std::move(id_token)),
         app_(app) {
     Ready();
   }
@@ -596,7 +594,6 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     } else {
       Success(flow);
     }
-    return;
   }
 
   // Fetch fresh firebase auth token by exchanging idToken from Google.
@@ -606,10 +603,10 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
 
     // JSON post request body
     const std::string json_request_body =
-        "{  \"postBody\": \"id_token=" + id_token_ +
+        R"({  "postBody": "id_token=)" + id_token_ +
         "&providerId=google.com\"," + "   \"returnIdpCredential\": true," +
         "   \"returnSecureToken\": true," +
-        "   \"requestUri\": \"http://localhost\"" + "}";
+        R"(   "requestUri": "http://localhost")" + "}";
 
     app_->application_context_->ConnectToEnvironmentService(
         network_service_.NewRequest());
@@ -695,7 +692,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     return false;
   }
 
-  void Success(FlowToken flow) {
+  void Success(FlowToken /*flow*/) {
     // Set firebase token
     firebase_token_ = auth::FirebaseToken::New();
     if (id_token_.empty()) {
@@ -716,7 +713,7 @@ class OAuthTokenManagerApp::GoogleFirebaseTokensCall
     auth_err_->message = "";
   }
 
-  void Failure(FlowToken flow,
+  void Failure(FlowToken /*flow*/,
                const Status& status,
                const std::string& error_message) {
     FTL_LOG(ERROR) << "Failed with error status:" << status
@@ -744,14 +741,14 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
     : Operation<fidl::String, modular::auth::AuthErrPtr> {
  public:
   GoogleOAuthTokensCall(OperationContainer* const container,
-                        const std::string& account_id,
+                        std::string account_id,
                         const TokenType& token_type,
                         OAuthTokenManagerApp* const app,
                         const ShortLivedTokenCallback& callback)
       : Operation("OAuthTokenManagerApp::GoogleOAuthTokensCall",
                   container,
                   callback),
-        account_id_(account_id),
+        account_id_(std::move(account_id)),
         token_type_(token_type),
         app_(app) {
     Ready();
@@ -784,7 +781,6 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
     } else {
       Success(flow);  // fetching tokens from local cache.
     }
-    return;
   }
 
   // Fetch fresh access and id tokens by exchanging refresh token from Google
@@ -897,7 +893,7 @@ class OAuthTokenManagerApp::GoogleOAuthTokensCall
     auth_err_->message = "";
   }
 
-  void Failure(FlowToken flow,
+  void Failure(FlowToken /*flow*/,
                const Status& status,
                const std::string& error_message) {
     FTL_LOG(ERROR) << "Failed with error status:" << status
@@ -929,13 +925,13 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   GoogleUserCredsCall(OperationContainer* const container,
                       AccountPtr account,
                       OAuthTokenManagerApp* const app,
-                      const AddAccountCallback& callback)
+                      AddAccountCallback callback)
       : Operation("OAuthTokenManagerApp::GoogleUserCredsCall",
                   container,
                   [] {}),
         account_(std::move(account)),
         app_(app),
-        callback_(callback) {
+        callback_(std::move(callback)) {
     Ready();
   }
 
@@ -968,7 +964,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     url += "&client_id=";
     url += kClientId;
 
-    web_view_->SetUrl(std::move(url));
+    web_view_->SetUrl(url);
 
     app_->account_provider_context_->GetAuthenticationContext(
         account_->id, auth_context_.NewRequest());
@@ -978,7 +974,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
 
   // |web_view::WebRequestDelegate|
   void WillSendRequest(const fidl::String& incoming_url) override {
-    const std::string uri = incoming_url.get();
+    const std::string& uri = incoming_url.get();
     const std::string prefix = std::string{kRedirectUri} + "?code=";
     auto pos = uri.find(prefix);
     if (pos != 0) {
@@ -1057,23 +1053,23 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
         creds.push_back(::auth::CreateUserCredential(
             builder, builder.CreateString(cred->account_id()),
             builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
-                std::move(idp_creds))));
+                idp_creds)));
       }
     }
 
     // add the new credential for |account_->id|.
     std::vector<flatbuffers::Offset<::auth::IdpCredential>> new_idp_creds;
-    new_idp_creds.push_back(::auth::CreateIdpCredential(
-        builder, ::auth::IdentityProvider_GOOGLE,
-        builder.CreateString(std::move(refresh_token))));
+    new_idp_creds.push_back(
+        ::auth::CreateIdpCredential(builder, ::auth::IdentityProvider_GOOGLE,
+                                    builder.CreateString(refresh_token)));
 
     creds.push_back(::auth::CreateUserCredential(
         builder, builder.CreateString(account_->id),
         builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
-            std::move(new_idp_creds))));
+            new_idp_creds)));
 
-    builder.Finish(::auth::CreateCredentialStore(
-        builder, builder.CreateVector(std::move(creds))));
+    builder.Finish(
+        ::auth::CreateCredentialStore(builder, builder.CreateVector(creds)));
 
     std::string new_serialized_creds = std::string(
         reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
@@ -1210,7 +1206,7 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
     std::string url = kGoogleRevokeTokenEndpoint + std::string("?token=");
     url += refresh_token;
 
-    std::string request_body = "";
+    std::string request_body;
 
     // This flow branches below, so we need to put it in a shared container
     // from which it can be removed once for all branches.
@@ -1260,11 +1256,11 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
       creds.push_back(::auth::CreateUserCredential(
           builder, builder.CreateString(cred->account_id()),
           builder.CreateVector<flatbuffers::Offset<::auth::IdpCredential>>(
-              std::move(idp_creds))));
+              idp_creds)));
     }
 
-    builder.Finish(::auth::CreateCredentialStore(
-        builder, builder.CreateVector(std::move(creds))));
+    builder.Finish(
+        ::auth::CreateCredentialStore(builder, builder.CreateVector(creds)));
 
     std::string new_serialized_creds = std::string(
         reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
@@ -1287,14 +1283,14 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
     return true;
   }
 
-  void Success(FlowToken flow) {
+  void Success(FlowToken /*flow*/) {
     // Set status to success
     auth_err_ = auth::AuthErr::New();
     auth_err_->status = Status::OK;
     auth_err_->message = "";
   }
 
-  void Failure(FlowToken flow,
+  void Failure(FlowToken /*flow*/,
                const Status& status,
                const std::string& error_message) {
     FTL_LOG(ERROR) << "Failed with error status:" << status
@@ -1321,13 +1317,13 @@ class OAuthTokenManagerApp::GoogleProfileAttributesCall : Operation<> {
   GoogleProfileAttributesCall(OperationContainer* const container,
                               AccountPtr account,
                               OAuthTokenManagerApp* const app,
-                              const AddAccountCallback& callback)
+                              AddAccountCallback callback)
       : Operation("OAuthTokenManagerApp::GoogleProfileAttributesCall",
                   container,
                   [] {}),
         account_(std::move(account)),
         app_(app),
-        callback_(callback) {
+        callback_(std::move(callback)) {
     Ready();
   }
 
@@ -1525,8 +1521,9 @@ void OAuthTokenManagerApp::RefreshFirebaseToken(
 
 int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+  if (!ftl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;
+  }
 
   mtl::MessageLoop loop;
   modular::auth::OAuthTokenManagerApp app;

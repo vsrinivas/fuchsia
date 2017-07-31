@@ -4,14 +4,16 @@
 
 #include "apps/modular/src/component/persistent_queue.h"
 
+#include <utility>
+
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 
 namespace modular {
 
-PersistentQueue::PersistentQueue(const std::string& file_name)
-    : file_name_(file_name) {
+PersistentQueue::PersistentQueue(std::string file_name)
+    : file_name_(std::move(file_name)) {
   std::string contents;
   if (files::ReadFileToString(file_name_, &contents)) {
     rapidjson::Document document;
@@ -26,7 +28,7 @@ PersistentQueue::PersistentQueue(const std::string& file_name)
         FTL_LOG(ERROR) << "Expected a string but got: " << it;
         continue;
       }
-      queue_.push_back(std::string(it->GetString(), it->GetStringLength()));
+      queue_.emplace_back(it->GetString(), it->GetStringLength());
     }
   }
 }

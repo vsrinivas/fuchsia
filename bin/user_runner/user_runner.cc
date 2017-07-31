@@ -18,7 +18,7 @@ namespace modular {
 // Implementation of the user runner app.
 class UserRunnerApp {
  public:
-  UserRunnerApp(const bool test)
+  explicit UserRunnerApp(const bool test)
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         user_runner_impl_(application_context_, test) {
     application_context_->outgoing_services()->AddService<UserRunner>(

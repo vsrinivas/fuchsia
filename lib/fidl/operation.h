@@ -166,8 +166,8 @@ class OperationBase {
   // a string literal. The trace_info argument is copied into the operation, so
   // passing a reference to a temporary is safe.
   OperationBase(const char* trace_name,
-                OperationContainer* container,
-                const std::string& trace_info);
+                OperationContainer* c,
+                std::string trace_info);
 
   // Derived classes call this when they are ready for |Run()| to be called by
   // their container.
@@ -283,7 +283,7 @@ class Operation : public OperationBase {
 // becomes less verbose.
 class OperationBase::FlowTokenBase {
  public:
-  FlowTokenBase(OperationBase* op);
+  explicit FlowTokenBase(OperationBase* op);
   FlowTokenBase(const FlowTokenBase& other);
   ~FlowTokenBase();
 
@@ -299,7 +299,7 @@ class OperationBase::FlowTokenBase {
 template <typename... Args>
 class Operation<Args...>::FlowToken : OperationBase::FlowTokenBase {
  public:
-  FlowToken(Operation<Args...>* const op, Args* const... result)
+  explicit FlowToken(Operation<Args...>* const op, Args* const... result)
       : FlowTokenBase(op), op_(op), result_(result...) {}
 
   FlowToken(const FlowToken& other)
@@ -317,7 +317,7 @@ class Operation<Args...>::FlowToken : OperationBase::FlowTokenBase {
   // This usage is based on the implementation of std::apply(), which is only
   // available in C++17: http://en.cppreference.com/w/cpp/utility/apply
   template <size_t... I>
-  void apply(std::integer_sequence<size_t, I...>) {
+  void apply(std::integer_sequence<size_t, I...> /*unused*/) {
     op_->Done(std::move((*std::get<I>(result_)))...);
   }
 
@@ -355,7 +355,7 @@ class Operation<Args...>::FlowTokenHolder {
  public:
   using FlowToken = Operation<Args...>::FlowToken;
 
-  FlowTokenHolder(const FlowToken& flow)
+  explicit FlowTokenHolder(const FlowToken& flow)
       : ptr_(std::make_shared<std::unique_ptr<FlowToken>>(
             std::make_unique<FlowToken>(flow))) {}
 

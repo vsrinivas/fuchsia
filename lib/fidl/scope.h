@@ -25,7 +25,7 @@ class Scope : public app::ApplicationEnvironmentHost {
   Scope(const app::ApplicationEnvironmentPtr& parent_env,
         const std::string& label);
 
-  Scope(const Scope* const parent_scope, const std::string& label);
+  Scope(const Scope* parent_scope, const std::string& label);
 
   template <typename Interface>
   void AddService(

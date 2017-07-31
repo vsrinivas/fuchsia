@@ -5,6 +5,7 @@
 #include "apps/modular/examples/counter_cpp/store.h"
 
 #include <iterator>
+#include <utility>
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -18,7 +19,8 @@ using modular::LinkWatcher;
 
 namespace modular_example {
 
-Counter::Counter(const rapidjson::Value& name, const rapidjson::Value& value) {
+Counter::Counter(const rapidjson::Value& /*name*/,
+                 const rapidjson::Value& value) {
   // Updates may be incremental, so don't assume that all fields are present.
   auto itr = value.FindMember(kSenderKey);
   if (itr != value.MemberEnd()) {
@@ -33,10 +35,11 @@ Counter::Counter(const rapidjson::Value& name, const rapidjson::Value& value) {
   }
 
   // For the last iteration, test that Module2 removes the sender.
-  if (counter <= 10)
+  if (counter <= 10) {
     FTL_CHECK(!sender.empty());
-  else
+  } else {
     FTL_CHECK(sender.empty());
+  }
 
   FTL_CHECK(is_valid());
 }
@@ -61,8 +64,8 @@ rapidjson::Document Counter::ToDocument(const std::string& module_name) {
   return counter_doc;
 }
 
-Store::Store(const std::string& module_name)
-    : module_name_(module_name), watcher_binding_(this) {}
+Store::Store(std::string module_name)
+    : module_name_(std::move(module_name)), watcher_binding_(this) {}
 
 void Store::Initialize(InterfaceHandle<Link> link) {
   link_.Bind(std::move(link));

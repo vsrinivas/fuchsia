@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
+#include <memory>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -35,7 +36,7 @@ class RecipeView : public mozart::BaseView {
     }
 
     if (view_owner) {
-      host_node_.reset(new mozart::client::EntityNode(session()));
+      host_node_ = std::make_unique<mozart::client::EntityNode>(session());
 
       mx::eventpair host_import_token;
       host_node_->ExportAsRequest(&host_import_token);
@@ -48,7 +49,8 @@ class RecipeView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override {
+  void OnPropertiesChanged(
+      mozart::ViewPropertiesPtr /*old_properties*/) override {
     if (host_node_) {
       GetViewContainer()->SetChildProperties(kChildKey, properties()->Clone());
     }
@@ -66,19 +68,20 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(
-        new RecipeView(application_context()
-                           ->ConnectToEnvironmentService<mozart::ViewManager>(),
-                       std::move(view_owner_request)));
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+    view_ = std::make_unique<RecipeView>(
+        application_context()
+            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+        std::move(view_owner_request));
     SetChild();
   }
 
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      override {
     module_context_.Bind(std::move(module_context));
     SwapModule();
   }
@@ -127,7 +130,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   RecipeApp app;
   loop.Run();

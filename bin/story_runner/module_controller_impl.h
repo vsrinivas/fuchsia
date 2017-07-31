@@ -38,7 +38,7 @@ class ModuleControllerImpl : ModuleController {
 
   // Notifies all watchers of a state change of the module. Also
   // remembers the state to initialize future added watchers.
-  void SetState(const ModuleState new_state);
+  void SetState(ModuleState new_state);
 
   // Calls Stop() on the module, closes the module handle, notifies
   // watchers, then DisposeModule()s the connection and finally calls

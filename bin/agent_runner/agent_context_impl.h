@@ -71,7 +71,7 @@ class AgentContextImpl : AgentContext, AgentController {
       fidl::InterfaceRequest<ComponentContext> request) override;
   // |AgentContext|
   void GetTokenProvider(
-      fidl::InterfaceRequest<auth::TokenProvider> token_provider) override;
+      fidl::InterfaceRequest<auth::TokenProvider> request) override;
   // |AgentContext|
   void ScheduleTask(TaskInfoPtr task_info) override;
   // |AgentContext|

@@ -51,9 +51,9 @@ class App {
     component_index_->FindComponentManifests(
         std::move(query), [this](fidl::Array<ComponentManifestPtr> results) {
           FTL_LOG(INFO) << "Got " << results.size() << " results...";
-          for (auto it = results.begin(); it != results.end(); ++it) {
-            std::cout << "=== " << (*it)->component->url << "\n";
-            std::cout << (*it)->raw << "\n";
+          for (auto& result : results) {
+            std::cout << "=== " << result->component->url << "\n";
+            std::cout << result->raw << "\n";
           }
 
           exit(0);

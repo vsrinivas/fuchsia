@@ -138,7 +138,7 @@ class StoryStorageImpl::WriteLinkDataCall : Operation<> {
                   std::move(result_call)),
         page_(page),
         link_key_(MakeLinkKey(link_path)),
-        data_(std::move(data)) {
+        data_(data) {
     Ready();
   }
 

@@ -41,9 +41,9 @@ class MessageReceiverClient : private modular::MessageReader {
       std::function<void(fidl::String, const OnReceiveCallback& ack)>;
 
   explicit MessageReceiverClient(modular::MessageQueue* mq,
-                                 const MessageReceiverClientCallback& callback);
+                                 MessageReceiverClientCallback callback);
 
-  ~MessageReceiverClient();
+  ~MessageReceiverClient() override;
 
  private:
   // |MessageReader|

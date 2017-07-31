@@ -46,7 +46,7 @@ void AppClientBase::SetAppErrorHandler(const ftl::Closure& error_handler) {
   app_.set_connection_error_handler(error_handler);
 }
 
-void AppClientBase::ServiceTerminate(const std::function<void()>& done) {}
+void AppClientBase::ServiceTerminate(const std::function<void()>& /*done*/) {}
 
 void AppClientBase::ServiceReset() {}
 

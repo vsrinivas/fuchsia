@@ -72,7 +72,7 @@ void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {
 }
 
 void DeviceMapImpl::OnPageChange(const std::string& key,
-                                 const std::string& value) {
+                                 const std::string& /*value*/) {
   FTL_LOG(INFO) << "New Device: " << key;
 }
 

@@ -34,8 +34,9 @@ class SuggestionApp : modular::testing::ComponentBase<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      override {
     module_context_.Bind(std::move(module_context));
     initialized_.Pass();
 
@@ -49,7 +50,7 @@ class SuggestionApp : modular::testing::ComponentBase<modular::Module> {
       received_story_id_.Pass();
 
       auto focus_story = maxwell::FocusStory::New();
-      focus_story->story_id = std::move(story_id);
+      focus_story->story_id = story_id;
 
       auto action = maxwell::Action::New();
       action->set_focus_story(std::move(focus_story));
@@ -99,7 +100,7 @@ class SuggestionApp : modular::testing::ComponentBase<modular::Module> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   SuggestionApp::New();
   loop.Run();

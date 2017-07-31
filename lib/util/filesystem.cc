@@ -33,7 +33,7 @@ void WaitForMinfs() {
     ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
     if (fd.is_valid()) {
       char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
-      vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
+      auto* info = reinterpret_cast<vfs_query_info_t*>(buf);
       ssize_t len = ioctl_vfs_query_fs(fd.get(), info, sizeof(buf) - 1);
       FTL_DCHECK(len > (ssize_t)sizeof(vfs_query_info_t));
       ftl::StringView fs_name(info->name, len - sizeof(vfs_query_info_t));

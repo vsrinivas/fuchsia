@@ -25,7 +25,7 @@ namespace modular {
 // values().
 class ContextHandler : maxwell::ContextListener {
  public:
-  ContextHandler(maxwell::IntelligenceServices* intelligence_services);
+  explicit ContextHandler(maxwell::IntelligenceServices* intelligence_services);
   ~ContextHandler() override;
 
   // Selects a topic to watch for. No notifications are received until Select()

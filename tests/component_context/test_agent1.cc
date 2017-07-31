@@ -49,15 +49,15 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
   }
 
   // |Agent|
-  void Connect(const fidl::String& requestor_url,
+  void Connect(const fidl::String& /*requestor_url*/,
                fidl::InterfaceRequest<app::ServiceProvider> services) override {
     agent1_services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("test_agent1_connected", "", [] {});
   }
 
   // |Agent|
-  void RunTask(const fidl::String& task_id,
-               const RunTaskCallback& callback) override {}
+  void RunTask(const fidl::String& /*task_id*/,
+               const RunTaskCallback& /*callback*/) override {}
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
@@ -94,7 +94,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   TestAgentApp::New();
   loop.Run();

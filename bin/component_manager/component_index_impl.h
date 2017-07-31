@@ -16,13 +16,13 @@ namespace component {
 
 class ComponentIndexImpl : public ComponentIndex {
  public:
-  ComponentIndexImpl(network::NetworkServicePtr network_service);
+  explicit ComponentIndexImpl(network::NetworkServicePtr network_service);
 
-  void GetComponent(const fidl::String& component_id,
-                    const GetComponentCallback& callback) override;
+  void GetComponent(const fidl::String& component_id_,
+                    const GetComponentCallback& callback_) override;
 
   void FindComponentManifests(
-      fidl::Map<fidl::String, fidl::String> filter,
+      fidl::Map<fidl::String, fidl::String> filter_fidl,
       const FindComponentManifestsCallback& callback) override;
 
  private:

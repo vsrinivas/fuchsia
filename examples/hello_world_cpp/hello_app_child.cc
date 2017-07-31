@@ -40,7 +40,7 @@ class HelloAppChild : public Hello {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   HelloAppChild app;
   loop.Run();

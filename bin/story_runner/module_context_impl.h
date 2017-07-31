@@ -66,7 +66,7 @@ class ModuleContextImpl : ModuleContext {
   void StartModule(
       const fidl::String& name,
       const fidl::String& query,
-      const fidl::String& link,
+      const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
@@ -75,15 +75,15 @@ class ModuleContextImpl : ModuleContext {
   void StartModuleInShell(
       const fidl::String& name,
       const fidl::String& query,
-      const fidl::String& link,
+      const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
-      bool focused) override;
+      bool focus) override;
   // |ModuleContext|
   void GetComponentContext(
-      fidl::InterfaceRequest<ComponentContext> request) override;
+      fidl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|
   void GetIntelligenceServices(
       fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;

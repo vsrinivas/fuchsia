@@ -16,7 +16,7 @@ namespace {
 
 class RequestComponentApp {
  public:
-  RequestComponentApp(const std::string& component_id)
+  explicit RequestComponentApp(const std::string& component_id)
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     component_index_ =
         context_->ConnectToEnvironmentService<component::ComponentIndex>();

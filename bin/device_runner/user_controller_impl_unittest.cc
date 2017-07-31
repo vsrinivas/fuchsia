@@ -13,7 +13,7 @@ namespace {
 
 class TestApplicationLauncher : app::ApplicationLauncher {
  public:
-  TestApplicationLauncher(
+  explicit TestApplicationLauncher(
       fidl::InterfaceRequest<app::ApplicationLauncher> request)
       : binding_(this, std::move(request)) {}
 
@@ -22,7 +22,7 @@ class TestApplicationLauncher : app::ApplicationLauncher {
  private:
   void CreateApplication(
       app::ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<app::ApplicationController> request) {
+      fidl::InterfaceRequest<app::ApplicationController> /*request*/) override {
     last_launch_info = std::move(launch_info);
   }
 

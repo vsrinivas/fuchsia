@@ -4,6 +4,8 @@
 
 #include "apps/modular/examples/swap_cpp/module.h"
 
+#include <utility>
+
 namespace modular_example {
 
 ModuleView::ModuleView(
@@ -21,7 +23,8 @@ ModuleView::ModuleView(
   parent_node().AddChild(background_node_);
 }
 
-void ModuleView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
+void ModuleView::OnPropertiesChanged(
+    mozart::ViewPropertiesPtr /*old_properties*/) {
   mozart::client::Rectangle background_shape(session(), logical_size().width,
                                              logical_size().height);
   background_node_.SetShape(background_shape);
@@ -30,20 +33,20 @@ void ModuleView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
   InvalidateScene();
 }
 
-ModuleApp::ModuleApp(CreateViewCallback create) : create_(create) {}
+ModuleApp::ModuleApp(CreateViewCallback create) : create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fidl::InterfaceRequest<app::ServiceProvider> services) {
+    fidl::InterfaceRequest<app::ServiceProvider> /*services*/) {
   view_.reset(create_(
       application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
       std::move(view_owner_request)));
 }
 
 void ModuleApp::Initialize(
-    fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
-    fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {}
+    fidl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
+    fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+    fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
 
 void ModuleApp::Stop(const StopCallback& done) {
   done();

@@ -24,10 +24,10 @@ UserControllerImpl::UserControllerImpl(
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
-      done_(done) {
+      done_(std::move(done)) {
   // 1. Launch UserRunner in the current environment.
-  user_runner_.reset(
-      new AppClient<UserRunner>(application_launcher, std::move(user_runner)));
+  user_runner_ = std::make_unique<AppClient<UserRunner>>(
+      application_launcher, std::move(user_runner));
 
   // 2. Initialize the UserRunner service.
   user_runner_->primary_service()->Initialize(

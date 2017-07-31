@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <string>
+#include <utility>
 
 #include "apps/modular/services/component/component.fidl.h"
 #include "apps/modular/src/component_manager/component_resources_impl.h"
@@ -57,7 +58,7 @@ void CopyJSONFieldToFidl(const rapidjson::Value& object,
 class BarrierCallback {
  public:
   BarrierCallback(int n, std::function<void()> callback)
-      : n_(n), callback_(callback) {}
+      : n_(n), callback_(std::move(callback)) {}
 
   void Decrement() {
     n_--;
@@ -78,8 +79,9 @@ bool FacetInfoMatches(const rapidjson::Value& facet_data,
     // This was just an existence filter, so return true.
     return true;
   }
-  if (facet_data.GetType() != filter_data.GetType())
+  if (facet_data.GetType() != filter_data.GetType()) {
     return false;
+  }
 
   if (facet_data.IsObject()) {
     // Go through each key in 'filter_data' and recursively check for the same
@@ -96,15 +98,15 @@ bool FacetInfoMatches(const rapidjson::Value& facet_data,
       }
     }
     return true;
-  } else if (facet_data.IsArray()) {
+  }
+  if (facet_data.IsArray()) {
     // Every array element in 'filter_data' should match an element
     // in facet_data.
     FTL_LOG(FATAL) << "Filtering by array not implemented.";
     return false;
-  } else {
+  }
     // For primitive values we can use rapidjson's comparison operator.
     return facet_data == filter_data;
-  }
 
   // Unreachable.
   return true;
@@ -115,15 +117,15 @@ bool ManifestMatches(const ComponentManifestPtr& manifest,
   rapidjson::Document manifest_json_doc;
   manifest_json_doc.Parse(manifest->raw.get().c_str());
 
-  for (auto it = filter.cbegin(); it != filter.cend(); ++it) {
+  for (const auto& it : filter) {
     // See if the manifest under consideration has this facet.
-    const auto& facet_type = it->first;
+    const auto& facet_type = it.first;
     if (!manifest_json_doc.HasMember(facet_type.c_str())) {
       return false;
     }
 
     // See if the filter's FacetInfo matches that in the facet.
-    const auto& filter_data = it->second;
+    const auto& filter_data = it.second;
     const auto& facet_data = manifest_json_doc[facet_type.c_str()];
 
     if (!FacetInfoMatches(facet_data, filter_data)) {
@@ -256,14 +258,14 @@ void ComponentIndexImpl::LoadComponentIndex(const std::string& contents,
   }
 
   for (const rapidjson::Value& uri : doc.GetArray()) {
-    local_index_.push_back(uri.GetString());
+    local_index_.emplace_back(uri.GetString());
   }
 }
 
 void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
                                       const GetComponentCallback& callback_) {
-  std::string component_id(component_id_);
-  GetComponentCallback callback(callback_);
+  const std::string& component_id(component_id_);
+  const GetComponentCallback& callback(callback_);
 
   FTL_VLOG(1) << "ComponentIndexImpl::GetComponent(\"" << component_id << "\")";
 
@@ -277,7 +279,7 @@ void ComponentIndexImpl::GetComponent(const ::fidl::String& component_id_,
         }
 
         std::string manifest_string;
-        if (!mtl::StringFromVmo(std::move(vmo), &manifest_string)) {
+        if (!mtl::StringFromVmo(vmo, &manifest_string)) {
           FTL_LOG(ERROR) << "Failed to make string from manifest vmo";
           callback(nullptr, nullptr,
                    MakeNetworkError(500, "Failed to make string from vmo"));
@@ -305,8 +307,7 @@ void ComponentIndexImpl::FindComponentManifests(
     const FindComponentManifestsCallback& callback) {
   // Convert the filter from a FIDL Map of JSON to something we work on
   // internally.
-  std::map<std::string, rapidjson::Document>* filter =
-      new std::map<std::string, rapidjson::Document>();
+  auto* filter = new std::map<std::string, rapidjson::Document>();
   for (auto i = filter_fidl.cbegin(); i != filter_fidl.cend(); ++i) {
     rapidjson::Document filter_doc;
     filter_doc.Parse(i.GetValue().get().c_str());
@@ -321,8 +322,7 @@ void ComponentIndexImpl::FindComponentManifests(
         std::make_pair(std::string(i.GetKey()), std::move(filter_doc)));
   }
 
-  std::vector<ComponentManifestPtr>* results =
-      new std::vector<ComponentManifestPtr>();
+  auto* results = new std::vector<ComponentManifestPtr>();
   // Self-deleting.
   BarrierCallback* barrier =
       new BarrierCallback(local_index_.size(), [results, filter, callback] {

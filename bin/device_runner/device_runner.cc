@@ -128,25 +128,25 @@ class Settings {
                       fidl::Array<fidl::String>* args) {
     bool escape = false;
     std::string arg;
-    for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
+    for (char i : value) {
       if (escape) {
-        arg.push_back(*i);
+        arg.push_back(i);
         escape = false;
         continue;
       }
 
-      if (*i == '\\') {
+      if (i == '\\') {
         escape = true;
         continue;
       }
 
-      if (*i == ',') {
+      if (i == ',') {
         args->push_back(arg);
         arg.clear();
         continue;
       }
 
-      arg.push_back(*i);
+      arg.push_back(i);
     }
 
     if (!arg.empty()) {
@@ -162,8 +162,8 @@ class Settings {
     const std::string kRootModule = "--root_module";
     std::string result = user_shell;
 
-    for (size_t i = 0; i < user_shell_args.size(); ++i) {
-      const auto& arg = user_shell_args[i].get();
+    for (const auto& user_shell_arg : user_shell_args) {
+      const auto& arg = user_shell_arg.get();
       if (arg.substr(0, kRootModule.size()) == kRootModule) {
         result = arg.substr(kRootModule.size());
       }
@@ -182,7 +182,7 @@ class Settings {
 
 class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
  public:
-  DeviceRunnerApp(const Settings& settings)
+  explicit DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
         app_context_(
             app::ApplicationContext::CreateFromStartupInfoNotChecked()),
@@ -238,8 +238,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 1. Start the device shell. This also connects the root view of the device
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
-    device_shell_.reset(new AppClient<DeviceShell>(
-        app_context_->launcher().get(), settings_.device_shell.Clone()));
+    device_shell_ = std::make_unique<AppClient<DeviceShell>>(
+        app_context_->launcher().get(), settings_.device_shell.Clone());
 
     mozart::ViewProviderPtr device_shell_view_provider;
     ConnectToService(device_shell_->services(),
@@ -266,8 +266,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 3. Start OAuth Token Manager App.
     AppConfigPtr token_manager_config = AppConfig::New();
     token_manager_config->url = "file:///system/apps/oauth_token_manager";
-    token_manager_.reset(new AppClient<auth::AccountProvider>(
-        app_context_->launcher().get(), std::move(token_manager_config)));
+    token_manager_ = std::make_unique<AppClient<auth::AccountProvider>>(
+        app_context_->launcher().get(), std::move(token_manager_config));
     token_manager_->SetAppErrorHandler([] {
       FTL_CHECK(false) << "Token manager crashed. Stopping device runner.";
     });

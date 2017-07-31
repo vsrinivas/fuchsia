@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <utility>
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
@@ -78,7 +79,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const fidl::String& json) override {
+  void Notify(const fidl::String& /*json*/) override {
     if (++data_count_ % 5 == 0) {
       continue_();
     }
@@ -156,7 +157,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   }
 
  private:
-  TestApp(const Settings& settings) : settings_(settings) {
+  explicit TestApp(Settings settings) : settings_(std::move(settings)) {
     TestInit(__FILE__);
   }
 
@@ -168,8 +169,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   // |SingleServiceViewApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     create_view_.Pass();
   }
 

@@ -32,7 +32,7 @@ class UserProviderImpl : UserProvider {
 
  private:
   // |UserProvider|
-  void Login(UserLoginParamsPtr user_login_params) override;
+  void Login(UserLoginParamsPtr params) override;
 
   // |UserProvider|
   void PreviousUsers(const PreviousUsersCallback& callback) override;
@@ -48,8 +48,7 @@ class UserProviderImpl : UserProvider {
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
-  void LoginInternal(auth::AccountPtr account,
-                     UserLoginParamsPtr user_login_params);
+  void LoginInternal(auth::AccountPtr account, UserLoginParamsPtr params);
 
   fidl::BindingSet<UserProvider> bindings_;
 

@@ -20,7 +20,7 @@ namespace {
 
 class HelloAppParent {
  public:
-  HelloAppParent(ftl::CommandLine& command_line)
+  explicit HelloAppParent(ftl::CommandLine& command_line)
       : context_(app::ApplicationContext::CreateFromStartupInfo()) {
     auto launch_info = app::ApplicationLaunchInfo::New();
     const std::vector<std::string>& args = command_line.positional_args();
@@ -28,8 +28,9 @@ class HelloAppParent {
       launch_info->url = "file:///system/apps/hello_app_child";
     } else {
       launch_info->url = args[0];
-      for (size_t i = 1; i < args.size(); ++i)
+      for (size_t i = 1; i < args.size(); ++i) {
         launch_info->arguments.push_back(args[i]);
+      }
     }
     launch_info->services = child_services_.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),

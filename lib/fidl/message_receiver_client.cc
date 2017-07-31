@@ -4,12 +4,14 @@
 
 #include "apps/modular/lib/fidl/message_receiver_client.h"
 
+#include <utility>
+
 namespace modular {
 
 MessageReceiverClient::MessageReceiverClient(
     modular::MessageQueue* const mq,
-    const MessageReceiverClientCallback& callback)
-    : callback_(callback), receiver_(this) {
+    MessageReceiverClientCallback callback)
+    : callback_(std::move(callback)), receiver_(this) {
   mq->RegisterReceiver(receiver_.NewBinding());
 }
 

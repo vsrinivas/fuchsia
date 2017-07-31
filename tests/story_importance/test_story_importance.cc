@@ -57,7 +57,7 @@ class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
 
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr story_info,
-                modular::StoryState story_state) override {
+                modular::StoryState /*story_state*/) override {
     FTL_VLOG(1) << "TestApp::OnChange() "
                 << " id " << story_info->id << " url " << story_info->url;
   }
@@ -99,7 +99,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
+  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
@@ -203,8 +203,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   // |SingleServiceViewApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     create_view_.Pass();
   }
 

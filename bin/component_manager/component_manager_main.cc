@@ -34,7 +34,7 @@ class App {
 
 }  // namespace component
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   component::App app;
   loop.Run();

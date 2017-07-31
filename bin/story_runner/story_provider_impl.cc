@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 
+#include <utility>
 #include <vector>
 
 #include "application/lib/app/connect.h"
@@ -76,7 +77,7 @@ class StoryProviderImpl::MutateStoryDataCall : Operation<> {
                   std::move(result_call)),
         page_(page),
         story_id_(story_id),
-        mutate_(mutate) {
+        mutate_(std::move(mutate)) {
     Ready();
   }
 
@@ -134,7 +135,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
         story_provider_impl_(story_provider_impl),
         url_(url),
         extra_info_(std::move(extra_info)),
-        root_json_(std::move(root_json)) {
+        root_json_(root_json) {
     Ready();
   }
 
@@ -269,7 +270,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
       return;
     }
 
-    FTL_DCHECK(i->second.impl.get() != nullptr);
+    FTL_DCHECK(i->second.impl != nullptr);
     i->second.impl->StopForDelete([this, flow] { Erase(flow); });
   }
 
@@ -450,7 +451,7 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
 
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope,
-    const std::string& device_id,
+    std::string device_id,
     ledger::Ledger* const ledger,
     ledger::Page* const root_page,
     AppConfigPtr story_shell,
@@ -460,7 +461,7 @@ StoryProviderImpl::StoryProviderImpl(
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
     : PageClient("StoryProviderImpl", root_page, kStoryKeyPrefix),
       user_scope_(user_scope),
-      device_id_(device_id),
+      device_id_(std::move(device_id)),
       ledger_(ledger),
       root_page_(root_page),
       story_shell_(std::move(story_shell)),
@@ -588,7 +589,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
     const CreateStoryWithInfoCallback& callback) {
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, module_url,
-                      std::move(extra_info), std::move(root_json), callback);
+                      std::move(extra_info), root_json, callback);
 }
 
 // |StoryProvider|
@@ -685,7 +686,7 @@ void StoryProviderImpl::WatchImportance(
 }
 
 // |PageClient|
-void StoryProviderImpl::OnPageChange(const std::string& key,
+void StoryProviderImpl::OnPageChange(const std::string& /*key*/,
                                      const std::string& value) {
   auto story_data = StoryData::New();
   if (!XdrRead(value, &story_data, XdrStoryData)) {

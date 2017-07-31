@@ -44,7 +44,7 @@ fidl::Array<uint8_t> ToArray(const std::string& val) {
 }
 
 Key MakeKey() {
-  return ToArray(ftl::StringPrintf("%120ld-%u", time(0), rand()));
+  return ToArray(ftl::StringPrintf("%120ld-%u", time(nullptr), rand()));
 }
 
 std::function<void(ledger::Status)> HandleResponse(std::string description) {
@@ -93,7 +93,7 @@ void GetEntries(ledger::PageSnapshotPtr snapshot,
 }  // namespace
 
 TodoApp::TodoApp()
-    : rng_(time(0)),
+    : rng_(time(nullptr)),
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       generator_(&rng_),
@@ -109,8 +109,8 @@ TodoApp::TodoApp()
 
 void TodoApp::Initialize(
     fidl::InterfaceHandle<modular::ModuleContext> module_context,
-    fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
+    fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+    fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {
   module_context_.Bind(std::move(module_context));
   module_context_->GetComponentContext(component_context_.NewRequest());
   component_context_->GetLedger(ledger_.NewRequest(),
@@ -130,7 +130,7 @@ void TodoApp::Stop(const StopCallback& done) {
   done();
 }
 
-void TodoApp::OnChange(ledger::PageChangePtr page_change,
+void TodoApp::OnChange(ledger::PageChangePtr /*page_change*/,
                        ledger::ResultState result_state,
                        const OnChangeCallback& callback) {
   if (result_state != ledger::ResultState::PARTIAL_STARTED &&
@@ -200,7 +200,7 @@ void TodoApp::Act() {
 
 }  // namespace todo
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   todo::TodoApp app;
   loop.Run();

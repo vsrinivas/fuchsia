@@ -4,6 +4,8 @@
 
 #include "apps/modular/src/story_runner/story_controller_impl.h"
 
+#include <memory>
+
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
@@ -266,7 +268,7 @@ class StoryControllerImpl::StartCall : Operation<> {
               auto parent_path = module_data->module_path.Clone();
               parent_path.resize(parent_path.size() - 1);
               story_controller_impl_->StartModuleInShell(
-                  std::move(parent_path),
+                  parent_path,
                   module_data->module_path[module_data->module_path.size() - 1],
                   module_data->module_url, module_data->link_path->link_name,
                   nullptr, nullptr, nullptr,
@@ -488,7 +490,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
     ii->module_controller_impl->Teardown([this, flow] { Cont4(flow); });
   }
 
-  void Cont4(FlowToken flow) {
+  void Cont4(FlowToken /*flow*/) {
     story_controller_impl_->modules_watchers_.ForAllPtrs(
         [this](StoryModulesWatcher* const watcher) {
           watcher->OnNewModule(module_data_.Clone());
@@ -637,7 +639,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     i->module_controller_impl->Connect(std::move(module_controller_request_));
   }
 
-  void Launch(FlowToken flow) {
+  void Launch(FlowToken /*flow*/) {
     auto launch_info = app::ApplicationLaunchInfo::New();
 
     app::ServiceProviderPtr app_services;
@@ -665,9 +667,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
     Connection connection;
 
-    connection.module_controller_impl.reset(new ModuleControllerImpl(
+    connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
         story_controller_impl_, std::move(application_controller),
-        std::move(module), module_path_));
+        std::move(module), module_path_);
     connection.module_controller_impl->Connect(
         std::move(module_controller_request_));
 
@@ -683,9 +685,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_->link_path = link_path_.Clone();
     module_data_->surface_relation = surface_relation_.Clone();
 
-    connection.module_context_impl.reset(new ModuleContextImpl(
+    connection.module_context_impl = std::make_unique<ModuleContextImpl>(
         module_context_info, module_data_.Clone(),
-        connection.module_controller_impl.get(), std::move(self_request)));
+        connection.module_controller_impl.get(), std::move(self_request));
 
     story_controller_impl_->connections_.emplace_back(std::move(connection));
 
@@ -748,7 +750,7 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
         });
   }
 
-  void Cont(FlowToken flow) {
+  void Cont(FlowToken /*flow*/) {
     // HACK(mesch): Hardcoded importance computation. Will be delegated
     // somewhere more flexible eventually.
     auto i = context_state_.find(kStoryImportanceContext);
@@ -871,7 +873,7 @@ void StoryControllerImpl::GetImportance(
 void StoryControllerImpl::FocusModule(
     const fidl::Array<fidl::String>& module_path) {
   if (story_shell_) {
-    if (module_path.size() > 0) {
+    if (!module_path.empty()) {
       // Focus modules relative to their parent modules.
       fidl::Array<fidl::String> parent_module_path = module_path.Clone();
       parent_module_path.resize(parent_module_path.size() - 1);
@@ -1160,7 +1162,7 @@ void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
   auto link_path = LinkPath::New();
   link_path->module_path = std::move(module_path);
   link_path->link_name = name;
-  GetLinkPath(std::move(link_path), std::move(request));
+  GetLinkPath(link_path, std::move(request));
 }
 
 void StoryControllerImpl::StartStoryShell(

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <utility>
 
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
@@ -268,7 +269,8 @@ class TestUserShellApp
   }
 
  private:
-  TestUserShellApp(const Settings& settings) : settings_(settings) {
+  explicit TestUserShellApp(Settings settings)
+      : settings_(std::move(settings)) {
     TestInit(__FILE__);
   }
 
@@ -280,8 +282,8 @@ class TestUserShellApp
 
   // |SingleServiceViewApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     create_view_.Pass();
   }
 
@@ -478,7 +480,7 @@ class TestUserShellApp
               path.push_back(' ');
               path.append(path_element);
             }
-            if (path.size()) {
+            if (!path.empty()) {
               FTL_LOG(INFO) << "TestUserShell         path=" << path.substr(1);
             }
           }

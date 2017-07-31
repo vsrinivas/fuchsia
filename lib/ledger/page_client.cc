@@ -4,16 +4,20 @@
 
 #include "apps/modular/lib/ledger/page_client.h"
 
+#include <utility>
+
+#include <memory>
+
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
 
-PageClient::PageClient(const std::string& context,
+PageClient::PageClient(std::string context,
                        ledger::Page* const page,
                        const char* const prefix)
-    : binding_(this), context_(context) {
+    : binding_(this), context_(std::move(context)) {
   FTL_DCHECK(page);
   page->GetSnapshot(
       NewRequest(), prefix == nullptr ? nullptr : to_array(prefix),
@@ -27,7 +31,7 @@ PageClient::PageClient(const std::string& context,
 PageClient::~PageClient() = default;
 
 fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
-  page_snapshot_.reset(new ledger::PageSnapshotPtr);
+  page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
   (*page_snapshot_).set_connection_error_handler([this] {
     FTL_LOG(ERROR) << context_ << ": "
@@ -83,10 +87,10 @@ void PageClient::OnChange(ledger::PageChangePtr page,
   callback(Update(result_state));
 }
 
-void PageClient::OnPageChange(const std::string& key,
-                              const std::string& value) {}
+void PageClient::OnPageChange(const std::string& /*key*/,
+                              const std::string& /*value*/) {}
 
-void PageClient::OnPageDelete(const std::string& key) {}
+void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
 namespace {
 

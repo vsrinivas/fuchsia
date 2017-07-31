@@ -12,7 +12,7 @@
 namespace modular {
 
 struct ViewHost::ViewData {
-  ViewData(mozart::client::Session* session) : host_node(session) {}
+  explicit ViewData(mozart::client::Session* session) : host_node(session) {}
 
   mozart::client::EntityNode host_node;
 };
@@ -44,7 +44,8 @@ void ViewHost::ConnectView(
   UpdateScene();
 }
 
-void ViewHost::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
+void ViewHost::OnPropertiesChanged(
+    mozart::ViewPropertiesPtr /*old_properties*/) {
   UpdateScene();
 }
 
@@ -62,8 +63,9 @@ void ViewHost::OnChildUnavailable(uint32_t child_key) {
 }
 
 void ViewHost::UpdateScene() {
-  if (!properties() || views_.empty())
+  if (!properties() || views_.empty()) {
     return;
+  }
 
   // Layout all children in a row.
   uint32_t index = 0;

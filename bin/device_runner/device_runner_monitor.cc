@@ -38,7 +38,7 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
 
 }  // namespace modular
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   modular::DeviceRunnerMonitorApp app;
   loop.Run();

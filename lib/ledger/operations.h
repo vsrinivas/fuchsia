@@ -156,7 +156,7 @@ class ReadAllDataCall : Operation<DataArray> {
                });
   }
 
-  void Cont2(FlowToken flow) {
+  void Cont2(FlowToken /*flow*/) {
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!mtl::StringFromVmo(entry->value, &value_as_string)) {

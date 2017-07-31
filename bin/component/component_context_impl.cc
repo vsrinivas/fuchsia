@@ -4,23 +4,24 @@
 
 #include "apps/modular/src/component/component_context_impl.h"
 
+#include <utility>
+
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/ftl/logging.h"
 
 namespace modular {
 
-ComponentContextImpl::ComponentContextImpl(
-    const ComponentContextInfo& info,
-    const std::string& component_namespace,
-    const std::string& component_instance_id,
-    const std::string& component_url)
+ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
+                                           std::string component_namespace,
+                                           std::string component_instance_id,
+                                           std::string component_url)
     : message_queue_manager_(info.message_queue_manager),
       agent_runner_(info.agent_runner),
       ledger_repository_(info.ledger_repository),
-      component_namespace_(component_namespace),
-      component_instance_id_(component_instance_id),
-      component_url_(component_url) {
+      component_namespace_(std::move(component_namespace)),
+      component_instance_id_(std::move(component_instance_id)),
+      component_url_(std::move(component_url)) {
   FTL_DCHECK(message_queue_manager_);
   FTL_DCHECK(agent_runner_);
   FTL_DCHECK(ledger_repository_);

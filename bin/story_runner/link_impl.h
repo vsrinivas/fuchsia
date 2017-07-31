@@ -71,12 +71,11 @@ class LinkImpl {
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   void Sync(const std::function<void()>& callback);
-  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
-             uint32_t connection);
+  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher, uint32_t conn);
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher);
 
   // Used by LinkWatcherConnection.
-  void RemoveConnection(LinkWatcherConnection* conn);
+  void RemoveConnection(LinkWatcherConnection* connection);
 
   // Used by StoryControllerImpl.
   const LinkPathPtr& link_path() const { return link_path_; }
@@ -179,7 +178,9 @@ class LinkConnection : Link {
 
  private:
   // Private so it cannot be created on the stack.
-  LinkConnection(LinkImpl* impl, uint32_t id, fidl::InterfaceRequest<Link> request);
+  LinkConnection(LinkImpl* impl,
+                 uint32_t id,
+                 fidl::InterfaceRequest<Link> link_request);
 
   // |Link|
   void SetSchema(const fidl::String& json_schema) override;

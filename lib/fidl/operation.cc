@@ -4,6 +4,8 @@
 
 #include "apps/modular/lib/fidl/operation.h"
 
+#include <utility>
+
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
@@ -119,12 +121,12 @@ void OperationQueue::Cont() {
 
 OperationBase::OperationBase(const char* trace_name,
                              OperationContainer* const c,
-                             const std::string& trace_info)
+                             std::string trace_info)
     : container_(c->GetWeakPtr()),
       weak_ptr_factory_(this),
       trace_name_(trace_name),
       trace_id_(TRACE_NONCE()),
-      trace_info_(trace_info) {}
+      trace_info_(std::move(trace_info)) {}
 
 OperationBase::~OperationBase() = default;
 

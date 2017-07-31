@@ -31,8 +31,9 @@ std::string StringUnescape(StringView input, char escape_char) {
     if (input[i] == escape_char) {
       FTL_DCHECK(i != input.size() - 1)
           << "StringUnescape: unescapable string: " << input;
-      if (i != input.size() - 1)
+      if (i != input.size() - 1) {
         i++;
+      }
     }
     output.push_back(input[i]);
   }

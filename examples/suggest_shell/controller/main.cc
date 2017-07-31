@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "application/lib/app/connect.h"
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
@@ -34,11 +36,11 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(new modular::ViewHost(
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+    view_ = std::make_unique<modular::ViewHost>(
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
+        std::move(view_owner_request));
 
     for (auto& view_owner : child_views_) {
       view_->ConnectView(std::move(view_owner));
@@ -58,8 +60,9 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      override {
     module_context_.Bind(std::move(module_context));
 
     constexpr char kViewLink[] = "view";
@@ -144,7 +147,7 @@ class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   ControllerApp app;
   loop.Run();

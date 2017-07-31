@@ -51,7 +51,7 @@ class Store : modular::LinkWatcher {
  public:
   using Callback = std::function<void()>;
 
-  Store(const std::string& module_name);
+  explicit Store(std::string module_name);
 
   void Initialize(fidl::InterfaceHandle<modular::Link> link);
 

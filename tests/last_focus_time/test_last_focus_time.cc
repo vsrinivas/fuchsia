@@ -130,7 +130,7 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
+  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
@@ -183,8 +183,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   // |SingleServiceViewApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     create_view_.Pass();
   }
 
@@ -277,7 +277,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   TestApp::New();
   loop.Run();

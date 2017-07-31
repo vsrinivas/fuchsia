@@ -44,7 +44,7 @@ class ProxySet {
 // Proxy template class below.
 class ProxyBase {
  public:
-  ProxyBase(ProxySet* set);
+  explicit ProxyBase(ProxySet* set);
   virtual ~ProxyBase();
 
  protected:

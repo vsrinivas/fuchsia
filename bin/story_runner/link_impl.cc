@@ -22,8 +22,8 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromPath(
     const Doc& doc,
     const fidl::Array<fidl::String>& path) {
   rapidjson::GenericPointer<typename Doc::ValueType> pointer;
-  for (auto it = path.begin(); it != path.end(); ++it) {
-    pointer = pointer.Append(it->get(), nullptr);
+  for (const auto& it : path) {
+    pointer = pointer.Append(it.get(), nullptr);
   }
   return pointer;
 }
@@ -95,7 +95,7 @@ class LinkImpl::WriteCall : Operation<> {
         });
   }
 
-  void Cont2(FlowToken flow) {
+  void Cont2(FlowToken /*flow*/) {
     FTL_CHECK(impl_->pending_write_call_);
     impl_->pending_write_call_ = false;
     impl_->NotifyWatchers(src_);

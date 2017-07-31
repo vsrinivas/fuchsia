@@ -28,7 +28,8 @@ class DevStoryShellApp
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services_request) override {
+      fidl::InterfaceRequest<app::ServiceProvider> /*services_request*/)
+      override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
@@ -46,9 +47,9 @@ class DevStoryShellApp
 
   // |StoryShell|
   void ConnectView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner,
-                   const fidl::String& view_id,
-                   const fidl::String& parent_id,
-                   modular::SurfaceRelationPtr surface_relation) override {
+                   const fidl::String& /*view_id*/,
+                   const fidl::String& /*parent_id*/,
+                   modular::SurfaceRelationPtr /*surface_relation*/) override {
     if (view_) {
       view_->ConnectView(std::move(view_owner));
     } else {
@@ -57,11 +58,11 @@ class DevStoryShellApp
   }
 
   // |StoryShell|
-  void FocusView(const fidl::String& view_id,
-                 const fidl::String& relative_view_id) override {}
+  void FocusView(const fidl::String& /*view_id*/,
+                 const fidl::String& /*relative_view_id*/) override {}
 
   // |StoryShell|
-  void DefocusView(const fidl::String& view_id,
+  void DefocusView(const fidl::String& /*view_id*/,
                    const DefocusViewCallback& callback) override {
     callback();
   }
@@ -75,10 +76,10 @@ class DevStoryShellApp
 
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {
-      view_.reset(new modular::ViewHost(
+      view_ = std::make_unique<modular::ViewHost>(
           application_context()
               ->ConnectToEnvironmentService<mozart::ViewManager>(),
-          std::move(view_owner_request_)));
+          std::move(view_owner_request_));
 
       for (auto& view_owner : child_views_) {
         view_->ConnectView(std::move(view_owner));
@@ -99,7 +100,7 @@ class DevStoryShellApp
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   DevStoryShellApp app;
   loop.Run();

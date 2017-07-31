@@ -4,6 +4,8 @@
 
 #include "apps/modular/src/device_runner/user_provider_impl.h"
 
+#include <utility>
+
 #include "apps/modular/src/device_runner/users_generated.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
@@ -60,7 +62,7 @@ UserProviderImpl::UserProviderImpl(
     const AppConfig& default_user_shell,
     const AppConfig& story_shell,
     auth::AccountProvider* const account_provider)
-    : app_context_(app_context),
+    : app_context_(std::move(app_context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
       story_shell_(story_shell),
@@ -200,8 +202,8 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
             builder.CreateString(account->url),
             builder.CreateString(account->image_url)));
 
-        builder.Finish(modular::CreateUsersStorage(
-            builder, builder.CreateVector(std::move(users))));
+        builder.Finish(
+            modular::CreateUsersStorage(builder, builder.CreateVector(users)));
         std::string new_serialized_users = std::string(
             reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
             builder.GetSize());
@@ -258,8 +260,8 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id,
           builder.CreateString(user->image_url())));
     }
 
-    builder.Finish(modular::CreateUsersStorage(
-        builder, builder.CreateVector(std::move(users))));
+    builder.Finish(
+        modular::CreateUsersStorage(builder, builder.CreateVector(users)));
     std::string new_serialized_users = std::string(
         reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
         builder.GetSize());
@@ -305,7 +307,7 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
     FTL_LOG(ERROR) << "Unable to verify storage buffer.";
     return false;
   }
-  serialized_users_ = std::move(serialized_users);
+  serialized_users_ = serialized_users;
   users_storage_ = modular::GetUsersStorage(serialized_users_.data());
   return true;
 }

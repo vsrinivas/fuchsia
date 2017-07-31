@@ -71,7 +71,7 @@ std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
 std::string MakeLinkKey(const LinkPathPtr& link_path);
-std::string MakeModuleKey(const fidl::Array<fidl::String>& module_name);
+std::string MakeModuleKey(const fidl::Array<fidl::String>& module_path);
 
 // 3. The slash separator is escaped by a backslash inside the ID
 //    values. Backslashes inside the ID values are escaped by backslash too.

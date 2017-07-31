@@ -27,11 +27,13 @@ constexpr char kSyncDeviceProfile[] =
 std::string LoadDeviceProfile() {
   std::string device_profile;
 
-  if (!files::IsDirectory(kDeviceInfoDirectory))
+  if (!files::IsDirectory(kDeviceInfoDirectory)) {
     files::CreateDirectory(kDeviceInfoDirectory);
+  }
 
-  if (!files::ReadFileToString(kSyncDeviceProfile, &device_profile))
+  if (!files::ReadFileToString(kSyncDeviceProfile, &device_profile)) {
     device_profile = "{}";
+  }
 
   return device_profile;
 }
@@ -42,8 +44,9 @@ std::string LoadDeviceProfile() {
 std::string LoadDeviceID(const std::string& user) {
   std::string device_id;
 
-  if (!files::IsDirectory(kDeviceInfoDirectory))
+  if (!files::IsDirectory(kDeviceInfoDirectory)) {
     files::CreateDirectory(kDeviceInfoDirectory);
+  }
 
   // FIXME(zbowling): this isn't scalable
   std::string path = ftl::StringPrintf(kDeviceIDFile, user.c_str());
@@ -65,8 +68,9 @@ std::string LoadDeviceID(const std::string& user) {
 std::string LoadDeviceName(const std::string& user) {
   std::string device_name;
 
-  if (!files::IsDirectory(kDeviceInfoDirectory))
+  if (!files::IsDirectory(kDeviceInfoDirectory)) {
     files::CreateDirectory(kDeviceInfoDirectory);
+  }
 
   std::string path = ftl::StringPrintf(kDeviceNameFile, user.c_str());
 

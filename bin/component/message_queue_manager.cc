@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <utility>
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
@@ -47,11 +48,11 @@ class MessageQueueConnection : public MessageQueue {
 // manipulate the message queue. Owned by |MessageQueueManager|.
 class MessageQueueStorage : MessageSender {
  public:
-  MessageQueueStorage(const std::string& queue_name,
-                      const std::string& queue_token,
+  MessageQueueStorage(std::string queue_name,
+                      std::string queue_token,
                       const std::string& file_name_)
-      : queue_name_(queue_name),
-        queue_token_(queue_token),
+      : queue_name_(std::move(queue_name)),
+        queue_token_(std::move(queue_token)),
         queue_data_(file_name_) {}
 
   ~MessageQueueStorage() override = default;
@@ -165,7 +166,7 @@ std::string GenerateQueueToken() {
   uint8_t randomness[256 / 8];
   size_t random_size;
   mx_cprng_draw(&randomness, sizeof randomness, &random_size);
-  // TODO: is there a more efficient way to do this?
+  // TODO(alhaad): is there a more efficient way to do this?
   std::string token;
   for (uint8_t byte : randomness) {
     ftl::StringAppendf(&token, "%X", byte);
@@ -190,8 +191,8 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
  public:
   GetQueueTokenCall(OperationContainer* const container,
                     ledger::Page* const page,
-                    const std::string& component_namespace,
-                    const std::string& component_instance_id,
+                    std::string component_namespace,
+                    std::string component_instance_id,
                     const std::string& queue_name,
                     ResultCall result_call)
       : Operation("MessageQueueManager::GetQueueTokenCall",
@@ -199,8 +200,8 @@ class MessageQueueManager::GetQueueTokenCall : Operation<fidl::String> {
                   std::move(result_call),
                   queue_name),
         page_(page),
-        component_namespace_(component_namespace),
-        component_instance_id_(component_instance_id),
+        component_namespace_(std::move(component_namespace)),
+        component_instance_id_(std::move(component_instance_id)),
         queue_name_(queue_name) {
     Ready();
   }
@@ -266,14 +267,14 @@ class MessageQueueManager::GetMessageSenderCall : Operation<> {
   GetMessageSenderCall(OperationContainer* const container,
                        MessageQueueManager* const message_queue_manager,
                        ledger::Page* const page,
-                       const std::string& token,
+                       std::string token,
                        fidl::InterfaceRequest<MessageSender> request)
       : Operation("MessageQueueManager::GetMessageSenderCall",
                   container,
                   [] {}),
         message_queue_manager_(message_queue_manager),
         page_(page),
-        token_(token),
+        token_(std::move(token)),
         request_(std::move(request)) {
     Ready();
   }
@@ -434,7 +435,7 @@ class MessageQueueManager::ObtainMessageQueueCall : Operation<> {
     });
   }
 
-  void Finish(FlowToken flow) {
+  void Finish(FlowToken /*flow*/) {
     message_queue_manager_->GetMessageQueueStorage(message_queue_info_)
         ->AddMessageQueueBinding(std::move(request_));
   }
@@ -551,7 +552,7 @@ class MessageQueueManager::DeleteMessageQueueCall : Operation<> {
 class MessageQueueManager::DeleteNamespaceCall : Operation<> {
  public:
   DeleteNamespaceCall(OperationContainer* const container,
-                      MessageQueueManager* const message_queue_manager,
+                      MessageQueueManager* const /*message_queue_manager*/,
                       ledger::Page* const page,
                       const std::string& component_namespace,
                       ftl::Closure done_callback)
@@ -608,11 +609,10 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
   }
 
   void DeleteKeys(FlowToken flow) {
-    for (size_t i = 0; i < keys_to_delete_.size(); ++i) {
-      page_->Delete(keys_to_delete_[i].Clone(), [this, i,
-                                                 flow](ledger::Status status) {
+    for (auto& i : keys_to_delete_) {
+      page_->Delete(i.Clone(), [this, &i, flow](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Page.Delete() " << to_string(keys_to_delete_[i])
+          FTL_LOG(ERROR) << "Page.Delete() " << to_string(i)
                          << ", status=" << status;
         }
       });
@@ -629,8 +629,8 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
 };
 
 MessageQueueManager::MessageQueueManager(ledger::PagePtr page,
-                                         const std::string& local_path)
-    : page_(std::move(page)), local_path_(local_path) {}
+                                         std::string local_path)
+    : page_(std::move(page)), local_path_(std::move(local_path)) {}
 
 MessageQueueManager::~MessageQueueManager() = default;
 
@@ -697,7 +697,7 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
     const ftl::Closure* watcher =
         FindQueueName(pending_watcher_callbacks_, info);
     if (watcher) {
-      it->second.get()->RegisterWatcher(*watcher);
+      it->second->RegisterWatcher(*watcher);
       EraseQueueName(pending_watcher_callbacks_, info);
     }
   }

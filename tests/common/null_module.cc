@@ -26,8 +26,9 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      override {
     module_context_.Bind(std::move(module_context));
     module_context_->Ready();
     initialized_.Pass();
@@ -48,7 +49,7 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   NullModule::New();
   loop.Run();

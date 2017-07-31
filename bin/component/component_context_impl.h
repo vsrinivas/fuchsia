@@ -40,9 +40,9 @@ class ComponentContextImpl : public ComponentContext {
   // * A component URL is the origin from which the executable associated with
   //   the component was fetched from.
   explicit ComponentContextImpl(const ComponentContextInfo& info,
-                                const std::string& component_namespace,
-                                const std::string& component_instance_id,
-                                const std::string& component_url);
+                                std::string component_namespace,
+                                std::string component_instance_id,
+                                std::string component_url);
 
   ~ComponentContextImpl() override;
 

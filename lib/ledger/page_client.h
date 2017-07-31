@@ -42,7 +42,7 @@ namespace modular {
 class PageClient : ledger::PageWatcher {
  public:
   // Takes a context name as a label for the error messages it logs.
-  explicit PageClient(const std::string& context,
+  explicit PageClient(std::string context,
                       ledger::Page* page,
                       const char* prefix);
   ~PageClient() override;

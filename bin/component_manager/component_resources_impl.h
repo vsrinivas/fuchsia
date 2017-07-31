@@ -5,6 +5,8 @@
 #ifndef APPS_COMPONENT_RESOURCES_IMPL_H_
 #define APPS_COMPONENT_RESOURCES_IMPL_H_
 
+#include <utility>
+
 #include "apps/modular/services/component/component.fidl.h"
 #include "apps/modular/src/component_manager/resource_loader.h"
 #include "apps/network/services/network_service.fidl.h"
@@ -17,11 +19,11 @@ class ComponentResourcesImpl : public ComponentResources {
   ComponentResourcesImpl(fidl::Map<fidl::String, fidl::String> resource_urls,
                          std::shared_ptr<ResourceLoader> resource_loader)
       : resource_urls_(std::move(resource_urls)),
-        resource_loader_(resource_loader) {}
+        resource_loader_(std::move(resource_loader)) {}
   void GetResourceNames(const GetResourceNamesCallback& callback) override;
   void GetResourceURLs(const GetResourceURLsCallback& callback) override;
   void GetResource(const fidl::String& resource_name,
-                   const GetResourceCallback& callback) override;
+                   const GetResourceCallback& callback_) override;
 
  private:
   fidl::Map<fidl::String, fidl::String> resource_urls_;

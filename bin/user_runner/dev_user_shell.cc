@@ -6,6 +6,10 @@
 // root module URL and data for its Link as command line arguments,
 // which can be set using the device_runner --user-shell-args flag.
 
+#include <utility>
+
+#include <memory>
+
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
@@ -43,15 +47,15 @@ class DevUserShellApp : modular::StoryWatcher,
                         maxwell::SuggestionListener,
                         modular::SingleServiceViewApp<modular::UserShell> {
  public:
-  explicit DevUserShellApp(const Settings& settings)
-      : settings_(settings), story_watcher_binding_(this) {}
+  explicit DevUserShellApp(Settings settings)
+      : settings_(std::move(settings)), story_watcher_binding_(this) {}
   ~DevUserShellApp() override = default;
 
  private:
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
@@ -93,10 +97,10 @@ class DevUserShellApp : modular::StoryWatcher,
     FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    view_.reset(new modular::ViewHost(
+    view_ = std::make_unique<modular::ViewHost>(
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request_)));
+        std::move(view_owner_request_));
 
     if (settings_.story_id.empty()) {
       story_provider_->CreateStory(
@@ -149,7 +153,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
+  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {

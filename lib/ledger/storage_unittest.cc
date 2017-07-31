@@ -15,20 +15,22 @@ namespace {
 
 TEST(Storage, EncodeModulePath) {
   fidl::Array<fidl::String> fidl_array;
-  for (auto s : {"foo", ":bar", "/baz"})
+  for (auto s : {"foo", ":bar", "/baz"}) {
     fidl_array.push_back(s);
+  }
   EXPECT_EQ("foo:\\:bar:\\/baz", EncodeModulePath(fidl_array));
 }
 
 TEST(Storage, EncodeLinkPath) {
   fidl::Array<fidl::String> fidl_array;
-  for (auto s : {"foo", ":bar"})
+  for (auto s : {"foo", ":bar"}) {
     fidl_array.push_back(s);
+  }
 
   auto link_path = LinkPath::New();
   link_path->link_name = "Fred";
   link_path->module_path = std::move(fidl_array);
-  EXPECT_EQ("foo:\\:bar/Fred", EncodeLinkPath(std::move(link_path)));
+  EXPECT_EQ("foo:\\:bar/Fred", EncodeLinkPath(link_path));
 }
 
 }  // namespace

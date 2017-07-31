@@ -21,7 +21,7 @@ class SingleServiceViewApp : public SingleServiceApp<Service>,
                              mozart::ViewProvider {
  public:
   SingleServiceViewApp() : view_provider_binding_(this) {
-    // TODO: The following line needs to be broken out for reasons not
+    // TODO(alhaad): The following line needs to be broken out for reasons not
     // completely clear. Using the more obvious
     //   application_context()->outgoing_services()...
     // results in the error:

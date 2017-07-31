@@ -37,14 +37,14 @@ class UserControllerImpl : UserController, UserContext {
   using DoneCallback = std::function<void(UserControllerImpl*)>;
 
   UserControllerImpl(
-      app::ApplicationLauncher* const application_launcher,
+      app::ApplicationLauncher* application_launcher,
       AppConfigPtr user_runner,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserController> user_controller,
+      fidl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
   // This will effectively tear down the entire instance by calling |done|.

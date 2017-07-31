@@ -26,7 +26,7 @@ void ComponentResourcesImpl::GetResourceURLs(
 
 void ComponentResourcesImpl::GetResource(const fidl::String& resource_name,
                                          const GetResourceCallback& callback_) {
-  GetResourceCallback callback(callback_);
+  const GetResourceCallback& callback(callback_);
 
   auto i = resource_urls_.find(resource_name);
   if (i == resource_urls_.end()) {

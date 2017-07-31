@@ -14,8 +14,8 @@ class ResourceLoader {
  public:
   using Callback = std::function<void(mx::vmo, network::NetworkErrorPtr)>;
 
-  ResourceLoader(network::NetworkServicePtr network_service);
-  void LoadResource(const std::string& url, const Callback& callback);
+  explicit ResourceLoader(network::NetworkServicePtr network_service);
+  void LoadResource(const std::string& url, const Callback& callback_);
 
  private:
   network::NetworkServicePtr network_service_;

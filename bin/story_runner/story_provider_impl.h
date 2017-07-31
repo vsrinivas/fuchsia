@@ -40,8 +40,8 @@ class StoryControllerImpl;
 class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
   StoryProviderImpl(
-      Scope* user_scope,
-      const std::string& device_id,
+      Scope* const user_scope,
+      std::string device_id,
       ledger::Ledger* ledger,
       ledger::Page* root_page,
       AppConfigPtr story_shell,
@@ -157,10 +157,9 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   void NotifyImportanceWatchers();
 
-  void NotifyStoryWatchers(const StoryInfo* const story_info,
-                           const StoryState story_state);
+  void NotifyStoryWatchers(const StoryInfo* story_info, StoryState story_state);
 
-  StoryContextLogPtr MakeLogEntry(const StorySignal signal);
+  StoryContextLogPtr MakeLogEntry(StorySignal signal);
 
   void LoadStoryShell();
 

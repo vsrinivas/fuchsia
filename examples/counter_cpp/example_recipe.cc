@@ -26,7 +26,6 @@
 namespace {
 
 using modular::to_array;
-using modular::to_string;
 using modular::examples::Adder;
 
 // JSON data
@@ -79,8 +78,6 @@ constexpr char kJsonSchema[] =
 
 // Ledger keys
 constexpr char kLedgerCounterKey[] = "counter_key";
-
-using modular::operator<<;
 
 // Implementation of the LinkWatcher service that forwards each document
 // changed in one Link instance to a second Link instance.
@@ -157,14 +154,15 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
  private:
   // |SingleServiceViewApp|
   void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {}
+      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
 
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      override {
     module_context_.Bind(std::move(module_context));
     module_context_->GetLink(nullptr, link_.NewRequest());
 
@@ -365,7 +363,7 @@ class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   RecipeApp app;
   loop.Run();

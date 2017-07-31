@@ -54,8 +54,9 @@ void Done(const std::function<void()>& ack) {
     ack();
   }
 
-  if (g_test_runner_store.is_bound())
+  if (g_test_runner_store.is_bound()) {
     g_test_runner_store.reset();
+  }
 }
 
 void Teardown(const std::function<void()>& ack) {
@@ -68,8 +69,9 @@ void Teardown(const std::function<void()>& ack) {
     ack();
   }
 
-  if (g_test_runner_store.is_bound())
+  if (g_test_runner_store.is_bound()) {
     g_test_runner_store.reset();
+  }
 }
 
 void WillTerminate(double withinSeconds) {

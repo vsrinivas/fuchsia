@@ -17,14 +17,14 @@ namespace modular {
 // remote device's profile from the device map.
 class DeviceProfile {
   DeviceProfile();
-  ~DeviceProfile();
+  ~DeviceProfile() = delete;
 
   bool Parse(const std::string& jsonProfile);
   bool ParseDefaultProfile();
 
   // if this device is intended to be a remote presentation device.
   // HACK(zbowling): TBD: We need a better way deciding a device's idioms.
-  bool presentation_server;
+  bool presentation_server{false};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceProfile);
 };

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -52,9 +54,10 @@ class Module2View : public mozart::BaseView {
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info) override {
-    if (!has_logical_size())
+      mozart2::PresentationInfoPtr /*presentation_info*/) override {
+    if (!has_logical_size()) {
       return;
+    }
 
     const float center_x = logical_size().width * .5f;
     const float center_y = logical_size().height * .5f;
@@ -89,8 +92,9 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
  public:
   explicit Module2App() : store_(kModuleName), weak_ptr_factory_(this) {
     store_.AddCallback([this] {
-      if (view_)
+      if (view_) {
         view_->InvalidateScene();
+      }
     });
     store_.AddCallback([this] { IncrementCounterAction(); });
   }
@@ -101,19 +105,20 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    view_.reset(new Module2View(
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
+    view_ = std::make_unique<Module2View>(
         &store_,
         application_context()
             ->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
+        std::move(view_owner_request));
   }
 
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
-      fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override {
+      fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
+      override {
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;
     module_context_->GetLink(nullptr, link.NewRequest());
@@ -128,8 +133,9 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   void IncrementCounterAction() {
-    if (store_.counter.sender == kModuleName || store_.counter.counter > 11)
+    if (store_.counter.sender == kModuleName || store_.counter.counter > 11) {
       return;
+    }
 
     ftl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
@@ -162,7 +168,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   Module2App app;
   loop.Run();

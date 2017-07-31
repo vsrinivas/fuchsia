@@ -25,7 +25,7 @@ namespace testing {
 // by the time the destructor is called, the test point records failure.
 class TestPoint {
  public:
-  TestPoint(std::string label);
+  explicit TestPoint(std::string label);
   ~TestPoint();
 
   void Pass();

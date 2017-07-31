@@ -43,9 +43,9 @@ class AgentRunner : AgentProvider, PageClient {
               MessageQueueManager* message_queue_manager,
               ledger::LedgerRepository* ledger_repository,
               ledger::PagePtr page,
-              auth::TokenProviderFactory* const token_provider_factory,
+              auth::TokenProviderFactory* token_provider_factory,
               maxwell::UserIntelligenceProvider* user_intelligence_provider);
-  ~AgentRunner();
+  ~AgentRunner() override;
 
   void Connect(fidl::InterfaceRequest<AgentProvider> request);
 
@@ -80,7 +80,7 @@ class AgentRunner : AgentProvider, PageClient {
  private:
   struct TriggerInfo;
 
-  static void XdrTriggerInfo(XdrContext* const xdr, TriggerInfo* const data);
+  static void XdrTriggerInfo(XdrContext* xdr, TriggerInfo* data);
 
   // Starts up an agent, or waits until the agent can start up if it is already
   // in a terminating state. Calls |done| once the agent has started.

@@ -32,7 +32,7 @@ class StoryStorageImpl : PageClient {
       std::function<void(PerDeviceStoryInfoPtr per_device)>;
   using LogCallback = std::function<void(fidl::Array<StoryContextLogPtr>)>;
 
-  StoryStorageImpl(ledger::Page* story_page);
+  explicit StoryStorageImpl(ledger::Page* story_page);
   ~StoryStorageImpl() override;
 
   void ReadLinkData(const LinkPathPtr& link_path, const DataCallback& callback);
@@ -51,10 +51,10 @@ class StoryStorageImpl : PageClient {
                        const SurfaceRelationPtr& surface_relation,
                        bool module_stopped,
                        const SyncCallback& callback);
-  void WriteModuleData(ModuleDataPtr module_data, const SyncCallback& callback);
+  void WriteModuleData(ModuleDataPtr data, const SyncCallback& callback);
 
   void WriteDeviceData(const std::string& story_id,
-                       const std::string& device_name,
+                       const std::string& device_id,
                        StoryState state,
                        const SyncCallback& callback);
 

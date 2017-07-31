@@ -113,7 +113,7 @@ class StoryControllerImpl : StoryController, StoryContext {
   // Called by ModuleControllerImpl.
   //
   // Releases ownership of |controller|, which deletes itself after return.
-  void ReleaseModule(ModuleControllerImpl* controller);
+  void ReleaseModule(ModuleControllerImpl* module_controller_impl);
 
   // Called by ModuleContextImpl.
   const fidl::String& GetStoryId() const;
@@ -129,23 +129,23 @@ class StoryControllerImpl : StoryController, StoryContext {
   void StartModule(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
-      const fidl::String& query,
+      const fidl::String& module_url,
       const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       ModuleSource module_source);
 
   // Called by ModuleContextImpl and AddModule.
   void StartModuleInShell(
       const fidl::Array<fidl::String>& parent_module_path,
       const fidl::String& module_name,
-      const fidl::String& query,
+      const fidl::String& module_url,
       const fidl::String& link_name,
       fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       bool focus,
       ModuleSource module_source);
@@ -159,11 +159,11 @@ class StoryControllerImpl : StoryController, StoryContext {
                     const fidl::String& value,
                     const SetInfoExtraCallback& callback) override;
   void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override;
-  void Stop(const StopCallback& callback) override;
+  void Stop(const StopCallback& done) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
   void AddModule(fidl::Array<fidl::String> module_path,
                  const fidl::String& module_name,
-                 const fidl::String& url,
+                 const fidl::String& module_url,
                  const fidl::String& link_name,
                  SurfaceRelationPtr surface_relation) override;
   void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
@@ -186,7 +186,7 @@ class StoryControllerImpl : StoryController, StoryContext {
   void DisposeLink(LinkImpl* link);
   void AddModuleWatcher(ModuleControllerPtr module_controller,
                         const fidl::Array<fidl::String>& module_path);
-  void OnRootStateChange(ModuleState new_state);
+  void OnRootStateChange(ModuleState state);
 
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.

@@ -25,7 +25,7 @@ class HelloComponentApp {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   FTL_LOG(INFO) << "hello_component main";
   mtl::MessageLoop loop;
   HelloComponentApp hello_component_app;

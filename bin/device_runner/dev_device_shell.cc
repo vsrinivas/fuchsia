@@ -7,6 +7,7 @@
 // single module through its life cycle.
 
 #include <memory>
+#include <utility>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/testing/reporting.h"
@@ -41,8 +42,8 @@ class Settings {
 class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
                           modular::UserWatcher {
  public:
-  DevDeviceShellApp(const Settings& settings)
-      : settings_(settings), user_watcher_binding_(this) {
+  explicit DevDeviceShellApp(Settings settings)
+      : settings_(std::move(settings)), user_watcher_binding_(this) {
     if (settings_.test) {
       modular::testing::Init(application_context(), __FILE__);
     }
@@ -53,7 +54,7 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<app::ServiceProvider> services) override {
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
@@ -83,8 +84,9 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void GetAuthenticationContext(
-      const fidl::String& username,
-      fidl::InterfaceRequest<modular::AuthenticationContext> request) override {
+      const fidl::String& /*username*/,
+      fidl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
+      override {
     FTL_LOG(INFO)
         << "DeviceShell::GetAuthenticationContext() is unimplemented.";
   }

@@ -36,7 +36,7 @@ ResourceLoader::ResourceLoader(network::NetworkServicePtr network_service)
 
 void ResourceLoader::LoadResource(const std::string& url,
                                   const Callback& callback_) {
-  Callback callback(callback_);
+  const Callback& callback(callback_);
   mx::vmo vmo;
 
   // Look in the local components directory.
@@ -46,10 +46,9 @@ void ResourceLoader::LoadResource(const std::string& url,
     if (mtl::VmoFromFilename(local_path, &vmo)) {
       callback(std::move(vmo), nullptr);
       return;
-    } else {
+    }
       // Log a warning and fall back to loading from the network.
       FTL_LOG(WARNING) << "Error reading " << local_path << " into VMO.";
-    }
   }
 
   // Load from the network.

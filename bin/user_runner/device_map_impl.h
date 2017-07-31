@@ -23,7 +23,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
   DeviceMapImpl(const std::string& device_name,
                 const std::string& device_id,
                 const std::string& device_profile,
-                ledger::Page* const page);
+                ledger::Page* page);
   ~DeviceMapImpl() override;
 
   void Connect(fidl::InterfaceRequest<DeviceMap> request);

@@ -20,20 +20,22 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
   ~TestAgentApp() override = default;
 
   // |Agent|
-  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
-                  const InitializeCallback& callback) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::AgentContext> /*agent_context*/,
+      const InitializeCallback& callback) override {
     callback();
   }
 
   // |Agent|
-  void Connect(const fidl::String& requestor_url,
-               fidl::InterfaceRequest<app::ServiceProvider> services) override {
+  void Connect(
+      const fidl::String& /*requestor_url*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     modular::testing::GetStore()->Put("test_agent2_connected", "", [] {});
   }
 
   // |Agent|
-  void RunTask(const fidl::String& task_id,
-               const RunTaskCallback& callback) override {}
+  void RunTask(const fidl::String& /*task_id*/,
+               const RunTaskCallback& /*callback*/) override {}
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
@@ -44,7 +46,7 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   TestAgentApp::New();
   loop.Run();

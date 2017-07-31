@@ -42,7 +42,7 @@ void ModuleContextImpl::GetLink(const fidl::String& name,
   } else {
     link_path = module_data_->link_path.Clone();
   }
-  story_controller_impl_->GetLinkPath(std::move(link_path), std::move(link));
+  story_controller_impl_->GetLinkPath(link_path, std::move(link));
 }
 
 void ModuleContextImpl::StartModule(

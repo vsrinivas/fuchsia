@@ -6,6 +6,7 @@
 
 #include <mutex>
 #include <unordered_set>
+#include <utility>
 
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
@@ -83,8 +84,8 @@ class AgentRunner::InitializeCall : Operation<> {
                });
   }
 
-  void Cont(FlowToken flow) {
-    if (entries_.size() == 0) {
+  void Cont(FlowToken /*flow*/) {
+    if (entries_.empty()) {
       // No existing entries.
       return;
     }
@@ -112,11 +113,11 @@ class AgentRunner::UpdateCall : Operation<> {
   UpdateCall(OperationContainer* const container,
              AgentRunner* const agent_runner,
              const std::string& key,
-             const std::string& value)
+             std::string value)
       : Operation("AgentRunner::UpdateCall", container, [] {}, key),
         agent_runner_(agent_runner),
         key_(key),
-        value_(value) {
+        value_(std::move(value)) {
     Ready();
   }
 
@@ -386,7 +387,7 @@ void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
   message_queue_manager_->DropWatcher(kAgentComponentNamespace, agent_url,
                                       task_id_it->second);
   watched_queues_[agent_url].erase(task_id);
-  if (watched_queues_[agent_url].size() == 0) {
+  if (watched_queues_[agent_url].empty()) {
     watched_queues_.erase(agent_url);
   }
 }
@@ -405,7 +406,7 @@ void AgentRunner::DeleteAlarmTask(const std::string& agent_url,
   }
 
   running_alarms_[agent_url].erase(task_id);
-  if (running_alarms_[agent_url].size() == 0) {
+  if (running_alarms_[agent_url].empty()) {
     running_alarms_.erase(agent_url);
   }
 }
@@ -511,8 +512,9 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
 }
 
 void AgentRunner::UpdateWatchers() {
-  if (*terminating_)
+  if (*terminating_) {
     return;
+  }
 
   // A set of all agents that are either running or scheduled to be run.
   std::unordered_set<std::string> agents;

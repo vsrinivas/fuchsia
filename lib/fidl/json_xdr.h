@@ -169,7 +169,7 @@ class XdrContext {
   // A simple value is mapped to the corresponding JSON type (int,
   // float, bool) directly.
   template <typename V>
-  typename std::enable_if<!std::is_enum<V>::value>::type Value(V* const data) {
+  typename std::enable_if<!std::is_enum<V>::value>::type Value(V* data) {
     switch (op_) {
       case XdrOp::TO_JSON:
         value_->Set(*data, allocator());
@@ -212,7 +212,7 @@ class XdrContext {
   // the corresponding Field() method for why there are two type
   // parameters here.
   template <typename D, typename V>
-  void Value(D* const data, XdrFilterType<V> const filter) {
+  void Value(D* data, XdrFilterType<V> filter) {
     filter(this, data);
   }
 
@@ -371,7 +371,7 @@ class XdrContext {
   class XdrCallbackOnReadError {
    public:
     XdrCallbackOnReadError(XdrContext* context,
-                           const XdrOp op,
+                           XdrOp op,
                            std::string* error,
                            std::function<void()> callback);
     XdrCallbackOnReadError(XdrCallbackOnReadError&& rhs);
@@ -400,7 +400,7 @@ class XdrContext {
 
  private:
   XdrContext(XdrContext* parent,
-             const char* name_,
+             const char* name,
              XdrOp op,
              JsonDoc* doc,
              JsonValue* value);

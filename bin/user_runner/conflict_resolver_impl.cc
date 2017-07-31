@@ -85,8 +85,8 @@ class ConflictResolverImpl::LogConflictDiffCall : Operation<> {
                           << to_string(change->key);
           }
           if (status == ledger::Status::PARTIAL_RESULT) {
-            GetDiff(std::move(next_token), std::move(left_or_right),
-                    std::move(get_left_or_right_diff));
+            GetDiff(std::move(next_token), left_or_right,
+                    get_left_or_right_diff);
           } else {
             ++finished_;
             CheckIfDone();
@@ -139,9 +139,9 @@ void ConflictResolverImpl::NewConflictResolver(
 }
 
 void ConflictResolverImpl::Resolve(
-    fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-    fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-    fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+    fidl::InterfaceHandle<ledger::PageSnapshot> /*left_version*/,
+    fidl::InterfaceHandle<ledger::PageSnapshot> /*right_version*/,
+    fidl::InterfaceHandle<ledger::PageSnapshot> /*common_version*/,
     fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider) {
   FTL_LOG(WARNING) << "Conflict in root page. Doing nothing.";
 

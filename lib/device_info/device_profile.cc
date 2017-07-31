@@ -13,13 +13,14 @@ namespace modular {
 // "like" a remote display server
 constexpr char kPresentationServer[] = "remote_presentor";
 
-DeviceProfile::DeviceProfile() : presentation_server(false) {}
+DeviceProfile::DeviceProfile() {}
 
 bool DeviceProfile::Parse(const std::string& jsonProfile) {
   modular::JsonDoc document;
   document.Parse(jsonProfile);
-  if (!document.IsObject())
+  if (!document.IsObject()) {
     return false;
+  }
 
   if (document.HasMember(kPresentationServer) &&
       document[kPresentationServer].IsBool()) {

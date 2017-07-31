@@ -87,7 +87,7 @@ class SuggestionTestUserShellApp
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
+  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   // |SuggestionListener|
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override {
@@ -104,7 +104,7 @@ class SuggestionTestUserShellApp
   }
 
   // |SuggestionListener|
-  void OnRemove(const fidl::String& suggestion_id) override {}
+  void OnRemove(const fidl::String& /*suggestion_id*/) override {}
 
   // |SuggestionListener|
   void OnRemoveAll() override {}
@@ -128,7 +128,7 @@ class SuggestionTestUserShellApp
 
 }  // namespace
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   SuggestionTestUserShellApp::New();
   loop.Run();

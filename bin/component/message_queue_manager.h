@@ -32,7 +32,7 @@ class XdrContext;
 // queues it has created, otherwise they are persisted.
 class MessageQueueManager {
  public:
-  MessageQueueManager(ledger::PagePtr page, const std::string& local_path);
+  MessageQueueManager(ledger::PagePtr page, std::string local_path);
   ~MessageQueueManager();
 
   void ObtainMessageQueue(const std::string& component_namespace,
@@ -45,7 +45,7 @@ class MessageQueueManager {
                           const std::string& queue_name);
 
   void DeleteNamespace(const std::string& component_namespace,
-                       ftl::Closure done);
+                       ftl::Closure done_callback);
 
   void GetMessageSender(const std::string& queue_token,
                         fidl::InterfaceRequest<MessageSender> request);
@@ -75,8 +75,7 @@ class MessageQueueManager {
       std::unordered_map<ComponentInstanceId,
                          std::unordered_map<ComponentQueueName, Value>>>;
 
-  static void XdrMessageQueueInfo(XdrContext* const xdr,
-                                  MessageQueueInfo* const data);
+  static void XdrMessageQueueInfo(XdrContext* xdr, MessageQueueInfo* data);
 
   // Returns the |MessageQueueStorage| for the queue_token. Creates it
   // if it doesn't exist yet.

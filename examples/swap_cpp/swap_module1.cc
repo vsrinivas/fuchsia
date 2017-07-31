@@ -5,7 +5,7 @@
 #include "apps/modular/examples/swap_cpp/module.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-int main(int argc, const char** argv) {
+int main(int /*argc*/, const char** /*argv*/) {
   mtl::MessageLoop loop;
   modular_example::ModuleApp app(
       [](auto view_manager, auto view_owner_request) {

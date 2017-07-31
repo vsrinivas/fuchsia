@@ -18,7 +18,7 @@ namespace modular {
 // Provides interface for calls to remote devices
 class RemoteInvokerImpl : RemoteInvoker {
  public:
-  RemoteInvokerImpl(ledger::Ledger* const ledger);
+  explicit RemoteInvokerImpl(ledger::Ledger* ledger);
   ~RemoteInvokerImpl() override;
 
   void Connect(fidl::InterfaceRequest<RemoteInvoker> request);

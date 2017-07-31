@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/user_runner/user_runner_impl.h"
 
+#include <memory>
 #include <string>
 
 #include "application/lib/app/connect.h"
@@ -159,8 +160,8 @@ void UserRunnerImpl::Initialize(
   device_name_ = LoadDeviceName(GetAccountId(account_));
   std::string device_profile = LoadDeviceProfile();
 
-  device_map_impl_.reset(new DeviceMapImpl(device_name_, device_id,
-                                           device_profile, root_page_.get()));
+  device_map_impl_ = std::make_unique<DeviceMapImpl>(
+      device_name_, device_id, device_profile, root_page_.get());
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         device_map_impl_->Connect(std::move(request));
@@ -170,7 +171,7 @@ void UserRunnerImpl::Initialize(
 
   // TODO(planders) Do not create RemoteInvoker until service is actually
   // requested.
-  remote_invoker_impl_.reset(new RemoteInvokerImpl(ledger_.get()));
+  remote_invoker_impl_ = std::make_unique<RemoteInvokerImpl>(ledger_.get());
   user_scope_->AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
         remote_invoker_impl_->Connect(std::move(request));
@@ -193,8 +194,8 @@ void UserRunnerImpl::Initialize(
     FTL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
   }
-  message_queue_manager_.reset(new MessageQueueManager(
-      std::move(message_queue_page), std::move(message_queue_path)));
+  message_queue_manager_ = std::make_unique<MessageQueueManager>(
+      std::move(message_queue_page), message_queue_path);
 
   // Begin init maxwell.
   //
@@ -239,10 +240,10 @@ void UserRunnerImpl::Initialize(
                      }
                    });
 
-  agent_runner_.reset(new AgentRunner(
+  agent_runner_ = std::make_unique<AgentRunner>(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), std::move(agent_runner_page),
-      token_provider_factory_.get(), user_intelligence_provider_.get()));
+      token_provider_factory_.get(), user_intelligence_provider_.get());
 
   // HACK(anwilson): Start some agents directly by user runner that are needed
   // to keep some dimensions of context updated. They will move
@@ -256,12 +257,13 @@ void UserRunnerImpl::Initialize(
                                               agent_runner_.get(),
                                               ledger_repository_.get()};
 
-  maxwell_component_context_impl_.reset(new ComponentContextImpl(
+  maxwell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kMaxwellComponentNamespace, kMaxwellUrl,
-      kMaxwellUrl));
+      kMaxwellUrl);
 
-  maxwell_component_context_binding_.reset(new fidl::Binding<ComponentContext>(
-      maxwell_component_context_impl_.get()));
+  maxwell_component_context_binding_ =
+      std::make_unique<fidl::Binding<ComponentContext>>(
+          maxwell_component_context_impl_.get());
 
   auto maxwell_config = AppConfig::New();
   maxwell_config->url = kMaxwellUrl;
@@ -270,8 +272,8 @@ void UserRunnerImpl::Initialize(
         "--config=/system/data/maxwell/test_config.json");
   }
 
-  maxwell_.reset(
-      new AppClientBase(user_scope_->GetLauncher(), std::move(maxwell_config)));
+  maxwell_ = std::make_unique<AppClientBase>(user_scope_->GetLauncher(),
+                                             std::move(maxwell_config));
 
   maxwell::UserIntelligenceProviderFactoryPtr maxwell_factory;
   app::ConnectToService(maxwell_->services(), maxwell_factory.NewRequest());
@@ -296,19 +298,19 @@ void UserRunnerImpl::Initialize(
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
-  story_provider_impl_.reset(new StoryProviderImpl(
+  story_provider_impl_ = std::make_unique<StoryProviderImpl>(
       user_scope_.get(), device_id, ledger_.get(), root_page_.get(),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
-      user_intelligence_provider_.get()));
+      user_intelligence_provider_.get());
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  focus_handler_.reset(new FocusHandler(device_id, root_page_.get()));
+  focus_handler_ = std::make_unique<FocusHandler>(device_id, root_page_.get());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
 
-  visible_stories_handler_.reset(new VisibleStoriesHandler);
+  visible_stories_handler_ = std::make_unique<VisibleStoriesHandler>();
   visible_stories_handler_->AddProviderBinding(
       std::move(visible_stories_provider_request));
 
@@ -379,11 +381,11 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
     return;
   }
 
-  link_storage_.reset(new StoryStorageImpl(root_page_.get()));
+  link_storage_ = std::make_unique<StoryStorageImpl>(root_page_.get());
   auto link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = kUserShellLinkName;
-  user_shell_link_.reset(new LinkImpl(link_storage_.get(), link_path));
+  user_shell_link_ = std::make_unique<LinkImpl>(link_storage_.get(), link_path);
   user_shell_link_->Connect(std::move(request));
 }
 
@@ -428,8 +430,9 @@ void UserRunnerImpl::SetupLedger() {
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
-  ledger_app_client_.reset(new AppClient<ledger::LedgerRepositoryFactory>(
-      user_scope_->GetLauncher(), std::move(ledger_config)));
+  ledger_app_client_ =
+      std::make_unique<AppClient<ledger::LedgerRepositoryFactory>>(
+          user_scope_->GetLauncher(), std::move(ledger_config));
   ledger_app_client_->SetAppErrorHandler([] {
     FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly."
                    << "Logging out.";
