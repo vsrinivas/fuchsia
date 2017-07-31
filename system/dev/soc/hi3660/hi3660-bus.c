@@ -224,7 +224,7 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
     intf.ctx = bus;
     pdev_set_interface(&pdev, &intf);
 
-#if 1
+#if 0
     thrd_t thrd;
     thrd_create_with_name(&thrd, led_test_thread, parent, "led_test_thread");
 #endif
