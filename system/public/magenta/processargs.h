@@ -206,16 +206,6 @@ struct mx_loader_svc_msg {
 // arg=0, data[] configuration string to affect later loading (asciiz)
 // e.g. "asan"
 
-// --- Compatibility Defines ---
-// TODO: remove once Fuchsia deps are resolved
-#define MX_HND_INFO(type, arg) (((type)&0xFF)| (((arg)&0xFFFF)<<16))
-#define MX_HND_INFO_TYPE(n) ((n) & 0xFF)
-
-#define MX_HND_TYPE_USER1 PA_USER1
-#define MX_HND_TYPE_MXIO_PIPE PA_MXIO_PIPE
-#define MX_HND_TYPE_JOB PA_JOB_DEFAULT
-#define MX_HND_TYPE_MXIO_LOGGER PA_MXIO_LOGGER
-
 #ifdef __cplusplus
 }
 #endif

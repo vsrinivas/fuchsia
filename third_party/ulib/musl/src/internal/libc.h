@@ -65,7 +65,7 @@ void __tls_run_dtors(void) ATTR_LIBC_VISIBILITY;
 //     entries.
 // |handles| contains the actual handle values, or MX_HANDLE_INVALID if a
 //     handle has already been claimed.
-// |handle_info| contains the MX_HND_INFO value associated with the
+// |handle_info| contains the PA_HND value associated with the
 //     corresponding element of |handles|, or zero if the handle has already
 //     been claimed.
 void __libc_startup_handles_init(uint32_t nhandles,

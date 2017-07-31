@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
     }
 
     // Note that if both -v and -V were passed, we'll add two separate
-    // MX_HND_TYPE_EXEC_VMO handles to the startup message, which is
+    // PA_VMO_EXECUTABLE handles to the startup message, which is
     // unlikely to be useful.  But this program is mainly to test the
     // library, so it makes all the library calls the user asks for.
     if (exec_vmo_file != NULL) {

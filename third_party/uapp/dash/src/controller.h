@@ -7,7 +7,7 @@
 // Shell controller protocol.
 //
 // To run shell with a controller, pass a controller channel handle as
-// MX_HND_TYPE_USER1.
+// PA_USER1.
 //
 // Messages sent by the shell to the controller:
 //

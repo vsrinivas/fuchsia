@@ -1134,8 +1134,8 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
             //
             // Note this expands the handle list after we've already
             // built the bootstrap message.  We shoved an extra info
-            // slot with MX_HND_TYPE_STACK_VMO into the message, so
-            // now this new final handle will correspond to that slot.
+            // slot with PA_VMO_STACK into the message, so now this new
+            // final handle will correspond to that slot.
             status = launchpad_add_handle(lp, stack_vmo, PA_VMO_STACK);
         }
         if (status != MX_OK) {

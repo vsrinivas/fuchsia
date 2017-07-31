@@ -14,7 +14,7 @@ __BEGIN_CDECLS
 // Examines the set of handles received at process startup for one matching
 // |hnd_info|.  If one is found, atomically returns it and removes it from the
 // set available to future calls.
-// |hnd_info| is a value returned by MX_HND_INFO().
+// |hnd_info| is a value returned by PA_HND().
 mx_handle_t mx_get_startup_handle(uint32_t hnd_info);
 
 mx_handle_t _mx_thread_self(void);
