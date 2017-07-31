@@ -434,16 +434,16 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
     memset(&vcpu_io, 0, sizeof(vcpu_io));
     io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
     switch (io->port) {
-    case UART_LINE_CONTROL_IO_PORT:
+    case UART_LINE_CONTROL_PORT:
         vcpu_io.access_size = 1;
         vcpu_io.u8 = io_port_state->uart_line_control;
         break;
     case UART_INTERRUPT_ENABLE_PORT:
-    case UART_MODEM_CONTROL_IO_PORT:
+    case UART_MODEM_CONTROL_PORT:
         vcpu_io.access_size = 1;
         vcpu_io.u8 = 0;
         break;
-    case UART_LINE_STATUS_IO_PORT:
+    case UART_LINE_STATUS_PORT:
         vcpu_io.access_size = 1;
         vcpu_io.u8 = UART_STATUS_IDLE | UART_STATUS_EMPTY;
         break;
@@ -535,14 +535,6 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-    case UART_INTERRUPT_ENABLE_PORT ... UART_LINE_CONTROL_IO_PORT - 1:
-    case UART_LINE_CONTROL_IO_PORT + 1 ... UART_SCR_SCRATCH_IO_PORT:
-        return MX_OK;
-    case UART_LINE_CONTROL_IO_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->uart_line_control = io->u8;
-        return MX_OK;
     case RTC_INDEX_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
@@ -595,7 +587,8 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
 static mx_status_t handle_io(vcpu_context_t* vcpu_context, mx_guest_io_t* io) {
     mtx_lock(&vcpu_context->guest_state->mutex);
     mx_status_t status = io->input ?
-                         handle_input(vcpu_context, io) : handle_output(vcpu_context, io);
+                         handle_input(vcpu_context, io) :
+                         handle_output(vcpu_context, io);
     mtx_unlock(&vcpu_context->guest_state->mutex);
     return status;
 }
@@ -619,56 +612,81 @@ static mx_status_t fifo_wait(mx_handle_t fifo, mx_signals_t signals) {
     return MX_OK;
 }
 
-static int serial_loop(void* arg) {
-    mx_handle_t* guest = arg;
+mx_status_t vcpu_handle_uart(mx_guest_io_t* io, mtx_t* mutex, io_port_state_t* io_port_state) {
+    static uint8_t buffer[UART_BUFFER_SIZE] = {};
+    static uint16_t offset = 0;
+
+    switch (io->port) {
+    case UART_RECEIVE_PORT:
+        for (int i = 0; i < io->access_size; i++) {
+            buffer[offset++] = io->data[i];
+            if (offset == UART_BUFFER_SIZE || io->data[i] == '\r') {
+                printf("%.*s", offset, buffer);
+                offset = 0;
+            }
+        }
+        break;
+    case UART_INTERRUPT_ENABLE_PORT ... UART_INTERRUPT_PORT:
+    case UART_MODEM_CONTROL_PORT ... UART_SCR_SCRATCH_PORT:
+        break;
+    case UART_LINE_CONTROL_PORT:
+        if (io->access_size != 1)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        mtx_lock(mutex);
+        io_port_state->uart_line_control = io->u8;
+        mtx_unlock(mutex);
+        break;
+    default:
+        return MX_ERR_INTERNAL;
+    }
+
+    return MX_OK;
+}
+
+static int uart_loop(void* arg) {
+    guest_state_t* guest_state = arg;
 
     mx_handle_t user_fifo;
     mx_handle_t kernel_fifo;
     mx_status_t status = fifo_create(&user_fifo, &kernel_fifo);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to create serial FIFO %d\n", status);
+        fprintf(stderr, "Failed to create UART FIFO %d\n", status);
         return MX_ERR_INTERNAL;
     }
 
-    status = mx_guest_set_trap(*guest, MX_GUEST_TRAP_IO, UART_RECEIVE_IO_PORT, 1, kernel_fifo);
+    const mx_vaddr_t addr = UART_RECEIVE_PORT;
+    const size_t len = UART_SCR_SCRATCH_PORT - addr;
+    status = mx_guest_set_trap(guest_state->guest, MX_GUEST_TRAP_IO, addr, len, kernel_fifo);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to set trap for serial FIFO %d\n", status);
+        fprintf(stderr, "Failed to set trap for UART FIFO %d\n", status);
         goto cleanup;
     }
 
-    uint8_t buffer[UART_BUFFER_SIZE];
-    uint16_t offset = 0;
     mx_guest_packet_t packets[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
     while (true) {
         status = fifo_wait(user_fifo, MX_FIFO_READABLE);
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to wait for serial FIFO %d\n", status);
+            fprintf(stderr, "Failed to wait for UART FIFO %d\n", status);
             goto cleanup;
         }
 
         uint32_t num_packets;
         status = mx_fifo_read(user_fifo, packets, sizeof(packets), &num_packets);
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to read from serial FIFO %d\n", status);
+            fprintf(stderr, "Failed to read from UART FIFO %d\n", status);
             goto cleanup;
         }
 
         for (uint32_t i = 0; i < num_packets; i++) {
             if (packets[i].type != MX_GUEST_PKT_IO) {
-                fprintf(stderr, "Invalid packet type for serial FIFO %d\n", packets[i].type);
+                fprintf(stderr, "Invalid packet type for UART %d\n", packets[i].type);
                 goto cleanup;
             }
-            mx_guest_io_t* io = &packets[i].io;
-            if (io->port != UART_RECEIVE_IO_PORT) {
-                fprintf(stderr, "Invalid IO port for serial FIFO %#x\n", io->port);
+            status = vcpu_handle_uart(&packets[i].io, &guest_state->mutex,
+                                      &guest_state->io_port_state);
+            if (status != MX_OK) {
+                fprintf(stderr, "Unable to handle packet for UART %d\n", status);
                 goto cleanup;
-            }
-            for (int i = 0; i < io->access_size; i++) {
-                buffer[offset++] = io->data[i];
-                if (offset == UART_BUFFER_SIZE || io->data[i] == '\r') {
-                    printf("%.*s", offset, buffer);
-                    offset = 0;
-                }
             }
         }
     }
@@ -696,15 +714,15 @@ void vcpu_init(vcpu_context_t* vcpu_context) {
 }
 
 mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
-    thrd_t serial_thread;
-    int ret = thrd_create(&serial_thread, serial_loop, &vcpu_context->guest_state->guest);
+    thrd_t uart_thread;
+    int ret = thrd_create(&uart_thread, uart_loop, vcpu_context->guest_state);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create serial thread %d\n", ret);
+        fprintf(stderr, "Failed to create UART thread %d\n", ret);
         return MX_ERR_INTERNAL;
     }
-    ret = thrd_detach(serial_thread);
+    ret = thrd_detach(uart_thread);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach serial thread %d\n", ret);
+        fprintf(stderr, "Failed to detach UART thread %d\n", ret);
         return MX_ERR_INTERNAL;
     }
 

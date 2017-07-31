@@ -71,7 +71,7 @@ static bool handle_input_packet(void) {
     // Send a guest packet to to read the UART line control port.
     packet.type = MX_GUEST_PKT_IO;
     packet.io.input = true;
-    packet.io.port = UART_LINE_CONTROL_IO_PORT;
+    packet.io.port = UART_LINE_CONTROL_PORT;
     packet.io.access_size = 1;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
 
@@ -91,21 +91,23 @@ static bool handle_input_packet(void) {
 static bool handle_output_packet(void) {
     BEGIN_TEST;
     test_t test;
-    mx_guest_packet_t packet = {};
+    mx_guest_io_t io = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
     test.guest_state.io_port_state.uart_line_control = 0;
 
     // Send a guest packet to to write the UART line control port.
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = false;
-    packet.io.port = UART_LINE_CONTROL_IO_PORT;
-    packet.io.access_size = 1;
-    packet.io.u8 = 0xaf;
-    EXPECT_EQ(vcpu_handle_packet(&test.vcpu, &packet), MX_OK, "Failed to handle guest packet.\n");
+    io.input = false;
+    io.port = UART_LINE_CONTROL_PORT;
+    io.access_size = 1;
+    io.u8 = 0xaf;
+    EXPECT_EQ(
+        vcpu_handle_uart(&io, &test.guest_state.mutex, &test.guest_state.io_port_state),
+        MX_OK,
+        "Failed to handle UART IO packet.\n");
 
     // Verify packet value was saved to the host port state.
     EXPECT_EQ(
-        packet.io.u8,
+        io.u8,
         test.guest_state.io_port_state.uart_line_control,
         "io_port_state was not populated with expected value.\n");
 
