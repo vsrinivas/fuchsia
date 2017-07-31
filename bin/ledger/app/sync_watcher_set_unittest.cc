@@ -30,7 +30,7 @@ class SyncWatcherSetTest : public test::TestWithMessageLoop {
 
 class SyncWatcherImpl : public SyncWatcher {
  public:
-  SyncWatcherImpl(fidl::InterfaceRequest<SyncWatcher> request)
+  explicit SyncWatcherImpl(fidl::InterfaceRequest<SyncWatcher> request)
       : binding_(this, std::move(request)) {}
   void SyncStateChanged(SyncState download_status,
                         SyncState upload_status,

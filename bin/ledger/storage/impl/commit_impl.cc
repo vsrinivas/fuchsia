@@ -31,7 +31,7 @@ class CommitImpl::SharedStorageBytes
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(SharedStorageBytes);
-  SharedStorageBytes(std::string bytes) : bytes_(std::move(bytes)) {}
+  explicit SharedStorageBytes(std::string bytes) : bytes_(std::move(bytes)) {}
   ~SharedStorageBytes() {}
 
   std::string bytes_;

@@ -19,7 +19,7 @@ using Context = InternalContext;
 class Stack {
  public:
   // Creates a new stack. |stack_size| is the minimal size of the new stack.
-  Stack(size_t stack_size = 64 * 1024);
+  explicit Stack(size_t stack_size = 64 * 1024);
   ~Stack();
 
   // Releases the memory associated with this stack. After this call, the stack

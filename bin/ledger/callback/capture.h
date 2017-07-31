@@ -19,7 +19,7 @@ class CaptureLambda {};
 template <typename C>
 class CaptureLambda<C> {
  public:
-  CaptureLambda(C callback) : callback_(std::move(callback)) {}
+  explicit CaptureLambda(C callback) : callback_(std::move(callback)) {}
 
   void operator()() { callback_(); }
 

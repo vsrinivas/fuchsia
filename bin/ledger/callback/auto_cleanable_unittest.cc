@@ -10,7 +10,7 @@ namespace {
 
 class Cleanable {
  public:
-  Cleanable(int id = 0) : id(id) {}
+  explicit Cleanable(int id = 0) : id(id) {}
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }

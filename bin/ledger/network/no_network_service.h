@@ -14,7 +14,7 @@ namespace ledger {
 
 class NoNetworkService : public NetworkService {
  public:
-  NoNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner);
+  explicit NoNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner);
   ~NoNetworkService() override;
 
   // NetworkService:

@@ -159,7 +159,7 @@ std::string NewJournalId(JournalType journal_type) {
 
 class JournalEntryIterator : public Iterator<const EntryChange> {
  public:
-  JournalEntryIterator(
+  explicit JournalEntryIterator(
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                                convert::ExtendedStringView>>>
           it)
@@ -217,7 +217,8 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
 
 class BatchImpl : public PageDb::Batch {
  public:
-  BatchImpl(std::unique_ptr<Db::Batch> batch) : batch_(std::move(batch)) {}
+  explicit BatchImpl(std::unique_ptr<Db::Batch> batch)
+      : batch_(std::move(batch)) {}
 
   ~BatchImpl() override {}
 

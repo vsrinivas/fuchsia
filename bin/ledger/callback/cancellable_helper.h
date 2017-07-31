@@ -86,7 +86,7 @@ class CancellableImpl final : public Cancellable {
   void SetOnDone(ftl::Closure callback) override;
 
  private:
-  CancellableImpl(ftl::Closure on_cancel);
+  explicit CancellableImpl(ftl::Closure on_cancel);
 
   bool is_cancelled_;
   ftl::Closure on_cancel_;

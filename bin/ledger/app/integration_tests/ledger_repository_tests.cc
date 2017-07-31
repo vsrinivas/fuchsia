@@ -24,7 +24,7 @@ class LedgerRepositoryIntegrationTest : public IntegrationTest {
 
 class EmptyTokenProvider : public modular::auth::TokenProvider {
  public:
-  EmptyTokenProvider(
+  explicit EmptyTokenProvider(
       fidl::InterfaceRequest<modular::auth::TokenProvider> request)
       : binding_(this, std::move(request)) {
     error_ = modular::auth::AuthErr::New();

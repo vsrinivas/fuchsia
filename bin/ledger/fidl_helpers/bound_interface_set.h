@@ -15,7 +15,8 @@ template <class Interface, class Impl>
 class BoundInterfaceSet : public SetBoundable<Interface> {
  public:
   template <class... Args>
-  BoundInterfaceSet(Args&&... args) : impl_(std::forward<Args>(args)...) {}
+  explicit BoundInterfaceSet(Args&&... args)
+      : impl_(std::forward<Args>(args)...) {}
 
   void AddBinding(fidl::InterfaceRequest<Interface> request) final {
     binding_.AddBinding(&impl_, std::move(request));

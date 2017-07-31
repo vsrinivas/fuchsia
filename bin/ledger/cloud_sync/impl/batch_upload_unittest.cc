@@ -150,7 +150,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 // Registers the data uploaded by BatchUpload.
 class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
  public:
-  TestCloudProvider(mtl::MessageLoop* message_loop)
+  explicit TestCloudProvider(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   ~TestCloudProvider() override = default;

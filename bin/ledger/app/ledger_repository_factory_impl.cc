@@ -178,7 +178,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  RepositoryInformation(const fidl::String& repository_path)
+  explicit RepositoryInformation(const fidl::String& repository_path)
       : base_path(files::SimplifyPath(repository_path.get())),
         content_path(ftl::Concatenate({base_path, kContentPath})),
         staging_path(ftl::Concatenate({base_path, kStagingPath})) {}

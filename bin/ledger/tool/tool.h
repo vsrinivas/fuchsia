@@ -21,7 +21,7 @@ namespace tool {
 
 class ToolApp {
  public:
-  ToolApp(ftl::CommandLine command_line);
+  explicit ToolApp(ftl::CommandLine command_line);
 
  private:
   std::unique_ptr<Command> CommandFromArgs(

@@ -39,7 +39,7 @@ class LedgerImpl : public Ledger {
   };
 
   // |delegate| outlives LedgerImpl.
-  LedgerImpl(Delegate* delegate);
+  explicit LedgerImpl(Delegate* delegate);
   ~LedgerImpl() override;
 
  private:

@@ -59,7 +59,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 // Registers the commits marked as synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
-  TestPageStorage(mtl::MessageLoop* message_loop)
+  explicit TestPageStorage(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   std::unique_ptr<TestCommit> NewCommit(std::string id,
@@ -223,7 +223,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 // Registers for inspection the notifications passed by PageSync.
 class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
  public:
-  TestCloudProvider(mtl::MessageLoop* message_loop)
+  explicit TestCloudProvider(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   ~TestCloudProvider() override = default;
@@ -328,7 +328,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 // time..
 class TestBackoff : public backoff::Backoff {
  public:
-  TestBackoff(int* get_next_count) : get_next_count_(get_next_count) {}
+  explicit TestBackoff(int* get_next_count) : get_next_count_(get_next_count) {}
   ~TestBackoff() override {}
 
   ftl::TimeDelta GetNext() override {

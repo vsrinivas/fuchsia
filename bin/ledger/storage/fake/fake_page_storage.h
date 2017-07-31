@@ -22,7 +22,7 @@ namespace fake {
 
 class FakePageStorage : public test::PageStorageEmptyImpl {
  public:
-  FakePageStorage(PageId page_id);
+  explicit FakePageStorage(PageId page_id);
   ~FakePageStorage() override;
 
   // PageStorage:

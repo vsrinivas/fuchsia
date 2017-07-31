@@ -17,7 +17,7 @@ namespace {
 
 class StringClient : public SocketWriter::Client {
  public:
-  StringClient(std::string value) : value_(std::move(value)) {}
+  explicit StringClient(std::string value) : value_(std::move(value)) {}
 
   void GetNext(size_t offset,
                size_t max_size,

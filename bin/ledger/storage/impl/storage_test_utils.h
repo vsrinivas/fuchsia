@@ -25,8 +25,8 @@ enum class InlineBehavior {
 
 class ObjectData {
  public:
-  ObjectData(std::string value,
-             InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+  explicit ObjectData(std::string value,
+                      InlineBehavior inline_behavior = InlineBehavior::ALLOW);
   std::unique_ptr<DataSource> ToDataSource();
   std::unique_ptr<DataSource::DataChunk> ToChunk();
 

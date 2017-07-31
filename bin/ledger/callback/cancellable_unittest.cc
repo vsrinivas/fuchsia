@@ -14,7 +14,7 @@ class FakeCancellable : public Cancellable {
     return ftl::AdoptRef(new FakeCancellable(destructed));
   }
 
-  FakeCancellable(bool* destructed) : destructed_(destructed) {}
+  explicit FakeCancellable(bool* destructed) : destructed_(destructed) {}
 
   void Cancel() override {
     if (is_done_)

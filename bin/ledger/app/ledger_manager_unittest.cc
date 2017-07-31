@@ -31,7 +31,7 @@ storage::PageId RandomId() {
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : task_runner_(task_runner) {}
   ~FakeLedgerStorage() {}
 
@@ -85,7 +85,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
 
 class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
-  FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : called(false), task_runner_(task_runner) {}
   ~FakeLedgerSync() {}
 

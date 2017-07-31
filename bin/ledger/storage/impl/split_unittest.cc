@@ -25,7 +25,7 @@ constexpr size_t kMaxChunkSize = std::numeric_limits<uint16_t>::max();
 // DataSource that produces 0.
 class PathologicalDataSource : public DataSource {
  public:
-  PathologicalDataSource(size_t size) : size_(size) {}
+  explicit PathologicalDataSource(size_t size) : size_(size) {}
 
   uint64_t GetSize() override { return size_; }
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)

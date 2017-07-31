@@ -16,7 +16,7 @@ namespace storage {
 
 class LevelDb : public Db {
  public:
-  LevelDb(std::string db_path);
+  explicit LevelDb(std::string db_path);
 
   ~LevelDb();
 

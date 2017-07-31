@@ -43,7 +43,8 @@ SyncState ConvertToSyncState(cloud_sync::UploadSyncState upload) {
 class SyncWatcherSet::SyncWatcherContainer
     : public cloud_sync::SyncStateWatcher {
  public:
-  SyncWatcherContainer(SyncWatcherPtr watcher) : watcher_(std::move(watcher)) {}
+  explicit SyncWatcherContainer(SyncWatcherPtr watcher)
+      : watcher_(std::move(watcher)) {}
 
   ~SyncWatcherContainer() {}
 

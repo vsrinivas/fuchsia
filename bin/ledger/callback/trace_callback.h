@@ -27,7 +27,7 @@ class TracingLambda {
         did_run_or_moved_out_(false),
         trace_enabled_(true) {}
 
-  TracingLambda(C callback)
+  explicit TracingLambda(C callback)
       : id_(0u),
         category_(nullptr),
         name_(nullptr),

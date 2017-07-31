@@ -54,7 +54,7 @@ std::string ToPrintable(ftl::StringView string) {
 
 class FileStreamWriter {
  public:
-  FileStreamWriter(const std::string& path)
+  explicit FileStreamWriter(const std::string& path)
       : fd_(HANDLE_EINTR(creat(path.c_str(), FILE_CREATE_MODE))) {}
 
   bool IsValid() { return fd_.is_valid(); }

@@ -14,7 +14,7 @@ class PageDelegate;
 // An implementation of the |Page| FIDL interface.
 class PageImpl : public Page {
  public:
-  PageImpl(PageDelegate* delegate);
+  explicit PageImpl(PageDelegate* delegate);
   ~PageImpl() override;
 
  private:

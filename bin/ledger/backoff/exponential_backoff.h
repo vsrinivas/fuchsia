@@ -18,7 +18,7 @@ namespace backoff {
 // with N denoting the number of consecutive GetNext() calls, starting at 0.
 class ExponentialBackoff : public Backoff {
  public:
-  ExponentialBackoff(
+  explicit ExponentialBackoff(
       std::function<uint64_t()> seed_generator = glue::RandUint64);
   ExponentialBackoff(
       ftl::TimeDelta initial_delay,

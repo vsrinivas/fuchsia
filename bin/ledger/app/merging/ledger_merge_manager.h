@@ -21,7 +21,7 @@ namespace ledger {
 // |LedgerMergeManager| must outlive all MergeResolver it provides.
 class LedgerMergeManager {
  public:
-  LedgerMergeManager(Environment* environment);
+  explicit LedgerMergeManager(Environment* environment);
   ~LedgerMergeManager();
 
   void SetFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);

@@ -52,7 +52,7 @@ class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   }
 
  protected:
-  BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
+  explicit BaseWaiter(A&& accumulator) : accumulator_(std::move(accumulator)) {}
 
  private:
   template <typename T>
@@ -90,7 +90,7 @@ class BaseWaiter : public ftl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 template <typename S, typename T>
 class ResultAccumulator {
  public:
-  ResultAccumulator(S success_status)
+  explicit ResultAccumulator(S success_status)
       : success_status_(success_status), result_status_(success_status_) {}
 
   size_t PrepareCall() {
@@ -122,7 +122,7 @@ class ResultAccumulator {
 template <typename S>
 class StatusAccumulator {
  public:
-  StatusAccumulator(S success_status)
+  explicit StatusAccumulator(S success_status)
       : success_status_(success_status), result_status_(success_status_) {}
 
   bool PrepareCall() { return true; }
@@ -205,7 +205,7 @@ class Waiter : public internal::BaseWaiter<internal::ResultAccumulator<S, T>,
   }
 
  private:
-  Waiter(S success_status)
+  explicit Waiter(S success_status)
       : internal::BaseWaiter<internal::ResultAccumulator<S, T>,
                              std::pair<S, std::vector<T>>,
                              S,
@@ -225,7 +225,7 @@ class StatusWaiter
   }
 
  private:
-  StatusWaiter(S success_status)
+  explicit StatusWaiter(S success_status)
       : internal::BaseWaiter<internal::StatusAccumulator<S>, S, S>(
             internal::StatusAccumulator<S>(success_status)) {}
 };

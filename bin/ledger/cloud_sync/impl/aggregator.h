@@ -19,7 +19,7 @@ namespace cloud_sync {
 class Aggregator {
  public:
   // Sets the base watcher that will receive the aggregated notification stream.
-  Aggregator(cloud_sync::SyncStateWatcher* base_watcher);
+  explicit Aggregator(cloud_sync::SyncStateWatcher* base_watcher);
   ~Aggregator();
 
   // Generates a new source of notifications for this aggregator. Note that

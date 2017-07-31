@@ -36,7 +36,7 @@ class AutoCleanableSet {
   using Set_ = typename std::unordered_set<V, ReferenceHash, ReferenceEquality>;
   class iterator : public std::iterator<std::forward_iterator_tag, V> {
    public:
-    iterator(typename Set_::iterator base) : base_(base) {}
+    explicit iterator(typename Set_::iterator base) : base_(base) {}
 
     iterator& operator++() {
       ++base_;

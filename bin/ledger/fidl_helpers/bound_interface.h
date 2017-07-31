@@ -15,12 +15,13 @@ template <class Interface, class Impl>
 class BoundInterface : public Boundable<Interface> {
  public:
   template <class... Args>
-  BoundInterface(fidl::InterfaceRequest<Interface> request, Args&&... args)
+  explicit BoundInterface(fidl::InterfaceRequest<Interface> request,
+                          Args&&... args)
       : impl_(std::forward<Args>(args)...),
         binding_(&impl_, std::move(request)) {}
 
   template <class... Args>
-  BoundInterface(Args&&... args)
+  explicit BoundInterface(Args&&... args)
       : impl_(std::forward<Args>(args)...), binding_(&impl_) {}
 
   void Bind(fidl::InterfaceRequest<Interface> request) final {

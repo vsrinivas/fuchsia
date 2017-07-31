@@ -49,7 +49,7 @@ class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
 // when this object is deleted.
 class AutoCancel {
  public:
-  AutoCancel(ftl::RefPtr<Cancellable> cancellable = nullptr);
+  explicit AutoCancel(ftl::RefPtr<Cancellable> cancellable = nullptr);
   ~AutoCancel();
 
   // Cancels any wrapped |Cancellable|s and starts wrapping |cancellable|.

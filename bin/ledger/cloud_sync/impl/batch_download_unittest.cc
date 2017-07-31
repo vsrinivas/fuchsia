@@ -24,7 +24,7 @@ namespace {
 // synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
-  TestPageStorage(mtl::MessageLoop* message_loop)
+  explicit TestPageStorage(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
   void AddCommitsFromSync(

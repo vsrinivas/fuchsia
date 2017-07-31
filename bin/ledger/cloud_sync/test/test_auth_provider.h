@@ -14,7 +14,7 @@ namespace test {
 
 class TestAuthProvider : public AuthProvider {
  public:
-  TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner);
+  explicit TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner);
 
   // AuthProvider:
   ftl::RefPtr<callback::Cancellable> GetFirebaseToken(

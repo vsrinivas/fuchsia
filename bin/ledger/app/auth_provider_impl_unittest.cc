@@ -17,7 +17,7 @@ namespace {
 
 class TestTokenProvider : public modular::auth::TokenProvider {
  public:
-  TestTokenProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit TestTokenProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : task_runner_(task_runner) {
     error_to_return = modular::auth::AuthErr::New();
     error_to_return->status = modular::auth::Status::OK;

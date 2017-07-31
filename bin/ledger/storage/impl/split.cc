@@ -56,7 +56,7 @@ struct ChunkAndSize {
 //   - Add the identifier of the index file at the next level.
 class SplitContext {
  public:
-  SplitContext(
+  explicit SplitContext(
       std::function<void(IterationStatus,
                          ObjectId,
                          std::unique_ptr<DataSource::DataChunk>)> callback)

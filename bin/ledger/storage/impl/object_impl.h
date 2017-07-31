@@ -20,7 +20,7 @@ namespace storage {
 // Object whose data is equal to its id.
 class InlinedObject : public Object {
  public:
-  InlinedObject(ObjectId id);
+  explicit InlinedObject(ObjectId id);
   ~InlinedObject() override;
 
   // Object:

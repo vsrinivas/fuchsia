@@ -18,7 +18,8 @@ const int32_t kInvalidResponseErrorCode = -320;
 
 class NetworkServiceImpl::RunningRequest {
  public:
-  RunningRequest(std::function<network::URLRequestPtr()> request_factory)
+  explicit RunningRequest(
+      std::function<network::URLRequestPtr()> request_factory)
       : request_factory_(std::move(request_factory)), redirect_count_(0u) {}
 
   void Cancel() {

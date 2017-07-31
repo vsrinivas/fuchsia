@@ -15,7 +15,7 @@ namespace {
 template <typename S>
 class StringLikeDataChunk : public DataSource::DataChunk {
  public:
-  StringLikeDataChunk(S value) : value_(std::move(value)) {}
+  explicit StringLikeDataChunk(S value) : value_(std::move(value)) {}
 
  private:
   ftl::StringView Get() override { return convert::ExtendedStringView(value_); }
@@ -26,7 +26,7 @@ class StringLikeDataChunk : public DataSource::DataChunk {
 template <typename S>
 class StringLikeDataSource : public DataSource {
  public:
-  StringLikeDataSource(S value)
+  explicit StringLikeDataSource(S value)
       : value_(std::move(value)), size_(value_.size()) {}
 
  private:
@@ -84,7 +84,7 @@ class VmoDataChunk : public DataSource::DataChunk {
 
 class VmoDataSource : public DataSource {
  public:
-  VmoDataSource(mx::vmo value) : vmo_(std::move(value)) {
+  explicit VmoDataSource(mx::vmo value) : vmo_(std::move(value)) {
     FTL_DCHECK(vmo_);
     mx_status_t status = vmo_.get_size(&vmo_size_);
     if (status != MX_OK) {
@@ -180,7 +180,8 @@ class SocketDataSource : public DataSource, public mtl::SocketDrainer::Client {
 
 class FlatBufferDataChunk : public DataSource::DataChunk {
  public:
-  FlatBufferDataChunk(std::unique_ptr<flatbuffers::FlatBufferBuilder> value)
+  explicit FlatBufferDataChunk(
+      std::unique_ptr<flatbuffers::FlatBufferBuilder> value)
       : value_(std::move(value)) {}
 
  private:

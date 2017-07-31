@@ -32,8 +32,9 @@ class SocketWriter {
     virtual ~Client() {}
   };
 
-  SocketWriter(Client* client,
-               const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
+  explicit SocketWriter(
+      Client* client,
+      const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
   ~SocketWriter();
 
   void Start(mx::socket destination);
@@ -65,7 +66,7 @@ class SocketWriter {
 // Writes the content of a string to a socket. Deletes itself when done.
 class StringSocketWriter : public SocketWriter::Client {
  public:
-  StringSocketWriter(
+  explicit StringSocketWriter(
       const FidlAsyncWaiter* waiter = fidl::GetDefaultAsyncWaiter());
 
   void Start(std::string data, mx::socket destination);

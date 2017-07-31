@@ -48,7 +48,8 @@ constexpr NodeLevelCalculator kTestNodeLevelCalculator = {&GetTestNodeLevel};
 
 class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
  public:
-  TrackGetObjectFakePageStorage(PageId id) : fake::FakePageStorage(id) {}
+  explicit TrackGetObjectFakePageStorage(PageId id)
+      : fake::FakePageStorage(id) {}
   ~TrackGetObjectFakePageStorage() {}
 
   void GetObject(
@@ -365,7 +366,8 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   // [00, 04]
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({
-                                     0, 4,
+                                     0,
+                                     4,
                                  }),
                                  &golden_entries));
   ObjectId root_id = CreateTree(golden_entries);

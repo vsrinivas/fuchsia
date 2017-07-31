@@ -23,7 +23,7 @@ namespace test {
 // time..
 class TestBackoff : public backoff::Backoff {
  public:
-  TestBackoff(int* get_next_count);
+  explicit TestBackoff(int* get_next_count);
   ~TestBackoff() override;
 
   ftl::TimeDelta GetNext() override;

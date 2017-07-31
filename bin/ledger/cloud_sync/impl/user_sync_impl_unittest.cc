@@ -28,7 +28,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 
 class TestCloudDeviceSet : public CloudDeviceSet {
  public:
-  TestCloudDeviceSet(ftl::RefPtr<ftl::TaskRunner> task_runner)
+  explicit TestCloudDeviceSet(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : task_runner_(task_runner) {}
   ~TestCloudDeviceSet() override {}
 

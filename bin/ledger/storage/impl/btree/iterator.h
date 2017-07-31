@@ -30,7 +30,7 @@ struct EntryAndNodeId {
 // to allow to skip part of the tree.
 class BTreeIterator {
  public:
-  BTreeIterator(SynchronousStorage* storage);
+  explicit BTreeIterator(SynchronousStorage* storage);
 
   BTreeIterator(BTreeIterator&&);
   BTreeIterator& operator=(BTreeIterator&&);

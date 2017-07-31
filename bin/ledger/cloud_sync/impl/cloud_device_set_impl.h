@@ -19,7 +19,8 @@ namespace cloud_sync {
 
 class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
  public:
-  CloudDeviceSetImpl(std::unique_ptr<firebase::Firebase> user_firebase);
+  explicit CloudDeviceSetImpl(
+      std::unique_ptr<firebase::Firebase> user_firebase);
   ~CloudDeviceSetImpl() override;
 
   void CheckFingerprint(std::string auth_token,

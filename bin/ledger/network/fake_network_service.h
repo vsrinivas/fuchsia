@@ -14,7 +14,7 @@ namespace ledger {
 
 class FakeNetworkService : public NetworkService {
  public:
-  FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner);
+  explicit FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner);
   ~FakeNetworkService() override;
 
   network::URLRequest* GetRequest();

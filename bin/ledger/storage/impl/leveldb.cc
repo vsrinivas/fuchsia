@@ -24,7 +24,7 @@ Status ConvertStatus(leveldb::Status s) {
 
 class BatchImpl : public Db::Batch {
  public:
-  BatchImpl(std::function<Status(bool)> callback)
+  explicit BatchImpl(std::function<Status(bool)> callback)
       : callback_(callback), executed_(false) {}
 
   ~BatchImpl() override {

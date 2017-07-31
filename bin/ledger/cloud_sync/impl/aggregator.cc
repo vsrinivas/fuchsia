@@ -12,7 +12,7 @@
 namespace cloud_sync {
 class Aggregator::Listener : public SyncStateWatcher {
  public:
-  Listener(Aggregator* aggregator);
+  explicit Listener(Aggregator* aggregator);
   ~Listener();
 
   // Notify the client watcher, if present, of a new state.

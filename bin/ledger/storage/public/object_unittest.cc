@@ -12,7 +12,7 @@ namespace {
 
 class StringObject : public storage::Object {
  public:
-  StringObject(std::string value) : value_(std::move(value)) {}
+  explicit StringObject(std::string value) : value_(std::move(value)) {}
   ~StringObject() override {}
 
   ObjectId GetId() const override { return "id"; }

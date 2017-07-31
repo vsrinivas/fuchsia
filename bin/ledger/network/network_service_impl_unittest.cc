@@ -62,7 +62,7 @@ class FakeURLLoader : public network::URLLoader {
 // each time.
 class FakeNetworkService : public network::NetworkService {
  public:
-  FakeNetworkService(fidl::InterfaceRequest<NetworkService> request)
+  explicit FakeNetworkService(fidl::InterfaceRequest<NetworkService> request)
       : binding_(this, std::move(request)) {}
   ~FakeNetworkService() override {}
 
@@ -124,7 +124,7 @@ class DestroyWatcher : public ftl::RefCountedThreadSafe<DestroyWatcher> {
   }
 
  private:
-  DestroyWatcher(const ftl::Closure& callback) : callback_(callback) {}
+  explicit DestroyWatcher(const ftl::Closure& callback) : callback_(callback) {}
   ~DestroyWatcher() { callback_(); }
 
   ftl::Closure callback_;
