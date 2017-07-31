@@ -12,6 +12,7 @@
 
 #include "apps/ledger/src/cloud_sync/impl/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
 namespace cloud_sync {
@@ -77,7 +78,10 @@ void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
 bool PageSyncImpl::IsIdle() {
   // TODO(nellyv): We should try to simplify the logic behind upload/download
   // states and IsIdle(). See LE-262.
-  return !batch_upload_ && download_list_retrieved_ && !batch_download_ &&
+  return !commits_to_upload_ &&
+         (upload_state_ == UPLOAD_IDLE ||
+          upload_state_ == WAIT_TOO_MANY_LOCAL_HEADS) &&
+         download_list_retrieved_ && !batch_download_ &&
          upload_state_ != UPLOAD_PENDING && commits_to_download_.empty();
 }
 
@@ -95,7 +99,7 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 }
 
 void PageSyncImpl::OnNewCommits(
-    const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+    const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
     storage::ChangeSource source) {
   // Only upload the locally created commits.
   // TODO(ppi): revisit this when we have p2p sync, too.
@@ -103,13 +107,8 @@ void PageSyncImpl::OnNewCommits(
     return;
   }
 
-  std::vector<std::unique_ptr<const storage::Commit>> cloned_commits;
-  cloned_commits.reserve(commits.size());
-  for (const auto& commit : commits) {
-    cloned_commits.push_back(commit->Clone());
-  }
-
-  HandleLocalCommits(std::move(cloned_commits));
+  commits_to_upload_ = true;
+  UploadUnsyncedCommits();
 }
 
 void PageSyncImpl::GetObject(
@@ -259,29 +258,13 @@ void PageSyncImpl::StartUpload() {
   if (!upload_enabled_ || !download_list_retrieved_) {
     // Only start uploading when the backlog is downloaded and upload is
     // enabled.
+    CheckIdle();
     return;
   }
 
-  // Retrieve the backlog of the existing unsynced commits and enqueue them for
-  // upload.
-  // TODO(ppi): either switch to a paginating API or (better?) ensure that long
-  // backlogs of local commits are squashed in storage, as otherwise the list of
-  // commits can be possibly very big.
-  storage_->GetUnsyncedCommits(
-      [this](storage::Status status,
-             std::vector<std::unique_ptr<const storage::Commit>> commits) {
-        if (status != storage::Status::OK) {
-          SetUploadState(UPLOAD_ERROR);
-          HandleError("Failed to retrieve the unsynced commits");
-          return;
-        }
-
-        HandleLocalCommits(std::move(commits));
-
-        // Subscribe to notifications about new commits in Storage.
-        storage_->AddCommitWatcher(this);
-        local_watch_set_ = true;
-      });
+  // Prime the upload process.
+  commits_to_upload_ = true;
+  UploadUnsyncedCommits();
 }
 
 void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
@@ -296,11 +279,7 @@ void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
 
         if (commits_to_download_.empty()) {
           SetDownloadState(DOWNLOAD_IDLE);
-          if (!commits_staged_for_upload_.empty()) {
-            HandleLocalCommits(
-                std::vector<std::unique_ptr<const storage::Commit>>());
-          }
-          CheckIdle();
+          UploadUnsyncedCommits();
           return;
         }
         auto commits = std::move(commits_to_download_);
@@ -338,14 +317,47 @@ void PageSyncImpl::SetRemoteWatcher() {
       });
 }
 
-void PageSyncImpl::HandleLocalCommits(
-    std::vector<std::unique_ptr<const storage::Commit>> commits) {
-  // Add new commits to the upload list.
-  std::move(std::begin(commits), std::end(commits),
-            std::back_inserter(commits_staged_for_upload_));
+void PageSyncImpl::UploadUnsyncedCommits() {
+  if (!commits_to_upload_) {
+    CheckIdle();
+    return;
+  }
 
-  if (commits_staged_for_upload_.empty()) {
+  if (batch_upload_) {
+    // If we are already uploading a commit batch, return early.
+    return;
+  }
+
+  // Retrieve the backlog of the existing unsynced commits and enqueue them for
+  // upload.
+  // TODO(ppi): either switch to a paginating API or (better?) ensure that long
+  // backlogs of local commits are squashed in storage, as otherwise the list of
+  // commits can be possibly very big.
+  storage_->GetUnsyncedCommits(
+      [this](storage::Status status,
+             std::vector<std::unique_ptr<const storage::Commit>> commits) {
+        if (status != storage::Status::OK) {
+          SetUploadState(UPLOAD_ERROR);
+          HandleError("Failed to retrieve the unsynced commits");
+          return;
+        }
+        VerifyUnsyncedCommits(std::move(commits));
+
+        if (!local_watch_set_) {
+          // Subscribe to notifications about new commits in Storage.
+          storage_->AddCommitWatcher(this);
+          local_watch_set_ = true;
+        }
+      });
+}
+
+void PageSyncImpl::VerifyUnsyncedCommits(
+    std::vector<std::unique_ptr<const storage::Commit>> commits) {
+  // If we have no commit to upload, skip.
+  if (commits.empty()) {
     SetUploadState(UPLOAD_IDLE);
+    commits_to_upload_ = false;
+    CheckIdle();
     return;
   }
 
@@ -357,56 +369,56 @@ void PageSyncImpl::HandleLocalCommits(
   }
 
   SetUploadState(UPLOAD_PENDING);
-  storage_->GetHeadCommitIds(
-      [this](storage::Status status, std::vector<storage::CommitId> heads) {
-        if (status != storage::Status::OK) {
-          SetUploadState(UPLOAD_ERROR);
-          HandleError("Failed to retrieve the current heads");
-          return;
-        }
-        if (batch_upload_ || commits_staged_for_upload_.empty()) {
-          // If we are already uploading a commit batch, or if a previous call
-          // already handled the commit return early.
-          return;
-        }
-        FTL_DCHECK(!heads.empty());
+  storage_->GetHeadCommitIds(ftl::MakeCopyable([
+    this, commits = std::move(commits)
+  ](storage::Status status, std::vector<storage::CommitId> heads) mutable {
+    if (status != storage::Status::OK) {
+      SetUploadState(UPLOAD_ERROR);
+      HandleError("Failed to retrieve the current heads");
+      return;
+    }
+    if (batch_upload_) {
+      // If we are already uploading a commit batch, return early.
+      return;
+    }
+    FTL_DCHECK(!heads.empty());
 
-        if (heads.size() > 1u) {
-          // Too many local heads.
-          SetUploadState(WAIT_TOO_MANY_LOCAL_HEADS);
-          CheckIdle();
-          return;
-        }
+    if (heads.size() > 1u) {
+      // Too many local heads.
+      commits_to_upload_ = false;
+      SetUploadState(WAIT_TOO_MANY_LOCAL_HEADS);
+      CheckIdle();
+      return;
+    }
 
-        SetUploadState(UPLOAD_IN_PROGRESS);
-        UploadStagedCommits();
-      });
+    SetUploadState(UPLOAD_IN_PROGRESS);
+    HandleUnsyncedCommits(std::move(commits));
+  }));
 }
 
-void PageSyncImpl::UploadStagedCommits() {
+void PageSyncImpl::HandleUnsyncedCommits(
+    std::vector<std::unique_ptr<const storage::Commit>> commits) {
   FTL_DCHECK(!batch_upload_);
-  FTL_DCHECK(!commits_staged_for_upload_.empty());
-
+  FTL_DCHECK(commits_to_upload_);
   batch_upload_ =
       std::make_unique<BatchUpload>(
-          storage_, cloud_provider_, auth_provider_,
-          std::move(commits_staged_for_upload_),
+          storage_, cloud_provider_, auth_provider_, std::move(commits),
           [this] {
             // Upload succeeded, reset the backoff delay.
             backoff_->Reset();
             batch_upload_.reset();
-            HandleLocalCommits(
-                std::vector<std::unique_ptr<const storage::Commit>>());
-            CheckIdle();
+            UploadUnsyncedCommits();
           },
           [this] {
             FTL_LOG(WARNING)
                 << log_prefix_
                 << "commit upload failed due to a connection error, retrying.";
             SetUploadState(UPLOAD_PENDING);
-            Retry([this] { batch_upload_->Retry(); });
+            Retry([this] {
+              batch_upload_.reset();
+              UploadUnsyncedCommits();
+            });
           });
-  commits_staged_for_upload_.clear();
   batch_upload_->Start();
 }
 
@@ -439,7 +451,6 @@ void PageSyncImpl::BacklogDownloaded() {
   }
   SetRemoteWatcher();
   StartUpload();
-  CheckIdle();
 }
 
 void PageSyncImpl::Retry(ftl::Closure callable) {
@@ -475,7 +486,8 @@ void PageSyncImpl::SetUploadState(UploadSyncState sync_state) {
 void PageSyncImpl::SetState(DownloadSyncState download_state,
                             UploadSyncState upload_state) {
   download_state_ = download_state;
-  upload_state_ = upload_state;
+  if (upload_enabled_)
+    upload_state_ = upload_state;
   NotifyStateWatcher();
 }
 

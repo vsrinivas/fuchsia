@@ -120,7 +120,10 @@ class PageSyncImpl : public PageSync,
 
   void SetRemoteWatcher();
 
-  void HandleLocalCommits(
+  void UploadUnsyncedCommits();
+  void VerifyUnsyncedCommits(
+      std::vector<std::unique_ptr<const storage::Commit>> commits);
+  void HandleUnsyncedCommits(
       std::vector<std::unique_ptr<const storage::Commit>> commits);
 
   void UploadStagedCommits();
@@ -173,10 +176,8 @@ class PageSyncImpl : public PageSync,
 
   // Current batch of local commits being uploaded.
   std::unique_ptr<BatchUpload> batch_upload_;
-  // Commits staged to be uploaded when the current upload is finished and the
-  // number of heads is 1.
-  std::vector<std::unique_ptr<const storage::Commit>>
-      commits_staged_for_upload_;
+  // Set to true when there are new commits to upload
+  bool commits_to_upload_ = false;
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.

@@ -117,7 +117,16 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     ftl::Closure confirm = ftl::MakeCopyable(
         [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() {
           for (auto& commit : ids_and_bytes) {
-            received_commits[std::move(commit.id)] = std::move(commit.bytes);
+            received_commits[commit.id] = std::move(commit.bytes);
+            unsynced_commits_to_return.erase(
+                std::remove_if(
+                    unsynced_commits_to_return.begin(),
+                    unsynced_commits_to_return.end(),
+                    [commit_id = std::move(commit.id)](
+                        const std::unique_ptr<const storage::Commit>& commit) {
+                      return commit->GetId() == commit_id;
+                    }),
+                unsynced_commits_to_return.end());
           }
           callback(storage::Status::OK);
         });
@@ -246,19 +255,25 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
                     cloud_provider::CommitWatcher* watcher) override {
     watch_commits_auth_tokens.push_back(auth_token);
     watch_call_min_timestamps.push_back(min_timestamp);
+    watcher_ = watcher;
+    DeliverRemoteCommits();
+  }
+
+  void DeliverRemoteCommits() {
     for (auto& record : notifications_to_deliver) {
       message_loop_->task_runner()->PostTask(ftl::MakeCopyable([
-        watcher, commit = std::move(record.commit),
+        this, commit = std::move(record.commit),
         timestamp = std::move(record.timestamp)
       ]() mutable {
         std::vector<cloud_provider::Commit> commits;
         commits.push_back(std::move(commit));
-        watcher->OnRemoteCommits(std::move(commits), std::move(timestamp));
+        watcher_->OnRemoteCommits(std::move(commits), std::move(timestamp));
       }));
     }
   }
 
   void UnwatchCommits(cloud_provider::CommitWatcher* watcher) override {
+    watcher_ = nullptr;
     watcher_removed = true;
   }
 
@@ -319,6 +334,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   std::vector<std::string> get_object_auth_tokens;
   std::vector<cloud_provider::Commit> received_commits;
   bool watcher_removed = false;
+  cloud_provider::CommitWatcher* watcher_ = nullptr;
 
  private:
   mtl::MessageLoop* message_loop_;
@@ -333,7 +349,7 @@ class TestBackoff : public backoff::Backoff {
 
   ftl::TimeDelta GetNext() override {
     (*get_next_count_)++;
-    return ftl::TimeDelta::FromSeconds(0);
+    return ftl::TimeDelta::FromMilliseconds(50);
   }
 
   void Reset() override {}
@@ -560,24 +576,18 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   auto commit1 = storage_.NewCommit("id1", "content1");
-  auto commit2 = storage_.NewCommit("id2", "content2");
-  auto commit3 = storage_.NewCommit("id3", "content3");
-
   storage_.new_commits_to_return["id1"] = commit1->Clone();
   page_sync_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
 
   // The commit coming from sync should be ignored.
+  auto commit2 = storage_.NewCommit("id2", "content2", false);
   storage_.new_commits_to_return["id2"] = commit2->Clone();
   page_sync_->OnNewCommits(commit2->AsList(), storage::ChangeSource::SYNC);
 
+  auto commit3 = storage_.NewCommit("id3", "content3");
   storage_.new_commits_to_return["id3"] = commit3->Clone();
   page_sync_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
 
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.received_commits.size() == 2u) {
-      message_loop_.PostQuitTask();
-    }
-  });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(2u, cloud_provider_.received_commits.size());
@@ -600,9 +610,9 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
   // Add a new commit when there's only one head and verify that it is
   // uploaded.
   storage_.head_count = 1;
-  storage_.new_commits_to_return["id0"] = storage_.NewCommit("id0", "content0");
-  page_sync_->OnNewCommits(storage_.NewCommit("id0", "content0")->AsList(),
-                           storage::ChangeSource::LOCAL);
+  auto commit0 = storage_.NewCommit("id0", "content0");
+  storage_.new_commits_to_return["id0"] = commit0->Clone();
+  page_sync_->OnNewCommits(commit0->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_->IsIdle());
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(1u, cloud_provider_.received_commits.size());
@@ -614,19 +624,19 @@ TEST_F(PageSyncImplTest, UploadNewCommitsOnlyOnSingleHead) {
   // uploaded.
   cloud_provider_.received_commits.clear();
   storage_.head_count = 2;
-  storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
-  page_sync_->OnNewCommits(storage_.NewCommit("id1", "content1")->AsList(),
-                           storage::ChangeSource::LOCAL);
-  EXPECT_TRUE(RunLoopUntil([&] { return page_sync_->IsIdle(); }));
+  auto commit1 = storage_.NewCommit("id1", "content1");
+  storage_.new_commits_to_return["id1"] = commit1->Clone();
+  page_sync_->OnNewCommits(commit1->AsList(), storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(0u, cloud_provider_.received_commits.size());
   EXPECT_EQ(0u, storage_.commits_marked_as_synced.count("id1"));
 
   // Add another commit bringing the number of heads down to one and verify that
   // both commits are uploaded.
   storage_.head_count = 1;
-  storage_.new_commits_to_return["id2"] = storage_.NewCommit("id2", "content2");
-  page_sync_->OnNewCommits(storage_.NewCommit("id2", "content2")->AsList(),
-                           storage::ChangeSource::LOCAL);
+  auto commit2 = storage_.NewCommit("id2", "content2");
+  storage_.new_commits_to_return["id2"] = commit2->Clone();
+  page_sync_->OnNewCommits(commit2->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_->IsIdle());
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(2u, cloud_provider_.received_commits.size());
@@ -708,9 +718,9 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
 
   // Notify about a new commit to upload and verify that the idle callback was
   // called again on completion.
-  storage_.new_commits_to_return["id3"] = storage_.NewCommit("id3", "content3");
-  page_sync_->OnNewCommits(storage_.NewCommit("id3", "content3")->AsList(),
-                           storage::ChangeSource::LOCAL);
+  auto commit3 = storage_.NewCommit("id3", "content3");
+  storage_.new_commits_to_return["id3"] = commit3->Clone();
+  page_sync_->OnNewCommits(commit3->AsList(), storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_->IsIdle());
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(3u, cloud_provider_.received_commits.size());
@@ -1149,6 +1159,38 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
   // Commit is already synced.
   EXPECT_EQ(0u, cloud_provider_.received_commits.size());
   EXPECT_EQ(0u, cloud_provider_.add_commits_calls);
+}
+
+// Merge commits are deterministic, so can already be in the cloud when we try
+// to upload it. The upload will then fail. However, we should stop retrying to
+// upload the commit once we received a notification for it through the cloud
+// sync watcher.
+TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
+  // Create a local commit.
+  storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
+
+  // Upload should fail.
+  cloud_provider_.commit_status_to_return =
+      cloud_provider::Status::SERVER_ERROR;
+  StartPageSync();
+
+  EXPECT_TRUE(
+      RunLoopUntil([this] { return cloud_provider_.add_commits_calls == 1u; }));
+
+  // Verify that the commit is still not marked as synced in storage.
+  EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
+  EXPECT_EQ(1, backoff_get_next_calls_);
+
+  // Let's receive the same commit from the remote side.
+  std::vector<cloud_provider::Commit> commits;
+  commits.push_back(cloud_provider::Commit("id1", "content1", {}));
+  page_sync_->OnRemoteCommits(std::move(commits), "44");
+
+  EXPECT_TRUE(RunLoopUntil([this] { return page_sync_->IsIdle(); }));
+
+  // No additional calls.
+  EXPECT_EQ(1u, cloud_provider_.add_commits_calls);
+  EXPECT_TRUE(page_sync_->IsIdle());
 }
 
 }  // namespace
