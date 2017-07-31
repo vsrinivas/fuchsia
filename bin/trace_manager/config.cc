@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
 #include <rapidjson/istreamwrapper.h>
 
 #include "apps/tracing/src/trace_manager/config.h"
@@ -29,6 +30,11 @@ bool Config::ReadFrom(const std::string& config_file) {
 
   if (!document.ParseStream(isw).IsObject()) {
     FTL_LOG(ERROR) << "Failed to parse JSON object from: " << config_file;
+    if (document.HasParseError()) {
+      FTL_LOG(ERROR) << "Parse error "
+        << GetParseError_En(document.GetParseError())
+        << " (" << document.GetErrorOffset() << ")";
+    }
     return false;
   }
 
