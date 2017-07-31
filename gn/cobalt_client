@@ -5,6 +5,7 @@
     "imports": [
         "boringssl_libssl",
         "ftl",
+        "magentix",
         "mtl"
     ],
     "labels": [
