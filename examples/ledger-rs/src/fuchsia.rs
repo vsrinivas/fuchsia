@@ -1,8 +1,10 @@
 // TODO: remove this
 use mxruntime::{get_service_root, connect_to_environment_service};
-use magenta::{Channel, ChannelOpts, HandleBase};
+use fidl::ClientEnd;
 use application_services_service_provider::*;
 use application_services::*;
+use ledger::LedgerError;
+use tokio_core::reactor;
 #[cfg(target_arch = "x86_64")]
 use std::panic;
 
@@ -25,47 +27,47 @@ pub fn install_panic_backtrace_hook() {
 pub fn install_panic_backtrace_hook() {}
 
 pub struct ApplicationContext {
-    pub environment: ApplicationEnvironment_Proxy,
-    pub environment_services: ServiceProvider_Proxy,
+    pub environment: ApplicationEnvironment::Proxy,
+    pub environment_services: ServiceProvider::Proxy,
 }
 
 // pub type ApplicationContextPtr = Arc<Mutex<ApplicationContext>>;
 
 impl ApplicationContext {
-    pub fn new() -> ApplicationContext {
+    pub fn new(handle: &reactor::Handle) -> Result<ApplicationContext, LedgerError> {
         let service_root = get_service_root().unwrap();
         let application_environment_channel =
             connect_to_environment_service(service_root,
-                                           ApplicationEnvironment_Metadata::SERVICE_NAME)
+                                           ApplicationEnvironment::SERVICE_NAME)
                 .unwrap();
-        let application_environment_client =
-            ApplicationEnvironment_Client::from_handle(application_environment_channel.into_handle());
-        let mut proxy = ApplicationEnvironment_new_Proxy(application_environment_client);
-        let (service_provider, service_provider_server) = ServiceProvider_new_pair();
+        let application_environment_client = ClientEnd::new(application_environment_channel);
+        let mut proxy = ApplicationEnvironment::new_proxy(application_environment_client, handle)?;
+        let (service_provider, service_provider_server) = ServiceProvider::new_pair(handle)?;
         proxy.get_services(service_provider_server);
-        ApplicationContext {
+        Ok(ApplicationContext {
             environment: proxy,
             environment_services: service_provider,
-        }
+        })
     }
 }
 
 pub struct Launcher {
-    proxy: ApplicationLauncher_Proxy,
+    proxy: ApplicationLauncher::Proxy,
 }
 
 impl Launcher {
-    pub fn new(context: &mut ApplicationContext) -> Launcher {
-        let (s1, s2) = Channel::create(ChannelOpts::Normal).unwrap();
-        context.environment_services.connect_to_service(ApplicationLauncher_Metadata::SERVICE_NAME.to_owned(), s2);
-        let launcher_client = ApplicationLauncher_Client::from_handle(s1.into_handle());
-        let proxy = ApplicationLauncher_new_Proxy(launcher_client);
-        Launcher { proxy }
+    pub fn new(context: &mut ApplicationContext, handle: &reactor::Handle) -> Result<Launcher, LedgerError> {
+        let (launcher_proxy, launcher_request) = ApplicationLauncher::new_pair(handle)?;
+        context.environment_services.connect_to_service(ApplicationLauncher::SERVICE_NAME.to_owned(),
+            launcher_request.into_channel());
+        Ok(Launcher { proxy: launcher_proxy })
     }
 
-    pub fn launch(&mut self, url: String, arguments: Option<Vec<String>>) -> App {
-        let (services_proxy, services_request) = ServiceProvider_new_pair();
-        let (controller_proxy, controller_request) = ApplicationController_new_pair();
+    pub fn launch(&mut self, url: String, arguments: Option<Vec<String>>, handle: &reactor::Handle)
+        -> Result<App, LedgerError>
+    {
+        let (services_proxy, services_request) = ServiceProvider::new_pair(handle)?;
+        let (controller_proxy, controller_request) = ApplicationController::new_pair(handle)?;
 
         let launch_info = ApplicationLaunchInfo {
             url,
@@ -75,11 +77,11 @@ impl Launcher {
             services: Some(services_request)
         };
         self.proxy.create_application(launch_info, Some(controller_request));
-        App { services: services_proxy, controller: controller_proxy }
+        Ok(App { services: services_proxy, controller: controller_proxy })
     }
 }
 
 pub struct App {
-    pub services: ServiceProvider_Proxy,
-    pub controller: ApplicationController_Proxy,
+    pub services: ServiceProvider::Proxy,
+    pub controller: ApplicationController::Proxy,
 }

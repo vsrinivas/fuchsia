@@ -7,64 +7,74 @@ extern crate magenta;
 extern crate magenta_sys;
 extern crate mxruntime;
 extern crate fidl;
+extern crate tokio_core;
+extern crate futures;
 extern crate application_services_service_provider;
 extern crate application_services;
 extern crate apps_ledger_services_public;
 extern crate apps_ledger_services_internal;
-
 mod fuchsia;
 mod ledger;
 
 use magenta::ClockId;
+use tokio_core::reactor;
 use fuchsia::{ApplicationContext, Launcher, install_panic_backtrace_hook};
-use ledger::ledger_crash_callback;
 use apps_ledger_services_public::*;
+use futures::Future;
 
 pub fn main() {
     println!("# installing panic hook");
     install_panic_backtrace_hook();
 
+    let mut core = reactor::Core::new().unwrap();
+    let handle = core.handle();
+
     println!("# getting app context");
-    let mut app_context: ApplicationContext = ApplicationContext::new();
+    let mut app_context: ApplicationContext = ApplicationContext::new(&handle).unwrap();
     println!("# getting launcher");
-    let mut launcher = Launcher::new(&mut app_context);
+    let mut launcher = Launcher::new(&mut app_context, &handle).unwrap();
     println!("# getting ledger");
     let ledger_id = "rust_ledger_example".to_owned().into_bytes();
-    let mut ledger = ledger::Ledger::new(&mut launcher, "/data/test/rust_ledger_example".to_owned(), ledger_id);
-
-    println!("# getting root page");
+    let repo_path = "/data/test/rust_ledger_example".to_owned();
     let key = vec![0];
-    let (mut page, page_request) = Page_new_pair();
-    ledger.proxy.get_root_page(page_request).with(ledger_crash_callback);
+    let future = ledger::LedgerInstance::new(&mut launcher, repo_path, ledger_id, &handle)
+        .and_then(|instance| {
+            println!("# getting root page");
+            Page::new_pair(&handle)
+                .map(|pair| (pair, instance))
+                .map_err(ledger::LedgerError::FidlError)
+        }).and_then(|((page, page_request), mut instance)|
+            instance.proxy.get_root_page(page_request)
+                .then(ledger::map_ledger_error)
+                .map(|()| (instance, page))
+        ).and_then(|(instance, page)| {
+            // get the current value
+            println!("# getting page snapshot");
+            PageSnapshot::new_pair(&handle)
+                .map_err(ledger::LedgerError::FidlError)
+                .map(|pair| ((instance, page), pair))
+        }).and_then(|((instance, mut page), (snap, snap_request))|
+            page.get_snapshot(snap_request, Some(key.clone()), None)
+                .then(ledger::map_ledger_error)
+                .map(|()| (instance, page, snap))
+        ).and_then(|(instance, page, mut snap)| {
+            println!("# getting key value");
+            snap.get(key.clone()).then(ledger::map_value_result)
+                .map(|value_opt| (instance, page, value_opt))
+        }).and_then(|(instance, mut page, value_opt)| {
+            println!("got value: {:?}", value_opt);
+            let as_str = value_opt.and_then(|s| String::from_utf8(s).ok());
+            println!("got value string: {:?}", as_str);
 
-    // get the current value
-    println!("# getting page snapshot");
-    let (mut snap, snap_request) = PageSnapshot_new_pair();
-    page.get_snapshot(snap_request, Some(key.clone()), None).with(ledger_crash_callback);
+            // put a new value
+            println!("# putting key value");
+            let cur_time = magenta::time_get(ClockId::Monotonic);
+            page.put(key.clone(), cur_time.to_string().into_bytes())
+                .then(ledger::map_ledger_error)
+                .map(|put_status| (instance, put_status))
+        }).map(|(_instance, put_status)| {
+            println!("put key with put_status: {:?}", put_status);
+        });
 
-    println!("# getting key value");
-    let raw_res = snap.get(key.clone()).get().expect("fidl message for ledger key failed");
-    let value_opt = ledger::value_result(raw_res).expect("failed to read value for key");
-    println!("got value: {:?}", value_opt);
-    let as_str = value_opt.and_then(|s| String::from_utf8(s).ok());
-    println!("got value string: {:?}", as_str);
-
-    // put a new value
-    println!("# putting key value");
-    let cur_time = magenta::time_get(ClockId::Monotonic);
-    let put_status = page.put(key.clone(), cur_time.to_string().into_bytes()).get().unwrap();
-    println!("put key with put_status: {:?}", put_status);
-
-    // TODO: the following code causes a crash with 'unable to "resume" thread: -20 (ERR_BAD_STATE)'
-    // it makes sense that the callback should never run if we don't wait, but it shouldn't cause a crash.
-
-    // should still print old value, since we're using the same snapshot
-    // println!("# getting key value with wait");
-    // snap.get(key.clone()).with(|raw_res| {
-    //     let raw_val = raw_res.expect("fidl message for ledger key failed");
-    //     let value_opt = ledger::value_result(raw_val).expect("failed to read value for key");
-    //     println!("got value after wait: {:?}", value_opt);
-    //     let as_str = value_opt.and_then(|s| String::from_utf8(s).ok());
-    //     println!("got value string after wait: {:?}", as_str);
-    // });
+    core.run(future).unwrap();
 }

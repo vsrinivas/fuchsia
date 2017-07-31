@@ -15,5 +15,6 @@ rust_binary("ledger_example") {
     "//rust/magenta-rs:magenta",
     "//rust/magenta-rs/magenta-sys",
     "//rust/mxruntime",
+    "//third_party/rust-crates:tokio-core-0.1.9",
   ]
 }
