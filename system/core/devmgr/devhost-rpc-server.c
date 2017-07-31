@@ -99,6 +99,14 @@ done:
         r = mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE,
                              obj.handle, obj.hcount);
 
+        // Regardless of obj.status, if the mx_channel_write fails
+        // we must close the handles that didn't get transmitted.
+        if (r < 0) {
+            for (size_t i = 0; i < obj.hcount; i++) {
+                mx_handle_close(obj.handle[i]);
+            }
+        }
+
         // If we were reporting an error, we've already closed
         // the device and destroyed the iostate, so no matter
         // what we close the handle and return
