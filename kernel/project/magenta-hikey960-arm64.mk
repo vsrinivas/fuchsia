@@ -6,10 +6,6 @@
 
 MODULES +=
 
-
-ENABLE_BUILD_LISTFILES:=true
-
 include kernel/project/virtual/user.mk
 include kernel/project/virtual/test.mk
 include kernel/project/target/hikey960-a53.mk
-
