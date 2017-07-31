@@ -51,6 +51,13 @@ __EXPORT mx_status_t device_add_from_driver(mx_driver_t* drv, mx_device_t* paren
         dev->flags |= DEV_FLAG_UNBINDABLE;
     }
 
+    // out must be set before calling devhost_device_add().
+    // devhost_device_add() may result in child devices being created before it returns,
+    // and those children may call ops on the device before device_add() returns.
+    if (out) {
+        *out = dev;
+    }
+
     if (args->flags & DEVICE_ADD_BUSDEV) {
         r = devhost_device_add(dev, parent, args->props, args->prop_count, args->busdev_args,
                                args->rsrc);
@@ -60,11 +67,10 @@ __EXPORT mx_status_t device_add_from_driver(mx_driver_t* drv, mx_device_t* paren
     } else {
         r = devhost_device_add(dev, parent, args->props, args->prop_count, NULL, MX_HANDLE_INVALID);
     }
-    if (r == MX_OK) {
+    if (r != MX_OK) {
         if (out) {
-            *out = dev;
+            *out = NULL;
         }
-    } else {
         devhost_device_destroy(dev);
     }
 
