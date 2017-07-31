@@ -19,6 +19,9 @@ class CircleShape;
 class RectangleShape;
 class RoundedRectangleShape;
 class Material;
+class DisplayCompositor;
+class LayerStack;
+class Layer;
 class Camera;
 class Renderer;
 class Scene;
@@ -43,6 +46,11 @@ class ResourceVisitor {
 
   // Materials.
   virtual void Visit(Material* r) = 0;
+
+  // Layers.
+  virtual void Visit(DisplayCompositor* r) = 0;
+  virtual void Visit(LayerStack* r) = 0;
+  virtual void Visit(Layer* r) = 0;
 
   // Scene, camera, lighting.
   virtual void Visit(Scene* r) = 0;

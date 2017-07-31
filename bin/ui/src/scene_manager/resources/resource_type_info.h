@@ -38,6 +38,12 @@ enum ResourceType {
   kEntityNode = 1 << 17,
   kShapeNode = 1 << 18,
 
+  // Compositor, layers.
+  kCompositor = 1 << 19,
+  kDisplayCompositor = 1 << 20,
+  kLayer = 1 << 21,
+  kLayerStack = 1 << 22,
+
   // Scene, camera, lighting.
   kScene = 1 << 23,
   kCamera = 1 << 24,

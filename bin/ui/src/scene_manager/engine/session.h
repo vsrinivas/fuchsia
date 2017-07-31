@@ -138,10 +138,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplyCreateBuffer(mozart::ResourceId id, const mozart2::BufferPtr& args);
   bool ApplyCreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
   bool ApplyCreateCamera(mozart::ResourceId id, const mozart2::CameraPtr& args);
-  bool ApplyCreateDisplayRenderer(mozart::ResourceId id,
-                                  const mozart2::DisplayRendererPtr& args);
-  bool ApplyCreateImagePipeRenderer(mozart::ResourceId id,
-                                    const mozart2::ImagePipeRendererPtr& args);
   bool ApplyCreateRenderer(mozart::ResourceId id,
                            const mozart2::RendererPtr& args);
   bool ApplyCreateDirectionalLight(mozart::ResourceId id,
@@ -180,11 +176,6 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
   ResourcePtr CreateCamera(mozart::ResourceId id,
                            const mozart2::CameraPtr& args);
-  ResourcePtr CreateDisplayRenderer(mozart::ResourceId id,
-                                    const mozart2::DisplayRendererPtr& args);
-  ResourcePtr CreateImagePipeRenderer(
-      mozart::ResourceId id,
-      const mozart2::ImagePipeRendererPtr& args);
   ResourcePtr CreateRenderer(mozart::ResourceId id,
                              const mozart2::RendererPtr& args);
   ResourcePtr CreateDirectionalLight(mozart::ResourceId id,
@@ -196,6 +187,15 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                                const mozart2::EntityNodePtr& args);
   ResourcePtr CreateShapeNode(mozart::ResourceId id,
                               const mozart2::ShapeNodePtr& args);
+  ResourcePtr CreateDisplayCompositor(
+      mozart::ResourceId id,
+      const mozart2::DisplayCompositorPtr& args);
+  ResourcePtr CreateImagePipeCompositor(
+      mozart::ResourceId id,
+      const mozart2::ImagePipeCompositorPtr& args);
+  ResourcePtr CreateLayerStack(mozart::ResourceId id,
+                               const mozart2::LayerStackPtr& args);
+  ResourcePtr CreateLayer(mozart::ResourceId id, const mozart2::LayerPtr& args);
   ResourcePtr CreateCircle(mozart::ResourceId id, float initial_radius);
   ResourcePtr CreateRectangle(mozart::ResourceId id, float width, float height);
   ResourcePtr CreateRoundedRectangle(mozart::ResourceId id,

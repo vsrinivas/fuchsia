@@ -255,13 +255,13 @@ void Camera::SetProjection(const float eye_position[3],
       id(), eye_position, eye_look_at, eye_up, fovy));
 }
 
-DisplayRenderer::DisplayRenderer(Session* session) : Resource(session) {
-  session->Enqueue(mozart::NewCreateDisplayRendererOp(id()));
+Renderer::Renderer(Session* session) : Resource(session) {
+  session->Enqueue(mozart::NewCreateRendererOp(id()));
 }
 
-DisplayRenderer::~DisplayRenderer() = default;
+Renderer::~Renderer() = default;
 
-void DisplayRenderer::SetCamera(uint32_t camera_id) {
+void Renderer::SetCamera(uint32_t camera_id) {
   session()->Enqueue(mozart::NewSetCameraOp(id(), camera_id));
 }
 
@@ -273,6 +273,10 @@ Layer::~Layer() = default;
 
 void Layer::SetRenderer(uint32_t renderer_id) {
   session()->Enqueue(mozart::NewSetRendererOp(id(), renderer_id));
+}
+
+void Layer::SetSize(const float size[2]) {
+  session()->Enqueue(mozart::NewSetSizeOp(id(), size));
 }
 
 LayerStack::LayerStack(Session* session) : Resource(session) {

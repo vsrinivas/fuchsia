@@ -4,8 +4,13 @@
 
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
-#include "apps/mozart/src/scene_manager/engine/session.h"
+#include "escher/impl/ssdo_sampler.h"
+#include "escher/renderer/renderer.h"
+#include "escher/scene/model.h"
+#include "escher/scene/stage.h"
+
 #include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/resources/material.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
@@ -22,18 +27,17 @@ namespace scene_manager {
 const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
                                               "Renderer"};
 
+const uint32_t Renderer::kRequiredSwapchainPixelMultiple =
+    escher::impl::SsdoSampler::kSsdoAccelDownsampleFactor;
+
 Renderer::Renderer(Session* session, mozart::ResourceId id)
     : Resource(session, id, Renderer::kTypeInfo) {
   escher::MaterialPtr default_material_ =
       ftl::MakeRefCounted<escher::Material>();
   default_material_->set_color(escher::vec3(0.f, 0.f, 0.f));
-
-  session->engine()->AddRenderer(this);
 }
 
-Renderer::~Renderer() {
-  session()->engine()->RemoveRenderer(this);
-}
+Renderer::~Renderer() = default;
 
 std::vector<escher::Object> Renderer::CreateDisplayList(
     const ScenePtr& scene,
@@ -146,6 +150,18 @@ void Renderer::Visitor::VisitNode(Node* r) {
 
 void Renderer::Visitor::Visit(Scene* r) {
   VisitNode(r);
+}
+
+void Renderer::Visitor::Visit(DisplayCompositor* r) {
+  FTL_DCHECK(false);
+}
+
+void Renderer::Visitor::Visit(LayerStack* r) {
+  FTL_DCHECK(false);
+}
+
+void Renderer::Visitor::Visit(Layer* r) {
+  FTL_DCHECK(false);
 }
 
 void Renderer::Visitor::Visit(ShapeNode* r) {

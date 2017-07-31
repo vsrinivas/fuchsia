@@ -249,7 +249,7 @@ struct SetAnchorOp {
 //   in some cases |depth| must be zero).
 struct SetSizeOp {
   uint32 id;
-  Vector3Value value;
+  Vector2Value value;
 };
 
 // Sets/clears a node's shape.

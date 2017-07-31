@@ -45,10 +45,6 @@ union Resource {
   Scene scene;
   Camera camera;
   Renderer renderer;
-  // TODO(MZ-??): in the implementation CL, Display/ImagePipeRenderer will go
-  // away.
-  DisplayRenderer display_renderer;
-  ImagePipeRenderer image_pipe_renderer;
 
   // Lighting.
   DirectionalLight directional_light;
@@ -148,25 +144,6 @@ struct Camera {
 // applied to a Renderer (see ops.fidl):
 //   - SetCamera
 struct Renderer {
-};
-
-// Renderers render a Scene via a Camera.  DisplayRenderer presents the rendered
-// scene by lighting up pixels a physical display.  The following operations
-// may be applied to a DisplayRenderer (see ops.fidl):
-//   - SetCamera
-// TODO: in the future we will explicitly manage multiple displays.  For now,
-// the display is implicitly associated with the SceneManager.
-struct DisplayRenderer {
-};
-
-// Renderers render a Scene via a Camera.  ImagePipeRenderer pushes rendered
-// images of a scene into an ImagePipe.  The following operations may be applied
-// to an ImagePipeRenderer (see ops.fidl):
-//   - SetCamera
-struct ImagePipeRenderer {
-  uint32 width;
-  uint32 height;
-  ImagePipe target;
 };
 
 // A DirectionalLight is a Light that is emitted from a point at infinity.

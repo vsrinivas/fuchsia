@@ -25,9 +25,9 @@ namespace scene_manager {
 
 using SessionId = uint64_t;
 
+class Compositor;
 class Session;
 class SessionHandler;
-class Renderer;
 
 // Owns a group of sessions which can share resources with one another
 // using the same resource linker and which coexist within the same timing
@@ -101,8 +101,8 @@ class Engine : private FrameSchedulerDelegate {
 
   size_t GetSessionCount() { return session_count_; }
 
-  void AddRenderer(Renderer* renderer);
-  void RemoveRenderer(Renderer* renderer);
+  void AddCompositor(Compositor* compositor);
+  void RemoveCompositor(Compositor* compositor);
 
  protected:
   // Only used by subclasses used in testing.
@@ -156,7 +156,7 @@ class Engine : private FrameSchedulerDelegate {
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;
   std::unique_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<escher::VulkanSwapchain> swapchain_;
-  std::set<Renderer*> renderers_;
+  std::set<Compositor*> compositors_;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, std::unique_ptr<SessionHandler>> sessions_;

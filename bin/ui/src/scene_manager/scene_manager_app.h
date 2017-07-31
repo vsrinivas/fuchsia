@@ -16,7 +16,7 @@
 
 namespace scene_manager {
 
-// TODO(MZ-142): SceneManagerApp shouldn't inherit from Demo.
+// TODO(MZ-142): SceneManagerApp should not rely on escher::DemoHarness.
 class SceneManagerApp {
  public:
   class Params {

@@ -140,11 +140,11 @@ mozart2::OpPtr NewCreateCameraOp(uint32_t id, uint32_t scene_id) {
   return NewCreateResourceOp(id, std::move(resource));
 }
 
-mozart2::OpPtr NewCreateDisplayRendererOp(uint32_t id) {
-  auto renderer = mozart2::DisplayRenderer::New();
+mozart2::OpPtr NewCreateRendererOp(uint32_t id) {
+  auto renderer = mozart2::Renderer::New();
 
   auto resource = mozart2::Resource::New();
-  resource->set_display_renderer(std::move(renderer));
+  resource->set_renderer(std::move(renderer));
 
   return NewCreateResourceOp(id, std::move(resource));
 }
@@ -652,6 +652,22 @@ mozart2::OpPtr NewSetRendererOp(uint32_t layer_id, uint32_t renderer_id) {
   return op;
 }
 
+mozart2::OpPtr NewSetSizeOp(uint32_t node_id, const float size[2]) {
+  auto set_size = mozart2::SetSizeOp::New();
+  set_size->id = node_id;
+  set_size->value = mozart2::Vector2Value::New();
+  set_size->value->value = mozart2::vec2::New();
+  auto& value = set_size->value->value;
+  value->x = size[0];
+  value->y = size[1];
+  set_size->value->variable_id = 0;
+
+  auto op = mozart2::Op::New();
+  op->set_set_size(std::move(set_size));
+
+  return op;
+}
+
 mozart2::OpPtr NewSetCameraProjectionOp(uint32_t camera_id,
                                         const float eye_position[3],
                                         const float eye_look_at[3],
@@ -753,15 +769,5 @@ mozart2::Matrix4ValuePtr NewMatrix4Value(const float matrix[16]) {
 
   return val;
 }
-
-/*
-mozart2::ColorRgbaValuePtr NewColorRgbaValue(const glm::vec4& value) {
-  return foo;
-}
-
-mozart2::QuaternionValuePtr NewQuaternionValue(const glm::quat& value) {
-  return foo;
-}
-*/
 
 }  // namespace mozart

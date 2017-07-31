@@ -9,9 +9,8 @@
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
-#include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -170,8 +169,8 @@ void Engine::RenderFrame(uint64_t presentation_time,
 
   UpdateAndDeliverMetrics(presentation_time);
 
-  for (auto renderer : renderers_) {
-    renderer->DrawFrame(paper_renderer_.get());
+  for (auto& compositor : compositors_) {
+    compositor->DrawFrame(paper_renderer_.get());
   }
 }
 
@@ -202,19 +201,19 @@ escher::VulkanSwapchain Engine::GetVulkanSwapchain() const {
   return *(swapchain_.get());
 }
 
-void Engine::AddRenderer(Renderer* renderer) {
-  FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->session()->engine() == this);
+void Engine::AddCompositor(Compositor* compositor) {
+  FTL_DCHECK(compositor);
+  FTL_DCHECK(compositor->session()->engine() == this);
 
-  bool success = renderers_.insert(renderer).second;
+  bool success = compositors_.insert(compositor).second;
   FTL_DCHECK(success);
 }
 
-void Engine::RemoveRenderer(Renderer* renderer) {
-  FTL_DCHECK(renderer);
-  FTL_DCHECK(renderer->session()->engine() == this);
+void Engine::RemoveCompositor(Compositor* compositor) {
+  FTL_DCHECK(compositor);
+  FTL_DCHECK(compositor->session()->engine() == this);
 
-  size_t count = renderers_.erase(renderer);
+  size_t count = compositors_.erase(compositor);
   FTL_DCHECK(count == 1);
 }
 
@@ -223,9 +222,8 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 
   // Gather all of the scene which might need to be updated.
   std::set<Scene*> scenes;
-  for (auto renderer : renderers_) {
-    if (renderer->camera() && renderer->camera()->scene())
-      scenes.insert(renderer->camera()->scene().get());
+  for (auto compositor : compositors_) {
+    compositor->CollectScenes(&scenes);
   }
   if (scenes.empty())
     return;

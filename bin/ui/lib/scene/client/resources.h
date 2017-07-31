@@ -342,20 +342,6 @@ class Renderer : public Resource {
   FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };
 
-// Represents a display renderer resource in a session.
-class DisplayRenderer : public Resource {
- public:
-  explicit DisplayRenderer(Session* session);
-  ~DisplayRenderer();
-
-  // Sets the camera whose view will be rendered.
-  void SetCamera(const Camera& camera) { SetCamera(camera.id()); }
-  void SetCamera(uint32_t camera_id);
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(DisplayRenderer);
-};
-
 // Represents a layer resource in a session.
 class Layer : public Resource {
  public:
@@ -367,6 +353,11 @@ class Layer : public Resource {
     SetTranslation((float[3]){tx, ty, tz});
   }
   void SetTranslation(const float translation[3]);
+
+  void SetSize(float width, float height) {
+    SetSize((float[2]){width, height});
+  }
+  void SetSize(const float size[2]);
 
   void SetRenderer(const Renderer& renderer) { SetRenderer(renderer.id()); }
   void SetRenderer(uint32_t renderer_id);

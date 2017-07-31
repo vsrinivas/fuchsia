@@ -25,7 +25,7 @@ class ExampleScene {
  private:
   float width_;
   float height_;
-  mozart::client::DisplayRenderer renderer_;
+  mozart::client::DisplayCompositor compositor_;
   mozart::client::RoundedRectangle shape_;
   mozart::client::ShapeNode background_;
   mozart::client::ShapeNode rect0_;

@@ -57,6 +57,14 @@ source_set("common") {
     "release_fence_signaller.h",
     "resources/camera.cc",
     "resources/camera.h",
+    "resources/compositor/compositor.cc",
+    "resources/compositor/compositor.h",
+    "resources/compositor/display_compositor.cc",
+    "resources/compositor/display_compositor.h",
+    "resources/compositor/layer.cc",
+    "resources/compositor/layer.h",
+    "resources/compositor/layer_stack.cc",
+    "resources/compositor/layer_stack.h",
     "resources/dump_visitor.cc",
     "resources/dump_visitor.h",
     "resources/gpu_memory.cc",
@@ -88,8 +96,6 @@ source_set("common") {
     "resources/nodes/shape_node.cc",
     "resources/nodes/shape_node.h",
     "resources/nodes/traversal.h",
-    "resources/renderers/display_renderer.cc",
-    "resources/renderers/display_renderer.h",
     "resources/renderers/renderer.cc",
     "resources/renderers/renderer.h",
     "resources/resource.cc",
@@ -117,6 +123,8 @@ source_set("common") {
     "util/error_reporter.h",
     "util/unwrap.h",
     "util/wrap.h",
+    "vulkan_swapchain.cc",
+    "vulkan_swapchain.h",
   ]
 
   public_deps = [

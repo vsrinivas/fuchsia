@@ -21,6 +21,11 @@ class Renderer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
+  // Any swapchain that uses PaperRenderer must be a multiple of this many
+  // pixels.
+  static const uint32_t kRequiredSwapchainPixelMultiple;
+
+  Renderer(Session* session, mozart::ResourceId id);
   ~Renderer();
 
   std::vector<escher::Object> CreateDisplayList(const ScenePtr& scene,
@@ -34,14 +39,6 @@ class Renderer : public Resource {
   void SetCamera(CameraPtr camera);
 
   Camera* camera() const { return camera_.get(); }
-
-  virtual void DrawFrame(escher::PaperRenderer* renderer) = 0;
-
- protected:
-  // Renderer is a "leaf interface" of the Session API.  Even though it has
-  // subclasses, these present exactly the same interface to callers, therefore
-  // we don't waste valuable ResourceTypeInfo bits to distinguish them.
-  Renderer(Session* session, mozart::ResourceId id);
 
  private:
   class Visitor : public ResourceVisitor {
@@ -58,6 +55,9 @@ class Renderer : public Resource {
     void Visit(RectangleShape* r) override;
     void Visit(RoundedRectangleShape* r) override;
     void Visit(Material* r) override;
+    void Visit(DisplayCompositor* r) override;
+    void Visit(LayerStack* r) override;
+    void Visit(Layer* r) override;
     void Visit(Scene* r) override;
     void Visit(Camera* r) override;
     void Visit(Renderer* r) override;

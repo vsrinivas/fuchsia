@@ -7,6 +7,9 @@
 #include "apps/mozart/src/scene_manager/engine/hit_tester.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
 #include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
 #include "apps/mozart/src/scene_manager/resources/image.h"
@@ -17,7 +20,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/node.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
@@ -144,12 +147,6 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
       return ApplyCreateScene(id, op->resource->get_scene());
     case mozart2::Resource::Tag::CAMERA:
       return ApplyCreateCamera(id, op->resource->get_camera());
-    case mozart2::Resource::Tag::DISPLAY_RENDERER:
-      return ApplyCreateDisplayRenderer(id,
-                                        op->resource->get_display_renderer());
-    case mozart2::Resource::Tag::IMAGE_PIPE_RENDERER:
-      return ApplyCreateImagePipeRenderer(
-          id, op->resource->get_image_pipe_renderer());
     case mozart2::Resource::Tag::RENDERER:
       return ApplyCreateRenderer(id, op->resource->get_renderer());
     case mozart2::Resource::Tag::DIRECTIONAL_LIGHT:
@@ -301,9 +298,14 @@ bool Session::ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op) {
 }
 
 bool Session::ApplySetSizeOp(const mozart2::SetSizeOpPtr& op) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR() << "scene_manager::Session::ApplySetSizeOp() "
-                              "is unimplemented (MZ-179)";
+  if (auto layer = resources_.FindResource<Layer>(op->id)) {
+    if (IsVariable(op->value)) {
+      error_reporter_->ERROR() << "scene_manager::Session::ApplySetSizeOp(): "
+                                  "unimplemented for variable value.";
+      return false;
+    }
+    return layer->SetSize(UnwrapVector2(op->value));
+  }
   return false;
 }
 
@@ -399,23 +401,30 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
 }
 
 bool Session::ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR() << "scene_manager::Session::ApplyAddLayerOp() "
-                              "is unimplemented (MZ-179)";
+  auto layer_stack = resources_.FindResource<LayerStack>(op->layer_stack_id);
+  auto layer = resources_.FindResource<Layer>(op->layer_id);
+  if (layer_stack && layer) {
+    return layer_stack->AddLayer(std::move(layer));
+  }
   return false;
 }
 
 bool Session::ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR() << "scene_manager::Session::ApplySetLayerStackOp() "
-                              "is unimplemented (MZ-179)";
+  auto compositor = resources_.FindResource<Compositor>(op->compositor_id);
+  auto layer_stack = resources_.FindResource<LayerStack>(op->layer_stack_id);
+  if (compositor && layer_stack) {
+    return compositor->SetLayerStack(std::move(layer_stack));
+  }
   return false;
 }
 
 bool Session::ApplySetRendererOp(const mozart2::SetRendererOpPtr& op) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR() << "scene_manager::Session::ApplySetRendererOp() "
-                              "is unimplemented (MZ-179)";
+  auto layer = resources_.FindResource<Layer>(op->layer_id);
+  auto renderer = resources_.FindResource<Renderer>(op->renderer_id);
+
+  if (layer && renderer) {
+    return layer->SetRenderer(std::move(renderer));
+  }
   return false;
 }
 
@@ -513,20 +522,6 @@ bool Session::ApplyCreateCamera(mozart::ResourceId id,
                                 const mozart2::CameraPtr& args) {
   auto camera = CreateCamera(id, args);
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
-}
-
-bool Session::ApplyCreateDisplayRenderer(
-    mozart::ResourceId id,
-    const mozart2::DisplayRendererPtr& args) {
-  auto renderer = CreateDisplayRenderer(id, args);
-  return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
-}
-
-bool Session::ApplyCreateImagePipeRenderer(
-    mozart::ResourceId id,
-    const mozart2::ImagePipeRendererPtr& args) {
-  auto renderer = CreateImagePipeRenderer(id, args);
-  return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
 bool Session::ApplyCreateRenderer(mozart::ResourceId id,
@@ -660,37 +655,28 @@ bool Session::ApplyCreateShapeNode(mozart::ResourceId id,
 bool Session::ApplyCreateDisplayCompositor(
     mozart::ResourceId id,
     const mozart2::DisplayCompositorPtr& args) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateDisplayCompositor() "
-         "is unimplemented (MZ-179)";
-  return false;
+  auto compositor = CreateDisplayCompositor(id, args);
+  return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateImagePipeCompositor(
     mozart::ResourceId id,
     const mozart2::ImagePipeCompositorPtr& args) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateImagePipeCompositor() "
-         "is unimplemented (MZ-179)";
-  return false;
+  auto compositor = CreateImagePipeCompositor(id, args);
+  return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateLayerStack(mozart::ResourceId id,
                                     const mozart2::LayerStackPtr& args) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR() << "scene_manager::Session::ApplyCreateLayerStack() "
-                              "is unimplemented (MZ-179)";
-  return false;
+  auto layer_stack = CreateLayerStack(id, args);
+  return layer_stack ? resources_.AddResource(id, std::move(layer_stack))
+                     : false;
 }
 
 bool Session::ApplyCreateLayer(mozart::ResourceId id,
                                const mozart2::LayerPtr& args) {
-  // TODO(MZ-179)
-  error_reporter_->ERROR() << "scene_manager::Session::ApplyCreateLayer() "
-                              "is unimplemented (MZ-179)";
-  return false;
+  auto layer = CreateLayer(id, args);
+  return layer ? resources_.AddResource(id, std::move(layer)) : false;
 }
 
 bool Session::ApplyCreateVariable(mozart::ResourceId id,
@@ -731,38 +717,9 @@ ResourcePtr Session::CreateCamera(mozart::ResourceId id,
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateDisplayRenderer(
-    mozart::ResourceId id,
-    const mozart2::DisplayRendererPtr& args) {
-  Display* display = engine()->display_manager()->default_display();
-  if (!display) {
-    error_reporter_->ERROR() << "There is no default display available.";
-    return nullptr;
-  }
-
-  if (display->is_claimed()) {
-    error_reporter_->ERROR()
-        << "The default display has already been claimed by another renderer.";
-    return nullptr;
-  }
-  return ftl::MakeRefCounted<DisplayRenderer>(this, id, display,
-                                              engine()->GetVulkanSwapchain());
-}
-
-ResourcePtr Session::CreateImagePipeRenderer(
-    mozart::ResourceId id,
-    const mozart2::ImagePipeRendererPtr& args) {
-  error_reporter_->ERROR()
-      << "scene_manager::Session::CreateImagePipeRenderer(): "
-         "unimplemented.";
-  return ResourcePtr();
-}
-
 ResourcePtr Session::CreateRenderer(mozart::ResourceId id,
                                     const mozart2::RendererPtr& args) {
-  error_reporter_->ERROR() << "scene_manager::Session::CreateRenderer(): "
-                              "unimplemented.";
-  return ResourcePtr();
+  return ftl::MakeRefCounted<Renderer>(this, id);
 }
 
 ResourcePtr Session::CreateDirectionalLight(mozart::ResourceId id,
@@ -786,6 +743,46 @@ ResourcePtr Session::CreateEntityNode(mozart::ResourceId id,
 ResourcePtr Session::CreateShapeNode(mozart::ResourceId id,
                                      const mozart2::ShapeNodePtr& args) {
   return ftl::MakeRefCounted<ShapeNode>(this, id);
+}
+
+ResourcePtr Session::CreateDisplayCompositor(
+    mozart::ResourceId id,
+    const mozart2::DisplayCompositorPtr& args) {
+  Display* display = engine()->display_manager()->default_display();
+  if (!display) {
+    error_reporter_->ERROR() << "There is no default display available.";
+    return nullptr;
+  }
+
+  if (display->is_claimed()) {
+    error_reporter_->ERROR() << "The default display has already been claimed "
+                                "by another compositor.";
+    return nullptr;
+  }
+  return ftl::MakeRefCounted<DisplayCompositor>(
+      this, id, display,
+      std::make_unique<DisplaySwapchain>(engine()->escher(),
+                                         engine()->GetVulkanSwapchain()));
+}
+
+ResourcePtr Session::CreateImagePipeCompositor(
+    mozart::ResourceId id,
+    const mozart2::ImagePipeCompositorPtr& args) {
+  // TODO(MZ-179)
+  error_reporter_->ERROR()
+      << "scene_manager::Session::ApplyCreateImagePipeCompositor() "
+         "is unimplemented (MZ-179)";
+  return ResourcePtr();
+}
+
+ResourcePtr Session::CreateLayerStack(mozart::ResourceId id,
+                                      const mozart2::LayerStackPtr& args) {
+  return ftl::MakeRefCounted<LayerStack>(this, id);
+}
+
+ResourcePtr Session::CreateLayer(mozart::ResourceId id,
+                                 const mozart2::LayerPtr& args) {
+  return ftl::MakeRefCounted<Layer>(this, id);
 }
 
 ResourcePtr Session::CreateCircle(mozart::ResourceId id, float initial_radius) {

@@ -32,9 +32,12 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
     : view_manager_(view_manager),
       scene_manager_(scene_manager),
       session_(scene_manager_),
+      compositor_(&session_),
+      layer_stack_(&session_),
+      layer_(&session_),
+      renderer_(&session_),
       scene_(&session_),
       camera_(scene_),
-      renderer_(&session_),
       root_view_host_node_(&session_),
       root_view_parent_node_(&session_),
       content_view_host_node_(&session_),
@@ -59,6 +62,11 @@ Presentation::Presentation(mozart::ViewManager* view_manager,
 
   renderer_.SetCamera(camera_);
   scene_.AddChild(root_view_host_node_);
+
+  layer_.SetRenderer(renderer_);
+  layer_stack_.AddLayer(layer_);
+  compositor_.SetLayerStack(layer_stack_);
+
   root_view_host_node_.ExportAsRequest(&root_view_host_import_token_);
   root_view_parent_node_.BindAsRequest(&root_view_parent_export_token_);
   root_view_parent_node_.AddChild(content_view_host_node_);
@@ -94,6 +102,9 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
       display_info_->physical_height / display_info_->device_pixel_ratio;
   scene_.SetScale(display_info_->device_pixel_ratio,
                   display_info_->device_pixel_ratio, 1.f);
+
+  layer_.SetSize(static_cast<float>(display_info_->physical_width),
+                 static_cast<float>(display_info_->physical_height));
 
   // Register the view tree.
   mozart::ViewTreeListenerPtr tree_listener;

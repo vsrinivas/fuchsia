@@ -39,6 +39,7 @@
 using namespace mozart;
 using namespace mozart::client;
 
+// TODO(MZ-247): don't hardcode width/height.
 static constexpr uint32_t kScreenWidth = 2160;
 static constexpr uint32_t kScreenHeight = 1440;
 
@@ -97,8 +98,26 @@ class HelloSceneManagerApp {
   void CreateExampleScene() {
     auto session = session_.get();
 
+    // The top-level nesting for drawing anything is compositor -> layer-stack
+    // -> layer.  Layer content can come from an image, or by rendering a scene.
+    // In this case, we do the latter, so we nest layer -> renderer -> camera ->
+    // scene.
+    compositor_ = std::make_unique<DisplayCompositor>(session);
+    LayerStack layer_stack(session);
+    Layer layer(session);
+    Renderer renderer(session);
+    Scene scene(session);
+    camera_ = std::make_unique<Camera>(scene);
+
+    compositor_->SetLayerStack(layer_stack);
+    layer_stack.AddLayer(layer);
+    layer.SetSize(float(kScreenWidth), float(kScreenHeight));
+    layer.SetRenderer(renderer);
+    renderer.SetCamera(camera_->id());
+
     // Create an EntityNode to serve as the scene root.
     EntityNode root_node(session);
+    scene.AddChild(root_node.id());
 
     // The root node will enclose two "panes", each with a rounded-rect part
     // that acts as a background clipper.
@@ -170,18 +189,6 @@ class HelloSceneManagerApp {
 
     pane_node_2.AddChild(pane_2_contents);
     pane_2_contents.SetTranslation(0, 0, 10);
-
-    // Create a Scene, and attach to it the Nodes created above.
-    Scene scene(session);
-    scene.AddChild(root_node.id());
-
-    // Create a Camera to view the Scene.
-    camera_ = std::make_unique<Camera>(scene);
-
-    // Create a DisplayRenderer that renders the Scene from the viewpoint of the
-    // Camera that we just created.
-    renderer_ = std::make_unique<DisplayRenderer>(session);
-    renderer_->SetCamera(camera_->id());
   }
 
   void Init() {
@@ -278,7 +285,7 @@ class HelloSceneManagerApp {
   void ReleaseSessionResources() {
     FTL_LOG(INFO) << "Closing session.";
 
-    renderer_.reset();
+    compositor_.reset();
     camera_.reset();
     clipper_2_.reset();
     clipper_1_.reset();
@@ -296,7 +303,7 @@ class HelloSceneManagerApp {
   std::unique_ptr<mozart::client::ShapeNode> clipper_1_;
   std::unique_ptr<mozart::client::ShapeNode> clipper_2_;
   std::unique_ptr<mozart::client::Camera> camera_;
-  std::unique_ptr<mozart::client::DisplayRenderer> renderer_;
+  std::unique_ptr<mozart::client::DisplayCompositor> compositor_;
 
   uint64_t start_time_ = 0;
   uint64_t camera_anim_start_time_;

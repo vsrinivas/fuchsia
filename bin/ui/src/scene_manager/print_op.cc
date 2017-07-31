@@ -96,12 +96,6 @@ std::ostream& operator<<(std::ostream& stream,
     case Resource::Tag::CAMERA:
       stream << "Camera";
       break;
-    case Resource::Tag::DISPLAY_RENDERER:
-      stream << "DisplayRenderer";
-      break;
-    case Resource::Tag::IMAGE_PIPE_RENDERER:
-      stream << "ImagePipeRenderer";
-      break;
     case Resource::Tag::RENDERER:
       stream << "Renderer";
       break;

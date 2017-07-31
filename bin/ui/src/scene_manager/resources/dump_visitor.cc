@@ -6,8 +6,10 @@
 
 #include <ostream>
 
-#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
 #include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
 #include "apps/mozart/src/scene_manager/resources/image.h"
@@ -18,6 +20,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
@@ -174,8 +177,46 @@ void DumpVisitor::Visit(Material* r) {
   EndItem();
 }
 
+void DumpVisitor::Visit(DisplayCompositor* r) {
+  BeginItem("DisplayCompositor", r);
+  if (r->layer_stack()) {
+    BeginSection("stack");
+    r->layer_stack()->Accept(this);
+    EndSection();
+  }
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(LayerStack* r) {
+  BeginItem("LayerStack", r);
+  if (!r->layers().empty()) {
+    BeginSection("layers");
+    for (auto& layer : r->layers()) {
+      layer->Accept(this);
+    }
+    EndSection();
+  }
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(Layer* r) {
+  BeginItem("Layer", r);
+  if (r->renderer()) {
+    VisitResource(r->renderer().get());
+  } else {
+    // TODO(MZ-249): Texture or ImagePipe or whatever.
+  }
+  EndItem();
+}
+
 void DumpVisitor::Visit(Camera* r) {
+  using escher::operator<<;
   BeginItem("Camera", r);
+  WriteProperty("position") << r->eye_position();
+  WriteProperty("look_at") << r->eye_look_at();
+  WriteProperty("up") << r->eye_up();
   BeginSection("scene");
   r->scene()->Accept(this);
   EndSection();

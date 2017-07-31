@@ -84,9 +84,13 @@ class Presentation : private mozart::ViewTreeListener,
   mozart2::SceneManager* const scene_manager_;
 
   mozart::client::Session session_;
+  mozart::client::DisplayCompositor compositor_;
+  mozart::client::LayerStack layer_stack_;
+  mozart::client::Layer layer_;
+  mozart::client::Renderer renderer_;
+  // TODO(MZ-254): put camera before scene.
   mozart::client::Scene scene_;
   mozart::client::Camera camera_;
-  mozart::client::DisplayRenderer renderer_;
   mozart::client::EntityNode root_view_host_node_;
   mx::eventpair root_view_host_import_token_;
   mozart::client::ImportNode root_view_parent_node_;

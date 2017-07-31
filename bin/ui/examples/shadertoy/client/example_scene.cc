@@ -14,7 +14,7 @@ ExampleScene::ExampleScene(mozart::client::Session* session,
                            float rect_height)
     : width_(scene_width),
       height_(scene_height),
-      renderer_(session),
+      compositor_(session),
       shape_(session, rect_width, rect_height, 80, 80, 80, 80),
       background_(session),
       rect0_(session),
@@ -33,8 +33,17 @@ ExampleScene::ExampleScene(mozart::client::Session* session,
       rect13_(session),
       rect14_(session),
       rect15_(session) {
+  mozart::client::LayerStack layer_stack(session);
+  compositor_.SetLayerStack(layer_stack);
+
+  mozart::client::Layer layer(session);
+  layer_stack.AddLayer(layer);
+
+  mozart::client::Renderer renderer(session);
+  layer.SetRenderer(renderer);
+
   mozart::client::Scene scene(session);
-  renderer_.SetCamera(mozart::client::Camera(scene));
+  renderer.SetCamera(mozart::client::Camera(scene));
 
   mozart::client::EntityNode root(session);
   scene.AddChild(root);

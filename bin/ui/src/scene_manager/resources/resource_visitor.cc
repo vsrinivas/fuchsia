@@ -4,9 +4,11 @@
 
 #include "apps/mozart/src/scene_manager/resources/resource_visitor.h"
 
-#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
+#include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
 #include "apps/mozart/src/scene_manager/resources/gpu_memory.h"
 #include "apps/mozart/src/scene_manager/resources/host_memory.h"
 #include "apps/mozart/src/scene_manager/resources/image.h"
@@ -18,6 +20,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/node.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
@@ -62,6 +65,18 @@ void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
 }
 
 void Material::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void DisplayCompositor::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void LayerStack::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void Layer::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

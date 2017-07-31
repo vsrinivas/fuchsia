@@ -7,7 +7,7 @@
 #include <magenta/syscalls.h>
 
 #include "apps/mozart/src/scene_manager/displays/display_watcher.h"
-#include "apps/mozart/src/scene_manager/resources/renderers/display_renderer.h"
+#include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
 namespace scene_manager {
 
@@ -30,7 +30,7 @@ void DisplayManager::WaitForDefaultDisplay(ftl::Closure callback) {
 void DisplayManager::CreateDefaultDisplay(uint32_t width,
                                           uint32_t height,
                                           float device_pixel_ratio) {
-  uint32_t multiple = DisplayRenderer::kRequiredSwapchainPixelMultiple;
+  uint32_t multiple = Renderer::kRequiredSwapchainPixelMultiple;
   if (width % multiple != 0) {
     // Round up to the nearest multiple.
     uint32_t new_width = multiple * (width / multiple) + multiple;

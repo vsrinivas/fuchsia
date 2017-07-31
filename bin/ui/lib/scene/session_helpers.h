@@ -46,7 +46,6 @@ mozart2::OpPtr NewCreateLayerOp(uint32_t id);
 
 mozart2::OpPtr NewCreateSceneOp(uint32_t id);
 mozart2::OpPtr NewCreateCameraOp(uint32_t id, uint32_t scene_id);
-mozart2::OpPtr NewCreateDisplayRendererOp(uint32_t id);
 mozart2::OpPtr NewCreateRendererOp(uint32_t id);
 
 mozart2::OpPtr NewCreateCircleOp(uint32_t id, float radius);
@@ -146,6 +145,7 @@ mozart2::OpPtr NewAddLayerOp(uint32_t layer_stack_id, uint32_t layer_id);
 mozart2::OpPtr NewSetLayerStackOp(uint32_t compositor_id,
                                   uint32_t layer_stack_id);
 mozart2::OpPtr NewSetRendererOp(uint32_t layer_id, uint32_t renderer_id);
+mozart2::OpPtr NewSetSizeOp(uint32_t node_id, const float size[2]);
 
 // Event operations.
 mozart2::OpPtr NewSetEventMaskOp(uint32_t resource_id, uint32_t event_mask);
