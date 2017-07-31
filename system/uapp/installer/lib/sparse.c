@@ -138,6 +138,21 @@ int sparse(int src, int dst, uint8_t *buf, size_t sz) {
     return -1;
   }
 
+  #if defined(__APPLE__) && defined(__MACH__)
+  pos = lseek(src, 0, SEEK_SET);
+  if (pos != 0) {
+    return -1;
+  }
+
+  chunk.len = info.st_size;
+  if (sizeof(chunk) != writen(dst, &chunk, sizeof(chunk))) {
+    return -1;
+  }
+
+  if (copyn(src, dst, chunk.len, buf, sz) != chunk.len) {
+    return -1;
+  }
+  #else
   while ((pos = lseek(src, chunk.start + chunk.len, SEEK_DATA)) >= 0) {
     // 4K-align the start
     chunk.start = pos - pos % FOUR_K;
@@ -164,6 +179,7 @@ int sparse(int src, int dst, uint8_t *buf, size_t sz) {
       return -1;
     }
   }
+  #endif
 
   chunk.start = 0;
   chunk.len = info.st_size;
