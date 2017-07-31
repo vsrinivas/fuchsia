@@ -64,8 +64,7 @@ namespace {
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
     const Commit& commit) {
   std::vector<PageStorage::CommitIdAndBytes> result;
-  result.push_back(PageStorage::CommitIdAndBytes(
-      commit.GetId(), commit.GetStorageBytes().ToString()));
+  result.emplace_back(commit.GetId(), commit.GetStorageBytes().ToString());
   return result;
 }
 

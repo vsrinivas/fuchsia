@@ -28,8 +28,8 @@ void BatchDownload::Start() {
   started_ = true;
   std::vector<storage::PageStorage::CommitIdAndBytes> commits;
   for (auto& record : records_) {
-    commits.push_back(storage::PageStorage::CommitIdAndBytes(
-        std::move(record.commit.id), std::move(record.commit.content)));
+    commits.emplace_back(std::move(record.commit.id),
+                         std::move(record.commit.content));
   }
   storage_->AddCommitsFromSync(
       std::move(commits), [this](storage::Status status) {

@@ -217,8 +217,7 @@ Status LevelDb::GetEntriesByPrefix(
        it->Next()) {
     leveldb::Slice key = it->key();
     key.remove_prefix(prefix.size());
-    result.push_back(std::pair<std::string, std::string>(
-        key.ToString(), it->value().ToString()));
+    result.emplace_back(key.ToString(), it->value().ToString());
   }
   if (!it->status().ok()) {
     return ConvertStatus(it->status());

@@ -119,7 +119,7 @@ std::vector<std::string> CloudProviderImpl::GetQueryParams(
   }
 
   if (!min_timestamp.empty()) {
-    result.push_back("orderBy=\"timestamp\"");
+    result.emplace_back("orderBy=\"timestamp\"");
     result.push_back("startAt=" + ftl::NumberToString(
                                       BytesToServerTimestamp(min_timestamp)));
   }

@@ -48,8 +48,7 @@ class LedgerManager::PageManagerContainer {
       page_manager_->BindPage(std::move(page_request), std::move(callback));
       return;
     }
-    requests_.push_back(
-        std::make_pair(std::move(page_request), std::move(callback)));
+    requests_.emplace_back(std::move(page_request), std::move(callback));
   }
 
   // Sets the PageManager or the error status for the container. This notifies

@@ -123,8 +123,8 @@ TEST(EncodingTest, EncodeDecodeZeroByte) {
 
 TEST(EncodingTest, EncodeDecodeBatch) {
   std::vector<Commit> commits;
-  commits.push_back(Commit("id_1", "content_1", std::map<ObjectId, Data>{}));
-  commits.push_back(Commit("id_2", "content_2", std::map<ObjectId, Data>{}));
+  commits.emplace_back("id_1", "content_1", std::map<ObjectId, Data>{});
+  commits.emplace_back("id_2", "content_2", std::map<ObjectId, Data>{});
 
   std::string encoded;
   EXPECT_TRUE(EncodeCommits(commits, &encoded));

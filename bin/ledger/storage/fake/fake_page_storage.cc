@@ -61,7 +61,7 @@ void FakePageStorage::GetHeadCommitIds(
     }
   }
   if (commit_ids.size() == 0) {
-    commit_ids.push_back(CommitId());
+    commit_ids.emplace_back();
   }
   callback(Status::OK, std::move(commit_ids));
 }
@@ -149,7 +149,7 @@ void FakePageStorage::GetPiece(
     ObjectIdView object_id,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
-  object_requests_.push_back([
+  object_requests_.emplace_back([
     this, object_id = object_id.ToString(), callback = std::move(callback)
   ] {
     auto it = objects_.find(object_id);

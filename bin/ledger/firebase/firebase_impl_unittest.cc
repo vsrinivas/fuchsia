@@ -35,14 +35,14 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
   void OnPut(const std::string& path, const rapidjson::Value& value) override {
     put_count_++;
     put_paths_.push_back(path);
-    put_data_.push_back(rapidjson::Value(value, document_.GetAllocator()));
+    put_data_.emplace_back(value, document_.GetAllocator());
   }
 
   void OnPatch(const std::string& path,
                const rapidjson::Value& value) override {
     patch_count_++;
     patch_paths_.push_back(path);
-    patch_data_.push_back(rapidjson::Value(value, document_.GetAllocator()));
+    patch_data_.emplace_back(value, document_.GetAllocator());
   }
 
   void OnCancel() override { cancel_count_++; }

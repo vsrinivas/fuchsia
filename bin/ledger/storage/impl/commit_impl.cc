@@ -99,7 +99,7 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
   std::vector<CommitIdView> parent_ids;
 
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
-    parent_ids.push_back(commit_storage->parents()->Get(i));
+    parent_ids.emplace_back(commit_storage->parents()->Get(i));
   }
   return std::unique_ptr<Commit>(
       new CommitImpl(page_storage, std::move(id), commit_storage->timestamp(),
