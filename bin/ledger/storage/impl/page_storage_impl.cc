@@ -325,8 +325,8 @@ void PageStorageImpl::GetUnsyncedCommits(
 
   auto waiter = callback::Waiter<Status, std::unique_ptr<const Commit>>::Create(
       Status::OK);
-  for (size_t i = 0; i < commit_ids.size(); ++i) {
-    GetCommit(commit_ids[i], waiter->NewCallback());
+  for (const auto& commit_id : commit_ids) {
+    GetCommit(commit_id, waiter->NewCallback());
   }
   waiter->Finalize([callback = std::move(callback)](
       Status s, std::vector<std::unique_ptr<const Commit>> commits) {

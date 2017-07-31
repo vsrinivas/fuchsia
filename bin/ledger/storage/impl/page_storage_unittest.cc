@@ -895,15 +895,15 @@ TEST_F(PageStorageTest, AddAndGetHugeObjectFromLocal) {
 }
 
 TEST_F(PageStorageTest, UnsyncedPieces) {
-  ObjectData data[] = {
+  ObjectData data_array[] = {
       ObjectData("Some data", InlineBehavior::PREVENT),
       ObjectData("Some more data", InlineBehavior::PREVENT),
       ObjectData("Even more data", InlineBehavior::PREVENT),
   };
-  constexpr size_t size = arraysize(data);
-  for (size_t i = 0; i < size; ++i) {
-    TryAddFromLocal(data[i].value, data[i].object_id);
-    EXPECT_TRUE(storage_->ObjectIsUntracked(data[i].object_id));
+  constexpr size_t size = arraysize(data_array);
+  for (auto& data : data_array) {
+    TryAddFromLocal(data.value, data.object_id);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
   }
 
   std::vector<CommitId> commits;
@@ -914,8 +914,9 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     EXPECT_EQ(Status::OK,
               storage_->StartCommit(GetFirstHead()->GetId(),
                                     JournalType::IMPLICIT, &journal));
-    EXPECT_EQ(Status::OK, journal->Put(ftl::StringPrintf("key%lu", i),
-                                       data[i].object_id, KeyPriority::LAZY));
+    EXPECT_EQ(Status::OK,
+              journal->Put(ftl::StringPrintf("key%lu", i),
+                           data_array[i].object_id, KeyPriority::LAZY));
     TryCommitJournal(std::move(journal), Status::OK);
     commits.push_back(GetFirstHead()->GetId());
   }
@@ -934,14 +935,14 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     EXPECT_TRUE(std::find(object_ids.begin(), object_ids.end(),
                           commit->GetRootId()) != object_ids.end());
   }
-  for (size_t i = 0; i < size; ++i) {
+  for (auto& data : data_array) {
     EXPECT_TRUE(std::find(object_ids.begin(), object_ids.end(),
-                          data[i].object_id) != object_ids.end());
+                          data.object_id) != object_ids.end());
   }
 
   // Mark the 2nd object as synced. We now expect to still find the 2 unsynced
   // values and the (also unsynced) root node.
-  EXPECT_EQ(Status::OK, storage_->MarkPieceSynced(data[1].object_id));
+  EXPECT_EQ(Status::OK, storage_->MarkPieceSynced(data_array[1].object_id));
   std::vector<ObjectId> objects;
   storage_->GetUnsyncedPieces(
       callback::Capture(MakeQuitTask(), &status, &objects));
@@ -951,10 +952,10 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   std::unique_ptr<const Commit> commit = GetCommit(commits[2]);
   EXPECT_TRUE(std::find(objects.begin(), objects.end(), commit->GetRootId()) !=
               objects.end());
-  EXPECT_TRUE(std::find(objects.begin(), objects.end(), data[0].object_id) !=
-              objects.end());
-  EXPECT_TRUE(std::find(objects.begin(), objects.end(), data[2].object_id) !=
-              objects.end());
+  EXPECT_TRUE(std::find(objects.begin(), objects.end(),
+                        data_array[0].object_id) != objects.end());
+  EXPECT_TRUE(std::find(objects.begin(), objects.end(),
+                        data_array[2].object_id) != objects.end());
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {
@@ -979,14 +980,14 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsComplex) {
-  ObjectData data[] = {
+  ObjectData data_array[] = {
       ObjectData("Some data", InlineBehavior::PREVENT),
       ObjectData("Some more data", InlineBehavior::PREVENT),
       ObjectData("Even more data", InlineBehavior::PREVENT),
   };
-  for (int i = 0; i < 3; ++i) {
-    TryAddFromLocal(data[i].value, data[i].object_id);
-    EXPECT_TRUE(storage_->ObjectIsUntracked(data[i].object_id));
+  for (auto& data : data_array) {
+    TryAddFromLocal(data.value, data.object_id);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
   }
 
   // Add a first commit containing object_ids[0].
@@ -994,12 +995,12 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
                                               JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
-            journal->Put("key0", data[0].object_id, KeyPriority::LAZY));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(data[0].object_id));
+            journal->Put("key0", data_array[0].object_id, KeyPriority::LAZY));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data_array[0].object_id));
   TryCommitJournal(std::move(journal), Status::OK);
-  EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(data[2].object_id));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data_array[0].object_id));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data_array[1].object_id));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data_array[2].object_id));
 
   // Create a second commit. After calling Put for "key1" for the second time
   // object_ids[1] is no longer part of this commit: it should remain untracked
@@ -1008,18 +1009,18 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
                                               JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
-            journal->Put("key1", data[1].object_id, KeyPriority::LAZY));
+            journal->Put("key1", data_array[1].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
-            journal->Put("key2", data[2].object_id, KeyPriority::LAZY));
+            journal->Put("key2", data_array[2].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
-            journal->Put("key1", data[2].object_id, KeyPriority::LAZY));
+            journal->Put("key1", data_array[2].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
-            journal->Put("key3", data[0].object_id, KeyPriority::LAZY));
+            journal->Put("key3", data_array[0].object_id, KeyPriority::LAZY));
   TryCommitJournal(std::move(journal), Status::OK);
 
-  EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
-  EXPECT_FALSE(storage_->ObjectIsUntracked(data[2].object_id));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data_array[0].object_id));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data_array[1].object_id));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data_array[2].object_id));
 }
 
 TEST_F(PageStorageTest, CommitWatchers) {

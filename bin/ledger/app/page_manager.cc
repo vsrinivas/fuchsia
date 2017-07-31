@@ -90,8 +90,8 @@ void PageManager::OnSyncBacklogDownloaded() {
                   << "Clients will receive a change notification.";
   }
   sync_backlog_downloaded_ = true;
-  for (auto it = page_requests_.begin(); it != page_requests_.end(); ++it) {
-    BindPage(std::move(it->first), std::move(it->second));
+  for (auto& page_request : page_requests_) {
+    BindPage(std::move(page_request.first), std::move(page_request.second));
   }
   page_requests_.clear();
 }

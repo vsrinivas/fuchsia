@@ -179,8 +179,8 @@ StorageTest::~StorageTest(){};
   }
   std::vector<EntryChange> result;
 
-  for (size_t i = 0; i < entries.size(); ++i) {
-    result.push_back(EntryChange{std::move(entries[i]), deletion});
+  for (auto& entry : entries) {
+    result.push_back(EntryChange{std::move(entry), deletion});
   }
   changes->swap(result);
   return ::testing::AssertionSuccess();

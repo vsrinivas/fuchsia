@@ -59,11 +59,12 @@ class LedgerManager::PageManagerContainer {
     FTL_DCHECK((status != Status::OK) == !page_manager);
     status_ = status;
     page_manager_ = std::move(page_manager);
-    for (auto it = requests_.begin(); it != requests_.end(); ++it) {
+    for (auto& request : requests_) {
       if (page_manager_) {
-        page_manager_->BindPage(std::move(it->first), std::move(it->second));
+        page_manager_->BindPage(std::move(request.first),
+                                std::move(request.second));
       } else {
-        it->second(status_);
+        request.second(status_);
       }
     }
     requests_.clear();

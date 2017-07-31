@@ -185,9 +185,9 @@ TEST_F(PageDbTest, JournalEntries) {
             page_db_.GetJournalEntries(
                 static_cast<JournalDBImpl*>(implicit_journal.get())->GetId(),
                 &entries));
-  for (int i = 0; i < 3; ++i) {
+  for (const auto& expected_change : expected_changes) {
     EXPECT_TRUE(entries->Valid());
-    ExpectChangesEqual(expected_changes[i], **entries);
+    ExpectChangesEqual(expected_change, **entries);
     entries->Next();
   }
   EXPECT_FALSE(entries->Valid());

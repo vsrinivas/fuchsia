@@ -609,8 +609,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
                                   fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
-    for (size_t i = 0; i < entries.size(); ++i) {
-      actual_entries.push_back(std::move(entries[i]));
+    for (auto& entry : entries) {
+      actual_entries.push_back(std::move(entry));
     }
     EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
     message_loop_.PostQuitTask();
@@ -656,8 +656,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(actual_next_token.is_null());
-  for (size_t i = 0; i < actual_entries2.size(); ++i) {
-    actual_entries.push_back(std::move(actual_entries2[i]));
+  for (auto& entry : actual_entries2) {
+    actual_entries.push_back(std::move(entry));
   }
   EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
 
@@ -696,8 +696,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
                                   fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
-    for (size_t i = 0; i < entries.size(); ++i) {
-      actual_entries.push_back(std::move(entries[i]));
+    for (auto& entry : entries) {
+      actual_entries.push_back(std::move(entry));
     }
     EXPECT_EQ(static_cast<size_t>(entry_count), actual_entries.size());
     message_loop_.PostQuitTask();
@@ -918,8 +918,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
                                fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
-    for (size_t i = 0; i < keys.size(); ++i) {
-      actual_keys.push_back(std::move(keys[i]));
+    for (auto& key : keys) {
+      actual_keys.push_back(std::move(key));
     }
     EXPECT_EQ(static_cast<size_t>(key_count), actual_keys.size());
     message_loop_.PostQuitTask();
