@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/vcpu_dispatcher.h>
+
 #include <arch/hypervisor.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/vm/vm_object.h>
 #include <magenta/guest_dispatcher.h>
 #include <magenta/rights.h>
 #include <magenta/types.h>
-#include <magenta/vcpu_dispatcher.h>
 #include <mxtl/alloc_checker.h>
 
 status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
@@ -48,7 +49,7 @@ VcpuDispatcher::VcpuDispatcher(mxtl::RefPtr<GuestDispatcher> guest, mxtl::unique
 
 VcpuDispatcher::~VcpuDispatcher() {}
 
-mx_status_t VcpuDispatcher::Resume(mx_guest_packet* packet) {
+mx_status_t VcpuDispatcher::Resume(mx_guest_packet_t* packet) {
     canary_.Assert();
 
     return arch_vcpu_resume(vcpu_.get(), packet);

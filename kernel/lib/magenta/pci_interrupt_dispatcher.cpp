@@ -6,9 +6,10 @@
 
 #if WITH_DEV_PCIE
 
+#include <magenta/pci_interrupt_dispatcher.h>
+
 #include <kernel/auto_lock.h>
 #include <magenta/pci_device_dispatcher.h>
-#include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
 

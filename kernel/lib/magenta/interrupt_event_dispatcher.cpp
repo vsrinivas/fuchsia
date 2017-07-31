@@ -4,8 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <dev/interrupt.h>
 #include <magenta/interrupt_event_dispatcher.h>
+
+#include <kernel/auto_lock.h>
+#include <dev/interrupt.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>

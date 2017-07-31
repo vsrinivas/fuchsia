@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/dispatcher.h>
+
 #include <magenta/state_tracker.h>
 
 #include <arch/ops.h>
@@ -53,4 +54,3 @@ status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool pe
     state_tracker->UpdateState(clear_mask, set_mask);
     return MX_OK;
 }
-

@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/fifo_dispatcher.h>
+
 #include <string.h>
 
 #include <lib/user_copy/user_ptr.h>
-#include <magenta/fifo_dispatcher.h>
 #include <magenta/handle.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>

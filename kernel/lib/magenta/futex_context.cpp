@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/futex_context.h>
+
 #include <assert.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
-#include <magenta/futex_context.h>
 #include <magenta/user_copy.h>
 #include <magenta/thread_dispatcher.h>
 #include <mxtl/auto_lock.h>

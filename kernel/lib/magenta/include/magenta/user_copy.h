@@ -6,9 +6,12 @@
 
 #pragma once
 
+#include <stddef.h>
+
+#include <magenta/types.h>
 #include <mxtl/string_piece.h>
 
-status_t magenta_copy_from_user(const void* src, void* dest, size_t len);
+mx_status_t magenta_copy_from_user(const void* src, void* dest, size_t len);
 
-status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, size_t buf_len,
-                                  mxtl::StringPiece* sp);
+mx_status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, size_t buf_len,
+                                     mxtl::StringPiece* sp);

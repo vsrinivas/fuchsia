@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/dispatcher.h>
+#include <magenta/syscalls/hypervisor.h>
 
 class GuestDispatcher;
 class Vcpu;
@@ -21,7 +22,7 @@ public:
 
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_VCPU; }
 
-    mx_status_t Resume(mx_guest_packet* packet);
+    mx_status_t Resume(mx_guest_packet_t* packet);
     mx_status_t Interrupt(uint32_t vector);
     mx_status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
     mx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);

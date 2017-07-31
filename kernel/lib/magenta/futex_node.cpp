@@ -4,9 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/futex_node.h>
+
 #include <assert.h>
 #include <err.h>
-#include <magenta/futex_node.h>
 #include <magenta/magenta.h>
 #include <mxtl/mutex.h>
 #include <platform.h>

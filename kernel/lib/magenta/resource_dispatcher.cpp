@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <magenta/resource_dispatcher.h>
+
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
 

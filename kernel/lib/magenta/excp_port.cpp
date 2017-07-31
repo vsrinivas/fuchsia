@@ -4,12 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/excp_port.h>
+
 #include <err.h>
 #include <inttypes.h>
 #include <string.h>
 
 #include <magenta/exception.h>
-#include <magenta/excp_port.h>
 #include <magenta/magenta.h>
 #include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>

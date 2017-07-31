@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/user_copy.h>
+
 #include <stdint.h>
 
 #include <lib/user_copy.h>
-#include <magenta/user_copy.h>
 
 status_t magenta_copy_from_user(const void* src, void* dest, size_t len) {
     if (src == nullptr) return MX_ERR_INVALID_ARGS;

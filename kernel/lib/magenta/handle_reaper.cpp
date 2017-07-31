@@ -4,11 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/handle_reaper.h>
+
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/dpc.h>
 #include <magenta/dispatcher.h>
-#include <magenta/handle_reaper.h>
 #include <magenta/magenta.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/mutex.h>

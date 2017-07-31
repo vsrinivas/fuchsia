@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <magenta/guest_dispatcher.h>
+
 #include <arch/hypervisor.h>
 #include <kernel/vm/vm_object.h>
 #include <magenta/fifo_dispatcher.h>
-#include <magenta/guest_dispatcher.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
 
