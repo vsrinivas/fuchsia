@@ -39,17 +39,17 @@ status_t JobDispatcher::Create(uint32_t flags,
     }
 
     AllocChecker ac;
-    auto job = new (&ac) JobDispatcher(flags, parent, parent->GetPolicy());
+    mxtl::RefPtr<JobDispatcher> job =
+        mxtl::AdoptRef(new (&ac) JobDispatcher(flags, parent, parent->GetPolicy()));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    if (!parent->AddChildJob(job)) {
-        delete job;
+    if (!parent->AddChildJob(job.get())) {
         return MX_ERR_BAD_STATE;
     }
 
     *rights = MX_DEFAULT_JOB_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(job);
+    *dispatcher = mxtl::move(job);
     return MX_OK;
 }
 
