@@ -18,35 +18,44 @@ namespace convert {
 
 // Provides conversions between fidl::Array, leveldb::Slice and std::string
 // representations of a data object.
-
+//
 // This class doesn't take ownership of the data used to construct it. The data
 // must outlive it. It is used to allow transparent handling of FIDL arrays,
 // leveldb slices and strings.
+//
+// Single-argument constructors and conversion operators are marked as NOLINT to
+// suppress `google-explicit-constructor` clang-tidy warning - in this case the
+// implicit conversion is intended.
 class ExtendedStringView : public ftl::StringView {
  public:
-  ExtendedStringView(const fidl::Array<uint8_t>& array)
+  ExtendedStringView(const fidl::Array<uint8_t>& array)  // NOLINT
       : ftl::StringView(reinterpret_cast<const char*>(array.data()),
                         array.size()) {}
-  ExtendedStringView(const leveldb::Slice& slice)
+  ExtendedStringView(const leveldb::Slice& slice)  // NOLINT
       : ftl::StringView(slice.data(), slice.size()) {}
-  ExtendedStringView(const std::string& string) : ftl::StringView(string) {}
-  constexpr ExtendedStringView(ftl::StringView string_view)
+  ExtendedStringView(const std::string& string)  // NOLINT
+      : ftl::StringView(string) {}
+  constexpr ExtendedStringView(ftl::StringView string_view)  // NOLINT
       : ftl::StringView(string_view) {}
-  ExtendedStringView(const rapidjson::Value& value)
+  ExtendedStringView(const rapidjson::Value& value)  // NOLINT
       : ftl::StringView(value.GetString(), value.GetStringLength()) {
     FTL_DCHECK(value.IsString());
   }
   template <size_t N>
-  constexpr ExtendedStringView(const char (&str)[N]) : ftl::StringView(str) {}
-  ExtendedStringView(const flatbuffers::Vector<uint8_t>* byte_storage)
+  constexpr ExtendedStringView(const char (&str)[N])  // NOLINT
+      : ftl::StringView(str) {}
+  ExtendedStringView(  // NOLINT
+      const flatbuffers::Vector<uint8_t>* byte_storage)
       : ftl::StringView(reinterpret_cast<const char*>(byte_storage->data()),
                         byte_storage->size()) {}
-  ExtendedStringView(const IdStorage* id_storage)
+  ExtendedStringView(const IdStorage* id_storage)  // NOLINT
       : ftl::StringView(reinterpret_cast<const char*>(id_storage),
                         sizeof(IdStorage)) {}
 
-  operator leveldb::Slice() const { return leveldb::Slice(data(), size()); }
-  operator const IdStorage*() const {
+  operator leveldb::Slice() const {  // NOLINT
+    return leveldb::Slice(data(), size());
+  }
+  operator const IdStorage*() const {  // NOLINT
     FTL_DCHECK(size() == sizeof(IdStorage));
     return reinterpret_cast<const IdStorage*>(data());
   }
