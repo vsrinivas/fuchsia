@@ -20,7 +20,7 @@ mx_status_t CreateRedirectedSocket(int startup_fd,
     return status;
 
   *out_socket = std::move(local_socket);
-  out_startup_handle->id = MX_HND_INFO(MX_HND_TYPE_MXIO_PIPE, startup_fd);
+  out_startup_handle->id = PA_HND(PA_MXIO_PIPE, startup_fd);
   out_startup_handle->handle = std::move(remote_socket);
   return MX_OK;
 }

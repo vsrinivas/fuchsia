@@ -19,7 +19,7 @@ TEST(Redirection, CreateRedirectedSocket) {
 
   ASSERT_EQ(MX_OK, status);
   EXPECT_TRUE(socket);
-  EXPECT_EQ(static_cast<uint32_t>(MX_HND_INFO(MX_HND_TYPE_MXIO_PIPE, 2)),
+  EXPECT_EQ(static_cast<uint32_t>(PA_HND(PA_MXIO_PIPE, 2)),
             startup_handle.id);
   EXPECT_TRUE(startup_handle.handle);
 }
