@@ -1,5 +1,7 @@
-Fuchsia Open Source Template Repository
-=======================================
+Fuchsia Authentication
+======================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository provides basic user authentication and authorization services for
+onboarding new users on Fuchsia and to access their data from external third
+party providers.
+
