@@ -51,6 +51,8 @@ typedef struct io_port_state {
  * NOTE(abdulla): This structure points to guest-controlled memory.
  */
 typedef struct virtio_queue {
+    // Queue PFN used to locate this queue in guest physical address space.
+    uint32_t pfn;
     uint32_t size;
     uint16_t index;
     volatile struct vring_desc* desc;   // guest-controlled

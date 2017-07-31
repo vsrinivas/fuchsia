@@ -24,7 +24,12 @@ typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32
 
 mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
                                      mx_vcpu_io_t* vcpu_io) {
+    virtio_queue_t* queue = &guest_state->block_queue;
     switch (port) {
+    case VIRTIO_PCI_QUEUE_PFN:
+        vcpu_io->access_size = 4;
+        vcpu_io->u32 = queue->pfn;
+        return MX_OK;
     case VIRTIO_PCI_QUEUE_SIZE:
         vcpu_io->access_size = 2;
         vcpu_io->u16 = VIRTIO_QUEUE_SIZE;
@@ -73,7 +78,8 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* vcpu_context, uint16_t por
     case VIRTIO_PCI_QUEUE_PFN: {
         if (io->access_size != 4)
             return MX_ERR_IO_DATA_INTEGRITY;
-        queue->desc = mem_addr + (io->u32 * PAGE_SIZE);
+        queue->pfn = io->u32;
+        queue->desc = mem_addr + (queue->pfn * PAGE_SIZE);
         queue->avail = (void*)&queue->desc[queue->size];
         queue->used_event = (void*)&queue->avail->ring[queue->size];
         queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
