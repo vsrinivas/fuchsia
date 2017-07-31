@@ -58,7 +58,7 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
     return {};
   }
   mtl::StartupHandle startup_handle;
-  startup_handle.id = MX_HND_TYPE_USER1;
+  startup_handle.id = PA_USER1;
   startup_handle.handle = std::move(shell_handle);
   ret.push_back(std::move(startup_handle));
 
