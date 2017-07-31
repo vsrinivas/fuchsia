@@ -5,15 +5,20 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <magenta/device/sysinfo.h>
+
 #include <magenta/types.h>
+#include <magenta/process.h>
+#include <magenta/processargs.h>
+
+#include <magenta/device/sysinfo.h>
+#include <magenta/syscalls/resource.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
-#include <magenta/process.h>
-#include <magenta/processargs.h>
+
 #define ID_HJOBROOT 4
 static mtx_t sysinfo_lock = MTX_INIT;
 static mx_handle_t sysinfo_job_root;
@@ -59,6 +64,21 @@ static mx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
             return MX_ERR_NOT_SUPPORTED;
         }
         mx_status_t status = mx_handle_duplicate(h, MX_RIGHT_TRANSFER, &h);
+        if (status < 0) {
+            return status;
+        }
+        memcpy(reply, &h, sizeof(mx_handle_t));
+        *out_actual = sizeof(mx_handle_t);
+        return MX_OK;
+    }
+    case IOCTL_SYSINFO_GET_HYPERVISOR_RESOURCE: {
+        if ((cmdlen != 0) || (max < sizeof(mx_handle_t))) {
+            return MX_ERR_INVALID_ARGS;
+        }
+        mx_handle_t h;
+        mx_status_t status = mx_resource_create(get_root_resource(),
+                                                MX_RSRC_KIND_HYPERVISOR,
+                                                0, 0, &h);
         if (status < 0) {
             return status;
         }
