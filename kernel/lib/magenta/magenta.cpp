@@ -28,9 +28,6 @@
 #include <magenta/resource_dispatcher.h>
 #include <magenta/state_tracker.h>
 
-// The next two includes should be removed. See DeleteHandle().
-#include <magenta/io_mapping_dispatcher.h>
-
 #include <mxtl/arena.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
@@ -221,24 +218,6 @@ void DeleteHandle(Handle* handle) {
 
     if (state_tracker) {
         state_tracker->Cancel(handle);
-    } else {
-        // This code is sad but necessary because certain dispatchers
-        // have complicated Close() logic which cannot be untangled at
-        // this time.
-        switch (dispatcher->get_type()) {
-        case MX_OBJ_TYPE_IOMAP: {
-            // DownCastDispatcher moves the reference so we need a copy
-            // because we use |dispatcher| after the cast.
-            auto disp = dispatcher;
-            auto iodisp = DownCastDispatcher<IoMappingDispatcher>(&disp);
-            if (iodisp)
-                iodisp->Close();
-            break;
-        }
-        default:
-            break;
-            // This is fine. See for example the LogDispatcher.
-        }
     }
 
     // Destroys, but does not free, the Handle, and fixes up its memory

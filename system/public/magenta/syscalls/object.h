@@ -42,7 +42,6 @@ typedef enum {
     MX_OBJ_TYPE_EVENT               = 5,
     MX_OBJ_TYPE_PORT                = 6,
     MX_OBJ_TYPE_INTERRUPT           = 9,
-    MX_OBJ_TYPE_IOMAP               = 10,
     MX_OBJ_TYPE_PCI_DEVICE          = 11,
     MX_OBJ_TYPE_LOG                 = 12,
     MX_OBJ_TYPE_SOCKET              = 14,

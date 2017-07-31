@@ -69,7 +69,6 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_EVENT: return "event";
         case MX_OBJ_TYPE_PORT: return "port";
         case MX_OBJ_TYPE_INTERRUPT: return "interrupt";
-        case MX_OBJ_TYPE_IOMAP: return "io-map";
         case MX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
         case MX_OBJ_TYPE_LOG: return "log";
         case MX_OBJ_TYPE_SOCKET: return "socket";

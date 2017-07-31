@@ -27,7 +27,6 @@
 #include <magenta/handle_owner.h>
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
-#include <magenta/io_mapping_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
@@ -275,43 +274,6 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
     udisplay_set_display_info(&di);
 
     return MX_OK;
-}
-
-/**
- * Gets info about an I/O mapping object.
- * @param handle Handle associated with an I/O mapping object.
- * @param out_vaddr Mapped virtual address for the I/O range.
- * @param out_len Mapped size of the I/O range.
- */
-mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
-                                    user_ptr<uintptr_t> _out_vaddr,
-                                    user_ptr<uint64_t> _out_size) {
-    LTRACEF("handle %x\n", handle);
-
-    if (!_out_vaddr || !_out_size)
-        return MX_ERR_INVALID_ARGS;
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<IoMappingDispatcher> io_mapping;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &io_mapping);
-    if (status != MX_OK)
-        return status;
-
-    // If we do not have read rights, or we are calling from a different address
-    // space than the one that this mapping exists in, refuse to tell the user
-    // the vaddr/len of the mapping.
-    if (ProcessDispatcher::GetCurrent()->aspace() != io_mapping->aspace())
-        return MX_ERR_ACCESS_DENIED;
-
-    uintptr_t vaddr = reinterpret_cast<uintptr_t>(io_mapping->vaddr());
-    uint64_t  size  = io_mapping->size();
-
-    status = _out_vaddr.copy_to_user(vaddr);
-    if (status != MX_OK)
-        return status;
-
-    return _out_size.copy_to_user(size);
 }
 
 #if ARCH_X86
