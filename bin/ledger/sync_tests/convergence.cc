@@ -48,7 +48,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
   // SyncWatcher
   void SyncStateChanged(ledger::SyncState download,
                         ledger::SyncState upload,
-                        const SyncStateChangedCallback& callback) {
+                        const SyncStateChangedCallback& callback) override {
     this->download = download;
     this->upload = upload;
     callback();

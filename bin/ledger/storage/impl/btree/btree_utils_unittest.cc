@@ -50,7 +50,7 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
  public:
   explicit TrackGetObjectFakePageStorage(PageId id)
       : fake::FakePageStorage(id) {}
-  ~TrackGetObjectFakePageStorage() {}
+  ~TrackGetObjectFakePageStorage() override {}
 
   void GetObject(
       ObjectIdView object_id,

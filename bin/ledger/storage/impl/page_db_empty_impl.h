@@ -12,7 +12,7 @@ namespace storage {
 class PageDbEmptyImpl : public PageDb {
  public:
   PageDbEmptyImpl() {}
-  ~PageDbEmptyImpl() {}
+  ~PageDbEmptyImpl() override {}
 
   Status Init() override;
   Status CreateJournal(JournalType journal_type,

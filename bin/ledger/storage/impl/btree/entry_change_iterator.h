@@ -18,7 +18,7 @@ class EntryChangeIterator : public Iterator<const storage::EntryChange> {
                       std::vector<EntryChange>::const_iterator end)
       : it_(it), end_(end) {}
 
-  ~EntryChangeIterator() {}
+  ~EntryChangeIterator() override {}
 
   Iterator<const storage::EntryChange>& Next() override {
     FTL_DCHECK(Valid()) << "Iterator::Next iterator not valid";

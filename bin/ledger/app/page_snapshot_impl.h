@@ -20,7 +20,7 @@ class PageSnapshotImpl : public PageSnapshot {
   PageSnapshotImpl(storage::PageStorage* page_storage,
                    std::unique_ptr<const storage::Commit> commit,
                    std::string key_prefix);
-  ~PageSnapshotImpl();
+  ~PageSnapshotImpl() override;
 
  private:
   // PageSnapshot:

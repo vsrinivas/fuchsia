@@ -21,7 +21,7 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
  public:
   ServiceAccountTokenProvider(ledger::NetworkService* network_service,
                               std::string user_id);
-  ~ServiceAccountTokenProvider();
+  ~ServiceAccountTokenProvider() override;
 
   // Load the service account credentials. This method must be called before
   // this class is usable. |json_file| must be a path to the service account

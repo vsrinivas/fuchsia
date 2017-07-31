@@ -25,7 +25,7 @@ class FakeObject : public Object {
  public:
   FakeObject(ObjectIdView id, ftl::StringView content)
       : id_(id.ToString()), content_(content.ToString()) {}
-  ~FakeObject() {}
+  ~FakeObject() override {}
   ObjectId GetId() const override { return id_; }
   Status GetData(ftl::StringView* data) const override {
     *data = content_;

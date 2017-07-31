@@ -40,7 +40,7 @@ class SyncTest : public ::test::AppTest {
   };
 
   SyncTest();
-  virtual ~SyncTest();
+  ~SyncTest() override;
 
   std::unique_ptr<LedgerPtrHolder> GetLedger(std::string ledger_name,
                                              test::Erase erase);

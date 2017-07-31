@@ -33,7 +33,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
  public:
   explicit FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : task_runner_(task_runner) {}
-  ~FakeLedgerStorage() {}
+  ~FakeLedgerStorage() override {}
 
   void CreatePageStorage(
       storage::PageId page_id,
@@ -87,7 +87,7 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
   explicit FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : called(false), task_runner_(task_runner) {}
-  ~FakeLedgerSync() {}
+  ~FakeLedgerSync() override {}
 
   std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,

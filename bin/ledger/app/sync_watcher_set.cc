@@ -46,7 +46,7 @@ class SyncWatcherSet::SyncWatcherContainer
   explicit SyncWatcherContainer(SyncWatcherPtr watcher)
       : watcher_(std::move(watcher)) {}
 
-  ~SyncWatcherContainer() {}
+  ~SyncWatcherContainer() override {}
 
   void Start(SyncStateContainer base_state) {
     pending_ = base_state;

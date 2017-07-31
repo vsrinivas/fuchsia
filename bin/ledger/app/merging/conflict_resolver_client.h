@@ -31,7 +31,7 @@ class ConflictResolverClient : public MergeResultProvider {
       std::unique_ptr<const storage::Commit> right,
       std::unique_ptr<const storage::Commit> ancestor,
       std::function<void(Status)> callback);
-  ~ConflictResolverClient();
+  ~ConflictResolverClient() override;
 
   void Start();
   void Cancel();
@@ -51,12 +51,12 @@ class ConflictResolverClient : public MergeResultProvider {
 
   // MergeResultProvider:
   void GetLeftDiff(fidl::Array<uint8_t> token,
-                   const GetLeftDiffCallback& callback);
+                   const GetLeftDiffCallback& callback) override;
   void GetRightDiff(fidl::Array<uint8_t> token,
-                    const GetRightDiffCallback& callback);
+                    const GetRightDiffCallback& callback) override;
   void Merge(fidl::Array<MergedValuePtr> merge_changes,
-             const MergeCallback& callback);
-  void Done(const DoneCallback& callback);
+             const MergeCallback& callback) override;
+  void Done(const DoneCallback& callback) override;
 
   storage::PageStorage* const storage_;
   PageManager* const manager_;

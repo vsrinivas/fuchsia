@@ -22,7 +22,7 @@ class InspectCommand : public Command {
   InspectCommand(const std::vector<std::string>& args,
                  const cloud_sync::UserConfig& user_config,
                  ftl::StringView user_repository_path);
-  ~InspectCommand() {}
+  ~InspectCommand() override {}
 
   // Command:
   void Start(ftl::Closure on_done) override;

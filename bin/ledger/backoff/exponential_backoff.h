@@ -25,7 +25,7 @@ class ExponentialBackoff : public Backoff {
       uint32_t retry_factor,
       ftl::TimeDelta max_delay,
       std::function<uint64_t()> seed_generator = glue::RandUint64);
-  ~ExponentialBackoff();
+  ~ExponentialBackoff() override;
 
   ftl::TimeDelta GetNext() override;
   void Reset() override;

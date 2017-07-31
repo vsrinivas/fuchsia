@@ -25,7 +25,7 @@ class LedgerSyncImpl : public LedgerSync {
                  const UserConfig* user_config,
                  ftl::StringView app_id,
                  std::unique_ptr<SyncStateWatcher> watcher);
-  ~LedgerSyncImpl();
+  ~LedgerSyncImpl() override;
 
   std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,

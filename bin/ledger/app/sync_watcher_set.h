@@ -15,7 +15,7 @@ namespace ledger {
 class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
  public:
   SyncWatcherSet();
-  ~SyncWatcherSet();
+  ~SyncWatcherSet() override;
 
   // Adds a new SyncWatcher.
   void AddSyncWatcher(fidl::InterfaceHandle<SyncWatcher> watcher);

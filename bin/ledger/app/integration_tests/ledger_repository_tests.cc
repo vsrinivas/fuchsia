@@ -31,7 +31,7 @@ class EmptyTokenProvider : public modular::auth::TokenProvider {
     error_->status = modular::auth::Status::OK;
     error_->message = "";
   }
-  ~EmptyTokenProvider() {}
+  ~EmptyTokenProvider() override {}
 
  private:
   void GetAccessToken(const GetAccessTokenCallback& callback) override {

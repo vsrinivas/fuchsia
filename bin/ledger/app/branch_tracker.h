@@ -28,7 +28,7 @@ class BranchTracker : public storage::CommitWatcher {
   BranchTracker(coroutine::CoroutineService* coroutine_service,
                 PageManager* manager,
                 storage::PageStorage* storage);
-  ~BranchTracker();
+  ~BranchTracker() override;
 
   void Init(std::function<void(Status)> on_done);
 

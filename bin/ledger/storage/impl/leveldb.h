@@ -18,7 +18,7 @@ class LevelDb : public Db {
  public:
   explicit LevelDb(std::string db_path);
 
-  ~LevelDb();
+  ~LevelDb() override;
 
   Status Init();
 

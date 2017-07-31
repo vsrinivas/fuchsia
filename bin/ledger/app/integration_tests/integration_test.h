@@ -54,7 +54,7 @@ class IntegrationTest : public test::TestWithMessageLoop {
   };
 
   IntegrationTest() {}
-  virtual ~IntegrationTest() override {}
+  ~IntegrationTest() override {}
 
  protected:
   // ::testing::Test:

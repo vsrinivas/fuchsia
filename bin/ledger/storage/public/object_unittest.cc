@@ -17,7 +17,7 @@ class StringObject : public storage::Object {
 
   ObjectId GetId() const override { return "id"; }
 
-  virtual Status GetData(ftl::StringView* data) const override {
+  Status GetData(ftl::StringView* data) const override {
     *data = value_;
     return Status::OK;
   }

@@ -27,7 +27,7 @@ class MergeResolver : public storage::CommitWatcher {
                 Environment* environment,
                 storage::PageStorage* storage,
                 std::unique_ptr<backoff::Backoff> backoff);
-  ~MergeResolver();
+  ~MergeResolver() override;
 
   void set_on_empty(ftl::Closure on_empty_callback);
 

@@ -34,7 +34,7 @@ class SyncWatcherImpl : public SyncWatcher {
       : binding_(this, std::move(request)) {}
   void SyncStateChanged(SyncState download_status,
                         SyncState upload_status,
-                        const SyncStateChangedCallback& callback) {
+                        const SyncStateChangedCallback& callback) override {
     download_states.push_back(download_status);
     upload_states.push_back(upload_status);
     callback();

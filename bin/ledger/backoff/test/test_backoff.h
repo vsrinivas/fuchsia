@@ -16,7 +16,7 @@ namespace test {
 class TestBackoff : public Backoff {
  public:
   TestBackoff();
-  ~TestBackoff();
+  ~TestBackoff() override;
 
   // Backoff:
   ftl::TimeDelta GetNext() override;

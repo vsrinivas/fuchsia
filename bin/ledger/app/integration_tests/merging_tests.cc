@@ -90,7 +90,7 @@ class ConflictResolverImpl : public ConflictResolver {
       mtl::MessageLoop::GetCurrent()->PostQuitTask();
     });
   }
-  ~ConflictResolverImpl() {}
+  ~ConflictResolverImpl() override {}
 
   struct ResolveRequest {
     fidl::InterfaceHandle<PageSnapshot> left_version;
@@ -1500,7 +1500,8 @@ TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
   DeletePage(test_page_id, Status::OK);
-  EXPECT_FALSE(resolver_impl->requests[0].Merge(fidl::Array<MergedValuePtr>::New(0)));
+  EXPECT_FALSE(
+      resolver_impl->requests[0].Merge(fidl::Array<MergedValuePtr>::New(0)));
 }
 
 }  // namespace

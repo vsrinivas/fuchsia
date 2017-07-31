@@ -36,7 +36,7 @@ class TestBackoff : public backoff::Backoff {
 class TestWithPageStorage : public ::test::TestWithMessageLoop {
  public:
   TestWithPageStorage();
-  virtual ~TestWithPageStorage();
+  ~TestWithPageStorage() override;
 
  protected:
   virtual storage::PageStorage* page_storage() = 0;

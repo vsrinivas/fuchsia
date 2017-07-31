@@ -18,7 +18,7 @@ class FakeTokenProvider : public modular::auth::TokenProvider {
                     std::string firebase_local_id,
                     std::string email,
                     std::string client_id);
-  ~FakeTokenProvider() {}
+  ~FakeTokenProvider() override {}
 
  private:
   void GetAccessToken(const GetAccessTokenCallback& callback) override;

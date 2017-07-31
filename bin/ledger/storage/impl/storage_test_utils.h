@@ -70,7 +70,7 @@ class StorageTest : public ::test::TestWithMessageLoop {
  protected:
   StorageTest();
 
-  ~StorageTest();
+  ~StorageTest() override;
 
   virtual PageStorage* GetStorage() = 0;
 

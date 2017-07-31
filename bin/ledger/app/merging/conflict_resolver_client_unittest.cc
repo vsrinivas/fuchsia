@@ -89,7 +89,7 @@ class ConflictResolverImpl : public ConflictResolver {
     binding_.set_connection_error_handler(
         [this] { this->disconnected = true; });
   }
-  ~ConflictResolverImpl() {}
+  ~ConflictResolverImpl() override {}
 
   struct ResolveRequest {
     fidl::InterfaceHandle<PageSnapshot> left_version;
