@@ -114,11 +114,8 @@ static void x86_debug_handler(x86_iframe_t *frame)
     exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
 
-void platform_handle_watchdog(void);
-
 static void x86_nmi_handler(x86_iframe_t *frame)
 {
-    platform_handle_watchdog();
 }
 
 static void x86_breakpoint_handler(x86_iframe_t *frame)

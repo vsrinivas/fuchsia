@@ -25,7 +25,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/platform_pcie.cpp \
     $(LOCAL_DIR)/power.cpp \
     $(LOCAL_DIR)/timer.cpp \
-    $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_DEPS += \
     third_party/lib/acpica \
