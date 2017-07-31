@@ -123,7 +123,7 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
     return;
   }
 
-  if (right_change->size() == 0) {
+  if (right_change->empty()) {
     OnComparisonDone(storage::Status::OK, std::move(right_change), true);
     return;
   }

@@ -105,8 +105,8 @@ void ComputePageChange(
       callback(PageUtils::ConvertStatus(status), std::make_pair(nullptr, ""));
       return;
     }
-    if (context->page_change->changes.size() == 0) {
-      if (context->page_change->deleted_keys.size() == 0) {
+    if (context->page_change->changes.empty()) {
+      if (context->page_change->deleted_keys.empty()) {
         callback(Status::OK, std::make_pair(nullptr, ""));
       } else {
         callback(Status::OK,

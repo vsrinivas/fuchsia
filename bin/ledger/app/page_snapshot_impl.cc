@@ -133,7 +133,7 @@ void FillEntries(
     context->handle_count += HandleUsed<EntryType>();
     if ((context->size > fidl_serialization::kMaxInlineDataSize ||
          context->handle_count > fidl_serialization::kMaxMessageHandles) &&
-        context->entries.size()) {
+        !context->entries.empty()) {
       context->next_token = convert::ToArray(entry.key);
       return false;
     }

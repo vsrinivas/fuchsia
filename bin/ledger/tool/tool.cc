@@ -79,7 +79,7 @@ bool ToolApp::Initialize() {
 
   std::unordered_set<std::string> valid_commands = {"inspect"};
   const std::vector<std::string>& args = command_line_.positional_args();
-  if (args.size() && valid_commands.count(args[0]) == 0) {
+  if (!args.empty() && valid_commands.count(args[0]) == 0) {
     std::cerr << "Unknown command: " << args[0] << std::endl;
     PrintUsage();
     return false;

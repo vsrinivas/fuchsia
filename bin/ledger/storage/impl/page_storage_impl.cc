@@ -996,7 +996,7 @@ void PageStorageImpl::ReadDataSource(
 
         FTL_DCHECK(status == DataSource::Status::DONE);
 
-        if (chunks.size() == 0) {
+        if (chunks.empty()) {
           callback(Status::OK, DataSource::DataChunk::Create(""));
           return;
         }

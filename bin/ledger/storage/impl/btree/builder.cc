@@ -648,7 +648,7 @@ void ApplyChanges(
       return;
     }
 
-    if (object_id != "") {
+    if (!object_id.empty()) {
       callback(Status::OK, std::move(object_id), std::move(new_ids));
       return;
     }

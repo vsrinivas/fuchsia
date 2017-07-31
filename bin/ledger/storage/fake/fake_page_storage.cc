@@ -60,7 +60,7 @@ void FakePageStorage::GetHeadCommitIds(
       break;
     }
   }
-  if (commit_ids.size() == 0) {
+  if (commit_ids.empty()) {
     commit_ids.emplace_back();
   }
   callback(Status::OK, std::move(commit_ids));

@@ -277,7 +277,7 @@ void BranchTracker::Init(std::function<void(Status)> on_done) {
       return;
     }
 
-    FTL_DCHECK(commit_ids.size() > 0);
+    FTL_DCHECK(!commit_ids.empty());
     weak_this->InitCommitAndSetWatcher(std::move(commit_ids[0]));
 
     on_done(Status::OK);
