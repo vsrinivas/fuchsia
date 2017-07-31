@@ -658,7 +658,7 @@ static int serial_loop(void* arg) {
     mx_status_t status = fifo_create(&user_fifo, &kernel_fifo);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create serial FIFO %d\n", status);
-        return status;
+        return MX_ERR_INTERNAL;
     }
 
     struct {
@@ -671,7 +671,7 @@ static int serial_loop(void* arg) {
                               &trap_args, sizeof(trap_args), NULL, 0);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to set trap for serial FIFO %d\n", status);
-        return status;
+        goto cleanup;
     }
 
     uint8_t buffer[UART_BUFFER_SIZE];
@@ -681,25 +681,25 @@ static int serial_loop(void* arg) {
         status = fifo_wait(user_fifo, MX_FIFO_READABLE);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to wait for serial FIFO %d\n", status);
-            return status;
+            goto cleanup;
         }
 
         uint32_t num_packets;
         status = mx_fifo_read(user_fifo, packets, sizeof(packets), &num_packets);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to read from serial FIFO %d\n", status);
-            return status;
+            goto cleanup;
         }
 
         for (uint32_t i = 0; i < num_packets; i++) {
             if (packets[i].type != MX_GUEST_PKT_TYPE_IO) {
                 fprintf(stderr, "Invalid packet type for serial FIFO %d\n", packets[i].type);
-                return MX_ERR_INTERNAL;
+                goto cleanup;
             }
             mx_guest_io_t* io = &packets[i].io;
             if (io->port != UART_RECEIVE_IO_PORT) {
                 fprintf(stderr, "Invalid IO port for serial FIFO %#x\n", io->port);
-                return MX_ERR_INTERNAL;
+                goto cleanup;
             }
             for (int i = 0; i < io->access_size; i++) {
                 buffer[offset++] = io->data[i];
@@ -710,6 +710,11 @@ static int serial_loop(void* arg) {
             }
         }
     }
+
+cleanup:
+    mx_handle_close(user_fifo);
+    mx_handle_close(kernel_fifo);
+    return MX_ERR_INTERNAL;
 }
 
 static mx_status_t vcpu_state_read(vcpu_context_t* vcpu_context,
