@@ -228,10 +228,10 @@ void resume_thread_from_exception(mx_handle_t thread,
     }
 
     // For now, we turn policy exceptions into non-fatal warnings, by
-    // resuming the thread when these exceptions occur.  TODO(mseaborn):
+    // resuming the thread when these exceptions occur.  TODO(MG-922):
     // Remove this and make these exceptions fatal after the system has
     // received some amount of testing with MX_POL_BAD_HANDLE enabled as a
-    // warning (MG-922).
+    // warning.
     if (excp_type == MX_EXCP_POLICY_ERROR) {
         resume_thread(thread, true);
         return;
@@ -309,7 +309,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     // CRASHLOGGER_RESUME_MAGIC isn't set. Big deal.
     if (is_resumable_swbreak(type))
         fatal = "";
-    // TODO(mseaborn): Remove this and make policy exceptions fatal (MG-922).
+    // TODO(MA-922): Remove this and make policy exceptions fatal.
     if (type == MX_EXCP_POLICY_ERROR)
         fatal = "";
 
