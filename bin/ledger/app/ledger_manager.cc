@@ -22,7 +22,7 @@ namespace ledger {
 // callbacks and fires them when the PageManager is available.
 class LedgerManager::PageManagerContainer {
  public:
-  PageManagerContainer() : status_(Status::OK) {}
+  PageManagerContainer() {}
   ~PageManagerContainer() {
     for (const auto& request : requests_) {
       request.second(Status::INTERNAL_ERROR);
@@ -79,7 +79,7 @@ class LedgerManager::PageManagerContainer {
 
  private:
   std::unique_ptr<PageManager> page_manager_;
-  Status status_;
+  Status status_ = Status::OK;
   std::vector<
       std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;

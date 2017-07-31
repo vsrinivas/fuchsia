@@ -62,7 +62,7 @@ class NodeBuilder {
                        NodeBuilder* node_builder);
 
   // Creates a null builder.
-  NodeBuilder() : type_(BuilderType::NULL_NODE) { FTL_DCHECK(Validate()); }
+  NodeBuilder() { FTL_DCHECK(Validate()); }
 
   NodeBuilder(NodeBuilder&&) = default;
 
@@ -206,7 +206,7 @@ class NodeBuilder {
     return true;
   }
 
-  BuilderType type_;
+  BuilderType type_ = BuilderType::NULL_NODE;
   uint8_t level_;
   ObjectId object_id_;
   std::vector<Entry> entries_;

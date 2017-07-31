@@ -6,7 +6,7 @@
 
 namespace callback {
 
-DestructionSentinel::DestructionSentinel() : is_destructed_ptr_(nullptr) {}
+DestructionSentinel::DestructionSentinel() {}
 
 DestructionSentinel::~DestructionSentinel() {
   if (is_destructed_ptr_)

@@ -23,6 +23,8 @@ CheckOptions:
     value:           llvm
   - key:             modernize-replace-auto-ptr.IncludeStyle
     value:           llvm
+  - key:             modernize-use-default-member-init.UseAssignment
+    value:           '1'
   - key:             modernize-use-nullptr.NullMacros
     value:           'NULL'
   - key:             readability-braces-around-statements.ShortStatementLines

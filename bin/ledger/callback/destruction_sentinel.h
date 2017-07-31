@@ -39,7 +39,7 @@ class DestructionSentinel {
   };
 
  private:
-  bool* is_destructed_ptr_;
+  bool* is_destructed_ptr_ = nullptr;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DestructionSentinel);
 };
