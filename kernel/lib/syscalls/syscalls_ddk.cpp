@@ -72,7 +72,7 @@ mx_status_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
     }
 
     up->AddHandle(mxtl::move(handle));
-    return hv;
+    return MX_OK;
 }
 
 mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
