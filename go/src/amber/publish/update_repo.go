@@ -30,7 +30,7 @@ func (e ErrFileAddFailed) Error() string {
 }
 
 func NewAddErr(m string, e error) ErrFileAddFailed {
-	return ErrFileAddFailed(fmt.Sprintf("%s: %v", e))
+	return ErrFileAddFailed(fmt.Sprintf("%s: %s", m, e))
 }
 
 type UpdateRepo struct {
@@ -79,6 +79,17 @@ func (u *UpdateRepo) AddPackageFile(src string, name string) error {
 	return nil
 }
 
+func (u *UpdateRepo) AbortStaged() error {
+	return u.repo.Clean()
+}
+
+// AddContentBlob adds the blob specified by src to the repository. The blob is
+// named according to its Merkle root. Upon success the Merkle root is returned
+// as a string. If the blob already exists the error return value is set to
+// os.ErrExist and the Merkle root is valid. If an error occurs computing the
+// Merkle root, the returned Merkle root will be invalid and the error value
+// is set. If an error happens while copying the file that error is returned
+// and the Merkle root is valid.
 func (u *UpdateRepo) AddContentBlob(src string) (string, error) {
 	root, err := computeMerkle(src)
 	if err != nil {
@@ -86,7 +97,16 @@ func (u *UpdateRepo) AddContentBlob(src string) (string, error) {
 	}
 
 	rootStr := hex.EncodeToString(root)
-	return rootStr, copyFile(filepath.Join(u.path, "repository", "blobs", rootStr), src)
+	dst := filepath.Join(u.path, "repository", "blobs", rootStr)
+	if _, err = os.Stat(dst); err == nil {
+		return rootStr, os.ErrExist
+	}
+
+	return rootStr, copyFile(dst, src)
+}
+
+func (u *UpdateRepo) RemoveContentBlob(merkle string) error {
+	return os.Remove(filepath.Join(u.path, "repository", "blobs", merkle))
 }
 
 func (u *UpdateRepo) CommitUpdates() error {
