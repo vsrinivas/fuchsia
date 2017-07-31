@@ -218,11 +218,11 @@ static void pin_thread(thread_t* thread, uint16_t vpid) {
         thread_reschedule();
 }
 
-static void check_pinned_cpu_invariant(uint16_t vpid) {
-    __UNUSED thread_t* thread = get_current_thread();
-    __UNUSED uint cpu = cpu_of(vpid);
-    DEBUG_ASSERT(thread_pinned_cpu(thread) == static_cast<int>(cpu));
-    DEBUG_ASSERT(arch_curr_cpu_num() == cpu);
+static bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid) {
+    uint cpu = cpu_of(vpid);
+    return thread == get_current_thread() &&
+        thread_pinned_cpu(thread) == static_cast<int>(cpu) &&
+        arch_curr_cpu_num() == cpu;
 }
 
 AutoPin::AutoPin(const Vcpu* vcpu)
@@ -584,10 +584,11 @@ status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic
     // 2. The state of the VMCS associated with the VCPU is cached within the
     //    CPU. To move to a different CPU, we must perform an explicit migration
     //    which will cost us performance.
-    pin_thread(get_current_thread(), vpid);
+    thread_t* thread = get_current_thread();
+    pin_thread(thread, vpid);
 
     AllocChecker ac;
-    mxtl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(vpid, apic_vmo, gpas, mux));
+    mxtl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, mux));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -630,9 +631,10 @@ status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic
     return MX_OK;
 }
 
-Vcpu::Vcpu(uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo, GuestPhysicalAddressSpace* gpas,
-           const PacketMux& mux)
-    : vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), mux_(mux), vmx_state_(/* zero-init */) {}
+Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
+           GuestPhysicalAddressSpace* gpas, const PacketMux& mux)
+    : thread_(thread), vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), mux_(mux),
+    vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
     if (!vmcs_page_.IsAllocated())
@@ -647,7 +649,8 @@ Vcpu::~Vcpu() {
 }
 
 status_t Vcpu::Resume(mx_guest_packet_t* packet) {
-    check_pinned_cpu_invariant(vpid_);
+    if (!check_pinned_cpu_invariant(thread_, vpid_))
+        return MX_ERR_BAD_STATE;
     status_t status;
     do {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
@@ -719,7 +722,8 @@ static void register_copy(Out* out, const In& in) {
 }
 
 status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
-    check_pinned_cpu_invariant(vpid_);
+    if (!check_pinned_cpu_invariant(thread_, vpid_))
+        return MX_ERR_BAD_STATE;
     switch (kind) {
     case MX_VCPU_STATE: {
         if (len != sizeof(mx_vcpu_state_t))
@@ -735,7 +739,8 @@ status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
 }
 
 status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
-    check_pinned_cpu_invariant(vpid_);
+    if (!check_pinned_cpu_invariant(thread_, vpid_))
+        return MX_ERR_BAD_STATE;
     switch (kind) {
     case MX_VCPU_STATE: {
         if (len != sizeof(mx_vcpu_state_t))

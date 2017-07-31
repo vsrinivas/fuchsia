@@ -106,6 +106,7 @@ public:
     uint16_t vpid() const { return vpid_; }
 
 private:
+    const thread_t* thread_;
     const uint16_t vpid_;
     mxtl::RefPtr<VmObject> apic_vmo_;
     LocalApicState local_apic_state_;
@@ -116,8 +117,8 @@ private:
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
 
-    explicit Vcpu(uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo, GuestPhysicalAddressSpace* gpas,
-                  const PacketMux& mux);
+    Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
+         GuestPhysicalAddressSpace* gpas, const PacketMux& mux);
 };
 
 /* Create a guest. */
