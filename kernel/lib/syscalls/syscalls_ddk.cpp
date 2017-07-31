@@ -123,7 +123,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
             alignment_log2 >= (8 * sizeof(uint64_t)))
         return MX_ERR_INVALID_ARGS;
 
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -226,7 +226,7 @@ mx_status_t sys_bootloader_fb_get_info(user_ptr<uint32_t> format, user_ptr<uint3
 }
 
 mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, user_ptr<void> vaddr, uint32_t len, uint32_t format, uint32_t width, uint32_t height, uint32_t stride) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -281,7 +281,7 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
 #include <arch/x86/ioport.h>
 
 mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -299,7 +299,7 @@ mx_status_t sys_mmap_device_io(mx_handle_t hrsrc, uint32_t io_addr, uint32_t len
 #endif
 
 uint64_t sys_acpi_uefi_rsdp(mx_handle_t hrsrc) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -311,7 +311,7 @@ uint64_t sys_acpi_uefi_rsdp(mx_handle_t hrsrc) {
 }
 
 mx_status_t sys_acpi_cache_flush(mx_handle_t hrsrc) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;

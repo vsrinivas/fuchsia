@@ -195,7 +195,7 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    // TODO: test rights
+    // TODO(MG-967): test rights on the handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcher(handle, &vmo);
     if (status != MX_OK)

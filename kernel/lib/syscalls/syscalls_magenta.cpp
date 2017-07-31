@@ -74,7 +74,7 @@ uint64_t sys_time_get(uint32_t clock_id) {
 }
 
 mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offset) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(hrsrc, MX_RSRC_KIND_ROOT)) < 0) {
         return status;

@@ -84,7 +84,7 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
         if (handle_list[i]->dispatcher()->get_state_tracker())
             handle_list[i]->dispatcher()->get_state_tracker()->Cancel(handle_list[i]);
         HandleOwner handle(handle_list[i]);
-        //TODO: This takes a lock per call. Consider doing these in a batch.
+        // TODO(MG-969): This takes a lock per call. Consider doing these in a batch.
         up->AddHandle(mxtl::move(handle));
     }
 }
@@ -237,7 +237,7 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
                 for (size_t idx = 0; idx < ix; ++idx) {
                     up->UndoRemoveHandleLocked(handles[idx]);
                 }
-                // TODO: more specific error?
+                // TODO(MG-968): more specific error?
                 return MX_ERR_INVALID_ARGS;
             }
         }
@@ -333,7 +333,7 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
             return result;
     }
 
-    // TODO(dbort): ktrace channel calls; maybe two traces, maybe with txid.
+    // TODO(MG-970): ktrace channel calls; maybe two traces, maybe with txid.
 
     // Write message and wait for reply, deadline, or cancelation
     bool return_handles = false;

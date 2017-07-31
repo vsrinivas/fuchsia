@@ -35,7 +35,7 @@ constexpr uint32_t kMaxDebugWriteSize = 256u;
 mx_status_t sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
     LTRACEF("ptr %p\n", ptr);
 
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -79,7 +79,7 @@ mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
 mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
     LTRACEF("ptr %p, len %u\n", ptr, len);
 
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -100,7 +100,7 @@ mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t
 mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> _data,
                             uint32_t offset, uint32_t len,
                             user_ptr<uint32_t> _actual) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -115,7 +115,7 @@ mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> _data,
 
 mx_status_t sys_ktrace_control(
         mx_handle_t handle, uint32_t action,uint32_t options, user_ptr<void> _ptr) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -135,7 +135,7 @@ mx_status_t sys_ktrace_control(
 }
 
 mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
@@ -159,7 +159,7 @@ mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg
 mx_status_t sys_mtrace_control(mx_handle_t handle,
                                uint32_t kind, uint32_t action, uint32_t options,
                                void* _ptr, uint32_t size) {
-    // TODO: finer grained validation
+    // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;

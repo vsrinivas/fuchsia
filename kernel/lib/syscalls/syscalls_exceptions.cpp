@@ -22,10 +22,10 @@
 #define LOCAL_TRACE 0
 
 static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool debugger, bool quietly) {
-    //TODO: check rights once appropriate right is determined
+    // TODO(MG-968): check rights once appropriate right is determined
 
     if (obj_handle == MX_HANDLE_INVALID) {
-        //TODO: handle for system exception
+        // TODO: handle for system exception
         if (debugger || quietly)
             return MX_ERR_INVALID_ARGS;
         return ResetSystemExceptionPort()
@@ -60,7 +60,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
 }
 
 static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t eport_handle, uint64_t key, bool debugger) {
-    //TODO: check rights once appropriate right is determined
+    // TODO(MG-968): check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
@@ -71,7 +71,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
     mxtl::RefPtr<ExceptionPort> eport;
 
     if (obj_handle == MX_HANDLE_INVALID) {
-        //TODO: handle for system exception
+        // TODO: handle for system exception
         if (debugger)
             return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::SYSTEM,
@@ -163,7 +163,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(dje/teisenbe): Rights checking here
+    // TODO(MG-968): Rights checking here
     mxtl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != MX_OK)

@@ -155,7 +155,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(dje): debug rights
+    // TODO(MG-968): debug rights
     mxtl::RefPtr<ThreadDispatcher> thread;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
     if (status != MX_OK)
@@ -194,7 +194,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // TODO(dje): debug rights
+    // TODO(MG-968): debug rights
     mxtl::RefPtr<ThreadDispatcher> thread;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &thread);
     if (status != MX_OK)
@@ -278,7 +278,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<JobDispatcher> job;
-    // TODO: define process creation job rights.
+    // TODO(MG-968): define process creation job rights.
     auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_WRITE, &job);
     if (status != MX_OK)
         return status;
@@ -627,7 +627,7 @@ mx_status_t sys_job_set_relative_importance(
             resource_handle, MX_RIGHT_NONE, &resource);
         if (status != MX_OK)
             return status;
-        // TODO(dbort): Check that this is actually the appropriate resource
+        // TODO(MG-971): Check that this is actually the appropriate resource
     }
 
     // Get the job to modify.
