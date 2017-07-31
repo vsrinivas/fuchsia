@@ -8,6 +8,7 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/decode.h>
 #include <stdio.h>
+#include <virtio/virtio_ids.h>
 
 // PCI BAR register addresses.
 #define PCI_REGISTER_BAR_0                      0x10
@@ -20,6 +21,8 @@
 typedef struct pci_attr {
     uint16_t device_id;
     uint16_t vendor_id;
+    uint16_t subsystem_id;
+    uint16_t subsystem_vendor_id;
     // Both class & subclass fields combined.
     uint16_t class_code;
     uint16_t bar_size;
@@ -29,12 +32,16 @@ static const pci_attr_t kPciDeviceAttributes[] = {
     [PCI_DEVICE_ROOT_COMPLEX] = {
         .vendor_id = PCI_VENDOR_ID_INTEL,
         .device_id = PCI_DEVICE_ID_INTEL_Q35,
+        .subsystem_vendor_id = 0,
+        .subsystem_id = 0,
         .class_code = PCI_CLASS_BRIDGE_HOST,
         .bar_size = 0x10,
     },
     [PCI_DEVICE_VIRTIO_BLOCK] = {
         .vendor_id = PCI_VENDOR_ID_VIRTIO,
         .device_id = PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY,
+        .subsystem_vendor_id = 0,
+        .subsystem_id = VIRTIO_ID_BLOCK,
         .class_code = PCI_CLASS_MASS_STORAGE,
         .bar_size = 0x40,
     },
@@ -122,6 +129,9 @@ static mx_status_t pci_config_read_word(pci_device_state_t* pci_device_state,
     // |   subsystem_id    |  subsystem_vendor_id  |
     //  -------------------------------------------
     case PCI_CONFIG_SUBSYS_VENDOR_ID:
+        *value = device_attributes->subsystem_vendor_id;
+        *value |= device_attributes->subsystem_id << 16;
+        return MX_OK;
     //  ------------------------------------------
     // |     (31..8)     |         (7..0)         |
     // |     Reserved    |  capabilities_pointer  |
