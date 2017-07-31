@@ -47,6 +47,7 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/exceptions.S \
 	$(SUBARCH_DIR)/hypervisor.S \
 	$(SUBARCH_DIR)/ops.S \
+	$(SUBARCH_DIR)/mexec.S \
 	$(SUBARCH_DIR)/syscall.S \
 	$(SUBARCH_DIR)/user_copy.S \
 	$(SUBARCH_DIR)/uspace_entry.S \
@@ -61,7 +62,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/faults.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/gdt.S \
-	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/hwp.cpp \
 	$(LOCAL_DIR)/idt.cpp \

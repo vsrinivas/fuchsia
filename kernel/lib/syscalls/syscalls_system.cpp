@@ -11,30 +11,22 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/pmm.h>
+#include <kernel/vm/vm_aspace.h>
 #include <magenta/compiler.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/types.h>
 #include <magenta/vm_object_dispatcher.h>
+#include <mexec.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
 
-// Warning: The geometry of this struct is depended upon by the mexec assembly
-//          function. Do not modify without also updating mexec.S.
-typedef struct __PACKED {
-    void* dst;
-    void* src;
-    size_t len;
-} memmov_ops_t;
-
-// Implemented in assembly. Copies the new kernel into place and branches to it.
-typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2,
-                               uint64_t arg3, memmov_ops_t* ops,
-                               void* new_kernel_addr);
+// Allocate this many extra bytes at the end of the bootdata for the platform
+// to fill in with platform specific boot structures.
+const size_t kBootdataPlatformExtraBytes = PAGE_SIZE;
 
 __BEGIN_CDECLS
 extern void mexec_asm(void);
@@ -87,7 +79,8 @@ static mx_status_t identity_page_allocate(void** result_addr) {
  * TODO(gkalsi): Don't coalesce pages into a physically contiguous region and
  *               just pass a vectored I/O list to the mexec assembly.
  */
-static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t* size) {
+static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, const size_t extra_bytes,
+                                      paddr_t* addr, uint8_t** vaddr, size_t* size) {
     DEBUG_ASSERT(addr);
     if (!addr) return MX_ERR_INVALID_ARGS;
 
@@ -105,7 +98,7 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t
 
     const size_t vmo_size = vmo->size();
 
-    const size_t num_pages = ROUNDUP(vmo_size, PAGE_SIZE) / PAGE_SIZE;
+    const size_t num_pages = ROUNDUP(vmo_size + extra_bytes, PAGE_SIZE) / PAGE_SIZE;
 
     paddr_t base_addr;
     const size_t allocated = pmm_alloc_contiguous(num_pages, PMM_ALLOC_FLAG_ANY,
@@ -139,6 +132,8 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, paddr_t* addr, size_t
 
     *size = vmo_size;
     *addr = base_addr;
+    if (vaddr)
+        *vaddr = dst_addr;
 
     return MX_OK;
 }
@@ -166,15 +161,19 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
 
     paddr_t new_kernel_addr;
     size_t new_kernel_len;
-    result = vmo_coalesce_pages(kernel_vmo, &new_kernel_addr, &new_kernel_len);
+    result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, nullptr,
+                                &new_kernel_len);
     if (result != MX_OK) {
         printf("Failed to coalesce vmo kernel pages, retcode = %d\n", result);
         return result;
     }
 
     paddr_t new_bootimage_addr;
+    uint8_t* bootimage_buffer;
     size_t new_bootimage_len;
-    result = vmo_coalesce_pages(bootimage_vmo, &new_bootimage_addr, &new_bootimage_len);
+    result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes,
+                                &new_bootimage_addr, &bootimage_buffer,
+                                &new_bootimage_len);
     if (result != MX_OK) {
         printf("Failed to coalesce vmo bootimage pages ,retcode = %d\n", result);
         return result;
@@ -182,8 +181,17 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
 
     // WARNING
     // It is unsafe to return from this function beyond this point.
-    // This is because we have swapped out the user address space halted the
+    // This is because we have swapped out the user address space and halted the
     // secondary cores and there is no trivial way to bring both of these back.
+    thread_migrate_cpu(BOOT_CPU_ID);
+
+    // Allow the platform to patch the bootdata with any platform specific
+    // sections before mexecing.
+    result = platform_mexec_patch_bootdata(bootimage_buffer, new_bootimage_len);
+    if (result != MX_OK) {
+        panic("Error while patching platform bootdata.");
+    }
+
     void* id_page_addr = 0x0;
     result = identity_page_allocate(&id_page_addr);
     if (result != MX_OK) {
@@ -197,7 +205,6 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     // this as the boot CPU.
     // We want to make sure that this is the CPU that eventually branches into
     // the new kernel so we attempt to migrate this thread to that cpu.
-    thread_migrate_cpu(BOOT_CPU_ID);
     platform_halt_secondary_cpus();
 
     // We're going to copy this into our identity page, make sure it's not
@@ -246,9 +253,9 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
     mp_set_curr_cpu_active(false);
     mp_set_curr_cpu_online(false);
 
+    // Ask the platform to mexec into the next kernel.
     mexec_asm_func mexec_assembly = (mexec_asm_func)id_page_addr;
-    mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, 0, ops,
-                   (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
+    platform_mexec(mexec_assembly, ops, new_bootimage_addr, new_bootimage_len);
 
     panic("Execution should never reach here\n");
     return MX_OK;

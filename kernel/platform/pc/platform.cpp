@@ -14,6 +14,7 @@
 #include <arch/x86/cpu_topology.h>
 #include <arch/x86/mmu.h>
 #include <platform.h>
+#include <mexec.h>
 #include "platform_p.h"
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
@@ -448,6 +449,225 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
     }
 }
 
+typedef struct e820_walk_ctx {
+    uint8_t* buf;
+    size_t len;
+    mx_status_t ret;
+} e820_walk_ctx_t;
+
+static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* void_ctx) {
+    e820_walk_ctx* ctx = (e820_walk_ctx*)void_ctx;
+
+    // Something went wrong in one of the previous calls, don't attempt to
+    // continue.
+    if (ctx->ret != MX_OK)
+        return;
+
+    // Make sure we have enough space in the buffer.
+    if (ctx->len < sizeof(e820entry_t)) {
+        ctx->ret = MX_ERR_BUFFER_TOO_SMALL;
+        return;
+    }
+
+    e820entry_t* entry = (e820entry_t*)ctx->buf;
+    entry->addr = base;
+    entry->size = size;
+
+    // Hack: When we first parse this map we normalize each section to either
+    // memory or not-memory. When we pass it to the next kernel, we lose
+    // information about the type of "not memory" in each region.
+    entry->type = is_mem ? E820_RAM : E820_RESERVED;
+
+    ctx->buf += sizeof(*entry);
+    ctx->len -= sizeof(*entry);
+    ctx->ret = MX_OK;
+}
+
+/* Takes a buffer to a bootimage and appends a section to the end of it */
+static mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
+                                       const uint8_t* section, const uint32_t section_length,
+                                       const uint32_t type, const uint32_t extra, const uint32_t flags) {
+    bootdata_t* hdr = (bootdata_t*)bootdata_buf;
+
+    if ((hdr->type != BOOTDATA_CONTAINER) ||
+        (hdr->extra != BOOTDATA_MAGIC) ||
+        (hdr->flags != 0)) {
+        // This buffer does not point to a bootimage.
+        return MX_ERR_WRONG_TYPE;
+    }
+
+    size_t total_len = hdr->length + sizeof(*hdr);
+    size_t new_section_length = BOOTDATA_ALIGN(section_length) + sizeof(bootdata_t);
+
+    // Make sure there's enough buffer space after the bootdata container to
+    // append the new section.
+    if ((total_len + new_section_length) >= buflen) {
+        return MX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    // Seek to the end of the bootimage.
+    bootdata_buf += total_len;
+
+    bootdata_t* new_hdr = (bootdata_t*)bootdata_buf;
+    new_hdr->type = type;
+    new_hdr->length = section_length;
+    new_hdr->extra = extra;
+    new_hdr->flags = flags;
+
+    bootdata_buf += sizeof(*new_hdr);
+
+    memcpy(bootdata_buf, section, section_length);
+
+    hdr->length += (uint32_t)new_section_length;
+
+    return MX_OK;
+}
+
+// Give the platform an opportunity to append any platform specific bootdata
+// sections.
+mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+    uint8_t e820buf[sizeof(e820entry_t) * 32];
+
+    e820_walk_ctx ctx;
+    ctx.buf = e820buf;
+    ctx.len = sizeof(e820buf);
+    ctx.ret = MX_OK;
+
+    mx_status_t ret = enumerate_e820(e820_entry_walk, &ctx);
+
+    if (ret != MX_OK)
+        return ret;
+
+    if (ctx.ret != MX_OK)
+        return ctx.ret;
+
+    uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
+
+    ret = bootdata_append_section(bootdata, len, e820buf, section_length,
+                                  BOOTDATA_E820_TABLE, 0, 0);
+
+    if (ret != MX_OK)
+        return ret;
+
+    // Append information about the framebuffer to the bootdata
+    if (bootloader.fb.base) {
+        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.fb,
+                                      sizeof(bootloader.fb), BOOTDATA_FRAMEBUFFER, 0, 0);
+        if (ret != MX_OK)
+            return ret;
+    }
+
+    if (bootloader.efi_system_table) {
+        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.efi_system_table,
+                                      sizeof(bootloader.efi_system_table),
+                                      BOOTDATA_EFI_SYSTEM_TABLE, 0, 0);
+        if (ret != MX_OK)
+            return ret;
+    }
+
+    if (bootloader.acpi_rsdp) {
+        ret = bootdata_append_section(bootdata, len, (uint8_t*)&bootloader.acpi_rsdp,
+                                      sizeof(bootloader.acpi_rsdp), BOOTDATA_ACPI_RSDP, 0, 0);
+        if (ret != MX_OK)
+            return ret;
+    }
+
+    return MX_OK;
+}
+
+// Number of pages required to identity map 4GiB of memory.
+const size_t kBytesToIdentityMap = 4ull * GB;
+const size_t kNumL2PageTables = kBytesToIdentityMap / (2ull * MB * NO_OF_PT_ENTRIES);
+const size_t kNumL3PageTables = 1;
+const size_t kNumL4PageTables = 1;
+const size_t kTotalPageTableCount = kNumL2PageTables + kNumL3PageTables + kNumL4PageTables;
+
+// Allocate `count` pages where no page has a physical address less than
+// `lower_bound`
+static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t* paddrs) {
+    struct list_node list = LIST_INITIAL_VALUE(list);
+    while (count) {
+        const size_t actual = pmm_alloc_range(lower_bound, count, &list);
+
+        for (size_t i = 0; i < actual; i++) {
+            paddrs[count - (i + 1)] = lower_bound + PAGE_SIZE * i;
+        }
+
+        count -= actual;
+        lower_bound += PAGE_SIZE * (actual + 1);
+
+        // If we're past the 4GiB mark and still trying to allocate, just give
+        // up.
+        if (lower_bound >= (4 * GB)) {
+            panic("failed to allocate page tables for mexec");
+        }
+    }
+
+    // mark all of the pages we allocated as WIRED
+    vm_page_t *p;
+    list_for_every_entry(&list, p, vm_page_t, free.node) {
+        p->state = VM_PAGE_STATE_WIRED;
+    }
+}
+
+void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
+                    uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
+    // This code only handles one L3 and one L4 page table for now. Fail if
+    // there are more L2 page tables than can fit in one L3 page table.
+    static_assert(kNumL2PageTables <= NO_OF_PT_ENTRIES,
+                  "Kexec identity map size is too large. Only one L3 PTE is supported at this time.");
+    static_assert(kNumL3PageTables == 1, "Only 1 L3 page table is supported at this time.");
+    static_assert(kNumL4PageTables == 1, "Only 1 L4 page table is supported at this time.");
+
+    // Identity map the first 4GiB of RAM
+    mxtl::RefPtr<VmAspace> identity_aspace =
+            VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "x86-64 mexec 1:1");
+    DEBUG_ASSERT(identity_aspace);
+
+    const uint perm_flags_rwx = ARCH_MMU_FLAG_PERM_READ  |
+                                ARCH_MMU_FLAG_PERM_WRITE |
+                                ARCH_MMU_FLAG_PERM_EXECUTE;
+    void* identity_address = 0x0;
+    paddr_t pa = 0;
+    mx_status_t result = identity_aspace->AllocPhysical("1:1 mapping", kBytesToIdentityMap,
+                                            &identity_address, 0, pa,
+                                            VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
+                                            perm_flags_rwx);
+    if (result != MX_OK) {
+        panic("failed to identity map low memory");
+    }
+
+    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(identity_aspace.get()));
+
+    paddr_t safe_pages[kTotalPageTableCount];
+    alloc_pages_greater_than(new_bootimage_addr + new_bootimage_len + PAGE_SIZE,
+                             kTotalPageTableCount, safe_pages);
+
+    size_t safe_page_id = 0;
+    volatile pt_entry_t* ptl4 = (pt_entry_t*)paddr_to_kvaddr(safe_pages[safe_page_id++]);
+    volatile pt_entry_t* ptl3 = (pt_entry_t*)paddr_to_kvaddr(safe_pages[safe_page_id++]);
+
+    // Initialize these to 0
+    for (size_t i = 0; i < NO_OF_PT_ENTRIES; i++) {
+        ptl4[i] = 0;
+        ptl3[i] = 0;
+    }
+
+    for (size_t i = 0; i < kNumL2PageTables; i++) {
+        ptl3[i] = safe_pages[safe_page_id] | X86_KERNEL_PD_FLAGS;
+        volatile pt_entry_t* ptl2 = (pt_entry_t*)paddr_to_kvaddr(safe_pages[safe_page_id]);
+
+        for (size_t j = 0; j < NO_OF_PT_ENTRIES; j++) {
+            ptl2[j] = (2 * MB * (i * NO_OF_PT_ENTRIES + j)) | X86_KERNEL_PD_LP_FLAGS;
+        }
+
+        safe_page_id++;
+    }
+
+    ptl4[0] = vaddr_to_paddr((void*)ptl3) | X86_KERNEL_PD_FLAGS;
+
+    mexec_assembly((uintptr_t)new_bootimage_addr, vaddr_to_paddr((void*)ptl4), 0, 0, ops, 0);
+}
 
 void platform_halt_secondary_cpus(void)
 {

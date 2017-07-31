@@ -23,6 +23,7 @@
 #include <dev/psci.h>
 
 #include <platform.h>
+#include <mexec.h>
 #include <dev/bcm28xx.h>
 
 #include <target.h>
@@ -740,4 +741,14 @@ size_t platform_stow_crashlog(void* log, size_t len) {
 size_t platform_recover_crashlog(size_t len, void* cookie,
                                  void (*func)(const void* data, size_t, size_t len, void* cookie)) {
     return 0;
+}
+
+mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+    return MX_OK;
+}
+
+void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
+                    uintptr_t new_bootimage_addr, size_t new_bootimage_len) {
+    mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, 0, ops,
+                   (void*)(MEMBASE + KERNEL_LOAD_OFFSET));
 }

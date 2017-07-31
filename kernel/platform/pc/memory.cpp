@@ -145,12 +145,6 @@ static status_t mem_arena_init(boot_addr_range_t *range)
     return MX_OK;
 }
 
-#define E820_RAM 1
-#define E820_RESERVED 2
-#define E820_ACPI 3
-#define E820_NVS 4
-#define E820_UNUSABLE 5
-
 typedef struct e820_range_seq {
     e820entry_t* map;
     int index;

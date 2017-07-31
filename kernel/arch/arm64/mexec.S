@@ -7,6 +7,7 @@
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <asm.h>
+#include <mexec.h>
 
 /* Arguments Passed via x0 through x8 inclusive */
 bootarg0                .req x25
@@ -58,8 +59,9 @@ FUNCTION(mexec_asm)
  */
 .Lcopy:
     // Load a copy operation into memory
-    ldp     x0, x1, [copy_list, 0]
-    ldr     x2, [copy_list, 16]
+    ldr     x0, [copy_list, MEMMOV_OPS_DST_OFFSET]
+    ldr     x1, [copy_list, MEMMOV_OPS_SRC_OFFSET]
+    ldr     x2, [copy_list, MEMMOV_OPS_LEN_OFFSET]
 
     // Determine if this is the end of the list by checking if all three elems
     // in the copy list are null

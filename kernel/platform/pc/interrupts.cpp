@@ -284,7 +284,7 @@ unsigned int remap_interrupt(unsigned int vector) {
 }
 
 void shutdown_interrupts(void) {
-    PANIC_UNIMPLEMENTED;
+    pic_disable();
 }
 
 #ifdef WITH_DEV_PCIE
