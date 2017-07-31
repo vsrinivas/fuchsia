@@ -136,3 +136,14 @@ throough to devmgr, and devmgr will export the VMO as a file at the path
 
 This mechanism is used by the entropy collector quality tests to export
 relatively large (~1 Mbit) files full of random data.
+
+## How to deprecate #define constants
+
+One can create a deprecated typedef and have the constant definition
+cast to that type.  The ensuing warning/error will include the name
+of the deprecated typedef.
+
+```
+typedef int MX_RESUME_NOT_HANDLED_DEPRECATION __attribute__((deprecated));
+#define MX_RESUME_NOT_HANDLED ((MX_RESUME_NOT_HANDLED_DEPRECATION)(2))
+```
