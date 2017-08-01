@@ -61,6 +61,29 @@ private:
         const Thunk     thunk = nullptr;
     };
 
+    // Capabilities common to both converters and pin complexes.
+    struct CommonCaps {
+        AudioWidgetCaps widget_caps;
+        AmpCaps         amp_caps;
+        bool            has_amp   = false;
+        float           max_gain  = 0.0;
+        float           min_gain  = 0.0;
+        float           gain_step = 0.0;
+    };
+
+    // Capabilities for converters
+    struct ConverterCaps : public CommonCaps {
+        SampleCaps      sample_caps;
+    };
+
+    // Capabilities for pin complexes
+    struct PinComplexCaps : public CommonCaps {
+        ConfigDefaults  cfg_defaults;
+        PinCaps         pin_caps;
+        bool            async_plug_det = false;
+        uint8_t         unsol_tag;
+    };
+
     // Declare a slab allocator for PendingCommands.  Note; it needs to be made
     // our friend in order to see the definition of the PendingCommand private
     // inner class.
@@ -108,6 +131,8 @@ private:
                                                          | PLUG_STATE_SETUP_COMPLETE
                                                          | DMA_ASSIGNMENT_COMPLETE;
 
+    static uint8_t ComputeGainSteps(const CommonCaps& caps, float target_gai);
+
     mx_status_t RunCmdLocked(const Command& cmd)
         __TA_REQUIRES(obj_lock());
 
@@ -115,7 +140,6 @@ private:
         __TA_REQUIRES(obj_lock());
 
     mx_status_t DisableConverterLocked(bool force_all = false) __TA_REQUIRES(obj_lock());
-
     mx_status_t UpdateConverterGainLocked(float target_gain) __TA_REQUIRES(obj_lock());
     float       ComputeCurrentGainLocked() __TA_REQUIRES(obj_lock());
     mx_status_t SendGainUpdatesLocked() __TA_REQUIRES(obj_lock());
@@ -125,7 +149,9 @@ private:
 
     // Setup state machine methods.
     mx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
+    void FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
     void DumpStreamPublishedLocked() __TA_REQUIRES(obj_lock());
+    void DumpAmpCaps(const CommonCaps& caps, const char* tag);
     DECLARE_THUNK(ProcessPinWidgetCaps);
     DECLARE_THUNK(ProcessPinAmpCaps);
     DECLARE_THUNK(ProcessPinCfgDefaults);
@@ -149,33 +175,16 @@ private:
     bool     format_set_     __TA_GUARDED(obj_lock()) = false;
 
     // Current gain and plug detect settings.
-    uint8_t   cur_gain_steps_ __TA_GUARDED(obj_lock()) = 0;
-    bool      cur_mute_       __TA_GUARDED(obj_lock()) = false;
-    bool      plug_state_     __TA_GUARDED(obj_lock()) = true;
-    mx_time_t last_plug_time_ __TA_GUARDED(obj_lock()) = 0;
+    uint8_t   cur_conv_gain_steps_ __TA_GUARDED(obj_lock()) = 0;
+    uint8_t   cur_pc_gain_steps_   __TA_GUARDED(obj_lock()) = 0;
+    bool      cur_mute_            __TA_GUARDED(obj_lock()) = false;
+    bool      plug_state_          __TA_GUARDED(obj_lock()) = true;
+    mx_time_t last_plug_time_      __TA_GUARDED(obj_lock()) = 0;
     NotifyTargetList plug_notify_targets_ __TA_GUARDED(obj_lock());
 
-    // Coverter capabilities.
-    struct {
-        AudioWidgetCaps widget_caps;
-        AmpCaps         amp_caps;
-        SampleCaps      sample_caps;
-        bool            has_amp   = false;
-        float           max_gain  = 0.0;
-        float           min_gain  = 0.0;
-        float           gain_step = 0.0;
-    } conv_ __TA_GUARDED(obj_lock());
-
-    // Pin complex capabilities.
-    struct {
-        AudioWidgetCaps widget_caps;
-        AmpCaps         amp_caps;
-        ConfigDefaults  cfg_defaults;
-        PinCaps         pin_caps;
-        bool            has_amp        = false;
-        bool            async_plug_det = false;
-        uint8_t         unsol_tag;
-    } pc_ __TA_GUARDED(obj_lock());
+    // Converter and pin complex capabilities.
+    ConverterCaps  conv_ __TA_GUARDED(obj_lock());
+    PinComplexCaps pc_   __TA_GUARDED(obj_lock());
 };
 
 #undef DECLARE_THUNK
