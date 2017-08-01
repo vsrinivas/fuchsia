@@ -4,8 +4,33 @@
 
 module wlan;
 
+enum ErrCode {
+  OK,
+  INTERNAL,
+  NOT_FOUND,
+  NOT_SUPPORTED,
+  INVALID_ARGS,
+};
+
+struct Error {
+  ErrCode code;
+  string description;
+};
+
+struct AP {
+  array<uint8> bssid;
+  string       ssid;
+  uint8        last_rssi;
+};
+
+struct ScanResult {
+  Error error;
+  array<AP>? aps;
+};
+
 // Stub interface; eventually to be replaced by something based on the 802.11
 // SME / MSGCF.
+[ServiceName="wlan::WlanService"]
 interface Wlan {
-  Scan(string ssid) => (string response);
+  Scan() => (ScanResult result);
 };

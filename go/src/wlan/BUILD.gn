@@ -28,15 +28,50 @@ wlan_go_dependencies = [
     package = "apps/netstack/watcher"
     source = "//apps/netstack/watcher"
   },
+  {
+    package = "application/lib/app"
+    source = "//application/lib/app/go/src/app"
+  },
+  {
+    package = "application/lib/svc"
+    source = "//application/lib/svc/go/src/svc"
+  },
 ]
 
 go_binary("wlanstack_bin") {
   output_name = "wlanstack"
   gopackage = "wlanstack"
   deps = [
+    "//apps/wlan/services",
     "//apps/wlan/services:mlme",
   ]
   go_dependencies = wlan_go_dependencies
+}
+
+go_binary("wlantool_bin") {
+  output_name = "wlantool"
+  gopackage = "wlantool"
+  deps = [
+    "//apps/wlan/services",
+  ]
+  go_dependencies = [
+    {
+      package = "wlantool"
+      source = "wlantool"
+    },
+    {
+      package = "application/lib/app"
+      source = "//application/lib/app/go/src/app"
+    },
+    {
+      package = "application/lib/svc"
+      source = "//application/lib/svc/go/src/svc"
+    },
+    {
+      package = "fidl"
+      source = "//lib/fidl/go/src/fidl"
+    },
+  ]
 }
 
 go_test("wlanstack_test_bin") {
@@ -60,6 +95,16 @@ package("wlanstack") {
   resources = [ {
         path = rebase_path("default.json")
         dest = "wlanstack/config.json"
+      } ]
+}
+
+package("wlantool") {
+  deps = [
+    ":wlantool_bin",
+  ]
+
+  binaries = [ {
+        name = "wlantool"
       } ]
 }
 

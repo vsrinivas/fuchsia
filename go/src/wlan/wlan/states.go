@@ -7,6 +7,7 @@ package wlan
 import (
 	mlme "apps/wlan/services/wlan_mlme"
 	mlme_ext "apps/wlan/services/wlan_mlme_ext"
+	"apps/wlan/services/wlan_service"
 
 	"fmt"
 	"log"
@@ -14,11 +15,22 @@ import (
 )
 
 type state interface {
-	run(*Client) error
-	handleMsg(interface{}, *Client) (state, error)
-	handleTimeout(*Client) (state, error)
-	nextTimeout() time.Duration
+	run(*Client) (time.Duration, error)
+	commandIsDisabled() bool
+	handleCommand(r *commandRequest) (state, error)
+	handleMLMEMsg(interface{}, *Client) (state, error)
+	handleMLMETimeout(*Client) (state, error)
+	needTimer() (bool, time.Duration)
+	timerExpired(*Client) (state, error)
 }
+
+type Command int
+
+const (
+	CmdScan Command = iota
+)
+
+const InfiniteTimeout = 0 * time.Second
 
 // Scanning
 
@@ -28,61 +40,99 @@ const ScanTimeout = 30 * time.Second
 type scanState struct {
 	scanInterval time.Duration
 	pause        bool
+	running      bool
+	cmdPending   *commandRequest
 }
 
 var twoPointFourGhzChannels = []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 var broadcastBssid = [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 func newScanState(c *Client) *scanState {
-	scanInterval := DefaultScanInterval
-	if c.cfg != nil && c.cfg.ScanInterval > 0 {
-		scanInterval = time.Duration(c.cfg.ScanInterval) * time.Second
+	scanInterval := time.Duration(0)
+	pause := true
+	if c.cfg != nil {
+		scanInterval = DefaultScanInterval
+		if c.cfg.ScanInterval > 0 {
+			scanInterval = time.Duration(c.cfg.ScanInterval) * time.Second
+		}
+		if c.cfg.SSID != "" {
+			// start periodic scan.
+			pause = false
+		}
 	}
 
-	return &scanState{scanInterval, false}
+	return &scanState{scanInterval: scanInterval, pause: pause}
 }
 
 func (s *scanState) String() string {
 	return "scanning"
 }
 
-func (s *scanState) run(c *Client) error {
-	if !s.pause {
-		req := &mlme.ScanRequest{
-			BssType:        mlme.BssTypes_Infrastructure,
-			Bssid:          broadcastBssid,
-			ScanType:       mlme.ScanTypes_Passive,
-			ChannelList:    &twoPointFourGhzChannels,
-			MinChannelTime: 100,
-			MaxChannelTime: 300,
-		}
-		if c.cfg != nil {
-			req.Ssid = c.cfg.SSID
-		}
-		if debug {
-			log.Printf("scan req: %v", req)
-		}
-
-		return c.sendMessage(req, int32(mlme.Method_ScanRequest))
+func newScanRequest(ssid string) *mlme.ScanRequest {
+	return &mlme.ScanRequest{
+		BssType:        mlme.BssTypes_Infrastructure,
+		Bssid:          broadcastBssid,
+		Ssid:           ssid,
+		ScanType:       mlme.ScanTypes_Passive,
+		ChannelList:    &twoPointFourGhzChannels,
+		MinChannelTime: 100,
+		MaxChannelTime: 300,
 	}
-	return nil
 }
 
-func (s *scanState) handleMsg(msg interface{}, c *Client) (state, error) {
+func (s *scanState) run(c *Client) (time.Duration, error) {
+	var req *mlme.ScanRequest
+	if s.cmdPending != nil && s.cmdPending.id == CmdScan {
+		req = newScanRequest("")
+	} else if c.cfg != nil && c.cfg.SSID != "" && !s.pause {
+		req = newScanRequest(c.cfg.SSID)
+	}
+	if req != nil {
+		if debug {
+			log.Printf("scan req: %v timeout: %v", req, ScanTimeout)
+		}
+		err := c.sendMessage(req, int32(mlme.Method_ScanRequest))
+		if err != nil {
+			return 0, err
+		}
+		s.running = true
+	}
+	return ScanTimeout, nil
+}
+
+func (s *scanState) commandIsDisabled() bool {
+	return s.running
+}
+
+func (s *scanState) handleCommand(cmd *commandRequest) (state, error) {
+	switch cmd.id {
+	case CmdScan:
+		s.cmdPending = cmd
+	}
+	return s, nil
+}
+
+func (s *scanState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
 	case *mlme.ScanResponse:
 		if debug {
 			PrintScanResponse(v)
 		}
+		s.running = false
 
-		if c.cfg != nil {
+		if s.cmdPending != nil && s.cmdPending.id == CmdScan {
+			aps := CollectScanResults(v, "")
+			s.cmdPending.respC <- &CommandResult{aps, nil}
+			s.cmdPending = nil
+		} else if c.cfg != nil && c.cfg.SSID != "" {
 			aps := CollectScanResults(v, c.cfg.SSID)
 			if len(aps) > 0 {
 				c.ap = &aps[0]
 				return newJoinState(), nil
 			}
+			s.pause = true
 		}
-		s.pause = true
+
 		return s, nil
 
 	default:
@@ -90,20 +140,30 @@ func (s *scanState) handleMsg(msg interface{}, c *Client) (state, error) {
 	}
 }
 
-func (s *scanState) handleTimeout(c *Client) (state, error) {
+func (s *scanState) handleMLMETimeout(c *Client) (state, error) {
 	if debug {
-		log.Println("scan timeout")
+		log.Printf("scan timeout")
 	}
-	s.pause = !s.pause
+	s.pause = false
 	return s, nil
 }
 
-func (s *scanState) nextTimeout() time.Duration {
-	if s.pause {
-		return s.scanInterval
-	} else {
-		return ScanTimeout
+func (s *scanState) needTimer() (bool, time.Duration) {
+	if s.running {
+		return false, 0
 	}
+	if debug {
+		log.Printf("scan pause %v start", s.scanInterval)
+	}
+	return true, s.scanInterval
+}
+
+func (s *scanState) timerExpired(c *Client) (state, error) {
+	if debug {
+		log.Printf("scan pause finished")
+	}
+	s.pause = false
+	return s, nil
 }
 
 // Joining
@@ -119,7 +179,7 @@ func (s *joinState) String() string {
 	return "joining"
 }
 
-func (s *joinState) run(c *Client) error {
+func (s *joinState) run(c *Client) (time.Duration, error) {
 	req := &mlme.JoinRequest{
 		SelectedBss:        *c.ap.BSSDesc,
 		JoinFailureTimeout: 20,
@@ -128,10 +188,18 @@ func (s *joinState) run(c *Client) error {
 		log.Printf("join req: %v", req)
 	}
 
-	return c.sendMessage(req, int32(mlme.Method_JoinRequest))
+	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_JoinRequest))
 }
 
-func (s *joinState) handleMsg(msg interface{}, c *Client) (state, error) {
+func (s *joinState) commandIsDisabled() bool {
+	return true
+}
+
+func (s *joinState) handleCommand(r *commandRequest) (state, error) {
+	return s, nil
+}
+
+func (s *joinState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
 	case *mlme.JoinResponse:
 		if debug {
@@ -148,12 +216,16 @@ func (s *joinState) handleMsg(msg interface{}, c *Client) (state, error) {
 	}
 }
 
-func (s *joinState) handleTimeout(c *Client) (state, error) {
+func (s *joinState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *joinState) nextTimeout() time.Duration {
-	return 0
+func (s *joinState) needTimer() (bool, time.Duration) {
+	return false, 0
+}
+
+func (s *joinState) timerExpired(c *Client) (state, error) {
+	return s, nil
 }
 
 // Authenticating
@@ -169,7 +241,7 @@ func (s *authState) String() string {
 	return "authenticating"
 }
 
-func (s *authState) run(c *Client) error {
+func (s *authState) run(c *Client) (time.Duration, error) {
 	req := &mlme.AuthenticateRequest{
 		PeerStaAddress:     c.ap.BSSDesc.Bssid,
 		AuthType:           mlme.AuthenticationTypes_OpenSystem,
@@ -179,10 +251,18 @@ func (s *authState) run(c *Client) error {
 		log.Printf("auth req: %v", req)
 	}
 
-	return c.sendMessage(req, int32(mlme.Method_AuthenticateRequest))
+	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_AuthenticateRequest))
 }
 
-func (s *authState) handleMsg(msg interface{}, c *Client) (state, error) {
+func (s *authState) commandIsDisabled() bool {
+	return true
+}
+
+func (s *authState) handleCommand(r *commandRequest) (state, error) {
+	return s, nil
+}
+
+func (s *authState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
 	case *mlme.AuthenticateResponse:
 		if debug {
@@ -199,12 +279,16 @@ func (s *authState) handleMsg(msg interface{}, c *Client) (state, error) {
 	}
 }
 
-func (s *authState) handleTimeout(c *Client) (state, error) {
+func (s *authState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *authState) nextTimeout() time.Duration {
-	return 0
+func (s *authState) needTimer() (bool, time.Duration) {
+	return false, 0
+}
+
+func (s *authState) timerExpired(c *Client) (state, error) {
+	return s, nil
 }
 
 // Associating
@@ -220,7 +304,7 @@ func (s *assocState) String() string {
 	return "associating"
 }
 
-func (s *assocState) run(c *Client) error {
+func (s *assocState) run(c *Client) (time.Duration, error) {
 	req := &mlme.AssociateRequest{
 		PeerStaAddress: c.ap.BSSDesc.Bssid,
 	}
@@ -228,10 +312,18 @@ func (s *assocState) run(c *Client) error {
 		log.Printf("assoc req: %v", req)
 	}
 
-	return c.sendMessage(req, int32(mlme.Method_AssociateRequest))
+	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_AssociateRequest))
 }
 
-func (s *assocState) handleMsg(msg interface{}, c *Client) (state, error) {
+func (s *assocState) commandIsDisabled() bool {
+	return true
+}
+
+func (s *assocState) handleCommand(r *commandRequest) (state, error) {
+	return s, nil
+}
+
+func (s *assocState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
 	case *mlme.AssociateResponse:
 		if debug {
@@ -248,12 +340,16 @@ func (s *assocState) handleMsg(msg interface{}, c *Client) (state, error) {
 	}
 }
 
-func (s *assocState) handleTimeout(c *Client) (state, error) {
+func (s *assocState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *assocState) nextTimeout() time.Duration {
-	return 0
+func (s *assocState) needTimer() (bool, time.Duration) {
+	return false, 0
+}
+
+func (s *assocState) timerExpired(c *Client) (state, error) {
+	return s, nil
 }
 
 // Associated
@@ -269,11 +365,25 @@ func (s *associatedState) String() string {
 	return "associated"
 }
 
-func (s *associatedState) run(c *Client) error {
-	return nil
+func (s *associatedState) run(c *Client) (time.Duration, error) {
+	return InfiniteTimeout, nil
 }
 
-func (s *associatedState) handleMsg(msg interface{}, c *Client) (state, error) {
+func (s *associatedState) commandIsDisabled() bool {
+	// TODO: disable if Scan request is running
+	return false
+}
+
+func (s *associatedState) handleCommand(r *commandRequest) (state, error) {
+	// TODO: handle Scan command
+	r.respC <- &CommandResult{nil,
+		&wlan_service.Error{
+			wlan_service.ErrCode_NotSupported,
+			"Can't run the command in associatedState"}}
+	return s, nil
+}
+
+func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
 	case *mlme.DisassociateIndication:
 		if debug {
@@ -298,10 +408,14 @@ func (s *associatedState) handleMsg(msg interface{}, c *Client) (state, error) {
 	}
 }
 
-func (s *associatedState) handleTimeout(c *Client) (state, error) {
+func (s *associatedState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *associatedState) nextTimeout() time.Duration {
-	return 0
+func (s *associatedState) needTimer() (bool, time.Duration) {
+	return false, 0
+}
+
+func (s *associatedState) timerExpired(c *Client) (state, error) {
+	return s, nil
 }

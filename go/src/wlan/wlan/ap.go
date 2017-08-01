@@ -28,7 +28,7 @@ func NewAP(bssDesc *mlme.BssDescription) *AP {
 func CollectScanResults(resp *mlme.ScanResponse, ssid string) []AP {
 	aps := []AP{}
 	for _, s := range resp.BssDescriptionSet {
-		if s.Ssid == ssid {
+		if s.Ssid == ssid || ssid == "" {
 			ap := NewAP(&s)
 			ap.LastRSSI = s.RssiMeasurement
 			aps = append(aps, *ap)

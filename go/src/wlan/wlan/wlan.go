@@ -8,6 +8,7 @@ import (
 	"apps/netstack/eth"
 	mlme "apps/wlan/services/wlan_mlme"
 	mlme_ext "apps/wlan/services/wlan_mlme_ext"
+	"apps/wlan/services/wlan_service"
 	bindings "fidl/bindings"
 	"fmt"
 	"log"
@@ -15,15 +16,34 @@ import (
 	"syscall"
 	"syscall/mx"
 	"syscall/mx/mxerror"
+	"time"
 )
 
 const MX_SOCKET_READABLE = mx.SignalObject0
 const debug = false
 
+type commandRequest struct {
+	id    Command
+	respC chan *CommandResult
+}
+
+type CommandResult struct {
+	Resp interface{}
+	Err  *wlan_service.Error
+}
+
+type mlmeResult struct {
+	observed mx.Signals
+	err      error
+}
+
 type Client struct {
+	cmdC  chan *commandRequest
+	mlmeC chan *mlmeResult
+
 	path     string
 	f        *os.File
-	wlanChan mx.Channel
+	mlmeChan mx.Channel
 	cfg      *Config
 	ap       *AP
 	txid     uint64
@@ -61,9 +81,11 @@ func NewClient(path string, config *Config) (*Client, error) {
 		return nil, fmt.Errorf("could not get channel: %v", err)
 	}
 	c := &Client{
+		cmdC:     make(chan *commandRequest, 1),
+		mlmeC:    make(chan *mlmeResult, 1),
 		path:     path,
 		f:        f,
-		wlanChan: mx.Channel{ch},
+		mlmeChan: mx.Channel{ch},
 		cfg:      config,
 		state:    nil,
 	}
@@ -73,7 +95,11 @@ func NewClient(path string, config *Config) (*Client, error) {
 
 func (c *Client) Close() {
 	c.f.Close()
-	c.wlanChan.Close()
+	c.mlmeChan.Close()
+}
+
+func (c *Client) PostCommand(cmd Command, respC chan *CommandResult) {
+	c.cmdC <- &commandRequest{cmd, respC}
 }
 
 func (c *Client) Run() {
@@ -81,61 +107,78 @@ func (c *Client) Run() {
 	defer c.Close()
 
 	var err error
+	var mlmeTimeout time.Duration
+	var timer *time.Timer
+	var timerC <-chan time.Time
+	var nextState state
+
+	watchingMLME := false
 	c.state = newScanState(c)
 
 event_loop:
 	for {
-		if err = c.state.run(c); err != nil {
+		if mlmeTimeout, err = c.state.run(c); err != nil {
 			log.Printf("could not run state \"%v\": %v", c.state, err)
 			break
 		}
 
-		nextTimeout := c.state.nextTimeout()
-		timeout := mx.TimensecInfinite
-		if nextTimeout > 0 {
-			timeout = mx.Sys_deadline_after(mx.Duration(nextTimeout.Nanoseconds()))
+		// We will select 3 channels:
+		// 1) We always watch mlmeChan, and c.mlmeC will receive a
+		//    mlmeResult if mlmeChan has a message to read, is closed,
+		//    or the watch is timed out.
+		//    TODO: restart the watch if mlmeTimeout is updated
+		if !watchingMLME {
+			watchingMLME = true
+			go func() {
+				c.mlmeC <- c.watchMLMEChan(mlmeTimeout)
+			}()
 		}
-		obs, err := c.wlanChan.Handle.WaitOne(mx.SignalChannelReadable|mx.SignalChannelPeerClosed, timeout)
 
-		var nextState state = nil
-		switch mxerror.Status(err) {
-		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
-			log.Printf("error waiting on handle: %v", err)
+		// 2) c.cmdC receives a command. If the state doesn't want
+		//    to handle it, c.state.commandIsDisabled() returns true.
+		cmdC := c.cmdC
+		if c.state.commandIsDisabled() {
+			cmdC = nil
+		}
+
+		// 3) If c.state.needTimer true, we start the timer.
+		//    timerC will block until the timer is expired.
+		timerIsNeeded, duration := c.state.needTimer()
+		if timerIsNeeded {
+			if timer != nil {
+				timer.Reset(duration)
+			} else {
+				timer = time.NewTimer(duration)
+			}
+			timerC = timer.C
+		} else {
+			timerC = nil
+		}
+
+		select {
+		case w := <-c.mlmeC:
+			watchingMLME = false
+			if timerC != nil && !timer.Stop() {
+				<-timer.C
+			}
+			if debug {
+				log.Printf("got a wlan response")
+			}
+			nextState, err = c.handleResponse(w.observed, w.err)
+		case r := <-cmdC:
+			if timerC != nil && !timer.Stop() {
+				<-timer.C
+			}
+			if debug {
+				log.Printf("got a command")
+			}
+			nextState, err = c.state.handleCommand(r)
+		case <-timerC:
+			nextState, err = c.state.timerExpired(c)
+		}
+		if err != nil {
+			log.Printf("%v", err)
 			break event_loop
-
-		case mx.ErrTimedOut:
-			nextState, err = c.state.handleTimeout(c)
-			if err != nil {
-				log.Printf("error handling timeout for state \"%v\": %v", c.state, err)
-				break event_loop
-			}
-
-		case mx.ErrOk:
-			switch {
-			case obs&mx.SignalChannelPeerClosed != 0:
-				log.Println("channel closed")
-				break event_loop
-
-			case obs&MX_SOCKET_READABLE != 0:
-				// TODO(tkilbourn): decide on a default buffer size, and support growing the buffer as needed
-				var buf [4096]byte
-				_, _, err := c.wlanChan.Read(buf[:], nil, 0)
-				if err != nil {
-					log.Printf("error reading from channel: %v", err)
-					break event_loop
-				}
-
-				if resp, err := parseResponse(buf[:]); err != nil {
-					log.Printf("error parsing message for \"%v\": %v", c.state, err)
-					break event_loop
-				} else {
-					nextState, err = c.state.handleMsg(resp, c)
-					if err != nil {
-						log.Printf("error handling message (%T) for \"%v\": %v", resp, c.state, err)
-						break event_loop
-					}
-				}
-			}
 		}
 
 		if nextState != c.state {
@@ -169,11 +212,63 @@ func (c *Client) sendMessage(msg bindings.Payload, ordinal int32) error {
 	if debug {
 		log.Printf("encoded message: %v", msgBuf)
 	}
-	if err := c.wlanChan.Write(msgBuf, nil, 0); err != nil {
+	if err := c.mlmeChan.Write(msgBuf, nil, 0); err != nil {
 		return fmt.Errorf("could not write to wlan channel: %v", err)
 	}
-	return nil
 
+	return nil
+}
+
+func (c *Client) watchMLMEChan(timeout time.Duration) *mlmeResult {
+	deadline := mx.TimensecInfinite
+	if timeout > 0 {
+		deadline = mx.Sys_deadline_after(
+			mx.Duration(timeout.Nanoseconds()))
+	}
+	obs, err := c.mlmeChan.Handle.WaitOne(
+		mx.SignalChannelReadable|mx.SignalChannelPeerClosed,
+		deadline)
+	return &mlmeResult{obs, err}
+}
+
+func (c *Client) handleResponse(obs mx.Signals, err error) (state, error) {
+	var nextState state
+	switch mxerror.Status(err) {
+	case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+		return nil, fmt.Errorf("error waiting on handle: %v", err)
+
+	case mx.ErrTimedOut:
+		nextState, err = c.state.handleMLMETimeout(c)
+		if err != nil {
+			return nil, fmt.Errorf("error handling timeout for state \"%v\": %v", c.state, err)
+		}
+
+	case mx.ErrOk:
+		switch {
+		case obs&mx.SignalChannelPeerClosed != 0:
+			return nil, fmt.Errorf("channel closed")
+
+		case obs&MX_SOCKET_READABLE != 0:
+			// TODO(tkilbourn): decide on a default buffer size, and support growing the buffer as needed
+			var buf [4096]byte
+			_, _, err := c.mlmeChan.Read(buf[:], nil, 0)
+			if err != nil {
+				return nil, fmt.Errorf("error reading from channel: %v", err)
+			}
+
+			if resp, err := parseResponse(buf[:]); err != nil {
+				return nil, fmt.Errorf("error parsing message for \"%v\": %v", c.state, err)
+			} else {
+				nextState, err = c.state.handleMLMEMsg(resp, c)
+				if err != nil {
+					return nil, fmt.Errorf("error handling message (%T) for \"%v\": %v", resp, c.state, err)
+				}
+			}
+		}
+	default:
+		return nil, fmt.Errorf("unknown error: %v", err)
+	}
+	return nextState, nil
 }
 
 func (c *Client) nextTxid() (txid uint64) {
