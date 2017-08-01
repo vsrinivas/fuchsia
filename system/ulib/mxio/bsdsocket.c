@@ -427,7 +427,7 @@ int setsockopt(int fd, int level, int optname, const void* optval,
 
 static ssize_t mxio_recvmsg(mxio_t* io, struct msghdr* msg, int flags) {
     mx_status_t r = io->ops->recvmsg(io, msg, flags);
-    // TODO: better error codes?
+    // TODO(MG-974): audit error codes
     if (r == MX_ERR_WRONG_TYPE)
         return ERRNO(ENOTSOCK);
     else if (r == MX_ERR_BAD_STATE)

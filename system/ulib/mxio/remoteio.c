@@ -131,7 +131,7 @@ mx_status_t mxrio_handle_rpc(mx_handle_t h, mxrio_msg_t* msg, mxrio_cb_t cb, voi
         // specific errors are prioritized over the bad
         // message case which we represent as MX_ERR_INTERNAL
         // to differentiate from MX_ERR_IO on the near side
-        // TODO: consider a better error code
+        // TODO(MG-974): consider a better error code
         msg->arg = (msg->arg < 0) ? msg->arg : MX_ERR_INTERNAL;
     }
 

@@ -621,7 +621,7 @@ mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* typ
     if ((io = fd_to_io(fd)) == NULL) {
         return MX_ERR_BAD_HANDLE;
     }
-    //TODO: implement/honor close-on-exec flag
+    // TODO(MG-973): implement/honor close-on-exec flag
     if ((r = io->ops->clone(io, handles, types)) > 0) {
         for (int i = 0; i < r; i++) {
             types[i] |= (newfd << 16);
@@ -721,7 +721,7 @@ mx_status_t mxio_setattr(mxio_t* io, vnattr_t* vn){
 }
 
 
-// TODO: determine complete correct mapping
+// TODO(MG-974): determine complete correct mapping
 int mxio_status_to_errno(mx_status_t status) {
     switch (status) {
     case MX_ERR_NOT_FOUND: return ENOENT;
@@ -1031,7 +1031,7 @@ int dup3(int oldfd, int newfd, int flags) {
         return ERRNO(EINVAL);
     }
 
-    // TODO(kulakowski) Implement O_CLOEXEC.
+    // TODO(MG-973) Implement O_CLOEXEC.
     return mxio_dup(oldfd, newfd, 0);
 }
 
@@ -1048,7 +1048,7 @@ int fcntl(int fd, int cmd, ...) {
     switch (cmd) {
     case F_DUPFD:
     case F_DUPFD_CLOEXEC: {
-        // TODO(kulakowski) Implement CLOEXEC.
+        // TODO(MG-973) Implement CLOEXEC.
         GET_INT_ARG(starting_fd);
         return mxio_dup(fd, -1, starting_fd);
     }
@@ -1069,7 +1069,7 @@ int fcntl(int fd, int cmd, ...) {
             return ERRNO(EBADF);
         }
         GET_INT_ARG(flags);
-        // TODO(kulakowski) Implement CLOEXEC.
+        // TODO(MG-973) Implement CLOEXEC.
         io->flags &= ~MXIO_FD_FLAGS;
         io->flags |= (int32_t)flags & MXIO_FD_FLAGS;
         mxio_release(io);
@@ -1705,6 +1705,7 @@ int isatty(int fd) {
     }
 
     int ret;
+    // TODO(MG-972)
     // For now, stdout etc. needs to be a tty for line buffering to
     // work. So let's pretend those are ttys but nothing else is.
     if (fd == 0 || fd == 1 || fd == 2) {
