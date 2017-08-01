@@ -246,12 +246,11 @@ static status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSta
 
 static status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
                            LocalApicState* local_apic_state) {
-    // TODO(abdulla): Use an interruptible sleep here, so that we can:
-    // a) Continue to deliver interrupts to the guest.
-    // b) Kill the hypervisor while a guest is halted.
     do {
-        event_wait(&local_apic_state->event);
+        status_t status = event_wait_deadline(&local_apic_state->event, INFINITE_TIME, true);
         vmcs->Reload();
+        if (status != MX_OK)
+            return MX_ERR_CANCELED;
     } while (!local_apic_issue_interrupt(vmcs, local_apic_state));
     next_rip(exit_info, vmcs);
     return MX_OK;

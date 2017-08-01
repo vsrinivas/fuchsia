@@ -35,6 +35,8 @@ returned.
 
 **MX_ERR_BAD_STATE** *vcpu* is in a bad state, and can not be executed.
 
+**MX_ERR_CANCELED** *vcpu* execution was canceled while waiting on an event.
+
 **MX_ERR_INTERNAL** There was an error executing *vcpu*.
 
 **MX_ERR_INVALID_ARGS** *packet* is an invalid pointer.

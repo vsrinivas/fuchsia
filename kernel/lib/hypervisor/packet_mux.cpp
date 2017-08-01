@@ -21,9 +21,9 @@ public:
 
     status_t Wait(StateTracker* state_tracker) {
         state_tracker->AddObserver(this, nullptr);
-        status_t status = event_wait(&event_);
+        status_t status = event_wait_deadline(&event_, INFINITE_TIME, true);
         state_tracker->RemoveObserver(this);
-        return status;
+        return status != MX_OK ? MX_ERR_CANCELED : MX_OK;
     }
 
 private:
