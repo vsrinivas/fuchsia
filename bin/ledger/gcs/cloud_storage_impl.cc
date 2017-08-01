@@ -177,11 +177,11 @@ void CloudStorageImpl::Request(
     std::function<network::URLRequestPtr()> request_factory,
     const std::function<void(Status status, network::URLResponsePtr response)>&
         callback) {
-  network_service_->Request(std::move(request_factory),
-                            [this, callback](network::URLResponsePtr response) {
-                              OnResponse(std::move(callback),
-                                         std::move(response));
-                            });
+  requests_.emplace(network_service_->Request(
+      std::move(request_factory),
+      [this, callback](network::URLResponsePtr response) {
+        OnResponse(std::move(callback), std::move(response));
+      }));
 }
 
 void CloudStorageImpl::OnResponse(
