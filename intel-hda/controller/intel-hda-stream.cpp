@@ -426,11 +426,13 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     uint32_t amt_done;
     uint32_t region_num, region_offset;
     uint32_t entry;
+    uint32_t irqs_inserted;
 
     next_irq_pos = nominal_irq_spacing;
     amt_done = 0;
     region_num = 0;
     region_offset = 0;
+    irqs_inserted = 0;
 
     for (entry = 0; (entry < MAX_BDL_LENGTH) && (amt_done < rb_size); ++entry) {
         MX_DEBUG_ASSERT(region_num < num_regions);
@@ -456,6 +458,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
             if ((amt_done + todo) >= ipos) {
                 bdl_[entry].flags = IntelHDABDLEntry::IOC_FLAG;
                 next_irq_pos += nominal_irq_spacing;
+                ++irqs_inserted;
 
                 if (ipos <= amt_done)
                     todo = mxtl::min(todo, DMA_ALIGN);
@@ -479,6 +482,11 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
             region_offset = 0;
             region_num++;
         }
+    }
+
+    MX_DEBUG_ASSERT(entry > 0);
+    if (irqs_inserted < req.notifications_per_ring) {
+        bdl_[entry - 1].flags = IntelHDABDLEntry::IOC_FLAG;
     }
 
     if (DEBUG_LOGGING) {
