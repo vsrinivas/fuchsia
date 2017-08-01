@@ -27,13 +27,9 @@ mx_status_t sys_guest_create(mx_handle_t resource, uint32_t options, mx_handle_t
         return status;*/
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_status_t status = up->QueryPolicy(MX_POL_NEW_GUEST);
-    if (status != MX_OK)
-        return status;
-
     mxtl::RefPtr<VmObjectDispatcher> physmem;
     mx_rights_t rights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
-    status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
+    mx_status_t status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
     if (status != MX_OK)
         return status;
 

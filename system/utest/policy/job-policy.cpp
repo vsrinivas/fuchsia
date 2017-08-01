@@ -200,16 +200,6 @@ static bool enforce_deny_channel() {
     END_TEST;
 }
 
-static bool enforce_deny_guest() {
-    BEGIN_TEST;
-
-    mx_policy_basic_t policy[] = { { MX_POL_NEW_GUEST, MX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_GUEST,
-                         MX_ERR_ACCESS_DENIED);
-
-    END_TEST;
-}
-
 static bool enforce_deny_any() {
     BEGIN_TEST;
 
@@ -432,7 +422,6 @@ RUN_TEST(invalid_calls_rel)
 RUN_TEST(abs_then_rel)
 RUN_TEST(enforce_deny_event)
 RUN_TEST(enforce_deny_channel)
-RUN_TEST(enforce_deny_guest)
 RUN_TEST(enforce_deny_any)
 RUN_TEST(enforce_allow_any)
 RUN_TEST(enforce_deny_but_event)

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "subprocess.h"
-#include <magenta/syscalls/hypervisor.h>
 #include <mini-process/mini-process.h>
 
 // This function is the entire program that the child process will execute. It
@@ -86,12 +85,6 @@ void minipr_thread_loop(mx_handle_t channel, uintptr_t fnptr) {
                 if (what & MINIP_CMD_CREATE_CHANNEL) {
                     what &= ~MINIP_CMD_CREATE_CHANNEL;
                     cmd.status = ctx.channel_create(0u, &handle[0], &handle[1]);
-                    goto reply;
-                }
-                if (what & MINIP_CMD_CREATE_GUEST) {
-                    what &= ~MINIP_CMD_CREATE_GUEST;
-                    cmd.status = ctx.guest_create(MX_HANDLE_INVALID, 0, MX_HANDLE_INVALID,
-                                                  &handle[0]);
                     goto reply;
                 }
                 if (what & MINIP_CMD_USE_BAD_HANDLE_CLOSED) {
