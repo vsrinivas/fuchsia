@@ -76,11 +76,7 @@ bool CheckValidTreeNodeSerialization(ftl::StringView data) {
         return convert::ExtendedStringView(e1->key()) >=
                convert::ExtendedStringView(e2->key());
       });
-  if (it != tree_node->entries()->end()) {
-    return false;
-  }
-
-  return true;
+  return it == tree_node->entries()->end();
 }
 
 std::string EncodeNode(uint8_t level,

@@ -133,10 +133,11 @@ class NetworkServiceImpl::RunningRequest {
       }
     }
 
-    // Returns an error otherwise.
+    // Return an error otherwise.
     callback_(
         NewErrorResponse(kInvalidResponseErrorCode, "No Location header."));
-    return;
+    // |this| might be deleted withing the callback, don't reference member
+    // variables afterwards.
   }
 
   network::URLResponsePtr NewErrorResponse(int32_t code, std::string reason) {

@@ -18,8 +18,7 @@
 namespace test {
 
 AppTest::AppTest()
-    : TestWithMessageLoop(),
-      application_context_(
+    : application_context_(
           app::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
 
 AppTest::~AppTest() {}

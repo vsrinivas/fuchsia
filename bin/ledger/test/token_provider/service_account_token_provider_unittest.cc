@@ -57,8 +57,7 @@ constexpr ftl::StringView kWrongKeyTestConfig =
 class ServiceAccountTokenProviderTest : public TestWithMessageLoop {
  public:
   ServiceAccountTokenProviderTest()
-      : TestWithMessageLoop(),
-        network_service_(message_loop_.task_runner()),
+      : network_service_(message_loop_.task_runner()),
         token_provider_(&network_service_, "user_id") {}
 
  protected:

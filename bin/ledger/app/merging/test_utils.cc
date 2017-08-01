@@ -25,7 +25,7 @@ ftl::TimeDelta TestBackoff::GetNext() {
 
 void TestBackoff::Reset() {}
 
-TestWithPageStorage::TestWithPageStorage() : TestWithMessageLoop(){};
+TestWithPageStorage::TestWithPageStorage(){};
 
 TestWithPageStorage::~TestWithPageStorage() {}
 

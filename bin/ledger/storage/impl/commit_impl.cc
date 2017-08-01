@@ -179,10 +179,7 @@ bool CommitImpl::CheckValidSerialization(ftl::StringView storage_bytes) {
 
   const CommitStorage* commit_storage = GetCommitStorage(storage_bytes.data());
   auto parents = commit_storage->parents();
-  if (!parents || parents->size() < 1 || parents->size() > 2) {
-    return false;
-  }
-  return true;
+  return parents && parents->size() >= 1 && parents->size() <= 2;
 }
 
 std::unique_ptr<Commit> CommitImpl::Clone() const {

@@ -654,9 +654,9 @@ void PageStorageImpl::AddCommits(
               remaining_commits.push_back(std::move(commit));
               commit.reset();
               break;
-            } else {
-              callback(Status::INTERNAL_IO_ERROR);
             }
+            callback(Status::INTERNAL_IO_ERROR);
+
             return;
           }
         }

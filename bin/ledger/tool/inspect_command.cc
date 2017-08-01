@@ -41,16 +41,14 @@ std::string ToPrintable(ftl::StringView string) {
       // Hex encoding takes 2 characters for each byte.
       if (string.size() > kDataSizeLimit / 2) {
         return convert::ToHex(string.substr(0, kDataSizeLimit / 2)) + "...";
-      } else {
-        return convert::ToHex(string);
       }
+      return convert::ToHex(string);
     }
   }
   if (string.size() > kDataSizeLimit) {
     return string.substr(0, kDataSizeLimit).ToString() + "...";
-  } else {
-    return string.ToString();
   }
+  return string.ToString();
 }
 
 class FileStreamWriter {

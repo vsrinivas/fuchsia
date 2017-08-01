@@ -40,8 +40,7 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class PageDbTest : public ::test::TestWithMessageLoop {
  public:
   PageDbTest()
-      : TestWithMessageLoop(),
-        page_storage_(&coroutine_service_, tmp_dir_.path(), "page_id"),
+      : page_storage_(&coroutine_service_, tmp_dir_.path(), "page_id"),
         page_db_(&coroutine_service_, &page_storage_, tmp_dir_.path()) {}
 
   ~PageDbTest() override {}

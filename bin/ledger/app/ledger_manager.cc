@@ -148,9 +148,8 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
 
   if (storage_->DeletePageStorage(page_id)) {
     return Status::OK;
-  } else {
-    return Status::PAGE_NOT_FOUND;
   }
+  return Status::PAGE_NOT_FOUND;
 }
 
 void LedgerManager::CreatePageStorage(storage::PageId page_id,

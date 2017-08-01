@@ -13,7 +13,7 @@ namespace {
 
 TEST(Capture, CaptureVariable) {
   int a1 = 0;
-  std::string a2 = "";
+  std::string a2;
   std::unique_ptr<std::string> a3;
   bool called = false;
 

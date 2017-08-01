@@ -83,7 +83,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   std::string value1 = "Alice";
   value1.resize(100);
-  std::string value2 = "";
+  std::string value2;
 
   // Put the 2 values without waiting for the callbacks.
   PagePtr page = GetTestPage();

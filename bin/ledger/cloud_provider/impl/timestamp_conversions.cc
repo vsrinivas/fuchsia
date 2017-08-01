@@ -31,10 +31,9 @@ std::string ServerTimestampToBytes(int64_t timestamp) {
 int64_t BytesToServerTimestamp(const std::string& bytes) {
   if (bytes.substr(0u, kVersionSize) == kTimestampVersion) {
     return *reinterpret_cast<const int64_t*>(bytes.data() + kVersionSize);
-  } else {
-    FTL_NOTREACHED();
-    return 0;
   }
+  FTL_NOTREACHED();
+  return 0;
 }
 
 }  // namespace cloud_provider

@@ -281,9 +281,8 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
   // TODO(etiennej): Commit implicit transactions when we have those.
   if (!journal_) {
     return branch_tracker_.GetBranchHeadId();
-  } else {
-    return journal_parent_commit_;
   }
+  return journal_parent_commit_;
 }
 
 void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,

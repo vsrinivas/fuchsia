@@ -134,7 +134,7 @@ TEST_F(CloudStorageImplTest, TestUploadAuth) {
 }
 
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
-  std::string content = "";
+  std::string content;
   mx::vmo data;
   ASSERT_TRUE(mtl::VmoFromString(content, &data));
   SetResponse("", 0, 412);
