@@ -142,6 +142,7 @@ source_set("semaphore") {
     ":object",
     "$magenta_build_root/system/ulib/mx",
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:trace",
   ]
 }
 

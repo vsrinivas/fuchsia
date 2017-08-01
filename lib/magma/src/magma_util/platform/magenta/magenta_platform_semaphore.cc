@@ -23,6 +23,7 @@ bool MagentaPlatformSemaphore::duplicate_handle(uint32_t* handle_out)
 
 bool MagentaPlatformSemaphore::Wait(uint64_t timeout_ms)
 {
+    TRACE_DURATION("magma:sync", "semaphore wait", "id", koid_);
     mx_signals_t pending = 0;
     mx_status_t status = event_.wait_one(
         mx_signal(), timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)), &pending);
@@ -38,10 +39,14 @@ bool MagentaPlatformSemaphore::Wait(uint64_t timeout_ms)
 
 bool MagentaPlatformSemaphore::WaitAsync(PlatformPort* platform_port)
 {
+    TRACE_DURATION("magma:sync", "semaphore wait async", "id", koid_);
+    TRACE_FLOW_BEGIN("magma:sync", "semaphore wait async", koid_);
+
     auto port = static_cast<MagentaPlatformPort*>(platform_port);
     mx_status_t status = event_.wait_async(port->mx_port(), id(), mx_signal(), MX_WAIT_ASYNC_ONCE);
     if (status != MX_OK)
         return DRETF(false, "wait_async failed: %d", status);
+
     return true;
 }
 

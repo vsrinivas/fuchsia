@@ -10,6 +10,7 @@
 #include "magma_util/status.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
+#include "platform_trace.h"
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -58,6 +59,8 @@ public:
 
         void SemaphoreComplete()
         {
+            TRACE_DURATION("magma:sync", "WaitSet::SemaphoreComplete");
+
             DASSERT(completed_count_ < semaphore_count());
             ++completed_count_;
             DLOG("completed_count %u semaphore count %u", completed_count_, semaphore_count());
@@ -113,6 +116,7 @@ public:
 
     Status WaitOne()
     {
+        TRACE_DURATION("magma:sync", "SemaphorePort::WaitOne");
         uint64_t id;
         Status status = port_->Wait(&id);
         if (!status)

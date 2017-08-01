@@ -8,6 +8,7 @@
 #include "magma_util/macros.h"
 #include "mx/event.h"
 #include "platform_semaphore.h"
+#include "platform_trace.h"
 
 namespace magma {
 
@@ -21,10 +22,18 @@ public:
 
     bool duplicate_handle(uint32_t* handle_out) override;
 
-    void Reset() override { event_.signal(mx_signal(), 0); }
+    void Reset() override
+    {
+        event_.signal(mx_signal(), 0);
+        TRACE_DURATION("magma:sync", "semaphore reset", "id", koid_);
+        TRACE_FLOW_END("magma:sync", "semaphore signal", koid_);
+        TRACE_FLOW_END("magma:sync", "semaphore wait async", koid_);
+    }
 
     void Signal() override
     {
+        TRACE_DURATION("magma:sync", "semaphore signal", "id", koid_);
+        TRACE_FLOW_BEGIN("magma:sync", "semaphore signal", koid_);
         mx_status_t status = event_.signal(0u, mx_signal());
         DASSERT(status == MX_OK);
     }
