@@ -90,14 +90,15 @@ void Dump(const AmpCaps& caps, const AudioWidgetState::AmpState* amp_state = nul
 
 void Dump(const AudioWidgetState::StreamFormat& format) {
     if (!format.is_pcm()) {
-        printf("Non-PCM\n");
+        printf("Non-PCM (raw 0x%04hx)\n", format.raw_data_);
         return;
     }
 
-    printf("%u chan %u Hz %u bps\n",
-    format.channels(),
-    format.sample_rate(),
-    format.bits_per_chan());
+    printf("%u chan %u Hz %u bps (raw 0x%04hx)\n",
+        format.channels(),
+        format.sample_rate(),
+        format.bits_per_chan(),
+        format.raw_data_);
 }
 
 #define FMT(fmt) "%s%17s : " fmt, pad
