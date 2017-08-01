@@ -18,6 +18,7 @@ executable("integration_tests") {
     "page_watcher_tests.cc",
     "test_utils.cc",
     "test_utils.h",
+    "sync_tests.cc",
   ]
 
   deps = [

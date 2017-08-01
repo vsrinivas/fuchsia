@@ -107,6 +107,25 @@ struct Filter {
   int64_t start_at;
 };
 
+std::string UrlDecode(ftl::StringView value) {
+  std::ostringstream result;
+  while (!value.empty()) {
+    if (value[0] != '%') {
+      result << value[0];
+      value = value.substr(1);
+      continue;
+    }
+    FTL_DCHECK(value.size() >= 3);
+    unsigned char c;
+    if (!ftl::StringToNumberWithError(value.substr(1, 2), &c, ftl::Base::k16)) {
+      FTL_NOTREACHED();
+    }
+    result << c;
+    value = value.substr(3);
+  }
+  return result.str();
+}
+
 // Parses |url| and extract the filtering data. Returns an empty unique_ptr if
 // not present.
 std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
@@ -129,7 +148,7 @@ std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
                          split[0]) !=
                kExpectedQueryParameters + arraysize(kExpectedQueryParameters))
         << "Unknown query parameter: " << split[0];
-    queries[split[0].ToString()] = split[1].ToString();
+    queries[UrlDecode(split[0])] = UrlDecode(split[1]);
   }
 
   FTL_DCHECK(queries.count(kOrderBy.ToString()) ==
@@ -140,7 +159,8 @@ std::unique_ptr<Filter> ExtractFilter(const url::GURL& url) {
   }
 
   std::string& order_by = queries[kOrderBy.ToString()];
-  FTL_DCHECK(order_by[0] == '"' && order_by[order_by.size() - 1] == '"');
+  FTL_DCHECK(order_by[0] == '"' && order_by[order_by.size() - 1] == '"')
+      << order_by;
   FTL_DCHECK(std::find(order_by.begin(), order_by.end(), '/') == order_by.end())
       << "Not handling complex path in orderBy";
   order_by = order_by.substr(1, order_by.size() - 2);
@@ -218,11 +238,11 @@ std::string Serialize(const rapidjson::Value& value, Filter* filter) {
   rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
   writer.StartObject();
   for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
-    if (it->value.IsObject() || !it->value.HasMember(filter->key) ||
+    if (!it->value.IsObject() || !it->value.HasMember(filter->key) ||
         !it->value[filter->key].IsInt64()) {
       FTL_NOTREACHED()
           << "Data does not conform to the expected schema, cannot find field "
-          << filter->key;
+          << filter->key << " in " << Serialize(it->value, nullptr);
     }
     if (it->value[filter->key].GetInt64() >= filter->start_at) {
       writer.Key(it->name.GetString());

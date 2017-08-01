@@ -25,7 +25,8 @@ void Server::Serve(
         HandleGetStream(std::move(request), callback);
         return;
       }
-      if (header->name == "x-goog-if-generation-match") {
+      if (header->name == "x-goog-if-generation-match" ||
+          header->name == "authorization") {
         continue;
       }
       FTL_LOG(WARNING) << "Unknown header: " << header->name << " -> "
