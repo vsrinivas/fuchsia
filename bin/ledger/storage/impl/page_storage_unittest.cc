@@ -8,10 +8,10 @@
 
 #include <chrono>
 #include <memory>
-#include <mutex>
 #include <thread>
 
 #include "apps/ledger/src/callback/capture.h"
+#include "apps/ledger/src/callback/synchronous_task.h"
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
@@ -1185,22 +1185,13 @@ TEST_F(PageStorageTest, Generation) {
 }
 
 TEST_F(PageStorageTest, DeletionOnIOThread) {
-  std::timed_mutex mutex;
-  // Need a local io_thread because mutex must outlive it.
   std::thread io_thread;
   ftl::RefPtr<ftl::TaskRunner> io_runner;
   io_thread = mtl::CreateThread(&io_runner);
   io_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   bool called = false;
-  io_runner->PostTask(ftl::MakeCopyable([
-    guard = std::make_unique<std::lock_guard<std::timed_mutex>>(mutex), &called
-  ] { called = true; }));
-
-  if (mutex.try_lock_for(std::chrono::seconds(1))) {
-    mutex.unlock();
-  } else {
-    ADD_FAILURE() << "Mutex should have been acquired.";
-  }
+  EXPECT_FALSE(callback::RunSynchronously(
+      io_runner, [&called] { called = true; }, ftl::TimeDelta::FromSeconds(1)));
   EXPECT_FALSE(called);
   io_thread.join();
 }

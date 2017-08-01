@@ -16,6 +16,8 @@ source_set("callback") {
     "operation_serializer.h",
     "pending_operation.cc",
     "pending_operation.h",
+    "synchronous_task.cc",
+    "synchronous_task.h",
     "trace_callback.h",
     "waiter.h",
   ]
@@ -40,6 +42,7 @@ source_set("unittests") {
     "capture_unittest.cc",
     "destruction_sentinel_unittest.cc",
     "pending_operation_unittest.cc",
+    "synchronous_task_unittest.cc",
     "waiter_unittest.cc",
   ]
 

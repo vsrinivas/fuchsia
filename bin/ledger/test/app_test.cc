@@ -4,9 +4,8 @@
 
 #include "apps/ledger/src/test/app_test.h"
 
-#include <mutex>
-
 #include "application/lib/app/application_context.h"
+#include "apps/ledger/src/callback/synchronous_task.h"
 #include "apps/ledger/src/test/get_ledger.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
@@ -31,23 +30,18 @@ int TestMain(int argc, char** argv) {
   test_runner::GTestListener listener(argv[0], &queue);
 
   reporting_thread.Run();
-  reporting_thread.TaskRunner()->PostTask([&reporter] {
-    auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
-    reporter.Start(context.get());
-  });
-
   // Wait until reporter thread has started before continuing. This ensures that
   // the first application context is taken by the reporter. This is necessary
   // because the first instances is the only one that has access to the
   // environment of the caller process.
-  {
-    std::timed_mutex mutex;
-    reporting_thread.TaskRunner()->PostTask(ftl::MakeCopyable(
-        [guard =
-                std::make_unique<std::lock_guard<std::timed_mutex>>(mutex)]{}));
-    FTL_CHECK(mutex.try_lock_for(std::chrono::seconds(1)));
-    mutex.unlock();
-  }
+  FTL_CHECK(callback::RunSynchronously(
+      reporting_thread.TaskRunner(),
+      [&reporter] {
+        auto context =
+            app::ApplicationContext::CreateFromStartupInfoNotChecked();
+        reporter.Start(context.get());
+      },
+      ftl::TimeDelta::FromSeconds(1)));
 
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);
