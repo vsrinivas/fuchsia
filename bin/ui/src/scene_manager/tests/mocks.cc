@@ -17,8 +17,7 @@ SessionHandlerForTest::SessionHandlerForTest(
                      std::move(request),
                      std::move(listener)),
       enqueue_count_(0),
-      present_count_(0),
-      connect_count_(0) {}
+      present_count_(0) {}
 
 void SessionHandlerForTest::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
   SessionHandler::Enqueue(std::move(ops));
@@ -32,13 +31,6 @@ void SessionHandlerForTest::Present(uint64_t presentation_time,
   SessionHandler::Present(presentation_time, std::move(acquire_fences),
                           std::move(release_fences), callback);
   ++present_count_;
-}
-
-void SessionHandlerForTest::Connect(
-    ::fidl::InterfaceRequest<mozart2::Session> session,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  SessionHandler::Connect(std::move(session), std::move(listener));
-  ++connect_count_;
 }
 
 ReleaseFenceSignallerForTest::ReleaseFenceSignallerForTest(

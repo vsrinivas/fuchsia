@@ -42,9 +42,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
                ::fidl::Array<mx::event> acquire_fences,
                ::fidl::Array<mx::event> release_fences,
                const PresentCallback& callback) override;
-  void Connect(
-      ::fidl::InterfaceRequest<mozart2::Session> session,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
+
   void HitTest(uint32_t node_id,
                mozart2::vec3Ptr ray_origin,
                mozart2::vec3Ptr ray_direction,
@@ -69,7 +67,7 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   scene_manager::SessionPtr session_;
 
   ::fidl::BindingSet<mozart2::Session> bindings_;
-  ::fidl::InterfacePtrSet<mozart2::SessionListener> listeners_;
+  ::fidl::InterfacePtr<mozart2::SessionListener> listener_;
 
   ::fidl::Array<mozart2::OpPtr> buffered_ops_;
   ::fidl::Array<mozart2::EventPtr> buffered_events_;

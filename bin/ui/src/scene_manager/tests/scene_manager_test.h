@@ -28,13 +28,20 @@ class SceneManagerTest : public ::testing::Test {
   SessionPtr NewSession();
 
  protected:
+  SceneManagerImpl* manager_impl() {
+    FTL_DCHECK(manager_impl_);
+    return manager_impl_.get();
+  }
+  Engine* engine() { return manager_impl()->engine(); }
   mozart2::SceneManagerPtr manager_;
   escher::impl::CommandBufferSequencer command_buffer_sequencer_;
   DisplayManager display_manager_;
   std::unique_ptr<Display> display_;
   std::unique_ptr<fidl::Binding<mozart2::SceneManager>> manager_binding_;
-  std::unique_ptr<SceneManagerImpl> manager_impl_;
   std::unique_ptr<mtl::Thread> thread_;
+
+ private:
+  std::unique_ptr<SceneManagerImpl> manager_impl_;
 };
 
 }  // namespace test

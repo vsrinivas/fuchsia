@@ -18,12 +18,13 @@ SessionHandler::SessionHandler(
       session_(::ftl::MakeRefCounted<scene_manager::Session>(
           session_id,
           engine_,
-          static_cast<ErrorReporter*>(this))) {
+          static_cast<ErrorReporter*>(this))),
+      listener_(::fidl::InterfacePtr<mozart2::SessionListener>::Create(
+          std::move(listener))) {
   FTL_DCHECK(engine);
 
   bindings_.set_on_empty_set_handler([this]() { BeginTearDown(); });
-
-  Connect(std::move(request), std::move(listener));
+  bindings_.AddBinding(this, std::move(request));
 }
 
 SessionHandler::~SessionHandler() {}
@@ -34,21 +35,13 @@ void SessionHandler::EnqueueEvent(mozart2::EventPtr event) {
 }
 
 void SessionHandler::FlushEvents(uint64_t presentation_time) {
-  if (buffered_events_.empty())
-    return;
-
-  // TODO(MZ-215): We should remove |Connect| from the API so there's only
-  // one listener to worry about.  Unfortunately InterfacePtrSet does
-  // not support random access so we have to iterate over all of the
-  // elements even though we passed the events to the first listener.
-  // In current usage, there's only ever one listener anyhow so it's not worth
-  // writing code to copy the event array.
-  FTL_DCHECK(listeners_.size() <= 1u);
-  listeners_.ForAllPtrs([
-    events = std::move(buffered_events_), &presentation_time
-  ](auto listener) mutable {
-    listener->OnEvent(presentation_time, std::move(events));
-  });
+  if (!buffered_events_.empty()) {
+    if (listener_) {
+      listener_->OnEvent(presentation_time, std::move(buffered_events_));
+    } else {
+      buffered_events_.reset();
+    }
+  }
 }
 
 void SessionHandler::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
@@ -67,16 +60,6 @@ void SessionHandler::Present(uint64_t presentation_time,
   session_->ScheduleUpdate(presentation_time, std::move(buffered_ops_),
                            std::move(acquire_fences), std::move(release_fences),
                            callback);
-}
-
-void SessionHandler::Connect(
-    ::fidl::InterfaceRequest<mozart2::Session> session,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
-  bindings_.AddBinding(this, std::move(session));
-  if (listener) {
-    listeners_.AddInterfacePtr(
-        mozart2::SessionListenerPtr::Create(std::move(listener)));
-  }
 }
 
 void SessionHandler::HitTest(uint32_t node_id,
@@ -98,8 +81,9 @@ void SessionHandler::ReportError(ftl::LogSeverity severity,
       break;
     case ftl::LOG_ERROR:
       FTL_LOG(ERROR) << error_string;
-      listeners_.ForAllPtrs(
-          [&error_string](auto listener) { listener->OnError(error_string); });
+      if (listener_) {
+        listener_->OnError(error_string);
+      }
       break;
     case ftl::LOG_FATAL:
       FTL_LOG(FATAL) << error_string;
@@ -117,7 +101,7 @@ void SessionHandler::BeginTearDown() {
 
 void SessionHandler::TearDown() {
   bindings_.CloseAllBindings();
-  listeners_.CloseAll();
+  listener_.reset();
   session_->TearDown();
 }
 

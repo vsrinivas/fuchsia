@@ -124,24 +124,6 @@ interface Session {
       array<handle<event>> acquire_fences, array<handle<event>> release_fences) =>
       (PresentationInfo presentation_info);
 
-  // Connect another client to the same Session.  The connection is made after
-  // the most recent call to Present() has been executed by the Session
-  // implementation.
-  //
-  // Discussion:
-  // This is typically used by an intermediary to pre-populate a Session before
-  // servicing a request for a new Session.  For example, see the documentation
-  // for View::ConnectToSession(); it returns a connection to a Session that is
-  // pre-populated with various resources with well-known IDs.  To implement this,
-  // when the ViewManager creates a View, it creates a corresponding Session and
-  // immediately pre-populates it.  Then, when the ViewManager receives the
-  // View::ConnectToSession() message, it uses this Op to connect the interface-
-  // request to the Session.
-  //
-  // The reason that this is an Op rather than  a Session::Connect() method is to
-  // guarantee the sequencing.
-  Connect(Session& session, SessionListener? listener);
-
   // Performs a hit test along the specified ray.
   //
   // Returns a list of intersections of tagged nodes between the ray

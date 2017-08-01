@@ -28,20 +28,15 @@ class SessionHandlerForTest : public SessionHandler {
                ::fidl::Array<mx::event> acquire_fences,
                ::fidl::Array<mx::event> release_fences,
                const PresentCallback& callback) override;
-  void Connect(
-      ::fidl::InterfaceRequest<mozart2::Session> session,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
 
   // Return the number of Enqueue()/Present()/Connect() messages that have
   // been processed.
   uint32_t enqueue_count() const { return enqueue_count_; }
   uint32_t present_count() const { return present_count_; }
-  uint32_t connect_count() const { return connect_count_; }
 
  private:
   std::atomic<uint32_t> enqueue_count_;
   std::atomic<uint32_t> present_count_;
-  std::atomic<uint32_t> connect_count_;
 };
 
 class ReleaseFenceSignallerForTest : public ReleaseFenceSignaller {

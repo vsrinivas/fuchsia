@@ -149,6 +149,7 @@ void Engine::TearDownSession(SessionId id) {
   if (it != sessions_.end()) {
     std::unique_ptr<SessionHandler> handler = std::move(it->second);
     sessions_.erase(it);
+    FTL_DCHECK(session_count_ > 0);
     --session_count_;
     handler->TearDown();
 
