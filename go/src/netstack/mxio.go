@@ -723,7 +723,7 @@ func errStatus(err error) mx.Status {
 	case tcpip.ErrDuplicateAddress, tcpip.ErrPortInUse:
 		return mx.ErrAddressInUse
 	case tcpip.ErrNoRoute:
-		return mx.ErrAddressUnreacheable
+		return mx.ErrAddressUnreachable
 	case tcpip.ErrAlreadyBound:
 		// Note that tcpip.ErrAlreadyBound and mx.ErrAlreadyBound correspond to different
 		// errors. tcpip.ErrAlreadyBound is returned when attempting to bind socket when
