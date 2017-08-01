@@ -11,6 +11,8 @@
 #include <launchpad/launchpad.h>
 #include <unittest/unittest.h>
 
+static const char* g_executable_filename;
+
 // This should match the value used by crashlogger.
 static const uint64_t kSysExceptionKey = 1166444u;
 
@@ -40,10 +42,43 @@ private:
     regex_t regex_;
 };
 
+_Pragma("GCC diagnostic push")
+// Tell GCC not to warn about "-Winfinite-recursion" being unknown.
+_Pragma("GCC diagnostic ignored \"-Wpragmas\"")
+// Tell Clang not to warn about recursion in the following function.
+_Pragma("GCC diagnostic ignored \"-Winfinite-recursion\"")
+
+void stack_overflow(volatile int* ptr) {
+    // To stop the compiler from making the function call a tail call,
+    // allocate a variable on the stack and take its address.  To stop the
+    // compiler optimizing the variable away, do a volatile write to it.
+    if (ptr)
+        *ptr = 0;
+    volatile int x;
+    stack_overflow(&x);
+}
+
+_Pragma("GCC diagnostic pop")
+
+void handle_crash_arg(int argc, char** argv) {
+    if (argc >= 2 && !strcmp(argv[1], "--crash")) {
+        if (argc == 3 && !strcmp(argv[2], "write_to_zero")) {
+            *(volatile int*) 0 = 0x12345678;
+            exit(1);
+        }
+        if (argc == 3 && !strcmp(argv[2], "stack_overflow")) {
+            stack_overflow(nullptr);
+            exit(1);
+        }
+        fprintf(stderr, "Unrecognized arguments");
+        exit(1);
+    }
+}
+
 // This tests the output of crashlogger given a process that crashes.  It
 // launches a test instance of crashlogger in order to capture its output.
-bool test_crash(const char* crasher_arg) {
-    const char* argv[] = { "/boot/bin/crasher", crasher_arg };
+bool test_crash(const char* crash_arg) {
+    const char* argv[] = { g_executable_filename, "--crash", crash_arg };
     launchpad_t* crasher_lp;
     launchpad_create(0, "crash-test", &crasher_lp);
 
@@ -119,13 +154,13 @@ bool test_crash(const char* crasher_arg) {
 
 bool test_crash_write0() {
     BEGIN_TEST;
-    test_crash("write0");
+    test_crash("write_to_zero");
     END_TEST;
 }
 
 bool test_crash_stack_overflow() {
     BEGIN_TEST;
-    test_crash("stackov");
+    test_crash("stack_overflow");
     END_TEST;
 }
 
@@ -135,6 +170,9 @@ RUN_TEST(test_crash_stack_overflow)
 END_TEST_CASE(crashlogger_tests)
 
 int main(int argc, char** argv) {
+    g_executable_filename = argv[0];
+    handle_crash_arg(argc, argv);
+
     bool success = unittest_run_all_tests(argc, argv);
     return success ? 0 : -1;
 }
