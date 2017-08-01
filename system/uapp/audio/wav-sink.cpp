@@ -56,13 +56,11 @@ mx_status_t WAVSink::SetFormat(const AudioStream::Format& format) {
     case AUDIO_SAMPLE_FORMAT_32BIT_FLOAT:
         wav_hdr.format = FORMAT_IEEE_FLOAT;
         // deliberate fall-thru
-    case AUDIO_SAMPLE_FORMAT_32BIT:
-        wav_hdr.bits_per_sample = 32;
-        break;
-
-    case AUDIO_SAMPLE_FORMAT_20BIT_PACKED:
     case AUDIO_SAMPLE_FORMAT_20BIT_IN32:
     case AUDIO_SAMPLE_FORMAT_24BIT_IN32:
+    case AUDIO_SAMPLE_FORMAT_32BIT:        wav_hdr.bits_per_sample = 32; break;
+
+    case AUDIO_SAMPLE_FORMAT_20BIT_PACKED:
     default:
         return MX_ERR_NOT_SUPPORTED;
     }

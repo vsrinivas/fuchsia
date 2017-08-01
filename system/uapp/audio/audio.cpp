@@ -23,6 +23,12 @@ static constexpr float DEFAULT_TONE_FREQ = 440.0f;
 static constexpr float MIN_TONE_FREQ = 15.0f;
 static constexpr float MAX_TONE_FREQ = 20000.0f;
 static constexpr float DEFAULT_RECORD_DURATION = 30.0f;
+static constexpr uint32_t DEFAULT_FRAME_RATE = 48000;
+static constexpr uint32_t DEFAULT_BITS_PER_SAMPLE = 16;
+static constexpr uint32_t DEFAULT_CHANNELS = 2;
+static constexpr audio_sample_format_t AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT =
+    static_cast<audio_sample_format_t>(AUDIO_SAMPLE_FORMAT_8BIT |
+                                       AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);
 
 enum class Command {
     INVALID,
@@ -38,12 +44,17 @@ enum class Command {
 
 void usage(const char* prog_name) {
     printf("usage:\n");
-    printf("%s [-d <device specifier>] <cmd> <cmd params>\n", prog_name);
-    printf("\nDevice specifier\n");
-    printf("  Device specifiers are optional, but must occur before the command\n");
-    printf("  when supplied.  Parameters for devices specifiers take the form\n");
-    printf("  <input/output> <dev_num>.  If no device specifier is provided,\n");
-    printf("  output #0 will be chosen by default.\n");
+    printf("%s [options] <cmd> <cmd params>\n", prog_name);
+    printf("\nOptions\n");
+    printf("  When options are specified, they must occur before the command and command\n"
+           "  arguments.  Valid options include...\n"
+           "  -d <device id>   : Dev node id for the audio device to use.  Defaults to 0.\n"
+           "  -t <device type> : The type of device to open, either input or output.  Ignored if\n"
+           "                     the command given is direction specific (play, record, etc).\n"
+           "                     Otherwise, defaults to output.\n"
+           "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
+           "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
+           "  -c <channels>    : Channels to use.  Defaults to 2\n");
     printf("\nValid command are\n");
     printf("info   : Fetches capability and status info for the specified stream\n");
     printf("mute   : Mute the specified stream\n");
@@ -76,64 +87,121 @@ void usage(const char* prog_name) {
 
 int main(int argc, const char** argv) {
     bool input = false;
-    uint32_t dev_num = 0;
+    uint32_t dev_id = 0;
+    uint32_t frame_rate = DEFAULT_FRAME_RATE;
+    uint32_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
+    uint32_t channels = DEFAULT_CHANNELS;
     Command cmd = Command::INVALID;
     auto print_usage = mxtl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
     int arg = 1;
 
     if (arg >= argc) return -1;
-    if (!strcmp("-d", argv[arg])) {
-        // Parse the input/output specifier.
-        if (++arg >= argc) return -1;
-        if (!strcmp("input", argv[arg])) {
-            input = true;
-        } else
-        if (!strcmp("output", argv[arg])) {
-            input = false;
-        } else {
-            printf("Invalid input/output specifier \"%s\".\n", argv[arg]);
-            return -1;
-        }
 
-        // Parse the device ID specifier.
-        if (++arg >= argc) return -1;
-        if (sscanf(argv[arg], "%u", &dev_num) != 1) {
-            printf("Failed to parse argument ID \"%s\"\n", argv[arg]);
-            return -1;
-        }
+    struct {
+        const char* name;
+        const char* tag;
+        uint32_t*   val;
+    } UINT_OPTIONS[] = {
+        { .name = "-d", .tag = "device ID",   .val = &dev_id },
+        { .name = "-r", .tag = "frame rate",  .val = &frame_rate },
+        { .name = "-b", .tag = "bits/sample", .val = &bits_per_sample },
+        { .name = "-c", .tag = "channels",    .val = &channels },
+    };
 
-        // Move on to the command.
-        if (++arg >= argc) return -1;
-    }
-
-    // Parse the command
     static const struct {
         const char* name;
         Command cmd;
+        bool force_out;
+        bool force_in;
     } COMMANDS[] = {
-        { "info",   Command::INFO },
-        { "mute",   Command::MUTE },
-        { "unmute", Command::UNMUTE },
-        { "gain",   Command::GAIN },
-        { "pmon",   Command::PLUG_MONITOR },
-        { "tone",   Command::TONE },
-        { "play",   Command::PLAY },
-        { "record", Command::RECORD },
+        { "info",   Command::INFO,          false, false },
+        { "mute",   Command::MUTE,          false, false },
+        { "unmute", Command::UNMUTE,        false, false },
+        { "gain",   Command::GAIN,          false, false },
+        { "pmon",   Command::PLUG_MONITOR,  false, false },
+        { "tone",   Command::TONE,          true,  false },
+        { "play",   Command::PLAY,          true,  false },
+        { "record", Command::RECORD,        false, true  },
     };
 
-    for (const auto& entry : COMMANDS) {
-        if (!strcmp(entry.name, argv[arg])) {
-            cmd = entry.cmd;
-            break;
+    while (arg < argc) {
+        // Check to see if this is an integer option
+        bool parsed_option = false;
+        for (const auto& o : UINT_OPTIONS) {
+            if (!strcmp(o.name, argv[arg])) {
+                // Looks like this is an integer argument we care about.
+                // Attempt to parse it.
+                if (++arg >= argc) return -1;
+                if (sscanf(argv[arg], "%u", o.val) != 1) {
+                    printf("Failed to parse %s option, \"%s\"\n", o.tag, argv[arg]);
+                    return -1;
+                }
+                ++arg;
+                parsed_option = true;
+                break;
+            }
         }
+
+        // If we successfully parse an integer option, continue on to the next
+        // argument (if any).
+        if (parsed_option)
+            continue;
+
+        // Was this the device type flag?
+        if (!strcmp("-t", argv[arg])) {
+            if (++arg >= argc) return -1;
+            if (!strcmp("input", argv[arg])) {
+                input = true;
+            } else
+            if (!strcmp("output", argv[arg])) {
+                input = false;
+            } else {
+                printf("Invalid input/output specifier \"%s\".\n", argv[arg]);
+                return -1;
+            }
+            ++arg;
+            continue;
+        }
+
+        // Well, this didn't look like an option we understand, so it must be a
+        // command.  Attempt to figure out what command it was.
+        for (const auto& entry : COMMANDS) {
+            if (!strcmp(entry.name, argv[arg])) {
+                cmd = entry.cmd;
+                parsed_option = true;
+                arg++;
+
+                if (entry.force_out) input = false;
+                if (entry.force_in)  input = true;
+
+                break;
+            }
+        }
+
+        if (!parsed_option) {
+            printf("Failed to parse command ID \"%s\"\n", argv[arg]);
+            return -1;
+        }
+
+        break;
     }
 
     if (cmd == Command::INVALID) {
-        printf("Failed to parse command ID \"%s\"\n", argv[arg]);
+        printf("Failed to find valid command ID.\n");
         return -1;
     }
 
-    arg++;
+    audio_sample_format_t sample_format;
+    switch (bits_per_sample) {
+    case 8:  sample_format = AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT; break;
+    case 16: sample_format = AUDIO_SAMPLE_FORMAT_16BIT; break;
+    case 20: sample_format = AUDIO_SAMPLE_FORMAT_20BIT_IN32; break;
+    case 24: sample_format = AUDIO_SAMPLE_FORMAT_24BIT_IN32; break;
+    case 32: sample_format = AUDIO_SAMPLE_FORMAT_32BIT; break;
+    default:
+        printf("Unsupported number of bits per sample (%u)\n", bits_per_sample);
+        return -1;
+    }
 
     float tone_freq = 440.0;
     float duration;
@@ -218,8 +286,8 @@ int main(int argc, const char** argv) {
 
     // Open the selected stream.
     mxtl::unique_ptr<audio::utils::AudioDeviceStream> stream;
-    if (input) stream = audio::utils::AudioInput::Create(dev_num);
-    else       stream = audio::utils::AudioOutput::Create(dev_num);
+    if (input) stream = audio::utils::AudioInput::Create(dev_id);
+    else       stream = audio::utils::AudioOutput::Create(dev_id);
     if (stream == nullptr) {
         printf("Out of memory!\n");
         return MX_ERR_NO_MEMORY;
@@ -244,7 +312,13 @@ int main(int argc, const char** argv) {
             return -1;
         }
 
-        SineSource sine_source(tone_freq, 1.0, duration);
+        SineSource sine_source;
+        res = sine_source.Init(tone_freq, 1.0, duration, frame_rate, channels, sample_format);
+        if (res != MX_OK) {
+            printf("Failed to initialize sine wav generator (res %d)\n", res);
+            return res;
+        }
+
         printf("Playing %.2f Hz tone for %.2f seconds\n", tone_freq, duration);
         return static_cast<audio::utils::AudioOutput*>(stream.get())->Play(sine_source);
     }
@@ -269,15 +343,10 @@ int main(int argc, const char** argv) {
             return -1;
         }
 
-        // TODO(johngro): add the ability to configure the capture format
-        static constexpr uint32_t frames_per_second = 48000u;
-        static constexpr uint16_t channels = 1u;
-        static constexpr audio_sample_format_t sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
-
-        res = stream->SetFormat(frames_per_second, channels, sample_format);
+        res = stream->SetFormat(frame_rate, static_cast<uint16_t>(channels), sample_format);
         if (res != MX_OK) {
             printf("Failed to set format (rate %u, chan %u, fmt 0x%08x, res %d)\n",
-                    frames_per_second, channels, sample_format, res);
+                    frame_rate, channels, sample_format, res);
             return -1;
         }
 
