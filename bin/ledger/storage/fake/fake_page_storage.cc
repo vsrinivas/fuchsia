@@ -5,6 +5,7 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "apps/ledger/src/glue/crypto/hash.h"
@@ -43,7 +44,8 @@ storage::ObjectId ComputeObjectId(ftl::StringView value) {
 
 }  // namespace
 
-FakePageStorage::FakePageStorage(PageId page_id) : rng_(0), page_id_(page_id) {}
+FakePageStorage::FakePageStorage(PageId page_id)
+    : rng_(0), page_id_(std::move(page_id)) {}
 
 FakePageStorage::~FakePageStorage() {}
 

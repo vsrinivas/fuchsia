@@ -5,6 +5,7 @@
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 
 #include <algorithm>
+#include <utility>
 
 #include <flatbuffers/flatbuffers.h>
 #include <sys/time.h>
@@ -72,7 +73,7 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
       id_(std::move(id)),
       timestamp_(timestamp),
       generation_(generation),
-      root_node_id_(root_node_id),
+      root_node_id_(std::move(root_node_id)),
       parent_ids_(std::move(parent_ids)),
       storage_bytes_(std::move(storage_bytes)) {
   FTL_DCHECK(page_storage_ != nullptr);

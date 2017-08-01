@@ -33,7 +33,8 @@ class Watcher : public PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<PageWatcher> request,
           ftl::Closure change_callback)
-      : binding_(this, std::move(request)), change_callback_(change_callback) {}
+      : binding_(this, std::move(request)),
+        change_callback_(std::move(change_callback)) {}
 
   uint changes_seen = 0;
   PageSnapshotPtr last_snapshot_;
@@ -278,7 +279,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
       ftl::TimeDelta response_delay = ftl::TimeDelta::FromMilliseconds(0))
       : policy_(policy),
         binding_(this, std::move(request)),
-        callback_(on_get_policy_called_callback),
+        callback_(std::move(on_get_policy_called_callback)),
         response_delay_(response_delay) {}
 
   uint get_policy_calls = 0;

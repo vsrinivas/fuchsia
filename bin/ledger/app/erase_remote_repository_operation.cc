@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/app/erase_remote_repository_operation.h"
 
+#include <utility>
+
 #include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
@@ -18,7 +20,7 @@ EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
     modular::auth::TokenProviderPtr token_provider)
     : task_runner_(task_runner),
       network_service_(network_service),
-      server_id_(server_id),
+      server_id_(std::move(server_id)),
       api_key_(std::move(api_key)) {
   token_provider.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "Lost connection to TokenProvider "

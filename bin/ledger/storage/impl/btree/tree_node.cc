@@ -5,6 +5,7 @@
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
@@ -26,8 +27,8 @@ TreeNode::TreeNode(PageStorage* page_storage,
     : page_storage_(page_storage),
       id_(std::move(id)),
       level_(level),
-      entries_(entries),
-      children_(children) {
+      entries_(std::move(entries)),
+      children_(std::move(children)) {
   FTL_DCHECK(entries_.size() + 1 == children_.size());
 }
 

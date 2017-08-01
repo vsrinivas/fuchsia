@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/callback/cancellable.h"
 
+#include <utility>
+
 namespace callback {
 
 Cancellable::Cancellable() {}
@@ -11,7 +13,7 @@ Cancellable::Cancellable() {}
 Cancellable::~Cancellable() {}
 
 AutoCancel::AutoCancel(ftl::RefPtr<Cancellable> cancellable)
-    : cancellable_(cancellable) {
+    : cancellable_(std::move(cancellable)) {
   if (cancellable_) {
     cancellable_->SetOnDone([this] { OnDone(); });
   }

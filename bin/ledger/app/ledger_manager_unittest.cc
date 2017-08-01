@@ -5,6 +5,7 @@
 #include "apps/ledger/src/app/ledger_manager.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "apps/ledger/src/app/constants.h"
@@ -32,7 +33,7 @@ storage::PageId RandomId() {
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
   explicit FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : task_runner_(task_runner) {}
+      : task_runner_(std::move(task_runner)) {}
   ~FakeLedgerStorage() override {}
 
   void CreatePageStorage(
@@ -86,7 +87,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
 class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
   explicit FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : called(false), task_runner_(task_runner) {}
+      : called(false), task_runner_(std::move(task_runner)) {}
   ~FakeLedgerSync() override {}
 
   std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(

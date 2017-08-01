@@ -26,7 +26,7 @@ class FakeJournalDelegate {
     KeyPriority priority;
   };
 
-  FakeJournalDelegate(const CommitId& parent_id, bool autocommit);
+  FakeJournalDelegate(CommitId parent_id, bool autocommit);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }

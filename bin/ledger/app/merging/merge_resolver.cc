@@ -8,6 +8,7 @@
 #include <memory>
 #include <queue>
 #include <set>
+#include <utility>
 
 #include "apps/ledger/src/app/merging/common_ancestor.h"
 #include "apps/ledger/src/app/merging/ledger_merge_manager.h"
@@ -29,7 +30,7 @@ MergeResolver::MergeResolver(ftl::Closure on_destroyed,
     : environment_(environment),
       storage_(storage),
       backoff_(std::move(backoff)),
-      on_destroyed_(on_destroyed),
+      on_destroyed_(std::move(on_destroyed)),
       weak_ptr_factory_(this) {
   storage_->AddCommitWatcher(this);
   PostCheckConflicts();

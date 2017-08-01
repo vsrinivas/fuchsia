@@ -34,7 +34,8 @@ class Watcher : public PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<PageWatcher> request,
           ftl::Closure change_callback)
-      : binding_(this, std::move(request)), change_callback_(change_callback) {}
+      : binding_(this, std::move(request)),
+        change_callback_(std::move(change_callback)) {}
 
   uint changes_seen = 0;
   ResultState last_result_state_;
@@ -429,14 +430,15 @@ class WaitingWatcher : public PageWatcher {
  public:
   WaitingWatcher(fidl::InterfaceRequest<PageWatcher> request,
                  ftl::Closure change_callback)
-      : binding_(this, std::move(request)), change_callback_(change_callback) {}
+      : binding_(this, std::move(request)),
+        change_callback_(std::move(change_callback)) {}
 
   struct Change {
     PageChangePtr change;
     OnChangeCallback callback;
 
-    Change(PageChangePtr change, const OnChangeCallback& callback)
-        : change(std::move(change)), callback(callback) {}
+    Change(PageChangePtr change, OnChangeCallback callback)
+        : change(std::move(change)), callback(std::move(callback)) {}
   };
 
   std::vector<Change> changes;

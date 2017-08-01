@@ -49,7 +49,8 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 class TestObject : public storage::Object {
  public:
   TestObject() = default;
-  TestObject(storage::ObjectId id, std::string data) : id(id), data(data) {}
+  TestObject(storage::ObjectId id, std::string data)
+      : id(std::move(id)), data(std::move(data)) {}
   ~TestObject() override = default;
 
   storage::ObjectId GetId() const override { return id; };

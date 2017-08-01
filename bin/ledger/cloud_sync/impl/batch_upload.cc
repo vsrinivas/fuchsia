@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <utility>
 
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
@@ -27,8 +28,8 @@ BatchUpload::BatchUpload(
       cloud_provider_(cloud_provider),
       auth_provider_(auth_provider),
       commits_(std::move(commits)),
-      on_done_(on_done),
-      on_error_(on_error),
+      on_done_(std::move(on_done)),
+      on_error_(std::move(on_error)),
       max_concurrent_uploads_(max_concurrent_uploads) {
   TRACE_ASYNC_BEGIN("ledger", "batch_upload",
                     reinterpret_cast<uintptr_t>(this));

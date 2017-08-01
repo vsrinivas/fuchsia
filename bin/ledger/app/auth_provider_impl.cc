@@ -16,7 +16,7 @@ AuthProviderImpl::AuthProviderImpl(
     std::string api_key,
     modular::auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff)
-    : task_runner_(task_runner),
+    : task_runner_(std::move(task_runner)),
       api_key_(std::move(api_key)),
       token_provider_(std::move(token_provider)),
       backoff_(std::move(backoff)),

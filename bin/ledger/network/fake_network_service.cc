@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "apps/ledger/src/network/fake_network_service.h"
+
+#include <utility>
+
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
@@ -10,7 +13,7 @@
 namespace ledger {
 
 FakeNetworkService::FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
-    : task_runner_(task_runner) {}
+    : task_runner_(std::move(task_runner)) {}
 
 FakeNetworkService::~FakeNetworkService() {}
 

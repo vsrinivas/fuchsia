@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/storage/impl/object_impl.h"
 
+#include <utility>
+
 namespace storage {
 
 namespace {
@@ -25,7 +27,7 @@ Status InlinedObject::GetData(ftl::StringView* data) const {
 }
 
 StringObject::StringObject(ObjectId id, std::string content)
-    : id_(id), content_(content) {}
+    : id_(std::move(id)), content_(std::move(content)) {}
 
 StringObject::~StringObject() {}
 

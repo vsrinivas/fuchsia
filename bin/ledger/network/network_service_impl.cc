@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/network/network_service_impl.h"
 
+#include <utility>
+
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "apps/ledger/src/callback/trace_callback.h"
@@ -158,8 +160,8 @@ class NetworkServiceImpl::RunningRequest {
 NetworkServiceImpl::NetworkServiceImpl(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
     std::function<network::NetworkServicePtr()> network_service_factory)
-    : task_runner_(task_runner),
-      network_service_factory_(network_service_factory),
+    : task_runner_(std::move(task_runner)),
+      network_service_factory_(std::move(network_service_factory)),
       weak_factory_(this) {}
 
 NetworkServiceImpl::~NetworkServiceImpl() {}

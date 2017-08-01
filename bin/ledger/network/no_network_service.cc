@@ -4,12 +4,14 @@
 
 #include "apps/ledger/src/network/no_network_service.h"
 
+#include <utility>
+
 #include "apps/ledger/src/callback/cancellable_helper.h"
 
 namespace ledger {
 
 NoNetworkService::NoNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
-    : task_runner_(task_runner) {}
+    : task_runner_(std::move(task_runner)) {}
 
 NoNetworkService::~NoNetworkService() {}
 

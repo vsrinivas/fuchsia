@@ -69,8 +69,8 @@ class JournalDBImpl : public Journal {
                 coroutine::CoroutineService* coroutine_service,
                 PageStorageImpl* page_storage,
                 PageDb* db,
-                const JournalId& id,
-                const CommitId& base);
+                JournalId id,
+                CommitId base);
 
   Status UpdateValueCounter(ObjectIdView object_id,
                             const std::function<int64_t(int64_t)>& operation);

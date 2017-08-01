@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/app/auth_provider_impl.h"
 
+#include <utility>
+
 #include "apps/ledger/src/backoff/test/test_backoff.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -18,7 +20,7 @@ namespace {
 class TestTokenProvider : public modular::auth::TokenProvider {
  public:
   explicit TestTokenProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : task_runner_(task_runner) {
+      : task_runner_(std::move(task_runner)) {
     error_to_return = modular::auth::AuthErr::New();
     error_to_return->status = modular::auth::Status::OK;
     error_to_return->message = "";

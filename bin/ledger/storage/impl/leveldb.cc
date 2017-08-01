@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/storage/impl/leveldb.h"
 
+#include <utility>
+
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "lib/ftl/files/directory.h"
 
@@ -25,7 +27,7 @@ Status ConvertStatus(leveldb::Status s) {
 class BatchImpl : public Db::Batch {
  public:
   explicit BatchImpl(std::function<Status(bool)> callback)
-      : callback_(callback), executed_(false) {}
+      : callback_(std::move(callback)), executed_(false) {}
 
   ~BatchImpl() override {
     if (!executed_)

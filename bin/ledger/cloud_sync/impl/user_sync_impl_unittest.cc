@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 
+#include <utility>
+
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/backoff/test/test_backoff.h"
 #include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
@@ -29,7 +31,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class TestCloudDeviceSet : public CloudDeviceSet {
  public:
   explicit TestCloudDeviceSet(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : task_runner_(task_runner) {}
+      : task_runner_(std::move(task_runner)) {}
   ~TestCloudDeviceSet() override {}
 
   void CheckFingerprint(std::string auth_token,

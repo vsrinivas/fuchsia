@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <string>
+#include <utility>
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/impl/btree/builder.h"
@@ -20,14 +21,14 @@ JournalDBImpl::JournalDBImpl(JournalType type,
                              coroutine::CoroutineService* coroutine_service,
                              PageStorageImpl* page_storage,
                              PageDb* db,
-                             const JournalId& id,
-                             const CommitId& base)
+                             JournalId id,
+                             CommitId base)
     : type_(type),
       coroutine_service_(coroutine_service),
       page_storage_(page_storage),
       db_(db),
-      id_(id),
-      base_(base),
+      id_(std::move(id)),
+      base_(std::move(base)),
       valid_(true),
       failed_operation_(false) {}
 

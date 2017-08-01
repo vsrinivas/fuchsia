@@ -5,6 +5,7 @@
 #include "apps/ledger/src/network/network_service_impl.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <mx/socket.h>
@@ -124,7 +125,8 @@ class DestroyWatcher : public ftl::RefCountedThreadSafe<DestroyWatcher> {
   }
 
  private:
-  explicit DestroyWatcher(const ftl::Closure& callback) : callback_(callback) {}
+  explicit DestroyWatcher(ftl::Closure callback)
+      : callback_(std::move(callback)) {}
   ~DestroyWatcher() { callback_(); }
 
   ftl::Closure callback_;

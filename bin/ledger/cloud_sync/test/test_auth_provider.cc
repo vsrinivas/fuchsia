@@ -13,7 +13,7 @@ namespace cloud_sync {
 namespace test {
 
 TestAuthProvider::TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
-    : task_runner_(task_runner) {}
+    : task_runner_(std::move(task_runner)) {}
 
 ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseToken(
     std::function<void(AuthStatus, std::string)> callback) {

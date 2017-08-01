@@ -19,7 +19,7 @@ namespace tool {
 // Command that cleans the local and remote storage of Ledger.
 class InspectCommand : public Command {
  public:
-  InspectCommand(const std::vector<std::string>& args,
+  InspectCommand(std::vector<std::string> args,
                  const cloud_sync::UserConfig& user_config,
                  ftl::StringView user_repository_path);
   ~InspectCommand() override {}

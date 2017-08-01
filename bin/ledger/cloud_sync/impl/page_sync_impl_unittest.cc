@@ -32,7 +32,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
  public:
   TestCommit() = default;
   TestCommit(storage::CommitId id, std::string content)
-      : id(id), content(content) {}
+      : id(std::move(id)), content(std::move(content)) {}
   ~TestCommit() override = default;
 
   std::vector<std::unique_ptr<const Commit>> AsList() {

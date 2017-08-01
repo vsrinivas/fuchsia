@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 
+#include <utility>
+
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -21,9 +23,10 @@ storage::CommitId RandomCommitId() {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(const CommitId& parent_id,
-                                         bool autocommit)
-    : autocommit_(autocommit), id_(RandomCommitId()), parent_id_(parent_id) {}
+FakeJournalDelegate::FakeJournalDelegate(CommitId parent_id, bool autocommit)
+    : autocommit_(autocommit),
+      id_(RandomCommitId()),
+      parent_id_(std::move(parent_id)) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 

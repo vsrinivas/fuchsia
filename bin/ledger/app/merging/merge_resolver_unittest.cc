@@ -5,6 +5,7 @@
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 
 #include <string>
+#include <utility>
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
@@ -163,10 +164,10 @@ class VerifyingMergeStrategy : public MergeStrategy {
                          storage::CommitId head1,
                          storage::CommitId head2,
                          storage::CommitId ancestor)
-      : task_runner_(task_runner),
-        head1_(head1),
-        head2_(head2),
-        ancestor_(ancestor) {}
+      : task_runner_(std::move(task_runner)),
+        head1_(std::move(head1)),
+        head2_(std::move(head2)),
+        ancestor_(std::move(ancestor)) {}
   ~VerifyingMergeStrategy() override {}
 
   void SetOnError(std::function<void()> on_error) override {}

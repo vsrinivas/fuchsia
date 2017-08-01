@@ -11,6 +11,7 @@
 #include <queue>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "apps/ledger/src/callback/waiter.h"
@@ -72,10 +73,10 @@ class FileStreamWriter {
 
 }  // namespace
 
-InspectCommand::InspectCommand(const std::vector<std::string>& args,
+InspectCommand::InspectCommand(std::vector<std::string> args,
                                const cloud_sync::UserConfig& user_config,
                                ftl::StringView user_repository_path)
-    : args_(args),
+    : args_(std::move(args)),
       app_id_(args_[1]),
       user_repository_path_(user_repository_path.ToString()) {
   FTL_DCHECK(!user_repository_path_.empty());

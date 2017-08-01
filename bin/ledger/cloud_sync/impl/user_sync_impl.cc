@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 
+#include <utility>
+
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/convert/convert.h"
@@ -28,7 +30,7 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
-      on_version_mismatch_(on_version_mismatch),
+      on_version_mismatch_(std::move(on_version_mismatch)),
       aggregator_(watcher),
       weak_ptr_factory_(this) {
   FTL_DCHECK(on_version_mismatch_);
