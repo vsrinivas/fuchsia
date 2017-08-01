@@ -121,14 +121,14 @@ mx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
             break;
         }
 
-        uint32_t todo = pos_notif.ring_buffer_pos + ring_bytes - rd_ptr;
-        if (todo >= ring_bytes)
-            todo -= ring_bytes;
+        uint32_t todo = pos_notif.ring_buffer_pos + rb_sz_ - rd_ptr;
+        if (todo >= rb_sz_)
+            todo -= rb_sz_;
 
-        MX_DEBUG_ASSERT(todo < ring_bytes);
-        MX_DEBUG_ASSERT(rd_ptr < ring_bytes);
+        MX_DEBUG_ASSERT(todo < rb_sz_);
+        MX_DEBUG_ASSERT(rd_ptr < rb_sz_);
 
-        uint32_t space = ring_bytes - rd_ptr;
+        uint32_t space = rb_sz_ - rd_ptr;
         uint32_t amt = mxtl::min(space, todo);
         auto data = static_cast<const uint8_t*>(rb_virt_) + rd_ptr;
 
