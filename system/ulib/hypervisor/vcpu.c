@@ -535,6 +535,7 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
+        return MX_OK;
     case RTC_INDEX_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
