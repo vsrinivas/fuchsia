@@ -423,17 +423,16 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
     pageflip_pending_queue_.push(std::move(request));
 
-    if (pageflip_pending_queue_.size() == 1) {
-        lock.unlock();
+    if (pageflip_pending_queue_.size() == 1)
         ProcessPendingFlip();
-    }
 }
 
 void MsdIntelDevice::ProcessPendingFlip()
 {
-    auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) { this->ProcessPendingFlip(); };
-
-    std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
+    auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
+        std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
+        this->ProcessPendingFlip();
+    };
 
     while (pageflip_pending_queue_.size()) {
         DLOG("pageflip_pending_queue_ size %zu", pageflip_pending_queue_.size());
@@ -450,11 +449,8 @@ void MsdIntelDevice::ProcessPendingFlip()
             pageflip_pending_sync_queue_.push(std::move(request));
             pageflip_pending_queue_.pop();
 
-            if (pageflip_pending_sync_queue_.size() == 1) {
-                lock.unlock();
+            if (pageflip_pending_sync_queue_.size() == 1)
                 ProcessPendingFlipSync();
-                lock.lock();
-            }
 
         } else {
             DLOG("adding waitset with %zu semaphores, first %lu", semaphores.size(),
@@ -476,10 +472,9 @@ void MsdIntelDevice::ProcessPendingFlip()
 void MsdIntelDevice::ProcessPendingFlipSync()
 {
     auto callback = [this](magma::SemaphorePort::WaitSet* wait_set) {
+        std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
         this->ProcessPendingFlipSync();
     };
-
-    std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
 
     while (pageflip_pending_sync_queue_.size()) {
         DLOG("pageflip_pending_sync_queue_ size %zu", pageflip_pending_sync_queue_.size());
@@ -788,6 +783,7 @@ magma::Status MsdIntelDevice::ProcessFlip(
 void MsdIntelDevice::ProcessFlipComplete()
 {
     TRACE_DURATION("magma", "ProcessFlipComplete");
+    DLOG("ProcessFlipComplete");
 
     for (auto& semaphore : signal_semaphores_[0]) {
         DLOG("signalling flip semaphore 0x%" PRIx64 "\n", semaphore->id());
