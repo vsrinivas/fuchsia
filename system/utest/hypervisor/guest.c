@@ -46,12 +46,16 @@ static bool setup(test_t *test, const char *start, const char *end) {
                           &addr),
               MX_OK, "");
 
-    mx_status_t status = mx_guest_create(MX_HANDLE_INVALID, 0, test->guest_physmem, &test->guest);
+    mx_handle_t resource;
+    ASSERT_EQ(guest_get_resource(&resource), MX_OK, "");
+
+    mx_status_t status = mx_guest_create(resource, 0, test->guest_physmem, &test->guest);
     test->supported = status != MX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
         return true;
     }
     ASSERT_EQ(status, MX_OK, "");
+    mx_handle_close(resource);
 
     // Setup the guest.
     uintptr_t guest_ip;

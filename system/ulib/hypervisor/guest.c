@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <limits.h>
+#include <unistd.h>
 
 #include <hypervisor/guest.h>
+#include <magenta/device/sysinfo.h>
 
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
@@ -17,6 +20,8 @@ static const uint64_t kAddr4000mb   = 0x0000000100000000;
 
 static const size_t kMaxSize = 512ull << 30;
 static const size_t kMinSize = 4 * (4 << 10);
+
+static const char kResourcePath[] = "/dev/misc/sysinfo";
 
 #if __x86_64__
 static const size_t kPml4PageSize = 512ull << 30;
@@ -121,4 +126,13 @@ mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off) {
     }
 
     return MX_OK;
+}
+
+mx_status_t guest_get_resource(mx_handle_t* resource) {
+    int fd = open(kResourcePath, O_RDWR);
+    if (fd < 0)
+        return MX_ERR_IO;
+    ssize_t n = ioctl_sysinfo_get_hypervisor_resource(fd, resource);
+    close(fd);
+    return n < 0 ? MX_ERR_IO : MX_OK;
 }

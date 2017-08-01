@@ -16,8 +16,8 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
-#include "magenta.h"
 #include "linux.h"
+#include "magenta.h"
 
 static const uint64_t kVmoSize = 1u << 30;
 static const uint16_t kPioEnable = 1u << 0;
@@ -62,12 +62,20 @@ int main(int argc, char** argv) {
         return status;
     }
 
+    mx_handle_t resource;
+    status = guest_get_resource(&resource);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to get resource\n");
+        return status;
+    }
+
     mx_handle_t guest;
-    status = mx_guest_create(MX_HANDLE_INVALID, 0, physmem_vmo, &guest);
+    status = mx_guest_create(resource, 0, physmem_vmo, &guest);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create guest\n");
         return status;
     }
+    mx_handle_close(resource);
 
     guest_state_t guest_state;
     memset(&guest_state, 0, sizeof(guest_state));

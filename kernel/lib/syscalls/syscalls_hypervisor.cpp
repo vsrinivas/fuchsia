@@ -21,15 +21,14 @@ mx_status_t sys_guest_create(mx_handle_t resource, uint32_t options, mx_handle_t
     if (options != 0u)
         return MX_ERR_INVALID_ARGS;
 
-    // TODO(abdulla): Enable resource validation, and remove job policy.
-    /*mx_status_t status = validate_resource(resource, MX_RSRC_KIND_HYPERVISOR);
+    mx_status_t status = validate_resource(resource, MX_RSRC_KIND_HYPERVISOR);
     if (status != MX_OK)
-        return status;*/
+        return status;
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<VmObjectDispatcher> physmem;
     mx_rights_t rights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
-    mx_status_t status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
+    status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
     if (status != MX_OK)
         return status;
 

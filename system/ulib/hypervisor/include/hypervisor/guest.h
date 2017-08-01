@@ -39,4 +39,9 @@ size_t guest_e820_size(size_t size);
  */
 mx_status_t guest_create_e820(uintptr_t addr, size_t size, uintptr_t e820_off);
 
+/**
+ * Get a hypervisor resource to create a guest.
+ */
+mx_status_t guest_get_resource(mx_handle_t* resource);
+
 __END_CDECLS
