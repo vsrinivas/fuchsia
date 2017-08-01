@@ -17,134 +17,134 @@ namespace {
 // which should be tested within a vector (raw types,
 // unique pointers, ref pointers).
 
-using BaseType = size_t;
+using ValueType = size_t;
 
-struct TestObjBase {
-    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TestObjBase);
-    explicit TestObjBase(BaseType val) : alive_(true), val_(val) { ++live_obj_count_; }
-    TestObjBase(TestObjBase&& r) : alive_(r.alive_), val_(r.val_) { r.alive_ = false; }
-    TestObjBase& operator=(TestObjBase&& r) {
+struct TestObject {
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(TestObject);
+    explicit TestObject(ValueType val) : alive_(true), val_(val) { ++live_obj_count_; }
+    TestObject(TestObject&& r) : alive_(r.alive_), val_(r.val_) { r.alive_ = false; }
+    TestObject& operator=(TestObject&& r) {
         val_ = r.val_;
         alive_ = r.alive_;
         r.alive_ = false;
         return *this;
     }
-    ~TestObjBase() {
+    ~TestObject() {
         if (alive_) {
             --live_obj_count_;
         }
     }
 
-    BaseType value() const { return val_; }
+    ValueType value() const { return val_; }
     static size_t live_obj_count() { return live_obj_count_; }
     static void ResetLiveObjCount() { live_obj_count_ = 0; }
 
     bool alive_;
-    BaseType val_;
+    ValueType val_;
 
     static size_t live_obj_count_;
 };
 
-size_t TestObjBase::live_obj_count_ = 0;
+size_t TestObject::live_obj_count_ = 0;
 
-struct BaseTypeTraits {
-    using ContainerType = BaseType;
-    static ContainerType Create(BaseType val) { return val; }
-    static BaseType Base(const ContainerType& c) { return c; }
+struct ValueTypeTraits {
+    using ItemType = ValueType;
+    static ItemType Create(ValueType val) { return val; }
+    static ValueType GetValue(const ItemType& c) { return c; }
     // We have no way of managing the "live count" of raw types, so we don't.
     static bool CheckLiveCount(size_t expected) { return true; }
 };
 
 struct StructTypeTraits {
-    using ContainerType = TestObjBase;
-    static ContainerType Create(BaseType val) { return TestObjBase(val); }
-    static BaseType Base(const ContainerType& c) { return c.value(); }
-    static bool CheckLiveCount(size_t expected) { return TestObjBase::live_obj_count() == expected; }
+    using ItemType = TestObject;
+    static ItemType Create(ValueType val) { return TestObject(val); }
+    static ValueType GetValue(const ItemType& c) { return c.value(); }
+    static bool CheckLiveCount(size_t expected) { return TestObject::live_obj_count() == expected; }
 };
 
 struct UniquePtrTraits {
-    using ContainerType = mxtl::unique_ptr<TestObjBase>;
+    using ItemType = mxtl::unique_ptr<TestObject>;
 
-    static ContainerType Create(BaseType val) {
+    static ItemType Create(ValueType val) {
         AllocChecker ac;
-        ContainerType ptr(new (&ac) TestObjBase(val));
+        ItemType ptr(new (&ac) TestObject(val));
         MX_ASSERT(ac.check());
         return ptr;
     }
-    static BaseType Base(const ContainerType& c) { return c->value(); }
-    static bool CheckLiveCount(size_t expected) { return TestObjBase::live_obj_count() == expected; }
+    static ValueType GetValue(const ItemType& c) { return c->value(); }
+    static bool CheckLiveCount(size_t expected) { return TestObject::live_obj_count() == expected; }
 };
 
 template <typename T>
-struct RefCountedContainer : public mxtl::RefCounted<RefCountedContainer<T>> {
-    RefCountedContainer(T v) : val(mxtl::move(v)) {}
-    DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedContainer);
+struct RefCountedItem : public mxtl::RefCounted<RefCountedItem<T>> {
+    RefCountedItem(T v) : val(mxtl::move(v)) {}
+    DISALLOW_COPY_ASSIGN_AND_MOVE(RefCountedItem);
     T val;
 };
 
 struct RefPtrTraits {
-    using ContainerType = mxtl::RefPtr<RefCountedContainer<TestObjBase>>;
+    using ItemType = mxtl::RefPtr<RefCountedItem<TestObject>>;
 
-    static ContainerType Create(BaseType val) {
+    static ItemType Create(ValueType val) {
         AllocChecker ac;
-        auto ptr = AdoptRef(new (&ac) RefCountedContainer<TestObjBase>(TestObjBase(val)));
+        auto ptr = AdoptRef(new (&ac) RefCountedItem<TestObject>(TestObject(val)));
         MX_ASSERT(ac.check());
         return ptr;
     }
-    static BaseType Base(const ContainerType& c) { return c->val.value(); }
-    static bool CheckLiveCount(size_t expected) { return TestObjBase::live_obj_count() == expected; }
+    static ValueType GetValue(const ItemType& c) { return c->val.value(); }
+    static bool CheckLiveCount(size_t expected) { return TestObject::live_obj_count() == expected; }
 };
 
 // Helper classes
 
-template <typename ContainerTraits>
+template <typename ItemTraits>
 struct Generator {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
-    constexpr static BaseType seed = 0xa2328b73e323fd0f;
-    BaseType NextBase() { return key_lfsr_.GetNext(); }
-    ContainerType NextContainer() { return ContainerTraits::Create(NextBase()); }
+    constexpr static ValueType seed = 0xa2328b73e323fd0f;
+    ValueType NextValue() { return key_lfsr_.GetNext(); }
+    ItemType NextItem() { return ItemTraits::Create(NextValue()); }
     void Reset() { key_lfsr_.SetCore(seed); }
-    Lfsr<BaseType> key_lfsr_ = Lfsr<BaseType>(seed);
+    Lfsr<ValueType> key_lfsr_ = Lfsr<ValueType>(seed);
 };
 
 // Actual tests
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_access_release() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
     // Create the vector, verify its contents
     {
-        mxtl::Vector<ContainerType> vector;
+        mxtl::Vector<ItemType> vector;
         ASSERT_TRUE(vector.reserve(size), "");
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vector.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
         }
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
 
         gen.Reset();
-        ContainerType* data = vector.get();
+        ItemType* data = vector.get();
         for (size_t i = 0; i < size; i++) {
-            auto base = gen.NextBase();
+            auto base = gen.NextValue();
             // Verify the contents using the [] operator
-            ASSERT_EQ(ContainerTraits::Base(vector[i]), base, "");
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), base, "");
             // Verify the contents using the underlying array
-            ASSERT_EQ(ContainerTraits::Base(data[i]), base, "");
+            ASSERT_EQ(ItemTraits::GetValue(data[i]), base, "");
         }
 
         // Release the vector's underlying array before it is destructed
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
         vector.reset();
         ASSERT_EQ(vector.size(), 0, "");
         ASSERT_EQ(vector.capacity(), 0, "");
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
@@ -159,100 +159,100 @@ struct CountedAllocatorTraits : public DefaultAllocatorTraits {
 
 size_t CountedAllocatorTraits::allocation_count = 0;
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_push_back_in_capacity() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     CountedAllocatorTraits::allocation_count = 0;
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
     {
-        mxtl::Vector<ContainerType, CountedAllocatorTraits> vector;
+        mxtl::Vector<ItemType, CountedAllocatorTraits> vector;
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 0, "");
         ASSERT_TRUE(vector.reserve(size), "");
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1, "");
 
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vector.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
         }
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1, "");
 
         gen.Reset();
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vector[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
         }
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_push_back_beyond_capacity() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     {
         // Create an empty vector, push back beyond its capacity
-        mxtl::Vector<ContainerType> vector;
+        mxtl::Vector<ItemType> vector;
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vector.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
         }
 
         gen.Reset();
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vector[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
         }
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_pop_back() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     {
         // Create a vector filled with objects
-        mxtl::Vector<ContainerType> vector;
+        mxtl::Vector<ItemType> vector;
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vector.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
         }
 
         gen.Reset();
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vector[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
         }
 
         // Pop one at a time, and check the vector is still valid
         while (vector.size()) {
             vector.pop_back();
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(vector.size()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(vector.size()), "");
             gen.Reset();
             for (size_t i = 0; i < vector.size(); i++) {
-                ASSERT_EQ(ContainerTraits::Base(vector[i]), gen.NextBase(), "");
+                ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
             }
         }
 
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
@@ -262,207 +262,207 @@ struct FailingAllocatorTraits {
     static void Deallocate(void* object) { return; }
 };
 
-template <typename ContainerType, size_t S>
+template <typename ItemType, size_t S>
 struct PartiallyFailingAllocatorTraits : public DefaultAllocatorTraits {
     static void* Allocate(size_t size) {
-        if (size <= sizeof(ContainerType) * S) {
+        if (size <= sizeof(ItemType) * S) {
             return DefaultAllocatorTraits::Allocate(size);
         }
         return nullptr;
     }
 };
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_allocation_failure() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     // Test that a failing allocator cannot take on additional elements
     {
-        mxtl::Vector<ContainerType, FailingAllocatorTraits> vector;
+        mxtl::Vector<ItemType, FailingAllocatorTraits> vector;
         ASSERT_TRUE(vector.reserve(0));
         ASSERT_FALSE(vector.reserve(1));
         ASSERT_FALSE(vector.reserve(size));
 
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
-        ASSERT_FALSE(vector.push_back(gen.NextContainer()), "");
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
+        ASSERT_FALSE(vector.push_back(gen.NextItem()), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     // Test that a partially failing allocator stops taking on additional
     // elements
     {
-        mxtl::Vector<ContainerType, PartiallyFailingAllocatorTraits<ContainerType, size>> vector;
+        mxtl::Vector<ItemType, PartiallyFailingAllocatorTraits<ItemType, size>> vector;
         ASSERT_TRUE(vector.reserve(0));
         ASSERT_TRUE(vector.reserve(1));
         ASSERT_TRUE(vector.reserve(size));
         ASSERT_EQ(vector.capacity(), size, "");
 
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
         gen.Reset();
         while (vector.size() < size) {
-            ASSERT_TRUE(vector.push_back(gen.NextContainer()), "");
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(vector.size()), "");
+            ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(vector.size()), "");
         }
-        ASSERT_FALSE(vector.push_back(gen.NextContainer()), "");
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_FALSE(vector.push_back(gen.NextItem()), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
         ASSERT_EQ(vector.size(), size, "");
         ASSERT_EQ(vector.capacity(), size, "");
 
         // All the elements we were able to push back should still be present
         gen.Reset();
         for (size_t i = 0; i < vector.size(); i++) {
-            ASSERT_EQ(ContainerTraits::Base(vector[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
         }
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_move() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     // Test move constructor
     {
-        mxtl::Vector<ContainerType> vectorA;
+        mxtl::Vector<ItemType> vectorA;
         ASSERT_TRUE(vectorA.is_empty(), "");
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vectorA.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vectorA.push_back(gen.NextItem()), "");
         }
 
         gen.Reset();
         ASSERT_FALSE(vectorA.is_empty(), "");
         ASSERT_EQ(vectorA.size(), size, "");
-        mxtl::Vector<ContainerType> vectorB(mxtl::move(vectorA));
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        mxtl::Vector<ItemType> vectorB(mxtl::move(vectorA));
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
         ASSERT_TRUE(vectorA.is_empty(), "");
         ASSERT_EQ(vectorA.size(), 0, "");
         ASSERT_EQ(vectorB.size(), size, "");
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vectorB[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vectorB[i]), gen.NextValue(), "");
         }
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     // Test move assignment operator
     {
         gen.Reset();
-        mxtl::Vector<ContainerType> vectorA;
+        mxtl::Vector<ItemType> vectorA;
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vectorA.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vectorA.push_back(gen.NextItem()), "");
         }
 
         gen.Reset();
         ASSERT_EQ(vectorA.size(), size, "");
-        mxtl::Vector<ContainerType> vectorB;
+        mxtl::Vector<ItemType> vectorB;
         vectorB = mxtl::move(vectorA);
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
         ASSERT_EQ(vectorA.size(), 0, "");
         ASSERT_EQ(vectorB.size(), size, "");
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vectorB[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vectorB[i]), gen.NextValue(), "");
         }
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_swap() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     {
-        mxtl::Vector<ContainerType> vectorA;
+        mxtl::Vector<ItemType> vectorA;
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vectorA.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vectorA.push_back(gen.NextItem()), "");
         }
-        mxtl::Vector<ContainerType> vectorB;
+        mxtl::Vector<ItemType> vectorB;
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(size + i), "");
-            ASSERT_TRUE(vectorB.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(size + i), "");
+            ASSERT_TRUE(vectorB.push_back(gen.NextItem()), "");
         }
 
         gen.Reset();
 
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vectorA[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vectorA[i]), gen.NextValue(), "");
         }
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vectorB[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vectorB[i]), gen.NextValue(), "");
         }
 
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size * 2), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size * 2), "");
         vectorA.swap(vectorB);
-        ASSERT_TRUE(ContainerTraits::CheckLiveCount(size * 2), "");
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size * 2), "");
 
         gen.Reset();
 
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vectorB[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vectorB[i]), gen.NextValue(), "");
         }
         for (size_t i = 0; i < size; i++) {
-            ASSERT_EQ(ContainerTraits::Base(vectorA[i]), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(vectorA[i]), gen.NextValue(), "");
         }
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
 
-template <typename ContainerTraits, size_t size>
+template <typename ItemTraits, size_t size>
 bool vector_test_iterator() {
-    using ContainerType = typename ContainerTraits::ContainerType;
+    using ItemType = typename ItemTraits::ItemType;
 
     BEGIN_TEST;
 
-    Generator<ContainerTraits> gen;
+    Generator<ItemTraits> gen;
 
     {
-        mxtl::Vector<ContainerType> vector;
+        mxtl::Vector<ItemType> vector;
         for (size_t i = 0; i < size; i++) {
-            ASSERT_TRUE(ContainerTraits::CheckLiveCount(i), "");
-            ASSERT_TRUE(vector.push_back(gen.NextContainer()), "");
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
         }
 
         gen.Reset();
         for (auto& e : vector) {
-            auto base = gen.NextBase();
-            ASSERT_EQ(ContainerTraits::Base(e), base, "");
+            auto base = gen.NextValue();
+            ASSERT_EQ(ItemTraits::GetValue(e), base, "");
             // Take the element out, and put it back... just to check
             // that we can.
             auto other = mxtl::move(e);
             e = mxtl::move(other);
-            ASSERT_EQ(ContainerTraits::Base(e), base, "");
+            ASSERT_EQ(ItemTraits::GetValue(e), base, "");
         }
 
         gen.Reset();
         const auto* cvector = &vector;
         for (const auto& e : *cvector) {
-            ASSERT_EQ(ContainerTraits::Base(e), gen.NextBase(), "");
+            ASSERT_EQ(ItemTraits::GetValue(e), gen.NextValue(), "");
         }
     }
-    ASSERT_TRUE(ContainerTraits::CheckLiveCount(0), "");
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
 
     END_TEST;
 }
@@ -470,9 +470,9 @@ bool vector_test_iterator() {
 }  // namespace anonymous
 
 #define RUN_FOR_ALL_TRAITS(test_base, test_size)              \
-        RUN_TEST((test_base<BaseTypeTraits, test_size>))      \
+        RUN_TEST((test_base<ValueTypeTraits, test_size>))     \
         RUN_TEST((test_base<StructTypeTraits, test_size>))    \
-        RUN_TEST((test_base<UniquePtrTraits, test_size>)) \
+        RUN_TEST((test_base<UniquePtrTraits, test_size>))     \
         RUN_TEST((test_base<RefPtrTraits, test_size>))
 
 #define RUN_FOR_ALL(test_base)            \
