@@ -39,13 +39,13 @@ mx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
     uint32_t tmp = ((target_gain - conv_.min_gain) + (conv_.gain_step / 2)) / conv_.gain_step;
     MX_DEBUG_ASSERT(tmp <= conv_.amp_caps.num_steps());
 
-    cur_gain_steps_ = static_cast<uint8_t>(tmp);
+    cur_conv_gain_steps_ = ComputeGainSteps(conv_, target_gain);
     return MX_OK;
 }
 
 float RealtekStream::ComputeCurrentGainLocked() {
     return conv_.has_amp
-        ? conv_.min_gain + (cur_gain_steps_ * conv_.gain_step)
+        ? conv_.min_gain + (cur_conv_gain_steps_ * conv_.gain_step)
         : 0.0f;
 }
 
@@ -55,7 +55,7 @@ mx_status_t RealtekStream::SendGainUpdatesLocked() {
     if (conv_.has_amp) {
         bool mute = conv_.amp_caps.can_mute() ? cur_mute_ : false;
         res = RunCmdLocked({ props_.conv_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
-                                                                      cur_gain_steps_,
+                                                                      cur_conv_gain_steps_,
                                                                       is_input(), !is_input()) });
         if (res != MX_OK)
             return res;
@@ -64,7 +64,7 @@ mx_status_t RealtekStream::SendGainUpdatesLocked() {
     if (pc_.has_amp) {
         bool mute = pc_.amp_caps.can_mute() ? cur_mute_ : false;
         res = RunCmdLocked({ props_.pc_nid, SET_AMPLIFIER_GAIN_MUTE(mute,
-                                                                    pc_.amp_caps.offset(),
+                                                                    cur_pc_gain_steps_,
                                                                     is_input(), !is_input()) });
         if (res != MX_OK)
             return res;
@@ -103,6 +103,24 @@ void RealtekStream::RemovePDNotificationTgtLocked(const DispatcherChannel& chann
             break;
         }
     }
+}
+
+// static
+uint8_t RealtekStream::ComputeGainSteps(const CommonCaps& caps, float target_gain) {
+    if (!caps.has_amp || !caps.amp_caps.num_steps())
+        return 0;
+
+    if (target_gain < caps.min_gain)
+        return 0;
+
+    if (target_gain > caps.max_gain)
+        return caps.amp_caps.num_steps() - 1;
+
+    MX_DEBUG_ASSERT(caps.gain_step > 0);
+    uint32_t tmp = ((target_gain - caps.min_gain) + (caps.gain_step / 2)) / caps.gain_step;
+    MX_DEBUG_ASSERT(tmp <= caps.amp_caps.num_steps());
+
+    return static_cast<uint8_t>(tmp);
 }
 
 mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
@@ -221,7 +239,36 @@ mx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
 
 mx_status_t RealtekStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
     // Check the format arguments.
-    if (!fmt.channels || (fmt.channels > conv_.widget_caps.ch_count()))
+    //
+    // Note: in the limited number of Realtek codecs I have seen so far, the
+    // channel count given by a converter's widget caps is *the* number of
+    // channels supported, not a maximum number of channels supported (as
+    // indicated by the Intel HDA specification).  One can configure the number
+    // of channels in the format specifier to be less than the number maximum
+    // number of channels supported  by the converter, but it will ignore you.
+    //
+    // For inputs, configuring a stereo input converter for mono will cause the
+    // converter to produce stereo frames anyway.  The controller side DMA
+    // engine also does not seem smart enough to discard the extra sample (even
+    // though it was configured for mono as well) and you will end up capturing
+    // data an twice the rate you expected.
+    //
+    // For output, configuring a stereo output converter for mono seems to have
+    // no real effect on its behavior.  It is still expecting stereo frames.
+    // When you configure the DMA engine for mono (as is the requirement given
+    // by Intel), the converter appears to be unhappy about the lack of samples
+    // in the frame and simply never produces any output.  The Converter Channel
+    // Count control (section 7.3.3.35 of the Intel HDA spec) also appears to
+    // have no effect.  This is not particularly surprising as it is supposed to
+    // only effect output converters, and only those with support for more than
+    // 2 channels, but I tried it anyway.
+    //
+    // Perhaps this is different for the 6xx series of codecs from Realtek (the
+    // 6 channel "surround sound ready" codecs); so far I have only worked with
+    // samples from the 2xx series (the stereo codec family).  For now, however,
+    // insist that the format specified by the user exactly match the number of
+    // channels present in the converter we are using for this pipeline.
+    if (!fmt.channels || (fmt.channels != conv_.widget_caps.ch_count()))
         return MX_ERR_NOT_SUPPORTED;
 
     if (!conv_.sample_caps.SupportsRate(fmt.frames_per_second) ||
@@ -360,12 +407,22 @@ mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
     setup_progress_ |= stage;
 
     if (setup_progress_ == ALL_SETUP_COMPLETE) {
+        FinalizeSetupLocked();
         setup_progress_ |= STREAM_PUBLISHED;
         DumpStreamPublishedLocked();
         return PublishDeviceLocked();
     }
 
     return MX_OK;
+}
+
+void RealtekStream::FinalizeSetupLocked() {
+    // Stash the number of gain steps to use in the pin converter.  This allows
+    // us to hardcode gain targets for things like mic boost.  Eventually, we
+    // need to expose a way to detect this capability and control it via APIs,
+    // but for now we can get away with just setting it as part of the finalize
+    // step for setup.
+    cur_pc_gain_steps_ = ComputeGainSteps(pc_, props_.default_pc_gain);
 }
 
 void RealtekStream::DumpStreamPublishedLocked() {
@@ -401,10 +458,10 @@ void RealtekStream::DumpStreamPublishedLocked() {
         { IHDA_PCM_SIZE_8BITS,  8 },
     };
 
-    LOG("Setup complete, publishing stream\n");
-    LOG("Max channels : %u\n", conv_.widget_caps.ch_count());
+    LOG("Setup complete, publishing %s stream\n", props_.is_input ? "input" : "output");
+    LOG("Channels          : %u\n", conv_.widget_caps.ch_count());
 
-    LOG("Sample rates :");
+    LOG("Sample rates      :");
     for (size_t i = 0; i < countof(RATE_LUT); ++i) {
         const auto& entry = RATE_LUT[i];
         if (conv_.sample_caps.pcm_size_rate_ & entry.flag)
@@ -412,7 +469,7 @@ void RealtekStream::DumpStreamPublishedLocked() {
     }
     printf("\n");
 
-    LOG("Sample bits  :");
+    LOG("Sample bits       :");
     for (size_t i = 0; i < countof(BITS_LUT); ++i) {
         const auto& entry = BITS_LUT[i];
         if (conv_.sample_caps.pcm_size_rate_ & entry.flag)
@@ -420,24 +477,30 @@ void RealtekStream::DumpStreamPublishedLocked() {
     }
     printf("\n");
 
-    if (conv_.has_amp) {
-        LOG("Gain control : [%.2f, %.2f] dB in %.2f dB steps (%s mute).\n",
-            conv_.min_gain,
-            conv_.max_gain,
-            conv_.gain_step,
-            can_mute() ? "can" : "cannot");
-    } else {
-        LOG("Gain control : 0dB fixed (%s mute)\n", can_mute() ? "can" : "cannot");
-    }
+    DumpAmpCaps(conv_, "Conv");
+    DumpAmpCaps(pc_,   "PC");
 
     if (pc_.pin_caps.can_pres_detect()) {
-        LOG("Plug Detect  : %s (current state %s)\n",
+        LOG("Plug Detect       : %s (current state %s)\n",
             pc_.async_plug_det ? "Asynchronous" : "Poll-only",
             plug_state_ ? "Plugged" : "Unplugged");
     } else {
-        LOG("Plug Detect  : No\n");
+        LOG("Plug Detect       : No\n");
     }
 
+}
+
+void RealtekStream::DumpAmpCaps(const CommonCaps& caps, const char* tag) {
+    if (caps.has_amp) {
+        LOG("%4s Gain control : [%.2f, %.2f] dB in %.2f dB steps (%s mute).\n",
+            tag,
+            caps.min_gain,
+            caps.max_gain,
+            caps.gain_step,
+            caps.amp_caps.can_mute() ? "can" : "cannot");
+    } else {
+        LOG("%4s Gain control : 0dB fixed (cannot mute)\n", tag);
+    }
 }
 
 #define THUNK(_method) (&RealtekStream::_method)
@@ -487,6 +550,11 @@ mx_status_t RealtekStream::ProcessPinWidgetCaps(const Command& cmd, const CodecR
 
 mx_status_t RealtekStream::ProcessPinAmpCaps(const Command& cmd, const CodecResponse& resp) {
     pc_.amp_caps.raw_data_ = resp.data;
+
+    pc_.gain_step = pc_.amp_caps.step_size_db();
+    pc_.min_gain  = pc_.amp_caps.min_gain_db();
+    pc_.max_gain  = pc_.amp_caps.max_gain_db();
+
     return UpdateSetupProgressLocked(PIN_COMPLEX_SETUP_COMPLETE);
 }
 
@@ -598,7 +666,7 @@ mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const Cod
     conv_.min_gain  = conv_.amp_caps.min_gain_db();
     conv_.max_gain  = conv_.amp_caps.max_gain_db();
 
-    return UpdateConverterGainLocked(mxtl::max(props_.default_gain, conv_.min_gain));
+    return UpdateConverterGainLocked(mxtl::max(props_.default_conv_gain, conv_.min_gain));
 }
 
 mx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,

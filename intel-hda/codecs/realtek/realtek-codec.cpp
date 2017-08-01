@@ -95,9 +95,9 @@ mx_status_t RealtekCodec::SetupCommon() {
         // Converters.  Place all converters into D3HOT and mute/attenuate their outputs.
         // Output converters.
         {  2u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        {  2u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0), },
+        {  2u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
         {  3u, SET_POWER_STATE(HDA_PS_D3HOT) },
-        {  3u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0), },
+        {  3u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true, 0), },
         {  6u, SET_POWER_STATE(HDA_PS_D3HOT) },
 
         // Input converters.
@@ -188,7 +188,16 @@ mx_status_t RealtekCodec::SetupAcer12() {
         { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0), },  // Mix NID 12, In-0 (nid 2) un-muted
         { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true,  1, 0), },  // Mix NID 12, In-1 (nid 11) muted
 
-        // Enable MIC2's input.  Failure to do this causes the positive half of
+        // Set up the routing that we will use for the builtin mic
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 0), },  // Mix NID 35, In-0 (nid 24) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 1), },  // Mix NID 35, In-1 (nid 25) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 2), },  // Mix NID 35, In-2 (nid 26) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 3), },  // Mix NID 35, In-3 (nid 27) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 4), },  // Mix NID 35, In-4 (nid 29) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 5), },  // Mix NID 35, In-5 (nid 11) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 6), },  // Mix NID 35, In-6 (nid 18) unmute
+
+        // Enable MIC2's input.  Failure to keep this enabled causes the positive half of
         // the headphone output to be destroyed.
         //
         // TODO(johngro) : figure out why
@@ -207,21 +216,33 @@ mx_status_t RealtekCodec::SetupAcer12() {
     // Create and publish the streams we will use.
     static const StreamProperties STREAMS[] = {
         // Headphones
-        { .stream_id    = 1,
-          .afg_nid      = 1,
-          .conv_nid     = 3,
-          .pc_nid       = 33,
-          .is_input     = false,
-          .default_gain = DEFAULT_HEADPHONE_GAIN,
+        { .stream_id         = 1,
+          .afg_nid           = 1,
+          .conv_nid          = 3,
+          .pc_nid            = 33,
+          .is_input          = false,
+          .default_conv_gain = DEFAULT_HEADPHONE_GAIN,
+          .default_pc_gain   = 0.0f,
         },
 
         // Speakers
-        { .stream_id    = 2,
-          .afg_nid      = 1,
-          .conv_nid     = 2,
-          .pc_nid       = 20,
-          .is_input     = false,
-          .default_gain = DEFAULT_SPEAKER_GAIN,
+        { .stream_id         = 2,
+          .afg_nid           = 1,
+          .conv_nid          = 2,
+          .pc_nid            = 20,
+          .is_input          = false,
+          .default_conv_gain = DEFAULT_SPEAKER_GAIN,
+          .default_pc_gain   = 0.0f,
+        },
+
+        // Builtin Mic
+        { .stream_id         = 3,
+          .afg_nid           = 1,
+          .conv_nid          = 8,
+          .pc_nid            = 18,
+          .is_input          = true,
+          .default_conv_gain = 0.0f,
+          .default_pc_gain   = 20.0f,
         },
     };
 
@@ -245,11 +266,19 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
 
     static const CommandListEntry START_CMDS[] = {
         // Set up the routing that we will use for the headphone output.
-        { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0), },  // Mix NID 12, In-0 (nid 2) un-muted
-        { 12u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(true,  1, 0), },  // Mix NID 12, In-1 (nid 11) muted
-        { 33u, SET_CONNECTION_SELECT_CONTROL(0u) },             // HP Pin source from ndx 0 (nid 12)
+        { 12u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 0), },  // Mix NID 12, In-0 (nid 2) unmute
+        { 12u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 1), },  // Mix NID 12, In-1 (nid 11) mute
+        { 33u, SET_CONNECTION_SELECT_CONTROL(0u) },            // HP Pin source from ndx 0 (nid 12)
 
-        // Enable MIC2's input.  Failure to do this causes the positive half of
+        // Set up the routing that we will use for the headset input.
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 0), },  // Mix NID 35, In-0 (nid 24) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 1), },  // Mix NID 35, In-1 (nid 25) unmute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 2), },  // Mix NID 35, In-2 (nid 26) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 3), },  // Mix NID 35, In-3 (nid 27) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 4), },  // Mix NID 35, In-4 (nid 29) mute
+        { 35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true,  0, 5), },  // Mix NID 35, In-5 (nid 11) mute
+
+        // Enable MIC2's input.  Failure to keep this enabled causes the positive half of
         // the headphone output to be destroyed.
         //
         // TODO(johngro) : figure out why
@@ -268,12 +297,23 @@ mx_status_t RealtekCodec::SetupIntelNUC() {
     // Create and publish the streams we will use.
     static const StreamProperties STREAMS[] = {
         // Headphones
-        { .stream_id    = 1,
-          .afg_nid      = 1,
-          .conv_nid     = 2,
-          .pc_nid       = 33,
-          .is_input     = false,
-          .default_gain = DEFAULT_HEADPHONE_GAIN,
+        { .stream_id         = 1,
+          .afg_nid           = 1,
+          .conv_nid          = 2,
+          .pc_nid            = 33,
+          .is_input          = false,
+          .default_conv_gain = DEFAULT_HEADPHONE_GAIN,
+          .default_pc_gain   = 0.0f,
+        },
+
+        // Headset Mic
+        { .stream_id         = 2,
+          .afg_nid           = 1,
+          .conv_nid          = 8,
+          .pc_nid            = 25,
+          .is_input          = true,
+          .default_conv_gain = 0.0f,
+          .default_pc_gain   = 36.0f,
         },
     };
 
