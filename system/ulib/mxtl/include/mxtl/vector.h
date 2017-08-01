@@ -104,14 +104,17 @@ public:
         other.capacity_ = capacity;
     }
 
+    bool push_back(const T& value) __WARN_UNUSED_RESULT {
+        if (!grow_for_new_element()) {
+            return false;
+        }
+        ptr_[size_++] = value;
+        return true;
+    }
+
     bool push_back(T&& value) __WARN_UNUSED_RESULT {
-        MX_DEBUG_ASSERT(size_ <= capacity_);
-        if (size_ == capacity_) {
-            size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
-                    capacity_ * kCapacityGrowthFactor;
-            if (!reallocate(newCapacity)) {
-                return false;
-            }
+        if (!grow_for_new_element()) {
+            return false;
         }
         ptr_[size_++] = mxtl::forward<T>(value);
         return true;
@@ -152,6 +155,20 @@ public:
     }
 
 private:
+    // Grows the vector's capacity to accommodate one more element.
+    // Returns true on success, false on failure.
+    bool grow_for_new_element() {
+        MX_DEBUG_ASSERT(size_ <= capacity_);
+        if (size_ == capacity_) {
+            size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
+                    capacity_ * kCapacityGrowthFactor;
+            if (!reallocate(newCapacity)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Forces capacity to become newCapcity.
     // Returns true on success, false on failure.
     // If reallocate fails, the old "ptr_" array is unmodified.

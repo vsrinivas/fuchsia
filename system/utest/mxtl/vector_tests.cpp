@@ -193,6 +193,40 @@ bool vector_test_push_back_in_capacity() {
 }
 
 template <typename ItemTraits, size_t size>
+bool vector_test_push_back_by_const_ref_in_capacity() {
+    using ItemType = typename ItemTraits::ItemType;
+
+    BEGIN_TEST;
+
+    Generator<ItemTraits> gen;
+
+    CountedAllocatorTraits::allocation_count = 0;
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
+    {
+        mxtl::Vector<ItemType, CountedAllocatorTraits> vector;
+        ASSERT_EQ(CountedAllocatorTraits::allocation_count, 0, "");
+        ASSERT_TRUE(vector.reserve(size), "");
+        ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1, "");
+
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            const ItemType item = gen.NextItem();
+            ASSERT_TRUE(vector.push_back(item), "");
+        }
+        ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1, "");
+
+        gen.Reset();
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
+        }
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
+    }
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
+
+    END_TEST;
+}
+
+template <typename ItemTraits, size_t size>
 bool vector_test_push_back_beyond_capacity() {
     using ItemType = typename ItemTraits::ItemType;
 
@@ -206,6 +240,34 @@ bool vector_test_push_back_beyond_capacity() {
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
             ASSERT_TRUE(vector.push_back(gen.NextItem()), "");
+        }
+
+        gen.Reset();
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue(), "");
+        }
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size), "");
+    }
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0), "");
+
+    END_TEST;
+}
+
+template <typename ItemTraits, size_t size>
+bool vector_test_push_back_by_const_ref_beyond_capacity() {
+    using ItemType = typename ItemTraits::ItemType;
+
+    BEGIN_TEST;
+
+    Generator<ItemTraits> gen;
+
+    {
+        // Create an empty vector, push back beyond its capacity
+        mxtl::Vector<ItemType> vector;
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i), "");
+            const ItemType item = gen.NextItem();
+            ASSERT_TRUE(vector.push_back(item), "");
         }
 
         gen.Reset();
@@ -492,6 +554,8 @@ RUN_FOR_ALL(vector_test_allocation_failure)
 RUN_FOR_ALL(vector_test_move)
 RUN_FOR_ALL(vector_test_swap)
 RUN_FOR_ALL(vector_test_iterator)
+RUN_TEST((vector_test_push_back_by_const_ref_in_capacity<ValueTypeTraits, 100>))
+RUN_TEST((vector_test_push_back_by_const_ref_beyond_capacity<ValueTypeTraits, 100>))
 END_TEST_CASE(vector_tests)
 
 }  // namespace tests
