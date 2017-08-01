@@ -69,7 +69,8 @@ class CobaltEncoderImpl : public CobaltEncoder {
         shuffler_client_(kCloudShufflerUri, false) {}
 
  private:
-  void AddStringObservation(uint32_t metric_id, uint32_t encoding_id,
+  void AddStringObservation(uint32_t metric_id,
+                            uint32_t encoding_id,
                             const fidl::String& observation,
                             const AddStringObservationCallback& callback) {
     auto result = encoder_.EncodeString(metric_id, encoding_id, observation);
@@ -120,12 +121,14 @@ class CobaltEncoderImpl : public CobaltEncoder {
   }
 
   Status SendToShuffler(EncryptedMessage& encrypted_envelope) {
+    auto start_time = std::chrono::system_clock::now();
     grpc::Status status;
-    // On retryable failures to send, we sleep for sleepmillis ms and try again
-    // We use exponential back-off doubling our wait time after each failure.
-    // If we exceed the deadline, we try again doubling the deadline.
-    // In total, we will try a maximum of 10 times before giving up.
-    static const size_t kMaxAttempts = 11;
+    // We retry multiple times with exponential backoff. We try up to 10
+    // times or up to 80 seconds, whichever comes first. On receiving
+    // DEADLINE_EXCEEDED we double the deadline. On receiving a
+    // non-retryable error we give up.
+    static const size_t kMaxAttempts = 10;
+    static const int kMaxDurationSeconds = 80;
     int sleepmillis = 10;
     int deadline_seconds = 10;
 
@@ -137,23 +140,41 @@ class CobaltEncoderImpl : public CobaltEncoder {
           shuffler_client_.SendToShuffler(encrypted_envelope, context.get());
       if (status.error_code() == grpc::OK) {
         return Status::OK;
+      } else {
+        FTL_LOG(WARNING) << "Cobalt send failed with: [" << status.error_code()
+                         << "] " << status.error_message() << ".";
+      }
+
+      if (!ShouldRetry(status)) {
+        FTL_LOG(WARNING) << "Cobalt send had non-retryable error. Giving up.";
+        return Status::SEND_FAILED;
       }
 
       if (status.error_code() == grpc::DEADLINE_EXCEEDED) {
         deadline_seconds *= 2;
       }
 
-      if (!ShouldRetry(status)) {
-        FTL_LOG(WARNING) << "Non-retryable error: " << status.error_code()
-                         << " " << status.error_message();
+      std::chrono::duration<double> elapsed =
+          std::chrono::system_clock::now() - start_time;
+      int elapsed_seconds = int(elapsed.count());
+      if (elapsed_seconds + deadline_seconds >= kMaxDurationSeconds) {
+        FTL_LOG(WARNING)
+            << "Multiple attempts to send Cobalt observations failed for "
+            << elapsed_seconds << " seconds. Giving up.";
         return Status::SEND_FAILED;
       }
+
+      FTL_LOG(INFO) << "Cobalt send: Will retry in " << sleepmillis
+                    << "ms with an RPC deadline of " << deadline_seconds
+                    << " seconds.";
 
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepmillis));
       sleepmillis *= 2;
     }
 
-    FTL_LOG(WARNING) << status.error_code() << " " << status.error_message();
+    FTL_LOG(WARNING)
+        << "Cobalt send failed too many times. Giving up. Last error: ["
+        << status.error_code() << "] " << status.error_message();
     return Status::SEND_FAILED;
   }
 

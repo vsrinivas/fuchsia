@@ -1,8 +1,8 @@
 {
   "tests": [
     {
-      "name": "cobalt_apptests",
-      "exec": "/system/bin/report_result /system/test/cobalt_apptests"
+      "name": "cobalt_testapp",
+      "exec": "/system/bin/report_result /system/test/cobalt_testapp --no_network_for_testing"
     }
   ]
 }

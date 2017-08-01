@@ -191,9 +191,10 @@ element {
     prob_0_becomes_1: 0.0
     prob_1_stays_1: 1.0
     string_categories: {
-      category: "Rare-event-1"
-      category: "Rare-event-2"
-      category: "Rare-event-3"
+      category: "Ledger-startup"
+      category: "Commits-received-out-of-order"
+      category: "Commits-merged"
+      category: "Merged-commits-merged"
     }
   }
 }
