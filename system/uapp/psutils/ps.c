@@ -103,20 +103,20 @@ static mx_status_t process_callback(void* unused_ctx, int depth,
         e.private_bytes = info.mem_private_bytes;
         e.shared_bytes = info.mem_shared_bytes;
         e.pss_bytes = info.mem_private_bytes + info.mem_scaled_shared_bytes;
+
+        // Update our ancestor jobs.
+        assert(depth > 0);
+        assert(depth < JOB_STACK_SIZE);
+        for (int i = 0; i < depth; i++) {
+            task_entry_t* job = job_stack[i];
+            job->pss_bytes += e.pss_bytes;
+            job->private_bytes += e.private_bytes;
+            // shared_bytes doesn't mean much as a sum, so leave it at zero.
+        }
     }
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
     add_entry(&tasks, &e);
-
-    // Update our ancestor jobs.
-    assert(depth > 0);
-    assert(depth < JOB_STACK_SIZE);
-    for (int i = 0; i < depth; i++) {
-        task_entry_t* job = job_stack[i];
-        job->pss_bytes += info.mem_private_bytes + info.mem_scaled_shared_bytes;
-        job->private_bytes += info.mem_private_bytes;
-        // shared_bytes doesn't mean much as a sum, so leave it at zero.
-    }
 
     return MX_OK;
 }
