@@ -562,12 +562,11 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         uint32_t bit_mask = BIT_MASK(bit_size);
 
         // Clear out the bits we'll be modifying.
-        io_port_state->pci_config_address = CLEAR_BITS(
-            io_port_state->pci_config_address, bit_size, bit_offset);
+        io_port_state->pci_config_address = CLEAR_BITS(io_port_state->pci_config_address,
+                                                       bit_size, bit_offset);
 
         // Write config address.
         io_port_state->pci_config_address |= ((io->u32 & bit_mask) << bit_offset);
-        fprintf(stderr, "WRITING PCI CONFIG ADDRESS\n");
         return MX_OK;
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
