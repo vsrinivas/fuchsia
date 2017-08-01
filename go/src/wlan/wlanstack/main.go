@@ -21,9 +21,12 @@ func main() {
 	// TODO(tkilbourn): monitor this file for changes
 	// TODO(tkilbourn): replace this with a FIDL interface
 	const configFile = "/system/data/wlanstack/config.json"
+	const overrideFile = "/system/data/wlanstack/override.json"
 	var err error
-	if wlanConfig, err = wlan.ReadConfigFromFile(configFile); err != nil {
-		log.Printf("[W] could not open config (%v)", configFile)
+	if wlanConfig, err = wlan.ReadConfigFromFile(overrideFile); err != nil {
+		if wlanConfig, err = wlan.ReadConfigFromFile(configFile); err != nil {
+			log.Printf("[W] could not open config (%v)", configFile)
+		}
 	}
 
 	const ethdir = "/dev/class/ethernet"
