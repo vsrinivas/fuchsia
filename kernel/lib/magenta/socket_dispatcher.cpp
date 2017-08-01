@@ -188,9 +188,9 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
     size_t st = 0u;
     mx_status_t status;
     if (flags_ == MX_SOCKET_DATAGRAM) {
-        status = data_.WriteDgramMBufs(src, len, &st);
+        status = data_.WriteDatagram(src, len, &st);
     } else {
-        status = data_.WriteStreamMBufs(src, len, &st);
+        status = data_.WriteStream(src, len, &st);
     }
     if (status)
         return status;
@@ -229,7 +229,7 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
 
     bool was_full = is_full();
 
-    auto st = data_.ReadMBufs(dst, len, flags_ == MX_SOCKET_DATAGRAM);
+    auto st = data_.Read(dst, len, flags_ == MX_SOCKET_DATAGRAM);
 
     if (is_empty())
         state_tracker_.UpdateState(MX_SOCKET_READABLE, 0u);

@@ -8,12 +8,18 @@
 
 #include <lib/user_copy/user_ptr.h>
 
+#include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
-size_t MBuf::rem() const {
-    return kMBufDataSize - (off_ + len_);
+constexpr size_t MBufChain::MBuf::kHeaderSize;
+constexpr size_t MBufChain::MBuf::kMallocSize;
+constexpr size_t MBufChain::MBuf::kPayloadSize;
+constexpr size_t MBufChain::kSizeMax;
+
+size_t MBufChain::MBuf::rem() const {
+    return kPayloadSize - (off_ + len_);
 }
 
 MBufChain::~MBufChain() {
@@ -24,15 +30,14 @@ MBufChain::~MBufChain() {
 }
 
 bool MBufChain::is_full() const {
-    return size_ >= kSocketSizeMax;
+    return size_ >= kSizeMax;
 }
 
 bool MBufChain::is_empty() const {
     return size_ == 0;
 }
 
-
-size_t MBufChain::ReadMBufs(user_ptr<void> dst, size_t len, bool datagram) {
+size_t MBufChain::Read(user_ptr<void> dst, size_t len, bool datagram) {
     if (datagram && len > tail_.front().pkt_len_)
         len = tail_.front().pkt_len_;
 
@@ -67,13 +72,13 @@ size_t MBufChain::ReadMBufs(user_ptr<void> dst, size_t len, bool datagram) {
     return pos;
 }
 
-mx_status_t MBufChain::WriteDgramMBufs(user_ptr<const void> src,
-                                             size_t len, size_t* written) {
-    if (len + size_ > kSocketSizeMax)
+mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
+                                     size_t len, size_t* written) {
+    if (len + size_ > kSizeMax)
         return MX_ERR_SHOULD_WAIT;
 
     mxtl::SinglyLinkedList<MBuf*> bufs;
-    for (size_t need = 1 + ((len - 1) / kMBufDataSize); need != 0; need--) {
+    for (size_t need = 1 + ((len - 1) / MBuf::kPayloadSize); need != 0; need--) {
         auto buf = AllocMBuf();
         if (buf == nullptr) {
             while (!bufs.is_empty())
@@ -85,7 +90,7 @@ mx_status_t MBufChain::WriteDgramMBufs(user_ptr<const void> src,
 
     size_t pos = 0;
     for (auto& buf : bufs) {
-        size_t copy_len = MIN(kMBufDataSize, len - pos);
+        size_t copy_len = mxtl::min(MBuf::kPayloadSize, len - pos);
         if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != MX_OK) {
             while (!bufs.is_empty())
                 FreeMBuf(bufs.pop_front());
@@ -113,8 +118,8 @@ mx_status_t MBufChain::WriteDgramMBufs(user_ptr<const void> src,
     return MX_OK;
 }
 
-mx_status_t MBufChain::WriteStreamMBufs(user_ptr<const void> src,
-                                        size_t len, size_t* written) {
+mx_status_t MBufChain::WriteStream(user_ptr<const void> src,
+                                   size_t len, size_t* written) {
     if (head_ == nullptr) {
         head_ = AllocMBuf();
         if (head_ == nullptr)
@@ -132,9 +137,9 @@ mx_status_t MBufChain::WriteStreamMBufs(user_ptr<const void> src,
             head_ = next;
         }
         void* dst = head_->data_ + head_->off_ + head_->len_;
-        size_t copy_len = MIN(head_->rem(), len - pos);
-        if (size_ + copy_len > kSocketSizeMax) {
-            copy_len = kSocketSizeMax - size_;
+        size_t copy_len = mxtl::min(head_->rem(), len - pos);
+        if (size_ + copy_len > kSizeMax) {
+            copy_len = kSizeMax - size_;
             if (copy_len == 0)
                 break;
         }
@@ -152,7 +157,7 @@ mx_status_t MBufChain::WriteStreamMBufs(user_ptr<const void> src,
     return MX_OK;
 }
 
-MBuf* MBufChain::AllocMBuf() {
+MBufChain::MBuf* MBufChain::AllocMBuf() {
     if (freelist_.is_empty()) {
         mxtl::AllocChecker ac;
         MBuf* buf = new (&ac) MBuf();
