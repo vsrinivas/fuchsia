@@ -178,7 +178,7 @@ TEST(L2CAP_RecombinerTest, CompleteFirstFragment) {
   ASSERT_EQ(4u, pdu.length());
 
   common::StaticByteBuffer<4> pdu_data;
-  pdu.Read(&pdu_data);
+  pdu.Copy(&pdu_data);
   EXPECT_EQ("Test", pdu_data.AsString());
 
   EXPECT_FALSE(recombiner.ready());
@@ -284,7 +284,7 @@ TEST(L2CAP_RecombinerTest, CompleteContinuationFragment) {
   ASSERT_EQ(4u, pdu.length());
 
   common::StaticByteBuffer<4> pdu_data;
-  pdu.Read(&pdu_data);
+  pdu.Copy(&pdu_data);
   EXPECT_EQ("Test", pdu_data.AsString());
 
   EXPECT_FALSE(recombiner.ready());
@@ -360,7 +360,7 @@ TEST(L2CAP_RecombinerTest, MultipleContinuationFragments) {
   ASSERT_EQ(15u, pdu.length());
 
   common::StaticByteBuffer<15u> pdu_data;
-  pdu.Read(&pdu_data);
+  pdu.Copy(&pdu_data);
   EXPECT_EQ("This is a test!", pdu_data.AsString());
 
   EXPECT_FALSE(recombiner.ready());

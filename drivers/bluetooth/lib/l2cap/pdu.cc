@@ -26,7 +26,7 @@ PDU& PDU::operator=(PDU&& other) {
   return *this;
 }
 
-size_t PDU::Read(common::MutableByteBuffer* out_buffer, size_t pos, size_t size) const {
+size_t PDU::Copy(common::MutableByteBuffer* out_buffer, size_t pos, size_t size) const {
   FTL_DCHECK(out_buffer);
   FTL_DCHECK(pos < length());
   FTL_DCHECK(is_valid());
@@ -71,6 +71,11 @@ size_t PDU::Read(common::MutableByteBuffer* out_buffer, size_t pos, size_t size)
   }
 
   return offset;
+}
+
+const common::BufferView PDU::ViewFirstFragment(size_t size) const {
+  FTL_DCHECK(is_valid());
+  return fragments_.begin()->view().payload_data().view(sizeof(BasicHeader), size);
 }
 
 void PDU::ReleaseFragments(FragmentList* out_list) {

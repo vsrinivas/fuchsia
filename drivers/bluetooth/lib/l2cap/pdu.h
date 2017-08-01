@@ -21,7 +21,8 @@ namespace l2cap {
 // A PDU is composed of one or more fragments, each contained in a HCI ACL data packet. A PDU cannot
 // be populated directly and must be obtained from a Recombiner or Fragmenter.
 //
-// A PDU instance is light-weight (it consists of a single unique_ptr via mxtl::DoublyLinkedList)
+// A PDU instance is light-weight (it consists of a single unique_ptr via mxtl::DoublyLinkedList and
+// a size_t field)
 // and can be passed around by value. As the PDU uniquely owns its chain of fragments, a PDU is
 // move-only.
 //
@@ -47,7 +48,7 @@ class PDU final {
     return !fragments_.is_empty();
   }
 
-  // The number of fragments that are currently a part of this PDU.
+  // The number of ACL data fragments that are currently a part of this PDU.
   size_t fragment_count() const { return fragment_count_; }
 
   // Returns the number of bytes that are currently contained in this PDU, excluding the Basic L2CAP
@@ -75,8 +76,13 @@ class PDU final {
   // NOTE: Use this method wisely as it can be costly. In particular, large values of |pos|
   // will incur a cost (O(pos)) as the underlying fragments need to be traversed to find the initial
   // fragment.
-  size_t Read(common::MutableByteBuffer* out_buffer, size_t pos = 0,
+  size_t Copy(common::MutableByteBuffer* out_buffer, size_t pos = 0,
               size_t size = std::numeric_limits<std::size_t>::max()) const;
+
+  // Helper for directly reading the contents of the first ACL data fragment of this PDU without
+  // copying. If the PDU contains multiple ACL data fragments and |size| is larger than the first
+  // fragment, the returned view will only contain the first fragment.
+  const common::BufferView ViewFirstFragment(size_t size) const;
 
   // Relinquishes ownership of the underlying list of fragments and returns it. Once this is called,
   // the PDU will become invalid.
