@@ -4,36 +4,37 @@
 
 module maxwell;
 
-enum ContextType {
-  STORY,
-  MODULE,
-  ENTITY
-
-  // TODO(thatguy): Add LINK support.
-};
 
 struct ContextMetadata {
-  // A 2d map of ContextType -> key -> value for metadata associated with a
-  // value in the Context Service.
-  //
-  // TODO(thatguy): It would be better to explicitly create structs for each
-  // type and have an optional field here for each one. Unfortunately in
-  // Dart it is (currently) impossible to create a struct with optional fields
-  // without explicitly giving each field a value. Until this is fixed, we use
-  // a 2d map.
-  //
-  // Valid values for namespaces and keys:
-  //
-  //  ContextType     Key                 Type
-  //  STORY           id                  string
-  //
-  //  MODULE          name                string
-  //                  path                JSON-encoded array of strings
-  //                  url                 string
-  //
-  //  ENTITY          topic               string
-  //                  value_type          string
-  //                  ctime               int: seconds since epoch UTC
-  //                  mtime               int: seconds since epoch UTC
-  map<ContextType, map<string, string>> value;
+  StoryMetadata? story;
+
+  // Annoyingly, "module" is a reserved word in FIDL.
+  ModuleMetadata? mod;
+
+  EntityMetadata? entity;
+};
+
+struct StoryMetadata {
+  // bool type cannot be made optional, so we cannot differentiate between
+  // an unspecified value and false. So we have to create an enum with two
+  // values here to represent the boolean states, so that we can make it null.
+  enum Focused {
+    FOCUSED = 1,
+    NOT_FOCUSED = 2
+  };
+
+  string? id;
+  Focused focused;
+};
+
+struct ModuleMetadata {
+  string? name;
+  array<string>? path;
+  string? url;
+};
+
+struct EntityMetadata {
+  string? topic;
+  array<string>? type;
+  uint32 ctime;  // seconds since epoch UTC
 };

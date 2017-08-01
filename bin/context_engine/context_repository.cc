@@ -124,11 +124,7 @@ bool EvaluateFilter(const ContextFilterPtr& filter,
 }  // namespace
 
 //// ContextValue
-ContextValue::ContextValue() : meta(ContextMetadata::New()) {
-  meta->value =
-      fidl::Map<ContextType, fidl::Map<fidl::String, fidl::String>>();
-  meta->value.mark_non_null();
-}
+ContextValue::ContextValue() : meta(ContextMetadata::New()) {}
 
 //// ContextRepository
 ContextRepository::ContextRepository() : next_subscription_id_(0) {}
