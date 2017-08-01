@@ -31,6 +31,46 @@ constexpr int kMBufDataSize = kMBufSize - kMBufHeaderSize;
 
 constexpr int kSocketSizeMax = 128 * kMBufDataSize;
 
+// An MBuf is a small fixed-size chainable memory buffer.
+class MBuf : public mxtl::SinglyLinkedListable<MBuf*> {
+public:
+    size_t rem() const;
+
+    uint32_t off_ = 0u;
+    uint32_t len_ = 0u;
+    // pkt_len_ is set to the total number of bytes in a packet
+    // when a socket is in MX_SOCKET_DATAGRAM mode. A pkt_len_ of
+    // 0 means this mbuf is part of the body of a packet.
+    //
+    // Always 0 in MX_SOCKET_STREAM mode.
+    uint32_t pkt_len_ = 0u;
+    uint32_t unused;
+    char data_[kMBufDataSize] = {0};
+    // TODO: maybe union data_ with char* blocks for large messages
+};
+static_assert(sizeof(MBuf) == kMBufSize, "");
+
+class MBufChain {
+public:
+    MBufChain() = default;
+    ~MBufChain();
+
+    mx_status_t WriteStreamMBufs(user_ptr<const void> src, size_t len, size_t* written);
+    mx_status_t WriteDgramMBufs(user_ptr<const void> src, size_t len, size_t* written);
+    size_t ReadMBufs(user_ptr<void> dst, size_t len, bool datagram);
+    MBuf* AllocMBuf();
+    void FreeMBuf(MBuf* buf);
+    bool is_full() const;
+    bool is_empty() const;
+    size_t size() const { return size_; }
+
+private:
+    mxtl::SinglyLinkedList<MBuf*> freelist_;
+    mxtl::SinglyLinkedList<MBuf*> tail_;
+    MBuf* head_ = nullptr;;
+    size_t size_ = 0u;
+};
+
 class SocketDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
@@ -56,37 +96,14 @@ public:
     void OnPeerZeroHandles();
 
 private:
-    // An MBuf is a small fixed-size chainable memory buffer.
-    struct MBuf : public mxtl::SinglyLinkedListable<MBuf*> {
-        size_t rem() const;
-
-        uint32_t off_ = 0u;
-        uint32_t len_ = 0u;
-        // pkt_len_ is set to the total number of bytes in a packet
-        // when a socket is in MX_SOCKET_DATAGRAM mode. A pkt_len_ of
-        // 0 means this mbuf is part of the body of a packet.
-        //
-        // Always 0 in MX_SOCKET_STREAM mode.
-        uint32_t pkt_len_ = 0u;
-        uint32_t unused;
-        char data_[kMBufDataSize] = {0};
-        // TODO: maybe union data_ with char* blocks for large messages
-    };
-    static_assert(sizeof(MBuf) == kMBufSize, "");
-
     SocketDispatcher(uint32_t flags);
     void Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t ShutdownOther(uint32_t how);
 
-    mx_status_t WriteStreamMBufsLocked(user_ptr<const void> src, size_t len, size_t* written) TA_REQ(lock_);
-    mx_status_t WriteDgramMBufsLocked(user_ptr<const void> src, size_t len, size_t* written) TA_REQ(lock_);
-    size_t ReadMBufsLocked(user_ptr<void> dst, size_t len) TA_REQ(lock_);
-    MBuf* AllocMBuf() TA_REQ(lock_);
-    void FreeMBuf(MBuf* buf) TA_REQ(lock_);
-    bool is_full() const TA_REQ(lock_);
-    bool is_empty() const TA_REQ(lock_);
+    bool is_full() const TA_REQ(lock_) { return data_.is_full(); }
+    bool is_empty() const TA_REQ(lock_) { return data_.is_empty(); }
 
     mxtl::Canary<mxtl::magic("SOCK")> canary_;
 
@@ -96,9 +113,6 @@ private:
 
     // The |lock_| protects all members below.
     Mutex lock_;
-    mxtl::SinglyLinkedList<MBuf*> freelist_ TA_GUARDED(lock_);
-    mxtl::SinglyLinkedList<MBuf*> tail_ TA_GUARDED(lock_);
-    MBuf* head_ TA_GUARDED(lock_);
-    size_t size_ TA_GUARDED(lock_);
+    MBufChain data_ TA_GUARDED(lock_);
     mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
 };

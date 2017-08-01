@@ -26,16 +26,159 @@
 
 #define LOCAL_TRACE 0
 
-size_t SocketDispatcher::MBuf::rem() const {
+size_t MBuf::rem() const {
     return kMBufDataSize - (off_ + len_);
 }
 
-bool SocketDispatcher::is_full() const {
+MBufChain::~MBufChain() {
+    while (!tail_.is_empty())
+        delete tail_.pop_front();
+    while (!freelist_.is_empty())
+        delete freelist_.pop_front();
+}
+
+bool MBufChain::is_full() const {
     return size_ >= kSocketSizeMax;
 }
 
-bool SocketDispatcher::is_empty() const {
+bool MBufChain::is_empty() const {
     return size_ == 0;
+}
+
+
+size_t MBufChain::ReadMBufs(user_ptr<void> dst, size_t len, bool datagram) {
+    if (datagram && len > tail_.front().pkt_len_)
+        len = tail_.front().pkt_len_;
+
+    size_t pos = 0;
+    while (pos < len && !tail_.is_empty()) {
+        MBuf& cur = tail_.front();
+        char* src = cur.data_ + cur.off_;
+        size_t copy_len = MIN(cur.len_, len - pos);
+        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != MX_OK)
+            return pos;
+        pos += copy_len;
+        cur.off_ += static_cast<uint32_t>(copy_len);
+        cur.len_ -= static_cast<uint32_t>(copy_len);
+        size_ -= copy_len;
+        if (cur.len_ == 0 || datagram) {
+            size_ -= cur.len_;
+            if (head_ == &cur)
+                head_ = nullptr;
+            FreeMBuf(tail_.pop_front());
+        }
+    }
+    if (datagram) {
+        // Drain any leftover mbufs in the datagram packet.
+        while (!tail_.is_empty() && tail_.front().pkt_len_ == 0) {
+            MBuf* cur = tail_.pop_front();
+            size_ -= cur->len_;
+            if (head_ == cur)
+                head_ = nullptr;
+            FreeMBuf(cur);
+        }
+    }
+    return pos;
+}
+
+mx_status_t MBufChain::WriteDgramMBufs(user_ptr<const void> src,
+                                             size_t len, size_t* written) {
+    if (len + size_ > kSocketSizeMax)
+        return MX_ERR_SHOULD_WAIT;
+
+    mxtl::SinglyLinkedList<MBuf*> bufs;
+    for (size_t need = 1 + ((len - 1) / kMBufDataSize); need != 0; need--) {
+        auto buf = AllocMBuf();
+        if (buf == nullptr) {
+            while (!bufs.is_empty())
+                FreeMBuf(bufs.pop_front());
+            return MX_ERR_SHOULD_WAIT;
+        }
+        bufs.push_front(buf);
+    }
+
+    size_t pos = 0;
+    for (auto& buf : bufs) {
+        size_t copy_len = MIN(kMBufDataSize, len - pos);
+        if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != MX_OK) {
+            while (!bufs.is_empty())
+                FreeMBuf(bufs.pop_front());
+            return MX_ERR_INVALID_ARGS; // Bad user buffer.
+        }
+        pos += copy_len;
+        buf.len_ += static_cast<uint32_t>(copy_len);
+    }
+
+    bufs.front().pkt_len_ = static_cast<uint32_t>(len);
+
+    // Successfully built the packet mbufs. Put it on the socket.
+    while (!bufs.is_empty()) {
+        auto next = bufs.pop_front();
+        if (head_ == nullptr) {
+            tail_.push_front(next);
+        } else {
+            tail_.insert_after(tail_.make_iterator(*head_), next);
+        }
+        head_ = next;
+    }
+
+    *written = len;
+    size_ += len;
+    return MX_OK;
+}
+
+mx_status_t MBufChain::WriteStreamMBufs(user_ptr<const void> src,
+                                        size_t len, size_t* written) {
+    if (head_ == nullptr) {
+        head_ = AllocMBuf();
+        if (head_ == nullptr)
+            return MX_ERR_SHOULD_WAIT;
+        tail_.push_front(head_);
+    }
+
+    size_t pos = 0;
+    while (pos < len) {
+        if (head_->rem() == 0) {
+            auto next = AllocMBuf();
+            if (next == nullptr)
+                break;
+            tail_.insert_after(tail_.make_iterator(*head_), next);
+            head_ = next;
+        }
+        void* dst = head_->data_ + head_->off_ + head_->len_;
+        size_t copy_len = MIN(head_->rem(), len - pos);
+        if (size_ + copy_len > kSocketSizeMax) {
+            copy_len = kSocketSizeMax - size_;
+            if (copy_len == 0)
+                break;
+        }
+        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != MX_OK)
+            break;
+        pos += copy_len;
+        head_->len_ += static_cast<uint32_t>(copy_len);
+        size_ += copy_len;
+    }
+
+    if (pos == 0)
+        return MX_ERR_SHOULD_WAIT;
+
+    *written = pos;
+    return MX_OK;
+}
+
+MBuf* MBufChain::AllocMBuf() {
+    if (freelist_.is_empty()) {
+        AllocChecker ac;
+        MBuf* buf = new (&ac) MBuf();
+        return (!ac.check()) ? nullptr : buf;
+    }
+    return freelist_.pop_front();
+}
+
+void MBufChain::FreeMBuf(MBuf* buf) {
+    buf->off_ = 0u;
+    buf->len_ = 0u;
+    freelist_.push_front(buf);
 }
 
 // static
@@ -70,16 +213,10 @@ status_t SocketDispatcher::Create(uint32_t flags,
 SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags),
       peer_koid_(0u),
-      state_tracker_(MX_SOCKET_WRITABLE),
-      head_(nullptr),
-      size_(0u) {
+      state_tracker_(MX_SOCKET_WRITABLE) {
 }
 
 SocketDispatcher::~SocketDispatcher() {
-    while (!tail_.is_empty())
-        delete tail_.pop_front();
-    while (!freelist_.is_empty())
-        delete freelist_.pop_front();
 }
 
 // This is called before either SocketDispatcher is accessible from threads other than the one
@@ -246,9 +383,9 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
     size_t st = 0u;
     mx_status_t status;
     if (flags_ == MX_SOCKET_DATAGRAM) {
-        status = WriteDgramMBufsLocked(src, len, &st);
+        status = data_.WriteDgramMBufs(src, len, &st);
     } else {
-        status = WriteStreamMBufsLocked(src, len, &st);
+        status = data_.WriteStreamMBufs(src, len, &st);
     }
     if (status)
         return status;
@@ -265,91 +402,6 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
     return status;
 }
 
-mx_status_t SocketDispatcher::WriteDgramMBufsLocked(user_ptr<const void> src,
-                                                    size_t len, size_t* written) {
-    if (len + size_ > kSocketSizeMax)
-        return MX_ERR_SHOULD_WAIT;
-
-    mxtl::SinglyLinkedList<MBuf*> bufs;
-    for (size_t need = 1 + ((len - 1) / kMBufDataSize); need != 0; need--) {
-        auto buf = AllocMBuf();
-        if (buf == nullptr) {
-            while (!bufs.is_empty())
-                FreeMBuf(bufs.pop_front());
-            return MX_ERR_SHOULD_WAIT;
-        }
-        bufs.push_front(buf);
-    }
-
-    size_t pos = 0;
-    for (auto& buf : bufs) {
-        size_t copy_len = MIN(kMBufDataSize, len - pos);
-        if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != MX_OK) {
-            while (!bufs.is_empty())
-                FreeMBuf(bufs.pop_front());
-            return MX_ERR_INVALID_ARGS; // Bad user buffer.
-        }
-        pos += copy_len;
-        buf.len_ += static_cast<uint32_t>(copy_len);
-    }
-
-    bufs.front().pkt_len_ = static_cast<uint32_t>(len);
-
-    // Successfully built the packet mbufs. Put it on the socket.
-    while (!bufs.is_empty()) {
-        auto next = bufs.pop_front();
-        if (head_ == nullptr) {
-            tail_.push_front(next);
-        } else {
-            tail_.insert_after(tail_.make_iterator(*head_), next);
-        }
-        head_ = next;
-    }
-
-    *written = len;
-    size_ += len;
-    return MX_OK;
-}
-
-mx_status_t SocketDispatcher::WriteStreamMBufsLocked(user_ptr<const void> src,
-                                                     size_t len, size_t* written) {
-    if (head_ == nullptr) {
-        head_ = AllocMBuf();
-        if (head_ == nullptr)
-            return MX_ERR_SHOULD_WAIT;
-        tail_.push_front(head_);
-    }
-
-    size_t pos = 0;
-    while (pos < len) {
-        if (head_->rem() == 0) {
-            auto next = AllocMBuf();
-            if (next == nullptr)
-                break;
-            tail_.insert_after(tail_.make_iterator(*head_), next);
-            head_ = next;
-        }
-        void* dst = head_->data_ + head_->off_ + head_->len_;
-        size_t copy_len = MIN(head_->rem(), len - pos);
-        if (size_ + copy_len > kSocketSizeMax) {
-            copy_len = kSocketSizeMax - size_;
-            if (copy_len == 0)
-                break;
-        }
-        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != MX_OK)
-            break;
-        pos += copy_len;
-        head_->len_ += static_cast<uint32_t>(copy_len);
-        size_ += copy_len;
-    }
-
-    if (pos == 0)
-        return MX_ERR_SHOULD_WAIT;
-
-    *written = pos;
-    return MX_OK;
-}
-
 mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
                                    size_t* nread) {
     canary_.Assert();
@@ -360,7 +412,7 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
 
     // Just query for bytes outstanding.
     if (!dst && len == 0) {
-        *nread = size_;
+        *nread = data_.size();
         return MX_OK;
     }
 
@@ -380,12 +432,9 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
         return MX_ERR_SHOULD_WAIT;
     }
 
-    if (flags_ == MX_SOCKET_DATAGRAM && len > tail_.front().pkt_len_)
-        len = tail_.front().pkt_len_;
-
     bool was_full = is_full();
 
-    auto st = ReadMBufsLocked(dst, len);
+    auto st = data_.ReadMBufs(dst, len, flags_ == MX_SOCKET_DATAGRAM);
 
     if (is_empty())
         state_tracker_.UpdateState(MX_SOCKET_READABLE, 0u);
@@ -395,51 +444,4 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
 
     *nread = static_cast<size_t>(st);
     return MX_OK;
-}
-
-size_t SocketDispatcher::ReadMBufsLocked(user_ptr<void> dst, size_t len) {
-    size_t pos = 0;
-    while (pos < len && !tail_.is_empty()) {
-        MBuf& cur = tail_.front();
-        char* src = cur.data_ + cur.off_;
-        size_t copy_len = MIN(cur.len_, len - pos);
-        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != MX_OK)
-            return pos;
-        pos += copy_len;
-        cur.off_ += static_cast<uint32_t>(copy_len);
-        cur.len_ -= static_cast<uint32_t>(copy_len);
-        size_ -= copy_len;
-        if (cur.len_ == 0 || flags_ == MX_SOCKET_DATAGRAM) {
-            size_ -= cur.len_;
-            if (head_ == &cur)
-                head_ = nullptr;
-            FreeMBuf(tail_.pop_front());
-        }
-    }
-    if (flags_ == MX_SOCKET_DATAGRAM) {
-        // Drain any leftover mbufs in the datagram packet.
-        while (!tail_.is_empty() && tail_.front().pkt_len_ == 0) {
-            MBuf* cur = tail_.pop_front();
-            size_ -= cur->len_;
-            if (head_ == cur)
-                head_ = nullptr;
-            FreeMBuf(cur);
-        }
-    }
-    return pos;
-}
-
-SocketDispatcher::MBuf* SocketDispatcher::AllocMBuf() {
-    if (freelist_.is_empty()) {
-        AllocChecker ac;
-        MBuf* buf = new (&ac) MBuf();
-        return (!ac.check()) ? nullptr : buf;
-    }
-    return freelist_.pop_front();
-}
-
-void SocketDispatcher::FreeMBuf(SocketDispatcher::MBuf* buf) {
-    buf->off_ = 0u;
-    buf->len_ = 0u;
-    freelist_.push_front(buf);
 }
