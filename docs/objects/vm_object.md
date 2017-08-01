@@ -16,7 +16,11 @@ They are the standard method of sharing memory between processes, as well as bet
 userspace.
 
 VMOs are created with [vmo_create](../syscalls/vmo_create.md) and basic I/O can be
-performed on them with [vmo_read](../syscalls/vmo_read.md) and [vmo_write](../syscalls/vmo_write.md). A VMO's size may be set using [vmo_set_size](../syscalls/vmo_set_size.md). Conversely, [vmo_get_size](../syscalls/vmo_get_size.md) will retrieve a VMO's current size.
+performed on them with [vmo_read](../syscalls/vmo_read.md) and [vmo_write](../syscalls/vmo_write.md).
+A VMO's size may be set using [vmo_set_size](../syscalls/vmo_set_size.md).
+Conversely, [vmo_get_size](../syscalls/vmo_get_size.md) will retrieve a VMO's current size.
+
+The size of a VMO will be rounded up to the next page size boundary by the kernel.
 
 Pages are committed (allocated) for VMOs on demand through [vmo_read](../syscalls/vmo_read.md), [vmo_write](../syscalls/vmo_write.md), or by writing to a mapping of the VMO created using [vmar_map](../syscalls/vmar_map.md). Pages can be commited and decommited from a VMO manually by calling
 [vmo_op_range](../syscalls/vmo_op_range.md) with the *ZX_VMO_OP_COMMIT* and *ZX_VMO_OP_DECOMMIT*

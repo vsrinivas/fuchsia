@@ -83,9 +83,12 @@ public:
         // Called under the parent's lock, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
+    // maximum size of a VMO is one page less than the full 64bit range
+    static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
+
 private:
     // private constructor (use Create())
-    explicit VmObjectPaged(uint32_t pmm_alloc_flags, fbl::RefPtr<VmObject> parent);
+    explicit VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;
@@ -120,9 +123,6 @@ private:
 
     // set our offset within our parent
     zx_status_t SetParentOffsetLocked(uint64_t o) TA_REQ(lock_);
-
-    // maximum size of a VMO is one page less than the full 64bit range
-    static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
 
     // members
     uint64_t size_ TA_GUARDED(lock_) = 0;

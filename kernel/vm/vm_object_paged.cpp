@@ -50,11 +50,26 @@ void InitializeVmPage(vm_page_t* p) {
     p->object.contiguous_pin = 0;
 }
 
+// round up the size to the next page size boundary and make sure we dont wrap
+zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
+    *out_size = ROUNDUP_PAGE_SIZE(size);
+    if (*out_size < size)
+        return ZX_ERR_OUT_OF_RANGE;
+
+    // there's a max size to keep indexes within range
+    if (*out_size > VmObjectPaged::MAX_SIZE)
+        return ZX_ERR_OUT_OF_RANGE;
+
+    return ZX_OK;
+}
+
 } // namespace
 
-VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, fbl::RefPtr<VmObject> parent)
-    : VmObject(fbl::move(parent)), pmm_alloc_flags_(pmm_alloc_flags) {
+VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent)
+    : VmObject(fbl::move(parent)), size_(size), pmm_alloc_flags_(pmm_alloc_flags) {
     LTRACEF("%p\n", this);
+
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
 }
 
 VmObjectPaged::~VmObjectPaged() {
@@ -76,18 +91,15 @@ VmObjectPaged::~VmObjectPaged() {
 }
 
 zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject>* obj) {
-    // there's a max size to keep indexes within range
-    if (size > MAX_SIZE)
-        return ZX_ERR_INVALID_ARGS;
+    // make sure size is page aligned
+    zx_status_t status = RoundSize(size, &size);
+    if (status != ZX_OK)
+        return status;
 
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, nullptr));
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
-
-    auto err = vmo->Resize(size);
-    if (err != ZX_OK)
-        return err;
 
     *obj = fbl::move(vmo);
 
@@ -99,8 +111,13 @@ zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_na
 
     canary_.Assert();
 
+    // make sure size is page aligned
+    zx_status_t status = RoundSize(size, &size);
+    if (status != ZX_OK)
+        return status;
+
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, fbl::WrapRefPtr(this)));
+    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, size, fbl::WrapRefPtr(this)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -108,11 +125,6 @@ zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_na
 
     // add it as a child to us
     AddChildLocked(vmo.get());
-
-    // set the new clone's size
-    auto status = vmo->ResizeLocked(size);
-    if (status != ZX_OK)
-        return status;
 
     // set the offset with the parent
     status = vmo->SetParentOffsetLocked(offset);
@@ -612,6 +624,7 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t
     RangeChangeUpdateLocked(start, page_aligned_len);
 
     // iterate through the pages, freeing them
+    // TODO: use page_list iterator, move pages to list, free at once
     while (start < end) {
         auto status = page_list_.FreePage(start);
         if (status == ZX_OK && decommitted) {
@@ -739,44 +752,45 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
 
     LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
 
-    // there's a max size to keep indexes within range
-    if (s > MAX_SIZE)
-        return ZX_ERR_OUT_OF_RANGE;
+    // round up the size to the next page size boundary and make sure we dont wrap
+    zx_status_t status = RoundSize(s, &s);
+    if (status != ZX_OK)
+        return status;
+
+    // make sure everything is aligned before we get started
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(s));
 
     // see if we're shrinking or expanding the vmo
     if (s < size_) {
         // shrinking
-        // figure the starting and ending page offset that is affected
-        uint64_t start = ROUNDUP_PAGE_SIZE(s);
-        uint64_t end = ROUNDUP_PAGE_SIZE(size_);
-        uint64_t page_aligned_len = end - start;
+        uint64_t start = s;
+        uint64_t end = size_;
+        uint64_t len = end - start;
 
-        // we're only worried about whole pages to be removed
-        if (page_aligned_len > 0) {
-            if (AnyPagesPinnedLocked(start, page_aligned_len)) {
-                return ZX_ERR_BAD_STATE;
-            }
-            // unmap all of the pages in this range on all the mapping regions
-            RangeChangeUpdateLocked(start, page_aligned_len);
+        // bail if there are any pinned pages in the range we're trimming
+        if (AnyPagesPinnedLocked(start, len)) {
+            return ZX_ERR_BAD_STATE;
+        }
 
-            // iterate through the pages, freeing them
-            while (start < end) {
-                page_list_.FreePage(start);
-                start += PAGE_SIZE;
-            }
+        // unmap all of the pages in this range on all the mapping regions
+        RangeChangeUpdateLocked(start, len);
+
+        // iterate through the pages, freeing them
+        // TODO: use page_list iterator, move pages to list, free at once
+        while (start < end) {
+            page_list_.FreePage(start);
+            start += PAGE_SIZE;
         }
     } else if (s > size_) {
         // expanding
         // figure the starting and ending page offset that is affected
-        uint64_t start = ROUNDUP_PAGE_SIZE(size_);
-        uint64_t end = ROUNDUP_PAGE_SIZE(s);
-        uint64_t page_aligned_len = end - start;
+        uint64_t start = size_;
+        uint64_t end = s;
+        uint64_t len = end - start;
 
-        // we're only worried about whole pages to be added
-        if (page_aligned_len > 0) {
-            // inform all our children or mapping that there's new bits
-            RangeChangeUpdateLocked(start, page_aligned_len);
-        }
+        // inform all our children or mapping that there's new bits
+        RangeChangeUpdateLocked(start, len);
     }
 
     // save bytewise size

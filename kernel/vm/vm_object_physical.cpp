@@ -27,7 +27,9 @@ using fbl::AutoLock;
 
 VmObjectPhysical::VmObjectPhysical(paddr_t base, uint64_t size)
     : size_(size), base_(base) {
-    LTRACEF("%p\n", this);
+    LTRACEF("%p, size %#" PRIx64 "\n", this, size_);
+
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
 }
 
 VmObjectPhysical::~VmObjectPhysical() {

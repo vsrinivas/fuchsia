@@ -19,6 +19,9 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
 a container of zero to *size* bytes of memory managed by the operating
 system.
 
+The size of the VMO will be rounded up to the next page size boundary.
+Use **vmo_get_size**() to return the current size of the VMO.
+
 One handle is returned on success, representing an object with the requested
 size.
 

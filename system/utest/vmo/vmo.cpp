@@ -306,6 +306,17 @@ bool vmo_resize_test() {
     status = zx_vmo_set_size(vmo, UINT64_MAX);
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "vm_object_set_size too big");
 
+    // resize it to a non aligned size
+    status = zx_vmo_set_size(vmo, len + 1);
+    EXPECT_EQ(ZX_OK, status, "vm_object_set_size");
+
+    // size should be rounded up to the next page boundary
+    size = 0x99999999;
+    status = zx_vmo_get_size(vmo, &size);
+    EXPECT_EQ(ZX_OK, status, "vm_object_get_size");
+    EXPECT_EQ(fbl::round_up(len + 1u, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+    len = fbl::round_up(len + 1u, static_cast<size_t>(PAGE_SIZE));
+
     // map it
     uintptr_t ptr;
     status = zx_vmar_map(zx_vmar_root_self(), 0, vmo, 0, len,
@@ -324,6 +335,83 @@ bool vmo_resize_test() {
     // close the handle
     status = zx_handle_close(vmo);
     EXPECT_EQ(ZX_OK, status, "handle_close");
+
+    END_TEST;
+}
+
+bool vmo_size_align_test() {
+    BEGIN_TEST;
+
+    for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
+        zx_handle_t vmo;
+
+        // create a new object with nonstandard size
+        zx_status_t status = zx_vmo_create(s, 0, &vmo);
+        EXPECT_EQ(ZX_OK, status, "vm_object_create");
+
+        // should be the size rounded up to the nearest page boundary
+        uint64_t size = 0x99999999;
+        status = zx_vmo_get_size(vmo, &size);
+        EXPECT_EQ(ZX_OK, status, "vm_object_get_size");
+        EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+
+        // close the handle
+        EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
+    }
+
+    END_TEST;
+}
+
+bool vmo_resize_align_test() {
+    BEGIN_TEST;
+
+    // resize a vmo with a particular size and test that the resulting size is aligned on a page boundary
+    zx_handle_t vmo;
+    zx_status_t status = zx_vmo_create(0, 0, &vmo);
+    EXPECT_EQ(ZX_OK, status, "vm_object_create");
+
+    for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
+        // set the size of the object
+        zx_status_t status = zx_vmo_set_size(vmo, s);
+        EXPECT_EQ(ZX_OK, status, "vm_object_create");
+
+        // should be the size rounded up to the nearest page boundary
+        uint64_t size = 0x99999999;
+        status = zx_vmo_get_size(vmo, &size);
+        EXPECT_EQ(ZX_OK, status, "vm_object_get_size");
+        EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+    }
+
+    // close the handle
+    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
+
+    END_TEST;
+}
+
+bool vmo_clone_size_align_test() {
+    BEGIN_TEST;
+
+    zx_handle_t vmo;
+    zx_status_t status = zx_vmo_create(0, 0, &vmo);
+    EXPECT_EQ(ZX_OK, status, "vm_object_create");
+
+    // create clones with different sizes, make sure the created size is a multiple of a page size
+    for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
+        zx_handle_t clone_vmo;
+        EXPECT_EQ(ZX_OK, zx_vmo_clone(vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, s, &clone_vmo), "vm_clone");
+
+        // should be the size rounded up to the nearest page boundary
+        uint64_t size = 0x99999999;
+        zx_status_t status = zx_vmo_get_size(clone_vmo, &size);
+        EXPECT_EQ(ZX_OK, status, "vm_object_get_size");
+        EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
+
+        // close the handle
+        EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo), "handle_close");
+    }
+
+    // close the handle
+    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
 
     END_TEST;
 }
@@ -1415,6 +1503,9 @@ RUN_TEST(vmo_read_only_map_test);
 RUN_TEST(vmo_no_perm_map_test);
 RUN_TEST(vmo_no_perm_protect_test);
 RUN_TEST(vmo_resize_test);
+RUN_TEST(vmo_size_align_test);
+RUN_TEST(vmo_resize_align_test);
+RUN_TEST(vmo_clone_size_align_test);
 RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);

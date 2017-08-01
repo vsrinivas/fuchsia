@@ -39,6 +39,8 @@ VMO syscall interactions with clones.
 
 Both offset and size may start or extend beyond the original VMO's size.
 
+The size of the VMO will be rounded up to the next page size boundary.
+
 By default the rights of the cloned handled will be the same as the
 original with a few exceptions. See [vmo_create](vmo_create.md) for a
 discussion of the details of each right.
