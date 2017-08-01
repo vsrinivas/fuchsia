@@ -190,8 +190,8 @@
 // supported.
 #define MX_ERR_PROTOCOL_NOT_SUPPORTED (-70)
 
-// MX_ERR_ADDRESS_UNREACHEABLE: Host is unreachable.
-#define MX_ERR_ADDRESS_UNREACHEABLE (-71)
+// MX_ERR_ADDRESS_UNREACHABLE: Host is unreachable.
+#define MX_ERR_ADDRESS_UNREACHABLE (-71)
 
 // MX_ERR_ADDRESS_IN_USE: Address is being used by someone else.
 #define MX_ERR_ADDRESS_IN_USE (-72)
