@@ -296,22 +296,24 @@ int unittest_set_verbosity_level(int new_level);
 #define RET_FALSE return false
 #define DONOT_RET
 
-#define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)             \
-    do {                                                             \
-        UT_ASSERT_VALID_TEST_STATE;                                  \
-        const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                   \
-        const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                   \
-        if (!(_lhs_val op _rhs_val)) {                               \
-            UNITTEST_TRACEF(                                         \
-                "%s:\n"                                              \
-                "        Comparison failed: %s %s %s is false\n"     \
-                "        Specifically, %lld %s %lld is false\n",     \
-                unittest_get_message(__VA_ARGS__),                   \
-                lhs_str, #op, rhs_str, (long long int)_lhs_val,      \
-                #op, (long long int)_rhs_val);                       \
-            current_test_info->all_ok = false;                       \
-            ret;                                                     \
-        }                                                            \
+#define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)                \
+    do {                                                                \
+        UT_ASSERT_VALID_TEST_STATE;                                     \
+        const AUTO_TYPE_VAR(lhs) _lhs_val = (lhs);                      \
+        const AUTO_TYPE_VAR(rhs) _rhs_val = (rhs);                      \
+        if (!(_lhs_val op _rhs_val)) {                                  \
+            UNITTEST_TRACEF(                                            \
+                "%s:\n"                                                 \
+                "        Comparison failed: %s %s %s is false\n"        \
+                "        Specifically, %lld (0x%llx) %s %lld (0x%llx) is false\n", \
+                unittest_get_message(__VA_ARGS__),                      \
+                lhs_str, #op, rhs_str, (long long int)_lhs_val,         \
+                (unsigned long long)_lhs_val,                           \
+                #op, (long long int)_rhs_val,                           \
+                (unsigned long long)_rhs_val);                          \
+            current_test_info->all_ok = false;                          \
+            ret;                                                        \
+        }                                                               \
     } while (0)
 
 #define UT_TRUE(actual, ret, ...)                                       \
