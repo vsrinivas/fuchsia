@@ -6,19 +6,7 @@
         "boringssl_libcrypto",
         "netstack"
     ],
-    "labels": [
-        "//third_party/boringssl:ssl"
-    ],
-    "resources": [
-        {
-            "bootfs_path": "data/boringssl/cert.pem",
-            "file": "third_party/root_certificates/certdata.pem"
-        }
-    ],
-    "binaries": [
-        {
-            "binary": "libssl.so",
-            "bootfs_path": "lib/libssl.so"
-        }
-    ]
+    "packages": {
+        "libssl": "//third_party/boringssl:libssl"
+    }
 }

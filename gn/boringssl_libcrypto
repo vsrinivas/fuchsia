@@ -2,13 +2,7 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//third_party/boringssl:crypto"
-    ],
-    "binaries": [
-        {
-            "binary": "libcrypto.so",
-            "bootfs_path": "lib/libcrypto.so"
-        }
-    ]
+    "packages": {
+        "libcrypto": "//third_party/boringssl:libcrypto"
+    }
 }
