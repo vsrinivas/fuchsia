@@ -46,14 +46,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  * ==================================================================== */
 
-#ifndef OPENSSL_HEADER_MD32_COMMON_H
-#define OPENSSL_HEADER_MD32_COMMON_H
-
 #include <openssl/base.h>
 
 #include <assert.h>
 
-#include "../internal.h"
+#include "../../internal.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -270,5 +267,3 @@ int HASH_FINAL(uint8_t *md, HASH_CTX *c) {
 #if defined(__cplusplus)
 } /* extern C */
 #endif
-
-#endif /* OPENSSL_HEADER_MD32_COMMON_H */

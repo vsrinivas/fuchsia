@@ -15,11 +15,11 @@ MODULE_SRCS := \
 
 MODULE_SRCS += \
     $(SRC_DIR)/chacha/chacha.c \
+    $(SRC_DIR)/fipsmodule/sha/sha256.c \
+    $(SRC_DIR)/fipsmodule/sha/sha512.c \
     $(SRC_DIR)/cpu-intel.c \
     $(SRC_DIR)/crypto.c \
     $(SRC_DIR)/mem.c \
-    $(SRC_DIR)/sha/sha256.c \
-    $(SRC_DIR)/sha/sha512.c \
 
 ifeq ($(ARCH),arm64)
 MODULE_SRCS += \

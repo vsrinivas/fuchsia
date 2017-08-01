@@ -60,7 +60,7 @@
 
 #include <openssl/mem.h>
 
-#include "../internal.h"
+#include "../../internal.h"
 
 
 #if !defined(OPENSSL_NO_ASM) &&                         \
@@ -99,12 +99,6 @@ int SHA256_Init(SHA256_CTX *sha) {
 
 uint8_t *SHA224(const uint8_t *data, size_t len, uint8_t *out) {
   SHA256_CTX ctx;
-  static uint8_t buf[SHA224_DIGEST_LENGTH];
-
-  /* TODO(fork): remove this static buffer. */
-  if (out == NULL) {
-    out = buf;
-  }
   SHA224_Init(&ctx);
   SHA224_Update(&ctx, data, len);
   SHA224_Final(out, &ctx);
@@ -114,12 +108,6 @@ uint8_t *SHA224(const uint8_t *data, size_t len, uint8_t *out) {
 
 uint8_t *SHA256(const uint8_t *data, size_t len, uint8_t *out) {
   SHA256_CTX ctx;
-  static uint8_t buf[SHA256_DIGEST_LENGTH];
-
-  /* TODO(fork): remove this static buffer. */
-  if (out == NULL) {
-    out = buf;
-  }
   SHA256_Init(&ctx);
   SHA256_Update(&ctx, data, len);
   SHA256_Final(out, &ctx);
@@ -326,4 +314,24 @@ static void sha256_block_data_order(uint32_t *state, const uint8_t *data,
   }
 }
 
-#endif /* SHA256_ASM */
+#endif /* !SHA256_ASM */
+
+#undef DATA_ORDER_IS_BIG_ENDIAN
+#undef HASH_CTX
+#undef HASH_CBLOCK
+#undef HASH_MAKE_STRING
+#undef HASH_UPDATE
+#undef HASH_TRANSFORM
+#undef HASH_FINAL
+#undef HASH_BLOCK_DATA_ORDER
+#undef ROTATE
+#undef Sigma0
+#undef Sigma1
+#undef sigma0
+#undef sigma1
+#undef Ch
+#undef Maj
+#undef ROUND_00_15
+#undef ROUND_16_63
+#undef HOST_c2l
+#undef HOST_l2c

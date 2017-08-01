@@ -1,4 +1,11 @@
-#!/usr/bin/env perl
+#! /usr/bin/env perl
+# Copyright 2005-2016 The OpenSSL Project Authors. All Rights Reserved.
+#
+# Licensed under the OpenSSL license (the "License").  You may not use
+# this file except in compliance with the License.  You can obtain a copy
+# in the file LICENSE in the source distribution or at
+# https://www.openssl.org/source/license.html
+
 #
 # ====================================================================
 # Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
@@ -88,9 +95,11 @@
 # Haswell	12.2	9.28(+31%)  7.80(+56%)	    7.66    5.40(+42%)
 # Skylake	11.4	9.03(+26%)  7.70(+48%)      7.25    5.20(+40%)
 # Bulldozer	21.1	13.6(+54%)  13.6(+54%(***)) 13.5    8.58(+57%)
+# Ryzen		11.0	9.02(+22%)  2.05(+440%)     7.05    5.67(+20%)
 # VIA Nano	23.0	16.5(+39%)  -		    14.7    -
 # Atom		23.0	18.9(+22%)  -		    14.7    -
 # Silvermont	27.4	20.6(+33%)  -               17.5    -
+# Knights L	27.4	21.0(+30%)  19.6(+40%)	    17.5    12.8(+37%)
 # Goldmont	18.9	14.3(+32%)  4.16(+350%)     12.0    -
 #
 # (*)	whichever best applicable, including SHAEXT;
@@ -108,7 +117,7 @@ $win64=0; $win64=1 if ($flavour =~ /[nm]asm|mingw64/ || $output =~ /\.asm$/);
 
 $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}x86_64-xlate.pl" and -f $xlate ) or
-( $xlate="${dir}../../perlasm/x86_64-xlate.pl" and -f $xlate) or
+( $xlate="${dir}../../../perlasm/x86_64-xlate.pl" and -f $xlate) or
 die "can't locate x86_64-xlate.pl";
 
 # In upstream, this is controlled by shelling out to the compiler to check
@@ -256,7 +265,7 @@ $code=<<___;
 $func:
 ___
 $code.=<<___ if ($SZ==4 || $avx);
-	lea	OPENSSL_ia32cap_P(%rip),%r11
+	leaq	OPENSSL_ia32cap_P(%rip),%r11
 	mov	0(%r11),%r9d
 	mov	4(%r11),%r10d
 	mov	8(%r11),%r11d

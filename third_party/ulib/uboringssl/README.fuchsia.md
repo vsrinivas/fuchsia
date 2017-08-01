@@ -46,4 +46,4 @@ BoringSSL.
 [license]: https://fuchsia.googlesource.com/third_party/boringssl/+/master/LICENSE "BoringSSL license"
 
 [//]: # (UPDATE THE DIGEST WHEN ROLLING BORINGSSL)
-[revision]: https://fuchsia.googlesource.com/third_party/boringssl/+/c87c462088508424ddd5330ebad9af2633d2c67b/
+[revision]: https://fuchsia.googlesource.com/third_party/boringssl/+/27e377ec65d57589499c1dbabc6b74f6464f5d6d/

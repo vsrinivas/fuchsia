@@ -60,7 +60,7 @@
 
 #include <openssl/mem.h>
 
-#include "../internal.h"
+#include "../../internal.h"
 
 
 /* IMPLEMENTATION NOTES.
@@ -123,13 +123,6 @@ int SHA512_Init(SHA512_CTX *sha) {
 
 uint8_t *SHA384(const uint8_t *data, size_t len, uint8_t *out) {
   SHA512_CTX ctx;
-  static uint8_t buf[SHA384_DIGEST_LENGTH];
-
-  /* TODO(fork): remove this static buffer. */
-  if (out == NULL) {
-    out = buf;
-  }
-
   SHA384_Init(&ctx);
   SHA384_Update(&ctx, data, len);
   SHA384_Final(out, &ctx);
@@ -139,12 +132,6 @@ uint8_t *SHA384(const uint8_t *data, size_t len, uint8_t *out) {
 
 uint8_t *SHA512(const uint8_t *data, size_t len, uint8_t *out) {
   SHA512_CTX ctx;
-  static uint8_t buf[SHA512_DIGEST_LENGTH];
-
-  /* TODO(fork): remove this static buffer. */
-  if (out == NULL) {
-    out = buf;
-  }
   SHA512_Init(&ctx);
   SHA512_Update(&ctx, data, len);
   SHA512_Final(out, &ctx);
@@ -606,4 +593,18 @@ static void sha512_block_data_order(uint64_t *state, const uint64_t *W,
 
 #endif
 
-#endif /* SHA512_ASM */
+#endif /* !SHA512_ASM */
+
+#undef ROTR
+#undef PULL64
+#undef B
+#undef Sigma0
+#undef Sigma1
+#undef sigma0
+#undef sigma1
+#undef Ch
+#undef Maj
+#undef ROUND_00_15
+#undef ROUND_16_80
+#undef HOST_c2l
+#undef HOST_l2c
