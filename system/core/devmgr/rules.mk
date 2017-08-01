@@ -12,7 +12,9 @@ MODULE_NAME := devmgr
 
 MODULE_TYPE := userapp
 
-ifeq ($(ENABLE_ACPI_BUS),true)
+ifeq ($(ARCH),arm64)
+    MODULE_DEFINES +=
+else ifeq ($(ENABLE_ACPI_BUS),true)
     MODULE_DEFINES += ACPI_BUS_DRV=1
 endif
 
