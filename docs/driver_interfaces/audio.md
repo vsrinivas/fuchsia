@@ -212,7 +212,7 @@ Notes
    values would range from [0x0000, 0xFFFF] with 0x8000 representing zero
    deflection.
  * When used to set formats, exactly one non-flag bit **must** be set.
- * When used to describe supported formats, and number of non-flag bits **may**
+ * When used to describe supported formats, any number of non-flag bits **may**
    be set.  Flags (when present) apply to all of the relevant non-flag bits in
    the bitfield.  eg.  If a stream supports COMPRESSED, 16BIT and 32BIT_FLOAT, and
    the UNSIGNED bit is set, it applies only to the 16BIT format.
@@ -231,7 +231,134 @@ Notes
 
 ### Enumeration of supported formats
 
-> TODO: define how to do this using fixed length messages
+In order to determine the formats supported by a given audio stream,
+applications send an `AUDIO_STREAM_CMD_GET_FORMATS` message over the stream
+channel.  No additional parameters are required.  Drivers **must** respond to
+this request using one or more `audio_stream_cmd_get_formats_resp_t` messages,
+even if only to report that there are no formats currently supported.
+
+### Range structures
+
+Drivers indicate support for formats by sending messages containing zero or more
+`audio_stream_format_range_t` structures.  Each structure contains field which
+describe...
+ * A bitmask of supported sample formats.
+ * A minimum and maximum number of channels.
+ * A set of frame rates.
+
+A single range structure indicates support for each of the combinations of the
+three different sets of values (sample formats, channel counts, and frame
+rates).  For example, if a range structure indicated support for...
+ * 16 bit signed LPCM samples
+ * 48000, and 44100 Hz frame rates
+ * 1 and 2 channels
+
+Then the fully expanded set of supported formats indicated by the range
+structure would be...
+ * Stereo 16-bit 48 KHz audio
+ * Stereo 16-bit 44.1 KHz audio
+ * Mono 16-bit 48 KHz audio
+ * Mono 16-bit 44.1 KHz audio
+
+See the Sample Formats section (above) for a description of how sample formats
+are encoded in the `sample_formats` member of a range structure.
+
+Supported channel counts are indicated using a pair of min/max channels fields
+which indicate an exclusive range of channel counts which apply to this range.
+For example, a min/max channels range of [1, 4] would indicate that this audio
+stream supports 1, 2, 3 or 4 channels.  A range of [2, 2] would indicate that
+this audio stream supports only stereo audio.
+
+Supported frame rates are signalled similarly to channel counts using a pair of
+min/max frame per second fields along with a flags field.  While the min/max
+values provide an inclusive range of frame rates, the flags determine how to
+interpret this range.  Currently defined flags include...
+Flag | Definition
+-----|-----------
+`ASF_RANGE_FLAG_FPS_CONTINUOUS` | The frame rate range is continuous.  All frame rates in the range [min, max] are valid.
+`ASF_RANGE_FLAG_FPS_48000_FAMILY` | The frame rate range includes the members of the 48 KHz family which exist in the range [min, max]
+`ASF_RANGE_FLAG_FPS_44100_FAMILY` | The frame rate range includes the members of the 44.1 KHz family which exist in the range [min, max]
+
+So, conceptually, the valid frame rates are the union of the sets produced by
+applying each of the flags which are set to the inclusive [min, max] range.  For
+example, if both the 48 KHz and 44.1 KHz were set, and the range given was
+[16000, 47999], then the supported frame rates for this range would be
+ * 16000 Hz
+ * 22050 Hz
+ * 32000 Hz
+ * 44100 Hz
+
+The official members of the 48 KHz and 44.1 KHz families are
+Family | Frame Rates
+-------|------------
+`ASF_RANGE_FLAG_FPS_48000_FAMILY` | 8000 16000 32000 48000 96000 192000 384000 768000
+`ASF_RANGE_FLAG_FPS_44100_FAMILY` | 11025 22050 44100 88200 176400
+
+Drivers **must** set at least one of the flags, or else the set of supported
+frame rates is empty and there was no reason to transmit this range structure.
+Also note that the set of valid frame rates is the union of the frame rates
+produce by applying each of the set flags.  This implies that there is never any
+good reason to set the `ASF_RANGE_FLAG_FPS_CONTINUOUS` in conjunction with any
+of the other flags.  While it is technically legal to do so, drivers **should**
+avoid this behavior.
+
+### Transporting range structures
+
+Range structures are transmitted from drivers to applications using the
+`audio_stream_cmd_get_formats_resp_t` message.  Because of the large number of
+formats which may be supported by a stream, drivers may need to send multiple
+messages in order to enumerate all available modes.  Messages include the
+following fields.
+ * A standard `audio_cmd_hdr_t` header.  **All** messages involved in the
+   response to an application request **must** use the transaction ID of the
+   original request, and **must** set the cmd field of the header to
+   `AUDIO_STREAM_CMD_GET_FORMATS`.
+ * A `format_range_count` field.  This indicates the total number of format
+   range structures which will be sent in this response to the application.
+   This number **must** be present in **all** messages involved in the response,
+   and **must not** change from message to message.
+ * A `first_format_range_ndx` field indicating the zero-based index of the first
+   format range being specified in this particular message.  See below for
+   details.
+ * An array of `audio_stream_cmd_get_formats_resp_t` structures which is at most
+   `AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE` elements long.
+
+Drivers **must**
+ * Always transmit all of the available audio format ranges.
+ * Always transmit the available audio format ranges in ascending index order.
+ * Always pack as many ranges as possible in the fixed size message structure.
+ * Never overlap index regions or leave gaps.
+
+Given these requirements, if the maximum number of ranges per response were 15,
+and a driver needed to send 35 ranges in response to an application's request,
+then 3 messages in total would be needed, and the `format_range_count` and
+`first_format_range_ndx` fields for each message would be as follows.
+Msg # | `format_range_count` | `first_format_range_ndx`
+------|----------------------|-------------------------
+1 | 35 | 0
+2 | 35 | 15
+3 | 35 | 30
+
+`first_format_range_ndx` **must** never be greater than `format_range_count`,
+however `format_range_count` **may** be zero if an audio stream currently
+supports no formats.  The total number of `audio_stream_format_range_t`
+structures in an `audio_stream_cmd_get_formats_resp_t` message is given by the
+formula
+
+```C
+valid_ranges = MIN(AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE,
+                   msg.format_range_count - msg.first_format_range_ndx);
+```
+
+Drivers **may** choose to always send an entire
+`audio_stream_cmd_get_formats_resp_t` message, or to send a truncated message
+which ends after the last valid range structure in the `format_ranges` array.
+Applications **must** be prepared to receive up to
+`sizeof(audio_stream_cmd_get_formats_resp_t) bytes for each message, but also
+accept messages as short as `offsetof(audio_stream_cmd_get_formats_resp_t, format_ranges)`
+
+> TODO: how do devices signal a change of supported formats (think, HDMI hotplug
+> event)?  Are such devices required to simply remove and republish the device?
 
 > TODO: define how to enumerate supported compressed bitstream formats.
 

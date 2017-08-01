@@ -22,10 +22,11 @@ __BEGIN_CDECLS
 
 typedef enum audio_cmd {
     // Commands sent on the stream channel
-    AUDIO_STREAM_CMD_SET_FORMAT     = 0x1000,
-    AUDIO_STREAM_CMD_GET_GAIN       = 0x1001,
-    AUDIO_STREAM_CMD_SET_GAIN       = 0x1002,
-    AUDIO_STREAM_CMD_PLUG_DETECT    = 0x1003,
+    AUDIO_STREAM_CMD_GET_FORMATS    = 0x1000,
+    AUDIO_STREAM_CMD_SET_FORMAT     = 0x1001,
+    AUDIO_STREAM_CMD_GET_GAIN       = 0x1002,
+    AUDIO_STREAM_CMD_SET_GAIN       = 0x1003,
+    AUDIO_STREAM_CMD_PLUG_DETECT    = 0x1004,
 
     // Async notifications sent on the stream channel.
     AUDIO_STREAM_PLUG_DETECT_NOTIFY = 0x2000,
@@ -44,12 +45,15 @@ typedef enum audio_cmd {
 } audio_cmd_t;
 
 static_assert(sizeof(audio_cmd_t) == sizeof(uint32_t),
-              "audio_cmd_t must be 32 bits!\n");
+              "audio_cmd_t must be 32 bits!");
 
 typedef struct audio_cmd_hdr {
-    mx_txid_t    transaction_id;
+    mx_txid_t   transaction_id;
     audio_cmd_t cmd;
 } audio_cmd_hdr_t;
+
+static_assert(sizeof(audio_cmd_hdr_t) == 8,
+              "audio_cmd_hdr_t should be 12 bytes!");
 
 // audio_sample_format_t
 //
@@ -73,7 +77,26 @@ typedef enum audio_sample_format {
 } audio_sample_format_t;
 
 static_assert(sizeof(audio_sample_format_t) == sizeof(uint32_t),
-              "audio_sample_format_t must be 32 bits!\n");
+              "audio_sample_format_t must be 32 bits!");
+
+// audio_stream_format_range_t
+//
+// A structure used along with the AUDIO_STREAM_CMD_GET_FORMATS command in order
+// to describe the formats supported by an audio stream.
+#define ASF_RANGE_FLAG_FPS_CONTINUOUS   ((uint16_t)(1u << 0))
+#define ASF_RANGE_FLAG_FPS_48000_FAMILY ((uint16_t)(1u << 1))
+#define ASF_RANGE_FLAG_FPS_44100_FAMILY ((uint16_t)(1u << 2))
+typedef struct audio_stream_format_range {
+    audio_sample_format_t sample_formats;
+    uint32_t              min_frames_per_second;
+    uint32_t              max_frames_per_second;
+    uint8_t               min_channels;
+    uint8_t               max_channels;
+    uint16_t              flags;
+} __PACKED audio_stream_format_range_t;
+
+static_assert(sizeof(audio_stream_format_range_t) == 16,
+              "audio_stream_format_range_t should be 16 bytes!");
 
 // audio_set_gain_flags_t
 //
@@ -86,7 +109,7 @@ typedef enum audio_set_gain_flags {
 } audio_set_gain_flags_t;
 
 static_assert(sizeof(audio_set_gain_flags_t) == sizeof(uint32_t),
-              "audio_set_gain_flags_t must be 32 bits!\n");
+              "audio_set_gain_flags_t must be 32 bits!");
 
 // audio_pd_flags_t
 //
@@ -100,7 +123,7 @@ typedef enum audio_pd_flags {
 } audio_pd_flags_t;
 
 static_assert(sizeof(audio_pd_flags_t) == sizeof(uint32_t),
-              "audio_pd_flags_t must be 32 bits!\n");
+              "audio_pd_flags_t must be 32 bits!");
 
 // audio_pd_notify_flags_t
 //
@@ -114,21 +137,44 @@ typedef enum audio_pd_notify_flags {
 } audio_pd_notify_flags_t;
 
 static_assert(sizeof(audio_pd_notify_flags_t) == sizeof(uint32_t),
-              "audio_pd_resp_flags_t must be 32 bits!\n");
+              "audio_pd_resp_flags_t must be 32 bits!");
+
+// AUDIO_STREAM_CMD_GET_FORMATS
+//
+// May not be used with the NO_ACK flag.
+#define AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE (15u)
+typedef struct audio_stream_cmd_get_formats_req {
+    audio_cmd_hdr_t hdr;
+} audio_stream_cmd_get_formats_req_t;
+
+// TODO(johngro) : Figure out if mx_txid_t is ever going to go up to 8 bytes or
+// not.  If it is, just remove the _pad field below.  If not, either keep it as
+// a _pad field, or repurpose it for some flags of some form.  Right now, we use
+// it to make sure that format_ranges is aligned to a 16 byte boundary.
+typedef struct audio_stream_cmd_get_formats_resp {
+    audio_cmd_hdr_t             hdr;
+    uint32_t                    _pad;
+    uint16_t                    format_range_count;
+    uint16_t                    first_format_range_ndx;
+    audio_stream_format_range_t format_ranges[AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE];
+} audio_stream_cmd_get_formats_resp_t;
+
+static_assert(sizeof(audio_stream_cmd_get_formats_resp_t) == 256,
+              "audio_stream_cmd_get_formats_resp_t must be 256 bytes");
 
 // AUDIO_STREAM_CMD_SET_FORMAT
 //
 // May not be used with the NO_ACK flag.
 typedef struct audio_stream_cmd_set_format_req {
-    audio_cmd_hdr_t       hdr;
+    audio_cmd_hdr_t        hdr;
     uint32_t               frames_per_second;
-    audio_sample_format_t sample_format;
+    audio_sample_format_t  sample_format;
     uint16_t               channels;
 } audio_stream_cmd_set_format_req_t;
 
 typedef struct audio_stream_cmd_set_format_resp {
     audio_cmd_hdr_t hdr;
-    mx_status_t      result;
+    mx_status_t     result;
 
     // Note: Upon success, a channel used to control the audio buffer will also
     // be returned.
@@ -150,13 +196,13 @@ typedef struct audio_stream_cmd_get_gain_resp {
     // behave as if they have continuous control at all times?
     audio_cmd_hdr_t hdr;
 
-    bool             cur_mute;  // True if the amplifier is currently muted.
-    float            cur_gain;  // The current setting gain of the amplifier in dB
+    bool            cur_mute;  // True if the amplifier is currently muted.
+    float           cur_gain;  // The current setting gain of the amplifier in dB
 
-    bool             can_mute;  // True if the amplifier is capable of muting
-    float            min_gain;  // The minimum valid gain setting, in dB
-    float            max_gain;  // The maximum valid gain setting, in dB
-    float            gain_step; // The smallest valid gain increment, counted from the minimum gain.
+    bool            can_mute;  // True if the amplifier is capable of muting
+    float           min_gain;  // The minimum valid gain setting, in dB
+    float           max_gain;  // The maximum valid gain setting, in dB
+    float           gain_step; // The smallest valid gain increment, counted from the minimum gain.
 } audio_stream_cmd_get_gain_resp_t;
 
 // AUDIO_STREAM_CMD_SET_GAIN
@@ -183,12 +229,12 @@ typedef struct audio_stream_cmd_get_gain_resp {
 typedef struct audio_stream_cmd_set_gain_req {
     audio_cmd_hdr_t        hdr;
     audio_set_gain_flags_t flags;
-    float                   gain;
+    float                  gain;
 } audio_stream_cmd_set_gain_req_t;
 
 typedef struct audio_stream_cmd_set_gain_resp {
     audio_cmd_hdr_t hdr;
-    mx_status_t      result;
+    mx_status_t     result;
     // The current gain settings observed immediately after processing the set
     // gain request.
     bool             cur_mute;
@@ -208,7 +254,7 @@ typedef struct audio_stream_cmd_plug_detect_req {
 typedef struct audio_stream_cmd_plug_detect_resp {
     audio_cmd_hdr_t         hdr;
     audio_pd_notify_flags_t flags;           // The current plug state and capabilities
-    mx_time_t                plug_state_time; // The time of the plug state last change.
+    mx_time_t               plug_state_time; // The time of the plug state last change.
 } audio_stream_cmd_plug_detect_resp_t;
 
 // AUDIO_STREAM_PLUG_DETECT_NOTIFY
@@ -238,7 +284,7 @@ typedef struct audio_rb_cmd_get_fifo_depth_req {
 
 typedef struct audio_rb_cmd_get_fifo_depth_resp {
     audio_cmd_hdr_t hdr;
-    mx_status_t      result;
+    mx_status_t     result;
 
     // A representation (in bytes) of how far ahead audio hardware may read
     // into the stream (in the case of output) or may hold onto audio before
@@ -256,7 +302,7 @@ typedef struct audio_rb_cmd_get_buffer_req {
 
 typedef struct audio_rb_cmd_get_buffer_resp {
     audio_cmd_hdr_t hdr;
-    mx_status_t      result;
+    mx_status_t     result;
 
     // NOTE: If result == MX_OK, a VMO handle representing the ring buffer to
     // be used will be returned as well.  Clients may map this buffer with
@@ -277,7 +323,7 @@ typedef struct audio_rb_cmd_start_req {
 
 typedef struct audio_rb_cmd_start_resp {
     audio_cmd_hdr_t hdr;
-    mx_status_t      result;
+    mx_status_t     result;
 
     // Nominal time at which the first frame of audio started to be clocked out
     // to the codec as measured by mx_ticks_get().
@@ -292,7 +338,7 @@ typedef struct audio_rb_cmd_stop_req {
 
 typedef struct audio_rb_cmd_stop_resp {
     audio_cmd_hdr_t hdr;
-    mx_status_t      result;
+    mx_status_t     result;
 } audio_rb_cmd_stop_resp_t;
 
 // AUDIO_RB_POSITION_NOTIFY
