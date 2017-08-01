@@ -71,13 +71,14 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
                                                   fidl::Array<uint8_t> start,
                                                   int* num_queries) {
   fidl::Array<fidl::Array<uint8_t>> result;
+  fidl::Array<uint8_t> token = nullptr;
   fidl::Array<uint8_t> next_token = nullptr;
   if (num_queries) {
     *num_queries = 0;
   }
   do {
     (*snapshot)->GetKeys(
-        std::move(start), std::move(next_token),
+        start.Clone(), std::move(token),
         [&result, &next_token, &num_queries](
             Status status, fidl::Array<fidl::Array<uint8_t>> keys,
             fidl::Array<uint8_t> new_next_token) {
@@ -92,7 +93,9 @@ fidl::Array<fidl::Array<uint8_t>> SnapshotGetKeys(PageSnapshotPtr* snapshot,
         });
     EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
         ftl::TimeDelta::FromSeconds(1)));
-  } while (next_token);
+    token = std::move(next_token);
+    next_token = nullptr;  // Suppress misc-use-after-move.
+  } while (token);
   return result;
 }
 
@@ -105,13 +108,14 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
                                          fidl::Array<uint8_t> start,
                                          int* num_queries) {
   fidl::Array<EntryPtr> result;
+  fidl::Array<uint8_t> token = nullptr;
   fidl::Array<uint8_t> next_token = nullptr;
   if (num_queries) {
     *num_queries = 0;
   }
   do {
     (*snapshot)->GetEntries(
-        std::move(start), std::move(next_token),
+        start.Clone(), std::move(token),
         [&result, &next_token, &num_queries](
             Status status, fidl::Array<EntryPtr> entries,
             fidl::Array<uint8_t> new_next_token) {
@@ -127,7 +131,9 @@ fidl::Array<EntryPtr> SnapshotGetEntries(PageSnapshotPtr* snapshot,
         });
     EXPECT_TRUE(snapshot->WaitForIncomingResponseWithTimeout(
         ftl::TimeDelta::FromSeconds(1)));
-  } while (next_token);
+    token = std::move(next_token);
+    next_token = nullptr;  // Suppress misc-use-after-move.
+  } while (token);
   return result;
 }
 

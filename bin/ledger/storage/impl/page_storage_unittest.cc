@@ -1132,9 +1132,13 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit0 = CommitImpl::FromContentAndParents(
       storage_.get(), object_ids[0], std::move(parent));
+  parent.clear();
+
   parent.emplace_back(GetFirstHead());
   std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
       storage_.get(), object_ids[1], std::move(parent));
+  parent.clear();
+
   parent.emplace_back(commit1->Clone());
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
       storage_.get(), object_ids[2], std::move(parent));

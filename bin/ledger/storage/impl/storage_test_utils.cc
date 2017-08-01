@@ -107,7 +107,7 @@ StorageTest::~StorageTest(){};
   Status status;
   ObjectId object_id;
   GetStorage()->AddObjectFromLocal(
-      DataSource::Create(std::move(value)),
+      DataSource::Create(value),
       callback::Capture(MakeQuitTask(), &status, &object_id));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()

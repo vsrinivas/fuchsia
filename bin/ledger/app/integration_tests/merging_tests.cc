@@ -224,6 +224,7 @@ class ConflictResolverImpl : public ConflictResolver {
         ++num_queries;
 
         token = std::move(next_token);
+        next_token = nullptr;  // Suppress misc-use-after-move.
       } while (token);
 
       if (num_queries < min_queries) {
@@ -511,7 +512,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 
   // Change the merge strategy.
-  resolver_factory_ptr.reset();
+  resolver_factory_ptr = nullptr;  // Suppress misc-use-after-move.
   resolver_factory = std::make_unique<TestConflictResolverFactory>(
       MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
       [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });

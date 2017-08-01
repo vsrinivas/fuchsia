@@ -150,22 +150,23 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
 void CommitImpl::Empty(
     PageStorage* page_storage,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  TreeNode::Empty(page_storage, [
-    page_storage, callback = std::move(callback)
-  ](Status s, ObjectId root_node_id) {
-    if (s != Status::OK) {
-      callback(s, nullptr);
-      return;
-    }
+  TreeNode::Empty(
+      page_storage, [ page_storage, callback = std::move(callback) ](
+                        Status s, ObjectId root_node_id) {
+        if (s != Status::OK) {
+          callback(s, nullptr);
+          return;
+        }
 
-    ftl::RefPtr<SharedStorageBytes> storage_ptr =
-        SharedStorageBytes::Create(std::move(root_node_id));
+        ftl::RefPtr<SharedStorageBytes> storage_ptr =
+            SharedStorageBytes::Create(std::move(root_node_id));
 
-    auto ptr = std::unique_ptr<Commit>(new CommitImpl(
-        page_storage, kFirstPageCommitId.ToString(), 0, 0, storage_ptr->bytes(),
-        std::vector<CommitIdView>(), std::move(storage_ptr)));
-    callback(Status::OK, std::move(ptr));
-  });
+        const auto& bytes = storage_ptr->bytes();
+        auto ptr = std::unique_ptr<Commit>(new CommitImpl(
+            page_storage, kFirstPageCommitId.ToString(), 0, 0, bytes,
+            std::vector<CommitIdView>(), std::move(storage_ptr)));
+        callback(Status::OK, std::move(ptr));
+      });
 }
 
 bool CommitImpl::CheckValidSerialization(ftl::StringView storage_bytes) {

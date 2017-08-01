@@ -649,13 +649,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
 
   // Call GetEntries with the previous token and receive the remaining results.
   fidl::Array<InlinedEntryPtr> actual_entries2;
+  fidl::Array<uint8_t> actual_next_token2;
   snapshot->GetEntriesInline(
       nullptr, std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
-                        &actual_next_token));
+                        &actual_next_token2));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  EXPECT_TRUE(actual_next_token.is_null());
+  EXPECT_TRUE(actual_next_token2.is_null());
   for (auto& entry : actual_entries2) {
     actual_entries.push_back(std::move(entry));
   }
