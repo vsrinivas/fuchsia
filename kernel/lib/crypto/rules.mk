@@ -20,7 +20,7 @@ MODULE_SRCS += \
 # TODO(andrewkrieger): Remove dependence on hw_rng once the new entropy
 # collector is used in global_prng.cpp.
 MODULE_DEPS += kernel/dev/hw_rng
-MODULE_DEPS += third_party/lib/boring-crypto
+MODULE_DEPS += third_party/lib/uboringssl
 MODULE_DEPS += third_party/lib/cryptolib
 MODULE_DEPS += kernel/lib/mxtl
 MODULE_DEPS += kernel/lib/unittest

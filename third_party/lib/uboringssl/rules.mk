@@ -6,7 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-ULIB_DIR := third_party/ulib/boring-crypto
+ULIB_DIR := third_party/ulib/uboringssl
 SRC_DIR := $(ULIB_DIR)/crypto
 
 KERNEL_INCLUDES += $(ULIB_DIR)/include

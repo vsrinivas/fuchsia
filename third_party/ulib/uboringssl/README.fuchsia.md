@@ -1,7 +1,7 @@
-boring-crypto
+uboringssl
 =======================================
 
-boring-crypto is a subset of [BoringSSL's][boringssl] libcrypto.  The source
+uboringssl is a subset of [BoringSSL's][boringssl] libcrypto.  The source
 code under this directory comprises a minimal set needed for selected
 cryptographic operations in the kernel.
 

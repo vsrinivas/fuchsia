@@ -33,7 +33,7 @@ MODULE_SRCS += \
     $(ASM_DIR)/sha512-x86-64.S
 endif
 
-MODULE_NAME := boring-crypto
+MODULE_NAME := uboringssl
 
 MODULE_LIBS := \
     system/ulib/mxio \

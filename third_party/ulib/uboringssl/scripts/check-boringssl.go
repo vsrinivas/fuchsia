@@ -22,7 +22,7 @@ import (
 
 const (
   DefaultBoringSSL = "//third_party/boringssl"
-  DefaultMagenta = "//magenta/third_party/ulib/boring-crypto"
+  DefaultMagenta = "//magenta/third_party/ulib/uboringssl"
 )
 
 // GetRealPath returns a canonical path, with '//' replaced by $FUCHSIA_DIR
