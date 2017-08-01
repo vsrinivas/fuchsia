@@ -25,24 +25,27 @@ struct waiter {
 };
 
 /* Self-synchronized-destruction-safe lock functions */
+#define UNLOCKED 0
+#define LOCKED_NO_WAITERS 1
+#define LOCKED_MAYBE_WAITERS 2
 
 static inline void lock(atomic_int* l) {
-    if (a_cas_shim(l, 0, 1)) {
-        a_cas_shim(l, 1, 2);
+    if (a_cas_shim(l, UNLOCKED, LOCKED_NO_WAITERS)) {
+        a_cas_shim(l, LOCKED_NO_WAITERS, LOCKED_MAYBE_WAITERS);
         do
-            __wait(l, 0, 2);
-        while (a_cas_shim(l, 0, 2));
+            __wait(l, UNLOCKED, LOCKED_MAYBE_WAITERS);
+        while (a_cas_shim(l, UNLOCKED, LOCKED_MAYBE_WAITERS));
     }
 }
 
 static inline void unlock(atomic_int* l) {
-    if (atomic_exchange(l, 0) == 2)
+    if (atomic_exchange(l, UNLOCKED) == LOCKED_MAYBE_WAITERS)
         __wake(l, 1);
 }
 
 static inline void unlock_requeue(atomic_int* l, mx_futex_t* r) {
-    atomic_store(l, 0);
-    _mx_futex_requeue(l, /* wake count */ 0, /* l futex value */ 0,
+    atomic_store(l, UNLOCKED);
+    _mx_futex_requeue(l, /* wake count */ 0, /* l futex value */ UNLOCKED,
                       r, /* requeue count */ 1);
 }
 
