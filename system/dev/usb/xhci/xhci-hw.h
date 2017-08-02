@@ -270,7 +270,7 @@ typedef volatile struct {
 #define CRCR_CA         (1 << 2)
 #define CRCR_CRR        (1 << 3)
 
-// Interruptor register bits
+// Interrupter register bits
 #define IMAN_IP         (1 << 0)    // Interrupt Pending
 #define IMAN_IE         (1 << 1)    // Interrupt Enable
 #define IMODI_MASK      0x0000FFFF  // Interrupter Moderation Interval
@@ -491,8 +491,8 @@ typedef volatile struct {
 #define SLOT_CTX_TT_PORT_NUM_BITS           8
 #define SLOT_CTX_TTT_START                  16
 #define SLOT_CTX_TTT_BITS                   2
-#define SLOT_CTX_INTERRUPTOR_TARGET_START   22
-#define SLOT_CTX_INTERRUPTOR_TARGET_BITS    10
+#define SLOT_CTX_INTERRUPTER_TARGET_START   22
+#define SLOT_CTX_INTERRUPTER_TARGET_BITS    10
 
 // Slot context bits (sc3)
 #define SLOT_CTX_DEVICE_ADDRESS_START       0

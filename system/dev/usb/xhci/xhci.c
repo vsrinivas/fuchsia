@@ -211,7 +211,7 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
 
     xhci->max_slots = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_SLOTS_START,
                                       HCSPARAMS1_MAX_SLOTS_BITS);
-    xhci->max_interruptors = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
+    xhci->max_interrupters = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_INTRS_START,
                                              HCSPARAMS1_MAX_INTRS_BITS);
     xhci->rh_num_ports = XHCI_GET_BITS32(hcsparams1, HCSPARAMS1_MAX_PORTS_START,
                                          HCSPARAMS1_MAX_PORTS_BITS);
@@ -393,24 +393,24 @@ int xhci_get_ep_state(xhci_endpoint_t* ep) {
     return XHCI_GET_BITS32(&ep->epc->epc0, EP_CTX_EP_STATE_START, EP_CTX_EP_STATE_BITS);
 }
 
-static void xhci_update_erdp(xhci_t* xhci, int interruptor) {
-    xhci_event_ring_t* er = &xhci->event_rings[interruptor];
-    xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interruptor];
+static void xhci_update_erdp(xhci_t* xhci, int interrupter) {
+    xhci_event_ring_t* er = &xhci->event_rings[interrupter];
+    xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
 
     uint64_t erdp = xhci_event_ring_current_phys(er);
     erdp |= ERDP_EHB; // clear event handler busy
     XHCI_WRITE64(&intr_regs->erdp, erdp);
 }
 
-static void xhci_interruptor_init(xhci_t* xhci, int interruptor) {
-    xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interruptor];
+static void xhci_interrupter_init(xhci_t* xhci, int interrupter) {
+    xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
 
-    xhci_update_erdp(xhci, interruptor);
+    xhci_update_erdp(xhci, interrupter);
 
     XHCI_SET32(&intr_regs->iman, IMAN_IE, IMAN_IE);
     XHCI_SET32(&intr_regs->imod, IMODI_MASK, XHCI_IMODI_VAL);
     XHCI_SET32(&intr_regs->erstsz, ERSTSZ_MASK, ERST_ARRAY_SIZE);
-    XHCI_WRITE64(&intr_regs->erstba, xhci->erst_arrays_phys[interruptor]);
+    XHCI_WRITE64(&intr_regs->erstba, xhci->erst_arrays_phys[interrupter]);
 }
 
 void xhci_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
@@ -464,8 +464,8 @@ mx_status_t xhci_start(xhci_t* xhci) {
     XHCI_SET_BITS32(&op_regs->config, CONFIG_MAX_SLOTS_ENABLED_START,
                     CONFIG_MAX_SLOTS_ENABLED_BITS, xhci->max_slots);
 
-    // initialize interruptor (only using one for now)
-    xhci_interruptor_init(xhci, 0);
+    // initialize interrupter (only using one for now)
+    xhci_interrupter_init(xhci, 0);
 
     // start the controller with interrupts and mfindex wrap events enabled
     uint32_t start_flags = USBCMD_RS | USBCMD_INTE | USBCMD_EWE;
@@ -545,8 +545,8 @@ uint64_t xhci_get_current_frame(xhci_t* xhci) {
     return ((wrap_count * (1 << XHCI_MFINDEX_BITS)) + mfindex) >> 3;
 }
 
-static void xhci_handle_events(xhci_t* xhci, int interruptor) {
-    xhci_event_ring_t* er = &xhci->event_rings[interruptor];
+static void xhci_handle_events(xhci_t* xhci, int interrupter) {
+    xhci_event_ring_t* er = &xhci->event_rings[interrupter];
 
     // process all TRBs with cycle bit matching our CCS
     while ((XHCI_READ32(&er->current->control) & TRB_C) == er->ccs) {
@@ -574,13 +574,13 @@ static void xhci_handle_events(xhci_t* xhci, int interruptor) {
             er->current = er->start;
             er->ccs ^= TRB_C;
         }
-        xhci_update_erdp(xhci, interruptor);
+        xhci_update_erdp(xhci, interrupter);
     }
 }
 
 void xhci_handle_interrupt(xhci_t* xhci, bool legacy) {
     volatile uint32_t* usbsts = &xhci->op_regs->usbsts;
-    const int interruptor = 0;
+    const int interrupter = 0;
 
     uint32_t status = XHCI_READ32(usbsts);
     uint32_t clear = status & USBSTS_CLEAR_BITS;
@@ -589,12 +589,12 @@ void xhci_handle_interrupt(xhci_t* xhci, bool legacy) {
     // If we are in legacy IRQ mode, clear the IP (Interrupt Pending) bit
     // from the IMAN register of our interrupter.
     if (legacy) {
-        xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interruptor];
+        xhci_intr_regs_t* intr_regs = &xhci->runtime_regs->intr_regs[interrupter];
         XHCI_SET32(&intr_regs->iman, IMAN_IP, IMAN_IP);
     }
 
     if (status & USBSTS_EINT) {
-        xhci_handle_events(xhci, interruptor);
+        xhci_handle_events(xhci, interrupter);
     }
     if (status & USBSTS_PCD) {
         xhci_handle_root_hub_change(xhci);

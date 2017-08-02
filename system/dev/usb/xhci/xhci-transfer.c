@@ -161,7 +161,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
     state->needs_data_event = true;
 
     size_t length = txn->length;
-    uint32_t interruptor_target = 0;
+    uint32_t interrupter_target = 0;
 
     if (setup) {
         // Setup Stage
@@ -177,7 +177,7 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
         XHCI_SET_BITS32(&trb->ptr_high, SETUP_TRB_LENGTH_START, SETUP_TRB_LENGTH_BITS, length);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_XFER_LENGTH_START, XFER_TRB_XFER_LENGTH_BITS, 8);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
-                        interruptor_target);
+                        interrupter_target);
 
         uint32_t control_bits = (length == 0 ? XFER_TRB_TRT_NONE :
                             (state->direction == USB_DIR_IN ? XFER_TRB_TRT_IN : XFER_TRB_TRT_OUT));
@@ -205,7 +205,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
     bool isochronous = (state->ep_type == USB_ENDPOINT_ISOCHRONOUS);
     uint64_t frame = proto_data->frame;
 
-    uint32_t interruptor_target = 0;
+    uint32_t interrupter_target = 0;
 
     if (isochronous) {
         if (length == 0) return MX_ERR_INVALID_ARGS;
@@ -241,7 +241,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         uint32_t td_size = --state->packet_count;
         XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
-                        interruptor_target);
+                        interrupter_target);
 
         uint32_t control_bits = TRB_CHAIN;
         if (td_size == 0) {
@@ -290,7 +290,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         xhci_clear_trb(trb);
         trb_set_ptr(trb, txn);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
-                        interruptor_target);
+                        interrupter_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
         print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);
@@ -309,7 +309,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
-                        interruptor_target);
+                        interrupter_target);
         uint32_t control_bits = (direction == USB_DIR_IN && length > 0 ? XFER_TRB_DIR_OUT
                                                                        : XFER_TRB_DIR_IN);
         if (length == 0) {
@@ -334,7 +334,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         xhci_clear_trb(trb);
         trb_set_ptr(trb, txn);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
-                        interruptor_target);
+                        interrupter_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
         print_trb(xhci, ring, trb);
         xhci_increment_ring(ring);

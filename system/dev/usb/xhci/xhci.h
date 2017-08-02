@@ -106,15 +106,15 @@ struct xhci {
     mtx_t command_ring_lock;
     xhci_command_context_t* command_contexts[COMMAND_RING_SIZE];
 
-    // One event ring for now, but we will have multiple if we use multiple interruptors
-#define INTERRUPTOR_COUNT 1
-    xhci_event_ring_t event_rings[INTERRUPTOR_COUNT];
-    erst_entry_t* erst_arrays[INTERRUPTOR_COUNT];
-    mx_paddr_t erst_arrays_phys[INTERRUPTOR_COUNT];
+    // One event ring for now, but we will have multiple if we use multiple interrupters
+#define INTERRUPTER_COUNT 1
+    xhci_event_ring_t event_rings[INTERRUPTER_COUNT];
+    erst_entry_t* erst_arrays[INTERRUPTER_COUNT];
+    mx_paddr_t erst_arrays_phys[INTERRUPTER_COUNT];
 
     size_t page_size;
     size_t max_slots;
-    size_t max_interruptors;
+    size_t max_interrupters;
     size_t context_size;
     // true if controller supports large ESIT payloads
     bool large_esit;

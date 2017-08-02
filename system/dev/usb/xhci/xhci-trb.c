@@ -41,14 +41,14 @@ size_t xhci_transfer_ring_free_trbs(xhci_transfer_ring_t* ring) {
     return size - busy_count;
 }
 
-mx_status_t xhci_event_ring_init(xhci_t* xhci, int interruptor, int count) {
-    xhci_event_ring_t* ring = &xhci->event_rings[interruptor];
+mx_status_t xhci_event_ring_init(xhci_t* xhci, int interrupter, int count) {
+    xhci_event_ring_t* ring = &xhci->event_rings[interrupter];
     // allocate buffer for TRBs
     mx_status_t status = io_buffer_init(&ring->buffer, count * sizeof(xhci_trb_t), IO_BUFFER_RW);
     if (status != MX_OK) return status;
 
     ring->start = io_buffer_virt(&ring->buffer);
-    erst_entry_t* erst_array = xhci->erst_arrays[interruptor];
+    erst_entry_t* erst_array = xhci->erst_arrays[interrupter];
     XHCI_WRITE64(&erst_array[0].ptr, io_buffer_phys(&ring->buffer));
     XHCI_WRITE32(&erst_array[0].size, count);
 
@@ -58,8 +58,8 @@ mx_status_t xhci_event_ring_init(xhci_t* xhci, int interruptor, int count) {
     return MX_OK;
 }
 
-void xhci_event_ring_free(xhci_t* xhci, int interruptor) {
-    xhci_event_ring_t* ring = &xhci->event_rings[interruptor];
+void xhci_event_ring_free(xhci_t* xhci, int interrupter) {
+    xhci_event_ring_t* ring = &xhci->event_rings[interrupter];
     io_buffer_release(&ring->buffer);
 }
 
