@@ -318,7 +318,6 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
 #endif // __x86_64__
         fprintf(stderr, "\n");
     } else {
-        status = MX_ERR_UNAVAILABLE;
         guest_state_t* guest_state = vcpu_context->guest_state;
         switch (memory->addr) {
         case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
