@@ -102,14 +102,13 @@ typedef struct arm64_exc_data {
 
 // data associated with an exception (siginfo in linux parlance)
 // Things available from regsets (e.g., pc) are not included here.
+// For an example list of things one might add, see linux siginfo.
 typedef struct mx_exception_context {
     struct {
         union {
             x86_64_exc_data_t x86_64;
             arm64_exc_data_t  arm_64;
         } u;
-        // TODO(dje): add more stuff, revisit packing
-        // For an example list of things one might add, see linux siginfo.
     } arch;
 } mx_exception_context_t;
 
@@ -126,7 +125,6 @@ typedef struct mx_exception_header {
 typedef struct mx_exception_report {
     mx_exception_header_t header;
     // The remainder of the report is exception-specific.
-    // TODO(dje): For now we KISS and use the same struct for everything.
     mx_exception_context_t context;
 } mx_exception_report_t;
 
