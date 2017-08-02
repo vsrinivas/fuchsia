@@ -25,6 +25,16 @@ source_set("buffer") {
   ]
 }
 
+source_set("interrupt") {
+  sources = [
+    "magenta_platform_interrupt.h",
+  ]
+
+  public_deps = [
+    "$magenta_build_root/system/ulib/mx",
+  ]
+}
+
 source_set("device") {
   configs += [ "..:platform_include_config" ]
 
@@ -35,6 +45,7 @@ source_set("device") {
   ]
 
   deps = [
+    ":interrupt",
     "$magma_build_root/src/magma_util",
   ]
 
@@ -91,9 +102,7 @@ source_set("thread") {
     "magenta_platform_thread.cc",
   ]
 
-  libs = [
-    "magenta"
-  ]
+  libs = [ "magenta" ]
 }
 
 source_set("event") {

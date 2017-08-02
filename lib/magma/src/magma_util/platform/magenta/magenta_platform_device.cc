@@ -102,7 +102,7 @@ std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
     if (status < 0)
         return DRETP(nullptr, "map_interrupt failed (%d)", status);
 
-    return std::make_unique<MagentaPlatformInterrupt>(interrupt_handle);
+    return std::make_unique<MagentaPlatformInterrupt>(mx::handle(interrupt_handle));
 }
 
 MagentaPlatformDevice::~MagentaPlatformDevice()

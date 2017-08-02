@@ -7,6 +7,7 @@
 
 #include "platform_interrupt.h"
 
+#include "mx/handle.h"
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
 
@@ -14,27 +15,29 @@ namespace magma {
 
 class MagentaPlatformInterrupt : public PlatformInterrupt {
 public:
-    MagentaPlatformInterrupt(mx_handle_t interrupt_handle) : handle_(interrupt_handle)
-    {
-        DASSERT(handle_ != MX_HANDLE_INVALID);
-    }
+    MagentaPlatformInterrupt(mx::handle interrupt_handle) : handle_(std::move(interrupt_handle)) {}
 
-    ~MagentaPlatformInterrupt() override { Close(); }
-
-    void Close() override { mx_handle_close(handle_); }
+    void Close() override { handle_.reset(); }
 
     bool Wait() override
     {
-        mx_status_t status = mx_interrupt_wait(handle_);
+        if (!handle_)
+            return DRETF(false, "invalid handle");
+
+        mx_status_t status = mx_interrupt_wait(handle_.get());
         if (status != MX_OK)
             return DRETF(false, "mx_interrupt_wait failed (%d)", status);
         return true;
     }
 
-    void Complete() override { mx_interrupt_complete(handle_); }
+    void Complete() override
+    {
+        if (handle_)
+            mx_interrupt_complete(handle_.get());
+    }
 
 private:
-    mx_handle_t handle_;
+    mx::handle handle_;
 };
 
 } // namespace magma
