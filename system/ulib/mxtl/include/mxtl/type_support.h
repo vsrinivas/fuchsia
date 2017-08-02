@@ -17,6 +17,14 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 
+// is_const:
+
+template <typename T>
+struct is_const : false_type {};
+
+template <typename T>
+struct is_const<const T> : true_type {};
+
 // is_lvalue_reference:
 
 template <typename T>

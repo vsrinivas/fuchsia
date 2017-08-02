@@ -4,6 +4,21 @@
 
 #include <mxtl/type_support.h>
 
+// is_const tests:
+struct s {};
+union u {};
+static_assert(!mxtl::is_const<int>::value, "");
+static_assert(mxtl::is_const<const int>::value, "");
+static_assert(!mxtl::is_const<s>::value, "");
+static_assert(mxtl::is_const<const s>::value, "");
+static_assert(!mxtl::is_const<u>::value, "");
+static_assert(mxtl::is_const<const u>::value, "");
+
+static_assert(!mxtl::is_const<int*>::value, "");
+static_assert(mxtl::is_const<int* const>::value, "");
+static_assert(!mxtl::is_const<const int*>::value, "");
+static_assert(mxtl::is_const<const int* const>::value, "");
+
 // match_cv tests:
 static_assert(mxtl::is_same<mxtl::match_cv<int, void>::type, void>::value, "wrong type");
 static_assert(mxtl::is_same<mxtl::match_cv<const int, void>::type, const void>::value,
