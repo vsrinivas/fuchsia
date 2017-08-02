@@ -3,6 +3,7 @@
         "go"
     ],
     "packages": {
-        "wlanstack": "//apps/wlan:wlanstack"
+        "wlanstack": "//apps/wlan:wlanstack",
+        "wlantool": "//apps/wlan:wlantool"
     }
 }
