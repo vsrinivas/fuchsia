@@ -158,7 +158,7 @@ static mx_status_t pci_config_read_word(pci_device_state_t* pci_device_state,
 
 mx_status_t pci_config_read(pci_device_state_t* pci_device_state,
                             uint8_t bus, uint8_t device, uint8_t func,
-                            uint8_t reg, size_t len, uint32_t* value) {
+                            uint16_t reg, size_t len, uint32_t* value) {
     // Perform 4-byte aligned read and then shift + mask the result to get the
     // expected value.
     uint32_t word = 0;
@@ -178,7 +178,7 @@ mx_status_t pci_config_read(pci_device_state_t* pci_device_state,
 
 mx_status_t pci_config_write(pci_device_state_t* pci_device_state,
                              uint8_t bus, uint8_t device,
-                             uint8_t func, uint8_t reg,
+                             uint8_t func, uint16_t reg,
                              size_t len, uint32_t value) {
     if (device >= PCI_MAX_DEVICES)
         return MX_ERR_OUT_OF_RANGE;

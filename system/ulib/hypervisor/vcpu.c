@@ -27,9 +27,15 @@
 #define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
 #define IO_APIC_PHYS_BASE                       0xfec00000
 #define IO_APIC_PHYS_TOP                        (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
-#define PCI_PHYS_BASE(bus, device, function) \
-    (0xd0000000 + (((bus) << 20) | ((device) << 15) | ((function) << 12)))
-#define PCI_PHYS_TOP(bus, device, function)     (PCI_PHYS_BASE(bus, device, function) + 4095)
+
+/* PCI ECAM memory layout. These are provided to the guest via the MCFG ACPI
+ * table.
+ */
+#define PCI_ECAM_START_BUS                      0
+#define PCI_ECAM_END_BUS                        0
+#define PCI_ECAM_PHYS_BASE                      0xd0000000
+#define PCI_ECAM_PHYS_TOP \
+    (PCI_ECAM_PHYS_BASE + PCI_ECAM_SIZE(PCI_ECAM_START_BUS, PCI_ECAM_END_BUS) - 1)
 
 /* Local APIC register addresses. */
 #define LOCAL_APIC_REGISTER_ID                  0x0020
@@ -188,7 +194,7 @@ static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
 
 static mx_status_t handle_pci_config_read(guest_state_t* guest_state,
                                           uint8_t bus, uint8_t device,
-                                          uint8_t function, uint8_t reg,
+                                          uint8_t function, uint16_t reg,
                                           size_t len, uint32_t* value) {
     // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
     //
@@ -209,7 +215,7 @@ static mx_status_t handle_pci_config_read(guest_state_t* guest_state,
 
 static mx_status_t handle_pci_config_write(guest_state_t* guest_state,
                                            uint8_t bus, uint8_t device,
-                                           uint8_t function, uint8_t reg,
+                                           uint8_t function, uint16_t reg,
                                            size_t len, uint32_t value) {
     // We don't expect software to ever write to an unimplemented device.
     if (device >= PCI_MAX_DEVICES)
@@ -221,14 +227,15 @@ static mx_status_t handle_pci_config_write(guest_state_t* guest_state,
 }
 
 static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
-                                          uint8_t device, instruction_t* inst,
+                                          uint8_t bus, uint8_t device,
+                                          uint8_t function, uint16_t reg,
+                                          instruction_t* inst,
                                           const mx_guest_memory_t* memory) {
     mx_status_t status;
-    uint32_t offset = memory->addr - PCI_PHYS_BASE(0, device, 0);
     switch (inst->type) {
     case INST_TEST: {
         uint32_t result = 0;
-        status = handle_pci_config_read(guest_state, 0, device, 0, offset,
+        status = handle_pci_config_read(guest_state, bus, device, function, reg,
                                         inst->mem, &result);
         if (status != MX_OK)
             return status;
@@ -242,7 +249,7 @@ static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
     }
     case INST_MOV_READ: {
         uint32_t result = 0;
-        status = handle_pci_config_read(guest_state, 0, device, 0, offset,
+        status = handle_pci_config_read(guest_state, bus, device, function, reg,
                                         inst->mem, &result);
         if (status != MX_OK)
             return status;
@@ -275,7 +282,7 @@ static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
         if (status != MX_OK)
             return status;
 
-        return handle_pci_config_write(guest_state, 0, device, 0, offset,
+        return handle_pci_config_write(guest_state, bus, device, function, reg,
                                        inst->mem, value);
     }}
     return MX_ERR_NOT_SUPPORTED;
@@ -322,21 +329,14 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
             status = handle_io_apic(&guest_state->io_apic_state, memory, &inst);
             mtx_unlock(&guest_state->mutex);
             break;
-        case PCI_PHYS_BASE(0, PCI_DEVICE_ROOT_COMPLEX, 0) ...
-             PCI_PHYS_TOP(0, PCI_DEVICE_ROOT_COMPLEX, 0): {
+        case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP: {
             mtx_lock(&guest_state->mutex);
             status = handle_pci_mmio_access(vcpu_context->guest_state,
-                                            PCI_DEVICE_ROOT_COMPLEX, &inst,
-                                            memory);
-            mtx_unlock(&guest_state->mutex);
-            break;
-        }
-        case PCI_PHYS_BASE(0, PCI_DEVICE_VIRTIO_BLOCK, 0) ...
-             PCI_PHYS_TOP(0, PCI_DEVICE_VIRTIO_BLOCK, 0): {
-            mtx_lock(&guest_state->mutex);
-            status = handle_pci_mmio_access(vcpu_context->guest_state,
-                                            PCI_DEVICE_VIRTIO_BLOCK, &inst,
-                                            memory);
+                                            PCI_ECAM_BUS(memory->addr) + PCI_ECAM_START_BUS,
+                                            PCI_ECAM_DEVICE(memory->addr),
+                                            PCI_ECAM_FUNCTION(memory->addr),
+                                            PCI_ECAM_REGISTER(memory->addr),
+                                            &inst, memory);
             mtx_unlock(&guest_state->mutex);
             break;
         }

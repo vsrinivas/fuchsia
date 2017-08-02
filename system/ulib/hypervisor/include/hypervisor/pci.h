@@ -34,6 +34,26 @@
     (0x80000000 | ((bus) << 16) | ((device) << 11) | ((function) << 8) \
      | ((reg) & PCI_TYPE1_REGISTER_MASK))
 
+// PCI ECAM address manipulation.
+#define PCI_ECAM_BUS(addr)                     (((addr) >> 20) & 0xff)
+#define PCI_ECAM_DEVICE(addr)                  (((addr) >> 15) & 0x1f)
+#define PCI_ECAM_FUNCTION(addr)                (((addr) >> 12) & 0x7)
+#define PCI_ECAM_REGISTER(addr)                ((addr) & 0xfff)
+
+/* The size of an ECAM region depends on values in the MCFG ACPI table. For
+ * each ECAM region there is a defined physical base address as well as a bus
+ * start/end value for that region.
+ *
+ * When creating an ECAM address for a PCI configuration register, the bus
+ * value must be relative to the starting bus number for that ECAM region.
+ */
+#define PCI_ECAM_SIZE(start_bus, end_bus) \
+    (((end_bus) - (start_bus) + 1) << 20)
+
+#define PCI_ECAM_ADDR(base, bus, device, function, reg) \
+    ((base) | ((bus) << 20) | ((device) << 15) | ((function) << 12) | (reg))
+
+
 /* Stores the state of PCI devices across VM exists. */
 typedef struct pci_device_state {
     // Command register.
@@ -46,13 +66,13 @@ typedef struct pci_device_state {
 /* Read a value from PCI config space. */
 mx_status_t pci_config_read(pci_device_state_t* pci_device_state,
                             uint8_t bus, uint8_t device,
-                            uint8_t func, uint8_t reg,
+                            uint8_t func, uint16_t reg,
                             size_t len, uint32_t* value);
 
 /* Write a value to PCI config space. */
 mx_status_t pci_config_write(pci_device_state_t* pci_device_state,
                              uint8_t bus, uint8_t device,
-                             uint8_t func, uint8_t reg,
+                             uint8_t func, uint16_t reg,
                              size_t len, uint32_t value);
 
 /* Return the device number for the PCI device that has a BAR mapped to the
