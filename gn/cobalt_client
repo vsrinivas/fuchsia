@@ -6,7 +6,8 @@
         "boringssl_libssl",
         "ftl",
         "magentix",
-        "mtl"
+        "mtl",
+        "runtime_config"
     ],
     "labels": [
         "//apps/cobalt_client",
