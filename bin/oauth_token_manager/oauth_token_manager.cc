@@ -93,7 +93,7 @@ enum TokenType {
 
 // Adjusts the token expiration window by a small amount to proactively refresh
 // tokens before the expiry time limit has reached.
-const uint64_t kPaddingForTokenExpiryInS = 300;
+const uint64_t kPaddingForTokenExpiryInS = 600;
 
 // TODO(alhaad/ukode): Don't use a hand-rolled version of this.
 std::string UrlEncode(const std::string& value) {
@@ -519,6 +519,7 @@ class OAuthTokenManagerApp::TokenProviderFactoryImpl : TokenProviderFactory,
     GetIdToken([ this, firebase_api_key = firebase_api_key, callback ](
         const std::string id_token, const modular::auth::AuthErrPtr auth_err) {
       if (auth_err->status != Status::OK) {
+        FTL_LOG(ERROR) << "Error in refreshing Idtoken.";
         modular::auth::AuthErrPtr ae = auth::AuthErr::New();
         ae->status = auth_err->status;
         ae->message = auth_err->message;
