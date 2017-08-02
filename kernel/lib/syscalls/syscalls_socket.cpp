@@ -30,9 +30,6 @@
 mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, user_ptr<mx_handle_t> _out1) {
     LTRACEF("entry out_handles %p, %p\n", _out0.get(), _out1.get());
 
-    if (options != MX_SOCKET_STREAM && options != MX_SOCKET_DATAGRAM)
-        return MX_ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
     mx_status_t res = up->QueryPolicy(MX_POL_NEW_SOCKET);
     if (res != MX_OK)
@@ -79,25 +76,31 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
     if (status != MX_OK)
         return status;
 
-    if (!options) {
-        size_t nwritten;
+    size_t nwritten;
+    switch (options) {
+    case 0:
         status = socket->Write(_buffer, size, &nwritten);
-
-        // Caller may ignore results if desired.
-        if (status == MX_OK && _actual)
-            status = _actual.copy_to_user(nwritten);
-
-        return status;
-    }
-    if (size == 0) {
-        switch (options) {
-        case MX_SOCKET_SHUTDOWN_WRITE:
-        case MX_SOCKET_SHUTDOWN_READ:
-        case MX_SOCKET_SHUTDOWN_READ | MX_SOCKET_SHUTDOWN_WRITE:
+        break;
+    case MX_SOCKET_CONTROL:
+        status = socket->WriteControl(_buffer, size);
+        if (status == MX_OK)
+            nwritten = size;
+        break;
+    case MX_SOCKET_SHUTDOWN_WRITE:
+    case MX_SOCKET_SHUTDOWN_READ:
+    case MX_SOCKET_SHUTDOWN_READ | MX_SOCKET_SHUTDOWN_WRITE:
+        if (size == 0)
             return socket->Shutdown(options & MX_SOCKET_SHUTDOWN_MASK);
-        }
+        // fallthrough
+    default:
+        return MX_ERR_INVALID_ARGS;
     }
-    return MX_ERR_INVALID_ARGS;
+
+    // Caller may ignore results if desired.
+    if (status == MX_OK && _actual)
+        status = _actual.copy_to_user(nwritten);
+
+    return status;
 }
 
 mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
@@ -106,7 +109,6 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
     LTRACEF("handle %x\n", handle);
 
     if (options)
-        return MX_ERR_INVALID_ARGS;
 
     if (!_buffer && size > 0)
         return MX_ERR_INVALID_ARGS;
@@ -119,7 +121,17 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
         return status;
 
     size_t nread;
-    status = socket->Read(_buffer, size, &nread);
+
+    switch (options) {
+    case 0:
+        status = socket->Read(_buffer, size, &nread);
+        break;
+    case MX_SOCKET_CONTROL:
+        status = socket->ReadControl(_buffer, size, &nread);
+        break;
+    default:
+        return MX_ERR_INVALID_ARGS;
+    }
 
     // Caller may ignore results if desired.
     if (status == MX_OK && _actual)

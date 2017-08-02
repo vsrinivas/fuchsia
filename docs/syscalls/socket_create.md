@@ -22,8 +22,9 @@ have a maximum capacity.
 
 Data written to one handle may be read from the opposite.
 
-The *options* must currently be either **MX_SOCKET_STREAM** or
-**MX_SOCKET_DATAGRAM**.
+The *options* must set either the **MX_SOCKET_STREAM** or
+**MX_SOCKET_DATAGRAM** flag. The **MX_SOCKET_HAS_CONTROL** flag
+can also be set to enable the socket control plane.
 
 ## RETURN VALUE
 

@@ -41,6 +41,10 @@ written before reading was disabled.
 because of passing **MX_SOCKET_SHUTDOWN_WRITE** to this endpoint or passing
 **MX_SOCKET_SHUTDOWN_READ** to the peer.
 
+**MX_SOCKET_CONTROL_READABLE** data is available to read from the
+socket control plane.
+
+**MX_SOCKET_CONTROL_WRITABLE** data may be written to the socket control plane.
 
 ## SYSCALLS
 

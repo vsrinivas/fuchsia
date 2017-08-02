@@ -24,14 +24,19 @@ If *size* is zero, a bitwise combination of **MX_SOCKET_SHUTDOWN_READ** and
 **MX_SOCKET_SHUTDOWN_WRITE** can be passed to *options* to disable reading or
 writing from a socket endpoint.
 
-If **MX_SOCKET_SHUTDOWN_READ** is passed to options, and *size* is 0, then reading is disabled for
+If **MX_SOCKET_SHUTDOWN_READ** is passed to *options*, and *size* is 0, then reading is disabled for
 the socket endpoint at *handle*. All data buffered in the socket at the time of the call may be
 read, but further reads from this endpoint or writes to the other endpoint of the socket will fail
 with **MX_ERR_BAD_STATE**.
 
-If **MX_SOCKET_SHUTDOWN_WRITE** is passed to options, and *size* is 0, then writing is disabled for
+If **MX_SOCKET_SHUTDOWN_WRITE** is passed to *options*, and *size* is 0, then writing is disabled for
 the socket endpoint at *handle*. Further writes to this endpoint or reads from the other endpoint of
 the socket will fail with **MX_ERR_BAD_STATE**.
+
+If **MX_SOCKET_CONTROL** is passed to *options*, then **socket_write**() attempts to write
+into the socket control plane. A write to the control plane is never short. If the socket
+control plane has insufficient space for *buffer*, it writes nothing and returns
+**MX_ERR_OUT_OF_RANGE**.
 
 If a NULL *actual* is passed in, it will be ignored.
 
@@ -50,6 +55,9 @@ insufficient space for *buffer*, it writes nothing and returns
 ## ERRORS
 
 **MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+
+**MX_ERR_BAD_STATE** *options* includes **MX_SOCKET_CONTROL** and the
+socket was not created with **MX_SOCKET_HAS_CONTROL**.
 
 **MX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 

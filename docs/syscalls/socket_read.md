@@ -30,6 +30,9 @@ If the socket was created with **MX_SOCKET_DATAGRAM** and *buffer*
 is too small for the packet, then the packet will be truncated,
 and any remaining bytes in the packet are discarded.
 
+If *options* is set to **MX_SOCKET_CONTROL**, then **socket_read**()
+attempts to read from the socket control plane.
+
 ## RETURN VALUE
 
 **socket_read**() returns **MX_OK** on success, and writes into
@@ -39,11 +42,14 @@ and any remaining bytes in the packet are discarded.
 
 **MX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 
+**MX_ERR_BAD_STATE** *options* includes **MX_SOCKET_CONTROL** and the
+socket was not created with **MX_SOCKET_HAS_CONTROL**.
+
 **MX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
 **MX_ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
 but invalid pointers, or if *buffer* is NULL but *size* is positive,
-or if *options* is nonzero.
+or if *options* is not either zero or **MX_SOCKET_CONTROL*.
 
 **MX_ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_READ**.
 

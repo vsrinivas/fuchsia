@@ -35,9 +35,8 @@ status_t SocketDispatcher::Create(uint32_t flags,
                                   mx_rights_t* rights) {
     LTRACE_ENTRY;
 
-    if (flags != MX_SOCKET_STREAM && flags != MX_SOCKET_DATAGRAM) {
+    if (flags & ~MX_SOCKET_CREATE_MASK)
         return MX_ERR_INVALID_ARGS;
-    }
 
     mxtl::AllocChecker ac;
     auto socket0 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
@@ -51,6 +50,24 @@ status_t SocketDispatcher::Create(uint32_t flags,
     socket0->Init(socket1);
     socket1->Init(socket0);
 
+    // TODO: use mbufs to avoid pinning control buffer memory.
+    if (flags & MX_SOCKET_HAS_CONTROL) {
+        // TODO: after moving to an mbuf pool, do this in Init
+        // to avoid the need to hold the mutex.
+        AutoLock lock0(&socket0->lock_);
+        socket0->control_msg_.reset(new (&ac) char[kControlMsgSize]);
+        if (!ac.check())
+            return MX_ERR_NO_MEMORY;
+
+        AutoLock lock1(&socket1->lock_);
+        socket1->control_msg_.reset(new (&ac) char[kControlMsgSize]);
+        if (!ac.check())
+            return MX_ERR_NO_MEMORY;
+
+        socket0->state_tracker_.UpdateState(0u, MX_SOCKET_CONTROL_WRITABLE);
+        socket1->state_tracker_.UpdateState(0u, MX_SOCKET_CONTROL_WRITABLE);
+    }
+
     *rights = MX_DEFAULT_SOCKET_RIGHTS;
     *dispatcher0 = mxtl::move(socket0);
     *dispatcher1 = mxtl::move(socket1);
@@ -61,6 +78,7 @@ SocketDispatcher::SocketDispatcher(uint32_t flags)
     : flags_(flags),
       peer_koid_(0u),
       state_tracker_(MX_SOCKET_WRITABLE),
+      control_msg_len_(0),
       read_disabled_(false) {
 }
 
@@ -221,6 +239,49 @@ mx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
     return other->WriteSelf(src, len, nwritten);
 }
 
+mx_status_t SocketDispatcher::WriteControl(user_ptr<const void> src, size_t len) {
+    canary_.Assert();
+
+    if ((flags_ & MX_SOCKET_HAS_CONTROL) == 0)
+        return MX_ERR_BAD_STATE;
+
+    if (len == 0)
+        return MX_ERR_INVALID_ARGS;
+
+    if (len > kControlMsgSize)
+        return MX_ERR_OUT_OF_RANGE;
+
+    mxtl::RefPtr<SocketDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_)
+            return MX_ERR_PEER_CLOSED;
+        other = other_;
+    }
+
+    return other->WriteControlSelf(src, len);
+}
+
+mx_status_t SocketDispatcher::WriteControlSelf(user_ptr<const void> src,
+                                               size_t len) {
+    canary_.Assert();
+
+    AutoLock lock(&lock_);
+
+    if (control_msg_len_ != 0)
+        return MX_ERR_SHOULD_WAIT;
+
+    if (src.copy_array_from_user(control_msg_.get(), len) != MX_OK)
+        return MX_ERR_INVALID_ARGS; // Bad user buffer.
+
+    control_msg_len_ = static_cast<uint32_t>(len);
+
+    state_tracker_.UpdateState(0u, MX_SOCKET_CONTROL_READABLE);
+    other_->state_tracker_.UpdateState(MX_SOCKET_CONTROL_WRITABLE, 0u);
+
+    return MX_OK;
+}
+
 mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
                                         size_t* written) {
     canary_.Assert();
@@ -234,7 +295,7 @@ mx_status_t SocketDispatcher::WriteSelf(user_ptr<const void> src, size_t len,
 
     size_t st = 0u;
     mx_status_t status;
-    if (flags_ == MX_SOCKET_DATAGRAM) {
+    if (flags_ & MX_SOCKET_DATAGRAM) {
         status = data_.WriteDatagram(src, len, &st);
     } else {
         status = data_.WriteStream(src, len, &st);
@@ -283,7 +344,7 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
 
     bool was_full = is_full();
 
-    auto st = data_.Read(dst, len, flags_ == MX_SOCKET_DATAGRAM);
+    auto st = data_.Read(dst, len, flags_ & MX_SOCKET_DATAGRAM);
 
     if (is_empty()) {
         uint32_t set_mask = 0u;
@@ -296,5 +357,30 @@ mx_status_t SocketDispatcher::Read(user_ptr<void> dst, size_t len,
         other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
     *nread = static_cast<size_t>(st);
+    return MX_OK;
+}
+
+mx_status_t SocketDispatcher::ReadControl(user_ptr<void> dst, size_t len,
+                                          size_t* nread) {
+    canary_.Assert();
+
+    if ((flags_ & MX_SOCKET_HAS_CONTROL) == 0) {
+        return MX_ERR_BAD_STATE;
+    }
+
+    AutoLock lock(&lock_);
+
+    if (control_msg_len_ == 0)
+        return MX_ERR_SHOULD_WAIT;
+
+    size_t copy_len = MIN(control_msg_len_, len);
+    if (dst.copy_array_to_user(control_msg_.get(), copy_len) != MX_OK)
+        return MX_ERR_INVALID_ARGS; // Invalid user buffer.
+
+    control_msg_len_ = 0;
+    state_tracker_.UpdateState(MX_SOCKET_CONTROL_READABLE, 0u);
+    other_->state_tracker_.UpdateState(0u, MX_SOCKET_CONTROL_WRITABLE);
+
+    *nread = copy_len;
     return MX_OK;
 }

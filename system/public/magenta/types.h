@@ -121,6 +121,8 @@ typedef uint32_t mx_signals_t;
 #define MX_SOCKET_PEER_CLOSED       __MX_OBJECT_PEER_CLOSED
 #define MX_SOCKET_READ_DISABLED     __MX_OBJECT_SIGNAL_4
 #define MX_SOCKET_WRITE_DISABLED    __MX_OBJECT_SIGNAL_5
+#define MX_SOCKET_CONTROL_READABLE  __MX_OBJECT_SIGNAL_6
+#define MX_SOCKET_CONTROL_WRITABLE  __MX_OBJECT_SIGNAL_7
 
 // Port
 #define MX_PORT_READABLE            __MX_OBJECT_READABLE
@@ -255,12 +257,16 @@ typedef int64_t mx_rel_off_t;
 
 // Socket options and limits.
 // These options can be passed to mx_socket_write()
-#define MX_SOCKET_SHUTDOWN_WRITE            1u
-#define MX_SOCKET_SHUTDOWN_READ             2u
+#define MX_SOCKET_SHUTDOWN_WRITE            (1u << 0)
+#define MX_SOCKET_SHUTDOWN_READ             (1u << 1)
 #define MX_SOCKET_SHUTDOWN_MASK             (MX_SOCKET_SHUTDOWN_WRITE | MX_SOCKET_SHUTDOWN_READ)
 // These can be passed to mx_socket_create()
-#define MX_SOCKET_STREAM                    0u
-#define MX_SOCKET_DATAGRAM                  1u
+#define MX_SOCKET_STREAM                    (0u << 0)
+#define MX_SOCKET_DATAGRAM                  (1u << 0)
+#define MX_SOCKET_HAS_CONTROL               (1u << 1)
+#define MX_SOCKET_CREATE_MASK               (MX_SOCKET_DATAGRAM | MX_SOCKET_HAS_CONTROL)
+// These can be passed to mx_socket_read() and mx_socket_write().
+#define MX_SOCKET_CONTROL                   (1u << 2)
 
 // Flags which can be used to to control cache policy for APIs which map memory.
 typedef enum {

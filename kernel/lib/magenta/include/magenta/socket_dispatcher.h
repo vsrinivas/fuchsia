@@ -20,6 +20,8 @@
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 
+constexpr int kControlMsgSize = 1024;
+
 class SocketDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
@@ -37,10 +39,16 @@ public:
     // Socket methods.
     mx_status_t Write(user_ptr<const void> src, size_t len, size_t* written);
 
+    mx_status_t WriteControl(user_ptr<const void> src, size_t len);
+
     // Shut this endpoint of the socket down for reading, writing, or both.
     status_t Shutdown(uint32_t how);
 
+    status_t HalfClose();
+
     mx_status_t Read(user_ptr<void> dst, size_t len, size_t* nread);
+
+    mx_status_t ReadControl(user_ptr<void> dst, size_t len, size_t* nread);
 
     void OnPeerZeroHandles();
 
@@ -48,6 +56,7 @@ private:
     SocketDispatcher(uint32_t flags);
     void Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
+    mx_status_t WriteControlSelf(user_ptr<const void> src, size_t len);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t ShutdownOther(uint32_t how);
 
@@ -63,6 +72,8 @@ private:
     // The |lock_| protects all members below.
     mxtl::Mutex lock_;
     MBufChain data_ TA_GUARDED(lock_);
+    mxtl::unique_ptr<char[]> control_msg_ TA_GUARDED(lock_);
+    size_t control_msg_len_ TA_GUARDED(lock_);
     mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
     bool read_disabled_ TA_GUARDED(lock_);
 };

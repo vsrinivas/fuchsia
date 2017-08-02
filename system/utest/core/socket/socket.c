@@ -569,6 +569,157 @@ static bool socket_datagram_no_short_write(void) {
     END_TEST;
 }
 
+static bool socket_control_plane_absent(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+
+    mx_handle_t h0, h1;
+    status = mx_socket_create(0, &h0, &h1);
+    ASSERT_EQ(status, MX_OK, "");
+
+    status = mx_socket_write(h0, MX_SOCKET_CONTROL, "hi", 2u, NULL);
+    EXPECT_EQ(status, MX_ERR_BAD_STATE, "");
+
+    status = mx_socket_write(h1, MX_SOCKET_CONTROL, "hi", 2u, NULL);
+    EXPECT_EQ(status, MX_ERR_BAD_STATE, "");
+
+    size_t count;
+    char rbuf[10] = {0};
+
+    status = mx_socket_read(h0, MX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_ERR_BAD_STATE, "");
+
+    status = mx_socket_read(h1, MX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_ERR_BAD_STATE, "");
+
+    END_TEST;
+}
+
+static bool socket_control_plane(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+
+    mx_handle_t h0, h1;
+    status = mx_socket_create(MX_SOCKET_HAS_CONTROL, &h0, &h1);
+    ASSERT_EQ(status, MX_OK, "");
+
+    mx_signals_t signals0 = get_satisfied_signals(h0);
+    mx_signals_t signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    // Write to the control plane.
+    size_t count;
+    status = mx_socket_write(h0, MX_SOCKET_CONTROL, "hello1", 6u, &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_READABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    status = mx_socket_write(h0, MX_SOCKET_CONTROL, "hi", 2u, NULL);
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+
+    status = mx_socket_write(h1, MX_SOCKET_CONTROL, "hello0", 6u, &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_READABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_READABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    status = mx_socket_write(h1, MX_SOCKET_CONTROL, "hi", 2u, NULL);
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+
+    char rbuf[10] = {0};
+
+    // The control plane is independent of normal reads and writes.
+    status = mx_socket_read(h0, 0, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+    status = mx_socket_read(h1, 0, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+    status = mx_socket_write(h0, 0, "normal", 7u, &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 7u, "");
+    status = mx_socket_read(h1, 0, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 7u, "");
+    EXPECT_EQ(memcmp(rbuf, "normal", 7), 0, "");
+
+    // Read from the control plane.
+    status = mx_socket_read(h0, MX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+    EXPECT_EQ(memcmp(rbuf, "hello0", 6), 0, "");
+
+    status = mx_socket_read(h0, MX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+
+    status = mx_socket_read(h1, MX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+    EXPECT_EQ(memcmp(rbuf, "hello1", 6), 0, "");
+
+    status = mx_socket_read(h1, MX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count);
+    EXPECT_EQ(status, MX_ERR_SHOULD_WAIT, "");
+
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    END_TEST;
+}
+
+static bool socket_control_plane_shutdown(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+    size_t count;
+
+    mx_handle_t h0, h1;
+    status = mx_socket_create(MX_SOCKET_HAS_CONTROL, &h0, &h1);
+    ASSERT_EQ(status, MX_OK, "");
+
+    mx_signals_t signals0 = get_satisfied_signals(h0);
+    mx_signals_t signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    status = mx_socket_write(h1, 0u, "12345", 5u, &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 5u, "");
+
+    status = mx_socket_write(h1, MX_SOCKET_SHUTDOWN_WRITE, NULL, 0u, NULL);
+    EXPECT_EQ(status, MX_OK, "");
+
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_WRITABLE | MX_SOCKET_READABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITE_DISABLED | MX_SOCKET_CONTROL_WRITABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    status = mx_socket_write(h0, MX_SOCKET_CONTROL, "hello1", 6u, &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+
+    status = mx_socket_write(h1, MX_SOCKET_CONTROL, "hello0", 6u, &count);
+    EXPECT_EQ(status, MX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+
+    signals0 = get_satisfied_signals(h0);
+    signals1 = get_satisfied_signals(h1);
+    EXPECT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_CONTROL_READABLE | MX_SOCKET_READABLE | MX_SIGNAL_LAST_HANDLE, "");
+    EXPECT_EQ(signals1, MX_SOCKET_WRITE_DISABLED | MX_SOCKET_CONTROL_READABLE | MX_SIGNAL_LAST_HANDLE, "");
+
+    END_TEST;
+}
+
+
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
 RUN_TEST(socket_signals)
@@ -580,6 +731,9 @@ RUN_TEST(socket_bytes_outstanding_shutdown_read)
 RUN_TEST(socket_short_write)
 RUN_TEST(socket_datagram)
 RUN_TEST(socket_datagram_no_short_write)
+RUN_TEST(socket_control_plane_absent)
+RUN_TEST(socket_control_plane)
+RUN_TEST(socket_control_plane_shutdown)
 END_TEST_CASE(socket_tests)
 
 #ifndef BUILD_COMBINED_TESTS
