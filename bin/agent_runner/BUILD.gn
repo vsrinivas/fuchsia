@@ -7,8 +7,8 @@ source_set("agent_runner") {
     "agent_context_impl.cc",
     "agent_context_impl.h",
     "agent_runner.cc",
-    "agent_runner_storage_impl.h",
     "agent_runner_storage_impl.cc",
+    "agent_runner_storage_impl.h",
   ]
 
   public_deps = [
@@ -33,6 +33,34 @@ source_set("agent_runner") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "agent_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":agent_runner",
+    ":public",
+    "//application/lib/app",
+    "//application/services",
+    "//apps/ledger/src/app:lib",
+    "//apps/ledger/src/environment",
+    "//apps/maxwell/services/user",
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/testing:fake_application_launcher",
+    "//apps/modular/lib/testing:ledger_repository_for_testing",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//apps/modular/services/agent",
+    "//apps/modular/services/auth",
+    "//apps/modular/src/component",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
   ]
 }
 

@@ -75,3 +75,41 @@ source_set("unittests") {
     ":test_with_message_loop",
   ]
 }
+
+source_set("fake_application_launcher") {
+  testonly = true
+
+  sources = [
+    "fake_application_launcher.cc",
+    "fake_application_launcher.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//application/services",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+source_set("ledger_repository_for_testing") {
+  testonly = true
+
+  sources = [
+    "ledger_repository_for_testing.cc",
+    "ledger_repository_for_testing.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//application/services",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/modular/lib/fidl:app_client",
+    "//apps/modular/lib/ledger:constants",
+    "//apps/modular/services/config",
+    "//apps/test_runner/lib:application_context",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
