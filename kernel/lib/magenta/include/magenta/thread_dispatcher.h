@@ -141,8 +141,8 @@ public:
     // exception processing as if the exception port had not been installed.
     void OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport);
     // Return true if waiting for an exception response.
-    // |exception_wait_lock_| must be held.
-    bool InExceptionLocked() TA_REQ(exception_wait_lock_);
+    // |state_lock_| must be held.
+    bool InExceptionLocked() TA_REQ(state_lock_);
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns MX_ERR_BAD_STATE if not in an exception.
@@ -217,12 +217,11 @@ private:
     Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.
-    ExceptionStatus exception_status_ TA_GUARDED(exception_wait_lock_)
+    ExceptionStatus exception_status_ TA_GUARDED(state_lock_)
         = ExceptionStatus::IDLE;
     // The exception port of the handler the thread is waiting for a response from.
-    mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(exception_wait_lock_);
-    const mx_exception_report_t* exception_report_ TA_GUARDED(exception_wait_lock_);
-    Mutex exception_wait_lock_;
+    mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(state_lock_);
+    const mx_exception_report_t* exception_report_ TA_GUARDED(state_lock_);
     event_t exception_event_ =
         EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 

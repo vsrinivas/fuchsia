@@ -653,13 +653,13 @@ status_t ThreadDispatcher::ExceptionHandlerExchange(
     LTRACE_ENTRY_OBJ;
 
     {
-        AutoLock lock(&exception_wait_lock_);
+        AutoLock lock(&state_lock_);
 
         // Send message, wait for reply.
         // Note that there is a "race" that we need handle: We need to send the
         // exception report before going to sleep, but what if the receiver of the
         // report gets it and processes it before we are asleep? This is handled by
-        // locking exception_wait_lock_ in places where the handler can see/modify
+        // locking state_lock_ in places where the handler can see/modify
         // thread state.
 
         status_t status = eport->SendPacket(this, report->header.type);
@@ -693,7 +693,7 @@ status_t ThreadDispatcher::ExceptionHandlerExchange(
         status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
     } while (status == MX_ERR_INTERNAL_INTR_RETRY);
 
-    AutoLock lock(&exception_wait_lock_);
+    AutoLock lock(&state_lock_);
 
     // Note: If |status| != MX_OK, then |exception_status_| is still
     // ExceptionStatus::UNPROCESSED.
@@ -735,7 +735,7 @@ status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     DEBUG_ASSERT(estatus != ExceptionStatus::IDLE &&
                  estatus != ExceptionStatus::UNPROCESSED);
 
-    AutoLock lock(&exception_wait_lock_);
+    AutoLock lock(&state_lock_);
     if (!InExceptionLocked())
         return MX_ERR_BAD_STATE;
 
@@ -760,7 +760,7 @@ void ThreadDispatcher::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>&
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&exception_wait_lock_);
+    AutoLock lock(&state_lock_);
     if (!InExceptionLocked())
         return;
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::IDLE);
@@ -777,7 +777,7 @@ bool ThreadDispatcher::InExceptionLocked() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    DEBUG_ASSERT(exception_wait_lock_.IsHeld());
+    DEBUG_ASSERT(state_lock_.IsHeld());
     return thread_stopped_in_exception(&thread_);
 }
 
@@ -794,22 +794,20 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
     // We need to fetch all these values under lock, but once we have them
     // we no longer need the lock.
     {
-        // N.B. Keep the order of obtaining these locks consistent.
         AutoLock state_lock(&state_lock_);
-        AutoLock lock(&exception_wait_lock_);
         state = state_;
         lk_state = thread_.state;
         if (InExceptionLocked() &&
                 // A port type of !NONE here indicates to the caller that the
                 // thread is waiting for an exception response. So don't return
                 // !NONE if the thread just woke up but hasn't reacquired
-                // |exception_wait_lock_|.
+                // |state_lock_|.
                 exception_status_ == ExceptionStatus::UNPROCESSED) {
             DEBUG_ASSERT(exception_wait_port_ != nullptr);
             excp_port_type = exception_wait_port_->type();
         } else {
             // Either we're not in an exception, or we're in the window where
-            // event_wait_deadline has woken up but |exception_wait_lock_| has
+            // event_wait_deadline has woken up but |state_lock_| has
             // not been reacquired.
             DEBUG_ASSERT(exception_wait_port_ == nullptr ||
                          exception_status_ != ExceptionStatus::UNPROCESSED);
@@ -889,7 +887,7 @@ status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&exception_wait_lock_);
+    AutoLock lock(&state_lock_);
     if (!InExceptionLocked())
         return MX_ERR_BAD_STATE;
     DEBUG_ASSERT(exception_report_ != nullptr);
@@ -910,12 +908,7 @@ status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t
 
     // We can't be reading regs while the thread transitions from
     // SUSPENDED to RUNNING.
-    // TODO(dje): Is it ok to use this lock here?
     AutoLock state_lock(&state_lock_);
-
-    // OTOH, the thread may be in an exception.
-    // TODO(dje): Can we reduce this to just one lock?
-    AutoLock exception_wait_lock(&exception_wait_lock_);
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return MX_ERR_BAD_STATE;
@@ -938,12 +931,7 @@ status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, u
 
     // We can't be reading regs while the thread transitions from
     // SUSPENDED to RUNNING.
-    // TODO(dje): Is it ok to use this lock here?
     AutoLock state_lock(&state_lock_);
-
-    // OTOH, the thread may be in an exception.
-    // TODO(dje): Can we reduce this to just one lock?
-    AutoLock exception_wait_lock(&exception_wait_lock_);
 
     if (state_ != State::SUSPENDED && !InExceptionLocked())
         return MX_ERR_BAD_STATE;
