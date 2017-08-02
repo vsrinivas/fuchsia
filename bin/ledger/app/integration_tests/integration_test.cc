@@ -37,8 +37,6 @@ class LedgerAppInstanceImpl final : public IntegrationTest::LedgerAppInstance {
     return ledger_repository_factory_.get();
   }
 
-  Ledger* ledger() override { return ledger_.get(); }
-
   LedgerRepositoryPtr GetTestLedgerRepository() override;
   LedgerPtr GetTestLedger() override;
   PagePtr GetTestPage() override;
@@ -210,11 +208,9 @@ void IntegrationTest::SetUp() {
   std::srand(0);
   socket_thread_ = mtl::CreateThread(&socket_task_runner_);
   services_thread_ = mtl::CreateThread(&services_task_runner_);
-  default_instance_ = NewLedgerAppInstance();
 }
 
 void IntegrationTest::TearDown() {
-  default_instance_ = nullptr;
   socket_task_runner_->PostTask(
       [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   services_task_runner_->PostTask(

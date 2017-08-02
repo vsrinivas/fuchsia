@@ -61,19 +61,20 @@ class EmptyTokenProvider : public modular::auth::TokenProvider {
 // Verifies that the LedgerRepository and its children are shut down on token
 // manager connection error.
 TEST_F(LedgerRepositoryIntegrationTest, ShutDownOnTokenProviderError) {
+  auto instance = NewLedgerAppInstance();
   const auto timeout = ftl::TimeDelta::FromSeconds(1);
 
-  LedgerRepositoryPtr repository = GetTestLedgerRepository();
+  LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
   bool repository_disconnected = false;
   repository.set_connection_error_handler(
       [&repository_disconnected] { repository_disconnected = true; });
 
-  LedgerPtr ledger = GetTestLedger();
+  LedgerPtr ledger = instance->GetTestLedger();
   bool ledger_disconnected = false;
   ledger.set_connection_error_handler(
       [&ledger_disconnected] { ledger_disconnected = true; });
 
-  UnbindTokenProvider();
+  instance->UnbindTokenProvider();
 
   ASSERT_FALSE(ledger.WaitForIncomingResponseWithTimeout(timeout));
   EXPECT_TRUE(ledger_disconnected);

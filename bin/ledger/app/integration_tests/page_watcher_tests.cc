@@ -61,7 +61,8 @@ class Watcher : public PageWatcher {
 };
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -85,7 +86,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
@@ -113,13 +115,14 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
+  auto instance = NewLedgerAppInstance();
   const size_t entry_count = 2;
   const auto key_generator = [](size_t i) {
     std::string filler(
         fidl_serialization::kMaxInlineDataSize * 3 / 2 / entry_count, 'k');
     return ftl::StringPrintf("key%02" PRIuMAX "%s", i, filler.c_str());
   };
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -171,8 +174,9 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
+  auto instance = NewLedgerAppInstance();
   size_t entry_count = 70;
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -226,7 +230,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -252,7 +257,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -284,14 +290,15 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
-  PagePtr page1 = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
@@ -359,7 +366,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -379,14 +387,15 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
-  PagePtr page1 = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
@@ -460,7 +469,8 @@ class WaitingWatcher : public PageWatcher {
 };
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   WaitingWatcher watcher(watcher_ptr.NewRequest(), []() {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -520,7 +530,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherPrefix) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
@@ -555,7 +566,8 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherPrefix) {
 }
 
 TEST_F(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });

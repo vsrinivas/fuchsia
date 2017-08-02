@@ -31,7 +31,8 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 };
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
@@ -55,10 +56,11 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGet) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
+  auto instance = NewLedgerAppInstance();
   std::string expected_value = "Alice";
   expected_value.resize(100);
 
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray(expected_value),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
 
@@ -81,12 +83,13 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
+  auto instance = NewLedgerAppInstance();
   std::string value1 = "Alice";
   value1.resize(100);
   std::string value2;
 
   // Put the 2 values without waiting for the callbacks.
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray(value1),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   page->Put(convert::ToArray("name"), convert::ToArray(value2),
@@ -106,7 +109,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
@@ -145,7 +149,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
 
   // Grab a snapshot before adding any entries and verify that GetKeys()
   // returns empty results.
@@ -216,7 +221,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
 
   // Grab a snapshot before adding any entries and verify that GetKeys()
   // returns empty results.
@@ -255,7 +261,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
 
   // Grab a snapshot before adding any entries and verify that GetEntries()
   // returns empty results.
@@ -337,7 +344,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
 
   // Grab a snapshot before adding any entries and verify that GetEntries()
   // returns empty results.
@@ -379,7 +387,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
 
   // Grab a snapshot before adding any entries and verify that GetEntries()
   // returns empty results.
@@ -420,7 +429,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
 
   const size_t N = 4;
   fidl::Array<uint8_t> keys[N] = {
@@ -466,9 +476,10 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
+  auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
 
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
 
   page->CreateReferenceFromSocket(123, StreamDataToSocket(big_data),
                                   [](Status status, ReferencePtr ref) {
@@ -478,9 +489,10 @@ TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
+  auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
 
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
 
   // Stream the data into the reference.
   ReferencePtr reference;
@@ -512,11 +524,12 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
+  auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
   mx::vmo vmo;
   ASSERT_TRUE(mtl::VmoFromString(big_data, &vmo));
 
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
 
   // Stream the data into the reference.
   ReferencePtr reference;
@@ -547,7 +560,8 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
@@ -575,7 +589,8 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
 }
 
 TEST_F(PageSnapshotIntegrationTest, PageGetById) {
-  PagePtr page = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
@@ -588,7 +603,7 @@ TEST_F(PageSnapshotIntegrationTest, PageGetById) {
 
   page.reset();
 
-  page = GetPage(test_page_id, Status::OK);
+  page = instance->GetPage(test_page_id, Status::OK);
   page->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     EXPECT_EQ(convert::ToString(test_page_id), convert::ToString(page_id));
   });

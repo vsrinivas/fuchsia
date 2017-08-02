@@ -30,8 +30,10 @@ class PageIntegrationTest : public IntegrationTest {
 };
 
 TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
+  auto instance = NewLedgerAppInstance();
+
   files::ScopedTempDir tmp_dir;
-  LedgerRepositoryPtr repository = GetTestLedgerRepository();
+  LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
 
   Status status;
   LedgerRepositoryPtr duplicated_repository;
@@ -42,63 +44,70 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
 }
 
 TEST_F(PageIntegrationTest, GetLedger) {
-  EXPECT_NE(nullptr, ledger());
+  auto instance = NewLedgerAppInstance();
+  EXPECT_TRUE(instance->GetTestLedger());
 }
 
 TEST_F(PageIntegrationTest, GetRootPage) {
+  auto instance = NewLedgerAppInstance();
+  LedgerPtr ledger = instance->GetTestLedger();
   Status status;
   PagePtr page;
-  ledger()->GetRootPage(page.NewRequest(),
-                        callback::Capture(MakeQuitTask(), &status));
+  ledger->GetRootPage(page.NewRequest(),
+                      callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 }
 
 TEST_F(PageIntegrationTest, NewPage) {
+  auto instance = NewLedgerAppInstance();
   // Get two pages and check that their ids are different.
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> id1 = PageGetId(&page1);
-  PagePtr page2 = GetTestPage();
+  PagePtr page2 = instance->GetTestPage();
   fidl::Array<uint8_t> id2 = PageGetId(&page2);
 
   EXPECT_TRUE(!id1.Equals(id2));
 }
 
 TEST_F(PageIntegrationTest, GetPage) {
+  auto instance = NewLedgerAppInstance();
   // Create a page and expect to find it by its id.
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
   fidl::Array<uint8_t> id = PageGetId(&page);
-  GetPage(id, Status::OK);
+  instance->GetPage(id, Status::OK);
 
 // TODO(etiennej): Reactivate after LE-87 is fixed.
 #if 0
   // Search with a random id and expect a PAGE_NOT_FOUND result.
   fidl::Array<uint8_t> test_id = RandomArray(16);
-  GetPage(test_id, Status::PAGE_NOT_FOUND);
+  instance->GetPage(test_id, Status::PAGE_NOT_FOUND);
 #endif
 }
 
 // Verifies that a page can be connected to twice.
 TEST_F(PageIntegrationTest, MultiplePageConnections) {
+  auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> page_id_1 = PageGetId(&page1);
 
   // Connect to the same page again.
-  PagePtr page2 = GetPage(page_id_1, Status::OK);
+  PagePtr page2 = instance->GetPage(page_id_1, Status::OK);
   fidl::Array<uint8_t> page_id_2 = PageGetId(&page2);
   EXPECT_EQ(convert::ToString(page_id_1), convert::ToString(page_id_2));
 }
 
 TEST_F(PageIntegrationTest, DeletePage) {
+  auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
-  PagePtr page = GetTestPage();
+  PagePtr page = instance->GetTestPage();
   fidl::Array<uint8_t> id = PageGetId(&page);
 
   // Delete the page.
   bool page_closed = false;
   page.set_connection_error_handler([&page_closed] { page_closed = true; });
-  DeletePage(id, Status::OK);
+  instance->DeletePage(id, Status::OK);
 
   // Verify that deletion of the page closed the page connection.
   EXPECT_FALSE(page.WaitForIncomingResponse());
@@ -107,17 +116,18 @@ TEST_F(PageIntegrationTest, DeletePage) {
 // TODO(etiennej): Reactivate after LE-87 is fixed.
 #if 0
   // Verify that the deleted page cannot be retrieved.
-  GetPage(id, Status::PAGE_NOT_FOUND);
+  instance->GetPage(id, Status::PAGE_NOT_FOUND);
 #endif
 
   // Delete the same page again and expect a PAGE_NOT_FOUND result.
-  DeletePage(id, Status::PAGE_NOT_FOUND);
+  instance->DeletePage(id, Status::PAGE_NOT_FOUND);
 }
 
 TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
+  auto instance = NewLedgerAppInstance();
   // Connect to the same ledger instance twice.
-  LedgerPtr ledger_connection_1 = GetTestLedger();
-  LedgerPtr ledger_connection_2 = GetTestLedger();
+  LedgerPtr ledger_connection_1 = instance->GetTestLedger();
+  LedgerPtr ledger_connection_2 = instance->GetTestLedger();
 
   // Create a page on the first connection.
   PagePtr page;

@@ -33,8 +33,6 @@ class IntegrationTest : public test::TestWithMessageLoop {
     // Returns the LedgerRepositoryFactory associated with this application
     // instance.
     virtual LedgerRepositoryFactory* ledger_repository_factory() = 0;
-    // Returns a default Ledger object.
-    virtual Ledger* ledger() = 0;
     // Builds and returns a new connection to the default LedgerRepository
     // object.
     virtual LedgerRepositoryPtr GetTestLedgerRepository() = 0;
@@ -66,30 +64,6 @@ class IntegrationTest : public test::TestWithMessageLoop {
 
   mx::socket StreamDataToSocket(std::string data);
 
-  LedgerRepositoryFactory* ledger_repository_factory() {
-    return default_instance_->ledger_repository_factory();
-  }
-
-  Ledger* ledger() { return default_instance_->ledger(); }
-
-  LedgerRepositoryPtr GetTestLedgerRepository() {
-    return default_instance_->GetTestLedgerRepository();
-  }
-
-  LedgerPtr GetTestLedger() { return default_instance_->GetTestLedger(); }
-
-  PagePtr GetTestPage() { return default_instance_->GetTestPage(); }
-
-  PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status) {
-    return default_instance_->GetPage(page_id, expected_status);
-  }
-
-  void DeletePage(const fidl::Array<uint8_t>& page_id, Status expected_status) {
-    default_instance_->DeletePage(page_id, expected_status);
-  }
-
-  void UnbindTokenProvider() { default_instance_->UnbindTokenProvider(); }
-
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance();
 
  private:
@@ -100,7 +74,6 @@ class IntegrationTest : public test::TestWithMessageLoop {
   ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
   ftl::RefPtr<ftl::TaskRunner> services_task_runner_;
   FakeCloudNetworkService network_service_;
-  std::unique_ptr<LedgerAppInstance> default_instance_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);
 };

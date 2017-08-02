@@ -26,8 +26,8 @@ TEST_F(IntegrationTestTests, MultipleLedgerAppInstances) {
   auto instance1 = NewLedgerAppInstance();
   auto instance2 = NewLedgerAppInstance();
 
-  EXPECT_TRUE(instance1->ledger());
-  EXPECT_TRUE(instance2->ledger());
+  EXPECT_TRUE(instance1->GetTestLedger());
+  EXPECT_TRUE(instance2->GetTestLedger());
 }
 
 }  // namespace

@@ -345,14 +345,15 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
 }
 
 TEST_F(MergingIntegrationTest, Merging) {
-  PagePtr page1 = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
@@ -431,7 +432,8 @@ TEST_F(MergingIntegrationTest, Merging) {
 }
 
 TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
-  PagePtr page1 = GetTestPage();
+  auto instance = NewLedgerAppInstance();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
@@ -444,14 +446,14 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
           [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
@@ -547,23 +549,24 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -668,10 +671,11 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
       MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   std::function<void(Status)> status_ok_callback = [](Status status) {
     EXPECT_EQ(status, Status::OK);
   };
@@ -679,13 +683,13 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
                                          status_ok_callback);
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction(status_ok_callback);
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -738,23 +742,24 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -812,23 +817,24 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -906,23 +912,24 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 // new resolver, not the old one.
 TEST_F(MergingIntegrationTest,
        CustomConflictResolutionResetFactory_FactoryRace) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -985,23 +992,24 @@ TEST_F(MergingIntegrationTest,
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -1079,24 +1087,25 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
 }
 
 TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
           nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   // Watch for changes.
   PageWatcherPtr watcher_ptr;
@@ -1159,24 +1168,25 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 }
 
 TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
           nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -1260,24 +1270,25 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
 }
 
 TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
           nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -1355,12 +1366,13 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
 // Tests a merge in which the right side contains no change (e.g. a change was
 // made in a commit, then reverted in another commit).
 TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
           nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   Status status;
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
@@ -1368,11 +1380,11 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(status, Status::OK);
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
   EXPECT_FALSE(RunLoopWithTimeout());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   // Watch for changes.
   PageWatcherPtr watcher_ptr;
@@ -1452,21 +1464,22 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 }
 
 TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
+  auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = GetTestLedger();
+  LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = GetTestPage();
+  PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
   EXPECT_FALSE(RunLoopWithTimeout());
-  PagePtr page2 = GetPage(test_page_id, Status::OK);
+  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
 
   Status status = Status::UNKNOWN_ERROR;
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
@@ -1504,7 +1517,7 @@ TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  DeletePage(test_page_id, Status::OK);
+  instance->DeletePage(test_page_id, Status::OK);
   EXPECT_FALSE(
       resolver_impl->requests[0].Merge(fidl::Array<MergedValuePtr>::New(0)));
 }
