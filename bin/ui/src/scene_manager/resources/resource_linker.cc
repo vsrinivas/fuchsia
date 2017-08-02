@@ -51,7 +51,7 @@ bool ResourceLinker::ExportResource(ResourcePtr resource,
           export_handle.get(),     // handle
           kEventPairDeathSignals,  // trigger
           ftl::TimeDelta::Max()    // timeout
-          );
+      );
 
   mx_handle_t raw_export_handle = export_handle.get();  // About to be moved.
 
@@ -119,7 +119,7 @@ void ResourceLinker::OnHandleReady(mx_handle_t export_handle,
 void ResourceLinker::OnHandleError(mx_handle_t export_handle,
                                    mx_status_t error) {
   // Should only happen in case of timeout or loop death.
-  if (error & (MX_ERR_TIMED_OUT | MX_ERR_BAD_STATE)) {
+  if (error == MX_ERR_TIMED_OUT || error == MX_ERR_CANCELED) {
     auto resource = RemoveResourceForExpiredExportHandle(export_handle);
     if (expiration_callback_) {
       expiration_callback_(std::move(resource),
