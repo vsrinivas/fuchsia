@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//lib/fidl/fidl.gni")
+
 source_set("app_client") {
   sources = [
     "app_client.cc",
@@ -158,5 +160,31 @@ source_set("message_receiver_client") {
   deps = [
     "//apps/modular/services/component",
     "//lib/fidl/cpp/bindings",
+  ]
+}
+
+fidl("unittest_fidl") {
+  testonly = true
+
+  sources = [
+    "app_client_unittest.fidl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "app_client_unittest.cc",
+  ]
+
+  deps = [
+    ":app_client",
+    ":unittest_fidl",
+    "//application/lib/app",
+    "//apps/modular/lib/testing:test_with_message_loop",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
   ]
 }

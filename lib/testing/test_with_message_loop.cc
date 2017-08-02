@@ -42,6 +42,11 @@ bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
 bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
                        std::function<bool()> condition,
                        ftl::TimeDelta timeout) {
+  if (condition()) {
+    FTL_LOG(ERROR) << "|condition| is already true prior to running the loop.";
+    return false;
+  }
+
   const ftl::TimePoint deadline = ftl::TimePoint::Now() + timeout;
   while (ftl::TimePoint::Now() < deadline) {
     if (condition()) {
