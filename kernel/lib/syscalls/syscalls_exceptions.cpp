@@ -25,7 +25,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     // TODO(MG-968): check rights once appropriate right is determined
 
     if (obj_handle == MX_HANDLE_INVALID) {
-        // TODO: handle for system exception
+        // TODO(MG-987): handle for system exception
         if (debugger || quietly)
             return MX_ERR_INVALID_ARGS;
         return ResetSystemExceptionPort()
@@ -71,7 +71,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
     mxtl::RefPtr<ExceptionPort> eport;
 
     if (obj_handle == MX_HANDLE_INVALID) {
-        // TODO: handle for system exception
+        // TODO(MG-987): handle for system exception
         if (debugger)
             return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::SYSTEM,
