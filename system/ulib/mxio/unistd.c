@@ -745,14 +745,6 @@ int mxio_status_to_errno(mx_status_t status) {
     case MX_ERR_FILE_BIG: return EFBIG;
     case MX_ERR_NO_SPACE: return ENOSPC;
     case MX_ERR_NOT_EMPTY: return ENOTEMPTY;
-    case MX_ERR_IO_REFUSED: return ECONNREFUSED;
-    case MX_ERR_CANCELED: return ECANCELED;
-    case MX_ERR_PROTOCOL_NOT_SUPPORTED: return EPROTONOSUPPORT;
-    case MX_ERR_ADDRESS_UNREACHABLE: return ENETUNREACH;
-    case MX_ERR_ADDRESS_IN_USE: return EADDRINUSE;
-    case MX_ERR_NOT_CONNECTED: return ENOTCONN;
-    case MX_ERR_CONNECTION_RESET: return ECONNRESET;
-    case MX_ERR_CONNECTION_ABORTED: return ECONNABORTED;
 
     // No specific translation, so return a generic errno value.
     default: return EIO;
