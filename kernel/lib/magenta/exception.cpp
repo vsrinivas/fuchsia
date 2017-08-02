@@ -40,17 +40,6 @@ static const char* excp_type_to_string(uint type) {
     }
 }
 
-static void build_exception_report(mx_exception_report_t* report,
-                                   uint exception_type,
-                                   const arch_exception_context_t* arch_context) {
-    // TODO(dje): Move to ExceptionPort::BuildArchExceptionReport.
-    memset(report, 0, sizeof(*report));
-    // TODO(dje): wip, just make all reports the same maximum size for now
-    report->header.size = sizeof(*report);
-    report->header.type = exception_type;
-    arch_fill_in_exception_context(arch_context, report);
-}
-
 static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
                                       ExceptionPort::Type expected_type,
                                       ThreadDispatcher* thread,
@@ -141,7 +130,7 @@ status_t magenta_exception_handler(uint exception_type,
 
     bool processed = false;
     mx_exception_report_t report;
-    build_exception_report(&report, exception_type, context);
+    ExceptionPort::BuildArchReport(&report, exception_type, context);
 
     for (size_t i = 0; i < countof(handlers); ++i) {
         // Initialize for paranoia's sake.

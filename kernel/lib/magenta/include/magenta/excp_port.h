@@ -5,6 +5,7 @@
 #include <kernel/mutex.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/exception.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>
 
@@ -52,6 +53,9 @@ public:
     // Drops the ExceptionPort's references to its target and PortDispatcher.
     // Called by the target when the port is explicitly unbound.
     void OnTargetUnbind();
+
+    static void BuildArchReport(mx_exception_report_t* report, uint32_t type,
+                                const arch_exception_context_t* arch_context);
 
 private:
     friend class PortDispatcher;

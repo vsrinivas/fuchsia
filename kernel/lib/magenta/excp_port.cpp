@@ -240,6 +240,12 @@ void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type) {
     report->header.type = type;
 }
 
+void ExceptionPort::BuildArchReport(mx_exception_report_t* report, uint32_t type,
+                                    const arch_exception_context_t* arch_context) {
+    BuildReport(report, type);
+    arch_fill_in_exception_context(arch_context, report);
+}
+
 void ExceptionPort::OnThreadStart(ThreadDispatcher* thread) {
     canary_.Assert();
 
