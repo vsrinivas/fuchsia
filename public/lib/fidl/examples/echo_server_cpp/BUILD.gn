@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("echo_server_cpp") {
+import("//packages/package.gni")
+
+executable("echo_server_cpp_bin") {
   output_name = "echo_server_cpp"
 
   sources = [
@@ -16,4 +18,16 @@ executable("echo_server_cpp") {
     "//lib/ftl",
     "//lib/mtl",
   ]
+}
+
+package("echo_server_cpp") {
+  app = true
+
+  deps = [
+    ":echo_server_cpp_bin",
+  ]
+
+  binaries = [ {
+        name = "echo_server_cpp"
+      } ]
 }

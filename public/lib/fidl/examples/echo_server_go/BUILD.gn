@@ -3,11 +3,41 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//packages/package.gni")
 
-go_binary("echo_server_go") {
+go_binary("echo_server_go_bin") {
+  output_name = "echo_server_go"
   gopackage = "fuchsia.googlesource.com/fidl_examples/echo_server_go"
-
   deps = [
     "//lib/fidl/examples/services",
   ]
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/fidl_examples/echo_server_go"
+    },
+    {
+      package = "fidl"
+      source = "//lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//application/lib/app/go/src/app"
+    },
+    {
+      package = "application/lib/svc"
+      source = "//application/lib/svc/go/src/svc"
+    },
+  ]
+}
+
+package("echo_server_go") {
+  app = true
+
+  deps = [
+    ":echo_server_go_bin",
+  ]
+
+  binaries = [ {
+        name = "echo_server_go"
+      } ]
 }
