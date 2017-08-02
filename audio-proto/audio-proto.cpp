@@ -25,7 +25,7 @@ const char* SampleFormatToString(SampleFormat sample_format) {
     case AUDIO_SAMPLE_FORMAT_20BIT_IN32:   return WITH_FLAGS("20BIT_IN32");
     case AUDIO_SAMPLE_FORMAT_24BIT_IN32:   return WITH_FLAGS("24BIT_IN32");
     case AUDIO_SAMPLE_FORMAT_32BIT_FLOAT:  return WITH_FLAGS("32BIT_FLOAT");
-    default:                                return WITH_FLAGS("<unknown>");
+    default:                               return WITH_FLAGS("<unknown>");
     }
 }
 #undef WITH_FLAGS
