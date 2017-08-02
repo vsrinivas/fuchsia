@@ -191,7 +191,7 @@ class OperationBase {
   template <typename... Args,
             typename ResultCall = std::function<void(Args...)>>
   void DispatchCallback(ResultCall callback, Args... result_args) {
-    auto container = std::move(container_);
+    auto container = container_;
     if (container) {
       auto result_call = std::move(callback);
       container->Drop(this);
