@@ -32,7 +32,7 @@ void FakeTokenProvider::GetIdToken(const GetIdTokenCallback& callback) {
 }
 
 void FakeTokenProvider::GetFirebaseAuthToken(
-    const fidl::String& firebase_api_key,
+    const fidl::String& /*firebase_api_key*/,
     const GetFirebaseAuthTokenCallback& callback) {
   modular::auth::AuthErrPtr error = modular::auth::AuthErr::New();
   error->status = modular::auth::Status::OK;

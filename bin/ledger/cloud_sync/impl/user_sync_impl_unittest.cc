@@ -25,7 +25,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   TestSyncStateWatcher() {}
   ~TestSyncStateWatcher() override{};
 
-  void Notify(SyncStateContainer sync_state) override {}
+  void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
 class TestCloudDeviceSet : public CloudDeviceSet {
@@ -34,7 +34,7 @@ class TestCloudDeviceSet : public CloudDeviceSet {
       : task_runner_(std::move(task_runner)) {}
   ~TestCloudDeviceSet() override {}
 
-  void CheckFingerprint(std::string auth_token,
+  void CheckFingerprint(std::string /*auth_token*/,
                         std::string fingerprint,
                         std::function<void(Status)> callback) override {
     checked_fingerprint = fingerprint;
@@ -43,7 +43,7 @@ class TestCloudDeviceSet : public CloudDeviceSet {
     });
   }
 
-  void SetFingerprint(std::string auth_token,
+  void SetFingerprint(std::string /*auth_token*/,
                       std::string fingerprint,
                       std::function<void(Status)> callback) override {
     set_fingerprint = fingerprint;
@@ -52,7 +52,7 @@ class TestCloudDeviceSet : public CloudDeviceSet {
     });
   }
 
-  void WatchFingerprint(std::string auth_token,
+  void WatchFingerprint(std::string /*auth_token*/,
                         std::string fingerprint,
                         std::function<void(Status)> callback) override {
     watched_fingerprint = fingerprint;

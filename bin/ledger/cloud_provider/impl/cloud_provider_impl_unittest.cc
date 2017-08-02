@@ -82,7 +82,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   void Put(
       const std::string& key,
-      const std::vector<std::string>& query_params,
+      const std::vector<std::string>& /*query_params*/,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
     put_keys_.push_back(key);
@@ -107,10 +107,10 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
     });
   }
 
-  void Delete(
-      const std::string& key,
-      const std::vector<std::string>& query_params,
-      const std::function<void(firebase::Status status)>& callback) override {
+  void Delete(const std::string& /*key*/,
+              const std::vector<std::string>& /*query_params*/,
+              const std::function<void(firebase::Status status)>& /*callback*/)
+      override {
     // Should never be called.
     FAIL();
   }
@@ -123,7 +123,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
     watch_client_ = watch_client;
   }
 
-  void UnWatch(firebase::WatchClient* watch_client) override {
+  void UnWatch(firebase::WatchClient* /*watch_client*/) override {
     unwatch_count_++;
     watch_client_ = nullptr;
   }

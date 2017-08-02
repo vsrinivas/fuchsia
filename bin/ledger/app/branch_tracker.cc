@@ -294,7 +294,7 @@ const storage::CommitId& BranchTracker::GetBranchHeadId() {
 
 void BranchTracker::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& commits,
-    storage::ChangeSource source) {
+    storage::ChangeSource /*source*/) {
   bool changed = false;
   const std::unique_ptr<const storage::Commit>* new_current_commit = nullptr;
   for (const auto& commit : commits) {

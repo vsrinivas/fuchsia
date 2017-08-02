@@ -27,16 +27,16 @@ class TestTokenProvider : public modular::auth::TokenProvider {
   }
 
   // modular::auth::TokenProvider:
-  void GetAccessToken(const GetAccessTokenCallback& callback) override {
+  void GetAccessToken(const GetAccessTokenCallback& /*callback*/) override {
     FTL_NOTIMPLEMENTED();
   }
 
-  void GetIdToken(const GetIdTokenCallback& callback) override {
+  void GetIdToken(const GetIdTokenCallback& /*callback*/) override {
     FTL_NOTIMPLEMENTED();
   }
 
   void GetFirebaseAuthToken(
-      const fidl::String& firebase_api_key,
+      const fidl::String& /*firebase_api_key*/,
       const GetFirebaseAuthTokenCallback& callback) override {
     task_runner_->PostTask(ftl::MakeCopyable([
       token_to_return = token_to_return.Clone(),
@@ -46,7 +46,7 @@ class TestTokenProvider : public modular::auth::TokenProvider {
     }));
   }
 
-  void GetClientId(const GetClientIdCallback& callback) override {
+  void GetClientId(const GetClientIdCallback& /*callback*/) override {
     FTL_NOTIMPLEMENTED();
   }
 

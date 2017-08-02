@@ -84,7 +84,7 @@ bool FakeJournalDelegate::IsPendingCommit() {
   return static_cast<bool>(commit_callback_);
 }
 
-void FakeJournalDelegate::ResolvePendingCommit(Status status) {
+void FakeJournalDelegate::ResolvePendingCommit(Status /*status*/) {
   is_committed_ = true;
   auto callback = std::move(commit_callback_);
   commit_callback_ = nullptr;

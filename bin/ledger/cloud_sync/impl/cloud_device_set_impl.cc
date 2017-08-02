@@ -94,7 +94,7 @@ void CloudDeviceSetImpl::WatchFingerprint(
   watch_callback_ = callback;
 }
 
-void CloudDeviceSetImpl::OnPut(const std::string& path,
+void CloudDeviceSetImpl::OnPut(const std::string& /*path*/,
                                const rapidjson::Value& value) {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   if (value.IsNull()) {
@@ -109,8 +109,8 @@ void CloudDeviceSetImpl::OnPut(const std::string& path,
   watch_callback_(Status::OK);
 }
 
-void CloudDeviceSetImpl::OnPatch(const std::string& path,
-                                 const rapidjson::Value& value) {
+void CloudDeviceSetImpl::OnPatch(const std::string& /*path*/,
+                                 const rapidjson::Value& /*value*/) {
   FTL_DCHECK(firebase_watcher_set_ && watch_callback_);
   FTL_NOTIMPLEMENTED();
 }
@@ -120,7 +120,7 @@ void CloudDeviceSetImpl::OnCancel() {
   FTL_NOTIMPLEMENTED();
 }
 
-void CloudDeviceSetImpl::OnAuthRevoked(const std::string& reason) {
+void CloudDeviceSetImpl::OnAuthRevoked(const std::string& /*reason*/) {
   if (destruction_sentinel_.DestructedWhile(
           [this] { watch_callback_(Status::NETWORK_ERROR); })) {
     return;

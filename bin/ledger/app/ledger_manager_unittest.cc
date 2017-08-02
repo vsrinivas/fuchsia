@@ -90,8 +90,8 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
   ~FakeLedgerSync() override {}
 
   std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(
-      storage::PageStorage* page_storage,
-      ftl::Closure error_callback) override {
+      storage::PageStorage* /*page_storage*/,
+      ftl::Closure /*error_callback*/) override {
     return nullptr;
   }
 

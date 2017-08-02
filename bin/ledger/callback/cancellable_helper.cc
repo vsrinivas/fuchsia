@@ -10,7 +10,7 @@ class DoneCancellable : public Cancellable {
  public:
   void Cancel() override {}
   bool IsDone() override { return true; }
-  void SetOnDone(ftl::Closure callback) override {}
+  void SetOnDone(ftl::Closure /*callback*/) override {}
 };
 }  // namespace
 

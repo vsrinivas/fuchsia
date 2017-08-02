@@ -88,7 +88,7 @@ void FakePageStorage::GetCommit(
 }
 
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
-                                    JournalType journal_type,
+                                    JournalType /*journal_type*/,
                                     std::unique_ptr<Journal>* journal) {
   auto delegate = std::make_unique<FakeJournalDelegate>(commit_id, autocommit_);
   *journal = std::make_unique<FakeJournal>(delegate.get());
@@ -107,11 +107,11 @@ Status FakePageStorage::RollbackJournal(std::unique_ptr<Journal> journal) {
   return static_cast<FakeJournal*>(journal.get())->Rollback();
 }
 
-Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
+Status FakePageStorage::AddCommitWatcher(CommitWatcher* /*watcher*/) {
   return Status::OK;
 }
 
-Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
+Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
   return Status::OK;
 }
 
@@ -141,7 +141,7 @@ void FakePageStorage::AddObjectFromLocal(
 
 void FakePageStorage::GetObject(
     ObjectIdView object_id,
-    Location location,
+    Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   GetPiece(object_id, std::move(callback));
 }

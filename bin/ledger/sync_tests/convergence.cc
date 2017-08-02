@@ -22,8 +22,8 @@ class PageWatcherImpl : public ledger::PageWatcher {
 
  private:
   // PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
-                ledger::ResultState result_state,
+  void OnChange(ledger::PageChangePtr /*page_change*/,
+                ledger::ResultState /*result_state*/,
                 const OnChangeCallback& callback) override {
     changes++;
     current_snapshot.reset();

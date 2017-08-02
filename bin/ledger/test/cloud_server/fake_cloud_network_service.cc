@@ -17,47 +17,48 @@ void FakeCloudNetworkService::CreateURLLoader(
   loader_bindings_.AddBinding(&url_loader_, std::move(loader));
 }
 
-void FakeCloudNetworkService::GetCookieStore(mx::channel cookie_store) {
+void FakeCloudNetworkService::GetCookieStore(mx::channel /*cookie_store*/) {
   FTL_NOTIMPLEMENTED();
 }
 
-void FakeCloudNetworkService::CreateWebSocket(mx::channel socket) {
+void FakeCloudNetworkService::CreateWebSocket(mx::channel /*socket*/) {
   FTL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateTCPBoundSocket(
-    network::NetAddressPtr local_address,
-    mx::channel bound_socket,
-    const CreateTCPBoundSocketCallback& callback) {
+    network::NetAddressPtr /*local_address*/,
+    mx::channel /*bound_socket*/,
+    const CreateTCPBoundSocketCallback& /*callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateTCPConnectedSocket(
-    network::NetAddressPtr remote_address,
-    mx::socket send_stream,
-    mx::socket receive_stream,
-    mx::channel client_socket,
-    const CreateTCPConnectedSocketCallback& callback) {
+    network::NetAddressPtr /*remote_address*/,
+    mx::socket /*send_stream*/,
+    mx::socket /*receive_stream*/,
+    mx::channel /*client_socket*/,
+    const CreateTCPConnectedSocketCallback& /*callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 
-void FakeCloudNetworkService::CreateUDPSocket(mx::channel socket) {
+void FakeCloudNetworkService::CreateUDPSocket(mx::channel /*socket*/) {
   FTL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::CreateHttpServer(
-    network::NetAddressPtr local_address,
-    mx::channel delegate,
-    const CreateHttpServerCallback& callback) {
+    network::NetAddressPtr /*local_address*/,
+    mx::channel /*delegate*/,
+    const CreateHttpServerCallback& /*callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 
 void FakeCloudNetworkService::RegisterURLLoaderInterceptor(
-    mx::channel factory) {
+    mx::channel /*factory*/) {
   FTL_NOTIMPLEMENTED();
 }
 
-void FakeCloudNetworkService::CreateHostResolver(mx::channel host_resolver) {
+void FakeCloudNetworkService::CreateHostResolver(
+    mx::channel /*host_resolver*/) {
   FTL_NOTIMPLEMENTED();
 }
 

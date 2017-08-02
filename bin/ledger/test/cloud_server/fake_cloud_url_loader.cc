@@ -59,11 +59,11 @@ void FakeCloudURLLoader::Start(network::URLRequestPtr request,
 }
 
 void FakeCloudURLLoader::FollowRedirect(
-    const FollowRedirectCallback& callback) {
+    const FollowRedirectCallback& /*callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 
-void FakeCloudURLLoader::QueryStatus(const QueryStatusCallback& callback) {
+void FakeCloudURLLoader::QueryStatus(const QueryStatusCallback& /*callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 

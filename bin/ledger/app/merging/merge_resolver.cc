@@ -71,8 +71,8 @@ void MergeResolver::SetPageManager(PageManager* page_manager) {
 }
 
 void MergeResolver::OnNewCommits(
-    const std::vector<std::unique_ptr<const storage::Commit>>& commits,
-    storage::ChangeSource source) {
+    const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
+    storage::ChangeSource /*source*/) {
   PostCheckConflicts();
 }
 

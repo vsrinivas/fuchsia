@@ -67,7 +67,7 @@ class LedgerAppInstanceImpl final : public IntegrationTest::LedgerAppInstance {
    private:
     // LedgerRepositoryFactoryImpl::Delegate:
     void EraseRepository(
-        EraseRemoteRepositoryOperation erase_remote_repository_operation,
+        EraseRemoteRepositoryOperation /*erase_remote_repository_operation*/,
         std::function<void(bool)> callback) override {
       FTL_NOTIMPLEMENTED();
       callback(false);

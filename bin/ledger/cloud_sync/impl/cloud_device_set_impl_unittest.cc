@@ -18,7 +18,7 @@ class FakeFirebase : public firebase::Firebase {
   FakeFirebase() {}
   ~FakeFirebase() override {}
 
-  void Get(const std::string& key,
+  void Get(const std::string& /*key*/,
            const std::vector<std::string>& query_params,
            const std::function<void(firebase::Status status,
                                     const rapidjson::Value& value)>& callback)
@@ -30,7 +30,7 @@ class FakeFirebase : public firebase::Firebase {
   }
 
   void Put(
-      const std::string& key,
+      const std::string& /*key*/,
       const std::vector<std::string>& query_params,
       const std::string& data,
       const std::function<void(firebase::Status status)>& callback) override {
@@ -39,18 +39,18 @@ class FakeFirebase : public firebase::Firebase {
     callback(returned_status);
   }
 
-  void Patch(
-      const std::string& key,
-      const std::vector<std::string>& query_params,
-      const std::string& data,
-      const std::function<void(firebase::Status status)>& callback) override {
+  void Patch(const std::string& /*key*/,
+             const std::vector<std::string>& /*query_params*/,
+             const std::string& /*data*/,
+             const std::function<void(firebase::Status status)>& /*callback*/)
+      override {
     FTL_NOTREACHED();
   }
 
-  void Delete(
-      const std::string& key,
-      const std::vector<std::string>& query_params,
-      const std::function<void(firebase::Status status)>& callback) override {
+  void Delete(const std::string& /*key*/,
+              const std::vector<std::string>& /*query_params*/,
+              const std::function<void(firebase::Status status)>& /*callback*/)
+      override {
     FTL_NOTREACHED();
   }
 

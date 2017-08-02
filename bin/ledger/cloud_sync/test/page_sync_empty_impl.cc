@@ -13,7 +13,7 @@ void PageSyncEmptyImpl::Start() {
   FTL_NOTIMPLEMENTED();
 }
 
-void PageSyncEmptyImpl::SetOnIdle(ftl::Closure on_idle_callback) {
+void PageSyncEmptyImpl::SetOnIdle(ftl::Closure /*on_idle_callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 
@@ -23,11 +23,11 @@ bool PageSyncEmptyImpl::IsIdle() {
 }
 
 void PageSyncEmptyImpl::SetOnBacklogDownloaded(
-    ftl::Closure on_backlog_downloaded_callback) {
+    ftl::Closure /*on_backlog_downloaded_callback*/) {
   FTL_NOTIMPLEMENTED();
 }
 
-void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
+void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) {
   FTL_NOTIMPLEMENTED();
 }
 

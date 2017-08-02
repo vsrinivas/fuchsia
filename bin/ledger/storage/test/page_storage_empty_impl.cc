@@ -14,7 +14,7 @@ PageId PageStorageEmptyImpl::GetId() {
   return "NOT_IMPLEMENTED";
 }
 
-void PageStorageEmptyImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
+void PageStorageEmptyImpl::SetSyncDelegate(PageSyncDelegate* /*page_sync*/) {
   FTL_NOTIMPLEMENTED();
 }
 
@@ -25,53 +25,55 @@ void PageStorageEmptyImpl::GetHeadCommitIds(
 }
 
 void PageStorageEmptyImpl::GetCommit(
-    CommitIdView commit_id,
+    CommitIdView /*commit_id*/,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
 void PageStorageEmptyImpl::AddCommitsFromSync(
-    std::vector<CommitIdAndBytes> ids_and_bytes,
+    std::vector<CommitIdAndBytes> /*ids_and_bytes*/,
     std::function<void(Status)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
 
-Status PageStorageEmptyImpl::StartCommit(const CommitId& commit_id,
-                                         JournalType journal_type,
-                                         std::unique_ptr<Journal>* journal) {
+Status PageStorageEmptyImpl::StartCommit(
+    const CommitId& /*commit_id*/,
+    JournalType /*journal_type*/,
+    std::unique_ptr<Journal>* /*journal*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
 Status PageStorageEmptyImpl::StartMergeCommit(
-    const CommitId& left,
-    const CommitId& right,
-    std::unique_ptr<Journal>* journal) {
+    const CommitId& /*left*/,
+    const CommitId& /*right*/,
+    std::unique_ptr<Journal>* /*journal*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
 void PageStorageEmptyImpl::CommitJournal(
-    std::unique_ptr<Journal> journal,
+    std::unique_ptr<Journal> /*journal*/,
     std::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::RollbackJournal(std::unique_ptr<Journal> journal) {
+Status PageStorageEmptyImpl::RollbackJournal(
+    std::unique_ptr<Journal> /*journal*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* watcher) {
+Status PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
+Status PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
@@ -83,13 +85,14 @@ void PageStorageEmptyImpl::GetUnsyncedCommits(
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
-Status PageStorageEmptyImpl::MarkCommitSynced(const CommitId& commit_id) {
+Status PageStorageEmptyImpl::MarkCommitSynced(const CommitId& /*commit_id*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::GetDeltaObjects(const CommitId& commit_id,
-                                             std::vector<ObjectId>* objects) {
+Status PageStorageEmptyImpl::GetDeltaObjects(
+    const CommitId& /*commit_id*/,
+    std::vector<ObjectId>* /*objects*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
@@ -100,66 +103,66 @@ void PageStorageEmptyImpl::GetUnsyncedPieces(
   callback(Status::NOT_IMPLEMENTED, std::vector<ObjectId>());
 }
 
-Status PageStorageEmptyImpl::MarkPieceSynced(ObjectIdView object_id) {
+Status PageStorageEmptyImpl::MarkPieceSynced(ObjectIdView /*object_id*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
-    std::unique_ptr<DataSource> data_source,
+    std::unique_ptr<DataSource> /*data_source*/,
     std::function<void(Status, ObjectId)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");
 }
 
 void PageStorageEmptyImpl::GetObject(
-    ObjectIdView object_id,
-    Location location,
+    ObjectIdView /*object_id*/,
+    Location /*location*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
 void PageStorageEmptyImpl::GetPiece(
-    ObjectIdView object_id,
+    ObjectIdView /*object_id*/,
     std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::SetSyncMetadata(ftl::StringView key,
-                                             ftl::StringView value) {
+Status PageStorageEmptyImpl::SetSyncMetadata(ftl::StringView /*key*/,
+                                             ftl::StringView /*value*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::GetSyncMetadata(ftl::StringView key,
-                                             std::string* value) {
+Status PageStorageEmptyImpl::GetSyncMetadata(ftl::StringView /*key*/,
+                                             std::string* /*value*/) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;
 }
 
 void PageStorageEmptyImpl::GetCommitContents(
-    const Commit& commit,
-    std::string min_key,
-    std::function<bool(Entry)> on_next,
+    const Commit& /*commit*/,
+    std::string /*min_key*/,
+    std::function<bool(Entry)> /*on_next*/,
     std::function<void(Status)> on_done) {
   FTL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::GetEntryFromCommit(
-    const Commit& commit,
-    std::string key,
+    const Commit& /*commit*/,
+    std::string /*key*/,
     std::function<void(Status, Entry)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, Entry());
 }
 
 void PageStorageEmptyImpl::GetCommitContentsDiff(
-    const Commit& base_commit,
-    const Commit& other_commit,
-    std::string min_key,
-    std::function<bool(EntryChange)> on_next_diff,
+    const Commit& /*base_commit*/,
+    const Commit& /*other_commit*/,
+    std::string /*min_key*/,
+    std::function<bool(EntryChange)> /*on_next_diff*/,
     std::function<void(Status)> on_done) {
   FTL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);

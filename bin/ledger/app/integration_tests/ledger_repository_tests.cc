@@ -41,7 +41,7 @@ class EmptyTokenProvider : public modular::auth::TokenProvider {
     callback(fidl::String(""), error_.Clone());
   }
   void GetFirebaseAuthToken(
-      const fidl::String& firebase_api_key,
+      const fidl::String& /*firebase_api_key*/,
       const GetFirebaseAuthTokenCallback& callback) override {
     modular::auth::FirebaseTokenPtr token = modular::auth::FirebaseToken::New();
     token->id_token = "";

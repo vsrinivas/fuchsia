@@ -75,7 +75,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_to_return; }
 
-  void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
+  void SetSyncDelegate(storage::PageSyncDelegate* /*page_sync*/) override {}
 
   void GetHeadCommitIds(
       std::function<void(storage::Status, std::vector<storage::CommitId>)>
@@ -143,13 +143,14 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK, std::vector<storage::ObjectId>());
   }
 
-  storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
+  storage::Status AddCommitWatcher(
+      storage::CommitWatcher* /*watcher*/) override {
     watcher_set = true;
     return storage::Status::OK;
   }
 
   storage::Status RemoveCommitWatcher(
-      storage::CommitWatcher* watcher) override {
+      storage::CommitWatcher* /*watcher*/) override {
     watcher_removed = true;
     return storage::Status::OK;
   }
@@ -238,7 +239,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   ~TestCloudProvider() override = default;
 
   void AddCommits(
-      const std::string& auth_token,
+      const std::string& /*auth_token*/,
       std::vector<cloud_provider::Commit> commits,
       const std::function<void(cloud_provider::Status)>& callback) override {
     ++add_commits_calls;
@@ -272,13 +273,13 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     }
   }
 
-  void UnwatchCommits(cloud_provider::CommitWatcher* watcher) override {
+  void UnwatchCommits(cloud_provider::CommitWatcher* /*watcher*/) override {
     watcher_ = nullptr;
     watcher_removed = true;
   }
 
   void GetCommits(const std::string& auth_token,
-                  const std::string& min_timestamp,
+                  const std::string& /*min_timestamp*/,
                   std::function<void(cloud_provider::Status,
                                      std::vector<cloud_provider::Record>)>
                       callback) override {

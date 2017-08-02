@@ -16,7 +16,7 @@ NoNetworkService::NoNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
 NoNetworkService::~NoNetworkService() {}
 
 ftl::RefPtr<callback::Cancellable> NoNetworkService::Request(
-    std::function<network::URLRequestPtr()> request_factory,
+    std::function<network::URLRequestPtr()> /*request_factory*/,
     std::function<void(network::URLResponsePtr)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 

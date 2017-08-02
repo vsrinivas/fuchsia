@@ -268,7 +268,7 @@ void FirebaseImpl::OnStreamComplete(WatchClient* watch_client) {
 }
 
 void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
-                                 Status status,
+                                 Status /*status*/,
                                  const std::string& event,
                                  const std::string& payload) {
   if (event == "put" || event == "patch") {

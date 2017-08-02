@@ -291,7 +291,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
 
  private:
   // ConflictResolverFactory:
-  void GetPolicy(fidl::Array<uint8_t> page_id,
+  void GetPolicy(fidl::Array<uint8_t> /*page_id*/,
                  const GetPolicyCallback& callback) override {
     get_policy_calls++;
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(

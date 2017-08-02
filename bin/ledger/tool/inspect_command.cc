@@ -72,7 +72,7 @@ class FileStreamWriter {
 }  // namespace
 
 InspectCommand::InspectCommand(std::vector<std::string> args,
-                               const cloud_sync::UserConfig& user_config,
+                               const cloud_sync::UserConfig& /*user_config*/,
                                ftl::StringView user_repository_path)
     : args_(std::move(args)),
       app_id_(args_[1]),

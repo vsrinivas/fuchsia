@@ -46,8 +46,8 @@ class FakeURLLoader : public network::URLLoader {
     *request_received_ = std::move(request);
     callback(std::move(response_to_return_));
   }
-  void FollowRedirect(const FollowRedirectCallback& callback) override {}
-  void QueryStatus(const QueryStatusCallback& callback) override {}
+  void FollowRedirect(const FollowRedirectCallback& /*callback*/) override {}
+  void QueryStatus(const QueryStatusCallback& /*callback*/) override {}
 
  private:
   fidl::Binding<network::URLLoader> binding_;
@@ -80,32 +80,34 @@ class FakeNetworkService : public network::NetworkService {
     loaders_.push_back(std::make_unique<FakeURLLoader>(
         std::move(loader), std::move(response_to_return_), &request_received_));
   }
-  void GetCookieStore(mx::channel cookie_store) override { FTL_DCHECK(false); }
-  void CreateWebSocket(mx::channel socket) override { FTL_DCHECK(false); }
+  void GetCookieStore(mx::channel /*cookie_store*/) override {
+    FTL_DCHECK(false);
+  }
+  void CreateWebSocket(mx::channel /*socket*/) override { FTL_DCHECK(false); }
   void CreateTCPBoundSocket(
-      network::NetAddressPtr local_address,
-      mx::channel bound_socket,
-      const CreateTCPBoundSocketCallback& callback) override {
+      network::NetAddressPtr /*local_address*/,
+      mx::channel /*bound_socket*/,
+      const CreateTCPBoundSocketCallback& /*callback*/) override {
     FTL_DCHECK(false);
   }
   void CreateTCPConnectedSocket(
-      network::NetAddressPtr remote_address,
-      mx::socket send_stream,
-      mx::socket receive_stream,
-      mx::channel client_socket,
-      const CreateTCPConnectedSocketCallback& callback) override {
+      network::NetAddressPtr /*remote_address*/,
+      mx::socket /*send_stream*/,
+      mx::socket /*receive_stream*/,
+      mx::channel /*client_socket*/,
+      const CreateTCPConnectedSocketCallback& /*callback*/) override {
     FTL_DCHECK(false);
   }
-  void CreateUDPSocket(mx::channel socket) override { FTL_DCHECK(false); }
-  void CreateHttpServer(network::NetAddressPtr local_address,
-                        mx::channel delegate,
-                        const CreateHttpServerCallback& callback) override {
+  void CreateUDPSocket(mx::channel /*socket*/) override { FTL_DCHECK(false); }
+  void CreateHttpServer(network::NetAddressPtr /*local_address*/,
+                        mx::channel /*delegate*/,
+                        const CreateHttpServerCallback& /*callback*/) override {
     FTL_DCHECK(false);
   }
-  void RegisterURLLoaderInterceptor(mx::channel factory) override {
+  void RegisterURLLoaderInterceptor(mx::channel /*factory*/) override {
     FTL_DCHECK(false);
   }
-  void CreateHostResolver(mx::channel host_resolver) override {
+  void CreateHostResolver(mx::channel /*host_resolver*/) override {
     FTL_DCHECK(false);
   }
 
