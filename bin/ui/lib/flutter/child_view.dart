@@ -402,7 +402,7 @@ class _RenderChildView extends RenderBox {
   }
 
   @override
-  void debugFillProperties(List<DiagnosticsNode> description) {
+  void debugFillProperties(DiagnosticPropertiesBuilder description) {
     super.debugFillProperties(description);
     description.add(
       new DiagnosticsProperty<ChildViewConnection>(
@@ -456,7 +456,7 @@ class ChildSceneLayer extends Layer {
   }
 
   @override
-  void debugFillProperties(List<DiagnosticsNode> description) {
+  void debugFillProperties(DiagnosticPropertiesBuilder description) {
     super.debugFillProperties(description);
     description.add(new DiagnosticsProperty<Offset>('offset', offset));
     description.add(new DoubleProperty('width', width));
