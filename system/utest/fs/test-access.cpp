@@ -22,31 +22,31 @@ bool test_access_readable(void) {
 
     // Try writing a string to a file
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     const char buf[] = "Hello, World!\n";
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(close(fd), 0);
 
     // Re-open as readonly
     fd = open(filename, O_RDONLY, 0644);
 
     // Reading is allowed
     char tmp[sizeof(buf)];
-    ASSERT_EQ(read(fd, tmp, sizeof(tmp)), sizeof(tmp), "");
-    ASSERT_EQ(memcmp(buf, tmp, sizeof(tmp)), 0, "");
+    ASSERT_EQ(read(fd, tmp, sizeof(tmp)), sizeof(tmp));
+    ASSERT_EQ(memcmp(buf, tmp, sizeof(tmp)), 0);
 
     // Writing is disallowed
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), -1, "");
-    ASSERT_EQ(errno, EBADF, "");
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), -1);
+    ASSERT_EQ(errno, EBADF);
     errno = 0;
 
     // Truncating is disallowed
-    ASSERT_EQ(ftruncate(fd, 0), -1, "");
-    ASSERT_EQ(errno, EBADF, "");
+    ASSERT_EQ(ftruncate(fd, 0), -1);
+    ASSERT_EQ(errno, EBADF);
     errno = 0;
 
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink(filename), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(filename), 0);
 
     END_TEST;
 }
@@ -58,28 +58,28 @@ bool test_access_writable(void) {
 
     // Try writing a string to a file
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     const char buf[] = "Hello, World!\n";
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(close(fd), 0);
 
     // Re-open as writable
     fd = open(filename, O_WRONLY, 0644);
 
     // Reading is disallowed
     char tmp[sizeof(buf)];
-    ASSERT_EQ(read(fd, tmp, sizeof(tmp)), -1, "");
-    ASSERT_EQ(errno, EBADF, "");
+    ASSERT_EQ(read(fd, tmp, sizeof(tmp)), -1);
+    ASSERT_EQ(errno, EBADF);
     errno = 0;
 
     // Writing is allowed
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
 
     // Truncating is allowed
-    ASSERT_EQ(ftruncate(fd, 0), 0, "");
+    ASSERT_EQ(ftruncate(fd, 0), 0);
 
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink(filename), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(filename), 0);
 
     END_TEST;
 }
@@ -90,19 +90,19 @@ bool test_access_badflags(void) {
     const char* filename = "::foobar";
 
     // No creation with "RDWR + WRONLY"
-    ASSERT_LT(open(filename, O_RDWR | O_WRONLY | O_CREAT, 0644), 0, "");
+    ASSERT_LT(open(filename, O_RDWR | O_WRONLY | O_CREAT, 0644), 0);
 
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd), 0);
 
     // No re-opening with "RDWR + WRONLY"
-    ASSERT_LT(open(filename, O_RDWR | O_WRONLY, 0644), 0, "");
+    ASSERT_LT(open(filename, O_RDWR | O_WRONLY, 0644), 0);
 
     // No read-only truncation
-    ASSERT_LT(open(filename, O_RDONLY | O_TRUNC | O_CREAT, 0644), 0, "");
+    ASSERT_LT(open(filename, O_RDONLY | O_TRUNC | O_CREAT, 0644), 0);
 
-    ASSERT_EQ(unlink(filename), 0, "");
+    ASSERT_EQ(unlink(filename), 0);
 
     END_TEST;
 }

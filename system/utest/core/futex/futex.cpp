@@ -407,12 +407,12 @@ static bool test_futex_thread_suspended() {
     volatile int futex_value = 1;
     TestThread thread(&futex_value);
 
-    ASSERT_EQ(mx_task_suspend(thread.get_thread_handle()), MX_OK, "");
+    ASSERT_EQ(mx_task_suspend(thread.get_thread_handle()), MX_OK);
     // Wait some time for the thread suspension to take effect.
     struct timespec wait_time = {0, 10 * 1000000 /* nanoseconds */};
     ASSERT_EQ(nanosleep(&wait_time, NULL), 0, "Error during sleep");
 
-    ASSERT_EQ(mx_task_resume(thread.get_thread_handle(), 0), MX_OK, "");
+    ASSERT_EQ(mx_task_resume(thread.get_thread_handle(), 0), MX_OK);
     // Wait some time for the thread to resume and execute.
     ASSERT_EQ(nanosleep(&wait_time, NULL), 0, "Error during sleep");
 
@@ -435,9 +435,9 @@ static bool test_futex_misaligned() {
     } __attribute__((packed)) buffer;
     mx_futex_t* const futex = &buffer.futex[0];
     mx_futex_t* const futex_2 = &buffer.futex[1];
-    ASSERT_GT(alignof(mx_futex_t), 1, "");
-    ASSERT_NEQ((uintptr_t)futex % alignof(mx_futex_t), 0, "");
-    ASSERT_NEQ((uintptr_t)futex_2 % alignof(mx_futex_t), 0, "");
+    ASSERT_GT(alignof(mx_futex_t), 1);
+    ASSERT_NEQ((uintptr_t)futex % alignof(mx_futex_t), 0);
+    ASSERT_NEQ((uintptr_t)futex_2 % alignof(mx_futex_t), 0);
 
     // mx_futex_requeue might check the waited-for value before it
     // checks the second futex's alignment, so make sure the call is
@@ -445,9 +445,9 @@ static bool test_futex_misaligned() {
     // look at uninitialized stack space!)
     memset(&buffer, 0, sizeof(buffer));
 
-    ASSERT_EQ(mx_futex_wait(futex, 0, MX_TIME_INFINITE), MX_ERR_INVALID_ARGS, "");
-    ASSERT_EQ(mx_futex_wake(futex, 1), MX_ERR_INVALID_ARGS, "");
-    ASSERT_EQ(mx_futex_requeue(futex, 1, 0, futex_2, 1), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(mx_futex_wait(futex, 0, MX_TIME_INFINITE), MX_ERR_INVALID_ARGS);
+    ASSERT_EQ(mx_futex_wake(futex, 1), MX_ERR_INVALID_ARGS);
+    ASSERT_EQ(mx_futex_requeue(futex, 1, 0, futex_2, 1), MX_ERR_INVALID_ARGS);
 
     END_TEST;
 }

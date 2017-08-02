@@ -1088,27 +1088,27 @@ bool vmo_clone_rights_test() {
 
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo),
-              MX_OK, "");
+              MX_OK);
     ASSERT_EQ(mx_object_set_property(vmo, MX_PROP_NAME,
                                      kOldVmoName, sizeof(kOldVmoName)),
-              MX_OK, "");
-    ASSERT_EQ(get_handle_rights(vmo) & kOldVmoRights, kOldVmoRights, "");
+              MX_OK);
+    ASSERT_EQ(get_handle_rights(vmo) & kOldVmoRights, kOldVmoRights);
 
     mx_handle_t reduced_rights_vmo;
     ASSERT_EQ(mx_handle_duplicate(vmo, kOldVmoRights, &reduced_rights_vmo),
-              MX_OK, "");
+              MX_OK);
     EXPECT_EQ(get_handle_rights(reduced_rights_vmo), kOldVmoRights, "");
 
     mx_handle_t clone;
     ASSERT_EQ(mx_vmo_clone(reduced_rights_vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                            0, PAGE_SIZE, &clone),
-              MX_OK, "");
+              MX_OK);
 
     EXPECT_EQ(mx_handle_close(reduced_rights_vmo), MX_OK, "");
 
     ASSERT_EQ(mx_object_set_property(clone, MX_PROP_NAME,
                                      kNewVmoName, sizeof(kNewVmoName)),
-              MX_OK, "");
+              MX_OK);
 
     char oldname[MX_MAX_NAME_LEN] = "bad";
     EXPECT_EQ(mx_object_get_property(vmo, MX_PROP_NAME,

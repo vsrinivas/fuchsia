@@ -237,7 +237,7 @@ static bool upgrade_fail_test() {
     {
         mxtl::AutoLock al(&mutex);
         int res = pthread_create(&thread, NULL, &adopt_and_reset, raw);
-        ASSERT_LE(0, res, "");
+        ASSERT_LE(0, res);
         mx_nanosleep(mx_deadline_after(MX_MSEC(300)));
         EXPECT_TRUE(destroying);
         // The RawUpgradeTester must be blocked in the destructor, the upgrade will fail.

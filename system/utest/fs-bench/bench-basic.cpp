@@ -68,7 +68,7 @@ bool benchmark_write_read(void) {
 
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[DataSize]);
-    ASSERT_EQ(ac.check(), true, "");
+    ASSERT_EQ(ac.check(), true);
     memset(data.get(), kMagicByte, DataSize);
 
     uint64_t start;
@@ -81,26 +81,26 @@ bool benchmark_write_read(void) {
         start = mx_ticks_get();
         count = NumOps;
         while (count--) {
-            ASSERT_EQ(write(fd, data.get(), DataSize), DataSize, "");
+            ASSERT_EQ(write(fd, data.get(), DataSize), DataSize);
         }
         time_end(str, start);
 
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
         snprintf(str, sizeof(str), "read %d", i);
 
         start = mx_ticks_get();
         count = NumOps;
         while (count--) {
-            ASSERT_EQ(read(fd, data.get(), DataSize), DataSize, "");
-            ASSERT_EQ(data[0], kMagicByte, "");
+            ASSERT_EQ(read(fd, data.get(), DataSize), DataSize);
+            ASSERT_EQ(data[0], kMagicByte);
         }
         time_end(str, start);
 
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     }
 
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink(MOUNT_POINT "/bigfile"), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(MOUNT_POINT "/bigfile"), 0);
 
     END_TEST;
 }

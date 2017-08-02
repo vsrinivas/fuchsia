@@ -47,34 +47,34 @@ bool test_realpath_absolute(void) {
     BEGIN_TEST;
 
     int fd = open(kName, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     struct stat sb;
-    ASSERT_EQ(stat(kName, &sb), 0, "");
+    ASSERT_EQ(stat(kName, &sb), 0);
 
     // Find the real path of the file (since, due to linker magic, we
     // actually don't know it).
     char buf[PATH_MAX];
-    ASSERT_EQ(realpath(kName, buf), buf, "");
+    ASSERT_EQ(realpath(kName, buf), buf);
 
     // Confirm that for (resolvable) cases of realpath, the name
     // can be cleaned.
     char buf2[PATH_MAX];
-    ASSERT_EQ(realpath(kTestNameDotDot, buf2), buf2, "");
+    ASSERT_EQ(realpath(kTestNameDotDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with ..) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
-    ASSERT_EQ(realpath(kTestNameDot, buf2), buf2, "");
+    ASSERT_EQ(realpath(kTestNameDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with .) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
-    ASSERT_EQ(realpath(kTestNameBothDots, buf2), buf2, "");
+    ASSERT_EQ(realpath(kTestNameBothDots, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with . and ..) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
     // Clean up
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink(kName), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(kName), 0);
     END_TEST;
 }
 
@@ -87,33 +87,33 @@ constexpr char kTestRelativeBothDots[] = "./..//my_dir/.././///././my_dir/./my_f
 bool test_realpath_relative(void) {
     BEGIN_TEST;
 
-    ASSERT_EQ(mkdir(kNameDir, 0666), 0, "");
+    ASSERT_EQ(mkdir(kNameDir, 0666), 0);
     int fd = open(kNameFile, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     close(fd);
 
     struct stat sb;
-    ASSERT_EQ(stat(kNameFile, &sb), 0, "");
+    ASSERT_EQ(stat(kNameFile, &sb), 0);
 
     // Find the real path of the file (since, due to linker magic, we
     // actually don't know it).
     char buf[PATH_MAX];
-    ASSERT_EQ(realpath(kNameFile, buf), buf, "");
+    ASSERT_EQ(realpath(kNameFile, buf), buf);
 
     char cwd[PATH_MAX];
     ASSERT_NONNULL(getcwd(cwd, sizeof(cwd)), "");
-    ASSERT_EQ(chdir(kNameDir), 0, "");
+    ASSERT_EQ(chdir(kNameDir), 0);
 
     char buf2[PATH_MAX];
-    ASSERT_EQ(realpath(kTestRelativeDotDot, buf2), buf2, "");
+    ASSERT_EQ(realpath(kTestRelativeDotDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with ..) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
-    ASSERT_EQ(realpath(kTestRelativeDot, buf2), buf2, "");
+    ASSERT_EQ(realpath(kTestRelativeDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with .) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
-    ASSERT_EQ(realpath(kTestRelativeBothDots, buf2), buf2, "");
+    ASSERT_EQ(realpath(kTestRelativeBothDots, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with . and ..) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
@@ -134,9 +134,9 @@ bool test_realpath_relative(void) {
     }
     memcpy(bufmax + len, "my_file", strlen("my_file"));
     bufmax[len + strlen("my_file")] = 0;
-    ASSERT_EQ(strlen(bufmax), PATH_MAX - cwd_len - 1, "");
+    ASSERT_EQ(strlen(bufmax), PATH_MAX - cwd_len - 1);
 
-    ASSERT_EQ(realpath(bufmax, buf2), buf2, "");
+    ASSERT_EQ(realpath(bufmax, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (longest path) did not resolve");
     ASSERT_TRUE(is_resolved(buf2), "");
 
@@ -148,7 +148,7 @@ bool test_realpath_relative(void) {
 
     // Clean up
     ASSERT_EQ(chdir(cwd), 0, "Could not return to original cwd");
-    ASSERT_EQ(unlink(kNameFile), 0, "");
+    ASSERT_EQ(unlink(kNameFile), 0);
     END_TEST;
 }
 

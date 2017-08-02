@@ -275,9 +275,9 @@ static bool async_wait_event_test_repeat(void) {
         EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED | ub), MX_OK, "");
         EXPECT_EQ(mx_object_signal(ev, MX_EVENT_SIGNALED | ub, 0u), MX_OK, "");
 
-        ASSERT_EQ(mx_port_wait(port, 0ull, &out, 0u), MX_OK, "");
-        ASSERT_EQ(out.type, MX_PKT_TYPE_SIGNAL_REP, "");
-        ASSERT_EQ(out.signal.count, 1u, "");
+        ASSERT_EQ(mx_port_wait(port, 0ull, &out, 0u), MX_OK);
+        ASSERT_EQ(out.type, MX_PKT_TYPE_SIGNAL_REP);
+        ASSERT_EQ(out.signal.count, 1u);
         count[0] += (out.signal.observed & MX_EVENT_SIGNALED) ? 1 : 0;
         count[1] += (out.signal.observed & MX_USER_SIGNAL_2) ? 1 : 0;
         count[2] += (out.signal.observed &

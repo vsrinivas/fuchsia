@@ -24,11 +24,11 @@ bool mini_process_sanity() {
     mx_handle_t thread;
     mx_handle_t vmar;
 
-    ASSERT_EQ(mx_process_create(mx_job_default(), "mini-p", 3u, 0, &proc, &vmar), MX_OK, "");
-    ASSERT_EQ(mx_thread_create(proc, "mini-p", 2u, 0u, &thread), MX_OK, "");
+    ASSERT_EQ(mx_process_create(mx_job_default(), "mini-p", 3u, 0, &proc, &vmar), MX_OK);
+    ASSERT_EQ(mx_thread_create(proc, "mini-p", 2u, 0u, &thread), MX_OK);
 
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t cmd_channel;
     EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, &cmd_channel), MX_OK, "");
@@ -53,13 +53,13 @@ bool process_start_fail() {
     mx_handle_t process;
     mx_handle_t thread;
 
-    ASSERT_EQ(mx_event_create(0u, &event1), MX_OK, "");
-    ASSERT_EQ(mx_event_create(0u, &event2), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event1), MX_OK);
+    ASSERT_EQ(mx_event_create(0u, &event2), MX_OK);
 
-    ASSERT_EQ(start_mini_process(mx_job_default(), event1, &process, &thread), MX_OK, "");
+    ASSERT_EQ(start_mini_process(mx_job_default(), event1, &process, &thread), MX_OK);
 
     mx_handle_t other_thread;
-    ASSERT_EQ(mx_thread_create(process, "test", 4u, 0, &other_thread), MX_OK, "");
+    ASSERT_EQ(mx_thread_create(process, "test", 4u, 0, &other_thread), MX_OK);
 
     // Test that calling process_start() again for an existing process fails in a
     // reasonable way. Also test that the transfered object is back into this process.
@@ -77,11 +77,11 @@ bool kill_process_via_thread_close() {
     BEGIN_TEST;
 
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t process;
     mx_handle_t thread;
-    ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK, "");
+    ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK);
 
     // closing the only thread handle should cause the process to terminate.
     EXPECT_EQ(mx_handle_close(thread), MX_OK, "");
@@ -99,11 +99,11 @@ bool kill_process_via_process_close() {
     BEGIN_TEST;
 
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t process;
     mx_handle_t thread;
-    ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK, "");
+    ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK);
 
     // closing the only process handle should cause the process to terminate.
     EXPECT_EQ(mx_handle_close(process), MX_OK, "");
@@ -121,11 +121,11 @@ bool kill_process_via_thread_kill() {
     BEGIN_TEST;
 
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t process;
     mx_handle_t thread;
-    ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK, "");
+    ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK);
 
     // Killing the only thread should cause the process to terminate.
     EXPECT_EQ(mx_task_kill(thread), MX_OK, "");
@@ -144,14 +144,14 @@ bool kill_process_via_vmar_destroy() {
     BEGIN_TEST;
 
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t proc;
     mx_handle_t vmar;
-    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp", 3u, 0, &proc, &vmar), MX_OK, "");
+    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp", 3u, 0, &proc, &vmar), MX_OK);
 
     mx_handle_t thread;
-    ASSERT_EQ(mx_thread_create(proc, "th", 2u, 0u, &thread), MX_OK, "");
+    ASSERT_EQ(mx_thread_create(proc, "th", 2u, 0u, &thread), MX_OK);
 
     // Make the process busy-wait rather than using a vDSO call because
     // if it maps in the vDSO then mx_vmar_destroy is prohibited.
@@ -179,13 +179,13 @@ bool kill_process_handle_cycle() {
     mx_handle_t proc1, proc2;
     mx_handle_t vmar1, vmar2;
 
-    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp1", 4u, 0u, &proc1, &vmar1), MX_OK, "");
-    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp2", 4u, 0u, &proc2, &vmar2), MX_OK, "");
+    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp1", 4u, 0u, &proc1, &vmar1), MX_OK);
+    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp2", 4u, 0u, &proc2, &vmar2), MX_OK);
 
     mx_handle_t thread1, thread2;
 
-    ASSERT_EQ(mx_thread_create(proc1, "th1", 3u, 0u, &thread1), MX_OK, "");
-    ASSERT_EQ(mx_thread_create(proc2, "th2", 3u, 0u, &thread2), MX_OK, "");
+    ASSERT_EQ(mx_thread_create(proc1, "th1", 3u, 0u, &thread1), MX_OK);
+    ASSERT_EQ(mx_thread_create(proc2, "th2", 3u, 0u, &thread2), MX_OK);
 
     mx_handle_t dup1, dup2;
 
@@ -241,21 +241,21 @@ bool kill_channel_handle_cycle() {
     BEGIN_TEST;
 
     mx_handle_t chan[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-    ASSERT_EQ(mx_channel_create(0u, &chan[0], &chan[1]), MX_OK, "");
+    ASSERT_EQ(mx_channel_create(0u, &chan[0], &chan[1]), MX_OK);
 
     mx_handle_t proc1, proc2;
     mx_handle_t vmar1, vmar2;
 
     mx_handle_t job_child;
-    ASSERT_EQ(mx_job_create(mx_job_default(), 0u, &job_child), MX_OK, "");
+    ASSERT_EQ(mx_job_create(mx_job_default(), 0u, &job_child), MX_OK);
 
-    ASSERT_EQ(mx_process_create(job_child, "ttp1", 4u, 0u, &proc1, &vmar1), MX_OK, "");
-    ASSERT_EQ(mx_process_create(job_child, "ttp2", 4u, 0u, &proc2, &vmar2), MX_OK, "");
+    ASSERT_EQ(mx_process_create(job_child, "ttp1", 4u, 0u, &proc1, &vmar1), MX_OK);
+    ASSERT_EQ(mx_process_create(job_child, "ttp2", 4u, 0u, &proc2, &vmar2), MX_OK);
 
     mx_handle_t thread1, thread2;
 
-    ASSERT_EQ(mx_thread_create(proc1, "th1", 3u, 0u, &thread1), MX_OK, "");
-    ASSERT_EQ(mx_thread_create(proc2, "th2", 3u, 0u, &thread2), MX_OK, "");
+    ASSERT_EQ(mx_thread_create(proc1, "th1", 3u, 0u, &thread1), MX_OK);
+    ASSERT_EQ(mx_thread_create(proc2, "th2", 3u, 0u, &thread2), MX_OK);
 
     // Now we stuff duplicated process and thread handles into each side of the channel.
 
@@ -320,45 +320,45 @@ bool info_reflects_process_state() {
 
     // Create a process with one thread.
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t job_child;
-    ASSERT_EQ(mx_job_create(mx_job_default(), 0u, &job_child), MX_OK, "");
+    ASSERT_EQ(mx_job_create(mx_job_default(), 0u, &job_child), MX_OK);
 
     mx_handle_t proc;
     mx_handle_t vmar;
-    ASSERT_EQ(mx_process_create(job_child, "ttp", 4u, 0u, &proc, &vmar), MX_OK, "");
+    ASSERT_EQ(mx_process_create(job_child, "ttp", 4u, 0u, &proc, &vmar), MX_OK);
 
     mx_handle_t thread;
-    ASSERT_EQ(mx_thread_create(proc, "th", 3u, 0u, &thread), MX_OK, "");
+    ASSERT_EQ(mx_thread_create(proc, "th", 3u, 0u, &thread), MX_OK);
 
     mx_info_process_t info;
     ASSERT_EQ(mx_object_get_info(
-            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK, "");
+            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK);
     EXPECT_FALSE(info.started, "process should not appear as started");
     EXPECT_FALSE(info.exited, "process should not appear as exited");
 
     mx_handle_t minip_chn;
     // Start the process and make (relatively) certain it's alive.
     ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event, &minip_chn),
-              MX_OK, "");
+              MX_OK);
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(
-        proc, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT, "");
+        proc, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT);
 
     ASSERT_EQ(mx_object_get_info(
-            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK, "");
+            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK);
     EXPECT_TRUE(info.started, "process should appear as started");
     EXPECT_FALSE(info.exited, "process should not appear as exited");
 
     // Kill the process and wait for it to terminate.
-    ASSERT_EQ(mx_task_kill(proc), MX_OK, "");
+    ASSERT_EQ(mx_task_kill(proc), MX_OK);
     ASSERT_EQ(mx_object_wait_one(
-        proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
-    ASSERT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
+        proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
+    ASSERT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE);
 
     ASSERT_EQ(mx_object_get_info(
-            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK, "");
+            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK);
     EXPECT_TRUE(info.started, "process should appear as started");
     EXPECT_TRUE(info.exited, "process should appear as exited");
     EXPECT_NEQ(info.return_code, 0, "killed process should have non-zero return code");

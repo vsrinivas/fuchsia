@@ -27,7 +27,7 @@ static bool basic_test() {
 
     BEGIN_TEST;
     mx::event event;
-    ASSERT_EQ(mx::event::create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx::event::create(0u, &event), MX_OK);
     mx_signals_t observed = 0u;
     EXPECT_EQ(
         event.wait_one(MX_SIGNAL_LAST_HANDLE, MX_TIME_INFINITE, &observed), MX_OK, "");
@@ -57,7 +57,7 @@ static bool replace_test() {
 
     BEGIN_TEST;
     mx::event old_ev;
-    ASSERT_EQ(mx::event::create(0u, &old_ev), MX_OK, "");
+    ASSERT_EQ(mx::event::create(0u, &old_ev), MX_OK);
 
     mx::event new_ev;
     EXPECT_EQ(old_ev.replace(MX_RIGHT_SAME_RIGHTS, &new_ev), MX_OK, "");
@@ -71,7 +71,7 @@ static bool replace_test() {
     EXPECT_EQ(new_ev.duplicate(MX_RIGHT_SAME_RIGHTS, &dup), MX_OK, "");
 
     mx::port port;
-    ASSERT_EQ(mx::port::create(0, &port), MX_OK, "");
+    ASSERT_EQ(mx::port::create(0, &port), MX_OK);
 
     EXPECT_EQ(new_ev.wait_async(
         port, 1u, MX_SIGNAL_LAST_HANDLE, MX_WAIT_ASYNC_ONCE), MX_OK, "");
@@ -102,37 +102,37 @@ static bool channel_test() {
 
     BEGIN_TEST;
     mx::event event;
-    ASSERT_EQ(mx::event::create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx::event::create(0u, &event), MX_OK);
 
     mx::channel channel[2];
-    ASSERT_EQ(mx::channel::create(0u, &channel[0], &channel[1]), MX_OK, "");
+    ASSERT_EQ(mx::channel::create(0u, &channel[0], &channel[1]), MX_OK);
 
     mx::port port;
-    ASSERT_EQ(mx::port::create(0, &port), MX_OK, "");
+    ASSERT_EQ(mx::port::create(0, &port), MX_OK);
 
     mx_handle_t dup_ev;
     EXPECT_EQ(mx_handle_duplicate(event.get(), MX_RIGHT_SAME_RIGHTS, &dup_ev), MX_OK, "");
 
     ASSERT_EQ(event.wait_async(
-        port, 1u, MX_SIGNAL_LAST_HANDLE, MX_WAIT_ASYNC_ONCE), MX_OK, "");
+        port, 1u, MX_SIGNAL_LAST_HANDLE, MX_WAIT_ASYNC_ONCE), MX_OK);
 
     uint32_t actual_b;
     uint32_t actual_h;
     mx_port_packet_t packet = {};
 
     for (int ix = 0; ix != 4; ++ix) {
-        ASSERT_EQ(channel[0].write(0u, nullptr, 0u, &dup_ev, 1u), MX_OK, "");
+        ASSERT_EQ(channel[0].write(0u, nullptr, 0u, &dup_ev, 1u), MX_OK);
         dup_ev = 0u;
 
         EXPECT_EQ(port.wait(0ull, &packet, 0u), MX_ERR_TIMED_OUT, "");
 
         ASSERT_EQ(channel[1].read(
-            0u, nullptr, 0, &actual_b, &dup_ev, 1u, &actual_h), MX_OK, "");
+            0u, nullptr, 0, &actual_b, &dup_ev, 1u, &actual_h), MX_OK);
 
         EXPECT_EQ(port.wait(0ull, &packet, 0u), MX_ERR_TIMED_OUT, "");
     }
 
-    ASSERT_EQ(channel[0].write(0u, nullptr, 0u, &dup_ev, 1u), MX_OK, "");
+    ASSERT_EQ(channel[0].write(0u, nullptr, 0u, &dup_ev, 1u), MX_OK);
 
     channel[0].reset();
     EXPECT_EQ(port.wait(0ull, &packet, 0u), MX_ERR_TIMED_OUT, "");

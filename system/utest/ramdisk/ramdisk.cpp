@@ -51,13 +51,13 @@ static bool ramdisk_test_simple(void) {
     memset(out, 0, sizeof(out));
 
     // Write a page and a half
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), (ssize_t) sizeof(buf), "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf) / 2), (ssize_t) (sizeof(buf) / 2), "");
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), (ssize_t) sizeof(buf));
+    ASSERT_EQ(write(fd, buf, sizeof(buf) / 2), (ssize_t) (sizeof(buf) / 2));
 
     // Seek to the start of the device and read the contents
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(read(fd, out, sizeof(out)), (ssize_t) sizeof(out), "");
-    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(read(fd, out, sizeof(out)), (ssize_t) sizeof(out));
+    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     close(fd);
@@ -90,7 +90,7 @@ static bool ramdisk_test_filesystem(void) {
 
     // Verify the ramdisk name
     char out[sizeof(name)];
-    ASSERT_EQ(ioctl_block_get_name(fd, out, sizeof(out)), (ssize_t) strlen(name), "");
+    ASSERT_EQ(ioctl_block_get_name(fd, out, sizeof(out)), (ssize_t) strlen(name));
     ASSERT_EQ(strncmp(out, name, strlen(name)), 0, "Unexpected ramdisk name");
 
     // Find the name of the ramdisk under "/dev/class/block", since it is a block device.
@@ -126,7 +126,7 @@ static bool ramdisk_test_filesystem(void) {
     // Check dev block is accessible before destruction
     int devfd = open(blockpath, O_RDONLY);
     ASSERT_GE(devfd, 0, "Ramdisk is not visible in /dev/class/block");
-    ASSERT_EQ(close(devfd), 0, "");
+    ASSERT_EQ(close(devfd), 0);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     ASSERT_EQ(close(fd), 0, "Could not close ramdisk device");
@@ -151,13 +151,13 @@ static bool ramdisk_test_rebind(void) {
     ASSERT_GE(fd, 0, "Could not open ramdisk device");
 
     // Rebind the ramdisk driver
-    ASSERT_EQ(ioctl_block_rr_part(fd), 0, "");
+    ASSERT_EQ(ioctl_block_rr_part(fd), 0);
     // Ensure that the block driver rebinds too.
     char *path_end = strrchr(ramdisk_path, '/');
-    ASSERT_EQ(strcmp(path_end, "/block"), 0, "");
+    ASSERT_EQ(strcmp(path_end, "/block"), 0);
     *path_end = '\0';
     printf("ramdisk_test: [%s] waiting for child [%s]\n", ramdisk_path, "block");
-    ASSERT_EQ(wait_for_driver_bind(ramdisk_path, "block"), 0, "");
+    ASSERT_EQ(wait_for_driver_bind(ramdisk_path, "block"), 0);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     ASSERT_EQ(close(fd), 0, "Could not close ramdisk device");
@@ -173,27 +173,27 @@ bool ramdisk_test_bad_requests(void) {
     memset(buf, 'a', sizeof(buf));
 
     // Read / write non-multiples of the block size
-    ASSERT_EQ(write(fd, buf, PAGE_SIZE - 1), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
-    ASSERT_EQ(write(fd, buf, PAGE_SIZE / 2), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
-    ASSERT_EQ(read(fd, buf, PAGE_SIZE - 1), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
-    ASSERT_EQ(read(fd, buf, PAGE_SIZE / 2), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
+    ASSERT_EQ(write(fd, buf, PAGE_SIZE - 1), -1);
+    ASSERT_EQ(errno, EINVAL);
+    ASSERT_EQ(write(fd, buf, PAGE_SIZE / 2), -1);
+    ASSERT_EQ(errno, EINVAL);
+    ASSERT_EQ(read(fd, buf, PAGE_SIZE - 1), -1);
+    ASSERT_EQ(errno, EINVAL);
+    ASSERT_EQ(read(fd, buf, PAGE_SIZE / 2), -1);
+    ASSERT_EQ(errno, EINVAL);
 
     // Read / write from unaligned offset
-    ASSERT_EQ(lseek(fd, 1, SEEK_SET), 1, "");
-    ASSERT_EQ(write(fd, buf, PAGE_SIZE), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
-    ASSERT_EQ(read(fd, buf, PAGE_SIZE), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
+    ASSERT_EQ(lseek(fd, 1, SEEK_SET), 1);
+    ASSERT_EQ(write(fd, buf, PAGE_SIZE), -1);
+    ASSERT_EQ(errno, EINVAL);
+    ASSERT_EQ(read(fd, buf, PAGE_SIZE), -1);
+    ASSERT_EQ(errno, EINVAL);
 
     // Read / write from beyond end of device
     off_t dev_size = PAGE_SIZE * 512;
-    ASSERT_EQ(lseek(fd, dev_size, SEEK_SET), dev_size, "");
-    ASSERT_EQ(write(fd, buf, PAGE_SIZE), 0, "");
-    ASSERT_EQ(read(fd, buf, PAGE_SIZE), 0, "");
+    ASSERT_EQ(lseek(fd, dev_size, SEEK_SET), dev_size);
+    ASSERT_EQ(write(fd, buf, PAGE_SIZE), 0);
+    ASSERT_EQ(read(fd, buf, PAGE_SIZE), 0);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     close(fd);
@@ -228,14 +228,14 @@ bool ramdisk_test_release_during_access(void) {
     };
 
     thrd_t thread;
-    ASSERT_EQ(thrd_create(&thread, bg_thread, &fd), thrd_success, "");
+    ASSERT_EQ(thrd_create(&thread, bg_thread, &fd), thrd_success);
     // Let the background thread warm up a little bit...
     usleep(10000);
     // ... and close the entire ramdisk from undearneath it!
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
 
     int res;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success, "");
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
     ASSERT_EQ(res, 0, "Background thread failed");
     close(fd);
     END_TEST;
@@ -253,12 +253,12 @@ bool ramdisk_test_release_during_fifo_access(void) {
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     uint64_t vmo_size = PAGE_SIZE * 3;
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), MX_OK, "Failed to create VMO");
     mx_handle_t xfer_vmo;
-    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK, "");
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK);
     vmoid_t vmoid;
     expected = sizeof(vmoid_t);
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
@@ -290,14 +290,14 @@ bool ramdisk_test_release_during_fifo_access(void) {
     args.client = client;
 
     thrd_t thread;
-    ASSERT_EQ(thrd_create(&thread, bg_thread, (void*)&args), thrd_success, "");
+    ASSERT_EQ(thrd_create(&thread, bg_thread, (void*)&args), thrd_success);
     // Let the background thread warm up a little bit...
     usleep(10000);
     // ... and close the entire ramdisk from undearneath it!
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
 
     int res;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success, "");
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
     ASSERT_EQ(res, 0, "Background thread failed");
     close(fd);
     END_TEST;
@@ -313,22 +313,22 @@ bool ramdisk_test_multiple(void) {
 
     // Write 'a' to fd1, write 'b', to fd2
     memset(buf, 'a', sizeof(buf));
-    ASSERT_EQ(write(fd1, buf, sizeof(buf)), (ssize_t) sizeof(buf), "");
+    ASSERT_EQ(write(fd1, buf, sizeof(buf)), (ssize_t) sizeof(buf));
     memset(buf, 'b', sizeof(buf));
-    ASSERT_EQ(write(fd2, buf, sizeof(buf)), (ssize_t) sizeof(buf), "");
+    ASSERT_EQ(write(fd2, buf, sizeof(buf)), (ssize_t) sizeof(buf));
 
-    ASSERT_EQ(lseek(fd1, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(lseek(fd2, 0, SEEK_SET), 0, "");
+    ASSERT_EQ(lseek(fd1, 0, SEEK_SET), 0);
+    ASSERT_EQ(lseek(fd2, 0, SEEK_SET), 0);
 
     // Read 'b' from fd2, read 'a' from fd1
-    ASSERT_EQ(read(fd2, out, sizeof(buf)), (ssize_t) sizeof(buf), "");
-    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
+    ASSERT_EQ(read(fd2, out, sizeof(buf)), (ssize_t) sizeof(buf));
+    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0);
     ASSERT_GE(ioctl_ramdisk_unlink(fd2), 0, "Could not unlink ramdisk device");
     close(fd2);
 
     memset(buf, 'a', sizeof(buf));
-    ASSERT_EQ(read(fd1, out, sizeof(buf)), (ssize_t) sizeof(buf), "");
-    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0, "");
+    ASSERT_EQ(read(fd1, out, sizeof(buf)), (ssize_t) sizeof(buf));
+    ASSERT_EQ(memcmp(out, buf, sizeof(out)), 0);
     ASSERT_GE(ioctl_ramdisk_unlink(fd1), 0, "Could not unlink ramdisk device");
     close(fd1);
 
@@ -377,14 +377,14 @@ bool ramdisk_test_fifo_basic(void) {
     fill_random(buf.get(), vmo_size);
 
     size_t actual;
-    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), MX_OK, "");
-    ASSERT_EQ(actual, vmo_size, "");
+    ASSERT_EQ(mx_vmo_write(vmo, buf.get(), 0, vmo_size, &actual), MX_OK);
+    ASSERT_EQ(actual, vmo_size);
 
     // Send a handle to the vmo to the block device, get a vmoid which identifies it
     vmoid_t vmoid;
     expected = sizeof(vmoid_t);
     mx_handle_t xfer_vmo;
-    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK, "");
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &xfer_vmo), MX_OK);
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
               "Failed to attach vmo");
 
@@ -406,28 +406,28 @@ bool ramdisk_test_fifo_basic(void) {
     requests[1].dev_offset = PAGE_SIZE * 100;
 
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], mxtl::count_of(requests)), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], mxtl::count_of(requests)), MX_OK);
 
     // Empty the vmo, then read the info we just wrote to the disk
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
     ASSERT_TRUE(ac.check(), "");
 
-    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
+    ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), MX_OK);
     requests[0].opcode = BLOCKIO_READ;
     requests[1].opcode = BLOCKIO_READ;
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], mxtl::count_of(requests)), MX_OK, "");
-    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], mxtl::count_of(requests)), MX_OK);
+    ASSERT_EQ(mx_vmo_read(vmo, out.get(), 0, vmo_size, &actual), MX_OK);
     ASSERT_EQ(memcmp(buf.get(), out.get(), vmo_size), 0, "Read data not equal to written data");
 
     // Close the current vmo
     requests[0].opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], 1), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], 1), MX_OK);
 
-    ASSERT_EQ(mx_handle_close(vmo), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(vmo), MX_OK);
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -481,7 +481,7 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
         requests[b].dev_offset = i * kBlockSize + b * (kBlockSize * objs);
     }
     // Write entire vmos at once
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK);
     return true;
 }
 
@@ -494,7 +494,7 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
     ASSERT_TRUE(ac.check(), "");
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
-              MX_OK, "");
+              MX_OK);
 
     // Next, read to the vmo from the disk
     size_t blocks = obj->vmo_size / kBlockSize;
@@ -509,12 +509,12 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
         requests[b].dev_offset = i * kBlockSize + b * (kBlockSize * objs);
     }
     // Read entire vmos at once
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK);
 
     // Finally, write from the vmo to an out buffer, where we can compare
     // the results with the input buffer.
     ASSERT_EQ(mx_vmo_read(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
-              MX_OK, "");
+              MX_OK);
     ASSERT_EQ(memcmp(obj->buf.get(), out.get(), obj->vmo_size), 0,
               "Read data not equal to written data");
     return true;
@@ -526,8 +526,8 @@ bool close_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, txnid_t txn
     request.txnid = txnid;
     request.vmoid = obj->vmoid;
     request.opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(obj->vmo), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK);
+    ASSERT_EQ(mx_handle_close(obj->vmo), MX_OK);
     return true;
 }
 
@@ -543,7 +543,7 @@ bool ramdisk_test_fifo_multiple_vmo(void) {
     expected = sizeof(txnid);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
 
     // Create multiple VMOs
     AllocChecker ac;
@@ -567,7 +567,7 @@ bool ramdisk_test_fifo_multiple_vmo(void) {
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -610,7 +610,7 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
 
     // Create multiple VMOs
     size_t num_threads = 10;
@@ -635,18 +635,18 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
         thread_args[i].client = client;
         thread_args[i].kBlockSize = kBlockSize;
         ASSERT_EQ(thrd_create(&threads[i], fifo_vmo_thread, &thread_args[i]),
-                  thrd_success, "");
+                  thrd_success);
     }
 
     for (size_t i = 0; i < num_threads; i++) {
         int res;
-        ASSERT_EQ(thrd_join(threads[i], &res), thrd_success, "");
-        ASSERT_EQ(res, 0, "");
+        ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
+        ASSERT_EQ(res, 0);
     }
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -663,7 +663,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), MX_ERR_ALREADY_BOUND,
               "Expected fifo to already be bound");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -677,7 +677,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     }
 
     // Now that we've set up the connection for a few VMOs, shut down the fifo
-    ASSERT_EQ(mx_handle_close(fifo), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(fifo), MX_OK);
 
     // Attempting to batch any operations to the fifo should fail
     block_fifo_request_t request;
@@ -696,7 +696,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     // The block server should still be functioning. We should be able to re-bind to it
     expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     expected = sizeof(txnid);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
@@ -715,7 +715,7 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -730,7 +730,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
 
     // Create a vmo
     test_vmo_object_t obj;
@@ -755,13 +755,13 @@ bool ramdisk_test_fifo_large_ops_count(void) {
             requests[b].dev_offset = 0;
         }
 
-        ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK, "");
+        ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_OK);
         ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), MX_OK, "Failed to free txn");
     }
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -776,7 +776,7 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     test_vmo_object_t obj;
     ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
 
@@ -801,7 +801,7 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     }
 
     // This should be caught locally by the client library
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], requests.size()), MX_ERR_INVALID_ARGS);
 
     // Since the client-side automatically appends the "TXN_END" flag, we avoid using it here.
     for (size_t i = 0; i < requests.size(); i++) {
@@ -812,11 +812,11 @@ retry_write:
         if (status == MX_ERR_SHOULD_WAIT) {
             mx_signals_t signals;
             ASSERT_EQ(mx_object_wait_one(fifo, MX_FIFO_WRITABLE, MX_TIME_INFINITE, &signals),
-                      MX_OK, "");
-            ASSERT_EQ(signals & MX_FIFO_WRITABLE, MX_FIFO_WRITABLE, "");
+                      MX_OK);
+            ASSERT_EQ(signals & MX_FIFO_WRITABLE, MX_FIFO_WRITABLE);
             goto retry_write;
         } else {
-            ASSERT_EQ(status, MX_OK, "");
+            ASSERT_EQ(status, MX_OK);
         }
     }
 
@@ -824,19 +824,19 @@ retry_write:
     // we filled our txn to the brim.
     mx_signals_t signals;
     ASSERT_EQ(mx_object_wait_one(fifo, MX_FIFO_READABLE, MX_TIME_INFINITE, &signals),
-              MX_OK, "");
-    ASSERT_EQ(signals & MX_FIFO_READABLE, MX_FIFO_READABLE, "");
+              MX_OK);
+    ASSERT_EQ(signals & MX_FIFO_READABLE, MX_FIFO_READABLE);
     block_fifo_response_t response;
     uint32_t count;
-    ASSERT_EQ(mx_fifo_read(fifo, &response, sizeof(block_fifo_response_t), &count), MX_OK, "");
-    ASSERT_EQ(response.status, MX_OK, "");
-    ASSERT_EQ(response.txnid, txnid, "");
+    ASSERT_EQ(mx_fifo_read(fifo, &response, sizeof(block_fifo_response_t), &count), MX_OK);
+    ASSERT_EQ(response.status, MX_OK);
+    ASSERT_EQ(response.txnid, txnid);
 
     // The txn should still be usable! We should still be able to send a close request.
     ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), MX_OK, "Failed to free txn");
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -852,7 +852,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -874,7 +874,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
     ASSERT_EQ(ioctl_block_free_txn(fd, &txnid), MX_OK, "Failed to free txn");
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -890,7 +890,7 @@ bool ramdisk_test_fifo_bad_client_txnid(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
 
     // Create a vmo
     test_vmo_object_t obj;
@@ -908,7 +908,7 @@ bool ramdisk_test_fifo_bad_client_txnid(void) {
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -924,7 +924,7 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -944,29 +944,29 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     request.length     = static_cast<uint32_t>(kBlockSize - 1);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
 
     // Send a request that has a non-block aligned length (+1)
     request.length     = static_cast<uint32_t>(kBlockSize + 1);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
 
     // Send a request that has a non-block aligned device offset
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 0;
     request.dev_offset = 1;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
 
     // Actually, we don't care about aligning VMO offsets, so this request should be fine
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 1;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_OK);
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 
@@ -982,7 +982,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
     fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     txnid_t txnid;
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
@@ -1015,14 +1015,14 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     request.length     = static_cast<uint32_t>(kBlockSize);
     request.vmo_offset = 0;
     request.dev_offset = 0;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
     // Do the same thing, but for reading
     request.opcode     = BLOCKIO_READ;
-    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(block_fifo_txn(client, &request, 1), MX_ERR_INVALID_ARGS);
 
     block_fifo_release_client(client);
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 

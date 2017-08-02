@@ -41,7 +41,7 @@ bool handle_valid_on_closed_handle_fails() {
     BEGIN_TEST;
     // Create an event and show that it's valid.
     mx_handle_t event;
-    ASSERT_EQ(mx_event_create(0u, &event), MX_OK, "");
+    ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
     EXPECT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
                                  nullptr, 0, nullptr, nullptr),
               MX_OK, "");
@@ -60,14 +60,14 @@ bool task_stats_smoke() {
     mx_info_task_stats_t info;
     ASSERT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_TASK_STATS,
                                  &info, sizeof(info), nullptr, nullptr),
-              MX_OK, "");
-    ASSERT_GT(info.mem_private_bytes, 0u, "");
-    ASSERT_GT(info.mem_shared_bytes, 0u, "");
+              MX_OK);
+    ASSERT_GT(info.mem_private_bytes, 0u);
+    ASSERT_GT(info.mem_shared_bytes, 0u);
     ASSERT_GE(info.mem_mapped_bytes,
-              info.mem_private_bytes + info.mem_shared_bytes, "");
+              info.mem_private_bytes + info.mem_shared_bytes);
 
-    ASSERT_GT(info.mem_scaled_shared_bytes, 0u, "");
-    ASSERT_GT(info.mem_shared_bytes, info.mem_scaled_shared_bytes, "");
+    ASSERT_GT(info.mem_scaled_shared_bytes, 0u);
+    ASSERT_GT(info.mem_shared_bytes, info.mem_scaled_shared_bytes);
     END_TEST;
 }
 
@@ -291,7 +291,7 @@ bool process_maps_smoke() {
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_PROCESS_MAPS,
                                  maps, bufsize,
                                  &actual, &avail),
-              MX_OK, "");
+              MX_OK);
     EXPECT_EQ(actual, avail, "Should have read all entries");
 
     // The first two entries should always be the ASpace and root VMAR.
@@ -308,7 +308,7 @@ bool process_maps_smoke() {
     bool under_vmar = false; // If we're looking at children of our VMAR.
     size_t vmar_depth = 0;
     uint32_t saw_mapping = 0u; // bitmask of mapping indices we've seen.
-    ASSERT_LT(test_info->num_mappings, 32u, "");
+    ASSERT_LT(test_info->num_mappings, 32u);
 
     LTRACEF("\n");
     for (size_t i = 2; i < actual; i++) {
@@ -374,7 +374,7 @@ bool process_maps_smoke() {
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_PROCESS_MAPS,
                                  maps2, bufsize2,
                                  &actual2, &avail2),
-              MX_OK, "");
+              MX_OK);
     EXPECT_LT(actual2, avail2, "");
     // mini-process is very simple, and won't have modified its own memory
     // maps since the previous dump. Its "committed_pages" values could be
@@ -463,7 +463,7 @@ bool missing_rights_fails() {
     mx_info_handle_basic_t hi;
     ASSERT_EQ(mx_object_get_info(obj, MX_INFO_HANDLE_BASIC,
                                  &hi, sizeof(hi), nullptr, nullptr),
-              MX_OK, "");
+              MX_OK);
     char msg[32];
     snprintf(msg, sizeof(msg), "rights 0x%" PRIx32, hi.rights);
     EXPECT_EQ(hi.rights & MissingRights, MissingRights, msg);
@@ -471,7 +471,7 @@ bool missing_rights_fails() {
     // Create a handle without the important rights.
     mx_handle_t handle;
     ASSERT_EQ(mx_handle_duplicate(obj, hi.rights & ~MissingRights, &handle),
-              MX_OK, "");
+              MX_OK);
 
     // Call should fail without these rights.
     EXPECT_EQ(mx_object_get_info(handle, Topic,
@@ -574,11 +574,11 @@ bool partially_unmapped_buffer_fails() {
                                    MX_VM_FLAG_CAN_MAP_WRITE |
                                    MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &vmar, &vmar_addr),
-              MX_OK, "");
+              MX_OK);
 
     // Create a one-page VMO.
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), MX_OK, "");
+    ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), MX_OK);
 
     // Map the first page of the VMAR.
     uintptr_t vmo_addr;
@@ -587,8 +587,8 @@ bool partially_unmapped_buffer_fails() {
                               MX_VM_FLAG_PERM_READ |
                               MX_VM_FLAG_PERM_WRITE,
                           &vmo_addr),
-              MX_OK, "");
-    ASSERT_EQ(vmar_addr, vmo_addr, "");
+              MX_OK);
+    ASSERT_EQ(vmar_addr, vmo_addr);
 
     // Point to a spot in the mapped page just before the unmapped region:
     // the first entry will hit mapped memory, the second entry will hit
@@ -656,12 +656,12 @@ bool process_vmos_smoke() {
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_PROCESS_VMOS,
                                  vmos, bufsize,
                                  &actual, &avail),
-              MX_OK, "");
+              MX_OK);
     EXPECT_EQ(actual, avail, "Should have read all entries");
 
     // Look for the expected VMOs.
     uint32_t saw_vmo = 0u; // Bitmask of VMO indices we've seen
-    ASSERT_LT(test_info->num_vmos, 32u, "");
+    ASSERT_LT(test_info->num_vmos, 32u);
 
     LTRACEF("\n");
     for (size_t i = 0; i < actual; i++) {
@@ -727,7 +727,7 @@ bool process_vmos_smoke() {
     ASSERT_EQ(mx_object_get_info(process, MX_INFO_PROCESS_VMOS,
                                  vmos2, bufsize2,
                                  &actual2, &avail2),
-              MX_OK, "");
+              MX_OK);
     EXPECT_LT(actual2, avail2, "");
     // mini-process is very simple, and won't have modified its own set of VMOs
     // since the previous dump.

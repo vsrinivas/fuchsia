@@ -19,18 +19,18 @@ bool test_fcntl_append(void) {
     BEGIN_TEST;
 
     int fd = open("::file", O_APPEND | O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     // Do a quick check that O_APPEND is appending
     char buf[5];
     memset(buf, 'a', sizeof(buf));
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
     struct stat sb;
-    ASSERT_EQ(fstat(fd, &sb), 0, "");
-    ASSERT_EQ(sb.st_size, sizeof(buf) * 2, "");
+    ASSERT_EQ(fstat(fd, &sb), 0);
+    ASSERT_EQ(sb.st_size, sizeof(buf) * 2);
 
     // Use F_GETFL; observe O_APPEND
     int flags = fcntl(fd, F_GETFL);
@@ -48,14 +48,14 @@ bool test_fcntl_append(void) {
     ASSERT_EQ(flags & ~O_ACCMODE, 0, "Status flags did not match");
 
     // Write to the file, verify it is no longer appending.
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
-    ASSERT_EQ(fstat(fd, &sb), 0, "");
-    ASSERT_EQ(sb.st_size, sizeof(buf) * 2, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(fstat(fd, &sb), 0);
+    ASSERT_EQ(sb.st_size, sizeof(buf) * 2);
 
     // Clean up
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink("::file"), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink("::file"), 0);
     END_TEST;
 }
 
@@ -63,16 +63,16 @@ bool test_fcntl_access_bits(void) {
     BEGIN_TEST;
 
     int fd = open("::file", O_APPEND | O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     // Do a quick check that we can write
     char buf[5];
     memset(buf, 'a', sizeof(buf));
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
     struct stat sb;
-    ASSERT_EQ(fstat(fd, &sb), 0, "");
-    ASSERT_EQ(sb.st_size, sizeof(buf), "");
+    ASSERT_EQ(fstat(fd, &sb), 0);
+    ASSERT_EQ(sb.st_size, sizeof(buf));
 
     // Use F_GETFL; observe O_APPEND
     int flags = fcntl(fd, F_GETFL);
@@ -87,14 +87,14 @@ bool test_fcntl_access_bits(void) {
 
     // We're still appending -- AND writable, because the access bits haven't
     // changed.
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf), "");
-    ASSERT_EQ(fstat(fd, &sb), 0, "");
-    ASSERT_EQ(sb.st_size, sizeof(buf) * 2, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(fstat(fd, &sb), 0);
+    ASSERT_EQ(sb.st_size, sizeof(buf) * 2);
 
     // Clean up
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink("::file"), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink("::file"), 0);
     END_TEST;
 }
 

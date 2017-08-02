@@ -32,7 +32,7 @@ static bool ralloc_region_pools_test() {
     ASSERT_NONNULL(pool, "");
 
     // Assign our pool to our allocator, but hold onto the pool for now.
-    ASSERT_EQ(MX_OK, alloc.SetRegionPool(pool), "");
+    ASSERT_EQ(MX_OK, alloc.SetRegionPool(pool));
     EXPECT_NONNULL(pool, "");
 
     // Create another allocator and transfer ownership of our region pool
@@ -62,7 +62,7 @@ static bool ralloc_region_pools_test() {
         ralloc_region_t tmp = { .base = GOOD_MERGE_REGION_BASE,
                                 .size = GOOD_MERGE_REGION_SIZE };
         for (size_t i = 0; i < OOM_RANGE_LIMIT; ++i) {
-            ASSERT_EQ(MX_OK, alloc.AddRegion(tmp), "");
+            ASSERT_EQ(MX_OK, alloc.AddRegion(tmp));
             tmp.base += tmp.size;
         }
     }
@@ -114,7 +114,7 @@ static bool ralloc_by_size_test() {
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     for (size_t i = 0; i < mxtl::count_of(ALLOC_BY_SIZE_REGIONS); ++i)
-        ASSERT_EQ(MX_OK, alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]), "");
+        ASSERT_EQ(MX_OK, alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]));
 
     // Run the alloc by size tests.  Hold onto the regions it allocates so they
     // don't automatically get returned to the pool.
@@ -140,7 +140,7 @@ static bool ralloc_by_size_test() {
         // the allocation should have come from the test region we
         // expect and be aligned in the way we asked.
         if ((res == MX_OK) && (TEST->res == MX_OK)) {
-            ASSERT_LT(TEST->region, mxtl::count_of(ALLOC_BY_SIZE_TESTS), "");
+            ASSERT_LT(TEST->region, mxtl::count_of(ALLOC_BY_SIZE_TESTS));
             EXPECT_TRUE(region_contains_region(ALLOC_BY_SIZE_REGIONS + TEST->region,
                                                regions[i].get()), "");
             EXPECT_EQ(0u, regions[i]->base & (TEST->align - 1), "");
@@ -162,7 +162,7 @@ static bool ralloc_specific_test() {
     RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     for (size_t i = 0; i < mxtl::count_of(ALLOC_SPECIFIC_REGIONS); ++i)
-        ASSERT_EQ(MX_OK, alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]), "");
+        ASSERT_EQ(MX_OK, alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]));
 
     // Run the alloc specific tests.  Hold onto the regions it allocates so they
     // don't automatically get returned to the pool.

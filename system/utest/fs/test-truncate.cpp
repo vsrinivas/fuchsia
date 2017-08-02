@@ -22,21 +22,21 @@ bool check_file_contains(const char* filename, const void* data, ssize_t len) {
     char buf[4096];
     struct stat st;
 
-    ASSERT_EQ(stat(filename, &st), 0, "");
-    ASSERT_EQ(st.st_size, len, "");
+    ASSERT_EQ(stat(filename, &st), 0);
+    ASSERT_EQ(st.st_size, len);
     int fd = open(filename, O_RDWR, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     ASSERT_STREAM_ALL(read, fd, buf, len);
-    ASSERT_EQ(memcmp(buf, data, len), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(memcmp(buf, data, len), 0);
+    ASSERT_EQ(close(fd), 0);
 
     return true;
 }
 
 bool check_file_empty(const char* filename) {
     struct stat st;
-    ASSERT_EQ(stat(filename, &st), 0, "");
-    ASSERT_EQ(st.st_size, 0, "");
+    ASSERT_EQ(stat(filename, &st), 0);
+    ASSERT_EQ(st.st_size, 0);
 
     return true;
 }
@@ -50,38 +50,38 @@ bool test_truncate_small(void) {
 
     // Try writing a string to a file
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     ASSERT_STREAM_ALL(write, fd, str, strlen(str));
     ASSERT_TRUE(check_file_contains(filename, str, strlen(str)), "");
 
     // Check that opening a file with O_TRUNC makes it empty
     int fd2 = open(filename, O_RDWR | O_TRUNC, 0644);
-    ASSERT_GT(fd2, 0, "");
+    ASSERT_GT(fd2, 0);
     ASSERT_TRUE(check_file_empty(filename), "");
 
     // Check that we can still write to a file that has been truncated
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_STREAM_ALL(write, fd, str, strlen(str));
     ASSERT_TRUE(check_file_contains(filename, str, strlen(str)), "");
 
     // Check that we can truncate the file using the "truncate" function
-    ASSERT_EQ(truncate(filename, 5), 0, "");
+    ASSERT_EQ(truncate(filename, 5), 0);
     ASSERT_TRUE(check_file_contains(filename, str, 5), "");
-    ASSERT_EQ(truncate(filename, 0), 0, "");
+    ASSERT_EQ(truncate(filename, 0), 0);
     ASSERT_TRUE(check_file_empty(filename), "");
 
     // Check that truncating an already empty file does not cause problems
-    ASSERT_EQ(truncate(filename, 0), 0, "");
+    ASSERT_EQ(truncate(filename, 0), 0);
     ASSERT_TRUE(check_file_empty(filename), "");
 
     // Check that we can use truncate to extend a file
     char empty[5] = {0, 0, 0, 0, 0};
-    ASSERT_EQ(truncate(filename, 5), 0, "");
+    ASSERT_EQ(truncate(filename, 5), 0);
     ASSERT_TRUE(check_file_contains(filename, empty, 5), "");
 
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(close(fd2), 0, "");
-    ASSERT_EQ(unlink(filename), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd2), 0);
+    ASSERT_EQ(unlink(filename), 0);
 
     END_TEST;
 }
@@ -90,28 +90,28 @@ template <bool Remount>
 bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     // Acquire the old size
     struct stat st;
-    ASSERT_EQ(stat(filename, &st), 0, "");
+    ASSERT_EQ(stat(filename, &st), 0);
     ssize_t old_len = st.st_size;
 
     // Truncate the file, verify the size gets updated
     int fd = open(filename, O_RDWR, 0644);
-    ASSERT_GT(fd, 0, "");
-    ASSERT_EQ(ftruncate(fd, new_len), 0, "");
-    ASSERT_EQ(stat(filename, &st), 0, "");
-    ASSERT_EQ(st.st_size, new_len, "");
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(ftruncate(fd, new_len), 0);
+    ASSERT_EQ(stat(filename, &st), 0);
+    ASSERT_EQ(st.st_size, new_len);
 
     // Close and reopen the file; verify the inode stays updated
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     fd = open(filename, O_RDWR, 0644);
-    ASSERT_GT(fd, 0, "");
-    ASSERT_EQ(stat(filename, &st), 0, "");
-    ASSERT_EQ(st.st_size, new_len, "");
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(stat(filename, &st), 0);
+    ASSERT_EQ(st.st_size, new_len);
 
     if (Remount) {
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         ASSERT_TRUE(check_remount(), "Could not remount filesystem");
-        ASSERT_EQ(stat(filename, &st), 0, "");
-        ASSERT_EQ(st.st_size, new_len, "");
+        ASSERT_EQ(stat(filename, &st), 0);
+        ASSERT_EQ(st.st_size, new_len);
         fd = open(filename, O_RDWR, 0644);
     }
 
@@ -120,25 +120,25 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     ASSERT_TRUE(ac.check(), "");
     if (new_len > old_len) { // Expanded the file
         // Verify that the file is unchanged up to old_len
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
         ASSERT_STREAM_ALL(read, fd, readbuf.get(), old_len);
-        ASSERT_EQ(memcmp(readbuf.get(), u8, old_len), 0, "");
+        ASSERT_EQ(memcmp(readbuf.get(), u8, old_len), 0);
         // Verify that the file is filled with zeroes from old_len to new_len
-        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len, "");
+        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
         ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len - old_len);
         for (ssize_t n = 0; n < (new_len - old_len); n++) {
-            ASSERT_EQ(readbuf[n], 0, "");
+            ASSERT_EQ(readbuf[n], 0);
         }
         // Overwrite those zeroes with the contents of u8
-        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len, "");
+        ASSERT_EQ(lseek(fd, old_len, SEEK_SET), old_len);
         ASSERT_STREAM_ALL(write, fd, u8 + old_len, new_len - old_len);
     } else { // Shrunk the file (or kept it the same length)
         // Verify that the file is unchanged up to new_len
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
         ASSERT_STREAM_ALL(read, fd, readbuf.get(), new_len);
-        ASSERT_EQ(memcmp(readbuf.get(), u8, new_len), 0, "");
+        ASSERT_EQ(memcmp(readbuf.get(), u8, new_len), 0);
     }
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
 
     return true;
 }
@@ -169,16 +169,16 @@ bool test_truncate_large(void) {
     // Start a file filled with the u8 buffer
     const char* filename = "::alpha";
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     ASSERT_STREAM_ALL(write, fd, buf.get(), BufSize);
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
 
     // Repeatedly truncate / write to the file
     for (size_t i = 0; i < Iterations; i++) {
         size_t len = rand_r(&seed) % BufSize;
         ASSERT_TRUE(checked_truncate<Remount>(filename, buf.get(), len), "");
     }
-    ASSERT_EQ(unlink(filename), 0, "");
+    ASSERT_EQ(unlink(filename), 0);
 
     END_TEST;
 }
@@ -187,16 +187,16 @@ bool test_truncate_errno(void) {
     BEGIN_TEST;
 
     int fd = open("::truncate_errno", O_RDWR | O_CREAT | O_EXCL);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
-    ASSERT_EQ(ftruncate(fd, -1), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
+    ASSERT_EQ(ftruncate(fd, -1), -1);
+    ASSERT_EQ(errno, EINVAL);
     errno = 0;
-    ASSERT_EQ(ftruncate(fd, 1UL << 60), -1, "");
-    ASSERT_EQ(errno, EINVAL, "");
+    ASSERT_EQ(ftruncate(fd, 1UL << 60), -1);
+    ASSERT_EQ(errno, EINVAL);
 
-    ASSERT_EQ(unlink("::truncate_errno"), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink("::truncate_errno"), 0);
+    ASSERT_EQ(close(fd), 0);
     END_TEST;
 }
 

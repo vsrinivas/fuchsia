@@ -23,13 +23,13 @@ bool test_vmo_create(void) {
         return true;
     }
 
-    ASSERT_EQ(mkdir("::dir", 0755), 0, "");
+    ASSERT_EQ(mkdir("::dir", 0755), 0);
     int dirfd = open("::dir", O_DIRECTORY | O_RDONLY);
-    ASSERT_GT(dirfd, 0, "");
+    ASSERT_GT(dirfd, 0);
 
     size_t vmosize = 512;
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(vmosize, 0, &vmo), MX_OK, "");
+    ASSERT_EQ(mx_vmo_create(vmosize, 0, &vmo), MX_OK);
 
     char buf[1024];
     vmo_create_config_t* config = reinterpret_cast<vmo_create_config_t*>(buf);
@@ -37,13 +37,13 @@ bool test_vmo_create(void) {
     strcpy(config->name, "vmofile");
 
     size_t config_size = sizeof(vmo_create_config_t) + strlen("vmofile") + 1;
-    ASSERT_EQ(ioctl_vfs_vmo_create(dirfd, config, config_size), MX_OK, "");
+    ASSERT_EQ(ioctl_vfs_vmo_create(dirfd, config, config_size), MX_OK);
     int fd = open("::dir/vmofile", O_RDWR);
-    ASSERT_GT(fd, 0, "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink("::dir/vmofile"), 0, "");
-    ASSERT_EQ(close(dirfd), 0, "");
-    ASSERT_EQ(rmdir("::dir"), 0, "");
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink("::dir/vmofile"), 0);
+    ASSERT_EQ(close(dirfd), 0);
+    ASSERT_EQ(rmdir("::dir"), 0);
 
     END_TEST;
 }
@@ -55,15 +55,15 @@ bool test_vmo_resizable_create(void) {
         return true;
     }
 
-    ASSERT_EQ(mkdir("::dir", 0755), 0, "");
+    ASSERT_EQ(mkdir("::dir", 0755), 0);
     int dirfd = open("::dir", O_DIRECTORY | O_RDONLY);
-    ASSERT_GT(dirfd, 0, "");
+    ASSERT_GT(dirfd, 0);
 
     size_t vmosize = 512;
     mx_handle_t vmo;
-    ASSERT_EQ(mx_vmo_create(vmosize, 0, &vmo), MX_OK, "");
+    ASSERT_EQ(mx_vmo_create(vmosize, 0, &vmo), MX_OK);
     mx_handle_t backup_handle;
-    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &backup_handle), MX_OK, "");
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_SAME_RIGHTS, &backup_handle), MX_OK);
 
     char buf[1024];
     vmo_create_config_t* config = reinterpret_cast<vmo_create_config_t*>(buf);
@@ -72,16 +72,16 @@ bool test_vmo_resizable_create(void) {
 
     size_t config_size = sizeof(vmo_create_config_t) + strlen("vmofile") + 1;
     // When we have both "vmo" and the "backup_handle" open, the call will fail.
-    ASSERT_EQ(ioctl_vfs_vmo_create(dirfd, config, config_size), MX_ERR_INVALID_ARGS, "");
+    ASSERT_EQ(ioctl_vfs_vmo_create(dirfd, config, config_size), MX_ERR_INVALID_ARGS);
 
     // vmo_create always consumes the incoming handle;
     // now "backup_handle" is the ONLY handle to the vmo left open.
     config->vmo = backup_handle;
-    ASSERT_EQ(ioctl_vfs_vmo_create(dirfd, config, config_size), MX_OK, "");
+    ASSERT_EQ(ioctl_vfs_vmo_create(dirfd, config, config_size), MX_OK);
 
-    ASSERT_EQ(unlink("::dir/vmofile"), 0, "");
-    ASSERT_EQ(close(dirfd), 0, "");
-    ASSERT_EQ(rmdir("::dir"), 0, "");
+    ASSERT_EQ(unlink("::dir/vmofile"), 0);
+    ASSERT_EQ(close(dirfd), 0);
+    ASSERT_EQ(rmdir("::dir"), 0);
 
     END_TEST;
 }

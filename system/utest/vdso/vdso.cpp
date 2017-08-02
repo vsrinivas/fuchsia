@@ -169,7 +169,7 @@ bool vdso_map_code_wrong_test() {
     // Try to map only part of the code, not the whole code segment.
     ASSERT_GE(scratch.vdso_code_size(), PAGE_SIZE, "vDSO code < page??");
     if (scratch.vdso_code_size() > PAGE_SIZE) {
-        ASSERT_EQ(scratch.vdso_code_size() % PAGE_SIZE, 0, "");
+        ASSERT_EQ(scratch.vdso_code_size() % PAGE_SIZE, 0);
         EXPECT_EQ(scratch.root_vmar().
                   map(0, vdso_vmo, scratch.vdso_code_offset(), PAGE_SIZE,
                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, &addr),

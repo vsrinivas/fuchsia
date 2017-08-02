@@ -50,7 +50,7 @@ const fsck_options_t test_fsck_options = {
 //Checks info of mounted blobstore
 static bool CheckBlobstoreInfo(const char* mount_path) {
     int fd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
     ssize_t r = ioctl_vfs_query_fs(fd, info, sizeof(buf) - 1);
@@ -60,7 +60,7 @@ static bool CheckBlobstoreInfo(const char* mount_path) {
     ASSERT_EQ(strncmp("blobstore", name, strlen("blobstore")), 0, "Unexpected filesystem mounted");
     ASSERT_LE(info->used_nodes, info->total_nodes, "Used nodes greater than free nodes");
     ASSERT_LE(info->used_bytes, info->total_bytes, "Used bytes greater than free bytes");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     return true;
 }
 
@@ -152,7 +152,7 @@ static bool VerifyContents(int fd, const char* data, size_t size_data) {
     mxtl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
     EXPECT_EQ(ac.check(), true, "");
 
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), 0, "Failed to read data");
     ASSERT_EQ(memcmp(buf.get(), data, size_data), 0, "Read data, but it was bad");
     return true;
@@ -164,7 +164,7 @@ static bool MakeBlob(const char* path, const char* merkle, size_t size_merkle,
                      const char* data, size_t size_data, int* out_fd) {
     int fd = open(path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    ASSERT_EQ(ftruncate(fd, size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, size_data), 0);
     ASSERT_EQ(StreamAll(write, fd, data, size_data), 0, "Failed to write Data");
 
     *out_fd = fd;
@@ -178,7 +178,7 @@ static bool VerifyCompromised(int fd, const char* data, size_t size_data) {
     mxtl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
     EXPECT_EQ(ac.check(), true, "");
 
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), -1, "Expected reading to fail");
     return true;
 }
@@ -189,13 +189,13 @@ static bool MakeBlobCompromised(const char* path, const char* merkle, size_t siz
                                 const char* data, size_t size_data) {
     int fd = open(path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    ASSERT_EQ(ftruncate(fd, size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, size_data), 0);
 
     // If we're writing a blob with invalid sizes, it's possible that writing will fail.
     StreamAll(write, fd, data, size_data);
 
     ASSERT_TRUE(VerifyCompromised(fd, data, size_data), "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     return true;
 }
 
@@ -238,7 +238,7 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
         info->merkle = nullptr;
     } else {
         info->merkle.reset(new (&ac) char[info->size_merkle]);
-        ASSERT_EQ(ac.check(), true, "");
+        ASSERT_EQ(ac.check(), true);
     }
     Digest digest;
     ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
@@ -272,14 +272,14 @@ static bool TestBasic(void) {
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                              info->data.get(), info->size_data, &fd),
                     "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
 
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
 
-        ASSERT_EQ(close(fd), 0, "");
-        ASSERT_EQ(unlink(info->path), 0, "");
+        ASSERT_EQ(close(fd), 0);
+        ASSERT_EQ(unlink(info->path), 0);
     }
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -299,7 +299,7 @@ static bool TestMmap(void) {
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                              info->data.get(), info->size_data, &fd),
                     "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
 
@@ -308,8 +308,8 @@ static bool TestMmap(void) {
         ASSERT_NEQ(addr, MAP_FAILED, "Could not mmap blob");
         ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");
         ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
-        ASSERT_EQ(close(fd), 0, "");
-        ASSERT_EQ(unlink(info->path), 0, "");
+        ASSERT_EQ(close(fd), 0);
+        ASSERT_EQ(unlink(info->path), 0);
     }
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
@@ -340,11 +340,11 @@ static bool TestReaddir(void) {
         ASSERT_TRUE(MakeBlob(info[i]->path, info[i]->merkle.get(), info[i]->size_merkle,
                              info[i]->data.get(), info[i]->size_data, &fd),
                     "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         fd = open(info[i]->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
         ASSERT_TRUE(VerifyContents(fd, info[i]->data.get(), info[i]->size_data), "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
     }
 
     // Check that we see the expected number of entries
@@ -353,7 +353,7 @@ static bool TestReaddir(void) {
     while ((de = readdir(dir)) != nullptr) {
         entries_seen++;
     }
-    ASSERT_EQ(entries_seen, kMaxEntries, "");
+    ASSERT_EQ(entries_seen, kMaxEntries);
     entries_seen = 0;
     rewinddir(dir);
 
@@ -363,7 +363,7 @@ static bool TestReaddir(void) {
         for (size_t i = 0; i < kMaxEntries; i++) {
             if ((info[i]->size_data != 0) &&
                 strcmp(strrchr(info[i]->path, '/') + 1, de->d_name) == 0) {
-                ASSERT_EQ(unlink(info[i]->path), 0, "");
+                ASSERT_EQ(unlink(info[i]->path), 0);
                 // It's a bit hacky, but we set 'size_data' to zero
                 // to identify the entry has been unlinked.
                 info[i]->size_data = 0;
@@ -374,11 +374,11 @@ static bool TestReaddir(void) {
     found:
         entries_seen++;
     }
-    ASSERT_EQ(entries_seen, kMaxEntries, "");
+    ASSERT_EQ(entries_seen, kMaxEntries);
 
     ASSERT_NULL(readdir(dir), "Expected blobstore to end empty");
 
-    ASSERT_EQ(closedir(dir), 0, "");
+    ASSERT_EQ(closedir(dir), 0);
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
 }
@@ -404,7 +404,7 @@ static bool UseAfterUnlink(void) {
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
 
         // After closing the fd, however, we should not be able to re-open the blob
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         ASSERT_LT(open(info->path, O_RDONLY), 0, "Expected blob to be deleted");
     }
 
@@ -431,14 +431,14 @@ static bool WriteAfterRead(void) {
                   "After being written, the blob should refuse writes");
 
         off_t seek_pos = (rand() % info->size_data);
-        ASSERT_EQ(lseek(fd, seek_pos, SEEK_SET), seek_pos, "");
+        ASSERT_EQ(lseek(fd, seek_pos, SEEK_SET), seek_pos);
         ASSERT_LT(write(fd, info->data.get(), 1), 0,
                   "After being written, the blob should refuse writes");
         ASSERT_LT(ftruncate(fd, rand() % info->size_data), 0,
                   "The blob should always refuse to be truncated");
 
         // We should be able to unlink the blob
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
     }
 
@@ -467,20 +467,20 @@ static bool ReadTooLarge(void) {
 
         // Try read beyond end of blob
         off_t end_off = info->size_data;
-        ASSERT_EQ(lseek(fd, end_off, SEEK_SET), end_off, "");
+        ASSERT_EQ(lseek(fd, end_off, SEEK_SET), end_off);
         ASSERT_EQ(read(fd, &buf[0], 1), 0, "Expected empty read beyond end of file");
 
         // Try some reads which straddle the end of the blob
         for (ssize_t j = 1; j < static_cast<ssize_t>(info->size_data); j *= 2) {
             end_off = info->size_data - j;
-            ASSERT_EQ(lseek(fd, end_off, SEEK_SET), end_off, "");
+            ASSERT_EQ(lseek(fd, end_off, SEEK_SET), end_off);
             ASSERT_EQ(read(fd, &buf[0], j * 2), j, "Expected to only read one byte at end of file");
             ASSERT_EQ(memcmp(buf.get(), &info->data[info->size_data - j], j),
                       0, "Read data, but it was bad");
         }
 
         // We should be able to unlink the blob
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
     }
 
@@ -513,7 +513,7 @@ static bool BadAllocation(void) {
 
     // Write nothing, but close the blob. Since the write was incomplete,
     // it will be inaccessible.
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_LT(open(info->path, O_RDWR), 0, "Cannot access partial blob");
     ASSERT_LT(open(info->path, O_RDONLY), 0, "Cannot access partial blob");
 
@@ -523,7 +523,7 @@ static bool BadAllocation(void) {
     ASSERT_EQ(ftruncate(fd, info->size_data), 0, "Failed to allocate blob");
     ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data - 1), 0,
               "Failed to write data");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_LT(open(info->path, O_RDWR), 0, "Cannot access partial blob");
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -619,8 +619,8 @@ static bool EdgeAllocation(void) {
             ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
                                  info->data.get(), info->size_data, &fd),
                         "");
-            ASSERT_EQ(unlink(info->path), 0, "");
-            ASSERT_EQ(close(fd), 0, "");
+            ASSERT_EQ(unlink(info->path), 0);
+            ASSERT_EQ(close(fd), 0);
         }
     }
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -641,7 +641,7 @@ static bool CreateUmountRemountSmall(void) {
                              info->data.get(), info->size_data, &fd),
                     "");
         // Close fd, unmount filesystem
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
         ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
 
@@ -650,7 +650,7 @@ static bool CreateUmountRemountSmall(void) {
 
         ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
         ASSERT_EQ(close(fd), 0, "Could not close blob");
-        ASSERT_EQ(unlink(info->path), 0, "");
+        ASSERT_EQ(unlink(info->path), 0);
     }
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -684,7 +684,7 @@ bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
 
     AllocChecker ac;
     mxtl::unique_ptr<blob_state_t> state(new (&ac) blob_state(mxtl::move(info)));
-    ASSERT_EQ(ac.check(), true, "");
+    ASSERT_EQ(ac.check(), true);
 
     int fd = open(state->info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
@@ -707,7 +707,7 @@ bool blob_config_helper(blob_list_t* bl) {
     if (state == nullptr) {
         return true;
     } else if (state->state == empty) {
-        ASSERT_EQ(ftruncate(state->fd, state->info->size_data), 0, "");
+        ASSERT_EQ(ftruncate(state->fd, state->info->size_data), 0);
         state->state = configured;
     }
     {
@@ -811,7 +811,7 @@ static bool CreateUmountRemountLarge(void) {
 
     // Close all currently opened nodes (REGARDLESS of their state)
     for (auto& state : bl.list) {
-        ASSERT_EQ(close(state.fd), 0, "");
+        ASSERT_EQ(close(state.fd), 0);
     }
 
     // Unmount, remount
@@ -826,11 +826,11 @@ static bool CreateUmountRemountLarge(void) {
             ASSERT_TRUE(VerifyContents(fd, state.info->data.get(),
                                        state.info->size_data),
                         "");
-            ASSERT_EQ(unlink(state.info->path), 0, "");
-            ASSERT_EQ(close(fd), 0, "");
+            ASSERT_EQ(unlink(state.info->path), 0);
+            ASSERT_EQ(close(fd), 0);
         } else {
             // ... otherwise, the blob should have been deleted.
-            ASSERT_LT(open(state.info->path, O_RDONLY), 0, "");
+            ASSERT_LT(open(state.info->path, O_RDONLY), 0);
         }
     }
 
@@ -883,19 +883,19 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     // Launch all threads
     for (size_t i = 0; i < num_threads; i++) {
         ASSERT_EQ(thrd_create(&threads[i], unmount_remount_thread, &bl),
-                  thrd_success, "");
+                  thrd_success);
     }
 
     // Wait for all threads to complete
     for (size_t i = 0; i < num_threads; i++) {
         int res;
-        ASSERT_EQ(thrd_join(threads[i], &res), thrd_success, "");
-        ASSERT_EQ(res, 0, "");
+        ASSERT_EQ(thrd_join(threads[i], &res), thrd_success);
+        ASSERT_EQ(res, 0);
     }
 
     // Close all currently opened nodes (REGARDLESS of their state)
     for (auto& state : bl.list) {
-        ASSERT_EQ(close(state.fd), 0, "");
+        ASSERT_EQ(close(state.fd), 0);
     }
 
     // Unmount, remount
@@ -910,11 +910,11 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
             ASSERT_TRUE(VerifyContents(fd, state.info->data.get(),
                                        state.info->size_data),
                         "");
-            ASSERT_EQ(unlink(state.info->path), 0, "");
-            ASSERT_EQ(close(fd), 0, "");
+            ASSERT_EQ(unlink(state.info->path), 0);
+            ASSERT_EQ(close(fd), 0);
         } else {
             // ... otherwise, the blob should have been deleted.
-            ASSERT_LT(open(state.info->path, O_RDONLY), 0, "");
+            ASSERT_LT(open(state.info->path, O_RDONLY), 0);
         }
     }
 
@@ -946,12 +946,12 @@ static bool NoSpace(void) {
             ASSERT_EQ(ftruncate(fd, info->size_data), 0, "Re-init after unlink");
 
             // Yay! allocated successfully.
-            ASSERT_EQ(close(fd), 0, "");
+            ASSERT_EQ(close(fd), 0);
             break;
         }
         ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data), 0,
                   "Failed to write Data");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
         last_info = mxtl::move(info);
 
         if (++count % 50 == 0) {
@@ -970,7 +970,7 @@ static bool check_not_readable(int fd) {
     ASSERT_EQ(poll(&fds, 1, 10), 0, "Failed to wait for readable blob");
 
     char buf[8];
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_LT(read(fd, buf, 1), 0, "Blob should not be readable yet");
     return true;
 }
@@ -980,7 +980,7 @@ static bool wait_readable(int fd) {
     fds.fd = fd;
     fds.events = POLLIN;
     ASSERT_EQ(poll(&fds, 1, 10000), 1, "Failed to wait for readable blob");
-    ASSERT_EQ(fds.revents, POLLIN, "");
+    ASSERT_EQ(fds.revents, POLLIN);
 
     return true;
 }
@@ -990,11 +990,11 @@ static bool check_readable(int fd) {
     fds.fd = fd;
     fds.events = POLLIN;
     ASSERT_EQ(poll(&fds, 1, 10), 1, "Failed to wait for readable blob");
-    ASSERT_EQ(fds.revents, POLLIN, "");
+    ASSERT_EQ(fds.revents, POLLIN);
 
     char buf[8];
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(read(fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(read(fd, buf, sizeof(buf)), sizeof(buf));
     return true;
 }
 
@@ -1019,7 +1019,7 @@ static bool EarlyRead(void) {
 
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after open");
     ASSERT_TRUE(check_not_readable(fd2), "Should not be readable after open");
-    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0);
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after alloc");
     ASSERT_TRUE(check_not_readable(fd2), "Should not be readable after alloc");
     ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data), 0,
@@ -1033,9 +1033,9 @@ static bool EarlyRead(void) {
     // Cool, everything is readable. What if we try accessing the blob status now?
     EXPECT_TRUE(check_readable(fd), "");
 
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(close(fd2), 0, "");
-    ASSERT_EQ(unlink(info->path), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd2), 0);
+    ASSERT_EQ(unlink(info->path), 0);
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
@@ -1070,7 +1070,7 @@ static bool WaitForRead(void) {
     thrd_create(&waiter_thread, wait_until_readable, &dupfd);
 
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after open");
-    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0);
     ASSERT_TRUE(check_not_readable(fd), "Should not be readable after alloc");
     ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data), 0,
               "Failed to write Data");
@@ -1085,8 +1085,8 @@ static bool WaitForRead(void) {
 
     // Double check that attempting to read early didn't cause problems...
     ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink(info->path), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(info->path), 0);
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
@@ -1102,12 +1102,12 @@ static bool WriteSeekIgnored(void) {
     ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
-    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0);
 
     size_t n = 0;
     while (n != info->size_data) {
         off_t seek_pos = (rand() % info->size_data);
-        ASSERT_EQ(lseek(fd, seek_pos, SEEK_SET), seek_pos, "");
+        ASSERT_EQ(lseek(fd, seek_pos, SEEK_SET), seek_pos);
         ssize_t d = write(fd, info->data.get(), info->size_data - n);
         ASSERT_GT(d, 0, "Data Write error");
         n += d;
@@ -1115,8 +1115,8 @@ static bool WriteSeekIgnored(void) {
 
     // Double check that attempting to seek early didn't cause problems...
     ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(unlink(info->path), 0, "");
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(info->path), 0);
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
@@ -1130,8 +1130,8 @@ static bool UnlinkTiming(void) {
 
     // Unlink, close fd, re-open fd as new file
     auto full_unlink_reopen = [](int& fd, const char* path) {
-        ASSERT_EQ(unlink(path), 0, "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(unlink(path), 0);
+        ASSERT_EQ(close(fd), 0);
         fd = open(path, O_CREAT | O_RDWR | O_EXCL);
         ASSERT_GT(fd, 0, "Failed to recreate blob");
         return true;
@@ -1146,16 +1146,16 @@ static bool UnlinkTiming(void) {
     ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
 
     // Unlink after init
-    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0);
     ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
 
     // Unlink after first write
-    ASSERT_EQ(ftruncate(fd, info->size_data), 0, "");
+    ASSERT_EQ(ftruncate(fd, info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data), 0,
               "Failed to write Data");
     ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
-    ASSERT_EQ(unlink(info->path), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(info->path), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
 }
@@ -1176,17 +1176,17 @@ static bool InvalidOps(void) {
     ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
 
     // Neat. Now, let's try some unsupported operations
-    ASSERT_LT(rename(info->path, info->path), 0, "");
-    ASSERT_LT(truncate(info->path, 0), 0, "");
-    ASSERT_LT(utime(info->path, nullptr), 0, "");
+    ASSERT_LT(rename(info->path, info->path), 0);
+    ASSERT_LT(truncate(info->path, 0), 0);
+    ASSERT_LT(utime(info->path, nullptr), 0);
 
     // Test that a blob fd cannot unmount the entire blobstore.
-    ASSERT_LT(ioctl_vfs_unmount_fs(fd), 0, "");
+    ASSERT_LT(ioctl_vfs_unmount_fs(fd), 0);
 
     // Access the file once more, after these operations
     ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
-    ASSERT_EQ(unlink(info->path), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(unlink(info->path), 0);
+    ASSERT_EQ(close(fd), 0);
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;
@@ -1205,11 +1205,11 @@ static bool RootDirectory(void) {
     ASSERT_TRUE(GenerateBlob(1 << 12, &info), "");
 
     // Test ioctls which should ONLY operate on Blobs
-    ASSERT_LT(ftruncate(dirfd, info->size_data), 0, "");
+    ASSERT_LT(ftruncate(dirfd, info->size_data), 0);
 
     // Should NOT be able to unlink root dir
-    ASSERT_EQ(close(dirfd), 0, "");
-    ASSERT_LT(unlink(info->path), 0, "");
+    ASSERT_EQ(close(dirfd), 0);
+    ASSERT_LT(unlink(info->path), 0);
 
     char buf[8];
     ASSERT_LT(write(dirfd, buf, 8), 0, "Should not write to directory");
@@ -1231,13 +1231,13 @@ static bool QueryDevicePath(void) {
     ssize_t path_len = ioctl_vfs_get_device_path(dirfd, device_path, sizeof(device_path));
     ASSERT_GT(path_len, 0, "Device path not found");
     ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
-    ASSERT_EQ(close(dirfd), 0, "");
+    ASSERT_EQ(close(dirfd), 0);
 
     dirfd = open(MOUNT_PATH "/.", O_RDONLY);
     ASSERT_GT(dirfd, 0, "Cannot open root directory");
     path_len = ioctl_vfs_get_device_path(dirfd, device_path, sizeof(device_path));
-    ASSERT_LT(path_len, 0, "");
-    ASSERT_EQ(close(dirfd), 0, "");
+    ASSERT_LT(path_len, 0);
+    ASSERT_EQ(close(dirfd), 0);
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
     END_TEST;

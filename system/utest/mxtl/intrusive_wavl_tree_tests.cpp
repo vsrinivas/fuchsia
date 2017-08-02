@@ -302,7 +302,7 @@ static bool DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
     // Erase should find the object and transfer its pointer back to us.
     // The object should no longer be in the tree.
     BalanceTestObjPtr erased = tree.erase(ptr->GetKey());
-    ASSERT_EQ(ptr, erased.get(), "");
+    ASSERT_EQ(ptr, erased.get());
     ASSERT_FALSE(ptr->InContainer(), "");
 
     // Run a full sanity check on the tree.  Its depth should be
@@ -402,7 +402,7 @@ static bool WAVLBalanceTest() {
         for (size_t i = 0; i < kBalanceTestSize; ++i)
             ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
 
-        ASSERT_EQ(0u, tree.size(), "");
+        ASSERT_EQ(0u, tree.size());
 
         WAVLBalanceTestObserver::AccumulateObserverOpCounts(op_counts);
     }

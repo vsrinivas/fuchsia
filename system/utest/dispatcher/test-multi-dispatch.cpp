@@ -70,7 +70,7 @@ public:
         mtx_lock(&writer_finished_lock_);
         while(writer_count_ > 0) {
             status = cnd_timedwait(&writer_finished_cond_, &writer_finished_lock_, &ts);
-            ASSERT_EQ(status, 0, "");
+            ASSERT_EQ(status, 0);
         }
         mtx_unlock(&writer_finished_lock_);
         return true;
@@ -96,7 +96,7 @@ static bool signal_finished(mx_handle_t ch) {
     Msg pmsg(0, STR_KILL, 0);
     mx_status_t status;
     status = mx_channel_write(ch, 0u, &pmsg, sizeof(pmsg), nullptr, 0u);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, MX_OK);
     return true;
 }
 
@@ -113,7 +113,7 @@ static mx_status_t handler_cb(mxrio_msg_t* msg_, void* cookie) {
         // after several levels of indirection, receive a message that
         // contains a unique index [0,MAX_MSG-]; bump the handler counts
         // for that index. we should get one bump per bucket.
-        ASSERT_LT(msg->idx, MAX_MSG, "");
+        ASSERT_LT(msg->idx, MAX_MSG);
         ASSERT_EQ(strcmp(msg->str, STR_DATA), 0, "channel read bad string payoad");
         xprintf("worker %u: inc %u\n", msg->worker, msg->idx);
         handler->counts[msg->idx]++;
@@ -159,23 +159,23 @@ bool test_multi_basic(void) {
     mx_status_t status;
 
     mxtl::unique_ptr<fs::VfsDispatcher> disp;
-    ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
+    ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp));
 
     // create a channel; write to one end, bind the other to the server port
     mx::channel ch[2];
     status = mx::channel::create(0u, &ch[0], &ch[1]);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, MX_OK);
 
     // associate a handler object that will track state
     Handler handler(1);
     status = disp->AddVFSHandler(mxtl::move(ch[1]), handler_cb, &handler);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, MX_OK);
 
     // write MAX_MSG messages -- should result in all handler counts == 1
     for (auto msgno=0; msgno<MAX_MSG; msgno++) {
         Msg omsg(msgno, STR_DATA, 0);
         status = ch[0].write(0u, &omsg, sizeof(omsg), nullptr, 0u);
-        ASSERT_EQ(status, MX_OK, "");
+        ASSERT_EQ(status, MX_OK);
         thrd_yield();
     }
     signal_finished(ch[0].get());
@@ -189,7 +189,7 @@ bool test_multi_basic(void) {
     // when all callbacks have finished, the handler counts
     // should all have been bumped
     for (auto i=0; i<MAX_MSG; i++) {
-        ASSERT_EQ(handler.counts[i], 1, "");
+        ASSERT_EQ(handler.counts[i], 1);
     }
 
     END_TEST;
@@ -215,7 +215,7 @@ static int parallel_writer_thread(void* arg) {
             xprintf("write msg %d\n", work->idx[i]);
             mx_status_t status;
             status = mx_channel_write(work->ch, 0u, &omsg, sizeof(omsg), nullptr, 0u);
-            ASSERT_EQ(status, MX_OK, "");
+            ASSERT_EQ(status, MX_OK);
 
             thrd_yield();
         }
@@ -245,7 +245,7 @@ static bool parallel_write(mx_handle_t ch, Handler* handler,
         char name[128];
         snprintf(name, sizeof(name), "th-%d", th);
         int status = thrd_create_with_name(&t[th], (thrd_start_t)parallel_writer_thread, (void*)(work+th), name);
-        ASSERT_EQ(status, thrd_success, "");
+        ASSERT_EQ(status, thrd_success);
     }
 
     // wait for all of the workers t signal they're done
@@ -255,8 +255,8 @@ static bool parallel_write(mx_handle_t ch, Handler* handler,
     for (uint32_t th=0; th<n_writers; th++) {
         int rc;
         int status = thrd_join(t[th], &rc);
-        ASSERT_EQ(status, thrd_success, "");
-        ASSERT_EQ(rc, true, "");
+        ASSERT_EQ(status, thrd_success);
+        ASSERT_EQ(rc, true);
     }
     return true;
 }
@@ -275,17 +275,17 @@ bool test_multi_multi(void) {
     mx_status_t status;
 
     mxtl::unique_ptr<fs::VfsDispatcher> disp;
-    ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp), "");
+    ASSERT_EQ(MX_OK, fs::VfsDispatcher::Create(disp_cb, DISPATCH_POOL_SIZE, &disp));
 
     // create a channel; write to one end, bind the other to the server port
     mx::channel ch[2];
     status = mx::channel::create(0u, &ch[0], &ch[1]);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, MX_OK);
 
     // associate a handler object that will track state
     Handler handler(WRITER_POOL_SIZE);
     status = disp->AddVFSHandler(mxtl::move(ch[1]), handler_cb, &handler);
-    ASSERT_EQ(status, MX_OK, "");
+    ASSERT_EQ(status, MX_OK);
 
     // make sure the counters get bumped in random order
     uint32_t idx[MAX_MSG];
@@ -308,7 +308,7 @@ bool test_multi_multi(void) {
 
     // all counts should be bumped == WRITE_ITER
     for (auto i=0; i<MAX_MSG; i++) {
-        ASSERT_EQ(handler.counts[i], WRITE_ITER, "");
+        ASSERT_EQ(handler.counts[i], WRITE_ITER);
     }
 
     END_TEST;

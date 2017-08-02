@@ -46,11 +46,11 @@ bool test_persist_simple(void) {
     };
     for (size_t i = 0; i < mxtl::count_of(paths); i++) {
         if (is_directory(paths[i])) {
-            ASSERT_EQ(mkdir(paths[i], 0644), 0, "");
+            ASSERT_EQ(mkdir(paths[i], 0644), 0);
         } else {
             int fd = open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644);
-            ASSERT_GT(fd, 0, "");
-            ASSERT_EQ(close(fd), 0, "");
+            ASSERT_GT(fd, 0);
+            ASSERT_EQ(close(fd), 0);
         }
     }
 
@@ -59,9 +59,9 @@ bool test_persist_simple(void) {
     // The files should still exist when we remount
     for (ssize_t i = mxtl::count_of(paths) - 1; i >= 0; i--) {
         if (is_directory(paths[i])) {
-            ASSERT_EQ(rmdir(paths[i]), 0, "");
+            ASSERT_EQ(rmdir(paths[i]), 0);
         } else {
-            ASSERT_EQ(unlink(paths[i]), 0, "");
+            ASSERT_EQ(unlink(paths[i]), 0);
         }
     }
 
@@ -70,9 +70,9 @@ bool test_persist_simple(void) {
     // But they should stay deleted!
     for (ssize_t i = mxtl::count_of(paths) - 1; i >= 0; i--) {
         if (is_directory(paths[i])) {
-            ASSERT_EQ(rmdir(paths[i]), -1, "");
+            ASSERT_EQ(rmdir(paths[i]), -1);
         } else {
-            ASSERT_EQ(unlink(paths[i]), -1, "");
+            ASSERT_EQ(unlink(paths[i]), -1);
         }
     }
 
@@ -121,10 +121,10 @@ bool test_persist_with_data(void) {
             buffers[i][j] = (uint8_t) rand_r(&seed);
         }
         int fd = open(files[i], O_RDWR | O_CREAT, 0644);
-        ASSERT_GT(fd, 0, "");
-        ASSERT_EQ(write(fd, &buffers[i][0], BufferSize), BufferSize, "");
-        ASSERT_EQ(fsync(fd), 0, "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_GT(fd, 0);
+        ASSERT_EQ(write(fd, &buffers[i][0], BufferSize), BufferSize);
+        ASSERT_EQ(fsync(fd), 0);
+        ASSERT_EQ(close(fd), 0);
     }
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
@@ -134,26 +134,26 @@ bool test_persist_with_data(void) {
         mxtl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
         ASSERT_TRUE(ac.check(), "");
         int fd = open(files[i], O_RDONLY, 0644);
-        ASSERT_GT(fd, 0, "");
+        ASSERT_GT(fd, 0);
 
         struct stat buf;
-        ASSERT_EQ(fstat(fd, &buf), 0, "");
-        ASSERT_EQ(buf.st_nlink, 1, "");
-        ASSERT_EQ(buf.st_size, BufferSize, "");
+        ASSERT_EQ(fstat(fd, &buf), 0);
+        ASSERT_EQ(buf.st_nlink, 1);
+        ASSERT_EQ(buf.st_size, BufferSize);
 
-        ASSERT_EQ(read(fd, &rbuf[0], BufferSize), BufferSize, "");
+        ASSERT_EQ(read(fd, &rbuf[0], BufferSize), BufferSize);
         for (size_t j = 0; j < BufferSize; j++) {
-            ASSERT_EQ(rbuf[j], buffers[i][j], "");
+            ASSERT_EQ(rbuf[j], buffers[i][j]);
         }
 
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_EQ(close(fd), 0);
     }
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
     // Delete all files
     for (size_t i = 0; i < mxtl::count_of(files); i++) {
-        ASSERT_EQ(unlink(files[i]), 0, "");
+        ASSERT_EQ(unlink(files[i]), 0);
     }
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
@@ -165,9 +165,9 @@ bool test_persist_with_data(void) {
     struct dirent* de;
     de = readdir(dirp);
     ASSERT_NONNULL(de, "");
-    ASSERT_EQ(strncmp(de->d_name, ".", 1), 0, "");
+    ASSERT_EQ(strncmp(de->d_name, ".", 1), 0);
     ASSERT_NULL(readdir(dirp), "");
-    ASSERT_EQ(closedir(dirp), 0, "");
+    ASSERT_EQ(closedir(dirp), 0);
 
     END_TEST;
 }
@@ -188,17 +188,17 @@ bool test_rename_loop(void) {
     char src[128];
     // Create "LoopLength" directories
     for (size_t i = 0; i < LoopLength; i++) {
-        ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0, "");
-        ASSERT_EQ(mkdir(src, 0644), 0, "");
+        ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);
+        ASSERT_EQ(mkdir(src, 0644), 0);
     }
 
     // Create a 'target'
     if (MoveDirectory) {
-        ASSERT_EQ(mkdir("::a/target", 0644), 0, "");
+        ASSERT_EQ(mkdir("::a/target", 0644), 0);
     } else {
         int fd = open("::a/target", O_RDWR | O_CREAT);
-        ASSERT_GT(fd, 0, "");
-        ASSERT_EQ(close(fd), 0, "");
+        ASSERT_GT(fd, 0);
+        ASSERT_EQ(close(fd), 0);
     }
 
     // Move the target through the loop a bunch of times
@@ -210,7 +210,7 @@ bool test_rename_loop(void) {
         strcpy(dst, src);
         char_index = (char_index + 1) % LoopLength;
         dst[2] = static_cast<char>('a' + char_index);
-        ASSERT_EQ(rename(src, dst), 0, "");
+        ASSERT_EQ(rename(src, dst), 0);
         strcpy(src, dst);
     }
 
@@ -219,13 +219,13 @@ bool test_rename_loop(void) {
     // Check that the target only exists in ONE directory
     bool target_found = false;
     for (size_t i = 0; i < LoopLength; i++) {
-        ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0, "");
+        ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);
         DIR* dirp = opendir(src);
         ASSERT_NONNULL(dirp, "");
         struct dirent* de;
         de = readdir(dirp);
         ASSERT_NONNULL(de, "");
-        ASSERT_EQ(strcmp(de->d_name, "."), 0, "");
+        ASSERT_EQ(strcmp(de->d_name, "."), 0);
         de = readdir(dirp);
         if (de != nullptr) {
             ASSERT_FALSE(target_found, "Target found twice!");
@@ -233,7 +233,7 @@ bool test_rename_loop(void) {
             target_found = true;
         }
 
-        ASSERT_EQ(closedir(dirp), 0, "");
+        ASSERT_EQ(closedir(dirp), 0);
     }
     ASSERT_TRUE(target_found, "");
 
@@ -243,14 +243,14 @@ bool test_rename_loop(void) {
 
     target_found = false;
     for (size_t i = 0; i < LoopLength; i++) {
-        ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0, "");
+        ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);
         int ret = unlink(src);
         if (ret != 0) {
             ASSERT_FALSE(target_found, "");
-            ASSERT_GT(sprintf(src, "::%c/target", static_cast<char>('a' + i)), 0, "");
-            ASSERT_EQ(unlink(src), 0, "");
-            ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0, "");
-            ASSERT_EQ(unlink(src), 0, "");
+            ASSERT_GT(sprintf(src, "::%c/target", static_cast<char>('a' + i)), 0);
+            ASSERT_EQ(unlink(src), 0);
+            ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);
+            ASSERT_EQ(unlink(src), 0);
             target_found = true;
         }
     }

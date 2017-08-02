@@ -38,14 +38,14 @@ static bool test_process_exit_status_race() {
     // Launch a subprocess.
     launchpad_t* lp;
     ASSERT_EQ(launchpad_create(MX_HANDLE_INVALID, "test_process", &lp),
-              MX_OK, "");
-    ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), MX_OK, "");
+              MX_OK);
+    ASSERT_EQ(launchpad_load_from_file(lp, g_executable_filename), MX_OK);
     const char* args[] = { g_executable_filename, "--subprocess" };
-    ASSERT_EQ(launchpad_set_args(lp, mxtl::count_of(args), args), MX_OK, "");
-    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), MX_OK, "");
+    ASSERT_EQ(launchpad_set_args(lp, mxtl::count_of(args), args), MX_OK);
+    ASSERT_EQ(launchpad_clone(lp, LP_CLONE_ALL), MX_OK);
     mx_handle_t proc;
     const char* errmsg;
-    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), MX_OK, "");
+    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), MX_OK);
 
     for (;;) {
         // Query the process state.
@@ -53,8 +53,8 @@ static bool test_process_exit_status_race() {
         size_t records_read;
         ASSERT_EQ(mx_object_get_info(
                       proc, MX_INFO_PROCESS, &info1, sizeof(info1),
-                      &records_read, NULL), MX_OK, "");
-        ASSERT_EQ(records_read, 1u, "");
+                      &records_read, NULL), MX_OK);
+        ASSERT_EQ(records_read, 1u);
 
         // If the process was reported as exited, query its state again.
         if (info1.exited) {
@@ -64,8 +64,8 @@ static bool test_process_exit_status_race() {
             mx_info_process_t info2;
             ASSERT_EQ(mx_object_get_info(
                           proc, MX_INFO_PROCESS, &info2, sizeof(info2),
-                          &records_read, NULL), MX_OK, "");
-            ASSERT_EQ(records_read, 1u, "");
+                          &records_read, NULL), MX_OK);
+            ASSERT_EQ(records_read, 1u);
             // Do the results match what we got before?
             EXPECT_TRUE(info2.exited, "");
             EXPECT_EQ(info1.return_code, info2.return_code, "");
@@ -75,7 +75,7 @@ static bool test_process_exit_status_race() {
     }
 
     // Clean up.
-    ASSERT_EQ(mx_handle_close(proc), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(proc), MX_OK);
 
     END_TEST;
 }
