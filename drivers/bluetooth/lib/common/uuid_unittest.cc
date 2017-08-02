@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/bluetooth/lib/common/uuid.h"
+#include "uuid.h"
 
 #include "gtest/gtest.h"
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "apps/bluetooth/lib/common/test_helpers.h"
+
 
 namespace bluetooth {
 namespace common {
@@ -25,7 +27,7 @@ constexpr uint16_t kOther16BitId = 0x1800;
 // Variants of 32-bit ID 0x12341234
 constexpr uint32_t kId2As32 = 0x12341234;
 constexpr UInt128 kId2As128 = {{0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
-                                0x00, 0x34, 0x12, 0x034, 0x12}};
+                                0x00, 0x34, 0x12, 0x34, 0x12}};
 constexpr char kId2AsString[] = "12341234-0000-1000-8000-00805f9b34fb";
 
 constexpr UInt128 kId3As128 = {{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
@@ -194,6 +196,51 @@ TEST(UUIDTest, FromBytes) {
   EXPECT_EQ(kId1As16, uuid);
   EXPECT_TRUE(UUID::FromBytes(kUuid128Bytes, &uuid));
   EXPECT_EQ(kId1As16, uuid);
+}
+
+TEST(UUIDTest, CompactSize) {
+  UUID direct(kId1As16);
+  UUID fromstring;
+
+  StringToUuid(kId1AsString, &fromstring);
+
+  EXPECT_EQ(2u, direct.CompactSize());
+  EXPECT_EQ(2u, fromstring.CompactSize());
+
+  direct = UUID(kId2As32);
+  StringToUuid(kId2AsString, &fromstring);
+
+  EXPECT_EQ(4u, direct.CompactSize());
+  EXPECT_EQ(4u, fromstring.CompactSize());
+
+  direct = UUID(kId3As128);
+  StringToUuid(kId3AsString, &fromstring);
+
+  EXPECT_EQ(16u, direct.CompactSize());
+  EXPECT_EQ(16u, fromstring.CompactSize());
+}
+
+TEST(UUIDTest, ToBytes) {
+  auto kUuid16Bytes = common::CreateStaticByteBuffer(0x0d, 0x18);
+
+  UUID uuid(kId1As16);
+  common::DynamicByteBuffer bytes(uuid.CompactSize());
+
+  EXPECT_EQ(bytes.size(), uuid.ToBytes(&bytes));
+  EXPECT_TRUE(common::ContainersEqual(kUuid16Bytes, bytes));
+
+  uuid = UUID(kId1As32);
+
+  EXPECT_EQ(bytes.size(), uuid.ToBytes(&bytes));
+  EXPECT_TRUE(common::ContainersEqual(kUuid16Bytes, bytes));
+}
+
+TEST(UUIDTest, Hash) {
+  UUID uuid1(kId3As128);
+  UUID uuid2(kId3As128);
+
+  EXPECT_EQ(uuid1, uuid2);
+  EXPECT_EQ(uuid1.Hash(), uuid2.Hash());
 }
 
 }  // namespace

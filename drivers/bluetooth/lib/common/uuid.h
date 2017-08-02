@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_set>
 
 #include "apps/bluetooth/lib/common/uint128.h"
 
@@ -12,6 +13,7 @@ namespace bluetooth {
 namespace common {
 
 class ByteBuffer;
+class MutableByteBuffer;
 
 // Represents a 128-bit Bluetooth UUID. This class allows UUID values to be constructed in the
 // official Bluetooth 16-bit, 32-bit, and 128-bit formats and to be compared against any other
@@ -54,6 +56,17 @@ class UUID final {
   //
   // where x is one of the alphanumeric characters in the string 0123456789abcdef.
   std::string ToString() const;
+
+  // Returns the number of bytes required to store this UUID.
+  size_t CompactSize() const;
+
+  // Writes a representation of this UUID to |buffer|.  Returns the number of
+  // bytes used. there must be enough space in |buffer| to store |compact_size()|
+  // bytes.
+  size_t ToBytes(common::MutableByteBuffer* buffer) const;
+
+  // Returns a hash of this UUID.
+  std::size_t Hash() const;
 
  private:
   // We store the type that this was initialized with to allow quick comparison with short Bluetooth
@@ -117,3 +130,15 @@ inline bool operator!=(const UInt128& lhs, const UUID& rhs) {
 
 }  // namespace common
 }  // namespace bluetooth
+
+// Specialization of std::hash for std::unordered_set, std::unordered_map, etc.
+namespace std {
+
+template<> struct hash<::bluetooth::common::UUID>
+{
+  size_t operator()(const ::bluetooth::common::UUID& k) const {
+    return k.Hash();
+  }
+};
+
+} // namespace std

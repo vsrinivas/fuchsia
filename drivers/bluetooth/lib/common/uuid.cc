@@ -48,6 +48,11 @@ constexpr char kScanUuidFormatString[] =
 // (see Core Spec v5.0, Vol 3, Part B, Section 2.5.1)
 constexpr size_t kBaseOffset = 12;
 
+// Size in bytes of the three valid lengths of UUIDs
+constexpr size_t k16BitSize = 2;
+constexpr size_t k32BitSize = 4;
+constexpr size_t k128BitSize = 16;
+
 // Parses the contents of a |uuid_string| and returns the result in |out_bytes|. Returns false if
 // |uuid_string| does not represent a valid UUID.
 // TODO(armansito): After having used UUID in camel-case words all over the place, I've decided that
@@ -74,13 +79,13 @@ bool ParseUuidString(const std::string& uuid_string, UInt128* out_bytes) {
 // static
 bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
   switch (bytes.size()) {
-    case 2:
+    case k16BitSize:
       *out_uuid = UUID(le16toh(*reinterpret_cast<const uint16_t*>(bytes.data())));
       return true;
-    case 4:
+    case k32BitSize:
       *out_uuid = UUID(le32toh(*reinterpret_cast<const uint32_t*>(bytes.data())));
       return true;
-    case 16:
+    case k128BitSize:
       *out_uuid = UUID(*reinterpret_cast<const UInt128*>(bytes.data()));
       return true;
   }
@@ -88,7 +93,13 @@ bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
   return false;
 }
 
-UUID::UUID(const UInt128& uuid128) : type_(Type::k128Bit), value_(uuid128) {}
+UUID::UUID(const UInt128& uuid128) : type_(Type::k128Bit), value_(uuid128) {
+  if (std::equal(value_.begin(), value_.begin() + kBaseOffset, kBaseUuid.begin())) {
+    // If value is compressible, store so we can quickly compare.
+    uint32_t val = le32toh(*reinterpret_cast<const uint32_t*>(value_.data() + kBaseOffset));
+    type_ = val > std::numeric_limits<uint16_t>::max() ? Type::k32Bit : Type::k16Bit;
+  }
+}
 
 UUID::UUID(uint16_t uuid16) : type_(Type::k16Bit), value_(kBaseUuid) {
   uint16_t* bytes = reinterpret_cast<uint16_t*>(value_.data() + kBaseOffset);
@@ -130,14 +141,13 @@ bool UUID::operator==(const UInt128& uuid128) const {
 }
 
 bool UUID::CompareBytes(const common::ByteBuffer& bytes) const {
-  if (bytes.size() == 2) {
-    return (*this == le16toh(*reinterpret_cast<const uint16_t*>(bytes.data())));
-  }
-  if (bytes.size() == 4) {
-    return (*this == le32toh(*reinterpret_cast<const uint32_t*>(bytes.data())));
-  }
-  if (bytes.size() == 16) {
-    return (*this == *reinterpret_cast<const UInt128*>(bytes.data()));
+  switch (bytes.size()) {
+    case k16BitSize:
+      return (*this == le16toh(*reinterpret_cast<const uint16_t*>(bytes.data())));
+    case k32BitSize:
+      return (*this == le32toh(*reinterpret_cast<const uint32_t*>(bytes.data())));
+    case k128BitSize:
+      return (*this == *reinterpret_cast<const UInt128*>(bytes.data()));
   }
 
   return false;
@@ -148,6 +158,35 @@ std::string UUID::ToString() const {
                            value_[15], value_[14], value_[13], value_[12], value_[11], value_[10],
                            value_[9], value_[8], value_[7], value_[6], value_[5], value_[4],
                            value_[3], value_[2], value_[1], value_[0]);
+}
+
+size_t UUID::CompactSize() const {
+  switch (type_) {
+    case Type::k16Bit: return k16BitSize;
+    case Type::k32Bit: return k32BitSize;
+    case Type::k128Bit: return k128BitSize;
+  };
+
+  return 0;
+}
+
+size_t UUID::ToBytes(common::MutableByteBuffer* bytes) const {
+  size_t size = CompactSize();
+  if (size != k128BitSize) {
+    bytes->Write(value_.data() + kBaseOffset, size);
+    return size;
+  }
+  bytes->Write(value_.data(), size);
+  return size;
+}
+
+std::size_t UUID::Hash() const {
+  FTL_DCHECK(sizeof(value_) % sizeof(size_t) == 0);
+  size_t hash = 0;
+  for (size_t i = 0; i < (sizeof(value_) / sizeof(size_t)); i++) {
+    hash ^= *reinterpret_cast<const size_t *>(value_.data() + (i * sizeof(size_t)));
+  }
+  return hash;
 }
 
 uint16_t UUID::ValueAs16Bit() const {
