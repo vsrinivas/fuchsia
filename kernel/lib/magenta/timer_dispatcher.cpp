@@ -20,8 +20,7 @@
 #include <safeint/safe_math.h>
 
 constexpr mx_duration_t kMinTimerPeriod = MX_TIMER_MIN_PERIOD;
-constexpr mx_time_t     kMinTimerDeadline = MX_TIMER_MIN_DEADLINE;
-constexpr mx_duration_t kTimerCanceled = 1u;
+constexpr mx_time_t kMinTimerDeadline = MX_TIMER_MIN_DEADLINE;
 
 static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
@@ -49,7 +48,7 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
 
 TimerDispatcher::TimerDispatcher(uint32_t /*options*/)
     : timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
-      deadline_(0u), period_(0u),
+      deadline_(0u), period_(0u), cancel_pending_(false),
       timer_(TIMER_INITIAL_VALUE(timer_)) {
 }
 
@@ -83,6 +82,12 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     deadline_ = deadline;
     period_ = period;
 
+    // If we're imminently awaiting a timer callback due to a prior cancelation request,
+    // let the callback take care of restarting the timer too so everthing happens in the
+    // right sequence.
+    if (cancel_pending_)
+        return MX_OK;
+
     // We need to ref-up because the timer and the dpc don't understand
     // refcounted objects. The Release() is called either in OnTimerFired()
     // or in the complicated cancelation path above.
@@ -99,40 +104,32 @@ mx_status_t TimerDispatcher::Cancel() {
 }
 
 void TimerDispatcher::CancelLocked() {
-    if (deadline_) {
-        // The timer is active and needs to be canceled.
-        // Refcount is at least 2 because there is a pending timer that we need to cancel.
-        bool timer_canceled = timer_cancel(&timer_);
-        if (timer_canceled) {
-            // Managed to cancel before OnTimerFired() ran. So we need to decrement the
-            // ref count here.
-            ASSERT(!Release());
-        } else {
-            // The DPC thread is about to run the callback! Yet we are
-            // holding the lock. We need to let the callback finish.
-            //
-            // The protocol is to zero both period_ and deadline_ members
-            // and wait for deadline to be == 1. The timer callback will
-            // call Release().
-            period_ = 0u;
-            deadline_ = 0u;
-
-            while (deadline_ != kTimerCanceled) {
-                lock_.Release();
-                // TODO: find a more reliable way to interlock with the dpc thread.
-                // This only works because the dpc thread is implicitly running at a higher
-                // priority and/or there are multiple cpus in the system. If we happen to be
-                // at dpc or higher priority, or if the dpc system changed such that it didn't
-                // run at a high priority, we'd potentially livelock the system.
-                thread_reschedule();
-                lock_.Acquire();
-            }
-        }
-
-        deadline_ = 0u;
-    }
-
+    // Always clear the signal bit.
     state_tracker_.UpdateState(MX_TIMER_SIGNALED, 0u);
+
+    // If the timer isn't pending then we're done.
+    if (!deadline_)
+        return;
+    deadline_ = 0u;
+    period_ = 0u;
+
+    // If we're already waiting for the timer to be canceled, then we don't need
+    // to cancel it again.
+    if (cancel_pending_)
+        return;
+
+    // The timer is active and needs to be canceled.
+    // Refcount is at least 2 because there is a pending timer that we need to cancel.
+    bool timer_canceled = timer_cancel(&timer_);
+    if (timer_canceled) {
+        // Managed to cancel before OnTimerFired() ran. So we need to decrement the
+        // ref count here.
+        ASSERT(!Release());
+    } else {
+        // The DPC thread is about to run the callback! Yet we are holding the lock.
+        // We'll let the timer callback take care of cleanup.
+        cancel_pending_ = true;
+    }
 }
 
 void TimerDispatcher::OnTimerFired() {
@@ -141,34 +138,33 @@ void TimerDispatcher::OnTimerFired() {
     {
         AutoLock al(&lock_);
 
-        if ((period_ == 0u) && (deadline_ == 0u)) {
-            // The timer is being canceled. Follow the handshake protocol
-            // which requires to set deadline_ and call Release().
-            deadline_ = kTimerCanceled;
+        if (cancel_pending_) {
+            // We previously attempted to cancel the timer but the callback had already
+            // been scheduled.  Suppress handling of that callback but take care to
+            // restart the timer if its deadline was set in the meantime.
+            cancel_pending_ = false;
         } else if (period_ != 0) {
-            // The timer is a periodic timer. Re-issue the timer and
-            // don't Release() the reference.
+            // The timer is a periodic timer.
             state_tracker_.StrobeState(MX_TIMER_SIGNALED);
 
             // Compute the next deadline while guarding for integer overflows.
+            // If an overflow occurs, the deadline will be set to 0 which causes
+            // repeating to cease.
             safeint::CheckedNumeric<mx_time_t> next_deadline(deadline_);
             next_deadline += period_;
             deadline_ = next_deadline.ValueOrDefault(0u);
-            if (deadline_ == 0u)
-                return;
-
-            // make sure the timer is canceled or finished before setting it again
-            // this avoids a race with the timer callback that queued our dpc
-            timer_cancel(&timer_);
-
-            timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
-            return;
         } else {
             // The timer is a one-shot timer.
             state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
             deadline_ = 0u;
         }
+
+        if (deadline_ != 0u) {
+            timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
+            return;
+        }
     }
+
     // This could be the last reference so we might need to destroy ourselves.
     // In Magenta RefPtrs, the 'delete' is called by the holder of the object.
     if (Release())

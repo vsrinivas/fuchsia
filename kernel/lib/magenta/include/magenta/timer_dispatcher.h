@@ -44,6 +44,7 @@ private:
     Mutex lock_;
     mx_time_t deadline_ TA_GUARDED(lock_);
     mx_duration_t period_ TA_GUARDED(lock_);
+    bool cancel_pending_ TA_GUARDED(lock_);
     timer_t timer_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
 };
