@@ -13,8 +13,15 @@ namespace audio_proto {
 using Cmd    = audio_cmd_t;
 using CmdHdr = audio_cmd_hdr_t;
 
+// Structures used with GET/SET format
+using SampleFormat = audio_sample_format_t;
+using FormatRange  = audio_stream_format_range_t;
+
+// AUDIO_STREAM_CMD_GET_FORMATS
+using StreamGetFmtsReq  = audio_stream_cmd_get_formats_req_t;
+using StreamGetFmtsResp = audio_stream_cmd_get_formats_resp_t;
+
 // AUDIO_STREAM_CMD_SET_FORMAT
-using SampleFormat     = audio_sample_format_t;
 using StreamSetFmtReq  = audio_stream_cmd_set_format_req_t;
 using StreamSetFmtResp = audio_stream_cmd_set_format_resp_t;
 
