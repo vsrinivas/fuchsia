@@ -37,13 +37,8 @@ KERNEL_DEFINES += \
     BOOTLOADER_RESERVE_SIZE=$(BOOTLOADER_RESERVE_SIZE) \
     PLATFORM_SUPPORTS_PANIC_SHELL=1 \
 
-include make/fastboot.mk
-
 # build MDI
-MDI_SRCS := \
-    $(LOCAL_DIR)/odroidc2.mdi \
+MDI_SRCS := $(LOCAL_DIR)/odroidc2.mdi
 
-MDI_DEPS := \
-    kernel/include/mdi/kernel-defs.mdi \
-
-include make/mdi.mk
+# extra build rules for building fastboot compatible image
+include make/fastboot.mk
