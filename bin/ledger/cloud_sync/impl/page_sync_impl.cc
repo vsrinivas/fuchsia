@@ -176,7 +176,16 @@ void PageSyncImpl::OnConnectionError() {
   FTL_LOG(WARNING)
       << log_prefix_
       << "Connection error in the remote commit watcher, retrying.";
-  Retry([this] { SetRemoteWatcher(); });
+  Retry([this] { SetRemoteWatcher(true); });
+}
+
+void PageSyncImpl::OnTokenExpired() {
+  FTL_DCHECK(remote_watch_set_);
+  // Reset the watcher and schedule a retry.
+  cloud_provider_->UnwatchCommits(this);
+  remote_watch_set_ = false;
+  FTL_LOG(INFO) << log_prefix_ << "Firebase token expired, refreshing.";
+  Retry([this] { SetRemoteWatcher(true); });
 }
 
 void PageSyncImpl::OnMalformedNotification() {
@@ -293,7 +302,7 @@ void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
   batch_download_->Start();
 }
 
-void PageSyncImpl::SetRemoteWatcher() {
+void PageSyncImpl::SetRemoteWatcher(bool is_retry) {
   FTL_DCHECK(!remote_watch_set_);
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
@@ -305,11 +314,14 @@ void PageSyncImpl::SetRemoteWatcher() {
   }
 
   GetAuthToken(
-      [ this,
+      [ this, is_retry,
         last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
         cloud_provider_->WatchCommits(std::move(auth_token), last_commit_ts,
                                       this);
         remote_watch_set_ = true;
+        if (is_retry) {
+          FTL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";
+        }
       },
       [this] {
         HandleError(
@@ -449,7 +461,7 @@ void PageSyncImpl::BacklogDownloaded() {
   if (on_backlog_downloaded_) {
     on_backlog_downloaded_();
   }
-  SetRemoteWatcher();
+  SetRemoteWatcher(false);
   StartUpload();
 }
 

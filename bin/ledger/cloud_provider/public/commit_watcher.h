@@ -28,6 +28,11 @@ class CommitWatcher {
   // call is received.
   virtual void OnConnectionError() = 0;
 
+  // Called when the remote watcher is interrupted because the token is no
+  // longer valid. No further commit notifications are delivered after this
+  // call is received.
+  virtual void OnTokenExpired() = 0;
+
   // Called when the watcher fails to decode the received notification. No
   // further commit notifications are delivered after this call is received.
   virtual void OnMalformedNotification() = 0;

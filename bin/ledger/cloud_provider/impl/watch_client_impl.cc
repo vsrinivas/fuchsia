@@ -142,9 +142,9 @@ void WatchClientImpl::OnCancel() {
 }
 
 void WatchClientImpl::OnAuthRevoked(const std::string& reason) {
-  FTL_LOG(WARNING) << "Auth credential no longer valid: " << reason;
+  FTL_LOG(INFO) << "Remote watcher needs a new token: " << reason;
   HandleError();
-  commit_watcher_->OnConnectionError();
+  commit_watcher_->OnTokenExpired();
 }
 
 void WatchClientImpl::OnMalformedEvent() {

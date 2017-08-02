@@ -140,6 +140,8 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
   void OnConnectionError() override { connection_error_calls_++; }
 
+  void OnTokenExpired() override { token_expired_calls_++; }
+
   void OnMalformedNotification() override { malformed_notification_calls_++; }
 
  protected:
@@ -181,6 +183,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   std::vector<std::string> server_timestamps_;
   unsigned int on_remote_commits_calls_ = 0u;
   unsigned int connection_error_calls_ = 0u;
+  unsigned int token_expired_calls_ = 0u;
   unsigned int malformed_notification_calls_ = 0u;
 
  private:
@@ -520,21 +523,29 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
 TEST_F(CloudProviderImplTest, WatchConnectionError) {
   rapidjson::Document document;
   EXPECT_EQ(0u, connection_error_calls_);
+  EXPECT_EQ(0u, token_expired_calls_);
   EXPECT_EQ(0u, unwatch_count_);
 
   cloud_provider_->WatchCommits("", "", this);
   watch_client_->OnConnectionError();
   EXPECT_EQ(1u, connection_error_calls_);
+  EXPECT_EQ(0u, token_expired_calls_);
   EXPECT_EQ(1u, unwatch_count_);
 }
 
-// Verifies that auth revoked errors are reported to the client as connection
-// errors, so that they can retry setting the watcher.
+// Verifies that auth revoked errors are reported to the client as token
+// expired errors, so that they can retry setting the watcher.
 TEST_F(CloudProviderImplTest, WatchAuthRevoked) {
   EXPECT_EQ(0u, connection_error_calls_);
+  EXPECT_EQ(0u, token_expired_calls_);
+  EXPECT_EQ(0u, unwatch_count_);
+
   cloud_provider_->WatchCommits("", "", this);
   watch_client_->OnAuthRevoked("token no longer valid");
-  EXPECT_EQ(1u, connection_error_calls_);
+
+  EXPECT_EQ(0u, connection_error_calls_);
+  EXPECT_EQ(1u, token_expired_calls_);
+  EXPECT_EQ(1u, unwatch_count_);
 }
 
 TEST_F(CloudProviderImplTest, GetCommits) {

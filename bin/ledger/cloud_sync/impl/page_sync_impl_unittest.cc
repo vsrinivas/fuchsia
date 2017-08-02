@@ -859,27 +859,25 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ("43", storage_.sync_metadata[kTimestampKey.ToString()]);
 }
 
-// Verify that we retry setting the remote watcher on connection errors.
+// Verify that we retry setting the remote watcher on connection errors
+// and when the auth token expires.
 TEST_F(PageSyncImplTest, RetryRemoteWatcher) {
   StartPageSync();
   EXPECT_EQ(0u, storage_.received_commits.size());
 
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.watch_call_min_timestamps.size() == 1u) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(1u, cloud_provider_.watch_call_min_timestamps.size());
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return cloud_provider_.watch_call_min_timestamps.size() == 1u;
+  }));
 
   page_sync_->OnConnectionError();
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.watch_call_min_timestamps.size() == 2u) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(2u, cloud_provider_.watch_call_min_timestamps.size());
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return cloud_provider_.watch_call_min_timestamps.size() == 2u;
+  }));
+
+  page_sync_->OnTokenExpired();
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return cloud_provider_.watch_call_min_timestamps.size() == 3u;
+  }));
 }
 
 // Verifies that if multiple remote commits are received while one batch is

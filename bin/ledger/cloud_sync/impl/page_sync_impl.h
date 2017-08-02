@@ -103,6 +103,8 @@ class PageSyncImpl : public PageSync,
 
   void OnConnectionError() override;
 
+  void OnTokenExpired() override;
+
   void OnMalformedNotification() override;
 
  private:
@@ -118,7 +120,7 @@ class PageSyncImpl : public PageSync,
   void DownloadBatch(std::vector<cloud_provider::Record> record,
                      ftl::Closure on_done);
 
-  void SetRemoteWatcher();
+  void SetRemoteWatcher(bool is_retry);
 
   void UploadUnsyncedCommits();
   void VerifyUnsyncedCommits(
