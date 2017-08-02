@@ -19,6 +19,8 @@
 #include "linux.h"
 #include "magenta.h"
 
+#define VIRTIO_QUEUE_SIZE           128u
+
 static const uint64_t kVmoSize = 1u << 30;
 static const uint16_t kPioEnable = 1u << 0;
 static const uintptr_t kPioBase = 0x8000;
@@ -91,6 +93,7 @@ int main(int argc, char** argv) {
     // Setup guest block.
     guest_state.block_fd = -1;
     guest_state.block_size = 1u << 30;
+    guest_state.block_queue.size = VIRTIO_QUEUE_SIZE;
     if (block_path != NULL) {
         guest_state.block_fd = open(block_path, O_RDONLY);
         if (guest_state.block_fd < 0) {

@@ -15,8 +15,6 @@
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
-#define VIRTIO_QUEUE_SIZE           128u
-
 #define PCI_INTERRUPT_VIRTIO_BLOCK  33u
 #define PCI_ALIGN(n)                ((((uintptr_t)n) + 4095) & ~4095)
 
@@ -32,7 +30,7 @@ mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
         return MX_OK;
     case VIRTIO_PCI_QUEUE_SIZE:
         vcpu_io->access_size = 2;
-        vcpu_io->u16 = VIRTIO_QUEUE_SIZE;
+        vcpu_io->u16 = queue->size;
         return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         vcpu_io->access_size = 1;
