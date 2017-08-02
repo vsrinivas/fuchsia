@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/firebase/firebase_impl.h"
 
+#include <memory>
 #include <sstream>
 #include <utility>
 
@@ -138,7 +139,7 @@ void FirebaseImpl::Delete(const std::string& key,
 void FirebaseImpl::Watch(const std::string& key,
                          const std::vector<std::string>& query_params,
                          WatchClient* watch_client) {
-  watch_data_[watch_client] = std::unique_ptr<WatchData>(new WatchData());
+  watch_data_[watch_client] = std::make_unique<WatchData>();
   watch_data_[watch_client]->request.Reset(network_service_->Request(
       MakeRequest(BuildRequestUrl(key, query_params), "GET", "", true),
       [this, watch_client](network::URLResponsePtr response) {

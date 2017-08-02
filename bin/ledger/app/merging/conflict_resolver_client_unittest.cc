@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 
+#include <memory>
 #include <string>
 
 #include "apps/ledger/src/app/constants.h"
@@ -48,8 +49,8 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
     resolver->set_on_empty(MakeQuitTask());
     merge_resolver_ = resolver.get();
 
-    page_manager_.reset(new PageManager(&environment_, std::move(page_storage),
-                                        nullptr, std::move(resolver)));
+    page_manager_ = std::make_unique<PageManager>(
+        &environment_, std::move(page_storage), nullptr, std::move(resolver));
   }
 
   storage::CommitId CreateCommit(
