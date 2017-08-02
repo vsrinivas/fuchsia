@@ -33,7 +33,7 @@ public:
 
     virtual Result operator()(Args... args) const = 0;
 
-    virtual FunctionTarget<Result, Args...>* MoveInitializeTo(void* ptr) = 0;
+    virtual void MoveInitializeTo(void* ptr) = 0;
 };
 
 template <typename Result, typename... Args>
@@ -50,8 +50,8 @@ public:
         MX_PANIC("Attempted to invoke mxtl::Function with a null target.");
     }
 
-    FunctionTarget<Result, Args...>* MoveInitializeTo(void* ptr) final {
-        return new (ptr) NullFunctionTarget();
+    void MoveInitializeTo(void* ptr) final {
+        new (ptr) NullFunctionTarget();
     }
 };
 
@@ -74,8 +74,8 @@ public:
         return target_(mxtl::forward<Args>(args)...);
     }
 
-    FunctionTarget<Result, Args...>* MoveInitializeTo(void* ptr) final {
-        return new (ptr) InlineFunctionTarget(mxtl::move(*this));
+    void MoveInitializeTo(void* ptr) final {
+        new (ptr) InlineFunctionTarget(mxtl::move(*this));
     }
 
 private:
@@ -101,8 +101,8 @@ public:
         return (*target_ptr_)(mxtl::forward<Args>(args)...);
     }
 
-    FunctionTarget<Result, Args...>* MoveInitializeTo(void* ptr) final {
-        return new (ptr) HeapFunctionTarget(mxtl::move(*this));
+    void MoveInitializeTo(void* ptr) final {
+        new (ptr) HeapFunctionTarget(mxtl::move(*this));
     }
 
 private:
