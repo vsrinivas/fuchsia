@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-// TODO(dje): wip
+// TODO(MG-992): Need to be able to r/w MSRs.
 // The thought is to use resources (as in ResourceDispatcher), at which point
 // this will all get rewritten. Until such time, the goal here is KISS.
 // This file contains the lower part of Intel Processor Trace support that must

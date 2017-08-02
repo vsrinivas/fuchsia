@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(dje): Revisit where things should live once things settle.
-
 #pragma once
 
 #include <magenta/compiler.h>
