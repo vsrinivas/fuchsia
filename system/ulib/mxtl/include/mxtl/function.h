@@ -82,9 +82,9 @@ template <typename Callable, typename Result, typename... Args>
 class HeapFunctionTarget final : public FunctionTarget<Result, Args...> {
 public:
     explicit HeapFunctionTarget(Callable target)
-        : target_ptr_(new Callable(mxtl::move(target))) {}
+        : target_ptr_(mxtl::make_unique<Callable>(mxtl::move(target))) {}
     HeapFunctionTarget(Callable target, AllocChecker* ac)
-        : target_ptr_(new (ac) Callable(mxtl::move(target))) {}
+        : target_ptr_(mxtl::make_unique_checked<Callable>(ac, mxtl::move(target))) {}
     HeapFunctionTarget(HeapFunctionTarget&& other)
         : target_ptr_(mxtl::move(other.target_ptr_)) {}
     ~HeapFunctionTarget() final = default;
