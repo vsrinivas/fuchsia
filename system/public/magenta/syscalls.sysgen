@@ -288,7 +288,7 @@ syscall task_resume
     returns (mx_status_t);
 
 syscall task_kill
-    (task_handle: mx_handle_t handle_release)
+    (task_handle: mx_handle_t)
     returns (mx_status_t);
 
 # Synchronization
