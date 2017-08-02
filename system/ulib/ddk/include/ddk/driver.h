@@ -99,10 +99,6 @@ extern mx_driver_rec_t __magenta_driver_rec__;
 mx_status_t device_add_from_driver(mx_driver_t* drv, mx_device_t* parent,
                               device_add_args_t* args, mx_device_t** out);
 
-static inline mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
-    return device_add_from_driver(__magenta_driver_rec__.driver, parent, args, out);
-}
-
 // Creates a device and adds it to the devmgr.
 // device_add_args_t contains all "in" arguments.
 // All device_add_args_t values are copied, so device_add_args_t can be stack allocated.
@@ -111,6 +107,9 @@ static inline mx_status_t device_add(mx_device_t* parent, device_add_args_t* arg
 // The newly added device will be active before this call returns, so be sure to have
 // the "out" pointer point to your device-local structure so callbacks can access
 // it immediately.
+static inline mx_status_t device_add(mx_device_t* parent, device_add_args_t* args, mx_device_t** out) {
+    return device_add_from_driver(__magenta_driver_rec__.driver, parent, args, out);
+}
 
 mx_status_t device_remove(mx_device_t* device);
 mx_status_t device_rebind(mx_device_t* device);
@@ -124,13 +123,13 @@ void device_unbind(mx_device_t* dev);
 // temporary accessor for root resource handle
 mx_handle_t get_root_resource(void);
 
-mx_status_t load_firmware(mx_device_t* device, const char* path,
-                          mx_handle_t* fw, size_t* size);
 // Drivers may need to load firmware for a device, typically during the call to
 // bind the device. The devmgr will look for the firmware at the given path
 // relative to system-defined locations for device firmware. The file will be
 // loaded into a vmo pointed to by fw. The actual size of the firmware will be
 // returned in size.
+mx_status_t load_firmware(mx_device_t* device, const char* path,
+                          mx_handle_t* fw, size_t* size);
 
 // panic is for handling non-recoverable, non-reportable fatal
 // errors in a way that will get logged.  Right now this just
