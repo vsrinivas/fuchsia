@@ -20,6 +20,7 @@ enum class TechnologyType {
 };
 
 // EIR Data Type, Advertising Data Type (AD Type), OOB Data Type definitions.
+// clang-format off
 enum class DataType : uint8_t {
   kFlags                        = 0x01,
   kIncomplete16BitServiceUuids  = 0x02,
@@ -38,10 +39,11 @@ enum class DataType : uint8_t {
   kAppearance                   = 0x19,
   kServiceData32Bit             = 0x20,
   kServiceData128Bit            = 0x21,
+  kURI                          = 0x24,
   kManufacturerSpecificData     = 0xFF,
-
   // TODO(armansito): Complete this list.
 };
+// clang-format on
 
 // Constants for the expected size (in octets) of an advertising/EIR/scan-response data field.
 //

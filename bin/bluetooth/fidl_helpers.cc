@@ -20,47 +20,6 @@ namespace bluetooth_service {
 namespace fidl_helpers {
 namespace {
 
-bool PopulateUuids(const ::bluetooth::common::BufferView& data, size_t uuid_size,
-                   std::unordered_set<std::string>* to_populate) {
-  FTL_DCHECK(to_populate);
-
-  if (data.size() % uuid_size) {
-    FTL_LOG(WARNING) << "Malformed service UUIDs list";
-    return false;
-  }
-
-  size_t uuid_count = data.size() / uuid_size;
-  for (size_t i = 0; i < uuid_count; i++) {
-    const ::bluetooth::common::BufferView uuid_bytes(data.data() + i * uuid_size, uuid_size);
-    ::bluetooth::common::UUID uuid;
-    ::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid);
-
-    to_populate->insert(uuid.ToString());
-  }
-
-  return true;
-}
-
-bool PopulateServiceData(const ::bluetooth::common::BufferView& data, size_t uuid_size,
-                         ::fidl::Map<::fidl::String, ::fidl::Array<uint8_t>>* to_populate) {
-  FTL_DCHECK(to_populate);
-
-  if (data.size() < uuid_size) {
-    FTL_LOG(WARNING) << "Malformed service UUID in service data";
-    return false;
-  }
-
-  ::bluetooth::common::UUID uuid;
-  ::bluetooth::common::UUID::FromBytes(data.view(0, uuid_size), &uuid);
-
-  std::vector<uint8_t> data_vector(data.cbegin() + uuid_size, data.cend() - uuid_size);
-  ::fidl::Array<uint8_t> fidl_data;
-  fidl_data.Swap(&data_vector);
-
-  to_populate->insert(uuid.ToString(), std::move(fidl_data));
-
-  return true;
-}
 
 ::btfidl::control::TechnologyType TechnologyTypeToFidl(::bluetooth::gap::TechnologyType type) {
   switch (type) {
@@ -127,171 +86,44 @@ bool PopulateServiceData(const ::bluetooth::common::BufferView& data, size_t uui
     fidl_device->rssi = std::move(fidl_rssi);
   }
 
-  ::bluetooth::gap::AdvertisingDataReader reader(device.advertising_data());
+  ::bluetooth::gap::AdvertisingData adv_data;
+  if (!::bluetooth::gap::AdvertisingData::FromBytes(device.advertising_data(), &adv_data))
+    return nullptr;
 
-  // Advertising data that made it this far is guaranteed to be valid as invalid data would not pass
-  // the filters.
-  FTL_DCHECK(reader.is_valid());
-
-  std::unordered_set<std::string> uuids;
-
-  ::bluetooth::gap::DataType type;
-  ::bluetooth::common::BufferView data;
-  while (reader.GetNextField(&type, &data)) {
-    switch (type) {
-      case ::bluetooth::gap::DataType::kTxPowerLevel: {
-        // Data must contain exactly one octet.
-        if (data.size() != ::bluetooth::gap::kTxPowerLevelSize) {
-          FTL_LOG(WARNING) << "Received malformed Tx Power Level";
-          return nullptr;
-        }
-
-        auto fidl_tx_power = ::btfidl::Int8::New();
-        fidl_tx_power->value = static_cast<int8_t>(data[0]);
-        fidl_device->tx_power = std::move(fidl_tx_power);
-        break;
-      }
-      case ::bluetooth::gap::DataType::kShortenedLocalName:
-        // If a name has been previously set (e.g. because the Complete Local Name was included in
-        // the scan response) then break. Otherwise we fall through.
-        if (fidl_device->name) break;
-      case ::bluetooth::gap::DataType::kCompleteLocalName:
-        fidl_device->name = data.ToString();
-        break;
-      case ::bluetooth::gap::DataType::kAppearance: {
-        // TODO(armansito): RemoteDevice should have a function to return the device appearance, as
-        // it can be obtained either from advertising data or via GATT.
-
-        if (data.size() != ::bluetooth::gap::kAppearanceSize) {
-          FTL_LOG(WARNING) << "Received malformed Appearance";
-          return nullptr;
-        }
-
-        fidl_device->appearance = static_cast<::btfidl::control::Appearance>(
-            le16toh(*reinterpret_cast<const uint16_t*>(data.data())));
-
-        break;
-      }
-      case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
-        if (!PopulateUuids(data, ::bluetooth::gap::k16BitUuidElemSize, &uuids)) return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
-        if (!PopulateUuids(data, ::bluetooth::gap::k32BitUuidElemSize, &uuids)) return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete128BitServiceUuids:
-        if (!PopulateUuids(data, ::bluetooth::gap::k128BitUuidElemSize, &uuids)) return nullptr;
-        break;
-      default:
-        break;
-    }
-  }
+  std::unordered_set<::bluetooth::common::UUID> uuids = adv_data.service_uuids();
 
   // |service_uuids| is not a nullable field, so we need to assign something to it.
   if (uuids.empty()) {
     fidl_device->service_uuids.resize(0);
   } else {
     for (const auto& uuid : uuids) {
-      fidl_device->service_uuids.push_back(uuid);
+      fidl_device->service_uuids.push_back(uuid.ToString());
     }
+  }
+
+  if (adv_data.local_name()) fidl_device->name = *adv_data.local_name();
+  if (adv_data.appearance()) {
+    fidl_device->appearance =
+        static_cast<::btfidl::control::Appearance>(le16toh(*adv_data.appearance()));
+  }
+  if (adv_data.tx_power()) {
+    auto fidl_tx_power = ::btfidl::Int8::New();
+    fidl_tx_power->value = *adv_data.tx_power();
+    fidl_device->tx_power = std::move(fidl_tx_power);
   }
 
   return fidl_device;
 }
 
-::btfidl::low_energy::AdvertisingDataPtr NewAdvertisingData(
-    const ::bluetooth::common::ByteBuffer& advertising_data) {
-  ::bluetooth::gap::AdvertisingDataReader reader(advertising_data);
-  if (!reader.is_valid()) return nullptr;
-
-  std::unordered_set<std::string> uuids;
-  auto fidl_data = ::btfidl::low_energy::AdvertisingData::New();
-
-  ::bluetooth::gap::DataType type;
-  ::bluetooth::common::BufferView data;
-  while (reader.GetNextField(&type, &data)) {
-    switch (type) {
-      case ::bluetooth::gap::DataType::kTxPowerLevel: {
-        if (data.size() != ::bluetooth::gap::kTxPowerLevelSize) {
-          FTL_LOG(WARNING) << "Received malformed Tx Power Level";
-          return nullptr;
-        }
-
-        fidl_data->tx_power_level = ::btfidl::Int8::New();
-        fidl_data->tx_power_level->value = static_cast<int8_t>(data[0]);
-        break;
-      }
-      case ::bluetooth::gap::DataType::kShortenedLocalName:
-        // If a name has been previously set (e.g. because the Complete Local Name was included in
-        // the scan response) then break. Otherwise we fall through.
-        if (fidl_data->name) break;
-      case ::bluetooth::gap::DataType::kCompleteLocalName:
-        fidl_data->name = data.ToString();
-        break;
-      case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
-        if (!PopulateUuids(data, ::bluetooth::gap::k16BitUuidElemSize, &uuids)) return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
-        if (!PopulateUuids(data, ::bluetooth::gap::k32BitUuidElemSize, &uuids)) return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
-      case ::bluetooth::gap::DataType::kComplete128BitServiceUuids:
-        if (!PopulateUuids(data, ::bluetooth::gap::k128BitUuidElemSize, &uuids)) return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kServiceData16Bit:
-        if (!PopulateServiceData(data, ::bluetooth::gap::k16BitUuidElemSize,
-                                 &fidl_data->service_data))
-          return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kServiceData32Bit:
-        if (!PopulateServiceData(data, ::bluetooth::gap::k32BitUuidElemSize,
-                                 &fidl_data->service_data))
-          return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kServiceData128Bit:
-        if (!PopulateServiceData(data, ::bluetooth::gap::k128BitUuidElemSize,
-                                 &fidl_data->service_data))
-          return nullptr;
-        break;
-      case ::bluetooth::gap::DataType::kManufacturerSpecificData: {
-        if (data.size() < ::bluetooth::gap::kManufacturerSpecificDataSizeMin) return nullptr;
-
-        uint16_t id = le16toh(*reinterpret_cast<const uint16_t*>(data.data()));
-        std::vector<uint8_t> manuf_data(data.cbegin() + ::bluetooth::gap::kManufacturerIdSize,
-                                        data.cend() - ::bluetooth::gap::kManufacturerIdSize);
-        fidl::Array<uint8_t> fidl_manuf_data;
-        fidl_manuf_data.Swap(&manuf_data);
-
-        fidl_data->manufacturer_specific_data.insert(id, std::move(fidl_manuf_data));
-        break;
-      }
-      default:
-        break;
-    }
-  }
-
-  if (!uuids.empty()) {
-    for (const auto& uuid : uuids) {
-      fidl_data->service_uuids.push_back(uuid);
-    }
-  }
-
-  return fidl_data;
-}
-
 ::btfidl::low_energy::RemoteDevicePtr NewLERemoteDevice(
     const ::bluetooth::gap::RemoteDevice& device) {
-  auto fidl_advertising_data = NewAdvertisingData(device.advertising_data());
-  if (!fidl_advertising_data) return nullptr;
+  ::bluetooth::gap::AdvertisingData ad;
+  if (!::bluetooth::gap::AdvertisingData::FromBytes(device.advertising_data(), &ad)) return nullptr;
 
   auto fidl_device = ::btfidl::low_energy::RemoteDevice::New();
   fidl_device->identifier = device.identifier();
   fidl_device->connectable = device.connectable();
-  fidl_device->advertising_data = std::move(fidl_advertising_data);
+  fidl_device->advertising_data = ad.AsLEAdvertisingData();
 
   return fidl_device;
 }

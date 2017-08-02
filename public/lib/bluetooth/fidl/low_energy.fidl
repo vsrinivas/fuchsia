@@ -14,6 +14,9 @@ struct AdvertisingData {
   // The radio transmission power level reported in the advertisement.
   Int8? tx_power_level;
 
+  // The appearance reported in the advertisemet.
+  UInt16? appearance;
+
   // List of service UUIDs reported in the advertisement.
   array<string>? service_uuids;
 

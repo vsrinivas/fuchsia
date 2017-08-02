@@ -13,11 +13,104 @@ namespace bluetooth {
 namespace gap {
 namespace {
 
+constexpr uint16_t kId1As16 = 0x0212;
+constexpr char kId1AsString[] = "00000212-0000-1000-8000-00805f9b34fb";
+constexpr uint16_t kId2As16 = 0x1122;
+
+constexpr char kId3AsString[] = "12341234-0000-1000-8000-00805f9b34fb";
+
 TEST(AdvertisingDataTest, ReaderEmptyData) {
   common::BufferView empty;
   AdvertisingDataReader reader(empty);
   EXPECT_FALSE(reader.is_valid());
   EXPECT_FALSE(reader.HasMoreData());
+}
+
+TEST(AdvertisingDataTest, MakeEmpty) {
+  AdvertisingData data;
+
+  EXPECT_EQ(0u, data.block_size());
+}
+
+TEST(AdvertisingDataTest, EncodeKnownURI) {
+  AdvertisingData data;
+  data.AddURI("https://abc.xyz");
+
+  auto bytes =
+      common::CreateStaticByteBuffer(0x0B, 0x24, 0x17, '/', '/', 'a', 'b', 'c', '.', 'x', 'y', 'z');
+
+  EXPECT_EQ(bytes.size(), data.block_size());
+  common::DynamicByteBuffer block(data.block_size());
+  data.WriteBlock(&block);
+  EXPECT_TRUE(ContainersEqual(bytes, block));
+}
+
+TEST(AdvertisingDataTest, EncodeUnknownURI) {
+  AdvertisingData data;
+  data.AddURI("flubs:xyz");
+
+  auto bytes =
+      common::CreateStaticByteBuffer(0x0B, 0x24, 0x01, 'f', 'l', 'u', 'b', 's', ':', 'x', 'y', 'z');
+
+  EXPECT_EQ(bytes.size(), data.block_size());
+  common::DynamicByteBuffer block(data.block_size());
+  data.WriteBlock(&block);
+  EXPECT_TRUE(ContainersEqual(bytes, block));
+}
+
+TEST(AdvertisingDataTest, CompressServiceUUIDs) {
+  AdvertisingData data;
+  data.AddServiceUuid(common::UUID(kId1As16));
+  data.AddServiceUuid(common::UUID(kId2As16));
+
+  EXPECT_EQ(1 + 1 + (sizeof(uint16_t) * 2), data.block_size());
+
+  auto bytes = common::CreateStaticByteBuffer(0x05, 0x02, 0x12, 0x02, 0x22, 0x11);
+
+  EXPECT_EQ(bytes.size(), data.block_size());
+  common::DynamicByteBuffer block(data.block_size());
+  data.WriteBlock(&block);
+
+  EXPECT_TRUE(ContainersEqual(bytes, block));
+}
+
+TEST(AdvertisingDataTest, ParseBlock) {
+  auto bytes = common::CreateStaticByteBuffer(
+      // Complete 16-bit UUIDs
+      0x05, 0x03, 0x12, 0x02, 0x22, 0x11,
+      // Incomplete list of 32-bit UUIDs
+      0x05, 0x04, 0x34, 0x12, 0x34, 0x12,
+      // Local name
+      0x09, 0x09, 'T', 'e', 's', 't', 0xF0, 0x9F, 0x92, 0x96,
+      // TX Power
+      0x02, 0x0A, 0x8F);
+
+  AdvertisingData data;
+
+  EXPECT_TRUE(AdvertisingData::FromBytes(bytes, &data));
+
+  EXPECT_EQ(3u, data.service_uuids().size());
+  EXPECT_TRUE(data.local_name());
+  EXPECT_EQ("Test💖", *(data.local_name()));
+  EXPECT_TRUE(data.tx_power());
+  EXPECT_EQ(-113, *(data.tx_power()));
+}
+
+TEST(AdvertisingDataTest, ParseFIDL) {
+  auto fidl_ad = ::btfidl::low_energy::AdvertisingData::New();
+
+  // Confirming UTF-8 codepoints are working as well.
+  fidl_ad->name = "Test💖";
+  fidl_ad->service_uuids.push_back(kId1AsString);
+  fidl_ad->service_uuids.push_back(kId3AsString);
+
+  AdvertisingData data;
+
+  AdvertisingData::FromFidl(fidl_ad, &data);
+
+  EXPECT_EQ(2u, data.service_uuids().size());
+  EXPECT_EQ("Test💖", *(data.local_name()));
+  EXPECT_FALSE(data.tx_power());
 }
 
 TEST(AdvertisingDataTest, ReaderMalformedData) {

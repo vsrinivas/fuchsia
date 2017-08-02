@@ -2,13 +2,468 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <endian.h>
+
 #include "advertising_data.h"
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "lib/fidl/cpp/bindings/type_converter.h"
 #include "lib/ftl/logging.h"
+
+// A |TypeConverter| that will create a |fidl::Array<unsigned char>| containing a copy of
+// of the contents of an |ByteBuffer|, copying the memory directly. If the input array is empty,
+// the array will be empty.
+template <>
+struct fidl::TypeConverter<fidl::Array<unsigned char>, bluetooth::common::ByteBuffer> {
+   static fidl::Array<unsigned char> Convert(const bluetooth::common::ByteBuffer& input) {
+    Array<unsigned char> result = Array<unsigned char>::New(input.size());
+    memcpy(result.data(), input.data(), input.size());
+    return result;
+  }
+};
 
 namespace bluetooth {
 namespace gap {
+
+namespace {
+
+using UuidFunction = std::function<void(const common::UUID&)>;
+
+bool ParseUuids(const ::bluetooth::common::BufferView& data, size_t uuid_size, UuidFunction func) {
+  FTL_DCHECK(func);
+
+  if (data.size() % uuid_size) {
+    FTL_LOG(WARNING) << "Malformed service UUIDs list";
+    return false;
+  }
+
+  size_t uuid_count = data.size() / uuid_size;
+  for (size_t i = 0; i < uuid_count; i++) {
+    const ::bluetooth::common::BufferView uuid_bytes(data.data() + (i * uuid_size), uuid_size);
+    ::bluetooth::common::UUID uuid;
+    ::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid);
+
+    func(uuid);
+  }
+
+  return true;
+}
+
+size_t SizeForType(::bluetooth::gap::DataType type) {
+  switch (type) {
+    case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
+    case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
+      return ::bluetooth::gap::k16BitUuidElemSize;
+    case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
+    case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
+      return ::bluetooth::gap::k32BitUuidElemSize;
+    case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
+    case ::bluetooth::gap::DataType::kComplete128BitServiceUuids:
+      return ::bluetooth::gap::k128BitUuidElemSize;
+    default:
+      break;
+  };
+
+  return 0;
+}
+
+// TODO(jamuraa): do real actual unicode conversion since this is way simple
+std::string CodePointToUtf8String(int i) {
+  char utf[3] = {0};
+  if (i < 127) {
+    utf[0] = i;
+    return std::string(utf);
+  }
+  utf[0] = 0xC0 | (i >> 6);             // Top 5 bits
+  utf[1] = 0x80 | ((uint8_t)i & 0x3F);  // Bottom 6 bits
+  return std::string(utf);
+}
+
+// clang-format off
+// https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping
+const char* kUriSchemes[] = {"aaa:", "aaas:", "about:", "acap:", "acct:", "cap:", "cid:",
+        "coap:", "coaps:", "crid:", "data:", "dav:", "dict:", "dns:", "file:", "ftp:", "geo:",
+        "go:", "gopher:", "h323:", "http:", "https:", "iax:", "icap:", "im:", "imap:", "info:",
+        "ipp:", "ipps:", "iris:", "iris.beep:", "iris.xpc:", "iris.xpcs:", "iris.lwz:", "jabber:",
+        "ldap:", "mailto:", "mid:", "msrp:", "msrps:", "mtqp:", "mupdate:", "news:", "nfs:", "ni:",
+        "nih:", "nntp:", "opaquelocktoken:", "pop:", "pres:", "reload:", "rtsp:", "rtsps:", "rtspu:",
+        "service:", "session:", "shttp:", "sieve:", "sip:", "sips:", "sms:", "snmp:", "soap.beep:",
+        "soap.beeps:", "stun:", "stuns:", "tag:", "tel:", "telnet:", "tftp:", "thismessage:",
+        "tn3270:", "tip:", "turn:", "turns:", "tv:", "urn:", "vemmi:", "ws:", "wss:", "xcon:",
+        "xcon-userid:", "xmlrpc.beep:", "xmlrpc.beeps:", "xmpp:", "z39.50r:", "z39.50s:", "acr:",
+        "adiumxtra:", "afp:", "afs:", "aim:", "apt:", "attachment:", "aw:", "barion:", "beshare:",
+        "bitcoin:", "bolo:", "callto:", "chrome:", "chrome-extension:", "com-eventbrite-attendee:",
+        "content:", "cvs:", "dlna-playsingle:", "dlna-playcontainer:", "dtn:", "dvb:", "ed2k:",
+        "facetime:", "feed:", "feedready:", "finger:", "fish:", "gg:", "git:", "gizmoproject:",
+        "gtalk:", "ham:", "hcp:", "icon:", "ipn:", "irc:", "irc6:", "ircs:", "itms:", "jar:",
+        "jms:", "keyparc:", "lastfm:", "ldaps:", "magnet:", "maps:", "market:", "message:", "mms:",
+        "ms-help:", "ms-settings-power:", "msnim:", "mumble:", "mvn:", "notes:", "oid:", "palm:",
+        "paparazzi:", "pkcs11:", "platform:", "proxy:", "psyc:", "query:", "res:", "resource:",
+        "rmi:", "rsync:", "rtmfp:", "rtmp:", "secondlife:", "sftp:", "sgn:", "skype:", "smb:",
+        "smtp:", "soldat:", "spotify:", "ssh:", "steam:", "submit:", "svn:", "teamspeak:",
+        "teliaeid:", "things:", "udp:", "unreal:", "ut2004:", "ventrilo:", "view-source:",
+        "webcal:", "wtai:", "wyciwyg:", "xfire:", "xri:", "ymsgr:", "example:",
+        "ms-settings-cloudstorage:"};
+// clang-format on
+
+const size_t kUriSchemesSize = std::extent<decltype(kUriSchemes)>::value;
+
+std::string EncodeUri(const std::string& uri) {
+  // First codepoint (U+0001) is for uncompressed schemes.
+  for (size_t i = 0; i < kUriSchemesSize; i++) {
+    const char *scheme = kUriSchemes[i];
+    size_t scheme_len = strlen(scheme);
+    if (std::equal(scheme, scheme + scheme_len, uri.begin())) {
+      return CodePointToUtf8String(i + 2) + uri.substr(scheme_len);
+    }
+  }
+  return CodePointToUtf8String(1) + uri;
+}
+
+template <typename T>
+inline size_t BufferWrite(common::MutableByteBuffer* buffer, size_t pos, const T& var) {
+  buffer->Write((uint8_t*)&var, sizeof(T), pos);
+  return sizeof(T);
+}
+
+}  // namespace
+
+AdvertisingData::AdvertisingData() {}
+
+bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData* out_ad) {
+  FTL_DCHECK(out_ad);
+  AdvertisingDataReader reader(data);
+  if (!reader.is_valid()) return false;
+
+  ::bluetooth::gap::DataType type;
+  ::bluetooth::common::BufferView field;
+  while (reader.GetNextField(&type, &field)) {
+    switch (type) {
+      case ::bluetooth::gap::DataType::kTxPowerLevel: {
+        if (field.size() != ::bluetooth::gap::kTxPowerLevelSize) {
+          FTL_LOG(WARNING) << "Received malformed Tx Power Level";
+          return false;
+        }
+
+        out_ad->SetTxPower(static_cast<int8_t>(field[0]));
+        break;
+      }
+      case ::bluetooth::gap::DataType::kShortenedLocalName:
+        // If a name has been previously set (e.g. because the Complete Local
+        // Name was included in the scan response) then break. Otherwise we fall
+        // through.
+        if (out_ad->local_name()) break;
+      case ::bluetooth::gap::DataType::kCompleteLocalName: {
+        out_ad->SetLocalName(field.ToString());
+        break;
+      }
+      case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
+      case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
+      case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
+      case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
+      case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
+      case ::bluetooth::gap::DataType::kComplete128BitServiceUuids: {
+        bool parsed = ParseUuids(field, SizeForType(type),
+                                 [&](const common::UUID& uuid) { out_ad->AddServiceUuid(uuid); });
+        if (!parsed) return false;
+        break;
+      }
+      case ::bluetooth::gap::DataType::kManufacturerSpecificData: {
+        if (field.size() < ::bluetooth::gap::kManufacturerSpecificDataSizeMin) {
+          FTL_LOG(WARNING) << "Manufacturer specific data too small";
+          return false;
+        }
+
+        uint16_t id = le16toh(*reinterpret_cast<const uint16_t*>(field.data()));
+        const common::BufferView manuf_data(field.data() + ::bluetooth::gap::kManufacturerIdSize,
+                                            field.size() - ::bluetooth::gap::kManufacturerIdSize);
+
+        out_ad->SetManufacturerData(id, manuf_data);
+        break;
+      }
+      case ::bluetooth::gap::DataType::kAppearance: {
+        // TODO(armansito): RemoteDevice should have a function to return the
+        // device appearance, as it can be obtained either from advertising data
+        // or via GATT.
+        if (field.size() != ::bluetooth::gap::kAppearanceSize) {
+          FTL_LOG(WARNING) << "Received malformed Appearance";
+          return false;
+        }
+
+        out_ad->SetAppearance(*reinterpret_cast<const uint16_t*>(field.data()));
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  return true;
+}
+
+::btfidl::low_energy::AdvertisingDataPtr AdvertisingData::AsLEAdvertisingData() const {
+  auto fidl_data = ::btfidl::low_energy::AdvertisingData::New();
+  FTL_DCHECK(fidl_data);
+
+  if (tx_power_) {
+    fidl_data->tx_power_level = ::btfidl::Int8::New();
+    fidl_data->tx_power_level->value = *tx_power_;
+  }
+
+  if (appearance_) {
+    fidl_data->appearance = ::btfidl::UInt16::New();
+    fidl_data->appearance->value = *appearance_;
+  }
+
+  for (const auto& pair : manufacturer_data_) {
+    fidl_data->manufacturer_specific_data.insert(pair.first,
+                                                 fidl::Array<unsigned char>::From(*pair.second));
+  }
+
+  for (const auto& pair : service_data_) {
+    fidl_data->service_data.insert(pair.first.ToString(),
+                                   fidl::Array<unsigned char>::From(*pair.second));
+  }
+
+  for (const auto& uuid : service_uuids_) {
+    fidl_data->service_uuids.push_back(uuid.ToString());
+  }
+
+  if (local_name_) {
+    fidl_data->name = *local_name_;
+  }
+
+  return fidl_data;
+}
+
+void AdvertisingData::FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad,
+                               AdvertisingData* out_ad) {
+  FTL_DCHECK(fidl_ad);
+  FTL_DCHECK(out_ad);
+  common::UUID uuid;
+  for (const auto& uuid_str : fidl_ad->service_uuids) {
+    if (common::StringToUuid(uuid_str, &uuid)) {
+      out_ad->AddServiceUuid(uuid);
+    }
+  }
+
+  for (const auto& it : fidl_ad->manufacturer_specific_data) {
+    fidl::Array<uint8_t>& data = it.GetValue();
+    common::BufferView manuf_view(data.data(), data.size());
+    out_ad->SetManufacturerData(it.GetKey(), manuf_view);
+  }
+
+  if (fidl_ad->appearance) {
+    out_ad->SetAppearance(fidl_ad->appearance->value);
+  }
+
+  if (fidl_ad->tx_power_level) {
+    out_ad->SetTxPower(fidl_ad->tx_power_level->value);
+  }
+
+  if (fidl_ad->name) {
+    out_ad->SetLocalName(fidl_ad->name);
+  }
+}
+
+void AdvertisingData::AddServiceUuid(const common::UUID& uuid) {
+  service_uuids_.insert(uuid);
+}
+
+const std::unordered_set<common::UUID>& AdvertisingData::service_uuids() const {
+  return service_uuids_;
+}
+
+void AdvertisingData::SetServiceData(const common::UUID& uuid, const common::ByteBuffer& data) {
+  std::unique_ptr<common::DynamicByteBuffer> srv_data(new common::DynamicByteBuffer(data.size()));
+  data.Copy(srv_data.get());
+  service_data_[uuid] = std::move(srv_data);
+}
+
+const common::BufferView AdvertisingData::service_data(const common::UUID& uuid) const {
+  if (service_data_.count(uuid) == 0) return common::BufferView();
+  return common::BufferView(*service_data_.at(uuid));
+}
+
+void AdvertisingData::SetManufacturerData(const uint16_t company_id,
+                                          const common::BufferView& data) {
+  std::unique_ptr<common::DynamicByteBuffer> manuf_data(new common::DynamicByteBuffer(data.size()));
+  data.Copy(manuf_data.get());
+  manufacturer_data_[company_id] = std::move(manuf_data);
+}
+
+const common::BufferView AdvertisingData::manufacturer_data(
+    const uint16_t company_id) const {
+  if (manufacturer_data_.count(company_id) == 0) return common::BufferView();
+  return common::BufferView(*manufacturer_data_.at(company_id));
+}
+
+void AdvertisingData::SetTxPower(int8_t dbm) {
+  tx_power_ = dbm;
+}
+
+common::Optional<int8_t> AdvertisingData::tx_power() const {
+  return tx_power_;
+}
+
+void AdvertisingData::SetLocalName(const std::string& name) {
+  local_name_ = std::string(name);
+}
+
+common::Optional<std::string> AdvertisingData::local_name() const {
+  return local_name_;
+}
+
+void AdvertisingData::AddURI(const std::string& uri) {
+  uris_.push_back(uri);
+}
+
+const std::vector<std::string>& AdvertisingData::uris() const {
+  return uris_;
+}
+
+void AdvertisingData::SetAppearance(uint16_t appearance) {
+  appearance_ = appearance;
+}
+
+common::Optional<uint16_t> AdvertisingData::appearance() const {
+  return appearance_;
+}
+
+size_t AdvertisingData::block_size() const {
+  size_t len = 0;
+  if (tx_power_) len += 3;
+  if (appearance_) len += 4;
+  if (local_name_) len += 2 + local_name_->size();
+
+  for (const auto& manuf_pair : manufacturer_data_) {
+    len += 2 + 2 + manuf_pair.second->size();
+  }
+
+  for (const auto& service_data_pair : service_data_) {
+    len += 2 + service_data_pair.first.CompactSize() + service_data_pair.second->size();
+  }
+
+  for (const auto& uri : uris_) {
+    len += 2 + EncodeUri(uri).size();
+  }
+
+  size_t small_uuids = 0;
+  size_t medium_uuids = 0;
+  size_t big_uuids = 0;
+  for (const auto& uuid : service_uuids_) {
+    switch (uuid.CompactSize()) {
+      case 2: {
+        if (small_uuids == 0) len += 2;
+        small_uuids++;
+        break;
+      }
+      case 4: {
+        if (medium_uuids == 0) len += 2;
+        medium_uuids++;
+        break;
+      }
+      case 16: {
+        if (big_uuids == 0) len += 2;
+        big_uuids++;
+        break;
+      }
+      default: {
+        FTL_LOG(WARNING) << "Unknown UUID size";
+        break;
+      }
+    }
+  }
+
+  len += (small_uuids * 2) + (medium_uuids * 4) + (big_uuids * 16);
+  return len;
+}
+
+bool AdvertisingData::WriteBlock(common::MutableByteBuffer* buffer) const {
+  if (buffer->size() < block_size()) return false;
+  size_t pos = 0;
+  if (tx_power_) {
+    (*buffer)[pos++] = 2;
+    (*buffer)[pos++] = static_cast<uint8_t>(DataType::kTxPowerLevel);
+    (*buffer)[pos++] = *reinterpret_cast<uint8_t*>(tx_power_.value());
+  }
+
+  if (appearance_) {
+    (*buffer)[pos++] = 3;
+    (*buffer)[pos++] = static_cast<uint8_t>(DataType::kAppearance);
+    pos += BufferWrite(buffer, pos, appearance_.value());
+  }
+
+  if (local_name_) {
+    (*buffer)[pos++] = 1 + local_name_->size();
+    (*buffer)[pos++] = static_cast<uint8_t>(DataType::kCompleteLocalName);
+    std::copy(local_name_->begin(), local_name_->end(), buffer->mutable_data() + pos);
+    pos += local_name_->size();
+  }
+
+  for (const auto& manuf_pair : manufacturer_data_) {
+    size_t data_size = manuf_pair.second->size();
+    (*buffer)[pos++] = 1 + 2 + data_size;  // 1 for type, 2 for Manuf. Code
+    (*buffer)[pos++] = static_cast<uint8_t>(DataType::kManufacturerSpecificData);
+    pos += BufferWrite(buffer, pos, manuf_pair.first);
+    buffer->Write(*manuf_pair.second, pos);
+    pos += data_size;
+  }
+
+  for (const auto& service_data_pair : service_data_) {
+    size_t uuid_size = service_data_pair.first.CompactSize();
+    (*buffer)[pos++] = 1 + uuid_size + service_data_pair.second->size();
+    switch (uuid_size) {
+      case 2:
+        (*buffer)[pos++] = static_cast<uint8_t>(DataType::kServiceData16Bit);
+        break;
+      case 4:
+        (*buffer)[pos++] = static_cast<uint8_t>(DataType::kServiceData32Bit);
+        break;
+      case 16:
+        (*buffer)[pos++] = static_cast<uint8_t>(DataType::kServiceData128Bit);
+        break;
+    };
+    auto target = buffer->mutable_view(pos);
+    pos += service_data_pair.first.ToBytes(&target);
+    buffer->Write(*service_data_pair.second, pos);
+    pos += service_data_pair.second->size();
+  }
+
+  for (const auto& uri : uris_) {
+    std::string s = EncodeUri(uri);
+    (*buffer)[pos++] = 1 + s.size();
+    (*buffer)[pos++] = static_cast<uint8_t>(DataType::kURI);
+    std::copy(s.begin(), s.end(), buffer->mutable_data() + pos);
+    pos += s.size();
+  }
+
+  std::unordered_map<size_t, std::unordered_set<common::UUID>> uuid_sets;
+  for (const auto& uuid : service_uuids_) {
+    uuid_sets[uuid.CompactSize()].insert(uuid);
+  }
+
+  for (const auto& pair : uuid_sets) {
+    (*buffer)[pos++] = 1 + pair.first * pair.second.size();
+    switch (pair.first) {
+      case 2:
+        (*buffer)[pos++] = static_cast<uint8_t>(DataType::kIncomplete16BitServiceUuids);
+        break;
+      case 4:
+        (*buffer)[pos++] = static_cast<uint8_t>(DataType::kIncomplete32BitServiceUuids);
+        break;
+      case 16:
+        (*buffer)[pos++] = static_cast<uint8_t>(DataType::kIncomplete128BitServiceUuids);
+        break;
+    };
+    for (const auto& uuid : pair.second) {
+      auto target = buffer->mutable_view(pos);
+      pos += uuid.ToBytes(&target);
+    }
+  }
+
+  return true;
+}
 
 AdvertisingDataReader::AdvertisingDataReader(const common::ByteBuffer& data)
     : is_valid_(true), remaining_(data) {

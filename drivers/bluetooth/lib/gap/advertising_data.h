@@ -5,23 +5,135 @@
 #pragma once
 
 #include <cstddef>
+#include <unordered_set>
+#include <unordered_map>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
+#include "apps/bluetooth/lib/common/optional.h"
+#include "apps/bluetooth/lib/common/uuid.h"
 #include "apps/bluetooth/lib/gap/gap.h"
 
-// This file contains convenience classes for reading and writing the contents
+#include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
+
+// The internal library components and the generated FIDL bindings are both
+// declared under the "bluetooth" namespace. We define an alias here to
+// disambiguate.
+namespace btfidl = ::bluetooth;
+
+namespace bluetooth {
+namespace gap {
+
+// A helper to build Adversiting Data, Scan Response Data, or Extended Inquiry
+// Response Data fields.
+// TODO(jamuraa): Add functionality for ACAD and OOB
+//
+// This can be viewed as a complex container type which has a specified byte
+// view that is valid for:
+//  - Core Spec v5.0 Vol 3, Part C, Section 11 in the case of Advertising or
+//    Scan Response Data
+//  - Core Spec v5.0 Vol 3, Part C, Section 8 for Extended Inquiry Response data
+//
+// See those sections, and the Core Specification Supplement v7 for more
+// information.
+class AdvertisingData {
+ public:
+  // Create a new empty advertising data.
+  explicit AdvertisingData();
+
+  // Fill the AdvertisingData |out_ad| from the raw Bluetooth field block |data|.
+  // Returns false if |data| is not formatted correctly or on a parsing error,
+  // and true otherwise.
+  // |out_ad| is not guaranteed to be in any state unless we return true.
+  // Does not clear |out_ad| so this function can be used to merge multiple field blocks.
+  static bool FromBytes(const common::ByteBuffer& data, AdvertisingData* out_ad);
+
+  // Fill the AdvertisingData |out_ad| from the corresponding FIDL object |obj|
+  // Does not clear |out_ad| first.
+  static void FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad, AdvertisingData* out_ad);
+
+  // Add a UUID to the set of services advertised.
+  // These service UUIDs will automatically be compressed to be represented in
+  // the smallest space possible.
+  void AddServiceUuid(const common::UUID& uuid);
+
+  // Get the service UUIDs represented in this advertisement.
+  const std::unordered_set<common::UUID>& service_uuids() const;
+
+  // Set some service data for the service specified by |uuid|.
+  void SetServiceData(const common::UUID& uuid, const common::ByteBuffer& data);
+
+  // View the currently set service data for |uuid|.
+  // This view is not stable; it should be used only ephemerally.
+  // Returns an empty BufferView if no service data is set for |uuid|
+  const common::BufferView service_data(const common::UUID& uuid) const;
+
+  // Set some Manufacturer specific data for the company identified by
+  // |company_id|
+  void SetManufacturerData(const uint16_t company_id, const common::BufferView& data);
+
+  // View the currently set manufacturer data for the company |company_id|.
+  // This view is not stable; it should be used only ephemerally.
+  // Returns an empty BufferView if no manufacturer data is set for |company_id|
+  const common::BufferView manufacturer_data(const uint16_t company_id) const;
+
+  // Sets the local TX Power
+  // TODO(jamuraa): add documentation about where to get this number from
+  void SetTxPower(int8_t dbm);
+
+  // Gets the TX power
+  common::Optional<int8_t> tx_power() const;
+
+  // Sets the local name
+  void SetLocalName(const std::string& name);
+
+  // Gets the local name
+  common::Optional<std::string> local_name() const;
+
+  // Adds a URI to the set of URIs advertised
+  void AddURI(const std::string& uri);
+
+  // Get the URIs in this advertisement
+  const std::vector<std::string>& uris() const;
+
+  // Sets the appearance
+  void SetAppearance(uint16_t appearance);
+
+  // Get the appearance
+  common::Optional<uint16_t> appearance() const;
+
+  // Returns the size of the current set of fields if they were to be written to
+  // a buffer using WriteBlock()
+  size_t block_size() const;
+
+  // Writes the byte representation of this to |buffer|.
+  // Returns false without modifying |buffer| if there is not enough space
+  // (if the buffer size is less than block_size())
+  bool WriteBlock(common::MutableByteBuffer* buffer) const;
+
+  // Makes a FIDL object that holds the same data
+  ::btfidl::low_energy::AdvertisingDataPtr AsLEAdvertisingData() const;
+
+ private:
+  common::Optional<std::string> local_name_;
+  common::Optional<int8_t> tx_power_;
+  common::Optional<uint16_t> appearance_;
+
+  std::unordered_set<common::UUID> service_uuids_;
+
+  std::unordered_map<uint16_t, std::unique_ptr<common::ByteBuffer>> manufacturer_data_;
+  std::unordered_map<common::UUID, std::unique_ptr<common::ByteBuffer>> service_data_;
+
+  std::vector<std::string> uris_;
+};
+
+// Convenience classes for reading and writing the contents
 // of Advertising Data, Scan Response Data, or Extended Inquiry Response Data
 // payloads. The format in which data is stored looks like the following:
 //
 //    [1-octet LENGTH][1-octet TYPE][LENGTH-1 octets DATA]
 //
-// See Core Spec v5.0, Vol 3, Part C, Section 11, and the Core Specification
-// Supplement v7 for more information.
-
-namespace bluetooth {
-namespace gap {
-
-// Used for parsing data in TLV-format as described at the beginning of the file above.
+// Used for parsing data in TLV-format as described at the beginning of the file
+// above.
 class AdvertisingDataReader {
  public:
   // |data| must point to a valid piece of memory for the duration in which this
