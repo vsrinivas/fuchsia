@@ -143,11 +143,21 @@ typedef struct thread {
 #endif
 } thread_t;
 
-/* TODO: make real inline functions */
-#define thread_last_cpu(t) ((t)->last_cpu)
-#define thread_pinned_cpu(t) ((t)->pinned_cpu)
-#define thread_set_last_cpu(t,c) ((t)->last_cpu = (c))
-#define thread_set_pinned_cpu(t, c) ((t)->pinned_cpu = (c))
+static inline uint thread_last_cpu(const thread_t* t) {
+    return t->last_cpu;
+}
+
+static inline void thread_set_last_cpu(thread_t* t, uint c) {
+    t->last_cpu = c;
+}
+
+static inline int thread_pinned_cpu(const thread_t* t) {
+    return t->pinned_cpu;
+}
+
+static inline void thread_set_pinned_cpu(thread_t* t, int c) {
+    t->pinned_cpu = c;
+}
 
 /* thread priority */
 #define NUM_PRIORITIES (32)
