@@ -24,6 +24,10 @@ mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
                                      mx_vcpu_io_t* vcpu_io) {
     virtio_queue_t* queue = &guest_state->block_queue;
     switch (port) {
+    case VIRTIO_PCI_DEVICE_FEATURES:
+        vcpu_io->access_size = 4;
+        vcpu_io->u32 = 0;
+        return MX_OK;
     case VIRTIO_PCI_QUEUE_PFN:
         vcpu_io->access_size = 4;
         vcpu_io->u32 = queue->pfn;
@@ -64,6 +68,13 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* vcpu_context, uint16_t por
     int block_fd = vcpu_context->guest_state->block_fd;
     virtio_queue_t* queue = &vcpu_context->guest_state->block_queue;
     switch (port) {
+    case VIRTIO_PCI_DRIVER_FEATURES:
+        if (io->access_size != 4)
+            return MX_ERR_IO_DATA_INTEGRITY;
+        // Currently no feature bits are implemented.
+        if (io->u32 != 0)
+            return MX_ERR_INVALID_ARGS;
+        return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
