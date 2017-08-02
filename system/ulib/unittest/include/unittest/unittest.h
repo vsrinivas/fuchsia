@@ -74,6 +74,18 @@ static inline const char* unittest_get_message() {
 }
 #endif
 
+// A workaround to help static analyzer identify assertion failures
+#if defined(__clang__)
+#define MX_ANALYZER_CREATE_SINK     __attribute__((annotate("mx_create_sink")))
+#else
+#define MX_ANALYZER_CREATE_SINK     //no-op
+#endif
+// This function will help terminate the static analyzer when it reaches
+// an assertion failure site which returns from test case function. The bugs
+// discovered by the static analyzer will be suppressed as they are expected
+// by the test cases.
+static inline void unittest_returns_early(void) MX_ANALYZER_CREATE_SINK {}
+
 __BEGIN_CDECLS
 
 extern int utest_verbosity_level;
@@ -293,7 +305,7 @@ int unittest_set_verbosity_level(int new_level);
 #define AUTO_TYPE_VAR(type) __typeof__(type)
 #endif
 
-#define RET_FALSE return false
+#define RET_FALSE do { unittest_returns_early(); return false; } while (0)
 #define DONOT_RET
 
 #define UT_CMP(op, lhs, rhs, lhs_str, rhs_str, ret, ...)                \
