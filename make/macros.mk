@@ -26,13 +26,22 @@ SPACE +=
 LC = $(subst A,a,$(subst B,b,$(subst C,c,$(subst D,d,$(subst E,e,$(subst F,f,$(subst G,g,$(subst H,h,$(subst I,i,$(subst J,j,$(subst K,k,$(subst L,l,$(subst M,m,$(subst N,n,$(subst O,o,$(subst P,p,$(subst Q,q,$(subst R,r,$(subst S,s,$(subst T,t,$(subst U,u,$(subst V,v,$(subst W,w,$(subst X,x,$(subst Y,y,$(subst Z,z,$1))))))))))))))))))))))))))
 UC = $(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,$1))))))))))))))))))))))))))
 
+# conditionally echo text passed in
+ifeq ($(call TOBOOL,$(QUIET)),false)
+BUILDECHO = @echo $(1)
+CMP_QUIET =
+else
+BUILDECHO =
+CMP_QUIET = ">/dev/null"
+endif
+
 # test if two files are different, replacing the first
 # with the second if so
 # args: $1 - temporary file to test
 #       $2 - file to replace
 define TESTANDREPLACEFILE
 	if [ -f "$2" ]; then \
-		if cmp "$1" "$2"; then \
+		if cmp "$1" "$2$(CMP_QUIET)"; then \
 			rm -f $1; \
 		else \
 			mv $1 $2; \
@@ -44,13 +53,6 @@ endef
 
 # replace all characters or sequences of letters in defines to convert to a proper C style variable
 MAKECVAR=$(subst C++,CPP,$(subst -,_,$(subst /,_,$(subst .,_,$1))))
-
-# conditionally echo text passed in
-ifeq ($(call TOBOOL,$(QUIET)),false)
-BUILDECHO = @echo $(1)
-else
-BUILDECHO =
-endif
 
 # generate a header file at $1 with an expanded variable in $2
 # $3 provides an (optional) raw footer to append to the end
