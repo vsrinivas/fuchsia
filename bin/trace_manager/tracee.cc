@@ -160,7 +160,7 @@ void Tracee::OnHandleReady(mx_handle_t handle,
 }
 
 void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(error == MX_ERR_BAD_STATE);
+  FTL_DCHECK(error == MX_ERR_CANCELED);
   FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
              state_ == State::kStopping);
   TransitionToState(State::kStopped);

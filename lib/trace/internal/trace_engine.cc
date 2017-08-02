@@ -451,7 +451,7 @@ void TraceEngine::OnHandleReady(mx_handle_t handle,
 }
 
 void TraceEngine::OnHandleError(mx_handle_t handle, mx_status_t error) {
-  FTL_DCHECK(error == MX_ERR_BAD_STATE);
+  FTL_DCHECK(error == MX_ERR_CANCELED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }
