@@ -58,7 +58,7 @@ public:
 template <typename Callable, typename Result, typename... Args>
 class InlineFunctionTarget final : public FunctionTarget<Result, Args...> {
 public:
-    InlineFunctionTarget(Callable target)
+    explicit InlineFunctionTarget(Callable target)
         : target_(mxtl::move(target)) {}
     InlineFunctionTarget(Callable target, AllocChecker* ac)
         : target_(mxtl::move(target)) { ac->arm(0u, true); }
@@ -85,7 +85,7 @@ private:
 template <typename Callable, typename Result, typename... Args>
 class HeapFunctionTarget final : public FunctionTarget<Result, Args...> {
 public:
-    HeapFunctionTarget(Callable target)
+    explicit HeapFunctionTarget(Callable target)
         : target_ptr_(new Callable(mxtl::move(target))) {}
     HeapFunctionTarget(Callable target, AllocChecker* ac)
         : target_ptr_(new (ac) Callable(mxtl::move(target))) {}
@@ -181,7 +181,7 @@ public:
 
     Function() { holder_.InitializeNullTarget(); }
 
-    explicit Function(decltype(nullptr)) { holder_.InitializeNullTarget(); }
+    Function(decltype(nullptr)) { holder_.InitializeNullTarget(); }
 
     Function(Function&& other) {
         holder_.MoveInitializeTargetFrom(other.holder_);
@@ -189,14 +189,14 @@ public:
     }
 
     template <typename Callable>
-    explicit Function(Callable target) {
+    Function(Callable target) {
         static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
                       "Callable too large for InlineFunction.");
         holder_.InitializeTarget(mxtl::move(target));
     }
 
     template <typename Callable>
-    explicit Function(Callable target, AllocChecker* ac) {
+    Function(Callable target, AllocChecker* ac) {
         static_assert(!require_inline || sizeof(Callable) <= inline_callable_size,
                       "Callable too large for InlineFunction.");
         holder_.InitializeTarget(mxtl::move(target), ac);
@@ -394,5 +394,8 @@ bool operator!=(decltype(nullptr),
                 const mxtl::internal::Function<inline_callable_size, require_inline, Result, Args...>& f) {
     return !!f;
 }
+
+// A function which takes no arguments and produces no result.
+using Closure = mxtl::Function<void()>;
 
 } // namespace mxtl

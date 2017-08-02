@@ -468,6 +468,18 @@ bool move_only_argument_and_result() {
     return true;
 }
 
+void implicit_construction_helper(mxtl::Closure closure) {}
+
+bool implicit_construction() {
+    // ensure we can implicitly construct from nullptr
+    implicit_construction_helper(nullptr);
+
+    // ensure we can implicitly construct from a lambda
+    implicit_construction_helper([] {});
+
+    return true;
+}
+
 // This is the code which is included in <function.h>.
 namespace example {
 using FoldFunction = mxtl::Function<int(int value, int item)>;
@@ -527,6 +539,7 @@ RUN_TEST((binary_op<mxtl::InlineFunction<BinaryOp, HugeCallableSize>>))
 RUN_TEST(sized_function_size_bounds);
 RUN_TEST(inline_function_size_bounds);
 RUN_TEST(move_only_argument_and_result);
+RUN_TEST(implicit_construction);
 RUN_TEST(example_code);
 END_TEST_CASE(function_tests)
 
