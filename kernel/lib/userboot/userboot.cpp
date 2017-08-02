@@ -87,14 +87,6 @@ public:
         status = RoDso::Map(vmar, 0);
         if (status == MX_OK) {
             *entry = vmar->vmar()->base() + USERBOOT_ENTRY;
-            // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
-            // about the actual ELF symbol values when they are Thumb function
-            // symbols with the low bit set (it clears the low bit in what it
-            // displays).  We assume that if the kernel is built as Thumb,
-            // userboot's entry point will be too, and Thumbify it.
-#ifdef __thumb__
-            *entry |= 1;
-#endif
 
             // Map the vDSO right after it.
             *vdso_base = vmar->vmar()->base() + RoDso::size();
