@@ -10,9 +10,6 @@
 #include <stdint.h>
 
 #include <magenta/compiler.h>
-
-// TODO(dje): For mx_x86_pt_regs_t. To be revisited when we switch to
-// "resources".
 #include <magenta/device/intel-pt.h>
 
 __BEGIN_CDECLS
