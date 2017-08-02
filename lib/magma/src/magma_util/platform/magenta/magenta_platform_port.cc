@@ -13,8 +13,10 @@ namespace magma {
 
 Status MagentaPlatformPort::Wait(uint64_t* key_out, uint64_t timeout_ms)
 {
-    mx_port_packet_t packet;
+    if (!port_)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "wait on invalid port");
 
+    mx_port_packet_t packet;
     mx_status_t status =
         port_.wait(timeout_ms == UINT64_MAX ? MX_TIME_INFINITE : mx::deadline_after(MX_MSEC(timeout_ms)), &packet, 0);
     if (status == MX_ERR_TIMED_OUT)
