@@ -3,39 +3,10 @@
         "cpp",
         "go"
     ],
-    "gopaths": [
-        {
-            "lib/fidl/examples": "fuchsia.googlesource.com/fidl_examples"
-        },
-        {
-            "application/lib/app/go/src/app": "application/lib/app"
-        },
-        {
-            "application/lib/svc/go/src/svc": "application/lib/svc"
-        },
-        {
-            "lib/fidl/go/src/fidl": "fidl"
-        }
-    ],
-    "labels": [
-        "//lib/fidl/examples"
-    ],
-    "binaries": [
-        {
-            "binary": "echo_client_cpp",
-            "bootfs_path": "apps/echo_client_cpp"
-        },
-        {
-            "binary": "echo_client_go",
-            "bootfs_path": "apps/echo_client_go"
-        },
-        {
-            "binary": "echo_server_cpp",
-            "bootfs_path": "apps/echo_server_cpp"
-        },
-        {
-            "binary": "echo_server_go",
-            "bootfs_path": "apps/echo_server_go"
-        }
-    ]
+    "packages": {
+        "echo_client_cpp": "//lib/fidl/examples/echo_client_cpp",
+        "echo_client_go": "//lib/fidl/examples/echo_client_go",
+        "echo_server_cpp": "//lib/fidl/examples/echo_server_cpp",
+        "echo_server_go": "//lib/fidl/examples/echo_server_go"
+    }
 }
