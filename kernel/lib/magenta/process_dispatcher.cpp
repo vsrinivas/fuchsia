@@ -601,14 +601,14 @@ status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) 
     AutoLock state_lock(&state_lock_);
     AutoLock excp_lock(&exception_lock_);
     if (state_ == State::DEAD)
-        return MX_ERR_NOT_FOUND; // TODO(dje): ?
+        return MX_ERR_NOT_FOUND;
     if (debugger) {
         if (debugger_exception_port_)
-            return MX_ERR_BAD_STATE; // TODO(dje): ?
+            return MX_ERR_BAD_STATE;
         debugger_exception_port_ = eport;
     } else {
         if (exception_port_)
-            return MX_ERR_BAD_STATE; // TODO(dje): ?
+            return MX_ERR_BAD_STATE;
         exception_port_ = eport;
     }
 
