@@ -304,7 +304,7 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
   coroutine_service->StartCoroutine([
     page_storage, base_root_id, other_root_id, on_next = std::move(on_next),
     min_key = std::move(min_key), on_done = std::move(on_done)
-  ](coroutine::CoroutineHandler * handler) {
+  ](coroutine::CoroutineHandler * handler) mutable {
     SynchronousStorage storage(page_storage, handler);
 
     on_done(ForEachDiffInternal(&storage, base_root_id, other_root_id,

@@ -117,7 +117,7 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
 
 void FakePageStorage::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    const std::function<void(Status, ObjectId)>& callback) {
+    std::function<void(Status, ObjectId)> callback) {
   auto value = std::make_unique<std::string>();
   auto data_source_ptr = data_source.get();
   data_source_ptr->Get(ftl::MakeCopyable([
@@ -142,15 +142,13 @@ void FakePageStorage::AddObjectFromLocal(
 void FakePageStorage::GetObject(
     ObjectIdView object_id,
     Location location,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   GetPiece(object_id, std::move(callback));
 }
 
 void FakePageStorage::GetPiece(
     ObjectIdView object_id,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   object_requests_.emplace_back([
     this, object_id = object_id.ToString(), callback = std::move(callback)
   ] {

@@ -71,18 +71,16 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      const std::function<void(Status, ObjectId)>& callback) override;
+      std::function<void(Status, ObjectId)> callback) override;
 
-  void GetObject(
-      ObjectIdView object_id,
-      Location location,
-      const std::function<void(Status, std::unique_ptr<const Object>)>&
-          callback) override;
+  void GetObject(ObjectIdView object_id,
+                 Location location,
+                 std::function<void(Status, std::unique_ptr<const Object>)>
+                     callback) override;
 
-  void GetPiece(
-      ObjectIdView object_id,
-      const std::function<void(Status, std::unique_ptr<const Object>)>&
-          callback) override;
+  void GetPiece(ObjectIdView object_id,
+                std::function<void(Status, std::unique_ptr<const Object>)>
+                    callback) override;
 
   Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
 

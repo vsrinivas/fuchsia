@@ -96,20 +96,18 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK, std::move(object_ids));
   }
 
-  void GetObject(
-      storage::ObjectIdView object_id,
-      Location location,
-      const std::function<void(storage::Status,
-                               std::unique_ptr<const storage::Object>)>&
-          callback) override {
+  void GetObject(storage::ObjectIdView object_id,
+                 Location location,
+                 std::function<void(storage::Status,
+                                    std::unique_ptr<const storage::Object>)>
+                     callback) override {
     GetPiece(object_id, callback);
   }
 
-  void GetPiece(
-      storage::ObjectIdView object_id,
-      const std::function<void(storage::Status,
-                               std::unique_ptr<const storage::Object>)>&
-          callback) override {
+  void GetPiece(storage::ObjectIdView object_id,
+                std::function<void(storage::Status,
+                                   std::unique_ptr<const storage::Object>)>
+                    callback) override {
     callback(storage::Status::OK,
              std::move(unsynced_objects_to_return[object_id.ToString()]));
   }

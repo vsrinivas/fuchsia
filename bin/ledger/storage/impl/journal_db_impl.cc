@@ -78,7 +78,7 @@ void JournalDBImpl::Commit(
 
   GetParents([ this, callback = std::move(callback) ](
       Status status,
-      std::vector<std::unique_ptr<const storage::Commit>> parents) {
+      std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
     if (status != Status::OK) {
       callback(status, nullptr);
       return;

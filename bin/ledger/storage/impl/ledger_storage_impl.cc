@@ -75,7 +75,7 @@ void LedgerStorageImpl::CreatePageStorage(
 
 void LedgerStorageImpl::GetPageStorage(
     PageId page_id,
-    const std::function<void(Status, std::unique_ptr<PageStorage>)>& callback) {
+    std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
     auto result = std::make_unique<PageStorageImpl>(coroutine_service_, path,

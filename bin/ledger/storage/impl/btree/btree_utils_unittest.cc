@@ -52,11 +52,10 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
       : fake::FakePageStorage(id) {}
   ~TrackGetObjectFakePageStorage() override {}
 
-  void GetObject(
-      ObjectIdView object_id,
-      Location location,
-      const std::function<void(Status, std::unique_ptr<const Object>)>&
-          callback) override {
+  void GetObject(ObjectIdView object_id,
+                 Location location,
+                 std::function<void(Status, std::unique_ptr<const Object>)>
+                     callback) override {
     object_requests.insert(object_id.ToString());
     fake::FakePageStorage::GetObject(object_id, location, callback);
   }

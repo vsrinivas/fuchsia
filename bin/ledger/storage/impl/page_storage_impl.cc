@@ -360,7 +360,7 @@ Status PageStorageImpl::MarkPieceSynced(ObjectIdView object_id) {
 
 void PageStorageImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    const std::function<void(Status, ObjectId)>& callback) {
+    std::function<void(Status, ObjectId)> callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_add_object");
 
@@ -397,12 +397,11 @@ void PageStorageImpl::AddObjectFromLocal(
 void PageStorageImpl::GetObject(
     ObjectIdView object_id,
     Location location,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   GetPiece(object_id, [
     this, object_id = object_id.ToString(), location,
     callback = std::move(callback)
-  ](Status status, std::unique_ptr<const Object> object) {
+  ](Status status, std::unique_ptr<const Object> object) mutable {
     if (status == Status::NOT_FOUND) {
       if (location == Location::NETWORK) {
         GetObjectFromSync(object_id, std::move(callback));
@@ -484,8 +483,7 @@ void PageStorageImpl::GetObject(
 
 void PageStorageImpl::GetPiece(
     ObjectIdView object_id,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   ObjectIdType id_type = GetObjectIdType(object_id);
   if (id_type == ObjectIdType::INLINE) {
     callback(Status::OK, std::make_unique<InlinedObject>(object_id.ToString()));
@@ -773,14 +771,14 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
 
   page_sync_->GetObject(object_id, [
     this, callback = std::move(callback), object_id = object_id.ToString()
-  ](Status status, uint64_t size, mx::socket data) {
+  ](Status status, uint64_t size, mx::socket data) mutable {
     if (status != Status::OK) {
       callback(status);
       return;
     }
     ReadDataSource(DataSource::Create(std::move(data), size), [
       this, callback = std::move(callback), object_id = std::move(object_id)
-    ](Status status, std::unique_ptr<DataSource::DataChunk> chunk) {
+    ](Status status, std::unique_ptr<DataSource::DataChunk> chunk) mutable {
       if (status != Status::OK) {
         callback(status);
         return;
@@ -840,8 +838,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
 
 void PageStorageImpl::GetObjectFromSync(
     ObjectIdView object_id,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   if (!page_sync_) {
     callback(Status::NOT_CONNECTED_ERROR, nullptr);
     return;
@@ -849,7 +846,7 @@ void PageStorageImpl::GetObjectFromSync(
 
   DownloadFullObject(object_id, [
     this, object_id = object_id.ToString(), callback = std::move(callback)
-  ](Status status) {
+  ](Status status) mutable {
     if (status != Status::OK) {
       callback(status, nullptr);
       return;
@@ -880,7 +877,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
   GetPiece(object_id, ftl::MakeCopyable([
              this, vmo = std::move(vmo), offset, size,
              callback = std::move(callback)
-           ](Status status, std::unique_ptr<const Object> object) {
+           ](Status status, std::unique_ptr<const Object> object) mutable {
              if (status != Status::OK) {
                callback(status);
                return;

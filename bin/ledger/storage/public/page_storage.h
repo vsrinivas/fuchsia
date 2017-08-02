@@ -123,7 +123,7 @@ class PageStorage {
   // |size| is negative, no validation is done.
   virtual void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
-      const std::function<void(Status, ObjectId)>& callback) = 0;
+      std::function<void(Status, ObjectId)> callback) = 0;
   // Finds the Object associated with the given |object_id|. The result or an
   // an error will be returned through the given |callback|. If |location| is
   // LOCAL, only local storage will be checked. If |location| is NETWORK, then
@@ -132,16 +132,14 @@ class PageStorage {
   virtual void GetObject(
       ObjectIdView object_id,
       Location location,
-      const std::function<void(Status, std::unique_ptr<const Object>)>&
-          callback) = 0;
+      std::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
   // Finds the piece associated with the given |object_id|. The result or an an
   // error will be returned through the given |callback|. Only local storage is
   // checked, and if the object is an index, is it returned as is, and not
   // expanded.
   virtual void GetPiece(
       ObjectIdView object_id,
-      const std::function<void(Status, std::unique_ptr<const Object>)>&
-          callback) = 0;
+      std::function<void(Status, std::unique_ptr<const Object>)> callback) = 0;
 
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved

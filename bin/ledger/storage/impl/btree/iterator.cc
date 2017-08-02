@@ -203,7 +203,8 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
     }
     return true;
   };
-  auto on_done = [ callback = std::move(callback), waiter_ ](Status status) {
+  auto on_done =
+      [ callback = std::move(callback), waiter_ ](Status status) mutable {
     if (status != Status::OK) {
       callback(status);
       return;

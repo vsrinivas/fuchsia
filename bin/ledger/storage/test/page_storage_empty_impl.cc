@@ -107,7 +107,7 @@ Status PageStorageEmptyImpl::MarkPieceSynced(ObjectIdView object_id) {
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
     std::unique_ptr<DataSource> data_source,
-    const std::function<void(Status, ObjectId)>& callback) {
+    std::function<void(Status, ObjectId)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");
 }
@@ -115,16 +115,14 @@ void PageStorageEmptyImpl::AddObjectFromLocal(
 void PageStorageEmptyImpl::GetObject(
     ObjectIdView object_id,
     Location location,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
 void PageStorageEmptyImpl::GetPiece(
     ObjectIdView object_id,
-    const std::function<void(Status, std::unique_ptr<const Object>)>&
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Object>)> callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 

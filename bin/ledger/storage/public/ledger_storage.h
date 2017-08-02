@@ -29,8 +29,7 @@ class LedgerStorage {
   // for the given page doesn't exist nullptr will be returned instead.
   virtual void GetPageStorage(
       PageId page_id,
-      const std::function<void(Status, std::unique_ptr<PageStorage>)>&
-          callback) = 0;
+      std::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
 
   // Deletes the storage related to the page with |page_id|. This includes all
   // commits, tree nodes and objects.
