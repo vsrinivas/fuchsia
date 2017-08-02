@@ -248,9 +248,9 @@ private:
 
     // LK thread structure
     // put last to ease debugging since this is a pretty large structure
-    // TODO(dje): Revisit eventually: How large? And how frequently are members
-    // of thread_ accessed? [better icache usage if insns can be smaller
-    // from smaller offsets]
+    // (~1.5K on x86_64).
+    // Also, a simple experiment to move this to the first member (after the
+    // canary) resulted in a 1K increase in text size (x86_64).
     thread_t thread_ = {};
 };
 
