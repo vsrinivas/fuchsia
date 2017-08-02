@@ -9,6 +9,7 @@ group("services") {
     "component",
     "config",
     "device",
+    "entity",
     "module",
     "remote",
     "story",

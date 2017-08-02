@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains the definition for EntityReference.
+//
+// STATUS: Draft / Heavy WIP: expect significant changes.
+
+module modular;
+
+// An opaque reference type. This can be copied and serialized and used to
+// retrieve an Entity handle through an EntityResolver (see
+// entity_resolver.fidl).
+struct EntityReference {
+  string internal_value;
+};
