@@ -110,7 +110,7 @@ void ExceptionPort::SetTarget(const mxtl::RefPtr<ThreadDispatcher>& target) {
 void ExceptionPort::OnPortZeroHandles() {
     canary_.Assert();
 
-    // TODO(dje): Add a way to mark specific ports as unbinding quietly
+    // TODO(MG-988): Add a way to mark specific ports as unbinding quietly
     // when auto-unbinding.
     static const bool default_quietness = false;
 
