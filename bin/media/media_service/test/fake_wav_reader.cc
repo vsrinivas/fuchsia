@@ -138,7 +138,7 @@ void FakeWavReader::WriteToSocketStatic(mx_status_t status,
                                         void* closure) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
   reader->wait_id_ = 0;
-  if (status == MX_ERR_BAD_STATE) {
+  if (status == MX_ERR_CANCELED) {
     // Run loop has aborted...the app is shutting down.
     return;
   }

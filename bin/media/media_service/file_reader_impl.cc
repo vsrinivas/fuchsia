@@ -111,7 +111,7 @@ void FileReaderImpl::WriteToSocketStatic(mx_status_t status,
                                          void* closure) {
   FileReaderImpl* reader = reinterpret_cast<FileReaderImpl*>(closure);
   reader->wait_id_ = 0;
-  if (status == MX_ERR_BAD_STATE) {
+  if (status == MX_ERR_CANCELED) {
     // Run loop has aborted...the app is shutting down.
     reader->socket_.reset();
     return;
