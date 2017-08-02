@@ -300,6 +300,10 @@ static void setup_bootfs(void) {
             case BOOTDATA_E820_TABLE:
             case BOOTDATA_EFI_MEMORY_MAP:
             case BOOTDATA_EFI_SYSTEM_TABLE:
+            case BOOTDATA_DEBUG_UART:
+            case BOOTDATA_LASTLOG_NVRAM:
+            case BOOTDATA_LASTLOG_NVRAM2:
+            case BOOTDATA_IGNORE:
                 // quietly ignore these
                 break;
             default:

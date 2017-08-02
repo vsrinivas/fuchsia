@@ -19,6 +19,7 @@
 #include <kernel/cmdline.h>
 #include <platform.h>
 #include <platform/pc.h>
+#include <platform/pc/bootloader.h>
 #include <platform/pc/memmap.h>
 #include <platform/console.h>
 #include <platform/debug.h>
@@ -27,8 +28,9 @@
 #include "platform_p.h"
 
 static const int uart_baud_rate = 115200;
-static const int uart_io_port = 0x3f8;
+static int uart_io_port = 0x3f8;
 static uint64_t uart_mem_addr = 0;
+static uint32_t uart_irq = ISA_IRQ_SERIAL1;
 
 cbuf_t console_input_buf;
 static bool output_enabled = false;
@@ -95,6 +97,17 @@ void platform_debug_start_uart_timer(void)
 
 void platform_init_debug_early(void)
 {
+    switch (bootloader.uart.type) {
+    case BOOTDATA_UART_PC_PORT:
+        uart_io_port = static_cast<uint32_t>(bootloader.uart.base);
+        uart_irq = bootloader.uart.irq;
+        break;
+    case BOOTDATA_UART_PC_MMIO:
+        uart_mem_addr = (uint64_t)paddr_to_kvaddr(bootloader.uart.base);
+        uart_irq = bootloader.uart.irq;
+        break;
+    }
+
     /* configure the uart */
     int divisor = 115200 / uart_baud_rate;
 
@@ -111,30 +124,22 @@ void platform_init_debug_early(void)
 
 void platform_init_debug(void)
 {
-    // command line isn't available in platform_init_debug_early()
-    // so we read it here instead
-    uint64_t uart_paddr = cmdline_get_uint64("pc.uart.paddr", 0);
-    if (uart_paddr) {
-        uart_mem_addr = (uint64_t)paddr_to_kvaddr(uart_paddr);
-        // need to reinitialize in this case
-        platform_init_debug_early();
-    }
-
     /* finish uart init to get rx going */
     cbuf_initialize(&console_input_buf, 1024);
 
-    uint32_t irq = apic_io_isa_to_global(ISA_IRQ_SERIAL1);
-    register_int_handler(irq, uart_irq_handler, NULL);
-    unmask_interrupt(irq);
-
-    uart_write(1, 0x1); // enable receive data available interrupt
-
-    // modem control register: Axiliary Output 2 is another IRQ enable bit
-    const uint8_t mcr = uart_read(4);
-    uart_write(4, mcr | 0x8);
-
-    if (cmdline_get_bool("kernel.debug_uart_poll", false)) {
+    if ((uart_irq == 0) || cmdline_get_bool("kernel.debug_uart_poll", false)) {
+        printf("debug-uart: polling enabled\n");
         platform_debug_start_uart_timer();
+    } else {
+        uart_irq = apic_io_isa_to_global(static_cast<uint8_t>(uart_irq));
+        register_int_handler(uart_irq, uart_irq_handler, NULL);
+        unmask_interrupt(uart_irq);
+
+        uart_write(1, 0x1); // enable receive data available interrupt
+
+        // modem control register: Axiliary Output 2 is another IRQ enable bit
+        const uint8_t mcr = uart_read(4);
+        uart_write(4, mcr | 0x8);
     }
 }
 

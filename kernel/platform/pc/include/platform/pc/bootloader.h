@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include <magenta/boot/bootdata.h>
+
 // Data passed in by the bootloader
 // Used by various bits of pc platform init
 
@@ -25,11 +27,9 @@ typedef struct pc_bootloader_info {
     uint64_t ramdisk_base;
     size_t ramdisk_size;
 
-    uint32_t fb_base;
-    uint32_t fb_width;
-    uint32_t fb_height;
-    uint32_t fb_stride;
-    uint32_t fb_format;
+    bootdata_swfb_t fb;
+    bootdata_uart_t uart;
+    bootdata_nvram_t nvram;
 } pc_bootloader_info_t;
 
 extern pc_bootloader_info_t bootloader;

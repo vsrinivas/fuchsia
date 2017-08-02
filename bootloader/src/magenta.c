@@ -143,7 +143,7 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
     bs->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
     if (gop) {
         bootdata_swfb_t fb = {
-            .phys_base = gop->Mode->FrameBufferBase,
+            .base = gop->Mode->FrameBufferBase,
             .width = gop->Mode->Info->HorizontalResolution,
             .height = gop->Mode->Info->VerticalResolution,
             .stride = gop->Mode->Info->PixelsPerScanLine,

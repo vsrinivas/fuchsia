@@ -75,35 +75,26 @@ static bool early_console_disabled;
 static int process_bootitem(bootdata_t* bd, void* item) {
     switch (bd->type) {
     case BOOTDATA_ACPI_RSDP:
-        if (bd->length < sizeof(uint64_t)) {
-            break;
+        if (bd->length >= sizeof(uint64_t)) {
+            bootloader.acpi_rsdp = *((uint64_t*)item);
         }
-        bootloader.acpi_rsdp = *((uint64_t*)item);
         break;
     case BOOTDATA_EFI_SYSTEM_TABLE:
-        if (bd->length < sizeof(uint64_t)) {
-            break;
+        if (bd->length >= sizeof(uint64_t)) {
+            bootloader.efi_system_table = (void*) *((uint64_t*)item);
         }
-        bootloader.efi_system_table = (void*) *((uint64_t*)item);
         break;
     case BOOTDATA_FRAMEBUFFER: {
-        if (bd->length < sizeof(bootdata_swfb_t)) {
-            break;
+        if (bd->length >= sizeof(bootdata_swfb_t)) {
+            memcpy(&bootloader.fb, item, sizeof(bootdata_swfb_t));
         }
-        bootdata_swfb_t* fb = static_cast<bootdata_swfb_t*>(item);
-        bootloader.fb_base = (uint32_t) fb->phys_base;
-        bootloader.fb_width = fb->width;
-        bootloader.fb_height = fb->height;
-        bootloader.fb_stride = fb->stride;
-        bootloader.fb_format = fb->format;
         break;
     }
     case BOOTDATA_CMDLINE:
-        if (bd->length < 1) {
-            break;
+        if (bd->length > 0) {
+            ((char*) item)[bd->length - 1] = 0;
+            cmdline_append((char*) item);
         }
-        ((char*) item)[bd->length - 1] = 0;
-        cmdline_append((char*) item);
         break;
     case BOOTDATA_EFI_MEMORY_MAP:
         bootloader.efi_mmap = item;
@@ -112,6 +103,18 @@ static int process_bootitem(bootdata_t* bd, void* item) {
     case BOOTDATA_E820_TABLE:
         bootloader.e820_table = item;
         bootloader.e820_count = bd->length / sizeof(e820entry_t);
+        break;
+    case BOOTDATA_LASTLOG_NVRAM2:
+        // fallthrough: this is a legacy/typo variant
+    case BOOTDATA_LASTLOG_NVRAM:
+        if (bd->length >= sizeof(bootdata_nvram_t)) {
+            memcpy(&bootloader.nvram, item, sizeof(bootdata_nvram_t));
+        }
+        break;
+    case BOOTDATA_DEBUG_UART:
+        if (bd->length >= sizeof(bootdata_uart_t)) {
+            memcpy(&bootloader.uart, item, sizeof(bootdata_uart_t));
+        }
         break;
     case BOOTDATA_IGNORE:
         break;
@@ -168,13 +171,6 @@ static void platform_save_bootloader_data(void) {
             const char* cmdline = (const char*) X86_PHYS_TO_VIRT(mi->cmdline);
             printf("multiboot: cmdline @ %p\n", cmdline);
             cmdline_append(cmdline);
-
-            // Look for framebuffer info in multiboot command line
-            bootloader.fb_base = cmdline_get_uint32("fb.base", 0);
-            bootloader.fb_width = cmdline_get_uint32("fb.width", 0);
-            bootloader.fb_height = cmdline_get_uint32("fb.height", 0);
-            bootloader.fb_stride = cmdline_get_uint32("fb.stride", 0);
-            bootloader.fb_format = cmdline_get_uint32("fb.format", 0);
         }
         if ((mi->flags & MB_INFO_MODS) && mi->mods_addr) {
             module_t* mod = (module_t*) X86_PHYS_TO_VIRT(mi->mods_addr);
@@ -241,7 +237,7 @@ static void platform_early_display_init(void) {
     struct display_info info;
     void *bits;
 
-    if (bootloader.fb_base == 0) {
+    if (bootloader.fb.base == 0) {
         return;
     }
 
@@ -251,16 +247,16 @@ static void platform_early_display_init(void) {
     }
 
     // allocate an offscreen buffer of worst-case size, page aligned
-    bits = boot_alloc_mem(8192 + bootloader.fb_height * bootloader.fb_stride * 4);
+    bits = boot_alloc_mem(8192 + bootloader.fb.height * bootloader.fb.stride * 4);
     bits = (void*) ((((uintptr_t) bits) + 4095) & (~4095));
 
     memset(&info, 0, sizeof(info));
-    info.format = bootloader.fb_format;
-    info.width = bootloader.fb_width;
-    info.height = bootloader.fb_height;
-    info.stride = bootloader.fb_stride;
+    info.format = bootloader.fb.format;
+    info.width = bootloader.fb.width;
+    info.height = bootloader.fb.height;
+    info.stride = bootloader.fb.stride;
     info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
-    info.framebuffer = (void*) X86_PHYS_TO_VIRT(bootloader.fb_base);
+    info.framebuffer = (void*) X86_PHYS_TO_VIRT(bootloader.fb.base);
 
     gfxconsole_bind_display(&info, bits);
 }
@@ -271,7 +267,7 @@ static void platform_early_display_init(void) {
  * come up so we can use PAT to manage the memory types. */
 static void platform_ensure_display_memtype(uint level)
 {
-    if (bootloader.fb_base == 0) {
+    if (bootloader.fb.base == 0) {
         return;
     }
     if (early_console_disabled) {
@@ -279,10 +275,10 @@ static void platform_ensure_display_memtype(uint level)
     }
     struct display_info info;
     memset(&info, 0, sizeof(info));
-    info.format = bootloader.fb_format;
-    info.width = bootloader.fb_width;
-    info.height = bootloader.fb_height;
-    info.stride = bootloader.fb_stride;
+    info.format = bootloader.fb.format;
+    info.width = bootloader.fb.width;
+    info.height = bootloader.fb.height;
+    info.stride = bootloader.fb.stride;
     info.flags = DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     void *addr = NULL;
@@ -291,7 +287,7 @@ static void platform_ensure_display_memtype(uint level)
             ROUNDUP(info.stride * info.height * 4, PAGE_SIZE),
             &addr,
             PAGE_SIZE_SHIFT,
-            bootloader.fb_base,
+            bootloader.fb.base,
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
                 ARCH_MMU_FLAG_PERM_WRITE);
@@ -363,6 +359,10 @@ size_t platform_stow_crashlog(void* log, size_t len) {
 
 void platform_early_init(void)
 {
+    /* extract bootloader data while still accessible */
+    /* this includes debug uart config, etc. */
+    platform_save_bootloader_data();
+
     /* get the debug output working */
     platform_init_debug_early();
 
@@ -370,9 +370,6 @@ void platform_early_init(void)
     /* get the text console working */
     platform_init_console();
 #endif
-
-    /* extract bootloader data while still accessible */
-    platform_save_bootloader_data();
 
     /* if the bootloader has framebuffer info, use it for early console */
     platform_early_display_init();

@@ -114,7 +114,7 @@ typedef struct {
 } bootdata_t;
 
 typedef struct {
-    uint64_t phys_base;
+    uint64_t base; // physical base addr
     uint32_t width;
     uint32_t height;
     uint32_t stride;
@@ -135,14 +135,15 @@ typedef struct {
 typedef struct {
     uint64_t base;
     uint64_t length;
-} bootdata_lastlog_nvram_t;
+} bootdata_nvram_t;
 
+#define BOOTDATA_UART_NONE 0
 #define BOOTDATA_UART_PC_PORT 1
 #define BOOTDATA_UART_PC_MMIO 2
 typedef struct {
     uint64_t base;
     uint32_t type;
-    uint32_t reserved;
+    uint32_t irq;
 } bootdata_uart_t;
 
 /* EFI Variable for Crash Log */
