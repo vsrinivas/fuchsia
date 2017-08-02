@@ -222,11 +222,12 @@ mx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
 }
 
 bool VmAddressRegionDispatcher::is_valid_mapping_protection(uint32_t flags) {
-    switch (flags & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
-        case 0: // no way to express no permissions
-        case MX_VM_FLAG_PERM_WRITE:
-            // no way to express write only
+    if (!(flags & MX_VM_FLAG_PERM_READ)) {
+        // No way to express non-readable mappings that are also writeable or
+        // executable.
+        if (flags & (MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE)) {
             return false;
-        default: return true;
+        }
     }
+    return true;
 }

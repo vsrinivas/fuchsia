@@ -27,11 +27,6 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t fd_off)
         errno = ENOMEM;
         return MAP_FAILED;
     }
-    if (prot == 0) {
-        // PROT_NONE is not supported (yet?)
-        errno = EINVAL;
-        return MAP_FAILED;
-    }
     if (!(flags & (MAP_PRIVATE | MAP_SHARED)) ||
         (flags & MAP_PRIVATE && flags & MAP_SHARED)) {
         errno = EINVAL;

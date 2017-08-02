@@ -119,10 +119,7 @@ bool mmap_prot_test() {
     BEGIN_TEST;
 
     volatile uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_NONE, MAP_PRIVATE|MAP_ANON, -1, 0);
-    auto test_errno = errno;
-    // PROT_NONE is not supported yet.
-    EXPECT_EQ(MAP_FAILED, addr, "mmap should have failed for PROT_NONE");
-    EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL for PROT_NONE");
+    EXPECT_NEQ(MAP_FAILED, addr, "mmap should have succeeded for PROT_NONE");
 
     addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
     EXPECT_NEQ(MAP_FAILED, addr, "mmap failed for read-only alloc");
@@ -191,8 +188,7 @@ bool mprotect_test() {
 
     status = mprotect(addr, page_size, PROT_NONE);
     test_errno = errno;
-    EXPECT_EQ(-1, status, "mprotect should fail for PROT_NONE");
-    EXPECT_EQ(ENOTSUP, test_errno, "mprotect should return ENOTSUP for PROT_NONE");
+    EXPECT_EQ(0, status, "mprotect should succeed for PROT_NONE");
 
     END_TEST;
 }

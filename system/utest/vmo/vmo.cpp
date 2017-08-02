@@ -170,6 +170,106 @@ bool vmo_read_only_map_test() {
     END_TEST;
 }
 
+bool vmo_no_perm_map_test() {
+    BEGIN_TEST;
+
+    mx_status_t status;
+    mx_handle_t vmo;
+    mx_handle_t channel[2];
+
+    // create a channel for testing read permissions via syscall failure
+    status = mx_channel_create(0, &channel[0], &channel[1]);
+    EXPECT_EQ(MX_OK, status, "vm_channel_create");
+
+    // allocate an object and read/write from it
+    const size_t len = PAGE_SIZE;
+    status = mx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(MX_OK, status, "vm_object_create");
+
+    // map it with read permissions
+    uintptr_t ptr;
+    status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len, MX_VM_FLAG_PERM_READ, &ptr);
+    EXPECT_EQ(MX_OK, status, "vm_map");
+    EXPECT_NEQ(0u, ptr, "vm_map");
+
+    // protect it to no permissions
+    status = mx_vmar_protect(mx_vmar_root_self(), ptr, len, 0);
+    EXPECT_EQ(MX_OK, status, "vm_protect");
+
+    // test writing to the mapping
+    size_t sz;
+    status = mx_cprng_draw(reinterpret_cast<void*>(ptr), 1, &sz);
+    EXPECT_NEQ(status, MX_OK, "write");
+
+    // test reading from the mapping
+    status = mx_channel_write(channel[0], 0, reinterpret_cast<void*>(ptr), 1, nullptr, 0);
+    EXPECT_NEQ(status, MX_OK, "read");
+
+    status = mx_vmar_unmap(mx_vmar_root_self(), ptr, len);
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
+
+    // close the handle
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(channel[0]), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(channel[1]), "handle_close");
+
+    END_TEST;
+}
+
+bool vmo_no_perm_protect_test() {
+    BEGIN_TEST;
+
+    mx_status_t status;
+    mx_handle_t vmo;
+    mx_handle_t channel[2];
+
+    // create a channel for testing read permissions via syscall failure
+    status = mx_channel_create(0, &channel[0], &channel[1]);
+    EXPECT_EQ(MX_OK, status, "vm_channel_create");
+
+    // allocate an object and read/write from it
+    const size_t len = PAGE_SIZE;
+    status = mx_vmo_create(len, 0, &vmo);
+    EXPECT_EQ(MX_OK, status, "vm_object_create");
+
+    // map it with no permissions
+    uintptr_t ptr;
+    status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len, 0, &ptr);
+    EXPECT_EQ(MX_OK, status, "vm_map");
+    EXPECT_NEQ(0u, ptr, "vm_map");
+
+    // test writing to the mapping
+    size_t sz;
+    status = mx_cprng_draw(reinterpret_cast<void*>(ptr), 1, &sz);
+    EXPECT_NEQ(status, MX_OK, "write");
+
+    // test reading from the mapping
+    status = mx_channel_write(channel[0], 0, reinterpret_cast<void*>(ptr), 1, nullptr, 0);
+    EXPECT_NEQ(status, MX_OK, "read");
+
+    // protect it to read permissions and make sure it works as expected
+    status = mx_vmar_protect(mx_vmar_root_self(), ptr, len, MX_VM_FLAG_PERM_READ);
+    EXPECT_EQ(MX_OK, status, "vm_protect");
+
+    // test writing to the mapping
+    status = mx_cprng_draw(reinterpret_cast<void*>(ptr), 1, &sz);
+    EXPECT_NEQ(status, MX_OK, "write");
+
+    // test reading from the mapping
+    status = mx_channel_write(channel[0], 0, reinterpret_cast<void*>(ptr), 1, nullptr, 0);
+    EXPECT_EQ(status, MX_OK, "read");
+
+    status = mx_vmar_unmap(mx_vmar_root_self(), ptr, len);
+    EXPECT_EQ(MX_OK, status, "vm_unmap");
+
+    // close the handle
+    EXPECT_EQ(MX_OK, mx_handle_close(vmo), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(channel[0]), "handle_close");
+    EXPECT_EQ(MX_OK, mx_handle_close(channel[1]), "handle_close");
+
+    END_TEST;
+}
+
 bool vmo_resize_test() {
     BEGIN_TEST;
 
@@ -230,10 +330,10 @@ static bool rights_test_map_helper(mx_handle_t vmo, size_t len, uint32_t flags, 
     mx_status_t r = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len, flags,
                                 &ptr);
     if (expect_success) {
-        EXPECT_EQ(0, r, msg);
+        EXPECT_EQ(MX_OK, r, msg);
 
         r = mx_vmar_unmap(mx_vmar_root_self(), ptr, len);
-        EXPECT_EQ(0, r, "unmap");
+        EXPECT_EQ(MX_OK, r, "unmap");
     } else {
         EXPECT_EQ(fail_err_code, r, msg);
     }
@@ -260,7 +360,6 @@ bool vmo_rights_test() {
     size_t len = PAGE_SIZE * 4;
     size_t r;
     mx_status_t status;
-    uintptr_t ptr;
     mx_handle_t vmo, vmo2;
 
     // allocate an object
@@ -310,20 +409,18 @@ bool vmo_rights_test() {
     EXPECT_EQ(MX_ERR_ACCESS_DENIED, status, "vmo_write");
     mx_handle_close(vmo2);
 
-    // no permission map (should fail)
-    status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len, 0, &ptr);
-    EXPECT_EQ(MX_ERR_INVALID_ARGS, status, "map_noperms");
-
     // full perm test
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo, len, 0, true, 0, "map_noperms")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ, true, 0, "map_read")) return false;
     if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, 0, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, 0, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, 0, "map_readexec")) return false;
 
     // try most of the permuations of mapping a vmo with various rights dropped
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE, &vmo2);
+    if (!rights_test_map_helper(vmo2, len, 0, false, MX_ERR_ACCESS_DENIED, "map_noperms")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, MX_ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -333,7 +430,8 @@ bool vmo_rights_test() {
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, 0, true, 0, "map_noperms")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, 0, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
@@ -342,6 +440,7 @@ bool vmo_rights_test() {
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_WRITE | MX_RIGHT_MAP, &vmo2);
+    if (!rights_test_map_helper(vmo2, len, 0, true, 0, "map_noperms")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, false, MX_ERR_ACCESS_DENIED, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
@@ -351,29 +450,32 @@ bool vmo_rights_test() {
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, 0, true, 0, "map_noperms")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, 0, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, 0, "map_readwrite")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, 0, true, 0, "map_noperms")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, 0, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, false, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, false, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, 0, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     vmo2 = MX_HANDLE_INVALID;
     mx_handle_duplicate(vmo, MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE | MX_RIGHT_MAP, &vmo2);
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, MX_ERR_ACCESS_DENIED, "map_read")) return false;
+    if (!rights_test_map_helper(vmo2, len, 0, true, 0, "map_noperms")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ, true, 0, "map_read")) return false;
     if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_WRITE, false, MX_ERR_INVALID_ARGS, "map_write")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, MX_ERR_ACCESS_DENIED, "map_readwrite")) return false;
-    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readwriteexec")) return false;
-    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, MX_ERR_ACCESS_DENIED, "map_readexec")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, true, 0, "map_readwrite")) return false;
+    if (!rights_test_map_helper(vmo2, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE, true, 0, "map_readwriteexec")) return false;
+    if (!rights_test_map_helper(vmo, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE, true, 0, "map_readexec")) return false;
     mx_handle_close(vmo2);
 
     // test that we can get/set a property on it
@@ -1136,6 +1238,8 @@ RUN_TEST(vmo_create_test);
 RUN_TEST(vmo_read_write_test);
 RUN_TEST(vmo_map_test);
 RUN_TEST(vmo_read_only_map_test);
+RUN_TEST(vmo_no_perm_map_test);
+RUN_TEST(vmo_no_perm_protect_test);
 RUN_TEST(vmo_resize_test);
 RUN_TEST(vmo_rights_test);
 RUN_TEST(vmo_lookup_test);

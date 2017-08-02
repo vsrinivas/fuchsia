@@ -91,6 +91,20 @@ status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) 
     return ProtectLocked(base, size, new_arch_mmu_flags);
 }
 
+namespace {
+
+// Implementation helper for ProtectLocked
+status_t ProtectOrUnmap(const mxtl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
+                        uint new_arch_mmu_flags) {
+    if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
+        return aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
+    } else {
+        return aspace->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+    }
+}
+
+} // namespace
+
 status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(base) && IS_PAGE_ALIGNED(size));
@@ -120,7 +134,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
 
     // If we're changing the whole mapping, just make the change.
     if (base_ == base && size_ == size) {
-        status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
+        status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
         arch_mmu_flags_ = new_arch_mmu_flags;
         return MX_OK;
@@ -137,8 +151,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
             return MX_ERR_NO_MEMORY;
         }
 
-        status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE,
-                                           new_arch_mmu_flags);
+        status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
         arch_mmu_flags_ = new_arch_mmu_flags;
 
@@ -160,8 +173,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
             return MX_ERR_NO_MEMORY;
         }
 
-        status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE,
-                                           new_arch_mmu_flags);
+        status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
         LTRACEF("arch_mmu_protect returns %d\n", status);
 
         size_ -= size;
@@ -189,8 +201,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
         return MX_ERR_NO_MEMORY;
     }
 
-    status_t status = aspace_->arch_aspace().Protect(base, size / PAGE_SIZE,
-                                       new_arch_mmu_flags);
+    status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
     LTRACEF("arch_mmu_protect returns %d\n", status);
 
     // Turn us into the left half
@@ -426,13 +437,15 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
         vaddr_t va = base_ + o;
         LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pa, va);
 
-        size_t mapped;
-        auto ret = aspace_->arch_aspace().Map(va, pa, 1, arch_mmu_flags_, &mapped);
-        if (ret < 0) {
-            TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
+        // Only perform the MMU mapping if the pages have non-empty permissions
+        if (arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_RWX_MASK) {
+            size_t mapped;
+            auto ret = aspace_->arch_aspace().Map(va, pa, 1, arch_mmu_flags_, &mapped);
+            if (ret < 0) {
+                TRACEF("error %d mapping page at va %#" PRIxPTR " pa %#" PRIxPTR "\n", ret, va, pa);
+            }
+            DEBUG_ASSERT(mapped == 1);
         }
-
-        DEBUG_ASSERT(mapped == 1);
     }
 
     return MX_OK;
@@ -529,6 +542,11 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     if ((pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_WRITE)) {
         // write to a non-writeable region
         LTRACEF("permission failure: write fault on non-writable region\n");
+        return MX_ERR_ACCESS_DENIED;
+    }
+    if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_READ)) {
+        // read to a non-readable region
+        LTRACEF("permission failure: read fault on non-readable region\n");
         return MX_ERR_ACCESS_DENIED;
     }
     if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(arch_mmu_flags_ & ARCH_MMU_FLAG_PERM_EXECUTE)) {
