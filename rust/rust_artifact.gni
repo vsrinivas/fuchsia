@@ -223,6 +223,6 @@ template("rust_artifact") {
   }
 
   group(target_name) {
-    deps = group_deps
+    public_deps = group_deps
   }
 }
