@@ -10,6 +10,7 @@
 
 #include <rapidjson/document.h>
 
+#include "apps/ledger/src/convert/collection_view.h"
 #include "apps/ledger/src/test/cloud_server/server.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/url/gurl.h"
@@ -22,6 +23,9 @@ namespace ledger {
 // In particular, the only query supported is 'startAt' with an integer value.
 class FirebaseServer : public Server {
  public:
+  using Path = std::vector<std::string>;
+  using PathView = convert::CollectionView<Path>;
+
   FirebaseServer();
   ~FirebaseServer() override;
 
@@ -51,8 +55,7 @@ class FirebaseServer : public Server {
   std::string GetSerializedValueForURL(const url::GURL& url);
   // Returns the data at the given path. If |create| is true, create the
   // necessary object and returns the empty object at the given |path|.
-  rapidjson::Value* GetValueAtPath(const std::vector<std::string>& path,
-                                   bool create = false);
+  rapidjson::Value* GetValueAtPath(PathView path, bool create = false);
 
   // The document containing the current state of the database.
   rapidjson::Document document_;

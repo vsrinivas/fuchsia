@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/test/cloud_server/firebase_server.h"
 
+#include <algorithm>
 #include <deque>
 #include <map>
 #include <sstream>
@@ -35,12 +36,23 @@ constexpr ftl::StringView kStartAt = "startAt";
 
 constexpr ftl::StringView kExpectedQueryParameters[] = {kAuth, kOrderBy,
                                                         kStartAt};
+
+// Filter for a Firebase query. |key| is the name of the field to consider, and
+// |start_at| is the minimal value of it.
+struct Filter {
+  std::string key;
+  int64_t start_at;
+};
+
 // Container for a socket connected to a watcher. This class handles sending a
 // stream of data to the socket.
 class ListenerContainer : public glue::SocketWriter::Client {
  public:
-  ListenerContainer() : writer_(this) {}
+  ListenerContainer(std::unique_ptr<Filter> filter)
+      : writer_(this), filter_(std::move(filter)) {}
   ~ListenerContainer() override {}
+
+  Filter* filter() { return filter_.get(); }
 
   void Start(mx::socket socket) { writer_.Start(std::move(socket)); }
 
@@ -61,25 +73,27 @@ class ListenerContainer : public glue::SocketWriter::Client {
     FTL_DCHECK(max_size_ > 0);
     ftl::StringView to_send = content_[0];
     to_send = to_send.substr(0, max_size_);
-    writer_callback_(to_send);
+    FTL_DCHECK(!to_send.empty());
+    // writer_callback_ needs to be reset before calling it, because GetNext
+    // might be called synchronously.
+    auto callback = std::move(writer_callback_);
     writer_callback_ = nullptr;
+    callback(to_send);
   }
 
   // glue::SocketWriter::Client
   void GetNext(size_t offset,
                size_t max_size,
                std::function<void(ftl::StringView)> callback) override {
-    if (offset > current_offset_) {
-      size_t to_remove = offset - current_offset_;
-      while (to_remove > 0) {
-        FTL_DCHECK(!content_.empty());
-        if (content_[0].size() <= to_remove) {
-          to_remove -= content_[0].size();
-          content_.pop_front();
-        } else {
-          content_[0] = content_[0].substr(to_remove);
-          to_remove = 0;
-        }
+    size_t to_remove = offset - current_offset_;
+    while (to_remove > 0) {
+      FTL_DCHECK(!content_.empty());
+      if (content_[0].size() <= to_remove) {
+        to_remove -= content_[0].size();
+        content_.pop_front();
+      } else {
+        content_[0] = content_[0].substr(to_remove);
+        to_remove = 0;
       }
     }
     writer_callback_ = std::move(callback);
@@ -93,18 +107,12 @@ class ListenerContainer : public glue::SocketWriter::Client {
   }
 
   glue::SocketWriter writer_;
+  const std::unique_ptr<Filter> filter_;
   std::deque<std::string> content_;
   ftl::Closure on_done_;
   std::function<void(ftl::StringView)> writer_callback_;
   size_t current_offset_ = 0u;
   size_t max_size_ = 0u;
-};
-
-// Filter for a Firebase query.. |key| is the name of the field to consider, and
-// |start_at| is the minimal value of it.
-struct Filter {
-  std::string key;
-  int64_t start_at;
 };
 
 std::string UrlDecode(ftl::StringView value) {
@@ -124,6 +132,60 @@ std::string UrlDecode(ftl::StringView value) {
     value = value.substr(3);
   }
   return result.str();
+}
+
+// Serializes the given |value| to a json string. If |filter| is not null,
+// values are filtered according to it. Return "null" if |value| is null.
+std::string Serialize(rapidjson::Value* value, Filter* filter) {
+  if (!value) {
+    return "null";
+  }
+  if (!filter || !value->IsObject()) {
+    rapidjson::StringBuffer buffer;
+    buffer.Clear();
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    value->Accept(writer);
+    return buffer.GetString();
+  }
+
+  rapidjson::StringBuffer string_buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
+  writer.StartObject();
+  for (auto it = value->MemberBegin(); it != value->MemberEnd(); ++it) {
+    if (!it->value.IsObject() || !it->value.HasMember(filter->key) ||
+        !it->value[filter->key].IsInt64()) {
+      FTL_NOTREACHED()
+          << "Data does not conform to the expected schema, cannot find field "
+          << filter->key << " in " << Serialize(&it->value, nullptr);
+    }
+    if (it->value[filter->key].GetInt64() >= filter->start_at) {
+      writer.Key(it->name.GetString());
+      it->value.Accept(writer);
+    }
+  }
+  writer.EndObject();
+  return string_buffer.GetString();
+}
+
+std::string BuildPathRepresentation(FirebaseServer::PathView path) {
+  if (path.empty()) {
+    return "/";
+  }
+  std::ostringstream result;
+  for (const auto& element : path) {
+    result << "/";
+    result << element;
+  }
+  return result.str();
+}
+
+std::string BuildEvent(ftl::StringView event_name,
+                       FirebaseServer::PathView path,
+                       rapidjson::Value* value,
+                       Filter* filter) {
+  return ftl::Concatenate({"event: ", event_name, "\ndata: {\"path\":\"",
+                           BuildPathRepresentation(path),
+                           "\",\"data\":", Serialize(value, filter), "}\n\n"});
 }
 
 // Parses |url| and extract the filtering data. Returns an empty unique_ptr if
@@ -223,37 +285,7 @@ void FillTimestamp(rapidjson::Value* value,
   }
 }
 
-// Serializes the given |value| to a json string. If |filter| is not null,
-// values are filtered according to it.
-std::string Serialize(const rapidjson::Value& value, Filter* filter) {
-  if (!filter || !value.IsObject()) {
-    rapidjson::StringBuffer buffer;
-    buffer.Clear();
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    value.Accept(writer);
-    return buffer.GetString();
-  }
-
-  rapidjson::StringBuffer string_buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
-  writer.StartObject();
-  for (auto it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
-    if (!it->value.IsObject() || !it->value.HasMember(filter->key) ||
-        !it->value[filter->key].IsInt64()) {
-      FTL_NOTREACHED()
-          << "Data does not conform to the expected schema, cannot find field "
-          << filter->key << " in " << Serialize(it->value, nullptr);
-    }
-    if (it->value[filter->key].GetInt64() >= filter->start_at) {
-      writer.Key(it->name.GetString());
-      it->value.Accept(writer);
-    }
-  }
-  writer.EndObject();
-  return string_buffer.GetString();
-}
-
-std::vector<std::string> GetPath(const url::GURL& url) {
+FirebaseServer::Path GetPath(const url::GURL& url) {
   constexpr ftl::StringView json_suffix = ".json";
 
   std::string path = url.path();
@@ -274,31 +306,58 @@ class FirebaseServer::Listeners {
   Listeners() {}
   ~Listeners() {}
 
-  void AddListener(const std::vector<std::string>& path,
+  void AddListener(PathView path,
+                   std::unique_ptr<Filter> filter,
                    mx::socket socket,
-                   std::string initial_data,
-                   size_t index = 0);
+                   rapidjson::Value* initial_value);
 
-  // TODO(qsr): Add methods to send put and patch events.
+  void SendEvent(const std::string& event_name,
+                 PathView path,
+                 rapidjson::Value* value);
 
  private:
   std::unordered_map<std::string, Listeners> children_;
   callback::AutoCleanableSet<ListenerContainer> listeners_;
 };
 
-void FirebaseServer::Listeners::AddListener(
-    const std::vector<std::string>& path,
-    mx::socket socket,
-    std::string initial_data,
-    size_t index) {
-  if (index < path.size()) {
-    children_[path[index]].AddListener(path, std::move(socket),
-                                       std::move(initial_data), index + 1);
+void FirebaseServer::Listeners::AddListener(PathView path,
+                                            std::unique_ptr<Filter> filter,
+                                            mx::socket socket,
+                                            rapidjson::Value* initial_value) {
+  if (!path.empty()) {
+    children_[path[0]].AddListener(path.Tail(), std::move(filter),
+                                   std::move(socket), initial_value);
     return;
   }
-  auto& new_listener = listeners_.emplace();
+  auto& new_listener = listeners_.emplace(std::move(filter));
   new_listener.Start(std::move(socket));
-  new_listener.SendChunk(std::move(initial_data));
+  Path empty_path;
+  new_listener.SendChunk(
+      BuildEvent("put", empty_path, initial_value, new_listener.filter()));
+}
+
+void FirebaseServer::Listeners::SendEvent(const std::string& event_name,
+                                          PathView path,
+                                          rapidjson::Value* value) {
+  for (auto& listener : listeners_) {
+    listener.SendChunk(BuildEvent(event_name, path, value, listener.filter()));
+  }
+
+  if (!path.empty()) {
+    if (children_.count(path[0]) != 0) {
+      children_[path[0]].SendEvent(event_name, path.Tail(), value);
+    }
+    return;
+  }
+  if (value == nullptr || !value->IsObject()) {
+    return;
+  }
+  for (auto it = value->MemberBegin(); it != value->MemberEnd(); ++it) {
+    auto key = it->name.GetString();
+    if (children_.count(key) != 0) {
+      children_[key].SendEvent(event_name, path, &it->value);
+    }
+  }
 }
 
 FirebaseServer::FirebaseServer() : listeners_(std::make_unique<Listeners>()) {
@@ -319,13 +378,10 @@ void FirebaseServer::HandleGetStream(
     network::URLRequestPtr request,
     const std::function<void(network::URLResponsePtr)> callback) {
   url::GURL url(request->url);
-  std::string initial_event =
-      ftl::Concatenate({"event: put\ndata: {\"path\":\"/\",\"data\":",
-                        GetSerializedValueForURL(url), "}\n\n"});
-  glue::SocketPair sockets;
   auto path = GetPath(url);
-  listeners_->AddListener(path, std::move(sockets.socket1),
-                          std::move(initial_event));
+  glue::SocketPair sockets;
+  listeners_->AddListener(path, ExtractFilter(url), std::move(sockets.socket1),
+                          GetValueAtPath(path));
   callback(BuildResponse(request->url, Server::ResponseCode::kOk,
                          std::move(sockets.socket2), {}));
 }
@@ -364,9 +420,9 @@ void FirebaseServer::HandlePatch(
   }
 
   callback(BuildResponse(request->url, Server::ResponseCode::kOk,
-                         Serialize(new_value, nullptr)));
+                         Serialize(&new_value, nullptr)));
 
-  // TODO(qsr): Send event.
+  listeners_->SendEvent("patch", path, &new_value);
 }
 
 void FirebaseServer::HandlePut(
@@ -379,7 +435,8 @@ void FirebaseServer::HandlePut(
 
   url::GURL url(request->url);
   auto path = GetPath(url);
-  auto sub_path = std::vector<std::string>(path.begin(), path.end() - 1);
+  FTL_DCHECK(path.size() > 0);
+  auto sub_path = PathView(path, path.begin(), path.end() - 1);
   rapidjson::Value* value = GetValueAtPath(sub_path, true);
 
   if (value->HasMember(path.back())) {
@@ -394,11 +451,12 @@ void FirebaseServer::HandlePut(
 
   FillTimestamp(&new_value, &new_value);
   rapidjson::Value key(path.back().c_str(), document_.GetAllocator());
-  value->AddMember(key, new_value, document_.GetAllocator());
+  rapidjson::Value copied_value(new_value, document_.GetAllocator());
+  value->AddMember(key, copied_value, document_.GetAllocator());
 
   callback(BuildResponse(request->url, Server::ResponseCode::kOk,
-                         Serialize(new_value, nullptr)));
-  // TODO(qsr) Send event.
+                         Serialize(&new_value, nullptr)));
+  listeners_->SendEvent("put", path, &new_value);
 }
 
 std::string FirebaseServer::GetSerializedValueForURL(const url::GURL& url) {
@@ -409,12 +467,10 @@ std::string FirebaseServer::GetSerializedValueForURL(const url::GURL& url) {
     return "null";
   }
   auto filter = ExtractFilter(url);
-  return Serialize(*value, filter.get());
+  return Serialize(value, filter.get());
 }
 
-rapidjson::Value* FirebaseServer::GetValueAtPath(
-    const std::vector<std::string>& path,
-    bool create) {
+rapidjson::Value* FirebaseServer::GetValueAtPath(PathView path, bool create) {
   rapidjson::Value* value = &document_;
   for (const auto& element : path) {
     if (!value->IsObject()) {
