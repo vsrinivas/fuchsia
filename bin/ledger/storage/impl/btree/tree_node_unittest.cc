@@ -48,6 +48,7 @@ class TreeNodeTest : public StorageTest {
 
   std::vector<ObjectId> CreateChildren(int size) {
     std::vector<ObjectId> children;
+    children.reserve(size);
     for (int i = 0; i < size; ++i) {
       children.push_back(CreateEmptyNode()->GetId());
     }

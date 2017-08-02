@@ -100,6 +100,7 @@ void PutBenchmark::Run() {
 void PutBenchmark::InitializeKeys(
     std::function<void(std::vector<fidl::Array<uint8_t>>)> on_done) {
   std::vector<fidl::Array<uint8_t>> keys;
+  keys.reserve(entry_count_);
   for (int i = 0; i < entry_count_; ++i) {
     keys.push_back(generator_.MakeKey(i, key_size_));
   }

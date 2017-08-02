@@ -154,6 +154,7 @@ void PageSyncImpl::GetObject(
 void PageSyncImpl::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
                                    std::string timestamp) {
   std::vector<cloud_provider::Record> records;
+  records.reserve(commits.size());
   for (auto& commit : commits) {
     records.emplace_back(std::move(commit), timestamp);
   }
