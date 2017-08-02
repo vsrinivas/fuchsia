@@ -14,9 +14,24 @@
 
 namespace maxwell {
 
-// Manages a single Next or Ask suggestion subscriber, translating raw
-// suggestion lifecycle events into windowed suggestion lists using a vector of
-// ranked suggestions.
+// This class is a side-effect of implementing something that's logically
+// pull-based (the Ask workflow) on top of a push-based system. Once Asks
+// are entirely pull-based, a windowed subscriber will not be necessary.
+//
+// WindowedSuggestionSubscribers provide a fixed-size window on top of a
+// read-only list of ranked suggestions (RankedSuggestions) -- this view
+// contains the top N results, where N can be defined through SetResultCount.
+//
+// When N is updated, the WindowedSuggestionSubscriber checks to see if its
+// window needs to be resized. Let's assume it must be resized, and the
+// difference between the current size and the desired size is D:
+// 1) If the window is to be shrunk, all listeners are notified with OnRemove
+//    events for the D suggestions that are currently in the window,
+//    but will not be in the window after resizing.
+//
+// 2) If the window is to be expanded, and the underlying read-only list is
+//    larger than the current window size, then OnAdd events are dispatched
+//    to all listeners for every suggestion that is included in the new window.
 class WindowedSuggestionSubscriber : public SuggestionSubscriber {
  public:
   WindowedSuggestionSubscriber(
