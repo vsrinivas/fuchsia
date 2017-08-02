@@ -189,6 +189,7 @@ mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     // initialize the arch specific component to our address space
     auto err = aspace->Init();
     if (err < 0) {
+        aspace->Destroy();
         return nullptr;
     }
 
@@ -217,7 +218,9 @@ VmAspace::~VmAspace() {
     // pop it out of the global aspace list
     {
         AutoLock a(&aspace_list_lock);
-        aspaces.erase(*this);
+        if (this->InContainer()) {
+            aspaces.erase(*this);
+        }
     }
 
     // destroy the arch portion of the aspace
@@ -246,9 +249,11 @@ status_t VmAspace::Destroy() {
 #endif
 
     // tear down and free all of the regions in our address space
-    status_t status = root_vmar_->DestroyLocked();
-    if (status != MX_OK && status != MX_ERR_BAD_STATE) {
-        return status;
+    if (root_vmar_) {
+        status_t status = root_vmar_->DestroyLocked();
+        if (status != MX_OK && status != MX_ERR_BAD_STATE) {
+            return status;
+        }
     }
     aspace_destroyed_ = true;
 

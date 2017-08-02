@@ -75,20 +75,20 @@ mx_status_t ProcessDispatcher::Create(
 
     mxtl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
 
-    *rights = MX_DEFAULT_PROCESS_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(process.release());
-
     // Create a dispatcher for the root VMAR.
     mxtl::RefPtr<Dispatcher> new_vmar_dispatcher;
     result = VmAddressRegionDispatcher::Create(vmar, &new_vmar_dispatcher, root_vmar_rights);
-    if (result == MX_OK) {
-        *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
-                &new_vmar_dispatcher);
-    } else {
-        dispatcher->reset();
+    if (result != MX_OK) {
+        process->aspace_->Destroy();
+        return result;
     }
 
-    return result;
+    *rights = MX_DEFAULT_PROCESS_RIGHTS;
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(process.release());
+    *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
+            &new_vmar_dispatcher);
+
+    return MX_OK;
 }
 
 ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
