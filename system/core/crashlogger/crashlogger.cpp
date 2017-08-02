@@ -299,8 +299,8 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     sp = regs->sp;
     fp = regs->r[29];
 #else
-    // TODO: support other architectures. It's unlikely we'll get here as
-    // trying to read the regs will likely fail, but we don't assume that.
+    // It's unlikely we'll get here as trying to read the regs will likely
+    // fail, but we don't assume that.
     printf("unsupported architecture .. coming soon.\n");
     goto Fail;
 #endif
@@ -333,8 +333,7 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     printf("arch: %s\n", arch);
     backtrace(process, thread, pc, sp, fp, use_libunwind);
 
-    // TODO(dje): Print a backtrace of all other threads in the process.
-    // Need to be able to suspend/resume threads first. MG-588
+    // TODO(MG-588): Print a backtrace of all other threads in the process.
 
 #ifdef __x86_64__
     if (pt_dump_enabled) {
