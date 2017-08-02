@@ -41,9 +41,9 @@ class FTL_EXPORT MessageLoopHandler {
   //
   // Possible errors are:
   //   - |MX_ERR_TIMED_OUT|: the handler deadline elapsed
-  //   - |MX_ERR_BAD_STATE|: the message loop itself has been destroyed
-  //   rendering
-  //                         it impossible to continue waiting on any handles
+  //   - |MX_ERR_CANCELED|:  the message loop itself has been destroyed
+  //                         rendering it impossible to continue waiting on any
+  //                         handles
   //
   // The default implementation does nothing.
   virtual void OnHandleError(mx_handle_t handle, mx_status_t error);

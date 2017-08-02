@@ -417,7 +417,7 @@ TEST(MessageLoop, Destruction) {
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MX_ERR_BAD_STATE, handler.last_error_result());
+  EXPECT_EQ(MX_ERR_CANCELED, handler.last_error_result());
 }
 
 class RemoveManyMessageLoopHandler : public TestMessageLoopHandler {
@@ -473,8 +473,8 @@ TEST(MessageLoop, MultipleHandleDestruction) {
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
-  EXPECT_EQ(MX_ERR_BAD_STATE, odd_handler.last_error_result());
-  EXPECT_EQ(MX_ERR_BAD_STATE, even_handler.last_error_result());
+  EXPECT_EQ(MX_ERR_CANCELED, odd_handler.last_error_result());
+  EXPECT_EQ(MX_ERR_CANCELED, even_handler.last_error_result());
 }
 
 class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
@@ -513,7 +513,7 @@ TEST(MessageLoop, AddHandlerOnError) {
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
-  EXPECT_EQ(MX_ERR_BAD_STATE, handler.last_error_result());
+  EXPECT_EQ(MX_ERR_CANCELED, handler.last_error_result());
 }
 
 // Tests that waiting on files in a MessageLoop works.

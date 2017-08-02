@@ -228,8 +228,6 @@ async_wait_result_t MessageLoop::HandlerRecord::Handle(
   if (status == MX_OK) {
     handler_->OnHandleReady(object(), signal->observed, signal->count);
   } else {
-    if (status == MX_ERR_CANCELED)
-      status = MX_ERR_BAD_STATE;  // TODO(jeffbrown): remove this conversion
     handler_->OnHandleError(object(), status);
 
     if (!loop_->current_handler_removed_) {
