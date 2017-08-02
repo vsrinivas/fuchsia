@@ -11,6 +11,7 @@ modified, staged or touched by any commits introduced on the local branch.
 """
 
 import argparse
+import multiprocessing
 import os
 import platform
 import re
@@ -86,11 +87,20 @@ def go(args):
     # change the working directory to Fuchsia root.
     os.chdir(paths.FUCHSIA_ROOT)
 
+    if args.no_parallel:
+        parallel_jobs = 1
+    else:
+        parallel_jobs = multiprocessing.cpu_count()
+        print("Running " + str(parallel_jobs) +
+              " jobs in parallel, pass --no-parallel to disable")
+
+    jobs = set()
+
     for file_path in files:
         # Skip deleted files.
         if not os.path.isfile(file_path):
             if args.verbose:
-               print "skipping " + file_path + " (deleted)"
+                print "skipping " + file_path + " (deleted)"
             continue
 
         _, extension = os.path.splitext(file_path)
@@ -103,8 +113,15 @@ def go(args):
                 cmd.append("-fix")
 
             if args.verbose:
-              print "checking " + file_path + ": " + str(cmd)
-            subprocess.check_call(cmd, cwd=paths.FUCHSIA_ROOT)
+                print "checking " + file_path + ": " + str(cmd)
+            jobs.add(subprocess.Popen(cmd))
+            if len(jobs) >= parallel_jobs:
+                os.wait()
+                jobs.difference_update(
+                    [job for job in jobs if job.poll() is not None])
+    for job in jobs:
+        if job.poll() is None:
+            job.wait()
 
 
 def main():
@@ -125,6 +142,11 @@ def main():
     parser.add_argument(
         "--out-dir",
         help="Output directory, needed to generate compilation db for clang.")
+    parser.add_argument(
+        "--no-parallel",
+        action="store_true",
+        default=False,
+        help="Process one file at a time")
     parser.add_argument(
         "--verbose",
         dest="verbose",
