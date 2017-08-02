@@ -41,4 +41,8 @@ source_set("mxtl") {
   ]
 
   public_configs = [ ":mxtl_config" ]
+
+  public_deps = [
+    "//magenta/system/ulib/mxalloc",
+  ]
 }
