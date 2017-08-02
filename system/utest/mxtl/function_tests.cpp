@@ -169,22 +169,38 @@ bool closure() {
     EXPECT_FALSE(nullptr == fnew);
     EXPECT_TRUE(nullptr != fnew);
 
-    // alloc checking constructor
+    // alloc checking constructor, inline
     AllocChecker ac1;
     int fcheck_value = 0;
-    ClosureFunction fcheck([&fcheck_value] { fcheck_value++; }, &ac1);
-    EXPECT_TRUE(!!fcheck);
+    ClosureFunction fcheckinline([&fcheck_value] { fcheck_value++; }, &ac1);
+    EXPECT_TRUE(!!fcheckinline);
     EXPECT_TRUE(ac1.check());
-    fcheck();
+    fcheckinline();
     EXPECT_EQ(1, fcheck_value);
 
-    // alloc checking set target
+    // alloc checking set target, inline
     AllocChecker ac2;
-    fcheck.SetTarget([&fcheck_value] { fcheck_value *= 3; }, &ac2);
-    EXPECT_TRUE(!!fcheck);
+    fcheckinline.SetTarget([&fcheck_value] { fcheck_value *= 3; }, &ac2);
+    EXPECT_TRUE(!!fcheckinline);
     EXPECT_TRUE(ac2.check());
-    fcheck();
+    fcheckinline();
     EXPECT_EQ(3, fcheck_value);
+
+    // alloc checking constructor, heap allocated
+    AllocChecker ac3;
+    ClosureFunction fcheckheap([&fcheck_value, big = Big() ] { fcheck_value++; }, &ac3);
+    EXPECT_TRUE(!!fcheckheap);
+    EXPECT_TRUE(ac3.check());
+    fcheckheap();
+    EXPECT_EQ(4, fcheck_value);
+
+    // alloc checking set target, heap allocated
+    AllocChecker ac4;
+    fcheckheap.SetTarget([&fcheck_value, big = Big() ] { fcheck_value *= 3; }, &ac4);
+    EXPECT_TRUE(!!fcheckheap);
+    EXPECT_TRUE(ac4.check());
+    fcheckheap();
+    EXPECT_EQ(12, fcheck_value);
 
     return true;
 }
@@ -351,30 +367,54 @@ bool binary_op() {
     EXPECT_FALSE(nullptr == fnew);
     EXPECT_TRUE(nullptr != fnew);
 
-    // alloc checking constructor
+    // alloc checking constructor, inline
     AllocChecker ac1;
     int fcheck_value = 0;
-    BinaryOpFunction fcheck([&fcheck_value](int a, int b) {
+    BinaryOpFunction fcheckinline([&fcheck_value](int a, int b) {
         fcheck_value++;
         return a + b;
     },
-                            &ac1);
-    EXPECT_TRUE(!!fcheck);
+                                  &ac1);
+    EXPECT_TRUE(!!fcheckinline);
     EXPECT_TRUE(ac1.check());
-    EXPECT_EQ(10, fcheck(3, 7));
+    EXPECT_EQ(10, fcheckinline(3, 7));
     EXPECT_EQ(1, fcheck_value);
 
-    // alloc checking set target
+    // alloc checking set target, inline
     AllocChecker ac2;
-    fcheck.SetTarget([&fcheck_value](int a, int b) {
+    fcheckinline.SetTarget([&fcheck_value](int a, int b) {
         fcheck_value *= 3;
         return a + b;
     },
-                     &ac2);
-    EXPECT_TRUE(!!fcheck);
+                           &ac2);
+    EXPECT_TRUE(!!fcheckinline);
     EXPECT_TRUE(ac2.check());
-    EXPECT_EQ(10, fcheck(3, 7));
+    EXPECT_EQ(10, fcheckinline(3, 7));
     EXPECT_EQ(3, fcheck_value);
+
+    // alloc checking constructor, heap allocated
+    AllocChecker ac3;
+    BinaryOpFunction fcheckheap([&fcheck_value, big = Big() ](int a, int b) {
+        fcheck_value++;
+        return a + b;
+    },
+                                &ac3);
+    EXPECT_TRUE(!!fcheckheap);
+    EXPECT_TRUE(ac3.check());
+    EXPECT_EQ(10, fcheckheap(3, 7));
+    EXPECT_EQ(4, fcheck_value);
+
+    // alloc checking set target, heap allocated
+    AllocChecker ac4;
+    fcheckheap.SetTarget([&fcheck_value, big = Big() ](int a, int b) {
+        fcheck_value *= 3;
+        return a + b;
+    },
+                         &ac4);
+    EXPECT_TRUE(!!fcheckheap);
+    EXPECT_TRUE(ac4.check());
+    EXPECT_EQ(10, fcheckheap(3, 7));
+    EXPECT_EQ(12, fcheck_value);
 
     return true;
 }
