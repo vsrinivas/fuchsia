@@ -19,13 +19,13 @@ class Channel {
       std::unique_ptr<ChannelHandler> handler);
 
   // Creates an unresolved channel known only by subject address.
-  static std::shared_ptr<Channel> CreateUnresolved(uint64_t subject_address);
+  static std::shared_ptr<Channel> CreateUnresolved(uint32_t log_id,
+                                                   uint64_t subject_address);
 
   ~Channel();
 
   // Resolves an unresolved channel.
-  void Resolve(uint32_t log_id,
-               uint32_t channel_id,
+  void Resolve(uint32_t channel_id,
                uint32_t creation_entry_index,
                std::unique_ptr<ChannelHandler> handler);
 

@@ -38,12 +38,14 @@ inline std::ostream& outdent(std::ostream& os) {
   return os;
 }
 
-struct AsEntryIndex {
-  explicit AsEntryIndex(uint32_t index) : index_(index) {}
+struct EntryHeader {
+  EntryHeader(const FlogEntryPtr& entry, uint32_t index)
+      : entry_(entry), index_(index) {}
+  const FlogEntryPtr& entry_;
   uint32_t index_;
 };
 
-std::ostream& operator<<(std::ostream& os, AsEntryIndex value);
+std::ostream& operator<<(std::ostream& os, const EntryHeader& value);
 
 struct AsAddress {
   explicit AsAddress(uint64_t address) : address_(address) {}
@@ -71,7 +73,5 @@ std::ostream& operator<<(std::ostream& os, const Channel& value);
 std::ostream& operator<<(std::ostream& os, const ChildBinding& value);
 
 std::ostream& operator<<(std::ostream& os, const PeerBinding& value);
-
-std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value);
 
 }  // namespace flog

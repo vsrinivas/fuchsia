@@ -14,6 +14,50 @@
 
 namespace flog {
 
+// Extracts a pair of uint32_ts from an istream. Accepts first.second or just
+// second, in which case first is set to 0.
+std::istream& operator>>(std::istream& istream,
+                         std::pair<uint32_t, uint32_t>& value) {
+  uint32_t first;
+  if (istream >> first) {
+    uint32_t second;
+    if (istream.peek() != '.') {
+      value = std::pair<uint32_t, uint32_t>(0, first);
+    } else if (istream.ignore() && istream >> second) {
+      value = std::pair<uint32_t, uint32_t>(first, second);
+    }
+  }
+
+  return istream;
+}
+
+// Extracts a comma-separated list as a vector.
+template <typename T>
+std::istream& operator>>(std::istream& istream, std::vector<T>& value_vector) {
+  T value;
+
+  while (istream >> value) {
+    value_vector.push_back(value);
+
+    if (istream.eof() || istream.peek() != ',') {
+      break;
+    }
+
+    istream.ignore();
+  }
+
+  return istream;
+}
+
+// Parses a string to produce the specified value.
+template <typename T>
+bool Parse(const std::string& string_value, T* value_out) {
+  FTL_DCHECK(value_out);
+
+  std::istringstream istream(string_value);
+  return (istream >> *value_out) && istream.eof();
+}
+
 class FlogViewerApp {
  public:
   FlogViewerApp(int argc, const char** argv) {
@@ -25,7 +69,15 @@ class FlogViewerApp {
     });
 
     ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-    bool did_something = false;
+
+    std::vector<uint32_t> log_ids;
+    for (const std::string& log_id_string : command_line.positional_args()) {
+      if (!Parse(log_id_string, &log_ids)) {
+        std::cout << "Failed to parse log ids.\n";
+        Usage();
+        return;
+      }
+    }
 
     viewer_.set_format(
         command_line.GetOptionValueWithDefault("format", viewer_.format()));
@@ -33,56 +85,80 @@ class FlogViewerApp {
     std::string string_value;
     if (command_line.GetOptionValue("channel", &string_value) ||
         command_line.GetOptionValue("channels", &string_value)) {
-      std::vector<uint32_t> channels;
-      if (!Parse(string_value, &channels)) {
+      if (log_ids.size() == 0) {
+        std::cout << "--channel(s) option not applicable.\n";
         Usage();
         return;
       }
 
-      for (uint32_t channel : channels) {
-        viewer_.AddChannel(channel);
+      std::vector<std::pair<uint32_t, uint32_t>> channels;
+      if (!Parse(string_value, &channels)) {
+        std::cout << "--channel(s) value is not well-formed.\n";
+        Usage();
+        return;
       }
 
-      did_something = true;
+      for (auto& channel : channels) {
+        if (channel.first == 0) {
+          if (log_ids.size() == 1) {
+            channel =
+                std::pair<uint32_t, uint32_t>(log_ids.front(), channel.second);
+          } else {
+            std::cout << "--channel(s) values must be <log id>.<channel id> "
+                         "when multiple logs are viewed.\n";
+            Usage();
+            return;
+          }
+        }
+
+        viewer_.EnableChannel(channel);
+      }
     }
 
     if (command_line.GetOptionValue("stop-index", &string_value)) {
-      uint32_t stop_index;
-      if (!Parse(string_value, &stop_index)) {
+      if (log_ids.size() == 0) {
+        std::cout << "--stop-index option not applicable.\n";
         Usage();
         return;
+      }
+
+      std::pair<uint32_t, uint32_t> stop_index;
+      if (!Parse(string_value, &stop_index)) {
+        std::cout << "--stop-index value is not well-formed.\n";
+        Usage();
+        return;
+      }
+
+      if (stop_index.first == 0) {
+        if (log_ids.size() == 1) {
+          stop_index =
+              std::pair<uint32_t, uint32_t>(log_ids.front(), stop_index.second);
+        } else {
+          std::cout << "--stop-index value must be <log id>.<index> when "
+                       "multiple logs are viewed\n";
+          Usage();
+          return;
+        }
       }
 
       viewer_.set_stop_index(stop_index);
-
-      did_something = true;
     }
 
-    if (command_line.GetOptionValue("last", &string_value)) {
-      viewer_.ProcessLastLog(string_value);
-      did_something = true;
-    }
+    bool did_something = false;
 
-    for (const std::string& log_id_string : command_line.positional_args()) {
-      std::vector<uint32_t> log_ids;
-      if (!Parse(log_id_string, &log_ids)) {
-        Usage();
-        return;
-      }
-
-      for (uint32_t log_id : log_ids) {
-        viewer_.ProcessLog(log_id);
-      }
-
+    if (!log_ids.empty()) {
+      viewer_.ProcessLogs(log_ids);
       did_something = true;
     }
 
     if (command_line.HasOption("delete-all-logs")) {
       viewer_.DeleteAllLogs();
+      did_something = true;
     } else if (command_line.GetOptionValue("delete-log", &string_value) ||
                command_line.GetOptionValue("delete-logs", &string_value)) {
       std::vector<uint32_t> logs;
       if (!Parse(string_value, &logs)) {
+        std::cout << "--delete-log(s) value is not well-formed.\n";
         Usage();
         return;
       }
@@ -101,59 +177,20 @@ class FlogViewerApp {
 
  private:
   void Usage() {
-    std::cout << "\n";
-    std::cout << "fidl:flog_viewer <args>\"\n";
-    std::cout << "    <log id>                    process specified log"
-              << "\n";
-    std::cout << "    --last=<label>              process last log with "
-                 "specified label"
-              << "\n";
     std::cout
-        << "    --last                      process last log with any label"
-        << "\n";
-    std::cout << "\n";
-    std::cout << "\n";
-    std::cout << "    --format=<format>           terse (default), full, digest"
-              << "\n";
-    std::cout
-        << "    --channel(s)=<channel ids>  process only the indicated channels"
-        << "\n";
-    std::cout << "    --stop-index=<time>         process up to the indicated "
-                 "entry index"
-              << "\n";
-    std::cout << "    --delete-log(s)=<log ids>   delete the indicated logs"
-              << "\n";
-    std::cout << "    --delete-all-logs           delete all logs\n";
-    std::cout << "If no log is specified, a list of logs is printed."
-              << "\n";
-    std::cout << "Value lists are comma-separated (channel ids, log ids)."
-              << "\n";
-    std::cout << "\n";
+        << "\nusage: flog_viewer <args>\n"
+        << "    <log ids>              process specified log(s)\n"
+        << "    --format=<format>      digest (default), full, or terse\n"
+        << "    --channel(s)=<ids>     process only the indicated channels\n"
+        << "    --stop-index=<index>   process up to the indicated index\n"
+        << "    --delete-log(s)=<ids>  delete the indicated logs\n"
+        << "    --delete-all-logs      delete all logs\n"
+        << "If no arguments are supplied, a list of logs is displayed.\n"
+        << "Lists of values are comma-separated.\n"
+        << "If more than one log is to be viewed, channel and stop index must\n"
+        << "specify log id, as in <log id>.<channel/index>.\n\n";
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  }
-
-  bool Parse(const std::string& string_value,
-             std::vector<uint32_t>* vector_of_uint32_out) {
-    FTL_DCHECK(vector_of_uint32_out);
-
-    std::istringstream istream(string_value);
-    uint32_t value;
-    while (istream >> value) {
-      vector_of_uint32_out->push_back(value);
-      if (istream.peek() == ',') {
-        istream.ignore();
-      }
-    }
-
-    return vector_of_uint32_out->size() != 0 && istream.eof();
-  }
-
-  bool Parse(const std::string& string_value, uint32_t* uint32_out) {
-    FTL_DCHECK(uint32_out);
-
-    std::istringstream istream(string_value);
-    return (istream >> *uint32_out) && istream.eof();
   }
 
   FlogViewer viewer_;

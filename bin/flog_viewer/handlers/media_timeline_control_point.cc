@@ -32,7 +32,7 @@ std::shared_ptr<Accumulator> MediaTimelineControlPoint::GetAccumulator() {
 }
 
 void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
@@ -44,7 +44,7 @@ void MediaTimelineControlPoint::BoundAs(uint64_t koid) {
 void MediaTimelineControlPoint::SetProgramRangeRequested(uint64_t program,
                                                          int64_t min_pts,
                                                          int64_t max_pts) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.SetProgramRangeRequested\n";
   terse_out() << indent;
   terse_out() << begl << "program: " << program << "\n";
@@ -56,7 +56,7 @@ void MediaTimelineControlPoint::SetProgramRangeRequested(uint64_t program,
 }
 
 void MediaTimelineControlPoint::PrimeRequested() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.PrimeRequested"
               << "\n";
 
@@ -64,7 +64,7 @@ void MediaTimelineControlPoint::PrimeRequested() {
 }
 
 void MediaTimelineControlPoint::CompletingPrime() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.CompletingPrime"
               << "\n";
 
@@ -73,7 +73,7 @@ void MediaTimelineControlPoint::CompletingPrime() {
 
 void MediaTimelineControlPoint::ScheduleTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.ScheduleTimelineTransform"
               << "\n";
   terse_out() << indent;
@@ -86,7 +86,7 @@ void MediaTimelineControlPoint::ScheduleTimelineTransform(
 
 void MediaTimelineControlPoint::ApplyTimelineTransform(
     media::TimelineTransformPtr timeline_transform) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.ApplyTimelineTransform"
               << "\n";
   terse_out() << indent;
@@ -99,7 +99,7 @@ void MediaTimelineControlPoint::ApplyTimelineTransform(
 }
 
 void MediaTimelineControlPoint::ReachedEndOfStream() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaTimelineControlPoint.ReachedEndOfStream"
               << "\n";
 

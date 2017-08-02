@@ -30,8 +30,18 @@ std::ostream& begl(std::ostream& os) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, AsEntryIndex value) {
-  return os << std::setfill('0') << std::setw(6) << value.index_;
+std::ostream& operator<<(std::ostream& os, const EntryHeader& value) {
+  if (value.entry_.is_null()) {
+    return os << "NULL ENTRY";
+  }
+
+  // Print <log_id>.<index> <hh:mm:ss>.<nanoseconds> <log_id>.<channel_id>
+  return os << value.entry_->log_id << "." << std::setfill('0') << std::setw(6)
+            << value.index_ << " " << AsNiceDateTime(value.entry_->time_ns)
+            << "." << std::setfill('0') << std::setw(9)
+            << value.entry_->time_ns % kNanosecondsPerSecond << " "
+            << value.entry_->log_id << "." << std::setw(2) << std::setfill('0')
+            << value.entry_->channel_id << " ";
 }
 
 std::ostream& operator<<(std::ostream& os, AsAddress value) {
@@ -101,18 +111,6 @@ std::ostream& operator<<(std::ostream& os, const PeerBinding& value) {
   }
 
   return os << "unresolved binding, koid " << AsKoid(value.koid());
-}
-
-std::ostream& operator<<(std::ostream& os, const FlogEntryPtr& value) {
-  if (value.is_null()) {
-    return os << "NULL ENTRY";
-  }
-
-  // Print <hh:mm:ss>.<nanoseconds> <log_id>.<channel_id>
-  return os << AsNiceDateTime(value->time_ns) << "." << std::setfill('0')
-            << std::setw(9) << value->time_ns % kNanosecondsPerSecond << " "
-            << value->log_id << "." << std::setw(2) << std::setfill('0')
-            << value->channel_id << " ";
 }
 
 }  // namespace flog

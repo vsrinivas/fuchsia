@@ -85,7 +85,8 @@ std::shared_ptr<Accumulator> ChannelHandler::GetAccumulator() {
 
 std::shared_ptr<Channel> ChannelHandler::AsChannel(uint64_t subject_address) {
   FTL_DCHECK(manager_ != nullptr);
-  return manager_->FindChannelBySubjectAddress(subject_address);
+  return manager_->FindChannelBySubjectAddress(channel_->log_id(),
+                                               subject_address);
 }
 
 void ChannelHandler::BindAs(uint64_t koid) {

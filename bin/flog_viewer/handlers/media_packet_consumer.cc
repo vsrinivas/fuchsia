@@ -40,7 +40,7 @@ MediaPacketConsumer::FindOutstandingPacket(uint64_t label) {
 }
 
 void MediaPacketConsumer::BoundAs(uint64_t koid) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
@@ -50,7 +50,7 @@ void MediaPacketConsumer::BoundAs(uint64_t koid) {
 }
 
 void MediaPacketConsumer::DemandSet(media::MediaPacketDemandPtr demand) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaPacketConsumer.DemandSet\n";
   full_out() << indent;
   full_out() << begl << "demand: " << demand << "\n";
@@ -65,12 +65,12 @@ void MediaPacketConsumer::DemandSet(media::MediaPacketDemandPtr demand) {
 }
 
 void MediaPacketConsumer::Reset() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.Reset\n";
 }
 
 void MediaPacketConsumer::Failed() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.Failed\n";
 
   accumulator_->failed_ = true;
@@ -78,7 +78,7 @@ void MediaPacketConsumer::Failed() {
 
 void MediaPacketConsumer::RespondingToGetDemandUpdate(
     media::MediaPacketDemandPtr demand) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaPacketConsumer.RespondingToGetDemandUpdate"
              << "\n";
   full_out() << indent;
@@ -90,7 +90,7 @@ void MediaPacketConsumer::RespondingToGetDemandUpdate(
 
 void MediaPacketConsumer::AddPayloadBufferRequested(uint32_t id,
                                                     uint64_t size) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.AddPayloadBufferRequested"
               << "\n";
   terse_out() << indent;
@@ -109,7 +109,7 @@ void MediaPacketConsumer::AddPayloadBufferRequested(uint32_t id,
 }
 
 void MediaPacketConsumer::RemovePayloadBufferRequested(uint32_t id) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.RemovePayloadBufferRequested"
               << "\n";
   terse_out() << indent;
@@ -127,7 +127,7 @@ void MediaPacketConsumer::RemovePayloadBufferRequested(uint32_t id) {
 }
 
 void MediaPacketConsumer::FlushRequested() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.FlushRequested\n";
 
   if (accumulator_->flush_requests_.outstanding_count() != 0) {
@@ -137,7 +137,7 @@ void MediaPacketConsumer::FlushRequested() {
 }
 
 void MediaPacketConsumer::CompletingFlush() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketConsumer.CompletingFlush\n";
 
   if (accumulator_->flush_requests_.outstanding_count() == 0) {
@@ -151,7 +151,7 @@ void MediaPacketConsumer::PacketSupplied(uint64_t label,
                                          media::MediaPacketPtr packet,
                                          uint64_t payload_address,
                                          uint32_t packets_outstanding) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaPacketConsumer.PacketSupplied\n";
   full_out() << indent;
   full_out() << begl << "label: " << label << "\n";
@@ -176,7 +176,7 @@ void MediaPacketConsumer::PacketSupplied(uint64_t label,
 
 void MediaPacketConsumer::ReturningPacket(uint64_t label,
                                           uint32_t packets_outstanding) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaPacketConsumer.ReturningPacket\n";
   full_out() << indent;
   full_out() << begl << "label: " << label << "\n";

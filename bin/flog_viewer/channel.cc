@@ -21,9 +21,10 @@ std::shared_ptr<Channel> Channel::Create(
 }
 
 // static
-std::shared_ptr<Channel> Channel::CreateUnresolved(uint64_t subject_address) {
+std::shared_ptr<Channel> Channel::CreateUnresolved(uint32_t log_id,
+                                                   uint64_t subject_address) {
   return std::shared_ptr<Channel>(
-      new Channel(0, 0, 0, subject_address, nullptr));
+      new Channel(log_id, 0, 0, subject_address, nullptr));
 }
 
 Channel::Channel(uint32_t log_id,
@@ -39,12 +40,10 @@ Channel::Channel(uint32_t log_id,
 
 Channel::~Channel() {}
 
-void Channel::Resolve(uint32_t log_id,
-                      uint32_t channel_id,
+void Channel::Resolve(uint32_t channel_id,
                       uint32_t creation_entry_index,
                       std::unique_ptr<ChannelHandler> handler) {
   FTL_DCHECK(!resolved());
-  log_id_ = log_id;
   channel_id_ = channel_id;
   creation_entry_index_ = creation_entry_index;
   handler_ = std::move(handler);

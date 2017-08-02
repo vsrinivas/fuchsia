@@ -35,7 +35,7 @@ std::shared_ptr<Accumulator> MediaRenderer::GetAccumulator() {
 }
 
 void MediaRenderer::BoundAs(uint64_t koid) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaRenderer.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
@@ -47,7 +47,7 @@ void MediaRenderer::BoundAs(uint64_t koid) {
 void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
                            uint64_t consumer_address,
                            uint64_t timeline_control_point_address) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaRenderer.Config\n";
   terse_out() << indent;
   terse_out() << begl << "supported_types: " << supported_types << "\n";
@@ -67,7 +67,7 @@ void MediaRenderer::Config(fidl::Array<media::MediaTypeSetPtr> supported_types,
 }
 
 void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaRenderer.SetMediaType\n";
   terse_out() << indent;
   terse_out() << begl << "type: " << type << "\n";
@@ -108,7 +108,7 @@ void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
 }
 
 void MediaRenderer::PtsRate(uint32_t ticks, uint32_t seconds) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaRenderer.PtsRate" << std::endl;
   terse_out() << indent;
   terse_out() << begl << "ticks: " << ticks << std::endl;
@@ -121,7 +121,7 @@ void MediaRenderer::PtsRate(uint32_t ticks, uint32_t seconds) {
 void MediaRenderer::EngagePacket(int64_t current_pts,
                                  int64_t packet_pts,
                                  uint64_t packet_label) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaRenderer.EngagePacket\n";
   full_out() << indent;
   full_out() << begl << "current_pts: " << AsNsTime(current_pts) << "\n";
@@ -178,7 +178,7 @@ void MediaRenderer::EngagePacket(int64_t current_pts,
 }
 
 void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaRenderer.RenderRange" << std::endl;
   full_out() << indent;
   full_out() << begl << "pts: " << AsNsTime(pts) << std::endl;

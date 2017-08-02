@@ -48,8 +48,7 @@ std::shared_ptr<Accumulator> MediaDemux::GetAccumulator() {
 }
 
 void MediaDemux::BoundAs(uint64_t koid) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
-              << "MediaDemux.BoundAs\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaDemux.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
   terse_out() << outdent;
@@ -62,7 +61,7 @@ void MediaDemux::NewStream(uint32_t index,
                            uint64_t producer_address) {
   FTL_DCHECK(type);
 
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaDemux.NewStream\n";
   terse_out() << indent;
   terse_out() << begl << "index: " << index << "\n";

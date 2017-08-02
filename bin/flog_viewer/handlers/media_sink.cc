@@ -30,7 +30,7 @@ std::shared_ptr<Accumulator> MediaSink::GetAccumulator() {
 }
 
 void MediaSink::BoundAs(uint64_t koid) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaSink.BoundAs\n";
   terse_out() << indent;
   terse_out() << begl << "koid: " << AsKoid(koid) << "\n";
@@ -46,7 +46,7 @@ void MediaSink::Config(media::MediaTypePtr input_type,
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
 
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaSink.Config\n";
   terse_out() << indent;
   terse_out() << begl << "input_type: " << input_type << "\n";

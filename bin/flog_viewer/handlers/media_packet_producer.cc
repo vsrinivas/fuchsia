@@ -30,7 +30,7 @@ std::shared_ptr<Accumulator> MediaPacketProducer::GetAccumulator() {
 }
 
 void MediaPacketProducer::ConnectedTo(uint64_t related_koid) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketProducer.ConnectedTo\n";
   terse_out() << indent;
   terse_out() << begl << "related_koid: " << AsKoid(related_koid) << "\n";
@@ -44,14 +44,14 @@ void MediaPacketProducer::ConnectedTo(uint64_t related_koid) {
 }
 
 void MediaPacketProducer::Resetting() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketProducer.Resetting\n";
 
   accumulator_->consumer_.Reset();
 }
 
 void MediaPacketProducer::RequestingFlush() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketProducer.RequestingFlush\n";
 
   if (accumulator_->flush_requests_.outstanding_count() != 0) {
@@ -61,7 +61,7 @@ void MediaPacketProducer::RequestingFlush() {
 }
 
 void MediaPacketProducer::FlushCompleted() {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketProducer.FlushCompleted\n";
 
   if (accumulator_->flush_requests_.outstanding_count() == 0) {
@@ -73,7 +73,7 @@ void MediaPacketProducer::FlushCompleted() {
 
 void MediaPacketProducer::PayloadBufferAllocationFailure(uint32_t index,
                                                          uint64_t size) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
+  terse_out() << EntryHeader(entry(), entry_index())
               << "MediaPacketProducer.PayloadBufferAllocationFailure"
               << "\n";
   terse_out() << indent;
@@ -85,7 +85,7 @@ void MediaPacketProducer::PayloadBufferAllocationFailure(uint32_t index,
 }
 
 void MediaPacketProducer::DemandUpdated(media::MediaPacketDemandPtr demand) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry() << indent;
+  full_out() << EntryHeader(entry(), entry_index()) << indent;
   full_out() << "MediaPacketProducer.DemandUpdated\n";
   full_out() << begl << "demand: " << demand << "\n";
   full_out() << outdent;
@@ -102,7 +102,7 @@ void MediaPacketProducer::ProducingPacket(uint64_t label,
                                           media::MediaPacketPtr packet,
                                           uint64_t payload_address,
                                           uint32_t packets_outstanding) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaPacketProducer.ProducingPacket\n";
   full_out() << indent;
   full_out() << begl << "label: " << label << "\n";
@@ -127,7 +127,7 @@ void MediaPacketProducer::ProducingPacket(uint64_t label,
 
 void MediaPacketProducer::RetiringPacket(uint64_t label,
                                          uint32_t packets_outstanding) {
-  full_out() << AsEntryIndex(entry_index()) << " " << entry()
+  full_out() << EntryHeader(entry(), entry_index())
              << "MediaPacketProducer.RetiringPacket\n";
   full_out() << indent;
   full_out() << begl << "label: " << label << "\n";

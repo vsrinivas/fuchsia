@@ -49,6 +49,7 @@ executable("flog_viewer") {
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/services/flog",
+    "//apps/media/src/util",
     "//lib/ftl",
     "//lib/mtl",
   ]

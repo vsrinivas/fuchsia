@@ -18,9 +18,9 @@ Default::Default(const std::string& format) : ChannelHandler(format) {}
 Default::~Default() {}
 
 void Default::HandleMessage(fidl::Message* message) {
-  terse_out() << AsEntryIndex(entry_index()) << " " << entry()
-              << "channel message, size " << message->data_num_bytes()
-              << " name " << message->name() << "\n";
+  terse_out() << EntryHeader(entry(), entry_index()) << "channel message, size "
+              << message->data_num_bytes() << " name " << message->name()
+              << "\n";
   if (format() == kFormatFull) {
     PrintData(message->data(), message->data_num_bytes());
   }

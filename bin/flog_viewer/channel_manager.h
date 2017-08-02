@@ -16,6 +16,7 @@ class ChannelManager {
  public:
   // Finds a channel by subject address.
   virtual std::shared_ptr<Channel> FindChannelBySubjectAddress(
+      uint32_t log_id,
       uint64_t subject_address) = 0;
 
   // Associates a binding koid with a binding.
