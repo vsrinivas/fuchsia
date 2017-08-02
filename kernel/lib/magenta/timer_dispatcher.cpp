@@ -77,6 +77,16 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
 
     CancelLocked();
 
+    // If the timer is already due and this is a one-shot, then we can set the signal
+    // immediately without starting the timer.
+    // TODO(MG-991): We could handle the repeating case here too but we're thinking
+    // about removing repeating timers so we might as well keep this optimization
+    // as simple as possible.
+    if (deadline <= current_time() && period == 0u) {
+        state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
+        return MX_OK;
+    }
+
     // The timer is always a one shot timer which in the periodic case
     // is re-issued in the timer callback.
     deadline_ = deadline;
