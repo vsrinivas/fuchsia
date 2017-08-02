@@ -32,7 +32,7 @@ namespace l2cap {
 // accessed on multiple threads.
 class PDU final {
  public:
-  using FragmentList = mxtl::DoublyLinkedList<std::unique_ptr<hci::ACLDataPacket>>;
+  using FragmentList = mxtl::DoublyLinkedList<hci::ACLDataPacketPtr>;
 
   PDU();
   ~PDU() = default;
@@ -97,7 +97,7 @@ class PDU final {
 
   // Takes ownership of |fragment| and adds it to |fragments_|. This method assumes that validity
   // checks on |fragment| have already been performed.
-  void AppendFragment(std::unique_ptr<hci::ACLDataPacket> fragment);
+  void AppendFragment(hci::ACLDataPacketPtr fragment);
 
   // The number of fragments currently stored in this PDU.
   size_t fragment_count_;

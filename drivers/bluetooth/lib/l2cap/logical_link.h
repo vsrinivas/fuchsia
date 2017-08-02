@@ -47,7 +47,7 @@ class LogicalLink final {
   std::unique_ptr<Channel> OpenFixedChannel(ChannelId channel_id);
 
   // Takes ownership of |packet| for PDU processing and routes it to its target channel.
-  void HandleRxPacket(std::unique_ptr<hci::ACLDataPacket> packet);
+  void HandleRxPacket(hci::ACLDataPacketPtr packet);
 
  private:
   friend class ChannelImpl;

@@ -107,8 +107,7 @@ void ACLDataChannel::SetDataRxHandler(const DataReceivedCallback& rx_callback) {
   rx_callback_ = rx_callback;
 }
 
-bool ACLDataChannel::SendPacket(std::unique_ptr<ACLDataPacket> data_packet,
-                                Connection::LinkType ll_type) {
+bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet, Connection::LinkType ll_type) {
   if (!is_initialized_) {
     FTL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
     return false;
@@ -123,7 +122,7 @@ bool ACLDataChannel::SendPacket(std::unique_ptr<ACLDataPacket> data_packet,
 
   std::lock_guard<std::mutex> lock(send_mutex_);
 
-  send_queue_.push_back(QueuedDataPacket(ll_type, std::move(data_packet)));
+  send_queue_.emplace_back(QueuedDataPacket(ll_type, std::move(data_packet)));
 
   TrySendNextQueuedPacketsLocked();
 

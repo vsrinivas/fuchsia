@@ -68,7 +68,7 @@ std::unique_ptr<Channel> ChannelManager::OpenFixedChannel(hci::ConnectionHandle 
   return iter->second->OpenFixedChannel(channel_id);
 }
 
-void ChannelManager::OnACLDataReceived(std::unique_ptr<hci::ACLDataPacket> packet) {
+void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
   // The creation thread of this object is expected to be different from the HCI I/O thread.
   FTL_DCHECK(!thread_checker_.IsCreationThreadCurrent());
 

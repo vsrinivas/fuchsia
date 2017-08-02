@@ -19,7 +19,7 @@ const BasicHeader& GetBasicHeader(const hci::ACLDataPacket& fragment) {
 
 Recombiner::Recombiner() : ready_(false), frame_length_(0u), cur_length_(0u) {}
 
-bool Recombiner::AddFragment(std::unique_ptr<hci::ACLDataPacket>&& fragment) {
+bool Recombiner::AddFragment(hci::ACLDataPacketPtr&& fragment) {
   FTL_DCHECK(fragment);
 
   if (ready()) return false;

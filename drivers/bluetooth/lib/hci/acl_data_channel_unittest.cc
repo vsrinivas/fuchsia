@@ -451,7 +451,7 @@ TEST_F(ACLDataChannelTest, ReceiveData) {
   size_t num_rx_packets = 0u;
   ConnectionHandle packet0_handle;
   ConnectionHandle packet1_handle;
-  auto data_rx_cb = [&](std::unique_ptr<ACLDataPacket> packet) {
+  auto data_rx_cb = [&](ACLDataPacketPtr packet) {
     num_rx_packets++;
     if (num_rx_packets == kExpectedPacketCount) message_loop()->PostQuitTask();
 

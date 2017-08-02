@@ -129,7 +129,7 @@ class TransportTest : public TestBase<FakeControllerType> {
   hci::ACLDataChannel* acl_data_channel() const { return transport_->acl_data_channel(); }
 
  private:
-  void OnDataReceived(std::unique_ptr<hci::ACLDataPacket> data_packet) {
+  void OnDataReceived(hci::ACLDataPacketPtr data_packet) {
     // Accessing |data_received_callback_| is racy but unlikely to cause issues in unit tests.
     // NOTE(armansito): Famous last words?
     if (!data_received_callback_) return;

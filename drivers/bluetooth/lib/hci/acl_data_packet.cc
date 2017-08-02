@@ -30,7 +30,7 @@ using SmallACLAllocator = mxtl::SlabAllocator<SmallACLTraits>;
 
 namespace {
 
-std::unique_ptr<ACLDataPacket> NewACLDataPacket(size_t payload_size) {
+ACLDataPacketPtr NewACLDataPacket(size_t payload_size) {
   FTL_DCHECK(payload_size <= slab_allocators::kLargeACLDataPayloadSize);
 
   if (payload_size <= slab_allocators::kSmallACLDataPayloadSize) {
@@ -53,15 +53,14 @@ std::unique_ptr<ACLDataPacket> NewACLDataPacket(size_t payload_size) {
 }  // namespace
 
 // static
-std::unique_ptr<ACLDataPacket> ACLDataPacket::New(uint16_t payload_size) {
+ACLDataPacketPtr ACLDataPacket::New(uint16_t payload_size) {
   return NewACLDataPacket(payload_size);
 }
 
 // static
-std::unique_ptr<ACLDataPacket> ACLDataPacket::New(ConnectionHandle connection_handle,
-                                                  ACLPacketBoundaryFlag packet_boundary_flag,
-                                                  ACLBroadcastFlag broadcast_flag,
-                                                  uint16_t payload_size) {
+ACLDataPacketPtr ACLDataPacket::New(ConnectionHandle connection_handle,
+                                    ACLPacketBoundaryFlag packet_boundary_flag,
+                                    ACLBroadcastFlag broadcast_flag, uint16_t payload_size) {
   auto packet = NewACLDataPacket(payload_size);
   if (!packet) return nullptr;
 

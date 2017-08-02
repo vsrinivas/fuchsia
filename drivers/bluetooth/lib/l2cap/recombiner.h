@@ -46,7 +46,7 @@ class Recombiner final {
   //
   // Takes ownership of |fragment| only in the success case. The contents will not be moved in the
   // case of failure.
-  bool AddFragment(std::unique_ptr<hci::ACLDataPacket>&& fragment);
+  bool AddFragment(hci::ACLDataPacketPtr&& fragment);
 
   // Returns a complete PDU in |out_pdu| (overwriting its contents) if the accumulated ACL data
   // fragments form a complete L2CAP frame. Otherwise, returns false.

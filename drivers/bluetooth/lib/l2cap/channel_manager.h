@@ -72,7 +72,7 @@ class ChannelManager final {
  private:
   // Called when an ACL data packet is received from the controller. This method is responsible for
   // routing the packet to the corresponding LogicalLink.
-  void OnACLDataReceived(std::unique_ptr<hci::ACLDataPacket> data_packet);
+  void OnACLDataReceived(hci::ACLDataPacketPtr data_packet);
 
   ftl::RefPtr<hci::Transport> hci_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

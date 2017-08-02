@@ -16,7 +16,7 @@ namespace l2cap {
 namespace {
 
 template <typename... T>
-std::unique_ptr<hci::ACLDataPacket> PacketFromBytes(T... data) {
+hci::ACLDataPacketPtr PacketFromBytes(T... data) {
   auto bytes = common::CreateStaticByteBuffer(std::forward<T>(data)...);
   FTL_DCHECK(bytes.size() >= sizeof(hci::ACLDataHeader));
 

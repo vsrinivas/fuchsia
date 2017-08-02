@@ -18,19 +18,20 @@ namespace hci {
 // Packet template specialization for ACL data packets. This cannot be directly instantiated.
 // Represents a HCI ACL data packet.
 using ACLDataPacket = Packet<ACLDataHeader>;
+using ACLDataPacketPtr = std::unique_ptr<ACLDataPacket>;
+
 template <>
 class Packet<ACLDataHeader> : public PacketBase<ACLDataHeader, ACLDataPacket> {
  public:
   // Slab-allocates a new ACLDataPacket with the given payload size without initializing its
   // contents.
-  static std::unique_ptr<ACLDataPacket> New(uint16_t payload_size);
+  static ACLDataPacketPtr New(uint16_t payload_size);
 
   // Slab-allocates a new ACLDataPacket with the given payload size and initializes the
   // packet's header field with the given data.
-  static std::unique_ptr<ACLDataPacket> New(ConnectionHandle connection_handle,
-                                            ACLPacketBoundaryFlag packet_boundary_flag,
-                                            ACLBroadcastFlag broadcast_flag,
-                                            uint16_t payload_size = 0u);
+  static ACLDataPacketPtr New(ConnectionHandle connection_handle,
+                              ACLPacketBoundaryFlag packet_boundary_flag,
+                              ACLBroadcastFlag broadcast_flag, uint16_t payload_size = 0u);
 
   // Getters for the header fields.
   ConnectionHandle connection_handle() const;

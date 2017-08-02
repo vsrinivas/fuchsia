@@ -89,7 +89,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
 
   // Callback invoked when there is a new ACL data packet from the controller. The ownership of the
   // |data_packet| is passed to the callback implementation as a rvalue reference..
-  using DataReceivedCallback = std::function<void(std::unique_ptr<ACLDataPacket> data_packet)>;
+  using DataReceivedCallback = std::function<void(ACLDataPacketPtr data_packet)>;
 
   // Assigns a handler callback for received ACL data packets. |rx_callback| will be invoked on the
   // Transport I/O thread.
@@ -100,7 +100,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   //
   // |data_packet| is passed by value, meaning that ACLDataChannel will take ownership of it.
   // |data_packet| must represent a valid ACL data packet.
-  bool SendPacket(std::unique_ptr<ACLDataPacket> data_packet, Connection::LinkType ll_type);
+  bool SendPacket(ACLDataPacketPtr data_packet, Connection::LinkType ll_type);
 
   // Returns the underlying channel handle.
   const mx::channel& channel() const { return channel_; }
@@ -115,7 +115,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
  private:
   // Represents a queued ACL data packet.
   struct QueuedDataPacket {
-    QueuedDataPacket(Connection::LinkType ll_type, std::unique_ptr<ACLDataPacket> packet)
+    QueuedDataPacket(Connection::LinkType ll_type, ACLDataPacketPtr packet)
         : ll_type(ll_type), packet(std::move(packet)) {}
 
     QueuedDataPacket() = default;
@@ -123,7 +123,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
     QueuedDataPacket& operator=(QueuedDataPacket&& other) = default;
 
     Connection::LinkType ll_type;
-    std::unique_ptr<ACLDataPacket> packet;
+    ACLDataPacketPtr packet;
   };
 
   // Returns the data buffer MTU for the given connection.

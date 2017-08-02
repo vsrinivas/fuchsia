@@ -95,7 +95,7 @@ const BasicHeader& PDU::basic_header() const {
   return fragment.view().payload<BasicHeader>();
 }
 
-void PDU::AppendFragment(std::unique_ptr<hci::ACLDataPacket> fragment) {
+void PDU::AppendFragment(hci::ACLDataPacketPtr fragment) {
   FTL_DCHECK(fragment);
   FTL_DCHECK(!is_valid() ||
              fragments_.begin()->connection_handle() == fragment->connection_handle());
