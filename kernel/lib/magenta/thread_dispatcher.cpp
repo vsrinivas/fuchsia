@@ -487,7 +487,6 @@ void ThreadDispatcher::Suspending() {
     // Notify debugger if attached.
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely.
-    // TODO(dje): Allow debugger to say whether it wants these.
     {
         mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
         if (debugger_port) {
@@ -515,7 +514,6 @@ void ThreadDispatcher::Resuming() {
     // Notify debugger if attached.
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely.
-    // TODO(dje): Allow debugger to say whether it wants these.
     {
         mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
         if (debugger_port) {
@@ -547,8 +545,6 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely. Note that this function doesn't return so we
     // need the reference to go out of scope before then.
-    // TODO(dje): Allow debugger to say whether it wants these.
-    // A process might want these as well.
     {
         mxtl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
         if (debugger_port) {
