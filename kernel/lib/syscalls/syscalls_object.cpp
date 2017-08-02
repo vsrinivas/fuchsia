@@ -365,13 +365,10 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_CPU_STATS: {
-            // grab a reference to the dispatcher
-            mxtl::RefPtr<ResourceDispatcher> resource;
-            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_NONE, &resource);
-            if (error < 0)
-                return error;
+            auto status = validate_resource(handle, MX_RSRC_KIND_ROOT);
+            if (status != MX_OK)
+                return status;
 
-            // TODO: check that this is the root resource
             // TODO: figure out a better handle to hang this off to and push this copy code into
             // that dispatcher.
 
@@ -431,13 +428,10 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return MX_OK;
         }
         case MX_INFO_KMEM_STATS: {
-            // grab a reference to the dispatcher
-            mxtl::RefPtr<ResourceDispatcher> resource;
-            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_NONE, &resource);
-            if (error < 0)
-                return error;
+            auto status = validate_resource(handle, MX_RSRC_KIND_ROOT);
+            if (status != MX_OK)
+                return status;
 
-            // TODO: check that this is the root resource
             // TODO: figure out a better handle to hang this off to and push this copy code into
             // that dispatcher.
 
