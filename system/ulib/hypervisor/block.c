@@ -38,7 +38,7 @@ mx_status_t handle_virtio_block_read(guest_state_t* guest_state, uint16_t port,
         return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         vcpu_io->access_size = 1;
-        vcpu_io->u8 = 0;
+        vcpu_io->u8 = guest_state->block_status;
         return MX_OK;
     case VIRTIO_PCI_ISR_STATUS:
         vcpu_io->access_size = 1;
@@ -78,6 +78,7 @@ mx_status_t handle_virtio_block_write(vcpu_context_t* vcpu_context, uint16_t por
     case VIRTIO_PCI_DEVICE_STATUS:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
+        vcpu_context->guest_state->block_status = io->u8;
         return MX_OK;
     case VIRTIO_PCI_QUEUE_PFN: {
         if (io->access_size != 4)

@@ -78,6 +78,8 @@ typedef struct guest_state {
 
     // Guest block.
     int block_fd;
+    // Virtio status register.
+    uint8_t block_status;
     uint64_t block_size;
     virtio_queue_t block_queue;
 
