@@ -12,6 +12,25 @@
 #include "usb-interface.h"
 #include "util.h"
 
+// By default we create devices for the interfaces on the first configuration.
+// This table allows us to specify a different configuration for certain devices
+// based on their VID and PID.
+//
+// TODO(voydanoff) Find a better way of handling this. For example, we could query to see
+// if any interfaces on the first configuration have drivers that can bind to them.
+// If not, then we could try the other configurations automatically instead of having
+// this hard coded list of VID/PID pairs
+typedef struct {
+    uint16_t vid;
+    uint16_t pid;
+    uint8_t configuration;
+} usb_config_override_t;
+
+static const usb_config_override_t config_overrides[] = {
+    { 0x0bda, 0x8153, 2 },  // Realtek ethernet dongle has CDC interface on configuration 2
+    { 0, 0, 0 },
+};
+
 static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
                                              usb_configuration_descriptor_t* config);
 
@@ -366,19 +385,35 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         }
     }
 
+    // we will create devices for interfaces on the first configuration by default
+    uint8_t configuration = 1;
+    const usb_config_override_t* override = config_overrides;
+    while (override->configuration) {
+        if (override->vid == le16toh(device_desc->idVendor) &&
+            override->pid == le16toh(device_desc->idProduct)) {
+            configuration = override->configuration;
+            break;
+        }
+        override++;
+    }
+    if (configuration > num_configurations) {
+        printf("usb_device_add: override configuration number out of range\n");
+        return MX_ERR_INTERNAL;
+    }
+    dev->current_config_index = configuration - 1;
+
     // set configuration
     status = usb_device_control(hci_mxdev, device_id,
                              USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE,
-                             USB_REQ_SET_CONFIGURATION, configs[0]->bConfigurationValue, 0,
-                             NULL, 0);
+                             USB_REQ_SET_CONFIGURATION,
+                             configs[dev->current_config_index]->bConfigurationValue, 0, NULL, 0);
     if (status < 0) {
         printf("set configuration failed\n");
         goto error_exit;
     }
-    dev->current_config_index = 0;
 
-    printf("* found USB device (0x%04x:0x%04x, USB %x.%x)\n", device_desc->idVendor,
-           device_desc->idProduct, device_desc->bcdUSB >> 8, device_desc->bcdUSB & 0xff);
+    printf("* found USB device (0x%04x:0x%04x, USB %x.%x) config %u\n", device_desc->idVendor,
+           device_desc->idProduct, device_desc->bcdUSB >> 8, device_desc->bcdUSB & 0xff, configuration);
 
     list_initialize(&dev->children);
     dev->hci_mxdev = hci_mxdev;
@@ -409,7 +444,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         goto error_exit;
     }
 
-    return usb_device_add_interfaces(dev, configs[0]);
+    return usb_device_add_interfaces(dev, configs[dev->current_config_index]);
 
 error_exit:
     if (configs) {
