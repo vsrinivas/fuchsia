@@ -3,7 +3,8 @@
         "dart"
     ],
     "labels": [
-        "//apps/mondrian"
+        "//apps/mondrian",
+        "//apps/mondrian:test"
     ],
     "binaries": [
         {
