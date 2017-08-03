@@ -5,7 +5,9 @@
 #pragma once
 
 #include <atomic>
+#include <list>
 #include <mutex>
+#include <queue>
 
 #include <magenta/compiler.h>
 
@@ -62,27 +64,32 @@ class Channel {
   using ClosedCallback = ftl::Closure;
   void set_channel_closed_callback(const ClosedCallback& callback) { closed_cb_ = callback; }
 
-  // Callback invoked when a new SDU is received on this channel. |rx_cb| will always be posted on
-  // |rx_task_runner|. If a non-empty |rx_cb| is provided, then the value of |rx_task_runner| must
+  // Callback invoked when a new SDU is received on this channel. Any previously buffered SDUs will
+  // be sent to |rx_cb| right away, provided that |rx_cb| is not empty and the underlying logical
+  // link is active.
+  //
+  // Setting |rx_cb| to empty will unregister the handler, but SDUs may still be delivered to the
+  // old handler until this takes effect.
+  //
+  // If a non-empty |rx_cb| is provided, then the value of |rx_task_runner| must
   // not be nullptr. If |rx_cb| is empty (e.g. to clear the rx handler), then |rx_task_runner| must
   // be nullptr.
+  //
+  // See additional notes on thread safety above.
   using RxCallback = std::function<void(const SDU& sdu)>;
-  void SetRxHandler(const RxCallback& rx_cb, ftl::RefPtr<ftl::TaskRunner> rx_task_runner);
+  virtual void SetRxHandler(const RxCallback& rx_cb,
+                            ftl::RefPtr<ftl::TaskRunner> rx_task_runner) = 0;
 
  protected:
   explicit Channel(ChannelId id);
 
-  const ClosedCallback& closed_callback() const { return closed_cb_; }
-
   bool IsCreationThreadCurrent() const { return thread_checker_.IsCreationThreadCurrent(); }
+
+  const ClosedCallback& closed_callback() const { return closed_cb_; }
 
  private:
   ChannelId id_;
   ClosedCallback closed_cb_;
-
-  std::mutex mtx_;
-  RxCallback rx_cb_ __TA_GUARDED(mtx_);
-  ftl::RefPtr<ftl::TaskRunner> rx_task_runner_ __TA_GUARDED(mtx_);
 
   ftl::ThreadChecker thread_checker_;
 
@@ -98,7 +105,9 @@ class ChannelImpl : public Channel {
  public:
   ~ChannelImpl() override;
 
+  // Channel overrides:
   void SendBasicFrame(const common::ByteBuffer& payload) override;
+  void SetRxHandler(const RxCallback& rx_cb, ftl::RefPtr<ftl::TaskRunner> rx_task_runner) override;
 
  private:
   friend class internal::LogicalLink;
@@ -110,14 +119,27 @@ class ChannelImpl : public Channel {
   // any locking methods of |link_| as that WILL cause a deadlock.
   void OnLinkClosed();
 
+  // Called by |link_| when a PDU targeting this channel has been received. Contents of |pdu| will
+  // be moved.
+  void HandleRxPdu(PDU&& pdu);
+
+  std::mutex mtx_;
+
+  RxCallback rx_cb_ __TA_GUARDED(mtx_);
+  ftl::RefPtr<ftl::TaskRunner> rx_task_runner_ __TA_GUARDED(mtx_);
+
   // The LogicalLink that this channel is associated with. A channel is always created by a
   // LogicalLink.
   //
   // |link_| is guaranteed to be valid as long as the link is active. When a LogicalLink is torn
   // down, it will notify all of its associated channels by calling OnLinkClosed() which sets
   // |link_| to nullptr.
-  std::mutex mtx_;
   internal::LogicalLink* link_ __TA_GUARDED(mtx_);  // weak
+
+  // The pending SDUs on this channel. Received PDUs are buffered if |rx_cb_| is currently not set.
+  // TODO(armansito): We should avoid STL containers for data packets as they all implicitly
+  // allocate. This is a reminder to fix this elsewhere (especially in the HCI layer).
+  std::queue<SDU, std::list<SDU>> pending_sdus_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ChannelImpl);
 };

@@ -4,12 +4,14 @@
 
 #pragma once
 
+#include <list>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
 
 #include <magenta/compiler.h>
 
+#include "apps/bluetooth/lib/common/cancelable_callback.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
@@ -74,6 +76,8 @@ class LogicalLink final {
 
   // TODO(armansito): Store a signaling channel implementation separately from other fixed channels.
 
+  Recombiner recombiner_;
+
   std::mutex mtx_;
 
   // LogicalLink stores raw pointers to its channels. Each Channel notifies its link when it is
@@ -81,6 +85,11 @@ class LogicalLink final {
   using ChannelMap = std::unordered_map<ChannelId, ChannelImpl*>;
   ChannelMap channels_ __TA_GUARDED(mtx_);
 
+  // Stores packets that have been received on
+  using PendingPduMap = std::unordered_map<ChannelId, std::list<PDU>>;
+  PendingPduMap pending_pdus_ __TA_GUARDED(mtx_);
+
+  common::CancelableCallbackFactory<void()> cancelable_callback_factory_;
   ftl::ThreadChecker thread_checker_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LogicalLink);

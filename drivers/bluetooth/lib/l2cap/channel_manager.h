@@ -10,9 +10,11 @@
 
 #include <magenta/compiler.h>
 
+#include "apps/bluetooth/lib/common/cancelable_callback.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/l2cap/channel.h"
 
 #include "lib/ftl/macros.h"
@@ -58,6 +60,10 @@ class ChannelManager final {
 
   // Removes a previously registered connection. All corresponding Channels will be closed and all
   // incoming data packets on this link will be dropped.
+  //
+  // NOTE: It is recommended that a link entry be removed AFTER the controller sends a HCI
+  // Disconnection Complete Event for the corresponding logical link. This is to prevent incorrectly
+  // buffering data if the controller has more packets to send after removing the link entry.
   void Unregister(hci::ConnectionHandle handle);
 
   // Opens the L2CAP fixed channel with |channel_id| over the logical link identified by
@@ -69,6 +75,9 @@ class ChannelManager final {
   std::unique_ptr<Channel> OpenFixedChannel(hci::ConnectionHandle connection_handle,
                                             ChannelId channel_id);
 
+  // Returns the HCI I/O thread task runner.
+  ftl::RefPtr<ftl::TaskRunner> io_task_runner() const { return hci_->io_task_runner(); }
+
  private:
   // Called when an ACL data packet is received from the controller. This method is responsible for
   // routing the packet to the corresponding LogicalLink.
@@ -77,11 +86,17 @@ class ChannelManager final {
   ftl::RefPtr<hci::Transport> hci_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
-  ftl::ThreadChecker thread_checker_;
-
   std::mutex mtx_;
   std::unordered_map<hci::ConnectionHandle, std::unique_ptr<internal::LogicalLink>> ll_map_
       __TA_GUARDED(mtx_);
+
+  // Stores packets received on a connection handle before a link for it has been created.
+  using PendingPacketMap =
+      std::unordered_map<hci::ConnectionHandle, mxtl::DoublyLinkedList<hci::ACLDataPacketPtr>>;
+  PendingPacketMap pending_packets_ __TA_GUARDED(mtx_);
+
+  common::CancelableCallbackFactory<void()> cancelable_callback_factory_;
+  ftl::ThreadChecker thread_checker_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ChannelManager);
 };
