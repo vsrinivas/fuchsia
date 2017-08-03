@@ -27,7 +27,7 @@ std::string GetTypeName<std::set<uint32_t>>() {
   return "std::set<uint32_t>";
 }
 }  // namespace internal
-}
+}  // namespace testing
 
 namespace convert {
 namespace {
@@ -57,10 +57,9 @@ template <typename T>
 class CollectionViewTest : public ::testing::Test {
 };
 
-typedef ::testing::Types<std::vector<uint32_t>,
-                         std::unordered_set<uint32_t>,
-                         std::set<uint32_t>>
-    CollectionTypes;
+using CollectionTypes = ::testing::Types<std::vector<uint32_t>,
+                                         std::unordered_set<uint32_t>,
+                                         std::set<uint32_t>>;
 
 TYPED_TEST_CASE(CollectionViewTest, CollectionTypes);
 
@@ -74,5 +73,5 @@ TYPED_TEST(CollectionViewTest, Views) {
   EXPECT_EQ(*std::next(values.begin()), view.Tail()[0]);
 }
 
-}
-}
+}  // namespace
+}  // namespace convert

@@ -14,18 +14,24 @@ namespace convert {
 
 // View over the given collection. Doesn't take ownership of the collection that
 // must outlives this class.
+//
+// Single-argument constructor is marked as NOLINT to suppress
+// `google-explicit-constructor` clang-tidy warning - in this case the implicit
+// conversion is intended.
 template <typename T>
 class CollectionView {
  public:
   using iterator = typename T::iterator;
   using const_iterator = typename T::const_iterator;
 
-  CollectionView(T& collection)
+  CollectionView(T& collection)  // NOLINT
       : collection_(collection),
         begin_(std::begin(collection)),
         end_(std::end(collection)) {}
   CollectionView(T& collection, iterator begin, iterator end)
-      : collection_(collection), begin_(std::move(begin)), end_(std::move(end)) {}
+      : collection_(collection),
+        begin_(std::move(begin)),
+        end_(std::move(end)) {}
   CollectionView(const CollectionView& collection) = default;
   CollectionView& operator=(const CollectionView& collection) = default;
 
@@ -72,6 +78,6 @@ class CollectionView {
   iterator end_;
 };
 
-}
+}  // namespace convert
 
 #endif  // APPS_LEDGER_SRC_CONVERT_COLLECTION_VIEW_H_
