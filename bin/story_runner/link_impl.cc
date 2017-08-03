@@ -217,9 +217,7 @@ class LinkImpl::SetCall : Operation<> {
     if (dirty) {
       ptr.Set(impl_->doc_, new_value);
       impl_->ValidateSchema("LinkImpl::Set", ptr, json_.get());
-      new WriteCall(&operation_queue_, impl_, src_, [this, flow]{
-          FTL_LOG(INFO) << "SET DONE " << json_;
-        });
+      new WriteCall(&operation_queue_, impl_, src_, [flow]{});
     }
   }
 
