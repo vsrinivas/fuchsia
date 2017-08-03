@@ -158,7 +158,7 @@ func TestTranslateInterfaceType(t *testing.T) {
 	typeRef := &fidl_types.TypeTypeReference{fidl_types.TypeReference{TypeKey: &typeKey}}
 
 	translator := NewTranslator(&fileGraph)
-	checkEq(t, "Pointer", translator.translateType(typeRef))
+	checkEq(t, "FooBar_Pointer", translator.translateType(typeRef))
 }
 
 func TestTranslateInterfaceRequestType(t *testing.T) {
@@ -177,5 +177,5 @@ func TestTranslateInterfaceRequestType(t *testing.T) {
 	}}
 
 	translator := NewTranslator(&fileGraph)
-	checkEq(t, "Request", translator.translateType(typeRef))
+	checkEq(t, "FooBar_Request", translator.translateType(typeRef))
 }

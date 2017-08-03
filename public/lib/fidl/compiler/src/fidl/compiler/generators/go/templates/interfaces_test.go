@@ -68,15 +68,15 @@ const someInterface_SecondMethod_Ordinal uint32 = 21
 func TestServiceName(t *testing.T) {
 	expected := `const someInterface_Name string = "SomeService"
 
-func (r *Request) Name() string {
+func (r SomeInterface_Request) Name() string {
 	return someInterface_Name
 }
 
-func (p *Pointer) Name() string {
+func (p SomeInterface_Pointer) Name() string {
 	return someInterface_Name
 }
 
-func (f *ServiceBinder) Name() string {
+func (f *SomeInterface_ServiceBinder) Name() string {
 	return someInterface_Name
 }`
 

@@ -65,71 +65,75 @@ type {{$interface.Name}} interface {
 const interfaceOtherDeclTmplText = `
 {{- define "InterfaceOtherDecl" -}}
 {{- $interface := . -}}
-type Request bindings.InterfaceRequest
+type {{$interface.Name}}_Request bindings.InterfaceRequest
 
-func (r Request) PassChannel() mx.Handle {
+func (r {{$interface.Name}}_Request) PassChannel() mx.Handle {
 	i := bindings.InterfaceRequest(r)
 	return i.PassChannel()
 }
 
-type Pointer bindings.InterfacePointer
-
-type ServiceBinder struct{
-	Delegate Binder
+func (r {{$interface.Name}}_Request) NewStub(impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
+	return NewStubFor{{$interface.Name}}(r, impl, waiter)
 }
 
-type Binder interface {
-	Bind(request Request)
+type {{$interface.Name}}_Pointer bindings.InterfacePointer
+
+type {{$interface.Name}}_ServiceBinder struct{
+	Delegate {{$interface.Name}}_Binder
 }
 
-func (f *ServiceBinder) Bind(handle mx.Handle) {
-	request := Request{bindings.NewChannelHandleOwner(handle)}
+type {{$interface.Name}}_Binder interface {
+	Bind(request {{$interface.Name}}_Request)
+}
+
+func (f *{{$interface.Name}}_ServiceBinder) Bind(handle mx.Handle) {
+	request := {{$interface.Name}}_Request{bindings.NewChannelHandleOwner(handle)}
 	f.Delegate.Bind(request)
 }
 
-// NewChannel creates a channel for use with the {{$interface.Name}} interface with
-// a Request on one end and a Pointer on the other.
-func NewChannel() (Request, Pointer) {
+// NewChannelFor{{$interface.Name}} creates a channel for use with the {{$interface.Name}} interface with
+// a {{$interface.Name}}_Request on one end and a {{$interface.Name}}_Pointer on the other.
+func NewChannelFor{{$interface.Name}}() ({{$interface.Name}}_Request, {{$interface.Name}}_Pointer) {
         r, p := bindings.CreateChannelForFidlInterface()
-        return Request(r), Pointer(p)
+        return {{$interface.Name}}_Request(r), {{$interface.Name}}_Pointer(p)
 }
 
-type Proxy struct {
+type {{$interface.Name}}_Proxy struct {
 	router *bindings.Router
 	ids bindings.Counter
 }
 
-func NewProxy(p Pointer, waiter bindings.AsyncWaiter) *Proxy {
-	return &Proxy{
+func NewProxyFor{{$interface.Name}}(p {{$interface.Name}}_Pointer, waiter bindings.AsyncWaiter) *{{$interface.Name}}_Proxy {
+	return &{{$interface.Name}}_Proxy{
 		bindings.NewRouter(p.PassChannel(), waiter),
 		bindings.NewCounter(),
 	}
 }
 
-func (p *Proxy) Close() {
+func (p *{{$interface.Name}}_Proxy) Close() {
 	p.router.Close()
 }
 
-func (p *Proxy) NewRequest(waiter bindings.AsyncWaiter) (Request, *Proxy) {
-	r, ptr := NewChannel()
+func (p *{{$interface.Name}}_Proxy) NewRequest(waiter bindings.AsyncWaiter) ({{$interface.Name}}_Request, *{{$interface.Name}}_Proxy) {
+	r, ptr := NewChannelFor{{$interface.Name}}()
 	if p != nil {
 		p.Close()
 	}
-	p = NewProxy(ptr, waiter)
+	p = NewProxyFor{{$interface.Name}}(ptr, waiter)
 	return r, p
 }
 
-type Stub struct {
+type {{$interface.PrivateName}}_Stub struct {
 	connector *bindings.Connector
 	impl {{$interface.Name}}
 }
 
-func NewStub(r Request, impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
+func NewStubFor{{$interface.Name}}(r {{$interface.Name}}_Request, impl {{$interface.Name}}, waiter bindings.AsyncWaiter) *bindings.Stub {
 	connector := bindings.NewConnector(r.PassChannel(), waiter)
-	return bindings.NewStub(connector, &Stub{connector, impl})
+	return bindings.NewStub(connector, &{{$interface.PrivateName}}_Stub{connector, impl})
 }
 
-func (s *Stub) Accept(message *bindings.Message) (err error) {
+func (s *{{$interface.PrivateName}}_Stub) Accept(message *bindings.Message) (err error) {
 	switch message.Header.Type {
 {{- range $method := $interface.Methods}}
 {{ template "AcceptMethod" $method }}
@@ -241,7 +245,7 @@ err error)
 const methodFuncTmplText = `
 {{- define "MethodFunction" -}}
 {{- $method := . -}}
-func (p *Proxy) {{ template "MethodSignature" $method }} {
+func (p *{{$method.Interface.Name}}_Proxy) {{ template "MethodSignature" $method }} {
 	payload := &{{$method.Params.Name}}{
 {{range $param := $method.Params.Fields -}}
 		in{{$param.Name}},
@@ -305,15 +309,15 @@ const serviceDeclTmplText = `
 {{- $interface := . -}}
 const {{$interface.PrivateName}}_Name string = "{{$interface.ServiceName}}"
 
-func (r Request) Name() string {
+func (r {{$interface.Name}}_Request) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 
-func (p Pointer) Name() string {
+func (p {{$interface.Name}}_Pointer) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 
-func (f *ServiceBinder) Name() string {
+func (f *{{$interface.Name}}_ServiceBinder) Name() string {
 	return {{$interface.PrivateName}}_Name
 }
 {{- end -}}

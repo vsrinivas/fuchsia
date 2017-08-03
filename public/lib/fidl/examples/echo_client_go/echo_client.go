@@ -15,7 +15,7 @@ import (
 
 type EchoClientApp struct {
 	ctx  *context.Context
-	echo *echo.Proxy
+	echo *echo.Echo_Proxy
 }
 
 func (a *EchoClientApp) Start() {

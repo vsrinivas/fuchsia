@@ -27,8 +27,8 @@ type EchoDelegate struct {
 	stubs []*bindings.Stub
 }
 
-func (delegate *EchoDelegate) Bind(request echo.Request) {
-	s := echo.NewStub(request, &EchoImpl{}, bindings.GetAsyncWaiter())
+func (delegate *EchoDelegate) Bind(r echo.Echo_Request) {
+	s := r.NewStub(&EchoImpl{}, bindings.GetAsyncWaiter())
 	delegate.stubs = append(delegate.stubs, s)
 	go func() {
 		for {
@@ -50,7 +50,7 @@ func (delegate *EchoDelegate) Quit() {
 
 func main() {
 	c := context.CreateFromStartupInfo()
-	c.OutgoingService.AddService(&echo.ServiceBinder{&EchoDelegate{}})
+	c.OutgoingService.AddService(&echo.Echo_ServiceBinder{&EchoDelegate{}})
 	c.Serve()
 
 	select {}
