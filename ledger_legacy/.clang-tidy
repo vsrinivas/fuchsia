@@ -1,5 +1,5 @@
 ---
-Checks:          'clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-use-equals-delete,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-cast'
+Checks:          'clang-diagnostic-*,-clang-diagnostic-unused-command-line-argument,clang-analyzer-*,google-*,misc-*,-misc-noexcept*,modernize-*,-modernize-deprecated-headers,-modernize-return-braced-init-list,-modernize-use-equals-delete,-modernize-use-equals-default,performance-*,-performance-unnecessary-value-param,readability-*,-readability-implicit-bool-cast'
 WarningsAsErrors: false
 HeaderFilterRegex: '\.\./apps/ledger/'
 AnalyzeTemporaryDtors: false
