@@ -100,13 +100,8 @@ as you normally would, then run the command to build the installer files
 By default this script assumes you're doing a debug build for x86-64. Use the
 '-h' option to get help customizing the parameters for other architectures, if
 you're doing a release build, or if your source and output directory structure
-is unique. This script creates a 'installer.bootfs' which is the secondary
-bootfs the installer needs. We'll replace our original 'user.bootfs' with the
-one for the installer.
-
-```
-> mv out/<ARCH>/installer.bootfs out/<ARCH>/user.bootfs
-```
+is unique. If you had a user.bootfs in your output directory, it will be moved
+to user-noinstaller.bootfs.
 
 If you will boot from a USB drive, use the 'build-bootable-usb-gigaboot.sh'
 script to configure a USB drive
@@ -132,11 +127,11 @@ format of the drive. To add a GPT locate your drive with 'lsblk'
 
 ```
 > lsblk
-ID     DEV        DRV      SIZE      TYPE          LABEL       FLAGS
-000    block      block     28G                                REMOVABLE
-001    block      block    1023M     efi system    EFI SYSTEM  REMOVABLE
-002    block      block     27GB     data          FAT PARTITION REMOVABLE
-003    block      block    232GB
+ID     SIZE      TYPE          LABEL       FLAGS  DEVICE
+000      28G                               RE     /dev/pci/00:14:00/xhci/usb/004/ifc-000/ums/lun-000/block
+001    1023M     efi system    EFI SYSTEM  RE     /dev/pci/00:14:00/xhci/usb/004/ifc-000/ums/lun-000/block/part-000/block
+002      27G     data          FAT PARTITION RE   /dev/pci/00:14:00/xhci/usb/004/ifc-000/ums/lun-000/block/part-001/block
+003     232G                                      /dev/pci/00:17:00/ahci/sata2/block
 ```
 
 In this case device 003 is what we want based on it not being labeled removable
@@ -213,17 +208,15 @@ First use 'lsblk' to examine the block devices you have
 
 ```
 > lsblk
-ID  DEV      DRV      SIZE TYPE           LABEL
-.
-..
-000 sata0    ahci       6G
-001 sata1    ahci      24G
-002 sata0p0  gpt        4G unknown        minfs1
-003 sata0p1  gpt        1G unknown        extra
-004 sata1p0  gpt        3G unknown        6th
-005 sata1p1  gpt        4G unknown        system
-006 sata1p2  gpt        1G efi system     EFI
-007 sata1p3  gpt        8G unknown        data
+ID  SIZE TYPE           LABEL    FLAGS  DEVICE
+000   6G                                /dev/pci/00:17:00/ahci/sata1/block
+001  24G                                /dev/pci/00:17:00/ahci/sata2/block
+002   4G unknown        minfs1          /dev/pci/00:17:00/ahci/sata1/block/part-000/block
+003   1G unknown        extra           /dev/pci/00:17:00/ahci/sata1/block/part-001/block
+004    3G unknown        6th            /dev/pci/00:17:00/ahci/sata2/block/part-000/block
+005    4G unknown        system         /dev/pci/00:17:00/ahci/sata2/block/part-001/block
+006    1G efi system     EFI            /dev/pci/00:17:00/ahci/sata2/block/part-002/block
+007    8G unknown        data           /dev/pci/00:17:00/ahci/sata2/block/part-003/block
 ```
 
 The two 'ahci'-driven entries here are actually disks, the rest are partitions.
