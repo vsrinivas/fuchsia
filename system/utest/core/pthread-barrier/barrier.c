@@ -18,18 +18,26 @@ static pthread_barrier_t barrier;
 static pthread_t threads[kNumThreads];
 static int barriers_won[kNumThreads];
 
-static void* barrier_wait(void* arg) {
-    int idx = (int)(intptr_t)arg;
+static bool barrier_wait_test(size_t idx) {
+    BEGIN_HELPER;
 
     for (int iteration = 0u; iteration < kNumIterations; iteration++) {
         int result = pthread_barrier_wait(&barrier);
-        ASSERT_TRUE((result == 0) || (result == PTHREAD_BARRIER_SERIAL_THREAD),
-                    "Invalid return from barrier!");
         if (result == PTHREAD_BARRIER_SERIAL_THREAD) {
             barriers_won[idx] += 1;
+        } else {
+            ASSERT_EQ(result, 0,
+                      "Invalid return value from pthread_barrier_wait");
         }
     }
 
+    END_HELPER;
+}
+
+static void* barrier_wait(void* arg) {
+    // The real work is in the subroutine because functions using
+    // ASSERT_* macros must return bool.
+    (void)barrier_wait_test((uintptr_t)arg);
     return NULL;
 }
 
@@ -39,7 +47,8 @@ static bool test_barrier(void) {
     ASSERT_EQ(pthread_barrier_init(&barrier, NULL, kNumThreads), 0, "Failed to initialize barrier!");
 
     for (int idx = 0; idx < kNumThreads; ++idx) {
-        ASSERT_EQ(pthread_create(&threads[idx], NULL, &barrier_wait, (void*)(intptr_t)idx), 0,
+        ASSERT_EQ(pthread_create(&threads[idx], NULL,
+                                 &barrier_wait, (void*)(uintptr_t)idx), 0,
                   "Failed to create thread!");
     }
 
