@@ -33,7 +33,7 @@ void EventStream::OnDataAvailable(const void* data, size_t num_bytes) {
     pending_line_.append(current, newline - current);
     current = newline;
     if (newline != end) {
-      if (!ProcessLine(std::move(pending_line_)))
+      if (!ProcessLine(pending_line_))
         return;
       pending_line_.clear();
       ++current;

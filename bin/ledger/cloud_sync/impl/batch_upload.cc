@@ -87,7 +87,7 @@ void BatchUpload::UploadNextObject() {
   auto object_id_to_send = std::move(remaining_object_ids_.front());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_ids_.pop();
-  storage_->GetPiece(std::move(object_id_to_send),
+  storage_->GetPiece(object_id_to_send,
                      [this](storage::Status storage_status,
                             std::unique_ptr<const storage::Object> object) {
                        FTL_DCHECK(storage_status == storage::Status::OK);

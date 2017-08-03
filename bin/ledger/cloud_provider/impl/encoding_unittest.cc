@@ -27,7 +27,7 @@ TEST(EncodingTest, Encode) {
   commits.push_back(std::move(commit));
 
   std::string encoded;
-  EXPECT_TRUE(EncodeCommits(std::move(commits), &encoded));
+  EXPECT_TRUE(EncodeCommits(commits, &encoded));
   EXPECT_EQ(
       "{\"some_idV\":{\"id\":\"some_idV\","
       "\"content\":\"some_contentV\","
@@ -109,7 +109,7 @@ TEST(EncodingTest, EncodeDecodeZeroByte) {
   commits.push_back(std::move(commit));
 
   std::string encoded;
-  EXPECT_TRUE(EncodeCommits(std::move(commits), &encoded));
+  EXPECT_TRUE(EncodeCommits(commits, &encoded));
   // Encoded commit is sent to server, which replaces the timestamp
   // placeholder with server-side timestamp. We emulate this for testing.
   std::string pattern = "{\".sv\":\"timestamp\"}";

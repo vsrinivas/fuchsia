@@ -176,7 +176,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     add_object_calls++;
     received_object_tokens.push_back(auth_token);
     std::string received_data;
-    ASSERT_TRUE(mtl::StringFromVmo(std::move(data), &received_data));
+    ASSERT_TRUE(mtl::StringFromVmo(data, &received_data));
     received_objects.insert(
         std::make_pair(object_id.ToString(), received_data));
     ftl::Closure report_result =

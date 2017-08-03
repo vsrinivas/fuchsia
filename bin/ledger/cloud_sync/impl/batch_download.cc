@@ -31,23 +31,22 @@ void BatchDownload::Start() {
     commits.emplace_back(std::move(record.commit.id),
                          std::move(record.commit.content));
   }
-  storage_->AddCommitsFromSync(
-      std::move(commits), [this](storage::Status status) {
-        if (status != storage::Status::OK) {
-          on_error_();
-          return;
-        }
+  storage_->AddCommitsFromSync(std::move(commits), [this](
+                                                       storage::Status status) {
+    if (status != storage::Status::OK) {
+      on_error_();
+      return;
+    }
 
-        if (storage_->SetSyncMetadata(kTimestampKey,
-                                      std::move(records_.back().timestamp)) !=
-            storage::Status::OK) {
-          on_error_();
-          return;
-        }
+    if (storage_->SetSyncMetadata(kTimestampKey, records_.back().timestamp) !=
+        storage::Status::OK) {
+      on_error_();
+      return;
+    }
 
-        // Can be deleted within.
-        on_done_();
-      });
+    // Can be deleted within.
+    on_done_();
+  });
 }
 
 }  // namespace cloud_sync

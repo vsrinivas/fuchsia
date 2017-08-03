@@ -668,8 +668,7 @@ TEST_F(CloudProviderImplTest, AddObject) {
   EXPECT_EQ(std::vector<std::string>{"object_idV"}, upload_keys_);
 
   std::string uploaded_content;
-  ASSERT_TRUE(
-      mtl::StringFromVmo(std::move(upload_data_[0]), &uploaded_content));
+  ASSERT_TRUE(mtl::StringFromVmo(upload_data_[0], &uploaded_content));
   EXPECT_EQ("bazinga", uploaded_content);
 }
 

@@ -115,7 +115,7 @@ void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
                             fidl::Array<uint8_t> value,
                             std::function<void(ledger::Status)> put_callback) {
   if (!should_put_as_reference_(value.size())) {
-    page_->Put(std::move(key), std::move(value), std::move(put_callback));
+    page_->Put(std::move(key), std::move(value), put_callback);
     return;
   }
   mx::vmo vmo;
@@ -128,7 +128,7 @@ void PutBenchmark::PutEntry(fidl::Array<uint8_t> key,
           return;
         }
         page_->PutReference(std::move(key), std::move(reference),
-                            ledger::Priority::EAGER, std::move(put_callback));
+                            ledger::Priority::EAGER, put_callback);
       }));
 }
 

@@ -98,8 +98,7 @@ int main(int argc, const char** argv) {
 
   mtl::MessageLoop loop;
   benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
-                              value_size, update, std::move(ref_strategy),
-                              seed);
+                              value_size, update, ref_strategy, seed);
   // TODO(nellyv): A delayed task is necessary because of US-257.
   loop.task_runner()->PostDelayedTask([&app] { app.Run(); },
                                       ftl::TimeDelta::FromSeconds(1));

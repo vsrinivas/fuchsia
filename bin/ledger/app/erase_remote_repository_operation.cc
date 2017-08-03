@@ -91,7 +91,7 @@ void EraseRemoteRepositoryOperation::ClearDeviceMap() {
   }
 
   firebase_->Delete(
-      cloud_sync::kDeviceMapRelpath, std::move(query_params),
+      cloud_sync::kDeviceMapRelpath, query_params,
       [this](firebase::Status status) {
         if (status != firebase::Status::OK) {
           FTL_LOG(ERROR) << "Failed to erase the device map: " << status;
@@ -109,16 +109,15 @@ void EraseRemoteRepositoryOperation::EraseRemote() {
   if (!auth_token_.empty()) {
     query_params = {"auth=" + auth_token_};
   }
-  firebase_->Delete(
-      "", std::move(query_params), [this](firebase::Status status) {
-        if (status != firebase::Status::OK) {
-          FTL_LOG(ERROR) << "Failed to erase the remote state: " << status;
-          on_done_(false);
-          return;
-        }
-        FTL_LOG(INFO) << "Erased remote data at " << firebase_->api_url();
-        on_done_(true);
-      });
+  firebase_->Delete("", query_params, [this](firebase::Status status) {
+    if (status != firebase::Status::OK) {
+      FTL_LOG(ERROR) << "Failed to erase the remote state: " << status;
+      on_done_(false);
+      return;
+    }
+    FTL_LOG(INFO) << "Erased remote data at " << firebase_->api_url();
+    on_done_(true);
+  });
 }
 
 }  // namespace ledger
