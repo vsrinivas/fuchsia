@@ -67,50 +67,51 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   }
 
   // firebase::Firebase:
-  void Get(const std::string& key,
-           const std::vector<std::string>& query_params,
-           const std::function<void(firebase::Status status,
-                                    const rapidjson::Value& value)>& callback)
-      override {
-    get_keys_.push_back(key);
-    get_queries_.push_back(query_params);
-    message_loop_.task_runner()->PostTask([this, callback] {
-      callback(firebase::Status::OK, *get_response_);
-      message_loop_.PostQuitTask();
-    });
-  }
-
-  void Put(
-      const std::string& key,
-      const std::vector<std::string>& /*query_params*/,
-      const std::string& data,
-      const std::function<void(firebase::Status status)>& callback) override {
-    put_keys_.push_back(key);
-    put_data_.push_back(data);
-    message_loop_.task_runner()->PostTask([this, callback] {
-      callback(firebase::Status::OK);
-      message_loop_.PostQuitTask();
-    });
-  }
-
-  void Patch(
+  void Get(
       const std::string& key,
       const std::vector<std::string>& query_params,
-      const std::string& data,
-      const std::function<void(firebase::Status status)>& callback) override {
+      std::function<void(firebase::Status status,
+                         const rapidjson::Value& value)> callback) override {
+    get_keys_.push_back(key);
+    get_queries_.push_back(query_params);
+    message_loop_.task_runner()->PostTask(
+        [ this, callback = std::move(callback) ] {
+          callback(firebase::Status::OK, *get_response_);
+          message_loop_.PostQuitTask();
+        });
+  }
+
+  void Put(const std::string& key,
+           const std::vector<std::string>& /*query_params*/,
+           const std::string& data,
+           std::function<void(firebase::Status status)> callback) override {
+    put_keys_.push_back(key);
+    put_data_.push_back(data);
+    message_loop_.task_runner()->PostTask(
+        [ this, callback = std::move(callback) ] {
+          callback(firebase::Status::OK);
+          message_loop_.PostQuitTask();
+        });
+  }
+
+  void Patch(const std::string& key,
+             const std::vector<std::string>& query_params,
+             const std::string& data,
+             std::function<void(firebase::Status status)> callback) override {
     patch_keys_.push_back(key);
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
-    message_loop_.task_runner()->PostTask([this, callback] {
-      callback(firebase::Status::OK);
-      message_loop_.PostQuitTask();
-    });
+    message_loop_.task_runner()->PostTask(
+        [ this, callback = std::move(callback) ] {
+          callback(firebase::Status::OK);
+          message_loop_.PostQuitTask();
+        });
   }
 
-  void Delete(const std::string& /*key*/,
-              const std::vector<std::string>& /*query_params*/,
-              const std::function<void(firebase::Status status)>& /*callback*/)
-      override {
+  void Delete(
+      const std::string& /*key*/,
+      const std::vector<std::string>& /*query_params*/,
+      std::function<void(firebase::Status status)> /*callback*/) override {
     // Should never be called.
     FAIL();
   }

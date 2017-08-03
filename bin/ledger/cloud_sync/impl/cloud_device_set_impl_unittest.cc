@@ -18,39 +18,38 @@ class FakeFirebase : public firebase::Firebase {
   FakeFirebase() {}
   ~FakeFirebase() override {}
 
-  void Get(const std::string& /*key*/,
-           const std::vector<std::string>& query_params,
-           const std::function<void(firebase::Status status,
-                                    const rapidjson::Value& value)>& callback)
-      override {
+  void Get(
+      const std::string& /*key*/,
+      const std::vector<std::string>& query_params,
+      std::function<void(firebase::Status status,
+                         const rapidjson::Value& value)> callback) override {
     get_query_params.push_back(query_params);
     rapidjson::Document document;
     document.Parse(returned_value);
     callback(returned_status, document);
   }
 
-  void Put(
-      const std::string& /*key*/,
-      const std::vector<std::string>& query_params,
-      const std::string& data,
-      const std::function<void(firebase::Status status)>& callback) override {
+  void Put(const std::string& /*key*/,
+           const std::vector<std::string>& query_params,
+           const std::string& data,
+           std::function<void(firebase::Status status)> callback) override {
     put_query_params.push_back(query_params);
     put_data.push_back(data);
     callback(returned_status);
   }
 
-  void Patch(const std::string& /*key*/,
-             const std::vector<std::string>& /*query_params*/,
-             const std::string& /*data*/,
-             const std::function<void(firebase::Status status)>& /*callback*/)
-      override {
+  void Patch(
+      const std::string& /*key*/,
+      const std::vector<std::string>& /*query_params*/,
+      const std::string& /*data*/,
+      std::function<void(firebase::Status status)> /*callback*/) override {
     FTL_NOTREACHED();
   }
 
-  void Delete(const std::string& /*key*/,
-              const std::vector<std::string>& /*query_params*/,
-              const std::function<void(firebase::Status status)>& /*callback*/)
-      override {
+  void Delete(
+      const std::string& /*key*/,
+      const std::vector<std::string>& /*query_params*/,
+      std::function<void(firebase::Status status)> /*callback*/) override {
     FTL_NOTREACHED();
   }
 

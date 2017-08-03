@@ -81,10 +81,10 @@ FirebaseImpl::~FirebaseImpl() {}
 void FirebaseImpl::Get(
     const std::string& key,
     const std::vector<std::string>& query_params,
-    const std::function<void(Status status, const rapidjson::Value& value)>&
+    std::function<void(Status status, const rapidjson::Value& value)>
         callback) {
-  auto request_callback = [callback](Status status,
-                                     const std::string& response) {
+  auto request_callback = [callback = std::move(callback)](
+      Status status, const std::string& response) {
     if (status != Status::OK) {
       callback(status, rapidjson::Value());
       return;
@@ -106,9 +106,10 @@ void FirebaseImpl::Get(
 void FirebaseImpl::Put(const std::string& key,
                        const std::vector<std::string>& query_params,
                        const std::string& data,
-                       const std::function<void(Status status)>& callback) {
+                       std::function<void(Status status)> callback) {
   Request(BuildRequestUrl(key, query_params), "PUT", data,
-          [callback](Status status, const std::string& response) {
+          [callback = std::move(callback)](Status status,
+                                           const std::string& response) {
             // Ignore the response body, which is the same data we sent to the
             // server.
             callback(status);
@@ -118,9 +119,10 @@ void FirebaseImpl::Put(const std::string& key,
 void FirebaseImpl::Patch(const std::string& key,
                          const std::vector<std::string>& query_params,
                          const std::string& data,
-                         const std::function<void(Status status)>& callback) {
+                         std::function<void(Status status)> callback) {
   Request(BuildRequestUrl(key, query_params), "PATCH", data,
-          [callback](Status status, const std::string& response) {
+          [callback = std::move(callback)](Status status,
+                                           const std::string& response) {
             // Ignore the response body, which is the same data we sent to the
             // server.
             callback(status);
@@ -129,11 +131,11 @@ void FirebaseImpl::Patch(const std::string& key,
 
 void FirebaseImpl::Delete(const std::string& key,
                           const std::vector<std::string>& query_params,
-                          const std::function<void(Status status)>& callback) {
-  Request(BuildRequestUrl(key, query_params), "DELETE", "",
-          [callback](Status status, const std::string& response) {
-            callback(status);
-          });
+                          std::function<void(Status status)> callback) {
+  Request(
+      BuildRequestUrl(key, query_params), "DELETE", "",
+      [callback = std::move(callback)](
+          Status status, const std::string& response) { callback(status); });
 }
 
 void FirebaseImpl::Watch(const std::string& key,
