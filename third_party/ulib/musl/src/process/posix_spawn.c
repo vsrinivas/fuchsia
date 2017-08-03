@@ -4,7 +4,6 @@
 #include "pthread_impl.h"
 #include <fcntl.h>
 #include <sched.h>
-#include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -22,40 +21,13 @@ struct args {
 void __get_handler_set(sigset_t*);
 
 static int child(void* args_vp) {
-    int i, ret;
-    struct sigaction sa = {};
+    int ret;
     struct args* args = args_vp;
     int p = args->p[1];
     const posix_spawn_file_actions_t* fa = args->fa;
     const posix_spawnattr_t* restrict attr = args->attr;
-    sigset_t hset;
 
     close(args->p[0]);
-
-    /* All signal dispositions must be either SIG_DFL or SIG_IGN
-     * before signals are unblocked. Otherwise a signal handler
-     * from the parent might get run in the child while sharing
-     * memory, with unpredictable and dangerous results. To
-     * reduce overhead, sigaction has tracked for us which signals
-     * potentially have a signal handler. */
-    __get_handler_set(&hset);
-    for (i = 1; i < _NSIG; i++) {
-        if ((attr->__flags & POSIX_SPAWN_SETSIGDEF) && sigismember(&attr->__def, i)) {
-            sa.sa_handler = SIG_DFL;
-        } else if (sigismember(&hset, i)) {
-            if (i - 32 < 3U) {
-                sa.sa_handler = SIG_IGN;
-            } else {
-                __libc_sigaction(i, 0, &sa);
-                if (sa.sa_handler == SIG_IGN)
-                    continue;
-                sa.sa_handler = SIG_DFL;
-            }
-        } else {
-            continue;
-        }
-        __libc_sigaction(i, &sa, 0);
-    }
 
     if (attr->__flags & POSIX_SPAWN_SETPGROUP)
         if ((ret = setpgid(0, attr->__pgrp)))

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "atomic.h"
-#include "ksigaction.h"
 #include "libc.h"
 #include "pthread_arch.h"
 #include <assert.h>
@@ -148,7 +147,6 @@ static inline pid_t __thread_get_tid(void) {
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
 void __private_cond_signal(void* condvar, int n);
 
-int __libc_sigaction(int, const struct sigaction*, struct sigaction*);
 int __libc_sigprocmask(int, const sigset_t*, sigset_t*);
 
 // This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
@@ -171,12 +169,6 @@ static inline int __sigaltstack(const stack_t* restrict ss, stack_t* restrict ol
 
 static inline int __rt_sigprocmask(int how, const sigset_t* restrict set,
                                    sigset_t* restrict old_set, size_t sigmask_size) {
-    return 0;
-}
-
-static inline int __rt_sigaction(int sig, const struct k_sigaction* restrict action,
-                                 struct k_sigaction* restrict old_action,
-                                 size_t sigaction_mask_size) {
     return 0;
 }
 
