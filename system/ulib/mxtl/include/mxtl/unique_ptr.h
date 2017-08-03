@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/macros.h>
 #include <mxtl/recycler.h>
 #include <mxtl/type_support.h>
@@ -201,6 +202,16 @@ static inline bool operator==(decltype(nullptr), const unique_ptr<T>& ptr) {
 template <typename T>
 static inline bool operator!=(decltype(nullptr), const unique_ptr<T>& ptr) {
     return (ptr.get() != nullptr);
+}
+
+// Constructs a new object and assigns it to a unique_ptr.
+template <typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+    return unique_ptr<T>(new T(mxtl::forward<Args>(args)...));
+}
+template <typename T, typename... Args>
+unique_ptr<T> make_unique_checked(AllocChecker* ac, Args&&... args) {
+    return unique_ptr<T>(new (ac) T(mxtl::forward<Args>(args)...));
 }
 
 }  // namespace mxtl

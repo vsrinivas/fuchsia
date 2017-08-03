@@ -550,6 +550,30 @@ static bool uptr_upcasting() {
     END_TEST;
 }
 
+} // namespace upcasting
+
+static bool uptr_test_make_unique() {
+    BEGIN_TEST;
+
+    // no alloc checker
+    destroy_count = 0;
+    {
+        CountingPtr ptr = mxtl::make_unique<DeleteCounter>(42);
+        EXPECT_EQ(42, ptr->value, "value");
+    }
+    EXPECT_EQ(1, destroy_count);
+
+    // with alloc checker
+    destroy_count = 0;
+    {
+        mxtl::AllocChecker ac;
+        CountingPtr ptr = mxtl::make_unique_checked<DeleteCounter>(&ac, 4242);
+        EXPECT_TRUE(ac.check());
+        EXPECT_EQ(4242, ptr->value, "value");
+    }
+    EXPECT_EQ(1, destroy_count);
+
+    END_TEST;
 }
 
 BEGIN_TEST_CASE(unique_ptr)
@@ -566,4 +590,5 @@ RUN_NAMED_TEST("Array Different Scope Swapping",   uptr_test_array_diff_scope_sw
 RUN_NAMED_TEST("Array operator bool",              uptr_test_array_bool_op)
 RUN_NAMED_TEST("Array comparison operators",       uptr_test_array_comparison)
 RUN_NAMED_TEST("Upcast tests",                     upcasting::uptr_upcasting)
+RUN_NAMED_TEST("Make unique",                      uptr_test_make_unique)
 END_TEST_CASE(unique_ptr);
