@@ -6,77 +6,33 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 #
-# Download and build a tiny linux kernel as a magenta hypervisor guest.
-#
-# .config is "make alldefconfig" with the following additions:
-#  + Initial RAM filesystem and RAM disk (initramfs/initrd) support
-#  + 8250/16550 and compatible serial support
-#  + Console on 8250/16550 and compatible serial port
-#  + kexec
-#  + PCIe
-#
-# More additions to come as and when desired / needed.
+# Clone and build a Linux kernel for use as a guest.
 
-if [[ "$1" == debug ]]; then
-  DEBUG=true
-  shift
+set -e
+
+LINUXDIR=/tmp/linux
+DEFCONFIG=machina_defconfig
+
+while getopts "c:d:" OPT; do
+  case $OPT in
+    c)
+      DEFCONFIG="$OPTARG"
+      shift ;;
+    d)
+      LINUXDIR="$OPTARG"
+      shift ;;
+  esac
+done
+
+# Clone the repository.
+if [ ! -d "$LINUXDIR" ]; then
+  git clone --branch machina https://magenta-guest.googlesource.com/third_party/linux "$LINUXDIR"
 fi
 
-SRCFILE="$PWD/${BASH_SOURCE[0]}"
+# Update the repository.
+cd "$LINUXDIR"
+git pull
 
-# Location of the patches that we'll apply to the default config
-PATCHFILE="${SRCFILE%/*}/alldefconfig_plus.patch"
-DEBUG_PATCHFILE="${SRCFILE%/*}/add_kernel_debug.patch"
-
-# Location of magenta and its build dir
-MAGENTADIR="${SRCFILE%magenta/*}magenta"
-BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
-mkdir -p $BUILDDIR
-
-# Location to download tarballs to
-PULLDIR="${1:-/tmp}"
-
-# Where to build the kernel
-LINUXDIR="$BUILDDIR/linux-x86"
-
-# The kernel version we're building
-LINUXVERSION="4.9.30"
-
-# Where the kernel srcs are expected to be
-LINUXDOWNLOAD="$PULLDIR/linux-$LINUXVERSION"
-
-# Check for a built linux in the output
-if [ ! -f "$LINUXDIR/vmlinux" ]; then
-  echo "No linux in $LINUXDIR, making one..."
-
-  # Not built? Do we even have the source?
-  if [ ! -d "$LINUXDOWNLOAD" ]; then
-    echo "Downloading linux to $LINUXDOWNLOAD"
-    if curl https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-$LINUXVERSION.tar.xz | \
-        tar xJf - -C "$PULLDIR"; then
-      echo "We got the linux"
-    else
-      echo "Some issues getting the linux!"
-      exit 1
-    fi
-  fi
-
-  mkdir -p "$LINUXDIR"
-
-  # alldefconfig is pretty small (allnoconfig is smaller, but it needs more tweaks)
-  make -C "$LINUXDOWNLOAD" O="$LINUXDIR" alldefconfig
-
-  # Apply our patches
-  echo "Applying config patches..."
-  patch "$LINUXDIR/.config" "$PATCHFILE"
-
-  if [ $DEBUG ]; then
-    echo "Patching in debug symbol config..."
-    patch "$LINUXDIR/.config" "$DEBUG_PATCHFILE"
-  fi
-
-  make -C "$LINUXDOWNLOAD" O="$LINUXDIR" -j100
-else
-  echo "vmlinux found. Doing nothing."
-  echo "To force a rebuild, \"rm $LINUXDIR/vmlinux\""
-fi
+# Build Linux.
+make "$DEFCONFIG"
+make -j $(getconf _NPROCESSORS_ONLN)

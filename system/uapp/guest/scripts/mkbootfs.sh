@@ -12,7 +12,7 @@ BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
 
 KERNEL="${2:-$BUILDDIR/magenta.bin}"
 BOOTDATA="${3:-$BUILDDIR/bootdata.bin}"
-LINUX="${4:-$BUILDDIR/linux-x86/arch/x86_64/boot/bzImage}"
+BZIMAGE="${4:-/tmp/linux/arch/x86/boot/bzImage}"
 INITRD="${4:-$BUILDDIR/initrd-x86/initrd.gz}"
 
 echo "
@@ -22,8 +22,8 @@ data/mcfg.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/mcfg.aml
 data/kernel.bin=$KERNEL
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
 
-if [ -f "$LINUX" ]; then
-    echo "data/bzImage=$LINUX" >> /tmp/guest.manifest
+if [ -f "$BZIMAGE" ]; then
+    echo "data/bzImage=$BZIMAGE" >> /tmp/guest.manifest
 fi
 
 if [ -f "$INITRD" ]; then
