@@ -51,6 +51,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "collection_view_unittest.cc",
     "convert_unittest.cc",
   ]
 
