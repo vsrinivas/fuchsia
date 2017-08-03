@@ -52,32 +52,32 @@ bool test_truncate_small(void) {
     int fd = open(filename, O_RDWR | O_CREAT, 0644);
     ASSERT_GT(fd, 0);
     ASSERT_STREAM_ALL(write, fd, str, strlen(str));
-    ASSERT_TRUE(check_file_contains(filename, str, strlen(str)), "");
+    ASSERT_TRUE(check_file_contains(filename, str, strlen(str)));
 
     // Check that opening a file with O_TRUNC makes it empty
     int fd2 = open(filename, O_RDWR | O_TRUNC, 0644);
     ASSERT_GT(fd2, 0);
-    ASSERT_TRUE(check_file_empty(filename), "");
+    ASSERT_TRUE(check_file_empty(filename));
 
     // Check that we can still write to a file that has been truncated
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_STREAM_ALL(write, fd, str, strlen(str));
-    ASSERT_TRUE(check_file_contains(filename, str, strlen(str)), "");
+    ASSERT_TRUE(check_file_contains(filename, str, strlen(str)));
 
     // Check that we can truncate the file using the "truncate" function
     ASSERT_EQ(truncate(filename, 5), 0);
-    ASSERT_TRUE(check_file_contains(filename, str, 5), "");
+    ASSERT_TRUE(check_file_contains(filename, str, 5));
     ASSERT_EQ(truncate(filename, 0), 0);
-    ASSERT_TRUE(check_file_empty(filename), "");
+    ASSERT_TRUE(check_file_empty(filename));
 
     // Check that truncating an already empty file does not cause problems
     ASSERT_EQ(truncate(filename, 0), 0);
-    ASSERT_TRUE(check_file_empty(filename), "");
+    ASSERT_TRUE(check_file_empty(filename));
 
     // Check that we can use truncate to extend a file
     char empty[5] = {0, 0, 0, 0, 0};
     ASSERT_EQ(truncate(filename, 5), 0);
-    ASSERT_TRUE(check_file_contains(filename, empty, 5), "");
+    ASSERT_TRUE(check_file_contains(filename, empty, 5));
 
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(close(fd2), 0);
@@ -117,7 +117,7 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
 
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     if (new_len > old_len) { // Expanded the file
         // Verify that the file is unchanged up to old_len
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
@@ -157,7 +157,7 @@ bool test_truncate_large(void) {
     // Fill a test buffer with data
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     unsigned seed = static_cast<unsigned>(mx_ticks_get());
     unittest_printf("Truncate test using seed: %u\n", seed);
@@ -176,7 +176,7 @@ bool test_truncate_large(void) {
     // Repeatedly truncate / write to the file
     for (size_t i = 0; i < Iterations; i++) {
         size_t len = rand_r(&seed) % BufSize;
-        ASSERT_TRUE(checked_truncate<Remount>(filename, buf.get(), len), "");
+        ASSERT_TRUE(checked_truncate<Remount>(filename, buf.get(), len));
     }
     ASSERT_EQ(unlink(filename), 0);
 

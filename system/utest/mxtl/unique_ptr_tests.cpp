@@ -421,7 +421,7 @@ static bool test_upcast() {
 
     // Construct unique_ptr<Base> with a move and implicit cast
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
 
@@ -433,7 +433,7 @@ static bool test_upcast() {
 
     // Assign unique_ptr<Base> at declaration time with a mxtl::move
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
 
@@ -445,7 +445,7 @@ static bool test_upcast() {
 
     // Assign unique_ptr<Base> after declaration with a mxtl::move
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         mxtl::unique_ptr<Base> base_ptr;
         base_ptr = mxtl::move(derived_ptr);
@@ -453,7 +453,7 @@ static bool test_upcast() {
 
     // Pass the pointer to a function with a move and an implicit cast
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
 
@@ -466,7 +466,7 @@ static bool test_upcast() {
 #if TEST_WILL_NOT_COMPILE || 0
     // Construct unique_ptr<Base> without a move.
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         mxtl::unique_ptr<Base> base_ptr(derived_ptr);
     }
@@ -475,7 +475,7 @@ static bool test_upcast() {
 #if TEST_WILL_NOT_COMPILE || 0
     // Assign unique_ptr<Base> at declaration time without a mxtl::move.
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         mxtl::unique_ptr<Base> base_ptr = derived_ptr;
     }
@@ -484,7 +484,7 @@ static bool test_upcast() {
 #if TEST_WILL_NOT_COMPILE || 0
     // Assign unique_ptr<Base> after declaration without a mxtl::move.
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         mxtl::unique_ptr<Base> base_ptr;
         base_ptr = derived_ptr;
@@ -494,7 +494,7 @@ static bool test_upcast() {
 #if TEST_WILL_NOT_COMPILE || 0
     // Pass the pointer to a function with an implicit cast but without a move.
     derived_ptr.reset(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         bool test_res = handoff_fn<mxtl::unique_ptr<Base>>(derived_ptr);
         EXPECT_FALSE(test_res, "");
@@ -535,7 +535,7 @@ static bool uptr_upcasting() {
     // well.  This should cause the build to break because of ambiguity.
     AllocChecker ac;
     mxtl::unique_ptr<C> ptr(new (&ac) C());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     {
         // Now test pass by move.

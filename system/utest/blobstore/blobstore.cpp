@@ -68,7 +68,7 @@ static bool CheckBlobstoreInfo(const char* mount_path) {
 static int EndBlobstoreTest(const char* ramdisk_path) {
     mx_status_t status = MX_OK;
 
-    ASSERT_TRUE(CheckBlobstoreInfo(MOUNT_PATH), "");
+    ASSERT_TRUE(CheckBlobstoreInfo(MOUNT_PATH));
 
     if ((status = umount(MOUNT_PATH)) != MX_OK) {
         fprintf(stderr, "Failed to unmount filesystem: %d\n", status);
@@ -168,7 +168,7 @@ static bool MakeBlob(const char* path, const char* merkle, size_t size_merkle,
     ASSERT_EQ(StreamAll(write, fd, data, size_data), 0, "Failed to write Data");
 
     *out_fd = fd;
-    ASSERT_TRUE(VerifyContents(*out_fd, data, size_data), "");
+    ASSERT_TRUE(VerifyContents(*out_fd, data, size_data));
     return true;
 }
 
@@ -194,7 +194,7 @@ static bool MakeBlobCompromised(const char* path, const char* merkle, size_t siz
     // If we're writing a blob with invalid sizes, it's possible that writing will fail.
     StreamAll(write, fd, data, size_data);
 
-    ASSERT_TRUE(VerifyCompromised(fd, data, size_data), "");
+    ASSERT_TRUE(VerifyCompromised(fd, data, size_data));
     ASSERT_EQ(close(fd), 0);
     return true;
 }
@@ -266,17 +266,16 @@ static bool TestBasic(void) {
 
     for (size_t i = 10; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                             info->data.get(), info->size_data, &fd),
-                    "");
+                             info->data.get(), info->size_data, &fd));
         ASSERT_EQ(close(fd), 0);
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
 
-        ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+        ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
 
         ASSERT_EQ(close(fd), 0);
         ASSERT_EQ(unlink(info->path), 0);
@@ -293,12 +292,11 @@ static bool TestMmap(void) {
 
     for (size_t i = 10; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                             info->data.get(), info->size_data, &fd),
-                    "");
+                             info->data.get(), info->size_data, &fd));
         ASSERT_EQ(close(fd), 0);
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
@@ -326,24 +324,23 @@ static bool TestReaddir(void) {
     AllocChecker ac;
     mxtl::Array<mxtl::unique_ptr<blob_info_t>>
         info(new (&ac) mxtl::unique_ptr<blob_info_t>[kMaxEntries](), kMaxEntries);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     // Try to readdir on an empty directory
     DIR* dir = opendir(MOUNT_PATH);
-    ASSERT_NONNULL(dir, "");
+    ASSERT_NONNULL(dir);
     ASSERT_NULL(readdir(dir), "Expected blobstore to start empty");
 
     // Fill a directory with entries
     for (size_t i = 0; i < kMaxEntries; i++) {
-        ASSERT_TRUE(GenerateBlob(kBlobSize, &info[i]), "");
+        ASSERT_TRUE(GenerateBlob(kBlobSize, &info[i]));
         int fd;
         ASSERT_TRUE(MakeBlob(info[i]->path, info[i]->merkle.get(), info[i]->size_merkle,
-                             info[i]->data.get(), info[i]->size_data, &fd),
-                    "");
+                             info[i]->data.get(), info[i]->size_data, &fd));
         ASSERT_EQ(close(fd), 0);
         fd = open(info[i]->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to-reopen blob");
-        ASSERT_TRUE(VerifyContents(fd, info[i]->data.get(), info[i]->size_data), "");
+        ASSERT_TRUE(VerifyContents(fd, info[i]->data.get(), info[i]->size_data));
         ASSERT_EQ(close(fd), 0);
     }
 
@@ -390,18 +387,17 @@ static bool UseAfterUnlink(void) {
 
     for (size_t i = 0; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                             info->data.get(), info->size_data, &fd),
-                    "");
+                             info->data.get(), info->size_data, &fd));
 
         // We should be able to unlink the blob
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
 
         // We should still be able to read the blob after unlinking
-        ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+        ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
 
         // After closing the fd, however, we should not be able to re-open the blob
         ASSERT_EQ(close(fd), 0);
@@ -419,12 +415,11 @@ static bool WriteAfterRead(void) {
 
     for (size_t i = 0; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                             info->data.get(), info->size_data, &fd),
-                    "");
+                             info->data.get(), info->size_data, &fd));
 
         // After blob generation, writes should be rejected
         ASSERT_LT(write(fd, info->data.get(), 1), 0,
@@ -453,12 +448,11 @@ static bool ReadTooLarge(void) {
 
     for (size_t i = 0; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                             info->data.get(), info->size_data, &fd),
-                    "");
+                             info->data.get(), info->size_data, &fd));
 
         // Verify the contents of the Blob
         AllocChecker ac;
@@ -500,7 +494,7 @@ static bool BadAllocation(void) {
               "Only acceptable pathnames are 32 hex-encoded bytes");
 
     mxtl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateBlob(1 << 15, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 15, &info));
 
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
@@ -537,19 +531,18 @@ static bool CorruptedBlob(void) {
 
     mxtl::unique_ptr<blob_info_t> info;
     for (size_t i = 1; i < 18; i++) {
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
         info->size_data -= (rand() % info->size_data) + 1;
         if (info->size_data == 0) {
             info->size_data = 1;
         }
         ASSERT_TRUE(MakeBlobCompromised(info->path, info->merkle.get(),
                                         info->size_merkle, info->data.get(),
-                                        info->size_data),
-                    "");
+                                        info->size_data));
     }
 
     for (size_t i = 0; i < 18; i++) {
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
         // Flip a random bit of the data
         size_t rand_index = rand() % info->size_data;
         char old_val = info->data.get()[rand_index];
@@ -557,8 +550,7 @@ static bool CorruptedBlob(void) {
         }
         ASSERT_TRUE(MakeBlobCompromised(info->path, info->merkle.get(),
                                         info->size_merkle, info->data.get(),
-                                        info->size_data),
-                    "");
+                                        info->size_data));
     }
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -572,7 +564,7 @@ static bool CorruptedDigest(void) {
 
     mxtl::unique_ptr<blob_info_t> info;
     for (size_t i = 1; i < 18; i++) {
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         char hexdigits[17] = "0123456789abcdef";
         size_t idx = strlen(info->path) - 1 - (rand() % (2 * Digest::kLength));
@@ -583,12 +575,11 @@ static bool CorruptedDigest(void) {
         info->path[idx] = newchar;
         ASSERT_TRUE(MakeBlobCompromised(info->path, info->merkle.get(),
                                         info->size_merkle, info->data.get(),
-                                        info->size_data),
-                    "");
+                                        info->size_data));
     }
 
     for (size_t i = 0; i < 18; i++) {
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
         // Flip a random bit of the data
         size_t rand_index = rand() % info->size_data;
         char old_val = info->data.get()[rand_index];
@@ -596,8 +587,7 @@ static bool CorruptedDigest(void) {
         }
         ASSERT_TRUE(MakeBlobCompromised(info->path, info->merkle.get(),
                                         info->size_merkle, info->data.get(),
-                                        info->size_data),
-                    "");
+                                        info->size_data));
     }
 
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -614,11 +604,10 @@ static bool EdgeAllocation(void) {
         // -1, 0, +1 offsets...
         for (size_t j = -1; j < 2; j++) {
             mxtl::unique_ptr<blob_info_t> info;
-            ASSERT_TRUE(GenerateBlob((1 << i) + j, &info), "");
+            ASSERT_TRUE(GenerateBlob((1 << i) + j, &info));
             int fd;
             ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                                 info->data.get(), info->size_data, &fd),
-                        "");
+                                 info->data.get(), info->size_data, &fd));
             ASSERT_EQ(unlink(info->path), 0);
             ASSERT_EQ(close(fd), 0);
         }
@@ -634,12 +623,11 @@ static bool CreateUmountRemountSmall(void) {
 
     for (size_t i = 10; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << i, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << i, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                             info->data.get(), info->size_data, &fd),
-                    "");
+                             info->data.get(), info->size_data, &fd));
         // Close fd, unmount filesystem
         ASSERT_EQ(close(fd), 0);
         ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
@@ -648,7 +636,7 @@ static bool CreateUmountRemountSmall(void) {
         fd = open(info->path, O_RDONLY);
         ASSERT_GT(fd, 0, "Failed to open blob");
 
-        ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+        ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
         ASSERT_EQ(close(fd), 0, "Could not close blob");
         ASSERT_EQ(unlink(info->path), 0);
     }
@@ -680,7 +668,7 @@ typedef struct blob_list {
 // Generate and open a new blob
 bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
     mxtl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateBlob(1 + (rand_r(seed) % (1 << 16)), &info), "");
+    ASSERT_TRUE(GenerateBlob(1 + (rand_r(seed) % (1 << 16)), &info));
 
     AllocChecker ac;
     mxtl::unique_ptr<blob_state_t> state(new (&ac) blob_state(mxtl::move(info)));
@@ -750,8 +738,7 @@ bool blob_read_data_helper(blob_list_t* bl) {
         return true;
     } else if (state->state == readable) {
         ASSERT_TRUE(VerifyContents(state->fd, state->info->data.get(),
-                                   state->info->size_data),
-                    "");
+                                   state->info->size_data));
     }
     {
         mxtl::AutoLock al(&bl->list_lock);
@@ -792,19 +779,19 @@ static bool CreateUmountRemountLarge(void) {
     for (size_t i = 0; i < num_ops; ++i) {
         switch (rand_r(&seed) % 5) {
         case 0:
-            ASSERT_TRUE(blob_create_helper(&bl, &seed), "");
+            ASSERT_TRUE(blob_create_helper(&bl, &seed));
             break;
         case 1:
-            ASSERT_TRUE(blob_config_helper(&bl), "");
+            ASSERT_TRUE(blob_config_helper(&bl));
             break;
         case 2:
-            ASSERT_TRUE(blob_write_data_helper(&bl), "");
+            ASSERT_TRUE(blob_write_data_helper(&bl));
             break;
         case 3:
-            ASSERT_TRUE(blob_read_data_helper(&bl), "");
+            ASSERT_TRUE(blob_read_data_helper(&bl));
             break;
         case 4:
-            ASSERT_TRUE(blob_unlink_helper(&bl), "");
+            ASSERT_TRUE(blob_unlink_helper(&bl));
             break;
         }
     }
@@ -824,8 +811,7 @@ static bool CreateUmountRemountLarge(void) {
             int fd = open(state.info->path, O_RDONLY);
             ASSERT_GT(fd, 0, "Failed to create blob");
             ASSERT_TRUE(VerifyContents(fd, state.info->data.get(),
-                                       state.info->size_data),
-                        "");
+                                       state.info->size_data));
             ASSERT_EQ(unlink(state.info->path), 0);
             ASSERT_EQ(close(fd), 0);
         } else {
@@ -848,19 +834,19 @@ int unmount_remount_thread(void* arg) {
     for (size_t i = 0; i < num_ops; ++i) {
         switch (rand_r(&seed) % 5) {
         case 0:
-            ASSERT_TRUE(blob_create_helper(bl, &seed), "");
+            ASSERT_TRUE(blob_create_helper(bl, &seed));
             break;
         case 1:
-            ASSERT_TRUE(blob_config_helper(bl), "");
+            ASSERT_TRUE(blob_config_helper(bl));
             break;
         case 2:
-            ASSERT_TRUE(blob_write_data_helper(bl), "");
+            ASSERT_TRUE(blob_write_data_helper(bl));
             break;
         case 3:
-            ASSERT_TRUE(blob_read_data_helper(bl), "");
+            ASSERT_TRUE(blob_read_data_helper(bl));
             break;
         case 4:
-            ASSERT_TRUE(blob_unlink_helper(bl), "");
+            ASSERT_TRUE(blob_unlink_helper(bl));
             break;
         }
     }
@@ -878,7 +864,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     size_t num_threads = 10;
     AllocChecker ac;
     mxtl::Array<thrd_t> threads(new (&ac) thrd_t[num_threads](), num_threads);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     // Launch all threads
     for (size_t i = 0; i < num_threads; i++) {
@@ -908,8 +894,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
             int fd = open(state.info->path, O_RDONLY);
             ASSERT_GT(fd, 0, "Failed to create blob");
             ASSERT_TRUE(VerifyContents(fd, state.info->data.get(),
-                                       state.info->size_data),
-                        "");
+                                       state.info->size_data));
             ASSERT_EQ(unlink(state.info->path), 0);
             ASSERT_EQ(close(fd), 0);
         } else {
@@ -933,7 +918,7 @@ static bool NoSpace(void) {
     size_t count = 0;
     while (true) {
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
+        ASSERT_TRUE(GenerateBlob(1 << 17, &info));
 
         int fd = open(info->path, O_CREAT | O_RDWR);
         ASSERT_GT(fd, 0, "Failed to create blob");
@@ -1006,7 +991,7 @@ static bool EarlyRead(void) {
 
     mxtl::unique_ptr<blob_info_t> info;
 
-    ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 17, &info));
     int fd = open(info->path, O_CREAT | O_EXCL | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
 
@@ -1027,8 +1012,8 @@ static bool EarlyRead(void) {
 
     // Okay, NOW we can read.
     // Double check that attempting to read early didn't cause problems...
-    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
-    ASSERT_TRUE(VerifyContents(fd2, info->data.get(), info->size_data), "");
+    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
+    ASSERT_TRUE(VerifyContents(fd2, info->data.get(), info->size_data));
 
     // Cool, everything is readable. What if we try accessing the blob status now?
     EXPECT_TRUE(check_readable(fd), "");
@@ -1049,7 +1034,7 @@ static bool WaitForRead(void) {
 
     mxtl::unique_ptr<blob_info_t> info;
 
-    ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 17, &info));
     int fd = open(info->path, O_CREAT | O_EXCL | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
 
@@ -1084,7 +1069,7 @@ static bool WaitForRead(void) {
     ASSERT_EQ(result, 0, "Unexpected result from background thread");
 
     // Double check that attempting to read early didn't cause problems...
-    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(unlink(info->path), 0);
 
@@ -1099,7 +1084,7 @@ static bool WriteSeekIgnored(void) {
     ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 17, &info));
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
     ASSERT_EQ(ftruncate(fd, info->size_data), 0);
@@ -1114,7 +1099,7 @@ static bool WriteSeekIgnored(void) {
     }
 
     // Double check that attempting to seek early didn't cause problems...
-    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(unlink(info->path), 0);
 
@@ -1138,22 +1123,22 @@ static bool UnlinkTiming(void) {
     };
 
     mxtl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateBlob(1 << 17, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 17, &info));
 
     int fd = open(info->path, O_CREAT | O_RDWR);
     ASSERT_GT(fd, 0, "Failed to create blob");
     // Unlink after first open
-    ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
+    ASSERT_TRUE(full_unlink_reopen(fd, info->path));
 
     // Unlink after init
     ASSERT_EQ(ftruncate(fd, info->size_data), 0);
-    ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
+    ASSERT_TRUE(full_unlink_reopen(fd, info->path));
 
     // Unlink after first write
     ASSERT_EQ(ftruncate(fd, info->size_data), 0);
     ASSERT_EQ(StreamAll(write, fd, info->data.get(), info->size_data), 0,
               "Failed to write Data");
-    ASSERT_TRUE(full_unlink_reopen(fd, info->path), "");
+    ASSERT_TRUE(full_unlink_reopen(fd, info->path));
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
@@ -1168,12 +1153,11 @@ static bool InvalidOps(void) {
 
     // First off, make a valid blob
     mxtl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateBlob(1 << 12, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 12, &info));
     int fd;
     ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
-                         info->data.get(), info->size_data, &fd),
-                "");
-    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+                         info->data.get(), info->size_data, &fd));
+    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
 
     // Neat. Now, let's try some unsupported operations
     ASSERT_LT(rename(info->path, info->path), 0);
@@ -1184,7 +1168,7 @@ static bool InvalidOps(void) {
     ASSERT_LT(ioctl_vfs_unmount_fs(fd), 0);
 
     // Access the file once more, after these operations
-    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data), "");
+    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(close(fd), 0);
 
@@ -1202,7 +1186,7 @@ static bool RootDirectory(void) {
     ASSERT_GT(dirfd, 0, "Cannot open root directory");
 
     mxtl::unique_ptr<blob_info_t> info;
-    ASSERT_TRUE(GenerateBlob(1 << 12, &info), "");
+    ASSERT_TRUE(GenerateBlob(1 << 12, &info));
 
     // Test ioctls which should ONLY operate on Blobs
     ASSERT_LT(ftruncate(dirfd, info->size_data), 0);

@@ -316,7 +316,7 @@ static bool do_test() {
     // Construct RefPtr<Base> with a copy and implicit cast
     Stats::Reset();
     derived_ptr = mxtl::AdoptRef<Derived>(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
         EXPECT_EQ(1, Stats::adopt_calls(), "");
@@ -360,7 +360,7 @@ static bool do_test() {
     // Assign RefPtr<Base> at declaration time with a copy
     Stats::Reset();
     derived_ptr = mxtl::AdoptRef<Derived>(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
         EXPECT_EQ(1, Stats::adopt_calls(), "");
@@ -404,7 +404,7 @@ static bool do_test() {
     // Assign RefPtr<Base> after declaration with a copy
     Stats::Reset();
     derived_ptr = mxtl::AdoptRef<Derived>(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
         EXPECT_EQ(1, Stats::adopt_calls(), "");
@@ -450,7 +450,7 @@ static bool do_test() {
     // Pass the pointer to a function as an lvalue reference with an implicit cast
     Stats::Reset();
     derived_ptr = mxtl::AdoptRef<Derived>(new (&ac) Derived());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     {
         EXPECT_NONNULL(derived_ptr, "");
         EXPECT_EQ(1, Stats::adopt_calls(), "");
@@ -531,14 +531,14 @@ static bool ref_ptr_upcast_test() {
     // should cause the build to break because of ambiguity.
     AllocChecker ac;
     mxtl::RefPtr<C> ptr = mxtl::AdoptRef(new (&ac) C());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     {
         // Test pass by copy first (so we can reuse our object)
         OverloadTestHelper helper;
         helper.PassByCopy(ptr);
 
-        ASSERT_NONNULL(ptr, "");
+        ASSERT_NONNULL(ptr);
         EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result(), "");
 
     }
@@ -583,12 +583,12 @@ static bool ref_ptr_to_const_test() {
 
     AllocChecker ac;
     mxtl::RefPtr<C> refptr = mxtl::AdoptRef<C>(new (&ac) C(23));
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     // Copy a ref-ptr to a ref-ptr-to-const.
     mxtl::RefPtr<const C> const_refptr = refptr;
     // refptr should have been copied, not moved.
-    ASSERT_NONNULL(refptr.get(), "");
+    ASSERT_NONNULL(refptr.get());
 
     // Call a const member function on a ref-ptr-to-const.
     EXPECT_NONNULL(const_refptr.get(), "");
@@ -596,16 +596,16 @@ static bool ref_ptr_to_const_test() {
 
     // Move a ref-ptr to a ref-ptr-to-const.
     mxtl::RefPtr<const C> moved_const_refptr = mxtl::move(refptr);
-    ASSERT_NONNULL(moved_const_refptr.get(), "");
+    ASSERT_NONNULL(moved_const_refptr.get());
     // Now refptr should have been nulled out.
-    ASSERT_NULL(refptr.get(), "");
+    ASSERT_NULL(refptr.get());
 
     // Move a ref-ptr-to-const into another ref-ptr-to-const.
     const_refptr.reset();
-    ASSERT_NULL(const_refptr, "");
+    ASSERT_NULL(const_refptr);
     const_refptr = mxtl::move(moved_const_refptr);
-    ASSERT_NONNULL(const_refptr, "");
-    ASSERT_NULL(moved_const_refptr, "");
+    ASSERT_NONNULL(const_refptr);
+    ASSERT_NULL(moved_const_refptr);
 
     END_TEST;
 }

@@ -99,7 +99,7 @@ static bool ramdisk_test_filesystem(void) {
     char blockpath[PATH_MAX];
     strcpy(blockpath, "/dev/class/block/");
     DIR* dir = opendir(blockpath);
-    ASSERT_NONNULL(dir, "");
+    ASSERT_NONNULL(dir);
 
     bool dev_class_block_found = false;
 
@@ -373,7 +373,7 @@ bool ramdisk_test_fifo_basic(void) {
     ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), MX_OK, "Failed to create VMO");
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     fill_random(buf.get(), vmo_size);
 
     size_t actual;
@@ -411,7 +411,7 @@ bool ramdisk_test_fifo_basic(void) {
 
     // Empty the vmo, then read the info we just wrote to the disk
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     ASSERT_EQ(mx_vmo_write(vmo, out.get(), 0, vmo_size, &actual), MX_OK);
     requests[0].opcode = BLOCKIO_READ;
@@ -445,7 +445,7 @@ bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
               "Failed to create vmo");
     AllocChecker ac;
     obj->buf.reset(new (&ac) uint8_t[obj->vmo_size]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     fill_random(obj->buf.get(), obj->vmo_size);
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj->vmo, obj->buf.get(), 0, obj->vmo_size, &actual),
@@ -471,7 +471,7 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
     size_t blocks = obj->vmo_size / kBlockSize;
     AllocChecker ac;
     mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[blocks], blocks);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     for (size_t b = 0; b < blocks; b++) {
         requests[b].txnid      = txnid;
         requests[b].vmoid      = obj->vmoid;
@@ -491,7 +491,7 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
     // First, empty out the VMO
     AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[obj->vmo_size]());
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj->vmo, out.get(), 0, obj->vmo_size, &actual),
               MX_OK);
@@ -499,7 +499,7 @@ bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size
     // Next, read to the vmo from the disk
     size_t blocks = obj->vmo_size / kBlockSize;
     mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[blocks], blocks);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     for (size_t b = 0; b < blocks; b++) {
         requests[b].txnid      = txnid;
         requests[b].vmoid      = obj->vmoid;
@@ -548,21 +548,21 @@ bool ramdisk_test_fifo_multiple_vmo(void) {
     // Create multiple VMOs
     AllocChecker ac;
     mxtl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[10](), 10);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(create_vmo_helper(fd, &objs[i], kBlockSize), "");
+        ASSERT_TRUE(create_vmo_helper(fd, &objs[i], kBlockSize));
     }
 
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(write_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize), "");
+        ASSERT_TRUE(write_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize));
     }
 
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(read_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize), "");
+        ASSERT_TRUE(read_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize));
     }
 
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(close_vmo_helper(client, &objs[i], txnid), "");
+        ASSERT_TRUE(close_vmo_helper(client, &objs[i], txnid));
     }
 
     block_fifo_release_client(client);
@@ -594,10 +594,10 @@ int fifo_vmo_thread(void* arg) {
     ssize_t expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
-    ASSERT_TRUE(create_vmo_helper(fd, obj, kBlockSize), "");
-    ASSERT_TRUE(write_striped_vmo_helper(client, obj, i, objs, txnid, kBlockSize), "");
-    ASSERT_TRUE(read_striped_vmo_helper(client, obj, i, objs, txnid, kBlockSize), "");
-    ASSERT_TRUE(close_vmo_helper(client, obj, txnid), "");
+    ASSERT_TRUE(create_vmo_helper(fd, obj, kBlockSize));
+    ASSERT_TRUE(write_striped_vmo_helper(client, obj, i, objs, txnid, kBlockSize));
+    ASSERT_TRUE(read_striped_vmo_helper(client, obj, i, objs, txnid, kBlockSize));
+    ASSERT_TRUE(close_vmo_helper(client, obj, txnid));
     return 0;
 }
 
@@ -616,14 +616,14 @@ bool ramdisk_test_fifo_multiple_vmo_multithreaded(void) {
     size_t num_threads = 10;
     AllocChecker ac;
     mxtl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[num_threads](), num_threads);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     mxtl::Array<thrd_t> threads(new (&ac) thrd_t[num_threads](), num_threads);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     mxtl::Array<test_thread_arg_t> thread_args(new (&ac) test_thread_arg_t[num_threads](),
                                                num_threads);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     for (size_t i = 0; i < num_threads; i++) {
         // Yes, this does create a bunch of duplicate fields, but it's an easy way to
@@ -671,9 +671,9 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     // Create multiple VMOs
     AllocChecker ac;
     mxtl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[10](), 10);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(create_vmo_helper(fd, &objs[i], kBlockSize), "");
+        ASSERT_TRUE(create_vmo_helper(fd, &objs[i], kBlockSize));
     }
 
     // Now that we've set up the connection for a few VMOs, shut down the fifo
@@ -701,16 +701,16 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(create_vmo_helper(fd, &objs[i], kBlockSize), "");
+        ASSERT_TRUE(create_vmo_helper(fd, &objs[i], kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(write_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize), "");
+        ASSERT_TRUE(write_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(read_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize), "");
+        ASSERT_TRUE(read_striped_vmo_helper(client, &objs[i], i, objs.size(), txnid, kBlockSize));
     }
     for (size_t i = 0; i < objs.size(); i++) {
-        ASSERT_TRUE(close_vmo_helper(client, &objs[i], txnid), "");
+        ASSERT_TRUE(close_vmo_helper(client, &objs[i], txnid));
     }
 
     block_fifo_release_client(client);
@@ -734,7 +734,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
 
     // Create a vmo
     test_vmo_object_t obj;
-    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize));
 
     for (size_t num_ops = 1; num_ops <= MAX_TXN_MESSAGES; num_ops++) {
         txnid_t txnid;
@@ -744,7 +744,7 @@ bool ramdisk_test_fifo_large_ops_count(void) {
         AllocChecker ac;
         mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[num_ops](),
                                                    num_ops);
-        ASSERT_TRUE(ac.check(), "");
+        ASSERT_TRUE(ac.check());
 
         for (size_t b = 0; b < num_ops; b++) {
             requests[b].txnid      = txnid;
@@ -778,7 +778,7 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     fifo_client_t* client;
     ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK);
     test_vmo_object_t obj;
-    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize));
 
     // This is one too many messages
     size_t num_ops = MAX_TXN_MESSAGES + 1;
@@ -789,7 +789,7 @@ bool ramdisk_test_fifo_too_many_ops(void) {
     AllocChecker ac;
     mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[num_ops](),
                                                num_ops);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     for (size_t b = 0; b < num_ops; b++) {
         requests[b].txnid      = txnid;
@@ -859,7 +859,7 @@ bool ramdisk_test_fifo_bad_client_vmoid(void) {
 
     // Create a vmo
     test_vmo_object_t obj;
-    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize));
 
     // Bad request: Writing to the wrong vmoid
     block_fifo_request_t request;
@@ -894,7 +894,7 @@ bool ramdisk_test_fifo_bad_client_txnid(void) {
 
     // Create a vmo
     test_vmo_object_t obj;
-    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize), "");
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize));
 
     // Bad request: Invalid txnid (not allocated)
     block_fifo_request_t request;
@@ -933,7 +933,7 @@ bool ramdisk_test_fifo_bad_client_unaligned_request(void) {
     // be reading "kBlockSize" bytes from an offset below, and we want it
     // to fit within the bounds of the VMO.
     test_vmo_object_t obj;
-    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize * 2), "");
+    ASSERT_TRUE(create_vmo_helper(fd, &obj, kBlockSize * 2));
 
     block_fifo_request_t request;
     request.txnid      = txnid;
@@ -994,7 +994,7 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
               "Failed to create vmo");
     AllocChecker ac;
     obj.buf.reset(new (&ac) uint8_t[obj.vmo_size]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     fill_random(obj.buf.get(), obj.vmo_size);
     size_t actual;
     ASSERT_EQ(mx_vmo_write(obj.vmo, obj.buf.get(), 0, obj.vmo_size, &actual),

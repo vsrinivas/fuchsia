@@ -574,17 +574,17 @@ bool compare_exchange_test() {
 bool atomic_math_test() {
     BEGIN_TEST;
 
-    ASSERT_TRUE(math_test<char>(), "");
-    ASSERT_TRUE(math_test<signed char>(), "");
-    ASSERT_TRUE(math_test<unsigned char>(), "");
-    ASSERT_TRUE(math_test<short>(), "");
-    ASSERT_TRUE(math_test<unsigned short>(), "");
-    ASSERT_TRUE(math_test<int>(), "");
-    ASSERT_TRUE(math_test<unsigned int>(), "");
-    ASSERT_TRUE(math_test<long>(), "");
-    ASSERT_TRUE(math_test<unsigned long>(), "");
-    ASSERT_TRUE(math_test<long long>(), "");
-    ASSERT_TRUE(math_test<unsigned long long>(), "");
+    ASSERT_TRUE(math_test<char>());
+    ASSERT_TRUE(math_test<signed char>());
+    ASSERT_TRUE(math_test<unsigned char>());
+    ASSERT_TRUE(math_test<short>());
+    ASSERT_TRUE(math_test<unsigned short>());
+    ASSERT_TRUE(math_test<int>());
+    ASSERT_TRUE(math_test<unsigned int>());
+    ASSERT_TRUE(math_test<long>());
+    ASSERT_TRUE(math_test<unsigned long>());
+    ASSERT_TRUE(math_test<long long>());
+    ASSERT_TRUE(math_test<unsigned long long>());
 
     END_TEST;
 }
@@ -592,17 +592,17 @@ bool atomic_math_test() {
 bool atomic_load_store_test() {
     BEGIN_TEST;
 
-    ASSERT_TRUE(load_store_test<char>(), "");
-    ASSERT_TRUE(load_store_test<signed char>(), "");
-    ASSERT_TRUE(load_store_test<unsigned char>(), "");
-    ASSERT_TRUE(load_store_test<short>(), "");
-    ASSERT_TRUE(load_store_test<unsigned short>(), "");
-    ASSERT_TRUE(load_store_test<int>(), "");
-    ASSERT_TRUE(load_store_test<unsigned int>(), "");
-    ASSERT_TRUE(load_store_test<long>(), "");
-    ASSERT_TRUE(load_store_test<unsigned long>(), "");
-    ASSERT_TRUE(load_store_test<long long>(), "");
-    ASSERT_TRUE(load_store_test<unsigned long long>(), "");
+    ASSERT_TRUE(load_store_test<char>());
+    ASSERT_TRUE(load_store_test<signed char>());
+    ASSERT_TRUE(load_store_test<unsigned char>());
+    ASSERT_TRUE(load_store_test<short>());
+    ASSERT_TRUE(load_store_test<unsigned short>());
+    ASSERT_TRUE(load_store_test<int>());
+    ASSERT_TRUE(load_store_test<unsigned int>());
+    ASSERT_TRUE(load_store_test<long>());
+    ASSERT_TRUE(load_store_test<unsigned long>());
+    ASSERT_TRUE(load_store_test<long long>());
+    ASSERT_TRUE(load_store_test<unsigned long long>());
 
     END_TEST;
 }
@@ -610,17 +610,17 @@ bool atomic_load_store_test() {
 bool atomic_exchange_test() {
     BEGIN_TEST;
 
-    ASSERT_TRUE(exchange_test<char>(), "");
-    ASSERT_TRUE(exchange_test<signed char>(), "");
-    ASSERT_TRUE(exchange_test<unsigned char>(), "");
-    ASSERT_TRUE(exchange_test<short>(), "");
-    ASSERT_TRUE(exchange_test<unsigned short>(), "");
-    ASSERT_TRUE(exchange_test<int>(), "");
-    ASSERT_TRUE(exchange_test<unsigned int>(), "");
-    ASSERT_TRUE(exchange_test<long>(), "");
-    ASSERT_TRUE(exchange_test<unsigned long>(), "");
-    ASSERT_TRUE(exchange_test<long long>(), "");
-    ASSERT_TRUE(exchange_test<unsigned long long>(), "");
+    ASSERT_TRUE(exchange_test<char>());
+    ASSERT_TRUE(exchange_test<signed char>());
+    ASSERT_TRUE(exchange_test<unsigned char>());
+    ASSERT_TRUE(exchange_test<short>());
+    ASSERT_TRUE(exchange_test<unsigned short>());
+    ASSERT_TRUE(exchange_test<int>());
+    ASSERT_TRUE(exchange_test<unsigned int>());
+    ASSERT_TRUE(exchange_test<long>());
+    ASSERT_TRUE(exchange_test<unsigned long>());
+    ASSERT_TRUE(exchange_test<long long>());
+    ASSERT_TRUE(exchange_test<unsigned long long>());
 
     END_TEST;
 }
@@ -628,17 +628,17 @@ bool atomic_exchange_test() {
 bool atomic_compare_exchange_test() {
     BEGIN_TEST;
 
-    ASSERT_TRUE(compare_exchange_test<char>(), "");
-    ASSERT_TRUE(compare_exchange_test<signed char>(), "");
-    ASSERT_TRUE(compare_exchange_test<unsigned char>(), "");
-    ASSERT_TRUE(compare_exchange_test<short>(), "");
-    ASSERT_TRUE(compare_exchange_test<unsigned short>(), "");
-    ASSERT_TRUE(compare_exchange_test<int>(), "");
-    ASSERT_TRUE(compare_exchange_test<unsigned int>(), "");
-    ASSERT_TRUE(compare_exchange_test<long>(), "");
-    ASSERT_TRUE(compare_exchange_test<unsigned long>(), "");
-    ASSERT_TRUE(compare_exchange_test<long long>(), "");
-    ASSERT_TRUE(compare_exchange_test<unsigned long long>(), "");
+    ASSERT_TRUE(compare_exchange_test<char>());
+    ASSERT_TRUE(compare_exchange_test<signed char>());
+    ASSERT_TRUE(compare_exchange_test<unsigned char>());
+    ASSERT_TRUE(compare_exchange_test<short>());
+    ASSERT_TRUE(compare_exchange_test<unsigned short>());
+    ASSERT_TRUE(compare_exchange_test<int>());
+    ASSERT_TRUE(compare_exchange_test<unsigned int>());
+    ASSERT_TRUE(compare_exchange_test<long>());
+    ASSERT_TRUE(compare_exchange_test<unsigned long>());
+    ASSERT_TRUE(compare_exchange_test<long long>());
+    ASSERT_TRUE(compare_exchange_test<unsigned long long>());
 
     END_TEST;
 }

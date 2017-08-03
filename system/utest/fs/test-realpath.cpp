@@ -62,15 +62,15 @@ bool test_realpath_absolute(void) {
     char buf2[PATH_MAX];
     ASSERT_EQ(realpath(kTestNameDotDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with ..) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     ASSERT_EQ(realpath(kTestNameDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with .) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     ASSERT_EQ(realpath(kTestNameBothDots, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with . and ..) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     // Clean up
     ASSERT_EQ(close(fd), 0);
@@ -101,21 +101,21 @@ bool test_realpath_relative(void) {
     ASSERT_EQ(realpath(kNameFile, buf), buf);
 
     char cwd[PATH_MAX];
-    ASSERT_NONNULL(getcwd(cwd, sizeof(cwd)), "");
+    ASSERT_NONNULL(getcwd(cwd, sizeof(cwd)));
     ASSERT_EQ(chdir(kNameDir), 0);
 
     char buf2[PATH_MAX];
     ASSERT_EQ(realpath(kTestRelativeDotDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with ..) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     ASSERT_EQ(realpath(kTestRelativeDot, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with .) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     ASSERT_EQ(realpath(kTestRelativeBothDots, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (with . and ..) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     // Test the longest possible path name
 
@@ -138,13 +138,13 @@ bool test_realpath_relative(void) {
 
     ASSERT_EQ(realpath(bufmax, buf2), buf2);
     ASSERT_EQ(strcmp(buf, buf2), 0, "Name (longest path) did not resolve");
-    ASSERT_TRUE(is_resolved(buf2), "");
+    ASSERT_TRUE(is_resolved(buf2));
 
     // Try a name that is too long (same as the last one, but just
     // add a single additional "/").
     bufmax[len++] = '/';
     strcpy(bufmax + len, "my_file");
-    ASSERT_NULL(realpath(bufmax, buf2), "");
+    ASSERT_NULL(realpath(bufmax, buf2));
 
     // Clean up
     ASSERT_EQ(chdir(cwd), 0, "Could not return to original cwd");

@@ -34,7 +34,7 @@ typedef struct {
 // Try to read from the channel when it should be empty.
 bool check_for_empty(watch_buffer_t* wb, mx_handle_t h) {
     char name[NAME_MAX + 1];
-    ASSERT_NULL(wb->ptr, "");
+    ASSERT_NULL(wb->ptr);
     ASSERT_EQ(mx_channel_read(h, 0, &name, nullptr, sizeof(name), 0, nullptr, nullptr),
               MX_ERR_SHOULD_WAIT);
     return true;
@@ -85,7 +85,7 @@ bool test_watcher_add(void) {
 
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
-    ASSERT_NONNULL(dir, "");
+    ASSERT_NONNULL(dir);
     mx_handle_t h;
     vfs_watch_dir_t request;
     ASSERT_EQ(mx_channel_create(0, &h, &request.channel), MX_OK);
@@ -96,28 +96,28 @@ bool test_watcher_add(void) {
     memset(&wb, 0, sizeof(wb));
 
     // The channel should be empty
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     // Creating a file in the directory should trigger the watcher
     int fd = open("::dir/foo", O_RDWR | O_CREAT);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED));
 
     // Renaming into directory should trigger the watcher
     ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED));
 
     // Linking into directory should trigger the watcher
     ASSERT_EQ(link("::dir/bar", "::dir/blat"), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "blat", VFS_WATCH_EVT_ADDED), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "blat", VFS_WATCH_EVT_ADDED));
 
     // Clean up
     ASSERT_EQ(unlink("::dir/bar"), 0);
     ASSERT_EQ(unlink("::dir/blat"), 0);
 
     // There shouldn't be anything else sitting around on the channel
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_empty(&wb, h));
     ASSERT_EQ(mx_handle_close(h), 0);
 
     ASSERT_EQ(closedir(dir), 0);
@@ -135,7 +135,7 @@ bool test_watcher_existing(void) {
 
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
-    ASSERT_NONNULL(dir, "");
+    ASSERT_NONNULL(dir);
 
     // Create a couple files in the directory
     int fd = open("::dir/foo", O_RDWR | O_CREAT);
@@ -157,19 +157,19 @@ bool test_watcher_existing(void) {
     memset(&wb, 0, sizeof(wb));
 
     // The channel should see the contents of the directory
-    ASSERT_TRUE(check_for_event(&wb, h, ".", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb, h, "", VFS_WATCH_EVT_IDLE), "");
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_event(&wb, h, ".", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb, h, "", VFS_WATCH_EVT_IDLE));
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     // Now, if we choose to add additional files, they'll show up separately
     // with an "ADD" event.
     fd = open("::dir/baz", O_RDWR | O_CREAT);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "baz", VFS_WATCH_EVT_ADDED), "");
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "baz", VFS_WATCH_EVT_ADDED));
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     // If we create a secondary watcher with the "EXISTING" request, we'll
     // see all files in the directory, but the first watcher won't see anything.
@@ -178,13 +178,13 @@ bool test_watcher_existing(void) {
     ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK);
     watch_buffer_t wb2;
     memset(&wb2, 0, sizeof(wb2));
-    ASSERT_TRUE(check_for_event(&wb2, h2, ".", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb2, h2, "foo", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb2, h2, "bar", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb2, h2, "baz", VFS_WATCH_EVT_EXISTING), "");
-    ASSERT_TRUE(check_for_event(&wb2, h2, "", VFS_WATCH_EVT_IDLE), "");
-    ASSERT_TRUE(check_for_empty(&wb2, h2), "");
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_event(&wb2, h2, ".", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, h2, "foo", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, h2, "bar", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, h2, "baz", VFS_WATCH_EVT_EXISTING));
+    ASSERT_TRUE(check_for_event(&wb2, h2, "", VFS_WATCH_EVT_IDLE));
+    ASSERT_TRUE(check_for_empty(&wb2, h2));
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     // Clean up
     ASSERT_EQ(unlink("::dir/foo"), 0);
@@ -192,9 +192,9 @@ bool test_watcher_existing(void) {
     ASSERT_EQ(unlink("::dir/baz"), 0);
 
     // There shouldn't be anything else sitting around on either channel
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_empty(&wb, h));
     ASSERT_EQ(mx_handle_close(h), 0);
-    ASSERT_TRUE(check_for_empty(&wb2, h2), "");
+    ASSERT_TRUE(check_for_empty(&wb2, h2));
     ASSERT_EQ(mx_handle_close(h2), 0);
 
     ASSERT_EQ(closedir(dir), 0);
@@ -212,7 +212,7 @@ bool test_watcher_removed(void) {
 
     ASSERT_EQ(mkdir("::dir", 0666), 0);
     DIR* dir = opendir("::dir");
-    ASSERT_NONNULL(dir, "");
+    ASSERT_NONNULL(dir);
     mx_handle_t h;
     vfs_watch_dir_t request;
 
@@ -224,24 +224,24 @@ bool test_watcher_removed(void) {
     memset(&wb, 0, sizeof(wb));
     ASSERT_EQ(ioctl_vfs_watch_dir(dirfd(dir), &request), MX_OK);
 
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     int fd = openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
 
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED), "");
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_ADDED));
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     ASSERT_EQ(rename("::dir/foo", "::dir/bar"), 0);
 
-    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_REMOVED), "");
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED), "");
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "foo", VFS_WATCH_EVT_REMOVED));
+    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_ADDED));
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     ASSERT_EQ(unlink("::dir/bar"), 0);
-    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_REMOVED), "");
-    ASSERT_TRUE(check_for_empty(&wb, h), "");
+    ASSERT_TRUE(check_for_event(&wb, h, "bar", VFS_WATCH_EVT_REMOVED));
+    ASSERT_TRUE(check_for_empty(&wb, h));
 
     mx_handle_close(h);
     ASSERT_EQ(closedir(dir), 0);

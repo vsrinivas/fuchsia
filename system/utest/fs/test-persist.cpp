@@ -115,7 +115,7 @@ bool test_persist_with_data(void) {
     AllocChecker ac;
     for (size_t i = 0; i < mxtl::count_of(files); i++) {
         buffers[i].reset(new (&ac) uint8_t[BufferSize]);
-        ASSERT_TRUE(ac.check(), "");
+        ASSERT_TRUE(ac.check());
 
         for (size_t j = 0; j < BufferSize; j++) {
             buffers[i][j] = (uint8_t) rand_r(&seed);
@@ -132,7 +132,7 @@ bool test_persist_with_data(void) {
     // Read files
     for (size_t i = 0; i < mxtl::count_of(files); i++) {
         mxtl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
-        ASSERT_TRUE(ac.check(), "");
+        ASSERT_TRUE(ac.check());
         int fd = open(files[i], O_RDONLY, 0644);
         ASSERT_GT(fd, 0);
 
@@ -161,12 +161,12 @@ bool test_persist_with_data(void) {
     // Files should stay deleted
 
     DIR* dirp = opendir("::.");
-    ASSERT_NONNULL(dirp, "");
+    ASSERT_NONNULL(dirp);
     struct dirent* de;
     de = readdir(dirp);
-    ASSERT_NONNULL(de, "");
+    ASSERT_NONNULL(de);
     ASSERT_EQ(strncmp(de->d_name, ".", 1), 0);
-    ASSERT_NULL(readdir(dirp), "");
+    ASSERT_NULL(readdir(dirp));
     ASSERT_EQ(closedir(dirp), 0);
 
     END_TEST;
@@ -221,10 +221,10 @@ bool test_rename_loop(void) {
     for (size_t i = 0; i < LoopLength; i++) {
         ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);
         DIR* dirp = opendir(src);
-        ASSERT_NONNULL(dirp, "");
+        ASSERT_NONNULL(dirp);
         struct dirent* de;
         de = readdir(dirp);
-        ASSERT_NONNULL(de, "");
+        ASSERT_NONNULL(de);
         ASSERT_EQ(strcmp(de->d_name, "."), 0);
         de = readdir(dirp);
         if (de != nullptr) {
@@ -235,7 +235,7 @@ bool test_rename_loop(void) {
 
         ASSERT_EQ(closedir(dirp), 0);
     }
-    ASSERT_TRUE(target_found, "");
+    ASSERT_TRUE(target_found);
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
 
@@ -246,7 +246,7 @@ bool test_rename_loop(void) {
         ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);
         int ret = unlink(src);
         if (ret != 0) {
-            ASSERT_FALSE(target_found, "");
+            ASSERT_FALSE(target_found);
             ASSERT_GT(sprintf(src, "::%c/target", static_cast<char>('a' + i)), 0);
             ASSERT_EQ(unlink(src), 0);
             ASSERT_GT(sprintf(src, "::%c", static_cast<char>('a' + i)), 0);

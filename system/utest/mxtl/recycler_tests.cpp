@@ -98,7 +98,7 @@ static bool do_test() {
     AllocChecker ac;
     auto ptr = PtrTraits<T>::MakePointer(new (&ac) typename PtrTraits<T>::ObjType);
 
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     EXPECT_FALSE(TestBase::recycle_was_called(), "");
 
     ptr = nullptr;

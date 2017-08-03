@@ -29,7 +29,7 @@ static bool ralloc_region_pools_test() {
 
     // Make a region pool to manage bookkeeping allocations.
     auto pool = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
-    ASSERT_NONNULL(pool, "");
+    ASSERT_NONNULL(pool);
 
     // Assign our pool to our allocator, but hold onto the pool for now.
     ASSERT_EQ(MX_OK, alloc.SetRegionPool(pool));
@@ -51,7 +51,7 @@ static bool ralloc_region_pools_test() {
     // because the allocator is currently using resources from its currently
     // assigned pool.
     auto pool2 = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
-    ASSERT_NONNULL(pool2, "");
+    ASSERT_NONNULL(pool2);
     EXPECT_EQ(MX_ERR_BAD_STATE, alloc.SetRegionPool(pool2), "");
 
     // Add a bunch of adjacent regions to our pool.  Try to add so many
@@ -131,7 +131,7 @@ static bool ralloc_by_size_test() {
         // back a non-null region.  Otherwise, we should have gotten a
         // null region back.
         if (res == MX_OK) {
-            ASSERT_NONNULL(regions[i], "");
+            ASSERT_NONNULL(regions[i]);
         } else {
             EXPECT_NULL(regions[i], "");
         }
@@ -178,7 +178,7 @@ static bool ralloc_specific_test() {
         // If the allocation claimed to succeed, we should have gotten back a
         // non-null region which exactly matches our requested region.
         if (res == MX_OK) {
-            ASSERT_NONNULL(regions[i], "");
+            ASSERT_NONNULL(regions[i]);
             EXPECT_EQ(TEST->req.base, regions[i]->base, "");
             EXPECT_EQ(TEST->req.size, regions[i]->size, "");
         } else {

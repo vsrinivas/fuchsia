@@ -262,7 +262,7 @@ bool test_futex_unqueued_on_timeout_2() {
     volatile int futex_value = 10;
     TestThread thread1(&futex_value);
     TestThread thread2(&futex_value, MX_MSEC(200));
-    ASSERT_TRUE(thread2.wait_for_timeout(), "");
+    ASSERT_TRUE(thread2.wait_for_timeout());
     // With the bug present, thread2 was removed but the futex wait queue's
     // tail pointer still points to thread2.  When another thread is
     // enqueued, it gets added to the thread2 node and lost.
@@ -281,7 +281,7 @@ bool test_futex_unqueued_on_timeout_3() {
     TestThread thread1(&futex_value, MX_MSEC(400));
     TestThread thread2(&futex_value);
     TestThread thread3(&futex_value);
-    ASSERT_TRUE(thread1.wait_for_timeout(), "");
+    ASSERT_TRUE(thread1.wait_for_timeout());
     // With the bug present, thread1 was removed but the futex wait queue
     // is set to the thread2 node, which has an invalid (null) tail
     // pointer.  When another thread is enqueued, we get a null pointer
@@ -367,7 +367,7 @@ bool test_futex_requeue_unqueued_on_timeout() {
     TestThread thread2(&futex_value2);
     // thread1 and thread2 should now both be waiting on futex_value2.
 
-    ASSERT_TRUE(thread1.wait_for_timeout(), "");
+    ASSERT_TRUE(thread1.wait_for_timeout());
     thread2.assert_thread_not_woken();
     // thread1 should have removed itself from futex_value2's wait queue,
     // so only thread2 should be waiting on futex_value2.  We can test that

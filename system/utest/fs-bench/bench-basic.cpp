@@ -177,16 +177,16 @@ bool benchmark_path_walk(void) {
     uint64_t start;
 
     start = mx_ticks_get();
-    ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, mkdir_callback), "");
+    ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, mkdir_callback));
     time_end("mkdir", start);
 
     strcpy(path, MOUNT_POINT);
     start = mx_ticks_get();
-    ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, stat_callback), "");
+    ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, stat_callback));
     time_end("stat", start);
 
     start = mx_ticks_get();
-    ASSERT_TRUE(walk_up_path_components(path, unlink_callback), "");
+    ASSERT_TRUE(walk_up_path_components(path, unlink_callback));
     time_end("unlink", start);
     END_TEST;
 }

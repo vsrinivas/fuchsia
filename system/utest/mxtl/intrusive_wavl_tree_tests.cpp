@@ -144,7 +144,7 @@ public:
         using NodeTraits = typename TreeType::NodeTraits;
         using PtrTraits  = typename TreeType::PtrTraits;
 
-        ASSERT_TRUE(PtrTraits::IsValid(node), "");
+        ASSERT_TRUE(PtrTraits::IsValid(node));
 
         // Check the rank rule.  The rules for a WAVL tree are...
         // 1) All rank differences are either 1 or 2
@@ -281,13 +281,13 @@ static bool DoBalanceTestInsert(BalanceTestTree& tree, BalanceTestObj* ptr) {
     BEGIN_TEST;
 
     // The selected object should not be in the tree.
-    ASSERT_NONNULL(ptr, "");
-    ASSERT_FALSE(ptr->InContainer(), "");
+    ASSERT_NONNULL(ptr);
+    ASSERT_FALSE(ptr->InContainer());
 
     // Put the object into the tree.  Assert that it succeeds, then
     // sanity check the tree.
-    ASSERT_TRUE(tree.insert_or_find(BalanceTestObjPtr(ptr)), "");
-    ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree), "");
+    ASSERT_TRUE(tree.insert_or_find(BalanceTestObjPtr(ptr)));
+    ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree));
 
     END_TEST;
 }
@@ -296,18 +296,18 @@ static bool DoBalanceTestErase(BalanceTestTree& tree, BalanceTestObj* ptr) {
     BEGIN_TEST;
 
     // The selected object should still be in the tree.
-    ASSERT_NONNULL(ptr, "");
-    ASSERT_TRUE(ptr->InContainer(), "");
+    ASSERT_NONNULL(ptr);
+    ASSERT_TRUE(ptr->InContainer());
 
     // Erase should find the object and transfer its pointer back to us.
     // The object should no longer be in the tree.
     BalanceTestObjPtr erased = tree.erase(ptr->GetKey());
     ASSERT_EQ(ptr, erased.get());
-    ASSERT_FALSE(ptr->InContainer(), "");
+    ASSERT_FALSE(ptr->InContainer());
 
     // Run a full sanity check on the tree.  Its depth should be
     // consistent with a tree which has seen both inserts and erases.
-    ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree), "");
+    ASSERT_TRUE(WAVLTreeChecker::SanityCheck(tree));
 
     END_TEST;
 }
@@ -381,26 +381,26 @@ static bool WAVLBalanceTest() {
         // the tree.  If anything goes wrong, just abort the test.  If we keep
         // going, we are just going to get an unmanageable amt of errors.
         for (size_t i = 0; i < kBalanceTestSize; ++i)
-            ASSERT_TRUE(DoBalanceTestInsert(tree, &objects[i]), "");
+            ASSERT_TRUE(DoBalanceTestInsert(tree, &objects[i]));
 
         // Shuffle the erase deck.
         ShuffleEraseDeck(objects, rng);
 
         // Erase half of the elements in the tree.
         for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i)
-            ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
+            ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
 
         // Put the elements back so that we have inserted some elements into a
         // non-empty tree which has seen erase operations.
         for (size_t i = 0; i < (kBalanceTestSize >> 1); ++i)
-            ASSERT_TRUE(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()), "");
+            ASSERT_TRUE(DoBalanceTestInsert(tree, objects[i].EraseDeckPtr()));
 
         // Shuffle the erase deck again.
         ShuffleEraseDeck(objects, rng);
 
         // Now erase every element from the tree.
         for (size_t i = 0; i < kBalanceTestSize; ++i)
-            ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()), "");
+            ASSERT_TRUE(DoBalanceTestErase(tree, objects[i].EraseDeckPtr()));
 
         ASSERT_EQ(0u, tree.size());
 

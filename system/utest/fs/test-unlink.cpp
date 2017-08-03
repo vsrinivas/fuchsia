@@ -63,12 +63,12 @@ bool test_unlink_use_afterwards(void) {
     int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
     ASSERT_GT(fd, 0);
 
-    ASSERT_TRUE(simple_write_test(fd, 1), "");
+    ASSERT_TRUE(simple_write_test(fd, 1));
 
     // When we unlink path, fd is still open.
     ASSERT_EQ(unlink(path), 0);
-    ASSERT_TRUE(simple_read_test(fd, 1), ""); // It should contain the same data as before
-    ASSERT_TRUE(simple_write_test(fd, 2), ""); // It should still be writable
+    ASSERT_TRUE(simple_read_test(fd, 1)); // It should contain the same data as before
+    ASSERT_TRUE(simple_write_test(fd, 2)); // It should still be writable
     ASSERT_EQ(close(fd), 0);           // This actually releases the file
 
     // Now, opening the file should fail without O_CREAT
@@ -86,13 +86,13 @@ bool test_unlink_open_elsewhere(void) {
     int fd2 = open(path, O_RDWR, 0644);
     ASSERT_GT(fd2, 0);
 
-    ASSERT_TRUE(simple_write_test(fd1, 0), "");
+    ASSERT_TRUE(simple_write_test(fd1, 0));
     ASSERT_EQ(close(fd1), 0);
 
     // When we unlink path, fd2 is still open.
     ASSERT_EQ(unlink(path), 0);
-    ASSERT_TRUE(simple_read_test(fd2, 0), "");  // It should contain the same data as before
-    ASSERT_TRUE(simple_write_test(fd2, 1), ""); // It should still be writable
+    ASSERT_TRUE(simple_read_test(fd2, 0));  // It should contain the same data as before
+    ASSERT_TRUE(simple_write_test(fd2, 1)); // It should still be writable
     ASSERT_EQ(close(fd2), 0);           // This actually releases the file
 
     // Now, opening the file should fail without O_CREAT
