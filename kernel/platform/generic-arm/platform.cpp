@@ -695,3 +695,8 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 size_t platform_stow_crashlog(void* log, size_t len) {
     return 0;
 }
+
+size_t platform_recover_crashlog(size_t len, void* cookie,
+                                 void (*func)(const void* data, size_t, size_t len, void* cookie)) {
+    return 0;
+}

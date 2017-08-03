@@ -26,8 +26,8 @@ static void reboot(void) {
     // Try legacy reboot path first
     pc_keyboard_reboot();
 
-    // Try 100-Series Chipset Reset Control Register: Hard Reset
-    outp(0xCF9, 0x0E);
+    // Try 100-Series Chipset Reset Control Register: CPU + SYS Reset
+    outp(0xCF9, 0x06);
 }
 
 static volatile int panic_started;

@@ -9,6 +9,7 @@
 
 #include <err.h>
 #include <trace.h>
+#include <arch/ops.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/cpu_topology.h>
 #include <arch/x86/mmu.h>
@@ -306,7 +307,80 @@ static char16_t crashlog_name[] = MAGENTA_CRASHLOG_EFIVAR;
 
 static mxtl::RefPtr<VmAspace> efi_aspace;
 
+typedef struct {
+    uint64_t magic;
+    uint64_t length;
+    uint64_t nmagic;
+    uint64_t nlength;
+} log_hdr_t;
+
+#define NVRAM_MAGIC (0x6f8962d66b28504fULL)
+
+static size_t nvram_stow_crashlog(void* log, size_t len) {
+    size_t max = bootloader.nvram.length - sizeof(log_hdr_t);
+    void* nvram = paddr_to_kvaddr(bootloader.nvram.base);
+    if (nvram == NULL) {
+        return 0;
+    }
+
+    if (log == NULL) {
+        return max;
+    }
+    if (len > max) {
+        len = max;
+    }
+
+    log_hdr_t hdr = {
+        .magic = NVRAM_MAGIC,
+        .length = len,
+        .nmagic = ~NVRAM_MAGIC,
+        .nlength = ~len,
+    };
+    memcpy(nvram, &hdr, sizeof(hdr));
+    memcpy(static_cast<char*>(nvram) + sizeof(hdr), log, len);
+    arch_clean_cache_range((uintptr_t)nvram, sizeof(hdr) + len);
+    return len;
+}
+
+static size_t nvram_recover_crashlog(size_t len, void* cookie,
+                                     void (*func)(const void* data, size_t, size_t len, void* cookie)) {
+    size_t max = bootloader.nvram.length - sizeof(log_hdr_t);
+    void* nvram = paddr_to_kvaddr(bootloader.nvram.base);
+    if (nvram == NULL) {
+        return 0;
+    }
+    log_hdr_t hdr;
+    memcpy(&hdr, nvram, sizeof(hdr));
+    if ((hdr.magic != NVRAM_MAGIC) || (hdr.length > max) ||
+        (hdr.nmagic != ~NVRAM_MAGIC) || (hdr.nlength != ~hdr.length)) {
+        printf("nvram-crashlog: bad header: %016lx %016lx %016lx %016lx\n",
+               hdr.magic, hdr.length, hdr.nmagic, hdr.nlength);
+        return 0;
+    }
+    if (len == 0) {
+        return hdr.length;
+    }
+    if (len > hdr.length) {
+        len = hdr.length;
+    }
+    func(static_cast<char*>(nvram) + sizeof(hdr), 0, len, cookie);
+
+    // invalidate header so we don't get a stale crashlog
+    // on future boots
+    hdr.magic = 0;
+    memcpy(nvram, &hdr, sizeof(hdr));
+    return hdr.length;
+}
+
 void platform_init_crashlog(void) {
+    if (bootloader.nvram.base && bootloader.nvram.length > sizeof(log_hdr_t)) {
+        // Nothing to do for simple nvram logs
+        return;
+    } else {
+        bootloader.nvram.base = 0;
+        bootloader.nvram.length = 0;
+    }
+
     if (bootloader.efi_system_table != NULL) {
         // Create a linear mapping to use to call UEFI Runtime Services
         efi_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "uefi");
@@ -333,17 +407,17 @@ void platform_init_crashlog(void) {
 
 // Something big enough for the panic log but not too enormous
 // to avoid excessive pressure on efi variable storage
-#define MAX_CRASHLOG_LEN 4096
+#define MAX_EFI_CRASHLOG_LEN 4096
 
-size_t platform_stow_crashlog(void* log, size_t len) {
+static size_t efi_stow_crashlog(void* log, size_t len) {
     if (!efi_aspace) {
         return 0;
     }
     if (log == NULL) {
-        return MAX_CRASHLOG_LEN;
+        return MAX_EFI_CRASHLOG_LEN;
     }
-    if (len > MAX_CRASHLOG_LEN) {
-        len = MAX_CRASHLOG_LEN;
+    if (len > MAX_EFI_CRASHLOG_LEN) {
+        len = MAX_EFI_CRASHLOG_LEN;
     }
 
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
@@ -352,6 +426,23 @@ size_t platform_stow_crashlog(void* log, size_t len) {
     efi_runtime_services* rs = sys->RuntimeServices;
     if (rs->SetVariable(crashlog_name, &magenta_guid, MAGENTA_CRASHLOG_EFIATTR, len, log) == 0) {
         return len;
+    } else {
+        return 0;
+    }
+}
+
+size_t platform_stow_crashlog(void* log, size_t len) {
+    if (bootloader.nvram.base) {
+        return nvram_stow_crashlog(log, len);
+    } else {
+        return efi_stow_crashlog(log, len);
+    }
+}
+
+size_t platform_recover_crashlog(size_t len, void* cookie,
+                                 void (*func)(const void* data, size_t, size_t len, void* cookie)) {
+    if (bootloader.nvram.base != 0) {
+        return nvram_recover_crashlog(len, cookie, func);
     } else {
         return 0;
     }

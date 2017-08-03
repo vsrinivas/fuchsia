@@ -99,6 +99,19 @@ void *platform_get_ramdisk(size_t *size);
  */
 size_t platform_stow_crashlog(void* log, size_t len);
 
+/* If len == 0, return the length of the last crashlog (or 0 if none).
+ * Otherwise call func() to return the last crashlog to the caller,
+ * returning the length the last crashlog.
+ *
+ * func() may be called as many times as necessary (adjusting off)
+ * to return the crashlog in segments.  There will not be gaps,
+ * but the individual segments may range from 1 byte to the full
+ * length requested, depending on the limitations of the underlying
+ * storage model.
+ */
+size_t platform_recover_crashlog(size_t len, void* cookie,
+                                 void (*func)(const void* data, size_t off, size_t len, void* cookie));
+
 __END_CDECLS;
 
 #endif
