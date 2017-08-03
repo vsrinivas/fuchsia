@@ -50,7 +50,8 @@ class AppClientBase {
   // invoked through primary_service(), below. TODO(mesch): It would be better
   // if it were impossible outright. This could be accomplished with a separate
   // Terminate interface, which would only be exposed to AppClient.
-  void AppTerminate(const std::function<void()>& done);
+  void AppTerminate(const std::function<void()>& done,
+                    ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(kAppClientTimeoutSeconds));
 
   // Registers a handler to receive a notification when this application
   // connection encounters an error. This typically happens when this

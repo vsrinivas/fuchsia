@@ -100,7 +100,7 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   bool app_terminated_callback_called = false;
   app_client_base.AppTerminate([&app_terminated_callback_called] {
     app_terminated_callback_called = true;
-  });
+  }, ftl::TimeDelta::Zero());
 
   EXPECT_TRUE(RunLoopUntil([&app_terminated_callback_called, &test_application_launcher] {
     return app_terminated_callback_called && test_application_launcher.controller.killed();

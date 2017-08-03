@@ -18,7 +18,8 @@ AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
 
 AppClientBase::~AppClientBase() = default;
 
-void AppClientBase::AppTerminate(const std::function<void()>& done) {
+void AppClientBase::AppTerminate(const std::function<void()>& done,
+                                 ftl::TimeDelta timeout) {
   auto called = std::make_shared<bool>(false);
   auto cont = [this, called, done] {
     if (*called) {
@@ -37,7 +38,7 @@ void AppClientBase::AppTerminate(const std::function<void()>& done) {
   };
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      cont, ftl::TimeDelta::FromSeconds(kAppClientTimeoutSeconds));
+      cont, timeout);
 
   ServiceTerminate(cont);
 }
@@ -46,7 +47,7 @@ void AppClientBase::SetAppErrorHandler(const ftl::Closure& error_handler) {
   app_.set_connection_error_handler(error_handler);
 }
 
-void AppClientBase::ServiceTerminate(const std::function<void()>& /*done*/) {}
+void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
 
 void AppClientBase::ServiceReset() {}
 
