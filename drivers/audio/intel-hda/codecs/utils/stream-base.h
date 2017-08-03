@@ -12,6 +12,7 @@
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/vector.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -69,6 +70,10 @@ protected:
 
     // Methods callable from subclasses
     mx_status_t PublishDeviceLocked() __TA_REQUIRES(obj_lock_);
+    void SetSupportedFormatsLocked(mxtl::Vector<audio_proto::FormatRange>&& formats)
+        __TA_REQUIRES(obj_lock_) {
+        supported_formats_ = mxtl::move(formats);
+    }
 
     // Overloads to control stream behavior.
     virtual mx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock_);
@@ -117,6 +122,9 @@ protected:
 
 private:
     mx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
+    mx_status_t DoGetStreamFormatsLocked(DispatcherChannel* channel,
+                                         const audio_proto::StreamGetFmtsReq& req)
+        __TA_REQUIRES(obj_lock_);
     mx_status_t DoSetStreamFormatLocked(DispatcherChannel* channel,
                                         const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
@@ -149,7 +157,8 @@ private:
     mx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
     mx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
-    mxtl::RefPtr<DispatcherChannel> stream_channel_ __TA_GUARDED(obj_lock_);
+    mxtl::RefPtr<DispatcherChannel>         stream_channel_    __TA_GUARDED(obj_lock_);
+    mxtl::Vector<audio_proto::FormatRange>  supported_formats_ __TA_GUARDED(obj_lock_);
 
     uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;
     uint16_t encoded_fmt_     __TA_GUARDED(obj_lock_);
