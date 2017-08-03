@@ -134,12 +134,18 @@ int sockatmark(int fd) {
 
 mx_status_t mxio_socketpair_shutdown(mxio_t* io, int how) {
     mx_pipe_t* p = (mx_pipe_t*)io;
-    if (how == SHUT_RD || how == SHUT_RDWR) {
-        // TODO: flag to disable all reads from this end (and writes from other)
+
+    uint32_t options = 0;
+    switch (how) {
+    case SHUT_RD:
+        options = MX_SOCKET_SHUTDOWN_READ;
+        break;
+    case SHUT_WR:
+        options = MX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    case SHUT_RDWR:
+        options = MX_SOCKET_SHUTDOWN_READ | MX_SOCKET_SHUTDOWN_WRITE;
+        break;
     }
-    if (how == SHUT_WR || how == SHUT_RDWR) {
-        // TODO: turn on a flag to prevent all write attempts
-        mx_socket_write(p->h, MX_SOCKET_HALF_CLOSE, NULL, 0, NULL);
-    }
-    return MX_OK;
+    return mx_socket_write(p->h, options, NULL, 0, NULL);
 }

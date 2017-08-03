@@ -27,20 +27,22 @@ ssize_t mx_pipe_read_internal(mx_handle_t h, void* data, size_t len, int nonbloc
         ssize_t r = mx_socket_read(h, 0, data, len, &len);
         if (r == MX_OK) {
             return (ssize_t) len;
-        } else if (r == MX_ERR_PEER_CLOSED) {
+        } else if (r == MX_ERR_PEER_CLOSED || r == MX_ERR_BAD_STATE) {
             return 0;
         }
         if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_object_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                                   MX_TIME_INFINITE, &pending);
+            r = mx_object_wait_one(h,
+                                   MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED,
+                                   MX_TIME_INFINITE,
+                                   &pending);
             if (r < 0) {
                 return r;
             }
             if (pending & MX_SOCKET_READABLE) {
                 continue;
             }
-            if (pending & MX_SOCKET_PEER_CLOSED) {
+            if (pending & (MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED)) {
                 return 0;
             }
             // impossible
@@ -59,15 +61,17 @@ ssize_t mx_pipe_write_internal(mx_handle_t h, const void* data, size_t len, int 
         }
         if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_object_wait_one(h, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
-                                   MX_TIME_INFINITE, &pending);
+            r = mx_object_wait_one(h,
+                                   MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED | MX_SOCKET_PEER_CLOSED,
+                                   MX_TIME_INFINITE,
+                                   &pending);
             if (r < 0) {
                 return r;
             }
             if (pending & MX_SOCKET_WRITABLE) {
                 continue;
             }
-            if (pending & MX_SOCKET_PEER_CLOSED) {
+            if (pending & (MX_SOCKET_WRITE_DISABLED | MX_SOCKET_PEER_CLOSED)) {
                 return MX_ERR_PEER_CLOSED;
             }
             // impossible
@@ -131,26 +135,26 @@ void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_sig
     *handle = p->h;
     mx_signals_t signals = 0;
     if (events & POLLIN) {
-        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
+        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED;
     }
     if (events & POLLOUT) {
-        signals |= MX_SOCKET_WRITABLE;
+        signals |= MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED;
     }
     if (events & POLLRDHUP) {
-        signals |= MX_SOCKET_PEER_CLOSED;
+        signals |= MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED;
     }
     *_signals = signals;
 }
 
 void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
+    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED)) {
         events |= POLLIN;
     }
-    if (signals & MX_SOCKET_WRITABLE) {
+    if (signals & (MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED)) {
         events |= POLLOUT;
     }
-    if (signals & MX_SOCKET_PEER_CLOSED) {
+    if (signals & (MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED)) {
         events |= POLLRDHUP;
     }
     *_events = events;

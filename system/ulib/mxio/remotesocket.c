@@ -29,12 +29,12 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
         if ((r = mx_socket_read(rio->h2, 0, data, len, &len)) == MX_OK) {
             return (ssize_t) len;
         }
-        if (r == MX_ERR_PEER_CLOSED) {
+        if (r == MX_ERR_PEER_CLOSED || r == MX_ERR_BAD_STATE) {
             return 0;
         } else if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
             r = mx_object_wait_one(rio->h2,
-                                   MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
+                                   MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
@@ -42,7 +42,7 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
             if (pending & MX_SOCKET_READABLE) {
                 continue;
             }
-            if (pending & MX_SOCKET_PEER_CLOSED) {
+            if (pending & (MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED)) {
                 return 0;
             }
             // impossible
@@ -85,15 +85,15 @@ static ssize_t mxsio_write_stream(mxio_t* io, const void* data, size_t len) {
             return (ssize_t) len;
         }
         if (r == MX_ERR_SHOULD_WAIT && !nonblock) {
-            // No wait for PEER_CLOSED signal. PEER_CLOSED could be signaled
-            // even if the socket is only half-closed for read.
-            // TODO: how to detect if the write direction is closed?
             mx_signals_t pending;
             r = mx_object_wait_one(rio->h2,
-                                   MX_SOCKET_WRITABLE,
+                                   MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
+            }
+            if (pending & (MX_SOCKET_WRITE_DISABLED | MX_SOCKET_PEER_CLOSED)) {
+                return MX_ERR_PEER_CLOSED;
             }
             if (pending & MX_SOCKET_WRITABLE) {
                 continue;
@@ -239,10 +239,10 @@ static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* ha
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if socket is connected
         if (events & POLLIN) {
-            signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
+            signals |= MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED;
         }
         if (events & POLLOUT) {
-            signals |= MX_SOCKET_WRITABLE;
+            signals |= MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED;
         }
     } else {
         // if socket is not connected
@@ -250,7 +250,7 @@ static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* ha
             // signal when a listening socket gets an incoming connection
             // or a connecting socket gets connected and receives data
             signals |= MXSIO_SIGNAL_INCOMING |
-                MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
+                MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED;
         }
         if (events & POLLOUT) {
             // signal when connect() operation is finished
@@ -258,7 +258,7 @@ static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* ha
         }
     }
     if (events & POLLRDHUP) {
-        signals |= MX_SOCKET_PEER_CLOSED;
+        signals |= MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
 }
@@ -273,10 +273,10 @@ static void mxsio_wait_end_stream(mxio_t* io, mx_signals_t signals, uint32_t* _e
     }
     uint32_t events = 0;
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
-        if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
+        if (signals & (MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED)) {
             events |= POLLIN;
         }
-        if (signals & MX_SOCKET_WRITABLE) {
+        if (signals & (MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED)) {
             events |= POLLOUT;
         }
     } else {
@@ -290,7 +290,7 @@ static void mxsio_wait_end_stream(mxio_t* io, mx_signals_t signals, uint32_t* _e
     if (signals & MXSIO_SIGNAL_ERROR) {
         events |= POLLERR;
     }
-    if (signals & MX_SOCKET_PEER_CLOSED) {
+    if (signals & (MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED)) {
         events |= POLLRDHUP;
     }
     *_events = events;
@@ -459,30 +459,29 @@ static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* han
     *handle = rio->h2;
     mx_signals_t signals = MXSIO_SIGNAL_ERROR;
     if (events & POLLIN) {
-        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
+        signals |= MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED;
     }
     if (events & POLLOUT) {
-        signals |= MX_SOCKET_WRITABLE;
+        signals |= MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED;
     }
     if (events & POLLRDHUP) {
-        signals |= MX_SOCKET_PEER_CLOSED;
-        signals |= MX_CHANNEL_PEER_CLOSED;
+        signals |=  MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
 }
 
 static void mxsio_wait_end_dgram(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
+    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED)) {
         events |= POLLIN;
     }
-    if (signals & MX_SOCKET_WRITABLE) {
+    if (signals & (MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED)) {
         events |= POLLOUT;
     }
     if (signals & MXSIO_SIGNAL_ERROR) {
         events |= POLLERR;
     }
-    if (signals & MX_SOCKET_PEER_CLOSED) {
+    if (signals & (MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED)) {
         events |= POLLRDHUP;
     }
     *_events = events;
@@ -565,12 +564,22 @@ mx_status_t mxio_socket_shutdown(mxio_t* io, int how) {
         return MX_ERR_BAD_STATE;
     }
     mxrio_t* rio = (mxrio_t*)io;
-    if (how == SHUT_RD || how == SHUT_RDWR) {
-        // TODO: turn on a flag to prevent all read attempts
-    }
     if (how == SHUT_WR || how == SHUT_RDWR) {
-        // TODO: turn on a flag to prevent all write attempts
+        // netstack expects this user signal to be set - raise it to keep that code working until
+        // it learns about the read/write disabled signals.
         mx_object_signal_peer(rio->h2, 0u, MXSIO_SIGNAL_HALFCLOSED);
     }
-    return MX_OK;
+    uint32_t options = 0;
+    switch (how) {
+    case SHUT_RD:
+        options = MX_SOCKET_SHUTDOWN_READ;
+        break;
+    case SHUT_WR:
+        options = MX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    case SHUT_RDWR:
+        options = MX_SOCKET_SHUTDOWN_READ | MX_SOCKET_SHUTDOWN_WRITE;
+        break;
+    }
+    return mx_socket_write(rio->h2, options, NULL, 0, NULL);
 }
