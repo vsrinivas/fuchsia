@@ -258,7 +258,7 @@ constexpr uint64_t kMemfsBlksize = PAGE_SIZE;
 
 mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
-    attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR;
+    attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
     attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;

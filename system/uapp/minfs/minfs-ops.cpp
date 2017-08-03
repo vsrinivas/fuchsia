@@ -972,7 +972,8 @@ mx_status_t VnodeMinfs::LookupInternal(mxtl::RefPtr<fs::Vnode>* out,
 
 mx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
     FS_TRACE(MINFS, "minfs_getattr() vn=%p(#%u)\n", this, ino_);
-    a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic));
+    a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) |
+            V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     a->inode = ino_;
     a->size = inode_.size;
     a->blksize = kMinfsBlockSize;
