@@ -4,6 +4,8 @@
 
 #include "qemu-stream.h"
 
+#include <mxtl/vector.h>
+
 namespace audio {
 namespace intel_hda {
 namespace codecs {
@@ -38,6 +40,21 @@ mx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bo
 }
 
 mx_status_t QemuStream::OnActivateLocked() {
+    mxtl::Vector<audio_proto::FormatRange> supported_formats;
+
+    audio_proto::FormatRange range;
+    range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+    range.min_channels = 1;
+    range.max_channels = 2;
+    range.min_frames_per_second = 16000;
+    range.min_frames_per_second = 96000;
+    range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
+
+    if (!supported_formats.push_back(range))
+        return MX_ERR_NO_MEMORY;
+
+    SetSupportedFormatsLocked(mxtl::move(supported_formats));
+
     return DisableConverterLocked();
 }
 
@@ -46,27 +63,6 @@ void QemuStream::OnDeactivateLocked() {
 }
 
 mx_status_t QemuStream::BeginChangeStreamFormatLocked(const audio_proto::StreamSetFmtReq& fmt) {
-    // Check the format arguments.
-    if ((fmt.channels != 1) && (fmt.channels != 2))
-        return MX_ERR_NOT_SUPPORTED;
-
-    if (fmt.sample_format != AUDIO_SAMPLE_FORMAT_16BIT)
-        return MX_ERR_NOT_SUPPORTED;
-
-    switch (fmt.frames_per_second) {
-    case 96000:
-    case 88200:
-    case 48000:
-    case 44100:
-    case 32000:
-    case 22050:
-    case 16000:
-        break;
-    default:
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
-    // Looks good, make sure that the converter is muted and not processing any stream tags.
     return DisableConverterLocked();
 }
 
