@@ -305,7 +305,10 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
                         (test_intf->bAlternateSetting == 0) &&
                         // Only Audio Control interface should be considered top-level
                         (test_intf->bInterfaceClass != USB_CLASS_AUDIO ||
-                            test_intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL)
+                            test_intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL) &&
+                        // USB_CLASS_CDC interfaces should be grouped within a
+                        // USB_CLASS_COMM interface
+                        (test_intf->bInterfaceClass != USB_CLASS_CDC)
                         ) {
                         // found the next top level interface
                         break;
