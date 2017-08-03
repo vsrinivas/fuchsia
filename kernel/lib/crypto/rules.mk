@@ -10,6 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/entropy/quality_test.cpp \
     $(LOCAL_DIR)/global_prng.cpp \
     $(LOCAL_DIR)/global_prng_unittest.cpp \
     $(LOCAL_DIR)/hash.cpp \

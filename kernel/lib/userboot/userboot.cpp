@@ -35,7 +35,7 @@
 #include <magenta/vm_object_dispatcher.h>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
-#include <lib/crypto/global_prng.h>
+#include <lib/crypto/entropy/quality_test.h>
 #endif
 
 static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
@@ -299,11 +299,11 @@ static int attempt_userboot() {
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
     if (status == MX_OK) {
-        if (crypto::GlobalPRNG::internal::entropy_was_lost) {
+        if (crypto::entropy::test::entropy_was_lost) {
             status = MX_ERR_INTERNAL;
         } else {
             status = get_vmo_handle(
-                    crypto::GlobalPRNG::internal::entropy_vmo,
+                    crypto::entropy::test::entropy_vmo,
                     /* readonly */ true, /* disp_ptr */ nullptr,
                     &handles[BOOTSTRAP_ENTROPY_FILE]);
         }
