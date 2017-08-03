@@ -26,17 +26,21 @@ variable, e.g.:
 LLVM_SRCDIR=${HOME}/llvm
 ```
 
-Before building the runtime libraries that are built along with the compiler,
-you need a Magenta `sysroot` built.  This comes from the Magenta build and
-sits in the `sysroot` subdirectory of the main Magenta build directory.  For
-example, `.../build-magenta-pc-x86-64/sysroot`.  In the following commands,
-the string `${MX_SYSROOT}` stands in for this absolute directory name.  You
-can cut & paste these commands into a shell after setting the `MX_SYSROOT`
+Before building the runtime libraries that are built along with the
+compiler, you need a Magenta `sysroot` built.  This comes from the
+Magenta build and sits in the `sysroot` subdirectory of the main Magenta
+build directory.  For example, `.../build-magenta-pc-x86-64/sysroot`.
+In the following commands, the string `${FUCHSIA_${arch}_SYSROOT}`
+stands in for this absolute directory name.  You can cut & paste these
+commands into a shell after setting the `FUCHSIA_${arch}_SYSROOT`
 variable, e.g.:
 
 ```bash
 make magenta-pc-x86-64
-MX_SYSROOT=`pwd`/build-magenta-pc-x86-64/sysroot
+FUCHSIA_x86_64_SYSROOT=`pwd`/build-magenta-pc-x86-64/sysroot
+
+make magenta-qemu-arm64
+FUCHSIA_aarch64_SYSROOT=`pwd`/build-magenta-qemu-arm64/sysroot
 ```
 
 You can build a Fuchsia Clang compiler using the following commands.
@@ -46,7 +50,7 @@ use `LLVM_SRCDIR=..` or it can be elsewhere, with `LLVM_SRCDIR` set
 to an absolute or relative directory path from the build directory.
 
 ```bash
-cmake -G Ninja -DFUCHSIA_SYSROOT=${MX_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia.cmake ${LLVM_SRCDIR}
+cmake -G Ninja -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia.cmake ${LLVM_SRCDIR}
 ninja stage2-distribution
 ```
 
@@ -59,11 +63,12 @@ ninja stage2-install-distribution
 
 To use the compiler just built without installing it into a system-wide
 shared location, you can just refer to its build directory explicitly as
-`.../tools/clang/stage2-bins/bin/` (where `...` is your LLVM build
-directory).  For example, in a Magenta build, you can pass the argument:
+`${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/` (where `LLVM_OBJDIR` is
+your LLVM build directory).  For example, in a Magenta build, you can
+pass the argument:
 
 ```bash
-CLANG_TOOLCHAIN_PREFIX=../llvm/build/tools/clang/stage2-bins/bin/
+CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/tools/clang/stage2-bins/bin/
 ```
 
 (Note: that trailing slash is important.)
@@ -93,7 +98,7 @@ the low-level target-specific routines) for Fuchsia, you need a few additional
 flags:
 
 ```bash
--DLLVM_BUILTIN_TARGETS='x86_64-fuchsia-none;aarch64-fuchsia-none' -DBUILTINS_{aarch64,x86_64}-fuchsia-none_CMAKE_SYSROOT=${MX_SYSROOT} -DBUILTINS_{aarch64,x86_64}-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia
+-DLLVM_BUILTIN_TARGETS='x86_64-fuchsia-none;aarch64-fuchsia-none' -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DBUILTINS_x86_64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -DBUILTINS_aarch64-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia
 ```
 
 For this kind of build, the `bin` directory immediate under your main LLVM
@@ -121,14 +126,14 @@ checkout (on Linux):
 CLANG_TOOLCHAIN_PREFIX=${HOME}/fuchsia/buildtools/toolchain/clang+llvm-x86_64-linux/bin/
 ```
 
-To put that all together, the full command sequence is:
+To build both builtins as well as runtimes (C++ library and sanitizer
+runtimes), you can also use the cache file, but run only the second
+stage, with LTO disabled, which gives you a faster build time suitable even
+for incremental development, without having to manually specify all
+options:
 
 ```bash
-LLVM_SRCDIR=<your llvm checkout>
-MX_SYSROOT=<your magenta build>/sysroot
-CLANG_TOOLCHAIN_PREFIX=<your fuchsia checkout>/buildtools/toolchain/clang+llvm-x86_64-linux/bin/
-cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_BUILTIN_TARGETS='x86_64-fuchsia-none;aarch64-fuchsia-none' -DBUILTINS_{aarch64,x86_64}-fuchsia-none_CMAKE_SYSROOT=${MX_SYSROOT} -DBUILTINS_{aarch64,x86_64}-fuchsia-none_CMAKE_SYSTEM_NAME=Fuchsia -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LLD=ON ${LLVM_SRCDIR}
-ninja
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LTO=OFF -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia-stage2.cmake ${LLVM_SRCDIR}
 ```
 
 ## Additional Resources
