@@ -167,28 +167,6 @@ static inline int __sigaltstack(const stack_t* restrict ss, stack_t* restrict ol
     return 0;
 }
 
-static inline int __rt_sigprocmask(int how, const sigset_t* restrict set,
-                                   sigset_t* restrict old_set, size_t sigmask_size) {
-    return 0;
-}
-
-static inline int __rt_sigpending(sigset_t* set, size_t sigset_size) {
-    return 0;
-}
-
-static inline int __rt_sigsuspend(const sigset_t* set, size_t sigset_size) {
-    return 0;
-}
-
-static inline int __rt_sigtimedwait(const sigset_t* restrict set, siginfo_t* restrict info,
-                                    const struct timespec* restrict timeout, size_t sigset_size) {
-    return 0;
-}
-
-static inline int __rt_sigqueueinfo(pid_t pid, int sig, siginfo_t* info) {
-    return 0;
-}
-
 #define DEFAULT_PTHREAD_ATTR                                                  \
     ((pthread_attr_t){                                                        \
         ._a_stacksize = MAGENTA_DEFAULT_STACK_SIZE,                           \
