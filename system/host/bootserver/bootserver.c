@@ -73,7 +73,7 @@ void update_status(size_t bytes_so_far) {
             int64_t us_since_begin = ((int64_t)(now.tv_sec - start_time.tv_sec) * 1000000) +
                                      ((int64_t)now.tv_usec - start_time.tv_usec);
             if (us_since_begin >= 1000000) {
-                bw = (float)bytes_so_far / (1024.0 * 1024.0 * (float)(us_since_begin / 1000000));
+                bw = (float)bytes_so_far / (1024.0 * 1024.0 * ((float)us_since_begin / 1000000));
             }
 
             fprintf(stderr, "\33[2K\r");
