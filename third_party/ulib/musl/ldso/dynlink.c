@@ -1152,14 +1152,11 @@ __NO_SAFESTACK static mx_status_t load_library_vmo(mx_handle_t vmo,
     }
 
     // Calculate how many slots are needed for dependencies.
-    size_t ndeps = 0;
+    size_t ndeps = 1;  // Account for a NULL terminator.
     for (size_t i = 0; temp_dso.dynv[i].d_tag; i++) {
         if (temp_dso.dynv[i].d_tag == DT_NEEDED)
             ++ndeps;
     }
-    if (ndeps > 0)
-        // Account for a NULL terminator.
-        ++ndeps;
 
     /* Allocate storage for the new DSO. When there is TLS, this
      * storage must include a reservation for all pre-existing
@@ -1870,6 +1867,18 @@ __NO_SAFESTACK NO_ASAN static void early_init(void) {
 #endif
 }
 
+static void set_global(struct dso* p, int global) {
+    if (p->global > 0)
+        // Short-circuit if it's already fully global.  Its deps will be too.
+        return;
+    p->global = global;
+    if (p->deps != NULL) {
+        for (struct dso **dep = p->deps; *dep != NULL; ++dep) {
+            set_global(*dep, global);
+        }
+    }
+}
+
 static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     pthread_rwlock_wrlock(&lock);
     __thread_allocation_inhibit();
@@ -1905,15 +1914,12 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     struct dl_alloc_checkpoint checkpoint;
     dl_alloc_checkpoint(&checkpoint);
 
-    size_t i;
     jmp_buf jb;
     rtld_fail = &jb;
     if (setjmp(*rtld_fail)) {
         /* Clean up anything new that was (partially) loaded */
         if (p && p->deps)
-            for (i = 0; p->deps[i]; i++)
-                if (p->deps[i]->global < 0)
-                    p->deps[i]->global = 0;
+            set_global(p, 0);
         for (p = orig_tail->next; p; p = p->next)
             unmap_library(p);
         if (!orig_tls_tail)
@@ -1931,26 +1937,13 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
     /* First load handling */
     if (!p->deps) {
         load_deps(p);
-        if (p->deps)
-            for (i = 0; p->deps[i]; i++)
-                if (!p->deps[i]->global)
-                    p->deps[i]->global = -1;
-        if (!p->global)
-            p->global = -1;
+        set_global(p, -1);
         reloc_all(p);
-        if (p->deps)
-            for (i = 0; p->deps[i]; i++)
-                if (p->deps[i]->global < 0)
-                    p->deps[i]->global = 0;
-        if (p->global < 0)
-            p->global = 0;
+        set_global(p, 0);
     }
 
     if (mode & RTLD_GLOBAL) {
-        if (p->deps)
-            for (i = 0; p->deps[i]; i++)
-                p->deps[i]->global = 1;
-        p->global = 1;
+        set_global(p, 1);
     }
 
     update_tls_size();
@@ -2029,10 +2022,40 @@ static void* addr2dso(size_t a) {
 
 void* __tls_get_addr(size_t*);
 
+static bool find_sym_for_dlsym(struct dso* p,
+                               const char* name,
+                               uint32_t* name_gnu_hash,
+                               uint32_t* name_sysv_hash,
+                               void** result) {
+    const Sym* sym;
+    if (p->ghashtab != NULL) {
+        if (*name_gnu_hash == 0)
+            *name_gnu_hash = gnu_hash(name);
+        sym = gnu_lookup(*name_gnu_hash, p->ghashtab, p, name);
+    } else {
+        if (*name_sysv_hash == 0)
+            *name_sysv_hash = sysv_hash(name);
+        sym = sysv_lookup(name, *name_sysv_hash, p);
+    }
+    if (sym && (sym->st_info & 0xf) == STT_TLS) {
+        *result = __tls_get_addr((size_t[]){p->tls_id, sym->st_value});
+        return true;
+    }
+    if (sym && sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES)) {
+        *result = laddr(p, sym->st_value);
+        return true;
+    }
+    if (p->deps) {
+        for (struct dso** dep = p->deps; *dep != NULL; ++dep) {
+            if (find_sym_for_dlsym(*dep, name, name_gnu_hash, name_sysv_hash,
+                                   result))
+                return true;
+        }
+    }
+    return false;
+}
+
 static void* do_dlsym(struct dso* p, const char* s, void* ra) {
-    size_t i;
-    uint32_t h = 0, gh = 0, *ght;
-    Sym* sym;
     if (p == head || p == RTLD_DEFAULT || p == RTLD_NEXT) {
         if (p == RTLD_DEFAULT) {
             p = head;
@@ -2051,33 +2074,10 @@ static void* do_dlsym(struct dso* p, const char* s, void* ra) {
     }
     if (__dl_invalid_handle(p))
         return 0;
-    if ((ght = p->ghashtab)) {
-        gh = gnu_hash(s);
-        sym = gnu_lookup(gh, ght, p, s);
-    } else {
-        h = sysv_hash(s);
-        sym = sysv_lookup(s, h, p);
-    }
-    if (sym && (sym->st_info & 0xf) == STT_TLS)
-        return __tls_get_addr((size_t[]){p->tls_id, sym->st_value});
-    if (sym && sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES))
-        return laddr(p, sym->st_value);
-    if (p->deps)
-        for (i = 0; p->deps[i]; i++) {
-            if ((ght = p->deps[i]->ghashtab)) {
-                if (!gh)
-                    gh = gnu_hash(s);
-                sym = gnu_lookup(gh, ght, p->deps[i], s);
-            } else {
-                if (!h)
-                    h = sysv_hash(s);
-                sym = sysv_lookup(s, h, p->deps[i]);
-            }
-            if (sym && (sym->st_info & 0xf) == STT_TLS)
-                return __tls_get_addr((size_t[]){p->deps[i]->tls_id, sym->st_value});
-            if (sym && sym->st_value && (1 << (sym->st_info & 0xf) & OK_TYPES))
-                return laddr(p->deps[i], sym->st_value);
-        }
+    uint32_t gnu_hash = 0, sysv_hash = 0;
+    void* result;
+    if (find_sym_for_dlsym(p, s, &gnu_hash, &sysv_hash, &result))
+        return result;
 failed:
     error("Symbol not found: %s", s);
     return 0;
