@@ -18,7 +18,7 @@
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,7 +77,7 @@ mx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, mxtl:
     if (size > MAX_SIZE)
         return MX_ERR_INVALID_ARGS;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto vmo = mxtl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, nullptr));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -96,7 +96,7 @@ status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
 
     canary_.Assert();
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto vmo = mxtl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, mxtl::WrapRefPtr(this)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

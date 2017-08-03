@@ -20,10 +20,10 @@
 #include <kernel/vm/vm_object_physical.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
-#include <mxalloc/new.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -181,7 +181,7 @@ mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
         panic("Invalid aspace type");
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto aspace = mxtl::AdoptRef(new (&ac) VmAspace(base, size, flags, name));
     if (!ac.check())
         return nullptr;

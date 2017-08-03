@@ -13,7 +13,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <pow2.h>
 #include <safeint/safe_math.h>
@@ -64,7 +64,7 @@ status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
                                      mxtl::RefPtr<VmAddressRegion>* out) {
     DEBUG_ASSERT(out);
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto vmar = new (&ac) VmAddressRegion(aspace, aspace.base(), aspace.size(), vmar_flags);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -168,7 +168,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
                                VDso::vmo_is_vdso(vmo));
 #endif
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VmAddressRegionOrMapping> vmar;
     if (vmo) {
         vmar = mxtl::AdoptRef(new (&ac)
@@ -286,7 +286,7 @@ status_t VmAddressRegion::OverwriteVmMapping(
     DEBUG_ASSERT(vmo);
     DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VmAddressRegionOrMapping> vmar;
     vmar = mxtl::AdoptRef(new (&ac)
                               VmMapping(*this, base, size, vmar_flags,

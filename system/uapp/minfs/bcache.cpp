@@ -9,7 +9,7 @@
 
 #include <fs/trace.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 #include <magenta/device/device.h>
@@ -52,7 +52,7 @@ int Bcache::Sync() {
 }
 
 mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

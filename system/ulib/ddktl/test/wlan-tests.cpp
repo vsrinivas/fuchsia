@@ -4,7 +4,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlan.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 

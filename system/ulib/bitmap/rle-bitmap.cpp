@@ -8,8 +8,8 @@
 
 #include <magenta/errors.h>
 #include <magenta/types.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 
 namespace bitmap {
 
@@ -19,7 +19,7 @@ namespace {
 // new.  If *free_list* is not null, take one from *free_list*.
 mxtl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_list) {
     if (!free_list) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::unique_ptr<RleBitmapElement> new_elem(new (&ac) RleBitmapElement());
         if (!ac.check()) {
             return mxtl::unique_ptr<RleBitmapElement>();

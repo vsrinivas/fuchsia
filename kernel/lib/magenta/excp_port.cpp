@@ -15,7 +15,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <trace.h>
 
@@ -25,7 +25,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
     if (!MX_PKT_IS_EXCEPTION(type))
         return nullptr;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto port_packet = new (&ac) PortPacket();
     if (!ac.check())
         return nullptr;
@@ -43,7 +43,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
 // static
 mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
                                   mxtl::RefPtr<ExceptionPort>* out_eport) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

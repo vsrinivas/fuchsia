@@ -102,7 +102,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
     if (count > kMaxWaitHandleCount)
         return MX_ERR_INVALID_ARGS;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::InlineArray<mx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

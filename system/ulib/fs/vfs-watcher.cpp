@@ -16,7 +16,7 @@
 
 #include <fs/vfs.h>
 #include <mx/channel.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 namespace fs {
 
@@ -56,7 +56,7 @@ mx_status_t WatchBuffer::Send(const mx::channel& c) {
 }
 
 mx_status_t WatcherContainer::WatchDir(mx::channel* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
                                                                   VFS_WATCH_MASK_ADDED));
     if (!ac.check()) {
@@ -79,7 +79,7 @@ mx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_di
         return MX_ERR_INVALID_ARGS;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mxtl::move(c), cmd->mask));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

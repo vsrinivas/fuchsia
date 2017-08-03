@@ -10,8 +10,8 @@
 #include <digest/digest.h>
 #include <magenta/assert.h>
 #include <magenta/errors.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 namespace digest {
@@ -128,7 +128,7 @@ mx_status_t MerkleTree::CreateInit(size_t data_len, size_t tree_len) {
     if (data_len <= kNodeSize) {
         return MX_OK;
     }
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     next_.reset(new (&ac) MerkleTree());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -347,7 +347,7 @@ mx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
     }
     // Allocate the wrapper object using a unique_ptr.  That way, if we hit an
     // error we'll clean up automatically.
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<merkle_tree_t> mt_uniq(new (&ac) merkle_tree_t());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

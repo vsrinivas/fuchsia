@@ -13,7 +13,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lk/init.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/limits.h>
 #include <trace.h>
 
@@ -449,7 +449,7 @@ status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
         return MX_ERR_BAD_STATE;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     driver_ = mxtl::AdoptRef(new (&ac) PcieBusDriver(platform));
     if (!ac.check()) {
         TRACEF("Failed to allocate PCIe bus driver\n");
@@ -566,7 +566,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
     }
 
     // Looks good.  Attempt to allocate and map this ECAM region.
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
     if (!ac.check()) {
         TRACEF("Failed to allocate ECAM region for bus range [0x%02x, 0x%02x]\n",

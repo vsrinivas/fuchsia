@@ -7,7 +7,7 @@
 #include <hypervisor/packet_mux.h>
 #include <kernel/event.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #if WITH_LIB_MAGENTA
 #include <magenta/state_observer.h>
@@ -61,7 +61,7 @@ static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals,
 
 status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo) {
 #if WITH_LIB_MAGENTA
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<FifoRange> range(new (&ac) FifoRange(addr, len, fifo));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

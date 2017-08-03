@@ -15,8 +15,8 @@
 #include <fs/block-txn.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 
 #define MXDEBUG 0
@@ -449,7 +449,7 @@ mx_status_t Blobstore::NewBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* ou
         return (status == MX_OK) ? MX_ERR_ALREADY_EXISTS : status;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     *out = mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this), digest));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -556,7 +556,7 @@ mx_status_t Blobstore::LookupBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>*
             if (digest == GetNode(i)->merkle_root_hash) {
                 if (out != nullptr) {
                     // Found it. Attempt to wrap the blob in a vnode.
-                    AllocChecker ac;
+                    mxtl::AllocChecker ac;
                     mxtl::RefPtr<VnodeBlob> vn =
                         mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this), digest));
                     if (!ac.check()) {
@@ -611,7 +611,7 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
         return status;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<Blobstore> fs = mxtl::AdoptRef(new (&ac) Blobstore(fd, info));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -668,7 +668,7 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
 }
 
 mx_status_t Blobstore::GetRootBlob(mxtl::RefPtr<VnodeBlob>* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VnodeBlob> vn =
         mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this)));
 

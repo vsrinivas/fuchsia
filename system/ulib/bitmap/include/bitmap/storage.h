@@ -10,8 +10,8 @@
 
 #include <magenta/process.h>
 #include <magenta/types.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/array.h>
 #include <mxtl/macros.h>
 
@@ -28,7 +28,7 @@ public:
     DefaultStorage() = default;
 
     mx_status_t Allocate(size_t size) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         auto arr = new (&ac) uint8_t[size];
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;

@@ -47,7 +47,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/mx \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
     system/ulib/port \
@@ -101,4 +100,3 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/port
 MODULE_LIBS := system/ulib/driver system/ulib/mxio system/ulib/magenta system/ulib/c
 
 include make/module.mk
-

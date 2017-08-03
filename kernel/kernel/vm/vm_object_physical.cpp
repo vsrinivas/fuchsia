@@ -15,7 +15,7 @@
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +43,7 @@ status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, mxtl::RefPtr<VmOb
     if (!safe_base.IsValid())
         return MX_ERR_INVALID_ARGS;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto vmo = mxtl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

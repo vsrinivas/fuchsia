@@ -26,7 +26,7 @@
 #include <trace.h>
 #include <platform.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -48,7 +48,7 @@ protected:
 
 mxtl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
                                                 uint dev_id, uint func_id) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto raw_dev = new (&ac) PcieDeviceImpl(upstream.driver(),
                                             upstream.managed_bus_id(),
                                             dev_id,

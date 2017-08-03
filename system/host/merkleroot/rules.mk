@@ -15,14 +15,13 @@ MODULE_TYPE := hostapp
 
 MODULE_COMPILEFLAGS += \
 	-Isystem/ulib/digest/include \
-	-Isystem/ulib/mxalloc/include \
 	-Isystem/ulib/mxcpp/include \
 	-Isystem/ulib/mxtl/include
 
 MODULE_SRCS += \
 	system/ulib/digest/digest.cpp \
 	system/ulib/digest/merkle-tree.cpp \
-	system/ulib/mxalloc/alloc_checker.cpp \
+	system/ulib/mxtl/alloc_checker.cpp \
 	$(LOCAL_DIR)/merkleroot.cpp
 
 ifneq (,$(wildcard $(OPENSSL_DIR)/sha.h))

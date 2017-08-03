@@ -213,7 +213,7 @@ static void vmxoff_task(void* arg) {
 status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
     // Allocate a VMXON page for each CPU.
     size_t num_cpus = arch_max_num_cpus();
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     VmxPage* pages = new (&ac) VmxPage[num_cpus];
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

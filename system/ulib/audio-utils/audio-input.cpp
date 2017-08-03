@@ -4,8 +4,8 @@
 
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-stream.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/limits.h>
 
 namespace audio {
@@ -16,7 +16,7 @@ static constexpr float MIN_DURATION = 0.100f;
 static constexpr float MAX_DURATION = 86400.0f;
 
 mxtl::unique_ptr<AudioInput> AudioInput::Create(uint32_t dev_id) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_id));
     if (!ac.check())
         return nullptr;
@@ -24,7 +24,7 @@ mxtl::unique_ptr<AudioInput> AudioInput::Create(uint32_t dev_id) {
 }
 
 mxtl::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_path));
     if (!ac.check())
         return nullptr;

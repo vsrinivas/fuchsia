@@ -11,7 +11,7 @@
 
 #include <magenta/rights.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <assert.h>
 #include <err.h>
@@ -23,7 +23,7 @@
 status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) VmObjectDispatcher(mxtl::move(vmo));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

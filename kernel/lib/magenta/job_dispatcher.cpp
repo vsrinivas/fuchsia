@@ -13,7 +13,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/rights.h>
 #include <magenta/syscalls/policy.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 // The starting max_height value of the root job.
 static constexpr uint32_t kRootJobMaxHeight = 32;
@@ -21,7 +21,7 @@ static constexpr uint32_t kRootJobMaxHeight = 32;
 static constexpr char kRootJobName[] = "<superroot>";
 
 mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto job = mxtl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, kPolicyEmpty));
     if (!ac.check())
         return nullptr;
@@ -38,7 +38,7 @@ status_t JobDispatcher::Create(uint32_t flags,
         return MX_ERR_OUT_OF_RANGE;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<JobDispatcher> job =
         mxtl::AdoptRef(new (&ac) JobDispatcher(flags, parent, parent->GetPolicy()));
     if (!ac.check())

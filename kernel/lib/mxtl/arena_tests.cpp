@@ -7,7 +7,7 @@
 #include <mxtl/arena.h>
 
 #include <kernel/vm/vm_aspace.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <unittest.h>
 
 using mxtl::Arena;
@@ -408,7 +408,7 @@ static bool memory_cleanup(void* context) {
     BEGIN_TEST;
     static const size_t num_slots = (16 * PAGE_SIZE) / sizeof(TestObj);
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     Arena* arena = new (&ac) Arena();
     EXPECT_TRUE(ac.check(), "");
     EXPECT_EQ(MX_OK, arena->Init("name", sizeof(TestObj), num_slots), "");

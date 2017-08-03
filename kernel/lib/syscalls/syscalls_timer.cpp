@@ -16,7 +16,7 @@
 #include <magenta/timer_dispatcher.h>
 #include <magenta/user_copy.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
@@ -78,4 +78,3 @@ mx_status_t sys_timer_cancel(mx_handle_t handle) {
 
     return timer->Cancel();
 }
-

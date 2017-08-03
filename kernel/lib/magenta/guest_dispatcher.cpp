@@ -9,7 +9,7 @@
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/guest_dispatcher.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 // static
 mx_status_t GuestDispatcher::Create(mxtl::RefPtr<VmObject> physmem,
@@ -20,7 +20,7 @@ mx_status_t GuestDispatcher::Create(mxtl::RefPtr<VmObject> physmem,
     if (status != MX_OK)
         return status;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) GuestDispatcher(mxtl::move(guest));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

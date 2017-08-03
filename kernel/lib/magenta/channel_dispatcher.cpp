@@ -21,7 +21,7 @@
 #include <magenta/rights.h>
 #include <magenta/thread_dispatcher.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/type_support.h>
 
 #define LOCAL_TRACE 0
@@ -31,7 +31,7 @@ status_t ChannelDispatcher::Create(uint32_t flags,
                                    mxtl::RefPtr<Dispatcher>* dispatcher0,
                                    mxtl::RefPtr<Dispatcher>* dispatcher1,
                                    mx_rights_t* rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

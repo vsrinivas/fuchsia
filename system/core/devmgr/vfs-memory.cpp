@@ -14,10 +14,10 @@
 #include <fs/vfs.h>
 #include <magenta/device/vfs.h>
 #include <magenta/thread_annotations.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -322,7 +322,7 @@ mx_status_t VnodeDir::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, siz
         return status;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<memfs::VnodeMemfs> vn;
     if (S_ISDIR(mode)) {
         vn = mxtl::AdoptRef(new (&ac) memfs::VnodeDir());
@@ -458,7 +458,7 @@ mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldnam
         targetdn->Detach();
         namebuffer = mxtl::move(targetdn->TakeName());
     } else {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         namebuffer.reset(new (&ac) char[newlen + 1]);
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;
@@ -592,7 +592,7 @@ mx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
 }
 
 static mx_status_t memfs_create_fs(const char* name, mxtl::RefPtr<VnodeDir>* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VnodeDir> fs = mxtl::AdoptRef(new (&ac) VnodeDir());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -620,7 +620,7 @@ mx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namel
         return status;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VnodeMemfs> vn;
     if (vmofile) {
         vn = mxtl::AdoptRef(new (&ac) VnodeVmo(vmo, off, len));

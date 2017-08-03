@@ -13,8 +13,8 @@
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
+#include <mxtl/alloc_checker.h>
 
 #define MXDEBUG 0
 

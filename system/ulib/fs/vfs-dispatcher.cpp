@@ -14,10 +14,10 @@
 #include <mx/event.h>
 #include <mx/object.h>
 #include <mx/port.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <fs/vfs-dispatcher.h>
 
@@ -162,7 +162,7 @@ void VfsDispatcher::RunOnCurrentThread() {
 
 mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
                                   mxtl::unique_ptr<fs::VfsDispatcher>* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher(cb, pool_size));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -233,7 +233,7 @@ mx_status_t VfsDispatcher::Start(const char* name) {
 }
 
 mx_status_t VfsDispatcher::AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* cookie) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<Handler> handler(new (&ac) Handler(mxtl::move(channel), cb, cookie));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

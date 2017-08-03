@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 #include <magenta/assert.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/macros.h>
 
 // We don't want to force a dependency on a particular implementation
@@ -19,7 +19,7 @@ namespace mxtl {
 // Runtime-determined, fixed size arrays that are "inlined" (e.g., on the stack) if the size at most
 // |max_inline_count| or heap-allocated otherwise. This is typically used like:
 //
-//   AllocChecker ac;
+//   mxtl::AllocChecker ac;
 //   mxtl::InlineArray<mx_handle_t, 4u> handle_values(&ac, num_handles);
 //   if (!ac.check())
 //       return MX_ERR_NO_MEMORY;
@@ -28,7 +28,7 @@ namespace mxtl {
 template <typename T, size_t max_inline_count>
 class InlineArray {
 public:
-    InlineArray(AllocChecker* ac, size_t count)
+    InlineArray(mxtl::AllocChecker* ac, size_t count)
         : count_(count),
           ptr_(!count_ ? nullptr
                        : is_inline() ? reinterpret_cast<T*>(inline_storage_) : new (ac) T[count_]) {

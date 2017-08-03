@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddktl/device.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -86,7 +86,7 @@ template <typename T>
 static bool do_test() {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto dev = mxtl::unique_ptr<T>(new (&ac) T);
     ASSERT_TRUE(ac.check(), "");
 
@@ -182,7 +182,7 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
 static bool test_dispatch() {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto dev = mxtl::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
     ASSERT_TRUE(ac.check(), "");
 
@@ -342,4 +342,3 @@ RUN_NAMED_TEST("FailNotAllMixins", do_test<TestNotAllMixins>);
 END_TEST_CASE(ddktl_device);
 
 test_case_element* test_case_ddktl_device = TEST_CASE_ELEMENT(ddktl_device);
-

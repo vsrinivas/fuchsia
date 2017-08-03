@@ -17,7 +17,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bench-basic.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

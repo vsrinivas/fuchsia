@@ -11,7 +11,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 #include <magenta/compiler.h>

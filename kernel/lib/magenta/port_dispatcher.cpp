@@ -17,7 +17,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/port.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <kernel/auto_lock.h>
 
@@ -97,7 +97,7 @@ mx_status_t PortDispatcher::Create(uint32_t options,
                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                      mx_rights_t* rights) {
     DEBUG_ASSERT(options == 0);
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -138,7 +138,7 @@ void PortDispatcher::on_zero_handles() {
 mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
     canary_.Assert();
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto port_packet = new (&ac) PortPacket();
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -238,7 +238,7 @@ mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle,
     if (!dispatcher->get_state_tracker())
         return MX_ERR_NOT_SUPPORTED;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto type = (options == MX_WAIT_ASYNC_ONCE) ?
         MX_PKT_TYPE_SIGNAL_ONE : MX_PKT_TYPE_SIGNAL_REP;
 

@@ -13,7 +13,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/rights.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <assert.h>
 #include <err.h>
@@ -31,7 +31,7 @@ status_t PciDeviceDispatcher::Create(uint32_t                  index,
     if (device == nullptr)
         return MX_ERR_OUT_OF_RANGE;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) PciDeviceDispatcher(mxtl::move(device), out_info);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

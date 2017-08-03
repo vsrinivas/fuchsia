@@ -5,7 +5,7 @@
 #include <mxtl/inline_array.h>
 
 #include <stddef.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <unittest.h>
 
 namespace {
@@ -37,7 +37,7 @@ bool inline_test(void* unused) {
     for (size_t sz = 0u; sz <= 3u; sz++) {
         TestType::ResetRunCounts();
         {
-            AllocChecker ac;
+            mxtl::AllocChecker ac;
             mxtl::InlineArray<TestType, 3u> ia(&ac, sz);
             EXPECT_TRUE(ac.check(), "");
         }
@@ -58,7 +58,7 @@ bool non_inline_test(void* unused) {
 
         TestType::ResetRunCounts();
         {
-            AllocChecker ac;
+            mxtl::AllocChecker ac;
             mxtl::InlineArray<TestType, 3u> ia(&ac, sz);
             EXPECT_TRUE(ac.check(), "");
         }

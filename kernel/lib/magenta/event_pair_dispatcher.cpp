@@ -12,14 +12,14 @@
 #include <kernel/auto_lock.h>
 #include <magenta/rights.h>
 #include <magenta/state_tracker.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
 status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
                                      mxtl::RefPtr<Dispatcher>* dispatcher1,
                                      mx_rights_t* rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp0 = mxtl::AdoptRef(new (&ac) EventPairDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

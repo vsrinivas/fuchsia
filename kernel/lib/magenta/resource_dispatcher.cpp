@@ -6,7 +6,7 @@
 
 #include <magenta/resource_dispatcher.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <kernel/auto_lock.h>
 #include <string.h>
@@ -15,7 +15,7 @@
 mx_status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
                                        mx_rights_t* rights, uint32_t kind,
                                        uint64_t low, uint64_t high) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     ResourceDispatcher* disp = new (&ac) ResourceDispatcher(kind, low, high);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

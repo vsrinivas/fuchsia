@@ -26,7 +26,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/fs \
     system/ulib/mx \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
     system/ulib/sync \
@@ -56,15 +55,14 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
+		system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
-    system/ulib/mxalloc/alloc_checker.cpp \
-    system/ulib/bitmap/raw-bitmap.cpp \
+    system/ulib/mxtl/alloc_checker.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/bitmap/include \
-    -Isystem/ulib/mxalloc/include \
     -Isystem/ulib/mxcpp/include \
     -Isystem/ulib/mxio/include \
     -Isystem/ulib/mxtl/include \

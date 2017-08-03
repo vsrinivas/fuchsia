@@ -6,7 +6,7 @@
 
 #include "tests.h"
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest.h>
 
@@ -14,11 +14,11 @@ static bool alloc_checker_ctor(void* context) {
     BEGIN_TEST;
 
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
     }
 
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         ac.check();
     }
 
@@ -28,7 +28,7 @@ static bool alloc_checker_ctor(void* context) {
 static bool alloc_checker_basic(void* context) {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     ac.arm(8u, true);
     EXPECT_TRUE(ac.check(), "");
 
@@ -49,7 +49,7 @@ static bool alloc_checker_panic(void* context) {
 #if 0
     // Arm but not check should panic (true).
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         ac.arm(24u, true);
     }
 #endif
@@ -57,7 +57,7 @@ static bool alloc_checker_panic(void* context) {
 #if 0
     // Arm but not check should panic (false).
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         ac.arm(24u, false);
     }
 #endif
@@ -65,7 +65,7 @@ static bool alloc_checker_panic(void* context) {
 #if 0
     // Arming twice without a check should panic.
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         ac.arm(24u, true);
         ac.arm(18u, true);
     }
@@ -77,7 +77,7 @@ static bool alloc_checker_panic(void* context) {
 static bool alloc_checker_new(void* context) {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<char[]> arr(new (&ac) char[128]);
     EXPECT_EQ(ac.check(), true, "");
 
@@ -93,7 +93,7 @@ struct BigStruct {
 static bool alloc_checker_oom(void* context) {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     for (int ix = 0; ix != 100; ++ix) {
         auto bs = new (&ac) BigStruct;
         if (!ac.check()) {

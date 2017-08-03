@@ -25,7 +25,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/digest \
     third_party/ulib/cryptolib \
     system/ulib/mx \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
     system/ulib/sync \
@@ -53,7 +52,7 @@ MODULE_SRCS := \
     system/ulib/digest/digest.cpp \
     system/ulib/digest/merkle-tree.cpp \
     system/ulib/fs/vfs.cpp \
-    system/ulib/mxalloc/alloc_checker.cpp \
+    system/ulib/mxtl/alloc_checker.cpp \
     third_party/ulib/cryptolib/cryptolib.c \
 
 MODULE_COMPILEFLAGS := \
@@ -63,7 +62,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/digest/include \
     -Isystem/ulib/digest/include \
-    -Isystem/ulib/mxalloc/include \
     -Isystem/ulib/mxcpp/include \
     -Isystem/ulib/mxio/include \
     -Isystem/ulib/mxtl/include \

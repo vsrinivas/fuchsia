@@ -17,7 +17,6 @@ MODULE_NAME := bitmap-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/mx \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

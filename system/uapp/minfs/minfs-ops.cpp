@@ -1113,7 +1113,7 @@ mx_status_t VnodeMinfs::Allocate(Minfs* fs, uint32_t type, mxtl::RefPtr<VnodeMin
 }
 
 mx_status_t VnodeMinfs::AllocateHollow(Minfs* fs, mxtl::RefPtr<VnodeMinfs>* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     *out = mxtl::AdoptRef(new (&ac) VnodeMinfs(fs));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

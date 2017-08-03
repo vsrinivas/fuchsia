@@ -33,9 +33,8 @@
 #include <magenta/rights.h>
 #include <magenta/syscalls/debug.h>
 
-#include <mxalloc/new.h>
-
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_call.h>
 
 #define LOCAL_TRACE 0
@@ -45,7 +44,7 @@ status_t ThreadDispatcher::Create(mxtl::RefPtr<ProcessDispatcher> process, uint3
                                   mxtl::StringPiece name,
                                   mxtl::RefPtr<Dispatcher>* out_dispatcher,
                                   mx_rights_t* out_rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = mxtl::AdoptRef(new (&ac) ThreadDispatcher(mxtl::move(process), flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

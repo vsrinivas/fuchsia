@@ -12,7 +12,7 @@
 #include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/type_support.h>
 #include <platform.h>
 
@@ -209,7 +209,7 @@ VDso::VDso() : RoDso("vdso/full", vdso_image,
 const VDso* VDso::Create() {
     ASSERT(!instance_);
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     VDso* vdso = new(&ac) VDso();
     ASSERT(ac.check());
 

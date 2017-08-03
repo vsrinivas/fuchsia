@@ -19,7 +19,7 @@
 #include <malloc.h>
 #include <string.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 void x86_reset_tss_io_bitmap(void) {
@@ -109,7 +109,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         // Optimistically allocate a bitmap structure if we don't have one, and
         // we'll see if we actually need this allocation later.  In the common
         // case, when we make the allocation we will use it.
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         optimistic_bitmap.reset(new (&ac) bitmap::RleBitmap());
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;
@@ -122,7 +122,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
 
     // Optimistically allocate an element for the bitmap, in case we need one.
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         bitmap_freelist.push_back(mxtl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;

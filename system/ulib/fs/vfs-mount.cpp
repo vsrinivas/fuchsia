@@ -10,10 +10,10 @@
 
 #include <fs/vfs.h>
 #include <magenta/thread_annotations.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_ptr.h>
@@ -31,7 +31,7 @@ mx_status_t Vfs::InstallRemote(mxtl::RefPtr<Vnode> vn, MountChannel h) {
     }
 
     // Allocate a node to track the remote handle
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -54,7 +54,7 @@ mx_status_t Vfs::InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, MountChannel h) {
     }
 
     // Allocate a node to track the remote handle
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<MountNode> mount_point(new (&ac) MountNode());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

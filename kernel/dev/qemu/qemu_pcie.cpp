@@ -12,7 +12,7 @@
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <inttypes.h>
 #include <lk/init.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 #include <dev/qemu-virt.h>
 #include <trace.h>
@@ -55,7 +55,7 @@ public:
 class QemuPcieRoot : public PcieRoot {
 public:
     static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv, uint managed_bus_id) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         auto root = mxtl::AdoptRef(new (&ac) QemuPcieRoot(bus_drv, managed_bus_id));
         if (!ac.check()) {
             TRACEF("Out of memory attemping to create PCIe root to manage bus ID 0x%02x\n",

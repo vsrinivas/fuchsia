@@ -10,13 +10,13 @@
 
 #include <magenta/rights.h>
 #include <magenta/state_tracker.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
 status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
                                  mx_rights_t* rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) EventDispatcher(options);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

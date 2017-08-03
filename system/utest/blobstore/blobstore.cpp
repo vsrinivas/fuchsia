@@ -26,8 +26,8 @@
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/unique_ptr.h>
@@ -148,7 +148,7 @@ static int StreamAll(T func, int fd, U* buf, size_t max) {
 
 static bool VerifyContents(int fd, const char* data, size_t size_data) {
     // Verify the contents of the Blob
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
     EXPECT_EQ(ac.check(), true, "");
 
@@ -174,7 +174,7 @@ static bool MakeBlob(const char* path, const char* merkle, size_t size_merkle,
 
 static bool VerifyCompromised(int fd, const char* data, size_t size_data) {
     // Verify the contents of the Blob
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
     EXPECT_EQ(ac.check(), true, "");
 
@@ -221,7 +221,7 @@ typedef struct blob_info {
 // Returns the result of the post-processing 'func' (true == success).
 static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     // Generate a Blob of random data
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<blob_info_t> info(new (&ac) blob_info_t);
     EXPECT_EQ(ac.check(), true, "");
     info->data.reset(new (&ac) char[size_data]);
@@ -321,7 +321,7 @@ static bool TestReaddir(void) {
     constexpr size_t kMaxEntries = 50;
     constexpr size_t kBlobSize = 1 << 10;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<mxtl::unique_ptr<blob_info_t>>
         info(new (&ac) mxtl::unique_ptr<blob_info_t>[kMaxEntries](), kMaxEntries);
     ASSERT_TRUE(ac.check());
@@ -455,7 +455,7 @@ static bool ReadTooLarge(void) {
                              info->data.get(), info->size_data, &fd));
 
         // Verify the contents of the Blob
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::unique_ptr<char[]> buf(new (&ac) char[info->size_data]);
         EXPECT_EQ(ac.check(), true, "");
 
@@ -670,7 +670,7 @@ bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
     mxtl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateBlob(1 + (rand_r(seed) % (1 << 16)), &info));
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<blob_state_t> state(new (&ac) blob_state(mxtl::move(info)));
     ASSERT_EQ(ac.check(), true);
 
@@ -862,7 +862,7 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
     blob_list_t bl;
 
     size_t num_threads = 10;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<thrd_t> threads(new (&ac) thrd_t[num_threads](), num_threads);
     ASSERT_TRUE(ac.check());
 

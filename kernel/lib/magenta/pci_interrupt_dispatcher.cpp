@@ -10,7 +10,7 @@
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
@@ -50,7 +50,7 @@ status_t PciInterruptDispatcher::Create(
         return MX_ERR_INVALID_ARGS;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
     auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id, maskable);
     mxtl::RefPtr<Dispatcher> dispatcher = mxtl::AdoptRef<Dispatcher>(interrupt_dispatcher);

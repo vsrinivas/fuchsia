@@ -46,7 +46,6 @@ MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
 MODULE_LDFLAGS += --wrap chdir --wrap renameat --wrap realpath --wrap remove
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

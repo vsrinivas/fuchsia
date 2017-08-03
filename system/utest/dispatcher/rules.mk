@@ -19,7 +19,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/mx \
     system/ulib/mxtl \
     system/ulib/mxcpp \
-    system/ulib/mxalloc \
 
 MODULE_LIBS := \
     system/ulib/c \

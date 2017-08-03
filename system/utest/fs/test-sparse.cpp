@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 
@@ -24,7 +24,7 @@ bool test_sparse(void) {
     ASSERT_GT(fd, 0);
 
     // Create a random write buffer of data
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
     ASSERT_EQ(ac.check(), true);
     unsigned int seed = static_cast<unsigned int>(mx_ticks_get());

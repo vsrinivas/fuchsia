@@ -10,7 +10,7 @@
 #include <fs/mapped-vmo.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 mx_status_t MappedVmo::Create(size_t size, const char* name, mxtl::unique_ptr<MappedVmo>* out) {
@@ -28,7 +28,7 @@ mx_status_t MappedVmo::Create(size_t size, const char* name, mxtl::unique_ptr<Ma
 
     mx_object_set_property(vmo, MX_PROP_NAME, name, strlen(name));
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<MappedVmo> mvmo(new (&ac) MappedVmo(vmo, addr, size));
     if (!ac.check()) {
         mx_vmar_unmap(mx_vmar_root_self(), addr, size);

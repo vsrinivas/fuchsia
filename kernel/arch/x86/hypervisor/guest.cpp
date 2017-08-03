@@ -32,7 +32,7 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
 
 // static
 status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<Guest> guest(new (&ac) Guest);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

@@ -8,7 +8,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -154,7 +154,7 @@ mx_status_t MBufChain::WriteStreamMBufs(user_ptr<const void> src,
 
 MBuf* MBufChain::AllocMBuf() {
     if (freelist_.is_empty()) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         MBuf* buf = new (&ac) MBuf();
         return (!ac.check()) ? nullptr : buf;
     }

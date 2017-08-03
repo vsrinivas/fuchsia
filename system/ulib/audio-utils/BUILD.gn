@@ -20,7 +20,6 @@ source_set("audio-utils") {
 
     public_deps = [
         "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxalloc",
         "//magenta/system/ulib/mxcpp",
         "//magenta/system/ulib/mxtl",
     ]

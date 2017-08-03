@@ -17,7 +17,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/sync \
     system/ulib/pretty \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

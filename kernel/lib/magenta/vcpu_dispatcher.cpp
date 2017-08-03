@@ -11,7 +11,7 @@
 #include <magenta/rights.h>
 #include <magenta/types.h>
 #include <magenta/vcpu_dispatcher.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
                                 mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
@@ -33,7 +33,7 @@ status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, 
     if (status != MX_OK)
         return status;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) VcpuDispatcher(guest_dispatcher, mxtl::move(vcpu));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

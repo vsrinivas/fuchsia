@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <bitmap/rle-bitmap.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <unittest/unittest.h>
 
 namespace bitmap {
@@ -314,7 +314,7 @@ static bool NoAlloc(void) {
     RleBitmap::FreeList free_list;
     EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), MX_ERR_NO_MEMORY, "set bits with empty freelist");
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
     EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), MX_OK, "set bits");

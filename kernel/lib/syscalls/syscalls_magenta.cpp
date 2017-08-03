@@ -32,7 +32,7 @@
 #include <magenta/user_copy.h>
 #include <magenta/thread_dispatcher.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/atomic.h>
 #include <mxtl/ref_ptr.h>
 

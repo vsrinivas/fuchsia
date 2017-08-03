@@ -14,10 +14,10 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/thread_annotations.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/unique_ptr.h>
 

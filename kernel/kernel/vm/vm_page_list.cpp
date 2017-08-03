@@ -10,7 +10,7 @@
 #include <inttypes.h>
 #include <kernel/vm.h>
 #include <kernel/vm/pmm.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <trace.h>
 
 #include "vm_priv.h"
@@ -78,7 +78,7 @@ status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
     // lookup the tree node that holds this page
     auto pln = list_.find(node_offset);
     if (!pln.IsValid()) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::unique_ptr<VmPageListNode> pl =
             mxtl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
         if (!ac.check())

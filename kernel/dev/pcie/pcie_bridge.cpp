@@ -24,7 +24,7 @@
 #include <dev/pci_config.h>
 #include <dev/pcie_bridge.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -42,7 +42,7 @@ mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
                                             uint dev_id,
                                             uint func_id,
                                             uint managed_bus_id) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto raw_bridge = new (&ac) PcieBridge(upstream.driver(),
                                            upstream.managed_bus_id(), dev_id, func_id,
                                            managed_bus_id);

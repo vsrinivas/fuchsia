@@ -17,7 +17,7 @@
 #include <magenta/syscalls/policy.h>
 #include <magenta/user_copy.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"

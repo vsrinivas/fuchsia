@@ -10,7 +10,7 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/fault.h>
 #include <kernel/vm/vm_object_physical.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
 static const uint kMmuFlags =
@@ -45,7 +45,7 @@ struct AspaceVmoLocator final : public VmEnumerator {
 
 status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
                                            mxtl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas(
         new (&ac) GuestPhysicalAddressSpace(guest_phys_mem));
     if (!ac.check())

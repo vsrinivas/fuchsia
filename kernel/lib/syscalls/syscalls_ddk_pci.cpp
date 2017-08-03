@@ -24,7 +24,7 @@
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
 #include <magenta/vm_object_dispatcher.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_free_ptr.h>
@@ -59,7 +59,7 @@ public:
     static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv,
                                          uint managed_bus_id,
                                          const mx_pci_irq_swizzle_lut_t& lut) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         auto root = mxtl::AdoptRef(new (&ac) PcieRootLUTSwizzle(bus_drv,
                                                                 managed_bus_id,
                                                                 lut));

@@ -15,9 +15,9 @@
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
-#include <mxalloc/new.h>
 #include <mxio/debug.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 #include <unittest/unittest.h>

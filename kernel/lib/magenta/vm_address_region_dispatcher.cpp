@@ -12,7 +12,7 @@
 
 #include <magenta/rights.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <assert.h>
 #include <err.h>
@@ -103,7 +103,7 @@ status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar,
         vmar_rights |= MX_RIGHT_EXECUTE;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) VmAddressRegionDispatcher(mxtl::move(vmar));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

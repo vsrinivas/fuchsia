@@ -33,7 +33,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/mx \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

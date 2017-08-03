@@ -15,7 +15,7 @@
 
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/string_piece.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
@@ -66,7 +66,7 @@ bool benchmark_write_read(void) {
     }
     printf("\nBenchmarking Write + Read (%lu MB)\n", size_mb);
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[DataSize]);
     ASSERT_EQ(ac.check(), true);
     memset(data.get(), kMagicByte, DataSize);

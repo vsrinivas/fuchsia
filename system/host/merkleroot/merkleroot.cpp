@@ -11,9 +11,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <mxalloc/new.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 using digest::Digest;
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     }
     // Buffer one intermediate node's worth at a time.
     struct stat info;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     void* data = nullptr;
     mxtl::unique_ptr<uint8_t[]> tree(nullptr);
     char strbuf[Digest::kLength * 2 + 1];

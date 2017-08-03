@@ -15,7 +15,7 @@
 
 #include <magenta/compiler.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <safeint/safe_math.h>
 
@@ -36,7 +36,7 @@ static void dpc_callback(dpc_t* d) {
 mx_status_t TimerDispatcher::Create(uint32_t options,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) TimerDispatcher(options);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

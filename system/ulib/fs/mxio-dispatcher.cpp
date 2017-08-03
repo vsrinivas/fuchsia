@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 #include <mxio/dispatcher.h>
 #include <fs/mxio-dispatcher.h>
@@ -15,7 +15,7 @@
 namespace fs {
 
 mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::MxioDispatcher>* out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<MxioDispatcher> d(new (&ac) MxioDispatcher());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

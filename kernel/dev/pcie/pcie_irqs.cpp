@@ -23,7 +23,7 @@
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -57,7 +57,7 @@ status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
         irq_.handlers      = &irq_.singleton_handler;
         irq_.handler_count = 1;
     } else {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         irq_.handlers = new (&ac) pcie_irq_handler_state_t[requested_irqs];
 
         if (!ac.check())
@@ -84,7 +84,7 @@ status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
  *
  ******************************************************************************/
 mxtl::RefPtr<SharedLegacyIrqHandler> SharedLegacyIrqHandler::Create(uint irq_id) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     SharedLegacyIrqHandler* handler = new (&ac) SharedLegacyIrqHandler(irq_id);
     if (!ac.check()) {

@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <magenta/syscalls.h>
 
 namespace vmofs {

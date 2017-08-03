@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <fs/vfs.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
@@ -23,7 +23,7 @@ mxtl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, mxtl::RefPtr<Vno
         return nullptr;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<char[]> namebuffer (new (&ac) char[len + 1]);
     if (!ac.check()) {
         return nullptr;

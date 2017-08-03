@@ -10,11 +10,11 @@
 
 #include <err.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto disp = new (&ac) LogDispatcher(flags);
     if (!ac.check()) return MX_ERR_NO_MEMORY;
 
@@ -71,4 +71,3 @@ status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actu
 
     return status;
 }
-

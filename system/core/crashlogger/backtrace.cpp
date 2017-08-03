@@ -20,8 +20,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 
-#include <mxalloc/new.h>
-
+#include <mxtl/alloc_checker.h>
 #include <mxtl/array.h>
 
 #include "backtrace.h"
@@ -85,7 +84,7 @@ class DebugInfoCache {
 
 DebugInfoCache::DebugInfoCache(dsoinfo_t* dso_list, size_t nr_ways)
     : dso_list_(dso_list) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto ways = new (&ac) way[nr_ways];
     if (!ac.check()) {
         debugf(1, "unable to initialize debug info cache\n");

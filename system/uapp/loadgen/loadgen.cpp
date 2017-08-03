@@ -5,8 +5,8 @@
 #include <magenta/errors.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/limits.h>
@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
 
     mxtl::SinglyLinkedList<mxtl::unique_ptr<LoadGeneratorThread>> threads;
     for (uint32_t i = 0; i < num_threads; ++i) {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::unique_ptr<LoadGeneratorThread> t(new (&ac) LoadGeneratorThread(rand_r(&seed)));
 
         if (!ac.check()) {

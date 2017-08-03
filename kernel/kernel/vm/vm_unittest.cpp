@@ -12,7 +12,7 @@
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_object_paged.h>
 #include <kernel/vm/vm_object_physical.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/array.h>
 #include <unittest.h>
 
@@ -667,7 +667,7 @@ static bool vmo_read_write_smoke_test(void* context) {
     REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     // create test buffer
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
     EXPECT_TRUE(ac.check(), "");
     fill_region(99, a.get(), alloc_size);

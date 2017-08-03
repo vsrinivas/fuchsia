@@ -11,7 +11,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/errors.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
 namespace digest {
@@ -161,7 +161,7 @@ struct digest_t {
 };
 
 mx_status_t digest_init(digest_t** out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<digest_t> uptr(new (&ac) digest_t);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

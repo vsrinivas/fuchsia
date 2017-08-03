@@ -12,8 +12,8 @@
 #include <bitmap/raw-bitmap.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 #ifdef __Fuchsia__
 #include <fs/vfs-dispatcher.h>
@@ -363,7 +363,7 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
         return status;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<Minfs> fs(new (&ac) Minfs(mxtl::move(bc), info));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

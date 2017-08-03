@@ -5,8 +5,8 @@
 #include <audio-utils/audio-output.h>
 #include <audio-utils/audio-stream.h>
 #include <magenta/device/audio.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,7 +15,7 @@ namespace audio {
 namespace utils {
 
 mxtl::unique_ptr<AudioOutput> AudioOutput::Create(uint32_t dev_id) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_id));
     if (!ac.check())
         return nullptr;
@@ -23,7 +23,7 @@ mxtl::unique_ptr<AudioOutput> AudioOutput::Create(uint32_t dev_id) {
 }
 
 mxtl::unique_ptr<AudioOutput> AudioOutput::Create(const char* dev_path) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_path));
     if (!ac.check())
         return nullptr;

@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include <fs/dispatcher.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 namespace svcfs {
 

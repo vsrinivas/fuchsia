@@ -11,7 +11,7 @@
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/handle.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 // static
 status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t options,
@@ -27,7 +27,7 @@ status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t opti
         return MX_ERR_OUT_OF_RANGE;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto data0 = mxtl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

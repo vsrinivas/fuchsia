@@ -587,7 +587,7 @@ status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic
     thread_t* thread = get_current_thread();
     pin_thread(thread, vpid);
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, mux));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

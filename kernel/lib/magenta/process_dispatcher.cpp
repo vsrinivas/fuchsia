@@ -36,7 +36,7 @@
 #include <magenta/vm_address_region_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -61,7 +61,7 @@ mx_status_t ProcessDispatcher::Create(
     mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
     mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
     mx_rights_t* root_vmar_rights) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<ProcessDispatcher> process(new (&ac) ProcessDispatcher(job, name, flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -567,7 +567,7 @@ status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
     AutoLock lock(&state_lock_);
     size_t n = thread_list_.size_slow();
     mxtl::Array<mx_koid_t> threads;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     threads.reset(new (&ac) mx_koid_t[n], n);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

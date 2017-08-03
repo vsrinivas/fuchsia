@@ -165,7 +165,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     if (buffer_len > kMaxThreadStateSize)
         return MX_ERR_INVALID_ARGS;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -204,7 +204,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
     if (buffer_len > kMaxThreadStateSize)
         return MX_ERR_INVALID_ARGS;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -593,7 +593,7 @@ mx_status_t sys_job_set_policy(mx_handle_t job_handle, uint32_t options,
     if (topic != MX_JOB_POL_BASIC)
         return MX_ERR_INVALID_ARGS;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::InlineArray<
         mx_policy_basic, kPolicyBasicInlineCount> policy(&ac, count);
     if (!ac.check())

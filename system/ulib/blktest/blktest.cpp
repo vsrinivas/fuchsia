@@ -17,8 +17,8 @@
 #include <block-client/client.h>
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/array.h>
 #include <mxtl/unique_ptr.h>
 #include <pretty/hexdump.h>
@@ -172,7 +172,7 @@ bool blkdev_test_fifo_basic(void) {
     uint64_t vmo_size = PAGE_SIZE * 3;
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), MX_OK, "Failed to create VMO");
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
     ASSERT_TRUE(ac.check(), "");
     fill_random(buf.get(), vmo_size);
@@ -248,7 +248,7 @@ bool blkdev_test_fifo_whole_disk(void) {
     uint64_t vmo_size = blk_size * blk_count;
     mx_handle_t vmo;
     ASSERT_EQ(mx_vmo_create(vmo_size, 0, &vmo), MX_OK, "Failed to create VMO");
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
     ASSERT_TRUE(ac.check(), "");
     fill_random(buf.get(), vmo_size);
@@ -311,7 +311,7 @@ bool create_vmo_helper(int fd, test_vmo_object_t* obj, size_t kBlockSize) {
     obj->vmo_size = kBlockSize + (rand() % 5) * kBlockSize;
     ASSERT_EQ(mx_vmo_create(obj->vmo_size, 0, &obj->vmo), MX_OK,
               "Failed to create vmo");
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     obj->buf.reset(new (&ac) uint8_t[obj->vmo_size]);
     ASSERT_TRUE(ac.check(), "");
     fill_random(obj->buf.get(), obj->vmo_size);
@@ -337,7 +337,7 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
                               txnid_t txnid, size_t kBlockSize) {
     // Make a separate request for each block
     size_t blocks = obj->vmo_size / kBlockSize;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[blocks], blocks);
     ASSERT_TRUE(ac.check(), "");
     for (size_t b = 0; b < blocks; b++) {
@@ -357,7 +357,7 @@ bool write_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, siz
 bool read_striped_vmo_helper(fifo_client_t* client, test_vmo_object_t* obj, size_t i, size_t objs,
                              txnid_t txnid, size_t kBlockSize) {
     // First, empty out the VMO
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[obj->vmo_size]());
     ASSERT_TRUE(ac.check(), "");
     size_t actual;
@@ -414,7 +414,7 @@ bool blkdev_test_fifo_multiple_vmo(void) {
     ASSERT_EQ(block_fifo_create_client(fifo, &client), MX_OK, "");
 
     // Create multiple VMOs
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[10](), 10);
     ASSERT_TRUE(ac.check(), "");
     for (size_t i = 0; i < objs.size(); i++) {
@@ -482,7 +482,7 @@ bool blkdev_test_fifo_multiple_vmo_multithreaded(void) {
 
     // Create multiple VMOs
     size_t num_threads = 10;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[num_threads](), num_threads);
     ASSERT_TRUE(ac.check(), "");
 
@@ -537,7 +537,7 @@ bool blkdev_test_fifo_unclean_shutdown(void) {
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
     // Create multiple VMOs
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<test_vmo_object_t> objs(new (&ac) test_vmo_object_t[10](), 10);
     ASSERT_TRUE(ac.check(), "");
     for (size_t i = 0; i < objs.size(); i++) {
@@ -609,7 +609,7 @@ bool blkdev_test_fifo_large_ops_count(void) {
         expected = sizeof(txnid_t);
         ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[num_ops](),
                                                    num_ops);
         ASSERT_TRUE(ac.check(), "");
@@ -654,7 +654,7 @@ bool blkdev_test_fifo_too_many_ops(void) {
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::Array<block_fifo_request_t> requests(new (&ac) block_fifo_request_t[num_ops](),
                                                num_ops);
     ASSERT_TRUE(ac.check(), "");
@@ -860,7 +860,7 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     obj.vmo_size = kBlockSize - 1;
     ASSERT_EQ(mx_vmo_create(obj.vmo_size, 0, &obj.vmo), MX_OK,
               "Failed to create vmo");
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     obj.buf.reset(new (&ac) uint8_t[obj.vmo_size]);
     ASSERT_TRUE(ac.check(), "");
     fill_random(obj.buf.get(), obj.vmo_size);

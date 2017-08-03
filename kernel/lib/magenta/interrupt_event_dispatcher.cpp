@@ -8,7 +8,7 @@
 #include <dev/interrupt.h>
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #include <err.h>
 
@@ -30,7 +30,7 @@ status_t InterruptEventDispatcher::Create(uint32_t vector,
         return MX_ERR_INVALID_ARGS;
 
     // Attempt to construct the dispatcher.
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     InterruptEventDispatcher* disp = new (&ac) InterruptEventDispatcher(vector);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;

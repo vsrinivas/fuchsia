@@ -13,7 +13,7 @@
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -277,7 +277,7 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
     status_t res = MX_OK;
     uint8_t cap_offset = cfg_->Read(PciConfig::kCapabilitiesPtr);
     uint8_t caps_found = 0;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     /*
      * Walk the pointer list for the standard capabilities table. As a safety,

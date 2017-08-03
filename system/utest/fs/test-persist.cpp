@@ -14,8 +14,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/array.h>
 #include <mxtl/string_piece.h>
 #include <mxtl/unique_ptr.h>
@@ -112,7 +112,7 @@ bool test_persist_with_data(void) {
     mxtl::unique_ptr<uint8_t[]> buffers[mxtl::count_of(files)];
     unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
     unittest_printf("Persistent data test using seed: %u\n", seed);
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     for (size_t i = 0; i < mxtl::count_of(files); i++) {
         buffers[i].reset(new (&ac) uint8_t[BufferSize]);
         ASSERT_TRUE(ac.check());

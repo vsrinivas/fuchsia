@@ -15,7 +15,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/mx \
-    system/ulib/mxalloc \
     system/ulib/mxio \
     system/ulib/mxtl
 

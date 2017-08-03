@@ -10,9 +10,9 @@
 #include <magenta/compiler.h>
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
-#include <mxalloc/new.h>
 #include <mx/fifo.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>
@@ -162,7 +162,7 @@ mx_status_t BlockServer::AttachVmo(mx::vmo vmo, vmoid_t* out) {
         return status;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<IoBuffer> ibuf = mxtl::AdoptRef(new (&ac) IoBuffer(mxtl::move(vmo), id));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -177,7 +177,7 @@ mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
     for (size_t i = 0; i < mxtl::count_of(txns_); i++) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
-            AllocChecker ac;
+            mxtl::AllocChecker ac;
             txns_[i] = mxtl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
             if (!ac.check()) {
                 return MX_ERR_NO_MEMORY;
@@ -199,7 +199,7 @@ void BlockServer::FreeTxn(txnid_t txnid) {
 }
 
 mx_status_t BlockServer::Create(mx::fifo* fifo_out, BlockServer** out) {
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer();
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

@@ -14,7 +14,7 @@
 #include <kernel/vm/fault.h>
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/auto_lock.h>
 #include <safeint/safe_math.h>
@@ -143,7 +143,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     // Handle changing from the left
     if (base_ == base) {
         // Create a new mapping for the right half (has old perms)
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
             new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_,
                                 object_, object_offset_ + size, arch_mmu_flags_)));
@@ -163,7 +163,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     // Handle changing from the right
     if (base_ + size_ == base + size) {
         // Create a new mapping for the right half (has new perms)
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
 
         mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
             new (&ac) VmMapping(*parent_, base, size, flags_,
@@ -187,7 +187,7 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     const uint64_t center_vmo_offset = object_offset_ + base - base_;
     const uint64_t right_vmo_offset = center_vmo_offset + size;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VmMapping> center_mapping(mxtl::AdoptRef(
         new (&ac) VmMapping(*parent_, base, size, flags_,
                             object_, center_vmo_offset, new_arch_mmu_flags)));
@@ -292,7 +292,7 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     const vaddr_t new_base = base + size;
     const size_t new_size = (base_ + size_) - new_base;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
         new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
                             arch_mmu_flags_)));

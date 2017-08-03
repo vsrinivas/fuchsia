@@ -22,7 +22,7 @@
 
 #include <magenta/handle.h>
 #include <magenta/rights.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -37,7 +37,7 @@ status_t SocketDispatcher::Create(uint32_t flags,
         return MX_ERR_INVALID_ARGS;
     }
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto socket0 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
