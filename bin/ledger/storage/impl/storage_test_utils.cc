@@ -65,8 +65,8 @@ std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
   return DataSource::DataChunk::Create(value);
 }
 
-ObjectId MakeObjectId(std::string str, InlineBehavior inline_behavior) {
-  ObjectData data(std::move(str), inline_behavior);
+ObjectId MakeObjectId(std::string content, InlineBehavior inline_behavior) {
+  ObjectData data(std::move(content), inline_behavior);
   return data.object_id;
 }
 
@@ -168,12 +168,12 @@ StorageTest::~StorageTest(){};
 }
 
 ::testing::AssertionResult StorageTest::CreateEntryChanges(
-    std::vector<size_t> entries_values,
+    std::vector<size_t> values,
     std::vector<EntryChange>* changes,
     bool deletion) {
   std::vector<Entry> entries;
   ::testing::AssertionResult assertion_result =
-      CreateEntries(std::move(entries_values), &entries);
+      CreateEntries(std::move(values), &entries);
   if (!assertion_result) {
     return assertion_result;
   }

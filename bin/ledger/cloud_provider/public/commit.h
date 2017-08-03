@@ -16,9 +16,7 @@ namespace cloud_provider {
 // Represents a commit.
 struct Commit {
   Commit();
-  Commit(CommitId id,
-         Data content,
-         std::map<ObjectId, Data> inline_storage_objects);
+  Commit(CommitId id, Data content, std::map<ObjectId, Data> storage_objects);
 
   ~Commit();
 

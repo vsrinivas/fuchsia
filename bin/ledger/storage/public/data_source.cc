@@ -201,8 +201,8 @@ std::unique_ptr<DataSource::DataChunk> DataSource::DataChunk::Create(
 }
 
 std::unique_ptr<DataSource::DataChunk> DataSource::DataChunk::Create(
-    std::unique_ptr<flatbuffers::FlatBufferBuilder> value) {
-  return std::make_unique<FlatBufferDataChunk>(std::move(value));
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> builder) {
+  return std::make_unique<FlatBufferDataChunk>(std::move(builder));
 }
 
 std::unique_ptr<DataSource> DataSource::Create(std::string value) {

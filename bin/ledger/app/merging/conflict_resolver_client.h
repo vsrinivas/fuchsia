@@ -54,7 +54,7 @@ class ConflictResolverClient : public MergeResultProvider {
                    const GetLeftDiffCallback& callback) override;
   void GetRightDiff(fidl::Array<uint8_t> token,
                     const GetRightDiffCallback& callback) override;
-  void Merge(fidl::Array<MergedValuePtr> merge_changes,
+  void Merge(fidl::Array<MergedValuePtr> merged_values,
              const MergeCallback& callback) override;
   void Done(const DoneCallback& callback) override;
 

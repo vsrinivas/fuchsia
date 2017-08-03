@@ -39,7 +39,7 @@ class PageManager {
   // deleted when it goes away.
   PageManager(Environment* environment,
               std::unique_ptr<storage::PageStorage> page_storage,
-              std::unique_ptr<cloud_sync::PageSyncContext> page_sync,
+              std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
               std::unique_ptr<MergeResolver> merge_resolver,
               ftl::TimeDelta sync_timeout = ftl::TimeDelta::FromSeconds(5));
   ~PageManager();

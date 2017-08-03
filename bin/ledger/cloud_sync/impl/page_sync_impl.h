@@ -117,7 +117,7 @@ class PageSyncImpl : public PageSync,
   void StartUpload();
 
   // Downloads the given batch of commits.
-  void DownloadBatch(std::vector<cloud_provider::Record> record,
+  void DownloadBatch(std::vector<cloud_provider::Record> records,
                      ftl::Closure on_done);
 
   void SetRemoteWatcher(bool is_retry);

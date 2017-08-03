@@ -21,8 +21,8 @@ std::string GetGcsPrefixForApp(ftl::StringView user_id, ftl::StringView app_id);
 
 // Returns the common object name prefix used for all objects stored for the
 // given page, based on the prefix for the app.
-std::string GetGcsPrefixForPage(ftl::StringView app_prefix,
-                                ftl::StringView app_id);
+std::string GetGcsPrefixForPage(ftl::StringView app_path,
+                                ftl::StringView page_id);
 
 // Returns the Firebase path under which the data for the given user is stored.
 std::string GetFirebasePathForUser(ftl::StringView user_id);

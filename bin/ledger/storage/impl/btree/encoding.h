@@ -20,8 +20,8 @@ std::string EncodeNode(uint8_t level,
 
 bool DecodeNode(ftl::StringView data,
                 uint8_t* level,
-                std::vector<Entry>* entries,
-                std::vector<ObjectId>* children);
+                std::vector<Entry>* res_entries,
+                std::vector<ObjectId>* res_children);
 
 }  // namespace storage
 

@@ -43,7 +43,7 @@ ledger::Status GetLedger(
 // created.
 ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
-                                        fidl::Array<uint8_t> id,
+                                        fidl::Array<uint8_t> requested_id,
                                         ledger::PagePtr* page,
                                         fidl::Array<uint8_t>* page_id);
 

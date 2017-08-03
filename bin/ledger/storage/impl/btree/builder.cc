@@ -217,7 +217,7 @@ class NodeBuilder {
 
 Status NodeBuilder::FromId(SynchronousStorage* page_storage,
                            ObjectId object_id,
-                           NodeBuilder* result) {
+                           NodeBuilder* node_builder) {
   std::unique_ptr<const TreeNode> node;
   RETURN_ON_ERROR(page_storage->TreeNodeFromId(object_id, &node));
   FTL_DCHECK(node);
@@ -225,9 +225,9 @@ Status NodeBuilder::FromId(SynchronousStorage* page_storage,
   std::vector<Entry> entries;
   std::vector<NodeBuilder> children;
   ExtractContent(*node, &entries, &children);
-  *result = NodeBuilder(BuilderType::EXISTING_NODE, node->level(),
-                        std::move(object_id), std::move(entries),
-                        std::move(children));
+  *node_builder = NodeBuilder(BuilderType::EXISTING_NODE, node->level(),
+                              std::move(object_id), std::move(entries),
+                              std::move(children));
   return Status::OK;
 }
 

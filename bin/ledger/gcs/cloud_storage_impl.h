@@ -24,7 +24,7 @@ class CloudStorageImpl : public CloudStorage {
   CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                    ledger::NetworkService* network_service,
                    const std::string& firebase_id,
-                   const std::string& prefix);
+                   const std::string& cloud_prefix);
   ~CloudStorageImpl() override;
 
   // CloudStorage implementation.

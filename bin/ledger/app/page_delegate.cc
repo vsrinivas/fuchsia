@@ -281,14 +281,14 @@ const storage::CommitId& PageDelegate::GetCurrentCommitId() {
 }
 
 void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
-                               storage::ObjectId object_id,
+                               storage::ObjectId value,
                                storage::KeyPriority priority,
                                std::function<void(Status)> callback) {
   RunInTransaction(
       ftl::MakeCopyable([
-        key = std::move(key), object_id = std::move(object_id), priority
+        key = std::move(key), value = std::move(value), priority
       ](storage::Journal * journal) {
-        return PageUtils::ConvertStatus(journal->Put(key, object_id, priority));
+        return PageUtils::ConvertStatus(journal->Put(key, value, priority));
       }),
       std::move(callback));
 }
