@@ -46,6 +46,17 @@ void LogCommandComplete(hci::Status status, hci::CommandChannel::TransactionId i
             << " (id=" << id << ")" << std::endl;
 }
 
+hci::CommandChannel::TransactionId SendCompleteCommand(const CommandData* cmd_data,
+                                                       std::unique_ptr<hci::CommandPacket> packet,
+                                                       const ftl::Closure& complete_cb) {
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+    auto return_params = event.return_params<hci::SimpleReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    complete_cb();
+  };
+  return SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+}
+
 // TODO(armansito): Move this to a library header as it will be useful
 // elsewhere.
 std::string AdvEventTypeToString(hci::LEAdvertisingEventType type) {
@@ -205,14 +216,8 @@ bool HandleReset(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
     return false;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto status = event.return_params<hci::SimpleReturnParams>()->status;
-    LogCommandComplete(status, id);
-    complete_cb();
-  };
-
   auto packet = hci::CommandPacket::New(hci::kReset);
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
   std::cout << "  Sent HCI_Reset (id=" << id << ")" << std::endl;
 
@@ -280,12 +285,6 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& c
     return false;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.return_params<hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
-    complete_cb();
-  };
-
   const std::string& name = cmd_line.positional_args()[0];
   auto packet = hci::CommandPacket::New(hci::kWriteLocalName, name.length() + 1);
   std::strcpy((char*)packet->mutable_view()
@@ -293,9 +292,38 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const ftl::CommandLine& c
                   ->local_name,
               name.c_str());
 
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
   std::cout << "  Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
 
+  return true;
+}
+
+bool HandleSetEventMask(const CommandData* cmd_data, const ftl::CommandLine& cmd_line,
+                        const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
+    std::cout << "  Usage: set-event-mask [hex]" << std::endl;
+    return false;
+  }
+
+  std::string hex = cmd_line.positional_args()[0];
+  if (hex.size() >= 2 && hex[0] == '0' && hex[1] == 'x') hex = hex.substr(2);
+
+  uint64_t mask;
+  if (!ftl::StringToNumberWithError<uint64_t>(hex, &mask, ftl::Base::k16)) {
+    std::cout << "  Unrecognized hex number: " << cmd_line.positional_args()[0] << std::endl;
+    std::cout << "  Usage: set-event-mask [hex]" << std::endl;
+    return false;
+  }
+
+  constexpr size_t kPayloadSize = sizeof(hci::SetEventMaskCommandParams);
+  auto packet = hci::CommandPacket::New(hci::kSetEventMask, kPayloadSize);
+  packet->mutable_view()->mutable_payload<hci::SetEventMaskCommandParams>()->event_mask =
+      htole64(mask);
+
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
+
+  std::cout << "  Sent HCI_Set_Event_Mask(" << ftl::NumberToString(mask, ftl::Base::k16)
+            << ") (id=" << id << ")" << std::endl;
   return true;
 }
 
@@ -318,12 +346,6 @@ bool HandleSetAdvEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd
     return false;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.return_params<hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
-    complete_cb();
-  };
-
   constexpr size_t kPayloadSize = sizeof(hci::LESetAdvertisingEnableCommandParams);
 
   auto packet = hci::CommandPacket::New(hci::kLESetAdvertisingEnable, kPayloadSize);
@@ -331,7 +353,7 @@ bool HandleSetAdvEnable(const CommandData* cmd_data, const ftl::CommandLine& cmd
       ->mutable_payload<hci::LESetAdvertisingEnableCommandParams>()
       ->advertising_enable = value;
 
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")" << std::endl;
   return true;
@@ -389,13 +411,7 @@ bool HandleSetAdvParams(const CommandData* cmd_data, const ftl::CommandLine& cmd
   params->adv_channel_map = hci::kLEAdvertisingChannelAll;
   params->adv_filter_policy = hci::LEAdvFilterPolicy::kAllowAll;
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.return_params<hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
-    complete_cb();
-  };
-
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")" << std::endl;
 
@@ -442,13 +458,7 @@ bool HandleSetAdvData(const CommandData* cmd_data, const ftl::CommandLine& cmd_l
         ->adv_data_length = 0;
   }
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.return_params<hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
-    complete_cb();
-  };
-
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")" << std::endl;
 
@@ -495,13 +505,7 @@ bool HandleSetScanParams(const CommandData* cmd_data, const ftl::CommandLine& cm
   params->own_address_type = hci::LEOwnAddressType::kPublic;
   params->filter_policy = hci::LEScanFilterPolicy::kNoWhiteList;
 
-  auto cb = [complete_cb](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
-    auto return_params = event.return_params<hci::SimpleReturnParams>();
-    LogCommandComplete(return_params->status, id);
-    complete_cb();
-  };
-
-  auto id = SendCommand(cmd_data, std::move(packet), cb, complete_cb);
+  auto id = SendCompleteCommand(cmd_data, std::move(packet), complete_cb);
 
   std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")" << std::endl;
 
@@ -640,6 +644,8 @@ void RegisterCommands(const CommandData* cmd_data,
                               BIND(HandleReadLocalName));
   dispatcher->RegisterHandler("write-local-name", "Send HCI_Write_Local_Name",
                               BIND(HandleWriteLocalName));
+  dispatcher->RegisterHandler("set-event-mask", "Send HCI_Set_Event_Mask",
+                              BIND(HandleSetEventMask));
   dispatcher->RegisterHandler("set-adv-enable", "Send HCI_LE_Set_Advertising_Enable",
                               BIND(HandleSetAdvEnable));
   dispatcher->RegisterHandler("set-adv-params", "Send HCI_LE_Set_Advertising_Parameters",
