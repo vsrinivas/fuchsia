@@ -7,16 +7,12 @@
 #include <stddef.h>
 
 #include <magenta/assert.h>
-#include <mxalloc/new.h>
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/macros.h>
+#include <mxtl/new.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
-
-// Demand that the project using us has a definition of the
-// bring-your-own-memory, non-array, placement new operator.  We don't want to
-// demand a specific implementation, just that one exists.
-void* operator new(size_t sz, void* ptr);
 
 namespace mxtl {
 namespace internal {

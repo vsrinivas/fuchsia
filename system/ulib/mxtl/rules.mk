@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/alloc_checker.cpp \
     $(LOCAL_DIR)/string_piece.cpp \
 
 include make/module.mk

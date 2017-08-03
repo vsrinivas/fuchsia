@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxalloc/new.h>
-#include <mxtl/slab_allocator.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/slab_allocator.h>
 #include <mxtl/unique_ptr.h>
 #include <unittest/unittest.h>
 

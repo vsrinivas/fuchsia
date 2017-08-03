@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/type_support.h>
@@ -309,7 +309,7 @@ template <typename Base,
           typename Derived>
 static bool do_test() {
     BEGIN_TEST;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     mxtl::RefPtr<Derived> derived_ptr;
 
@@ -529,7 +529,7 @@ static bool ref_ptr_upcast_test() {
     // the RefPtr<D> version.  If the TEST_WILL_NOT_COMPILE check is enabled in
     // OverloadTestHelper, a RefPtr<B> version will be enabled as well.  This
     // should cause the build to break because of ambiguity.
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<C> ptr = mxtl::AdoptRef(new (&ac) C());
     ASSERT_TRUE(ac.check());
 
@@ -581,7 +581,7 @@ static bool ref_ptr_to_const_test() {
         int x_;
     };
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<C> refptr = mxtl::AdoptRef<C>(new (&ac) C(23));
     ASSERT_TRUE(ac.check());
 

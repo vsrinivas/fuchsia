@@ -4,7 +4,7 @@
 
 #include <mxtl/array.h>
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/algorithm.h>
 #include <unittest/unittest.h>
 
@@ -28,7 +28,7 @@ bool destructor_test() {
     DestructorSignaler bogus;
     DestructorSignaler* result = &bogus;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     DestructorSignaler* signalers = new (&ac) DestructorSignaler[2];
     EXPECT_TRUE(ac.check(), "");
 

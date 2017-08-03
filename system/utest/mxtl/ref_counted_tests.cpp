@@ -6,14 +6,12 @@
 
 #include <magenta/syscalls.h>
 
-#include <mxalloc/new.h>
-
 #include <mxtl/algorithm.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-
 #include <unittest/unittest.h>
 
 // If set, will run tests that expect the process to die (usually due to a
@@ -46,7 +44,7 @@ static bool ref_counted_test() {
 
     bool destroyed = false;
     {
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::RefPtr<DestructionTracker> ptr =
             mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
         EXPECT_TRUE(ac.check(), "");
@@ -82,7 +80,7 @@ static bool wrap_dead_pointer_asserts() {
     DestructionTracker* raw = nullptr;
     {
         // Create and adopt a ref-counted object, and let it go out of scope.
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::RefPtr<DestructionTracker> ptr =
             mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
         EXPECT_TRUE(ac.check(), "");
@@ -108,7 +106,7 @@ static bool extra_release_asserts() {
 
     // Create and adopt a ref-counted object.
     bool destroyed = false;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<DestructionTracker> ptr =
         mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
     EXPECT_TRUE(ac.check(), "");
@@ -137,7 +135,7 @@ static bool wrap_after_last_release_asserts() {
 
     // Create and adopt a ref-counted object.
     bool destroyed = false;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::RefPtr<DestructionTracker> ptr =
         mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
     EXPECT_TRUE(ac.check(), "");
@@ -227,7 +225,7 @@ static bool upgrade_fail_test() {
     BEGIN_TEST;
 
     mxtl::Mutex mutex;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     bool destroying = false;
 
     auto raw = new (&ac) RawUpgradeTester(&mutex, &destroying);
@@ -256,7 +254,7 @@ static bool upgrade_success_test() {
     BEGIN_TEST;
 
     mxtl::Mutex mutex;
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     bool destroying = false;
 
     auto ref = mxtl::AdoptRef(new (&ac) RawUpgradeTester(&mutex, &destroying));

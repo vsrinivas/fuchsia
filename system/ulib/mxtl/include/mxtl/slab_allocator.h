@@ -10,16 +10,12 @@
 #include <mxtl/deleter.h>
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/mutex.h>
+#include <mxtl/new.h>
 #include <mxtl/null_lock.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/slab_malloc.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
-
-// Demand that the project using us has a definition of the
-// bring-your-own-memory, non-array, placement new operator.  We don't want to
-// demand a specific implementation, just that one exists.
-void* operator new(size_t sz, void *ptr);
 
 // Usage Notes:
 //

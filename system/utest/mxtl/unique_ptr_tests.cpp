@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
-#include <mxalloc/new.h>
-#include <unittest/unittest.h>
+
+#include <mxtl/alloc_checker.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
+#include <unittest/unittest.h>
 
 static int destroy_count = 0;
 
@@ -43,7 +44,7 @@ static bool uptr_test_scoped_destruction() {
     BEGIN_TEST;
     destroy_count = 0;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     // Construct and let a unique_ptr fall out of scope.
     {
         CountingPtr ptr(new (&ac) DeleteCounter);
@@ -58,7 +59,7 @@ static bool uptr_test_move() {
     BEGIN_TEST;
     destroy_count = 0;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     // Construct and move into another unique_ptr.
     {
         CountingPtr ptr(new (&ac) DeleteCounter);
@@ -96,7 +97,7 @@ static bool uptr_test_diff_scope_swap() {
     // that the values change places and that the values are destroyed at the
     // correct times.
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     {
         CountingPtr ptr1(new (&ac) DeleteCounter(4));
         EXPECT_TRUE(ac.check(), "");
@@ -119,7 +120,7 @@ static bool uptr_test_bool_op() {
     BEGIN_TEST;
     destroy_count = 0;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     CountingPtr foo(new (&ac) DeleteCounter);
     EXPECT_TRUE(ac.check(), "");
@@ -135,7 +136,7 @@ static bool uptr_test_bool_op() {
 static bool uptr_test_comparison() {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     // Test comparison operators.
     mxtl::unique_ptr<DeleteCounter> null_unique;
     mxtl::unique_ptr<DeleteCounter> lesser_unique(new (&ac) DeleteCounter(1));
@@ -195,7 +196,7 @@ static bool uptr_test_array_scoped_destruction() {
     BEGIN_TEST;
     destroy_count = 0;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     // Construct and let a unique_ptr fall out of scope.
     {
         CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
@@ -210,7 +211,7 @@ static bool uptr_test_array_move() {
     BEGIN_TEST;
     destroy_count = 0;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     // Construct and move into another unique_ptr.
     {
         CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
@@ -245,7 +246,7 @@ static bool uptr_test_array_diff_scope_swap() {
     // Construct a pair of unique_ptrs in different scopes, swap them, and verify
     // that the values change places and that the values are destroyed at the
     // correct times.
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     {
         CountingArrPtr ptr1(new (&ac) DeleteCounter[1]);
@@ -272,7 +273,7 @@ static bool uptr_test_array_bool_op() {
     BEGIN_TEST;
     destroy_count = 0;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     CountingArrPtr foo(new (&ac) DeleteCounter[1]);
     EXPECT_TRUE(ac.check(), "");
@@ -288,7 +289,7 @@ static bool uptr_test_array_bool_op() {
 static bool uptr_test_array_comparison() {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     mxtl::unique_ptr<DeleteCounter[]> null_unique;
     mxtl::unique_ptr<DeleteCounter[]> lesser_unique(new (&ac) DeleteCounter[1]);
@@ -415,7 +416,7 @@ template <typename Base,
 static bool test_upcast() {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
 
     mxtl::unique_ptr<Derived> derived_ptr;
 
@@ -533,7 +534,7 @@ static bool uptr_upcasting() {
     // not the unique_ptr<D> version.  If the TEST_WILL_NOT_COMPILE check is
     // enabled in OverloadTestHelper, a unique_ptr<B> version will be enabled as
     // well.  This should cause the build to break because of ambiguity.
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<C> ptr(new (&ac) C());
     ASSERT_TRUE(ac.check());
 

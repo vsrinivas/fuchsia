@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/assert.h>
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/macros.h>
 
 namespace mxtl {

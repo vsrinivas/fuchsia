@@ -37,7 +37,6 @@ MODULE_SRCS += \
 MODULE_NAME := mxtl-test
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxalloc \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxalloc/new.h>
+#include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
@@ -95,7 +95,7 @@ template <typename T>
 static bool do_test() {
     BEGIN_TEST;
 
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     auto ptr = PtrTraits<T>::MakePointer(new (&ac) typename PtrTraits<T>::ObjType);
 
     ASSERT_TRUE(ac.check());
@@ -159,4 +159,3 @@ RUN_NAMED_TEST("FailBadArg",   do_test<mxtl::unique_ptr<FailBadArg>>);
 RUN_NAMED_TEST("FailNotVis",   do_test<mxtl::unique_ptr<FailBadArg>>);
 #endif
 END_TEST_CASE(mxtl_recycle);
-

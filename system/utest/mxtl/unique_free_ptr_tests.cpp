@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
-#include <mxalloc/new.h>
-#include <unittest/unittest.h>
+
+#include <mxtl/alloc_checker.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_free_ptr.h>
+#include <unittest/unittest.h>
 
 static_assert(mxtl::is_standard_layout<mxtl::unique_free_ptr<int>>::value,
               "mxtl::unique_free_ptr<int>'s should have a standard layout");
