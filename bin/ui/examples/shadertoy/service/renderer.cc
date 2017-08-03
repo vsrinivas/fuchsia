@@ -186,15 +186,6 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
   EndFrame(frame_done, nullptr);
 }
 
-void Renderer::DrawFrame(const escher::Stage& stage,
-                         const escher::Model& model,
-                         const escher::Camera& camera,
-                         const escher::ImagePtr& color_image_out,
-                         const escher::SemaphorePtr& frame_done,
-                         escher::FrameRetiredCallback frame_retired_callback) {
-  FTL_DCHECK(false) << "This version of DrawFrame() is not supported.";
-}
-
 escher::TexturePtr Renderer::CreateWhiteTexture() {
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;

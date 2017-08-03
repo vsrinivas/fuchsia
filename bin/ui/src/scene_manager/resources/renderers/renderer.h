@@ -35,7 +35,7 @@ class Renderer : public Resource {
 
   Camera* camera() const { return camera_.get(); }
 
-  virtual void DrawFrame(escher::Renderer* renderer) = 0;
+  virtual void DrawFrame(escher::PaperRenderer* renderer) = 0;
 
  protected:
   // Renderer is a "leaf interface" of the Session API.  Even though it has

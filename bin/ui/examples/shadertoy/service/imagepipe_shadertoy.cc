@@ -37,11 +37,11 @@ void ShadertoyStateForImagePipe::ClearFramebuffers() {
     fb.acquire_fence.reset();
     fb.release_fence.reset();
     if (fb.image_pipe_id) {
-      // TODO: The docs in image_pipe.fidl says that all release fences must
-      // "be signaled before freeing or modifying the underlying memory object".
-      // However, it seems convenient to allow clients to free the object
-      // immediately; this shouldn't be a problem because the presentation queue
-      // also has a reference to the memory.
+      // TODO(MZ-242): The docs in image_pipe.fidl says that all release fences
+      // must "be signaled before freeing or modifying the underlying memory
+      // object".  However, it seems convenient to allow clients to free the
+      // object immediately; this shouldn't be a problem because the
+      // presentation queue also has a reference to the memory.
       image_pipe_->RemoveImage(fb.image_pipe_id);
       fb.image_pipe_id = 0;
     }
@@ -131,26 +131,27 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   Renderer::Params params;
   params.iResolution = glm::vec3(width(), height(), 1);
   params.iTime = animation_time;
-  // TODO:  params.iTimeDelta = ??;
-  // TODO: params.iFrame = 0;
-  // TODO: params.iChannelTime = ??;
-  // TODO: params.iChannelResolution = ??;
+  // TODO(MZ-241):  params.iTimeDelta = ??;
+  // TODO(MZ-241): params.iFrame = 0;
+  // TODO(MZ-241): params.iChannelTime = ??;
+  // TODO(MZ-241): params.iChannelResolution = ??;
   params.iMouse = i_mouse();
-  // TODO: params.iDate = ??;
-  // TODO: params.iSampleRate = ??;
+  // TODO(MZ-241): params.iDate = ??;
+  // TODO(MZ-241): params.iSampleRate = ??;
 
-  renderer()->DrawFrame(fb.framebuffer, pipeline(), params, channel0(),
-                        channel1(), channel2(), channel3(),
-                        // TODO: waiting on the release_semaphore causes the
-                        // app to crash during Vulkan command-buffer submit.
-                        // fb.release_semaphore,
-                        escher::SemaphorePtr(),
-                        // TODO: signaling the acquire_semaphore causes the
-                        // app to crash during Vulkan command-buffer submit.
-                        // fb.acquire_semaphore,
-                        escher::SemaphorePtr());
-  // TODO: this shouldn't even be necessary once we have Vulkan semaphore
-  // import working properly.
+  renderer()->DrawFrame(
+      fb.framebuffer, pipeline(), params, channel0(), channel1(), channel2(),
+      channel3(),
+      // TODO(MZ-240): waiting on the release_semaphore causes the app to crash
+      // during Vulkan command-buffer submit.
+      // fb.release_semaphore,
+      escher::SemaphorePtr(),
+      // TODO(MZ-240): signaling the acquire_semaphore causes the app to crash
+      // during Vulkan command-buffer submit.
+      // fb.acquire_semaphore,
+      escher::SemaphorePtr());
+  // TODO(MZ-240): this shouldn't even be necessary once we have Vulkan
+  // semaphore import working properly.
   fb.acquire_fence.signal(0u, kFenceSignalled);
   mx::event bogus_event;
   mx::event::create(0u, &bogus_event);
@@ -165,8 +166,8 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   };
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
                             std::move(acquire_fence),
-                            // TODO: use release_fence once we have Vulkan
-                            // semaphore import working properly.
+                            // TODO(MZ-240): use release_fence once we have
+                            // Vulkan semaphore import working properly.
                             // std::move(release_fence),
                             std::move(bogus_event), present_image_callback);
 }

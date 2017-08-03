@@ -38,7 +38,7 @@ DisplayRenderer::~DisplayRenderer() {
   display_->Unclaim();
 }
 
-void DisplayRenderer::DrawFrame(escher::Renderer* renderer) {
+void DisplayRenderer::DrawFrame(escher::PaperRenderer* renderer) {
   TRACE_DURATION("gfx", "DisplayRenderer::DrawFrame");
 
   float width = static_cast<float>(swapchain_helper_.swapchain().width);
@@ -60,7 +60,6 @@ void DisplayRenderer::DrawFrame(escher::Renderer* renderer) {
   }
 
   escher::Stage stage;
-  stage.Resize(escher::SizeI(width, height), 1.0, escher::SizeI(0, 0));
   // TODO(MZ-194): Define these properties on the Scene instead of hardcoding
   // them here.
   constexpr float kTop = 1000;

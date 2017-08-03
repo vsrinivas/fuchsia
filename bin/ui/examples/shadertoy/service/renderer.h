@@ -51,15 +51,6 @@ class Renderer : public escher::Renderer {
   }
 
  private:
-  // |escher::Renderer|
-  // Unsupported. DCHECKs.
-  void DrawFrame(const escher::Stage& stage,
-                 const escher::Model& model,
-                 const escher::Camera& camera,
-                 const escher::ImagePtr& color_image_out,
-                 const escher::SemaphorePtr& frame_done,
-                 escher::FrameRetiredCallback frame_retired_callback) override;
-
   // Update descriptor set with current channel textures.
   vk::DescriptorSet GetUpdatedDescriptorSet(escher::Texture* channel0,
                                             escher::Texture* channel1,
