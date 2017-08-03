@@ -15,6 +15,7 @@
 #include <magenta/syscalls/pci.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_single_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
@@ -63,7 +64,7 @@ private:
     // held for the duration of most of our dispatcher API implementations.  It
     // is unsafe to ever attempt to acquire this lock during a callback from the
     // PCI bus driver level.
-    Mutex lock_;
+    mxtl::Mutex lock_;
     mxtl::RefPtr<PcieDevice> device_ TA_GUARDED(lock_);
 
     uint irqs_avail_cnt_  TA_GUARDED(lock_) = 0;

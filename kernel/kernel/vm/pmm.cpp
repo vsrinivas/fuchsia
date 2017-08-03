@@ -10,9 +10,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
 #include <kernel/mp.h>
-#include <kernel/mutex.h>
 #include <kernel/timer.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
@@ -29,12 +27,16 @@
 
 #include <magenta/thread_annotations.h>
 #include <mxcpp/new.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 // the main arena list
-static Mutex arena_lock;
+static mxtl::Mutex arena_lock;
 static mxtl::DoublyLinkedList<PmmArena*> arena_list TA_GUARDED(arena_lock);
 static size_t arena_cumulative_size TA_GUARDED(arena_lock);
 

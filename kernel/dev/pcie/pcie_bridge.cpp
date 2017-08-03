@@ -10,8 +10,6 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
-#include <kernel/spinlock.h>
 #include <kernel/vm.h>
 #include <list.h>
 #include <lk/init.h>
@@ -25,6 +23,8 @@
 #include <dev/pcie_bridge.h>
 
 #include <mxtl/alloc_checker.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

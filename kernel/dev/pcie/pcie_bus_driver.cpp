@@ -10,12 +10,15 @@
 #include <dev/pcie_device.h>
 #include <dev/pcie_root.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
 #include <kernel/vm/vm_aspace.h>
 #include <lk/init.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
+#include <mxtl/mutex.h>
 #include <trace.h>
+
+using mxtl::AutoLock;
 
 /* TODO(johngro) : figure this out someday.
  *
@@ -37,7 +40,7 @@ constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_SLAB_SIZE;
 constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_MAX_MEM;
 
 mxtl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
-Mutex PcieBusDriver::driver_lock_;
+mxtl::Mutex PcieBusDriver::driver_lock_;
 
 PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {

@@ -9,7 +9,6 @@
 #include <sys/types.h>
 
 #include <kernel/event.h>
-#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/vm/vm_address_region.h>
 
@@ -25,6 +24,7 @@
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
@@ -205,7 +205,7 @@ private:
 
     // our State
     State state_ TA_GUARDED(state_lock_) = State::INITIAL;
-    Mutex state_lock_;
+    mxtl::Mutex state_lock_;
 
     // Node for linked list of threads blocked on a futex
     FutexNode futex_node_;
@@ -214,7 +214,7 @@ private:
 
     // A thread-level exception port for this thread.
     mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
-    Mutex exception_lock_;
+    mxtl::Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.
     ExceptionStatus exception_status_ TA_GUARDED(state_lock_)

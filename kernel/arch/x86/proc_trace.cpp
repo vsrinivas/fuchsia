@@ -23,7 +23,6 @@
 #include <arch/x86/proc_trace.h>
 #include <err.h>
 #include <kernel/mp.h>
-#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
@@ -32,11 +31,15 @@
 #include <magenta/ktrace.h>
 #include <magenta/mtrace.h>
 #include <magenta/thread_annotations.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/macros.h>
+#include <mxtl/mutex.h>
 #include <mxtl/unique_ptr.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -83,7 +86,7 @@ struct ipt_cpu_state_t {
     } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
 };
 
-static Mutex ipt_lock;
+static mxtl::Mutex ipt_lock;
 
 static ipt_cpu_state_t* ipt_cpu_state TA_GUARDED(ipt_lock);
 

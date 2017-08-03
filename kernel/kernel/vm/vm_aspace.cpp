@@ -10,7 +10,6 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
@@ -22,6 +21,7 @@
 #include <lib/crypto/prng.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_call.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
 #include <safeint/safe_math.h>
@@ -32,6 +32,8 @@
 #if WITH_LIB_VDSO
 #include <lib/vdso.h>
 #endif
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

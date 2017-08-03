@@ -9,8 +9,10 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>
 
+#include <mxtl/auto_lock.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 
@@ -75,7 +77,7 @@ private:
     // Lets PortDispatcher assert that this eport is associated
     // with the right instance.
     bool PortMatches(const PortDispatcher *port, bool allow_null) {
-        AutoLock lock(&lock_);
+        mxtl::AutoLock lock(&lock_);
         return (allow_null && port_ == nullptr) || port_.get() == port;
     }
 #endif  // if DEBUG_ASSERT_IMPLEMENTED
@@ -102,7 +104,7 @@ private:
     mxtl::RefPtr<Dispatcher> target_ TA_GUARDED(lock_);
     bool bound_to_system_ TA_GUARDED(lock_) = false;
 
-    Mutex lock_;
+    mxtl::Mutex lock_;
 
     // NOTE: The DoublyLinkedListNodeState is guarded by |port_|'s lock,
     // and should only be touched using port_->LinkExceptionPort()

@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
 #include <magenta/interrupt_dispatcher.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_wavl_tree.h>
+#include <mxtl/mutex.h>
 #include <sys/types.h>
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
@@ -41,6 +41,6 @@ private:
     const uint32_t vector_;
     mxtl::WAVLTreeNodeState<InterruptEventDispatcher*> wavl_node_state_;
 
-    static Mutex vectors_lock_;
+    static mxtl::Mutex vectors_lock_;
     static VectorCollection vectors_ TA_GUARDED(vectors_lock_);
 };

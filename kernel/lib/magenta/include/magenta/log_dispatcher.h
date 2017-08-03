@@ -11,6 +11,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <mxtl/canary.h>
+#include <mxtl/mutex.h>
 
 class LogDispatcher final : public Dispatcher {
 public:
@@ -34,6 +35,6 @@ private:
     dlog_reader reader_;
     uint32_t flags_;
 
-    Mutex lock_;
+    mxtl::Mutex lock_;
     StateTracker state_tracker_;
 };

@@ -17,10 +17,10 @@
 #include <dev/pcie_irqs.h>
 #include <dev/pcie_ref_counted.h>
 #include <dev/pci_config.h>
-#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 #include <sys/types.h>
@@ -322,7 +322,7 @@ public:
 
     // TODO(johngro) : make these protected.  They are currently only visibile
     // because of debug code.
-    Mutex* dev_lock() { return &dev_lock_; }
+    mxtl::Mutex* dev_lock() { return &dev_lock_; }
 
 protected:
     friend class PcieUpstreamNode;
@@ -373,7 +373,7 @@ protected:
     mxtl::RefPtr<PcieUpstreamNode> upstream_;  // The upstream node in the device graph.
 
     /* State related to lifetime management */
-    mutable Mutex dev_lock_;
+    mutable mxtl::Mutex dev_lock_;
     bool          plugged_in_  = false;
     bool          disabled_    = false;
     bool          quirks_done_ = false;

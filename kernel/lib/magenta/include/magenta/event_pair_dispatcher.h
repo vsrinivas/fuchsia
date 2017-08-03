@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <mxtl/canary.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
@@ -41,6 +41,6 @@ private:
     mx_koid_t other_koid_;
 
     // Protects |other_| (except in Init(), where it's not needed).
-    Mutex lock_;
+    mxtl::Mutex lock_;
     mxtl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(lock_);
 };

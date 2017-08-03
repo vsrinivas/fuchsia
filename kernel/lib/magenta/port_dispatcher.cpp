@@ -19,7 +19,9 @@
 
 #include <mxtl/alloc_checker.h>
 
-#include <kernel/auto_lock.h>
+#include <mxtl/auto_lock.h>
+
+using mxtl::AutoLock;
 
 PortPacket::PortPacket() : packet{}, observer(nullptr) {
     // Note that packet is initialized to zeros.

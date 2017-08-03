@@ -8,12 +8,12 @@
 
 #include <stdint.h>
 
-#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <magenta/state_observer.h>
 #include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 
 class Handle;
 
@@ -76,7 +76,7 @@ private:
     mxtl::Canary<mxtl::magic("STRK")> canary_;
 
     mx_signals_t signals_;
-    Mutex lock_;
+    mxtl::Mutex lock_;
 
     // Active observers are elements in |observers_|.
     ObserverList observers_ TA_GUARDED(lock_);

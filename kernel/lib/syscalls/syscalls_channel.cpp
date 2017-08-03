@@ -8,8 +8,6 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
-
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
 
@@ -22,9 +20,12 @@
 #include <magenta/user_copy.h>
 
 #include <mxtl/algorithm.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

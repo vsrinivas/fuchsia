@@ -15,7 +15,6 @@
 
 #include <arch/defines.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
@@ -37,6 +36,9 @@
 #include <magenta/vm_object_dispatcher.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

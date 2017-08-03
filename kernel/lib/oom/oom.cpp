@@ -19,8 +19,10 @@
 #include <string.h>
 #include <sys/types.h>
 
+using mxtl::AutoLock;
+
 // Guards the oom_* values below.
-static Mutex oom_mutex;
+static mxtl::Mutex oom_mutex;
 
 // Function to call when we hit a low-memory condition.
 static oom_lowmem_callback_t* oom_lowmem_callback TA_GUARDED(oom_mutex);

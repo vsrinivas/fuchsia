@@ -6,7 +6,6 @@
 
 #if WITH_DEV_PCIE
 
-#include <kernel/auto_lock.h>
 #include <lib/user_copy.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
@@ -14,10 +13,13 @@
 #include <magenta/rights.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 
 #include <assert.h>
 #include <err.h>
 #include <trace.h>
+
+using mxtl::AutoLock;
 
 status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                      mx_pcie_device_info_t*    out_info,

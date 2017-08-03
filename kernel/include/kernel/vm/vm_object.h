@@ -174,8 +174,8 @@ public:
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
-    Mutex& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+    mxtl::Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
+    mxtl::Mutex& lock_ref() TA_RET_CAP(lock_) { return lock_; }
 
     void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
@@ -198,7 +198,7 @@ public:
     // error value.
     template <typename T>
     static status_t ForEach(T func) {
-        AutoLock a(&all_vmos_lock_);
+        mxtl::AutoLock a(&all_vmos_lock_);
         for (const auto& iter : all_vmos_) {
             status_t s = func(iter);
             if (s != MX_OK) {
@@ -236,10 +236,10 @@ protected:
     // declare a local mutex and default to pointing at it
     // if constructed with a parent vmo, point lock_ at the parent's lock
 private:
-    Mutex local_lock_;
+    mxtl::Mutex local_lock_;
 
 protected:
-    Mutex& lock_;
+    mxtl::Mutex& lock_;
 
     // list of every mapping
     mxtl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
@@ -272,6 +272,6 @@ private:
         }
     };
     using GlobalList = mxtl::DoublyLinkedList<VmObject*, GlobalListTraits>;
-    static Mutex all_vmos_lock_;
+    static mxtl::Mutex all_vmos_lock_;
     static GlobalList all_vmos_ TA_GUARDED(all_vmos_lock_);
 };

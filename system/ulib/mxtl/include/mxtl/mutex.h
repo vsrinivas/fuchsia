@@ -15,15 +15,11 @@
 // primative and provide a common interface for library code which is intended
 // to be shared between user-mode and kernel code.  It is also responsible for
 // automatically initializing and destroying the internal mutex object.
-//
-// For user-mode code, Mutex is defined in the mxtl namespace.  For kernel mode
-// code, to maintain compatibility with existing code, Mutex is introduced into
-// the global namespace, and a using alias is introduced in the mxtl namespace.
-// The implication of this is that shared code should always use mxtl::Mutex
-// instead of the global Mutex
 #if _KERNEL
 #include <kernel/mutex.h>
 #include <sys/types.h>
+
+namespace mxtl {
 
 class __TA_CAPABILITY("mutex") Mutex {
 public:
@@ -47,7 +43,7 @@ private:
     mutex_t mutex_;
 };
 
-namespace mxtl { using Mutex = ::Mutex; }
+} // namespace mxtl
 
 #else   // if _KERNEL
 

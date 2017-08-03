@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/semaphore.h>
 #include <magenta/state_observer.h>
@@ -16,6 +14,7 @@
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/unique_ptr.h>
 
 #include <sys/types.h>
@@ -173,7 +172,7 @@ private:
     void UnlinkExceptionPort(ExceptionPort* eport);
 
     mxtl::Canary<mxtl::magic("POR2")> canary_;
-    Mutex lock_;
+    mxtl::Mutex lock_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);

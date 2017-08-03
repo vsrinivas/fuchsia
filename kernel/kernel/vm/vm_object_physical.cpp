@@ -11,15 +11,17 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/user_copy.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

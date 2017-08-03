@@ -17,6 +17,7 @@
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
 
@@ -107,7 +108,7 @@ private:
 
     mxtl::Canary<mxtl::magic("CHAN")> canary_;
 
-    Mutex lock_;
+    mxtl::Mutex lock_;
     MessageList messages_ TA_GUARDED(lock_);
     WaiterList waiters_ TA_GUARDED(lock_);
     StateTracker state_tracker_;

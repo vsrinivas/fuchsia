@@ -6,12 +6,12 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/wait.h>
 #include <list.h>
 #include <magenta/types.h>
 #include <mxtl/intrusive_hash_table.h>
+#include <mxtl/mutex.h>
 
 // Node for linked list of threads blocked on a futex
 // Intended to be embedded within a ThreadDispatcher Instance
@@ -42,7 +42,7 @@ public:
                                      uintptr_t new_hash_key);
 
     // This must be called with |mutex| held and returns without |mutex| held.
-    status_t BlockThread(Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
+    status_t BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;

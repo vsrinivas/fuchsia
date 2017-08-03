@@ -5,13 +5,15 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
-#include <kernel/auto_lock.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/futex_context.h>
 #include <magenta/user_copy.h>
 #include <magenta/thread_dispatcher.h>
+#include <mxtl/auto_lock.h>
 #include <trace.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

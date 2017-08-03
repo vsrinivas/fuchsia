@@ -9,10 +9,10 @@
 #include <assert.h>
 #include <err.h>
 
-#include <kernel/auto_lock.h>
 #include <magenta/rights.h>
 #include <magenta/state_tracker.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
@@ -43,7 +43,7 @@ EventPairDispatcher::~EventPairDispatcher() {}
 void EventPairDispatcher::on_zero_handles() {
     canary_.Assert();
 
-    AutoLock locker(&lock_);
+    mxtl::AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
     other_->state_tracker_.InvalidateCookie(other_->get_cookie_jar());
@@ -62,7 +62,7 @@ status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
         return MX_OK;
     }
 
-    AutoLock locker(&lock_);
+    mxtl::AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
         return MX_ERR_PEER_CLOSED;

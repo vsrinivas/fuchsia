@@ -7,7 +7,6 @@
 #pragma once
 
 #include <kernel/event.h>
-#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <kernel/vm/vm_aspace.h>
 
@@ -24,6 +23,7 @@
 #include <mxtl/array.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/name.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -166,7 +166,7 @@ public:
     // returning the error value.
     template <typename T>
     status_t ForEachHandle(T func) const {
-        AutoLock lock(&handle_table_lock_);
+        mxtl::AutoLock lock(&handle_table_lock_);
         for (const auto& handle : handles_) {
             // It would be nice to only pass a const Dispatcher* to the
             // callback, but many callers will use DownCastDispatcher()
@@ -181,7 +181,7 @@ public:
     }
 
     // accessors
-    Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
+    mxtl::Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
     State state() const;
     mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
@@ -309,7 +309,7 @@ private:
     mxtl::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutable Mutex handle_table_lock_; // protects |handles_|.
+    mutable mxtl::Mutex handle_table_lock_; // protects |handles_|.
     mxtl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
     StateTracker state_tracker_;
@@ -318,7 +318,7 @@ private:
 
     // our state
     State state_ TA_GUARDED(state_lock_) = State::INITIAL;
-    mutable Mutex state_lock_;
+    mutable mxtl::Mutex state_lock_;
 
     // process return code
     int retcode_ = 0;
@@ -326,7 +326,7 @@ private:
     // Exception ports bound to the process.
     mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
     mxtl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
-    Mutex exception_lock_;
+    mxtl::Mutex exception_lock_;
 
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.

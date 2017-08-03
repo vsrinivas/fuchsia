@@ -17,6 +17,7 @@
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
+#include <mxtl/auto_lock.h>
 
 class PcieDebugConsole {
 public:
@@ -466,7 +467,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
 
     /* Grab the device's lock so it cannot be unplugged out from under us while
      * we print details. */
-    AutoLock lock(dev->dev_lock());
+    mxtl::AutoLock lock(dev->dev_lock());
 
     /* If the device has already been unplugged, just skip it */
     if (!dev->plugged_in())

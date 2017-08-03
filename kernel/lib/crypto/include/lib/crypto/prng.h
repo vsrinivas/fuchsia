@@ -10,8 +10,8 @@
 #include <stdint.h>
 
 #include <kernel/event.h>
-#include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
+#include <mxtl/mutex.h>
 
 namespace crypto {
 
@@ -96,7 +96,7 @@ private:
     } nonce_;
 
     bool is_thread_safe_;
-    Mutex lock_;
+    mxtl::Mutex lock_;
     uint64_t total_entropy_added_;
     event_t ready_;
 };

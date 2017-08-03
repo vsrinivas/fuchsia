@@ -10,14 +10,16 @@
 #include <err.h>
 #include <platform.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 
 #include <magenta/compiler.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 
 #include <safeint/safe_math.h>
+
+using mxtl::AutoLock;
 
 constexpr mx_duration_t kMinTimerPeriod = MX_TIMER_MIN_PERIOD;
 constexpr mx_time_t kMinTimerDeadline = MX_TIMER_MIN_DEADLINE;

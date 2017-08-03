@@ -7,17 +7,18 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/dpc.h>
-#include <kernel/mutex.h>
 #include <magenta/dispatcher.h>
 #include <magenta/handle_reaper.h>
 #include <magenta/magenta.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
 
 static void ReaperRoutine(dpc_t* dpc);
 
-static Mutex reaper_mutex;
+static mxtl::Mutex reaper_mutex;
 static mxtl::DoublyLinkedList<Handle*> reaper_handles TA_GUARDED(reaper_mutex);
 static dpc_t reaper_dpc = {
     .node = LIST_INITIAL_CLEARED_VALUE,
@@ -27,7 +28,7 @@ static dpc_t reaper_dpc = {
 
 void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
     LTRACE_ENTRY;
-    AutoLock lock(&reaper_mutex);
+    mxtl::AutoLock lock(&reaper_mutex);
     reaper_handles.splice(reaper_handles.end(), *handles);
     dpc_queue(&reaper_dpc, false);
 }
@@ -44,7 +45,7 @@ static void ReaperRoutine(dpc_t* dpc) {
     LTRACE_ENTRY;
     mxtl::DoublyLinkedList<Handle*> list;
     {
-        AutoLock lock(&reaper_mutex);
+        mxtl::AutoLock lock(&reaper_mutex);
         list.swap(reaper_handles);
     }
     Handle* handle;

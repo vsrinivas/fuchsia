@@ -8,8 +8,6 @@
 
 #include <stdint.h>
 
-#include <kernel/mutex.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/policy_manager.h>
 #include <magenta/process_dispatcher.h>
@@ -17,8 +15,10 @@
 #include <magenta/types.h>
 
 #include <mxtl/array.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/name.h>
 #include <mxtl/ref_counted.h>
 
@@ -111,7 +111,7 @@ public:
     // returns an error, returning the error value.
     template <typename T>
     static status_t ForEachJobByImportance(T func) {
-        AutoLock lock(&importance_lock_);
+        mxtl::AutoLock lock(&importance_lock_);
         for (auto &job : importance_list_) {
             mx_status_t s = func(&job);
             if (s != MX_OK)
@@ -159,7 +159,7 @@ private:
     mxtl::Name<MX_MAX_NAME_LEN> name_;
 
     // The |lock_| protects all members below.
-    mutable Mutex lock_;
+    mutable mxtl::Mutex lock_;
     State state_ TA_GUARDED(lock_);
     uint32_t process_count_ TA_GUARDED(lock_);
     uint32_t job_count_ TA_GUARDED(lock_);
@@ -193,7 +193,7 @@ private:
     using JobImportanceList =
         mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsImportance>;
 
-    static Mutex importance_lock_;
+    static mxtl::Mutex importance_lock_;
     // Jobs, ordered by importance, with the least-important job at the front.
     static JobImportanceList importance_list_ TA_GUARDED(importance_lock_);
 };

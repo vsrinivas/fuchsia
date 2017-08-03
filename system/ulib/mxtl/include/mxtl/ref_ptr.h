@@ -10,7 +10,8 @@
 #include <mxtl/type_support.h>
 
 #if _KERNEL
-#include <kernel/mutex.h>
+// Need the full type for the kernel's mxtl::Mutex::IsHeld().
+#include <mxtl/mutex.h>
 #else
 namespace mxtl {
 class Mutex;

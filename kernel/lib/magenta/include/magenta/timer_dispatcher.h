@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <kernel/mutex.h>
 #include <kernel/timer.h>
 
 #include <lib/dpc.h>
@@ -14,6 +13,7 @@
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <mxtl/canary.h>
+#include <mxtl/mutex.h>
 
 #include <sys/types.h>
 
@@ -41,7 +41,7 @@ private:
 
     mxtl::Canary<mxtl::magic("TIMR")> canary_;
     dpc_t timer_dpc_;
-    Mutex lock_;
+    mxtl::Mutex lock_;
     mx_time_t deadline_ TA_GUARDED(lock_);
     mx_duration_t period_ TA_GUARDED(lock_);
     bool cancel_pending_ TA_GUARDED(lock_);

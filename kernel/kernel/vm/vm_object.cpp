@@ -11,19 +11,22 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/auto_lock.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_ptr.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 
+using mxtl::AutoLock;
+
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-Mutex VmObject::all_vmos_lock_ = {};
+mxtl::Mutex VmObject::all_vmos_lock_ = {};
 VmObject::GlobalList VmObject::all_vmos_ = {};
 
 VmObject::VmObject(mxtl::RefPtr<VmObject> parent)

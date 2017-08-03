@@ -8,12 +8,14 @@
 
 #include <err.h>
 
-#include <kernel/auto_lock.h>
-
 #include <magenta/process_dispatcher.h>
 #include <magenta/rights.h>
 #include <magenta/syscalls/policy.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
+
+using mxtl::AutoLock;
 
 // The starting max_height value of the root job.
 static constexpr uint32_t kRootJobMaxHeight = 32;
@@ -402,7 +404,7 @@ status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
 // Global importance ranking. Note that this is independent of
 // mx_task_importance_t-style importance as far as JobDispatcher is concerned;
 // some other entity will choose how to order importance_list_.
-Mutex JobDispatcher::importance_lock_;
+mxtl::Mutex JobDispatcher::importance_lock_;
 JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
 
 status_t JobDispatcher::MakeMoreImportantThan(

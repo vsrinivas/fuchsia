@@ -14,12 +14,12 @@
 #include <dev/pcie_device.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
 #include <kernel/vm/arch_vm_aspace.h>
 #include <list.h>
 #include <lk/init.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>
@@ -27,6 +27,8 @@
 #include <platform.h>
 
 #include <mxtl/alloc_checker.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

@@ -8,6 +8,7 @@
 #include <err.h>
 #include <magenta/futex_node.h>
 #include <magenta/magenta.h>
+#include <mxtl/mutex.h>
 #include <platform.h>
 #include <trace.h>
 
@@ -149,7 +150,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // This blocks the current thread.  This releases the given mutex (which
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
-status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
+status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
     THREAD_LOCK(state);
 
     // We specifically want reschedule=false here, otherwise the

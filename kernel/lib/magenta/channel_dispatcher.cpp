@@ -22,7 +22,10 @@
 #include <magenta/thread_dispatcher.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/type_support.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

@@ -72,10 +72,4 @@ static inline bool is_mutex_held(const mutex_t *m)
 
 __END_CDECLS
 
-// Include the handy C++ Mutex/AutoLock wrappers from mxtl.  Note, this include
-// must come after the kernel definition of mutex_t and the prototypes for the
-// mutex routines.
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
-
 #endif

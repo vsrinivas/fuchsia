@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <kernel/auto_lock.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <pretty/sizes.h>
@@ -19,6 +18,7 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
+#include <mxtl/auto_lock.h>
 
 // Machinery to walk over a job tree and run a callback on each process.
 template <typename ProcessCallbackType>
@@ -105,7 +105,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
 }
 
 uint32_t ProcessDispatcher::ThreadCount() const {
-    AutoLock lock(&state_lock_);
+    mxtl::AutoLock lock(&state_lock_);
     return static_cast<uint32_t>(thread_list_.size_slow());
 }
 

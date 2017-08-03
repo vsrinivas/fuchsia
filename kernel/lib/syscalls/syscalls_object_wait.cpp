@@ -8,7 +8,6 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/event.h>
 #include <platform.h>
 
@@ -20,10 +19,13 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/wait_state_observer.h>
 
+#include <mxtl/auto_lock.h>
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

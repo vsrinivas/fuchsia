@@ -16,8 +16,11 @@
 #include <magenta/thread_dispatcher.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 
 #include <trace.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

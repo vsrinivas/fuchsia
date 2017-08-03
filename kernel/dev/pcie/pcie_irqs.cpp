@@ -12,7 +12,6 @@
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_root.h>
 #include <err.h>
-#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
 #include <list.h>
@@ -24,6 +23,9 @@
 #include <dev/pcie_device.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 

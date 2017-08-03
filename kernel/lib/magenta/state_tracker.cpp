@@ -6,12 +6,16 @@
 
 #include <magenta/state_tracker.h>
 
-#include <kernel/auto_lock.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
+
+using mxtl::AutoLock;
 
 namespace {
 
 template <typename Func>
-StateObserver::Flags CancelWithFunc(StateTracker::ObserverList* observers, Mutex* observer_lock, Func f) {
+StateObserver::Flags CancelWithFunc(StateTracker::ObserverList* observers,
+                                    mxtl::Mutex* observer_lock, Func f) {
     StateObserver::Flags flags = 0;
 
     StateTracker::ObserverList obs_to_remove;

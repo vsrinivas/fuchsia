@@ -17,6 +17,8 @@
 #include <string.h>
 #include <trace.h>
 
+using mxtl::AutoLock;
+
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 VmAddressRegionOrMapping::VmAddressRegionOrMapping(

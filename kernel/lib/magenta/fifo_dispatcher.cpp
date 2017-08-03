@@ -6,12 +6,14 @@
 
 #include <string.h>
 
-#include <kernel/auto_lock.h>
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/fifo_dispatcher.h>
 #include <magenta/handle.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
+
+using mxtl::AutoLock;
 
 // static
 status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t options,

@@ -9,17 +9,16 @@
 #include <mxtl/mutex.h>
 #include <mxtl/null_lock.h>
 
+namespace mxtl {
+
 // Introduce preprocessor definitions for the underlying mutex data type and the
 // lock/unlock operations based on whether this code is being used in the kernel
-// or in user-mode.  Also, if this is the user-mode AutoLock implementation,
-// introduce it into the mxtl namespace.  Otherwise, add it to the global
-// namespace, and create an alias in mxtl.
+// or in user-mode.
 #ifdef _KERNEL
 #define mxtl_mutex_t mutex_t
 #define mxtl_mutex_acquire mutex_acquire
 #define mxtl_mutex_release mutex_release
 #else
-namespace mxtl {
 #define mxtl_mutex_t mtx_t
 #define mxtl_mutex_acquire mtx_lock
 #define mxtl_mutex_release mtx_unlock
@@ -57,11 +56,7 @@ private:
     mxtl_mutex_t* mutex_;
 };
 
-#if _KERNEL
-namespace mxtl { using AutoLock = ::AutoLock; }
-#else
 }  // namespace mxtl
-#endif
 
 // Remove the underlying mutex preprocessor definitions.  Do not let them leak
 // out into the world at large.

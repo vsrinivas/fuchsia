@@ -9,9 +9,7 @@
 #include <pow2.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/cmdline.h>
-#include <kernel/mutex.h>
 
 #include <lk/init.h>
 
@@ -29,10 +27,14 @@
 #include <magenta/state_tracker.h>
 
 #include <mxtl/arena.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/intrusive_double_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/type_support.h>
 
 #include <platform.h>
+
+using mxtl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -44,7 +46,7 @@ constexpr size_t kMaxHandleCount = 256 * 1024u;
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
 // The handle arena and its mutex. It also guards Dispatcher::handle_count_.
-static Mutex handle_mutex;
+static mxtl::Mutex handle_mutex;
 static mxtl::Arena TA_GUARDED(handle_mutex) handle_arena;
 static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 

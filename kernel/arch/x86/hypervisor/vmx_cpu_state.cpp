@@ -12,7 +12,11 @@
 #include <kernel/mp.h>
 #include <kernel/vm/pmm.h>
 
+#include <mxtl/mutex.h>
+
 #include "vmx_cpu_state_priv.h"
+
+using mxtl::AutoLock;
 
 static mxtl::Mutex vmx_mutex;
 static size_t vcpus TA_GUARDED(vmx_mutex) = 0;

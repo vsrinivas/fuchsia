@@ -8,13 +8,12 @@
 
 #include <stdint.h>
 
-#include <kernel/mutex.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
 #include <mxtl/canary.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 
 typedef mx_status_t (*fifo_copy_from_fn_t)(const uint8_t* ptr, uint8_t* data, size_t len);
@@ -62,7 +61,7 @@ private:
     mx_koid_t peer_koid_;
     StateTracker state_tracker_;
 
-    Mutex lock_;
+    mxtl::Mutex lock_;
     mxtl::RefPtr<FifoDispatcher> other_ TA_GUARDED(lock_);
     uint32_t head_ TA_GUARDED(lock_);
     uint32_t tail_ TA_GUARDED(lock_);

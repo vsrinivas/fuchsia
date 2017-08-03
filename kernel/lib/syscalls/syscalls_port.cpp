@@ -18,6 +18,7 @@
 #include <magenta/user_copy.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"
@@ -122,7 +123,7 @@ mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key
         return status;
 
     {
-        AutoLock lock(up->handle_table_lock());
+        mxtl::AutoLock lock(up->handle_table_lock());
         Handle* watched = up->GetHandleLocked(source);
         if (!watched)
             return MX_ERR_BAD_HANDLE;

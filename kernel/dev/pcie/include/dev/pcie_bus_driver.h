@@ -150,7 +150,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieBusDriver);
 
     static mxtl::RefPtr<PcieBusDriver> GetDriver() {
-        AutoLock lock(&driver_lock_);
+        mxtl::AutoLock lock(&driver_lock_);
         return driver_;
     }
 
@@ -218,9 +218,9 @@ private:
     static void RunQuirks(const mxtl::RefPtr<PcieDevice>& device);
 
     State                               state_ = State::NOT_STARTED;
-    Mutex                               bus_topology_lock_;
-    Mutex                               bus_rescan_lock_;
-    mutable Mutex                       start_lock_;
+    mxtl::Mutex                         bus_topology_lock_;
+    mxtl::Mutex                         bus_rescan_lock_;
+    mutable mxtl::Mutex                 start_lock_;
     RootCollection                      roots_;
     mxtl::SinglyLinkedList<mxtl::RefPtr<PciConfig>> configs_;
 
@@ -229,15 +229,15 @@ private:
     RegionAllocator                     mmio_hi_regions_;
     RegionAllocator                     pio_regions_;
 
-    mutable Mutex                       ecam_region_lock_;
+    mutable mxtl::Mutex                 ecam_region_lock_;
     mxtl::WAVLTree<uint8_t, mxtl::unique_ptr<MappedEcamRegion>> ecam_regions_;
 
-    Mutex                               legacy_irq_list_lock_;
+    mxtl::Mutex                         legacy_irq_list_lock_;
     mxtl::SinglyLinkedList<mxtl::RefPtr<SharedLegacyIrqHandler>> legacy_irq_list_;
     PciePlatformInterface&              platform_;
 
     static mxtl::RefPtr<PcieBusDriver>  driver_;
-    static Mutex                        driver_lock_;
+    static mxtl::Mutex                  driver_lock_;
 };
 
 #if WITH_DEV_PCIE

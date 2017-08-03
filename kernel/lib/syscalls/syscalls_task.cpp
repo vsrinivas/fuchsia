@@ -30,6 +30,7 @@
 #include <magenta/user_copy.h>
 #include <magenta/vm_address_region_dispatcher.h>
 
+#include <mxtl/auto_lock.h>
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
@@ -359,7 +360,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 
     HandleOwner arg_handle;
     {
-        AutoLock lock(up->handle_table_lock());
+        mxtl::AutoLock lock(up->handle_table_lock());
         auto handle = up->GetHandleLocked(arg_handle_value);
         if (!handle)
             return MX_ERR_BAD_HANDLE;

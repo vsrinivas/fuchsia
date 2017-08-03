@@ -4,16 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/mutex.h>
 
 #include <err.h>
 
 // Static storage
-Mutex InterruptEventDispatcher::vectors_lock_;
+mxtl::Mutex InterruptEventDispatcher::vectors_lock_;
 InterruptEventDispatcher::VectorCollection InterruptEventDispatcher::vectors_;
 
 // static
@@ -42,7 +43,7 @@ status_t InterruptEventDispatcher::Create(uint32_t vector,
 
     // Attempt to add ourselves to the vector collection.
     {
-        AutoLock lock(&vectors_lock_);
+        mxtl::AutoLock lock(&vectors_lock_);
         if (!vectors_.insert_or_find(disp))
             return MX_ERR_ALREADY_EXISTS;
     }
@@ -68,7 +69,7 @@ InterruptEventDispatcher::~InterruptEventDispatcher() {
         mask_interrupt(vector_);
         register_int_handler(vector_, nullptr, nullptr);
         {
-            AutoLock lock(&vectors_lock_);
+            mxtl::AutoLock lock(&vectors_lock_);
             vectors_.erase(*this);
         }
     }

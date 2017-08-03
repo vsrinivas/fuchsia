@@ -11,6 +11,7 @@
 #include <err.h>
 
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 
 status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights) {
@@ -40,7 +41,7 @@ LogDispatcher::~LogDispatcher() {
 void LogDispatcher::Signal() {
     canary_.Assert();
 
-    AutoLock lock(&lock_);
+    mxtl::AutoLock lock(&lock_);
     state_tracker_.UpdateState(0, MX_CHANNEL_READABLE);
 }
 
@@ -62,7 +63,7 @@ status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actu
     if (!(flags_ & MX_LOG_FLAG_READABLE))
         return MX_ERR_BAD_STATE;
 
-    AutoLock lock(&lock_);
+    mxtl::AutoLock lock(&lock_);
 
     mx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
     if (status == MX_ERR_SHOULD_WAIT) {

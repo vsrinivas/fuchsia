@@ -10,8 +10,6 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <kernel/mutex.h>
-
 #include <magenta/dispatcher.h>
 #include <magenta/mbuf.h>
 #include <magenta/state_tracker.h>
@@ -19,6 +17,7 @@
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_single_list.h>
+#include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 
 class VmMapping;
@@ -64,7 +63,7 @@ private:
     StateTracker state_tracker_;
 
     // The |lock_| protects all members below.
-    Mutex lock_;
+    mxtl::Mutex lock_;
     MBufChain data_ TA_GUARDED(lock_);
     mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
     // half_closed_[0] is this end and [1] is the other end.

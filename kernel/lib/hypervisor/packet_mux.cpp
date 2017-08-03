@@ -8,6 +8,7 @@
 #include <kernel/event.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/auto_lock.h>
 
 #if WITH_LIB_MAGENTA
 #include <magenta/state_observer.h>
@@ -65,7 +66,7 @@ status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispat
     mxtl::unique_ptr<FifoRange> range(new (&ac) FifoRange(addr, len, fifo));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
-    AutoLock lock(&mutex);
+    mxtl::AutoLock lock(&mutex);
     fifos.insert(mxtl::move(range));
     return MX_OK;
 #else
@@ -76,7 +77,7 @@ status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispat
 status_t PacketMux::FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const {
     FifoTree::const_iterator iter;
     {
-        AutoLock lock(&mutex);
+        mxtl::AutoLock lock(&mutex);
         iter = fifos.upper_bound(addr);
     }
     --iter;
