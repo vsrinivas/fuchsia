@@ -253,6 +253,10 @@ void Post(const std::string& request_body,
   url_loader->Start(std::move(request), [success_callback, failure_callback,
                                          set_token_callback](
                                             network::URLResponsePtr response) {
+
+    FTL_VLOG(1) << "URL Loader response:"
+                << std::to_string(response->status_code);
+
     if (!response->error.is_null()) {
       failure_callback(
           Status::NETWORK_ERROR,
@@ -937,7 +941,6 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   }
 
  private:
-
   // |Operation|
   void Run() override {
     // No FlowToken used here; calling Done() directly is more suitable,
@@ -977,10 +980,25 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
   void WillSendRequest(const fidl::String& incoming_url) override {
     const std::string& uri = incoming_url.get();
     const std::string prefix = std::string{kRedirectUri} + "?code=";
+    const std::string cancel_prefix =
+        std::string{kRedirectUri} + "?error=access_denied";
+
+    auto cancel_pos = uri.find(cancel_prefix);
+    // user denied OAuth permissions
+    if (cancel_pos == 0) {
+      Failure(Status::USER_CANCELLED, "User cancelled OAuth flow");
+      return;
+    }
+
     auto pos = uri.find(prefix);
+    // user performing gaia authentication inside webview, let it pass
     if (pos != 0) {
       return;
     }
+
+    // user accepted OAuth permissions - close the webview and exchange auth
+    // code to long lived credential
+    auth_context_->StopOverlay();
 
     auto code = uri.substr(prefix.size(), std::string::npos);
     // There is a '#' character at the end.
@@ -1084,7 +1102,6 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
 
   void Success() {
     callback_(std::move(account_), nullptr);
-    auth_context_->StopOverlay();
     Done();
   }
 
