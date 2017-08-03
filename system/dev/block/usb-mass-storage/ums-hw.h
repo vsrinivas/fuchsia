@@ -24,7 +24,7 @@
 #define UMS_READ16                   0x88
 #define UMS_WRITE16                  0x8A
 #define UMS_READ_CAPACITY16          0x9E
-#define UMS_READ12                   0x8A
+#define UMS_READ12                   0xA8
 #define UMS_WRITE12                  0xAA
 
 // control request values
