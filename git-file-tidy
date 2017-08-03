@@ -87,7 +87,10 @@ def go(args):
     # change the working directory to Fuchsia root.
     os.chdir(paths.FUCHSIA_ROOT)
 
-    if args.no_parallel:
+    # It's not safe to run in parallel with "--fix", as clang-tidy traverses and
+    # fixes header files, and we might end up with concurrent writes to the same
+    # header file.
+    if args.no_parallel or args.fix:
         parallel_jobs = 1
     else:
         parallel_jobs = multiprocessing.cpu_count()
