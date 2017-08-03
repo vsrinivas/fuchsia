@@ -19,10 +19,10 @@ import (
 )
 
 type Context struct {
-	Environment     *application_environment.Proxy
+	Environment     *application_environment.ApplicationEnvironment_Proxy
 	OutgoingService *svcns.Namespace
 	serviceRoot     mx.Handle
-	Launcher        *application_launcher.Proxy
+	Launcher        *application_launcher.ApplicationLauncher_Proxy
 	appServices     mx.Handle
 }
 
@@ -71,9 +71,9 @@ func New(serviceRoot, serviceRequest, appServices mx.Handle) *Context {
 
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
-		r := service_provider.Request{
+		r := service_provider.ServiceProvider_Request{
 			bindings.NewChannelHandleOwner(c.appServices)}
-		s := service_provider.NewStub(
+		s := service_provider.NewStubForServiceProvider(
 			r, c.OutgoingService, bindings.GetAsyncWaiter())
 		go func() {
 			for {
