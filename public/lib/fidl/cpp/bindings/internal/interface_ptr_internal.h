@@ -87,11 +87,11 @@ class InterfacePtrState {
     return router_ ? router_->encountered_error() : false;
   }
 
-  void set_connection_error_handler(const ftl::Closure& error_handler) {
+  void set_connection_error_handler(ftl::Closure error_handler) {
     ConfigureProxyIfNecessary();
 
     FTL_DCHECK(router_);
-    router_->set_connection_error_handler(error_handler);
+    router_->set_connection_error_handler(std::move(error_handler));
   }
 
   Router* router_for_testing() {

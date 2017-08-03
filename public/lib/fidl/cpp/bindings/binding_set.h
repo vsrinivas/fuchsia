@@ -68,8 +68,8 @@ class BindingSet {
 
   size_t size() const { return bindings_.size(); }
 
-  void set_on_empty_set_handler(const ftl::Closure& on_empty_set_handler) {
-    on_empty_set_handler_ = on_empty_set_handler;
+  void set_on_empty_set_handler(ftl::Closure on_empty_set_handler) {
+    on_empty_set_handler_ = std::move(on_empty_set_handler);
   }
 
   // NOTE: These iterators return a ref to a std::unique_ptr<fidl::Binding<>>.

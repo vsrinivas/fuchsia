@@ -49,8 +49,8 @@ class Connector : public MessageReceiver {
   // Sets the error handler to receive notifications when an error is
   // encountered while reading from the channel or waiting to read from the
   // channel.
-  void set_connection_error_handler(const ftl::Closure& error_handler) {
-    connection_error_handler_ = error_handler;
+  void set_connection_error_handler(ftl::Closure error_handler) {
+    connection_error_handler_ = std::move(error_handler);
   }
 
   // Returns true if an error was encountered while reading from the channel or

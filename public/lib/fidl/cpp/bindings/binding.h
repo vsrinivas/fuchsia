@@ -188,8 +188,8 @@ class Binding {
 
   // Sets an error handler that will be called if a connection error occurs on
   // the bound channel.
-  void set_connection_error_handler(const ftl::Closure& error_handler) {
-    connection_error_handler_ = error_handler;
+  void set_connection_error_handler(ftl::Closure error_handler) {
+    connection_error_handler_ = std::move(error_handler);
   }
 
   // Returns the interface implementation that was previously specified. Caller

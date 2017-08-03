@@ -187,8 +187,8 @@ class InterfacePtr {
   //
   // This method may only be called after the InterfacePtr has been bound to a
   // channel.
-  void set_connection_error_handler(const ftl::Closure& error_handler) {
-    internal_state_.set_connection_error_handler(error_handler);
+  void set_connection_error_handler(ftl::Closure error_handler) {
+    internal_state_.set_connection_error_handler(std::move(error_handler));
   }
 
   // Unbinds the InterfacePtr and returns the information which could be used
