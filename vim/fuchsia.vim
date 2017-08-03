@@ -6,8 +6,8 @@
 if $FUCHSIA_DIR != ""
   let g:ycm_global_ycm_extra_conf = $FUCHSIA_DIR . '/scripts/vim/ycm_extra_conf.py'
 
+  set runtimepath+=$FUCHSIA_DIR/scripts/vim/
   set runtimepath+=$FUCHSIA_DIR/lib/fidl/tools/vim/
-  au BufRead,BufNewFile *.fidl set filetype=fidl
 
   function FuchsiaBuffer()
     " Set up path so that 'gf' and :find do what we want.
