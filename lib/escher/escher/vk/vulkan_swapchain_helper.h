@@ -4,11 +4,14 @@
 
 #pragma once
 
-#include "escher/renderer/renderer.h"
 #include "escher/vk/vulkan_swapchain.h"
 
 namespace escher {
 
+class PaperRenderer;
+
+// TODO(ES-27): VulkanSwapchainHelper is now PaperRenderer-specific.
+// Generalize or get rid of it.
 class VulkanSwapchainHelper {
  public:
   VulkanSwapchainHelper(VulkanSwapchain swapchain,
@@ -16,7 +19,7 @@ class VulkanSwapchainHelper {
                         vk::Queue queue);
   ~VulkanSwapchainHelper();
 
-  void DrawFrame(Renderer* renderer,
+  void DrawFrame(PaperRenderer* renderer,
                  const Stage& stage,
                  const Model& model,
                  const Camera& camera,

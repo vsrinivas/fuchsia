@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <queue>
-
 #include "escher/forward_declarations.h"
 #include "escher/renderer/semaphore_wait.h"
 #include "escher/renderer/timestamper.h"
@@ -20,28 +18,12 @@ typedef std::function<void()> FrameRetiredCallback;
 class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
                  public Timestamper {
  public:
-  virtual void DrawFrame(const Stage& stage,
-                         const Model& model,
-                         const Camera& camera,
-                         const ImagePtr& color_image_out,
-                         const Model* overlay_model,
-                         const SemaphorePtr& frame_done,
-                         FrameRetiredCallback frame_retired_callback) = 0;
-
-  // Calls the version above; passes nullptr for |overlay_model|.
-  void DrawFrame(const Stage& stage,
-                 const Model& model,
-                 const Camera& camera,
-                 const ImagePtr& color_image_out,
-                 const SemaphorePtr& frame_done,
-                 FrameRetiredCallback frame_retired_callback);
-
-  void RunOffscreenBenchmark(const VulkanContext& context,
-                             const Stage& stage,
-                             const Model& model,
-                             const Camera& camera,
-                             vk::Format framebuffer_format,
-                             size_t frame_count);
+  void RunOffscreenBenchmark(
+      uint32_t framebuffer_width,
+      uint32_t framebuffer_height,
+      vk::Format framebuffer_format,
+      size_t frame_count,
+      std::function<void(const ImagePtr&, const SemaphorePtr&)> draw_func);
 
   const VulkanContext& vulkan_context() { return context_; }
 

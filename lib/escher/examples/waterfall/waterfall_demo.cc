@@ -195,9 +195,8 @@ static escher::Camera GenerateCamera(int camera_projection_mode,
       return escher::Camera::NewOrtho(volume);
     case 1:
       return escher::Camera::NewPerspective(
-          volume,
-          glm::translate(
-              vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
+          volume, glm::translate(
+                      vec3(-volume.width() / 2, -volume.height() / 2, -10000)),
           glm::radians(8.f));
     case 2: {
       vec3 eye(volume.width() / 3, 6000, 3000);
@@ -235,9 +234,16 @@ void WaterfallDemo::DrawFrame() {
     run_offscreen_benchmark_ = false;
     stopwatch_.Stop();
     renderer_->set_show_debug_info(false);
-    renderer_->RunOffscreenBenchmark(vulkan_context(), stage_, *model, camera,
-                                     swapchain_helper_.swapchain().format,
-                                     kOffscreenBenchmarkFrameCount);
+
+    renderer_->RunOffscreenBenchmark(
+        stage_.physical_size().width(), stage_.physical_size().height(),
+        swapchain_helper_.swapchain().format, kOffscreenBenchmarkFrameCount,
+        [this, model, &camera, overlay_model](
+            const escher::ImagePtr& color_image_out,
+            const escher::SemaphorePtr& frame_done_semaphore) {
+          renderer_->DrawFrame(stage_, *model, camera, color_image_out,
+                               overlay_model, frame_done_semaphore, nullptr);
+        });
     renderer_->set_show_debug_info(show_debug_info_);
     if (!stop_time_) {
       stopwatch_.Start();

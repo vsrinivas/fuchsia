@@ -4,6 +4,8 @@
 
 #include "escher/renderer/renderer.h"
 
+#include <array>
+
 #include "escher/escher.h"
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/escher_impl.h"
@@ -32,16 +34,6 @@ Renderer::Renderer(Escher* escher)
 Renderer::~Renderer() {
   FTL_DCHECK(!current_frame_);
   escher_impl()->DecrementRendererCount();
-}
-
-void Renderer::DrawFrame(const Stage& stage,
-                         const Model& model,
-                         const Camera& camera,
-                         const ImagePtr& color_image_out,
-                         const SemaphorePtr& frame_done,
-                         FrameRetiredCallback frame_retired_callback) {
-  DrawFrame(stage, model, camera, color_image_out, nullptr, frame_done,
-            std::move(frame_retired_callback));
 }
 
 void Renderer::BeginFrame() {
@@ -115,12 +107,12 @@ void Renderer::AddTimestamp(const char* name) {
   }
 }
 
-void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
-                                     const Stage& stage,
-                                     const Model& model,
-                                     const Camera& camera,
-                                     vk::Format framebuffer_format,
-                                     size_t frame_count) {
+void Renderer::RunOffscreenBenchmark(
+    uint32_t framebuffer_width,
+    uint32_t framebuffer_height,
+    vk::Format framebuffer_format,
+    size_t frame_count,
+    std::function<void(const ImagePtr&, const SemaphorePtr&)> draw_func) {
   constexpr uint64_t kSecondsToNanoseconds = 1000000000;
 
   // Create the images that we will render into, and the semaphores that will
@@ -129,22 +121,19 @@ void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
   // benchmark (this also signals the semaphores so that they can be waited
   // upon in the actual benchmark run).
   constexpr size_t kSwapchainSize = 3;
-  std::vector<SemaphorePtr> semaphores;
-  std::vector<ImagePtr> images;
+  std::array<SemaphorePtr, kSwapchainSize> semaphores;
+  std::array<ImagePtr, kSwapchainSize> images;
   {
-    const uint32_t width = stage.physical_size().width();
-    const uint32_t height = stage.physical_size().height();
-
     auto image_cache = escher_impl()->image_cache();
     for (size_t i = 0; i < kSwapchainSize; ++i) {
-      auto im =
-          image_cache->NewImage({framebuffer_format, width, height, 1,
-                                 vk::ImageUsageFlagBits::eColorAttachment |
-                                     vk::ImageUsageFlagBits::eTransferSrc});
-      images.push_back(im);
-      semaphores.push_back(Semaphore::New(context.device));
+      auto im = image_cache->NewImage(
+          {framebuffer_format, framebuffer_width, framebuffer_height, 1,
+           vk::ImageUsageFlagBits::eColorAttachment |
+               vk::ImageUsageFlagBits::eTransferSrc});
+      images[i] = std::move(im);
+      semaphores[i] = Semaphore::New(context_.device);
 
-      DrawFrame(stage, model, camera, images[i], semaphores[i], nullptr);
+      draw_func(images[i], semaphores[i]);
     }
 
     // Prepare all semaphores to be waited-upon, and wait for the throwaway
@@ -160,6 +149,8 @@ void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
   stopwatch.Start();
 
   impl::CommandBuffer* throttle = nullptr;
+  bool was_profiling = enable_profiling_;
+  set_enable_profiling(false);
   for (size_t current_frame = 0; current_frame < frame_count; ++current_frame) {
     size_t image_index = current_frame % kSwapchainSize;
 
@@ -179,22 +170,17 @@ void Renderer::RunOffscreenBenchmark(const VulkanContext& context,
       throttle = command_buffer;
     }
 
-    if (current_frame == frame_count - 1) {
-      set_enable_profiling(true);
-    }
-
-    DrawFrame(stage, model, camera, images[image_index],
-              semaphores[image_index], nullptr);
-
-    set_enable_profiling(false);
+    set_enable_profiling(current_frame == frame_count - 1);
+    draw_func(images[image_index], semaphores[image_index]);
   }
+  set_enable_profiling(was_profiling);
 
   // Wait for the last frame to finish.
   auto command_buffer = pool_->GetCommandBuffer();
   command_buffer->AddWaitSemaphore(
       semaphores[(frame_count - 1) % kSwapchainSize],
       vk::PipelineStageFlagBits::eBottomOfPipe);
-  command_buffer->Submit(context.queue, nullptr);
+  command_buffer->Submit(context_.queue, nullptr);
   FTL_CHECK(vk::Result::eSuccess ==
             command_buffer->Wait(kSwapchainSize * kSecondsToNanoseconds));
   stopwatch.Stop();

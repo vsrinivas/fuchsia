@@ -6,6 +6,7 @@
 
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
+#include "escher/renderer/paper_renderer.h"
 #include "escher/scene/camera.h"
 #include "escher/scene/stage.h"
 #include "escher/util/trace_macros.h"
@@ -24,7 +25,7 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
 
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 
-void VulkanSwapchainHelper::DrawFrame(Renderer* renderer,
+void VulkanSwapchainHelper::DrawFrame(PaperRenderer* renderer,
                                       const Stage& stage,
                                       const Model& model,
                                       const Camera& camera,
