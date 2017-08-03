@@ -242,6 +242,15 @@ static void fetch_vmos(uint_fast8_t type, const char* debug_type_name) {
                    debug_type_name, i, mx_status_get_string(status));
             continue;
         }
+        if (size == 0) {
+            // empty vmos do not get installed
+            mx_handle_close(vmo);
+            continue;
+        }
+        if (!strcmp(name + VMO_SUBDIR_LEN, "crashlog")) {
+            // the crashlog has a special home
+            strcpy(name, "log/last-panic.txt");
+        }
         status = bootfs_add_file(name, vmo, 0, size);
         if (status != MX_OK) {
             printf("devmgr: failed to add %s %u to filesystem: %s\n",

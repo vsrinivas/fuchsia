@@ -42,6 +42,7 @@ static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
 #define STACK_VMO_NAME "userboot-initial-stack"
 #define RAMDISK_VMO_NAME "userboot-raw-ramdisk"
+#define CRASHLOG_VMO_NAME "crashlog"
 
 extern char __kernel_cmdline[CMDLINE_MAX];
 extern unsigned __kernel_cmdline_size;
@@ -183,6 +184,7 @@ enum bootstrap_handle_index {
     BOOTSTRAP_THREAD,
     BOOTSTRAP_JOB,
     BOOTSTRAP_VMAR_ROOT,
+    BOOTSTRAP_CRASHLOG,
 #if ENABLE_ENTROPY_COLLECTOR_TEST
     BOOTSTRAP_ENTROPY_FILE,
 #endif
@@ -239,9 +241,12 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
         case BOOTSTRAP_VMAR_ROOT:
             info = PA_HND(PA_VMAR_ROOT, 0);
             break;
+        case BOOTSTRAP_CRASHLOG:
+            info = PA_HND(PA_VMO_KERNEL_FILE, 0);
+            break;
 #if ENABLE_ENTROPY_COLLECTOR_TEST
         case BOOTSTRAP_ENTROPY_FILE:
-            info = PA_HND(PA_VMO_KERNEL_FILE, 0);
+            info = PA_HND(PA_VMO_KERNEL_FILE, 1);
             break;
 #endif
         case BOOTSTRAP_HANDLES:
@@ -262,19 +267,37 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     return packet;
 }
 
-static int attempt_userboot() {
+static void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) {
+    VmObject* vmo = static_cast<VmObject*>(cookie);
+    size_t actual;
+    vmo->Write(data, off, len, &actual);
+}
+
+static mx_status_t attempt_userboot() {
     size_t rsize;
     void* rbase = platform_get_ramdisk(&rsize);
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
     mxtl::RefPtr<VmObject> stack_vmo;
-    VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
+    mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
+    if (status != MX_OK)
+        return status;
     stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
 
     mxtl::RefPtr<VmObject> rootfs_vmo;
-    VmObjectPaged::CreateFromROData(rbase, rsize, &rootfs_vmo);
+    status = VmObjectPaged::CreateFromROData(rbase, rsize, &rootfs_vmo);
+    if (status != MX_OK)
+        return status;
     rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
+
+    size_t size = platform_recover_crashlog(0, NULL, NULL);
+    mxtl::RefPtr<VmObject> crashlog_vmo;
+    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &crashlog_vmo);
+    if (status != MX_OK)
+        return status;
+    platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
+    crashlog_vmo->set_name(CRASHLOG_VMO_NAME, sizeof(CRASHLOG_VMO_NAME) - 1);
 
     // Prepare the bootstrap message packet.  This puts its data (the
     // kernel command line) in place, and allocates space for its handles.
@@ -285,12 +308,15 @@ static int attempt_userboot() {
 
     Handle** const handles = msg->mutable_handles();
     DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
-    mx_status_t status = get_vmo_handle(rootfs_vmo, false, nullptr,
-                                        &handles[BOOTSTRAP_RAMDISK]);
+    status = get_vmo_handle(rootfs_vmo, false, nullptr,
+                            &handles[BOOTSTRAP_RAMDISK]);
     mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
     if (status == MX_OK)
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
                                 &handles[BOOTSTRAP_STACK]);
+    if (status == MX_OK)
+        status = get_vmo_handle(crashlog_vmo, false, nullptr,
+                                &handles[BOOTSTRAP_CRASHLOG]);
     if (status == MX_OK)
         status = get_resource_handle(&handles[BOOTSTRAP_RESOURCE_ROOT]);
 
