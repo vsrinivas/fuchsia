@@ -46,6 +46,7 @@
         "pm",
         "pmd",
         "pmd_tests",
+        "power-service",
         "openssh",
         "openssh-keys",
         "re2",
