@@ -19,6 +19,7 @@
 #include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
+#include "escher/scene/camera.h"
 #include "escher/util/depth_to_color.h"
 #include "escher/util/image_utils.h"
 #include "escher/util/trace_macros.h"
@@ -30,6 +31,9 @@
 #define SSDO_SAMPLING_USES_KERNEL 0
 
 namespace escher {
+
+using impl::ModelDisplayListFlag;
+using impl::ModelDisplayListPtr;
 
 namespace {
 constexpr float kMaxDepth = 1.f;
@@ -95,11 +99,17 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
 
   float scale =
       static_cast<float>(depth_image->width()) / stage.physical_size().width();
-  FTL_DCHECK(scale == static_cast<float>(depth_image->height()) /
-                          stage.physical_size().height());
-  impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, camera, scale, sort_by_pipeline_, true, true, 1,
-      TexturePtr(), command_buffer);
+  FTL_DCHECK(scale ==
+             static_cast<float>(depth_image->height()) /
+                 stage.physical_size().height());
+
+  auto display_list_flags =
+      ModelDisplayListFlag::kUseDepthPrepass |
+      (sort_by_pipeline_ ? ModelDisplayListFlag::kSortByPipeline
+                         : ModelDisplayListFlag::kNull);
+  ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
+      stage, model, camera, display_list_flags, scale, 1, TexturePtr(),
+      command_buffer);
 
   command_buffer->KeepAlive(framebuffer);
   command_buffer->KeepAlive(display_list);
@@ -255,26 +265,50 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                                      const TexturePtr& illumination_texture,
                                      const Stage& stage,
                                      const Model& model,
-                                     const Camera& camera) {
+                                     const Camera& camera,
+                                     const Model* overlay_model) {
   TRACE_DURATION("gfx", "escher::PaperRenderer::DrawLightingPass", "width",
                  framebuffer->width(), "height", framebuffer->height());
 
   auto command_buffer = current_frame();
   command_buffer->KeepAlive(framebuffer);
 
-  impl::ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
-      stage, model, camera, 1.f, sort_by_pipeline_, false, true, sample_count,
+  auto display_list_flags =
+      (sort_by_pipeline_ ? ModelDisplayListFlag::kSortByPipeline
+                         : ModelDisplayListFlag::kNull);
+
+  ModelDisplayListPtr display_list = model_renderer_->CreateDisplayList(
+      stage, model, camera, display_list_flags, 1.f, sample_count,
       illumination_texture, command_buffer);
   command_buffer->KeepAlive(display_list);
 
   // Update the clear color from the stage
-  vec3 clear_color = stage.clear_color();
-  clear_values_[0] = vk::ClearColorValue(
-      std::array<float, 4>{{clear_color.x, clear_color.y, clear_color.z, 1.f}});
+  vec4 clear_color = stage.clear_color();
+  clear_values_[0] = vk::ClearColorValue(std::array<float, 4>{
+      {clear_color.x, clear_color.y, clear_color.z, clear_color.w}});
+
+  // Create stage, camera etc. for rendering overlays.
+  Stage overlay_stage;
+  overlay_stage.set_viewing_volume(stage.viewing_volume());
+  overlay_stage.Resize(SizeI(framebuffer->width(), framebuffer->height()), 1.f,
+                       SizeI());
+  Camera overlay_camera = Camera::NewOrtho(overlay_stage.viewing_volume());
+  impl::ModelDisplayListPtr overlay_display_list;
+  if (overlay_model) {
+    display_list_flags = ModelDisplayListFlag::kDisableDepthTest;
+    overlay_display_list = model_renderer_->CreateDisplayList(
+        overlay_stage, *overlay_model, overlay_camera, display_list_flags, 1.f,
+        sample_count, TexturePtr(), command_buffer);
+    command_buffer->KeepAlive(overlay_display_list);
+  }
+
   command_buffer->BeginRenderPass(model_renderer_->lighting_pass(), framebuffer,
                                   clear_values_);
 
   model_renderer_->Draw(stage, display_list, command_buffer);
+  if (overlay_model) {
+    model_renderer_->Draw(stage, overlay_display_list, command_buffer);
+  }
 
   command_buffer->EndRenderPass();
 }
@@ -360,6 +394,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
                               const Model& model,
                               const Camera& camera,
                               const ImagePtr& color_image_out,
+                              const Model* overlay_model,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
   TRACE_DURATION("gfx", "escher::PaperRenderer::DrawFrame");
@@ -458,7 +493,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     current_frame()->KeepAlive(lighting_fb);
 
     DrawLightingPass(kLightingPassSampleCount, lighting_fb,
-                     illumination_texture, stage, model, camera);
+                     illumination_texture, stage, model, camera, overlay_model);
 
     AddTimestamp("finished lighting pass");
   } else {
@@ -486,7 +521,7 @@ void PaperRenderer::DrawFrame(const Stage& stage,
     current_frame()->KeepAlive(multisample_fb);
 
     DrawLightingPass(kLightingPassSampleCount, multisample_fb,
-                     illumination_texture, stage, model, camera);
+                     illumination_texture, stage, model, camera, overlay_model);
 
     AddTimestamp("finished lighting pass");
 

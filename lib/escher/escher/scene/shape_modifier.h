@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
+#include "escher/util/debug_print.h"
+
 namespace escher {
 
 // Set of flags that specify modifications that should be made to a shape.

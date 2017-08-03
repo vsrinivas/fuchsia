@@ -27,7 +27,8 @@ VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 void VulkanSwapchainHelper::DrawFrame(Renderer* renderer,
                                       const Stage& stage,
                                       const Model& model,
-                                      const Camera& camera) {
+                                      const Camera& camera,
+                                      const Model* overlay_model) {
   FTL_DCHECK(renderer);
 
   auto& image_available_semaphore =
@@ -60,8 +61,8 @@ void VulkanSwapchainHelper::DrawFrame(Renderer* renderer,
   // signal the semaphore.
   auto& image = swapchain_.images[swapchain_index];
   image->SetWaitSemaphore(image_available_semaphore);
-  renderer->DrawFrame(stage, model, camera, image, render_finished_semaphore,
-                      nullptr);
+  renderer->DrawFrame(stage, model, camera, image, overlay_model,
+                      render_finished_semaphore, nullptr);
 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "escher::VulkanSwapchain::Present");

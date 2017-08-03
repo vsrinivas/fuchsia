@@ -34,6 +34,16 @@ Renderer::~Renderer() {
   escher_impl()->DecrementRendererCount();
 }
 
+void Renderer::DrawFrame(const Stage& stage,
+                         const Model& model,
+                         const Camera& camera,
+                         const ImagePtr& color_image_out,
+                         const SemaphorePtr& frame_done,
+                         FrameRetiredCallback frame_retired_callback) {
+  DrawFrame(stage, model, camera, color_image_out, nullptr, frame_done,
+            std::move(frame_retired_callback));
+}
+
 void Renderer::BeginFrame() {
   TRACE_DURATION("gfx", "escher::Renderer::BeginFrame");
 

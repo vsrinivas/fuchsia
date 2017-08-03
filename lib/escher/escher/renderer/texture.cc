@@ -62,4 +62,14 @@ Texture::~Texture() {
   device.destroyImageView(image_view_);
 }
 
+TexturePtr Texture::New(ResourceRecycler* resource_recycler,
+                        ImagePtr image,
+                        vk::Filter filter,
+                        vk::ImageAspectFlags aspect_mask,
+                        bool use_unnormalized_coordinates) {
+  return ftl::MakeRefCounted<Texture>(resource_recycler, std::move(image),
+                                      filter, aspect_mask,
+                                      use_unnormalized_coordinates);
+}
+
 }  // namespace escher

@@ -8,7 +8,7 @@
 
 namespace escher {
 
-Stage::Stage() : clear_color_(0.012, 0.047, 0.427) {}
+Stage::Stage() : clear_color_(0.f, 0.f, 0.f, 0.f) {}
 
 Stage::~Stage() {}
 

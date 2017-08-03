@@ -55,10 +55,8 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
     const Stage& stage,
     const Model& model,
     const Camera& camera,
+    ModelDisplayListFlags flags,
     float scale,
-    bool sort_by_pipeline,
-    bool use_depth_prepass,
-    bool use_descriptor_set_per_object,
     uint32_t sample_count,
     const TexturePtr& illumination_texture,
     CommandBuffer* command_buffer) {
@@ -67,8 +65,10 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 
   const std::vector<Object>& objects = model.objects();
 
-  // The alternative isn't implemented.
-  FTL_DCHECK(use_descriptor_set_per_object);
+  // TODO(ES-29): not low-hanging fruit, but maybe someday...
+  FTL_DCHECK(
+      !(flags & ModelDisplayListFlag::kShareDescriptorSetsBetweenObjects))
+      << "unimplemented (ES-29).";
 
   // Used to accumulate indices of objects in render-order.
   std::vector<uint32_t> opaque_objects;
@@ -82,6 +82,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
   // TODO: We should sort according to more different metrics, and look for
   // performance differences between them.  At the same time, we should
   // experiment with strategies for updating/binding descriptor-sets.
+  const bool sort_by_pipeline(flags & ModelDisplayListFlag::kSortByPipeline);
   if (!sort_by_pipeline) {
     // Simply render objects in the order that they appear in the model.
     for (uint32_t i = 0; i < objects.size(); ++i) {
@@ -119,10 +120,10 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 
   TRACE_DURATION("gfx", "escher::ModelRenderer::CreateDisplayList[build]");
 
-  ModelDisplayListBuilder builder(
-      device_, stage, model, camera, scale, !use_depth_prepass, white_texture_,
-      illumination_texture, model_data_, this, pipeline_cache_.get(),
-      sample_count, use_depth_prepass);
+  ModelDisplayListBuilder builder(device_, stage, model, camera, scale,
+                                  white_texture_, illumination_texture,
+                                  model_data_, this, pipeline_cache_.get(),
+                                  flags, sample_count);
   for (uint32_t object_index : opaque_objects) {
     builder.AddObject(objects[object_index]);
   }

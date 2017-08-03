@@ -190,6 +190,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
     vk::ShaderModule vertex_module,
     vk::ShaderModule fragment_module,
     bool enable_depth_write,
+    bool enable_blending,
     vk::CompareOp depth_compare_op,
     vk::RenderPass render_pass,
     std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
@@ -233,7 +234,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   input_assembly_info.primitiveRestartEnable = false;
 
   vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-  depth_stencil_info.depthTestEnable = true;
+  depth_stencil_info.depthTestEnable = !spec.disable_depth_test;
   depth_stencil_info.depthWriteEnable = enable_depth_write;
   depth_stencil_info.depthCompareOp = depth_compare_op;
   depth_stencil_info.depthBoundsTestEnable = false;
@@ -345,7 +346,21 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
         vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
         vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
   }
-  color_blend_attachment.blendEnable = false;
+  if (enable_blending) {
+    // TODO(ES-28): In some cases we have a constant alpha, so we could
+    // optimize this with eConstantAlpha and eOneMinusConstantAlpha.
+    color_blend_attachment.blendEnable = true;
+    color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    color_blend_attachment.dstColorBlendFactor =
+        vk::BlendFactor::eOneMinusSrcAlpha;
+    color_blend_attachment.colorBlendOp = vk::BlendOp::eAdd;
+    color_blend_attachment.srcAlphaBlendFactor =
+        vk::BlendFactor::eOneMinusDstAlpha;
+    color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eOne;
+    color_blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;
+  } else {
+    color_blend_attachment.blendEnable = false;
+  }
 
   vk::PipelineColorBlendStateCreateInfo color_blending;
   color_blending.logicOpEnable = false;
@@ -399,6 +414,9 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   TRACE_DURATION("gfx", "escher::ModelPipelineCache::NewPipeline");
   // TODO: create customized pipelines for different shapes/materials/etc.
 
+  // Only specs with materials may be opaque.
+  FTL_DCHECK(!spec.is_opaque || spec.has_material);
+
   std::future<SpirvData> vertex_spirv_future;
   std::future<SpirvData> fragment_spirv_future;
 
@@ -415,9 +433,10 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   // The depth-only pre-pass uses a different renderpass and a cheap fragment
   // shader.
   vk::RenderPass render_pass = depth_prepass_;
-  const bool enable_depth_write = spec.has_material;
+  const bool enable_depth_write = spec.has_material && !spec.disable_depth_test;
   const bool omit_fragment_shader =
       spec.use_depth_prepass || !spec.has_material;
+  const bool enable_blending = !spec.is_opaque && !omit_fragment_shader;
   const vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
   if (omit_fragment_shader) {
     // Omit fragment shader.
@@ -456,7 +475,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
 
   auto pipeline_and_layout = NewPipelineHelper(
       model_data_, vertex_module, fragment_module, enable_depth_write,
-      depth_compare_op, render_pass,
+      enable_blending, depth_compare_op, render_pass,
       {model_data_->per_model_layout(), model_data_->per_object_layout()}, spec,
       SampleCountFlagBitsFromInt(spec.sample_count));
 

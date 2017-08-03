@@ -32,4 +32,7 @@ class Camera {
   mat4 projection_;
 };
 
+// Debugging.
+ESCHER_DEBUG_PRINTABLE(Camera);
+
 }  // namespace escher

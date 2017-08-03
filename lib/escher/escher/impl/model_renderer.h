@@ -6,6 +6,7 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/impl/model_data.h"
+#include "escher/impl/model_display_list_flags.h"
 #include "escher/renderer/texture.h"
 #include "escher/shape/mesh.h"
 
@@ -46,10 +47,8 @@ class ModelRenderer {
   ModelDisplayListPtr CreateDisplayList(const Stage& stage,
                                         const Model& model,
                                         const Camera& camera,
+                                        ModelDisplayListFlags flags,
                                         float scale,
-                                        bool sort_by_pipeline,
-                                        bool use_depth_prepass,
-                                        bool use_descriptor_set_per_object,
                                         uint32_t sample_count,
                                         const TexturePtr& illumination_texture,
                                         CommandBuffer* command_buffer);

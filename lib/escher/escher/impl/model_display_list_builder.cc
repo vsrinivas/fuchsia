@@ -42,18 +42,18 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
     const Model& model,
     const Camera& camera,
     float scale,
-    bool use_material_textures,
     const TexturePtr& white_texture,
     const TexturePtr& illumination_texture,
     ModelData* model_data,
     ModelRenderer* renderer,
     ModelPipelineCache* pipeline_cache,
-    uint32_t sample_count,
-    bool use_depth_prepass)
+    ModelDisplayListFlags flags,
+    uint32_t sample_count)
     : device_(device),
       volume_(stage.viewing_volume()),
       camera_transform_(AdjustCameraTransform(stage, camera, scale)),
-      use_material_textures_(use_material_textures),
+      use_material_textures_(!(flags & ModelDisplayListFlag::kUseDepthPrepass)),
+      disable_depth_test_(flags & ModelDisplayListFlag::kDisableDepthTest),
       white_texture_(white_texture),
       illumination_texture_(illumination_texture ? illumination_texture
                                                  : white_texture),
@@ -68,7 +68,8 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
 
   // These fields of the pipeline spec are the same for the entire display list.
   pipeline_spec_.sample_count = sample_count;
-  pipeline_spec_.use_depth_prepass = use_depth_prepass;
+  pipeline_spec_.use_depth_prepass =
+      bool(flags & ModelDisplayListFlag::kUseDepthPrepass);
 
   // Obtain a uniform buffer and write the PerModel data to it.
   PrepareUniformBufferForWriteOfSize(sizeof(ModelData::PerModel), 0);
@@ -188,6 +189,8 @@ void ModelDisplayListBuilder::AddClipperAndClippeeObjects(
     // Even if the object has a material, we already drew it the first time;
     // now we just need to clear the stencil buffer.
     pipeline_spec_.has_material = false;
+    pipeline_spec_.is_opaque = false;
+    pipeline_spec_.disable_depth_test = disable_depth_test_;
     item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
     item.stencil_reference = clip_depth_;
 
@@ -215,6 +218,8 @@ void ModelDisplayListBuilder::AddNonClipperObject(const Object& object) {
     pipeline_spec_.clipper_state =
         ModelPipelineSpec::ClipperState::kNoClipChildren;
     pipeline_spec_.has_material = true;
+    pipeline_spec_.is_opaque = object.material()->opaque();
+    pipeline_spec_.disable_depth_test = disable_depth_test_;
     item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
     item.stencil_reference = clip_depth_;
 
@@ -249,8 +254,7 @@ void ModelDisplayListBuilder::UpdateDescriptorSetForObject(
 
   // Push uniforms for scale/translation and color.
   per_object->transform = camera_transform_ * object.transform();
-  per_object->color =
-      mat ? vec4(mat->color(), 1) : vec4(1, 1, 1, 1);  // always opaque
+  per_object->color = mat ? mat->color() : vec4(1, 1, 1, 1);  // always opaque
 
   // Find the texture to use, either the object's material's texture, or
   // the default texture if the material doesn't have one.

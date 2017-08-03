@@ -19,6 +19,7 @@ class PaperRenderer : public Renderer {
                  const Model& model,
                  const Camera& camera,
                  const ImagePtr& color_image_out,
+                 const Model* overlay_model,
                  const SemaphorePtr& frame_done,
                  FrameRetiredCallback frame_retired_callback) override;
 
@@ -78,7 +79,8 @@ class PaperRenderer : public Renderer {
                         const TexturePtr& illumination_texture,
                         const Stage& stage,
                         const Model& model,
-                        const Camera& camera);
+                        const Camera& camera,
+                        const Model* overlay_model);
 
   void DrawDebugOverlays(const ImagePtr& output,
                          const ImagePtr& depth,

@@ -34,6 +34,11 @@ struct ModelPipelineSpec {
   bool use_depth_prepass = true;
   // Set to true if an object has a material.
   bool has_material = false;
+  // Set to true if the object has an opaque material, and false if it has no
+  // material or the material is not fully opaque.
+  bool is_opaque = false;
+  // Entirely disable depth test and depth write.
+  bool disable_depth_test = false;
 };
 #pragma pack(pop)
 
@@ -47,7 +52,8 @@ inline bool operator==(const ModelPipelineSpec& spec1,
          spec1.clipper_state == spec2.clipper_state &&
          spec1.is_clippee == spec2.is_clippee &&
          spec1.use_depth_prepass == spec2.use_depth_prepass &&
-         spec1.has_material == spec2.has_material;
+         spec1.has_material == spec2.has_material &&
+         spec1.is_opaque == spec2.is_opaque;
 }
 
 inline bool operator!=(const ModelPipelineSpec& spec1,
@@ -59,5 +65,6 @@ inline bool operator!=(const ModelPipelineSpec& spec1,
 
 // Debugging.
 ESCHER_DEBUG_PRINTABLE(impl::ModelPipelineSpec);
+ESCHER_DEBUG_PRINTABLE(impl::ModelPipelineSpec::ClipperState);
 
 }  // namespace escher

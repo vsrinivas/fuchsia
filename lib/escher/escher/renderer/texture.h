@@ -26,6 +26,13 @@ class Texture : public Resource {
           bool use_unnormalized_coordinates = false);
   ~Texture() override;
 
+  static TexturePtr New(
+      ResourceRecycler* resource_recycler,
+      ImagePtr image,
+      vk::Filter filter,
+      vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
+      bool use_unnormalized_coordinates = false);
+
   const ImagePtr& image() const { return image_; }
   vk::ImageView image_view() const { return image_view_; }
   vk::Sampler sampler() const { return sampler_; }

@@ -217,6 +217,9 @@ void WaterfallDemo::DrawFrame() {
   current_scene_ = current_scene_ % scenes_.size();
   auto& scene = scenes_.at(current_scene_);
   escher::Model* model = scene->Update(stopwatch_, frame_count_, &stage_);
+  escher::Model* overlay_model = scene->UpdateOverlay(
+      stopwatch_, frame_count_, swapchain_helper_.swapchain().width,
+      swapchain_helper_.swapchain().height);
 
   renderer_->set_show_debug_info(show_debug_info_);
   renderer_->set_enable_lighting(enable_lighting_);
@@ -247,7 +250,8 @@ void WaterfallDemo::DrawFrame() {
     stopwatch_.Start();
   }
 
-  swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera);
+  swapchain_helper_.DrawFrame(renderer_.get(), stage_, *model, camera,
+                              overlay_model);
 
   if (++frame_count_ == 1) {
     first_frame_microseconds_ = stopwatch_.GetElapsedMicroseconds();

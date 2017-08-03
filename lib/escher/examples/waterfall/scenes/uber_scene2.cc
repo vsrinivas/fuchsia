@@ -14,12 +14,13 @@
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_context.h"
 
-using escher::vec2;
-using escher::vec3;
 using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
+using escher::vec2;
+using escher::vec3;
+using escher::vec4;
 
 UberScene2::UberScene2(Demo* demo) : Scene(demo) {}
 
@@ -28,10 +29,16 @@ void UberScene2::Init(escher::Stage* stage) {
   red_ = ftl::MakeRefCounted<escher::Material>();
   purple_ = ftl::MakeRefCounted<escher::Material>();
   bg_ = ftl::MakeRefCounted<escher::Material>();
+  gray1_ = ftl::MakeRefCounted<escher::Material>();
+  gray2_ = ftl::MakeRefCounted<escher::Material>();
   blue_->set_color(vec3(0.188f, 0.188f, 0.788f));
   red_->set_color(vec3(0.98f, 0.15f, 0.15f));
   purple_->set_color(vec3(0.588f, 0.239f, 0.729f));
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
+  gray1_->set_color(vec4(0.7f, 0.7f, 0.7f, 0.9f));
+  gray1_->set_opaque(false);
+  gray2_->set_color(vec4(0.4f, 0.4f, 0.4f, 0.4f));
+  gray2_->set_opaque(false);
 
   // Create meshes for fancy wobble effect.
   MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
@@ -147,7 +154,7 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring1(ring1_pos, ring_mesh2_, purple_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring1b_pos(screen_width * 0.5, screen_height * 0.5, 1.f);
+  vec3 ring1b_pos(screen_width * 0.5, screen_height * 0.5, 5.f);
   Object ring1b(ring1b_pos, ring_mesh1_, purple_);
   ring1b.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -155,7 +162,7 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring2(ring2_pos, ring_mesh2_, purple_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring2b_pos(screen_width * 0.15, screen_height * 0.5, 1.f);
+  vec3 ring2b_pos(screen_width * 0.15, screen_height * 0.5, 5.f);
   Object ring2b(ring2b_pos, ring_mesh1_, purple_);
   ring2b.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -163,11 +170,11 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring3(ring3_pos, ring_mesh2_, purple_);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring3b_pos(screen_width * 0.85, screen_height * 0.5, 1.f);
+  vec3 ring3b_pos(screen_width * 0.85, screen_height * 0.5, 5.f);
   Object ring3b(ring3b_pos, ring_mesh1_, purple_);
   ring3b.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring4_pos(screen_width * 0.325, screen_height * 0.15, 1.f);
+  vec3 ring4_pos(screen_width * 0.325, screen_height * 0.15, 2.f);
   Object ring4(ring4_pos, ring_mesh2_, purple_);
   ring4.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -175,7 +182,15 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring4b(ring4b_pos, ring_mesh1_, purple_);
   ring4b.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring5_pos(screen_width * 0.675, screen_height * 0.15, 1.f);
+  vec3 ring6_pos(screen_width * 0.325, screen_height * 0.15, 22.f);
+  Object ring6(ring6_pos, ring_mesh2_, purple_);
+  ring6.set_shape_modifiers(ShapeModifier::kWobble);
+
+  vec3 ring6b_pos(screen_width * 0.325, screen_height * 0.15, 2.f);
+  Object ring6b(ring6b_pos, ring_mesh1_, purple_);
+  ring6b.set_shape_modifiers(ShapeModifier::kWobble);
+
+  vec3 ring5_pos(screen_width * 0.675, screen_height * 0.15, 2.f);
   Object ring5(ring5_pos, ring_mesh2_, purple_);
   ring5.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -183,19 +198,11 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring5b(ring5b_pos, ring_mesh1_, purple_);
   ring5b.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring6_pos(screen_width * 0.325, screen_height * 0.15, 1.f);
-  Object ring6(ring6_pos, ring_mesh2_, purple_);
-  ring6.set_shape_modifiers(ShapeModifier::kWobble);
-
-  vec3 ring6b_pos(screen_width * 0.325, screen_height * 0.15, 22.f);
-  Object ring6b(ring6b_pos, ring_mesh1_, purple_);
-  ring6b.set_shape_modifiers(ShapeModifier::kWobble);
-
-  vec3 ring7_pos(screen_width * 0.675, screen_height * 0.15, 1.f);
+  vec3 ring7_pos(screen_width * 0.675, screen_height * 0.15, 22.f);
   Object ring7(ring7_pos, ring_mesh2_, purple_);
   ring7.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring7b_pos(screen_width * 0.675, screen_height * 0.15, 1.f);
+  vec3 ring7b_pos(screen_width * 0.675, screen_height * 0.15, 2.f);
   Object ring7b(ring7b_pos, ring_mesh1_, purple_);
   ring7b.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -203,7 +210,7 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring8(ring8_pos, ring_mesh2_, purple_);
   ring8.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring8b_pos(screen_width * 0.325, screen_height * 0.85, 1.f);
+  vec3 ring8b_pos(screen_width * 0.325, screen_height * 0.85, 2.f);
   Object ring8b(ring8b_pos, ring_mesh1_, purple_);
   ring8b.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -211,19 +218,36 @@ escher::Model* UberScene2::Update(const escher::Stopwatch& stopwatch,
   Object ring9(ring9_pos, ring_mesh2_, purple_);
   ring9.set_shape_modifiers(ShapeModifier::kWobble);
 
-  vec3 ring9b_pos(screen_width * 0.675, screen_height * 0.85, 1.f);
+  vec3 ring9b_pos(screen_width * 0.675, screen_height * 0.85, 2.f);
   Object ring9b(ring9b_pos, ring_mesh1_, purple_);
   ring9b.set_shape_modifiers(ShapeModifier::kWobble);
 
   std::vector<Object> objects{
       rectangle, circle1,  circle1o, circle2, circle3, circle3o, circle2o,
-      circle4,   circle4o, ring1,    ring1b,  ring2,   ring2b,   ring1b,
-      ring3,     ring3b,   ring4,    ring4b,  ring5,   ring5b,   ring6,
-      ring6b,    ring7,    ring7b,   ring8,   ring8b,  ring9,    ring9b};
+      circle4,   circle4o, ring1,    ring1b,  ring2,   ring2b,   ring3,
+      ring3b,    ring4,    ring4b,   ring5,   ring5b,  ring6,    ring6b,
+      ring7,     ring7b,   ring8,    ring8b,  ring9,   ring9b};
 
   // Create the Model
-  model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
+  model_ = std::make_unique<escher::Model>(std::move(objects));
   model_->set_time(current_time_sec);
 
   return model_.get();
+}
+
+escher::Model* UberScene2::UpdateOverlay(const escher::Stopwatch& stopwatch,
+                                         uint64_t frame_count,
+                                         uint32_t width,
+                                         uint32_t height) {
+  const float quarter_width = static_cast<float>(width) * 0.25f;
+  const float half_height = static_cast<float>(height) * 0.5f;
+  const float radius = quarter_width * 0.9f;
+  Object circle1(Object::NewCircle(vec3(quarter_width, half_height, 24.f),
+                                   radius, gray1_));
+  Object circle2(Object::NewCircle(vec3(3.f * quarter_width, half_height, 24.f),
+                                   radius, gray2_));
+  std::vector<Object> objects{circle1, circle2};
+  overlay_model_ = std::make_unique<escher::Model>(std::move(objects));
+
+  return overlay_model_.get();
 }

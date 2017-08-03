@@ -4,20 +4,25 @@
 
 #include "escher/scene/model.h"
 
-#include <utility>
-
 namespace escher {
 
-Model::Model() {}
+Model::Model() = default;
 
-Model::~Model() {}
+Model::~Model() = default;
 
 Model::Model(std::vector<Object> objects) : objects_(std::move(objects)) {}
 
-Model::Model(Model&& other) : objects_(std::move(other.objects_)) {}
+Model::Model(Model&& other) : objects_(std::move(other.objects_)) {
+  other.objects_.clear();
+  other.time_ = 0.f;
+}
 
 Model& Model::operator=(Model&& other) {
   objects_ = std::move(other.objects_);
+  other.objects_.clear();
+  time_ = other.time_;
+  other.time_ = 0.f;
+
   return *this;
 }
 

@@ -28,6 +28,16 @@ class Scene {
                                 uint64_t frame_count,
                                 escher::Stage* stage) = 0;
 
+  // Optionally returns a |Model| for the specified time, frame_count, and
+  // screen dimensions.  The returned Model only needs to be valid for the
+  // duration of the frame.
+  virtual escher::Model* UpdateOverlay(const escher::Stopwatch& stopwatch,
+                                       uint64_t frame_count,
+                                       uint32_t width,
+                                       uint32_t height) {
+    return nullptr;
+  }
+
  protected:
   const escher::VulkanContext& vulkan_context() const {
     return demo_->vulkan_context();

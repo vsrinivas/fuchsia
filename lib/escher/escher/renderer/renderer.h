@@ -24,8 +24,17 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer>,
                          const Model& model,
                          const Camera& camera,
                          const ImagePtr& color_image_out,
+                         const Model* overlay_model,
                          const SemaphorePtr& frame_done,
                          FrameRetiredCallback frame_retired_callback) = 0;
+
+  // Calls the version above; passes nullptr for |overlay_model|.
+  void DrawFrame(const Stage& stage,
+                 const Model& model,
+                 const Camera& camera,
+                 const ImagePtr& color_image_out,
+                 const SemaphorePtr& frame_done,
+                 FrameRetiredCallback frame_retired_callback);
 
   void RunOffscreenBenchmark(const VulkanContext& context,
                              const Stage& stage,

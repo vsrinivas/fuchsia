@@ -19,7 +19,8 @@ class VulkanSwapchainHelper {
   void DrawFrame(Renderer* renderer,
                  const Stage& stage,
                  const Model& model,
-                 const Camera& camera);
+                 const Camera& camera,
+                 const Model* overlay_model = nullptr);
 
   const VulkanSwapchain& swapchain() const { return swapchain_; }
 

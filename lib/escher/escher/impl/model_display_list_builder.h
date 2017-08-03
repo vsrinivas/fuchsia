@@ -9,6 +9,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_display_list.h"
+#include "escher/impl/model_display_list_flags.h"
 #include "escher/impl/model_pipeline_spec.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
@@ -25,16 +26,13 @@ class ModelDisplayListBuilder {
                           const Model& model,
                           const Camera& camera,
                           float scale,
-                          bool use_material_textures,
                           const TexturePtr& white_texture,
                           const TexturePtr& illumination_texture,
                           ModelData* model_data,
                           ModelRenderer* renderer,
                           ModelPipelineCache* pipeline_cache,
-                          uint32_t sample_count,
-                          // TODO: this is redundant with use_material_textures
-                          // (see callers).
-                          bool use_depth_prepass);
+                          ModelDisplayListFlags flags,
+                          uint32_t sample_count);
 
   ~ModelDisplayListBuilder();
 
@@ -73,6 +71,9 @@ class ModelDisplayListBuilder {
   // If this is false, use |default_white_texture_| instead of a material's
   // existing texture (e.g. to save bandwidth during depth-only passes).
   const bool use_material_textures_;
+
+  // If this is true, entirely disable all depth-testing.
+  const bool disable_depth_test_;
 
   const TexturePtr white_texture_;
   const TexturePtr illumination_texture_;

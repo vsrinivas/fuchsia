@@ -95,6 +95,7 @@ static_library("escher") {
     "impl/model_display_list.cc",
     "impl/model_display_list_builder.cc",
     "impl/model_display_list_builder.h",
+    "impl/model_display_list_flags.h",
     "impl/model_pipeline.cc",
     "impl/model_pipeline.h",
     "impl/model_pipeline_cache.cc",

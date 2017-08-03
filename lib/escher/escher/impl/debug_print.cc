@@ -11,6 +11,7 @@
 #include "escher/geometry/transform.h"
 #include "escher/impl/model_pipeline_spec.h"
 #include "escher/renderer/image.h"
+#include "escher/scene/camera.h"
 #include "escher/scene/viewing_volume.h"
 
 namespace escher {
@@ -104,11 +105,33 @@ std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
   return str;
 }
 
+std::ostream& operator<<(
+    std::ostream& str,
+    const impl::ModelPipelineSpec::ClipperState& clipper_state) {
+  using ClipperState = impl::ModelPipelineSpec::ClipperState;
+  switch (clipper_state) {
+    case ClipperState::kBeginClipChildren:
+      str << "ClipperState::kBeginClipChildren";
+      break;
+    case ClipperState::kEndClipChildren:
+      str << "ClipperState::kEndClipChildren";
+      break;
+    case ClipperState::kNoClipChildren:
+      str << "ClipperState::kNoClipChildren";
+      break;
+  }
+  return str;
+}
+
 std::ostream& operator<<(std::ostream& str,
                          const impl::ModelPipelineSpec& spec) {
   str << "ModelPipelineSpec[" << spec.mesh_spec << ", " << spec.shape_modifiers
       << ", sample_count: " << spec.sample_count
-      << ", depth_prepass: " << spec.use_depth_prepass << "]";
+      << ", clipper_state: " << spec.clipper_state
+      << ", is_clippee: " << spec.is_clippee
+      << ", depth_prepass: " << spec.use_depth_prepass
+      << ", has_material: " << spec.has_material
+      << ", is_opaque: " << spec.is_opaque << "]";
   return str;
 }
 
@@ -159,6 +182,11 @@ std::ostream& operator<<(std::ostream& str, const BoundingBox& box) {
   } else {
     return str << "BoundingBox[min" << box.min() << ", max" << box.max() << "]";
   }
+}
+
+std::ostream& operator<<(std::ostream& str, const Camera& camera) {
+  return str << "Camera[\ntransform: " << camera.transform()
+             << "\nprojection: " << camera.projection() << "]";
 }
 
 }  // namespace escher
