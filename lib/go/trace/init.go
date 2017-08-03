@@ -28,13 +28,13 @@ func InitializeTracerUsingFlag(ctx *context.Context, ts Setting) error {
 }
 
 func InitializeTracer(ctx *context.Context, ts Setting) {
-	var p *trace_registry.Proxy
+	var p *trace_registry.TraceRegistry_Proxy
 	r, p := p.NewRequest(bindings.GetAsyncWaiter())
 	ctx.ConnectToEnvService(r)
 	InitializeTracerUsingRegistry(p, ts)
 }
 
-func InitializeTracerUsingRegistry(p *trace_registry.Proxy, ts Setting) {
+func InitializeTracerUsingRegistry(p *trace_registry.TraceRegistry_Proxy, ts Setting) {
 	if traceProvider != nil {
 		fmt.Println("Tracer is already initialized")
 		return
