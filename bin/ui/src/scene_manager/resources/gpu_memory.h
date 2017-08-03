@@ -9,7 +9,6 @@
 #include "apps/mozart/src/scene_manager/resources/memory.h"
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "escher/vk/gpu_mem.h"
-#include "lib/mtl/vmo/shared_vmo.h"
 
 namespace scene_manager {
 
