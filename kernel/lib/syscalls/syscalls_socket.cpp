@@ -79,7 +79,8 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
     if (status != MX_OK)
         return status;
 
-    if (!options) {
+    switch (options) {
+    case 0: {
         size_t nwritten;
         status = socket->Write(_buffer, size, &nwritten);
 
@@ -89,15 +90,13 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
 
         return status;
     }
-    if (size == 0) {
-        switch (options) {
-        case MX_SOCKET_SHUTDOWN_WRITE:
-        case MX_SOCKET_SHUTDOWN_READ:
-        case MX_SOCKET_SHUTDOWN_READ | MX_SOCKET_SHUTDOWN_WRITE:
-            return socket->Shutdown(options & MX_SOCKET_SHUTDOWN_MASK);
-        }
+    case MX_SOCKET_HALF_CLOSE:
+        if (size == 0)
+            return socket->HalfClose();
+    // fall thru if size != 0.
+    default:
+        return MX_ERR_INVALID_ARGS;
     }
-    return MX_ERR_INVALID_ARGS;
 }
 
 mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,

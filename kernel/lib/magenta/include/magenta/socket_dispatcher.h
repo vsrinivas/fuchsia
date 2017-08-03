@@ -41,8 +41,7 @@ public:
     // Socket methods.
     mx_status_t Write(user_ptr<const void> src, size_t len, size_t* written);
 
-    // Shut this endpoint of the socket down for reading, writing, or both.
-    status_t Shutdown(uint32_t how);
+    status_t HalfClose();
 
     mx_status_t Read(user_ptr<void> dst, size_t len, size_t* nread);
 
@@ -53,7 +52,7 @@ private:
     void Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
-    status_t ShutdownOther(uint32_t how);
+    status_t HalfCloseOther();
 
     bool is_full() const TA_REQ(lock_) { return data_.is_full(); }
     bool is_empty() const TA_REQ(lock_) { return data_.is_empty(); }
@@ -68,4 +67,6 @@ private:
     Mutex lock_;
     MBufChain data_ TA_GUARDED(lock_);
     mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
+    // half_closed_[0] is this end and [1] is the other end.
+    bool half_closed_[2] TA_GUARDED(lock_);
 };

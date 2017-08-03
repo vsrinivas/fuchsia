@@ -131,26 +131,26 @@ void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_sig
     *handle = p->h;
     mx_signals_t signals = 0;
     if (events & POLLIN) {
-        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED;
+        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
     }
     if (events & POLLOUT) {
-        signals |= MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED;
+        signals |= MX_SOCKET_WRITABLE;
     }
     if (events & POLLRDHUP) {
-        signals |= MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED;
+        signals |= MX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
 }
 
 void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED)) {
+    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
         events |= POLLIN;
     }
-    if (signals & (MX_SOCKET_WRITABLE | MX_SOCKET_WRITE_DISABLED)) {
+    if (signals & MX_SOCKET_WRITABLE) {
         events |= POLLOUT;
     }
-    if (signals & (MX_SOCKET_PEER_CLOSED | MX_SOCKET_READ_DISABLED)) {
+    if (signals & MX_SOCKET_PEER_CLOSED) {
         events |= POLLRDHUP;
     }
     *_events = events;

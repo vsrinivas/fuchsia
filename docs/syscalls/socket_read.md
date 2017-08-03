@@ -49,10 +49,9 @@ or if *options* is nonzero.
 
 **MX_ERR_SHOULD_WAIT**  The socket contained no data to read.
 
-**MX_ERR_PEER_CLOSED**  The other side of the socket is closed and no data is
-readable.
-
-**MX_ERR_BAD_STATE**  Reading has been disabled for this socket endpoint.
+**MX_ERR_PEER_CLOSED**  The other side of the socket is closed, or this
+side of the socket has been previously closed via a write with the
+**MX_SOCKET_HALF_CLOSE** flag.
 
 **MX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 

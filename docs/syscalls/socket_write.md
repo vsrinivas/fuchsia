@@ -20,18 +20,10 @@ mx_status_t mx_socket_write(mx_handle_t handle, uint32_t options,
 specified by *handle*.  The pointer to *bytes* may be NULL if *size*
 is zero.
 
-If *size* is zero, a bitwise combination of **MX_SOCKET_SHUTDOWN_READ** and
-**MX_SOCKET_SHUTDOWN_WRITE** can be passed to *options* to disable reading or
-writing from a socket endpoint.
-
-If **MX_SOCKET_SHUTDOWN_READ** is passed to options, and *size* is 0, then reading is disabled for
-the socket endpoint at *handle*. All data buffered in the socket at the time of the call may be
-read, but further reads from this endpoint or writes to the other endpoint of the socket will fail
-with **MX_ERR_BAD_STATE**.
-
-If **MX_SOCKET_SHUTDOWN_WRITE** is passed to options, and *size* is 0, then writing is disabled for
-the socket endpoint at *handle*. Further writes to this endpoint or reads from the other endpoint of
-the socket will fail with **MX_ERR_BAD_STATE**.
+There is one value (besides 0) that may be passed to *options*. If
+**MX_SOCKET_HALF_CLOSE** is passed to options, and *size* is 0, then the
+socket endpoint at *handle* is closed. Further writes to the other
+endpoint of the socket will fail with **MX_ERR_BAD_STATE**.
 
 If a NULL *actual* is passed in, it will be ignored.
 
@@ -63,7 +55,8 @@ not 0, or *options* was not 0 or **MX_SOCKET_HALF_CLOSE**.
 the socket was created with **MX_SOCKET_DATAGRAM** and *buffer* is
 larger than the remaining space in the socket.
 
-**MX_ERR_BAD_STATE**  Writing has been disabled for this socket endpoint.
+**MX_ERR_BAD_STATE**  This side of the socket has been closed by a prior write
+to the other side with **MX_SOCKET_HALF_CLOSE**.
 
 **MX_ERR_PEER_CLOSED**  The other side of the socket is closed.
 
