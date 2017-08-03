@@ -136,6 +136,44 @@ options:
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LTO=OFF -DFUCHSIA_x86_64_SYSROOT=${FUCHSIA_x86_64_SYSROOT} -DFUCHSIA_aarch64_SYSROOT=${FUCHSIA_aarch64_SYSROOT} -C ${LLVM_SRCDIR}/tools/clang/cmake/caches/Fuchsia-stage2.cmake ${LLVM_SRCDIR}
 ```
 
+## Building with sanitizer support
+
+For the purposes of explanation we'll explain how to build with ASan. To build
+with ASan support you first need to build libc++ with ASan support. You can do
+this in the same build as long as you don't modify libc++. To setup a build with
+ASan support first run CMake with `LLVM_USE_SANITIZER=Address` and
+`LLVM_ENABLE_LIBCXX=ON`.
+
+```bash
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_USE_SANITIZER=Address -DLLVM_ENABLE_LIBCXX=ON -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LLD=ON ${LLVM_SRCDIR}
+```
+
+Normally you would run Ninja at this point but we want to build everything
+using a sanitized version of libc++ but if we build now it will use libc++ from
+`${CLANG_TOOLCHAIN_PREFIX}` which isn't sanitized. So first we build just
+the libcxx and libcxxabi targets:
+
+```bash
+ninja libcxx libcxxabi
+```
+
+Now that we have a sanitized version of libc++ we can have our build use it
+instead of the one from `${CLANG_TOOLCHAIN_PREFIX}` and then build everything.
+
+```bash
+LD_LIBRARY_PATH=`pwd`/lib
+ninja
+```
+
+Putting that all together
+
+```bash
+cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_USE_SANITIZER=Address -DLLVM_ENABLE_LIBCXX=ON -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ -DLLVM_ENABLE_LLD=ON ${LLVM_SRCDIR}
+ninja libcxx libcxxabi
+LD_LIBRARY_PATH=`pwd`/lib
+ninja
+```
+
 ## Additional Resources
 
 Documentation:
