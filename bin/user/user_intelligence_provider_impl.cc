@@ -5,6 +5,7 @@
 #include "apps/maxwell/src/user/user_intelligence_provider_impl.h"
 
 #include "application/lib/app/connect.h"
+#include "apps/cobalt_client/services/cobalt.fidl.h"
 #include "apps/maxwell/services/action_log/factory.fidl.h"
 #include "apps/maxwell/services/context/debug.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
@@ -174,6 +175,10 @@ void UserIntelligenceProviderImpl::StartActionLog(
 void UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url,
     app::ServiceNamespace* agent_host) {
+  agent_host->AddService<cobalt::CobaltEncoderFactory>(
+      [this, url](fidl::InterfaceRequest<cobalt::CobaltEncoderFactory> request) {
+        app_context_->ConnectToEnvironmentService(std::move(request));
+      });
   agent_host->AddService<maxwell::ContextPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
         auto scope = ComponentScope::New();

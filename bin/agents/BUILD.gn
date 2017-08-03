@@ -12,6 +12,7 @@ group("agents") {
     "//apps/maxwell/src/agents/mi_dashboard",
     "//apps/maxwell/src/agents/module_suggester_dart",
     "//apps/maxwell/src/agents/proposal_maker",
+    "//apps/maxwell/src/agents/usage_log",
   ]
 }
 

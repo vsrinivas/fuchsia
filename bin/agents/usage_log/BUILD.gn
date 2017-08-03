@@ -1,0 +1,37 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+import("//apps/dart_content_handler/dart_app.gni")
+
+dart_app("usage_log_dart") {
+  output_name = "usage_log.dartx"
+
+  main_dart = "main.dart"
+
+  source_dir = "."
+
+  deps = [
+    "//application/lib/app/dart",
+    "//apps/cobalt_client/services:cobalt_dart",
+    "//apps/maxwell/lib/context/dart",
+    "//apps/maxwell/services/context:context_dart",
+    "//lib/fidl/dart",
+  ]
+}
+
+package("usage_log") {
+  app = true
+  # this should be set to true once dart packages can be archives
+  archive = false
+
+  deps = [
+    ":usage_log_dart",
+  ]
+
+  binaries = [ {
+        name = "usage_log.dartx"
+        dest = "agents/usage_log.dartx"
+      } ]
+}
