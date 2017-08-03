@@ -166,10 +166,9 @@ void ConflictResolverClient::GetDiff(
   diff_utils::ComputePageChange(
       storage_, *ancestor_, commit, "", convert::ToString(token),
       diff_utils::PaginationBehavior::BY_SIZE,
-      [
-        weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)
-      ](Status status,
-        std::pair<PageChangePtr, std::string> page_change) mutable {
+      [ weak_this = weak_factory_.GetWeakPtr(), callback ](
+          Status status,
+          std::pair<PageChangePtr, std::string> page_change) mutable {
         if (!weak_this) {
           callback(Status::INTERNAL_ERROR, nullptr, nullptr);
           return;
@@ -262,7 +261,7 @@ void ConflictResolverClient::Done(const DoneCallback& callback) {
   FTL_DCHECK(journal_);
 
   storage_->CommitJournal(std::move(journal_), [
-    weak_this = weak_factory_.GetWeakPtr(), callback = std::move(callback)
+    weak_this = weak_factory_.GetWeakPtr(), callback
   ](storage::Status status, std::unique_ptr<const storage::Commit>) {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;

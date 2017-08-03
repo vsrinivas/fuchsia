@@ -51,6 +51,13 @@ struct AppParams {
   bool no_network_for_testing = false;
   bool trigger_cloud_erased_for_testing = false;
   bool disable_statistics = false;
+
+  AppParams() = default;
+  AppParams(AppParams& other) = default;
+  AppParams(AppParams&& other) = default;
+
+  AppParams& operator=(const AppParams& other) = default;
+  AppParams& operator=(AppParams&& other) = default;
 };
 
 ftl::AutoCall<ftl::Closure> SetupCobalt(

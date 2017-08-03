@@ -78,11 +78,12 @@ void FindCommonAncestorInGeneration(
     for (auto& parent : parents) {
       commits->insert(std::move(parent));
     }
-    task_runner->PostTask(
-        [ task_runner, storage, commits, callback = std::move(callback) ] {
-          FindCommonAncestorInGeneration(task_runner, storage, commits,
-                                         std::move(callback));
-        });
+    task_runner->PostTask([
+      task_runner, storage, commits, callback = std::move(callback)
+    ]() mutable {
+      FindCommonAncestorInGeneration(task_runner, storage, commits,
+                                     std::move(callback));
+    });
   });
 }
 

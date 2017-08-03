@@ -70,7 +70,7 @@ void PageDelegate::GetSnapshot(
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
   operation_serializer_.Serialize(
-      std::move(callback), ftl::MakeCopyable([
+      callback, ftl::MakeCopyable([
         this, snapshot_request = std::move(snapshot_request),
         key_prefix = std::move(key_prefix), watcher = std::move(watcher)
       ](Page::GetSnapshotCallback callback) mutable {
@@ -105,8 +105,7 @@ void PageDelegate::GetSnapshot(
 void PageDelegate::Put(fidl::Array<uint8_t> key,
                        fidl::Array<uint8_t> value,
                        const Page::PutCallback& callback) {
-  PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
-                  std::move(callback));
+  PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
 
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
@@ -122,7 +121,7 @@ void PageDelegate::PutWithPriority(
                                promise->NewCallback());
 
   operation_serializer_.Serialize(
-      std::move(callback), ftl::MakeCopyable([
+      callback, ftl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key), priority
       ](Page::PutWithPriorityCallback callback) mutable {
         promise->Finalize(ftl::MakeCopyable([
@@ -155,7 +154,7 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                       promise->NewCallback());
 
   operation_serializer_.Serialize(
-      std::move(callback), ftl::MakeCopyable([
+      callback, ftl::MakeCopyable([
         this, promise = std::move(promise), key = std::move(key),
         object_id = std::move(reference->opaque_id), priority
       ](Page::PutReferenceCallback callback) mutable {
@@ -181,16 +180,15 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
 void PageDelegate::Delete(fidl::Array<uint8_t> key,
                           const Page::DeleteCallback& callback) {
   operation_serializer_.Serialize(
-      std::move(callback), ftl::MakeCopyable([ this, key = std::move(key) ](
-                               Page::DeleteCallback callback) mutable {
+      callback, ftl::MakeCopyable([ this, key = std::move(key) ](
+                    Page::DeleteCallback callback) mutable {
 
-        RunInTransaction(
-            ftl::MakeCopyable([key = std::move(key)](storage::Journal *
-                                                     journal) mutable {
-              return PageUtils::ConvertStatus(journal->Delete(std::move(key)),
-                                              Status::KEY_NOT_FOUND);
-            }),
-            std::move(callback));
+        RunInTransaction(ftl::MakeCopyable([key = std::move(key)](
+                             storage::Journal * journal) {
+                           return PageUtils::ConvertStatus(
+                               journal->Delete(key), Status::KEY_NOT_FOUND);
+                         }),
+                         std::move(callback));
       }));
 }
 
@@ -215,58 +213,55 @@ void PageDelegate::CreateReference(
 // StartTransaction() => (Status status);
 void PageDelegate::StartTransaction(
     const Page::StartTransactionCallback& callback) {
-  operation_serializer_.Serialize(
-      std::move(callback), [this](StatusCallback callback) {
-        if (journal_) {
-          callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
-          return;
-        }
-        storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-        storage::Status status = storage_->StartCommit(
-            commit_id, storage::JournalType::EXPLICIT, &journal_);
-        if (status != storage::Status::OK) {
-          callback(PageUtils::ConvertStatus(status));
-          return;
-        }
-        journal_parent_commit_ = commit_id;
-        branch_tracker_.StartTransaction([callback = std::move(callback)]() {
-          callback(Status::OK);
-        });
-      });
+  operation_serializer_.Serialize(callback, [this](StatusCallback callback) {
+    if (journal_) {
+      callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
+      return;
+    }
+    storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
+    storage::Status status = storage_->StartCommit(
+        commit_id, storage::JournalType::EXPLICIT, &journal_);
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status));
+      return;
+    }
+    journal_parent_commit_ = commit_id;
+    branch_tracker_.StartTransaction([callback = std::move(callback)]() {
+      callback(Status::OK);
+    });
+  });
 }
 
 // Commit() => (Status status);
 void PageDelegate::Commit(const Page::CommitCallback& callback) {
-  operation_serializer_.Serialize(
-      std::move(callback), [this](StatusCallback callback) {
-        if (!journal_) {
-          callback(Status::NO_TRANSACTION_IN_PROGRESS);
-          return;
-        }
-        journal_parent_commit_.clear();
-        CommitJournal(std::move(journal_), [
-          this, callback = std::move(callback)
-        ](Status status, std::unique_ptr<const storage::Commit> commit) {
-          branch_tracker_.StopTransaction(std::move(commit));
-          callback(status);
-        });
-      });
+  operation_serializer_.Serialize(callback, [this](StatusCallback callback) {
+    if (!journal_) {
+      callback(Status::NO_TRANSACTION_IN_PROGRESS);
+      return;
+    }
+    journal_parent_commit_.clear();
+    CommitJournal(std::move(journal_), [
+      this, callback = std::move(callback)
+    ](Status status, std::unique_ptr<const storage::Commit> commit) {
+      branch_tracker_.StopTransaction(std::move(commit));
+      callback(status);
+    });
+  });
 }
 
 // Rollback() => (Status status);
 void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
-  operation_serializer_.Serialize(
-      std::move(callback), [this](StatusCallback callback) {
-        if (!journal_) {
-          callback(Status::NO_TRANSACTION_IN_PROGRESS);
-          return;
-        }
-        storage::Status status = storage_->RollbackJournal(std::move(journal_));
-        journal_.reset();
-        journal_parent_commit_.clear();
-        callback(PageUtils::ConvertStatus(status));
-        branch_tracker_.StopTransaction(nullptr);
-      });
+  operation_serializer_.Serialize(callback, [this](StatusCallback callback) {
+    if (!journal_) {
+      callback(Status::NO_TRANSACTION_IN_PROGRESS);
+      return;
+    }
+    storage::Status status = storage_->RollbackJournal(std::move(journal_));
+    journal_.reset();
+    journal_parent_commit_.clear();
+    callback(PageUtils::ConvertStatus(status));
+    branch_tracker_.StopTransaction(nullptr);
+  });
 }
 
 void PageDelegate::SetSyncStateWatcher(
@@ -292,9 +287,8 @@ void PageDelegate::PutInCommit(fidl::Array<uint8_t> key,
   RunInTransaction(
       ftl::MakeCopyable([
         key = std::move(key), object_id = std::move(object_id), priority
-      ](storage::Journal * journal) mutable {
-        return PageUtils::ConvertStatus(
-            journal->Put(std::move(key), std::move(object_id), priority));
+      ](storage::Journal * journal) {
+        return PageUtils::ConvertStatus(journal->Put(key, object_id, priority));
       }),
       std::move(callback));
 }

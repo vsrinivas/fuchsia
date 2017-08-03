@@ -50,7 +50,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                                          std::unique_ptr<storage::PageStorage>)>
                           callback) override {
     get_page_calls.push_back(page_id);
-    task_runner_->PostTask([this, callback, page_id]() {
+    task_runner_->PostTask([this, callback, page_id]() mutable {
       if (should_get_page_fail) {
         callback(storage::Status::NOT_FOUND, nullptr);
       } else {

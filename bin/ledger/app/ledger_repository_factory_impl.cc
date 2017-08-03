@@ -220,8 +220,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   }
   auto it = repositories_.find(repository_information.name);
   if (it != repositories_.end()) {
-    it->second.BindRepository(std::move(repository_request),
-                              std::move(callback));
+    it->second.BindRepository(std::move(repository_request), callback);
     return;
   }
 
@@ -234,8 +233,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
         std::forward_as_tuple(repository_information.name),
         std::forward_as_tuple(nullptr));
     LedgerRepositoryContainer* container = &ret.first->second;
-    container->BindRepository(std::move(repository_request),
-                              std::move(callback));
+    container->BindRepository(std::move(repository_request), callback);
     std::unique_ptr<SyncWatcherSet> watchers =
         std::make_unique<SyncWatcherSet>();
     auto repository = std::make_unique<LedgerRepositoryImpl>(
@@ -266,7 +264,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
                             std::forward_as_tuple(repository_information.name),
                             std::forward_as_tuple(std::move(auth_provider)));
   LedgerRepositoryContainer* container = &ret.first->second;
-  container->BindRepository(std::move(repository_request), std::move(callback));
+  container->BindRepository(std::move(repository_request), callback);
 
   auto request = auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
     this, repository_information, firebase_config = std::move(firebase_config),
@@ -325,9 +323,8 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
           environment_->main_runner(), environment_->network_service(),
           firebase_config->server_id, firebase_config->api_key,
           std::move(token_provider_ptr)),
-      ftl::MakeCopyable([
-        this, callback, delete_repository = std::move(find_repository)
-      ](bool succeeded) {
+      ftl::MakeCopyable([ this, callback, delete_repository = find_repository ](
+          bool succeeded) {
         if (delete_repository != repositories_.end()) {
           repositories_.erase(delete_repository);
         }
@@ -408,7 +405,7 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   ftl::Closure on_version_mismatch = [this, repository_information]() mutable {
-    OnVersionMismatch(std::move(repository_information));
+    OnVersionMismatch(repository_information);
   };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),

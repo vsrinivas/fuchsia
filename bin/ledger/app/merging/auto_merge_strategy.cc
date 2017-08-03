@@ -101,7 +101,7 @@ void AutoMergeStrategy::AutoMerger::Start() {
     weak_this = weak_factory_.GetWeakPtr(), changes = std::move(changes)
   ](storage::Status status) mutable {
     if (weak_this) {
-      weak_this->OnRightChangeReady(std::move(status), std::move(changes));
+      weak_this->OnRightChangeReady(status, std::move(changes));
     }
   });
 

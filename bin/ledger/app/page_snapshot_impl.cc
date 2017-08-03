@@ -269,8 +269,7 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
     std::string next_token = "";
   };
 
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_keys");
+  auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get_keys");
 
   auto context = std::make_unique<Context>();
   auto on_next = ftl::MakeCopyable(
@@ -309,12 +308,11 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_start,
 
 void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                            const GetCallback& callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get");
+  auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get");
 
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
     this, callback = std::move(timed_callback)
-  ](storage::Status status, storage::Entry entry) {
+  ](storage::Status status, storage::Entry entry) mutable {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
                mx::vmo());
@@ -330,11 +328,11 @@ void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
 void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
                                  const GetInlineCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_inline");
+      TRACE_CALLBACK(callback, "ledger", "snapshot_get_inline");
 
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
     this, callback = std::move(timed_callback)
-  ](storage::Status status, storage::Entry entry) {
+  ](storage::Status status, storage::Entry entry) mutable {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
                nullptr);
@@ -359,8 +357,7 @@ void PageSnapshotImpl::GetInline(fidl::Array<uint8_t> key,
 
 void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
                              const FetchCallback& callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch");
+  auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_fetch");
 
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
     this, callback = std::move(timed_callback)
@@ -373,7 +370,7 @@ void PageSnapshotImpl::Fetch(fidl::Array<uint8_t> key,
     PageUtils::GetPartialReferenceAsBuffer(
         page_storage_, entry.object_id, 0u, std::numeric_limits<int64_t>::max(),
         storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
-        std::move(callback));
+        callback);
   });
 }
 
@@ -382,7 +379,7 @@ void PageSnapshotImpl::FetchPartial(fidl::Array<uint8_t> key,
                                     int64_t max_size,
                                     const FetchPartialCallback& callback) {
   auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_fetch_partial");
+      TRACE_CALLBACK(callback, "ledger", "snapshot_fetch_partial");
 
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
     this, offset, max_size, callback = std::move(timed_callback)

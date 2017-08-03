@@ -45,37 +45,39 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
 void AuthProviderImpl::GetToken(
     std::function<void(cloud_sync::AuthStatus, modular::auth::FirebaseTokenPtr)>
         callback) {
-  token_provider_->GetFirebaseAuthToken(api_key_, [
-    this, callback = std::move(callback)
-  ](modular::auth::FirebaseTokenPtr token, modular::auth::AuthErrPtr error) {
-    if (!token || error->status != modular::auth::Status::OK) {
-      if (!token) {
-        // This should not happen - the token provider returns nullptr when
-        // running in the guest mode, but in this case we don't initialize
-        // sync and should never call auth provider.
-        FTL_LOG(ERROR) << "null Firebase token returned from token provider, "
-                       << "this should never happen. Retrying.";
-      } else {
-        FTL_LOG(ERROR)
-            << "Error retrieving the Firebase token from token provider: "
-            << error->status << ", '" << error->message << "', retrying.";
-      }
-      task_runner_->PostDelayedTask(
-          [
-            weak_this = weak_factory_.GetWeakPtr(),
-            callback = std::move(callback)
-          ] {
-            if (weak_this) {
-              weak_this->GetToken(std::move(callback));
-            }
-          },
-          backoff_->GetNext());
-      return;
-    }
+  token_provider_->GetFirebaseAuthToken(
+      api_key_, [ this, callback = std::move(callback) ](
+                    modular::auth::FirebaseTokenPtr token,
+                    modular::auth::AuthErrPtr error) mutable {
+        if (!token || error->status != modular::auth::Status::OK) {
+          if (!token) {
+            // This should not happen - the token provider returns nullptr when
+            // running in the guest mode, but in this case we don't initialize
+            // sync and should never call auth provider.
+            FTL_LOG(ERROR)
+                << "null Firebase token returned from token provider, "
+                << "this should never happen. Retrying.";
+          } else {
+            FTL_LOG(ERROR)
+                << "Error retrieving the Firebase token from token provider: "
+                << error->status << ", '" << error->message << "', retrying.";
+          }
+          task_runner_->PostDelayedTask(
+              [
+                weak_this = weak_factory_.GetWeakPtr(),
+                callback = std::move(callback)
+              ]() mutable {
+                if (weak_this) {
+                  weak_this->GetToken(std::move(callback));
+                }
+              },
+              backoff_->GetNext());
+          return;
+        }
 
-    backoff_->Reset();
-    callback(cloud_sync::AuthStatus::OK, std::move(token));
-  });
+        backoff_->Reset();
+        callback(cloud_sync::AuthStatus::OK, std::move(token));
+      });
 }
 
 }  // namespace ledger
