@@ -47,19 +47,30 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF NOT ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
+ *
+ * Modifications by the Fuchsia Authors, 2017
+ * =======
+ *
+ * - Add #include lines for stdlib.h, string.h, and
+ *   lib/jitterentropy/internal.h.
+ * - Change #include line for Magenta file conventions.
+ * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
+ * - Add jent_entropy_collector_init definition.
  */
 
 #undef _FORTIFY_SOURCE
 #pragma GCC optimize ("O0")
 
-#include "jitterentropy.h"
+#include <assert.h>
+#include <lib/jitterentropy/jitterentropy.h>
+#include <lib/jitterentropy/internal.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifndef CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT
  /* only check optimization in a compilation for real work */
  #ifdef __OPTIMIZE__
   #error "The CPU Jitter random number generator must not be compiled with optimizations. See documentation. Use the compiler switch -O0 for compiling jitterentropy-base.c."
  #endif
-#endif
 
 #define MAJVERSION 2 /* API / ABI incompatible changes, functional changes that
 		      * require consumer to be updated (as long as this number
@@ -768,7 +779,6 @@ int jent_entropy_init(void)
  * Statistical test logic not compiled for regular operation
  ***************************************************************************/
 
-#ifdef CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT
 /*
  * Statistical test: return the time duration for the folding operation. If min
  * is set, perform the given number of LFSR ops. Otherwise, allow the
@@ -786,4 +796,33 @@ uint64_t jent_lfsr_var_stat(struct rand_data *ec, unsigned int min)
 	jent_get_nstime(&time2);
 	return ((time2 - time));
 }
-#endif /* CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT */
+
+/***************************************************************************
+ * Magenta interface
+ ***************************************************************************/
+
+void jent_entropy_collector_init(
+        struct rand_data* ec, uint8_t* mem, size_t mem_size,
+        unsigned int mem_block_size, unsigned int mem_block_count,
+        unsigned int mem_loops, bool stir) {
+    DEBUG_ASSERT(((size_t)mem_block_size) * mem_block_count < mem_size);
+    memset(ec, 0, sizeof(*ec));
+    /* Oversample rate. The jitterentropy man page (not included with Magenta)
+     * suggests a value of 1. Higher values cause jitterentropy to discount its
+     * entropy estimates by a factor of osr, so that more random bytes are
+     * collected than would be with osr == 1. */
+    ec->osr = 1;
+    /* For now, we don't enable the FIPS 140-2 test mode built into
+     * jitterentropy. Magenta should handle entropy source health tests itself,
+     * to ensure uniform testing of all entropy sources. */
+    ec->fips_enabled = 0;
+    ec->stir = stir;
+    /* von Neumann unbiasing is never performed, and the disable_unbias flag is
+     * never even checked. To avoid confusion, always set the flag to true. */
+    ec->disable_unbias = true;
+    ec->mem = mem;
+    ec->memlocation = 0;
+    ec->memblocks = mem_block_count;
+    ec->memblocksize = mem_block_size;
+    ec->memaccessloops = mem_loops;
+}

@@ -37,16 +37,26 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF NOT ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
+ *
+ * Modifications by the Fuchsia Authors, 2017
+ * =======
+ *
+ * - Remove references to jitterentropy-base-{kernel,user}.h.
+ * - Add __BEGIN/END_CDECLS.
+ * - Add #include lines for required system libraries.
+ * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
+ * - Add jent_entropy_collector_init declaration.
  */
 
 #ifndef _JITTERENTROPY_H
 #define _JITTERENTROPY_H
 
-#ifdef __KERNEL__
-#include "jitterentropy-base-kernel.h"
-#else
-#include "jitterentropy-base-user.h"
-#endif /* __KERNEL__ */
+#include <magenta/compiler.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/types.h>
+
+__BEGIN_CDECLS;
 
 /* The entropy pool */
 struct rand_data
@@ -138,11 +148,36 @@ unsigned int jent_version(void);
 
 /* -- BEGIN statistical test functions only complied with CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT -- */
 
-#ifdef CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT
 JENT_PRIVATE_STATIC
 uint64_t jent_lfsr_var_stat(struct rand_data *ec, unsigned int min);
-#endif /* CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT */
 
 /* -- END of statistical test function -- */
+
+/* -- BEGIN Magenta interface -- */
+
+/* Initialize an entropy collector using already allocated memory. This function
+ * is to jent_entropy_collector_alloc as placement new is to regular new in C++.
+ *
+ * |ec| is the entropy collector to initialize. |mem| points to a block of
+ * |mem_size| bytes used for memory access loops (to generate CPU instruction
+ * time variation).
+ *
+ * The memory will be logically divided into |mem_block_count| blocks of size
+ * |mem_block_size|; it is an error if the product of these two values is larger
+ * than |mem_size|. Ideally, the mem_block_* parameters should be configured for
+ * each target, or at least each architecture. The entropy collector will
+ * perform at least |mem_loops| memory access loops to generate variations.
+ *
+ * The |stir| flag controls whether to stir a deterministic constant into the
+ * entropy pool, which does not destroy entropy but may whiten it.
+ */
+void jent_entropy_collector_init(
+        struct rand_data* ec, uint8_t* mem, size_t mem_size,
+        unsigned int mem_block_size, unsigned int mem_block_count,
+        unsigned int mem_loops, bool stir);
+
+/* -- END of Magenta interface -- */
+
+__END_CDECLS;
 
 #endif /* _JITTERENTROPY_H */

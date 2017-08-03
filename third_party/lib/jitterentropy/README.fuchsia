@@ -10,3 +10,6 @@ Modifications:
     * doc/jitterentropy.3
     * jitterentropy-base-user.h
  - Removed COPYING.gplv2
+- Added rules.mk.
+- Modified lib/jitterentropy/jitterentropy.h and jitterentropy-base.c.
+- Added lib/jitterentropy/internal.h.
