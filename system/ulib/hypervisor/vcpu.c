@@ -45,6 +45,8 @@
 #define LOCAL_APIC_REGISTER_SVR                 0x00f0
 #define LOCAL_APIC_REGISTER_ISR_31_0            0x0100
 #define LOCAL_APIC_REGISTER_ISR_255_224         0x0170
+#define LOCAL_APIC_REGISTER_TMR_31_0            0x0180
+#define LOCAL_APIC_REGISTER_TMR_255_224         0x01f0
 #define LOCAL_APIC_REGISTER_IRR_31_0            0x0200
 #define LOCAL_APIC_REGISTER_IRR_255_224         0x0270
 #define LOCAL_APIC_REGISTER_ESR                 0x0280
@@ -137,6 +139,7 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
         if (inst->type == INST_MOV_WRITE)
             return MX_OK;
     case LOCAL_APIC_REGISTER_ISR_31_0 ... LOCAL_APIC_REGISTER_ISR_255_224:
+    case LOCAL_APIC_REGISTER_TMR_31_0 ... LOCAL_APIC_REGISTER_TMR_255_224:
     case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
         return inst_read32(inst, 0);
     case LOCAL_APIC_REGISTER_DFR:
