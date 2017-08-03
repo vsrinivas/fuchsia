@@ -37,9 +37,9 @@ Status ForEachEntryInternal(
 
 BTreeIterator::BTreeIterator(SynchronousStorage* storage) : storage_(storage) {}
 
-BTreeIterator::BTreeIterator(BTreeIterator&&) = default;
+BTreeIterator::BTreeIterator(BTreeIterator&& other) = default;
 
-BTreeIterator& BTreeIterator::operator=(BTreeIterator&&) = default;
+BTreeIterator& BTreeIterator::operator=(BTreeIterator&& other) = default;
 
 Status BTreeIterator::Init(ObjectIdView node_id) {
   return Descend(node_id);

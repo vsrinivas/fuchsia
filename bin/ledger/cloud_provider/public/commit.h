@@ -22,8 +22,8 @@ struct Commit {
 
   ~Commit();
 
-  Commit(Commit&&);
-  Commit& operator=(Commit&&);
+  Commit(Commit&& other);
+  Commit& operator=(Commit&& other);
 
   bool operator==(const Commit& other) const;
 

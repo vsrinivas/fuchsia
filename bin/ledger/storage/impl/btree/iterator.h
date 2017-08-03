@@ -32,8 +32,8 @@ class BTreeIterator {
  public:
   explicit BTreeIterator(SynchronousStorage* storage);
 
-  BTreeIterator(BTreeIterator&&);
-  BTreeIterator& operator=(BTreeIterator&&);
+  BTreeIterator(BTreeIterator&& other);
+  BTreeIterator& operator=(BTreeIterator&& other);
 
   // Initializes the iterator with the root node of the tree.
   Status Init(ObjectIdView node_id);

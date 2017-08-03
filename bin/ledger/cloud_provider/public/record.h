@@ -18,8 +18,8 @@ struct Record {
 
   ~Record();
 
-  Record(Record&&);
-  Record& operator=(Record&&);
+  Record(Record&& other);
+  Record& operator=(Record&& other);
 
   Commit commit;
   std::string timestamp;

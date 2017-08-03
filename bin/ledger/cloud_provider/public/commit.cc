@@ -19,9 +19,9 @@ Commit::Commit(CommitId id,
 
 Commit::~Commit() = default;
 
-Commit::Commit(Commit&&) = default;
+Commit::Commit(Commit&& other) = default;
 
-Commit& Commit::operator=(Commit&&) = default;
+Commit& Commit::operator=(Commit&& other) = default;
 
 bool Commit::operator==(const Commit& other) const {
   return id == other.id && content == other.content &&

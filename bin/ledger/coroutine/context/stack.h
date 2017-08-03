@@ -29,8 +29,11 @@ class Stack {
   size_t stack_size() const { return stack_size_; }
 
  private:
-  friend void MakeContext(context::Context*, Stack*, void (*)(void*), void*);
-  friend char* GetUnsafeStackForTest(const Stack&);
+  friend void MakeContext(context::Context* context,
+                          Stack* stack,
+                          void (*func)(void*),
+                          void* data);
+  friend char* GetUnsafeStackForTest(const Stack& stack);
 
   uintptr_t safe_stack() const { return safe_stack_; }
   uintptr_t unsafe_stack() const { return unsafe_stack_; };

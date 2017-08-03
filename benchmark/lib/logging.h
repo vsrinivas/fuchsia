@@ -16,7 +16,7 @@ namespace benchmark {
 // Logs an error and posts a quit task on the current message loop if the given
 // ledger status is not ledger::Status::OK. Returns true if the quit task was
 // posted.
-bool QuitOnError(ledger::Status, ftl::StringView description);
+bool QuitOnError(ledger::Status status, ftl::StringView description);
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
     std::string description);

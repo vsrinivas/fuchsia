@@ -26,9 +26,9 @@ class PageStorage {
  public:
   struct CommitIdAndBytes {
     CommitIdAndBytes(CommitId id, std::string bytes);
-    CommitIdAndBytes(CommitIdAndBytes&&);
+    CommitIdAndBytes(CommitIdAndBytes&& other);
 
-    CommitIdAndBytes& operator=(CommitIdAndBytes&&);
+    CommitIdAndBytes& operator=(CommitIdAndBytes&& other);
 
     CommitId id;
     std::string bytes;

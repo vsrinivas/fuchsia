@@ -127,7 +127,7 @@ class StatusAccumulator {
 
   bool PrepareCall() { return true; }
 
-  bool Update(bool, S status) {
+  bool Update(bool /*token*/, S status) {
     result_status_ = status;
     return success_status_ == result_status_;
   }
@@ -147,7 +147,7 @@ class PromiseAccumulator {
 
   bool PrepareCall() { return true; }
 
-  bool Update(bool, S status, V value) {
+  bool Update(bool /*token*/, S status, V value) {
     status_ = std::move(status);
     value_ = std::move(value);
     return false;
@@ -166,7 +166,7 @@ class CompletionAccumulator {
  public:
   bool PrepareCall() { return true; }
 
-  bool Update(bool) { return true; }
+  bool Update(bool /*token*/) { return true; }
 
   bool Result() { return true; }
 };

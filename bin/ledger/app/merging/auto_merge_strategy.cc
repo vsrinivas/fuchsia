@@ -35,9 +35,10 @@ class AutoMergeStrategy::AutoMerger {
   void OnRightChangeReady(
       storage::Status status,
       std::unique_ptr<std::vector<storage::EntryChange>> right_change);
-  void OnComparisonDone(storage::Status status,
-                        std::unique_ptr<std::vector<storage::EntryChange>>,
-                        bool distinct);
+  void OnComparisonDone(
+      storage::Status status,
+      std::unique_ptr<std::vector<storage::EntryChange>> right_changes,
+      bool distinct);
 
   storage::PageStorage* const storage_;
   PageManager* const manager_;

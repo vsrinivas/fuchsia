@@ -36,7 +36,7 @@ class CommitRandomImpl : public Commit {
   ftl::StringView GetStorageBytes() const override;
 
  private:
-  CommitRandomImpl(const CommitRandomImpl&);
+  CommitRandomImpl(const CommitRandomImpl& other);
 
   CommitId id_;
   int64_t timestamp_;

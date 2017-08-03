@@ -16,8 +16,8 @@ Record::Record(Commit n, std::string t, int position, int size)
 
 Record::~Record() = default;
 
-Record::Record(Record&&) = default;
+Record::Record(Record&& other) = default;
 
-Record& Record::operator=(Record&&) = default;
+Record& Record::operator=(Record&& other) = default;
 
 }  // namespace cloud_provider
