@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 #include <string.h>
+
+#include <audio-proto-utils/format-utils.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
+#include <mxtl/limits.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
@@ -372,11 +376,51 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     return res;
 }
 
+mx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(DispatcherChannel* channel,
+                                                         const audio_proto::StreamGetFmtsReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+    size_t formats_sent = 0;
+    audio_proto::StreamGetFmtsResp resp;
+
+    if (supported_formats_.size() > mxtl::numeric_limits<uint16_t>::max()) {
+        LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+            supported_formats_.size());
+        return MX_ERR_INTERNAL;
+    }
+
+    resp.hdr = req.hdr;
+    resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
+
+    do {
+        uint16_t todo, payload_sz, to_send;
+        mx_status_t res;
+
+        todo = mxtl::min<uint16_t>(supported_formats_.size() - formats_sent,
+                                   AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
+        payload_sz = sizeof(resp.format_ranges[0]) * todo;
+        to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
+
+        resp.first_format_range_ndx = formats_sent;
+        ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
+
+        res = channel->Write(&resp, sizeof(resp));
+        if (res != MX_OK) {
+            DEBUG_LOG("Failed to send get stream formats response (res %d)\n", res);
+            return res;
+        }
+
+        formats_sent += todo;
+    } while (formats_sent < supported_formats_.size());
+
+    return MX_OK;
+}
+
 mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* channel,
                                                         const audio_proto::StreamSetFmtReq& fmt) {
     MX_DEBUG_ASSERT(channel != nullptr);
     ihda_proto::SetStreamFmtReq req;
     uint16_t encoded_fmt;
+    bool found_supported_format = false;
     mx_status_t res;
 
     // Check to make sure that this channel is permitted to change formats.
@@ -393,7 +437,23 @@ mx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
         goto send_fail_response;
     }
 
-    // If we cannot encode this stream format, then we definitely do not support it.
+    // Is the requested format compatible with this stream?
+    for (const auto& format_range : supported_formats_) {
+        found_supported_format = utils::FormatIsCompatible(fmt.frames_per_second,
+                                                           fmt.channels,
+                                                           fmt.sample_format,
+                                                           format_range);
+        if (found_supported_format)
+            break;
+    }
+
+    if (!found_supported_format) {
+        res = MX_ERR_NOT_SUPPORTED;
+        goto send_fail_response;
+    }
+
+    // The upper level stream told us that they support this format, we had
+    // better be able to encode it into an IHDA format specifier.
     res = EncodeStreamFormat(fmt, &encoded_fmt);
     if (res != MX_OK) {
         DEBUG_LOG("Failed to encode stream format %u:%hu:%s (res %d)\n",
@@ -526,11 +586,12 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
         return MX_ERR_BAD_STATE;
 
     union {
-        audio_proto::CmdHdr          hdr;
-        audio_proto::StreamSetFmtReq set_format;
-        audio_proto::GetGainReq      get_gain;
-        audio_proto::SetGainReq      set_gain;
-        audio_proto::PlugDetectReq   plug_detect;
+        audio_proto::CmdHdr           hdr;
+        audio_proto::StreamGetFmtsReq get_formats;
+        audio_proto::StreamSetFmtReq  set_format;
+        audio_proto::GetGainReq       get_gain;
+        audio_proto::SetGainReq       set_gain;
+        audio_proto::PlugDetectReq    plug_detect;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -549,10 +610,11 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  DoSetStreamFormatLocked, false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    DoGetGainLocked,         false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    DoSetGainLocked,         true);
-        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked,      true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, DoGetStreamFormatsLocked, false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  DoSetStreamFormatLocked,  false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    DoGetGainLocked,          false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    DoSetGainLocked,          true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked,       true);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
             return MX_ERR_NOT_SUPPORTED;
