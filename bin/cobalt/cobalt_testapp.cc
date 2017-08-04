@@ -38,7 +38,9 @@ namespace {
 
 const uint32_t kTestAppProjectId = 2;
 const uint32_t kRareEventMetricId = 1;
+const uint32_t kModuleViewsMetricId = 2;
 const uint32_t kRareEventEncodingId = 1;
+const uint32_t kModuleViewsEncodingId = 2;
 const std::string kRareEvent1 = "Ledger-startup";
 
 std::string StatusToString(cobalt::Status status) {
@@ -64,15 +66,16 @@ class CobaltTestApp {
         context_(app::ApplicationContext::CreateFromStartupInfo()) {}
 
   // Synchronously invokes AddStringObservation() |num_observations_per_batch_|
-  // times. Invokes SendObservations() if |use_network_| is true. Returns true
-  // just in case everything succeeds.
-  bool RunTest() {
-    // Add a batch of observations of kRareEvent1 to the envelope.
+  // times using the given parameters. Invokes SendObservations() if
+  // |use_network_| is true. Returns true just in case everything succeeds.
+  bool EncodeStringAndSend(uint32_t metric_id, uint32_t encoding_config_id,
+                           std::string val) {
+    // Invoke AddStringObservation() multiple times.
     for (int i = 0; i < num_observations_per_batch_; i++) {
       cobalt::Status status = cobalt::Status::INTERNAL_ERROR;
-      encoder_->AddStringObservation(kRareEventMetricId, kRareEventEncodingId,
-                                     kRareEvent1, &status);
-      FTL_LOG(INFO) << "Add(kRareEvent1) => " << StatusToString(status);
+      encoder_->AddStringObservation(metric_id, encoding_config_id, val,
+                                     &status);
+      FTL_LOG(INFO) << "Add(" << val << ") => " << StatusToString(status);
       if (status != cobalt::Status::OK) {
         return false;
       }
@@ -90,6 +93,17 @@ class CobaltTestApp {
     encoder_->SendObservations(&status);
     FTL_LOG(INFO) << "SendObservations => " << StatusToString(status);
     return status == cobalt::Status::OK;
+  }
+
+  // Invokes EncodeStringAndSend() once for the rare events metric and
+  // once for the module-views metric.
+  bool RunTest() {
+    if (!EncodeStringAndSend(kRareEventMetricId, kRareEventEncodingId,
+                             kRareEvent1)) {
+      return false;
+    }
+    return EncodeStringAndSend(kModuleViewsMetricId, kModuleViewsEncodingId,
+                               "www.cobalt_test_app.com");
   }
 
   // Starts and connects to a Cobalt FIDL service.
