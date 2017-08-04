@@ -404,6 +404,22 @@ static void start_test_child(mx_handle_t job, const char* arg,
     unittest_printf("Test child started.\n");
 }
 
+static void setup_test_child_with_eport(mx_handle_t job, const char* arg,
+                                        mx_handle_t* out_child,
+                                        mx_handle_t* out_eport,
+                                        mx_handle_t* out_channel)
+{
+    launchpad_t* lp = setup_test_child(mx_job_default(), arg, out_channel);
+    mx_handle_t eport = tu_io_port_create();
+    // Note: child is a borrowed handle, launchpad still owns it at this point.
+    mx_handle_t child = launchpad_get_process_handle(lp);
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    child = tu_launch_mxio_fini(lp);
+    // Now we own the child handle, and lp is destroyed.
+    *out_child = child;
+    *out_eport = eport;
+}
+
 static bool ensure_child_running(mx_handle_t channel) {
     enum message msg;
     send_msg(channel, MSG_PING);
@@ -805,14 +821,8 @@ static bool process_start_test(void)
     BEGIN_TEST;
     unittest_printf("process start test\n");
 
-    mx_handle_t child, our_channel;
-    launchpad_t* lp = setup_test_child(mx_job_default(), NULL, &our_channel);
-    mx_handle_t eport = tu_io_port_create();
-    // Note: child is a borrowed handle, launchpad still owns it at this point.
-    child = launchpad_get_process_handle(lp);
-    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-    child = tu_launch_mxio_fini(lp);
-    // Now we own the child handle, and lp is destroyed.
+    mx_handle_t child, eport, our_channel;
+    setup_test_child_with_eport(mx_job_default(), NULL, &child, &eport, &our_channel);
 
     mx_koid_t tid;
     if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid)) {
@@ -978,17 +988,11 @@ static bool trigger_test(void)
     for (size_t i = 0; i < countof(exceptions); ++i) {
         mx_excp_type_t excp_type = exceptions[i].type;
         const char *excp_name = exceptions[i].name;
-        mx_handle_t child, our_channel;
-        char* arg;
-        arg = tu_asprintf("trigger=%s", excp_name);
-        launchpad_t* lp = setup_test_child(mx_job_default(), arg, &our_channel);
+        mx_handle_t child, eport, our_channel;
+        char* arg = tu_asprintf("trigger=%s", excp_name);
+        setup_test_child_with_eport(mx_job_default(), arg,
+                                    &child, &eport, &our_channel);
         free(arg);
-        mx_handle_t eport = tu_io_port_create();
-        // Note: child is a borrowed handle, launchpad still owns it at this point.
-        child = launchpad_get_process_handle(lp);
-        tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-        child = tu_launch_mxio_fini(lp);
-        // Now we own the child handle, and lp is destroyed.
 
         mx_koid_t tid = MX_KOID_INVALID;
         (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
@@ -1028,15 +1032,10 @@ static bool unbind_while_stopped_test(void)
     BEGIN_TEST;
     unittest_printf("unbind_while_stopped tests\n");
 
-    mx_handle_t child, our_channel;
+    mx_handle_t child, eport, our_channel;
     const char* arg = "";
-    launchpad_t* lp = setup_test_child(mx_job_default(), arg, &our_channel);
-    mx_handle_t eport = tu_io_port_create();
-    // Note: child is a borrowed handle, launchpad still owns it at this point.
-    child = launchpad_get_process_handle(lp);
-    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-    child = tu_launch_mxio_fini(lp);
-    // Now we own the child handle, and lp is destroyed.
+    setup_test_child_with_eport(mx_job_default(), arg,
+                                &child, &eport, &our_channel);
 
     {
         mx_koid_t tid;
@@ -1062,15 +1061,10 @@ static bool unbind_rebind_while_stopped_test(void)
     BEGIN_TEST;
     unittest_printf("unbind_rebind_while_stopped tests\n");
 
-    mx_handle_t child, our_channel;
+    mx_handle_t child, eport, our_channel;
     const char* arg = "";
-    launchpad_t* lp = setup_test_child(mx_job_default(), arg, &our_channel);
-    mx_handle_t eport = tu_io_port_create();
-    // Note: child is a borrowed handle, launchpad still owns it at this point.
-    child = launchpad_get_process_handle(lp);
-    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-    child = tu_launch_mxio_fini(lp);
-    // Now we own the child handle, and lp is destroyed.
+    setup_test_child_with_eport(mx_job_default(), arg,
+                                &child, &eport, &our_channel);
 
     mx_port_packet_t start_packet;
     // Assert reading the start packet succeeds because otherwise the rest
@@ -1146,15 +1140,10 @@ static bool kill_while_stopped_at_start_test(void)
     BEGIN_TEST;
     unittest_printf("kill_while_stopped_at_start tests\n");
 
-    mx_handle_t child, our_channel;
+    mx_handle_t child, eport, our_channel;
     const char* arg = "";
-    launchpad_t* lp = setup_test_child(mx_job_default(), arg, &our_channel);
-    mx_handle_t eport = tu_io_port_create();
-    // Note: child is a borrowed handle, launchpad still owns it at this point.
-    child = launchpad_get_process_handle(lp);
-    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
-    child = tu_launch_mxio_fini(lp);
-    // Now we own the child handle, and lp is destroyed.
+    setup_test_child_with_eport(mx_job_default(), arg,
+                                &child, &eport, &our_channel);
 
     mx_koid_t tid;
     if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid)) {
