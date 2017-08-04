@@ -14,10 +14,15 @@
 int main(int argc, const char** argv) {
   escher::GlslangInitializeProcess();
   {
+    // Only enable Vulkan validation layers when in debug mode.
+    escher::VulkanInstance::Params instance_params(
+        {{}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+#if !defined(NDEBUG)
+    instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
+#endif
     auto vulkan_instance =
-        escher::VulkanInstance::New({{"VK_LAYER_LUNARG_standard_validation"},
-                                     {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-                                     false});
+        escher::VulkanInstance::New(std::move(instance_params));
+
     auto vulkan_device = escher::VulkanDeviceQueues::New(
         vulkan_instance,
         {{VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME}, vk::SurfaceKHR()});

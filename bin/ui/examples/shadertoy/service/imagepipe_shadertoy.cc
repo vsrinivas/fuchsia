@@ -139,22 +139,9 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   // TODO(MZ-241): params.iDate = ??;
   // TODO(MZ-241): params.iSampleRate = ??;
 
-  renderer()->DrawFrame(
-      fb.framebuffer, pipeline(), params, channel0(), channel1(), channel2(),
-      channel3(),
-      // TODO(MZ-240): waiting on the release_semaphore causes the app to crash
-      // during Vulkan command-buffer submit.
-      // fb.release_semaphore,
-      escher::SemaphorePtr(),
-      // TODO(MZ-240): signaling the acquire_semaphore causes the app to crash
-      // during Vulkan command-buffer submit.
-      // fb.acquire_semaphore,
-      escher::SemaphorePtr());
-  // TODO(MZ-240): this shouldn't even be necessary once we have Vulkan
-  // semaphore import working properly.
-  fb.acquire_fence.signal(0u, kFenceSignalled);
-  mx::event bogus_event;
-  mx::event::create(0u, &bogus_event);
+  renderer()->DrawFrame(fb.framebuffer, pipeline(), params, channel0(),
+                        channel1(), channel2(), channel3(),
+                        fb.release_semaphore, fb.acquire_semaphore);
 
   // Present the image and request another frame.
   auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
@@ -165,11 +152,8 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
     }
   };
   image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
-                            std::move(acquire_fence),
-                            // TODO(MZ-240): use release_fence once we have
-                            // Vulkan semaphore import working properly.
-                            // std::move(release_fence),
-                            std::move(bogus_event), present_image_callback);
+                            std::move(acquire_fence), std::move(release_fence),
+                            present_image_callback);
 }
 
 }  // namespace shadertoy
