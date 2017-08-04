@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <hypervisor/acpi.h>
+#include <hypervisor/block.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
@@ -19,8 +20,6 @@
 
 #include "linux.h"
 #include "magenta.h"
-
-#define VIRTIO_QUEUE_SIZE           128u
 
 static const uint64_t kVmoSize = 1u << 30;
 static const uint16_t kPioEnable = 1u << 0;
@@ -91,31 +90,24 @@ int main(int argc, char** argv) {
     // Setup guest memory.
     guest_state.mem_addr = (void*)addr;
     guest_state.mem_size = kVmoSize;
-    // Setup guest block.
-    guest_state.block_fd = -1;
-    guest_state.block_size = 1u << 30;
-    guest_state.block_queue.size = VIRTIO_QUEUE_SIZE;
-    if (block_path != NULL) {
-        guest_state.block_fd = open(block_path, O_RDONLY);
-        if (guest_state.block_fd < 0) {
-            fprintf(stderr, "Failed to open block file \"%s\"\n", block_path);
-            return MX_ERR_IO;
-        }
-        off_t ret = lseek(guest_state.block_fd, 0, SEEK_END);
-        if (ret < 0) {
-            fprintf(stderr, "Failed to read size of block file \"%s\"\n", block_path);
-            return MX_ERR_IO;
-        }
-        guest_state.block_size = ret;
-    }
     // Setup UART.
     uart_state_t uart_state;
+    guest_state.uart_state = &uart_state;
     status = uart_init(&uart_state);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to initialize UART state\n");
         return status;
     }
-    guest_state.uart_state = &uart_state;
+    // Setup block device.
+    block_state_t block_state;
+    guest_state.block_state = &block_state;
+    if (block_path != NULL) {
+        status = block_init(&block_state, block_path);
+        if (status != MX_OK)
+            return status;
+    } else {
+        block_state.fd = -1;
+    }
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];

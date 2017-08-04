@@ -80,7 +80,7 @@ static mx_status_t raise_thr_empty(mx_handle_t vcpu, io_apic_state_t* io_apic_st
     return mx_vcpu_interrupt(vcpu, interrupt);
 }
 
-mx_status_t uart_write(mx_guest_io_t* io, guest_state_t* guest_state, mx_handle_t vcpu) {
+mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_guest_io_t* io) {
     static uint8_t buffer[UART_BUFFER_SIZE] = {};
     static uint16_t offset = 0;
     static bool thr_empty = false;

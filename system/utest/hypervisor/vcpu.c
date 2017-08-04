@@ -112,7 +112,7 @@ static bool handle_output_packet(void) {
     io.access_size = 1;
     io.u8 = 0xaf;
     EXPECT_EQ(
-        uart_write(&io, &test.guest_state, 0),
+        uart_write(&test.guest_state, 0, &io),
         MX_OK,
         "Failed to handle UART IO packet.\n");
 

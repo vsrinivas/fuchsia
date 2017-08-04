@@ -480,11 +480,11 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
         vcpu_io.u8 = PIC_INVALID;
         break;
     default: {
-        uint32_t port_off;
+        uint16_t port_off;
         pci_device_state_t* devices = vcpu_context->guest_state->pci_device_state;
         switch (pci_device(devices, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK:
-            status = handle_virtio_block_read(vcpu_context->guest_state, port_off, &vcpu_io);
+            status = block_read(vcpu_context->guest_state->block_state, port_off, &vcpu_io);
             if (status != MX_OK)
                 return status;
             break;
@@ -557,11 +557,11 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         return MX_OK;
     }
 
-    uint32_t port_off;
+    uint16_t port_off;
     pci_device_state_t* devices = vcpu_context->guest_state->pci_device_state;
     switch (pci_device(devices, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
     case PCI_DEVICE_VIRTIO_BLOCK: {
-        return handle_virtio_block_write(vcpu_context, port_off, io);
+        return block_write(vcpu_context->guest_state, vcpu_context->vcpu, port_off, io);
     }}
 
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
@@ -571,7 +571,7 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
 #endif // __x86_64__
 }
 
-static mx_status_t handle_io(vcpu_context_t* vcpu_context, mx_guest_io_t* io) {
+static mx_status_t handle_io(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
     mtx_lock(&vcpu_context->guest_state->mutex);
     mx_status_t status = io->input ?
                          handle_input(vcpu_context, io) :
@@ -638,7 +638,7 @@ static int uart_loop(void* arg) {
                 fprintf(stderr, "Invalid packet type for UART %d\n", packets[i].type);
                 goto cleanup;
             }
-            status = uart_write(&packets[i].io, guest_state, vcpu_context->vcpu);
+            status = uart_write(guest_state, vcpu_context->vcpu, &packets[i].io);
             if (status != MX_OK) {
                 fprintf(stderr, "Unable to handle packet for UART %d\n", status);
                 goto cleanup;

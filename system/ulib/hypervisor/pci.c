@@ -73,8 +73,8 @@ static uint32_t pci_bar_address(uint32_t bar, uint8_t io_type) {
 
 // TODO(abdulla): Introduce a syscall to associate a port range with a FIFO, so
 // that we can directly communicate with the handler and remove this function.
-uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type,
-                    uint32_t addr, uint32_t* offset) {
+uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type, uint16_t addr,
+                    uint16_t* off) {
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_state_t* pci_device = &pci_device_states[i];
 
@@ -91,7 +91,7 @@ uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type,
         uint16_t bar_base = pci_bar_address(bar0, io_type);
         uint16_t bar_size = kPciDeviceAttributes[i].bar_size;
         if (addr >= bar_base && addr < bar_base + bar_size) {
-            *offset = addr - bar_base;
+            *off = addr - bar_base;
             return i;
         }
     }

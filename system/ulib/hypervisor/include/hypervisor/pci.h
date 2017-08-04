@@ -80,8 +80,8 @@ mx_status_t pci_config_write(pci_device_state_t* pci_device_state,
  * given address with the specified IO type. Returns PCI_DEVICE_INVALID if no
  * mapping exists or IO is disabled for the mapping.
  */
-uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type,
-                    uint32_t address, uint32_t* offset);
+uint16_t pci_device(pci_device_state_t* pci_device_states, uint8_t io_type, uint16_t addr,
+                    uint16_t* off);
 
 /* Returns the bar size for the device. The device is the same value used to
  * index the device in PCI config space.
