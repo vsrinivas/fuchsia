@@ -11,6 +11,7 @@
 
 #include <hypervisor/acpi.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
@@ -107,6 +108,14 @@ int main(int argc, char** argv) {
         }
         guest_state.block_size = ret;
     }
+    // Setup UART.
+    uart_state_t uart_state;
+    status = uart_init(&uart_state);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to initialize UART state\n");
+        return status;
+    }
+    guest_state.uart_state = &uart_state;
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];

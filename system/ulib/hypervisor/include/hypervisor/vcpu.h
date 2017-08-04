@@ -13,13 +13,9 @@
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
 
-/* Stores the local APIC state across VM exits. */
-typedef struct local_apic_state {
-    // Address of the local APIC.
-    void* apic_addr;
-} local_apic_state_t;
+typedef struct uart_state uart_state_t;
 
-/* Stores the IO APIC state across VM exits. */
+/* Stores the IO APIC state. */
 typedef struct io_apic_state {
     // IO register-select register.
     uint32_t select;
@@ -29,7 +25,7 @@ typedef struct io_apic_state {
     uint32_t redirect[IO_APIC_REDIRECT_OFFSETS];
 } io_apic_state_t;
 
-/* Stores the IO port state across VM exits. */
+/* Stores the IO port state. */
 typedef struct io_port_state {
     // Index of the RTC register to use.
     uint8_t rtc_index;
@@ -37,12 +33,6 @@ typedef struct io_port_state {
     uint8_t i8042_command;
     // State of power management enable register.
     uint16_t pm1_enable;
-    // State of the UART interrupt enable register.
-    uint8_t uart_interrupt_enable;
-    // State of the UART interrupt id register.
-    uint8_t uart_interrupt_id;
-    // State of the UART line control register.
-    uint8_t uart_line_control;
     // Selected address in PCI config space.
     uint32_t pci_config_address;
 } io_port_state_t;
@@ -62,11 +52,20 @@ typedef struct guest_state {
     uint64_t block_size;
     virtio_queue_t block_queue;
 
+    uart_state_t* uart_state;
+
     io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;
     pci_device_state_t pci_device_state[PCI_MAX_DEVICES];
 } guest_state_t;
 
+/* Stores the local APIC state. */
+typedef struct local_apic_state {
+    // Address of the local APIC.
+    void* apic_addr;
+} local_apic_state_t;
+
+/* Typedefs to abstract reading and writing VCPU state. */
 typedef struct vcpu_context vcpu_context_t;
 typedef mx_status_t (*read_state_fn_t)
     (vcpu_context_t* vcpu, uint32_t kind, void* buffer, uint32_t len);
@@ -92,9 +91,6 @@ mx_status_t vcpu_loop(vcpu_context_t* context);
 
 /* Processes a single guest packet. */
 mx_status_t vcpu_handle_packet(vcpu_context_t* context, mx_guest_packet_t* packet);
-
-/* Processes a single UART IO packet. */
-mx_status_t vcpu_handle_uart(mx_guest_io_t* io, guest_state_t* guest_state, mx_handle_t vcpu);
 
 /* Returns the redirected IRQ for the given global one. */
 uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq);

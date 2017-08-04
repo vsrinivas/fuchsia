@@ -6,6 +6,7 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/ports.h>
+#include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
@@ -39,7 +40,7 @@ static mx_status_t setup(test_t* test) {
 
     int ret = mtx_init(&test->guest_state.mutex, mtx_plain);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to initialize guest state mutex\n");
+        fprintf(stderr, "Failed to initialize guest state mutex.\n");
         return MX_ERR_INTERNAL;
     }
 
@@ -63,12 +64,16 @@ static void tear_down(test_t* test) {
  */
 static bool handle_input_packet(void) {
     BEGIN_TEST;
+
     test_t test;
     mx_guest_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
 
     // Initialize the hosts register to an arbitrary non-zero value.
-    test.guest_state.io_port_state.uart_line_control = 0xfe;
+    uart_state_t uart_state;
+    ASSERT_EQ(uart_init(&uart_state), MX_OK, "Failed to initialize UART.\n");
+    uart_state.line_control = 0xfe;
+    test.guest_state.uart_state = &uart_state;
 
     // Send a guest packet to to read the UART line control port.
     packet.type = MX_GUEST_PKT_IO;
@@ -79,7 +84,7 @@ static bool handle_input_packet(void) {
 
     // Verify result value was written to RAX.
     EXPECT_EQ(
-        test.guest_state.io_port_state.uart_line_control,
+        uart_state.line_control,
         test.vcpu_io.u8,
         "RAX was not populated with expected value.\n");
 
@@ -92,10 +97,14 @@ static bool handle_input_packet(void) {
  */
 static bool handle_output_packet(void) {
     BEGIN_TEST;
+
     test_t test;
     mx_guest_io_t io = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
-    test.guest_state.io_port_state.uart_line_control = 0;
+
+    uart_state_t uart_state;
+    ASSERT_EQ(uart_init(&uart_state), MX_OK, "Failed to initialize UART.\n");
+    test.guest_state.uart_state = &uart_state;
 
     // Send a guest packet to to write the UART line control port.
     io.input = false;
@@ -103,17 +112,18 @@ static bool handle_output_packet(void) {
     io.access_size = 1;
     io.u8 = 0xaf;
     EXPECT_EQ(
-        vcpu_handle_uart(&io, &test.guest_state, 0),
+        uart_write(&io, &test.guest_state, 0),
         MX_OK,
         "Failed to handle UART IO packet.\n");
 
     // Verify packet value was saved to the host port state.
     EXPECT_EQ(
         io.u8,
-        test.guest_state.io_port_state.uart_line_control,
-        "io_port_state was not populated with expected value.\n");
+        uart_state.line_control,
+        "uart_state was not populated with expected value.\n");
 
     tear_down(&test);
+
     END_TEST;
 }
 
@@ -177,6 +187,7 @@ static bool write_pci_config_addr_port(void) {
         "Incorrect address read from PCI address port.\n");
 
     tear_down(&test);
+
     END_TEST;
 }
 
@@ -231,6 +242,7 @@ static bool read_pci_config_addr_port(void) {
         "Incorrect address read from PCI address port.\n");
 
     tear_down(&test);
+
     END_TEST;
 }
 
@@ -286,6 +298,7 @@ static bool read_pci_config_data_port(void) {
     EXPECT_EQ(expected_value, test.vcpu_io.u16, "Incorrect value read from PCI data port.\n");
 
     tear_down(&test);
+
     END_TEST;
 }
 

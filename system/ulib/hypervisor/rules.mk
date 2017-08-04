@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/block.c \
     $(LOCAL_DIR)/guest.c \
     $(LOCAL_DIR)/pci.c \
+    $(LOCAL_DIR)/uart.c \
     $(LOCAL_DIR)/vcpu.c \
     $(LOCAL_DIR)/virtio.c \
 
