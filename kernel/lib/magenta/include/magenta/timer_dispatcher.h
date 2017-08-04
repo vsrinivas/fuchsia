@@ -37,7 +37,7 @@ public:
 
 private:
     TimerDispatcher(uint32_t options);
-    void CancelLocked() TA_REQ(lock_);
+    bool CancelTimerLocked() TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("TIMR")> canary_;
     dpc_t timer_dpc_;

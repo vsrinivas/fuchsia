@@ -59,7 +59,13 @@ TimerDispatcher::~TimerDispatcher() {
 void TimerDispatcher::on_zero_handles() {
     // The timers can be kept alive indefinitely by the callbacks, so
     // we need to cancel when there are no more user-mode clients.
-    Cancel();
+    AutoLock al(&lock_);
+
+    // We must ensure that the timer callback (running in interrupt context,
+    // possibly on a different CPU) has completed before possibly destroy
+    // the timer.  So cancel the timer if we haven't already.
+    if (!CancelTimerLocked())
+        timer_cancel(&timer_);
 }
 
 mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
@@ -75,7 +81,7 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
 
     AutoLock al(&lock_);
 
-    CancelLocked();
+    bool did_cancel = CancelTimerLocked();
 
     // If the timer is already due and this is a one-shot, then we can set the signal
     // immediately without starting the timer.
@@ -102,6 +108,12 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     // refcounted objects. The Release() is called either in OnTimerFired()
     // or in the complicated cancelation path above.
     AddRef();
+
+    // We must ensure that the timer callback (running in interrupt context,
+    // possibly on a different CPU) has completed before set try to set the
+    // timer again.  So cancel the timer if we haven't already.
+    if (!did_cancel)
+        timer_cancel(&timer_);
     timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
     return MX_OK;
 }
@@ -109,24 +121,24 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
 mx_status_t TimerDispatcher::Cancel() {
     canary_.Assert();
     AutoLock al(&lock_);
-    CancelLocked();
+    CancelTimerLocked();
     return MX_OK;
 }
 
-void TimerDispatcher::CancelLocked() {
+bool TimerDispatcher::CancelTimerLocked() {
     // Always clear the signal bit.
     state_tracker_.UpdateState(MX_TIMER_SIGNALED, 0u);
 
     // If the timer isn't pending then we're done.
     if (!deadline_)
-        return;
+        return false; // didn't call timer_cancel
     deadline_ = 0u;
     period_ = 0u;
 
     // If we're already waiting for the timer to be canceled, then we don't need
     // to cancel it again.
     if (cancel_pending_)
-        return;
+        return false; // didn't call timer_cancel
 
     // The timer is active and needs to be canceled.
     // Refcount is at least 2 because there is a pending timer that we need to cancel.
@@ -140,6 +152,7 @@ void TimerDispatcher::CancelLocked() {
         // We'll let the timer callback take care of cleanup.
         cancel_pending_ = true;
     }
+    return true; // did call timer_cancel
 }
 
 void TimerDispatcher::OnTimerFired() {
@@ -149,8 +162,8 @@ void TimerDispatcher::OnTimerFired() {
         AutoLock al(&lock_);
 
         if (cancel_pending_) {
-            // We previously attempted to cancel the timer but the callback had already
-            // been scheduled.  Suppress handling of that callback but take care to
+            // We previously attempted to cancel the timer but the dpc had already
+            // been queued.  Suppress handling of this callback but take care to
             // restart the timer if its deadline was set in the meantime.
             cancel_pending_ = false;
         } else if (period_ != 0) {
@@ -170,11 +183,9 @@ void TimerDispatcher::OnTimerFired() {
         }
 
         if (deadline_ != 0u) {
-            // Make sure the timer is canceled or finished before setting it again.
-            // This avoids a race with the timer callback that queued our dpc and
-            // which might be running concurrently on another CPU.
-            // Calling timer_cancel() ensures that any such timer callback completes
-            // before we call timer_set_oneshot().
+            // We must ensure that the timer callback (running in interrupt context,
+            // possibly on a different CPU) has completed before set try to set the
+            // timer again.
             timer_cancel(&timer_);
             timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
             return;
