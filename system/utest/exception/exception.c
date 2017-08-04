@@ -158,16 +158,13 @@ static bool read_exception(mx_handle_t eport, mx_port_packet_t* packet)
     return true;
 }
 
-// TODO(dje): test_not_enough_buffer is wip. Remove the argument and
-// have a separate explicit test for it.
 // TODO(dje): "kind" is losing its value. Delete?
 // The bool result is because we use the unittest EXPECT/ASSERT macros.
 
 static bool verify_exception(const mx_port_packet_t* packet,
                              const char* kind,
                              mx_handle_t process,
-                             mx_excp_type_t expected_type,
-                             bool test_not_enough_buffer)
+                             mx_excp_type_t expected_type)
 {
     EXPECT_EQ(packet->type, expected_type, "unexpected exception type");
 
@@ -204,15 +201,13 @@ static bool read_and_verify_exception(mx_handle_t eport,
                                       const char* kind,
                                       mx_handle_t process,
                                       mx_excp_type_t expected_type,
-                                      bool test_not_enough_buffer,
                                       mx_koid_t* tid)
 {
     mx_port_packet_t packet;
     if (!read_exception(eport, &packet))
         return false;
     *tid = packet.exception.tid;
-    return verify_exception(&packet, kind, process, expected_type,
-                            test_not_enough_buffer);
+    return verify_exception(&packet, kind, process, expected_type);
 }
 
 // Wait for a process to exit, and while it's exiting verify we get the
@@ -231,8 +226,7 @@ static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
         // If we get a process gone report then all threads have exited.
         if (packet.type == MX_EXCP_GONE)
             break;
-        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
-                              false))
+        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING))
             return false;
         // MX_EXCP_THREAD_EXITING reports must normally be responded to.
         // However, when the process exits it kills all threads which will
@@ -240,7 +234,7 @@ static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
         // need to resume them here.
     }
 
-    verify_exception(&packet, "process-gone", process, MX_EXCP_GONE, false);
+    verify_exception(&packet, "process-gone", process, MX_EXCP_GONE);
     EXPECT_EQ(packet.exception.tid, 0u, "non-zero tid in process gone report");
     // There is no reply to a "process gone" notification.
 
@@ -271,8 +265,7 @@ static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t proce
         // If we get a process gone report then all threads have exited.
         if (packet.type == MX_EXCP_GONE)
             break;
-        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
-                              false))
+        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING))
             return false;
         if (packet.exception.tid == tid)
             tid_seen = true;
@@ -284,7 +277,7 @@ static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t proce
 
     EXPECT_TRUE(tid_seen, "missing MX_EXCP_THREAD_EXITING report");
 
-    verify_exception(&packet, "process-gone", process, MX_EXCP_GONE, false);
+    verify_exception(&packet, "process-gone", process, MX_EXCP_GONE);
     EXPECT_EQ(packet.exception.tid, 0u, "non-zero tid in process gone report");
     // There is no reply to a "process gone" notification.
 
@@ -752,7 +745,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
 {
     send_msg(our_channel, crash_msg);
     mx_koid_t tid;
-    if (read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid)) {
+    if (read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, &tid)) {
         resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
         tu_process_wait_signaled(child);
     }
@@ -825,7 +818,7 @@ static bool process_start_test(void)
     setup_test_child_with_eport(mx_job_default(), NULL, &child, &eport, &our_channel);
 
     mx_koid_t tid;
-    if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid)) {
+    if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, &tid)) {
         send_msg(our_channel, MSG_DONE);
         resume_thread_from_exception(child, tid, 0);
         wait_process_exit_from_debugger(eport, child, tid);
@@ -878,7 +871,7 @@ static bool thread_gone_notification_test(void)
     send_msg(our_channel, MSG_DONE);
     // TODO(dje): The passing of "self" here is wip.
     mx_koid_t tid;
-    if (read_and_verify_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, true, &tid)) {
+    if (read_and_verify_exception(eport, "thread gone", MX_HANDLE_INVALID /*self*/, MX_EXCP_GONE, &tid)) {
         ASSERT_GT(tid, 0u, "tid not >= 0");
     }
     // there's no reply to a "gone" notification
@@ -995,7 +988,7 @@ static bool trigger_test(void)
         free(arg);
 
         mx_koid_t tid = MX_KOID_INVALID;
-        (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+        (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, &tid);
         resume_thread_from_exception(child, tid, 0);
 
         mx_port_packet_t packet;
@@ -1006,10 +999,10 @@ static bool trigger_test(void)
             // need to resume them here.
             if (packet.type != MX_EXCP_THREAD_EXITING) {
                 tid = packet.exception.tid;
-                verify_exception(&packet, excp_name, child, excp_type, false);
+                verify_exception(&packet, excp_name, child, excp_type);
                 resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
                 mx_koid_t tid2;
-                if (read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXITING, false, &tid2)) {
+                if (read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXITING, &tid2)) {
                     ASSERT_EQ(tid2, tid, "exiting tid mismatch");
                 }
             }
@@ -1039,7 +1032,7 @@ static bool unbind_while_stopped_test(void)
 
     {
         mx_koid_t tid;
-        (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+        (void) read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, &tid);
     }
 
     // Now unbind the exception port and wait for the child to cleanly exit.
@@ -1071,7 +1064,7 @@ static bool unbind_rebind_while_stopped_test(void)
     // of the test is moot.
     ASSERT_TRUE(read_exception(eport, &start_packet), "error reading start exception");
     ASSERT_TRUE(verify_exception(&start_packet, "process start", child,
-                                 MX_EXCP_THREAD_STARTING, false),
+                                 MX_EXCP_THREAD_STARTING),
                 "unexpected exception");
     mx_koid_t tid = start_packet.exception.tid;
 
@@ -1146,7 +1139,7 @@ static bool kill_while_stopped_at_start_test(void)
                                 &child, &eport, &our_channel);
 
     mx_koid_t tid;
-    if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid)) {
+    if (read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, &tid)) {
         // Now kill the thread and wait for the child to exit.
         // This assumes the inferior only has the one thread.
         // If this doesn't work the thread will stay blocked, we'll timeout, and
