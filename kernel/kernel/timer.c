@@ -170,10 +170,7 @@ void timer_set(timer_t *timer,
     timer->callback = callback;
     timer->arg = arg;
     timer->cancel = false;
-
-    /* if we're currently active don't reset the active cpu to -1, the timer callback will do this */
-    if (!currently_active)
-        timer->active_cpu = -1;
+    // We don't need to modify timer->active_cpu because it is managed by timer_tick().
 
     LTRACEF("scheduled time %" PRIu64 "\n", timer->scheduled_time);
 
@@ -469,4 +466,3 @@ STATIC_COMMAND_MASKED("timers", "dump the current kernel timer queues", &cmd_tim
 STATIC_COMMAND_END(kernel);
 
 #endif // WITH_LIB_CONSOLE
-
