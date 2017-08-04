@@ -7,14 +7,11 @@
 #include <threads.h>
 
 #include <hypervisor/pci.h>
+#include <hypervisor/virtio.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
-
-struct vring_desc;
-struct vring_avail;
-struct vring_used;
 
 /* Stores the local APIC state across VM exits. */
 typedef struct local_apic_state {
@@ -49,24 +46,6 @@ typedef struct io_port_state {
     // Selected address in PCI config space.
     uint32_t pci_config_address;
 } io_port_state_t;
-
-/* Stores the Virtio queue based on the ring provided by the guest.
- *
- * NOTE(abdulla): This structure points to guest-controlled memory.
- */
-typedef struct virtio_queue {
-    // Queue PFN used to locate this queue in guest physical address space.
-    uint32_t pfn;
-    uint32_t size;
-    uint16_t index;
-    volatile struct vring_desc* desc;   // guest-controlled
-
-    volatile struct vring_avail* avail; // guest-controlled
-    volatile uint16_t* used_event;      // guest-controlled
-
-    volatile struct vring_used* used;   // guest-controlled
-    volatile uint16_t* avail_event;     // guest-controlled
-} virtio_queue_t;
 
 typedef struct guest_state {
     mx_handle_t guest;

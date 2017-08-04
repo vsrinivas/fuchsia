@@ -19,6 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/guest.c \
     $(LOCAL_DIR)/pci.c \
     $(LOCAL_DIR)/vcpu.c \
+    $(LOCAL_DIR)/virtio.c \
 
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \

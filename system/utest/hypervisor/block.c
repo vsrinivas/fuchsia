@@ -146,7 +146,7 @@ static bool null_block_device_bad_request(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, 0u, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_IOERR, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_ERROR, "");
 
     END_TEST;
 }
@@ -167,7 +167,7 @@ static bool null_block_device_bad_flush(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, 0u, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_IOERR, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_ERROR, "");
 
     END_TEST;
 }
@@ -192,7 +192,7 @@ static bool null_block_device_read(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -218,7 +218,7 @@ static bool null_block_device_write(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -245,7 +245,7 @@ static bool null_block_device_write_chain(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE * 2, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -282,7 +282,7 @@ static bool file_block_device_bad_flush(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, 0u, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_IOERR, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_ERROR, "");
 
     END_TEST;
 }
@@ -311,7 +311,7 @@ static bool file_block_device_read(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -341,7 +341,7 @@ static bool file_block_device_read_chain(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -375,7 +375,7 @@ static bool file_block_device_write(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -410,7 +410,7 @@ static bool file_block_device_write_chain(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, DATA_SIZE, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -434,7 +434,7 @@ static bool file_block_device_flush(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, 0u, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
@@ -459,7 +459,7 @@ static bool file_block_device_flush_data(void) {
     ASSERT_EQ(queue.used->idx, 1u, "");
     ASSERT_EQ(queue.used->ring[0].id, 0u, "");
     ASSERT_EQ(queue.used->ring[0].len, 128u, "");
-    ASSERT_EQ(mem.status, VIRTIO_BLK_S_OK, "");
+    ASSERT_EQ(mem.status, VIRTIO_STATUS_OK, "");
 
     END_TEST;
 }
