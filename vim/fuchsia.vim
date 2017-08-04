@@ -9,6 +9,13 @@ if $FUCHSIA_DIR != ""
   set runtimepath+=$FUCHSIA_DIR/scripts/vim/
   set runtimepath+=$FUCHSIA_DIR/lib/fidl/tools/vim/
 
+  " The "filetype plugin" line must come AFTER the changes to runtimepath
+  " above (so the proper directories are searched), but must come BEFORE the
+  " FuchsiaBuffer function below (to work around a bug on MacOS where
+  " Ctrl-] does not work because filetype is undefined instead of being
+  " equal to "cpp".)
+  filetype plugin indent on
+
   function FuchsiaBuffer()
     " Set up path so that 'gf' and :find do what we want.
     let &l:path = $PWD. "/**" . "," . $FUCHSIA_DIR . "," .
