@@ -669,29 +669,46 @@ void PageStorageImpl::AddCommits(
 
       continue_trying = true;
 
-      s = db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
-      if (s != Status::OK) {
+      s = ContainsCommit(commit->GetId());
+      if (s == Status::NOT_FOUND) {
+        s = db_.AddCommitStorageBytes(commit->GetId(),
+                                      commit->GetStorageBytes());
+        if (s != Status::OK) {
+          callback(s);
+          return;
+        }
+
+        if (source == ChangeSource::LOCAL) {
+          s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+          if (s != Status::OK) {
+            callback(s);
+            return;
+          }
+        }
+
+        // Update heads.
+        s = db_.AddHead(commit->GetId(), commit->GetTimestamp());
+        if (s != Status::OK) {
+          callback(s);
+          return;
+        }
+        added_commits.insert(&commit->GetId());
+        commits_to_send.push_back(std::move(commit));
+      } else if (s != Status::OK) {
         callback(s);
         return;
-      }
-
-      if (source == ChangeSource::LOCAL) {
-        s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+      } else if (source == ChangeSource::SYNC) {
+        // We need to check again if we are adding an already present remote
+        // commit here because we might both download and locally commit the
+        // same commit at roughly the same time. As commit writing is
+        // asynchronous, the previous check in AddCommitsFromSync may have not
+        // matched any commit, while a commit got added in between.
+        s = db_.MarkCommitIdSynced(commit->GetId());
         if (s != Status::OK) {
           callback(s);
           return;
         }
       }
-
-      // Update heads.
-      s = db_.AddHead(commit->GetId(), commit->GetTimestamp());
-      if (s != Status::OK) {
-        callback(s);
-        return;
-      }
-
-      added_commits.insert(&commit->GetId());
-      commits_to_send.push_back(std::move(commit));
     }
 
     if (!remaining_commits.empty()) {

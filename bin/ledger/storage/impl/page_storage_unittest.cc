@@ -15,6 +15,7 @@
 #include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/commit_random_impl.h"
@@ -86,6 +87,9 @@ class FakeCommitWatcher : public CommitWatcher {
 
 class FakeSyncDelegate : public PageSyncDelegate {
  public:
+  explicit FakeSyncDelegate(mtl::MessageLoop* message_loop)
+      : message_loop_(message_loop) {}
+
   void AddObject(ObjectIdView object_id, const std::string& value) {
     id_to_value_[object_id.ToString()] = value;
   }
@@ -97,13 +101,17 @@ class FakeSyncDelegate : public PageSyncDelegate {
     std::string id = object_id.ToString();
     std::string& value = id_to_value_[id];
     object_requests.insert(id);
-    callback(Status::OK, value.size(), mtl::WriteStringToSocket(value));
+    message_loop_->task_runner()->PostTask(
+        [&value, callback = std::move(callback) ]() mutable {
+          callback(Status::OK, value.size(), mtl::WriteStringToSocket(value));
+        });
   }
 
   std::set<ObjectId> object_requests;
 
  private:
   std::map<ObjectId, std::string> id_to_value_;
+  mtl::MessageLoop* message_loop_;
 };
 
 // Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
@@ -435,7 +443,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(&message_loop_);
   storage_->SetSyncDelegate(&sync);
 
   // Create a node with 2 values.
@@ -503,7 +511,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 // Check that receiving a remote commit that is already present locally but not
 // synced will mark the commit as synced.
 TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(&message_loop_);
   storage_->SetSyncDelegate(&sync);
 
   std::unique_ptr<const TreeNode> node;
@@ -832,7 +840,7 @@ TEST_F(PageStorageTest, GetObject) {
 
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(&message_loop_);
   sync.AddObject(data.object_id, data.value);
   storage_->SetSyncDelegate(&sync);
 
@@ -854,7 +862,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
 TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
   ObjectData data2("Some data2", InlineBehavior::PREVENT);
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(&message_loop_);
   sync.AddObject(data.object_id, data2.value);
   storage_->SetSyncDelegate(&sync);
 
@@ -1099,7 +1107,7 @@ TEST_F(PageStorageTest, SyncMetadata) {
 }
 
 TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(&message_loop_);
   storage_->SetSyncDelegate(&sync);
 
   // Build the commit Tree with:
@@ -1275,6 +1283,61 @@ TEST_F(PageStorageTest, NoOpCommit) {
   ASSERT_TRUE(commit);
   // Expect that the commit id is the same as the original one.
   EXPECT_EQ(heads[0], commit->GetId());
+}
+
+// Check that receiving a remote commit and commiting locally at the same time
+// do not prevent the commit to be marked as unsynced.
+TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
+  FakeSyncDelegate sync(&message_loop_);
+  storage_->SetSyncDelegate(&sync);
+
+  // We need to create new nodes for the storage to be asynchronous. The empty
+  // node is already there, so we create two (child, which is empty, and root,
+  // which contains child).
+  std::string child_data =
+      storage::EncodeNode(0u, std::vector<Entry>(), std::vector<ObjectId>(1));
+  ObjectId child_id = ComputeObjectId(ObjectType::VALUE, child_data);
+  sync.AddObject(child_id, child_data);
+
+  std::string root_data = storage::EncodeNode(0u, std::vector<Entry>(),
+                                              std::vector<ObjectId>{child_id});
+  ObjectId root_id = ComputeObjectId(ObjectType::VALUE, root_data);
+  sync.AddObject(root_id, root_data);
+
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
+      storage_.get(), root_id, std::move(parent));
+  CommitId id = commit->GetId();
+
+  // Start adding the remote commit.
+  Status status;
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+  commits_and_bytes.emplace_back(commit->GetId(),
+                                 commit->GetStorageBytes().ToString());
+  storage_->AddCommitsFromSync(std::move(commits_and_bytes),
+                               callback::Capture(MakeQuitTask(), &status));
+  // Make the run loop stop before the process finishes.
+  message_loop_.PostQuitTask();
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Add the local commit.
+  storage_->AddCommitFromLocal(std::move(commit), {},
+                               callback::Capture(MakeQuitTask(), &status));
+  // Let the two add commit finish.
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  // Verify that the commit is added correctly.
+  storage_->GetCommit(id, callback::Capture(MakeQuitTask(), &status, &commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  // The commit should be marked as synced.
+  EXPECT_EQ(0u, GetUnsyncedCommits().size());
 }
 
 }  // namespace
