@@ -703,6 +703,44 @@ func errStatus(err error) mx.Status {
 	if s, ok := err.(mx.Error); ok {
 		return s.Status
 	}
+
+	switch err {
+	case tcpip.ErrUnknownProtocol:
+		return mx.ErrProtocolNotSupported
+	case tcpip.ErrDuplicateAddress, tcpip.ErrPortInUse:
+		return mx.ErrAddressInUse
+	case tcpip.ErrNoRoute:
+		return mx.ErrAddressUnreachable
+	case tcpip.ErrAlreadyBound:
+		// Note that tcpip.ErrAlreadyBound and mx.ErrAlreadyBound correspond to different
+		// errors. tcpip.ErrAlreadyBound is returned when attempting to bind socket when
+		// it's already bound. mx.ErrAlreadyBound is used to indicate that the local
+		// address is already used by someone else.
+		return mx.ErrInvalidArgs
+	case tcpip.ErrInvalidEndpointState, tcpip.ErrAlreadyConnecting, tcpip.ErrAlreadyConnected:
+		return mx.ErrBadState
+	case tcpip.ErrNoPortAvailable:
+		return mx.ErrNoResources
+	case tcpip.ErrUnknownProtocolOption, tcpip.ErrBadLocalAddress, tcpip.ErrDestinationRequired:
+		return mx.ErrInvalidArgs
+	case tcpip.ErrClosedForSend, tcpip.ErrClosedForReceive, tcpip.ErrConnectionReset:
+		return mx.ErrConnectionReset
+	case tcpip.ErrWouldBlock:
+		return mx.ErrShouldWait
+	case tcpip.ErrConnectionRefused:
+		return mx.ErrConnectionRefused
+	case tcpip.ErrTimeout:
+		return mx.ErrTimedOut
+	case tcpip.ErrConnectStarted:
+		return mx.ErrShouldWait
+	case tcpip.ErrNotSupported, tcpip.ErrQueueSizeNotSupported:
+		return mx.ErrNotSupported
+	case tcpip.ErrNotConnected:
+		return mx.ErrNotConnected
+	case tcpip.ErrConnectionAborted:
+		return mx.ErrConnectionAborted
+	}
+
 	log.Printf("%v", err)
 	return mx.ErrInternal
 }
