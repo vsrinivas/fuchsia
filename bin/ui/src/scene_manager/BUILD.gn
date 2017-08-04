@@ -123,10 +123,12 @@ source_set("common") {
     "swapchain.h",
     "util/error_reporter.cc",
     "util/error_reporter.h",
+    "util/event_timestamper.cc",
+    "util/event_timestamper.h",
     "util/unwrap.h",
     "util/wrap.h",
   ]
-
+  libs = [ "async" ]
   public_deps = [
     "//application/lib/app",
     "//apps/mozart/services/geometry",
