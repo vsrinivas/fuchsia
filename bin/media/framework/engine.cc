@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/media/src/framework/engine.h"
+#include "apps/media/src/framework/task.h"
 
 namespace media {
 
@@ -70,7 +71,7 @@ bool Engine::UpdateOne() {
 
 void Engine::UpdateUntilDone() {
   {
-    ftl::MutexLocker locker(&mutex_);
+    ftl::MutexLocker locker(&backlog_mutex_);
     FTL_DCHECK(!suppress_update_callbacks_) << "re-entered UpdateUntilDone.";
     suppress_update_callbacks_ = true;
   }
@@ -82,9 +83,35 @@ void Engine::UpdateUntilDone() {
   // suppress_update_callbacks_ is set to false when |UpdateOne| returns false.
 }
 
+void Engine::PostTask(const ftl::Closure& function,
+                      std::vector<Stage*> stages) {
+  Task* task;
+
+  {
+    ftl::MutexLocker locker(&tasks_mutex_);
+    // We create the task and add it to |tasks_| with the mutex taken. This
+    // synchronizes access to |tasks_| and ensures that all the
+    // |Stage::AcquireForTask| calls are made exclusive of any other |PostTask|
+    // call. This is required to prevent deadlocks.
+    task = new Task(this, function, std::move(stages));
+    tasks_.emplace(task, std::unique_ptr<Task>(task));
+  }
+
+  // The task is created in 'blocked' state to prevent it from executing with
+  // the |tasks_mutex_| taken. Now that we've released the mutex, we allow the
+  // task to run if it has all its stages.
+  task->Unblock();
+}
+
+void Engine::DeleteTask(Task* task) {
+  ftl::MutexLocker locker(&tasks_mutex_);
+  size_t erased = tasks_.erase(task);
+  FTL_DCHECK(erased == 1);
+}
+
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
   FTL_DCHECK(input);
-  ftl::MutexLocker locker(&mutex_);
+  ftl::MutexLocker locker(&backlog_mutex_);
 
   std::queue<Input*> backlog;
   backlog.push(input);
@@ -106,7 +133,7 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
 
 void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
   FTL_DCHECK(output);
-  ftl::MutexLocker locker(&mutex_);
+  ftl::MutexLocker locker(&backlog_mutex_);
 
   std::queue<Output*> backlog;
   backlog.push(output);
@@ -128,13 +155,13 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
 
 bool Engine::PushToUpdateBacklog(Stage* stage) {
   FTL_DCHECK(stage);
-  ftl::MutexLocker locker(&mutex_);
+  ftl::MutexLocker locker(&backlog_mutex_);
   update_backlog_.push(stage);
   return !suppress_update_callbacks_;
 }
 
 Stage* Engine::PopFromUpdateBacklog() {
-  ftl::MutexLocker locker(&mutex_);
+  ftl::MutexLocker locker(&backlog_mutex_);
 
   if (update_backlog_.empty()) {
     suppress_update_callbacks_ = false;

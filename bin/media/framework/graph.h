@@ -14,6 +14,7 @@
 #include "apps/media/src/framework/stages/multistream_source_stage.h"
 #include "apps/media/src/framework/stages/stage.h"
 #include "apps/media/src/framework/stages/transform_stage.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
 
 namespace media {
@@ -181,6 +182,11 @@ class Graph {
 
   // Flushes the output and the subgraph downstream of it.
   void FlushAllOutputs(NodeRef node);
+
+  // Executes |function| after having acquired |nodes|. No update or other
+  // task will touch any of the nodes while |function| is executing.
+  void PostTask(const ftl::Closure& function,
+                std::initializer_list<NodeRef> nodes);
 
  private:
   // Adds a stage to the graph.

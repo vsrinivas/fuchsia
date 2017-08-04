@@ -209,6 +209,16 @@ void Graph::FlushAllOutputs(NodeRef node) {
   }
 }
 
+void Graph::PostTask(const ftl::Closure& function,
+                     std::initializer_list<NodeRef> nodes) {
+  std::vector<Stage*> stages;
+  for (NodeRef node : nodes) {
+    stages.push_back(node.stage_);
+  }
+
+  engine_.PostTask(function, std::move(stages));
+}
+
 NodeRef Graph::Add(Stage* stage) {
   stages_.push_back(stage);
 

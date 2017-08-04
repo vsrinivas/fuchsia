@@ -5,9 +5,12 @@
 #pragma once
 
 #include <queue>
+#include <unordered_map>
+#include <vector>
 
 #include "apps/media/src/framework/refs.h"
 #include "apps/media/src/framework/stages/stage.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
@@ -46,10 +49,6 @@ namespace media {
 // way, the operation of the graph is driven by external events signalled
 // through update callbacks.
 //
-// Currently, the engine isn't ready for multiproc and only allows
-// one thread to drive the backlog processing at any given time. The graph
-// registers an update callback and calls |Engine::UpdateOne| from that
-// callback. The graph takes a lock to make sure |UpdateOne| is not reentered.
 // This arrangement implies the following constraints:
 //
 // 1) A stage cannot update supply/demand on its inputs/outputs except during
@@ -57,37 +56,28 @@ namespace media {
 //    should update its internal state as required and call NeedsUpdate.
 //    During the subsequent Update, the stage and/or node can then update
 //    supply and/or demand.
-// 2) Threads used to signal external events must be suitable for operating the
-//    engine. There is currently no affordance for processing other tasks on
-//    the thread while the callback is running. A callback may run for a long
-//    time, depending on how much work needs to be done.
-// 3) Nodes cannot rely on being called back on the same thread on which they
+// 2) Nodes cannot rely on being called back on the same thread on which they
 //    invoke update callbacks. This may require additional synchronization and
 //    thread transitions inside the node.
-// 4) If a node takes a lock of its own during Update, it should not also hold
-//    that lock when calling the update callback. Doing so will result in
+// 3) If a node takes a lock of its own during Update, it should not also hold
+//    that lock when calling the update callback. Doing so may result in
 //    deadlock.
 //
 // NOTE: Allocators, not otherwise discussed here, are required to be thread-
 // safe so that packets may be cleaned up on any thread.
 //
-// In the future, the threading model will be enhanced. Intended features
-// include:
-// 1) Support for multiple threads.
-// 2) Marshalling update callbacks to a different thread.
-//
+
+class Task;
 
 // Manages operation of a Graph.
 class Engine {
  public:
-  using UpdateCallback = std::function<void()>;
-
   Engine();
 
   ~Engine();
 
   // Sets the update callback. The update callback can be called on any thread.
-  void SetUpdateCallback(UpdateCallback update_callback) {
+  void SetUpdateCallback(ftl::Closure update_callback) {
     update_callback_ = update_callback;
   }
 
@@ -110,6 +100,13 @@ class Engine {
   // Updates stages from the update backlog until the backlog is empty.
   void UpdateUntilDone();
 
+  // Executes |function| after having acquired |stages|. No update or other
+  // task will touch any of the stages while |function| is executing.
+  void PostTask(const ftl::Closure& function, std::vector<Stage*> stages);
+
+  // Deletes the specified task.
+  void DeleteTask(Task* task);
+
  private:
   using UpstreamVisitor =
       std::function<void(Input* input,
@@ -121,24 +118,28 @@ class Engine {
                          const Stage::DownstreamCallback& callback)>;
 
   void VisitUpstream(Input* input, const UpstreamVisitor& visitor)
-      FTL_LOCKS_EXCLUDED(mutex_);
+      FTL_LOCKS_EXCLUDED(backlog_mutex_);
 
   void VisitDownstream(Output* output, const DownstreamVisitor& visitor)
-      FTL_LOCKS_EXCLUDED(mutex_);
+      FTL_LOCKS_EXCLUDED(backlog_mutex_);
 
   // Pushes the stage to the update backlog and returns an indication of whether
   // the update callback should be called.
-  bool PushToUpdateBacklog(Stage* stage) FTL_LOCKS_EXCLUDED(mutex_);
+  bool PushToUpdateBacklog(Stage* stage) FTL_LOCKS_EXCLUDED(backlog_mutex_);
 
   // Pops a stage from the update backlog and returns it or returns nullptr if
   // the update backlog is empty.
-  Stage* PopFromUpdateBacklog() FTL_LOCKS_EXCLUDED(mutex_);
+  Stage* PopFromUpdateBacklog() FTL_LOCKS_EXCLUDED(backlog_mutex_);
 
-  UpdateCallback update_callback_;
+  ftl::Closure update_callback_;
 
-  mutable ftl::Mutex mutex_;
-  std::queue<Stage*> update_backlog_ FTL_GUARDED_BY(mutex_);
-  bool suppress_update_callbacks_ FTL_GUARDED_BY(mutex_) = false;
+  mutable ftl::Mutex backlog_mutex_;
+  std::queue<Stage*> update_backlog_ FTL_GUARDED_BY(backlog_mutex_);
+  bool suppress_update_callbacks_ FTL_GUARDED_BY(backlog_mutex_) = false;
+
+  mutable ftl::Mutex tasks_mutex_;
+  std::unordered_map<Task*, std::unique_ptr<Task>> tasks_
+      FTL_GUARDED_BY(tasks_mutex_);
 };
 
 }  // namespace media
