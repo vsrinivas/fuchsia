@@ -5,6 +5,8 @@
 package daemon
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -86,7 +88,14 @@ func (w *Watcher) Watch(path string) {
 				continue
 			}
 
-			go w.getPackage(name)
+			go func(n string) {
+				if pErr := w.getPackage(n); pErr != nil {
+					log.Printf("Package update failed %s\n", pErr)
+					w.mu.Lock()
+					w.failures[n] = struct{}{}
+					w.mu.Unlock()
+				}
+			}(name)
 		}
 
 		d, err = os.Open(filepath.Join(path, "blobs"))
@@ -125,20 +134,53 @@ func (w *Watcher) Watch(path string) {
 	}
 }
 
-func (w *Watcher) getPackage(name string) {
+func (w *Watcher) getPackage(name string) error {
 	defer func() {
 		w.mu.Lock()
 		delete(w.packages, name)
 		w.mu.Unlock()
 	}()
 
+	pkg := Package{Name: "/" + name}
 	ps := NewPackageSet()
-	ps.Add(&Package{Name: "/" + name})
-	if !w.d.GetUpdates(ps) {
-		w.mu.Lock()
-		w.failures[name] = struct{}{}
-		w.mu.Unlock()
+	ps.Add(&pkg)
+	updates := w.d.GetUpdates(ps)
+	r, ok := updates[pkg]
+	if !ok {
+		return fmt.Errorf("Update result didn't contain requested update\n")
 	}
+	if r.Err != nil {
+		return r.Err
+	}
+
+	dstPath := filepath.Join(DstUpdate, r.Update.Name)
+	dst, e := os.Create(dstPath)
+	if e != nil {
+		return NewErrProcessPackage("couldn't open file to write update %v", e)
+	}
+	defer dst.Close()
+
+	err := r.Open()
+	if err != nil {
+		return NewErrProcessPackage("failed to open input file %v", e)
+	}
+
+	i, err := r.Stat()
+	if err != nil {
+		return NewErrProcessPackage("couldn't stat temp file", e)
+	}
+
+	err = dst.Truncate(i.Size())
+	if err != nil {
+		return NewErrProcessPackage("couldn't truncate file destination", e)
+	}
+	_, e = io.Copy(dst, r)
+	r.Close()
+	// TODO(jmatt) validate file on disk, size, hash, etc
+	if e != nil {
+		return NewErrProcessPackage("couldn't write update to file %v", e)
+	}
+	return nil
 }
 
 func (w *Watcher) getBlob(name string) {

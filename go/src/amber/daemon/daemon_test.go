@@ -168,6 +168,8 @@ func TestOneShot(t *testing.T) {
 	}
 }
 
+// TODO(jmatt) rewrite this test
+/*
 func testDaemonOneShot(t *testing.T) {
 	tickers := []testTicker{}
 	muTickers := sync.Mutex{}
@@ -209,7 +211,7 @@ func testDaemonOneShot(t *testing.T) {
 	verify(t, &tSrc, oneShotPkgsB, 1)
 	verify(t, &tSrc, monitoredPkgs, 2)
 }
-
+*/
 func createOneShotPkgsA() *PackageSet {
 	pkgSet := NewPackageSet()
 	pkgSet.Add(&Package{Name: "one", Version: "18facd43"})
