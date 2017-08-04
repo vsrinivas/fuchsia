@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/scene/viewing_volume.h"
+#include "escher/geometry/types.h"
 
 namespace escher {
 

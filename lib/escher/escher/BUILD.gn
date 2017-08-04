@@ -56,8 +56,6 @@ static_library("escher") {
     "geometry/bounding_box.h",
     "geometry/quad.cc",
     "geometry/quad.h",
-    "geometry/size_i.cc",
-    "geometry/size_i.h",
     "geometry/tessellation.cc",
     "geometry/tessellation.h",
     "geometry/transform.h",

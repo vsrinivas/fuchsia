@@ -6,7 +6,6 @@
 
 #include <math.h>
 
-#include "escher/geometry/size_i.h"
 #include "escher/util/debug_print.h"
 
 namespace escher {

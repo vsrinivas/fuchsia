@@ -67,8 +67,6 @@ void WaterfallDemo::ProcessCommandLineArgs(int argc, char** argv) {
 }
 
 void WaterfallDemo::InitializeEscherStage() {
-  stage_.Resize(escher::SizeI(kDemoWidth, kDemoHeight), 1.0,
-                escher::SizeI(0, 0));
   stage_.set_viewing_volume(
       escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
   // TODO: perhaps lights should be initialized by the various demo scenes.
@@ -236,8 +234,8 @@ void WaterfallDemo::DrawFrame() {
     renderer_->set_show_debug_info(false);
 
     renderer_->RunOffscreenBenchmark(
-        stage_.physical_size().width(), stage_.physical_size().height(),
-        swapchain_helper_.swapchain().format, kOffscreenBenchmarkFrameCount,
+        kDemoWidth, kDemoHeight, swapchain_helper_.swapchain().format,
+        kOffscreenBenchmarkFrameCount,
         [this, model, &camera, overlay_model](
             const escher::ImagePtr& color_image_out,
             const escher::SemaphorePtr& frame_done_semaphore) {

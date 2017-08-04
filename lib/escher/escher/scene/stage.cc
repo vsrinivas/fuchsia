@@ -12,16 +12,6 @@ Stage::Stage() : clear_color_(0.f, 0.f, 0.f, 0.f) {}
 
 Stage::~Stage() {}
 
-void Stage::Resize(SizeI size,
-                   float device_pixel_ratio,
-                   SizeI viewport_offset) {
-  physical_size_ = SizeI(size.width() * device_pixel_ratio,
-                         size.height() * device_pixel_ratio);
-  viewport_offset_ = SizeI(viewport_offset.width() * device_pixel_ratio,
-                           viewport_offset.height() * device_pixel_ratio);
-  viewing_volume_ = viewing_volume_.CopyWith(size.width(), size.height());
-}
-
 void Stage::set_viewing_volume(ViewingVolume value) {
   viewing_volume_ = std::move(value);
 }

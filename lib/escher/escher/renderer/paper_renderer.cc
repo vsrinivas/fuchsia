@@ -97,11 +97,9 @@ void PaperRenderer::DrawDepthPrePass(const ImagePtr& depth_image,
       std::vector<ImagePtr>{dummy_color_image, depth_image},
       model_renderer_->depth_prepass());
 
-  float scale =
-      static_cast<float>(depth_image->width()) / stage.physical_size().width();
+  float scale = static_cast<float>(depth_image->width()) / stage.width();
   FTL_DCHECK(scale ==
-             static_cast<float>(depth_image->height()) /
-                 stage.physical_size().height());
+             static_cast<float>(depth_image->height()) / stage.height());
 
   auto display_list_flags =
       ModelDisplayListFlag::kUseDepthPrepass |
@@ -290,8 +288,6 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
   // Create stage, camera etc. for rendering overlays.
   Stage overlay_stage;
   overlay_stage.set_viewing_volume(stage.viewing_volume());
-  overlay_stage.Resize(SizeI(framebuffer->width(), framebuffer->height()), 1.f,
-                       SizeI());
   Camera overlay_camera = Camera::NewOrtho(overlay_stage.viewing_volume());
   impl::ModelDisplayListPtr overlay_display_list;
   if (overlay_model) {

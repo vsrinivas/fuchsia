@@ -24,8 +24,6 @@ SketchyDemo::SketchyDemo(DemoHarness* harness, int argc, char** argv)
 SketchyDemo::~SketchyDemo() {}
 
 void SketchyDemo::InitializeEscherStage() {
-  stage_.Resize(escher::SizeI(kDemoWidth, kDemoHeight), 1.0,
-                escher::SizeI(0, 0));
   stage_.set_viewing_volume(
       escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
   // TODO: perhaps lights should be initialized by the various demo scenes.
