@@ -43,6 +43,7 @@ typedef struct tftp_data_msg_t {
 #define DEFAULT_WINDOWSIZE 1
 #define DEFAULT_MODE MODE_OCTET
 #define DEFAULT_MAX_TIMEOUTS 5
+#define DEFAULT_USE_OPCODE_PREFIX true
 
 typedef struct tftp_options_t {
     // Maximum filename really is 505 including \0
@@ -59,6 +60,12 @@ typedef struct tftp_options_t {
 
     // Maximum number of times we will retransmit a single msg before aborting
     uint16_t max_timeouts;
+
+    // Add an 8-bit prefix to the opcode so that retransmissions differ from the
+    // original transmission. This fixes problems with checksums on asix 88179 USB
+    // adapters (they send 0 checksums when they should send 0xffff, which is a
+    // no-no in IPv6). This modification is not RFC-compatible.
+    bool use_opcode_prefix;
 } tftp_options;
 
 /**
@@ -99,6 +106,8 @@ struct tftp_session_t {
     tftp_options options;
     tftp_state state;
     size_t offset;
+
+    uint8_t opcode_prefix;
 
     uint32_t block_number;
     uint32_t window_index;

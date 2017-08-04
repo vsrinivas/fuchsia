@@ -202,7 +202,8 @@ static bool test_tftp_generate_write_request_windowsize(void) {
 bool verify_response_opcode(const test_state& ts, uint16_t opcode) {
     ASSERT_GT(ts.outlen, 0, "outlen must not be zero");
     auto msg = reinterpret_cast<tftp_msg*>(ts.out);
-    EXPECT_EQ(msg->opcode, htons(opcode), "bad opcode");
+    // The upper byte of the opcode is ignored
+    EXPECT_EQ(ntohs(msg->opcode) & 0xff, opcode, "bad opcode");
     return true;
 }
 
@@ -418,7 +419,8 @@ bool verify_read_data(const test_state& ts, const tx_test_data& td) {
     EXPECT_EQ(td.expected.offset, td.actual.offset, "read offset mismatch");
     EXPECT_EQ(td.expected.len, td.actual.len, "read length mismatch");
     auto msg = static_cast<tftp_data_msg*>(ts.out);
-    EXPECT_EQ(htons(OPCODE_DATA), msg->opcode, "bad opcode");
+    // The upper byte of the opcode is ignored
+    EXPECT_EQ(OPCODE_DATA, ntohs(msg->opcode) & 0xff, "bad opcode");
     EXPECT_EQ(td.expected.block, msg->block, "bad block number");
     EXPECT_BYTES_EQ(td.expected.data, msg->data, td.actual.len, "read data mismatch");
     END_HELPER;
@@ -863,10 +865,22 @@ static bool test_tftp_receive_data_skipped_block(void) {
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
     ASSERT_GT(ts.outlen, 0, "outlen must not be zero");
     auto msg = reinterpret_cast<tftp_data_msg*>(ts.out);
-    EXPECT_EQ(msg->opcode, htons(OPCODE_ACK), "bad opcode");
+    EXPECT_EQ(ntohs(msg->opcode) & 0xff, OPCODE_ACK, "bad opcode");
+    // The opcode prefix should have been advanced when we saw a dropped block
+    EXPECT_EQ((ntohs(msg->opcode) & 0xff00) >> 8, 1, "bad opcode prefix");
     EXPECT_EQ(msg->block, 0, "bad block number");
     EXPECT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
     EXPECT_EQ(0, ts.session->window_index, "tftp session window index mismatch");
+
+    // Verify with the opcode prefix disabled
+    tftp_session_set_opcode_prefix_use(ts.session, false);
+    status = tftp_process_msg(ts.session, data_buf, sizeof(data_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
+    ASSERT_GT(ts.outlen, 0, "outlen must not be zero");
+    msg = reinterpret_cast<tftp_data_msg*>(ts.out);
+    EXPECT_EQ(ntohs(msg->opcode) & 0xff, OPCODE_ACK, "bad opcode");
+    EXPECT_EQ((ntohs(msg->opcode) & 0xff00) >> 8, 0, "bad opcode prefix");
+    EXPECT_EQ(msg->block, 0, "bad block number");
 
     END_TEST;
 }
@@ -938,7 +952,9 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive data failed");
     ASSERT_GT(ts.outlen, 0, "outlen must not be zero");
     auto msg = reinterpret_cast<tftp_data_msg*>(ts.out);
-    EXPECT_EQ(msg->opcode, htons(OPCODE_ACK), "bad opcode");
+    EXPECT_EQ(ntohs(msg->opcode) & 0xff, OPCODE_ACK, "bad opcode");
+    // Opcode prefix should have been incremented when a packet was not received
+    EXPECT_EQ((ntohs(msg->opcode) & 0xff00) >> 8, 1, "bad opcode prefix");
     EXPECT_EQ(msg->block, 2, "bad block number");
     EXPECT_EQ(0, td.actual.data[1024], "block 3 should be empty");
     EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
@@ -1370,10 +1386,28 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     EXPECT_EQ(3, reads_performed, "failed to call read function");
     ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + kBlockSize, "improper DATA packet size");
     msg = reinterpret_cast<tftp_data_msg*>(ts.out);
-    EXPECT_EQ(OPCODE_DATA, htons(msg->opcode), "incorrect DATA packet opcode");
+    EXPECT_EQ(OPCODE_DATA, ntohs(msg->opcode) & 0xff, "incorrect DATA packet opcode");
+    // Opcode prefix should have been incremented when a packet was dropped
+    EXPECT_EQ(1, (ntohs(msg->opcode) & 0xff00) >> 8, "incorrect opcode prefix");
     EXPECT_EQ((kAckBlock + 1) & 0xffff, msg->block, "incorrect DATA packet block");
     EXPECT_EQ(ts.session->block_number, kAckBlock, "session offset not rewound correctly");
     EXPECT_EQ(ts.session->window_index, 1, "window index not set correctly");
+
+    // Try again, this time disabling opcode prefixes
+    ifc.read = [](void* data, size_t* length, off_t offset, void* cookie) -> tftp_status {
+                   return TFTP_NO_ERROR;
+               };
+    tftp_session_set_file_interface(ts.session, &ifc);
+    tftp_session_set_opcode_prefix_use(ts.session, false);
+    ack_msg.block = (kAckBlock + 1) & 0xffff;
+    status = tftp_process_msg(ts.session, reinterpret_cast<void*>(&ack_msg), sizeof(ack_msg),
+                              ts.out, &ts.outlen, &ts.timeout, NULL);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "no ACK generated");
+    ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + kBlockSize, "improper DATA packet size");
+    msg = reinterpret_cast<tftp_data_msg*>(ts.out);
+    EXPECT_EQ(OPCODE_DATA, ntohs(msg->opcode) & 0xff, "incorrect DATA packet opcode");
+    EXPECT_EQ(0, (ntohs(msg->opcode) & 0xff00) >> 8, "incorrect opcode prefix");
+    EXPECT_EQ((kAckBlock + 2) & 0xffff, msg->block, "incorrect DATA packet block");
 
     END_TEST;
 }

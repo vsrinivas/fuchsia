@@ -201,6 +201,14 @@ tftp_status tftp_session_set_transport_interface(tftp_session* session,
 void tftp_session_set_max_timeouts(tftp_session* session,
                                    uint16_t max_timeouts);
 
+// Specify whether to use the upper 8 bits of the opcode field as a pseudo
+// retransmission count. When enabled, this tweaks the contents of a
+// retransmitted packet just enough that it will have a different checksum,
+// avoiding the problem we have on ASIX 88179 adapters that (reliably)
+// generate incorrect checksums for certain packets.
+void tftp_session_set_opcode_prefix_use(tftp_session* session,
+                                        bool enable);
+
 // If no response from the peer is received before the most recent timeout_ms
 // value, this function should be called to take the next appropriate action
 // (e.g., retransmit or cancel). |sending| indicates whether we are sending or

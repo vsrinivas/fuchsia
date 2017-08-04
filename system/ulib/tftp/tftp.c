@@ -98,9 +98,13 @@ static void __ATTR_PRINTF(4, 5) append_option(char** body, size_t* left, const c
     *left = leftp;
 }
 
-#define OPCODE(msg, value)                \
-    do {                                  \
-        (msg)->opcode = htons(value);     \
+#define OPCODE(session, msg, value)                                                           \
+    do {                                                                                      \
+        if (session->options.use_opcode_prefix) {                                             \
+            (msg)->opcode = htons((value & 0xff) | ((uint16_t)session->opcode_prefix << 8));  \
+        } else {                                                                              \
+            (msg)->opcode = htons(value);                                                     \
+        }                                                                                     \
     } while (0)
 
 #define TRANSMIT_MORE 1
@@ -128,7 +132,7 @@ static size_t next_option(char* buffer, size_t len, char** option, char** value)
 }
 
 static void set_error(tftp_session* session, uint16_t opcode, tftp_msg* resp, size_t* resp_len) {
-    OPCODE(resp, opcode);
+    OPCODE(session, resp, opcode);
     *resp_len = sizeof(*resp);
     session->state = ERROR;
 }
@@ -138,7 +142,7 @@ tftp_status tx_data(tftp_session* session, tftp_data_msg* resp, size_t* outlen, 
     *outlen = 0;
     if (session->offset <= session->file_size) {
         session->window_index++;
-        OPCODE(resp, OPCODE_DATA);
+        OPCODE(session, resp, OPCODE_DATA);
         resp->block = session->block_number + session->window_index;
         size_t len = MIN(session->file_size - session->offset, session->block_size);
         xprintf(" -> Copying block #%d (size:%zu/%d) from %zu/%zu [%d/%d]\n",
@@ -190,6 +194,7 @@ int tftp_init(tftp_session** session, void* buffer, size_t size) {
 
     // Sensible defaults for non-negotiated values
     s->options.max_timeouts = DEFAULT_MAX_TIMEOUTS;
+    s->options.use_opcode_prefix = DEFAULT_USE_OPCODE_PREFIX;
 
     return TFTP_NO_ERROR;
 }
@@ -236,7 +241,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
     }
 
     tftp_msg* ack = outgoing;
-    OPCODE(ack, OPCODE_WRQ);
+    OPCODE(session, ack, OPCODE_WRQ);
     char* body = ack->data;
     memset(body, 0, *outlen - sizeof(*ack));
     size_t left = *outlen - sizeof(*ack);
@@ -430,7 +435,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
     memset(body, 0, *resp_len - sizeof(*resp));
     left = *resp_len - sizeof(*resp);
 
-    OPCODE(resp, OPCODE_OACK);
+    OPCODE(session, resp, OPCODE_OACK);
     if (session->options.requested & FILESIZE_OPTION) {
         append_option(&body, &left, kTsize, "%d", session->options.file_size);
         session->file_size = session->options.file_size;
@@ -487,7 +492,7 @@ static void tftp_prepare_ack(tftp_session* session,
     tftp_data_msg* ack_data = (tftp_data_msg*)msg;
     xprintf(" -> Ack %d\n", session->block_number);
     session->window_index = 0;
-    OPCODE(ack_data, OPCODE_ACK);
+    OPCODE(session, ack_data, OPCODE_ACK);
     ack_data->block = session->block_number & 0xffff;
     *msg_len = sizeof(*ack_data);
 }
@@ -536,6 +541,10 @@ tftp_status tftp_handle_data(tftp_session* session,
         xprintf("Skipped: got %d, expected %d\n", session->block_number + block_delta,
                 session->block_number + 1);
         session->window_index = session->window_size;
+        // It's possible that a previous ACK wasn't received, increment the prefix
+        if (session->options.use_opcode_prefix) {
+            session->opcode_prefix++;
+        }
     }
 
     if (session->window_index == session->window_size ||
@@ -578,6 +587,13 @@ tftp_status tftp_handle_ack(tftp_session* session,
         return TFTP_NO_ERROR;
     }
 
+    if (block_offset < session->window_size) {
+        // If it looks like some of our data might have been dropped, modify the prefix
+        // before resending.
+        if (session->options.use_opcode_prefix) {
+            session->opcode_prefix++;
+        }
+    }
     session->state = SENT_DATA;
     session->block_number += block_offset;
     session->window_index = 0;
@@ -738,7 +754,7 @@ tftp_status tftp_process_msg(tftp_session* session,
     tftp_msg* resp = outgoing;
 
     // Decode opcode
-    uint16_t opcode = ntohs(msg->opcode);
+    uint16_t opcode = ntohs(msg->opcode) & 0xff;
     xprintf("handle_msg opcode=%u length=%d\n", opcode, (int)inlen);
 
     // Set default timeout
@@ -793,6 +809,11 @@ void tftp_session_set_max_timeouts(tftp_session* session,
     session->options.max_timeouts = max_timeouts;
 }
 
+void tftp_session_set_opcode_prefix_use(tftp_session* session,
+                                        bool enable) {
+    session->options.use_opcode_prefix = enable;
+}
+
 tftp_status tftp_timeout(tftp_session* session,
                          bool sending,
                          void* msg_buf,
@@ -803,6 +824,11 @@ tftp_status tftp_timeout(tftp_session* session,
     xprintf("Timeout\n");
     if (++session->consecutive_timeouts > session->options.max_timeouts) {
         return TFTP_ERR_TIMED_OUT;
+    }
+    // It's possible our previous transmission was dropped because of checksum errors.
+    // Use a different opcode prefix when we resend.
+    if (session->options.use_opcode_prefix) {
+        session->opcode_prefix++;
     }
     if (session->state == SENT_WRQ || session->state == RECV_WRQ) {
         // Resend previous message (OACK for recv and WRQ for send)
