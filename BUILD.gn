@@ -18,10 +18,7 @@ executable("modular_unittests") {
   testonly = true
 
   deps = [
-    "//apps/modular/lib/fidl:unittests",
-    "//apps/modular/lib/ledger:unittests",
-    "//apps/modular/lib/testing:unittests",
-    "//apps/modular/lib/util:unittests",
+    "//apps/modular/lib:unittests",
     "//apps/modular/src/device_runner:unittests",
     "//apps/test_runner/src:gtest_main",
   ]
