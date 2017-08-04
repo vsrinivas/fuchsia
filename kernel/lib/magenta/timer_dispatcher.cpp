@@ -170,6 +170,12 @@ void TimerDispatcher::OnTimerFired() {
         }
 
         if (deadline_ != 0u) {
+            // Make sure the timer is canceled or finished before setting it again.
+            // This avoids a race with the timer callback that queued our dpc and
+            // which might be running concurrently on another CPU.
+            // Calling timer_cancel() ensures that any such timer callback completes
+            // before we call timer_set_oneshot().
+            timer_cancel(&timer_);
             timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
             return;
         }
