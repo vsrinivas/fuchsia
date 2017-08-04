@@ -9,6 +9,7 @@ group("tests") {
   public_deps = [
     ":mac_tests",
     ":scanner_tests",
+    ":common_tests",
   ]
 }
 
@@ -63,6 +64,22 @@ executable("scanner_tests") {
   configs += [ "//drivers/wifi/wlan:wlan_config" ]
 }
 
+executable("common_tests") {
+  output_name = "wlan_common_unittest"
+
+  testonly = true
+
+  sources = [
+    "moving_average_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//drivers/wifi/common",
+    "//third_party/gtest",
+  ]
+}
+
 package("wlan_tests") {
   testonly = true
 
@@ -84,6 +101,10 @@ package("wlan_tests") {
 
     {
       name = "wlan_scanner_unittest"
+    },
+
+    {
+      name = "wlan_common_unittest"
     },
 
   ]

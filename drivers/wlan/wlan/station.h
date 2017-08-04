@@ -10,6 +10,7 @@
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <apps/wlan/services/wlan_mlme_ext.fidl-common.h>
 #include <ddk/protocol/wlan.h>
+#include <drivers/wifi/common/moving_average.h>
 #include <magenta/types.h>
 #include <mxtl/unique_ptr.h>
 
@@ -31,7 +32,6 @@ class Station {
 
         // State 2
         kAuthenticated,
-        
         // State 3/4
         // TODO(tkilbourn): distinguish between states where 802.1X ports are blocked
         kAssociated,
@@ -85,6 +85,7 @@ class Station {
     mx_status_t SetPowerManagementMode(bool ps_mode);
     mx_status_t SendPsPoll();
 
+    mx_time_t deadline_after_bcn_period(mx_duration_t tus);
     uint16_t next_seq();
 
     DeviceInterface* device_;
@@ -97,9 +98,10 @@ class Station {
     mx_time_t join_timeout_ = 0;
     mx_time_t auth_timeout_ = 0;
     mx_time_t assoc_timeout_ = 0;
+    mx_time_t signal_report_timeout_ = 0;
     mx_time_t last_seen_ = 0;
     uint16_t aid_ = 0;
-
+    common::MovingAverage<uint8_t, uint16_t, 20> avg_rssi_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
 };
 

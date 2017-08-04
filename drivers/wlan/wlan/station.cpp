@@ -17,6 +17,7 @@
 namespace wlan {
 
 static constexpr mx_duration_t kAssocTimeoutTu = 20;
+static constexpr mx_duration_t kSignalReportTimeoutTu = 10;
 
 Station::Station(DeviceInterface* device, mxtl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
@@ -61,7 +62,7 @@ mx_status_t Station::Join(JoinRequestPtr req) {
         return status;
     }
 
-    join_timeout_ = timer_->Now() + WLAN_TU(bss_->beacon_period * req->join_failure_timeout);
+    join_timeout_ = deadline_after_bcn_period(req->join_failure_timeout);
     status = timer_->StartTimer(join_timeout_);
     if (status != MX_OK) {
         errorf("could not set join timer: %d\n", status);
@@ -134,7 +135,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
         return status;
     }
 
-    auth_timeout_ = timer_->Now() + WLAN_TU(bss_->beacon_period * req->auth_failure_timeout);
+    auth_timeout_ = deadline_after_bcn_period(req->auth_failure_timeout);
     status = timer_->StartTimer(auth_timeout_);
     if (status != MX_OK) {
         errorf("could not set auth timer: %d\n", status);
@@ -236,7 +237,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
     }
 
     // TODO(tkilbourn): get the assoc timeout from somewhere
-    assoc_timeout_ = timer_->Now() + WLAN_TU(bss_->beacon_period * kAssocTimeoutTu);
+    assoc_timeout_ = deadline_after_bcn_period(kAssocTimeoutTu);
     status = timer_->StartTimer(assoc_timeout_);
     if (status != MX_OK) {
         errorf("could not set auth timer: %d\n", status);
@@ -255,6 +256,7 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
 
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
     MX_DEBUG_ASSERT(rxinfo);
+
     auto hdr = packet->field<MgmtFrameHeader>(0);
     if (DeviceAddress(hdr->addr3) != bss_->bssid.data()) {
         // Not our beacon -- this shouldn't happen because the Mlme should not have routed this
@@ -262,6 +264,8 @@ mx_status_t Station::HandleBeacon(const Packet* packet) {
         MX_DEBUG_ASSERT(false);
         return MX_ERR_BAD_STATE;
     }
+
+    avg_rssi_.add(rxinfo->rssi);
 
     // TODO(tkilbourn): update any other info (like rolling average of rssi)
     last_seen_ = timer_->Now();
@@ -406,6 +410,15 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     timer_->CancelTimer();
     device_->SetStatus(ETH_STATUS_ONLINE);
     SendAssocResponse(AssociateResultCodes::SUCCESS);
+
+    signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
+    timer_->StartTimer(signal_report_timeout_);
+    auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
+    MX_DEBUG_ASSERT(rxinfo);
+    avg_rssi_.reset();
+    avg_rssi_.add(rxinfo->rssi);
+    SendSignalReportIndication(rxinfo->rssi);
+
     std::printf("associated\n");
 
     return MX_OK;
@@ -433,6 +446,9 @@ mx_status_t Station::HandleDisassociation(const Packet* packet) {
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
 
+    signal_report_timeout_ = 0;
+    timer_->CancelTimer();
+
     return SendDisassociateIndication(disassoc->reason_code);
 }
 
@@ -442,6 +458,11 @@ mx_status_t Station::HandleData(const Packet* packet) {
         debugf("dropping data packet while not associated\n");
         return MX_OK;
     }
+
+    // Take signal strength into account.
+    auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
+    MX_DEBUG_ASSERT(rxinfo);
+    avg_rssi_.add(rxinfo->rssi);
 
     // DataFrameHeader was also parsed by MLME so this should not fail
     auto hdr = packet->field<DataFrameHeader>(0);
@@ -568,6 +589,13 @@ mx_status_t Station::HandleTimeout() {
         assoc_timeout_ = 0;
         // TODO(tkilbourn): need a better error code for this
         return SendAssocResponse(AssociateResultCodes::REFUSED_TEMPORARILY);
+    }
+
+    if (signal_report_timeout_ > 0 && now > signal_report_timeout_ &&
+        state_ == WlanState::kAssociated) {
+        signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
+        timer_->StartTimer(signal_report_timeout_);
+        SendSignalReportIndication(avg_rssi_.avg());
     }
 
     return MX_OK;
@@ -701,6 +729,10 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
 
 mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
     debugfn();
+    if (state_ != WlanState::kAssociated) {
+        return MX_OK;
+    }
+
     auto ind = SignalReportIndication::New();
     ind->rssi = rssi;
 
@@ -788,8 +820,8 @@ mx_status_t Station::SetPowerManagementMode(bool ps_mode) {
 }
 
 mx_status_t Station::SendPsPoll() {
-    // TODO(hahnr): We should probably wait for an RSNA if the network is an RSN. Else we cannot
-    // work with the incoming data frame.
+    // TODO(hahnr): We should probably wait for an RSNA if the network is an
+    // RSN. Else we cannot work with the incoming data frame.
     if (state_ != WlanState::kAssociated) {
         warnf("cannot send ps-poll before being associated\n");
         return MX_OK;
@@ -829,6 +861,11 @@ uint16_t Station::next_seq() {
     }
     last_seq_ = seq;
     return seq;
+}
+
+mx_time_t Station::deadline_after_bcn_period(mx_duration_t tus) {
+    MX_DEBUG_ASSERT(!bss_.is_null());
+    return timer_->Now() + WLAN_TU(bss_->beacon_period * tus);
 }
 
 }  // namespace wlan
