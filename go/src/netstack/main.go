@@ -8,6 +8,8 @@ import (
 	"log"
 	"strings"
 
+	"application/lib/app/context"
+
 	"apps/netstack/eth"
 	"apps/netstack/watcher"
 
@@ -20,10 +22,14 @@ import (
 	"github.com/google/netstack/tcpip/transport/udp"
 )
 
+var ns *netstack
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("netstack: ")
 	log.Print("started")
+
+	ctx := context.CreateFromStartupInfo()
 
 	stk := stack.New([]string{
 		ipv4.ProtocolName,
@@ -34,11 +40,14 @@ func main() {
 		tcp.ProtocolName,
 		udp.ProtocolName,
 	}).(*stack.Stack)
-	s, err := socketDispatcher(stk)
+	s, err := socketDispatcher(stk, ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Print("socket dispatcher started")
+
+	AddNetstackService(ctx)
+	ctx.Serve()
 
 	arena, err := eth.NewArena()
 	if err != nil {
@@ -48,7 +57,7 @@ func main() {
 	// TODO: plumb the magenta.nodename environment variable through
 	// initialization, just as devmgr does to netsvc. Set it here
 	// in the ns.nodename field.
-	ns := &netstack{
+	ns = &netstack{
 		arena:      arena,
 		stack:      stk,
 		dispatcher: s,

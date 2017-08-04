@@ -19,7 +19,7 @@ import (
 	"syscall/mx/mxio/rio"
 	"syscall/mx/mxruntime"
 
-	"apps/netstack/svcfs"
+	"application/lib/app/context"
 
 	"github.com/google/netstack/dns"
 	"github.com/google/netstack/tcpip"
@@ -81,21 +81,21 @@ type app struct {
 	socket socketServer
 }
 
-func (a *app) serviceProvider(name string, h mx.Handle) {
-	if name == "net.Netstack" {
-		if err := a.socket.dispatcher.AddHandler(h, rio.ServerHandler(a.socket.mxioHandler), 0); err != nil {
-			h.Close()
-		}
-
-		if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
-			h.Close()
-		}
-		return
+func (a *app) Bind(h mx.Handle) {
+	if err := a.socket.dispatcher.AddHandler(h, rio.ServerHandler(a.socket.mxioHandler), 0); err != nil {
+		h.Close()
 	}
-	h.Close()
+
+	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
+		h.Close()
+	}
 }
 
-func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
+func (a *app) Name() string {
+	return "net.Netstack"
+}
+
+func socketDispatcher(stk tcpip.Stack, ctx *context.Context) (*socketServer, error) {
 	d, err := dispatcher.New(rio.Handler)
 	if err != nil {
 		return nil, err
@@ -127,20 +127,7 @@ func socketDispatcher(stk tcpip.Stack) (*socketServer, error) {
 		return nil, err
 	}
 
-	h2 := mxruntime.GetStartupHandle(
-		mxruntime.HandleInfo{Type: handleServicesRequest, Arg: 0})
-
-	if h2 != mx.HANDLE_INVALID {
-		n := &svcfs.Namespace{
-			Provider:   a.serviceProvider,
-			Dispatcher: d,
-		}
-
-		if err := n.Serve(h2); err != nil {
-			h2.Close()
-			return nil, err
-		}
-	}
+	ctx.OutgoingService.AddService(a)
 
 	go d.Serve()
 	return &a.socket, nil

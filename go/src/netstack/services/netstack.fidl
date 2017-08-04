@@ -1,0 +1,25 @@
+// Copyright 2013 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module netstack;
+import "apps/network/services/net_address.fidl";
+
+enum Protocol {
+  UNSPECIFIED,
+  UDP,
+  TCP,
+};
+
+[ServiceName="netstack::Netstack"]
+interface Netstack {
+  // Finds the port number from a given service name and protocol. [service] can be a
+  // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
+  // the service is checked for TCP first, then UDP.
+  GetPortForService(string service, Protocol protocol) => (uint16 port);
+
+  // Finds the IP address for a given host name and port. This may issue network
+  // requests via DNS to look up domain names. E.g.
+  // GetAddress("example.com", 80) => [{142.42.42.1}]
+  GetAddress(string address, uint16 port) => (array<network.NetAddress> addresses);
+};
