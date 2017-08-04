@@ -282,7 +282,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			v, err = ios.ep.Read(nil)
 			if err == nil {
 				break
-			} else if err == tcpip.ErrWouldBlock || err == tcpip.ErrInvalidEndpointState {
+			} else if err == tcpip.ErrWouldBlock || err == tcpip.ErrInvalidEndpointState || err == tcpip.ErrNotConnected {
 				if debug2 {
 					log.Printf("loopSocketRead read err=%v", err)
 				}
