@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mxtl/vector.h>
+
 #include "drivers/audio/intel-hda/utils/codec-caps.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/codec-state.h"
+#include "drivers/audio/intel-hda/utils/utils.h"
 
 #include "debug-logging.h"
 #include "realtek-stream.h"
@@ -407,7 +410,10 @@ mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
     setup_progress_ |= stage;
 
     if (setup_progress_ == ALL_SETUP_COMPLETE) {
-        FinalizeSetupLocked();
+        mx_status_t res = FinalizeSetupLocked();
+        if (res != MX_OK)
+            return res;
+
         setup_progress_ |= STREAM_PUBLISHED;
         DumpStreamPublishedLocked();
         return PublishDeviceLocked();
@@ -416,13 +422,48 @@ mx_status_t RealtekStream::UpdateSetupProgressLocked(uint32_t stage) {
     return MX_OK;
 }
 
-void RealtekStream::FinalizeSetupLocked() {
+mx_status_t RealtekStream::FinalizeSetupLocked() {
     // Stash the number of gain steps to use in the pin converter.  This allows
     // us to hardcode gain targets for things like mic boost.  Eventually, we
     // need to expose a way to detect this capability and control it via APIs,
     // but for now we can get away with just setting it as part of the finalize
     // step for setup.
     cur_pc_gain_steps_ = ComputeGainSteps(pc_, props_.default_pc_gain);
+
+    // Compute the list of formats we support.
+    mxtl::Vector<audio_proto::FormatRange> supported_formats;
+    mx_status_t res =  MakeFormatRangeList(conv_.sample_caps,
+                                           conv_.widget_caps.ch_count(),
+                                           &supported_formats);
+    if (res != MX_OK) {
+        DEBUG_LOG("Failed to compute supported format ranges!  (res = %d)\n", res);
+        return res;
+    }
+
+    // At this point, we should have at least one sample encoding that we
+    // support.  If we don't, then this output stream is pretty worthless.
+    if (!supported_formats.size()) {
+        DEBUG_LOG("WARNING - no sample encodings are supported by this audio stream!  "
+                  "(formats = 0x%08x, size/rates = 0x%08x)\n",
+                  conv_.sample_caps.pcm_formats_,
+                  conv_.sample_caps.pcm_size_rate_);
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
+    // Go over the list of format ranges produced and tweak it to account for
+    // seemingly non-standard Realtek codec behavior.  Usually, when a converter
+    // says that it supports a maximum of N channels, you are supposed to be
+    // able to configure it for any number of channels in the set [1, N].  The
+    // Realtek codecs I have encountered so far, however, only support the
+    // number of channels they claim to support.  IOW - If the converter says
+    // that max_channels == 2, and you configure it for 1 channel, it will still
+    // produce 2 audio frames per frame period.
+    for (auto& format : supported_formats)
+        format.min_channels = format.max_channels;
+
+    SetSupportedFormatsLocked(mxtl::move(supported_formats));
+
+    return MX_OK;
 }
 
 void RealtekStream::DumpStreamPublishedLocked() {
