@@ -5,7 +5,8 @@
     "labels": [
         "//apps/amber:amber",
         "//apps/amber:amber-keys",
-        "//apps/amber:amber-srv-keys"
+        "//apps/amber:amber-srv-keys",
+        "//apps/amber:amber-publish(//build/toolchain:host_x64)"
     ],
     "binaries": [
         {
