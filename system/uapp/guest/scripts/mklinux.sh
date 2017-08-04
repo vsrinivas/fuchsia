@@ -24,9 +24,9 @@ while getopts "c:d:" OPT; do
   esac
 done
 
-# Clone the repository.
+# Shallow clone the repository.
 if [ ! -d "$LINUXDIR" ]; then
-  git clone --branch machina https://magenta-guest.googlesource.com/third_party/linux "$LINUXDIR"
+  git clone --depth 1 --branch machina https://magenta-guest.googlesource.com/third_party/linux "$LINUXDIR"
 fi
 
 # Update the repository.

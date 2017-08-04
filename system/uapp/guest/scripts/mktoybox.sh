@@ -46,7 +46,7 @@ if [ ! -f "$IRDIR/initrd.gz" ]; then
   if [ ! -d "$TBDOWNLOAD" ]; then
     echo "Downloading toybox to $TBDOWNLOAD"
     if curl https://landley.net/toybox/downloads/toybox-$TBVERSION.tar.gz | \
-        tar xjf - -C "$PULLDIR"; then
+        tar xz -C "$PULLDIR"; then
       echo "We got the box"
     else
       echo "Some issues getting the box!"
@@ -61,9 +61,21 @@ if [ ! -f "$IRDIR/initrd.gz" ]; then
 
   make -C "$TBDOWNLOAD" defconfig
 
-  # Apply our patches
+  # Apply the patch to include the shell
   echo "Applying config patches..."
-  patch "$TBDOWNLOAD/.config" "$PATCHFILE"
+  patch "$TBDOWNLOAD/.config" << '_EOF'
+--- .config.old 2017-07-22 03:04:04.335638468 +1000
++++ .config 2017-07-22 03:04:18.391546765 +1000
+@@ -159,7 +159,7 @@
+ # CONFIG_PING is not set
+ # CONFIG_ROUTE is not set
+ # CONFIG_SETFATTR is not set
+-# CONFIG_SH is not set
++CONFIG_SH=y
+ # CONFIG_CD is not set
+ # CONFIG_EXIT is not set
+ # CONFIG_SULOGIN is not set
+_EOF
 
   LDFLAGS="--static" make -C "$TBDOWNLOAD" -j100
   PREFIX=$IRDIR_FS make -C "$TBDOWNLOAD" install
