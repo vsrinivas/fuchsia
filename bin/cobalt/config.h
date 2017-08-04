@@ -18,14 +18,14 @@ const char* kMetricConfigText = R"(
 # Customer 1 (Fuchsia)
 ########################
 
-## Project 100: Ledger
+########################### Project 100: Ledger ###############################
 
 #####################################################################
 # Metric (1, 100, 1)
-# Name:  Daily rare event counts
-# Description: Daily counts of several events that are expected to occur
+# Name:  Rare event occurrences.
+# Description: Occurrences of several events that are expected to occur
 #              rarely if ever.
-# Parts: This metric has one part name "Event name"
+# Parts: This metric has one part named "Event name"
 # Notes: At least initially, we plan to use Basic RAPPOR with no privacy to
 #        collect this metric. Each category will be one of the rare events.
 ######################################################################
@@ -33,20 +33,49 @@ element {
   customer_id: 1
   project_id: 100
   id: 1
-  name: "Daily rare event counts"
-  description: "Daily counts of several events that are expected to occur rarely if ever."
+  name: "Rare event occurrences"
+  description: "Occurrences of several events that are expected to occur rarely if ever."
   time_zone_policy: UTC
   parts {
     key: "Event name"
     value {
-      description: "Which rare event occured?"
+      description: "Which rare event occurred?"
     }
   }
 }
 
+##################### Project 101: Module Usage Tracking ######################
+
 #####################################################################
-#        ***  Below this line are testing projects. ***
-#####################################################################
+# Metric (1, 101, 1)
+# Name:  Module views
+# Description: Tracks each incidence of viewing a module by its URL.
+# Parts: This metric has one part named "url"
+# Notes: At least initially, we plan to use Forculus with threshold set
+#        to 2 to collect this. (Forculus doesn't support threshold=1.)
+######################################################################
+element {
+  customer_id: 1
+  project_id: 101
+  id: 1
+  name: "Module views"
+  description: "Tracks each incidence of viewing a module by its URL."
+  time_zone_policy: UTC
+  parts {
+    key: "url"
+    value {
+      description: "The URL of the module being launched."
+    }
+  }
+}
+
+
+
+################################################################################
+#      ***  NOTICE: Below this line are testing-only projects. ***
+#
+#           These project must all use project IDs less than 100.
+################################################################################
 
 ## Project 1: End-to-End test
 
@@ -105,10 +134,34 @@ element {
   parts {
     key: "Event name"
     value {
-      description: "Which rare event occured?"
+      description: "Which rare event occurred?"
     }
   }
 }
+
+#####################################################################
+# Metric (1, 2, 2)
+# Name:  Module views
+# Description: Tracks each incidence of viewing a module by its URL.
+# Parts: This metric has one part named "url"
+# Notes: At least initially, we plan to use Forculus with threshold set
+#        to 2 to collect this. (Forculus doesn't support threshold=1.)
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 2
+  name: "Module views"
+  description: "Tracks each incidence of viewing a module by its URL."
+  time_zone_policy: UTC
+  parts {
+    key: "url"
+    value {
+      description: "The URL of the module being launched."
+    }
+  }
+}
+
 )";
 
 // This must be kept in sync with registered_encodings.txt in the Cobalt repo.
@@ -117,11 +170,11 @@ const char* kEncodingConfigText = R"(
 # Customer 1 (Fuchsia)
 ########################
 
-## Project 100: Ledger
+########################### Project 100: Ledger ###############################
 
 #####################################################################
 # EncodingConfig(1, 100, 1)
-# Name:  Basic RAPPOR for Daily Rare Event Counts
+# Name:  Basic RAPPOR for Rare Event Occurrences
 # Description: A Configuration of Basic RAPPOR with no privacy, with string
 #              category names, and with one category for each rare event.
 ######################################################################
@@ -142,10 +195,36 @@ element {
   }
 }
 
+##################### Project 101: Module Usage Tracking ######################
 
 #####################################################################
-#        ***  Below this line are testing projects. ***
-#####################################################################
+# EncodingConfig(1, 101, 1)
+# Name:  Forculus with minimal privacy
+# Description:  We are using Forculus to collect arbitrary strings. We don't
+#               need privacy at this time so we use a threshold of 2 and
+#               an aggregation epoch of a month. This means that a string
+#               will be decoded as long as it as sent by at least two differnt
+#               devices in any given calendar month. At the time of this writing
+#               we have not yet implemented persistent device identity so
+#               every re-start of the Cobalt Client process on a Fuchsia
+#               system counts as a new device.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 101
+  id: 1
+  forculus {
+    threshold: 2
+    epoch_type: MONTH
+  }
+}
+
+
+################################################################################
+#      ***  NOTICE: Below this line are testing-only projects. ***
+#
+#           These project must all use project IDs less than 100.
+################################################################################
 
 ## Project 1: End-to-End test
 
@@ -198,6 +277,29 @@ element {
     }
   }
 }
+
+#####################################################################
+# EncodingConfig(1, 2, 2)
+# Name:  Forculus with minimal privacy
+# Description:  We are using Forculus to collect arbitrary strings. We don't
+#               need privacy at this time so we use a threshold of 2 and
+#               an aggregation epoch of a month. This means that a string
+#               will be decoded as long as it as sent by at least two differnt
+#               devices in any given calendar month. At the time of this writing
+#               we have not yet implemented persistent device identity so
+#               every re-start of the Cobalt Client process on a Fuchsia
+#               system counts as a new device.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 2
+  forculus {
+    threshold: 2
+    epoch_type: MONTH
+  }
+}
+
 )";
 
 }  // namespace cobalt
