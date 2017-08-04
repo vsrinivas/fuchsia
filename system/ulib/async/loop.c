@@ -519,10 +519,9 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
         deadline = task->deadline;
         if (deadline == MX_TIME_INFINITE)
             return;
-        if (deadline < MX_TIMER_MIN_DEADLINE)
-            deadline = MX_TIMER_MIN_DEADLINE;
     } else {
-        deadline = MX_TIMER_MIN_DEADLINE;
+        // Fire now.
+        deadline = 0ULL;
     }
 
     mx_status_t status = mx_timer_start(loop->timer, deadline, 0, 0);

@@ -22,7 +22,6 @@
 using mxtl::AutoLock;
 
 constexpr mx_duration_t kMinTimerPeriod = MX_TIMER_MIN_PERIOD;
-constexpr mx_time_t kMinTimerDeadline = MX_TIMER_MIN_DEADLINE;
 
 static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
@@ -50,7 +49,7 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
 
 TimerDispatcher::TimerDispatcher(uint32_t /*options*/)
     : timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
-      deadline_(0u), period_(0u), cancel_pending_(false),
+      deadline_(0u), slack_(0u), period_(0u), cancel_pending_(false),
       timer_(TIMER_INITIAL_VALUE(timer_)) {
 }
 
@@ -70,13 +69,8 @@ void TimerDispatcher::on_zero_handles() {
         timer_cancel(&timer_);
 }
 
-mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
+mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack, mx_duration_t period) {
     canary_.Assert();
-
-    // Deadline values 0 and 1 are special.
-    if (deadline < kMinTimerDeadline)
-        return MX_ERR_INVALID_ARGS;
-
     // zero period is valid but other small values are not.
     if ((period < kMinTimerPeriod) && (period != 0u))
         return MX_ERR_NOT_SUPPORTED;
@@ -90,15 +84,16 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     // TODO(MG-991): We could handle the repeating case here too but we're thinking
     // about removing repeating timers so we might as well keep this optimization
     // as simple as possible.
-    if (deadline <= current_time() && period == 0u) {
+    if ((period == 0u) && ((deadline == 0u) || (deadline <= current_time()))) {
         state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
         return MX_OK;
     }
 
     // The timer is always a one shot timer which in the periodic case
     // is re-issued in the timer callback.
-    deadline_ = deadline;
+    deadline_ = (deadline == 0u) ? 1u: deadline;
     period_ = period;
+    slack_ = slack;
 
     // If we're imminently awaiting a timer callback due to a prior cancelation request,
     // let the callback take care of restarting the timer too so everthing happens in the
@@ -116,7 +111,7 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t period) {
     // timer again.  So cancel the timer if we haven't already.
     if (!did_cancel)
         timer_cancel(&timer_);
-    timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
+    timer_set(&timer_, deadline_, slack_, &timer_irq_callback, &timer_dpc_);
     return MX_OK;
 }
 
@@ -136,6 +131,7 @@ bool TimerDispatcher::CancelTimerLocked() {
         return false; // didn't call timer_cancel
     deadline_ = 0u;
     period_ = 0u;
+    slack_ = 0;
 
     // If we're already waiting for the timer to be canceled, then we don't need
     // to cancel it again.
@@ -189,7 +185,7 @@ void TimerDispatcher::OnTimerFired() {
             // possibly on a different CPU) has completed before set try to set the
             // timer again.
             timer_cancel(&timer_);
-            timer_set_oneshot(&timer_, deadline_, &timer_irq_callback, &timer_dpc_);
+            timer_set(&timer_, deadline_, slack_, &timer_irq_callback, &timer_dpc_);
             return;
         }
     }

@@ -272,7 +272,6 @@ typedef enum {
 
 // Timer limits.
 #define MX_TIMER_MIN_PERIOD         MX_USEC(50)
-#define MX_TIMER_MIN_DEADLINE       MX_USEC(1)
 
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by

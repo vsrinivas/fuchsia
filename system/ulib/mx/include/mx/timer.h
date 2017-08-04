@@ -30,8 +30,13 @@ public:
 
     static mx_status_t create(uint32_t options, uint32_t clock_id, timer* result);
 
+    // This method is deprecated.
     mx_status_t start(mx_time_t deadline, mx_duration_t period, mx_duration_t slack) const {
         return mx_timer_start(get(), deadline, period, slack);
+    }
+
+    mx_status_t set(mx_time_t deadline, mx_duration_t slack) const {
+        return mx_timer_set(get(), deadline, slack);
     }
 
     mx_status_t cancel() const {
