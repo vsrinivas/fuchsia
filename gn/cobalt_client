@@ -7,6 +7,9 @@
         "ftl",
         "magentix",
         "mtl",
+        "netconnector",
+        "netstack",
+        "network",
         "runtime_config"
     ],
     "labels": [
