@@ -111,7 +111,11 @@ def main():
         if args.depfile is not None:
             with open(args.depfile, "wb") as out:
                 env['GOROOT'] = os.path.join(args.fuchsia_root, "third_party/go")
-                subprocess.Popen([godepfile, '-o', output_name, args.package], stdout=out, env=env)
+                godepfile_args = [godepfile, '-o', output_name]
+                if args.is_test:
+                    godepfile_args += [ '-test']
+                godepfile_args += [args.package]
+                subprocess.Popen(godepfile_args, stdout=out, env=env)
     return retcode
 
 
