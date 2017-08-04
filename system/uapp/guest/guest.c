@@ -12,6 +12,7 @@
 #include <hypervisor/acpi.h>
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/process.h>
@@ -22,8 +23,6 @@
 #include "magenta.h"
 
 static const uint64_t kVmoSize = 1u << 30;
-static const uint16_t kPioEnable = 1u << 0;
-static const uintptr_t kPioBase = 0x8000;
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
 static mx_status_t usage(const char* cmd) {
@@ -82,20 +81,23 @@ int main(int argc, char** argv) {
     guest_state_t guest_state;
     memset(&guest_state, 0, sizeof(guest_state));
     guest_state.guest = guest;
-    int ret = mtx_init(&guest_state.mutex, mtx_plain);
-    if (ret != thrd_success) {
-        fprintf(stderr, "Failed to initialize guest state mutex\n");
-        return MX_ERR_INTERNAL;
-    }
     // Setup guest memory.
     guest_state.mem_addr = (void*)addr;
     guest_state.mem_size = kVmoSize;
+    // Setup PCI.
+    pci_bus_t bus;
+    guest_state.bus = bus;
+    status = pci_bus_init(bus);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to initialize PCI\n");
+        return status;
+    }
     // Setup UART.
     uart_t uart;
     guest_state.uart = &uart;
     status = uart_init(&uart);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to initialize UART state\n");
+        fprintf(stderr, "Failed to initialize UART\n");
         return status;
     }
     // Setup block device.
@@ -106,13 +108,7 @@ int main(int argc, char** argv) {
         if (status != MX_OK)
             return status;
     } else {
-        block.fd = -1;
-    }
-    // Setup each PCI device's BAR 0 register.
-    for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {
-        pci_device_state_t* pci_device_state = &guest_state.pci_device_state[i];
-        pci_device_state->command = kPioEnable;
-        pci_device_state->bar[0] = kPioBase + (i << 8);
+        pci_device_disable(&bus[PCI_DEVICE_VIRTIO_BLOCK]);
     }
 
     uintptr_t pt_end_off;
@@ -138,7 +134,7 @@ int main(int argc, char** argv) {
     // Load the first page in to allow OS detection without requiring
     // us to seek backwards later.
     uintptr_t first_page = addr + kVmoSize - PAGE_SIZE;
-    ret = read(fd, (void*)first_page, PAGE_SIZE);
+    ssize_t ret = read(fd, (void*)first_page, PAGE_SIZE);
     if (ret != PAGE_SIZE) {
         fprintf(stderr, "Failed to read first page of kernel\n");
         return MX_ERR_IO;

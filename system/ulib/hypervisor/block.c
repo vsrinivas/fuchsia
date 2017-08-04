@@ -137,12 +137,7 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
             fprintf(stderr, "Only one queue per device is supported\n");
             return MX_ERR_NOT_SUPPORTED;
         }
-        mx_status_t status;
-        if (block->fd < 0) {
-            status = null_block_device(queue, mem_addr, mem_size);
-        } else {
-            status = file_block_device(queue, mem_addr, mem_size, block->fd);
-        }
+        mx_status_t status = file_block_device(queue, mem_addr, mem_size, block->fd);
         if (status != MX_OK) {
             fprintf(stderr, "Block device operation failed %d\n", status);
             return status;

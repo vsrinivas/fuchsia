@@ -6,14 +6,13 @@
 
 #include <threads.h>
 
-#include <hypervisor/pci.h>
-#include <hypervisor/virtio.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
 
 typedef struct block block_t;
+typedef struct pci_device pci_device_t;
 typedef struct uart uart_t;
 
 /* Stores the IO APIC state. */
@@ -46,12 +45,12 @@ typedef struct guest_state {
     void* mem_addr;
     size_t mem_size;
 
+    pci_device_t* bus;
     uart_t* uart;
     block_t* block;
 
     io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;
-    pci_device_state_t pci_device_state[PCI_MAX_DEVICES];
 } guest_state_t;
 
 /* Stores the local APIC state. */
