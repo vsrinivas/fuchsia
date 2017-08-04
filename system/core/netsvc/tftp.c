@@ -12,17 +12,32 @@
 #include <tftp/tftp.h>
 
 #include <magenta/boot/netboot.h>
+#include <magenta/syscalls.h>
 
 #include "netsvc.h"
 
 #define SCRATCHSZ 2048
-static char tftp_session_scratch[SCRATCHSZ];
-char tftp_out_scratch[SCRATCHSZ];
 
 typedef struct {
     bool is_write;
     char filename[PATH_MAX + 1];
 } file_info_t;
+
+typedef struct {
+    ip6_addr_t dest_addr;
+    uint16_t dest_port;
+    uint32_t timeout_ms;
+} transport_info_t;
+
+static char tftp_session_scratch[SCRATCHSZ];
+char tftp_out_scratch[SCRATCHSZ];
+
+static size_t last_msg_size = 0;
+static tftp_session *session = NULL;
+static file_info_t file_info;
+static transport_info_t transport_info;
+
+mx_time_t tftp_next_timeout = MX_TIME_INFINITE;
 
 void file_init(file_info_t *file_info) {
     file_info->is_write = true;
@@ -66,81 +81,113 @@ static void file_close(void* cookie) {
     netfile_close();
 }
 
-typedef struct {
-    ip6_addr_t dest_addr;
-    uint16_t dest_port;
-} transport_info_t;
-
 static int transport_send(void* data, size_t len, void* transport_cookie) {
     transport_info_t* transport_info = transport_cookie;
     int bytes_sent = udp6_send(data, len, &transport_info->dest_addr,
                                transport_info->dest_port, NB_TFTP_OUTGOING_PORT);
-    return bytes_sent < 0 ? TFTP_ERR_IO : bytes_sent;
+    if (bytes_sent < 0) {
+        return TFTP_ERR_IO;
+    }
+
+    // The timeout is relative to sending instead of receiving a packet, since there are some
+    // received packets we want to ignore (duplicate ACKs).
+    if (transport_info->timeout_ms != 0) {
+        tftp_next_timeout = mx_deadline_after(MX_MSEC(transport_info->timeout_ms));
+    }
+    return bytes_sent;
 }
 
 static int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
-    // TODO
+    transport_info_t* transport_info = transport_cookie;
+    transport_info->timeout_ms = timeout_ms;
     return 0;
+}
+
+static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
+    int ret = tftp_init(&session, tftp_session_scratch,
+                        sizeof(tftp_session_scratch));
+    if (ret != TFTP_NO_ERROR) {
+        printf("netsvc: failed to initiate tftp session\n");
+        session = NULL;
+        return;
+    }
+
+    // Initialize file interface
+    file_init(&file_info);
+    tftp_file_interface file_ifc = {file_open_read, file_open_write,
+                                    file_read, file_write, file_close};
+    tftp_session_set_file_interface(session, &file_ifc);
+
+    // Initialize transport interface
+    memcpy(&transport_info.dest_addr, saddr, sizeof(ip6_addr_t));
+    transport_info.dest_port = sport;
+    transport_info.timeout_ms = 1000;  // Reasonable default for now
+    tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
+    tftp_session_set_transport_interface(session, &transport_ifc);
+}
+
+static void end_connection(void) {
+    session = NULL;
+    tftp_next_timeout = MX_TIME_INFINITE;
+}
+
+void tftp_timeout_expired(void) {
+    tftp_status result = tftp_timeout(session, false, tftp_out_scratch, &last_msg_size,
+                                      sizeof(tftp_out_scratch), &transport_info.timeout_ms,
+                                      &file_info);
+    if (result == TFTP_ERR_TIMED_OUT) {
+        printf("netsvc: excessive timeouts, dropping tftp connection\n");
+        end_connection();
+        netfile_abort_write();
+    } else if (result < 0) {
+        printf("netsvc: failed to generate timeout response, dropping tftp connection\n");
+        end_connection();
+        netfile_abort_write();
+    } else {
+        if (last_msg_size > 0) {
+            if (transport_send(tftp_out_scratch, last_msg_size, &transport_info) <
+                (tftp_status) last_msg_size) {
+                printf("netsvc: failed to send message\n");
+            }
+        }
+    }
 }
 
 void tftp_recv(void* data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
-    static tftp_session *session = NULL;
-    static file_info_t file_info;
-    static transport_info_t transport_info;
-
     if (dport == NB_TFTP_INCOMING_PORT) {
         if (session != NULL) {
             printf("netsvc: only one simultaneous tftp session allowed\n");
             // ignore attempts to connect when a session is in progress
             return;
         }
-        // Start TFTP session
-        int ret = tftp_init(&session, tftp_session_scratch,
-                            sizeof(tftp_session_scratch));
-        if (ret != TFTP_NO_ERROR) {
-            printf("netsvc: failed to initiate tftp session\n");
-            session = NULL;
-            return;
-        }
-
-        // Initialize file interface
-        file_init(&file_info);
-        tftp_file_interface file_ifc = {file_open_read, file_open_write,
-                                        file_read, file_write, file_close};
-        tftp_session_set_file_interface(session, &file_ifc);
-
-        // Initialize transport interface
-        memcpy(&transport_info.dest_addr, saddr, sizeof(ip6_addr_t));
-        transport_info.dest_port = sport;
-        tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
-        tftp_session_set_transport_interface(session, &transport_ifc);
+        initialize_connection(saddr, sport);
     } else if (!session) {
         // Ignore anything sent to the outgoing port unless we've already
         // established a connection.
         return;
     }
 
-    size_t outlen = sizeof(tftp_out_scratch);
+    last_msg_size = sizeof(tftp_out_scratch);
 
     char err_msg[128];
     tftp_handler_opts handler_opts = { .inbuf = data,
                                        .inbuf_sz = len,
                                        .outbuf = tftp_out_scratch,
-                                       .outbuf_sz = outlen,
+                                       .outbuf_sz = &last_msg_size,
                                        .err_msg = err_msg,
                                        .err_msg_sz = sizeof(err_msg) };
     tftp_status status = tftp_handle_msg(session, &transport_info, &file_info,
                                          &handler_opts);
     if (status < 0) {
         printf("netsvc: tftp protocol error:%s\n", err_msg);
-        session = NULL;
+        end_connection();
+        netfile_abort_write();
     } else if (status == TFTP_TRANSFER_COMPLETED) {
         printf("netsvc: tftp %s of file %s completed\n",
                file_info.is_write ? "write" : "read",
                file_info.filename);
-        session = NULL;
+        end_connection();
     }
 }
-

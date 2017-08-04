@@ -264,7 +264,7 @@ void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
     tftp_handler_opts handler_opts = {.inbuf = data,
                                       .inbuf_sz = len,
                                       .outbuf = tftp_out_scratch,
-                                      .outbuf_sz = outlen,
+                                      .outbuf_sz = &outlen,
                                       .err_msg = err_msg,
                                       .err_msg_sz = sizeof(err_msg)};
     tftp_status status = tftp_handle_msg(session, &transport_info, &file_info, &handler_opts);

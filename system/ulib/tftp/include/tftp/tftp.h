@@ -78,23 +78,23 @@ typedef enum {
 #define TFTP_DEFAULT_CLIENT_MODE MODE_OCTET
 
 typedef struct {
-   char* inbuf;          // required - buffer for assembling incoming msgs
-   size_t inbuf_sz;      // required
-   char* outbuf;         // required - buffer for assembling outgoing msgs
-   size_t outbuf_sz;     // required
-   tftp_mode* mode;
-   size_t* block_size;
-   uint16_t* window_size;
-   uint8_t* timeout;
-   char* err_msg;
-   size_t err_msg_sz;
+    char* inbuf;          // required - buffer for assembling incoming msgs
+    size_t inbuf_sz;      // required
+    char* outbuf;         // required - buffer for assembling outgoing msgs
+    size_t outbuf_sz;     // required
+    tftp_mode* mode;
+    size_t* block_size;
+    uint16_t* window_size;
+    uint8_t* timeout;
+    char* err_msg;
+    size_t err_msg_sz;
 } tftp_request_opts;
 
 typedef struct {
     char* inbuf;         // required - buffer for assembling incoming msgs
     size_t inbuf_sz;     // required
     char* outbuf;        // required - buffer for assembling outgoing msgs
-    size_t outbuf_sz;    // required
+    size_t* outbuf_sz;   // required
     char* err_msg;
     size_t err_msg_sz;
 } tftp_handler_opts;
@@ -196,6 +196,30 @@ tftp_status tftp_session_set_file_interface(tftp_session* session,
 tftp_status tftp_session_set_transport_interface(tftp_session* session,
                                                  tftp_transport_interface* callbacks);
 
+// Specifies how many consecutive timeouts we will endure before terminating
+// a session.
+void tftp_session_set_max_timeouts(tftp_session* session,
+                                   uint16_t max_timeouts);
+
+// If no response from the peer is received before the most recent timeout_ms
+// value, this function should be called to take the next appropriate action
+// (e.g., retransmit or cancel). |sending| indicates whether we are sending or
+// receiving a file. |msg_buf| must point to the last message sent, which is
+// |msg_len| bytes long. |buf_sz| represents the total size of |msg_buf|,
+// which may be used to assemble the next packet to send. |timeout_ms| is set
+// to the next timeout value the user of the library should use when waiting
+// for a response. |file_cookie| will be passed to the tftp callback functions.
+// On return, TFTP_ERR_TIMED out is returned if the maximum number of timeouts
+// has been exceeded. If a message should be sent out, |msg_len| will be set
+// to the size of the message.
+tftp_status tftp_timeout(tftp_session* session,
+                         bool sending,
+                         void* msg_buf,
+                         size_t* msg_len,
+                         size_t buf_sz,
+                         uint32_t* timeout_ms,
+                         void* file_cookie);
+
 // Request to send the file |local_filename| across an existing session
 // to |remote_filename| on the target. If |options| is NULL, all values are
 // set to some (semi-)reasonable defaults. Otherwise, all non-NULL members of
@@ -220,7 +244,8 @@ tftp_status tftp_handle_request(tftp_session* session,
 // Processes a single message from the requestor, which is passed in as the
 // inbuf component of |opts|. Responds to the request and updates the
 // connection timeout using the appropriate transport send and timeout_set
-// functions.
+// functions. Also, sets the value of outbuf_sz in |opts| to the size of
+// the message sent (or 0 if no message was sent).
 tftp_status tftp_handle_msg(tftp_session* session,
                             void* transport_cookie,
                             void* file_cookie,

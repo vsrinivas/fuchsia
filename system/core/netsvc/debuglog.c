@@ -19,7 +19,7 @@ static int pkt_len;
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
-mx_time_t debuglog_next_timeout;
+mx_time_t debuglog_next_timeout = MX_TIME_INFINITE;
 
 static int get_log_line(char* out) {
     char buf[MX_LOG_RECORD_MAX + 1];
@@ -79,7 +79,7 @@ static void debuglog_send(void) {
     }
     udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT);
 done:
-    debuglog_next_timeout = mx_time_get(MX_CLOCK_MONOTONIC) + MX_MSEC(100);
+    debuglog_next_timeout = mx_deadline_after(MX_MSEC(100));
 }
 
 void debuglog_recv(void* data, size_t len, bool is_mcast) {
@@ -100,7 +100,7 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
     debuglog_send();
 }
 
-void debuglog_timeout(void) {
+void debuglog_timeout_expired(void) {
     debuglog_send();
 }
 

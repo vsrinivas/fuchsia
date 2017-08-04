@@ -102,7 +102,7 @@ tftp_status file_read(void* data, size_t* length, off_t offset,
 tftp_status file_write(const void* data, size_t* length, off_t offset,
                        void* file_cookie) {
     file_info_t* file_info = file_cookie;
-    if (((size_t)offset >= file_info->filesz) || ((offset + *length) > file_info->filesz)) {
+    if (((size_t)offset > file_info->filesz) || ((offset + *length) > file_info->filesz)) {
         // Something has gone wrong in libtftp
         return TFTP_ERR_INTERNAL;
     }
@@ -344,7 +344,7 @@ bool run_recv_test(struct test_params* tp) {
     tftp_handler_opts opts = { .inbuf = msg_in_buf,
                                .inbuf_sz = buf_sz,
                                .outbuf = msg_out_buf,
-                               .outbuf_sz = buf_sz,
+                               .outbuf_sz = &buf_sz,
                                .err_msg = err_msg_buf,
                                .err_msg_sz = sizeof(err_msg_buf) };
     do {

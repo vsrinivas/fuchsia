@@ -26,7 +26,7 @@
 #define BLOCKSZ 1024
 #define WINSZ   64
 
-#define DROPRATE 20
+#define DROPRATE 100
 
 #define SCRATCHSZ 2048
 static char scratch[SCRATCHSZ];
@@ -226,6 +226,10 @@ int tftp_send_file_wrapper(tftp_session* session,
     options.outbuf_sz = sizeof(out_scratch);
     options.err_msg = err_msg;
     options.err_msg_sz = sizeof(err_msg);
+    size_t block_size = BLOCKSZ;
+    options.block_size = &block_size;
+    uint16_t window_size = WINSZ;
+    options.window_size = &window_size;
     tftp_status send_result =
         tftp_push_file(session, connection, &file_cookie, filename,
                        "magenta.bin", &options);
@@ -244,7 +248,8 @@ int tftp_receive_file_wrapper(tftp_session* session,
     options.inbuf = in_scratch;
     options.inbuf_sz = sizeof(in_scratch);
     options.outbuf = out_scratch;
-    options.outbuf_sz = sizeof(out_scratch);
+    size_t outbuf_sz = sizeof(out_scratch);
+    options.outbuf_sz = &outbuf_sz;
     options.err_msg = err_msg;
     options.err_msg_sz = sizeof(err_msg);
 

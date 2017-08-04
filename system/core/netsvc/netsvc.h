@@ -41,6 +41,8 @@ int netfile_write(const char* data, size_t len);
 
 int netfile_close(void);
 
+void netfile_abort_write(void);
+
 // netboot interface
 extern const char* nodename;
 extern bool netbootloader;
@@ -54,9 +56,13 @@ void netboot_recv(void* data, size_t len, bool is_mcast,
 void netboot_run_cmd(const char* cmd);
 
 // TFTP interface
+extern mx_time_t tftp_next_timeout;
+
 void tftp_recv(void *data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport);
+
+void tftp_timeout_expired(void);
 
 // debuglog interface
 extern mx_time_t debuglog_next_timeout;
@@ -65,4 +71,4 @@ int debuglog_init(void);
 
 void debuglog_recv(void* data, size_t len, bool is_mcast);
 
-void debuglog_timeout(void);
+void debuglog_timeout_expired(void);

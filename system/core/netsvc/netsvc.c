@@ -127,13 +127,20 @@ int main(int argc, char** argv) {
                 netboot_advertise(nodename);
 
             mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
-            netifc_set_timer((debuglog_next_timeout < now) ? 0 :
-                             ((debuglog_next_timeout - now)/MX_MSEC(1)));
+            mx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
+                                     debuglog_next_timeout : tftp_next_timeout;
+            if (next_timeout != MX_TIME_INFINITE) {
+                netifc_set_timer((next_timeout < now) ? 0 :
+                                 ((next_timeout - now)/MX_MSEC(1)));
+            }
             if (netifc_poll())
                 break;
             now = mx_time_get(MX_CLOCK_MONOTONIC);
             if (now > debuglog_next_timeout) {
-                debuglog_timeout();
+                debuglog_timeout_expired();
+            }
+            if (now > tftp_next_timeout) {
+                tftp_timeout_expired();
             }
         }
         netifc_close();

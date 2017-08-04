@@ -178,8 +178,8 @@ int netfile_close(void) {
     } else {
         if (netfile.needs_rename) {
             char src[PATH_MAX];
-            strlcpy(src, netfile.filename, sizeof(netfile.filename));
-            strcat(src, TMP_SUFFIX);
+            strlcpy(src, netfile.filename, sizeof(src));
+            strlcat(src, TMP_SUFFIX, sizeof(src));
             if (rename(src, netfile.filename)) {
                 printf("netsvc: failed to rename temporary file: %s\n", strerror(errno));
             }
@@ -190,4 +190,26 @@ int netfile_close(void) {
         netfile.fd = -1;
     }
     return result;
+}
+
+// Clean up if we abort before finishing a write. Close out and unlink it, rather than
+// leaving an incomplete file.
+void netfile_abort_write(void) {
+    if (netfile.fd < 0) {
+        return;
+    }
+    close(netfile.fd);
+    netfile.fd = -1;
+    char tmp[PATH_MAX];
+    const char* filename;
+    if (netfile.needs_rename) {
+        strlcpy(tmp, netfile.filename, sizeof(tmp));
+        strlcat(tmp, TMP_SUFFIX, sizeof(tmp));
+        filename = tmp;
+    } else {
+        filename = netfile.filename;
+    }
+    if (unlink(filename) != 0) {
+        printf("netsvc: failed to unlink aborted file %s\n", filename);
+    }
 }

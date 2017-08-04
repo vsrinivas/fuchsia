@@ -128,7 +128,7 @@ static bool test_tftp_generate_write_request_default(void) {
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->options.timeout, "bad session options: timeout");
     EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->options.window_size, "bad session options: window size");
 
-    EXPECT_EQ(WRITE_REQUESTED, ts.session->state, "bad session: state");
+    EXPECT_EQ(SENT_WRQ, ts.session->state, "bad session: state");
     EXPECT_EQ(ts.msg_size, ts.session->file_size, "bad session: file size");
     EXPECT_EQ(0, ts.session->offset, "bad session: offset");
     EXPECT_EQ(0, ts.session->block_number, "bad session: block number");
@@ -285,7 +285,7 @@ static bool test_tftp_receive_write_request_send_oack(void) {
     };
     auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    EXPECT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    EXPECT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     EXPECT_EQ(1024, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
@@ -455,7 +455,7 @@ static bool test_tftp_receive_oack(void) {
     tx_test_data td;
     status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
     EXPECT_FALSE(tftp_session_has_pending(ts.session), "session should not have pending data");
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
+    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
     EXPECT_EQ(1024, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
@@ -493,7 +493,7 @@ static bool test_tftp_receive_oack_blocksize(void) {
     td.expected.len = kBlockSize;
     td.expected.data[kBlockSize - 1] = 'X';
     status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
+    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
     EXPECT_EQ(2048, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(kBlockSize, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
@@ -528,7 +528,7 @@ static bool test_tftp_receive_oack_timeout(void) {
 
     tx_test_data td;
     status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
+    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
     EXPECT_EQ(1024, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(kTimeout, ts.session->timeout, "bad session: timeout");
@@ -564,7 +564,7 @@ static bool test_tftp_receive_oack_windowsize(void) {
 
     tx_test_data td;
     status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, &td);
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
+    EXPECT_EQ(SENT_FIRST_DATA, ts.session->state, "session should be in state SENT_FIRST_DATA");
     EXPECT_EQ(4096, ts.session->file_size, "tftp session bad file size");
     EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
@@ -627,7 +627,7 @@ static bool test_tftp_receive_data(void) {
     };
     auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -673,7 +673,7 @@ static bool test_tftp_receive_data_final_block(void) {
     };
     auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -736,7 +736,7 @@ static bool test_tftp_receive_data_blocksize(void) {
     };
     auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[1028] = {
@@ -785,7 +785,7 @@ static bool test_tftp_receive_data_windowsize(void) {
     };
     auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -845,7 +845,7 @@ static bool test_tftp_receive_data_skipped_block(void) {
     };
     auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     // This is block 2, meaning we missed block 1 somehow.
@@ -895,7 +895,7 @@ static bool test_tftp_receive_data_windowsize_skipped_block(void) {
     };
     auto status = tftp_process_msg(ts.session, req_buf, sizeof(req_buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     uint8_t data_buf[516] = {
@@ -987,11 +987,12 @@ static bool test_tftp_receive_data_block_wrapping(void) {
     auto status = tftp_process_msg(ts.session, req_buf, req_buf_sz, ts.out, &ts.outlen,
                                    &ts.timeout, nullptr);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
-    ASSERT_EQ(WRITE_REQUESTED, ts.session->state, "tftp session in wrong state");
+    ASSERT_EQ(RECV_WRQ, ts.session->state, "tftp session in wrong state");
     ASSERT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     // Artificially advance to force block wrapping
     ts.session->block_number = kWrapAt;
+    ts.session->window_index = 0;
 
     uint8_t data_buf[] = {
         0x00, 0x03,  // Opcode (DATA)
@@ -1051,8 +1052,10 @@ static bool test_tftp_send_data_receive_ack(void) {
     td.expected.data[1] = 'f';
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive error");
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
-    EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
+    EXPECT_EQ(SENT_DATA, ts.session->state, "session should be in state SENT_DATA");
+    // The block number will not advance until we see an ACK for block 2
+    EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
+    EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
     EXPECT_TRUE(verify_read_data(ts, td), "bad test data");
 
@@ -1143,15 +1146,14 @@ static bool test_tftp_send_data_receive_ack_skipped_block(void) {
         0x00, 0x00,  // Block
     };
 
-    // next data packet should have same offset since it is a resend
     tx_test_data td2;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td2);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive error");
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
-    EXPECT_EQ(1, ts.session->block_number, "tftp session block number mismatch");
+    EXPECT_EQ(SENT_DATA, ts.session->state, "session should be in state SENT_DATA");
+    EXPECT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
+    EXPECT_EQ(1, ts.session->window_index, "tftp window index mismatch");
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
     EXPECT_TRUE(verify_read_data(ts, td2), "bad test data");
-
     END_TEST;
 }
 
@@ -1192,8 +1194,9 @@ static bool test_tftp_send_data_receive_ack_window_size(void) {
     td.expected.data[0]++;
     status = tftp_prepare_data(ts.session, ts.out, &ts.outlen, &ts.timeout, &td);
     ASSERT_EQ(TFTP_NO_ERROR, status, "receive error");
-    ASSERT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
-    ASSERT_EQ(0, ts.session->window_index, "tftp session window index mismatch");
+    // Window index doesn't roll until we receive an ACK
+    ASSERT_EQ(0, ts.session->block_number, "tftp session block number mismatch");
+    ASSERT_EQ(2, ts.session->window_index, "tftp session window index mismatch");
     ASSERT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
     ASSERT_TRUE(verify_read_data(ts, td), "bad test data");
     ASSERT_FALSE(tftp_session_has_pending(ts.session), "expected to wait for ack");
@@ -1208,7 +1211,7 @@ static bool test_tftp_send_data_receive_ack_window_size(void) {
     td.expected.data[1]++;
     status = tftp_process_msg(ts.session, ack_buf, sizeof(ack_buf), ts.out, &ts.outlen, &ts.timeout, &td);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive error");
-    EXPECT_EQ(TRANSMITTING, ts.session->state, "session should be TRANSMITTING");
+    EXPECT_EQ(SENT_DATA, ts.session->state, "session should be in state SENT_DATA");
     EXPECT_EQ(2, ts.session->block_number, "tftp session block number mismatch");
     EXPECT_EQ(1, ts.session->window_index, "tftp session window index mismatch");
     EXPECT_EQ(ts.outlen, sizeof(tftp_data_msg) + DEFAULT_BLOCKSIZE, "bad outlen");
@@ -1258,6 +1261,7 @@ static bool test_tftp_send_data_receive_ack_block_wrapping(void) {
 
     // Artificially advance the session to a point where wrapping will occur
     ts.session->block_number = kWrapAt;
+    ts.session->window_index = 0;
 
     uint8_t data_buf[4 + kBlockSize];
     size_t data_buf_len = sizeof(data_buf);
@@ -1325,6 +1329,7 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
 
     // Artificially advance the session so we can test wrapping
     ts.session->block_number = kLastBlockSent;
+    ts.session->window_index = 0;
 
     // Create a DATA packet for block kLastBlockSent + 1
     uint8_t data_buf[4 + kBlockSize] = {0};
@@ -1367,7 +1372,8 @@ static bool test_tftp_send_data_receive_ack_skip_block_wrap(void) {
     msg = reinterpret_cast<tftp_data_msg*>(ts.out);
     EXPECT_EQ(OPCODE_DATA, htons(msg->opcode), "incorrect DATA packet opcode");
     EXPECT_EQ((kAckBlock + 1) & 0xffff, msg->block, "incorrect DATA packet block");
-    EXPECT_EQ(ts.session->block_number, kAckBlock + 1, "session offset not rewound correctly");
+    EXPECT_EQ(ts.session->block_number, kAckBlock, "session offset not rewound correctly");
+    EXPECT_EQ(ts.session->window_index, 1, "window index not set correctly");
 
     END_TEST;
 }
