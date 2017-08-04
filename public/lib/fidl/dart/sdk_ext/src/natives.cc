@@ -34,19 +34,8 @@ tonic::DartLibraryNatives* InitNatives() {
 constexpr int kNumberOfNativeFields = 2;
 
 struct HandlePeer {
-  HandlePeer() {
-    dart_state = tonic::DartState::Current()->GetWeakPtr();
-  }
-
-  void CloseHandle() {
-    if (dart_state) {
-      dart_state->handle_table().Close(handle);
-    }
-  }
-
   Dart_WeakPersistentHandle weak;
   mx_handle_t handle;
-  ftl::WeakPtr<tonic::DartState> dart_state;
 };
 
 }  // namespace
@@ -159,8 +148,9 @@ static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
 static void HandleFinalizer(void* isolate_data,
                             Dart_WeakPersistentHandle weak,
                             void* peer_ptr) {
+  // TODO(US-324): Close the handle here, while coordinating with the
+  // HandleWaiter finalizer to avoid races if necessary.
   HandlePeer* peer = reinterpret_cast<HandlePeer*>(peer_ptr);
-  peer->CloseHandle();
   delete peer;
 }
 
