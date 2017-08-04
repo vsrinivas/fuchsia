@@ -669,6 +669,11 @@ void PageStorageImpl::AddCommits(
 
       continue_trying = true;
 
+      // NOTE(etiennej, 2017-08-04): This code works because db_ operations are
+      // synchronous. If they are not, then ContainsCommit may return NOT_FOUND
+      // while a commit is added, and batch->Execute() will break the invariants
+      // of this system (in particular, that synced commits cannot become
+      // unsynced).
       s = ContainsCommit(commit->GetId());
       if (s == Status::NOT_FOUND) {
         s = db_.AddCommitStorageBytes(commit->GetId(),

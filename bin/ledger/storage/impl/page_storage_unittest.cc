@@ -85,10 +85,11 @@ class FakeCommitWatcher : public CommitWatcher {
   ChangeSource last_source;
 };
 
-class FakeSyncDelegate : public PageSyncDelegate {
+class DelayingFakeSyncDelegate : public PageSyncDelegate {
  public:
-  explicit FakeSyncDelegate(mtl::MessageLoop* message_loop)
-      : message_loop_(message_loop) {}
+  explicit DelayingFakeSyncDelegate(
+      std::function<void(ftl::Closure)> on_get_object)
+      : on_get_object_(on_get_object) {}
 
   void AddObject(ObjectIdView object_id, const std::string& value) {
     id_to_value_[object_id.ToString()] = value;
@@ -101,17 +102,22 @@ class FakeSyncDelegate : public PageSyncDelegate {
     std::string id = object_id.ToString();
     std::string& value = id_to_value_[id];
     object_requests.insert(id);
-    message_loop_->task_runner()->PostTask(
-        [&value, callback = std::move(callback) ]() mutable {
-          callback(Status::OK, value.size(), mtl::WriteStringToSocket(value));
-        });
+    on_get_object_([ callback = std::move(callback), value ] {
+      callback(Status::OK, value.size(), mtl::WriteStringToSocket(value));
+    });
   }
 
   std::set<ObjectId> object_requests;
 
  private:
+  std::function<void(ftl::Closure)> on_get_object_;
   std::map<ObjectId, std::string> id_to_value_;
-  mtl::MessageLoop* message_loop_;
+};
+
+class FakeSyncDelegate : public DelayingFakeSyncDelegate {
+ public:
+  FakeSyncDelegate()
+      : DelayingFakeSyncDelegate([](ftl::Closure callback) { callback(); }) {}
 };
 
 // Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
@@ -443,7 +449,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  FakeSyncDelegate sync(&message_loop_);
+  FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
 
   // Create a node with 2 values.
@@ -511,7 +517,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 // Check that receiving a remote commit that is already present locally but not
 // synced will mark the commit as synced.
 TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
-  FakeSyncDelegate sync(&message_loop_);
+  FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
 
   std::unique_ptr<const TreeNode> node;
@@ -840,7 +846,7 @@ TEST_F(PageStorageTest, GetObject) {
 
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
-  FakeSyncDelegate sync(&message_loop_);
+  FakeSyncDelegate sync;
   sync.AddObject(data.object_id, data.value);
   storage_->SetSyncDelegate(&sync);
 
@@ -862,7 +868,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
 TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   ObjectData data("Some data", InlineBehavior::PREVENT);
   ObjectData data2("Some data2", InlineBehavior::PREVENT);
-  FakeSyncDelegate sync(&message_loop_);
+  FakeSyncDelegate sync;
   sync.AddObject(data.object_id, data2.value);
   storage_->SetSyncDelegate(&sync);
 
@@ -1107,7 +1113,7 @@ TEST_F(PageStorageTest, SyncMetadata) {
 }
 
 TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
-  FakeSyncDelegate sync(&message_loop_);
+  FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
 
   // Build the commit Tree with:
@@ -1288,7 +1294,9 @@ TEST_F(PageStorageTest, NoOpCommit) {
 // Check that receiving a remote commit and commiting locally at the same time
 // do not prevent the commit to be marked as unsynced.
 TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
-  FakeSyncDelegate sync(&message_loop_);
+  ftl::Closure sync_delegate_call;
+  DelayingFakeSyncDelegate sync(
+      callback::Capture(MakeQuitTask(), &sync_delegate_call));
   storage_->SetSyncDelegate(&sync);
 
   // We need to create new nodes for the storage to be asynchronous. The empty
@@ -1319,7 +1327,6 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   storage_->AddCommitsFromSync(std::move(commits_and_bytes),
                                callback::Capture(MakeQuitTask(), &status));
   // Make the run loop stop before the process finishes.
-  message_loop_.PostQuitTask();
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Add the local commit.
@@ -1328,6 +1335,8 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // Let the two add commit finish.
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(sync_delegate_call);
+  sync_delegate_call();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
