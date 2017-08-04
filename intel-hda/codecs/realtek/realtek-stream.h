@@ -149,7 +149,7 @@ private:
 
     // Setup state machine methods.
     mx_status_t UpdateSetupProgressLocked(uint32_t stage) __TA_REQUIRES(obj_lock());
-    void FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
+    mx_status_t FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
     void DumpStreamPublishedLocked() __TA_REQUIRES(obj_lock());
     void DumpAmpCaps(const CommonCaps& caps, const char* tag);
     DECLARE_THUNK(ProcessPinWidgetCaps);
