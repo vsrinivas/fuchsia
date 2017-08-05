@@ -147,7 +147,7 @@ public:
     // Rvalue construction is permitted, but will result in the move of the tree
     // contents from one instance of the list to the other (even for unmanaged
     // pointers)
-    explicit WAVLTree(WAVLTree&& other_tree) {
+    WAVLTree(WAVLTree&& other_tree) {
         swap(other_tree);
     }
 

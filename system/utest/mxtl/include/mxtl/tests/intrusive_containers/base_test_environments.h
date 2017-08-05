@@ -842,7 +842,8 @@ public:
 
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
 
-        // Move its contents to a new container using the Rvalue constructor.
+        // Move its contents to a new container by explicity invoking the Rvalue
+        // constructor.
 #if TEST_WILL_NOT_COMPILE || 0
         ContainerType other_container(container());
 #else
@@ -861,7 +862,28 @@ public:
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
         EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
 
-        // Move the contents of the other container back to the internal container.  If we
+        // Move the contents again, this time using move-initialization which implicitly
+        // invokes the Rvalue constructor.
+#if TEST_WILL_NOT_COMPILE || 0
+        ContainerType another_container = other_container;
+#else
+        ContainerType another_container = mxtl::move(other_container);
+#endif
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+        EXPECT_EQ(OBJ_COUNT, Size(another_container), "");
+        EXPECT_TRUE(other_container.is_empty(), "");
+        for (const auto& obj : another_container) {
+            ASSERT_GT(OBJ_COUNT, obj.value(), "");
+            EXPECT_EQ(2u, obj.visited_count(), "");
+            EXPECT_EQ(objects()[obj.value()], &obj, "");
+            obj.Visit();
+        }
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(another_container), "");
+
+        // Move the contents of the final container back to the internal container.  If we
         // are testing managed pointer types, put some objects into the internal
         // container first and make sure they get released.  Don't try this with
         // unmanaged pointers as it will trigger an assert if you attempt to
@@ -885,26 +907,28 @@ public:
 
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
         EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(another_container), "");
 
 #if TEST_WILL_NOT_COMPILE || 0
-        container() = other_container;
+        container() = another_container;
 #else
-        container() = mxtl::move(other_container);
+        container() = mxtl::move(another_container);
 #endif
 
-        // other_container should now be empty, and we should have returned to our
+        // another_container should now be empty, and we should have returned to our
         // starting, post-populated state.
         EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
         EXPECT_EQ(OBJ_COUNT, Size(container()), "");
-        EXPECT_TRUE(other_container.is_empty(), "");
+        EXPECT_TRUE(another_container.is_empty(), "");
         for (const auto& obj : container()) {
             ASSERT_GT(OBJ_COUNT, obj.value(), "");
-            EXPECT_EQ(2u, obj.visited_count(), "");
+            EXPECT_EQ(3u, obj.visited_count(), "");
             EXPECT_EQ(objects()[obj.value()], &obj, "");
         }
 
         EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
         EXPECT_TRUE(ContainerChecker::SanityCheck(other_container), "");
+        EXPECT_TRUE(ContainerChecker::SanityCheck(another_container), "");
 
         END_TEST;
     }

@@ -233,7 +233,7 @@ public:
     // Rvalue construction is permitted, but will result in the move of the list
     // contents from one instance of the list to the other (even for unmanaged
     // pointers)
-    explicit SinglyLinkedList(SinglyLinkedList<T, NodeTraits>&& other_list) {
+    SinglyLinkedList(SinglyLinkedList<T, NodeTraits>&& other_list) {
         swap(other_list);
     }
 
