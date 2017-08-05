@@ -33,12 +33,10 @@ static nbfile nbramdisk;
 static nbfile nbcmdline;
 
 nbfile* netboot_get_buffer(const char* name, size_t size) {
-    // we know these are in a buffer large enough
-    // that this is safe (todo: implement strcmp)
-    if (!memcmp(name, "kernel.bin", 11)) {
+    if (!strcmp(name, NB_KERNEL_FILENAME)) {
         return &nbkernel;
     }
-    if (!memcmp(name, "ramdisk.bin", 12)) {
+    if (!strcmp(name, NB_RAMDISK_FILENAME)) {
         efi_physical_addr mem = 0xFFFFFFFF;
         size_t buf_size = size > 0 ? (size + PAGE_MASK) & ~PAGE_MASK : RBUFSIZE;
 
@@ -68,7 +66,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
 
         return &nbramdisk;
     }
-    if (!memcmp(name, "cmdline", 8)) {
+    if (!strcmp(name, NB_CMDLINE_FILENAME)) {
         return &nbcmdline;
     }
     return NULL;

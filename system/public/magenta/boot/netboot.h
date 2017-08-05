@@ -9,7 +9,7 @@
 
 // clang-format off
 
-#define BOOTLOADER_VERSION "0.5.5"
+#define BOOTLOADER_VERSION "0.5.6"
 
 #define NB_MAGIC              0xAA774217
 #define NB_DEBUGLOG_MAGIC     0xAEAE1123
@@ -49,6 +49,11 @@
 #define NB_VERSION_1_1  0x0001010
 #define NB_VERSION_1_2  0x0001020
 #define NB_VERSION_CURRENT NB_VERSION_1_2
+
+#define NB_FILENAME_PREFIX "<<netboot>>"
+#define NB_KERNEL_FILENAME NB_FILENAME_PREFIX "kernel.bin"
+#define NB_RAMDISK_FILENAME NB_FILENAME_PREFIX "ramdisk.bin"
+#define NB_CMDLINE_FILENAME NB_FILENAME_PREFIX "cmdline"
 
 typedef struct nbmsg_t {
     uint32_t magic;

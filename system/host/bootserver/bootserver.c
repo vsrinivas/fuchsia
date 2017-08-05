@@ -27,6 +27,7 @@
 
 char* appname;
 int64_t us_between_packets = DEFAULT_US_BETWEEN_PACKETS;
+bool use_filename_prefix = true;
 
 static bool use_tftp = false;
 static size_t total_file_size;
@@ -40,7 +41,14 @@ void initialize_status(const char* name, size_t size) {
     total_file_size = size;
     progress_reported = 0;
     packets_sent = 0;
-    fprintf(stderr, "Sending %s [%lu bytes]:\n", name, (unsigned long)size);
+    size_t prefix_len = strlen(NB_FILENAME_PREFIX);
+    const char* base_name;
+    if (!strncmp(name, NB_FILENAME_PREFIX, prefix_len)) {
+        base_name = &name[prefix_len];
+    } else {
+        base_name = name;
+    }
+    fprintf(stderr, "Sending %s [%lu bytes]:\n", base_name, (unsigned long)size);
 }
 
 void update_status(size_t bytes_so_far) {
@@ -403,6 +411,11 @@ int main(int argc, char** argv) {
                     "%s: WARNING: Bootloader version '%s' != '%s'. Please Upgrade.\n"
                     "%s: WARNING:\n",
                     appname, appname, adv_version, BOOTLOADER_VERSION, appname);
+            if (!strcmp(adv_version, "0.5.5")) {
+                use_filename_prefix = false;
+            }
+        } else {
+            use_filename_prefix = true;
         }
 
         if (cmdline[0]) {
@@ -413,13 +426,15 @@ int main(int argc, char** argv) {
         if (status == 0) {
             struct stat s;
             if (ramdisk_fn) {
-                status = xfer(&ra, ramdisk_fn, "ramdisk.bin");
+                status = xfer(&ra, ramdisk_fn,
+                              use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
             } else if (auto_ramdisk_fn && (stat(auto_ramdisk_fn, &s) == 0)) {
-                status = xfer(&ra, auto_ramdisk_fn, "ramdisk.bin");
+                status = xfer(&ra, auto_ramdisk_fn,
+                              use_filename_prefix ? NB_RAMDISK_FILENAME : "ramdisk.bin");
             }
         }
         if (status == 0) {
-            status = xfer(&ra, kernel_fn, "kernel.bin");
+            status = xfer(&ra, kernel_fn, use_filename_prefix ? NB_KERNEL_FILENAME : "kernel.bin");
             if (status == 0) {
                 send_boot_command(&ra);
             }

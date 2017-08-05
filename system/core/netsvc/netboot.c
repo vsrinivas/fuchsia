@@ -41,6 +41,7 @@ typedef struct nbfilecontainer {
 
 static nbfilecontainer_t nbkernel;
 static nbfilecontainer_t nbbootdata;
+static nbfilecontainer_t nbcmdline;
 
 // Pointer to the currently active transfer.
 static nbfile* active;
@@ -99,10 +100,12 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
     mx_status_t st = MX_OK;
     nbfilecontainer_t* result;
 
-    if (!strncmp(name, "kernel.bin", 11)) {
+    if (!strcmp(name, NB_KERNEL_FILENAME)) {
         result = &nbkernel;
-    } else if (!strncmp(name, "ramdisk.bin", 12)) {
+    } else if (!strcmp(name, NB_RAMDISK_FILENAME)) {
         result = &nbbootdata;
+    } else if (!strcmp(name, NB_CMDLINE_FILENAME)) {
+        result = &nbcmdline;
     } else {
         return NULL;
     }

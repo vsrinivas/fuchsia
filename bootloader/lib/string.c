@@ -67,6 +67,14 @@ char* strncpy(char* dst, const char* src, size_t len) {
     return dst;
 }
 
+int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *s1 - *s2;
+}
+
 int strncmp(const char* s1, const char* s2, size_t len) {
     while (len-- > 0) {
         int diff = *s1 - *s2;

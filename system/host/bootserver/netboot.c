@@ -250,7 +250,7 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
         xd.datalen = strlen(name) + 1;
         xd.ptr = xd.data;
         xd.avail = xd.datalen;
-        name = "cmdline";
+        name = use_filename_prefix ? NB_CMDLINE_FILENAME : "cmdline";
         sz = xd.datalen;
     } else {
         if ((xd.fp = fopen(fn, "rb")) == NULL) {

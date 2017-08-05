@@ -114,7 +114,14 @@ void netboot_recv(void* data, size_t len, const ip6_addr* saddr, uint16_t sport)
         if (item) {
             item->offset = 0;
             ack.arg = msg->arg;
-            printf("netboot: Receive File '%s'...\n", (char*) msg->data);
+            size_t prefix_len = strlen(NB_FILENAME_PREFIX);
+            const char* filename;
+            if (!strncmp((char*)msg->data, NB_FILENAME_PREFIX, prefix_len)) {
+                filename = &((const char*)msg->data)[prefix_len];
+            } else {
+                filename = (const char*)msg->data;
+            }
+            printf("netboot: Receive File '%s'...\n", filename);
         } else {
             printf("netboot: Rejected File '%s'...\n", (char*) msg->data);
             ack.cmd = NB_ERROR_BAD_FILE;
@@ -182,7 +189,14 @@ static tftp_status buffer_open(const char* filename, size_t size, void* cookie) 
         return TFTP_ERR_INVALID_ARGS;
     }
     file_info->netboot_file_data->offset = 0;
-    printf("Receiving %s [%lu bytes]... ", filename, (unsigned long)size);
+    const char* base_filename;
+    size_t prefix_len = strlen(NB_FILENAME_PREFIX);
+    if (!strncmp(filename, NB_FILENAME_PREFIX, prefix_len)) {
+        base_filename = &filename[prefix_len];
+    } else {
+        base_filename = filename;
+    }
+    printf("Receiving %s [%lu bytes]... ", base_filename, (unsigned long)size);
     file_info->file_size = size;
     file_info->progress_reported = 0;
     return TFTP_NO_ERROR;
