@@ -16,6 +16,18 @@ static int ring_avail_count(virtio_queue_t* queue) {
     return queue->avail->idx - queue->index;
 }
 
+/* Map mx_status_t values to their Virtio counterparts. */
+static uint8_t to_virtio_status(mx_status_t status) {
+    switch (status) {
+    case MX_OK:
+        return VIRTIO_STATUS_OK;
+    case MX_ERR_NOT_SUPPORTED:
+        return VIRTIO_STATUS_UNSUPPORTED;
+    default:
+        return VIRTIO_STATUS_ERROR;
+    }
+}
+
 mx_status_t virtio_queue_handler(virtio_queue_t* queue, void* mem_addr,
                                  size_t mem_size, uint32_t hdr_size,
                                  virtio_req_fn_t req_fn, void* ctx) {
@@ -49,7 +61,7 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, void* mem_addr,
             if (status != MX_OK) {
                 fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n",
                         desc.addr, desc.len, status);
-                req_status = VIRTIO_STATUS_ERROR;
+                req_status = to_virtio_status(status);
             } else {
                 used->len += desc.len;
             }
@@ -61,7 +73,7 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, void* mem_addr,
             if (!has_payload) {
                 mx_status_t status = req_fn(ctx, req, NULL, 0);
                 if (status != MX_OK)
-                    req_status = VIRTIO_STATUS_ERROR;
+                    req_status = to_virtio_status(status);
             }
             uint8_t* virtio_status = mem_addr + desc.addr;
             *virtio_status = req_status;

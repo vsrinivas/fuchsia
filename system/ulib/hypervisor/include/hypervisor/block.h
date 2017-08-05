@@ -13,6 +13,8 @@
 typedef struct block {
     // File descriptor backing the block device.
     int fd;
+    // Virtio feature flags.
+    uint32_t features;
     // Size of file backing the block device.
     uint64_t size;
     // Virtio status register for the block device.
@@ -31,7 +33,7 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
                         const mx_guest_io_t* io);
 
 /* Block device that returns zeros when read, and ignores all writes. */
-mx_status_t null_block_device(virtio_queue_t* queue, void* mem_addr, size_t mem_size);
+mx_status_t null_block_device(block_t* block_state, void* mem_addr, size_t mem_size);
 
 /* Block device that returns reads and writes to a file. */
-mx_status_t file_block_device(virtio_queue_t* queue, void* mem_addr, size_t mem_size, int fd);
+mx_status_t file_block_device(block_t* block_state, void* mem_addr, size_t mem_size);
