@@ -26,7 +26,7 @@ static const uint64_t kVmoSize = 1u << 30;
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
 static mx_status_t usage(const char* cmd) {
-    fprintf(stderr, "usage: %s [-b block.bin] kernel.bin [ramdisk.bin]\n", cmd);
+    fprintf(stderr, "usage: %s [-b block.bin] [-r ramdisk.bin] [-c cmdline] kernel.bin\n", cmd);
     return MX_ERR_INVALID_ARGS;
 }
 
@@ -40,11 +40,19 @@ static mx_status_t create_vmo(uint64_t size, uintptr_t* addr, mx_handle_t* vmo) 
 int main(int argc, char** argv) {
     const char* cmd = basename(argv[0]);
     const char* block_path = NULL;
+    const char* ramdisk_path = NULL;
+    const char* cmdline = NULL;
     int opt;
-    while ((opt = getopt(argc, argv, "b:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:r:c:")) != -1) {
         switch (opt) {
         case 'b':
             block_path = optarg;
+            break;
+        case 'r':
+            ramdisk_path = optarg;
+            break;
+        case 'c':
+            cmdline = optarg;
             break;
         default:
             return usage(cmd);
@@ -142,16 +150,15 @@ int main(int argc, char** argv) {
 
     uintptr_t guest_ip;
     uintptr_t bootdata_off = 0;
-    const char* ramdisk_path = argc >= 2 ? argv[1] : NULL;
-    status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path, NULL,
-                           &guest_ip, &bootdata_off);
+    status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path,
+                           cmdline, &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
-        char cmdline[UINT8_MAX];
+        char linux_cmdline[UINT8_MAX];
         const char* fmt_string = "earlyprintk=serial,ttyS,115200 acpi_rsdp=%#" PRIx64
-                                 " io_delay=none console=ttyS0";
-        snprintf(cmdline, UINT8_MAX, fmt_string, pt_end_off);
+                                 " io_delay=none console=ttyS0 %s";
+        snprintf(linux_cmdline, UINT8_MAX, fmt_string, pt_end_off, cmdline ? cmdline : "");
         status = setup_linux(
-                addr, kVmoSize, first_page, fd, ramdisk_path, cmdline, &guest_ip, &bootdata_off);
+                addr, kVmoSize, first_page, fd, ramdisk_path, linux_cmdline, &guest_ip, &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
         fprintf(stderr, "Unknown kernel\n");

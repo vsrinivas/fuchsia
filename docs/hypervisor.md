@@ -22,7 +22,7 @@ build-magenta-pc-x86-64/tools/bootserver build-magenta-pc-x86-64/magenta.bin bui
 After netbooting the target device, for Magenta run:
 
 ```
-/boot/bin/guest /boot/data/kernel.bin /boot/data/bootdata.bin
+/boot/bin/guest -r /boot/data/bootdata.bin /boot/data/kernel.bin
 ```
 
 And for Linux run:
