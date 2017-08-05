@@ -969,6 +969,62 @@ function fclock() {
   fcmd "clock --set ${device_date}"
 }
 
+# Create a package manager package and then create update files which are
+# published to the local file system. If no package name is supplied, all
+# built packages are processed.
+function fpublish() {
+  if [[ "${1}" == "" ]]; then
+    pkgs_dir="${FUCHSIA_BUILD_DIR}/package"
+    for e in "${pkgs_dir}"/*
+    do
+      echo "Publishing $(basename "$e")"
+      fpublish_one $(basename "$e")
+      if [[ "$?" -ne 0 ]]; then
+        fpublish-usage
+        return $?
+      fi
+    done
+  else
+    fpublish_one "${1}"
+  fi
+}
+
+# See comments for fpublish, this does the same thing, but for an individual
+# package.
+function fpublish_one() {
+  fcheck || return 1
+
+  local stg_dir="${FUCHSIA_BUILD_DIR}/fars/${1}"
+  local arch_dir="${stg_dir}/archive"
+  local key_path="${stg_dir}/key"
+  rm -r "${stg_dir}"/*  >/dev/null 2>&1
+  mkdir -p "${arch_dir}"
+
+  local pm_cmd="${FUCHSIA_BUILD_DIR}/host_x64/pm"
+  local amber_cmd="${FUCHSIA_BUILD_DIR}/host_x64/amber-publish"
+  "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "genkey" || return $?
+
+  "${pm_cmd}" "-o" "${arch_dir}" "-n" "${1}" "init" || return $?
+
+  local mani_path=""
+  for try_path in ${FUCHSIA_BUILD_DIR}/package/${1}/{boot,system}_manifest; do
+    if [[ -s  "$try_path" ]]; then
+      mani_path="$try_path"
+    fi
+  done
+
+  if [[ "$mani_path" == "" ]]; then
+    echo "Error: manifest not found"
+    return -1
+  fi
+
+  "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "-m" "$mani_path" "build" || return $?
+
+  "${amber_cmd}" "-p" "-f" "${arch_dir}/meta.far" "-n" "${1}.far" || return $?
+
+  "${amber_cmd}" "-m" "-f" "${mani_path}" >/dev/null || return $?
+}
+
 if [[ -n "${ZSH_VERSION}" ]]; then
   ### Zsh Completion
   if [[ ${fpath[(Ie)${FUCHSIA_SCRIPTS_DIR}/zsh-completion]} -eq 0 ]]; then
