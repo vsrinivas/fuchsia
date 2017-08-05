@@ -15,25 +15,29 @@ public:
     async_wait_t* last_cancel_wait = nullptr;
     async_task_t* last_post_task = nullptr;
     async_task_t* last_cancel_task = nullptr;
+    mx_status_t next_begin_wait_status = MX_OK;
+    mx_status_t next_cancel_wait_status = MX_OK;
+    mx_status_t next_post_task_status = MX_OK;
+    mx_status_t next_cancel_task_status = MX_OK;
 
     mx_status_t BeginWait(async_wait_t* wait) override {
         last_begin_wait = wait;
-        return MX_OK;
+        return next_begin_wait_status;
     }
 
     mx_status_t CancelWait(async_wait_t* wait) override {
         last_cancel_wait = wait;
-        return MX_OK;
+        return next_cancel_wait_status;
     }
 
     mx_status_t PostTask(async_task_t* task) override {
         last_post_task = task;
-        return MX_OK;
+        return next_post_task_status;
     }
 
     mx_status_t CancelTask(async_task_t* task) override {
         last_cancel_task = task;
-        return MX_OK;
+        return next_cancel_task_status;
     }
 };
 
@@ -150,8 +154,30 @@ bool wait_with_timeout_test() {
     END_TEST;
 }
 
+bool begin_wait_cleans_up() {
+    const mx_handle_t dummy_handle = 1;
+    const mx_signals_t dummy_trigger = MX_USER_SIGNAL_0;
+    const mx_time_t dummy_deadline = 100u;
+    const uint32_t dummy_flags = ASYNC_HANDLE_SHUTDOWN;
+
+    BEGIN_TEST;
+
+    MockWaitWithTimeout wait(dummy_handle, dummy_trigger, dummy_deadline, dummy_flags);
+
+    // If an error occurs while setting the timeout, cancel the wait.
+    MockAsync async;
+    async.next_post_task_status = MX_ERR_BAD_STATE;
+    EXPECT_EQ(MX_ERR_BAD_STATE, wait.Begin(&async), "begin, will fail to post task");
+    EXPECT_NONNULL(async.last_begin_wait, "begin wait called");
+    EXPECT_NONNULL(async.last_post_task, "post task called");
+    EXPECT_NONNULL(async.last_cancel_wait, "cancel wait called");
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(timeout_tests)
 RUN_TEST(wait_with_timeout_test)
+RUN_TEST(begin_wait_cleans_up)
 END_TEST_CASE(timeout_tests)

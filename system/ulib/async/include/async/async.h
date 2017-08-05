@@ -201,8 +201,12 @@ void async_set_default(async_t* async);
 // until the handler runs or the wait is successfully canceled using
 // `async_cancel_wait()`.
 //
+// When the dispatcher is shutting down (being destroyed), attempting to
+// begin new waits will fail but previously begun waits can still be canceled
+// successfully.
+//
 // Returns |MX_OK| if the wait has been successfully started.
-// Returns |MX_ERR_CANCELED| if the dispatcher shut down.
+// Returns |MX_ERR_BAD_STATE| if the dispatcher shut down.
 // Returns |MX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // See |mx_object_wait_async()|.
@@ -212,12 +216,15 @@ inline mx_status_t async_begin_wait(async_t* async, async_wait_t* wait) {
 
 // Cancels the wait associated with |wait|.
 //
+// When the dispatcher is shutting down (being destroyed), attempting to
+// begin new waits will fail but previously begun waits can still be canceled
+// successfully.
+//
 // Returns |MX_OK| if there was a pending wait and it has been successfully
 // canceled; its handler will not run again and can be released immediately.
 // Returns |MX_ERR_NOT_FOUND| if there was no pending wait either because it
 // already completed, had not been started, or its completion packet has been
 // dequeued and is pending delivery to its handler (perhaps on another thread).
-// Returns |MX_ERR_CANCELED| if the dispatcher shut down.
 // Returns |MX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // See |mx_port_cancel()|.
@@ -232,8 +239,12 @@ inline mx_status_t async_cancel_wait(async_t* async, async_wait_t* wait) {
 // until the handler is invoked or until the task is successfully canceled
 // using `async_cancel_task()`.
 //
+// When the dispatcher is shutting down (being destroyed), attempting to
+// post new tasks will fail but previously posted tasks can still be canceled
+// successfully.
+//
 // Returns |MX_OK| if the task was successfully posted.
-// Returns |MX_ERR_CANCELED| if the dispatcher shut down.
+// Returns |MX_ERR_BAD_STATE| if the dispatcher shut down.
 // Returns |MX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // See also |mx_deadline_after()|.
@@ -247,12 +258,15 @@ inline mx_status_t async_post_task(async_t* async, async_task_t* task) {
 
 // Cancels the task associated with |task|.
 //
+// When the dispatcher is shutting down (being destroyed), attempting to
+// post new tasks will fail but previously posted tasks can still be canceled
+// successfully.
+//
 // Returns |MX_OK| if there was a pending task and it has been successfully
 // canceled; its handler will not run again and can be released immediately.
 // Returns |MX_ERR_NOT_FOUND| if there was no pending task either because it
 // already ran, had not been posted, or has been dequeued and is pending
 // execution (perhaps on another thread).
-// Returns |MX_ERR_CANCELED| if the dispatcher shut down.
 // Returns |MX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 inline mx_status_t async_cancel_task(async_t* async, async_task_t* task) {
     return async->ops->cancel_task(async, task);
@@ -266,8 +280,11 @@ inline mx_status_t async_cancel_task(async_t* async, async_task_t* task) {
 // The |data| will be copied into the packet.  May be NULL to create a
 // zero-initialized packet payload.
 //
+// When the dispatcher is shutting down (being destroyed), attempting to
+// queue new packets will fail.
+//
 // Returns |MX_OK| if the packet was successfully enqueued.
-// Returns |MX_ERR_CANCELED| if the dispatcher shut down.
+// Returns |MX_ERR_BAD_STATE| if the dispatcher shut down.
 // Returns |MX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // See |mx_port_queue()|.

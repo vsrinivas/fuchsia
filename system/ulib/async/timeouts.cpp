@@ -20,8 +20,13 @@ WaitWithTimeout::~WaitWithTimeout() = default;
 
 mx_status_t WaitWithTimeout::Begin(async_t* async) {
     mx_status_t status = async_begin_wait(async, this);
-    if (status == MX_OK && deadline() != MX_TIME_INFINITE)
+    if (status == MX_OK && deadline() != MX_TIME_INFINITE) {
         status = async_post_task(async, this);
+        if (status != MX_OK) {
+            mx_status_t cancel_status = async_cancel_wait(async, this);
+            MX_DEBUG_ASSERT(cancel_status == MX_OK);
+        }
+    }
     return status;
 }
 
