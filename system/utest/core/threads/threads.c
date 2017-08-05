@@ -16,6 +16,7 @@
 #include <unittest/unittest.h>
 #include <runtime/thread.h>
 
+#include "register-set.h"
 #include "test-threads/threads.h"
 
 static const char kThreadName[] = "test-thread";
@@ -625,6 +626,48 @@ static bool test_kill_suspended_thread(void) {
     END_TEST;
 }
 
+// This tests the registers reported by mx_thread_read_state() for a
+// suspended thread.  It starts a thread which sets all the registers to
+// known test values.
+static bool test_reading_register_state(void) {
+    BEGIN_TEST;
+
+    mx_general_regs_t regs_expected;
+    regs_fill_test_values(&regs_expected);
+    regs_expected.REG_PC = (uintptr_t)spin_with_regs_spin_address;
+
+    mxr_thread_t thread;
+    mx_handle_t thread_handle;
+    ASSERT_TRUE(start_thread((void (*)(void*))spin_with_regs, &regs_expected,
+                             &thread, &thread_handle), "");
+
+    // Allow some time for the thread to begin execution and reach the
+    // instruction that spins.
+    ASSERT_EQ(mx_nanosleep(mx_deadline_after(MX_MSEC(10))), MX_OK, "");
+
+    // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED.
+    mx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+
+    mx_general_regs_t regs;
+    uint32_t size_read;
+    ASSERT_EQ(mx_thread_read_state(thread_handle, MX_THREAD_STATE_REGSET0,
+                                   &regs, sizeof(regs), &size_read), MX_OK, "");
+    ASSERT_EQ(size_read, sizeof(regs), "");
+    ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
+
+    // Clean up.
+    ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
+    ASSERT_EQ(mx_task_kill(thread_handle), MX_OK, "");
+    // Wait for the thread termination to complete.
+    ASSERT_EQ(mx_object_wait_one(thread_handle, MX_THREAD_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), MX_OK, "");
+
+    END_TEST;
+}
+
 #if defined(__x86_64__)
 
 // This is based on code from kernel/ which isn't usable by code in system/.
@@ -736,6 +779,7 @@ RUN_TEST(test_suspend_channel_call)
 RUN_TEST(test_suspend_port_call)
 RUN_TEST(test_suspend_stops_thread)
 RUN_TEST(test_kill_suspended_thread)
+RUN_TEST(test_reading_register_state)
 RUN_TEST(test_noncanonical_rip_address)
 END_TEST_CASE(threads_tests)
 

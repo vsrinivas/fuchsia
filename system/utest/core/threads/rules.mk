@@ -11,6 +11,7 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := core
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/register-set.c \
     $(LOCAL_DIR)/threads.c
 
 MODULE_NAME := threads-test
