@@ -14,6 +14,7 @@
 #include <kernel/cmdline.h>
 #include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
+#include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/prng.h>
 #include <mxcpp/new.h>
@@ -73,13 +74,11 @@ static size_t IntegrateCmdlineEntropy() {
 static void EarlyBootSeed(uint level) {
     ASSERT(kGlobalPrng == nullptr);
 
-#if ENABLE_ENTROPY_COLLECTOR_TEST
     // Before doing anything else, test our entropy collector. This is
     // explicitly called here rather than in another init hook to ensure
     // ordering (at level LK_INIT_LEVEL_TARGET_EARLY, but before the rest of
     // EarlyBootSeed).
-    entropy::test::TestEntropyCollector();
-#endif
+    entropy::EarlyBootTest();
 
     // Statically allocate an array of bytes to put the PRNG into.  We do this
     // to control when the PRNG constructor is called.

@@ -10,7 +10,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/entropy/quality_test.cpp \
     $(LOCAL_DIR)/global_prng.cpp \
     $(LOCAL_DIR)/global_prng_unittest.cpp \
     $(LOCAL_DIR)/hash.cpp \
@@ -18,10 +17,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/prng.cpp \
     $(LOCAL_DIR)/prng_unittest.cpp
 
+# TODO(andrewkrieger): Remove dependence on hw_rng once the new entropy
+# collector is used in global_prng.cpp.
 MODULE_DEPS += kernel/dev/hw_rng
 MODULE_DEPS += third_party/lib/boring-crypto
 MODULE_DEPS += third_party/lib/cryptolib
 MODULE_DEPS += kernel/lib/mxtl
 MODULE_DEPS += kernel/lib/unittest
+
+include $(LOCAL_DIR)/entropy/rules.mk
 
 include make/module.mk

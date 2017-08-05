@@ -17,8 +17,6 @@ namespace entropy {
 #define ENTROPY_COLLECTOR_TEST_MAXLEN (128u * 1024u)
 #endif
 
-namespace test {
-
 static uint8_t entropy_buf[ENTROPY_COLLECTOR_TEST_MAXLEN];
 mxtl::RefPtr<VmObject> entropy_vmo;
 bool entropy_was_lost = false;
@@ -53,7 +51,7 @@ static void SetupEntropyVmo(uint level) {
 }
 
 // Run the entropy collector test.
-void TestEntropyCollector() {
+void EarlyBootTest() {
     constexpr size_t kMaxRead = 256;
     size_t read, total;
     ssize_t result;
@@ -90,7 +88,11 @@ void TestEntropyCollector() {
     }
 }
 
-} // namespace test
+
+#else // ENABLE_ENTROPY_COLLECTOR_TEST
+
+void EarlyBootTest() {
+}
 
 #endif // ENABLE_ENTROPY_COLLECTOR_TEST
 
@@ -99,6 +101,6 @@ void TestEntropyCollector() {
 } // namespace crypto
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
-LK_INIT_HOOK(setup_entropy_vmo, crypto::entropy::test::SetupEntropyVmo,
+LK_INIT_HOOK(setup_entropy_vmo, crypto::entropy::SetupEntropyVmo,
              LK_INIT_LEVEL_VM + 1);
 #endif

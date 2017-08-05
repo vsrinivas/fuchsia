@@ -325,11 +325,11 @@ static mx_status_t attempt_userboot() {
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
     if (status == MX_OK) {
-        if (crypto::entropy::test::entropy_was_lost) {
+        if (crypto::entropy::entropy_was_lost) {
             status = MX_ERR_INTERNAL;
         } else {
             status = get_vmo_handle(
-                    crypto::entropy::test::entropy_vmo,
+                    crypto::entropy::entropy_vmo,
                     /* readonly */ true, /* disp_ptr */ nullptr,
                     &handles[BOOTSTRAP_ENTROPY_FILE]);
         }
