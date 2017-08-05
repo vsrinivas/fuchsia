@@ -6,7 +6,6 @@
 
 #include "escher/escher.h"
 #include "escher/impl/command_buffer_pool.h"
-#include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/profiling/timestamp_profiler.h"
@@ -34,7 +33,6 @@ EscherImpl::EscherImpl(Escher* escher, const VulkanContext& context)
     : escher_(escher),
       vulkan_context_(context),
       pipeline_cache_(std::make_unique<PipelineCache>()),
-      image_cache_(std::make_unique<ImageCache>(escher)),
       mesh_manager_(NewMeshManager(escher->command_buffer_pool(),
                                    escher->transfer_command_buffer_pool(),
                                    escher->gpu_allocator(),
@@ -88,7 +86,7 @@ CommandBufferPool* EscherImpl::transfer_command_buffer_pool() {
 }
 
 ImageCache* EscherImpl::image_cache() {
-  return image_cache_.get();
+  return escher_->image_cache();
 }
 
 MeshManager* EscherImpl::mesh_manager() {

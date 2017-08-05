@@ -65,12 +65,12 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
           NewTransferCommandBufferPool(vulkan_context_,
                                        command_buffer_sequencer_.get())),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
+      image_cache_(std::make_unique<impl::ImageCache>(this, gpu_allocator())),
       gpu_uploader_(NewGpuUploader(this,
                                    command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),
       resource_recycler_(std::make_unique<ResourceRecycler>(this)),
-
       impl_(std::make_unique<impl::EscherImpl>(this, vulkan_context_)) {}
 
 Escher::~Escher() {}
@@ -83,23 +83,23 @@ MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
 }
 
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
-  return image_utils::NewRgbaImage(impl_->image_cache(), impl_->gpu_uploader(),
-                                   width, height, bytes);
+  return image_utils::NewRgbaImage(image_cache(), gpu_uploader(), width, height,
+                                   bytes);
 }
 
 ImagePtr Escher::NewCheckerboardImage(uint32_t width, uint32_t height) {
-  return image_utils::NewCheckerboardImage(
-      impl_->image_cache(), impl_->gpu_uploader(), width, height);
+  return image_utils::NewCheckerboardImage(image_cache(), gpu_uploader(), width,
+                                           height);
 }
 
 ImagePtr Escher::NewGradientImage(uint32_t width, uint32_t height) {
-  return image_utils::NewGradientImage(impl_->image_cache(),
-                                       impl_->gpu_uploader(), width, height);
+  return image_utils::NewGradientImage(image_cache(), gpu_uploader(), width,
+                                       height);
 }
 
 ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
-  return image_utils::NewNoiseImage(impl_->image_cache(), impl_->gpu_uploader(),
-                                    width, height);
+  return image_utils::NewNoiseImage(image_cache(), gpu_uploader(), width,
+                                    height);
 }
 
 PaperRendererPtr Escher::NewPaperRenderer() {
@@ -110,41 +110,13 @@ TexturePtr Escher::NewTexture(ImagePtr image,
                               vk::Filter filter,
                               vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
-  return ftl::MakeRefCounted<Texture>(impl_->resource_recycler(),
-                                      std::move(image), filter, aspect_mask,
+  return ftl::MakeRefCounted<Texture>(resource_recycler(), std::move(image),
+                                      filter, aspect_mask,
                                       use_unnormalized_coordinates);
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() {
   return gpu_allocator()->total_slab_bytes();
-}
-
-ResourceRecycler* Escher::resource_recycler() {
-  return resource_recycler_.get();
-}
-
-GpuAllocator* Escher::gpu_allocator() {
-  return gpu_allocator_.get();
-}
-
-impl::GpuUploader* Escher::gpu_uploader() {
-  return gpu_uploader_.get();
-}
-
-impl::CommandBufferSequencer* Escher::command_buffer_sequencer() {
-  return command_buffer_sequencer_.get();
-}
-
-impl::GlslToSpirvCompiler* Escher::glsl_compiler() {
-  return glsl_compiler_.get();
-}
-
-impl::CommandBufferPool* Escher::command_buffer_pool() {
-  return command_buffer_pool_.get();
-}
-
-impl::CommandBufferPool* Escher::transfer_command_buffer_pool() {
-  return transfer_command_buffer_pool_.get();
 }
 
 }  // namespace escher

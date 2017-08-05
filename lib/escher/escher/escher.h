@@ -56,18 +56,26 @@ class Escher : public MeshBuilderFactory {
   uint64_t GetNumGpuBytesAllocated();
 
   VulkanDeviceQueues* device() const { return device_.get(); }
+  vk::Device vk_device() const { return device_->vk_device(); }
   const VulkanContext& vulkan_context() const { return vulkan_context_; }
 
-  ResourceRecycler* resource_recycler();
-  GpuAllocator* gpu_allocator();
-  impl::GpuUploader* gpu_uploader();
-  impl::CommandBufferSequencer* command_buffer_sequencer();
-  impl::GlslToSpirvCompiler* glsl_compiler();
+  ResourceRecycler* resource_recycler() { return resource_recycler_.get(); }
+  GpuAllocator* gpu_allocator() { return gpu_allocator_.get(); }
+  impl::GpuUploader* gpu_uploader() { return gpu_uploader_.get(); }
+  impl::CommandBufferSequencer* command_buffer_sequencer() {
+    return command_buffer_sequencer_.get();
+  }
+  impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
+  impl::ImageCache* image_cache() { return image_cache_.get(); }
 
   // Pool for CommandBuffers submitted on the main queue.
-  impl::CommandBufferPool* command_buffer_pool();
+  impl::CommandBufferPool* command_buffer_pool() {
+    return command_buffer_pool_.get();
+  }
   // Pool for CommandBuffers submitted on the transfer queue (if one exists).
-  impl::CommandBufferPool* transfer_command_buffer_pool();
+  impl::CommandBufferPool* transfer_command_buffer_pool() {
+    return transfer_command_buffer_pool_.get();
+  }
 
  private:
   // Friends that need access to impl_.
@@ -86,6 +94,7 @@ class Escher : public MeshBuilderFactory {
   std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
+  std::unique_ptr<impl::ImageCache> image_cache_;
 
   std::unique_ptr<impl::GpuUploader> gpu_uploader_;
   std::unique_ptr<ResourceRecycler> resource_recycler_;

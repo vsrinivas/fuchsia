@@ -26,8 +26,8 @@ class GpuUploader;
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
 //
-// NOTE: this does not prune entries!!  Once a new Image is created, it will
-// live until the cache is destroyed!!
+// TODO(ES-7): this does not prune entries!!  Once a new Image is created, it
+// will live until the cache is destroyed!!
 class ImageCache : public ResourceManager, public ImageFactory {
  public:
   // The allocator is used to allocate memory for newly-created images.  If no

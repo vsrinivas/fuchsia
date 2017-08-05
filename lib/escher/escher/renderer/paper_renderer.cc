@@ -20,6 +20,7 @@
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 #include "escher/scene/camera.h"
+#include "escher/scene/model.h"
 #include "escher/util/depth_to_color.h"
 #include "escher/util/image_utils.h"
 #include "escher/util/trace_macros.h"
@@ -52,7 +53,7 @@ constexpr uint32_t kLightingPassSampleCount = 1;
 PaperRenderer::PaperRenderer(Escher* escher)
     : Renderer(escher),
       full_screen_(NewFullScreenMesh(escher_impl()->mesh_manager())),
-      image_cache_(escher_impl()->image_cache()),
+      image_cache_(escher->image_cache()),
       // TODO: perhaps cache depth_format_ in EscherImpl.
       depth_format_(ESCHER_CHECKED_VK_RESULT(
           impl::GetSupportedDepthStencilFormat(context_.physical_device))),
@@ -290,7 +291,7 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
   overlay_stage.set_viewing_volume(stage.viewing_volume());
   Camera overlay_camera = Camera::NewOrtho(overlay_stage.viewing_volume());
   impl::ModelDisplayListPtr overlay_display_list;
-  if (overlay_model) {
+  if (overlay_model && !overlay_model->objects().empty()) {
     display_list_flags = ModelDisplayListFlag::kDisableDepthTest;
     overlay_display_list = model_renderer_->CreateDisplayList(
         overlay_stage, *overlay_model, overlay_camera, display_list_flags, 1.f,
@@ -302,7 +303,7 @@ void PaperRenderer::DrawLightingPass(uint32_t sample_count,
                                   clear_values_);
 
   model_renderer_->Draw(stage, display_list, command_buffer);
-  if (overlay_model) {
+  if (overlay_display_list) {
     model_renderer_->Draw(stage, overlay_display_list, command_buffer);
   }
 

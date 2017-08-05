@@ -21,6 +21,8 @@ class WaitableResource : public Resource {
   void SetWaitSemaphore(SemaphorePtr semaphore);
   SemaphorePtr TakeWaitSemaphore();
 
+  bool HasWaitSemaphore() const { return !!wait_semaphore_; }
+
  protected:
   explicit WaitableResource(ResourceManager* owner);
 

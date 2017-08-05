@@ -124,7 +124,7 @@ void Renderer::RunOffscreenBenchmark(
   std::array<SemaphorePtr, kSwapchainSize> semaphores;
   std::array<ImagePtr, kSwapchainSize> images;
   {
-    auto image_cache = escher_impl()->image_cache();
+    auto image_cache = escher()->image_cache();
     for (size_t i = 0; i < kSwapchainSize; ++i) {
       auto im = image_cache->NewImage(
           {framebuffer_format, framebuffer_width, framebuffer_height, 1,
