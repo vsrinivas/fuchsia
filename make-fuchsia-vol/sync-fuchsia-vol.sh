@@ -3,6 +3,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+usage() {
+  echo "usage: $(basename $0) [netaddr args (hostname)]" >&2
+}
+
+case "$1" in
+  -h|--help|help)
+    usage
+    exit
+    ;;
+esac
+
 # Find the directory that this script lives in.
 if [[ -n "${ZSH_VERSION}" ]]; then
   thisdir=${${(%):-%x}:a:h}
@@ -107,29 +118,9 @@ sftp-batch-updated-system-files() {
 }
 
 mount-writable-parts() {
-  remountsys='
-  if [ ! -f /tmp/remounted-sys ]; then
-    sysline=$(lsfs -b /system | head -n 1);
-    export systemdev="/${sysline#*/}";
-    umount /system || exit 1;
-    mount $systemdev /system || exit 1;
-    touch /tmp/remounted-sys;
-  fi;
-  if [ ! -f /tmp/mounted-boot ]; then
-    if [ $(lsblk  | grep "efi system" | wc -l) -ne 1 ]; then
-      echo "ambiguous or missing efi system partition";
-      exit 1;
-    fi;
-    bootline=$(lsblk | grep "efi system");
-    export bootdev="/${bootline#*/}";
-    echo $bootdev;
-    mkdir /efi || exit 1;
-    mount $bootdev /efi || exit 1;
-    touch /tmp/mounted-boot;
-  fi
-  '
+  scp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config "$thisdir/remount.sh" "[$1]:/tmp/remount.sh" || exit 1
 
-  fcmd $remountsys || exit 1
+  fssh $1 /boot/bin/sh /tmp/remount.sh || exit 1
 }
 
 sftp-batch-updated-efi-files() {
@@ -156,17 +147,21 @@ sftp-batch-updated-efi-files() {
   done
 }
 
-mount-writable-parts &
-
-host=$(netaddr --fuchsia)
+echo "finding address of host"
+host=$(netaddr --fuchsia $@)
 if [[ $? != 0 ]]; then
   echo "Couldn't resolve host"
   exit 1
 fi
 
+echo "remounting partitions as writable"
+mount-writable-parts $host || exit 1
+
+echo "updating bootdata"
 update-bootdata
+
+echo "syncing updated files"
 eficmds=$(sftp-batch-updated-efi-files "$syncstamp")
-wait
 (
   echo progress
   sftp-batch-updated-system-files "$syncstamp"

@@ -129,7 +129,13 @@ func main() {
 	}
 	defer os.RemoveAll(tempDir)
 
-	ramdisk := filepath.Join(tempDir, "bootdata.bin")
+	// persist the ramdisk in case a user wants it to boot qemu against a
+	// persistent image
+	ramdiskDir := fuchsiaBuildDir
+	if ramdiskDir == "" {
+		ramdiskDir = tempDir
+	}
+	ramdisk := filepath.Join(ramdiskDir, "bootdata.bin")
 
 	args := []string{"-o", ramdisk, "--target=boot", *bootfsmanifest}
 	cmd := exec.Command("mkbootfs", append(args, bootManifests...)...)
@@ -138,6 +144,8 @@ func main() {
 		fmt.Printf("%s\n", b2)
 		log.Fatal(err)
 	}
+
+	log.Printf("combined bootdata written to: %s", ramdisk)
 
 	f, err := os.Open(disk)
 	if err != nil {

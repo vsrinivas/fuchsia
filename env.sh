@@ -620,7 +620,7 @@ function fbuild-sync() {
 ### fsyncvol: update a persistent fuchsia system
 
 fsyncvol() {
-  $FUCHSIA_SCRIPTS_DIR/make-fuchsia-vol/sync-fuchsia-vol.sh
+  $FUCHSIA_SCRIPTS_DIR/make-fuchsia-vol/sync-fuchsia-vol.sh $@
 }
 
 ### fboot: run fuchsia bootserver
