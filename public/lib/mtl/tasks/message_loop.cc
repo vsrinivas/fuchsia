@@ -4,6 +4,7 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
+#include <magenta/syscalls.h>
 #include <utility>
 
 #include "lib/ftl/logging.h"
@@ -104,8 +105,12 @@ MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
 
   // TODO(jeffbrown): Consider allocating handlers from a pool.
   HandlerKey key = next_handler_key_++;
-  auto record = new HandlerRecord(handle, trigger, timeout.ToNanoseconds(),
-                                  this, handler, key);
+  auto record =
+      new HandlerRecord(handle, trigger,
+                        timeout == ftl::TimeDelta::Max()
+                            ? MX_TIME_INFINITE
+                            : mx_deadline_after(timeout.ToNanoseconds()),
+                        this, handler, key);
   mx_status_t status = record->Begin(loop_.async());
   if (status == MX_ERR_BAD_STATE) {
     // Suppress request when shutting down.
