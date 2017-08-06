@@ -16,6 +16,7 @@
 // location relative to the jiri root, then invokes clang with the additional
 // arguments.
 
+#include <map>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -27,6 +28,7 @@
 #include <string.h>
 #include <algorithm>
 
+using std::map;
 using std::string;
 using std::vector;
 
@@ -102,16 +104,22 @@ string SysrootPath(const string& triple, const string& self_path) {
 
 // Detect the host, get the host identifier (used to select a prebuilt toolchain).
 // Empty string on failure.
-// Typical return value: "x86_64-darwin"
+// Typical return value: "mac-x64"
 string HostDouble() {
   struct utsname name;
   int status = uname(&name);
   if (status != 0) {
     return "";
   }
-  string dbl = string(name.machine) + "-" + string(name.sysname);
-  std::transform(dbl.begin(), dbl.end(), dbl.begin(), ::tolower);
-  return dbl;
+  map<string, string> cpumap = {
+    {"aarch64", "arm64"},
+    {"x86_64", "x64"}
+  };
+  map<string, string> osmap = {
+    {"Linux", "linux"},
+    {"Darwin", "mac"}
+  };
+  return osmap[name.sysname] + "-" + cpumap[name.machine];
 }
 
 // Given the command baseline, get the llvm binary to invoke.
@@ -174,7 +182,7 @@ int main(int argc, char** argv) {
   string triple = TargetTriple(cmd);
   vector<string> args = CollectArgs(argc, argv);
 
-  string newcmd = root + "buildtools/toolchain/clang+llvm-" + host + "/bin/" + tool;
+  string newcmd = root + "buildtools/" + host + "/clang/bin/" + tool;
   string sysroot = SysrootPath(triple, self_path);
   if (sysroot.empty()) {
     Die("Can't find sysroot from wrapper path");
