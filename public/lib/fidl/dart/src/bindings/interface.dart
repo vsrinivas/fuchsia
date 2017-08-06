@@ -184,8 +184,7 @@ abstract class Binding<T> {
   InterfaceHandle<T> wrap(T impl) {
     assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
-    if (pair.status != core.NO_ERROR)
-      return null;
+    if (pair.status != core.NO_ERROR) return null;
     _impl = impl;
     _reader.bind(pair.passChannel0());
     return new InterfaceHandle<T>(pair.passChannel1(), version);
@@ -236,7 +235,7 @@ abstract class Binding<T> {
   }
 
   /// Called when the channel underneath closes.
-  _VoidCallback onConnectionError = null;
+  _VoidCallback onConnectionError;
 
   /// The implementation of [T] bound using this object.
   ///
@@ -260,30 +259,23 @@ abstract class Binding<T> {
   int get version;
 
   void _handleReadable() {
-    final result = _reader.channel.queryAndRead();
-    if ((result.data == null) || (result.dataLength == 0))
+    final core.ReadResult result = _reader.channel.queryAndRead();
+    if ((result.bytes == null) || (result.bytes.lengthInBytes == 0))
       throw new FidlCodecError('Unexpected empty message or error: $result');
 
-    final Message message = new Message(result.data,
-                                        result.handles,
-                                        result.dataLength,
-                                        result.handlesLength);
+    final Message message = new Message.fromReadResult(result);
     handleMessage(new ServiceMessage.fromMessage(message), _sendResponse);
   }
 
   /// Always called when the channel underneath closes. If [onConnectionError]
   /// is set, it is called.
   void _handleError(core.ChannelReaderError error) {
-    if (onConnectionError != null)
-      onConnectionError();
+    if (onConnectionError != null) onConnectionError();
   }
 
   void _sendResponse(Message response) {
-    if (!_reader.isBound)
-      return;
-    final int status = _reader.channel.write(response.buffer,
-                                             response.buffer.lengthInBytes,
-                                             response.handles);
+    if (!_reader.isBound) return;
+    final int status = _reader.channel.write(response.buffer, response.handles);
     // ERR_BAD_STATE is only used to indicate that the other end of
     // the pipe has been closed. We can ignore the close here and wait for
     // the PeerClosed signal on the event stream.
@@ -329,7 +321,7 @@ class ProxyController<T> {
   /// Proxy controllers are not typically created directly. Instead, you
   /// typically obtain a [ProxyController<T>] object as the [Proxy<T>.ctrl]
   /// property of a `TProxy` object.
-  ProxyController({ this.serviceName }) {
+  ProxyController({this.serviceName}) {
     _reader.onReadable = _handleReadable;
     _reader.onError = _handleError;
   }
@@ -352,7 +344,7 @@ class ProxyController<T> {
   /// The proxy must not already have been bound.
   ///
   /// The `version` parameter must not be null.
-  InterfaceRequest<T> request({ int version: 0 }) {
+  InterfaceRequest<T> request({int version: 0}) {
     assert(version != null);
     assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
@@ -387,8 +379,7 @@ class ProxyController<T> {
   /// The proxy must have previously been bound (e.g., using [bind]).
   InterfaceHandle<T> unbind() {
     assert(isBound);
-    if (!_reader.isBound)
-      return null;
+    if (!_reader.isBound) return null;
     return new InterfaceHandle<T>(_reader.unbind(), _version);
   }
 
@@ -402,15 +393,14 @@ class ProxyController<T> {
   /// The proxy must have previously been bound (e.g., using [bind]).
   void close() {
     if (isBound) {
-      if (_pendingResponsesCount > 0)
-        proxyError('The proxy is closed.');
+      if (_pendingResponsesCount > 0) proxyError('The proxy is closed.');
       _reset();
       _reader.close();
     }
   }
 
   /// Called when the channel underneath closes.
-  _VoidCallback onConnectionError = null;
+  _VoidCallback onConnectionError;
 
   /// Called whenever this object receives a response on a bound channel.
   ///
@@ -440,18 +430,15 @@ class ProxyController<T> {
   }
 
   void _handleReadable() {
-    final result = _reader.channel.queryAndRead();
-    if ((result.data == null) || (result.dataLength == 0)) {
+    final core.ReadResult result = _reader.channel.queryAndRead();
+    if ((result.bytes == null) || (result.bytes.lengthInBytes == 0)) {
       proxyError('Read from channel failed');
       return;
     }
     try {
       _pendingResponsesCount--;
       if (onResponse != null) {
-        final Message message = new Message(result.data,
-                                            result.handles,
-                                            result.dataLength,
-                                            result.handlesLength);
+        final Message message = new Message.fromReadResult(result);
         onResponse(new ServiceMessage.fromMessage(message));
       }
     } on FidlCodecError catch (e) {
@@ -465,8 +452,7 @@ class ProxyController<T> {
   /// Always called when the channel underneath closes. If [onConnectionError]
   /// is set, it is called.
   void _handleError(core.ChannelReaderError error) {
-    if (onConnectionError != null)
-      onConnectionError();
+    if (onConnectionError != null) onConnectionError();
   }
 
   /// Sends the given messages over the bound channel.
@@ -479,46 +465,40 @@ class ProxyController<T> {
     }
     final ServiceMessage serialized =
         message.serializeWithHeader(new MessageHeader(name));
-    final int status = _reader.channel.write(serialized.buffer,
-                                             serialized.buffer.lengthInBytes,
-                                             serialized.handles);
+    final int status =
+        _reader.channel.write(serialized.buffer, serialized.handles);
     if (status != core.NO_ERROR)
-      proxyError('Failed to write to channel: ${_reader.channel} (status: $status)');
+      proxyError(
+          'Failed to write to channel: ${_reader.channel} (status: $status)');
   }
 
   /// Sends the given messages over the bound channel and registers a callback
   /// to handle the response.
   ///
   /// Used by subclasses of [Proxy<T>] to send encoded messages.
-  void sendMessageWithRequestId(Struct message,
-                                int name,
-                                int id,
-                                int flags,
-                                Function callback) {
+  void sendMessageWithRequestId(
+      Struct message, int name, int id, int flags, Function callback) {
     if (!_reader.isBound) {
       proxyError('The sender is closed.');
       return;
     }
 
-    if (id == -1) {
-      id = _nextId++;
-    }
+    final int messageId = (id == -1) ? _nextId++ : id;
 
     final MessageHeader header =
-        new MessageHeader.withRequestId(name, flags, id);
-    final ServiceMessage serialized =
-        message.serializeWithHeader(header);
+        new MessageHeader.withRequestId(name, flags, messageId);
+    final ServiceMessage serialized = message.serializeWithHeader(header);
 
-    final int status = _reader.channel.write(serialized.buffer,
-                                             serialized.buffer.lengthInBytes,
-                                             serialized.handles);
+    final int status =
+        _reader.channel.write(serialized.buffer, serialized.handles);
 
     if (status != core.NO_ERROR) {
-      proxyError('Failed to write to channel: ${_reader.channel} (status: $status)');
+      proxyError(
+          'Failed to write to channel: ${_reader.channel} (status: $status)');
       return;
     }
 
-    _callbackMap[id] = callback;
+    _callbackMap[messageId] = callback;
     _pendingResponsesCount++;
   }
 

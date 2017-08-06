@@ -28,47 +28,39 @@ class ChannelReader {
   ChannelReaderErrorHandler onError;
 
   void bind(Channel channel) {
-    if (isBound)
-      throw new FidlApiError('ChannelReader is already bound.');
+    if (isBound) throw new FidlApiError('ChannelReader is already bound.');
     _channel = channel;
-    _waiter ??= new HandleWaiter();
     _asyncWait();
   }
 
   Channel unbind() {
-    if (!isBound)
-      throw new FidlApiError("ChannelReader is not bound");
-    _waiter.cancelWait();
+    if (!isBound) throw new FidlApiError("ChannelReader is not bound");
+    _waiter?.cancel();
     final Channel result = _channel;
     _channel = null;
     return result;
   }
 
   void close() {
-    if (!isBound)
-      return;
-    _waiter.cancelWait();
+    if (!isBound) return;
+    _waiter.cancel();
     _channel.close();
     _channel = null;
   }
 
   void _asyncWait() {
-    _waiter.asyncWait(
-      channel.handle,
-      MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-      MX_TIME_INFINITE,
-      _handleWaitComplete
-    );
+    _waiter = _channel.handle.asyncWait(
+        MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+        MX_TIME_INFINITE,
+        _handleWaitComplete);
   }
 
   void _errorSoon(ChannelReaderError error) {
-    if (onError == null)
-      return;
+    if (onError == null) return;
     scheduleMicrotask(() {
       // We need to re-check onError because it might have changed during the
       // asynchronous gap.
-      if (onError != null)
-        onError(error);
+      if (onError != null) onError(error);
     });
   }
 
@@ -88,10 +80,8 @@ class ChannelReader {
     // RawReceivePort any more.
     try {
       if ((pending & MX_SIGNAL_READABLE) != 0) {
-        if (onReadable != null)
-          onReadable();
-        if (isBound)
-          _asyncWait();
+        if (onReadable != null) onReadable();
+        if (isBound) _asyncWait();
       } else if ((pending & MX_SIGNAL_PEER_CLOSED) != 0) {
         close();
         _errorSoon(null);

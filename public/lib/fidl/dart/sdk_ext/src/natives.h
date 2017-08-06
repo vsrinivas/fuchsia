@@ -7,8 +7,17 @@
 
 #include "dart/runtime/include/dart_api.h"
 
+#include <magenta/syscalls.h>
+
+#include <set>
+
+#include "lib/tonic/dart_wrappable.h"
+#include "lib/tonic/typed_data/dart_byte_data.h"
+
 namespace fidl {
 namespace dart {
+
+void Initialize();
 
 Dart_NativeFunction NativeLookup(Dart_Handle name,
                                  int argument_count,

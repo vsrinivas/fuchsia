@@ -2,12 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# NOTE: You must add any Dart files to sdk_ext.gni.
+
 source_set("sdk_ext") {
   sources = [
+    "src/handle.cc",
+    "src/handle.h",
     "src/handle_waiter.cc",
     "src/handle_waiter.h",
     "src/natives.cc",
     "src/natives.h",
+    "src/system.cc",
+    "src/system.h",
   ]
 
   deps = [

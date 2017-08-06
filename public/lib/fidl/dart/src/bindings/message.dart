@@ -20,9 +20,6 @@ class MessageHeader {
   int flags;
   int requestId;
 
-  static bool mustHaveRequestId(int flags) =>
-      (flags & (kMessageExpectsResponse | kMessageIsResponse)) != 0;
-
   MessageHeader(this.type)
       : _header =
             new StructDataHeader(kSimpleMessageSize, kSimpleMessageVersion),
@@ -53,6 +50,9 @@ class MessageHeader {
     }
   }
 
+  static bool mustHaveRequestId(int flags) =>
+      (flags & (kMessageExpectsResponse | kMessageIsResponse)) != 0;
+
   int get size => _header.size;
   bool get hasRequestId => mustHaveRequestId(flags);
 
@@ -65,9 +65,10 @@ class MessageHeader {
     }
   }
 
+  @override
   String toString() => "MessageHeader($_header, $type, $flags, $requestId)";
 
-  bool validateHeaderFlags(expectedFlags) =>
+  bool validateHeaderFlags(int expectedFlags) =>
       (flags & (kMessageExpectsResponse | kMessageIsResponse)) == expectedFlags;
 
   bool validateHeader(int expectedType, int expectedFlags) =>
@@ -76,19 +77,26 @@ class MessageHeader {
 
 class Message {
   Message(this.buffer, this.handles, this.dataLength, this.handlesLength);
+  Message.fromReadResult(core.ReadResult result)
+      : buffer = result.bytes,
+        handles = result.handles,
+        dataLength = result.bytes.lengthInBytes,
+        handlesLength = result.handles.length {
+    assert(result.status == core.NO_ERROR);
+  }
 
   final ByteData buffer;
   final List<core.Handle> handles;
-  final dataLength;
-  final handlesLength;
+  final int dataLength;
+  final int handlesLength;
 
   void closeAllHandles() {
     if (handles != null) {
-      for (int i = 0; i < handles.length; ++i)
-        handles[i].close();
+      for (int i = 0; i < handles.length; ++i) handles[i].close();
     }
   }
 
+  @override
   String toString() =>
       "Message(numBytes=$dataLength, numHandles=$handlesLength)";
 }
@@ -114,6 +122,7 @@ class ServiceMessage extends Message {
     return _payload;
   }
 
+  @override
   String toString() => "ServiceMessage($header, $_payload)";
 }
 

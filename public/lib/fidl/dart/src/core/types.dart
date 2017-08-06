@@ -4,6 +4,8 @@
 
 part of core;
 
+// ignore_for_file: constant_identifier_names
+
 typedef void VoidCallback();
 
 // These values are from these headers:

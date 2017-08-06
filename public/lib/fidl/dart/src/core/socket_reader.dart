@@ -4,7 +4,7 @@
 
 part of core;
 
-class SocketReaderError {
+class SocketReaderError extends Error {
   final Object error;
   final StackTrace stacktrace;
 
@@ -31,14 +31,13 @@ class SocketReader {
     if (isBound)
       throw new FidlApiError('SocketReader is already bound.');
     _socket = socket;
-    _waiter ??= new HandleWaiter();
     _asyncWait();
   }
 
   Socket unbind() {
     if (!isBound)
       throw new FidlApiError("SocketReader is not bound");
-    _waiter.cancelWait();
+    _waiter.cancel();
     final Socket result = _socket;
     _socket = null;
     return result;
@@ -47,14 +46,13 @@ class SocketReader {
   void close() {
     if (!isBound)
       return;
-    _waiter.cancelWait();
+    _waiter.cancel();
     _socket.close();
     _socket = null;
   }
 
   void _asyncWait() {
-    _waiter.asyncWait(
-      socket.handle,
+    _waiter = _socket.handle.asyncWait(
       MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
       MX_TIME_INFINITE,
       _handleWaitComplete

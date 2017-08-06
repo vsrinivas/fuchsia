@@ -7,5 +7,8 @@ library internal;
 import 'dart:nativewrappers';
 import 'dart:typed_data';
 
+part 'src/constants.dart';
+part 'src/handle.dart';
 part 'src/handle_waiter.dart';
 part 'src/natives.dart';
+part 'src/system.dart';

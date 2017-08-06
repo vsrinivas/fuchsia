@@ -9,8 +9,8 @@
 
 #include <mutex>
 
-#include "lib/tonic/dart_wrappable.h"
 #include "lib/fidl/c/waiter/async_waiter.h"
+#include "lib/tonic/dart_wrappable.h"
 
 namespace tonic {
 class DartLibraryNatives;
@@ -19,6 +19,8 @@ class DartLibraryNatives;
 namespace fidl {
 namespace dart {
 
+class Handle;
+
 class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
                      public tonic::DartWrappable {
   DEFINE_WRAPPERTYPEINFO();
@@ -26,15 +28,22 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
   FRIEND_MAKE_REF_COUNTED(HandleWaiter);
 
  public:
-  static ftl::RefPtr<HandleWaiter> Create(std::string stack);
+  static ftl::RefPtr<HandleWaiter> Create(Handle* handle,
+                                          mx_signals_t signals,
+                                          mx_time_t timeout,
+                                          Dart_Handle callback);
 
-  void asyncWait(uint64_t handle, mx_signals_t signals, mx_time_t timeout);
-  void cancelWait();
+  void Cancel();
+
+  bool is_valid() const { return wait_id_ != 0; }
 
   static void RegisterNatives(tonic::DartLibraryNatives* natives);
 
  private:
-  explicit HandleWaiter(std::string stack);
+  explicit HandleWaiter(Handle* handle,
+                        mx_signals_t signals,
+                        mx_time_t timeout,
+                        Dart_Handle callback);
   ~HandleWaiter();
 
   void OnWaitComplete(mx_status_t status, mx_signals_t pending);
@@ -44,9 +53,8 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
                                  void* closure);
 
   const FidlAsyncWaiter* waiter_;
-  ftl::WeakPtr<tonic::DartState> dart_state_;
-
-  std::string creation_stack_;
+  Handle* handle_;
+  tonic::DartPersistentValue callback_;
   FidlAsyncWaitID wait_id_ = 0;
 };
 

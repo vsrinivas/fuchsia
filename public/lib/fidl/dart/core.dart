@@ -8,7 +8,7 @@ import 'dart:async';
 import 'dart:fidl.internal';
 import 'dart:typed_data';
 
-export 'dart:fidl.internal' show Handle;
+export 'dart:fidl.internal' show Handle, ReadResult, WriteResult, GetSizeResult;
 
 part 'src/core/channel.dart';
 part 'src/core/channel_reader.dart';

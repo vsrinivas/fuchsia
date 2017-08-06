@@ -4,18 +4,10 @@
 
 part of core;
 
-class FidlInternalError {
-  FidlInternalError(this._message);
+class FidlApiError extends Error {
+  final String message;
+  FidlApiError(this.message) : super();
 
-  final String _message;
-
-  String toString() => "FidlInternalError: $_message";
-}
-
-class FidlApiError {
-  FidlApiError(this._message);
-
-  final String _message;
-
-  String toString() => "FidlApiError: $_message";
+  @override
+  String toString() => message;
 }

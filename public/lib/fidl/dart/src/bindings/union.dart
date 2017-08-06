@@ -8,16 +8,16 @@ abstract class Union { // ignore: one_member_abstracts
   void encode(Encoder encoder, int offset);
 }
 
-class UnionError {}
+class UnionError extends Error {}
 
 class UnsetUnionTagError extends UnionError {
-  final curTag;
-  final requestedTag;
+  final dynamic curTag;
+  final dynamic requestedTag;
 
   UnsetUnionTagError(this.curTag, this.requestedTag);
 
-  String toString() {
-    return "Tried to read unset union member: $requestedTag "
+  @override
+  String toString() =>
+    "Tried to read unset union member: $requestedTag "
         "current member: $curTag.";
-  }
 }
