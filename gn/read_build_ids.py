@@ -29,9 +29,7 @@ def read_build_id(readobj, path):
 
 
 def readobj_path():
-    toolchain_name = 'clang+llvm-x86_64-%s' % platform.system().lower()
-    return os.path.join(
-        paths.TOOLCHAIN_PATH, toolchain_name, 'bin', 'llvm-readobj')
+    return os.path.join(paths.BUILDTOOLS_PATH, 'clang', 'bin', 'llvm-readobj')
 
 
 def main():
