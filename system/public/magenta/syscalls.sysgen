@@ -657,7 +657,7 @@ syscall vcpu_write_state
 # System Control
 
 syscall system_mexec
-   (kernel: mx_handle_t, bootimage: mx_handle_t)
+   (kernel: mx_handle_t, bootimage: mx_handle_t, cmdline: char[cmdline_len] IN, cmdline_len: uint32_t)
    returns (mx_status_t);
 
 # Internal-only task syscalls

@@ -36,6 +36,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_resource.cpp \
     $(LOCAL_DIR)/syscalls_socket.cpp \
     $(LOCAL_DIR)/syscalls_system.cpp \
+    $(LOCAL_DIR)/bootdata_unittest.cpp \
     $(LOCAL_DIR)/syscalls_task.cpp \
     $(LOCAL_DIR)/syscalls_test.cpp \
     $(LOCAL_DIR)/syscalls_timer.cpp \

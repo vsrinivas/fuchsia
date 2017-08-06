@@ -483,46 +483,6 @@ static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* voi
     ctx->ret = MX_OK;
 }
 
-/* Takes a buffer to a bootimage and appends a section to the end of it */
-static mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
-                                       const uint8_t* section, const uint32_t section_length,
-                                       const uint32_t type, const uint32_t extra, const uint32_t flags) {
-    bootdata_t* hdr = (bootdata_t*)bootdata_buf;
-
-    if ((hdr->type != BOOTDATA_CONTAINER) ||
-        (hdr->extra != BOOTDATA_MAGIC) ||
-        (hdr->flags != 0)) {
-        // This buffer does not point to a bootimage.
-        return MX_ERR_WRONG_TYPE;
-    }
-
-    size_t total_len = hdr->length + sizeof(*hdr);
-    size_t new_section_length = BOOTDATA_ALIGN(section_length) + sizeof(bootdata_t);
-
-    // Make sure there's enough buffer space after the bootdata container to
-    // append the new section.
-    if ((total_len + new_section_length) >= buflen) {
-        return MX_ERR_BUFFER_TOO_SMALL;
-    }
-
-    // Seek to the end of the bootimage.
-    bootdata_buf += total_len;
-
-    bootdata_t* new_hdr = (bootdata_t*)bootdata_buf;
-    new_hdr->type = type;
-    new_hdr->length = section_length;
-    new_hdr->extra = extra;
-    new_hdr->flags = flags;
-
-    bootdata_buf += sizeof(*new_hdr);
-
-    memcpy(bootdata_buf, section, section_length);
-
-    hdr->length += (uint32_t)new_section_length;
-
-    return MX_OK;
-}
-
 // Give the platform an opportunity to append any platform specific bootdata
 // sections.
 mx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {

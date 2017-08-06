@@ -8,14 +8,17 @@
 #include <arch/mp.h>
 #include <debug.h>
 #include <dev/interrupt.h>
+#include <kernel/cmdline.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
+#include <magenta/boot/bootdata.h>
 #include <magenta/compiler.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/types.h>
+#include <magenta/user_copy.h>
 #include <magenta/vm_object_dispatcher.h>
 #include <mexec.h>
 #include <platform.h>
@@ -155,28 +158,94 @@ static inline bool intervals_intersect(const void* start1, const size_t len1,
     return false;
 }
 
-mx_status_t sys_system_mexec(mx_handle_t kernel_vmo,
-                             mx_handle_t bootimage_vmo) {
+
+/* Takes a buffer to a bootimage and appends a section to the end of it */
+mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
+                                       const uint8_t* section, const uint32_t section_length,
+                                       const uint32_t type, const uint32_t extra,
+                                       const uint32_t flags) {
+    bootdata_t* hdr = (bootdata_t*)bootdata_buf;
+
+    if ((hdr->type != BOOTDATA_CONTAINER) ||
+        (hdr->extra != BOOTDATA_MAGIC) ||
+        (hdr->flags != 0)) {
+        // This buffer does not point to a bootimage.
+        return MX_ERR_WRONG_TYPE;
+    }
+
+    size_t total_len = hdr->length + sizeof(*hdr);
+    size_t new_section_length = BOOTDATA_ALIGN(section_length) + sizeof(bootdata_t);
+
+    // Make sure there's enough buffer space after the bootdata container to
+    // append the new section.
+    if ((total_len + new_section_length) > buflen) {
+        return MX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    // Seek to the end of the bootimage.
+    bootdata_buf += total_len;
+
+    bootdata_t* new_hdr = (bootdata_t*)bootdata_buf;
+    new_hdr->type = type;
+    new_hdr->length = section_length;
+    new_hdr->extra = extra;
+    new_hdr->flags = flags;
+
+    bootdata_buf += sizeof(*new_hdr);
+
+    memcpy(bootdata_buf, section, section_length);
+
+    hdr->length += (uint32_t)new_section_length;
+
+    return MX_OK;
+}
+
+mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
+                             user_ptr<const char> _cmdline, uint32_t cmdline_len) {
     mx_status_t result;
+
+    // Copy the command line to a local buffer
+    char* cmdline_buf = (char*)calloc(1, CMDLINE_MAX);
+    if (!cmdline_buf)
+        return MX_ERR_NO_MEMORY;
+
+    mxtl::StringPiece cmdline;
+    result = magenta_copy_user_string((const char*)_cmdline.get(), cmdline_len, cmdline_buf,
+                                      CMDLINE_MAX, &cmdline);
+    if (result != MX_OK) {
+        free(cmdline_buf);
+        return result;
+    }
+
+    // WARNING
+    // It is unsafe to return from this function beyond this point.
+    // This is because we have swapped out the user address space and halted the
+    // secondary cores and there is no trivial way to bring both of these back.
 
     paddr_t new_kernel_addr;
     size_t new_kernel_len;
     result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, nullptr,
                                 &new_kernel_len);
     if (result != MX_OK) {
-        printf("Failed to coalesce vmo kernel pages, retcode = %d\n", result);
-        return result;
+        panic("Failed to coalesce vmo kernel pages");
     }
 
     paddr_t new_bootimage_addr;
     uint8_t* bootimage_buffer;
     size_t new_bootimage_len;
-    result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes,
+    result = vmo_coalesce_pages(bootimage_vmo, kBootdataPlatformExtraBytes + cmdline_len,
                                 &new_bootimage_addr, &bootimage_buffer,
                                 &new_bootimage_len);
     if (result != MX_OK) {
-        printf("Failed to coalesce vmo bootimage pages ,retcode = %d\n", result);
-        return result;
+        panic("Failed to coalesce vmo kernel pages");
+    }
+
+
+    result = bootdata_append_section(bootimage_buffer, new_bootimage_len,
+                                     (const uint8_t*)cmdline.data(), (uint32_t)cmdline.length(),
+                                     BOOTDATA_CMDLINE, 0, 0);
+    if (result != MX_OK) {
+        panic("Failed to append command line to bootdata\n");
     }
 
     // WARNING

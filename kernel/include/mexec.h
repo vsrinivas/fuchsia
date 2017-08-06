@@ -13,6 +13,9 @@
 #ifndef ASSEMBLY
 
 #include <magenta/compiler.h>
+#include <magenta/types.h>
+#include <stddef.h>
+#include <stdint.h>
 
 __BEGIN_CDECLS;
 
@@ -29,6 +32,11 @@ typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2,
                                uint64_t arg3, memmov_ops_t* ops,
                                void* new_kernel_addr);
 
+// Appends a section to the end of a given bootdata image.
+mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
+                                    const uint8_t* section, const uint32_t section_length,
+                                    const uint32_t type, const uint32_t extra,
+                                    const uint32_t flags);
 
 /* Allow the platform to patch the bootdata structure with any platform specific
  * data that might be necessary for the kernel that mexec is chain-loading.

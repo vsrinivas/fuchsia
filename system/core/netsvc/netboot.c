@@ -320,7 +320,8 @@ transmit:
     }
 
     if (do_boot) {
-        mx_system_mexec(nbkernel.data, nbbootdata.data);
+        mx_system_mexec(nbkernel.data, nbbootdata.data, (char*)nbcmdline.file.data,
+                        nbcmdline.file.size);
     }
 }
 
