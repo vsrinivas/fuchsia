@@ -23,7 +23,7 @@ config("compiler") {
   ]
   libs = [ "pthread" ]  # libc++ depends on pthreads
   lib_dirs =
-      [ rebase_path("//buildtools/toolchain/clang+llvm-x86_64-linux/lib") ]
+      [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
   configs = [ ":sysroot" ]
 }
 

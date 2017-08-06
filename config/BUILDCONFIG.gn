@@ -19,6 +19,7 @@ if (current_cpu == "") {
 if (current_os == "") {
   current_os = target_os
 }
+host_platform = "${host_os}-${host_cpu}"
 
 if (target_os == "fuchsia") {
   target_toolchain = "//build/toolchain/fuchsia:${target_cpu}"

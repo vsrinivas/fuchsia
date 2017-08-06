@@ -5,29 +5,10 @@
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 
-if (host_cpu == "arm64") {
-  _clang_cpu = "aarch64"
-} else if (host_cpu == "x64") {
-  _clang_cpu = "x86_64"
-} else {
-  assert(false, "Host CPU not supported")
-}
-
-if (host_os == "linux") {
-  _clang_os = "linux"
-} else if (host_os == "mac") {
-  _clang_os = "darwin"
-} else {
-  assert(false, "Host OS not supported")
-}
-
-_clang_name = "clang+llvm-$_clang_cpu-$_clang_os"
-_clang_path = "//buildtools/toolchain/$_clang_name"
-
 declare_args() {
   # The default clang toolchain provided by the buildtools. This variable is
-  # additionally consumed by the go toolchain.
-  clang_prefix = rebase_path("$_clang_path/bin", root_build_dir)
+  # additionally consumed by the Go toolchain.
+  clang_prefix = rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
 }
 
 # Defines a clang-based toolchain
