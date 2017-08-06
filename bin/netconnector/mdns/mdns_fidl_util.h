@@ -28,24 +28,24 @@ class MdnsFidlUtil {
       const SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
-  static network::NetAddressIPv4Ptr CreateNetAddressIPv4(
+  static netstack::NetAddressIPv4Ptr CreateNetAddressIPv4(
       const IpAddress& ip_address);
 
-  static network::NetAddressIPv6Ptr CreateNetAddressIPv6(
+  static netstack::NetAddressIPv6Ptr CreateNetAddressIPv6(
       const IpAddress& ip_address);
 
-  static network::NetAddressIPv4Ptr CreateNetAddressIPv4(
+  static netstack::NetAddressIPv4Ptr CreateNetAddressIPv4(
       const SocketAddress& socket_address);
 
-  static network::NetAddressIPv6Ptr CreateNetAddressIPv6(
+  static netstack::NetAddressIPv6Ptr CreateNetAddressIPv6(
       const SocketAddress& socket_address);
 
   static bool UpdateNetAddressIPv4(
-      const network::NetAddressIPv4Ptr& net_address,
+      const netstack::NetAddressIPv4Ptr& net_address,
       const SocketAddress& socket_address);
 
   static bool UpdateNetAddressIPv6(
-      const network::NetAddressIPv6Ptr& net_address,
+      const netstack::NetAddressIPv6Ptr& net_address,
       const SocketAddress& socket_address);
 };
 

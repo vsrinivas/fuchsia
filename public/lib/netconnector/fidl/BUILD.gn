@@ -12,6 +12,7 @@ fidl("services") {
 
   public_deps = [
     "//application/services",
+    "//apps/netstack/services:net_address",
     "//apps/network/services",
   ]
 }
