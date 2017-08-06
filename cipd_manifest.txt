@@ -1,0 +1,31 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# vpython
+infra/tools/luci/vpython/${platform} git_revision:5cf65fdf804a9b3f3023f79d5b3cab2a88ccd09e
+
+# LUCI editor
+infra/tools/luci/led/${platform} git_revision:5cf65fdf804a9b3f3023f79d5b3cab2a88ccd09e
+
+# Ninja
+infra/ninja/${platform} version:1.8.1
+
+# GN
+infra/tools/gn/${platform} gn_version:499403
+
+# Clang
+@Subdir clang
+fuchsia/clang/${platform} clang_revision:36d969c2a922522b11a461fc36c12d6ed7a03d37
+
+# Go
+@Subdir go
+fuchsia/go/${platform} git_revision:54d80666ad6c6defd7f765b47fc82a8fec9f16d4
+
+# Rust
+@Subdir rust
+fuchsia/rust/${platform} git_revision:e1ef1882a0b1e37d51d1b864bc8222897977d692
+
+# QEMU
+@Subdir qemu
+fuchsia/qemu/${platform} git_revision:a9b53caf4931b2450dfe87e97c59ac617acff935
