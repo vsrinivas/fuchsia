@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 var archive = flag.Bool("archive", true, "Whether to archive the output")
@@ -45,72 +46,89 @@ type component struct {
 	f         func(src, dst string) // When t is 'custom', function to run to copy
 }
 
-var components = []component{
-	{
-		toolchain,
-		"buildtools/toolchain",
-		"toolchain",
-		dir,
-		nil,
-	},
-	{
-		// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
-		toolchainLibs,
-		"buildtools/toolchain/clang+llvm-x86_64-linux/lib/clang/6.0.0/lib/fuchsia",
-		"toolchain_libs/clang/6.0.0/lib/fuchsia",
-		dir,
-		nil,
-	},
-	{
+var (
+	hostOs string
+	hostCpu string
+	components []component
+)
 
-		sysroot,
-		"out/build-magenta/build-magenta-qemu-arm64/sysroot",
-		"sysroot/aarch64-fuchsia",
-		dir,
-		nil,
-	},
-	{
-		sysroot,
-		"out/build-magenta/build-magenta-pc-x86-64/sysroot",
-		"sysroot/x86_64-fuchsia",
-		dir,
-		nil,
-	},
-	{
-		kernelImg,
-		"out/build-magenta/build-magenta-pc-x86-64/magenta.bin",
-		"kernel/magenta.bin",
-		file,
-		nil,
-	},
-	{
-		kernelDebugObjs,
-		"out/build-magenta/build-magenta-pc-x86-64",
-		"kernel/debug",
-		custom,
-		copyKernelDebugObjs,
-	},
-	{
-		bootdata,
-		"out/release-x86-64/user.bootfs",
-		"bootdata.bin",
-		file,
-		nil,
-	},
-	{
-		qemu,
-		"buildtools/qemu",
-		"qemu",
-		dir,
-		nil,
-	},
-	{
-		tools,
-		"out/build-magenta/tools",
-		"tools",
-		dir,
-		nil,
-	},
+func init() {
+	hostCpu = runtime.GOARCH
+	if hostCpu == "amd64" {
+		hostCpu = "x64"
+	}
+	hostOs = runtime.GOOS
+	if hostOs == "darwin" {
+		hostOs = "mac"
+	}
+
+	components = []component{
+		{
+			toolchain,
+			fmt.Sprintf("buildtools/%s-%s/clang", hostOs, hostCpu),
+			"clang",
+			dir,
+			nil,
+		},
+		{
+			// TODO(https://crbug.com/724204): Remove this once Chromium starts using upstream compiler-rt builtins.
+			toolchainLibs,
+			fmt.Sprintf("buildtools/%s-%s/clang/lib/clang/6.0.0/lib/fuchsia", hostOs, hostCpu),
+			"toolchain_libs/clang/6.0.0/lib/fuchsia",
+			dir,
+			nil,
+		},
+		{
+
+			sysroot,
+			"out/build-magenta/build-magenta-qemu-arm64/sysroot",
+			"sysroot/aarch64-fuchsia",
+			dir,
+			nil,
+		},
+		{
+			sysroot,
+			"out/build-magenta/build-magenta-pc-x86-64/sysroot",
+			"sysroot/x86_64-fuchsia",
+			dir,
+			nil,
+		},
+		{
+			kernelImg,
+			"out/build-magenta/build-magenta-pc-x86-64/magenta.bin",
+			"kernel/magenta.bin",
+			file,
+			nil,
+		},
+		{
+			kernelDebugObjs,
+			"out/build-magenta/build-magenta-pc-x86-64",
+			"kernel/debug",
+			custom,
+			copyKernelDebugObjs,
+		},
+		{
+			bootdata,
+			"out/release-x86-64/user.bootfs",
+			"bootdata.bin",
+			file,
+			nil,
+		},
+		{
+			qemu,
+			"buildtools/qemu",
+			"qemu",
+			dir,
+			nil,
+		},
+		{
+			tools,
+			"out/build-magenta/tools",
+			"tools",
+			dir,
+			nil,
+		},
+	}
 }
 
 func copyKernelDebugObjs(src, dstPrefix string) {
