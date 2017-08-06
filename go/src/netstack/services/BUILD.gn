@@ -8,4 +8,14 @@ fidl("services") {
   sources = [
     "netstack.fidl",
   ]
+
+  public_deps = [
+    ":net_address",
+  ]
+}
+
+fidl("net_address") {
+  sources = [
+    "net_address.fidl",
+  ]
 }

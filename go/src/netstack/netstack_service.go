@@ -15,7 +15,7 @@ import (
 	"syscall/mx/mxerror"
 
 	nsfidl "apps/netstack/services/netstack"
-	network "apps/network/services/net_address"
+	nsaddr "apps/netstack/services/net_address"
 
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
@@ -38,23 +38,23 @@ func (ni *NetstackImpl) GetPortForService(service string, protocol nsfidl.Protoc
 	return port, err
 }
 
-func (ni *NetstackImpl) GetAddress(name string, port uint16) (out []network.NetAddress, err error) {
+func (ni *NetstackImpl) GetAddress(name string, port uint16) (out []nsaddr.NetAddress, err error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
 	// mxio's getaddrinfo into here.
 	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
 	if err == nil {
-		out = make([]network.NetAddress, len(addrs))
+		out = make([]nsaddr.NetAddress, len(addrs))
 		for i, addr := range addrs {
 			switch len(addr) {
 			case 0:
 				// skip
 			case 4:
-				out[i].Family = network.NetAddressFamily_Ipv4
-				out[i].Ipv4 = &network.NetAddressIPv4{Port: port}
+				out[i].Family = nsaddr.NetAddressFamily_Ipv4
+				out[i].Ipv4 = &nsaddr.NetAddressIPv4{Port: port}
 				copy(out[i].Ipv4.Addr[:], addr[:])
 			case 16:
-				out[i].Family = network.NetAddressFamily_Ipv6
-				out[i].Ipv6 = &network.NetAddressIPv6{Port: port}
+				out[i].Family = nsaddr.NetAddressFamily_Ipv6
+				out[i].Ipv6 = &nsaddr.NetAddressIPv6{Port: port}
 				copy(out[i].Ipv6.Addr[:], addr[:])
 			}
 		}
