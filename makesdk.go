@@ -60,6 +60,14 @@ var components = []component{
 		nil,
 	},
 	{
+
+		sysroot,
+		"out/build-magenta/build-magenta-qemu-arm64/sysroot",
+		"sysroot/aarch64-fuchsia",
+		dir,
+		nil,
+	},
+	{
 		sysroot,
 		"out/build-magenta/build-magenta-pc-x86-64/sysroot",
 		"sysroot/x86_64-fuchsia",
