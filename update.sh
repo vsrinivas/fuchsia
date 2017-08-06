@@ -68,7 +68,7 @@ function download_gn() {
 }
 
 function download_clang() {
-  download_cipd_package clang clang "${SCRIPT_ROOT}/toolchain/clang+llvm-${HOST_TRIPLE}"
+  download_cipd_package clang clang "${SCRIPT_ROOT}/${GN_PLATFORM}/clang"
 }
 
 function download_rust() {
