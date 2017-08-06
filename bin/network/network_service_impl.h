@@ -5,6 +5,7 @@
 #ifndef APPS_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define APPS_NETWORK_NETWORK_SERVICE_IMPL_H_
 
+#include "apps/netstack/services/net_address.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 
 #include <list>
@@ -32,17 +33,17 @@ class NetworkServiceImpl : public NetworkService,
   void GetCookieStore(mx::channel cookie_store) override;
   void CreateWebSocket(mx::channel socket) override;
   void CreateTCPBoundSocket(
-      NetAddressPtr local_address,
+      netstack::NetAddressPtr local_address,
       mx::channel bound_socket,
       const CreateTCPBoundSocketCallback& callback) override;
   void CreateTCPConnectedSocket(
-      NetAddressPtr remote_address,
+      netstack::NetAddressPtr remote_address,
       mx::socket send_stream,
       mx::socket receive_stream,
       mx::channel client_socket,
       const CreateTCPConnectedSocketCallback& callback) override;
   void CreateUDPSocket(mx::channel socket) override;
-  void CreateHttpServer(NetAddressPtr local_address,
+  void CreateHttpServer(netstack::NetAddressPtr local_address,
                         mx::channel delegate,
                         const CreateHttpServerCallback& callback) override;
   void RegisterURLLoaderInterceptor(mx::channel factory) override;

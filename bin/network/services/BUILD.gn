@@ -7,12 +7,15 @@ import("//lib/fidl/fidl.gni")
 fidl("services") {
   sources = [
     "http_header.fidl",
-    "net_address.fidl",
     "network_error.fidl",
     "network_service.fidl",
     "url_body.fidl",
     "url_loader.fidl",
     "url_request.fidl",
     "url_response.fidl",
+  ]
+
+  public_deps = [
+    "//apps/netstack/services:net_address",
   ]
 }

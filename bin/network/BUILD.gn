@@ -27,6 +27,7 @@ executable("network") {
 
   deps = [
     "//application/lib/app",
+    "//apps/netstack/services:net_address",
     "//apps/network/services",
     "//lib/ftl",
     "//lib/mtl",

@@ -4,8 +4,8 @@
 
 module network;
 
+import "apps/netstack/services/net_address.fidl";
 import "apps/network/services/network_error.fidl";
-import "apps/network/services/net_address.fidl";
 import "apps/network/services/url_loader.fidl";
 
 [ServiceName="network::NetworkService"]
@@ -19,26 +19,26 @@ interface NetworkService {
   CreateWebSocket(handle<channel> socket);
 
   // This is not implemented
-  CreateTCPBoundSocket(NetAddress? local_address,
+  CreateTCPBoundSocket(netstack.NetAddress? local_address,
                        handle<channel> bound_socket)
-      => (NetworkError result, NetAddress? bound_to);
+      => (NetworkError result, netstack.NetAddress? bound_to);
 
   // This is not implemented
-  CreateTCPConnectedSocket(NetAddress remote_address,
+  CreateTCPConnectedSocket(netstack.NetAddress remote_address,
                            handle<socket> send_stream,
                            handle<socket> receive_stream,
                            handle<channel> client_socket)
       => (NetworkError result,
-          NetAddress? local_address);
+          netstack.NetAddress? local_address);
 
   // This is not implemented
   CreateUDPSocket(handle<channel> socket);
 
   // This is not implemented
-  CreateHttpServer(NetAddress local_address,
+  CreateHttpServer(netstack.NetAddress local_address,
                    handle<channel> delegate)
       => (NetworkError result,
-          NetAddress? bound_to);
+          netstack.NetAddress? bound_to);
 
   // This is not implemented
   RegisterURLLoaderInterceptor(handle<channel> factory);

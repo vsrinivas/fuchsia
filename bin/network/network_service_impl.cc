@@ -177,7 +177,7 @@ void NetworkServiceImpl::CreateWebSocket(mx::channel socket) {
 }
 
 void NetworkServiceImpl::CreateTCPBoundSocket(
-    NetAddressPtr local_address,
+    netstack::NetAddressPtr local_address,
     mx::channel bound_socket,
     const CreateTCPBoundSocketCallback& callback) {
   FTL_NOTIMPLEMENTED();
@@ -185,7 +185,7 @@ void NetworkServiceImpl::CreateTCPBoundSocket(
 }
 
 void NetworkServiceImpl::CreateTCPConnectedSocket(
-    NetAddressPtr remote_address,
+    netstack::NetAddressPtr remote_address,
     mx::socket send_stream,
     mx::socket receive_stream,
     mx::channel client_socket,
@@ -199,7 +199,7 @@ void NetworkServiceImpl::CreateUDPSocket(mx::channel request) {
 }
 
 void NetworkServiceImpl::CreateHttpServer(
-    NetAddressPtr local_address,
+    netstack::NetAddressPtr local_address,
     mx::channel delegate,
     const CreateHttpServerCallback& callback) {
   FTL_NOTIMPLEMENTED();
