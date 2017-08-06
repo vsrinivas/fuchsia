@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_TEST_CLOUD_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
 #include "apps/ledger/src/test/cloud_server/fake_cloud_url_loader.h"
+#include "apps/netstack/services/net_address.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -25,23 +26,23 @@ class FakeCloudNetworkService : public network::NetworkService {
   void GetCookieStore(mx::channel cookie_store) override;
   void CreateWebSocket(mx::channel socket) override;
   using CreateTCPBoundSocketCallback =
-      std::function<void(network::NetworkErrorPtr, network::NetAddressPtr)>;
+      std::function<void(network::NetworkErrorPtr, netstack::NetAddressPtr)>;
   void CreateTCPBoundSocket(
-      network::NetAddressPtr local_address,
+      netstack::NetAddressPtr local_address,
       mx::channel bound_socket,
       const CreateTCPBoundSocketCallback& callback) override;
   using CreateTCPConnectedSocketCallback =
-      std::function<void(network::NetworkErrorPtr, network::NetAddressPtr)>;
+      std::function<void(network::NetworkErrorPtr, netstack::NetAddressPtr)>;
   void CreateTCPConnectedSocket(
-      network::NetAddressPtr remote_address,
+      netstack::NetAddressPtr remote_address,
       mx::socket send_stream,
       mx::socket receive_stream,
       mx::channel client_socket,
       const CreateTCPConnectedSocketCallback& callback) override;
   void CreateUDPSocket(mx::channel socket) override;
   using CreateHttpServerCallback =
-      std::function<void(network::NetworkErrorPtr, network::NetAddressPtr)>;
-  void CreateHttpServer(network::NetAddressPtr local_address,
+      std::function<void(network::NetworkErrorPtr, netstack::NetAddressPtr)>;
+  void CreateHttpServer(netstack::NetAddressPtr local_address,
                         mx::channel delegate,
                         const CreateHttpServerCallback& callback) override;
   void RegisterURLLoaderInterceptor(mx::channel factory) override;

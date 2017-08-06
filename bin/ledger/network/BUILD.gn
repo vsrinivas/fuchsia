@@ -52,6 +52,7 @@ source_set("unittests") {
   deps = [
     ":network",
     "//apps/ledger/src/test:lib",
+    "//apps/netstack/services:net_address",
     "//lib/mtl",
     "//third_party/gtest",
   ]

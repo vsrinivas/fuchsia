@@ -11,6 +11,7 @@
 #include <mx/socket.h>
 
 #include "apps/ledger/src/test/test_with_message_loop.h"
+#include "apps/netstack/services/net_address.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -85,13 +86,13 @@ class FakeNetworkService : public network::NetworkService {
   }
   void CreateWebSocket(mx::channel /*socket*/) override { FTL_DCHECK(false); }
   void CreateTCPBoundSocket(
-      network::NetAddressPtr /*local_address*/,
+      netstack::NetAddressPtr /*local_address*/,
       mx::channel /*bound_socket*/,
       const CreateTCPBoundSocketCallback& /*callback*/) override {
     FTL_DCHECK(false);
   }
   void CreateTCPConnectedSocket(
-      network::NetAddressPtr /*remote_address*/,
+      netstack::NetAddressPtr /*remote_address*/,
       mx::socket /*send_stream*/,
       mx::socket /*receive_stream*/,
       mx::channel /*client_socket*/,
@@ -99,7 +100,7 @@ class FakeNetworkService : public network::NetworkService {
     FTL_DCHECK(false);
   }
   void CreateUDPSocket(mx::channel /*socket*/) override { FTL_DCHECK(false); }
-  void CreateHttpServer(network::NetAddressPtr /*local_address*/,
+  void CreateHttpServer(netstack::NetAddressPtr /*local_address*/,
                         mx::channel /*delegate*/,
                         const CreateHttpServerCallback& /*callback*/) override {
     FTL_DCHECK(false);
