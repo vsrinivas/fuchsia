@@ -7,7 +7,7 @@ WARNING:  These are directions to configure the machine and boot an experimental
 These instructions configure the machine to boot from a USB flash drive.
 
 1. Remove four bottom plate screws and bottom plate
-2. Install memory (and optionally M.2 SSD)
+2. Install memory (and optionally M.2 SSD (only SATA is supported; NVMe lacks a driver))
 3. Boot into Visual BIOS (F2)
 4. Select the Wrench menu (upper right), select Visual Bios Settings
 5. Disable Internet Updates (Requires a mouse due to the wonders of Visual BIOS)
