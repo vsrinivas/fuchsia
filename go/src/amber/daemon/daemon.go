@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,7 +79,6 @@ func (d *Daemon) blobRepos() []BlobRepo {
 }
 
 func (d *Daemon) AddBlobRepo(br BlobRepo) {
-	log.Printf("Adding a blob repo\n")
 	d.muRepos.Lock()
 	d.repos = append(d.repos, br)
 	d.muRepos.Unlock()

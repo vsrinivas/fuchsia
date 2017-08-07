@@ -74,10 +74,14 @@ func main() {
 			log.Printf("amber: please provide keys for client %v\n", err)
 			return
 		}
-		err = client.Init(rootKeys, len(rootKeys))
-		if err != nil {
-			fmt.Printf("amber: client failed to init with provided keys %v\n", err)
-			return
+		for tries := 3; tries > 0; tries-- {
+			log.Println("amber: initializing client")
+			err = client.Init(rootKeys, len(rootKeys))
+			if err != nil {
+				log.Printf("amber: client failed to init with provided keys %v\n", err)
+				continue
+			}
+			break
 		}
 	}
 
@@ -87,7 +91,7 @@ func main() {
 	}
 
 	d := startupDaemon(client, *addr)
-
+	log.Println("amber: monitoring for updates")
 	defer d.CancelAll()
 
 	//block forever
