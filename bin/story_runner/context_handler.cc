@@ -23,7 +23,7 @@ void ContextHandler::Select(const fidl::String& topic) {
   }
 
   query_.topics.push_back(topic);
-  context_reader_->Subscribe(query_.Clone(), binding_.NewBinding());
+  context_reader_->SubscribeToTopics(query_.Clone(), binding_.NewBinding());
 }
 
 void ContextHandler::Watch(const std::function<void()>& watcher) {

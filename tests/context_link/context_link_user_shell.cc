@@ -51,7 +51,7 @@ class ContextListenerImpl : maxwell::ContextListener {
   void Listen(maxwell::ContextReader* const context_reader) {
     auto query = maxwell::ContextQuery::New();
     query->topics.resize(0);
-    context_reader->Subscribe(std::move(query), binding_.NewBinding());
+    context_reader->SubscribeToTopics(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
         [] { FTL_LOG(WARNING) << "Lost connection to ContextReader."; });
   }
