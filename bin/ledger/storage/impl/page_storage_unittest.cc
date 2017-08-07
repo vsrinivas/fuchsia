@@ -89,7 +89,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
  public:
   explicit DelayingFakeSyncDelegate(
       std::function<void(ftl::Closure)> on_get_object)
-      : on_get_object_(on_get_object) {}
+      : on_get_object_(std::move(on_get_object)) {}
 
   void AddObject(ObjectIdView object_id, const std::string& value) {
     id_to_value_[object_id.ToString()] = value;
@@ -247,8 +247,8 @@ class PageStorageTest : public StorageTest {
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
-      EXPECT_EQ(Status::OK, journal->Put(std::move(key), RandomObjectId(),
-                                         KeyPriority::EAGER));
+      EXPECT_EQ(Status::OK,
+                journal->Put(key, RandomObjectId(), KeyPriority::EAGER));
     }
     EXPECT_EQ(Status::OK, journal->Delete("key_does_not_exist"));
 

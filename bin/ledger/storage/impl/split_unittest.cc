@@ -290,8 +290,8 @@ TEST(SplitTest, CollectPieces) {
       children.push_back({MakeIndexId(child), 1});
     }
     size_t total_size;
-    FileIndexSerialization::BuildFileIndex(
-        std::move(children), &objects[MakeIndexId(i)], &total_size);
+    FileIndexSerialization::BuildFileIndex(children, &objects[MakeIndexId(i)],
+                                           &total_size);
   }
   IterationStatus status;
   std::unordered_set<ObjectId> ids;

@@ -4,7 +4,9 @@
 
 #include "apps/ledger/src/storage/impl/page_db.h"
 
+#include <algorithm>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -92,8 +94,9 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
   auto sorted_timestamps = timestamps;
   std::sort(sorted_timestamps.begin(), sorted_timestamps.end());
   auto random_ordered_timestamps = timestamps;
-  std::random_shuffle(random_ordered_timestamps.begin(),
-                      random_ordered_timestamps.end());
+  auto rng = std::default_random_engine(42);
+  std::shuffle(random_ordered_timestamps.begin(),
+               random_ordered_timestamps.end(), rng);
 
   std::map<int64_t, CommitId> commits;
   for (auto ts : random_ordered_timestamps) {

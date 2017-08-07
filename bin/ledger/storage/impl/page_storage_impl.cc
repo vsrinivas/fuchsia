@@ -562,7 +562,7 @@ void PageStorageImpl::NotifyWatchers() {
   while (!commits_to_send_.empty()) {
     auto to_send = std::move(commits_to_send_.front());
     for (CommitWatcher* watcher : watchers_) {
-      watcher->OnNewCommits(std::move(to_send.second), to_send.first);
+      watcher->OnNewCommits(to_send.second, to_send.first);
     }
     commits_to_send_.pop();
   }
@@ -831,7 +831,7 @@ void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
         auto id_string = id.ToString();
         Status status = db_.ReadObject(id_string, nullptr);
         if (status == Status::NOT_FOUND) {
-          DownloadFullObject(std::move(id_string), waiter->NewCallback());
+          DownloadFullObject(id_string, waiter->NewCallback());
           return Status::OK;
         }
         return status;

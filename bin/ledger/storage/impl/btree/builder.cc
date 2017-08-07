@@ -267,7 +267,8 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
     NodeBuilder& child = children_[index];
     RETURN_ON_ERROR(child.Apply(node_level_calculator, page_storage,
                                 std::move(change), did_mutate));
-    if (!*did_mutate) {
+    // Suppress warning that |did_mutate| might not be initialized.
+    if (!*did_mutate) {  // NOLINT
       return Status::OK;
     }
 
@@ -316,7 +317,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
         children.push_back(sub_child.object_id_);
       }
       TreeNode::FromEntries(page_storage->page_storage(), child->level_,
-                            child->entries_, std::move(children), [
+                            child->entries_, children, [
                               new_ids, child, callback = waiter->NewCallback()
                             ](Status status, ObjectId object_id) {
                               if (status == Status::OK) {
@@ -595,7 +596,7 @@ Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
                           std::unordered_set<ObjectId>* new_ids) {
   Status status;
   while (changes->Valid()) {
-    EntryChange change = std::move(**changes);
+    EntryChange change = **changes;
     changes->Next();
 
     bool did_mutate;

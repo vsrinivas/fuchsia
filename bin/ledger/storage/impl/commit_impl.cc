@@ -133,7 +133,7 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
                          parent_commits[1]->GetTimestamp());
   } else {
     struct timeval tv;
-    gettimeofday(&tv, NULL);
+    gettimeofday(&tv, nullptr);
     timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000L +
                 static_cast<int64_t>(tv.tv_usec) * 1000L;
   }

@@ -78,7 +78,7 @@ class BTreeUtilsTest : public StorageTest {
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }
 
-  ObjectId CreateTree(std::vector<EntryChange>& entries) {
+  ObjectId CreateTree(const std::vector<EntryChange>& entries) {
     ObjectId root_id;
     EXPECT_TRUE(GetEmptyNodeId(&root_id));
 

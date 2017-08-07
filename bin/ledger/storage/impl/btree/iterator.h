@@ -22,8 +22,8 @@ namespace btree {
 
 // An entry and the id of the tree node in which it is stored.
 struct EntryAndNodeId {
-  const Entry& entry;
-  const ObjectId& node_id;
+  const Entry& entry;       // NOLINT
+  const ObjectId& node_id;  // NOLINT
 };
 
 // Iterator over a B-Tree. This iterator exposes the internal of the iteration
