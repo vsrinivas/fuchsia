@@ -94,7 +94,7 @@ if (is_fuchsia) {
 }
 
 if (use_lto) {
-  default_shared_binary_configs += [ "//build/config:lto" ]
+  default_shared_binary_configs += [ "//build/config/lto" ]
 }
 
 default_shared_library_configs = default_shared_binary_configs + [

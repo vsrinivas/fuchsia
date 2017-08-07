@@ -1,0 +1,14 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Use ThinLTO variant of LTO if use_lto = true.
+  use_thinlto = true
+
+  # Number of parallel ThinLTO jobs.
+  thinlto_jobs = 8
+
+  # ThinLTO cache directory path.
+  thinlto_cache_dir = rebase_path("$root_out_dir/thinlto-cache", root_build_dir)
+}
