@@ -53,7 +53,7 @@ network::HttpHeaderPtr MakeAuthorizationHeader(const std::string& auth_token) {
   return authorization_header;
 }
 
-void RunUploadObjectCallback(const std::function<void(Status)>& callback,
+void RunUploadObjectCallback(std::function<void(Status)> callback,
                              Status status,
                              network::URLResponsePtr response) {
   // A precondition failure means the object already exist.
@@ -82,11 +82,10 @@ CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 
 CloudStorageImpl::~CloudStorageImpl() {}
 
-void CloudStorageImpl::UploadObject(
-    std::string auth_token,
-    const std::string& key,
-    mx::vmo data,
-    const std::function<void(Status)>& callback) {
+void CloudStorageImpl::UploadObject(std::string auth_token,
+                                    const std::string& key,
+                                    mx::vmo data,
+                                    std::function<void(Status)> callback) {
   std::string url = GetUploadUrl(key);
 
   uint64_t data_size;
@@ -132,17 +131,17 @@ void CloudStorageImpl::UploadObject(
     return request;
   });
 
-  Request(std::move(request_factory),
-          [callback](Status status, network::URLResponsePtr response) {
-            RunUploadObjectCallback(std::move(callback), status,
-                                    std::move(response));
-          });
+  Request(std::move(request_factory), [callback = std::move(callback)](
+                                          Status status, network::URLResponsePtr
+                                                             response) mutable {
+    RunUploadObjectCallback(std::move(callback), status, std::move(response));
+  });
 }
 
 void CloudStorageImpl::DownloadObject(
     std::string auth_token,
     const std::string& key,
-    const std::function<void(Status status, uint64_t size, mx::socket data)>&
+    std::function<void(Status status, uint64_t size, mx::socket data)>
         callback) {
   std::string url = GetDownloadUrl(key);
 
@@ -157,7 +156,7 @@ void CloudStorageImpl::DownloadObject(
     return request;
   },
           [ this, callback = std::move(callback) ](
-              Status status, network::URLResponsePtr response) {
+              Status status, network::URLResponsePtr response) mutable {
             OnDownloadResponseReceived(std::move(callback), status,
                                        std::move(response));
           });
@@ -175,17 +174,17 @@ std::string CloudStorageImpl::GetUploadUrl(ftl::StringView key) {
 
 void CloudStorageImpl::Request(
     std::function<network::URLRequestPtr()> request_factory,
-    const std::function<void(Status status, network::URLResponsePtr response)>&
+    std::function<void(Status status, network::URLResponsePtr response)>
         callback) {
-  requests_.emplace(network_service_->Request(
-      std::move(request_factory),
-      [this, callback](network::URLResponsePtr response) {
-        OnResponse(std::move(callback), std::move(response));
-      }));
+  requests_.emplace(network_service_->Request(std::move(request_factory), [
+    this, callback = std::move(callback)
+  ](network::URLResponsePtr response) mutable {
+    OnResponse(std::move(callback), std::move(response));
+  }));
 }
 
 void CloudStorageImpl::OnResponse(
-    const std::function<void(Status status, network::URLResponsePtr response)>&
+    std::function<void(Status status, network::URLResponsePtr response)>
         callback,
     network::URLResponsePtr response) {
   if (response->error) {

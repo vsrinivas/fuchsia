@@ -31,12 +31,12 @@ class CloudStorageImpl : public CloudStorage {
   void UploadObject(std::string auth_token,
                     const std::string& key,
                     mx::vmo data,
-                    const std::function<void(Status)>& callback) override;
+                    std::function<void(Status)> callback) override;
 
   void DownloadObject(
       std::string auth_token,
       const std::string& key,
-      const std::function<void(Status status, uint64_t size, mx::socket data)>&
+      std::function<void(Status status, uint64_t size, mx::socket data)>
           callback) override;
 
  private:
@@ -44,13 +44,12 @@ class CloudStorageImpl : public CloudStorage {
 
   std::string GetUploadUrl(ftl::StringView key);
 
-  void Request(
-      std::function<network::URLRequestPtr()> request_factory,
-      const std::function<void(Status status,
-                               network::URLResponsePtr response)>& callback);
+  void Request(std::function<network::URLRequestPtr()> request_factory,
+               std::function<void(Status status,
+                                  network::URLResponsePtr response)> callback);
   void OnResponse(
-      const std::function<void(Status status,
-                               network::URLResponsePtr response)>& callback,
+      std::function<void(Status status, network::URLResponsePtr response)>
+          callback,
       network::URLResponsePtr response);
 
   void OnDownloadResponseReceived(

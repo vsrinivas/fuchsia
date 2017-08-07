@@ -44,26 +44,26 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   void UploadObject(std::string auth_token,
                     const std::string& key,
                     mx::vmo data,
-                    const std::function<void(gcs::Status)>& callback) override {
+                    std::function<void(gcs::Status)> callback) override {
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
     message_loop_.task_runner()->PostTask(
-        [callback] { callback(gcs::Status::OK); });
+        [callback = std::move(callback)] { callback(gcs::Status::OK); });
   }
 
   void DownloadObject(
       std::string auth_token,
       const std::string& key,
-      const std::function<
-          void(gcs::Status status, uint64_t size, mx::socket data)>& callback)
-      override {
+      std::function<void(gcs::Status status, uint64_t size, mx::socket data)>
+          callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
-    message_loop_.task_runner()->PostTask([this, callback] {
-      callback(download_status_, download_response_size_,
-               std::move(download_response_));
-    });
+    message_loop_.task_runner()->PostTask(
+        [ this, callback = std::move(callback) ] {
+          callback(download_status_, download_response_size_,
+                   std::move(download_response_));
+        });
   }
 
   // firebase::Firebase:
