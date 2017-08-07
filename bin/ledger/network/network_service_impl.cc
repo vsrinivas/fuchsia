@@ -41,7 +41,7 @@ class NetworkServiceImpl::RunningRequest {
   void set_callback(std::function<void(network::URLResponsePtr)> callback) {
     // Once this class calls its callback, it must notify its container.
     callback_ = [ this, callback = std::move(callback) ](
-        network::URLResponsePtr response) {
+        network::URLResponsePtr response) mutable {
       FTL_DCHECK(on_empty_callback_);
       if (destruction_sentinel_.DestructedWhile([
             callback = std::move(callback), &response

@@ -48,7 +48,7 @@ struct Filter {
 // stream of data to the socket.
 class ListenerContainer : public glue::SocketWriter::Client {
  public:
-  ListenerContainer(std::unique_ptr<Filter> filter)
+  explicit ListenerContainer(std::unique_ptr<Filter> filter)
       : writer_(this), filter_(std::move(filter)) {}
   ~ListenerContainer() override {}
 
@@ -435,7 +435,7 @@ void FirebaseServer::HandlePut(
 
   url::GURL url(request->url);
   auto path = GetPath(url);
-  FTL_DCHECK(path.size() > 0);
+  FTL_DCHECK(!path.empty());
   auto sub_path = PathView(path, path.begin(), path.end() - 1);
   rapidjson::Value* value = GetValueAtPath(sub_path, true);
 
