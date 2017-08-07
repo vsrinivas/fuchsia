@@ -1,5 +1,5 @@
-Fuchsia Open Source Template Repository
-=======================================
+Rust DDK
+========
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains the Rust language DDK, for writing device drivers for
+the Magenta kernel in Rust.
