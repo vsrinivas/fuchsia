@@ -57,8 +57,7 @@ namespace {
 // NOTE: We are currently using a single client-id in Fuchsia. This is temporary
 // and will change in the future.
 constexpr char kClientId[] =
-    "1051596886047-kjfjv6tuoluj61n5cedv71ansrj3ggi8.apps."
-    "googleusercontent.com";
+    "934259141868-rejmm4ollj1bs7th1vg2ur6antpbug79.apps.googleusercontent.com";
 constexpr char kGoogleOAuthAuthEndpoint[] =
     "https://accounts.google.com/o/oauth2/v2/auth";
 constexpr char kGoogleOAuthTokenEndpoint[] =
