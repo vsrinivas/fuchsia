@@ -88,3 +88,9 @@ package("trace") {
         name = "trace"
       } ]
 }
+
+group("host_utils") {
+  deps = [
+    "//apps/tracing/src/traceutil(//build/toolchain:host_x64)",
+  ]
+}
