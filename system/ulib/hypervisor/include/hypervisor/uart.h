@@ -11,15 +11,15 @@ typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 
 /* Stores the state of a UART. */
-typedef struct uart_state {
-    // State of the UART interrupt enable register.
+typedef struct uart {
+    // Interrupt enable register.
     uint8_t interrupt_enable;
-    // State of the UART interrupt id register.
+    // Interrupt ID register.
     uint8_t interrupt_id;
-    // State of the UART line control register.
+    // Line control register.
     uint8_t line_control;
-} uart_state_t;
+} uart_t;
 
-mx_status_t uart_init(uart_state_t* uart_state);
-mx_status_t uart_read(uart_state_t* uart_state, uint16_t port, mx_vcpu_io_t* vcpu_io);
+mx_status_t uart_init(uart_t* uart);
+mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io);
 mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_guest_io_t* io);

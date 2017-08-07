@@ -10,7 +10,7 @@
 #define SECTOR_SIZE 512u
 
 /* Stores the state of a block device. */
-typedef struct block_state {
+typedef struct block {
     // File descriptor backing the block device.
     int fd;
     // Size of file backing the block device.
@@ -19,14 +19,14 @@ typedef struct block_state {
     uint8_t status;
     // Virtio queue for the block device.
     virtio_queue_t queue;
-} block_state_t;
+} block_t;
 
 typedef struct guest_state guest_state_t;
 typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 
-mx_status_t block_init(block_state_t* block_state, const char* block_path);
-mx_status_t block_read(block_state_t* block_state, uint16_t port, mx_vcpu_io_t* vcpu_io);
+mx_status_t block_init(block_t* block, const char* block_path);
+mx_status_t block_read(block_t* block, uint16_t port, mx_vcpu_io_t* vcpu_io);
 mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t port,
                         const mx_guest_io_t* io);
 

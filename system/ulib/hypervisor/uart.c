@@ -28,12 +28,12 @@
 /* Interrupt vectors. */
 #define X86_INT_UART                    4u
 
-mx_status_t uart_init(uart_state_t* uart_state) {
-    memset(uart_state, 0, sizeof(*uart_state));
+mx_status_t uart_init(uart_t* uart) {
+    memset(uart, 0, sizeof(*uart));
     return MX_OK;
 }
 
-mx_status_t uart_read(uart_state_t* uart_state, uint16_t port, mx_vcpu_io_t* vcpu_io) {
+mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case UART_RECEIVE_PORT:
     case UART_MODEM_CONTROL_PORT:
@@ -44,11 +44,11 @@ mx_status_t uart_read(uart_state_t* uart_state, uint16_t port, mx_vcpu_io_t* vcp
         break;
     case UART_INTERRUPT_ENABLE_PORT:
         vcpu_io->access_size = 1;
-        vcpu_io->u8 = uart_state->interrupt_enable;
+        vcpu_io->u8 = uart->interrupt_enable;
         break;
     case UART_INTERRUPT_ID_PORT:
         vcpu_io->access_size = 1;
-        vcpu_io->u8 = UART_INTERRUPT_ID_NO_FIFO_MASK & uart_state->interrupt_id;
+        vcpu_io->u8 = UART_INTERRUPT_ID_NO_FIFO_MASK & uart->interrupt_id;
         // Technically, we should always reset the interrupt id register to UART_INTERRUPT_ID_NONE
         // after a read, but this requires us to take a lock on every THR output (to set
         // interrupt_id to UART_INTERRUPT_ID_THR_EMPTY before we fire the interrupt).
@@ -57,7 +57,7 @@ mx_status_t uart_read(uart_state_t* uart_state, uint16_t port, mx_vcpu_io_t* vcp
         break;
     case UART_LINE_CONTROL_PORT:
         vcpu_io->access_size = 1;
-        vcpu_io->u8 = uart_state->line_control;
+        vcpu_io->u8 = uart->line_control;
         break;
     case UART_LINE_STATUS_PORT:
         vcpu_io->access_size = 1;
@@ -93,7 +93,7 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
     static uint16_t offset = 0;
     static bool thr_empty = false;
 
-    uart_state_t* uart_state = guest_state->uart_state;
+    uart_t* uart = guest_state->uart;
 
     switch (io->port) {
     case UART_RECEIVE_PORT:
@@ -112,8 +112,8 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
             return MX_ERR_IO_DATA_INTEGRITY;
         thr_empty = io->u8 & UART_INTERRUPT_ENABLE_THR_EMPTY;
         mtx_lock(&guest_state->mutex);
-        uart_state->interrupt_enable = io->u8;
-        uart_state->interrupt_id = thr_empty ? UART_INTERRUPT_ID_THR_EMPTY : UART_INTERRUPT_ID_NONE;
+        uart->interrupt_enable = io->u8;
+        uart->interrupt_id = thr_empty ? UART_INTERRUPT_ID_THR_EMPTY : UART_INTERRUPT_ID_NONE;
         mtx_unlock(&guest_state->mutex);
         if (thr_empty)
             return raise_thr_empty(vcpu, guest_state);
@@ -122,7 +122,7 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
         mtx_lock(&guest_state->mutex);
-        uart_state->line_control = io->u8;
+        uart->line_control = io->u8;
         mtx_unlock(&guest_state->mutex);
         break;
     case UART_INTERRUPT_ID_PORT:

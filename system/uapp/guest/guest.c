@@ -91,22 +91,22 @@ int main(int argc, char** argv) {
     guest_state.mem_addr = (void*)addr;
     guest_state.mem_size = kVmoSize;
     // Setup UART.
-    uart_state_t uart_state;
-    guest_state.uart_state = &uart_state;
-    status = uart_init(&uart_state);
+    uart_t uart;
+    guest_state.uart = &uart;
+    status = uart_init(&uart);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to initialize UART state\n");
         return status;
     }
     // Setup block device.
-    block_state_t block_state;
-    guest_state.block_state = &block_state;
+    block_t block;
+    guest_state.block = &block;
     if (block_path != NULL) {
-        status = block_init(&block_state, block_path);
+        status = block_init(&block, block_path);
         if (status != MX_OK)
             return status;
     } else {
-        block_state.fd = -1;
+        block.fd = -1;
     }
     // Setup each PCI device's BAR 0 register.
     for (unsigned i = 0; i < PCI_MAX_DEVICES; i++) {

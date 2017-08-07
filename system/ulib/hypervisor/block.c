@@ -25,24 +25,24 @@
 /* Interrupt vectors. */
 #define X86_INT_BLOCK   33u
 
-mx_status_t block_init(block_state_t* block_state, const char* block_path) {
-    memset(block_state, 0, sizeof(*block_state));
-    block_state->fd = open(block_path, O_RDWR);
-    if (block_state->fd < 0) {
+mx_status_t block_init(block_t* block, const char* block_path) {
+    memset(block, 0, sizeof(*block));
+    block->fd = open(block_path, O_RDWR);
+    if (block->fd < 0) {
         fprintf(stderr, "Failed to open block file \"%s\"\n", block_path);
         return MX_ERR_IO;
     }
-    off_t ret = lseek(block_state->fd, 0, SEEK_END);
+    off_t ret = lseek(block->fd, 0, SEEK_END);
     if (ret < 0) {
         fprintf(stderr, "Failed to read size of block file \"%s\"\n", block_path);
         return MX_ERR_IO;
     }
-    block_state->size = ret;
-    block_state->queue.size = QUEUE_SIZE;
+    block->size = ret;
+    block->queue.size = QUEUE_SIZE;
     return MX_OK;
 }
 
-mx_status_t block_read(block_state_t* block_state, uint16_t port, mx_vcpu_io_t* vcpu_io) {
+mx_status_t block_read(block_t* block, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case VIRTIO_PCI_DEVICE_FEATURES:
         vcpu_io->access_size = 4;
@@ -50,15 +50,15 @@ mx_status_t block_read(block_state_t* block_state, uint16_t port, mx_vcpu_io_t* 
         return MX_OK;
     case VIRTIO_PCI_QUEUE_PFN:
         vcpu_io->access_size = 4;
-        vcpu_io->u32 = block_state->queue.pfn;
+        vcpu_io->u32 = block->queue.pfn;
         return MX_OK;
     case VIRTIO_PCI_QUEUE_SIZE:
         vcpu_io->access_size = 2;
-        vcpu_io->u16 = block_state->queue.size;
+        vcpu_io->u16 = block->queue.size;
         return MX_OK;
     case VIRTIO_PCI_DEVICE_STATUS:
         vcpu_io->access_size = 1;
-        vcpu_io->u8 = block_state->status;
+        vcpu_io->u8 = block->status;
         return MX_OK;
     case VIRTIO_PCI_ISR_STATUS:
         vcpu_io->access_size = 1;
@@ -68,7 +68,7 @@ mx_status_t block_read(block_state_t* block_state, uint16_t port, mx_vcpu_io_t* 
          VIRTIO_PCI_CONFIG_OFFSET_NOMSI + sizeof(virtio_blk_config_t) - 1: {
         virtio_blk_config_t config;
         memset(&config, 0, sizeof(virtio_blk_config_t));
-        config.capacity = block_state->size / SECTOR_SIZE;
+        config.capacity = block->size / SECTOR_SIZE;
         config.blk_size = PAGE_SIZE;
 
         uint8_t* buf = (uint8_t*)&config;
@@ -85,8 +85,8 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
                         const mx_guest_io_t* io) {
     void* mem_addr = guest_state->mem_addr;
     size_t mem_size = guest_state->mem_size;
-    block_state_t* block_state = guest_state->block_state;
-    virtio_queue_t* queue = &block_state->queue;
+    block_t* block = guest_state->block;
+    virtio_queue_t* queue = &block->queue;
     switch (port) {
     case VIRTIO_PCI_DRIVER_FEATURES:
         if (io->access_size != 4)
@@ -98,7 +98,7 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
     case VIRTIO_PCI_DEVICE_STATUS:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        block_state->status = io->u8;
+        block->status = io->u8;
         return MX_OK;
     case VIRTIO_PCI_QUEUE_PFN: {
         if (io->access_size != 4)
@@ -138,10 +138,10 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
             return MX_ERR_NOT_SUPPORTED;
         }
         mx_status_t status;
-        if (block_state->fd < 0) {
+        if (block->fd < 0) {
             status = null_block_device(queue, mem_addr, mem_size);
         } else {
-            status = file_block_device(queue, mem_addr, mem_size, block_state->fd);
+            status = file_block_device(queue, mem_addr, mem_size, block->fd);
         }
         if (status != MX_OK) {
             fprintf(stderr, "Block device operation failed %d\n", status);

@@ -13,8 +13,8 @@
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
 
-typedef struct block_state block_state_t;
-typedef struct uart_state uart_state_t;
+typedef struct block block_t;
+typedef struct uart uart_t;
 
 /* Stores the IO APIC state. */
 typedef struct io_apic_state {
@@ -46,8 +46,8 @@ typedef struct guest_state {
     void* mem_addr;
     size_t mem_size;
 
-    uart_state_t* uart_state;
-    block_state_t* block_state;
+    uart_t* uart;
+    block_t* block;
 
     io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;

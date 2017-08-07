@@ -70,10 +70,10 @@ static bool handle_input_packet(void) {
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
 
     // Initialize the hosts register to an arbitrary non-zero value.
-    uart_state_t uart_state;
-    ASSERT_EQ(uart_init(&uart_state), MX_OK, "Failed to initialize UART.\n");
-    uart_state.line_control = 0xfe;
-    test.guest_state.uart_state = &uart_state;
+    uart_t uart;
+    ASSERT_EQ(uart_init(&uart), MX_OK, "Failed to initialize UART.\n");
+    uart.line_control = 0xfe;
+    test.guest_state.uart = &uart;
 
     // Send a guest packet to to read the UART line control port.
     packet.type = MX_GUEST_PKT_IO;
@@ -84,7 +84,7 @@ static bool handle_input_packet(void) {
 
     // Verify result value was written to RAX.
     EXPECT_EQ(
-        uart_state.line_control,
+        uart.line_control,
         test.vcpu_io.u8,
         "RAX was not populated with expected value.\n");
 
@@ -102,9 +102,9 @@ static bool handle_output_packet(void) {
     mx_guest_io_t io = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test.\n");
 
-    uart_state_t uart_state;
-    ASSERT_EQ(uart_init(&uart_state), MX_OK, "Failed to initialize UART.\n");
-    test.guest_state.uart_state = &uart_state;
+    uart_t uart;
+    ASSERT_EQ(uart_init(&uart), MX_OK, "Failed to initialize UART.\n");
+    test.guest_state.uart = &uart;
 
     // Send a guest packet to to write the UART line control port.
     io.input = false;
@@ -119,8 +119,8 @@ static bool handle_output_packet(void) {
     // Verify packet value was saved to the host port state.
     EXPECT_EQ(
         io.u8,
-        uart_state.line_control,
-        "uart_state was not populated with expected value.\n");
+        uart.line_control,
+        "UART was not populated with expected value.\n");
 
     tear_down(&test);
 

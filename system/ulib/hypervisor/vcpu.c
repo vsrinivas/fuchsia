@@ -410,7 +410,7 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
     io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
     switch (io->port) {
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
-        status = uart_read(vcpu_context->guest_state->uart_state, io->port, &vcpu_io);
+        status = uart_read(vcpu_context->guest_state->uart, io->port, &vcpu_io);
         if (status != MX_OK)
             return status;
         break;
@@ -484,7 +484,7 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
         pci_device_state_t* devices = vcpu_context->guest_state->pci_device_state;
         switch (pci_device(devices, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK:
-            status = block_read(vcpu_context->guest_state->block_state, port_off, &vcpu_io);
+            status = block_read(vcpu_context->guest_state->block, port_off, &vcpu_io);
             if (status != MX_OK)
                 return status;
             break;
