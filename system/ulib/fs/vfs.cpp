@@ -112,10 +112,14 @@ mx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
         mx_status_t status = remote_.wait_one(MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                               0,
                                               &observed);
-        if ((status != MX_OK) || (observed & MX_CHANNEL_PEER_CLOSED)) {
-            // Not set (or otherwise remote is bad)
+        // Not set (or otherwise remote is bad)
+        // TODO(planders): Add a background thread that waits on all remotes
+        if (observed & MX_CHANNEL_PEER_CLOSED) {
+            return MX_ERR_PEER_CLOSED;
+        } else if ((status != MX_OK)) {
             return MX_ERR_UNAVAILABLE;
         }
+
         flags_ |= V_FLAG_MOUNT_READY;
     }
     return remote_.get();
@@ -204,8 +208,10 @@ mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
             // Opening a mount point: Traverse across remote.
             // Devices are different, even though they also have remotes.  Ignore them.
             *pathout = ".";
-            r = vn->WaitForRemote();
-            return r;
+
+            if ((r = Vfs::WaitForRemoteLocked(vn)) != MX_ERR_PEER_CLOSED) {
+                return r;
+            }
         }
 
         flags |= (must_be_dir ? O_DIRECTORY : 0);
@@ -405,6 +411,21 @@ mx_status_t Vfs::Link(mx::event token, mxtl::RefPtr<Vnode> oldparent,
     return MX_OK;
 }
 
+mx_handle_t Vfs::WaitForRemoteLocked(mxtl::RefPtr<Vnode> vn) {
+    mx_handle_t h = vn->WaitForRemote();
+
+    if (h == MX_ERR_PEER_CLOSED) {
+        printf("VFS: Remote filesystem channel closed, unmounting\n");
+        mx::channel c;
+        mx_status_t status;
+        if ((status = Vfs::UninstallRemoteLocked(vn, &c)) != MX_OK) {
+            return status;
+        }
+    }
+
+    return h;
+}
+
 #endif  // idfdef __Fuchsia__
 
 ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
@@ -507,12 +528,14 @@ mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
         if (vn->IsRemote() && !vn->IsDevice()) {
             // remote filesystem mount, caller must resolve
             // devices are different, so ignore them even though they can have vn->remote
-            if ((r = vn->WaitForRemote()) < 0) {
+            r = Vfs::WaitForRemoteLocked(vn);
+            if (r != MX_ERR_PEER_CLOSED) {
+                if (r >= 0) {
+                    *out = vn;
+                    *pathout = path;
+                }
                 return r;
             }
-            *out = vn;
-            *pathout = path;
-            return r;
         }
 #endif
 

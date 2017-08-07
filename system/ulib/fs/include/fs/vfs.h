@@ -432,7 +432,11 @@ private:
     mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
     mx_status_t UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn,
                                       mx::channel* h) __TA_REQUIRES(vfs_lock_);
-
+    // Waits for a remote handle on a Vnode to become ready to receive requests.
+    // Returns |MX_ERR_PEER_CLOSED| if the remote will never become available, since it is closed.
+    // Returns |MX_ERR_UNAVAILABLE| if there is no remote handle, or if the remote handle is not yet ready.
+    // On success, returns the remote handle.
+    mx_handle_t WaitForRemoteLocked(mxtl::RefPtr<Vnode> vn) __TA_REQUIRES(vfs_lock_);
     // The mount list is a global static variable, but it only uses
     // constexpr constructors during initialization. As a consequence,
     // the .init_array section of the compiled vfs-mount object file is
