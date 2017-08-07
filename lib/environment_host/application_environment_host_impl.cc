@@ -29,7 +29,8 @@ ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
         app::ServiceProviderPtr services;
         parent_env->GetServices(services.NewRequest());
         services->ConnectToService(kNetstack, std::move(request));
-      }, kNetstack);
+      },
+      kNetstack);
 }
 
 void ApplicationEnvironmentHostImpl::GetApplicationEnvironmentServices(

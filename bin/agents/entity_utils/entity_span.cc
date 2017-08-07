@@ -12,8 +12,10 @@
 
 namespace maxwell {
 
-EntitySpan::EntitySpan(const std::string& content, const std::string& type,
-                       const int start, const int end) {
+EntitySpan::EntitySpan(const std::string& content,
+                       const std::string& type,
+                       const int start,
+                       const int end) {
   this->Init(content, type, start, end);
 }
 
@@ -48,8 +50,7 @@ std::vector<EntitySpan> EntitySpan::EntitiesFromJson(
   }
 
   if (!entities_doc.IsArray()) {
-    FTL_LOG(ERROR) << "Invalid Array entry in Context:"
-                   << json_string;
+    FTL_LOG(ERROR) << "Invalid Array entry in Context:" << json_string;
     return std::vector<EntitySpan>();
   }
 
@@ -60,8 +61,10 @@ std::vector<EntitySpan> EntitySpan::EntitiesFromJson(
   return entities;
 }
 
-void EntitySpan::Init(const std::string& content, const std::string& type,
-                      const int start, const int end) {
+void EntitySpan::Init(const std::string& content,
+                      const std::string& type,
+                      const int start,
+                      const int end) {
   content_ = content;
   type_ = type;
   start_ = start;

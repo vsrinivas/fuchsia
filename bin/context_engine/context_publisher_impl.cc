@@ -60,7 +60,7 @@ void ContextPublisherImpl::Publish(const fidl::String& topic,
   value.meta = metadata_.Clone();
   value.meta->entity = EntityMetadata::New();
   /// TODO(thatguy): This should be set to |topic|, once clients have been
-  //updated to query based on metadata values.
+  // updated to query based on metadata values.
   value.meta->entity->topic = scoped_topic;
   if (doc.IsObject() && doc.HasMember(kEntityTypeProperty)) {
     const auto& types = doc[kEntityTypeProperty];
@@ -70,7 +70,8 @@ void ContextPublisherImpl::Publish(const fidl::String& topic,
     } else if (types.IsArray()) {
       value.meta->entity->type = fidl::Array<fidl::String>::New(types.Size());
       for (uint32_t i = 0; i < types.Size(); ++i) {
-        if (!types[i].IsString()) continue;
+        if (!types[i].IsString())
+          continue;
         value.meta->entity->type[i] = types[i].GetString();
       }
     }

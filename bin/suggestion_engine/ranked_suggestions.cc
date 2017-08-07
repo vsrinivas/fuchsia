@@ -10,7 +10,7 @@
 namespace maxwell {
 
 MatchPredicate GetSuggestionMatcher(const std::string& component_url,
-                                   const std::string& proposal_id) {
+                                    const std::string& proposal_id) {
   return [component_url,
           proposal_id](const std::unique_ptr<RankedSuggestion>& suggestion) {
     return (suggestion->prototype->proposal->id == proposal_id) &&

@@ -13,8 +13,9 @@ bool KeyInUpdateResult(const ContextUpdatePtr& result, const std::string& key) {
   // TODO(travismart): Currently, when we lose focus, several values become null
   // but this isn't reflected in their "is_null" methods. The string comparison,
   // below, however, does work.
-  const bool ret = result->values.find(key) != result->values.end()
-      && !result->values[key].is_null() && result->values[key] != "null";
+  const bool ret = result->values.find(key) != result->values.end() &&
+                   !result->values[key].is_null() &&
+                   result->values[key] != "null";
   return ret;
 }
 

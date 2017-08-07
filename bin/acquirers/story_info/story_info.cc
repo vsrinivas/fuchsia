@@ -19,7 +19,6 @@ namespace maxwell {
 namespace {
 
 const std::string kStoryPrefix = "/story";
-
 }
 
 std::string CreateKey(const std::string suffix) {
@@ -128,17 +127,16 @@ void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
   // If we aren't already watching this story, get a controller and create
   // a watcher.
   if (stories_.find(id) == stories_.end()) {
-    stories_.emplace(
-        std::make_pair(
-            id, std::make_unique<StoryWatcherImpl>(
-                this, context_publisher_.get(), story_provider_.get(), id)));
+    stories_.emplace(std::make_pair(
+        id, std::make_unique<StoryWatcherImpl>(this, context_publisher_.get(),
+                                               story_provider_.get(), id)));
   }
 
   std::string url_json;
   modular::XdrWrite(&url_json, &info->url, modular::XdrFilter<fidl::String>);
   context_publisher_->Publish(CreateKey(id, "url"), url_json);
-  // TODO(jwnichols): Choose between recording the state here vs. the StoryWatcher
-  // once the bug in StoryProviderWatcher is fixed.
+  // TODO(jwnichols): Choose between recording the state here vs. the
+  // StoryWatcher once the bug in StoryProviderWatcher is fixed.
   std::string state_text = StoryStateToString(state);
   std::string state_json;
   modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);

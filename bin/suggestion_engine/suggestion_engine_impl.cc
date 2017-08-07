@@ -9,9 +9,9 @@
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/interruptions_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
+#include "apps/modular/lib/fidl/json_xdr.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "apps/modular/lib/fidl/json_xdr.h"
 
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
@@ -29,7 +29,6 @@ bool IsInterruption(const SuggestionPrototype* suggestion) {
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            ProposalPtr proposal) {
-
   // The component_url and proposal ID form a unique identifier for a proposal.
   // If one already exists, remove it before adding the new one.
   RemoveProposal(source->component_url(), proposal->id);

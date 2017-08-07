@@ -23,16 +23,13 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
       story_links_watcher_binding_(this) {
   story_provider->GetController(story_id, story_controller_.NewRequest());
 
-  story_controller_.set_connection_error_handler([this] {
-      owner_->DropStoryWatcher(story_id_);
-    });
+  story_controller_.set_connection_error_handler(
+      [this] { owner_->DropStoryWatcher(story_id_); });
 
-  story_controller_->Watch(
-      story_watcher_binding_.NewBinding());
+  story_controller_->Watch(story_watcher_binding_.NewBinding());
 
-  story_watcher_binding_.set_connection_error_handler([this] {
-      owner_->DropStoryWatcher(story_id_);
-    });
+  story_watcher_binding_.set_connection_error_handler(
+      [this] { owner_->DropStoryWatcher(story_id_); });
 
   story_controller_->GetActiveLinks(
       story_links_watcher_binding_.NewBinding(),
@@ -47,8 +44,8 @@ StoryWatcherImpl::~StoryWatcherImpl() = default;
 
 // |StoryWatcher|
 void StoryWatcherImpl::OnStateChange(modular::StoryState new_state) {
-  // TODO(jwnichols): Choose between recording the state here vs. the StoryProviderWatcher
-  // once the bug in StoryProviderWatcher is fixed.
+  // TODO(jwnichols): Choose between recording the state here vs. the
+  // StoryProviderWatcher once the bug in StoryProviderWatcher is fixed.
   std::string state_text = StoryStateToString(new_state);
   std::string state_json;
   modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);
@@ -60,8 +57,7 @@ void StoryWatcherImpl::OnModuleAdded(modular::ModuleDataPtr module_data) {
   std::string meta;
   modular::XdrWrite(&meta, &module_data, XdrModuleData);
   publisher_->Publish(
-      MakeModuleScopeTopic(story_id_, module_data->module_path, "meta"),
-      meta);
+      MakeModuleScopeTopic(story_id_, module_data->module_path, "meta"), meta);
 }
 
 // |StoryLinksWatcher|
@@ -70,10 +66,10 @@ void StoryWatcherImpl::OnNewLink(modular::LinkPathPtr link_path) {
 }
 
 void StoryWatcherImpl::WatchLink(const modular::LinkPathPtr& link_path) {
-  links_.emplace(
-      std::make_pair(
-          modular::MakeLinkKey(link_path), std::make_unique<LinkWatcherImpl>(
-              this, story_controller_.get(), publisher_, story_id_, link_path)));
+  links_.emplace(std::make_pair(
+      modular::MakeLinkKey(link_path),
+      std::make_unique<LinkWatcherImpl>(this, story_controller_.get(),
+                                        publisher_, story_id_, link_path)));
 }
 
 void StoryWatcherImpl::DropLink(const std::string& link_key) {

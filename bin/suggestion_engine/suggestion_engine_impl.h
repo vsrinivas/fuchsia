@@ -133,14 +133,14 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // AskSubscriber has two responsibilities:
   //  1) Take the queries passed to the `controller` (via SetUserQuery) and hand
   //     those off to the SuggestionEngineImpl's (or whichever class implements
-  //     AskDispatcher) DispatchAsk method. DispatchAsk will fan the query out to
-  //     all registered AskHandlers and the results are pushed into
+  //     AskDispatcher) DispatchAsk method. DispatchAsk will fan the query out
+  //     to all registered AskHandlers and the results are pushed into
   //     ask_suggestions_.
   //
   //  2) Since ask_suggestions_ is a RankedSuggestions, it has a
-  //     SuggestionChannel with registered SuggestionSubscribers. The AskSubscriber
-  //     is a SuggestionSubscriber, and so also functions as a proxy to pass the
-  //     latest query results back to `listener`.
+  //     SuggestionChannel with registered SuggestionSubscribers. The
+  //     AskSubscriber is a SuggestionSubscriber, and so also functions as a
+  //     proxy to pass the latest query results back to `listener`.
   //
   // TODO: This process can be refactored to eliminate the need for
   // ask_suggestions_

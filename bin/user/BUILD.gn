@@ -35,8 +35,8 @@ executable("maxwell_main") {
 
 source_set("config") {
   sources = [
-    "config.h",
     "config.cc",
+    "config.h",
   ]
 }
 

@@ -8,8 +8,8 @@
 namespace maxwell {
 
 ContextReaderImpl::ContextReaderImpl(ComponentScopePtr scope,
-                                         ContextRepository* repository,
-                                         ContextDebugImpl* debug)
+                                     ContextRepository* repository,
+                                     ContextDebugImpl* debug)
     : scope_(std::move(scope)), repository_(repository), debug_(debug) {}
 ContextReaderImpl::~ContextReaderImpl() {
   // Connection error handlers are not executed when closing from our side, so

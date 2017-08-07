@@ -16,8 +16,8 @@ namespace maxwell {
 class ContextReaderImpl : public ContextReader {
  public:
   ContextReaderImpl(ComponentScopePtr scope,
-                      ContextRepository* repository,
-                      ContextDebugImpl* debug);
+                    ContextRepository* repository,
+                    ContextDebugImpl* debug);
   ~ContextReaderImpl() override;
 
  private:

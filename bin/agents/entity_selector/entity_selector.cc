@@ -66,8 +66,8 @@ class SelectedEntityFinder : ContextListener {
   // Return a JSON representation of an array of entities that fall within
   // start and end.
   std::string GetSelectedEntities(const std::vector<EntitySpan>& entities,
-                                 const int selection_start,
-                                 const int selection_end) {
+                                  const int selection_start,
+                                  const int selection_end) {
     rapidjson::Document d;
     rapidjson::Value entities_json(rapidjson::kArrayType);
     for (const EntitySpan& e : entities) {
@@ -91,7 +91,7 @@ class SelectedEntityFinder : ContextListener {
         GetSelectionFromJson(result->values[kRawTextSelectionTopic]);
     publisher_->Publish(kSelectedEntitiesTopic,
                         GetSelectedEntities(entities, start_and_end.first,
-                                           start_and_end.second));
+                                            start_and_end.second));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;

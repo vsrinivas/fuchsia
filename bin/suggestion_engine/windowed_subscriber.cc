@@ -47,7 +47,6 @@ void WindowedSuggestionSubscriber::Invalidate() {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }
 
-
   if (window)  // after OnRemoveAll, no point in adding if no window
     listener()->OnAdd(std::move(window));
 }

@@ -15,7 +15,8 @@ namespace maxwell {
 constexpr char kWebViewUrl[] = "web_view";
 // TODO(travismart): This url breaks in web_view because it's running an
 // "unsupported browser." Follow up on this.
-const std::string kGmailUrlPrefix = "https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=";
+const std::string kGmailUrlPrefix =
+    "https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=";
 
 ProposalPtr MkUrlProposal(const std::string& query) {
   auto p = Proposal::New();

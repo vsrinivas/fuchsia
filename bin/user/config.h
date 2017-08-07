@@ -16,9 +16,8 @@ struct Config {
 
   // Set to true if the MI Dashboard should be started.
   bool mi_dashboard;
-
 };
 
-std::ostream& operator<< (std::ostream& out, const Config& config);
+std::ostream& operator<<(std::ostream& out, const Config& config);
 
 }  // namespace maxwell

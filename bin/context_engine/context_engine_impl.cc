@@ -38,8 +38,8 @@ void ContextEngineImpl::GetReader(
     ComponentScopePtr scope,
     fidl::InterfaceRequest<ContextReader> request) {
   reader_bindings_.AddBinding(std::make_unique<ContextReaderImpl>(
-                                    std::move(scope), &repository_, &debug_),
-                                std::move(request));
+                                  std::move(scope), &repository_, &debug_),
+                              std::move(request));
 }
 
 }  // namespace maxwell

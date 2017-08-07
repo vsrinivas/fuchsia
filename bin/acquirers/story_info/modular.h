@@ -15,11 +15,9 @@ namespace maxwell {
 
 std::string StoryStateToString(modular::StoryState state);
 
-void XdrLinkPath(modular::XdrContext* xdr,
-                 modular::LinkPath* data);
+void XdrLinkPath(modular::XdrContext* xdr, modular::LinkPath* data);
 
-void XdrModuleData(modular::XdrContext* xdr,
-                   modular::ModuleData* data);
+void XdrModuleData(modular::XdrContext* xdr, modular::ModuleData* data);
 
 }  // namespace maxwell
 

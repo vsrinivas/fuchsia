@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 
 namespace maxwell {
 

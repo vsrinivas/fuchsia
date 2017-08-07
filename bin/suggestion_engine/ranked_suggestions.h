@@ -13,7 +13,7 @@
 
 namespace maxwell {
 using MatchPredicate =
-      std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
+    std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
 
 class RankedSuggestions {
  public:

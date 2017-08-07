@@ -27,7 +27,7 @@ class ContextEngineImpl : public ContextEngine {
 
   // |ContextEngine|
   void GetReader(ComponentScopePtr scope,
-                   fidl::InterfaceRequest<ContextReader> request) override;
+                 fidl::InterfaceRequest<ContextReader> request) override;
 
   ContextRepository repository_;
   ContextDebugImpl debug_;

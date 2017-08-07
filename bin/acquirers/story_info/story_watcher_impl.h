@@ -11,8 +11,8 @@
 
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
-#include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
+#include "apps/modular/services/story/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
 

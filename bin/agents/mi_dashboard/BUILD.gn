@@ -27,6 +27,7 @@ dart_app("mi_dashboard_dart") {
 
 package("mi_dashboard") {
   app = true
+
   # this should be set to true once dart packages can be archives
   archive = false
 

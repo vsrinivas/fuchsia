@@ -47,6 +47,4 @@ void XdrModuleData(modular::XdrContext* const xdr,
   xdr->Field("module_source", &data->module_source);
 }
 
-
-
 }  // namespace maxwell

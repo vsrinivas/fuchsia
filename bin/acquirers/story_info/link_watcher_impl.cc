@@ -39,11 +39,12 @@ void XdrSource(modular::XdrContext* const xdr, Source* const data) {
 
 }  // namespace
 
-LinkWatcherImpl::LinkWatcherImpl(StoryWatcherImpl* const owner,
-                                 modular::StoryController* const story_controller,
-                                 ContextPublisher* const publisher,
-                                 const std::string& story_id,
-                                 const modular::LinkPathPtr& link_path)
+LinkWatcherImpl::LinkWatcherImpl(
+    StoryWatcherImpl* const owner,
+    modular::StoryController* const story_controller,
+    ContextPublisher* const publisher,
+    const std::string& story_id,
+    const modular::LinkPathPtr& link_path)
     : owner_(owner),
       story_controller_(story_controller),
       publisher_(publisher),
@@ -51,10 +52,8 @@ LinkWatcherImpl::LinkWatcherImpl(StoryWatcherImpl* const owner,
       link_path_(link_path->Clone()),
       link_watcher_binding_(this) {
   modular::LinkPtr link;
-  story_controller_->GetLink(
-      link_path_->module_path.Clone(),
-      link_path_->link_name,
-      link.NewRequest());
+  story_controller_->GetLink(link_path_->module_path.Clone(),
+                             link_path_->link_name, link.NewRequest());
 
   link->Watch(link_watcher_binding_.NewBinding());
 
@@ -64,9 +63,8 @@ LinkWatcherImpl::LinkWatcherImpl(StoryWatcherImpl* const owner,
   //
   // The Link itself is not kept here, because otherwise it never becomes
   // inactive (i.e. loses all its Link connections).
-  link_watcher_binding_.set_connection_error_handler([this] {
-      owner_->DropLink(MakeLinkKey(link_path_));
-    });
+  link_watcher_binding_.set_connection_error_handler(
+      [this] { owner_->DropLink(MakeLinkKey(link_path_)); });
 }
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;
@@ -112,10 +110,12 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   doc.AddMember(kSourceProperty, source_doc, doc.GetAllocator());
 
   std::string json = modular::JsonValueToString(doc);
-  auto scoped_topic = MakeStoryScopeTopic(story_id_, ConcatTopic("link", context.topic));
+  auto scoped_topic =
+      MakeStoryScopeTopic(story_id_, ConcatTopic("link", context.topic));
   publisher_->Publish(scoped_topic, json);
 
-  FTL_LOG(INFO) << "Context published: " << json << std::endl << "Original link value: " << value;
+  FTL_LOG(INFO) << "Context published: " << json << std::endl
+                << "Original link value: " << value;
 }
 
 }  // namespace maxwell

@@ -13,8 +13,8 @@ import 'data_handler.dart';
 
 Function listEqual = const ListEquality().equals;
 
-class ProposalSubscribersDataHandler extends AskProposalListener with NextProposalListener,
-      InterruptionProposalListener, DataHandler {
+class ProposalSubscribersDataHandler extends AskProposalListener
+    with NextProposalListener, InterruptionProposalListener, DataHandler {
   @override
   String get name => "proposal_subscribers";
 
@@ -56,7 +56,8 @@ class ProposalSubscribersDataHandler extends AskProposalListener with NextPropos
     // Watch for Ask, Next, and Interruption proposal changes.
     suggestionDebug.watchAskProposals(_askListenerBinding.wrap(this));
     suggestionDebug.watchNextProposals(_nextListenerBinding.wrap(this));
-    suggestionDebug.watchInterruptionProposals(_interruptionListenerBinding.wrap(this));
+    suggestionDebug
+        .watchInterruptionProposals(_interruptionListenerBinding.wrap(this));
     suggestionDebug.ctrl.close();
   }
 

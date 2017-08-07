@@ -22,8 +22,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
                            SuggestionEngine* suggestion_engine,
                            UserActionLog* user_action_log);
 
-  void GetContextReader(
-      fidl::InterfaceRequest<ContextReader> request) override;
+  void GetContextReader(fidl::InterfaceRequest<ContextReader> request) override;
 
   void GetContextPublisher(
       fidl::InterfaceRequest<ContextPublisher> request) override;
