@@ -57,6 +57,7 @@ static mx_status_t async_loop_dispatch_wait(async_loop_t* loop, async_wait_t* wa
 static mx_status_t async_loop_dispatch_tasks(async_loop_t* loop);
 static mx_status_t async_loop_dispatch_packet(async_loop_t* loop, async_receiver_t* receiver,
                                               mx_status_t status, const mx_packet_user_t* data);
+static void async_loop_wake_threads(async_loop_t* loop);
 static mx_status_t async_loop_wait_async(async_loop_t* loop, async_wait_t* wait);
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task);
 static void async_loop_restart_timer_locked(async_loop_t* loop);
@@ -150,6 +151,7 @@ void async_loop_shutdown(async_t* async) {
     if (prior_state == ASYNC_LOOP_SHUTDOWN)
         return;
 
+    async_loop_wake_threads(loop);
     async_loop_join_threads(async);
 
     list_node_t* node;
@@ -331,6 +333,10 @@ void async_loop_quit(async_t* async) {
                                                  memory_order_acq_rel, memory_order_acquire))
         return;
 
+    async_loop_wake_threads(loop);
+}
+
+static void async_loop_wake_threads(async_loop_t* loop) {
     // Queue enough packets to awaken all active threads.
     // This is safe because any new threads which join the pool first increment the
     // active thread count then check the loop state, so the count we observe here

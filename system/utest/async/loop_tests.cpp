@@ -700,6 +700,41 @@ bool threads_have_default_dispatcher() {
     END_TEST;
 }
 
+// The goal here is to ensure that threads stop when Quit() is called.
+bool threads_quit() {
+    const size_t num_threads = 4;
+
+    BEGIN_TEST;
+
+    async::Loop loop;
+    for (size_t i = 0; i < num_threads; i++) {
+        EXPECT_EQ(MX_OK, loop.StartThread());
+    }
+    loop.Quit();
+    loop.JoinThreads();
+    EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState());
+
+    END_TEST;
+}
+
+// The goal here is to ensure that threads stop when Shutdown() is called.
+bool threads_shutdown() {
+    const size_t num_threads = 4;
+
+    BEGIN_TEST;
+
+    async::Loop loop;
+    for (size_t i = 0; i < num_threads; i++) {
+        EXPECT_EQ(MX_OK, loop.StartThread());
+    }
+    loop.Shutdown();
+    EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState());
+
+    loop.JoinThreads(); // should be a no-op
+
+    END_TEST;
+}
+
 // The goal here is to schedule a lot of work and see whether it runs
 // on as many threads as we expected it to.
 bool threads_waits_run_concurrently_test() {
@@ -836,6 +871,8 @@ RUN_TEST(receiver_test)
 RUN_TEST(receiver_shutdown_test)
 RUN_TEST(threads_have_default_dispatcher)
 for (int i = 0; i < 3; i++) {
+    RUN_TEST(threads_quit)
+    RUN_TEST(threads_shutdown)
     RUN_TEST(threads_waits_run_concurrently_test)
     RUN_TEST(threads_tasks_run_sequentially_test)
     RUN_TEST(threads_receivers_run_concurrently_test)
