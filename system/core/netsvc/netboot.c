@@ -258,7 +258,14 @@ static void bootloader_recv(void* data, size_t len,
         if (active) {
             active->offset = 0;
             ack.arg = msg->arg;
-            printf("netboot: Receive File '%s'...\n", (char*) msg->data);
+            size_t prefix_len = strlen(NB_FILENAME_PREFIX);
+            const char* filename;
+            if (!strncmp((char*)msg->data, NB_FILENAME_PREFIX, prefix_len)) {
+                filename = &((const char*)msg->data)[prefix_len];
+            } else {
+                filename = (const char*)msg->data;
+            }
+            printf("netboot: Receive File '%s'...\n", filename);
         } else {
             printf("netboot: Rejected File '%s'...\n", (char*) msg->data);
             ack.cmd = NB_ERROR_BAD_FILE;
