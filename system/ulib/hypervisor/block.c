@@ -168,9 +168,17 @@ mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
 }
 
 mx_status_t null_block_device(virtio_queue_t* queue, void* mem_addr, size_t mem_size) {
-    return handle_virtio_queue(queue, mem_addr, mem_size, sizeof(virtio_blk_req_t), null_req, NULL);
+    mx_status_t status;
+    do {
+        status = virtio_queue_handler(queue, mem_addr, mem_size,
+                                      sizeof(virtio_blk_req_t), null_req, NULL);
+    } while (status == MX_ERR_NEXT);
+    return status;
 }
 
+// Multiple data buffers can be chained in the payload of block read/write
+// requests. We pass along the offset (from the sector ID defined in the request
+// header) so that subsequent requests can seek to the correct block location.
 typedef struct file_state {
     int fd;
     off_t off;
@@ -212,7 +220,11 @@ mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
 }
 
 mx_status_t file_block_device(virtio_queue_t* queue, void* mem_addr, size_t mem_size, int fd) {
-    file_state_t state = { fd, 0 };
-    return handle_virtio_queue(queue, mem_addr, mem_size, sizeof(virtio_blk_req_t), file_req,
-                               &state);
+    mx_status_t status;
+    do {
+        file_state_t state = { fd, 0 };
+        status = virtio_queue_handler(queue, mem_addr, mem_size,
+                                      sizeof(virtio_blk_req_t), file_req, &state);
+    } while (status == MX_ERR_NEXT);
+    return status;
 }

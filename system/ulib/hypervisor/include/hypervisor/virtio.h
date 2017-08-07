@@ -36,7 +36,12 @@ typedef struct virtio_queue {
 
 typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
 
-/* Handles a Virtio queue, calling req_fn to process individual requests.
+/* Handles the next available descriptor in a Virtio queue, calling req_fn to
+ * process individual payload buffers.
+ *
+ * On success the function either returns MX_OK if there are no more descriptors
+ * available, or MX_ERR_NEXT if there are more available descriptors to process.
  */
-mx_status_t handle_virtio_queue(virtio_queue_t* queue, void* mem_addr, size_t mem_size,
-                                uint32_t hdr_size, virtio_req_fn_t req_fn, void* ctx);
+mx_status_t virtio_queue_handler(virtio_queue_t* queue, void* mem_addr,
+                                 size_t mem_size, uint32_t hdr_size,
+                                 virtio_req_fn_t req_fn, void* ctx);
