@@ -12,9 +12,11 @@
 #if defined(__x86_64__)
 typedef mx_x86_64_general_regs_t mx_general_regs_t;
 #define REG_PC rip
+#define REG_STACK_PTR rsp
 #elif defined(__aarch64__)
 typedef mx_arm64_general_regs_t mx_general_regs_t;
 #define REG_PC pc
+#define REG_STACK_PTR sp
 #else
 # error Unsupported architecture
 #endif
@@ -30,3 +32,7 @@ bool regs_expect_eq(mx_general_regs_t* regs1, mx_general_regs_t* regs2);
 // is |spin_address|.
 void spin_with_regs(mx_general_regs_t* regs);
 void spin_with_regs_spin_address(void);
+
+// This assembly code routine saves the registers into an mx_general_regs_t
+// pointed to by the stack pointer, and then calls mx_thread_exit().
+void save_regs_and_exit_thread(void);

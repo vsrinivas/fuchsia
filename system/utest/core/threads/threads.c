@@ -656,6 +656,13 @@ static bool test_reading_register_state(void) {
     ASSERT_EQ(mx_thread_read_state(thread_handle, MX_THREAD_STATE_REGSET0,
                                    &regs, sizeof(regs), &size_read), MX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
+#if defined(__aarch64__)
+    // The following flag is reported by the kernel but is not modified by
+    // spin_with_regs().
+    uint64_t extra_flags = 1 << 8; // SError exception mask flag
+    ASSERT_EQ(regs.cpsr & extra_flags, extra_flags, "");
+    regs.cpsr &= ~extra_flags;
+#endif
     ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
 
     // Clean up.
@@ -664,6 +671,63 @@ static bool test_reading_register_state(void) {
     // Wait for the thread termination to complete.
     ASSERT_EQ(mx_object_wait_one(thread_handle, MX_THREAD_TERMINATED,
                                  MX_TIME_INFINITE, NULL), MX_OK, "");
+
+    END_TEST;
+}
+
+// This tests writing registers using mx_thread_write_state().  After
+// setting registers using that syscall, it reads back the registers and
+// checks their values.
+static bool test_writing_register_state(void) {
+    BEGIN_TEST;
+
+    mxr_thread_t thread;
+    mx_handle_t thread_handle;
+    ASSERT_TRUE(start_thread(threads_test_busy_fn, NULL, &thread,
+                             &thread_handle), "");
+
+    // Allow some time for the thread to begin execution and reach the
+    // instruction that spins.
+    ASSERT_EQ(mx_nanosleep(mx_deadline_after(MX_MSEC(10))), MX_OK, "");
+
+    // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED.
+    mx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+
+    struct {
+        // A small stack that is used for calling mx_thread_exit().
+        char stack[1024];
+        mx_general_regs_t regs_got;
+    } stack;
+
+    mx_general_regs_t regs_to_set;
+    regs_fill_test_values(&regs_to_set);
+    regs_to_set.REG_PC = (uintptr_t)save_regs_and_exit_thread;
+    regs_to_set.REG_STACK_PTR = (uintptr_t)&stack.regs_got;
+    ASSERT_EQ(mx_thread_write_state(
+                  thread_handle, MX_THREAD_STATE_REGSET0,
+                  &regs_to_set, sizeof(regs_to_set)), MX_OK, "");
+    ASSERT_EQ(mx_task_resume(thread_handle, 0), MX_OK, "");
+    ASSERT_EQ(mx_object_wait_one(thread_handle, MX_THREAD_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), MX_OK, "");
+#if defined(__x86_64__)
+    // The mx_thread_write_state() syscall currently ignores and unsets the
+    // following x86 flags:
+    uint64_t regs_unset =
+        (1 << 14) | // NT: nested task flag
+        (1 << 18) | // AC: alignment check flag
+        (1 << 21);  // ID: used for testing CPUID support
+    // Check that we're testing all those flags.
+    EXPECT_EQ(regs_to_set.rflags & regs_unset, regs_unset, "");
+    regs_to_set.rflags &= ~regs_unset;
+#endif
+    EXPECT_TRUE(regs_expect_eq(&regs_to_set, &stack.regs_got), "");
+
+    // Clean up.
+    ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(thread_handle), MX_OK, "");
 
     END_TEST;
 }
@@ -780,6 +844,7 @@ RUN_TEST(test_suspend_port_call)
 RUN_TEST(test_suspend_stops_thread)
 RUN_TEST(test_kill_suspended_thread)
 RUN_TEST(test_reading_register_state)
+RUN_TEST(test_writing_register_state)
 RUN_TEST(test_noncanonical_rip_address)
 END_TEST_CASE(threads_tests)
 

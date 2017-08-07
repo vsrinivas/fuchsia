@@ -18,7 +18,9 @@ void regs_fill_test_values(mx_general_regs_t* regs) {
     // flag is set (see MG-998).
     regs->rflags = 0x244ed7;
 #elif defined(__aarch64__)
-    regs->cpsr = 0xf0000100;
+    // Only set the 4 flag bits that are readable and writable by the
+    // instructions "msr nzcv, REG" and "mrs REG, nzcv".
+    regs->cpsr = 0xf0000000;
 #endif
 }
 
@@ -61,6 +63,7 @@ bool regs_expect_eq(mx_general_regs_t* regs1, mx_general_regs_t* regs2) {
     END_HELPER;
 }
 
+// spin_with_regs() function.
 #if defined(__x86_64__)
 static_assert(offsetof(mx_general_regs_t, rax) == 8*0, "");
 static_assert(offsetof(mx_general_regs_t, rbx) == 8*1, "");
@@ -148,6 +151,73 @@ __asm__(".pushsection .text, \"ax\", %progbits\n"
         ".global spin_with_regs_spin_address\n"
         "spin_with_regs_spin_address:\n"
         "b spin_with_regs_spin_address\n"
+        ".popsection\n");
+#else
+# error Unsupported architecture
+#endif
+
+// save_regs_and_exit_thread() function.
+#if defined(__x86_64__)
+__asm__(".pushsection .text,\"ax\", @progbits\n"
+        ".global save_regs_and_exit_thread\n"
+        "save_regs_and_exit_thread:\n"
+        "movq %rax, 8*0(%rsp)\n"
+        "movq %rbx, 8*1(%rsp)\n"
+        "movq %rcx, 8*2(%rsp)\n"
+        "movq %rdx, 8*3(%rsp)\n"
+        "movq %rsi, 8*4(%rsp)\n"
+        "movq %rdi, 8*5(%rsp)\n"
+        "movq %rbp, 8*6(%rsp)\n"
+        "movq %rsp, 8*7(%rsp)\n"
+        "movq %r8, 8*8(%rsp)\n"
+        "movq %r9, 8*9(%rsp)\n"
+        "movq %r10, 8*10(%rsp)\n"
+        "movq %r11, 8*11(%rsp)\n"
+        "movq %r12, 8*12(%rsp)\n"
+        "movq %r13, 8*13(%rsp)\n"
+        "movq %r14, 8*14(%rsp)\n"
+        "movq %r15, 8*15(%rsp)\n"
+        // Save the flags register.
+        "pushfq\n"
+        "popq %rax\n"
+        "movq %rax, 8*17(%rsp)\n"
+        // Fill out the rip field with known value.
+        "leaq save_regs_and_exit_thread(%rip), %rax\n"
+        "movq %rax, 8*16(%rsp)\n"
+        "call mx_thread_exit@PLT\n"
+        "ud2\n"
+        ".popsection\n");
+#elif defined(__aarch64__)
+__asm__(".pushsection .text, \"ax\", %progbits\n"
+        ".global save_regs_and_exit_thread\n"
+        "save_regs_and_exit_thread:\n"
+        "stp x0, x1, [sp, #8*0]\n"
+        "stp x2, x3, [sp, #8*2]\n"
+        "stp x4, x5, [sp, #8*4]\n"
+        "stp x6, x7, [sp, #8*6]\n"
+        "stp x8, x9, [sp, #8*8]\n"
+        "stp x10, x11, [sp, #8*10]\n"
+        "stp x12, x13, [sp, #8*12]\n"
+        "stp x14, x15, [sp, #8*14]\n"
+        "stp x16, x17, [sp, #8*16]\n"
+        "stp x18, x19, [sp, #8*18]\n"
+        "stp x20, x21, [sp, #8*20]\n"
+        "stp x22, x23, [sp, #8*22]\n"
+        "stp x24, x25, [sp, #8*24]\n"
+        "stp x26, x27, [sp, #8*26]\n"
+        "stp x28, x29, [sp, #8*28]\n"
+        "str x30, [sp, #8*30]\n"
+        // Save the sp register.
+        "mov x0, sp\n"
+        "str x0, [sp, #8*31]\n"
+        // Fill out the pc field with known value.
+        "adr x0, save_regs_and_exit_thread\n"
+        "str x0, [sp, #8*32]\n"
+        // Save NZCV flags, a subset of the PSTATE/CPSR register.
+        "mrs x0, nzcv\n"
+        "str x0, [sp, #8*33]\n"
+        "bl mx_thread_exit\n"
+        "brk 0\n"
         ".popsection\n");
 #else
 # error Unsupported architecture
