@@ -87,6 +87,12 @@ FUNCTION_LABEL(interrupt_common)
        sake we do this for all of them. */
     ALL_CFI_SAME_VALUE
 
+    /* Clear the direction flag.  Without this, uses of string
+       instructions, e.g. REP MOVS in memcpy() or inlined by the compiler,
+       can go wrong and copy in the wrong direction, since this code may
+       assume that the direction flag is unset. */
+    cld
+
     /* Check to see if we came from user space by testing the PL of the
      * CS register that was saved on the stack automatically. Check for != 0.
      */

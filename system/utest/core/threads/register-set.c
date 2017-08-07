@@ -13,9 +13,10 @@ void regs_fill_test_values(mx_general_regs_t* regs) {
     }
     // Set various flags bits that will read back the same.
 #if defined(__x86_64__)
-    // TODO(MG-998): Set the direction flag once the kernel correctly
-    // handles that being set when taking an interrupt or exception.
-    regs->rflags = 0x244ad7;
+    // Note that this sets the direction flag (bit 10), which helps test
+    // whether the kernel correctly handles taking an interrupt when that
+    // flag is set (see MG-998).
+    regs->rflags = 0x244ed7;
 #elif defined(__aarch64__)
     regs->cpsr = 0xf0000100;
 #endif
