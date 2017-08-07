@@ -9,6 +9,7 @@
 #include <mx/channel.h>
 #include <mx/vmo.h>
 #include <mxtl/unique_ptr.h>
+#include <mxtl/vector.h>
 
 namespace audio {
 namespace utils {
@@ -16,6 +17,7 @@ namespace utils {
 class AudioDeviceStream {
 public:
     mx_status_t Open();
+    mx_status_t GetSupportedFormats(mxtl::Vector<audio_stream_format_range_t>* out_formats) const;
     mx_status_t DumpInfo();
     mx_status_t SetMute(bool mute);
     mx_status_t SetGain(float gain);

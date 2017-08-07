@@ -24,12 +24,13 @@
 namespace audio {
 namespace utils {
 
+static constexpr mx_duration_t CALL_TIMEOUT = MX_MSEC(500);
 template <typename ReqType, typename RespType>
 mx_status_t DoCallImpl(const mx::channel& channel,
                        const ReqType&     req,
                        RespType*          resp,
-                       mx::handle*        resp_handle_out) {
-    constexpr mx_duration_t CALL_TIMEOUT = MX_MSEC(500);
+                       mx::handle*        resp_handle_out,
+                       uint32_t*          resp_len_out = nullptr) {
     mx_channel_call_args_t args;
 
     MX_DEBUG_ASSERT((resp_handle_out == nullptr) || !resp_handle_out->is_valid());
@@ -59,6 +60,13 @@ mx_status_t DoCallImpl(const mx::channel& channel,
         }
     }
 
+    // If the caller wants to know the size of the response length, let them
+    // check to make sure it is consistent with what they expect.  Otherwise,
+    // make sure that the number of bytes we got back matches the size of the
+    // response structure.
+    if (resp_len_out != nullptr) {
+        *resp_len_out = bytes;
+    } else
     if (bytes != sizeof(RespType)) {
         printf("Unexpected response size (got %u, expected %zu)\n", bytes, sizeof(RespType));
         return MX_ERR_INTERNAL;
@@ -115,6 +123,99 @@ mx_status_t AudioDeviceStream::Open() {
     if (res != sizeof(stream_ch_)) {
         printf("Failed to obtain channel (res %zd)\n", res);
         return static_cast<mx_status_t>(res);
+    }
+
+    return MX_OK;
+}
+
+mx_status_t AudioDeviceStream::GetSupportedFormats(
+        mxtl::Vector<audio_stream_format_range_t>* out_formats) const {
+    constexpr uint32_t MIN_RESP_SIZE = offsetof(audio_stream_cmd_get_formats_resp_t, format_ranges);
+    audio_stream_cmd_get_formats_req req;
+    audio_stream_cmd_get_formats_resp resp;
+    uint32_t rxed;
+    mx_status_t res;
+
+    if (out_formats == nullptr) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    req.hdr.cmd = AUDIO_STREAM_CMD_GET_FORMATS;
+    req.hdr.transaction_id = 1;
+    res = DoCallImpl(stream_ch_, req, &resp, nullptr, &rxed);
+    if ((res != MX_OK) || (rxed < MIN_RESP_SIZE)) {
+        printf("Failed to fetch initial suppored format list chunk (res %d, rxed %u)\n",
+                res, rxed);
+        return res;
+    }
+
+    uint32_t expected_formats = resp.format_range_count;
+    if (!expected_formats)
+        return MX_OK;
+
+    out_formats->reset();
+    if (!out_formats->reserve(expected_formats)) {
+        printf("Failed to allocated %u entries for format ranges\n", expected_formats);
+        return MX_ERR_NO_MEMORY;
+    }
+
+    mx_txid_t txid = resp.hdr.transaction_id;
+    uint32_t processed_formats = 0;
+    while (true) {
+        if (resp.hdr.cmd != AUDIO_STREAM_CMD_GET_FORMATS) {
+            printf("Unexpected response command while fetching formats "
+                   "(expected 0x%08x, got 0x%08x)\n",
+                    AUDIO_STREAM_CMD_GET_FORMATS, resp.hdr.cmd);
+            return MX_ERR_INTERNAL;
+        }
+
+        if (resp.hdr.transaction_id != txid) {
+            printf("Unexpected response transaction id while fetching formats "
+                   "(expected 0x%08x, got 0x%08x)\n",
+                    txid, resp.hdr.transaction_id);
+            return MX_ERR_INTERNAL;
+        }
+
+        if (resp.first_format_range_ndx != processed_formats) {
+            printf("Bad format index while fetching formats (expected %u, got %hu)\n",
+                    processed_formats, resp.first_format_range_ndx);
+            return MX_ERR_INTERNAL;
+        }
+
+        uint32_t todo = mxtl::min(static_cast<uint32_t>(expected_formats - processed_formats),
+                                  AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
+        size_t min_size = MIN_RESP_SIZE + (todo * sizeof(audio_stream_format_range_t));
+        if (rxed < min_size) {
+            printf("Short response while fetching formats (%u < %zu)\n", rxed, min_size);
+            return MX_ERR_INTERNAL;
+        }
+
+        for (uint16_t i = 0; i < todo; ++i) {
+            bool __UNUSED good_push;
+            good_push = out_formats->push_back(resp.format_ranges[i]);
+            MX_DEBUG_ASSERT(good_push);
+        }
+
+        processed_formats += todo;
+        if (processed_formats == expected_formats)
+            break;
+
+        mx_signals_t pending_sig;
+        res = stream_ch_.wait_one(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
+                                  mx_deadline_after(CALL_TIMEOUT),
+                                  &pending_sig);
+        if (res != MX_OK) {
+            printf("Failed to wait for next response after processing %u/%u formats (res %d)\n",
+                    processed_formats, expected_formats, res);
+            return res;
+        }
+
+        res = stream_ch_.read(0u, &resp, sizeof(resp), &rxed, nullptr, 0, nullptr);
+        if (res != MX_OK) {
+            printf("Failed to read next response after processing %u/%u formats (res %d)\n",
+                    processed_formats, expected_formats, res);
+            return res;
+        }
     }
 
     return MX_OK;
