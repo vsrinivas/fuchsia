@@ -34,7 +34,7 @@ Status SynchronousStorage::TreeNodesFromIds(
   auto waiter =
       callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
           Status::OK);
-  for (const auto object_id : object_ids) {
+  for (const auto& object_id : object_ids) {
     TreeNode::FromId(page_storage_, object_id, waiter->NewCallback());
   }
   Status status;

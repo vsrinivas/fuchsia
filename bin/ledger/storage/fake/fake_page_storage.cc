@@ -178,7 +178,7 @@ void FakePageStorage::GetCommitContents(const Commit& commit,
            convert::StringViewComparator>
       data;
   while (journal) {
-    for (const auto entry : journal->GetData()) {
+    for (const auto& entry : journal->GetData()) {
       if ((min_key.empty() || min_key <= entry.first) &&
           data.find(entry.first) == data.end()) {
         data[entry.first] = entry.second;

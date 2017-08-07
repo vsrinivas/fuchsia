@@ -174,7 +174,7 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
   // Print commit info
   std::cout << "Commit " << args_[4] << std::endl;
   std::cout << " timestamp " << commit->GetTimestamp() << std::endl;
-  for (storage::CommitIdView parent_commit : commit->GetParentIds()) {
+  for (const storage::CommitIdView& parent_commit : commit->GetParentIds()) {
     std::cout << " parent " << convert::ToHex(parent_commit) << std::endl;
   }
   std::cout << "Page state at this commit: " << std::endl;
@@ -308,7 +308,7 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
       FTL_NOTREACHED();
     }
     std::vector<storage::CommitIdView> parents = commit->GetParentIds();
-    for (storage::CommitIdView parent : parents) {
+    for (const storage::CommitIdView& parent : parents) {
       storage::CommitId parent_id = parent.ToString();
       if (commit_ids.count(parent_id) != 1) {
         commit_ids.insert(parent_id);
