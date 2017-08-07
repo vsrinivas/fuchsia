@@ -97,13 +97,13 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
   explicit NonAssociativeConflictResolverImpl(
       fidl::InterfaceRequest<ledger::ConflictResolver> request)
       : binding_(this, std::move(request)) {}
-  ~NonAssociativeConflictResolverImpl() {}
+  ~NonAssociativeConflictResolverImpl() override {}
 
  private:
   // ConflictResolver:
-  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
-               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> /*left_version*/,
+               fidl::InterfaceHandle<ledger::PageSnapshot> /*right_version*/,
+               fidl::InterfaceHandle<ledger::PageSnapshot> /*common_version*/,
                fidl::InterfaceHandle<ledger::MergeResultProvider>
                    result_provider) override {
     ledger::MergeResultProviderPtr merge_result_provider =
@@ -162,13 +162,13 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
 
 class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
  public:
-  TestConflictResolverFactory(
+  explicit TestConflictResolverFactory(
       fidl::InterfaceRequest<ledger::ConflictResolverFactory> request)
       : binding_(this, std::move(request)) {}
 
  private:
   // ConflictResolverFactory:
-  void GetPolicy(fidl::Array<uint8_t> page_id,
+  void GetPolicy(fidl::Array<uint8_t> /*page_id*/,
                  const GetPolicyCallback& callback) override {
     callback(ledger::MergePolicy::CUSTOM);
   }

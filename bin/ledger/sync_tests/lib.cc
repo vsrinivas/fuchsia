@@ -31,7 +31,7 @@ SyncTest::LedgerPtrHolder::LedgerPtrHolder(
     app::ApplicationControllerPtr controller,
     ledger::LedgerPtr ledger)
     : ledger(std::move(ledger)),
-      dir_(std::move(dir)),
+      dir_(dir),
       controller_(std::move(controller)) {}
 
 SyncTest::LedgerPtrHolder::~LedgerPtrHolder() {}
