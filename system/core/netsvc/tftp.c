@@ -21,6 +21,7 @@
 typedef struct {
     bool is_write;
     char filename[PATH_MAX + 1];
+    nbfile* netboot_file;
 } file_info_t;
 
 typedef struct {
@@ -42,6 +43,7 @@ mx_time_t tftp_next_timeout = MX_TIME_INFINITE;
 void file_init(file_info_t *file_info) {
     file_info->is_write = true;
     file_info->filename[0] = '\0';
+    file_info->netboot_file = NULL;
 }
 
 static ssize_t file_open_read(const char* filename, void* cookie) {
@@ -56,8 +58,19 @@ static tftp_status file_open_write(const char* filename, size_t size,
     strncpy(file_info->filename, filename, PATH_MAX);
     file_info->filename[PATH_MAX] = '\0';
 
-    if (netfile_open(filename, O_WRONLY) == 0)
-        return TFTP_NO_ERROR;
+    const size_t netboot_prefix_len = strlen(NB_FILENAME_PREFIX);
+    if (!strncmp(filename, NB_FILENAME_PREFIX, netboot_prefix_len)) {
+        // netboot
+        file_info->netboot_file = netboot_get_buffer(filename, size);
+        if (file_info->netboot_file != NULL) {
+            return TFTP_NO_ERROR;
+        }
+    } else {
+        // netcp
+        if (netfile_open(filename, O_WRONLY) == 0) {
+            return TFTP_NO_ERROR;
+        }
+    }
     return TFTP_ERR_INVALID_ARGS;
 }
 
@@ -67,18 +80,32 @@ static tftp_status file_read(void* data, size_t* length, off_t offset, void* coo
 }
 
 static tftp_status file_write(const void* data, size_t* length, off_t offset, void* cookie) {
-    int write_result = netfile_offset_write(data, offset, *length);
-    if ((size_t) write_result == *length) {
+    file_info_t* file_info = cookie;
+    if (file_info->netboot_file != NULL) {
+        nbfile* nb_file = file_info->netboot_file;
+        if (((size_t)offset > nb_file->size) || (offset + *length) > nb_file->size) {
+            return TFTP_ERR_INVALID_ARGS;
+        }
+        memcpy(nb_file->data + offset, data, *length);
+        nb_file->offset = offset + *length;
         return TFTP_NO_ERROR;
+    } else {
+        int write_result = netfile_offset_write(data, offset, *length);
+        if ((size_t) write_result == *length) {
+            return TFTP_NO_ERROR;
+        }
+        if (write_result == -EBADF) {
+            return TFTP_ERR_BAD_STATE;
+        }
+        return TFTP_ERR_IO;
     }
-    if (write_result == -EBADF) {
-        return TFTP_ERR_BAD_STATE;
-    }
-    return TFTP_ERR_IO;
 }
 
 static void file_close(void* cookie) {
-    netfile_close();
+    file_info_t* file_info = cookie;
+    if (file_info->netboot_file == NULL) {
+        netfile_close();
+    }
 }
 
 static int transport_send(void* data, size_t len, void* transport_cookie) {
