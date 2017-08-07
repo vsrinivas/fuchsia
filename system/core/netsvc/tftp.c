@@ -59,7 +59,7 @@ static tftp_status file_open_write(const char* filename, size_t size,
     file_info->filename[PATH_MAX] = '\0';
 
     const size_t netboot_prefix_len = strlen(NB_FILENAME_PREFIX);
-    if (!strncmp(filename, NB_FILENAME_PREFIX, netboot_prefix_len)) {
+    if (netbootloader && !strncmp(filename, NB_FILENAME_PREFIX, netboot_prefix_len)) {
         // netboot
         file_info->netboot_file = netboot_get_buffer(filename, size);
         if (file_info->netboot_file != NULL) {
