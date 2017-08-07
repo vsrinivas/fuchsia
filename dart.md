@@ -135,15 +135,18 @@ scripts/run-dart-action.py test --out out/<build-type> --tree //apps/sysui/armad
 [FIDL][fidl] targets generate implicit Dart bindings targets. To use the
 bindings generated for:
 ```
-//foo/bar/blah
+//foo/bar
+//foo/bar:blah
 ```
 add a dependency on:
 ```
-//foo/bar/blah:blah_dart
+//foo/bar:bar_dart
+//foo/bar:blah_dart
 ```
 and import the resulting Dart sources with:
 ```
-import "package:foo.bar.blah/baz.dart";
+import "package:foo.bar/baz.dart";
+import "package:foo.bar..blah/baz.dart";
 ```
 
 
