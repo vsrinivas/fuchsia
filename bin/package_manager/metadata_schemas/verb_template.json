@@ -12,12 +12,6 @@
           "uniqueItems": true,
           "additionalItems": false
         },
-        "return": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/return" }
-          "uniqueItems": true,
-          "additionalItems": false
-        }
         "doc": {
           "type": "string"
         }
@@ -29,21 +23,18 @@
       "type": "object",
       "properties": {
         "name": { "$ref": "#/definitions/alphaNumString" },
+        "direction": { "$ref": "#/definitions/direction" },
         "required": {
           "type": "boolean",
           "default": false
         }
       },
-      "required": [ "name" ],
+      "required": [ "name", "direction" ],
       "additionalProperties": false
     },
-    "return": {
-      "type": "object",
-      "properties": {
-        "name": { "$ref": "#/definitions/alphaNumString" }
-      },
-      "required": [ "name" ],
-      "additionalProperties": false
+    "direction": {
+      "type": "string",
+      "enum": [ "input", "output", "input/output" ]
     },
     "alphaNumString": {
       "type": "string",

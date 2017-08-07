@@ -3,6 +3,13 @@ Entity Types
 > Status: DRAFT
 > 
 > This is a stand-in for a future Entity/user-data reference system.
+>
+> NOTE: There is a proposal to "publish" these not to Fuchsia packages, but
+> rather somewhere within the build tree, since they are strictly only necessary
+> at build time, not at runtime.
+>
+> We will need to consolidate the concepts here with that of the proposed v0
+> Entity model.
 
 In Fuchsia, data sharing between system and application components is a central
 part of enabling interesting and powerful user experiences. To promote

@@ -14,8 +14,7 @@ schema [available here](../src/package_manager/metadata_schemas/module.json)).
 Each element in the array defines a single verb implementation.
 
 ## Example `module` metadata file
-The following sample `module` file describes a `Module` that implements a
-single `verb` (`Preview` in `https://fuchsia.io/package/coreVerbs`).
+The following sample `module` file describes a `Module` that implements a number of `verb`s.
 
 ```javascript
 [
@@ -58,9 +57,7 @@ single `verb` (`Preview` in `https://fuchsia.io/package/coreVerbs`).
             "name": "FriendRepository"
           }
         ]
-      }
-    ],
-    "return_types": [
+      },
       {
         "name": "picked",
         "type": {
@@ -90,15 +87,15 @@ Specifies the relative path from the root of the package where the Module execut
 can be found. Different verb implementations within the same package can share
 a single `binary`.
 
-#### local_name ?
+#### local_name
 
 ```javascript
 "local_name": "previewPerson",
 ```
 
-The `local_name` attribute must be unique only within this `module` metadata file.
-It is used to inform the `Module` which verb implementation specified in the 
-`module` file is being invoked at runtime.
+The `local_name` attribute must be unique within this `module` metadata file.
+It is used to inform the `Module` at runtime which verb implementation specified in the 
+`module` file is being invoked.
 
 The `local_name` is passed to the Module in its `Module::Initialize()` FIDL
 call. (**TODO(thatguy)**: create and document this in FIDL file)
@@ -160,26 +157,7 @@ is made up of the following fields:
      - `package`: the Fuchsia package ID where the [Entity type](entity_type.md) is defined.
      - `name`: the name of the Entity type found in `package`'s `meta/entity_type.md` file.
 
-#### return types
-
-```javascript
-"return_types": [
-  {
-    "name": "picked",
-    "type": {
-      "package": "https://fuchsia.instagram.com/types",
-      "name": "Friend"
-    }
-  }
-]
-```
-
-Some [verb templates](veb_template.md) indicate that implementers should provide return 
-values. At runtime, these return values are [`Entities`](entity.md). This section informs 
-the platform what type of `Entity` will be returned from this `Module`.
-
-`return_types` contains a list of dictionaries, one for or each entry in the
-[verb template's](verb_template.md) `"return"` section.
+At runtime, this `Module` will communicate with its parent (the invoker of the `Module`) through a `Link` interface (**TODO** link). The `Link` enforces the typing described here, making any attempt to write an `Entity` with an incompatible type an error. This applies for all values of `direction` (`input`, `output` and `input/output`) on the nouns.
 
 #### outgoing services
 

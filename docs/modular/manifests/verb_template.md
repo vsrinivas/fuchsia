@@ -1,6 +1,10 @@
 Verb Template
 =============
 > Status: DRAFT
+>
+> NOTE: There is a proposal to "publish" these not to Fuchsia packages, but
+> rather somewhere within the build tree, since they are strictly only necessary
+> at build time, not at runtime.
 
 **Verbs** represent high-level operations that `Modules` can perform. The operations are described independently of the specific data types they operate on or the modules that implement them.
 
@@ -29,8 +33,8 @@ Below is an example, followed by a detailed breakdown of the properties.
 
 ## Example
 
-The following `meta/verb_template` file defines two verbs: `Preview` and
-`Navigate`.
+The following `meta/verb_template` file defines three verbs: `Preview`,
+`Navigate` and `Pick`.
 
 `Preview` accepts a single required argument (called a "noun"), which
 represents the `Entity` that will be previewed.
@@ -47,6 +51,7 @@ single "picked" entity.
     "nouns": [
       {
         "name": "entityToPreview",
+        "direction": "input",
         "required": true
       }
     ],
@@ -60,10 +65,12 @@ single "picked" entity.
     "name": "Navigate",
     "nouns": [
       {
-        "name": "start"
+        "name": "start",
+        "direction": "input"
       },
       {
         "name": "destination",
+        "direction": "input",
         "required": true
       }
     ],
@@ -73,16 +80,17 @@ single "picked" entity.
     "name": "Pick",
     "nouns": [
       {
-        "name": "source"
-      }
-    ],
-    "return": [
+        "name": "source",
+        "direction": "input"
+      },
       {
-        "name": "picked"
+        "name": "picked",
+        "direction": "output"
       }
     ],
     "doc": "docs/pick.md"
   }
+  // TODO: Add an example that uses input/output direction on a noun.
 ]
 ```
 
@@ -105,7 +113,7 @@ camel-case with the first letter capitalized.
 Verb names allow `Module` [metadata files](module.md) to reference this verb
 template when they declare that they provide an implementation. When
 referencing, the developer will include both the package containing this
-`meta/verb_template` file, as well as the `name`.  
+`meta/verb_template` file, as well as the `name`.
 
 ### nouns
 
@@ -113,43 +121,32 @@ referencing, the developer will include both the package containing this
 "nouns": [
   {
     "name": "entityToPreivew",
+    "direction": "input",
     "required": true
   }
 ],
 ```
 
-> TODO: There is no way to specify that a noun argument should be a list of Entities.
-> This may be possible simply by adding a `is_list` property.
+> TODO: There is no way to specify that a noun argument should be a list of
+> Entities.  This may be possible simply by adding a `is_list` property.
 
-Nouns give names to the arguments passed to an implementation of the `verb` at runtime.
-Each noun has a `name` and identifies a runtime `Entity` (**TODO: link**) to be passed
-to the implementing `Module` at runtime.
+Nouns give names to individual or sets of [`Entity`](../entity.md) references
+passed between `Modules` at runtime.
 
-Each noun declared here has the following properties:
+Each noun declared in a `verb` definition must have the following properties:
 
-* `name`, limited to the following characters: `[a-zA-Z0-9_]`
+* `name`: limited to the following characters: `[a-zA-Z0-9_]`
+* `direction`: any of `input`, `output` and `input/output`.
+  - `input`: only the target `Module`'s parent may set the `Entity`
+    reference(s) value for this noun.
+  - `output`: only the target `Module` may set the `Entity` reference(s).
+  - `input/output`: either may set the `Entity` reference(s).
 * `required`: `true` or `false`. Default: `false`
 
 Note that nouns do not specify `Entity` types here. These are
 defined at the time of declaring an implementation of this `verb`
 by a `Module`, which is done in a [`Module` metadata file](module.md).
 
-### return value
-
-```javascript
-"return": [
-  {
-    "name": "picked"
-  }
-```
-
-> TODO: allow for lists as well as single Entities in the return statement.
-
-Similar to the `nouns` block, the `return` block names return values but does
-not assign them types. Types are assigned at the time of verb implementation by
-a `Module`.
-
-The above block indicates that this `verb` has a single return value named `"picked"`.
 
 ### JSON parameters
 

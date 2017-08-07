@@ -17,6 +17,10 @@ interface ModuleResolver {
   // specified in |daisy|. Results are returned in order according to scoring
   // configuration and signals given in |scoring_info|.
   //
+  // If no results could be found, |modules| will be empty.
+  // TODO(thatguy): Offer some kind of fallback instruction/option to clients
+  // in the case of no results.
+  //
   // For detailed information on the resolution process, see
   // docs/module_resolution.md.
   FindModules(Daisy daisy, ResolverScoringInfo scoring_info) => (array<ModuleResolverResult> modules);
@@ -47,8 +51,10 @@ struct ModuleResolverResult {
   string local_name;
 
   // The initial set of noun Entities to set on the Link to this Module once it
-  // is initialized.
-  array<Entity> initial_nouns;
+  // is initialized. This map is keyed by the noun's name as given in the
+  // `verb_template` file referenced by the `module` metadata file for
+  // |package_id| where |local_name| is defined.
+  map<string, Entity> initial_nouns;
 
   // TODO(thatguy): Schema information for the Link. This can be derived by the
   // client by looking at both |package_id| and |local_name|.

@@ -9,7 +9,6 @@
         "local_name": { "type": "string" },
         "verb": { "$ref": "#/definitions/verbId" },
         "noun_constraints": { "$ref": "#/definitions/nounConstraintArray" },
-        "return_types": { "$ref": "#/definitions/returnTypeArray" }
       },
       "required": [ "binary", "local_name", "verb" ],
       "additionalProperties": false
@@ -28,22 +27,6 @@
         "types": { "$ref": "#/definitions/entityTypeIdArray" }
       },
       "required": [ "name", "types" ],
-      "additionalProperties": false
-    },
-    "returnTypeArray": {
-      "type": "array",
-      "items": { "$ref": "#/definitions/returnType" },
-      "additionalItems": false,
-      "uniqueItems": true,
-      "minItems": 1
-    },
-    "returnType": {
-      "type": "object",
-      "properties": {
-        "name": { "$ref": "#/definitions/alphaNumString" },
-        "type": { "$ref": "#/definitions/entityOrVerbId" }
-      },
-      "required": [ "name", "type" ]
       "additionalProperties": false
     },
     "entityOrVerbId": {

@@ -77,6 +77,9 @@ interface ModuleContext {
   // set of initial state derived from |daisy.nouns| which is written to the
   // Link.
   //
+  // When |daisy.verb| is not set, the calling Module will have a read-only
+  // view of the Link |link_name|.
+  //
   // TODO(thatguy): Remove this comment:
   // NOTE: When the resolution results are available, and a mozart.ViewOwner is
   // made available by the shell, the Mod must be wrapped in a DaisyView.
