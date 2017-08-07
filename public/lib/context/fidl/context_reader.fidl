@@ -25,7 +25,7 @@ interface ContextReader {
   // conditions in |ContextQuery.filters| changes from matching to not
   // matching.  We should add some indicator in ContextUpdate so clients can
   // differentiate between "no change" and "your query no longer matches".
-  Subscribe(ContextQuery query, ContextListener listener);
+  SubscribeToTopics(ContextQuery query, ContextListener listener);
 };
 
 interface ContextListener {
@@ -35,7 +35,7 @@ interface ContextListener {
 
 struct ContextUpdate {
   // A map of the latest values of each topic specified in the ContextQuery's
-  // |topics| field that was issued during |Subscribe()|.
+  // |topics| field that was issued during |SubscribeToTopics()|.
   //
   // Topics that don't have a current value are not present in |values|.
   map<string, string> values;

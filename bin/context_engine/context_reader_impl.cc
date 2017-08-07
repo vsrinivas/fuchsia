@@ -20,7 +20,7 @@ ContextReaderImpl::~ContextReaderImpl() {
   }
 };
 
-void ContextReaderImpl::Subscribe(
+void ContextReaderImpl::SubscribeToTopics(
     ContextQueryPtr query,
     fidl::InterfaceHandle<ContextListener> listener) {
   ContextListenerPtr listener_ptr =

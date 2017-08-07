@@ -24,7 +24,7 @@ class CarmenSandiegoApp : public ContextListener {
         binding_(this) {
     auto query = ContextQuery::New();
     query->topics.push_back(acquirers::GpsAcquirer::kLabel);
-    reader_->Subscribe(std::move(query), binding_.NewBinding());
+    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
   }
 
  private:

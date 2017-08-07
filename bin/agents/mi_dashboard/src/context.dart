@@ -37,7 +37,7 @@ class ContextDataHandler extends DataHandler {
     // Subscribe to all topics
     ContextQuery query = new ContextQuery();
     query.topics = []; // empty list is the wildcard query
-    _contextReader.subscribe(query, _contextListener.getHandle());
+    _contextReader.subscribeToTopics(query, _contextListener.getHandle());
   }
 
   @override

@@ -28,8 +28,9 @@ class ContextReaderImpl : public ContextReader {
   };
 
   // |ContextReader|
-  void Subscribe(ContextQueryPtr query,
-                 fidl::InterfaceHandle<ContextListener> listener) override;
+  void SubscribeToTopics(
+      ContextQueryPtr query,
+      fidl::InterfaceHandle<ContextListener> listener) override;
 
   const ComponentScopePtr scope_;
   ContextRepository* repository_;

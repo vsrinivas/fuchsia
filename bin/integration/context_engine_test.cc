@@ -99,7 +99,7 @@ TEST_F(ContextEngineTest, PublishAndSubscribe) {
   publisher_->Publish("a_different_topic", "2");
 
   TestListener listener;
-  reader_->Subscribe(CreateQuery({"topic"}), listener.GetHandle());
+  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener.GetHandle());
   listener.WaitForUpdate();
 
   ContextUpdatePtr update;
@@ -117,8 +117,8 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
   // should be notified of new values.
   TestListener listener1;
   TestListener listener2;
-  reader_->Subscribe(CreateQuery({"topic"}), listener1.GetHandle());
-  reader_->Subscribe(CreateQuery({"topic"}), listener2.GetHandle());
+  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener1.GetHandle());
+  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener2.GetHandle());
 
   publisher_->Publish("topic", "1");
   WAIT_UNTIL(listener1.PopLast());
@@ -130,8 +130,8 @@ TEST_F(ContextEngineTest, CloseListener) {
   TestListener listener2;
   {
     TestListener listener1;
-    reader_->Subscribe(CreateQuery({"topic"}), listener1.GetHandle());
-    reader_->Subscribe(CreateQuery({"topic"}), listener2.GetHandle());
+    reader_->SubscribeToTopics(CreateQuery({"topic"}), listener1.GetHandle());
+    reader_->SubscribeToTopics(CreateQuery({"topic"}), listener2.GetHandle());
   }
 
   publisher_->Publish("topic", "\"don't crash\"");
@@ -141,14 +141,14 @@ TEST_F(ContextEngineTest, CloseListener) {
 TEST_F(ContextEngineTest, CloseProvider) {
   // After a provider is closed, its listeners should no longer recieve updates.
   TestListener listener1;
-  reader_->Subscribe(CreateQuery({"topic"}), listener1.GetHandle());
+  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener1.GetHandle());
 
   // Close the provider and open a new one to ensure we're still running.
   InitProvider(MakeGlobalScope());
 
   publisher_->Publish("topic", "\"please don't crash\"");
   TestListener listener2;
-  reader_->Subscribe(CreateQuery({"topic"}), listener2.GetHandle());
+  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener2.GetHandle());
 
   WAIT_UNTIL(listener2.PopLast());
   // Since the ContextReader owns subscriptions, and we closed it
@@ -187,7 +187,7 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
       MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic_type");
   const std::string kTopicStringTypeArray =
       MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic_type_array");
-  reader_->Subscribe(
+  reader_->SubscribeToTopics(
       CreateQuery({kTopicString, kTopicStringType, kTopicStringTypeArray}),
       listener.GetHandle());
   listener.WaitForUpdate();

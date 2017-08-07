@@ -30,7 +30,7 @@ class SelectedEntityFinder : ContextListener {
     for (const std::string& s : topics_) {
       query->topics.push_back(s);
     }
-    reader_->Subscribe(std::move(query), binding_.NewBinding());
+    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
   }
 
  private:

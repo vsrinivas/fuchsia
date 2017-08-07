@@ -123,7 +123,7 @@ class ModuleImpl extends Module {
     _contextListenerImpl = new ContextListenerImpl();
     ContextQuery query = new ContextQuery.init(
         <String>[_kCurrentFocalEntitiesTopic], null /* filters */);
-    _contextReader.subscribe(query, _contextListenerImpl.getHandle());
+    _contextReader.subscribeToTopics(query, _contextListenerImpl.getHandle());
 
     // Indicate readiness
     _moduleContext.ready();

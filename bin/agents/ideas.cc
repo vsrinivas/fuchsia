@@ -25,7 +25,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
     auto query = ContextQuery::New();
     query->topics.push_back("/location/region");
-    reader_->Subscribe(std::move(query), binding_.NewBinding());
+    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
   }
 
   void OnUpdate(ContextUpdatePtr update) override {

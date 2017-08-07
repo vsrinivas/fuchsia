@@ -29,7 +29,7 @@ interface ContextReader {
   //
   // The subscription will continue to stay active as long as the |listener|
   // handle is not closed.
-  Subscribe(ContextQuery query, ContextListener listener);
+  SubscribeToTopics(ContextQuery query, ContextListener listener);
 
   Get(ContextQuery query) => ContextUpdate result;
 };

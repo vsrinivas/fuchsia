@@ -99,7 +99,7 @@ void main(List args) {
   // possible after thatguy's context engine refactor
   ContextQuery query = new ContextQuery();
   query.topics = []; // empty list is the wildcard query
-  _contextReader.subscribe(query, _contextListener.getHandle());
+  _contextReader.subscribeToTopics(query, _contextListener.getHandle());
 
   // Connect to Cobalt
   var encoderFactory = new CobaltEncoderFactoryProxy();

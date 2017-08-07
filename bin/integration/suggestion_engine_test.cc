@@ -146,7 +146,8 @@ class NProposals : public Proposinator, public ContextListener {
 
     auto query = ContextQuery::New();
     query->topics.push_back("n");
-    reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
+    reader_->SubscribeToTopics(std::move(query),
+                               listener_binding_.NewBinding());
   }
 
   void OnUpdate(ContextUpdatePtr update) override {
