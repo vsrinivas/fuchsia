@@ -221,58 +221,6 @@ mx_status_t AudioDeviceStream::GetSupportedFormats(
     return MX_OK;
 }
 
-mx_status_t AudioDeviceStream::DumpInfo() {
-    mx_status_t res;
-    printf("Info for audio %s at \"%s\"\n",
-            input_ ? "input" : "output", name_);
-
-    {   // Current gain settings and caps
-        audio_stream_cmd_get_gain_req  req;
-        audio_stream_cmd_get_gain_resp resp;
-
-        req.hdr.cmd = AUDIO_STREAM_CMD_GET_GAIN;
-        req.hdr.transaction_id = 1;
-
-        res = DoNoFailCall(stream_ch_, req, &resp);
-        if (res != MX_OK) {
-            printf("Failed to fetch gain information! (res %d)\n", res);
-            return res;
-        }
-
-        printf("  Current Gain : %.2f dB (%smuted)\n", resp.cur_gain, resp.cur_mute ? "" : "un");
-        printf("  Gain Caps    : ");
-        if ((resp.min_gain == resp.max_gain) && (resp.min_gain == 0.0f)) {
-            printf("fixed 0 dB gain");
-        } else
-        if (resp.gain_step == 0.0f) {
-            printf("gain range [%.2f, %.2f] dB (continuous)", resp.min_gain, resp.max_gain);
-        } else {
-            printf("gain range [%.2f, %.2f] in %.2f dB steps",
-                    resp.min_gain, resp.max_gain, resp.gain_step);
-        }
-        printf("; %s mute\n", resp.can_mute ? "can" : "cannot");
-    }
-
-    {   // Current gain settings and caps
-        audio_stream_cmd_plug_detect_resp resp;
-        res = GetPlugState(&resp);
-        if (res != MX_OK)
-            return res;
-
-        printf("  Plug State   : %splugged\n", resp.flags & AUDIO_PDNF_PLUGGED ? "" : "un");
-        printf("  PD Caps      : %s\n", (resp.flags & AUDIO_PDNF_HARDWIRED)
-                                        ? "hardwired"
-                                        : ((resp.flags & AUDIO_PDNF_CAN_NOTIFY)
-                                            ? "dynamic (async)"
-                                            : "dynamic (synchronous)"));
-    }
-
-    // TODO(johngro) : Add other info (supported formats, plug detect, etc...)
-    // as we add commands to the protocol.
-
-    return MX_OK;
-}
-
 mx_status_t AudioDeviceStream::GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,
                                             bool enable_notify) const {
     MX_DEBUG_ASSERT(out_state != nullptr);

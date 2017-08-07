@@ -5,6 +5,7 @@
 #include <audio-utils/audio-device-stream.h>
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
+#include <audio-proto-utils/format-utils.h>
 #include <magenta/types.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
@@ -83,6 +84,123 @@ void usage(const char* prog_name) {
            "         Record to the specified WAV file from the selected input.\n"
            "         Duration defaults to %.1f seconds if unspecified.\n",
            DEFAULT_RECORD_DURATION);
+}
+
+void dump_format_range(size_t ndx, const audio_stream_format_range_t& range) {
+    printf("[%2zu] Sample Format :", ndx);
+
+    struct {
+        audio_sample_format_t flag;
+        const char* name;
+    } SF_FLAG_LUT[] = {
+        { AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED, "Unsigned" },
+        { AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN , "Inv Endian" },
+    };
+
+    for (const auto& sf : SF_FLAG_LUT) {
+        if (range.sample_formats & sf.flag) {
+            printf(" %s", sf.name);
+        }
+    }
+
+    struct {
+        audio_sample_format_t flag;
+        const char* name;
+    } SF_FORMAT_LUT[] = {
+        { AUDIO_SAMPLE_FORMAT_BITSTREAM, "Bitstream" },
+        { AUDIO_SAMPLE_FORMAT_8BIT, "8" },
+        { AUDIO_SAMPLE_FORMAT_16BIT, "16" },
+        { AUDIO_SAMPLE_FORMAT_20BIT_PACKED, "20-packed" },
+        { AUDIO_SAMPLE_FORMAT_24BIT_PACKED, "24-packed" },
+        { AUDIO_SAMPLE_FORMAT_20BIT_IN32, "20-in-32" },
+        { AUDIO_SAMPLE_FORMAT_24BIT_IN32, "24-in-32" },
+        { AUDIO_SAMPLE_FORMAT_32BIT, "32" },
+        { AUDIO_SAMPLE_FORMAT_32BIT_FLOAT, "Float 32" },
+    };
+
+    bool first = true;
+    printf(" [");
+    for (const auto& sf : SF_FORMAT_LUT) {
+        if (range.sample_formats & sf.flag) {
+            printf("%s%s", first ? "" : ", ", sf.name);
+            first = false;
+        }
+    }
+    printf("]\n");
+
+    printf("     Channel Count : [%u, %u]\n", range.min_channels, range.max_channels);
+    printf("     Frame Rates   :");
+    if (range.flags & ASF_RANGE_FLAG_FPS_CONTINUOUS) {
+        printf(" [%u, %u] Hz continuous\n",
+                range.min_frames_per_second, range.max_frames_per_second);
+    } else {
+        audio::utils::FrameRateEnumerator enumerator(range);
+
+        first = true;
+        for (uint32_t rate : enumerator) {
+            printf("%s%u", first ? " " : ", ", rate);
+            first = false;
+        }
+
+        printf(" Hz\n");
+    }
+}
+
+mx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
+    mx_status_t res;
+    printf("Info for audio %s at \"%s\"\n",
+            stream.input() ? "input" : "output", stream.name());
+
+    // Fetch and print the current gain settings for this audio stream.
+    audio_stream_cmd_get_gain_resp gain_state;
+    res = stream.GetGain(&gain_state);
+    if (res != MX_OK) {
+        printf("Failed to fetch gain information! (res %d)\n", res);
+        return res;
+    }
+
+    printf("  Current Gain : %.2f dB (%smuted)\n",
+            gain_state.cur_gain, gain_state.cur_mute ? "" : "un");
+    printf("  Gain Caps    : ");
+    if ((gain_state.min_gain == gain_state.max_gain) && (gain_state.min_gain == 0.0f)) {
+        printf("fixed 0 dB gain");
+    } else
+    if (gain_state.gain_step == 0.0f) {
+        printf("gain range [%.2f, %.2f] dB (continuous)", gain_state.min_gain, gain_state.max_gain);
+    } else {
+        printf("gain range [%.2f, %.2f] in %.2f dB steps",
+                gain_state.min_gain, gain_state.max_gain, gain_state.gain_step);
+    }
+    printf("; %s mute\n", gain_state.can_mute ? "can" : "cannot");
+
+    // Fetch and print the current pluged/unplugged state for this audio stream.
+    audio_stream_cmd_plug_detect_resp plug_state;
+    res = stream.GetPlugState(&plug_state);
+    if (res != MX_OK) {
+        printf("Failed to fetch plug state information! (res %d)\n", res);
+        return res;
+    }
+
+    printf("  Plug State   : %splugged\n", plug_state.flags & AUDIO_PDNF_PLUGGED ? "" : "un");
+    printf("  PD Caps      : %s\n", (plug_state.flags & AUDIO_PDNF_HARDWIRED)
+                                    ? "hardwired"
+                                    : ((plug_state.flags & AUDIO_PDNF_CAN_NOTIFY)
+                                        ? "dynamic (async)"
+                                        : "dynamic (synchronous)"));
+
+    // Fetch and print the currently supported audio formats for this audio stream.
+    mxtl::Vector<audio_stream_format_range_t> fmts;
+    res = stream.GetSupportedFormats(&fmts);
+    if (res != MX_OK) {
+        printf("Failed to fetch supported formats! (res %d)\n", res);
+        return res;
+    }
+
+    printf("\nStream supports %zu format range%s\n", fmts.size(), fmts.size() == 1 ? "" : "s");
+    for (size_t i = 0; i < fmts.size(); ++i)
+        dump_format_range(i, fmts[i]);
+
+    return MX_OK;
 }
 
 int main(int argc, const char** argv) {
@@ -300,7 +418,7 @@ int main(int argc, const char** argv) {
 
     // Execute the chosen command.
     switch (cmd) {
-    case Command::INFO:         return stream->DumpInfo();
+    case Command::INFO:         return dump_stream_info(*stream);
     case Command::MUTE:         return stream->SetMute(true);
     case Command::UNMUTE:       return stream->SetMute(false);
     case Command::GAIN:         return stream->SetGain(target_gain);

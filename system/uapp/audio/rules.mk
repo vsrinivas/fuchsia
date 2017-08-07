@@ -15,6 +15,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/ulib/audio-utils \
+    system/ulib/audio-proto-utils \
     system/ulib/mx \
     system/ulib/mxcpp \
     system/ulib/mxtl
