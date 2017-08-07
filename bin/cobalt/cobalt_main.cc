@@ -92,6 +92,29 @@ class CobaltEncoderImpl : public CobaltEncoder {
     callback(Status::OK);
   }
 
+  void AddIndexObservation(uint32_t metric_id,
+                           uint32_t encoding_id,
+                           uint32_t index,
+                           const AddIndexObservationCallback& callback) {
+    auto result = encoder_.EncodeIndex(metric_id, encoding_id, index);
+    switch (result.status) {
+      case Encoder::kOK:
+        break;
+      case Encoder::kInvalidArguments:
+        callback(Status::INVALID_ARGUMENTS);
+        return;
+      case Encoder::kInvalidConfig:
+      case Encoder::kEncodingFailed:
+        callback(Status::INTERNAL_ERROR);
+        FTL_LOG(WARNING) << "Cobalt internal error: " << result.status;
+        return;
+    }
+
+    envelope_maker_.AddObservation(*result.observation,
+                                   std::move(result.metadata));
+    callback(Status::OK);
+  }
+
   void SendObservations(const SendObservationsCallback& callback) {
     if (envelope_maker_.envelope().batch_size() == 0) {
       FTL_LOG(WARNING) << "SendObservations without any added observations.";

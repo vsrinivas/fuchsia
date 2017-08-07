@@ -50,18 +50,46 @@ interface CobaltEncoderFactory {
 // CobaltEncoder accumulates and sends observations. An instance of
 // CobaltEncoder is associated with a particular Cobalt project ID.
 interface CobaltEncoder {
-  // Add a string observation.
+  // Adds a string observation.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
-  //             associated with this encoder's project ID.
+  //             associated with this encoder's project ID. The specified
+  //             metric must have type STRING.
+  //
   // |encoding_id| Must be an encoding ID registered with the Cobalt system
   //               and associated with this encoder's project ID.
+  //
   // |observation| The string value to be encoded. Must be consistent with
   //               the definition of the metric and encoding. Some encodings
   //               restrict the set of values to a pre-defined list.
   AddStringObservation(uint32 metric_id, uint32 encoding_id, string observation)
       => (Status status);
 
-  // Send the observations that have been added to the encoder since the last
+  // Adds an observation specified by its index. This only makes sense if
+  // the specified metric and encoding are consistent with values of type INDEX.
+  // |metric_id| Must be a metric ID registered with the Cobalt system and
+  //             associated with this encoder's project ID. The specified
+  //             metric must have type INDEX.
+  //
+  // |encoding_id| Must be an encoding ID registered with the Cobalt system
+  //               and associated with this encoder's project ID. The
+  //               ecoding must support values of type INDEX. Some encoding
+  //               configurations may specify a maximum index and in that case
+  //               |index| must not exceed that maximum.
+  //
+  // |index|  The zero-based index of the value to be encoded. This is an index
+  //          into some enumerated set of values that must be maintained outside
+  //          of the scope of Cobalt's client-side configuration system by the
+  //          client of this API.  Cobalt treats the given |index| as opaque,
+  //          except that human-readable string labels may optionally be
+  //          associated with the indices in Cobalt's server-side configuration
+  //          in a |ReportConfig|. This allows Cobalt to use these strings in
+  //          place of the indices when generating reports. However there is
+  //          no requirement to register a label with an index in order to
+  //          use the index here. Also the label may be added or changed later.
+  AddIndexObservation(uint32 metric_id, uint32 encoding_id, uint32 index)
+      => (Status status);
+
+  // Sends the observations that have been added to the encoder since the last
   // send. Unless SendObservations returns OK, the observations remain enqueued.
   // Will fail with FAILED_PRECONDITION if no observations are ready to be sent.
   SendObservations() => (Status status);

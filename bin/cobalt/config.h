@@ -22,6 +22,9 @@ const char* kMetricConfigText = R"(
 
 #####################################################################
 # Metric (1, 100, 1)
+#
+# DEPRECATED: Please use Metric (1, 100, 2) instead.
+#
 # Name:  Rare event occurrences.
 # Description: Occurrences of several events that are expected to occur
 #              rarely if ever.
@@ -33,13 +36,40 @@ element {
   customer_id: 1
   project_id: 100
   id: 1
-  name: "Rare event occurrences"
+  name: "Deprecated: Rare event occurrences"
   description: "Occurrences of several events that are expected to occur rarely if ever."
   time_zone_policy: UTC
   parts {
     key: "Event name"
     value {
       description: "Which rare event occurred?"
+    }
+  }
+}
+
+#####################################################################
+# Metric (1, 100, 2)
+# Name:  Rare event occurrences.
+# Description: Occurrences of several events that are expected to occur
+#              rarely if ever.
+# Parts: This metric has one part named "event-index"
+# Notes: At least initially, we plan to use Basic RAPPOR with no privacy to
+#        collect this metric. The events are specified by a zero-based index.
+#        The meaning of each index is not specified here. See the definition
+#        of report config (1, 100, 2).
+######################################################################
+element {
+  customer_id: 1
+  project_id: 100
+  id: 2
+  name: "Rare event occurrences"
+  description: "Occurrences of several events that are expected to occur rarely if ever."
+  time_zone_policy: UTC
+  parts {
+    key: "event-index"
+    value {
+      description: "The index of the rare event that occurred."
+       data_type: INDEX
     }
   }
 }
@@ -162,6 +192,31 @@ element {
   }
 }
 
+#####################################################################
+# Metric (1, 2, 3)
+# Name:  Rare event occurrences using indexes.
+# Description: Occurrences of several events that are expected to occur
+#              rarely if ever.
+# Parts: This metric has one part named "event-index"
+# Notes: At least initially, we plan to use Basic RAPPOR with no privacy to
+#        collect this metric. Each category will be one of the rare events.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 3
+  name: "Rare event occurrences"
+  description: "Occurrences of several events that are expected to occur rarely if ever."
+  time_zone_policy: UTC
+  parts {
+    key: "event-index"
+    value {
+      description: "The index of the rare event that occurred."
+       data_type: INDEX
+    }
+  }
+}
+
 )";
 
 // This must be kept in sync with registered_encodings.txt in the Cobalt repo.
@@ -174,6 +229,9 @@ const char* kEncodingConfigText = R"(
 
 #####################################################################
 # EncodingConfig(1, 100, 1)
+#
+# DEPRECATED: Please use EncodingConfig (1, 100, 2) instead.
+#
 # Name:  Basic RAPPOR for Rare Event Occurrences
 # Description: A Configuration of Basic RAPPOR with no privacy, with string
 #              category names, and with one category for each rare event.
@@ -191,6 +249,25 @@ element {
       category: "Commits-merged"
       category: "Merged-commits-merged"
       category: "Commits-received-out-of-order-not-recovered"
+    }
+  }
+}
+
+#####################################################################
+# EncodingConfig(1, 100, 2)
+# Name:  Basic RAPPOR for Rare Event Occurrences
+# Description: A Configuration of Basic RAPPOR with no privacy, with 128
+#              indexed categories.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 100
+  id: 2
+  basic_rappor {
+    prob_0_becomes_1: 0.0
+    prob_1_stays_1: 1.0
+    indexed_categories: {
+      num_categories: 128
     }
   }
 }
@@ -297,6 +374,25 @@ element {
   forculus {
     threshold: 2
     epoch_type: MONTH
+  }
+}
+
+#####################################################################
+# EncodingConfig(1, 2, 3)
+# Name:  Basic RAPPOR for Rare Event Occurrences
+# Description: A Configuration of Basic RAPPOR with no privacy, with 128
+#              indexed categories.
+######################################################################
+element {
+  customer_id: 1
+  project_id: 2
+  id: 3
+  basic_rappor {
+    prob_0_becomes_1: 0.0
+    prob_1_stays_1: 1.0
+    indexed_categories: {
+      num_categories: 128
+    }
   }
 }
 
