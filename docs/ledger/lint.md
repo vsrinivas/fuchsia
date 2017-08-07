@@ -17,6 +17,8 @@ This list tracks context on why we disabled particular [checks]:
     warning for every file
  - `misc-noexcept*` - Fuchsia doesn't use C++ exceptions
  - `modernize-deprecated-headers` - Fuchsia uses old-style C headers
+ - `modernize-raw-string-literal` - the check was suggesting to convert `\xFF`
+    literals, which we'd rather keep in the escaped form.
  - `modernize-return-braced-init-list` - concerns about readability of returning
     braced initialization list for constructor arguments, prefer to use a
     constructor explicitly
