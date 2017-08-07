@@ -190,8 +190,8 @@ class Map {
 
     // The key is always a const reference, but the value is conditional on
     // whether this is a const iterator or not.
-    const KeyType& GetKey() { return it_->first; }
-    ReturnValueType GetValue() { return it_->second; }
+    const KeyType& GetKey() const { return it_->first; }
+    ReturnValueType GetValue() const { return it_->second; }
 
     InternalIterator& operator++() {
       ++it_;
@@ -210,6 +210,9 @@ class Map {
       InternalIterator<MutabilityType> original(*this);
       --it_;
       return original;
+    }
+    InternalIterator<MutabilityType>& operator*() {
+      return *this;
     }
     bool operator!=(const InternalIterator& rhs) const {
       return it_ != rhs.it_;

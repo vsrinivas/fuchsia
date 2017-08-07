@@ -35,6 +35,12 @@ struct StringIntData {
     {"two", 2},
     {"three", 3},
     {"four", 4},
+},
+kStringIntDataSorted[] = {
+    {"four", 4},
+    {"one", 1},
+    {"three", 3},
+    {"two", 2},
 };
 
 const size_t kStringIntDataSize = 4;
@@ -71,6 +77,31 @@ TEST(MapTest, TestIndexOperator) {
               map.at(kStringIntData[i].string_data));
   }
 }
+
+// Tests that range-based for loops work, and that the ordering is correct
+TEST(MapTest, RangeBasedForLoops) {
+  Map<String, int> map;
+
+  for (size_t i = 0; i < kStringIntDataSize; ++i)
+    map.insert(kStringIntData[i].string_data, kStringIntData[i].int_data);
+
+  size_t idx = 0;
+  for (auto &it : map) {
+    EXPECT_EQ(kStringIntDataSorted[idx].string_data, it.GetKey());
+    EXPECT_EQ(kStringIntDataSorted[idx].int_data, it.GetValue());
+    idx++;
+  }
+  EXPECT_EQ(idx, map.size());
+
+  idx = 0;
+  for (const auto &it : map) {
+    EXPECT_EQ(kStringIntDataSorted[idx].string_data, it.GetKey());
+    EXPECT_EQ(kStringIntDataSorted[idx].int_data, it.GetValue());
+    idx++;
+  }
+  EXPECT_EQ(idx, map.size());
+}
+
 
 TEST(MapTest, TestIndexOperatorAsRValue) {
   Map<String, int> map;
