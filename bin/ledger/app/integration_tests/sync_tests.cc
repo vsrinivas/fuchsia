@@ -24,17 +24,19 @@ class SyncIntegrationTest : public IntegrationTest {
     }
     entries->resize(0);
     fidl::Array<uint8_t> token = nullptr;
+    fidl::Array<uint8_t> next_token = nullptr;
     do {
       fidl::Array<EntryPtr> new_entries;
-      snapshot->GetEntries(
-          nullptr, std::move(token),
-          callback::Capture(MakeQuitTask(), &status, &new_entries, &token));
+      snapshot->GetEntries(nullptr, std::move(token),
+                           callback::Capture(MakeQuitTask(), &status,
+                                             &new_entries, &next_token));
       if (RunLoopWithTimeout() || status != Status::OK) {
         return ::testing::AssertionFailure() << "Unable to retrieve entries";
       }
       for (auto& entry : new_entries) {
         entries->push_back(std::move(entry));
       }
+      token = std::move(next_token);
     } while (token);
     return ::testing::AssertionSuccess();
   }

@@ -185,8 +185,6 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
-  RepositoryInformation& operator=(const RepositoryInformation& other) =
-      default;
 
   bool Init() { return GetRepositoryName(content_path, &name); }
 

@@ -51,13 +51,6 @@ struct AppParams {
   bool no_network_for_testing = false;
   bool trigger_cloud_erased_for_testing = false;
   bool disable_statistics = false;
-
-  AppParams() = default;
-  AppParams(AppParams& other) = default;
-  AppParams(AppParams&& other) = default;
-
-  AppParams& operator=(const AppParams& other) = default;
-  AppParams& operator=(AppParams&& other) = default;
 };
 
 ftl::AutoCall<ftl::Closure> SetupCobalt(
@@ -80,7 +73,7 @@ class App : public LedgerController,
             public LedgerRepositoryFactoryImpl::Delegate {
  public:
   explicit App(AppParams app_params)
-      : app_params_(std::move(app_params)),
+      : app_params_(app_params),
         application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
                                     loop_.task_runner(),
@@ -235,7 +228,7 @@ int main(int argc, const char** argv) {
     ledger::WaitForData();
   }
 
-  ledger::App app(std::move(app_params));
+  ledger::App app(app_params);
   if (!app.Start()) {
     return 1;
   }
