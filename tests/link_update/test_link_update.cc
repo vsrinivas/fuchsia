@@ -60,9 +60,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   }
 
  private:
-  TestApp() {
-    TestInit(__FILE__);
-  }
+  TestApp() { TestInit(__FILE__); }
 
   ~TestApp() override = default;
 
@@ -84,11 +82,12 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory("file:///system/apps/modular_tests/null_module",
-                                 [this](const fidl::String& story_id) {
-                                   story_create_.Pass();
-                                   GetController(story_id);
-                                 });
+    story_provider_->CreateStory(
+        "file:///system/apps/modular_tests/null_module",
+        [this](const fidl::String& story_id) {
+          story_create_.Pass();
+          GetController(story_id);
+        });
   }
 
   void GetController(const fidl::String& story_id) {
@@ -96,7 +95,8 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
     story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
                                root_link_.NewRequest());
-    story_provider_->GetLinkPeer(story_id, nullptr, "root", root_peer_.NewRequest());
+    story_provider_->GetLinkPeer(story_id, nullptr, "root",
+                                 root_peer_.NewRequest());
 
     link_watcher_.Watch(&root_link_);
 
@@ -110,13 +110,13 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   void SequentialSet() {
     link_watcher_.Continue([this](const fidl::String& json) {
-        if (json == "1") {
-          notify_1_.Pass();
-        } else if (json == "2") {
-          notify_2_.Pass();
-          PeerSet();
-        }
-      });
+      if (json == "1") {
+        notify_1_.Pass();
+      } else if (json == "2") {
+        notify_2_.Pass();
+        PeerSet();
+      }
+    });
 
     root_link_->Set(nullptr, "1");
     root_link_->Set(nullptr, "2");
@@ -129,11 +129,11 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   void PeerSet() {
     link_watcher_.Continue([this](const fidl::String& json) {
-        if (json == "4") {
-          notify_4_.Pass();
-          ConcurrentSet();
-        }
-      });
+      if (json == "4") {
+        notify_4_.Pass();
+        ConcurrentSet();
+      }
+    });
 
     // Watch the log to see what values actually arrive.
     root_peer_->Set(nullptr, "3");
@@ -157,10 +157,10 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   void ConcurrentSet() {
     link_watcher_.Continue([this](const fidl::String& json) {
-        if (json == "6") {
-          notify_6_.Pass();
-        }
-      });
+      if (json == "6") {
+        notify_6_.Pass();
+      }
+    });
 
     // Watch the log to see what values actually arrive, and in which order.
     root_peer_->Set(nullptr, "5");
@@ -168,16 +168,10 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
     // We log out after Link updates are written to ledger. The local one is
     // guaranteed to be delivered locally by then.
-    root_peer_->Sync([this] {
-        root_link_->Sync([this] {
-            Logout();
-          });
-      });
+    root_peer_->Sync([this] { root_link_->Sync([this] { Logout(); }); });
   }
 
-  void Logout() {
-    user_shell_context_->Logout();
-  }
+  void Logout() { user_shell_context_->Logout(); }
 
   TestPoint terminate_{"Terminate"};
 

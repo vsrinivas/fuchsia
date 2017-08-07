@@ -478,8 +478,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    MakeGetStoryDataCall(&operation_queue_, impl_->root_page_,
-                         story_id_,
+    MakeGetStoryDataCall(&operation_queue_, impl_->root_page_, story_id_,
                          [this, flow](StoryDataPtr story_data) {
                            if (story_data) {
                              story_data_ = std::move(story_data);
@@ -490,8 +489,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
 
   void Cont1(FlowToken flow) {
     impl_->ledger_->GetPage(
-        story_data_->story_page_id.Clone(),
-        page_.NewRequest(),
+        story_data_->story_page_id.Clone(), page_.NewRequest(),
         [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "GetLinkPeerCall() " << story_id_

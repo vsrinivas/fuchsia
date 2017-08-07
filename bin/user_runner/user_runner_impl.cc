@@ -246,13 +246,13 @@ void UserRunnerImpl::Initialize(
       token_provider_factory_.get(), user_intelligence_provider_.get());
 
   if (!test_) {
-  // HACK(anwilson): Start some agents directly by user runner that are needed
-  // to keep some dimensions of context updated. They will move
-  // elsewhere / become configurable eventually.
-  agent_runner_->ConnectToAgent("file:///system/apps/user_runner",
-                                "file:///system/apps/agents/home_work_agent",
-                                home_work_agent_services_.NewRequest(),
-                                home_work_agent_controller_.NewRequest());
+    // HACK(anwilson): Start some agents directly by user runner that are needed
+    // to keep some dimensions of context updated. They will move
+    // elsewhere / become configurable eventually.
+    agent_runner_->ConnectToAgent("file:///system/apps/user_runner",
+                                  "file:///system/apps/agents/home_work_agent",
+                                  home_work_agent_services_.NewRequest(),
+                                  home_work_agent_controller_.NewRequest());
   }
 
   ComponentContextInfo component_context_info{message_queue_manager_.get(),

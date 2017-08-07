@@ -171,7 +171,8 @@ class LinkConnection : Link {
   // given LinkImpl, which takes ownership. It cannot be on the stack
   // because it destroys itself when its fidl connection closes. The
   // constructor is therefore private and only accessible from here.
-  static void New(LinkImpl* const impl, const uint32_t id,
+  static void New(LinkImpl* const impl,
+                  const uint32_t id,
                   fidl::InterfaceRequest<Link> request) {
     new LinkConnection(impl, id, std::move(request));
   }
@@ -212,9 +213,7 @@ class LinkConnection : Link {
 
 class LinkWatcherConnection {
  public:
-  LinkWatcherConnection(LinkImpl* impl,
-                        LinkWatcherPtr watcher,
-                        uint32_t conn);
+  LinkWatcherConnection(LinkImpl* impl, LinkWatcherPtr watcher, uint32_t conn);
   ~LinkWatcherConnection();
 
   // Notifies the LinkWatcher in this connection, unless src is the

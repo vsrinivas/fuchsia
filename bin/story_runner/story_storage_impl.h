@@ -33,7 +33,8 @@ class LinkStorage {
                              const SyncCallback& callback) = 0;
 
   virtual void FlushWatchers(const SyncCallback& callback) = 0;
-  virtual void WatchLink(const LinkPathPtr& link_path, LinkImpl* impl,
+  virtual void WatchLink(const LinkPathPtr& link_path,
+                         LinkImpl* impl,
                          const DataCallback& watcher) = 0;
   virtual void DropWatcher(LinkImpl* impl) = 0;
 
@@ -58,7 +59,8 @@ class StoryStorageImpl : PageClient, public LinkStorage {
   void ReadLinkData(const LinkPathPtr& link_path,
                     const DataCallback& callback) override;
   // |LinkStorage|
-  void WriteLinkData(const LinkPathPtr& link_path, const fidl::String& data,
+  void WriteLinkData(const LinkPathPtr& link_path,
+                     const fidl::String& data,
                      const SyncCallback& callback) override;
 
   void ReadModuleData(const fidl::Array<fidl::String>& module_path,

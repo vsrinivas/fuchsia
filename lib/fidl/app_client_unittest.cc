@@ -27,20 +27,15 @@ class TestApplicationController : app::ApplicationController {
 
   void Connect(fidl::InterfaceRequest<app::ApplicationController> request) {
     binding_.Bind(std::move(request));
-    binding_.set_connection_error_handler([this] {
-      Kill();
-    });
+    binding_.set_connection_error_handler([this] { Kill(); });
   }
 
   bool killed() { return killed_; }
 
  private:
-  void Kill() {
-    killed_ = true;
-  }
+  void Kill() { killed_ = true; }
 
-  void Detach() {
-  }
+  void Detach() {}
 
   fidl::Binding<app::ApplicationController> binding_;
 
@@ -77,10 +72,10 @@ class AppClientTest : public testing::TestWithMessageLoop {};
 TEST_F(AppClientTest, BaseRun_Success) {
   app::ApplicationLauncherPtr application_launcher_ptr;
   TestApplicationLauncher test_application_launcher(
-    application_launcher_ptr.NewRequest());
+      application_launcher_ptr.NewRequest());
 
-  AppClientBase app_client_base(
-    application_launcher_ptr.get(), GetTestAppConfig());
+  AppClientBase app_client_base(application_launcher_ptr.get(),
+                                GetTestAppConfig());
 
   EXPECT_TRUE(RunLoopUntil([&test_application_launcher] {
     return !test_application_launcher.last_launch_info.is_null();
@@ -92,19 +87,23 @@ TEST_F(AppClientTest, BaseRun_Success) {
 TEST_F(AppClientTest, BaseTerminate_Success) {
   app::ApplicationLauncherPtr application_launcher_ptr;
   TestApplicationLauncher test_application_launcher(
-    application_launcher_ptr.NewRequest());
+      application_launcher_ptr.NewRequest());
 
-  AppClientBase app_client_base(
-    application_launcher_ptr.get(), GetTestAppConfig());
+  AppClientBase app_client_base(application_launcher_ptr.get(),
+                                GetTestAppConfig());
 
   bool app_terminated_callback_called = false;
-  app_client_base.AppTerminate([&app_terminated_callback_called] {
-    app_terminated_callback_called = true;
-  }, ftl::TimeDelta::Zero());
+  app_client_base.AppTerminate(
+      [&app_terminated_callback_called] {
+        app_terminated_callback_called = true;
+      },
+      ftl::TimeDelta::Zero());
 
-  EXPECT_TRUE(RunLoopUntil([&app_terminated_callback_called, &test_application_launcher] {
-    return app_terminated_callback_called && test_application_launcher.controller.killed();
-  }));
+  EXPECT_TRUE(RunLoopUntil(
+      [&app_terminated_callback_called, &test_application_launcher] {
+        return app_terminated_callback_called &&
+               test_application_launcher.controller.killed();
+      }));
 
   EXPECT_FALSE(test_application_launcher.last_launch_info.is_null());
   EXPECT_EQ(kTestUrl, test_application_launcher.last_launch_info->url);
@@ -114,10 +113,10 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
 TEST_F(AppClientTest, Run_Success) {
   app::ApplicationLauncherPtr application_launcher_ptr;
   TestApplicationLauncher test_application_launcher(
-    application_launcher_ptr.NewRequest());
+      application_launcher_ptr.NewRequest());
 
-  AppClient<test::TerminateService> app_client(
-    application_launcher_ptr.get(), GetTestAppConfig());
+  AppClient<test::TerminateService> app_client(application_launcher_ptr.get(),
+                                               GetTestAppConfig());
 
   EXPECT_TRUE(RunLoopUntil([&test_application_launcher] {
     return !test_application_launcher.last_launch_info.is_null();

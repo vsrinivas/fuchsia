@@ -186,20 +186,20 @@ class StoryStorageImpl::FlushWatchersCall : Operation<> {
     // received when this Operation is Done().
 
     page_->StartTransaction([this, flow](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "FlushWatchersCall()"
+                       << " Page.StartTransaction() " << status;
+        return;
+      }
+
+      page_->Commit([this, flow](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << "FlushWatchersCall()"
-                         << " Page.StartTransaction() " << status;
+                         << " Page.Commit() " << status;
           return;
         }
-
-        page_->Commit([this, flow](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FTL_LOG(ERROR) << "FlushWatchersCall()"
-                             << " Page.Commit() " << status;
-              return;
-            }
-          });
       });
+    });
   }
 
   ledger::Page* const page_;  // not owned

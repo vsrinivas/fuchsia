@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <memory>
-#include <string>
 #include <sstream>
+#include <string>
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"

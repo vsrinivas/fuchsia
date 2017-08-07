@@ -47,8 +47,8 @@ void ResourceLoader::LoadResource(const std::string& url,
       callback(std::move(vmo), nullptr);
       return;
     }
-      // Log a warning and fall back to loading from the network.
-      FTL_LOG(WARNING) << "Error reading " << local_path << " into VMO.";
+    // Log a warning and fall back to loading from the network.
+    FTL_LOG(WARNING) << "Error reading " << local_path << " into VMO.";
   }
 
   // Load from the network.

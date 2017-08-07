@@ -35,9 +35,7 @@ class LinkImpl::ReadCall : Operation<> {
   ReadCall(OperationContainer* const container,
            LinkImpl* const impl,
            ResultCall result_call)
-      : Operation("LinkImpl::ReadCall",
-                  container,
-                  std::move(result_call)),
+      : Operation("LinkImpl::ReadCall", container, std::move(result_call)),
         impl_(impl) {
     Ready();
   }
@@ -46,13 +44,12 @@ class LinkImpl::ReadCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    impl_->link_storage_->ReadLinkData(
-        impl_->link_path_,
-        [this, flow](const fidl::String& json) {
-          if (!json.is_null()) {
-            impl_->doc_.Parse(json.get());
-          }
-        });
+    impl_->link_storage_->ReadLinkData(impl_->link_path_,
+                                       [this, flow](const fidl::String& json) {
+                                         if (!json.is_null()) {
+                                           impl_->doc_.Parse(json.get());
+                                         }
+                                       });
   }
 
   LinkImpl* const impl_;  // not owned
@@ -66,9 +63,7 @@ class LinkImpl::WriteCall : Operation<> {
             LinkImpl* const impl,
             const uint32_t src,
             ResultCall result_call)
-      : Operation("LinkImpl::WriteCall",
-                  container,
-                  std::move(result_call)),
+      : Operation("LinkImpl::WriteCall", container, std::move(result_call)),
         impl_(impl),
         src_(src) {
     Ready();
@@ -81,18 +76,14 @@ class LinkImpl::WriteCall : Operation<> {
     FTL_CHECK(!impl_->pending_write_call_);
     impl_->pending_write_call_ = true;
 
-    impl_->link_storage_->WriteLinkData(
-        impl_->link_path_, JsonValueToString(impl_->doc_), [this, flow] {
-          Cont1(flow);
-        });
+    impl_->link_storage_->WriteLinkData(impl_->link_path_,
+                                        JsonValueToString(impl_->doc_),
+                                        [this, flow] { Cont1(flow); });
   }
 
   void Cont1(FlowToken flow) {
     FTL_CHECK(impl_->pending_write_call_);
-    impl_->link_storage_->FlushWatchers(
-        [this, flow] {
-          Cont2(flow);
-        });
+    impl_->link_storage_->FlushWatchers([this, flow] { Cont2(flow); });
   }
 
   void Cont2(FlowToken /*flow*/) {
@@ -112,7 +103,7 @@ class LinkImpl::SetSchemaCall : Operation<> {
   SetSchemaCall(OperationContainer* const container,
                 LinkImpl* const impl,
                 const fidl::String& json_schema)
-      : Operation("LinkImpl::SetSchemaCall", container, []{}),
+      : Operation("LinkImpl::SetSchemaCall", container, [] {}),
         impl_(impl),
         json_schema_(json_schema) {
     Ready();
@@ -125,7 +116,8 @@ class LinkImpl::SetSchemaCall : Operation<> {
     rapidjson::Document doc;
     doc.Parse(json_schema_.get());
     if (doc.HasParseError()) {
-      FTL_LOG(ERROR) << "LinkImpl::SetSchema() " << EncodeLinkPath(impl_->link_path_)
+      FTL_LOG(ERROR) << "LinkImpl::SetSchema() "
+                     << EncodeLinkPath(impl_->link_path_)
                      << " JSON parse failed error #" << doc.GetParseError()
                      << std::endl
                      << json_schema_;
@@ -147,9 +139,7 @@ class LinkImpl::GetCall : Operation<fidl::String> {
           LinkImpl* const impl,
           fidl::Array<fidl::String> path,
           ResultCall result_call)
-      : Operation("LinkImpl::GetCall",
-                  container,
-                  std::move(result_call)),
+      : Operation("LinkImpl::GetCall", container, std::move(result_call)),
         impl_(impl),
         path_(std::move(path)) {
     Ready();
@@ -180,9 +170,7 @@ class LinkImpl::SetCall : Operation<> {
           fidl::Array<fidl::String> path,
           const fidl::String& json,
           const uint32_t src)
-      : Operation("LinkImpl::SetCall",
-                  container,
-                  []{}),
+      : Operation("LinkImpl::SetCall", container, [] {}),
         impl_(impl),
         path_(std::move(path)),
         json_(json),
@@ -198,8 +186,8 @@ class LinkImpl::SetCall : Operation<> {
     new_value.Parse(json_);
     if (new_value.HasParseError()) {
       FTL_LOG(ERROR) << "LinkImpl::Set() " << EncodeLinkPath(impl_->link_path_)
-                     << " JSON parse failed error #" << new_value.GetParseError()
-                     << std::endl
+                     << " JSON parse failed error #"
+                     << new_value.GetParseError() << std::endl
                      << json_;
       return;
     }
@@ -209,7 +197,7 @@ class LinkImpl::SetCall : Operation<> {
 
     CrtJsonPointer ptr = CreatePointerFromPath(impl_->doc_, path_);
     CrtJsonValue& current_value =
-      ptr.Create(impl_->doc_, impl_->doc_.GetAllocator(), &alreadyExist);
+        ptr.Create(impl_->doc_, impl_->doc_.GetAllocator(), &alreadyExist);
     if (alreadyExist) {
       dirty = new_value != current_value;
     }
@@ -217,7 +205,7 @@ class LinkImpl::SetCall : Operation<> {
     if (dirty) {
       ptr.Set(impl_->doc_, new_value);
       impl_->ValidateSchema("LinkImpl::Set", ptr, json_.get());
-      new WriteCall(&operation_queue_, impl_, src_, [flow]{});
+      new WriteCall(&operation_queue_, impl_, src_, [flow] {});
     }
   }
 
@@ -239,9 +227,7 @@ class LinkImpl::UpdateObjectCall : Operation<> {
                    fidl::Array<fidl::String> path,
                    const fidl::String& json,
                    const uint32_t src)
-      : Operation("LinkImpl::UpdateObjectCall",
-                  container,
-                  []{}),
+      : Operation("LinkImpl::UpdateObjectCall", container, [] {}),
         impl_(impl),
         path_(std::move(path)),
         json_(json),
@@ -256,9 +242,10 @@ class LinkImpl::UpdateObjectCall : Operation<> {
     CrtJsonDoc new_value;
     new_value.Parse(json_);
     if (new_value.HasParseError()) {
-      FTL_LOG(ERROR) << "LinkImpl::UpdateObject() " << EncodeLinkPath(impl_->link_path_)
-                     << " JSON parse failed error #" << new_value.GetParseError()
-                     << std::endl
+      FTL_LOG(ERROR) << "LinkImpl::UpdateObject() "
+                     << EncodeLinkPath(impl_->link_path_)
+                     << " JSON parse failed error #"
+                     << new_value.GetParseError() << std::endl
                      << json_;
       return;
     }
@@ -266,11 +253,11 @@ class LinkImpl::UpdateObjectCall : Operation<> {
     auto ptr = CreatePointerFromPath(impl_->doc_, path_);
     CrtJsonValue& current_value = ptr.Create(impl_->doc_);
 
-    const bool dirty =
-      MergeObject(current_value, std::move(new_value), impl_->doc_.GetAllocator());
+    const bool dirty = MergeObject(current_value, std::move(new_value),
+                                   impl_->doc_.GetAllocator());
     if (dirty) {
       impl_->ValidateSchema("LinkImpl::UpdateObject", ptr, json_.get());
-      new WriteCall(&operation_queue_, impl_, src_, [flow]{});
+      new WriteCall(&operation_queue_, impl_, src_, [flow] {});
     }
   }
 
@@ -291,7 +278,7 @@ class LinkImpl::EraseCall : Operation<> {
             LinkImpl* const impl,
             fidl::Array<fidl::String> path,
             const uint32_t src)
-      : Operation("LinkImpl::EraseCall", container, []{}),
+      : Operation("LinkImpl::EraseCall", container, [] {}),
         impl_(impl),
         path_(std::move(path)),
         src_(src) {
@@ -305,7 +292,7 @@ class LinkImpl::EraseCall : Operation<> {
     auto value = ptr.Get(impl_->doc_);
     if (value != nullptr && ptr.Erase(impl_->doc_)) {
       impl_->ValidateSchema("LinkImpl::Erase", ptr, std::string());
-      new WriteCall(&operation_queue_, impl_, src_, [flow]{});
+      new WriteCall(&operation_queue_, impl_, src_, [flow] {});
     }
   }
 
@@ -325,7 +312,7 @@ class LinkImpl::WatchCall : Operation<> {
             LinkImpl* const impl,
             fidl::InterfaceHandle<LinkWatcher> watcher,
             const uint32_t conn)
-      : Operation("LinkImpl::WatchCall", container, []{}),
+      : Operation("LinkImpl::WatchCall", container, [] {}),
         impl_(impl),
         watcher_(LinkWatcherPtr::Create(std::move(watcher))),
         conn_(conn) {
@@ -346,9 +333,8 @@ class LinkImpl::WatchCall : Operation<> {
     // that we don't have to send the current value to the watcher.
     watcher_->Notify(JsonValueToString(impl_->doc_));
 
-    impl_->watchers_.emplace_back(
-        std::make_unique<LinkWatcherConnection>(
-            impl_, std::move(watcher_), conn_));
+    impl_->watchers_.emplace_back(std::make_unique<LinkWatcherConnection>(
+        impl_, std::move(watcher_), conn_));
   }
 
   LinkImpl* const impl_;  // not owned
@@ -361,11 +347,9 @@ class LinkImpl::WatchCall : Operation<> {
 class LinkImpl::ChangeCall : Operation<> {
  public:
   ChangeCall(OperationContainer* const container,
-          LinkImpl* const impl,
-          const fidl::String& json)
-      : Operation("LinkImpl::ChangeCall",
-                  container,
-                  []{}),
+             LinkImpl* const impl,
+             const fidl::String& json)
+      : Operation("LinkImpl::ChangeCall", container, [] {}),
         impl_(impl),
         json_(json) {
     Ready();
@@ -405,15 +389,14 @@ class LinkImpl::ChangeCall : Operation<> {
 
 LinkImpl::LinkImpl(LinkStorage* const link_storage,
                    const LinkPathPtr& link_path)
-    : link_path_(link_path.Clone()),
-      link_storage_(link_storage) {
+    : link_path_(link_path.Clone()), link_storage_(link_storage) {
   new ReadCall(&operation_queue_, this, [this] {
-      for (auto& request : requests_) {
-        LinkConnection::New(this, next_connection_id_++, std::move(request));
-      }
-      requests_.clear();
-      ready_ = true;
-    });
+    for (auto& request : requests_) {
+      LinkConnection::New(this, next_connection_id_++, std::move(request));
+    }
+    requests_.clear();
+    ready_ = true;
+  });
 
   link_storage_->WatchLink(
       link_path, this, [this](const fidl::String& json) { OnChange(json); });
@@ -467,8 +450,7 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
   new UpdateObjectCall(&operation_queue_, this, std::move(path), json, src);
 }
 
-void LinkImpl::Erase(fidl::Array<fidl::String> path,
-                     const uint32_t src) {
+void LinkImpl::Erase(fidl::Array<fidl::String> path, const uint32_t src) {
   new EraseCall(&operation_queue_, this, std::move(path), src);
 }
 
@@ -611,9 +593,7 @@ void LinkImpl::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
 LinkConnection::LinkConnection(LinkImpl* const impl,
                                const uint32_t id,
                                fidl::InterfaceRequest<Link> link_request)
-    : impl_(impl),
-      binding_(this, std::move(link_request)),
-      id_(id) {
+    : impl_(impl), binding_(this, std::move(link_request)), id_(id) {
   impl_->AddConnection(this);
   binding_.set_connection_error_handler(
       [this] { impl_->RemoveConnection(this); });

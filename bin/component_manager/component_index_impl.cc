@@ -105,8 +105,8 @@ bool FacetInfoMatches(const rapidjson::Value& facet_data,
     FTL_LOG(FATAL) << "Filtering by array not implemented.";
     return false;
   }
-    // For primitive values we can use rapidjson's comparison operator.
-    return facet_data == filter_data;
+  // For primitive values we can use rapidjson's comparison operator.
+  return facet_data == filter_data;
 
   // Unreachable.
   return true;

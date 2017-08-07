@@ -97,10 +97,8 @@ void RegisterTestPoint(const std::string& label) {
   auto inserted = g_test_points.insert(label);
 
   // Test points must have unique labels.
-  FTL_CHECK(inserted.second)
-      << "Test points must have unique labels. "
-      << "\"" << label << "\" is repeated.";
-
+  FTL_CHECK(inserted.second) << "Test points must have unique labels. "
+                             << "\"" << label << "\" is repeated.";
 }
 
 void PassTestPoint(const std::string& label) {
@@ -111,7 +109,7 @@ void PassTestPoint(const std::string& label) {
       << "called.";
 
   // Test points can only be passed once.
-  FTL_CHECK( g_test_points.erase(label))
+  FTL_CHECK(g_test_points.erase(label))
       << "TEST FAILED: Test point can only be passed once. "
       << "\"" << label << "\".Pass() has been called twice.";
 
