@@ -101,7 +101,7 @@ void InspectCommand::ListPages(ftl::Closure on_done) {
   for (const storage::PageId& page_id : page_ids) {
     ledger_storage->GetPageStorage(
         page_id, ftl::MakeCopyable([
-          completer = ftl::MakeAutoCall(waiter->NewCallback()), page_id
+          completer = ftl::MakeAutoCall(waiter->NewCallback()), page_id=page_id
         ](storage::Status status,
                  std::unique_ptr<storage::PageStorage> storage) mutable {
           if (status != storage::Status::OK) {
@@ -146,7 +146,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
 
   ledger_storage->GetPageStorage(page_id, [
     this, commit_id, on_done = std::move(on_done)
-  ](storage::Status status, std::unique_ptr<storage::PageStorage> storage) {
+  ](storage::Status status, std::unique_ptr<storage::PageStorage> storage) mutable {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
       on_done();
@@ -155,7 +155,7 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
     storage_ = std::move(storage);
     storage_->GetCommit(commit_id, [
       this, commit_id, on_done = std::move(on_done)
-    ](storage::Status status, std::unique_ptr<const storage::Commit> commit) {
+    ](storage::Status status, std::unique_ptr<const storage::Commit> commit) mutable {
       if (status != storage::Status::OK) {
         FTL_LOG(ERROR) << "Unable to retrieve commit "
                        << convert::ToHex(commit_id) << " on page "
@@ -189,9 +189,9 @@ void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
           if (coroutine::SyncCall(
                   handler,
                   [this, &entry](
-                      const std::function<void(
+                      std::function<void(
                           storage::Status,
-                          std::unique_ptr<const storage::Object>)>& callback) {
+                          std::unique_ptr<const storage::Object>)> callback) {
                     storage_->GetObject(entry.object_id,
                                         storage::PageStorage::Location::LOCAL,
                                         std::move(callback));
@@ -251,9 +251,9 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
   std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits;
   if (coroutine::SyncCall(
           handler,
-          [this](const std::function<void(
+          [this](std::function<void(
                      storage::Status,
-                     std::vector<std::unique_ptr<const storage::Commit>>)>&
+                     std::vector<std::unique_ptr<const storage::Commit>>)>
                      callback) {
             storage_->GetUnsyncedCommits(std::move(callback));
           },
@@ -272,8 +272,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
   if (coroutine::SyncCall(
           handler,
           [this](
-              const std::function<void(
-                  storage::Status, std::vector<storage::CommitId>)>& callback) {
+              std::function<void(
+                  storage::Status, std::vector<storage::CommitId>)> callback) {
             storage_->GetHeadCommitIds(std::move(callback));
           },
           &status, &heads)) {
@@ -299,8 +299,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
     if (coroutine::SyncCall(
             handler,
             [this, &commit_id](
-                const std::function<void(
-                    storage::Status, std::unique_ptr<const storage::Commit>)>&
+                std::function<void(
+                    storage::Status, std::unique_ptr<const storage::Commit>)>
                     callback) {
               storage_->GetCommit(commit_id, std::move(callback));
             },
