@@ -104,7 +104,7 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
   storage::ObjectId id = object->GetId();
   cloud_provider_->AddObject(
       auth_token_, object->GetId(), std::move(data),
-      [ this, id = std::move(id) ](cloud_provider::Status status) {
+      [ this, id = std::move(id) ](cloud_provider::Status status) mutable {
         FTL_DCHECK(current_uploads_ > 0);
         current_uploads_--;
 

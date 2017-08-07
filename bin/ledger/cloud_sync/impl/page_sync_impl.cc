@@ -115,40 +115,39 @@ void PageSyncImpl::GetObject(
     storage::ObjectIdView object_id,
     std::function<void(storage::Status status, uint64_t size, mx::socket data)>
         callback) {
-  GetAuthToken(
-      [ this, object_id = object_id.ToString(),
-        callback ](std::string auth_token) {
-        cloud_provider_->GetObject(std::move(auth_token), object_id, [
+  GetAuthToken([ this, object_id = object_id.ToString(),
+                 callback ](std::string auth_token) mutable {
+    cloud_provider_->GetObject(auth_token, object_id, [
+      this, object_id, callback = std::move(callback)
+    ](cloud_provider::Status status, uint64_t size, mx::socket data) mutable {
+      if (status == cloud_provider::Status::NETWORK_ERROR) {
+        FTL_LOG(WARNING)
+            << log_prefix_
+            << "GetObject() failed due to a connection error, retrying.";
+        Retry([
           this, object_id = std::move(object_id), callback = std::move(callback)
-        ](cloud_provider::Status status, uint64_t size, mx::socket data) {
-          if (status == cloud_provider::Status::NETWORK_ERROR) {
-            FTL_LOG(WARNING)
-                << log_prefix_
-                << "GetObject() failed due to a connection error, retrying.";
-            Retry([
-              this, object_id = std::move(object_id),
-              callback = std::move(callback)
-            ] { GetObject(object_id, callback); });
-            return;
-          }
+        ] { GetObject(object_id, callback); });
+        return;
+      }
 
-          backoff_->Reset();
-          if (status != cloud_provider::Status::OK) {
-            FTL_LOG(WARNING)
-                << log_prefix_
-                << "Fetching remote object failed with status: " << status;
-            callback(storage::Status::IO_ERROR, 0, mx::socket());
-            return;
-          }
-
-          callback(storage::Status::OK, size, std::move(data));
-        });
-      },
-      [this, callback] {
-        FTL_LOG(ERROR) << log_prefix_ << "Failed to retrieve the auth token, "
-                       << "cannot download the object.";
+      backoff_->Reset();
+      if (status != cloud_provider::Status::OK) {
+        FTL_LOG(WARNING) << log_prefix_
+                         << "Fetching remote object failed with status: "
+                         << status;
         callback(storage::Status::IO_ERROR, 0, mx::socket());
-      });
+        return;
+      }
+
+      callback(storage::Status::OK, size, std::move(data));
+    });
+  },
+               [this, callback] {
+                 FTL_LOG(ERROR)
+                     << log_prefix_ << "Failed to retrieve the auth token, "
+                     << "cannot download the object.";
+                 callback(storage::Status::IO_ERROR, 0, mx::socket());
+               });
 }
 
 void PageSyncImpl::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
@@ -222,7 +221,7 @@ void PageSyncImpl::StartDownload() {
         last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
         // TODO(ppi): handle pagination when the response is huge.
         cloud_provider_->GetCommits(
-            std::move(auth_token), std::move(last_commit_ts),
+            auth_token, last_commit_ts,
             [this](cloud_provider::Status cloud_status,
                    std::vector<cloud_provider::Record> records) {
               if (cloud_status != cloud_provider::Status::OK) {
@@ -317,8 +316,7 @@ void PageSyncImpl::SetRemoteWatcher(bool is_retry) {
   GetAuthToken(
       [ this, is_retry,
         last_commit_ts = std::move(last_commit_ts) ](std::string auth_token) {
-        cloud_provider_->WatchCommits(std::move(auth_token), last_commit_ts,
-                                      this);
+        cloud_provider_->WatchCommits(auth_token, last_commit_ts, this);
         remote_watch_set_ = true;
         if (is_retry) {
           FTL_LOG(INFO) << log_prefix_ << "Cloud watcher re-established";

@@ -79,7 +79,7 @@ modular::auth::AuthErrPtr GetError(modular::auth::Status status,
                                    std::string message) {
   auto error = modular::auth::AuthErr::New();
   error->status = status;
-  error->message = std::move(message);
+  error->message = message;
   return error;
 }
 

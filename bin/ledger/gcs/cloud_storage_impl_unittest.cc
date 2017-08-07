@@ -97,8 +97,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
   std::string sent_content;
   EXPECT_TRUE(mtl::StringFromVmo(
-      std::move(fake_network_service_.GetRequest()->body->get_buffer()),
-      &sent_content));
+      fake_network_service_.GetRequest()->body->get_buffer(), &sent_content));
   EXPECT_EQ(content, sent_content);
 
   network::HttpHeaderPtr content_length_header =

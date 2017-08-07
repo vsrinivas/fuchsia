@@ -36,7 +36,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       return;
     }
     message_loop_->task_runner()->PostTask(ftl::MakeCopyable(
-        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() {
+        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
           }

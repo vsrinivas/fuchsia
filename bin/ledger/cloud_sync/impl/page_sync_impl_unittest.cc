@@ -115,7 +115,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     }
 
     ftl::Closure confirm = ftl::MakeCopyable(
-        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() {
+        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[commit.id] = std::move(commit.bytes);
             unsynced_commits_to_return.erase(

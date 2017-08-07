@@ -144,7 +144,7 @@ class NetworkServiceImpl::RunningRequest {
     auto response = network::URLResponse::New();
     response->error = network::NetworkError::New();
     response->error->code = code;
-    response->error->description = std::move(reason);
+    response->error->description = reason;
     return response;
   }
 

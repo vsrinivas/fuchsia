@@ -54,7 +54,7 @@ class LedgerAppTest : public ::test::AppTest {
     launch_info->arguments.push_back("--no_persisted_config");
     launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
     for (auto& additional_arg : additional_args) {
-      launch_info->arguments.push_back(std::move(additional_arg));
+      launch_info->arguments.push_back(additional_arg);
     }
     application_context()->launcher()->CreateApplication(
         std::move(launch_info), ledger_controller_.NewRequest());
