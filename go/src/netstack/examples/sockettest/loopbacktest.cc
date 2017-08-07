@@ -6,6 +6,7 @@
 // No network connection is required, only a running netstack binary.
 
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <string>
@@ -70,6 +71,62 @@ TEST(NetTest, LoopbackStream) {
   thrd.join();
 
   ASSERT_STREQ(msg, out.c_str());
+}
+
+void PollSignal(struct sockaddr_in* addr, short events, short* revents) {
+  int connfd = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GT(connfd, 0);
+
+  int ret = connect(connfd, (const struct sockaddr*)addr, sizeof(*addr));
+  ASSERT_EQ(0, ret) << "connect failed: " << errno;
+
+  struct pollfd fds = {
+    .fd = connfd,
+    .events = events,
+  };
+
+  int n = poll(&fds, 1, 100); // timeout: 100ms
+  ASSERT_GT(n, 0) << "poll failed: " << errno;
+
+  EXPECT_EQ(0, close(connfd));
+
+  *revents = fds.revents;
+}
+
+TEST(NetTest, Shutdown) {
+  int server = socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GT(server, 0);
+
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_port = 0;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  int ret = bind(server, (const struct sockaddr*)&addr, sizeof(addr));
+  ASSERT_EQ(0, ret) << "bind failed: " << errno;
+
+  socklen_t addrlen = sizeof(addr);
+  ret = getsockname(server, (struct sockaddr*)&addr, &addrlen);
+  ASSERT_EQ(0, ret) << "getsockname failed: " << errno;
+
+  ret = listen(server, 10);
+  ASSERT_EQ(0, ret) << "listen failed: " << errno;
+
+  short events = POLLRDHUP;
+  short revents;
+  std::thread thrd(PollSignal, &addr, events, &revents);
+
+  int connfd = accept(server, nullptr, nullptr);
+  ASSERT_GT(connfd, 0) << "accept failed: " << errno;
+
+  ret = shutdown(connfd, SHUT_WR);
+  ASSERT_EQ(0, ret) << "shutdown failed: " << errno;
+
+  thrd.join();
+
+  ASSERT_EQ(POLLRDHUP, revents);
+
+  ASSERT_EQ(0, close(connfd));
+  ASSERT_EQ(0, close(server));
 }
 
 // TODO datagrams
