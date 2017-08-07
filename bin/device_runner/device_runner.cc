@@ -84,6 +84,7 @@ class Settings {
       user_runner.args.push_back("--test");
       user_shell.args.push_back("--test");
       test_name = FindTestName(user_shell.url, user_shell.args);
+      no_minfs = true;
     }
   }
 
