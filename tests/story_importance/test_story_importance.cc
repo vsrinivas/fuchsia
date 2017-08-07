@@ -33,39 +33,6 @@ namespace {
 constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
 constexpr char kTopic[] = "/location/home_work";
 
-// A simple story provider watcher implementation. Just logs observed state
-// transitions.
-class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
- public:
-  StoryProviderWatcherImpl() : binding_(this) {}
-  ~StoryProviderWatcherImpl() override = default;
-
-  // Registers itself a watcher on the given story provider. Only one story
-  // provider can be watched at a time.
-  void Watch(modular::StoryProviderPtr* const story_provider) {
-    (*story_provider)->Watch(binding_.NewBinding());
-  }
-
-  // Deregisters itself from the watched story provider.
-  void Reset() { binding_.Close(); }
-
- private:
-  // |StoryProviderWatcher|
-  void OnDelete(const ::fidl::String& story_id) override {
-    FTL_VLOG(1) << "TestApp::OnDelete() " << story_id;
-  }
-
-  // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfoPtr story_info,
-                modular::StoryState /*story_state*/) override {
-    FTL_VLOG(1) << "TestApp::OnChange() "
-                << " id " << story_info->id << " url " << story_info->url;
-  }
-
-  fidl::Binding<modular::StoryProviderWatcher> binding_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherImpl);
-};
-
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to RUNNING state. Used to push the test
 // sequence forward when the test story has started.
@@ -209,7 +176,6 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_.Bind(std::move(user_shell_context));
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    story_provider_watcher_.Watch(&story_provider_);
 
     user_shell_context_->GetFocusController(focus_controller_.NewRequest());
     user_shell_context_->GetFocusProvider(focus_provider_.NewRequest());
@@ -396,8 +362,6 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     terminate_.Pass();
     DeleteAndQuit();
   }
-
-  StoryProviderWatcherImpl story_provider_watcher_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;

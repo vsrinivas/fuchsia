@@ -12,6 +12,7 @@
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
+#include "apps/modular/lib/common/story_provider_watcher_base.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -26,71 +27,52 @@ constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
 // A simple story provider watcher implementation. It confirms that it sees an
 // increase in the last_focus_time in the StoryInfo it receives, and pushes the
 // test through to the next step.
-class StoryProviderWatcherImpl : modular::StoryProviderWatcher {
+class StoryProviderWatcherImpl
+    : public modular::StoryProviderWatcherBase {
  public:
-  StoryProviderWatcherImpl() : binding_(this) {}
+  StoryProviderWatcherImpl() = default;
   ~StoryProviderWatcherImpl() override = default;
 
-  // Registers itself a watcher on the given story provider. Only one story
-  // provider can be watched at a time.
-  void Watch(modular::StoryProviderPtr* const story_provider) {
-    (*story_provider)->Watch(binding_.NewBinding());
-  }
-
-  // Deregisters itself from the watched story provider.
-  void Reset() { binding_.Close(); }
-
-  // Sets the function where to continue when the story is observed to be
-  // running.
-  void Continue(std::function<void()> at) { continue_ = at; }
-
  private:
-  // |StoryProviderWatcher|
-  void OnDelete(const ::fidl::String& story_id) override {
-    FTL_LOG(INFO) << "TestApp::OnDelete() " << story_id;
-  }
-
   using TestPoint = modular::testing::TestPoint;
 
-  TestPoint last_focus_time_increased_{
-      "StoryProviderWatcher::OnChange() last_focus_time increased"};
+  TestPoint last_focus_time_created_{
+      "StoryInfo::last_focus_time increased after create"};
+  TestPoint last_focus_time_focused_{
+      "StoryInfo::last_focus_time increased after focus"};
 
   // |StoryProviderWatcher|
   void OnChange(modular::StoryInfoPtr story_info,
                 modular::StoryState story_state) override {
-    FTL_LOG(INFO) << "TestApp::OnChange() " << story_state << " id "
-                  << story_info->id << " url " << story_info->url << " focus "
-                  << story_info->last_focus_time;
+    FTL_CHECK(story_info->last_focus_time >= last_focus_time_);
+    if (story_info->last_focus_time <= last_focus_time_) {
+      return;
+    }
 
-    // We test that we at least see one increase in the last focus time.
-    bool cont{};
-    if (story_info->last_focus_time > last_focus_time_) {
-      // Every time we see an increase in last_focus_time, we push the test
-      // sequence forward.
-      cont = true;
-
-      // We expect two last_focus_time transitions:
-      //
-      // 0 -> X on creation of the story.
-      // X -> Y where Y > X on focusing the story.
-      if (++change_count_ == 2) {
-        last_focus_time_increased_.Pass();
-      }
+    // Every time we see an increase in last_focus_time, we push the test
+    // sequence forward.
+    // We expect two last_focus_time transitions:
+    //
+    // 0 -> X on creation of the story.
+    // X -> Y where Y > X on focusing the story.
+    switch (++change_count_) {
+      case 1:
+        last_focus_time_created_.Pass();
+        break;
+     case 2:
+       last_focus_time_focused_.Pass();
+       break;
+     default:
+       FTL_CHECK(change_count_ == 1 || change_count_ == 2);
+       break;
     }
 
     last_focus_time_ = story_info->last_focus_time;
-
-    if (cont) {
-      continue_();
-    }
+    continue_();
   }
 
   int change_count_{};
   int64_t last_focus_time_{};
-
-  fidl::Binding<modular::StoryProviderWatcher> binding_;
-  std::function<void()> continue_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherImpl);
 };
 
 class StoryWatcherImpl : modular::StoryWatcher {
@@ -180,10 +162,8 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     initialize_.Pass();
 
     user_shell_context_.Bind(std::move(user_shell_context));
-
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
     story_provider_watcher_.Watch(&story_provider_);
-    story_provider_watcher_.Continue([] {});
 
     user_shell_context_->GetFocusController(focus_controller_.NewRequest());
     user_shell_context_->GetFocusProvider(focus_provider_.NewRequest());

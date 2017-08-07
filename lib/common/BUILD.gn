@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("story_provider_watcher_base") {
+  sources = [
+    "story_provider_watcher_base.cc",
+    "story_provider_watcher_base.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/services/story",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
+
+source_set("common") {
+  deps = [
+    ":story_provider_watcher_base",
+  ]
+}

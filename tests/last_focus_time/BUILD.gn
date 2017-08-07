@@ -22,6 +22,7 @@ executable("test_last_focus_time") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
+    "//apps/modular/lib/common:story_provider_watcher_base",
     "//apps/modular/services/user",
     "//apps/mozart/services/views",
     "//apps/test_runner/services:test_runner",
