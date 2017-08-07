@@ -35,11 +35,6 @@ typedef uint64_t lk_time_t; // nanoseconds
 #define LK_MSEC(n) ((lk_time_t)(1000000ULL * (n)))
 #define LK_SEC(n)  ((lk_time_t)(1000000000ULL * (n)))
 
-#define TIME_GTE(a, b) ((int64_t)((a) - (b)) >= 0)
-#define TIME_LTE(a, b) ((int64_t)((a) - (b)) <= 0)
-#define TIME_GT(a, b) ((int64_t)((a) - (b)) > 0)
-#define TIME_LT(a, b) ((int64_t)((a) - (b)) < 0)
-
 enum handler_return {
     INT_NO_RESCHEDULE = 0,
     INT_RESCHEDULE,

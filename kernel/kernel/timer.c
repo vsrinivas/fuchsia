@@ -82,7 +82,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer) {
     //    --------------(-c--t--n-)-----------------------> time
 
     list_for_every_entry(&percpu[cpu].timer_queue, entry, timer_t, node) {
-        if (TIME_GT(entry->scheduled_time, timer->scheduled_time + timer->slack)) {
+        if (entry->scheduled_time > (timer->scheduled_time + timer->slack)) {
             //  First case: new timer latest is earlier than the earliest timer.
             // Just add as is, without slack.
             timer->slack = 0ull;
@@ -90,7 +90,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer) {
             return;
         }
 
-        if (TIME_GTE(entry->scheduled_time, timer->scheduled_time)) {
+        if (entry->scheduled_time >= timer->scheduled_time) {
             // Second case: coalesce with current timer by scheduling late.
             timer->slack =  entry->scheduled_time - timer->scheduled_time;
             timer->scheduled_time = entry->scheduled_time;
@@ -101,7 +101,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer) {
         const timer_t* next =
             list_next_type(&percpu[cpu].timer_queue, &entry->node, timer_t, node);
 
-        if ((next == NULL) || TIME_LT(next->scheduled_time, timer->scheduled_time)) {
+        if ((next == NULL) || (next->scheduled_time < timer->scheduled_time)) {
             // This case should be handled in a future loop iteration. This also covers
             // the case when |next| has the same deadline as |entry|.
             continue;
@@ -118,7 +118,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer) {
             continue;
         }
 
-        if (TIME_GTE(entry->scheduled_time, timer->scheduled_time - timer->slack)) {
+        if (entry->scheduled_time >= (timer->scheduled_time - timer->slack)) {
             // Third case: coalesce with current timer by scheduling early.
             timer->slack = entry->scheduled_time - timer->scheduled_time;
             timer->scheduled_time = entry->scheduled_time;
@@ -287,7 +287,7 @@ enum handler_return timer_tick(lk_time_t now)
             break;
         LTRACEF("next item on timer queue %p at %" PRIu64 " now %" PRIu64 " (%p, arg %p)\n",
             timer, timer->scheduled_time, now, timer->callback, timer->arg);
-        if (likely(TIME_LT(now, timer->scheduled_time)))
+        if (likely(now < timer->scheduled_time))
             break;
 
         /* process it */
@@ -328,7 +328,7 @@ enum handler_return timer_tick(lk_time_t now)
     timer = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (timer) {
         /* has to be the case or it would have fired already */
-        DEBUG_ASSERT(TIME_GT(timer->scheduled_time, now));
+        DEBUG_ASSERT(timer->scheduled_time > now);
 
         LTRACEF("setting new timer for %" PRIu64 " nsecs for event %p\n", timer->scheduled_time,
                 timer);

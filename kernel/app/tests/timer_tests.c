@@ -119,8 +119,28 @@ static void timer_test_coalescing(void)
     atomic_store(&cb2_timer_count, 0u);
 }
 
+static void timer_far_deadline(void)
+{
+    event_t event;
+    timer_t timer;
+
+    event_init(&event, false, 0);
+    timer_init(&timer);
+
+    timer_set(&timer, UINT64_MAX - 5, 0, timer_cb, &event);
+    status_t st = event_wait_deadline(&event, current_time() + LK_MSEC(100), false);
+    if (st != MX_ERR_TIMED_OUT) {
+        printf("error: unexpected timer fired!\n");
+    } else {
+        timer_cancel(&timer);
+    }
+
+    event_destroy(&event);
+}
+
 void timer_tests(void)
 {
     timer_test_coalescing();
     timer_test_all_cpus();
+    timer_far_deadline();
 }
