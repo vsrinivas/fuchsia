@@ -13,13 +13,13 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 
-__WEAK mx_handle_t root_resource_handle;
-
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"
 #endif
 
 #include "acpi.h"
+
+__WEAK mx_handle_t root_resource_handle;
 
 #define _COMPONENT          ACPI_OS_SERVICES
 ACPI_MODULE_NAME    ("osmagenta")
@@ -67,13 +67,13 @@ static ACPI_STATUS acpi_pci_ecam_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
     if (write) {
         switch (width) {
             case 8:
-                *((volatile uint8_t *)ptr) = *val;
+                *((volatile uint8_t *)ptr) = (uint8_t)(*val);
                 break;
             case 16:
-                *((volatile uint16_t *)ptr) = *val;
+                *((volatile uint16_t *)ptr) = (uint16_t)(*val);
                 break;
             case 32:
-                *((volatile uint32_t *)ptr) = *val;
+                *((volatile uint32_t *)ptr) = (uint32_t)(*val);
                 break;
             case 64:
                 *((volatile uint64_t *)ptr) = *val;
@@ -107,8 +107,12 @@ static ACPI_STATUS acpi_pci_ecam_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
 // x86 PIO configuration support
 static ACPI_STATUS acpi_pci_x86_pio_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
                                 uint32_t* val, uint32_t width, bool write) {
-    mx_status_t s = mx_pci_cfg_pio_rw(root_resource_handle, PciId->Bus, PciId->Device,
-                                      PciId->Function, reg, val, width, write);
+    mx_status_t s = mx_pci_cfg_pio_rw(root_resource_handle,
+                                      (uint8_t)PciId->Bus,
+                                      (uint8_t)PciId->Device,
+                                      (uint8_t)PciId->Function,
+                                      (uint8_t)reg, val,
+                                      (uint8_t)width, write);
     return (s == MX_OK) ? AE_OK : AE_NOT_FOUND;
 }
 
@@ -149,15 +153,17 @@ static mx_status_t acpi_probe_ecam(void) {
     }
 
     ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
-    ACPI_MCFG_ALLOCATION* table_start = ((void*)mcfg) + sizeof(*mcfg);
-    ACPI_MCFG_ALLOCATION* table_end = ((void*)mcfg) + mcfg->Header.Length;
+    ACPI_MCFG_ALLOCATION* table_start =
+        (ACPI_MCFG_ALLOCATION*)(((uintptr_t)mcfg) + sizeof(*mcfg));
+    ACPI_MCFG_ALLOCATION* table_end =
+        (ACPI_MCFG_ALLOCATION*)(((uintptr_t)mcfg) + mcfg->Header.Length);
     uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
     if (table_bytes % sizeof(*table_start) != 0) {
         LTRACEF("PCIe error, MCFG has unexpected size.\n");
         return MX_ERR_NOT_FOUND;
     }
 
-    int num_entries = table_end - table_start;
+    int num_entries = (int)(table_end - table_start);
     if (num_entries == 0) {
         LTRACEF("PCIe error, MCFG has no entries.\n");
         return MX_ERR_NOT_FOUND;
@@ -270,7 +276,7 @@ ACPI_PHYSICAL_ADDRESS AcpiOsGetRootPointer() {
     ACPI_PHYSICAL_ADDRESS TableAddress = 0;
     ACPI_STATUS status = AcpiFindRootPointer(&TableAddress);
 
-    uint32_t uefi_rsdp = mx_acpi_uefi_rsdp(root_resource_handle);
+    uint32_t uefi_rsdp = (uint32_t)mx_acpi_uefi_rsdp(root_resource_handle);
     if (uefi_rsdp != 0) {
         return uefi_rsdp;
     }
@@ -498,7 +504,7 @@ struct acpi_os_task_ctx {
 };
 
 static int acpi_os_task(void *raw_ctx) {
-    struct acpi_os_task_ctx *ctx = raw_ctx;
+    struct acpi_os_task_ctx *ctx = (struct acpi_os_task_ctx*)raw_ctx;
 
     ctx->func(ctx->ctx);
 
@@ -544,7 +550,7 @@ ACPI_STATUS AcpiOsExecute(
         default: return AE_BAD_PARAMETER;
     }
 
-    struct acpi_os_task_ctx *ctx = malloc(sizeof(*ctx));
+    struct acpi_os_task_ctx *ctx = (struct acpi_os_task_ctx*)malloc(sizeof(*ctx));
     if (!ctx) {
         return AE_NO_MEMORY;
     }
@@ -632,7 +638,7 @@ ACPI_STATUS AcpiOsCreateSemaphore(
         UINT32 MaxUnits,
         UINT32 InitialUnits,
         ACPI_SEMAPHORE *OutHandle) {
-    sem_t *sem = malloc(sizeof(sem_t));
+    sem_t *sem = (sem_t*)malloc(sizeof(sem_t));
     if (!sem) {
         return AE_NO_MEMORY;
     }
@@ -717,7 +723,7 @@ ACPI_STATUS AcpiOsSignalSemaphore(
 ACPI_STATUS AcpiOsCreateLock(ACPI_SPINLOCK *OutHandle) {
     // Since we don't have a notion of interrupt contex in usermode, just make
     // these mutexes.
-    mtx_t* lock = malloc(sizeof(mtx_t));
+    mtx_t* lock = (mtx_t*)malloc(sizeof(mtx_t));
     if (!lock) {
         return AE_NO_MEMORY;
     }
@@ -826,7 +832,7 @@ ACPI_STATUS AcpiOsInstallInterruptHandler(
 
     assert(InterruptLevel == 0x9); // SCI
 
-    struct acpi_irq_thread_arg *arg = malloc(sizeof(*arg));
+    struct acpi_irq_thread_arg *arg = (struct acpi_irq_thread_arg*)malloc(sizeof(*arg));
     if (!arg) {
         return AE_NO_MEMORY;
     }
@@ -927,13 +933,13 @@ ACPI_STATUS AcpiOsReadPort(
 
     switch (Width) {
         case 8:
-            *Value = inp(Address);
+            *Value = inp((uint16_t)Address);
             break;
         case 16:
-            *Value = inpw(Address);
+            *Value = inpw((uint16_t)Address);
             break;
         case 32:
-            *Value = inpd(Address);
+            *Value = inpd((uint16_t)Address);
             break;
         default:
             return AE_BAD_PARAMETER;
@@ -960,13 +966,13 @@ ACPI_STATUS AcpiOsWritePort(
 
     switch (Width) {
         case 8:
-            outp(Address, (uint8_t)Value);
+            outp((uint16_t)Address, (uint8_t)Value);
             break;
         case 16:
-            outpw(Address, (uint16_t)Value);
+            outpw((uint16_t)Address, (uint16_t)Value);
             break;
         case 32:
-            outpd(Address, (uint32_t)Value);
+            outpd((uint16_t)Address, (uint32_t)Value);
             break;
         default:
             return AE_BAD_PARAMETER;
@@ -1149,7 +1155,7 @@ ACPI_STATUS AcpiOsSignal(
  */
 bool _acpica_acquire_global_lock(void *FacsPtr)
 {
-    ACPI_TABLE_FACS *table = FacsPtr;
+    ACPI_TABLE_FACS *table = (ACPI_TABLE_FACS*)FacsPtr;
     uint32_t old_val, new_val, test_val;
     do {
         old_val = test_val = table->GlobalLock;
@@ -1178,7 +1184,7 @@ bool _acpica_acquire_global_lock(void *FacsPtr)
  */
 bool _acpica_release_global_lock(void *FacsPtr)
 {
-    ACPI_TABLE_FACS *table = FacsPtr;
+    ACPI_TABLE_FACS *table = (ACPI_TABLE_FACS*)FacsPtr;
     uint32_t old_val, new_val, test_val;
     do {
         old_val = test_val = table->GlobalLock;

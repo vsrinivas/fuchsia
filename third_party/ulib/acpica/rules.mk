@@ -173,7 +173,7 @@ MODULE_SRCS += \
 	$(SRC_DIR)/common/ahpredef.c \
 	$(SRC_DIR)/common/ahids.c \
 	$(SRC_DIR)/common/ahtable.c \
-	$(SRC_DIR)/os_specific/service_layers/osfuchsia.c
+	$(SRC_DIR)/os_specific/service_layers/osfuchsia.cpp
 else
 MODULE_SRCS += $(LOCAL_DIR)/empty.c
 endif
@@ -190,7 +190,9 @@ endif
 # bringing in the latest upstream ACPICA, so instead we mitigate the problem with a compile-time
 # flag.  We take the more conservative approach of disabling strict-aliasing-based optimizations,
 # rather than disabling warnings.
-MODULE_CFLAGS += -fno-strict-aliasing -I$(SRC_DIR)/include/acpica
+MODULE_CFLAGS += -fno-strict-aliasing
+
+MODULE_COMPILEFLAGS += -I$(SRC_DIR)/include/acpica
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
