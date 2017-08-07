@@ -51,7 +51,7 @@ RoundedRectSpec::RoundedRectSpec(float width,
       bottom_right_radius(bottom_right_radius),
       bottom_left_radius(bottom_left_radius) {}
 
-// Return the number of vertices and indices that are required to tesselate the
+// Return the number of vertices and indices that are required to tessellate the
 // specified rounded-rect.
 std::pair<uint32_t, uint32_t> GetRoundedRectMeshVertexAndIndexCounts(
     const RoundedRectSpec& spec) {

@@ -29,7 +29,8 @@ class Page {
   // Delete the |Stroke| with the specified ID.  No-op if no such stroke exists.
   void DeleteStroke(StrokeId id);
 
-  // Compute the number of vertices to use to tesselate each Stoke path segment.
+  // Compute the number of vertices required to tessellate each segment of the
+  // stroke path.
   std::vector<size_t> ComputeVertexCounts(const StrokePath& path);
 
   // Allows the page to be rendered by an escher::Renderer.
