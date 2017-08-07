@@ -21,6 +21,7 @@ public:
     mx_status_t DumpInfo();
     mx_status_t SetMute(bool mute);
     mx_status_t SetGain(float gain);
+    mx_status_t GetGain(audio_stream_cmd_get_gain_resp_t* out_gain) const;
     mx_status_t PlugMonitor(float duration);
     mx_status_t SetFormat(uint32_t frames_per_second,
                           uint16_t channels,

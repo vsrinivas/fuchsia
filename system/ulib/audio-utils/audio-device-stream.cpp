@@ -338,6 +338,17 @@ mx_status_t AudioDeviceStream::SetGain(float gain) {
     return res;
 }
 
+mx_status_t AudioDeviceStream::GetGain(audio_stream_cmd_get_gain_resp_t* out_gain) const {
+    if (out_gain == nullptr)
+        return MX_ERR_INVALID_ARGS;
+
+    audio_stream_cmd_get_gain_req req;
+    req.hdr.cmd = AUDIO_STREAM_CMD_GET_GAIN;
+    req.hdr.transaction_id = 1;
+
+    return DoNoFailCall(stream_ch_, req, out_gain);
+}
+
 mx_status_t AudioDeviceStream::PlugMonitor(float duration) {
     mx_time_t deadline = mx_deadline_after(MX_SEC(static_cast<double>(duration)));
     audio_stream_cmd_plug_detect_resp resp;
