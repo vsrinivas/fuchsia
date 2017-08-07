@@ -14,7 +14,7 @@
 #include <digest/merkle-tree.h>
 #include <magenta/device/vfs.h>
 #include <magenta/device/rtc.h>
-#include <mxalloc/new.h>
+#include <mxtl/new.h>
 #include <mxtl/unique_ptr.h>
 #include <mxtl/vector.h>
 #include <unittest/unittest.h>
@@ -66,7 +66,7 @@ static int GetStartTime() {
 // Returns the result of the post-processing 'func' (true == success).
 static bool GenerateBlob(mxtl::unique_ptr<blob_info_t>* out, size_t blob_size) {
     // Generate a Blob of random data
-    AllocChecker ac;
+    mxtl::AllocChecker ac;
     mxtl::unique_ptr<blob_info_t> info(new (&ac) blob_info_t);
     EXPECT_EQ(ac.check(), true, "");
     info->data.reset(new (&ac) char[blob_size]);
@@ -391,7 +391,7 @@ bool TestData::read_blobs() {
         sample_end(start, OPEN, i);
         ASSERT_GT(fd, 0, "Failed to open blob");
 
-        AllocChecker ac;
+        mxtl::AllocChecker ac;
         mxtl::unique_ptr<char[]> buf(new (&ac) char[blob_size]);
         EXPECT_EQ(ac.check(), true, "");
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
