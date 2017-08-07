@@ -70,13 +70,21 @@ mx_status_t uart_read(uart_state_t* uart_state, uint16_t port, mx_vcpu_io_t* vcp
     return MX_OK;
 }
 
-static mx_status_t raise_thr_empty(mx_handle_t vcpu, io_apic_state_t* io_apic_state) {
-    uint32_t interrupt = irq_redirect(io_apic_state, X86_INT_UART);
-    // UART IRQs overlap with CPU exception handlers, so they need to be remapped.
-    // If that hasn't happened yet, don't fire the interrupt - it would be bad.
+static mx_status_t raise_thr_empty(mx_handle_t vcpu, guest_state_t* guest_state) {
+    static uint32_t interrupt = 0;
     if (interrupt == 0) {
-        return MX_OK;
+        // Lock concurrent access to io_apic_state.
+        mtx_lock(&guest_state->mutex);
+        interrupt = irq_redirect(&guest_state->io_apic_state, X86_INT_UART);
+        mtx_unlock(&guest_state->mutex);
+
+        // UART IRQs overlap with CPU exception handlers, so they need to be remapped.
+        // If that hasn't happened yet, don't fire the interrupt - it would be bad.
+        if (interrupt == 0) {
+            return MX_OK;
+        }
     }
+
     return mx_vcpu_interrupt(vcpu, interrupt);
 }
 
@@ -86,7 +94,6 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
     static bool thr_empty = false;
 
     uart_state_t* uart_state = guest_state->uart_state;
-    io_apic_state_t* io_apic_state = &guest_state->io_apic_state;
 
     switch (io->port) {
     case UART_RECEIVE_PORT:
@@ -98,7 +105,7 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
             }
         }
         if (thr_empty)
-            return raise_thr_empty(vcpu, io_apic_state);
+            return raise_thr_empty(vcpu, guest_state);
         break;
     case UART_INTERRUPT_ENABLE_PORT:
         if (io->access_size != 1)
@@ -109,7 +116,7 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
         uart_state->interrupt_id = thr_empty ? UART_INTERRUPT_ID_THR_EMPTY : UART_INTERRUPT_ID_NONE;
         mtx_unlock(&guest_state->mutex);
         if (thr_empty)
-            return raise_thr_empty(vcpu, io_apic_state);
+            return raise_thr_empty(vcpu, guest_state);
         break;
     case UART_LINE_CONTROL_PORT:
         if (io->access_size != 1)
