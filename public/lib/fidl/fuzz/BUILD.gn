@@ -25,7 +25,7 @@ executable("fidl-fuzzer") {
 
   if (enable_ossfuzz) {
     libs = [ "FuzzingEngine" ]
-    lib_dirs += [ "/usr/lib" ]
+    lib_dirs = [ "/usr/lib" ]
   } else {
     deps += [ "//third_party/llvm/lib/Fuzzer" ]
   }
