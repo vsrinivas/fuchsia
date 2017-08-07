@@ -32,7 +32,13 @@ type Client struct {
 }
 
 func NewClient(path string, config *Config) (*Client, error) {
+	success := false
 	f, err := os.Open(path)
+	defer func() {
+		if !success {
+			f.Close()
+		}
+	}()
 	if err != nil {
 		return nil, fmt.Errorf("wlan: client open: %v", err)
 	}
@@ -61,11 +67,18 @@ func NewClient(path string, config *Config) (*Client, error) {
 		cfg:      config,
 		state:    nil,
 	}
+	success = true
 	return c, nil
+}
+
+func (c *Client) Close() {
+	c.f.Close()
+	c.wlanChan.Close()
 }
 
 func (c *Client) Run() {
 	log.Printf("Running wlan for %v", c.path)
+	defer c.Close()
 
 	var err error
 	c.state = newScanState(c)
