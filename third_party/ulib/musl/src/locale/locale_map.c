@@ -3,7 +3,7 @@
 #include <string.h>
 #include <threads.h>
 
-const char* __lctrans_impl(const char* msg, const struct __locale_map* lm) {
+const char* __lctrans(const char* msg, const struct __locale_map* lm) {
     const char* trans = 0;
     if (lm)
         trans = __mo_lookup(lm->map, lm->map_size, msg);
