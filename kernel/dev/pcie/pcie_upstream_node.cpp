@@ -74,11 +74,6 @@ void PcieUpstreamNode::ScanDownstream() {
             /* If we can find the config, and it has a valid vendor ID, go ahead
              * and scan it looking for a valid function. */
             auto cfg = driver().GetConfig(managed_bus_id_, dev_id, func_id);
-            if (cfg == nullptr) {
-                TRACEF("Warning: bus being scanned is outside ecam region!\n");
-                return;
-            }
-
             uint16_t vendor_id = cfg->Read(PciConfig::kVendorId);
             bool good_device = cfg && (vendor_id != PCIE_INVALID_VENDOR_ID);
             if (good_device) {

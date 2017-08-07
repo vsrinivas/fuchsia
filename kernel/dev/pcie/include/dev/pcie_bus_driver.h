@@ -99,28 +99,6 @@ public:
     // Add a root bus to the driver and attempt to scan it for devices.
     status_t AddRoot(mxtl::RefPtr<PcieRoot>&& root);
 
-    // Set a bus driver's memory address space to MMIO or IO.
-    //
-    // This is a workaround to get around a problem with the current
-    // system of initializing PCI. Presently, while PCI is in the kernel,
-    // we create the PcieBusDriver singleton in a platform specific early
-    // init hook linked via LK_INIT_HOOK, then after ACPI runs we add roots
-    // and start the bus driver. It would make more sense to apply the memory
-    // space to the root, however during downstream scanning we rely on the
-    // bus driver's ability to call its own GetConfig(). For this reason, since
-    // we're only surfacing a single root right now anyway we need to mark that
-    // root as MMIO or PIO in the bus driver itself. When we move to userspace
-    // and have a bus driver instance for each root, this will no longer be an
-    // issue.
-    bool EnablePIOWorkaround(bool enable) {
-        AutoLock lock(&driver_lock_);
-        if (roots_.is_empty()) {
-            is_mmio_ = !enable;
-        }
-
-        return is_mmio_;
-    }
-
     // Start the driver
     //
     // Notes about startup:
@@ -246,7 +224,6 @@ private:
     RootCollection                      roots_;
     mxtl::SinglyLinkedList<mxtl::RefPtr<PciConfig>> configs_;
 
-    bool                                is_mmio_ = true;
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
     RegionAllocator                     mmio_lo_regions_;
     RegionAllocator                     mmio_hi_regions_;

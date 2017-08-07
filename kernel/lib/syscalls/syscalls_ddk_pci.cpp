@@ -263,9 +263,6 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     if (root == nullptr)
         return MX_ERR_NO_MEMORY;
 
-    // Enable PIO config space if the address window was not MMIO
-    pcie->EnablePIOWorkaround(!arg->addr_windows[0].is_mmio);
-
     mx_status_t ret = pcie->AddRoot(mxtl::move(root));
     if (ret != MX_OK) {
         TRACEF("Failed to add root complex to PCIe bus driver! (ret %d)\n", ret);
