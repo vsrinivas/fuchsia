@@ -235,47 +235,49 @@ void UserProviderImpl::RemoveUser(const fidl::String& account_id,
   }
 
   FTL_DCHECK(account_provider_);
-  account_provider_->RemoveAccount(std::move(account), [
-    this, account_id = account_id, callback
-  ](auth::AuthErrPtr auth_err) {
-    if (auth_err->status != auth::Status::OK) {
-      callback(auth_err->message);
-      return;
-    }
+  account_provider_->RemoveAccount(
+      std::move(account), false /* disable single logout*/,
+      [ this, account_id = account_id, callback ](auth::AuthErrPtr auth_err) {
+        if (auth_err->status != auth::Status::OK) {
+          callback(auth_err->message);
+          return;
+        }
 
-    // update user storage after deleting user credentials.
-    flatbuffers::FlatBufferBuilder builder;
-    std::vector<flatbuffers::Offset<modular::UserStorage>> users;
-    for (const auto* user : *(users_storage_->users())) {
-      if (user->id()->str() == account_id) {
-        // TODO(alhaad): We need to delete the local ledger data for a user who
-        // has been removed. Re-visit this when sandboxing the user runner.
-        continue;
-      }
+        // update user storage after deleting user credentials.
+        flatbuffers::FlatBufferBuilder builder;
+        std::vector<flatbuffers::Offset<modular::UserStorage>> users;
+        for (const auto* user : *(users_storage_->users())) {
+          if (user->id()->str() == account_id) {
+            // TODO(alhaad): We need to delete the local ledger data for a user
+            // who has been removed. Re-visit this when sandboxing the user
+            // runner.
+            continue;
+          }
 
-      users.push_back(modular::CreateUserStorage(
-          builder, builder.CreateString(user->id()), user->identity_provider(),
-          builder.CreateString(user->display_name()),
-          builder.CreateString(user->profile_url()),
-          builder.CreateString(user->image_url())));
-    }
+          users.push_back(modular::CreateUserStorage(
+              builder, builder.CreateString(user->id()),
+              user->identity_provider(),
+              builder.CreateString(user->display_name()),
+              builder.CreateString(user->profile_url()),
+              builder.CreateString(user->image_url())));
+        }
 
-    builder.Finish(
-        modular::CreateUsersStorage(builder, builder.CreateVector(users)));
-    std::string new_serialized_users = std::string(
-        reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
-        builder.GetSize());
+        builder.Finish(
+            modular::CreateUsersStorage(builder, builder.CreateVector(users)));
+        std::string new_serialized_users = std::string(
+            reinterpret_cast<const char*>(builder.GetCurrentBufferPointer()),
+            builder.GetSize());
 
-    std::string error;
-    if (!WriteUsersDb(new_serialized_users, &error)) {
-      FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
-      callback(error);
-      return;
-    }
+        std::string error;
+        if (!WriteUsersDb(new_serialized_users, &error)) {
+          FTL_LOG(ERROR) << "Writing to user database failed with: " << error;
+          callback(error);
+          return;
+        }
 
-    callback("");  // success
-    return;
-  });
+        callback("");  // success
+        return;
+      });
 }
 
 bool UserProviderImpl::WriteUsersDb(const std::string& serialized_users,

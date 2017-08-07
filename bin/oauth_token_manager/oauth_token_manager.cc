@@ -402,6 +402,7 @@ class OAuthTokenManagerApp : AccountProvider {
 
   // |AccountProvider|
   void RemoveAccount(AccountPtr account,
+                     bool revoke_all,
                      const RemoveAccountCallback& callback) override;
 
   // |AccountProvider|
@@ -1157,12 +1158,14 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
  public:
   GoogleRevokeTokensCall(OperationContainer* const container,
                          AccountPtr account,
+                         bool revoke_all,
                          OAuthTokenManagerApp* const app,
                          const RemoveAccountCallback& callback)
       : Operation("OAuthTokenManagerApp::GoogleRevokeTokensCall",
                   container,
                   callback),
         account_(std::move(account)),
+        revoke_all_(revoke_all),
         app_(app),
         callback_(callback) {
     Ready();
@@ -1212,6 +1215,11 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
       Failure(flow, Status::INTERNAL_ERROR,
               "Unable to delete persistent credentials for account:" +
                   std::string(account_->id));
+      return;
+    }
+
+    if (!revoke_all_) {
+      Success(flow);
       return;
     }
 
@@ -1318,6 +1326,9 @@ class OAuthTokenManagerApp::GoogleRevokeTokensCall
   }
 
   AccountPtr account_;
+  // By default, RemoveAccount deletes account only from the device where the
+  // user performed the operation.
+  bool revoke_all_ = false;
   OAuthTokenManagerApp* const app_;
   const RemoveAccountCallback callback_;
 
@@ -1502,10 +1513,11 @@ void OAuthTokenManagerApp::AddAccount(IdentityProvider identity_provider,
 
 void OAuthTokenManagerApp::RemoveAccount(
     AccountPtr account,
+    bool revoke_all,
     const RemoveAccountCallback& callback) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::RemoveAccount()";
-  new GoogleRevokeTokensCall(&operation_queue_, std::move(account), this,
-                             callback);
+  new GoogleRevokeTokensCall(&operation_queue_, std::move(account),
+                             revoke_all, this, callback);
 }
 
 void OAuthTokenManagerApp::GetTokenProviderFactory(

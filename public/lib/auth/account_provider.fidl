@@ -29,7 +29,15 @@ interface AccountProvider {
   // This operation also deletes cached tokens for the given account.
   // TODO(ukode): Modify this api to take account_id and IDP as input once the
   // Account struct is cleaned up.
-  RemoveAccount(Account account) => (AuthErr status);
+  //
+  // If |revoke_all| is set to true, then all device credentials are revoked
+  // both locally and remotely on the backend server and user is logged out from
+  // all devices. If |revoke_all| is set to false, then credentials stored
+  // locally are wiped. This includes cached tokens such as access/id and
+  // firebase tokens and the locally persisted refresh token. By default,
+  // |revoke_all| is set to false and deletes account only from that given
+  // device.
+  RemoveAccount(Account account, bool revoke_all) => (AuthErr status);
 
   // Get a |TokenProviderFactory| associated with an |account_id|. It is used
   // by the Framework to provide a specialized instances of |TokenProvider| to
