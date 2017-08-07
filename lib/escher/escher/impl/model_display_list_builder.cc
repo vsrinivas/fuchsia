@@ -142,7 +142,13 @@ void ModelDisplayListBuilder::AddClipperObject(const Object& object) {
   pipeline_spec_.is_clippee = clip_depth_ > 0;
   pipeline_spec_.clipper_state =
       ModelPipelineSpec::ClipperState::kBeginClipChildren;
-  pipeline_spec_.has_material = !!object.material();
+  if (object.material()) {
+    pipeline_spec_.has_material = true;
+    pipeline_spec_.is_opaque = object.material()->opaque();
+  } else {
+    pipeline_spec_.has_material = false;
+    pipeline_spec_.is_opaque = false;
+  }
   item.pipeline = pipeline_cache_->GetPipeline(pipeline_spec_);
   item.stencil_reference = clip_depth_;
 
