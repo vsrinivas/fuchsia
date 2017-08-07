@@ -226,7 +226,11 @@ mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koi
     if (!iopk)
         return MX_ERR_NO_MEMORY;
 
-    return port_->Queue(iopk, 0, 0);
+    mx_status_t status = port_->Queue(iopk, 0, 0);
+    if (status != MX_OK) {
+        delete iopk;
+    }
+    return status;
 }
 
 mx_status_t ExceptionPort::SendPacket(ThreadDispatcher* thread, uint32_t type) {
