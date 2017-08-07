@@ -31,6 +31,10 @@ public:
     mx_status_t StopRingBuffer();
     void        ResetRingBuffer();
 
+    mx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state) const {
+        return GetPlugState(out_state, false);
+    }
+
     bool IsStreamBufChannelConnected() const { return IsChannelConnected(stream_ch_); }
     bool IsRingBufChannelConnected() const { return IsChannelConnected(rb_ch_); }
 
@@ -49,9 +53,8 @@ protected:
     friend class mxtl::unique_ptr<AudioDeviceStream>;
 
     static bool IsChannelConnected(const mx::channel& ch);
-
     mx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,
-                             bool enable_notify = false);
+                             bool enable_notify) const;
     void        DisablePlugNotifications();
 
     AudioDeviceStream(bool input, uint32_t dev_id);

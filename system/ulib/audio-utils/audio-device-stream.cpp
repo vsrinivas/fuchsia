@@ -274,7 +274,7 @@ mx_status_t AudioDeviceStream::DumpInfo() {
 }
 
 mx_status_t AudioDeviceStream::GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,
-                                            bool enable_notify) {
+                                            bool enable_notify) const {
     MX_DEBUG_ASSERT(out_state != nullptr);
     audio_stream_cmd_plug_detect_req req;
 
