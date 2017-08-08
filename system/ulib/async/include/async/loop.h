@@ -63,8 +63,7 @@ mx_status_t async_loop_create(const async_loop_config_t* config,
 
 // Shuts down the message loop, notifies handlers which asked to handle shutdown.
 // The message loop must not currently be running on any threads other than
-// those started by |async_loop_start_thread()| which this function will
-// terminate automatically.
+// those started by |async_loop_start_thread()| which this function will join.
 //
 // Does nothing if already shutting down.
 void async_loop_shutdown(async_t* async);
@@ -86,18 +85,30 @@ void async_loop_destroy(async_t* async);
 // Returns |MX_OK| if the dispatcher returns after one cycle.
 // Returns |MX_ERR_TIMED_OUT| if the deadline expired.
 // Returns |MX_ERR_CANCELED| if the loop quitted.
-// Returns |MX_ERR_BAD_STATE| if the loop shut down.
+// Returns |MX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
 mx_status_t async_loop_run(async_t* async, mx_time_t deadline, bool once);
 
 // Quits the message loop.
-// Active invocations of |async_loop_run()| will exit upon completion of
-// their current unit of work.  Subsequent calls to |async_loop_run()| will
-// return immediately until |async_loop_reset_quit()| is called.
+// Active invocations of |async_loop_run()| and threads started using
+// |async_loop_start_thread()| will eventually terminate upon completion of their
+// current unit of work.
+//
+// Subsequent calls to |async_loop_run()| or |async_loop_start_thread()|
+// will return immediately until |async_loop_reset_quit()| is called.
 void async_loop_quit(async_t* async);
 
 // Resets the quit state of the message loop so that it can be restarted
-// using |async_loop_run()|.  Does nothing if the loop has not been quitted.
-void async_loop_reset_quit(async_t* async);
+// using |async_loop_run()| or |async_loop_start_thread()|.
+//
+// This function must only be called when the message loop is not running.
+// The caller must ensure all active invocations of |async_loop_run()| and
+// threads started using |async_loop_start_thread()| have terminated before
+// resetting the quit state.
+//
+// Returns |MX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
+// Returns |MX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
+// the message loop is currently active on one or more threads.
+mx_status_t async_loop_reset_quit(async_t* async);
 
 // Returns the current state of the message loop.
 typedef enum {
@@ -114,6 +125,7 @@ async_loop_state_t async_loop_get_state(async_t* async);
 // If |out_thread| is not NULL, it is set to the new thread identifier.
 //
 // Returns |MX_OK| on success.
+// Returns |MX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
 // Returns |MX_ERR_NO_MEMORY| if allocation or thread creation failed.
 mx_status_t async_loop_start_thread(async_t* async, const char* name,
                                     thrd_t* out_thread);
@@ -147,8 +159,9 @@ public:
 
     // Shuts down the message loop, notifies handlers which asked to handle shutdown.
     // The message loop must not currently be running on any threads other than
-    // those started by |StartThread()| which this function will
-    // terminate automatically.
+    // those started by |StartThread()| which this function will join.
+    //
+    // Does nothing if already shutting down.
     void Shutdown();
 
     // Runs the message loop on the current thread.
@@ -156,25 +169,35 @@ public:
     // dispatcher.
     //
     // Dispatches events until the |deadline| expires or the loop is quitted.
-    // Use |ftl::TimePoint::Max()| to dispatch events indefinitely.
+    // Use |MX_TIME_INFINITE| to dispatch events indefinitely.
     //
     // If |once| is true, performs a single unit of work then returns.
     //
     // Returns |MX_OK| if the dispatcher returns after one cycle.
     // Returns |MX_ERR_TIMED_OUT| if the deadline expired.
     // Returns |MX_ERR_CANCELED| if the loop quitted.
-    // Returns |MX_ERR_BAD_STATE| if the loop shut down.
+    // Returns |MX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
     mx_status_t Run(mx_time_t deadline = MX_TIME_INFINITE, bool once = false);
 
     // Quits the message loop.
-    // Active invocations of |Run()| will exit upon completion of their
-    // current unit of work.  Subsequent calls to |Run()| will
-    // return immediately until |ResetQuit()| is called.
+    // Active invocations of |Run()| and threads started using |StartThread()|
+    // will eventually terminate upon completion of their current unit of work.
+    //
+    // Subsequent calls to |Run()| or |StartThread()| will return immediately
+    // until |ResetQuit()| is called.
     void Quit();
 
     // Resets the quit state of the message loop so that it can be restarted
-    // using |Run()|.  Does nothing if the loop has not been quitted.
-    void ResetQuit();
+    // using |Run()| or |StartThread()|.
+    //
+    // This function must only be called when the message loop is not running.
+    // The caller must ensure all active invocations of |Run()| and threads
+    // started using |StartThread()| have terminated before resetting the quit state.
+    //
+    // Returns |MX_OK| if the loop's state was |ASYNC_LOOP_RUNNABLE| or |ASYNC_LOOP_QUIT|.
+    // Returns |MX_ERR_BAD_STATE| if the loop's state was |ASYNC_LOOP_SHUTDOWN| or if
+    // the message loop is currently active on one or more threads.
+    mx_status_t ResetQuit();
 
     // Returns the current state of the message loop.
     async_loop_state_t GetState() const;
@@ -187,6 +210,10 @@ public:
     //
     // |name| is the desired name for the new thread, may be NULL.
     // If |out_thread| is not NULL, it is set to the new thread identifier.
+    //
+    // Returns |MX_OK| on success.
+    // Returns |MX_ERR_BAD_STATE| if the loop was shut down with |async_loop_shutdown()|.
+    // Returns |MX_ERR_NO_MEMORY| if allocation or thread creation failed.
     mx_status_t StartThread(const char* name = nullptr, thrd_t* out_thread = nullptr);
 
     // Blocks until all dispatch threads started with |StartThread()|

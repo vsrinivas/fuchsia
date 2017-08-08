@@ -99,6 +99,21 @@ protected:
     }
 };
 
+class ResetQuitTask : public TestTask {
+public:
+    ResetQuitTask(mx_time_t deadline = now())
+        : TestTask(deadline) {}
+
+    mx_status_t result = MX_ERR_INTERNAL;
+
+protected:
+    async_task_result_t Handle(async_t* async, mx_status_t status) override {
+        TestTask::Handle(async, status);
+        result = async_loop_reset_quit(async);
+        return ASYNC_TASK_FINISHED;
+    }
+};
+
 class RepeatingTask : public TestTask {
 public:
     RepeatingTask(mx_time_t deadline, mx_duration_t interval, uint32_t repeat_count)
@@ -165,7 +180,7 @@ bool c_api_basic_test() {
     async_loop_quit(async);
     EXPECT_EQ(ASYNC_LOOP_QUIT, async_loop_get_state(async), "quitting");
     async_loop_run(async, MX_TIME_INFINITE, false);
-    async_loop_reset_quit(async);
+    EXPECT_EQ(MX_OK, async_loop_reset_quit(async));
 
     thrd_t thread{};
     EXPECT_EQ(MX_OK, async_loop_start_thread(async, "name", &thread), "thread start");
@@ -218,20 +233,28 @@ bool quit_test() {
     EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "run returns immediately");
     EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "still quitting");
 
+    ResetQuitTask reset_quit_task;
+    EXPECT_EQ(MX_OK, reset_quit_task.Post(loop.async()), "can post tasks even after quit");
     QuitTask quit_task;
     EXPECT_EQ(MX_OK, quit_task.Post(loop.async()), "can post tasks even after quit");
 
-    loop.ResetQuit();
+    EXPECT_EQ(MX_OK, loop.ResetQuit());
     EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "not quitting after reset");
 
-    EXPECT_EQ(MX_OK, loop.Run(MX_TIME_INFINITE, true /*once*/), "run task");
-    EXPECT_EQ(1u, quit_task.run_count, "task ran");
+    EXPECT_EQ(MX_OK, loop.Run(MX_TIME_INFINITE, true /*once*/), "run tasks");
+
+    EXPECT_EQ(1u, reset_quit_task.run_count, "reset quit task ran");
+    EXPECT_EQ(MX_ERR_BAD_STATE, reset_quit_task.result, "can't reset quit while loop is running");
+
+    EXPECT_EQ(1u, quit_task.run_count, "quit task ran");
     EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitted");
-    EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "runs returns immediately");
+
+    EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "runs returns immediately when quitted");
 
     loop.Shutdown();
     EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState(), "shut down");
-    EXPECT_EQ(MX_ERR_BAD_STATE, loop.Run(), "run returns immediately");
+    EXPECT_EQ(MX_ERR_BAD_STATE, loop.Run(), "run returns immediately when shut down");
+    EXPECT_EQ(MX_ERR_BAD_STATE, loop.ResetQuit());
 
     END_TEST;
 }
@@ -453,7 +476,7 @@ bool task_test() {
     TestTask task7(start_time);
     EXPECT_EQ(MX_OK, task6.Post(loop.async()), "post 6");
     EXPECT_EQ(MX_OK, task7.Post(loop.async()), "post 7");
-    loop.ResetQuit();
+    EXPECT_EQ(MX_OK, loop.ResetQuit());
     EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "run loop");
     EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitting");
 
@@ -731,6 +754,8 @@ bool threads_shutdown() {
     EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, loop.GetState());
 
     loop.JoinThreads(); // should be a no-op
+
+    EXPECT_EQ(MX_ERR_BAD_STATE, loop.StartThread(), "can't start threads after shutdown");
 
     END_TEST;
 }

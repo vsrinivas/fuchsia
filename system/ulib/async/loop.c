@@ -353,14 +353,29 @@ static void async_loop_wake_threads(async_loop_t* loop) {
     }
 }
 
-void async_loop_reset_quit(async_t* async) {
+mx_status_t async_loop_reset_quit(async_t* async) {
     async_loop_t* loop = (async_loop_t*)async;
     MX_DEBUG_ASSERT(loop);
 
+    // Ensure that there are no active threads before resetting the quit state.
+    // This check is inherently racy but not dangerously so.  It's mainly a
+    // sanity check for client code so we can make a stronger statement about
+    // how |async_loop_reset_quit()| is supposed to be used.
+    uint32_t n = atomic_load_explicit(&loop->active_threads, memory_order_acquire);
+    if (n != 0)
+        return MX_ERR_BAD_STATE;
+
     async_loop_state_t expected_state = ASYNC_LOOP_QUIT;
-    atomic_compare_exchange_strong_explicit(&loop->state, &expected_state,
-                                            ASYNC_LOOP_RUNNABLE,
-                                            memory_order_acq_rel, memory_order_acquire);
+    if (atomic_compare_exchange_strong_explicit(&loop->state, &expected_state,
+                                                ASYNC_LOOP_RUNNABLE,
+                                                memory_order_acq_rel, memory_order_acquire)) {
+        return MX_OK;
+    }
+
+    async_loop_state_t state = atomic_load_explicit(&loop->state, memory_order_acquire);
+    if (state == ASYNC_LOOP_RUNNABLE)
+        return MX_OK;
+    return MX_ERR_BAD_STATE;
 }
 
 async_loop_state_t async_loop_get_state(async_t* async) {
@@ -561,6 +576,12 @@ static int async_loop_run_thread(void* data) {
 mx_status_t async_loop_start_thread(async_t* async, const char* name, thrd_t* out_thread) {
     async_loop_t* loop = (async_loop_t*)async;
     MX_DEBUG_ASSERT(loop);
+
+    // This check is inherently racy.  The client should not be racing shutdown
+    // with attemps to start new threads.  This is mainly a sanity check.
+    async_loop_state_t state = atomic_load_explicit(&loop->state, memory_order_acquire);
+    if (state == ASYNC_LOOP_SHUTDOWN)
+        return MX_ERR_BAD_STATE;
 
     thread_record_t* rec = calloc(1u, sizeof(thread_record_t));
     if (!rec)

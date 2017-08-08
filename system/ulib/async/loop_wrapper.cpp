@@ -29,8 +29,8 @@ void Loop::Quit() {
     async_loop_quit(async_);
 }
 
-void Loop::ResetQuit() {
-    async_loop_reset_quit(async_);
+mx_status_t Loop::ResetQuit() {
+    return async_loop_reset_quit(async_);
 }
 
 async_loop_state_t Loop::GetState() const {
