@@ -35,6 +35,10 @@
     {
       "name": "media_util_tests",
       "exec": "/system/test/media_util_tests"
+    },
+    {
+      "name": "power_manager_tests",
+      "exec": "/system/bin/report_result /system/test/power_manager_test"
     }
   ]
 }
