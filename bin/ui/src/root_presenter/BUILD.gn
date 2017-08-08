@@ -28,4 +28,8 @@ executable("root_presenter") {
     "//lib/mtl",
   ]
   libs = [ "hid" ]
+
+  include_dirs = [ "//third_party/glm" ]
+
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
 }

@@ -4,6 +4,21 @@
 
 #include "apps/mozart/src/root_presenter/presentation.h"
 
+#include <cmath>
+
+#if defined(countof)
+// Workaround for compiler error due to Magenta defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway.
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
+#include <glm/gtc/type_ptr.hpp>
+
 #include "application/lib/app/connect.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
@@ -96,13 +111,11 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
   FTL_DCHECK(!display_info_);
   FTL_DCHECK(display_info);
   display_info_ = std::move(display_info);
-  logical_width_ =
-      display_info_->physical_width / display_info_->device_pixel_ratio;
-  logical_height_ =
-      display_info_->physical_height / display_info_->device_pixel_ratio;
-  scene_.SetScale(display_info_->device_pixel_ratio,
-                  display_info_->device_pixel_ratio, 1.f);
+  device_pixel_ratio_ = display_info_->device_pixel_ratio;
+  logical_width_ = display_info_->physical_width / device_pixel_ratio_;
+  logical_height_ = display_info_->physical_height / device_pixel_ratio_;
 
+  scene_.SetScale(device_pixel_ratio_, device_pixel_ratio_, 1.f);
   layer_.SetSize(static_cast<float>(display_info_->physical_width),
                  static_cast<float>(display_info_->physical_height));
 
@@ -155,8 +168,7 @@ void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
                             std::move(root_view_host_import_token_));
   auto root_properties = mozart::ViewProperties::New();
   root_properties->display_metrics = mozart::DisplayMetrics::New();
-  root_properties->display_metrics->device_pixel_ratio =
-      display_info_->device_pixel_ratio;
+  root_properties->display_metrics->device_pixel_ratio = device_pixel_ratio_;
   root_properties->view_layout = mozart::ViewLayout::New();
   root_properties->view_layout->size = mozart::SizeF::New();
   root_properties->view_layout->size->width = logical_width_;
@@ -255,6 +267,15 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
         }
       }
     }
+  } else if (event->is_keyboard()) {
+    // Alt-PrtSc toggles between perspective and orthographic view of the stage.
+    const mozart::KeyboardEventPtr& kbd = event->get_keyboard();
+    if ((kbd->modifiers & mozart::kModifierAlt) &&
+        kbd->phase == mozart::KeyboardEvent::Phase::PRESSED &&
+        kbd->code_point == 0 && kbd->hid_usage == 70) {
+      StartAnimation();
+      invalidate = true;
+    }
   }
 
   if (invalidate) {
@@ -263,6 +284,56 @@ void Presentation::OnEvent(mozart::InputEventPtr event) {
 
   if (input_dispatcher_)
     input_dispatcher_->DispatchEvent(std::move(event));
+}
+
+void Presentation::StartAnimation() {
+  if (is_animating_)
+    return;
+
+  animation_start_time_ = mx_time_get(MX_CLOCK_MONOTONIC);
+  is_animating_ = true;
+  use_perspective_ = !use_perspective_;
+  UpdateAnimation(animation_start_time_);
+}
+
+bool Presentation::UpdateAnimation(uint64_t presentation_time) {
+  if (!is_animating_) {
+    return false;
+  }
+
+  const float half_width = logical_width_ * device_pixel_ratio_ * 0.5f;
+  const float half_height = logical_height_ * device_pixel_ratio_ * 0.5f;
+  // TODO: kOrthoEyeDist and the values in |eye_end| below are somewhat
+  // dependent on the screen size, but also the depth of the stage's viewing
+  // volume (currently hardcoded in the SceneManager implementation to 1000, and
+  // not available outside).  Since this is a demo feature, it seems OK for now.
+  constexpr float kOrthoEyeDist = 5000;
+  const float fovy = 2.f * atan(half_height / kOrthoEyeDist);
+  glm::vec3 eye_start(half_width, half_height, kOrthoEyeDist);
+  glm::vec3 eye_end(0, 10000, 7000);
+
+  double secs = static_cast<double>(presentation_time - animation_start_time_) /
+                1'000'000'000;
+  constexpr double kAnimationDuration = 1.3;
+  float param = secs / kAnimationDuration;
+  if (param >= 1.f) {
+    param = 1.f;
+    is_animating_ = false;
+  }
+  if (!use_perspective_) {
+    param = 1.f - param;  // Animating back to regular position.
+  }
+
+  glm::vec3 eye =
+      glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
+
+  // Always look at the middle of the stage.
+  float target[3] = {half_width, half_height, 0};
+  float up[3] = {0, 1, 0};
+
+  camera_.SetProjection(glm::value_ptr(eye), target, up, fovy);
+
+  return true;
 }
 
 void Presentation::OnChildAttached(uint32_t child_key,
@@ -317,7 +388,16 @@ void Presentation::PresentScene() {
     }
   }
 
-  session_.Present(0, [](mozart2::PresentationInfoPtr info) {});
+  session_.Present(0, [weak = weak_factory_.GetWeakPtr()](
+                          mozart2::PresentationInfoPtr info) {
+    if (auto self = weak.get()) {
+      uint64_t next_presentation_time =
+          info->presentation_time + info->presentation_interval;
+      if (self->UpdateAnimation(next_presentation_time)) {
+        self->PresentScene();
+      }
+    }
+  });
 }
 
 void Presentation::Shutdown() {

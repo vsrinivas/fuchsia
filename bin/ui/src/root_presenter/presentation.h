@@ -80,6 +80,9 @@ class Presentation : private mozart::ViewTreeListener,
   void PresentScene();
   void Shutdown();
 
+  void StartAnimation();
+  bool UpdateAnimation(uint64_t presentation_time);
+
   mozart::ViewManager* const view_manager_;
   mozart2::SceneManager* const scene_manager_;
 
@@ -103,6 +106,7 @@ class Presentation : private mozart::ViewTreeListener,
   mozart2::DisplayInfoPtr display_info_;
   float logical_width_ = 0.f;
   float logical_height_ = 0.f;
+  float device_pixel_ratio_ = 1.f;
 
   mozart::ViewPtr root_view_;
 
@@ -119,6 +123,10 @@ class Presentation : private mozart::ViewTreeListener,
   mozart::ViewContainerPtr tree_container_;
   mozart::ViewContainerPtr root_container_;
   mozart::InputDispatcherPtr input_dispatcher_;
+
+  bool is_animating_ = false;
+  bool use_perspective_ = false;
+  uint64_t animation_start_time_ = 0;
 
   struct CursorState {
     bool created;
