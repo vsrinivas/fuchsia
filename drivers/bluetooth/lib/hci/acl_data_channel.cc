@@ -129,6 +129,37 @@ bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet, Connection::LinkTy
   return true;
 }
 
+bool ACLDataChannel::SendPackets(mxtl::DoublyLinkedList<ACLDataPacketPtr> packets,
+                                 Connection::LinkType ll_type) {
+  if (!is_initialized_) {
+    FTL_VLOG(1) << "hci: ACLDataChannel: Cannot send packets while uninitialized";
+    return false;
+  }
+
+  if (packets.is_empty()) {
+    FTL_VLOG(1) << "hci: ACLDataChannel: No packets to send!";
+    return false;
+  }
+
+  // Make sure that all packets are within the MTU.
+  for (const auto& packet : packets) {
+    if (packet.view().payload_size() > GetBufferMTU(ll_type)) {
+      FTL_LOG(ERROR) << "ACL data packet too large!";
+      return false;
+    }
+  }
+
+  std::lock_guard<std::mutex> lock(send_mutex_);
+
+  while (!packets.is_empty()) {
+    send_queue_.emplace_back(QueuedDataPacket(ll_type, packets.pop_front()));
+  }
+
+  TrySendNextQueuedPacketsLocked();
+
+  return true;
+}
+
 const DataBufferInfo& ACLDataChannel::GetBufferInfo() const {
   return bredr_buffer_info_;
 }

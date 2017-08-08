@@ -440,6 +440,124 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
   EXPECT_EQ(kExpectedTotalPacketCount, total_packet_count);
 }
 
+TEST_F(ACLDataChannelTest, SendPacketsFailure) {
+  constexpr size_t kMaxMTU = 5;
+  InitializeACLDataChannel(DataBufferInfo(kMaxMTU, 100), DataBufferInfo());
+
+  // Empty packet list.
+  EXPECT_FALSE(acl_data_channel()->SendPackets(mxtl::DoublyLinkedList<ACLDataPacketPtr>(),
+                                               Connection::LinkType::kACL));
+
+  // Packet exceeds MTU
+  mxtl::DoublyLinkedList<ACLDataPacketPtr> packets;
+  packets.push_back(ACLDataPacket::New(0x0001, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, kMaxMTU + 1));
+  EXPECT_FALSE(acl_data_channel()->SendPackets(std::move(packets), Connection::LinkType::kACL));
+}
+
+// Tests sending multiple packets in a single call.
+TEST_F(ACLDataChannelTest, SendPackets) {
+  constexpr int kExpectedPacketCount = 5;
+  InitializeACLDataChannel(DataBufferInfo(1024, 100), DataBufferInfo());
+
+  bool pass = true;
+  int seq_no = 0;
+  auto data_cb = [&pass, &seq_no](const common::ByteBuffer& bytes) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    common::PacketView<hci::ACLDataHeader> packet(&bytes, bytes.size() - sizeof(ACLDataHeader));
+    EXPECT_EQ(1u, packet.payload_size());
+
+    int cur_no = packet.payload_bytes()[0];
+    if (cur_no != seq_no + 1) {
+      pass = false;
+      mtl::MessageLoop::GetCurrent()->QuitNow();
+      return;
+    }
+
+    seq_no = cur_no;
+
+    if (seq_no == kExpectedPacketCount) {
+      mtl::MessageLoop::GetCurrent()->QuitNow();
+      return;
+    }
+  };
+  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+
+  mxtl::DoublyLinkedList<ACLDataPacketPtr> packets;
+  for (int i = 1; i <= kExpectedPacketCount; ++i) {
+    auto packet = ACLDataPacket::New(1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                     ACLBroadcastFlag::kPointToPoint, 1);
+    packet->mutable_view()->mutable_payload_bytes()[0] = i;
+    packets.push_back(std::move(packet));
+  }
+
+  EXPECT_TRUE(acl_data_channel()->SendPackets(std::move(packets), Connection::LinkType::kLE));
+
+  RunMessageLoop();
+
+  EXPECT_TRUE(pass);
+  EXPECT_EQ(kExpectedPacketCount, seq_no);
+}
+
+// Test sending batches of packets atomically across multiple threads.
+TEST_F(ACLDataChannelTest, SendPacketsAtomically) {
+  constexpr size_t kThreadCount = 10;
+  constexpr size_t kPacketsPerThread = 10;
+  constexpr size_t kExpectedPacketCount = kThreadCount * kPacketsPerThread;
+
+  InitializeACLDataChannel(DataBufferInfo(1024, 100), DataBufferInfo());
+
+  std::vector<std::unique_ptr<common::ByteBuffer>> received;
+  auto data_cb = [&received](const common::ByteBuffer& bytes) {
+    FTL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
+    received.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
+    if (received.size() == kExpectedPacketCount) mtl::MessageLoop::GetCurrent()->QuitNow();
+  };
+  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+
+  // Each thread will send a sequence of kPacketsPerThread packets. The payload of each packet
+  // encodes an integer
+  mxtl::DoublyLinkedList<ACLDataPacketPtr> packets[kThreadCount];
+  for (size_t i = 0; i < kThreadCount; ++i) {
+    for (size_t j = 1; j <= kPacketsPerThread; ++j) {
+      auto packet = ACLDataPacket::New(1, ACLPacketBoundaryFlag::kFirstNonFlushable,
+                                       ACLBroadcastFlag::kPointToPoint, 1);
+      packet->mutable_view()->mutable_payload_bytes()[0] = j;
+      packets[i].push_back(std::move(packet));
+    }
+  }
+
+  // Send each packet sequence on a different thread and make sure that each sequence arrives
+  // atomically.
+  std::thread threads[kThreadCount];
+  message_loop()->task_runner()->PostTask([this, &packets, &threads] {
+    auto thread_func = [&packets, this](size_t i) {
+      EXPECT_TRUE(
+          acl_data_channel()->SendPackets(std::move(packets[i]), Connection::LinkType::kLE));
+    };
+
+    for (size_t i = 0; i < kThreadCount; ++i) {
+      threads[i] = std::thread(thread_func, i);
+    }
+  });
+
+  RunMessageLoop();
+
+  for (size_t i = 0; i < kThreadCount; ++i) {
+    if (threads[i].joinable()) threads[i].join();
+  }
+
+  EXPECT_EQ(kExpectedPacketCount, received.size());
+
+  // Verify that the contents of |received| are in the correct sequence.
+  for (size_t i = 0; i < kExpectedPacketCount; ++i) {
+    common::PacketView<hci::ACLDataHeader> packet(received[i].get(),
+                                                  received[i]->size() - sizeof(ACLDataHeader));
+    EXPECT_EQ(1u, packet.payload_size());
+    EXPECT_EQ((i % kPacketsPerThread) + 1, packet.payload_bytes()[0]);
+  }
+}
+
 TEST_F(ACLDataChannelTest, ReceiveData) {
   constexpr size_t kMaxMTU = 5;
   constexpr size_t kMaxNumPackets = 5;

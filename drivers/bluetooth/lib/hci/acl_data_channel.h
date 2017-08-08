@@ -102,6 +102,14 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   // |data_packet| must represent a valid ACL data packet.
   bool SendPacket(ACLDataPacketPtr data_packet, Connection::LinkType ll_type);
 
+  // Queues the given list of ACL data packets to be sent to the controller. The behavior is
+  // identical to that of SendPacket() with the guarantee that all packets that are in |packets| are
+  // queued atomically.
+  //
+  // Takes ownership of the contents of |packets|. Returns false if |packets| contains an element
+  // that exceeds the MTU for |ll_type| or it is empty.
+  bool SendPackets(mxtl::DoublyLinkedList<ACLDataPacketPtr> packets, Connection::LinkType ll_type);
+
   // Returns the underlying channel handle.
   const mx::channel& channel() const { return channel_; }
 
