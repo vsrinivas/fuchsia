@@ -82,7 +82,7 @@ mx_status_t block_read(const block_t* block, uint16_t port, mx_vcpu_io_t* vcpu_i
         virtio_blk_config_t config;
         memset(&config, 0, sizeof(virtio_blk_config_t));
         config.capacity = block->size / SECTOR_SIZE;
-        config.blk_size = PAGE_SIZE;
+        config.blk_size = SECTOR_SIZE;
 
         uint8_t* buf = (uint8_t*)&config;
         vcpu_io->access_size = 1;
