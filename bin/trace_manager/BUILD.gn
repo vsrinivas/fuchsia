@@ -77,6 +77,16 @@ package("trace_tests") {
   ]
 }
 
+package("benchmark_example") {
+  deps = [
+    "src/benchmark_example",
+  ]
+
+  binaries = [ {
+        name = "benchmark_example"
+      } ]
+}
+
 package("trace") {
   deps = [
     "src/trace",

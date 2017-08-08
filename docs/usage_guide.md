@@ -73,56 +73,66 @@ The file supports the following top level-parameters:
 ### Benchmarking
 
 Performance benchmarks can be defined in the tracing specification file as
-measurements to be performed on the captured trace events.
+measurements to be performed on the captured trace events.  A example can be
+found in [src/benchmark_example](../src/benchmark_example/).
 
-Example:
+[benchmark_example.json](../src/benchmark_example/benchmark_example.json) can
+be broken up into three sections.
 
-```
+The first section defines the top level parameters listed above:
+```{json}
 {
-  "app": "ledger_benchmark_put",
-  "args": ["--entry-count=100", "--value-size=1000"],
-  "categories": ["benchmark", "ledger"],
+  "app": "benchmark_example",
+  "args": [],
+  "categories": ["benchmark"],
   "measure": [
-    {
-      "type": "duration",
-      "split_samples_at": [1, 50],
-      "event_name": "put",
-      "event_category": "benchmark"
-    },
-    {
-      "type": "time_between",
-      "first_event_name": "initialized",
-      "first_event_category": "ledger",
-      "second_event_name": "commit_download",
-      "second_event_category": "ledger",
-      "second_event_anchor": "begin"
-    }
+    ...
   ]
 }
 ```
 
+The second section defines a `duration` measurement:
+```{json}
+    {
+      "type": "duration",
+      "split_samples_at": [1, 50],
+      "event_name": "example",
+      "event_category": "benchmark"
+    },
+```
 A `duration` measurement targets a single trace event and computes the
 duration of its occurences. The target trace event can be recorded as a
 duration or as an async event. Takes arguments: `event_name`,
 `event_category`.
 
+The third section defines a `time_between` measurement:
+```{json}
+    {
+      "type": "time_between",
+      "first_event_name": "task_end",
+      "first_event_category": "benchmark",
+      "second_event_name": "task_start",
+      "second_event_category": "benchmark"
+    }
+```
+
 A `time_between` measurement targets two trace events with the specified
 anchors (either the beginning or the end of the events) and computes the time
-between the consecutive occurences of the two. The target events can be
+between the consecutive occurrences of the two. The target events can be
 "duration", "async" or "instant" (in which case the anchor doesn't matter).
 Takes arguments: `first_event_name`, `first_event_category`,
 `first_event_anchor`, `second_event_name`, `second_event_category`,
 `second_event_anchor`.
 
 In the example above the `time_between` measurement captures the time between
-the instant event "initialized" and the beginning of the duration event
-"commit_download".
+the two instant events and measures the time between the end of one task and
+the beginning of another.
 
 Both `duration` and `time_between` measurements can optionally group the
 recorded samples into consecutive ranges, splitting the samples at the given
 instances of the recorded events and reporting the results of each group
 separately. In order to achieve that, pass a strictly increasing list of
-zero-based numbers denoting the occurences at which samples must be split as
+zero-based numbers denoting the occurrences at which samples must be split as
 `split_samples_at`.
 
 For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
