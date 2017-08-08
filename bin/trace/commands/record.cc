@@ -223,7 +223,7 @@ Command::Info Record::Describe() {
       "record",
       "starts tracing and records data",
       {{"spec-file=[none]", "Tracing specification file"},
-       {"output-file=[/tmp/trace.json]", "Trace data is stored in this file"},
+       {"output-file=[/data/trace.json]", "Trace data is stored in this file"},
        {"duration=[10s]",
         "Trace will be active for this long after the session has been "
         "started"},

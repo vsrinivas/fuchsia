@@ -36,7 +36,7 @@ class Record : public CommandWithTraceController {
     bool detach = false;
     bool decouple = false;
     uint32_t buffer_size_megabytes_hint = 4;
-    std::string output_file_name = "/tmp/trace.json";
+    std::string output_file_name = "/data/trace.json";
     measure::Measurements measurements;
     bool upload_results = false;
     UploadMetadata upload_metadata;
