@@ -7,6 +7,8 @@
 # cannot be built from sources in the Fuchsia tree AND cannot be installed via
 # "cargo install"...
 
+set -e
+
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
@@ -20,6 +22,8 @@ readonly CARGO="$RUST_BASE/bin/cargo"
 
 export PATH="$PATH:$ROOT_DIR/buildtools/cmake/bin"
 export RUSTC="$RUST_BASE/bin/rustc"
+export CARGO_TARGET_DIR="$ROOT_DIR/out/cargo-vendor"
 
+mkdir -p $CARGO_TARGET_DIR
 cd "$ROOT_DIR/third_party/rust-crates/manual/cargo-vendor"
 $CARGO build

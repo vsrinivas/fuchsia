@@ -131,11 +131,18 @@ def main():
     parser = argparse.ArgumentParser("Updates third-party Rust crates")
     parser.add_argument("--cargo-vendor",
                         help="Path to the cargo-vendor command",
-                        required=True)
+                        default=os.path.join(paths.FUCHSIA_ROOT, "out",
+                                             "cargo-vendor", "debug",
+                                             "cargo-vendor"))
     parser.add_argument("--debug",
                         help="Debug mode",
                         action="store_true")
     args = parser.parse_args()
+
+    if not os.path.isfile(args.cargo_vendor):
+        print("!!! No cargo-vendor binary at %s !!!" % args.cargo_vendor)
+        print("You might need to run //scripts/build_cargo_vendor.sh first.")
+        return 1
 
     # Use the root of the tree as the working directory. Ideally a temporary
     # directory would be used, but unfortunately this would break the flow as
