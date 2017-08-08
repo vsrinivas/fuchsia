@@ -88,25 +88,35 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
       done();
     }
 
-    // |this| must be deleted after the callbacks, because otherwise
-    // the callback for ModuleController::Stop() cannot be invoked
-    // anymore.
+    // |this| must be deleted after the callbacks so that the |done()| calls
+    // above can be dispatched while the bindings still exist in case they are
+    // FIDL method callbacks.
+    // Destructing |this| will delete |module_application_|, which will kill the
+    // related application if it's still running.
+    // TODO(jimbe) This line needs review if (someday) we add support in
+    // Modular for multi-tenancy of Modules in ELF executables.
     delete this;
   };
 
   // At this point, it's no longer an error if the module closes its
   // connection, or the application exits.
   module_application_.set_connection_error_handler(nullptr);
-  module_.set_connection_error_handler(nullptr);
 
   // If the module was UNLINKED, stop it without a delay. Otherwise
   // call Module.Stop(), but also schedule a timeout in case it
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
+    module_.set_connection_error_handler(nullptr);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
-
   } else {
-    module_->Stop(cont);
+    // The contract for Stop() is that the Application will be killed when
+    // the Module's handle is closed.
+    module_.set_connection_error_handler(cont);
+
+    // TODO(jimbe) Remove the lambda parameter to Stop(), which is no
+    // longer used. [FW-265] Expected to happen as part of implementing the
+    // Lifecycle interface for namespaces.
+    module_->Stop([]{});
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         cont, kStoryTeardownTimeout);
   }

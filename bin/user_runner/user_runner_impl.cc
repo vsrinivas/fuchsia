@@ -46,7 +46,12 @@ namespace modular {
 template <>
 void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
     const std::function<void()>& done) {
-  service_.set_connection_error_handler(done);
+  // The LedgerRepositoryFactory service is not the primary service in the
+  // Ledger's executable (LedgerController is primary) and so we shouldn't use
+  // this handle to control the lifetime of that executable. Related to FW-265.
+  DetachApplicationController();
+  ServiceReset();
+  done();
 }
 
 namespace {
@@ -122,7 +127,7 @@ UserRunnerImpl::UserRunnerImpl(
       application_context_(application_context),
       test_(test),
       user_shell_context_binding_(this) {
-  binding_->set_connection_error_handler([this] { Terminate([] {}); });
+  binding_->set_connection_error_handler([this] { Terminate(); });
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
@@ -311,24 +316,19 @@ void UserRunnerImpl::Initialize(
       user_shell_context_binding_.NewBinding());
 }
 
-void UserRunnerImpl::Terminate(const TerminateCallback& done) {
+void UserRunnerImpl::Terminate() {
   FTL_LOG(INFO) << "UserRunner::Terminate()";
 
-  user_shell_->AppTerminate([this, done] {
+  user_shell_->AppTerminate([this] {
     // We teardown |story_provider_impl_| before |agent_runner_| because the
     // modules running in a story might freak out if agents they are connected
     // to go away while they are still running. On the other hand agents are
     // meant to outlive story lifetimes.
-    story_provider_impl_->Teardown([this, done] {
-      agent_runner_->Teardown([this, done] {
-        ledger_app_client_->AppTerminate([this, done] {
-          // First invoke done, finally post stop.
-          std::unique_ptr<fidl::Binding<UserRunner>> binding =
-              std::move(binding_);
-          done();
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
-
+    story_provider_impl_->Teardown([this] {
+      agent_runner_->Teardown([this] {
+        ledger_app_client_->AppTerminate([this] {
           FTL_LOG(INFO) << "UserRunner::Terminate(): done";
+          mtl::MessageLoop::GetCurrent()->QuitNow();
         });
       });
     });

@@ -341,8 +341,9 @@ class StoryControllerImpl::StopCall : Operation<> {
   void StopStoryShell() {
     // It StopCall runs on a story that's not running, there is no story shell.
     if (story_controller_impl_->story_shell_) {
-      story_controller_impl_->story_shell_->Terminate(
+      story_controller_impl_->story_shell_.set_connection_error_handler(
           [this] { StoryShellDown(); });
+      story_controller_impl_->story_shell_->Terminate();
     } else {
       StoryShellDown();
     }
@@ -450,7 +451,9 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
   }
 
   void Cont2(FlowToken flow) {
-    // Write the module data back, with module_stopped = true.
+    // Write the module data back, with module_stopped = true, which is a
+    // global state shared between machines to track when the module is
+    // explicitly stopped.
     module_data_->module_stopped = true;
     story_controller_impl_->story_storage_impl_->WriteModuleData(
         module_data_->Clone(), [this, flow] { Cont3(flow); });
@@ -468,11 +471,12 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
       story_controller_impl_->external_modules_.erase(i);
     }
 
-    // Teardown the module, which discards the module controller. Nothing right
-    // now prevents the parent module to call ModuleController.Stop() multiple
-    // times, and more than a single call might get through before the
-    // ModuleController connection get disconnected by Teardown(). So we
-    // tolerate if we don't have a ModuleControllerImpl for the module.
+    // Teardown the module, which discards the module controller. A parent
+    // module can call ModuleController.Stop() multiple times before the
+    // ModuleController connection gets disconnected by Teardown(). Therefore,
+    // this StopModuleCall Operation will cause the calls to be queued.
+    // The first Stop() will cause the ModuleController to be closed, and
+    // so subsequent Stop() attempts will not find a controller and will return.
     auto ii = std::find_if(
         story_controller_impl_->connections_.begin(),
         story_controller_impl_->connections_.end(),

@@ -69,17 +69,16 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   }
 
   // |DeviceShell|
-  void Terminate(const TerminateCallback& done) override {
+  void Terminate() override {
     if (settings_.test) {
-      modular::testing::Teardown([this, done] { Exit(done); });
+      modular::testing::Teardown([this] { Exit(); });
     } else {
-      Exit(done);
+      Exit();
     }
   }
 
-  void Exit(const TerminateCallback& done) {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    done();
+  void Exit() {
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   // |DeviceShell|

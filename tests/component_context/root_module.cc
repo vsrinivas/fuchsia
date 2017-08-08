@@ -21,14 +21,50 @@ namespace {
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
 constexpr ftl::TimeDelta kTimeout = ftl::TimeDelta::FromSeconds(15);
-// This is how long we wait before declare the story to be Done.
-constexpr ftl::TimeDelta kStoryDoneDelay = ftl::TimeDelta::FromSeconds(7);
 
 constexpr char kTest1Agent[] =
     "file:///system/apps/modular_tests/component_context_test_agent1";
 
 constexpr char kUnstoppableAgent[] =
     "file:///system/apps/modular_tests/component_context_unstoppable_agent";
+
+constexpr int kTotalSimultaneousTests = 2;
+
+// Execute a trigger after the counter reaches a particular value OR if the
+// count is canceled.
+class CounterTrigger {
+ public:
+  CounterTrigger(int count, std::function<void()> trigger)
+      : count_(count), trigger_(trigger) {}
+  void Step() {
+    if (!finished_) {
+      // If this CHECK triggers, then you've called Step() more times than
+      // you passed for |count| into the constructor.
+      FTL_CHECK(count_ > 0);
+      if (count_ && --count_ == 0) {
+        Finished();
+      }
+    }
+  }
+
+  // It's safe to call Cancel() at any time, even if the trigger has already
+  // executed.
+  void Cancel() { Finished(); }
+
+ private:
+  void Finished() {
+    if (!finished_) {
+      finished_ = true;
+      trigger_();
+    }
+  }
+
+  int count_;
+  const std::function<void()> trigger_;
+  bool finished_{};
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(CounterTrigger);
+};
 
 class ParentApp : modular::testing::ComponentBase<modular::Module> {
  public:
@@ -37,7 +73,10 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   }
 
  private:
-  ParentApp() { TestInit(__FILE__); }
+  ParentApp()
+      : steps_(kTotalSimultaneousTests, [this] { DeleteAndQuit([] {}); }) {
+    TestInit(__FILE__);
+  }
   ~ParentApp() override = default;
 
   // |Module|
@@ -58,33 +97,23 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
                                        agent1_controller.NewRequest());
     ConnectToService(agent1_services.get(), agent1_interface_.NewRequest());
 
-    modular::testing::GetStore()->Get(
-        "test_agent1_connected", [this](const fidl::String&) {
-          agent_connected_.Pass();
-          TestMessageQueue([this] {
-            TestAgentController([this] {
-              mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                  Protect([this] { module_context_->Done(); }),
-                  kStoryDoneDelay);
-            });
-          });
-        });
+    modular::testing::GetStore()->Get("test_agent1_connected",
+                                      [this](const fidl::String&) {
+                                        agent_connected_.Pass();
+                                        TestMessageQueue([this] {
+                                          TestAgentController(Protect([this] {
+                                            module_context_->Done();
+                                            steps_.Step();
+                                          }));
+                                        });
+                                      });
 
-    // Start an agent that will not stop of its own accord.
-    app::ServiceProviderPtr unstoppable_agent_services;
-    component_context_->ConnectToAgent(
-        kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
-        unstoppable_agent_controller_.NewRequest());
-
-    // After 500ms close the AgentController for the unstoppable agent.
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this] { unstoppable_agent_controller_.reset(); }),
-        ftl::TimeDelta::FromMilliseconds(500));
+    TestUnstoppableAgent(Protect([this] { steps_.Step(); }));
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        Protect([this] { DeleteAndQuit([] {}); }), kTimeout);
+        Protect([this] { steps_.Cancel(); }), kTimeout);
   }
 
   // Tests message queues. Calls |done_cb| when completed successfully.
@@ -96,9 +125,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
     // MessageQueueManager shouldn't send us anything just yet.
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-        msg_queue_.get(),
-        [this, done_cb, kTestMessage](const fidl::String& msg,
-                                      std::function<void()> ack) {
+        msg_queue_.get(), [this, done_cb, kTestMessage](const fidl::String& msg,
+                                                        std::function<void()> ack) {
           ack();
           // We only want one message.
           msg_receiver_.reset();
@@ -126,11 +154,32 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
                                       });
   }
 
+  // Start an agent that will not stop of its own accord.
+  void TestUnstoppableAgent(std::function<void()> done_cb) {
+    app::ServiceProviderPtr unstoppable_agent_services;
+    component_context_->ConnectToAgent(
+        kUnstoppableAgent, unstoppable_agent_services.NewRequest(),
+        unstoppable_agent_controller_.NewRequest());
+
+    // After 500ms close the AgentController for the unstoppable agent.
+    // TODO(jimbe) We don't check if the agent started running in the allotted
+    // time, so this test isn't reliable. We need to make a call to the agent
+    // and wait for a response.
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        Protect([this, done_cb] {
+          unstoppable_agent_controller_.reset();
+          done_cb();
+        }),
+        ftl::TimeDelta::FromMilliseconds(500));
+  }
+
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    DeleteAndQuit(done);
+    steps_.Cancel();
   }
+
+  CounterTrigger steps_;
 
   modular::ModuleContextPtr module_context_;
   modular::AgentControllerPtr agent1_controller;

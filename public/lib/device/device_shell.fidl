@@ -14,7 +14,7 @@ interface DeviceShell {
   // This method may be invoked by the device runner in reaction to an
   // invocation of DeviceShellContext.Shutdown(), or because of some other
   // condition such as the device being powered off.
-  Terminate() => ();
+  Terminate();
 
   // This method may be invoked by the device runner to request an
   // AuthenticationContext associated with |username|. |request| will then be

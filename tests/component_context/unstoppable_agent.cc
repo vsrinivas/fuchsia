@@ -50,8 +50,8 @@ class UnstoppableAgentApp : modular::testing::ComponentBase<modular::Agent> {
   modular::AgentContextPtr agent_context_;
   modular::ComponentContextPtr component_context_;
 
-  TestPoint initialized_{"Unstoppable module initialized"};
-  TestPoint stopped_{"Unstoppable module stopped"};
+  TestPoint initialized_{"Unstoppable agent initialized"};
+  TestPoint stopped_{"Unstoppable agent stopped"};
 };
 
 }  // namespace

@@ -56,9 +56,9 @@ class SuggestionTestUserShellApp
   }
 
   // |UserShell|
-  void Terminate(const TerminateCallback& done) override {
+  void Terminate() override {
     TEST_PASS("Suggestion test user shell terminated");
-    DeleteAndQuit(done);
+    DeleteAndQuit();
   };
 
   void StartStoryById(const fidl::String& story_id) {

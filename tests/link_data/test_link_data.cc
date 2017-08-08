@@ -102,10 +102,10 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to DONE state. Used to push the test
 // sequence forward when the test story is done.
-class StoryDoneWatcherImpl : modular::StoryWatcher {
+class StoryStateWatcherImpl : modular::StoryWatcher {
  public:
-  StoryDoneWatcherImpl() : binding_(this) {}
-  ~StoryDoneWatcherImpl() override = default;
+  StoryStateWatcherImpl() : binding_(this) {}
+  ~StoryStateWatcherImpl() override = default;
 
   // Registers itself as a watcher on the given story. Only one story at a time
   // can be watched.
@@ -116,17 +116,26 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
   // Deregisters itself from the watched story.
   void Reset() { binding_.Close(); }
 
-  // Sets the function where to continue when the story is observed to be done.
-  void Continue(std::function<void()> at) { continue_ = at; }
+  // Sets the function where to continue when the story is observed to be at
+  // a particular state.
+  void Continue(modular::StoryState state, std::function<void()> at) {
+    auto state_index = static_cast<unsigned int>(state);
+    if (continue_.size() <= state_index) {
+      continue_.resize(state_index+1);
+    }
+    continue_[state_index] = at;
+  }
 
  private:
   // |StoryWatcher|
   void OnStateChange(modular::StoryState state) override {
-    if (state != modular::StoryState::DONE) {
-      return;
+    auto state_index = static_cast<unsigned int>(state);
+    // TODO(jimbe) Need to investigate why we are getting two notifications for
+    // each state transition.
+    FTL_LOG(INFO) << "OnStateChange: " << state_index;
+    if (continue_.size() > state_index && continue_[state_index]) {
+      continue_[state_index]();
     }
-
-    continue_();
   }
 
   // |StoryWatcher|
@@ -139,10 +148,11 @@ class StoryDoneWatcherImpl : modular::StoryWatcher {
   }
 
   fidl::Binding<modular::StoryWatcher> binding_;
-  std::function<void()> continue_;
+  std::vector<std::function<void()>> continue_;
   modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
-  bool on_module_added_called_ = false;
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryDoneWatcherImpl);
+  bool on_module_added_called_{};
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StoryStateWatcherImpl);
 };
 
 // Tests the machinery that allows modules to coordinate through shared link
@@ -250,7 +260,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
         [this, round] { TestStory1_Cycle(round); });
     link_change_count_watcher_.Watch(&root_link_);
 
-    story_done_watcher_.Continue([this] {
+    story_state_watcher_.Continue(modular::StoryState::DONE, [this] {
       story_controller_->Stop([this] {
         TeardownStoryController();
         story1_run_.Pass();
@@ -260,7 +270,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
             [this] { user_shell_context_->Logout(); });
       });
     });
-    story_done_watcher_.Watch(&story_controller_);
+    story_state_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
@@ -280,34 +290,32 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
       story1_cycle2_.Pass();
     }
 
+    // When the story stops, we start it again.
+    story_state_watcher_.Continue(modular::StoryState::STOPPED, [this, round] {
+      story_state_watcher_.Continue(modular::StoryState::STOPPED, nullptr);
+      story_provider_->GetStoryInfo(
+          story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
+            FTL_CHECK(story_info);
+
+            // Can't use the StoryController here because we closed it
+            // in TeardownStoryController().
+            story_provider_->RunningStories(
+                [this, round](fidl::Array<fidl::String> story_ids) {
+                  auto n = count(story_ids.begin(), story_ids.end(),
+                                 story_info_->id);
+                  FTL_CHECK(n == 0);
+                  TestStory1_Run(round + 1);
+                });
+          });
+    });
+
     story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,
                                              modular::StoryState state) {
-      FTL_DCHECK(!story_info.is_null());
-      FTL_DCHECK(IsRunning(state));
+      FTL_CHECK(!story_info.is_null());
+      FTL_CHECK(IsRunning(state));
+
       story_controller_->Stop([this, round] {
         TeardownStoryController();
-
-        // When the story stops, we start it again.
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this, round] {
-              story_provider_->GetStoryInfo(
-                  story_info_->id,
-                  [this, round](modular::StoryInfoPtr story_info) {
-                    FTL_DCHECK(!story_info.is_null());
-
-                    // Can't use the StoryController here because we closed it
-                    // in TeardownStoryController().
-                    story_provider_->RunningStories(
-                        [this, round](fidl::Array<fidl::String> story_ids) {
-                          auto n = count(story_ids.begin(), story_ids.end(),
-                                         story_info_->id);
-                          FTL_DCHECK(n == 0);
-
-                          TestStory1_Run(round + 1);
-                        });
-                  });
-            },
-            ftl::TimeDelta::FromSeconds(2));
       });
     });
   }
@@ -315,13 +323,13 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   TestPoint terminate_{"Terminate"};
 
   // |UserShell|
-  void Terminate(const TerminateCallback& done) override {
+  void Terminate() override {
     terminate_.Pass();
-    DeleteAndQuit(done);
+    DeleteAndQuit();
   }
 
   void TeardownStoryController() {
-    story_done_watcher_.Reset();
+    story_state_watcher_.Reset();
     link_change_count_watcher_.Reset();
     story_controller_.reset();
     root_link_.reset();
@@ -329,14 +337,13 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   const Settings settings_;
 
-  StoryDoneWatcherImpl story_done_watcher_;
+  StoryStateWatcherImpl story_state_watcher_;
   LinkChangeCountWatcherImpl link_change_count_watcher_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::LinkPtr root_link_;
-  modular::LinkPtr user_shell_link_;
   modular::StoryInfoPtr story_info_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);

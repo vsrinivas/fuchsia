@@ -64,7 +64,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
 
   // |UserRunner|
-  void Terminate(const TerminateCallback& done) override;
+  void Terminate() override;
 
   // |UserShellContext|
   void GetAccount(const GetAccountCallback& callback) override;

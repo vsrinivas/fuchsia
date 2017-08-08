@@ -60,6 +60,7 @@ class _Module extends Module implements LinkWatcher {
     _linkWatcherBinding.close();
     _link.ctrl.close();
     callback();
+    _moduleBinding.close();
   }
 
   /// |LinkWatcher|

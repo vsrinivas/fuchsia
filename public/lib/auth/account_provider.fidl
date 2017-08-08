@@ -44,6 +44,11 @@ interface AccountProvider {
   // third party agents.
   GetTokenProviderFactory(string account_id,
                           TokenProviderFactory& request);
+
+  // This signals |AccountProvider| to teardown itself. After the
+  // AccountProvider responds by closing its handle, the caller may terminate
+  // the |AccountProvider| application if it hasn't already exited.
+  Terminate();
 };
 
 // Implemented by device runner and provided to AccountProvider.Initialize().

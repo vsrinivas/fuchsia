@@ -82,9 +82,8 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |UserShell|
-  void Terminate(const TerminateCallback& done) override {
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    done();
+  void Terminate() override {
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   };
 
   void Connect() {

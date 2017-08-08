@@ -60,6 +60,11 @@ class AppClientBase {
   // attempting graceful termination via |AppTerminate|.
   void SetAppErrorHandler(const std::function<void()>& error_handler);
 
+ protected:
+  // Some services' Ptr objects shouldn't control the lifetime of the
+  // executable.
+  void DetachApplicationController();
+
  private:
   // Service specific parts of the termination sequence.
   virtual void ServiceTerminate(const std::function<void()>& done);
@@ -87,8 +92,10 @@ class AppClient : public AppClientBase {
 
  private:
   void ServiceTerminate(const std::function<void()>& done) override {
+    // The service is expected to acknowledge the Terminate() request by
+    // closing its connection within the timeout set in AppTerminate().
     service_.set_connection_error_handler(done);
-    service_->Terminate(done);
+    service_->Terminate();
   }
 
   void ServiceReset() override { service_.reset(); }

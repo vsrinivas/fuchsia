@@ -80,13 +80,16 @@ void Store::AddCallback(Callback c) {
 }
 
 void Store::Stop() {
+  terminating_ = true;
   watcher_binding_.Close();
   link_.reset();
 }
 
 void Store::Notify(const fidl::String& json) {
   FTL_LOG(INFO) << "Store::Notify() " << module_name_;
-  ApplyLinkData(json.get());
+  if (!terminating_) {
+    ApplyLinkData(json.get());
+  }
 }
 
 modular_example::Counter Store::ParseCounterJson(
@@ -142,6 +145,8 @@ void Store::ApplyLinkData(const std::string& json) {
 }
 
 void Store::ModelChanged() {
+  // If this triggers, the calling function needs to check store.terminating().
+  FTL_CHECK(!terminating_);
   for (auto& c : callbacks_) {
     c();
   }

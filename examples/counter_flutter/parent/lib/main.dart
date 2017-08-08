@@ -67,7 +67,7 @@ class _ParentCounterModule extends Module implements LinkWatcher {
       InterfaceHandle<ModuleContext> moduleContextHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _log('Module.initialize()');
+    _log('_ParentCounterModule.initialize()');
 
     // A module is initialized with a ModuleContext and a Link.
     _moduleContext.ctrl.bind(moduleContextHandle);
@@ -104,15 +104,16 @@ class _ParentCounterModule extends Module implements LinkWatcher {
   /// |Module|
   @override
   void stop(void callback()) {
-    _log('Module.stop()');
+    _log('_ParentCounterModule.stop()');
 
-    // Do some clean up here.
     _linkWatcherBinding.close();
     _link.ctrl.close();
     _moduleContext.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+
+    _moduleBinding.close();
   }
 
   /// |LinkWatcher|

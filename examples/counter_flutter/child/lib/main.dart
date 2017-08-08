@@ -47,7 +47,7 @@ class _ChildCounterModule extends Module implements LinkWatcher {
       InterfaceHandle<ModuleContext> moduleContextHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _log('ModuleImpl.initialize()');
+    _log('_ChildCounterModule.initialize()');
 
     ModuleContextProxy moduleContext = new ModuleContextProxy()
       ..ctrl.bind(moduleContextHandle);
@@ -60,12 +60,14 @@ class _ChildCounterModule extends Module implements LinkWatcher {
   /// |Module|
   @override
   void stop(void callback()) {
-    _log('Module.stop()');
+    _log('_ChildCounterModule.stop()');
 
     _linkWatcherBinding.close();
     _link.ctrl.close();
 
     callback();
+
+    _moduleBinding.close();
   }
 
   /// |LinkWatcher|
@@ -128,9 +130,7 @@ class _AppState {
 class _HomeScreen extends StatefulWidget {
   _HomeScreen({Key key, _AppState state})
       : _state = state,
-        super(key: key) {
-    _log("HomeScreen()");
-  }
+        super(key: key);
 
   final _AppState _state;
 

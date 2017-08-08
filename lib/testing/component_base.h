@@ -66,17 +66,24 @@ class ComponentBase : protected SingleServiceApp<Component> {
     };
   }
 
-  // Delete alone is used to simulate the "unstoppable agent".
+  // Delete alone is used to simulate the "unstoppable agent"
   void Delete(const std::function<void()>& done) {
-    auto binding = Base::PassBinding();  // To invoke done() after delete this.
-    delete this;
-    modular::testing::Done(done);
+    modular::testing::Done([this, done] {
+      // It is safe to call "delete this" after "Base::PassBinding()" because
+      // the Framwork will never make a follow on call after calling
+      // Terminate().
+      auto binding = Base::PassBinding();  // To invoke done() after delete this.
+      delete this;
+      done();
+    });
   }
 
-  void DeleteAndQuit(const std::function<void()>& done) {
-    Delete([done] {
+  void DeleteAndQuit(const std::function<void()>& done = [] {}) {
+    modular::testing::Done([this, done] {
+      auto binding = Base::PassBinding();  // To invoke done() after delete this.
+      delete this;
       done();
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      mtl::MessageLoop::GetCurrent()->QuitNow();
     });
   }
 
@@ -114,15 +121,19 @@ class ComponentViewBase : protected SingleServiceViewApp<Component> {
   }
 
   void Delete(const std::function<void()>& done) {
-    auto binding = Base::PassBinding();  // To invoke done() after delete this.
-    delete this;
-    modular::testing::Done(done);
+    modular::testing::Done([this, done] {
+      auto binding = Base::PassBinding();  // To invoke done() after delete this.
+      delete this;
+      done();
+    });
   }
 
-  void DeleteAndQuit(const std::function<void()>& done) {
-    Delete([done] {
+  void DeleteAndQuit(const std::function<void()>& done = [] {}) {
+    modular::testing::Done([this, done] {
+      auto binding = Base::PassBinding();  // To invoke done() after delete this.
+      delete this;
       done();
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      mtl::MessageLoop::GetCurrent()->QuitNow();
     });
   }
 

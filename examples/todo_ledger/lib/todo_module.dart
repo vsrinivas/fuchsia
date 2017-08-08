@@ -94,13 +94,15 @@ class TodoModule extends Module implements PageWatcher {
   /// Implementation of Module.stop().
   @override
   void stop(void callback()) {
-    _log('TodoModule::stop()');
+    _log('TodoModule.stop()');
     _ledger.ctrl.close();
     _page.ctrl.close();
     _moduleContext.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+
+    _binding.close();
   }
 
   /// Implementation of PageWatcher.onChange().

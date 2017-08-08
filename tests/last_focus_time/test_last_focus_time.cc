@@ -7,23 +7,16 @@
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/testing/component_base.h"
-#include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -254,9 +247,9 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   TestPoint terminate_{"Terminate()"};
 
   // |UserShell|
-  void Terminate(const TerminateCallback& done) override {
+  void Terminate() override {
     terminate_.Pass();
-    DeleteAndQuit(done);
+    DeleteAndQuit();
   }
 
   modular::UserShellContextPtr user_shell_context_;

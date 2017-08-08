@@ -22,7 +22,7 @@ interface UserShell {
 
   // Signals UserShell to teardown itself. Upon response, the caller
   // may terminate the UserShell process if it hasn't done so already.
-  Terminate() => ();
+  Terminate();
 };
 
 // TODO(alhaad): There are some intelligence services that are individually

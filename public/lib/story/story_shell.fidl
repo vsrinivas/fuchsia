@@ -45,5 +45,5 @@ interface StoryShell {
   // Signals to the StoryShell to tear down itself. Upon response the
   // caller terminates the StoryShell process if it hasn't done so
   // already.
-  Terminate() => ();
+  Terminate();
 };

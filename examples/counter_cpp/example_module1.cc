@@ -24,7 +24,7 @@ namespace {
 constexpr float kBackgroundElevation = 0.f;
 constexpr float kSquareElevation = 8.f;
 constexpr int kTickRotationDegrees = 45;
-constexpr int kAnimationDelayInMs = 200;
+constexpr int kAnimationDelayInMs = 50;
 
 constexpr char kModuleName[] = "Module1Impl";
 
@@ -177,7 +177,6 @@ class Module1App : modular::SingleServiceViewApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     store_.Stop();
-    module_context_.reset();
     done();
   }
 
@@ -195,7 +194,7 @@ class Module1App : modular::SingleServiceViewApp<modular::Module> {
     ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr] {
-          if (!module_ptr.get()) {
+          if (!module_ptr.get() || store_.terminating()) {
             return;
           }
 

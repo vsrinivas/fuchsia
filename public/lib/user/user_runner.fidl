@@ -26,8 +26,7 @@ interface UserRunner {
 
   // This signals |UserRunner| to teardown itself. Upon response, the caller may
   // terminate the |UserRunner| process if it hasn't done so already.
-  Terminate() => ();
-
+  Terminate();
 };
 
 // This interface is provided by device runner to |UserRunner|.

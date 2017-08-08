@@ -68,10 +68,9 @@ class DevStoryShellApp
   }
 
   // |StoryShell|
-  void Terminate(const TerminateCallback& done) override {
+  void Terminate() override {
     FTL_LOG(INFO) << "StoryShell::Terminate()";
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    done();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void Connect() {

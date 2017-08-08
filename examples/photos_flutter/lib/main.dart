@@ -42,12 +42,12 @@ class ModuleImpl extends Module {
   /// Implementation of the Stop() => (); method.
   @override
   void stop(void callback()) {
-    _log('ModuleImpl::stop call');
-
-    // Do some clean up here.
+    _log('ModuleImpl.stop()');
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+
+    _binding.close();
   }
 }
 

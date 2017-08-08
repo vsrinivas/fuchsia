@@ -35,15 +35,6 @@
 
 namespace modular {
 
-// Template specializations for fidl services that don't have a Terminate()
-// method.
-
-template <>
-void AppClient<auth::AccountProvider>::ServiceTerminate(
-    const std::function<void()>& done) {
-  service_.set_connection_error_handler(done);
-}
-
 namespace {
 
 class Settings {
@@ -310,7 +301,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         device_shell_->AppTerminate([this] {
           FTL_DLOG(INFO) << "- DeviceShell down";
           FTL_LOG(INFO) << "Clean Shutdown";
-          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          mtl::MessageLoop::GetCurrent()->QuitNow();
         });
       });
     });

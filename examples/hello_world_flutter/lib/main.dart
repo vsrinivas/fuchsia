@@ -53,14 +53,15 @@ class ModuleImpl extends Module {
   /// Implementation of the Stop() => (); method.
   @override
   void stop(void callback()) {
-    _log('ModuleImpl::stop call');
+    _log('ModuleImpl.stop()');
 
-    // Do some clean up here.
     _moduleContext.ctrl.close();
     _link.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+
+    _binding.close();
   }
 }
 

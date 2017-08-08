@@ -55,12 +55,12 @@ class TodoModule extends Module {
   /// Implementation of the Stop() => (); method.
   @override
   void stop(void callback()) {
-    _log('TodoModule::stop()');
-
-    // Do some clean up here.
+    _log('TodoModule.stop()');
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+
+    _binding.close();
   }
 }
 

@@ -260,9 +260,9 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   TestPoint terminate_{"Terminate()"};
 
   // |UserShell|
-  void Terminate(const TerminateCallback& done) override {
+  void Terminate() override {
     terminate_.Pass();
-    DeleteAndQuit(done);
+    DeleteAndQuit();
   }
 
   modular::UserShellContextPtr user_shell_context_;

@@ -24,7 +24,6 @@
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "apps/web_runner/services/web_view.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/command_line.h"
@@ -35,7 +34,6 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/join_strings.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/ftl/time/time_point.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -395,6 +393,9 @@ class OAuthTokenManagerApp : AccountProvider {
   // |AccountProvider|
   void Initialize(
       fidl::InterfaceHandle<AccountProviderContext> provider) override;
+
+  // |AccountProvider|
+  void Terminate() override;
 
   // |AccountProvider|
   void AddAccount(IdentityProvider identity_provider,
@@ -1474,6 +1475,11 @@ void OAuthTokenManagerApp::Initialize(
     fidl::InterfaceHandle<AccountProviderContext> provider) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::Initialize()";
   account_provider_context_.Bind(std::move(provider));
+}
+
+void OAuthTokenManagerApp::Terminate() {
+  FTL_LOG(INFO) << "OAuthTokenManagerApp::Terminate()";
+  mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 // TODO(alhaad): Check if account id already exists.
