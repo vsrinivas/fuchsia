@@ -83,9 +83,14 @@ class Service : private mtl::MessageLoopHandler {
           socklen_t peer_addr_len = sizeof(peer_addr);
           int conn = accept(sock_, (struct sockaddr*)&peer_addr, &peer_addr_len);
           if (conn < 0) {
-            FTL_LOG(ERROR) << "Failed to accept: " << strerror(errno);
-            // Wait for another connection.
-            Wait();
+            if (errno == EPIPE) {
+              FTL_LOG(ERROR) << "The netstack died. Terminating.";
+              exit(1);
+            } else {
+              FTL_LOG(ERROR) << "Failed to accept: " << strerror(errno);
+              // Wait for another connection.
+              Wait();
+            }
             return;
           }
           std::string peer_name = "unknown";
