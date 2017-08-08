@@ -53,6 +53,7 @@ $dartanalyzer \\
   with open(analyzer_file, 'w') as file:
       file.write(script_template.substitute(
           args.__dict__,
+          package_name = package_name,
           options_argument = '--options='+args.options if args.options else ''))
   permissions = (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |
                  stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP |
