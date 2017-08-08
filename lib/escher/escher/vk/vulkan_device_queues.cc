@@ -33,10 +33,10 @@ VulkanDeviceQueues::ProcAddrs::ProcAddrs(
   GET_DEVICE_PROC_ADDR(GetSwapchainImagesKHR);
   GET_DEVICE_PROC_ADDR(AcquireNextImageKHR);
   GET_DEVICE_PROC_ADDR(QueuePresentKHR);
-  if (extension_names.find(VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) !=
+  if (extension_names.find(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) !=
       extension_names.end()) {
-    GET_DEVICE_PROC_ADDR(ImportSemaphoreFdKHX);
-    GET_DEVICE_PROC_ADDR(GetSemaphoreFdKHX);
+    GET_DEVICE_PROC_ADDR(ImportSemaphoreFdKHR);
+    GET_DEVICE_PROC_ADDR(GetSemaphoreFdKHR);
   }
 }
 

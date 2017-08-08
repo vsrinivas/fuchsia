@@ -247,16 +247,9 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       // TODO: investigate whether there are performance benefits to providing
       // a less-conservative mask.
       dst_stage_mask =
-          vk::PipelineStageFlagBits::eVertexShader |
-          vk::PipelineStageFlagBits::eTessellationControlShader |
-          vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-          vk::PipelineStageFlagBits::eGeometryShader |
-          vk::PipelineStageFlagBits::eFragmentShader;
-
-      if ((dst_stage_mask & pipeline_stage_mask_) == vk::PipelineStageFlags()) {
-        // We must be on a queue that doesn't support graphics operations.
-        dst_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
-      }
+          (pipeline_stage_mask_ & vk::PipelineStageFlagBits::eAllCommands)
+              ? vk::PipelineStageFlagBits::eAllCommands
+              : vk::PipelineStageFlagBits::eTopOfPipe;
       break;
     case vk::ImageLayout::eTransferDstOptimal:
       barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
