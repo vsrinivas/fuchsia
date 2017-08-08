@@ -16,6 +16,7 @@ using std::vector;
 bool is_identifier_keyword(const string& iden) {
     if (iden == "syscall" ||
         iden == "returns" ||
+        iden == "optional" ||
         iden == "IN" || iden == "OUT" || iden == "INOUT") {
         return true;
     }

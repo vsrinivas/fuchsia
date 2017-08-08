@@ -109,7 +109,7 @@ syscall handle_replace
 
 syscall object_wait_one blocking
     (handle: mx_handle_t, waitfor: mx_signals_t, deadline: mx_time_t)
-    returns (mx_status_t, observed: mx_signals_t);
+    returns (mx_status_t, observed: mx_signals_t optional);
 
 syscall object_wait_many blocking
     (items: mx_wait_item_t[count] INOUT, count: uint32_t, deadline: mx_time_t)
@@ -147,7 +147,7 @@ syscall object_get_cookie
 syscall object_get_info
     (handle: mx_handle_t, topic: uint32_t,
         buffer: any[buffer_size] OUT, buffer_size: size_t)
-    returns (mx_status_t, actual_count: size_t, avail_count: size_t);
+    returns (mx_status_t, actual_count: size_t optional, avail_count: size_t optional);
 
 syscall object_get_child
     (handle: mx_handle_t, koid: uint64_t, rights: mx_rights_t)
@@ -166,7 +166,7 @@ syscall channel_read
         handles: mx_handle_t[num_handles] OUT,
         num_bytes: uint32_t,
         num_handles: uint32_t)
-    returns (mx_status_t, actual_bytes: uint32_t, actual_handles: uint32_t);
+    returns (mx_status_t, actual_bytes: uint32_t optional, actual_handles: uint32_t optional);
 
 syscall channel_write
     (handle: mx_handle_t, options: uint32_t,
@@ -178,18 +178,18 @@ syscall channel_call_noretry internal
     (handle: mx_handle_t, options: uint32_t, deadline: mx_time_t,
         args: mx_channel_call_args_t[1] IN)
     returns (mx_status_t, actual_bytes: uint32_t,
-                actual_handles: uint32_t, read_status: mx_status_t);
+                actual_handles: uint32_t, read_status: mx_status_t optional);
 
 syscall channel_call_finish internal
     (deadline: mx_time_t, args: mx_channel_call_args_t[1] IN)
     returns (mx_status_t, actual_bytes: uint32_t,
-                actual_handles: uint32_t, read_status: mx_status_t);
+                actual_handles: uint32_t, read_status: mx_status_t optional);
 
 syscall channel_call vdsocall
     (handle: mx_handle_t, options: uint32_t, deadline: mx_time_t,
         args: mx_channel_call_args_t[1] IN)
     returns (mx_status_t, actual_bytes: uint32_t,
-                actual_handles: uint32_t, read_status: mx_status_t);
+                actual_handles: uint32_t, read_status: mx_status_t optional);
 
 # IPC: Sockets
 
@@ -201,12 +201,12 @@ syscall socket_create
 syscall socket_write
     (handle: mx_handle_t, options: uint32_t,
         buffer: any[size] IN, size: size_t)
-    returns (mx_status_t, actual: size_t);
+    returns (mx_status_t, actual: size_t optional);
 
 syscall socket_read
     (handle: mx_handle_t, options: uint32_t,
         buffer: any[size] OUT, size: size_t)
-    returns (mx_status_t, actual: size_t);
+    returns (mx_status_t, actual: size_t optional);
 
 # Threads
 

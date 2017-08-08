@@ -6,11 +6,23 @@
 
 using std::map;
 using std::string;
+using std::vector;
 
 static const string add_attribute(map<string, string> attributes,
                                   const string& attribute) {
     auto ft = attributes.find(attribute);
     return (ft == attributes.end()) ? string() : ft->second;
+}
+
+static vector<int> collect_nonnull(const Syscall& sc) {
+    vector<int> nonnull;
+    int out_idx = sc.arg_spec.size();
+    sc.for_each_return([&](const TypeSpec& type) {
+            ++out_idx;
+            if (!has_attribute("optional", type.attributes))
+                nonnull.push_back(out_idx);
+        });
+    return nonnull;
 }
 
 bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
@@ -25,9 +37,23 @@ bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
         os << function_prefix_;
 
         write_syscall_signature_line(
-            os, sc, name_prefix.first, "\n", "\n" + string(indent_spaces, ' '),
+            os, sc, name_prefix.first,
+            "\n" + string(indent_spaces, ' '),
+            "\n" + string(indent_spaces, ' '),
             allow_pointer_wrapping_ && !sc.is_no_wrap() && !sc.is_vdso(),
             no_args_type_);
+
+        if (!allow_pointer_wrapping_) {
+            const vector<int> nonnull = collect_nonnull(sc);
+            if (!nonnull.empty()) {
+                os << " __attribute__((nonnull(";
+                for (int idx : nonnull) {
+                    os << idx << ", ";
+                }
+                os.seekp(-2, std::ios_base::end);
+                os << ")))";
+            }
+        }
 
         os << " ";
 

@@ -169,11 +169,15 @@ size_t Syscall::num_kernel_args() const {
     return is_noreturn() ? arg_spec.size() : arg_spec.size() + ret_spec.size() - 1;
 }
 
-void Syscall::for_each_kernel_arg(const std::function<void(const TypeSpec&)>& cb) const {
-    std::for_each(arg_spec.begin(), arg_spec.end(), cb);
+void Syscall::for_each_return(const std::function<void(const TypeSpec&)>& cb) const {
     if (ret_spec.size() > 1) {
         std::for_each(ret_spec.begin() + 1, ret_spec.end(), cb);
     }
+}
+
+void Syscall::for_each_kernel_arg(const std::function<void(const TypeSpec&)>& cb) const {
+    std::for_each(arg_spec.begin(), arg_spec.end(), cb);
+    for_each_return(cb);
 }
 
 bool Syscall::validate() const {

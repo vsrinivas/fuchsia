@@ -30,9 +30,6 @@ static bool test_cookie_actions(void) {
     ASSERT_EQ(mx_object_get_cookie(token, scope1, &cookie), MX_OK, "");
     ASSERT_EQ(cookie, magic1, "");
 
-    // pointers must be valid
-    ASSERT_EQ(mx_object_get_cookie(token, scope1, NULL), MX_ERR_INVALID_ARGS, "");
-
     // cookies are only settable on objects that support them
     ASSERT_EQ(mx_object_set_cookie(mx_process_self(), scope1, magic1), MX_ERR_NOT_SUPPORTED, "");
 
