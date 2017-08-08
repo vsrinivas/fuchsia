@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
+#include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/block.h>
 #include <hypervisor/decode.h>
 #include <hypervisor/io_apic.h>
 #include <hypervisor/pci.h>
-#include <hypervisor/ports.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <hw/pci.h>
@@ -24,16 +23,6 @@
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 #endif // __x86_64__
-
-/* Memory-mapped device physical addresses. */
-#define LOCAL_APIC_PHYS_BASE                    0xfee00000
-#define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
-
-/* PCI ECAM memory layout. These are provided to the guest via the MCFG ACPI
- * table.
- */
-#define PCI_ECAM_PHYS_BASE                      0xd0000000
-#define PCI_ECAM_PHYS_TOP                       (PCI_ECAM_PHYS_BASE + PCI_ECAM_SIZE(0, 1) - 1)
 
 /* Local APIC register addresses. */
 #define LOCAL_APIC_REGISTER_ID                  0x0020

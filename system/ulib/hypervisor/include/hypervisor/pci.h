@@ -37,15 +37,6 @@
 #define PCI_ECAM_FUNCTION(addr)             (((addr) >> 12) & 0x7)
 #define PCI_ECAM_REGISTER(addr)             ((addr) & 0xfff)
 
-/* The size of an ECAM region depends on values in the MCFG ACPI table. For
- * each ECAM region there is a defined physical base address as well as a bus
- * start/end value for that region.
- *
- * When creating an ECAM address for a PCI configuration register, the bus
- * value must be relative to the starting bus number for that ECAM region.
- */
-#define PCI_ECAM_SIZE(start_bus, end_bus)   (((end_bus) - (start_bus)) << 20)
-
 #define PCI_ECAM_ADDR(base, bus, device, function, reg) \
     ((base) | ((bus) << 20) | ((device) << 15) | ((function) << 12) | (reg))
 

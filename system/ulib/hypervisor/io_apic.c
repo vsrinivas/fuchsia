@@ -4,6 +4,7 @@
 
 #include <string.h>
 
+#include <hypervisor/address.h>
 #include <hypervisor/io_apic.h>
 #include <magenta/assert.h>
 

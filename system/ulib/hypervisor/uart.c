@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
-#include <hypervisor/ports.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>

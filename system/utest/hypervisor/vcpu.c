@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <hw/pci.h>
+#include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/pci.h>
-#include <hypervisor/ports.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>

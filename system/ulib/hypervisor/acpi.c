@@ -4,11 +4,10 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <limits.h>
 #include <unistd.h>
 
 #include <hypervisor/acpi.h>
-#include <hypervisor/ports.h>
+#include <hypervisor/address.h>
 #include <sys/stat.h>
 
 #if __x86_64__

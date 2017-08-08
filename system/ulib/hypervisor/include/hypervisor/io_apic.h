@@ -8,8 +8,6 @@
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 
-#define IO_APIC_PHYS_BASE           0xfec00000
-#define IO_APIC_PHYS_TOP            (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
 #define IO_APIC_REDIRECT_OFFSETS    128u
 
 /* Stores the IO APIC state. */
