@@ -11,18 +11,16 @@ namespace l2cap {
 
 PDU::PDU() : fragment_count_(0u) {}
 
-PDU::PDU(PDU&& other) {
-  // NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
-  // |other.fragment_count_|.
-  fragment_count_ = other.fragment_count_;
-  other.ReleaseFragments(&fragments_);
-}
+// NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
+// |other.fragment_count_|.
+PDU::PDU(PDU&& other)
+    : fragment_count_(other.fragment_count_), fragments_(other.ReleaseFragments()) {}
 
 PDU& PDU::operator=(PDU&& other) {
   // NOTE: The order in which these are initialized matters, as other.ReleaseFragments() resets
   // |other.fragment_count_|.
   fragment_count_ = other.fragment_count_;
-  other.ReleaseFragments(&fragments_);
+  fragments_ = other.ReleaseFragments();
   return *this;
 }
 
@@ -78,13 +76,12 @@ const common::BufferView PDU::ViewFirstFragment(size_t size) const {
   return fragments_.begin()->view().payload_data().view(sizeof(BasicHeader), size);
 }
 
-void PDU::ReleaseFragments(FragmentList* out_list) {
-  FTL_DCHECK(out_list);
-
-  *out_list = std::move(fragments_);
+PDU::FragmentList PDU::ReleaseFragments() {
+  auto out_list = std::move(fragments_);
   fragment_count_ = 0u;
 
   FTL_DCHECK(!is_valid());
+  return out_list;
 }
 
 const BasicHeader& PDU::basic_header() const {

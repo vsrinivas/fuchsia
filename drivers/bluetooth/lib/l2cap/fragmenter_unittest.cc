@@ -33,8 +33,7 @@ TEST(L2CAP_FragmenterTest, EmptyPayload) {
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(1u, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
+  auto fragments = pdu.ReleaseFragments();
 
   EXPECT_TRUE(common::ContainersEqual(expected_fragment, fragments.begin()->view().data()));
 }
@@ -55,8 +54,7 @@ TEST(L2CAP_FragmenterTest, SingleFragment) {
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(1u, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
+  auto fragments = pdu.ReleaseFragments();
 
   EXPECT_TRUE(common::ContainersEqual(expected_fragment, fragments.begin()->view().data()));
 }
@@ -77,8 +75,7 @@ TEST(L2CAP_FragmenterTest, SingleFragmentExactFit) {
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(1u, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
+  auto fragments = pdu.ReleaseFragments();
 
   EXPECT_TRUE(common::ContainersEqual(expected_fragment, fragments.begin()->view().data()));
 }
@@ -107,8 +104,7 @@ TEST(L2CAP_FragmenterTest, TwoFragmentsOffByOne) {
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(2u, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
+  auto fragments = pdu.ReleaseFragments();
 
   EXPECT_TRUE(common::ContainersEqual(expected_fragment0, fragments.begin()->view().data()));
   EXPECT_TRUE(common::ContainersEqual(expected_fragment1, (++fragments.begin())->view().data()));
@@ -139,8 +135,7 @@ TEST(L2CAP_FragmenterTest, TwoFragmentsExact) {
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(2u, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
+  auto fragments = pdu.ReleaseFragments();
 
   EXPECT_TRUE(common::ContainersEqual(expected_fragment0, fragments.begin()->view().data()));
   EXPECT_TRUE(common::ContainersEqual(expected_fragment1, (++fragments.begin())->view().data()));
@@ -187,9 +182,7 @@ TEST(L2CAP_FragmenterTest, ManyFragmentsOffByOne) {
   ASSERT_TRUE(pdu.is_valid());
   EXPECT_EQ(kExpectedFragmentCount, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
-
+  auto fragments = pdu.ReleaseFragments();
   auto iter = fragments.begin();
   EXPECT_TRUE(common::ContainersEqual(expected_fragment0, (iter++)->view().data()));
   EXPECT_TRUE(common::ContainersEqual(expected_fragment1, (iter++)->view().data()));

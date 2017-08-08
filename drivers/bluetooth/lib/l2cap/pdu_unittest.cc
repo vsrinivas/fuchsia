@@ -98,8 +98,7 @@ TEST(L2CAP_PduTest, ReleaseFragments) {
   EXPECT_TRUE(pdu.is_valid());
   EXPECT_EQ(1u, pdu.fragment_count());
 
-  PDU::FragmentList fragments;
-  pdu.ReleaseFragments(&fragments);
+  auto fragments = pdu.ReleaseFragments();
 
   EXPECT_FALSE(pdu.is_valid());
   ASSERT_FALSE(fragments.is_empty());

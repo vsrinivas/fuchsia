@@ -84,9 +84,9 @@ class PDU final {
   // fragment, the returned view will only contain the first fragment.
   const common::BufferView ViewFirstFragment(size_t size) const;
 
-  // Relinquishes ownership of the underlying list of fragments and returns it. Once this is called,
+  // Release ownership of the current fragments, moving them to the caller. Once this is called,
   // the PDU will become invalid.
-  void ReleaseFragments(FragmentList* out_list);
+  FragmentList ReleaseFragments();
 
  private:
   friend class Fragmenter;
