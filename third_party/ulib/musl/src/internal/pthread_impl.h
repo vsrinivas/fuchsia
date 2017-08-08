@@ -147,8 +147,6 @@ static inline pid_t __thread_get_tid(void) {
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
 void __private_cond_signal(void* condvar, int n);
 
-int __libc_sigprocmask(int, const sigset_t*, sigset_t*);
-
 // This is guaranteed to only return 0, EINVAL, or ETIMEDOUT.
 int __timedwait(atomic_int*, int, clockid_t, const struct timespec*)
     ATTR_LIBC_VISIBILITY;
@@ -162,10 +160,6 @@ void __thread_allocation_inhibit(void) ATTR_LIBC_VISIBILITY;
 void __thread_allocation_release(void) ATTR_LIBC_VISIBILITY;
 
 void __pthread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
-
-static inline int __sigaltstack(const stack_t* restrict ss, stack_t* restrict old) {
-    return 0;
-}
 
 #define DEFAULT_PTHREAD_ATTR                                                  \
     ((pthread_attr_t){                                                        \
