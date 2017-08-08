@@ -32,7 +32,7 @@ func (pmw *WatcherMock) OnChangeBatteryStatus(bs power_manager.BatteryStatus) er
 	return nil
 }
 
-func TestProjectManager(t *testing.T) {
+func TestPowerManager(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
 	pmClient := &ClientMock{}
 	r, p := pmClient.pm.NewRequest(bindings.GetAsyncWaiter())
@@ -48,7 +48,7 @@ func TestProjectManager(t *testing.T) {
 	pmClient.pm.Close()
 }
 
-func TestProjectManagerWatcher(t *testing.T) {
+func TestPowerManagerWatcher(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
 	pmClient := &ClientMock{}
 	r, p := pmClient.pm.NewRequest(bindings.GetAsyncWaiter())
