@@ -127,6 +127,10 @@ TEST_F(CommandChannelTest, SingleRequestResponse) {
   test_obj = nullptr;
   EXPECT_FALSE(test_obj_deleted);
   RunMessageLoop();
+
+  // Make sure that the I/O thread is no longer holding on to |test_obj|.
+  TearDown();
+
   EXPECT_TRUE(test_obj_deleted);
 }
 

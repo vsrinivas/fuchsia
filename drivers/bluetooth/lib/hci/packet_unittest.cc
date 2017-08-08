@@ -180,6 +180,7 @@ TEST(HCIPacketTest, ACLDataPacketFromFields) {
 
   auto packet = ACLDataPacket::New(0x007F, ACLPacketBoundaryFlag::kContinuingFragment,
                                    ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
+  packet->mutable_view()->mutable_payload_data().Fill(0);
 
   // First 12-bits: 0x07F
   // Upper 4-bits: 0b0101
@@ -188,6 +189,7 @@ TEST(HCIPacketTest, ACLDataPacketFromFields) {
 
   packet = ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kCompletePDU,
                               ACLBroadcastFlag::kActiveSlaveBroadcast, kSmallDataLength);
+  packet->mutable_view()->mutable_payload_data().Fill(0);
 
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0111
@@ -196,6 +198,7 @@ TEST(HCIPacketTest, ACLDataPacketFromFields) {
 
   packet = ACLDataPacket::New(0x0FFF, ACLPacketBoundaryFlag::kFirstNonFlushable,
                               ACLBroadcastFlag::kPointToPoint, kLargeDataLength);
+  packet->mutable_view()->mutable_payload_data().Fill(0);
 
   // First 12-bits: 0xFFF
   // Upper 4-bits: 0b0000
