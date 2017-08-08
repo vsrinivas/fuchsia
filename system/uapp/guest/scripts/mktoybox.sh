@@ -13,57 +13,79 @@
 #
 # More additions to come as and when desired / needed.
 
-SRCFILE="$PWD/${BASH_SOURCE[0]}"
+set -eo pipefail
 
-# Location of the patch that we'll apply to the default config
-PATCHFILE="${SRCFILE%/*}/tb-defconfig_plus.patch"
+SRCFILE="$PWD/${BASH_SOURCE[0]}"
 
 # Location of magenta and its build dir
 MAGENTADIR="${SRCFILE%magenta/*}magenta"
 BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
 mkdir -p $BUILDDIR
 
-# Location to download tarballs to
-PULLDIR="${1:-/tmp}"
+# Location to download tarballs to.
+PULLDIR="/tmp"
 
-# Where to build toybox
-IRDIR="$BUILDDIR/initrd-x86"
+# Where to build toybox.
+TOYBOX_BUILD_DIR="$BUILDDIR/toybox-x86"
 
-# Where to prep the initrd fs
-IRDIR_FS="$IRDIR/fs"
+# Toybox initrd file.
+TOYBOX_INITRD="$TOYBOX_BUILD_DIR/initrd.gz"
 
-# The toybox version we're building
-TBVERSION="0.7.4"
+# Toybox root filesystem image.
+TOYBOX_ROOTFS="$TOYBOX_BUILD_DIR/rootfs.ext2"
 
-# Where the toybox srcs are expected to be
-TBDOWNLOAD="$PULLDIR/toybox-$TBVERSION"
+# Where to prep the toybox directory structure.
+TOYBOX_SYSROOT="$TOYBOX_BUILD_DIR/fs"
 
-# Check for a built initramfs in the output
-if [ ! -f "$IRDIR/initrd.gz" ]; then
-  echo "No image in $IRDIR, making one..."
+# The toybox version we're building.
+TOYBOX_VERSION="0.7.4"
 
-  # Not built? Do we even have the source?
-  if [ ! -d "$TBDOWNLOAD" ]; then
-    echo "Downloading toybox to $TBDOWNLOAD"
-    if curl https://landley.net/toybox/downloads/toybox-$TBVERSION.tar.gz | \
-        tar xz -C "$PULLDIR"; then
+# Where the toybox srcs are expected to be.
+TOYBOX_SRC_DIR="$PULLDIR/toybox-$TOYBOX_VERSION"
+
+usage() {
+    echo "usage: ${0} [-rif]"
+    echo ""
+    echo "    -r Build ext2 filesystem image."
+    echo "    -i Build initrd CPIO archive."
+    echo "    -f Force a rebuild even if the artifact already exists."
+    echo ""
+    exit 1
+}
+
+# Ensures the toybox sources are downloaded.
+#
+# $1 - Directory to unpack the sources into.
+# $2 - Toybox version requested.
+get_toybox_source() {
+  local toybox_src=$1
+  local toybox_version=$2
+
+  if [ ! -d "$toybox_src" ]; then
+    echo "Downloading toybox to $toybox_src"
+    if curl https://landley.net/toybox/downloads/toybox-$toybox_version.tar.gz | \
+        tar xz -C `dirname $toybox_src`; then
       echo "We got the box"
     else
       echo "Some issues getting the box!"
       exit 1
     fi
   fi
+}
 
-  # From here on, errors should just terminate the script.
-  set -e
+# Build toybox and create and create a sysroot.
+#
+# $1 - Toybox source directory.
+# $2 - Directory to build the toybox sysroot with the toybox binary and symlinks.
+build_toybox() {
+  local toybox_src=$1
+  local sysroot_dir="$2"
 
-  mkdir -p "$IRDIR_FS"/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}
-
-  make -C "$TBDOWNLOAD" defconfig
+  make -C "$toybox_src" defconfig
 
   # Apply the patch to include the shell
   echo "Applying config patches..."
-  patch "$TBDOWNLOAD/.config" << '_EOF'
+  patch "$toybox_src/.config" << '_EOF'
 --- .config.old 2017-07-22 03:04:04.335638468 +1000
 +++ .config 2017-07-22 03:04:18.391546765 +1000
 @@ -159,7 +159,7 @@
@@ -77,11 +99,22 @@ if [ ! -f "$IRDIR/initrd.gz" ]; then
  # CONFIG_SULOGIN is not set
 _EOF
 
-  LDFLAGS="--static" make -C "$TBDOWNLOAD" -j100
-  PREFIX=$IRDIR_FS make -C "$TBDOWNLOAD" install
+  LDFLAGS="--static" make -C "$toybox_src" -j100
+
+  mkdir -p "$sysroot_dir"/{bin,sbin,etc,proc,sys,usr/{bin,sbin}}
+  PREFIX=$sysroot_dir make -C "$toybox_src" install
+}
+
+# Generate a simple init script at /init in the target sysroot.
+#
+# $1 - Toybox source directory.
+# $2 - Toybox sysroot directory.
+generate_init() {
+  local toybox_src="$1"
+  local sysroot_dir="$2"
 
   # Write an init script for toybox.
-  cat > "$IRDIR_FS/init" <<'_EOF'
+  cat > "$sysroot_dir/init" <<'_EOF'
 #!/bin/sh
 mount -t proc none /proc
 mount -t sysfs none /sys
@@ -89,12 +122,89 @@ echo Launched toybox
 /bin/sh
 _EOF
 
-  chmod +x "$IRDIR_FS/init"
+  chmod +x "$sysroot_dir/init"
+}
 
-  (cd "$IRDIR_FS" && find . -print0 \
+# Generate a gzipped CPIO archive of the toybox sysroot.
+#
+# $1 - Toybox sysroot directory.
+# $2 - Filepath of the created initrd.
+package_initrd() {
+  local sysroot="$1"
+  local initrd="$2"
+  (cd "$sysroot" && find . -print0 \
     | cpio --null -o --format=newc \
-    | gzip -9 > $IRDIR/initrd.gz)
-else
-  echo "initrd.gz found. Doing nothing."
-  echo "To force a rebuild, \"rm $IRDIR/initrd.gz\""
+    | gzip -9 > $initrd)
+}
+
+
+# Generate an EXT2 filesystem impage of the toybox sysroot.
+#
+# Note: We need root here to mount the image as a loopback device.
+#
+# $1 - Toybox sysroot directory.
+# $2 - Filepath of the created EXT2 image file.
+package_rootfs() {
+  local sysroot="$1"
+  local rootfs="$2"
+
+  dd if=/dev/zero of=$rootfs bs=1M count=20
+  mkfs.ext2 -F $rootfs
+
+  local mountpoint=`mktemp -d`
+  sudo mount -o loop $rootfs $mountpoint
+  sudo cp -r $sysroot/* $mountpoint
+  sudo umount $mountpoint
+  rm -rf $mountpoint
+}
+
+declare FORCE="${FORCE:-false}"
+declare BUILD_INITRD="${BUILD_INITRD:-false}"
+declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
+
+while getopts "fir" opt; do
+  case "${opt}" in
+    f) FORCE="true" ;;
+    i) BUILD_INITRD="true" ;;
+    r) BUILD_ROOTFS="true" ;;
+    *) usage ;;
+  esac
+done
+
+# Do we have something to build?
+if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then 
+  echo "Either -r or -i is required."
+  usage
+fi
+
+# Are the requested targets up-to-date?
+if [[ ! "${FORCE}" = "true" ]]; then
+  if [[ -f "${TOYBOX_INITRD}" ]]; then
+    BUILD_INITRD="false"
+  fi
+  if [[ -f "${TOYBOX_ROOTFS}" ]]; then
+    BUILD_ROOTFS="false"
+  fi
+fi
+if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then 
+  echo "All targets up to date. Pass -f to force a rebuild."
+  exit 0
+fi
+
+readonly "${FORCE}" "${BUILD_INITRD}" "${BUILD_ROOTFS}"
+
+get_toybox_source "${TOYBOX_SRC_DIR}" "${TOYBOX_VERSION}"
+
+build_toybox "${TOYBOX_SRC_DIR}" "${TOYBOX_SYSROOT}"
+
+generate_init "${TOYBOX_SRC_DIR}" "${TOYBOX_SYSROOT}"
+
+if [[ "${BUILD_INITRD}" = "true" ]]; then
+  package_initrd "${TOYBOX_SYSROOT}" "${TOYBOX_INITRD}"
+  echo "initrd at ${TOYBOX_INITRD}"
+fi
+
+if [[ "${BUILD_ROOTFS}" = "true" ]]; then
+  package_rootfs "${TOYBOX_SYSROOT}" "${TOYBOX_ROOTFS}"
+  echo "filesystem image at ${TOYBOX_ROOTFS}"
 fi
