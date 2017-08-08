@@ -9,7 +9,9 @@
 #include <fcntl.h>
 #include <magenta/device/audio.h>
 #include <mxtl/auto_call.h>
+#include <mxtl/vector.h>
 
+#include "apps/media/src/audio/driver_utils.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "lib/ftl/logging.h"
@@ -53,15 +55,17 @@ mx_status_t AudioInput::Initalize() {
     return res;
   }
 
-  // TODO(johngro) : Do not hardcode this.  When the audio driver protocal has
-  // defined how to enumerate audio modes, use that instead.
-  frame_rates_.push_back(48000);
-  state_ = State::kStopped;
+  mxtl::Vector<audio_stream_format_range_t> formats;
+  res = audio_input_->GetSupportedFormats(&formats);
+  if (res != MX_OK) {
+    return res;
+  }
 
-  configured_frames_per_second_ = 48000;
-  configured_channels_ = 1;
-  configured_sample_format_ = AUDIO_SAMPLE_FORMAT_16BIT;
-  configured_bytes_per_frame_ = 2;
+  for (const auto& fmt : formats) {
+    driver_utils::AddAudioStreamTypeSets(fmt, &supported_stream_types_);
+  }
+
+  state_ = State::kStopped;
 
   return MX_OK;
 }
@@ -74,13 +78,8 @@ std::vector<std::unique_ptr<media::StreamTypeSet>>
 AudioInput::GetSupportedStreamTypes() {
   std::vector<std::unique_ptr<media::StreamTypeSet>> result;
 
-  // TODO(johngro) : Do not hardcode this.  Available channel counts and formats
-  // should be read from the device during Initialize instead.
-  for (uint32_t frame_rates : frame_rates_) {
-    result.push_back(AudioStreamTypeSet::Create(
-        {AudioStreamType::kAudioEncodingLpcm},
-        AudioStreamType::SampleFormat::kSigned16, Range<uint32_t>(1, 1),
-        Range<uint32_t>(frame_rates, frame_rates)));
+  for (const auto& t : supported_stream_types_) {
+    result.push_back(t->Clone());
   }
 
   return result;
@@ -93,55 +92,40 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
     return false;
   }
 
-  if (stream_type->medium() != StreamType::Medium::kAudio ||
-      (stream_type->encoding() != AudioStreamType::kAudioEncodingLpcm) ||
-      stream_type->audio()->sample_format() !=
-          AudioStreamType::SampleFormat::kSigned16 ||
-      stream_type->audio()->channels() != 1) {
-    FTL_LOG(ERROR) << "Unsupported stream type requested";
-    return false;
-  }
-
-  bool frame_rate_valid = false;
-  for (uint32_t frame_rate : frame_rates_) {
-    if (stream_type->audio()->frames_per_second() == frame_rate) {
-      frame_rate_valid = true;
+  // We are in the proper state to accept a SetStreamType request.  If the
+  // request fails for any reason, the internal configuration should be
+  // considered to be invalid.
+  config_valid_ = false;
+  bool compatible = false;
+  for (const auto& t : supported_stream_types_) {
+    if (t->Includes(*stream_type)) {
+      compatible = true;
       break;
     }
   }
 
-  if (!frame_rate_valid) {
+  if (!compatible) {
     FTL_LOG(ERROR) << "Unsupported stream type requested";
     return false;
   }
 
-  configured_frames_per_second_ = stream_type->audio()->frames_per_second();
-  configured_channels_ = stream_type->audio()->channels();
-  switch (stream_type->audio()->sample_format()) {
-    case AudioStreamType::SampleFormat::kUnsigned8:
-      configured_sample_format_ = static_cast<audio_sample_format_t>(
-          AUDIO_SAMPLE_FORMAT_8BIT | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);
-      break;
-
-    case AudioStreamType::SampleFormat::kSigned16:
-      configured_sample_format_ = AUDIO_SAMPLE_FORMAT_16BIT;
-      break;
-
-    case AudioStreamType::SampleFormat::kSigned24In32:
-      configured_sample_format_ = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
-      break;
-
-    case AudioStreamType::SampleFormat::kFloat:
-      configured_sample_format_ = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
-      break;
-
-    default:
-      FTL_DCHECK(false);
-      return false;
+  // Convert the AudioStreamType::SampleFormat into an audio_sample_format_t
+  // which the driver will understand.  This should really never fail.
+  const auto& audio_stream_type = *stream_type->audio();
+  if (!driver_utils::SampleFormatToDriverSampleFormat(
+        audio_stream_type.sample_format(),
+        &configured_sample_format_)) {
+    FTL_LOG(ERROR) << "Failed to convert SampleFormat ("
+                   << static_cast<uint32_t>(audio_stream_type.sample_format())
+                   << ") to audio_sample_format_t";
+    return false;
   }
 
-  configured_bytes_per_frame_ = stream_type->audio()->bytes_per_frame();
+  configured_frames_per_second_ = audio_stream_type.frames_per_second();
+  configured_channels_ = audio_stream_type.channels();
+  configured_bytes_per_frame_ = audio_stream_type.bytes_per_frame();
   pts_rate_ = TimelineRate(configured_frames_per_second_, 1);
+  config_valid_ = true;
 
   return true;
 }
@@ -150,6 +134,13 @@ void AudioInput::Start() {
   FTL_DCHECK(state_ != State::kUninitialized);
 
   if (state_ != State::kStopped) {
+    FTL_DCHECK(state_ == State::kStarted);
+    return;
+  }
+
+  if (!config_valid_) {
+    FTL_LOG(ERROR) << "Cannot start AudioInput.  "
+                   << "Configuration is currently invalid.";
     return;
   }
 
@@ -191,6 +182,7 @@ void AudioInput::SetDownstreamDemand(Demand demand) {}
 
 void AudioInput::Worker() {
   FTL_DCHECK((state_ == State::kStarted) || (state_ == State::kStopping));
+  FTL_DCHECK(config_valid_);
 
   mx_status_t res;
   uint32_t cached_frames_per_packet = frames_per_packet();
@@ -202,9 +194,9 @@ void AudioInput::Worker() {
   });
 
   // Configure the format.
-  res =
-      audio_input_->SetFormat(configured_frames_per_second_,
-                              configured_channels_, configured_sample_format_);
+  res = audio_input_->SetFormat(configured_frames_per_second_,
+                                configured_channels_,
+                                configured_sample_format_);
   if (res != MX_OK) {
     FTL_LOG(ERROR) << "Failed set device format to "
                    << configured_frames_per_second_ << " Hz "

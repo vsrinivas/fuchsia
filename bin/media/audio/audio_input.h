@@ -68,7 +68,8 @@ class AudioInput : public ActiveSource {
 
   // The fields below need to be stable while the worker thread is operating.
   mxtl::unique_ptr<audio::utils::AudioInput> audio_input_;
-  std::vector<uint32_t> frame_rates_;
+  std::vector<std::unique_ptr<media::StreamTypeSet>> supported_stream_types_;
+  bool config_valid_ = false;
   uint32_t configured_frames_per_second_;
   uint16_t configured_channels_;
   audio_sample_format_t configured_sample_format_;
