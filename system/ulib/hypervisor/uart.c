@@ -28,12 +28,11 @@
 /* Interrupt vectors. */
 #define X86_INT_UART                    4u
 
-mx_status_t uart_init(uart_t* uart) {
+void uart_init(uart_t* uart) {
     memset(uart, 0, sizeof(*uart));
-    return MX_OK;
 }
 
-mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
+mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case UART_RECEIVE_PORT:
     case UART_MODEM_CONTROL_PORT:

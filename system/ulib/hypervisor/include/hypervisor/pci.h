@@ -63,8 +63,8 @@ typedef struct pci_device {
 
 typedef pci_device_t pci_bus_t[PCI_MAX_DEVICES];
 
-mx_status_t pci_bus_init(pci_bus_t bus);
-mx_status_t pci_device_read(pci_device_t* device, uint16_t reg, size_t len, uint32_t* value);
+void pci_bus_init(pci_bus_t bus);
+mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, size_t len, uint32_t* value);
 mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, size_t len, uint32_t value);
 
 /* Disable the given PCI device. By default, all devices on the bus are enabled

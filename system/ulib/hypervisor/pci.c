@@ -60,18 +60,17 @@ static const pci_device_attr_t kDeviceAttributes[] = {
     },
 };
 
-mx_status_t pci_bus_init(pci_bus_t bus) {
+void pci_bus_init(pci_bus_t bus) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_t* device = &bus[i];
         device->command = PCI_COMMAND_IO_EN;
         device->bar[0] = kPioBase + (i << 8);
         device->attributes = &kDeviceAttributes[i];
     }
-    return MX_OK;
 }
 
 /* Read a 4 byte aligned value from PCI config space. */
-static mx_status_t pci_device_read_word(pci_device_t* device, uint8_t reg, uint32_t* value) {
+static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg, uint32_t* value) {
     const pci_device_attr_t* attributes = device->attributes;
     switch (reg) {
     //  ---------------------------------
@@ -105,8 +104,7 @@ static mx_status_t pci_device_read_word(pci_device_t* device, uint8_t reg, uint3
         *value = PCI_HEADER_TYPE_STANDARD << 16;
         return MX_OK;
     case PCI_REGISTER_BAR_0: {
-        uint32_t* bar = &device->bar[0];
-        *value = *bar | PCI_BAR_IO_TYPE_PIO;
+        *value = device->bar[0] | PCI_BAR_IO_TYPE_PIO;
         return MX_OK;
     }
     //  -------------------------------------------------------------
@@ -151,7 +149,7 @@ static mx_status_t pci_device_read_word(pci_device_t* device, uint8_t reg, uint3
     return MX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t pci_device_read(pci_device_t* device, uint16_t reg, size_t len, uint32_t* value) {
+mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, size_t len, uint32_t* value) {
     // Perform 4-byte aligned read and then shift + mask the result to get the
     // expected value.
     uint32_t word = 0;

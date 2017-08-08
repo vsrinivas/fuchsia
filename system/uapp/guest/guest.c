@@ -95,19 +95,11 @@ int main(int argc, char** argv) {
     // Setup PCI.
     pci_bus_t bus;
     guest_state.bus = bus;
-    status = pci_bus_init(bus);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to initialize PCI\n");
-        return status;
-    }
+    pci_bus_init(bus);
     // Setup UART.
     uart_t uart;
     guest_state.uart = &uart;
-    status = uart_init(&uart);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to initialize UART\n");
-        return status;
-    }
+    uart_init(&uart);
     // Setup block device.
     block_t block;
     guest_state.block = &block;

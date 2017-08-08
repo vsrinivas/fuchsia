@@ -20,6 +20,6 @@ typedef struct uart {
     uint8_t line_control;
 } uart_t;
 
-mx_status_t uart_init(uart_t* uart);
-mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io);
+void uart_init(uart_t* uart);
+mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io);
 mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_guest_io_t* io);

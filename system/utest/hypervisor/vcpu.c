@@ -43,10 +43,7 @@ static mx_status_t vcpu_write_test_state(vcpu_context_t* context, uint32_t kind,
 static mx_status_t setup(test_t* test) {
     memset(test, 0, sizeof(*test));
     vcpu_init(&test->vcpu_context);
-
-    mx_status_t status = pci_bus_init(test->bus);
-    if (status != MX_OK)
-        return status;
+    pci_bus_init(test->bus);
 
     test->guest_state.bus = test->bus;
     test->vcpu_context.guest_state = &test->guest_state;
@@ -76,7 +73,7 @@ static bool handle_input_packet(void) {
 
     // Initialize the hosts register to an arbitrary non-zero value.
     uart_t uart;
-    ASSERT_EQ(uart_init(&uart), MX_OK, "Failed to initialize UART");
+    uart_init(&uart);
     uart.line_control = 0xfe;
     test.guest_state.uart = &uart;
 
@@ -106,7 +103,7 @@ static bool handle_output_packet(void) {
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test");
 
     uart_t uart;
-    ASSERT_EQ(uart_init(&uart), MX_OK, "Failed to initialize UART");
+    uart_init(&uart);
     test.guest_state.uart = &uart;
 
     // Send a guest packet to to write the UART line control port.
