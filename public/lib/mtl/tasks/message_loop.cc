@@ -158,7 +158,10 @@ void MessageLoop::Run() {
   mx_status_t status = loop_.Run();
   FTL_CHECK(status == MX_OK || status == MX_ERR_CANCELED)
       << "Loop stopped abnormally: status=" << status;
-  loop_.ResetQuit();
+
+  status = loop_.ResetQuit();
+  FTL_DCHECK(status == MX_OK)
+      << "Failed to reset quit state: status=" << status;
 
   FTL_DCHECK(is_running_);
   is_running_ = false;
