@@ -325,7 +325,7 @@ if [[ -n $TERM ]]; then
 fi
 
 # Add entropy to the kernel
-CMDLINE+="kernel.entropy=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
+CMDLINE+="kernel.entropy.cmdline=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
 
 # Don't 'reboot' the emulator if the kernel crashes
 CMDLINE+="kernel.halt_on_panic=true "

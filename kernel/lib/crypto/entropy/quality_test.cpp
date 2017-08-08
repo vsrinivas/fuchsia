@@ -3,7 +3,10 @@
 #include <dev/hw_rng.h>
 #include <kernel/cmdline.h>
 #include <kernel/vm/vm_object_paged.h>
+#include <lib/crypto/entropy/collector.h>
+#include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lk/init.h>
+#include <magenta/types.h>
 #include <string.h>
 
 namespace crypto {
@@ -52,39 +55,43 @@ static void SetupEntropyVmo(uint level) {
 
 // Run the entropy collector test.
 void EarlyBootTest() {
-    constexpr size_t kMaxRead = 256;
-    size_t read, total;
-    ssize_t result;
+    const char* src_name = cmdline_get("kernel.entropy_test.src");
+    if (!src_name) {
+        src_name = "";
+    }
 
-    total = cmdline_get_uint64("kernel.entropy_test.len", sizeof(entropy_buf));
-    if (total > sizeof(entropy_buf)) {
-        total = sizeof(entropy_buf);
-        printf("entropy-record: only recording %zu bytes (try defining "
+    entropy::Collector* collector = nullptr;
+    entropy::Collector* candidate;
+    char candidate_name[MX_MAX_NAME_LEN];
+
+    // TODO(andrewkrieger): find a nicer way to enumerate all entropy collectors
+    if (HwRngCollector::GetInstance(&candidate) == MX_OK) {
+        candidate->get_name(candidate_name, sizeof(candidate_name));
+        if (strncmp(candidate_name, src_name, MX_MAX_NAME_LEN) == 0) {
+            collector = candidate;
+        }
+    }
+
+    // TODO(andrewkrieger): add other entropy collectors.
+
+    if (!collector) {
+        printf("entropy-test: unrecognized source \"%s\"\n", src_name);
+        printf("entropy-test: skipping test.\n");
+        return;
+    }
+
+    size_t len = cmdline_get_uint64("kernel.entropy_test.len",
+                                    sizeof(entropy_buf));
+    if (len > sizeof(entropy_buf)) {
+        len = sizeof(entropy_buf);
+        printf("entropy-test: only recording %zu bytes (try defining "
                "ENTROPY_COLLECTOR_TEST_MAXLEN)\n", sizeof(entropy_buf));
     }
 
-    read = 0;
-    while (read < total) {
-#if ARCH_X86_64
-        result = hw_rng_get_entropy(
-                entropy_buf + read,
-                mxtl::min(kMaxRead, sizeof(entropy_buf) - read),
-                true);
-#else
-        // Temporary workaround to suppress unused variable warning, only
-        // because we don't yet have entropy on ARM.
-        (void) kMaxRead;
-        result = -1;
-#endif
-
-        if (result < 0) {
-            // Failed to collect any entropy - report an error and give up.
-            printf("entropy-record: source stopped returning entropy after "
-                   "%zu bytes.\n", read);
-            memset(entropy_buf + read, 0, sizeof(entropy_buf) - read);
-            return;
-        }
-        read += result;
+    size_t result = collector->DrawEntropy(entropy_buf, len);
+    if (result < len) {
+        printf("entropy-test: source only returned %zu bytes.\n", result);
+        memset(entropy_buf + result, 0, sizeof(entropy_buf) - result);
     }
 }
 

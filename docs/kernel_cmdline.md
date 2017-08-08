@@ -53,9 +53,22 @@ MAGENTA\_DRIVER\_BEGIN macro.
 
 Example: `driver.usb-audio.disable`
 
-## kernel.entropy=\<hex>
+## kernel.entropy.cmdline=\<hex>
 
 Provides entropy to be mixed into the kernel's CPRNG.
+
+## kernel.entropy_test.src=\<source>
+
+When running an entropy collector quality test, use the provided entropy source.
+Currently recognized sources: `hw_rng`.
+
+## kernel.entropy_test.len=\<len>
+
+When running an entropy collector quality test, collect the provided number of
+bytes. Defaults to the maximum value `ENTROPY_COLLECTOR_TEST_MAXLEN`.
+
+The default value for the compile-time constant `ENTROPY_COLLECTOR_TEST_MAXLEN`
+is 128 KiB.
 
 ## kernel.halt_on_panic=\<bool>
 If this option is set (disabled by default), the system will halt on

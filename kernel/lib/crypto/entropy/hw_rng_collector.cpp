@@ -7,22 +7,21 @@
 #include <lib/crypto/entropy/hw_rng_collector.h>
 
 #include <dev/hw_rng.h>
+#include <magenta/errors.h>
 
 namespace crypto {
 
 namespace entropy {
 
-bool HwRngCollector::IsSupported() {
+mx_status_t HwRngCollector::GetInstance(Collector** ptr) {
 #if ARCH_X86_64
-    return true;
-#else
-    return false;
-#endif
-}
-
-Collector* HwRngCollector::GetInstance() {
     static HwRngCollector instance;
-    return &instance;
+    *ptr = &instance;
+    return MX_OK;
+#else
+    *ptr = nullptr;
+    return MX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 HwRngCollector::HwRngCollector()

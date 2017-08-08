@@ -8,13 +8,14 @@
 
 #include <assert.h>
 #include <ctype.h>
-#include <dev/hw_rng.h>
 #include <err.h>
+#include <explicit-memory/bytes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/cmdline.h>
 #include <kernel/mutex.h>
 #include <lib/crypto/cryptolib.h>
 #include <lib/crypto/entropy/collector.h>
+#include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/prng.h>
 #include <mxcpp/new.h>
@@ -33,12 +34,15 @@ PRNG* GetInstance() {
     return kGlobalPrng;
 }
 
+// Returns true if the kernel cmdline provided at least PRNG::kMinEntropy bytes
+// of entropy, and false otherwise.
+//
 // TODO(security): Remove this in favor of virtio-rng once it is available and
 // we decide we don't need it for getting entropy from elsewhere.
-static size_t IntegrateCmdlineEntropy() {
-    const char* entropy = cmdline_get("kernel.entropy");
+static bool IntegrateCmdlineEntropy() {
+    const char* entropy = cmdline_get("kernel.entropy.cmdline");
     if (!entropy) {
-        return 0;
+        return false;
     }
 
     const size_t kMaxEntropyArgumentLen = 128;
@@ -60,14 +64,33 @@ static size_t IntegrateCmdlineEntropy() {
     // it's fully well-defined to cast away the const and mutate this
     // here so the bits can't leak to userboot.  While we're at it,
     // prettify the result a bit so it's obvious what one is looking at.
-    memset(const_cast<char*>(entropy), 'x', hex_len);
+    mandatory_memset(const_cast<char*>(entropy), 'x', hex_len);
     if (hex_len >= sizeof(".redacted=") - 1) {
         memcpy(const_cast<char*>(entropy) - 1,
                ".redacted=", sizeof(".redacted=") - 1);
     }
 
     const size_t entropy_added = mxtl::max(hex_len / 2, sizeof(digest));
-    return entropy_added;
+    return (entropy_added >= PRNG::kMinEntropy);
+}
+
+// Returns true on success, false on failure.
+static bool SeedFrom(entropy::Collector* collector) {
+    uint8_t buf[PRNG::kMinEntropy] = {0};
+    size_t remaining = collector->BytesNeeded(8 * PRNG::kMinEntropy);
+    while (remaining > 0) {
+        size_t result = collector->DrawEntropy(
+                buf, mxtl::min(sizeof(buf), remaining));
+        if (result == 0) {
+            return false;
+        }
+        // TODO(MG-1007): don't assume that every byte of entropy that's added
+        // has a full 8 bits worth of entropy
+        kGlobalPrng->AddEntropy(buf, result);
+        mandatory_memset(buf, 0, sizeof(buf));
+        remaining -= result;
+    }
+    return true;
 }
 
 // Instantiates the global PRNG (in non-thread-safe mode) and seeds it.
@@ -88,23 +111,19 @@ static void EarlyBootSeed(uint level) {
     alignas(alignof(PRNG))static uint8_t prng_space[sizeof(PRNG)];
     kGlobalPrng = new (&prng_space) PRNG(nullptr, 0, PRNG::NonThreadSafeTag());
 
-    uint8_t buf[PRNG::kMinEntropy] = {0};
     // TODO(security): Have the PRNG reseed based on usage
-    size_t fetched = 0;
-#if ARCH_X86_64
-    // We currently only have a hardware RNG implemented for x86-64.  If
-    // we're on ARM, we will probably go through the fallback (see the
-    // security warning below).
-    fetched = hw_rng_get_entropy(buf, sizeof(buf), true);
-#endif
 
-    if (fetched != 0) {
-        DEBUG_ASSERT(fetched == sizeof(buf));
-        kGlobalPrng->AddEntropy(buf, static_cast<int>(fetched));
+    unsigned int successful = 0; // number of successful entropy sources
+    entropy::Collector* collector;
+    if (entropy::HwRngCollector::GetInstance(&collector) == MX_OK &&
+        SeedFrom(collector)) {
+        successful++;
     }
 
-    fetched += IntegrateCmdlineEntropy();
-    if (fetched < PRNG::kMinEntropy) {
+    if (IntegrateCmdlineEntropy()) {
+        successful++;
+    }
+    if (successful == 0) {
         printf("WARNING: System has insufficient randomness.  It is completely "
                "unsafe to use this system for any cryptographic applications."
                "\n");
@@ -112,6 +131,7 @@ static void EarlyBootSeed(uint level) {
         // hardware that we should remove and attempt to do better.  If this
         // fallback is used, it breaks all cryptography used on the system.
         // *CRITICAL*
+        uint8_t buf[PRNG::kMinEntropy] = {0};
         kGlobalPrng->AddEntropy(buf, sizeof(buf));
         return;
     }

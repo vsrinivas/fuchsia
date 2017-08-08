@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/crypto/entropy/collector.h>
+#include <magenta/types.h>
 
 namespace crypto {
 
@@ -12,8 +13,7 @@ namespace entropy {
 
 class HwRngCollector : public Collector {
 public:
-    static bool IsSupported();
-    static Collector* GetInstance();
+    static mx_status_t GetInstance(Collector** ptr);
 
     HwRngCollector();
 
