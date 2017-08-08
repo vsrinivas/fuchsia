@@ -244,7 +244,7 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryFailure) {
   test_device()->SetDefaultResponseStatus(hci::kLESetScanEnable, hci::Status::kCommandDisallowed);
 
   // |session| should contain nullptr.
-  discovery_manager()->StartDiscovery([this](auto session) { EXPECT_FALSE(session); });
+  discovery_manager()->StartDiscovery([](auto session) { EXPECT_FALSE(session); });
 
   RunMessageLoop(1);
   EXPECT_FALSE(scan_enabled());
@@ -255,7 +255,7 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWhileScanning) {
 
   constexpr size_t kExpectedSessionCount = 5;
   size_t cb_count = 0u;
-  auto cb = [this, kExpectedSessionCount, &cb_count, &sessions](auto session) {
+  auto cb = [this, &cb_count, &sessions](auto session) {
     sessions.push_back(std::move(session));
     cb_count++;
     if (cb_count == 1 || cb_count == kExpectedSessionCount) message_loop()->QuitNow();
@@ -300,7 +300,7 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStart) {
 
   constexpr size_t kExpectedSessionCount = 5;
   size_t cb_count = 0u;
-  auto cb = [this, kExpectedSessionCount, &cb_count, &sessions](auto session) {
+  auto cb = [this, &cb_count, &sessions](auto session) {
     sessions.push_back(std::move(session));
     cb_count++;
     if (cb_count == kExpectedSessionCount) message_loop()->QuitNow();
@@ -325,7 +325,7 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryWhilePendingStartAndStopInCa
   constexpr size_t kExpectedSessionCount = 5;
   size_t cb_count = 0u;
   std::unique_ptr<LowEnergyDiscoverySession> session;
-  auto cb = [this, kExpectedSessionCount, &cb_count, &session](auto cb_session) {
+  auto cb = [this, &cb_count, &session](auto cb_session) {
     cb_count++;
     if (cb_count == kExpectedSessionCount) {
       // Hold on to only the last session object. The rest should get deleted within the callback.
@@ -395,7 +395,7 @@ TEST_F(LowEnergyDiscoveryManagerTest, StartDiscoveryFailureManyPending) {
 
   constexpr size_t kExpectedSessionCount = 5;
   size_t cb_count = 0u;
-  auto cb = [this, kExpectedSessionCount, &cb_count](auto session) {
+  auto cb = [this, &cb_count](auto session) {
     // |session| should contain nullptr as the request will fail.
     EXPECT_FALSE(session);
     cb_count++;

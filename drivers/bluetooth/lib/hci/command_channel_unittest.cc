@@ -204,7 +204,7 @@ TEST_F(CommandChannelTest, SingleRequestWithCustomResponse) {
   // Send HCI_Reset
   CommandChannel::TransactionId id;
   int status_cb_count = 0;
-  auto status_cb = [&status_cb_count, &id](CommandChannel::TransactionId callback_id,
+  auto status_cb = [&status_cb_count](CommandChannel::TransactionId callback_id,
                                            Status status) { status_cb_count++; };
   auto complete_cb = [&id, this](CommandChannel::TransactionId callback_id,
                                  const EventPacket& event) {

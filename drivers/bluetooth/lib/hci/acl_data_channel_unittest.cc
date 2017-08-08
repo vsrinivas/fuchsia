@@ -411,7 +411,7 @@ TEST_F(ACLDataChannelTest, SendPacketFromMultipleThreads) {
                            DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
 
   // On 3 threads (for each connection handle) we each send 6 packets up to a total of 18.
-  auto thread_func = [kLEMaxMTU, this](ConnectionHandle handle) {
+  auto thread_func = [this](ConnectionHandle handle) {
     for (int i = 0; i < kExpectedTotalPacketCount / 3; ++i) {
       auto packet = ACLDataPacket::New(handle, ACLPacketBoundaryFlag::kFirstNonFlushable,
                                        ACLBroadcastFlag::kPointToPoint, kLEMaxMTU);
@@ -509,7 +509,7 @@ TEST_F(ACLDataChannelTest, TransportClosedCallbackBothChannels) {
   InitializeACLDataChannel(DataBufferInfo(1u, 1u), DataBufferInfo(1u, 1u));
 
   int closed_cb_count = 0;
-  auto closed_cb = [&closed_cb_count, this] { closed_cb_count++; };
+  auto closed_cb = [&closed_cb_count] { closed_cb_count++; };
   transport()->SetTransportClosedCallback(closed_cb, message_loop()->task_runner());
 
   // We'll send closed events for both channels. The closed callback should get invoked only once.

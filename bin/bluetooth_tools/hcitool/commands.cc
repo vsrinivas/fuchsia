@@ -599,7 +599,7 @@ bool HandleSetScanEnable(const CommandData* cmd_data, const ftl::CommandLine& cm
   };
 
   // Delayed task that stops scanning.
-  auto scan_disable_cb = [kPayloadSize, cleanup_cb, final_cb, cmd_data] {
+  auto scan_disable_cb = [cleanup_cb, final_cb, cmd_data] {
     auto packet = hci::CommandPacket::New(hci::kLESetScanEnable, kPayloadSize);
     auto params = packet->mutable_view()->mutable_payload<hci::LESetScanEnableCommandParams>();
     params->scanning_enabled = hci::GenericEnableParam::kDisable;

@@ -128,7 +128,7 @@ void LEConnectionTest::InitializeDataChannelAndCreateConnection(
   };
 
   // This is the event that signals the completion of a connection.
-  auto le_conn_complete_cb = [ this, orig_params = conn_params ](const hci::EventPacket& event) {
+  auto le_conn_complete_cb = [this](const hci::EventPacket& event) {
     FTL_DCHECK(event.event_code() == hci::kLEMetaEventCode);
     FTL_DCHECK(event.view().payload<hci::LEMetaEventParams>().subevent_code ==
                hci::kLEConnectionCompleteSubeventCode);
