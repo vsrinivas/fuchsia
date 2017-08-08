@@ -1,13 +1,3 @@
-#include <endian.h>
-
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define ENDIAN_SUFFIX "_be"
-#else
-#define ENDIAN_SUFFIX ""
-#endif
-
-#define LDSO_ARCH "aarch64" ENDIAN_SUFFIX
-
 #define NO_LEGACY_INITFINI
 
 #define TPOFF_K 16
@@ -21,10 +11,3 @@
 #define REL_DTPOFF R_AARCH64_TLS_DTPREL64
 #define REL_TPOFF R_AARCH64_TLS_TPREL64
 #define REL_TLSDESC R_AARCH64_TLSDESC
-
-// Jump to PC with ARG1 in the first argument register.
-#define CRTJMP(pc, arg1)                                       \
-    __asm__ __volatile__("mov x0,%1 ; br %0"                   \
-                         :                                     \
-                         : "r"(pc), "r"((unsigned long)(arg1)) \
-                         : "memory")
