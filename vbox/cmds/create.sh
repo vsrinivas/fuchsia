@@ -33,7 +33,7 @@ VBoxManage modifyvm "${FUCHSIA_VBOX_NAME}" \
   --firmware efi \
   --nestedpaging on \
   --nic1 "nat" \
-  --nictype1 virtio \
+  --nictype1 82540EM \
   --uart1 "0x03f8" "4" \
   --uartmode1 "server" "$FUCHSIA_VBOX_CONSOLE_SOCK" \
   --usb on \
