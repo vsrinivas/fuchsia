@@ -22,12 +22,9 @@ class LevelDb : public Db {
 
   Status Init();
 
-  // Store:
+  // Db:
   std::unique_ptr<Batch> StartBatch() override;
-  bool BatchStarted() override;
-  Status Put(convert::ExtendedStringView key, ftl::StringView value) override;
   Status Get(convert::ExtendedStringView key, std::string* value) override;
-  Status Delete(convert::ExtendedStringView key) override;
   Status HasKey(convert::ExtendedStringView key, bool* has_key) override;
   Status GetObject(convert::ExtendedStringView key,
                    ObjectId object_id,
@@ -42,7 +39,6 @@ class LevelDb : public Db {
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                                convert::ExtendedStringView>>>*
           iterator) override;
-  Status DeleteByPrefix(convert::ExtendedStringView prefix) override;
 
  private:
   const std::string db_path_;
@@ -51,7 +47,7 @@ class LevelDb : public Db {
   const leveldb::WriteOptions write_options_;
   const leveldb::ReadOptions read_options_;
 
-  std::unique_ptr<leveldb::WriteBatch> batch_;
+  uint64_t active_batches_count_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LevelDb);
 };

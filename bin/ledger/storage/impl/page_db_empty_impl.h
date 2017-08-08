@@ -9,30 +9,48 @@
 
 namespace storage {
 
-class PageDbEmptyImpl : public PageDb {
+class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
  public:
   PageDbEmptyImpl() {}
   ~PageDbEmptyImpl() override {}
 
+  // PageDb:
   Status Init() override;
+  std::unique_ptr<PageDb::Batch> StartBatch() override;
+  Status GetHeads(std::vector<CommitId>* heads) override;
+  Status GetCommitStorageBytes(CommitIdView commit_id,
+                               std::string* storage_bytes) override;
+  Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) override;
+  Status GetImplicitJournal(const JournalId& journal_id,
+                            std::unique_ptr<Journal>* journal) override;
+  Status GetJournalValue(const JournalId& journal_id,
+                         ftl::StringView key,
+                         std::string* value) override;
+  Status GetJournalEntries(
+      const JournalId& journal_id,
+      std::unique_ptr<Iterator<const EntryChange>>* entries) override;
+
+  // PageDb and PageDb::Batch:
+  Status ReadObject(ObjectId object_id,
+                    std::unique_ptr<const Object>* object) override;
+  Status HasObject(ObjectIdView object_id, bool* has_object) override;
+  Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
+  Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
+  Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
+  Status GetObjectStatus(ObjectIdView object_id,
+                         PageDbObjectStatus* object_status) override;
+  Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
+
+  Status AddHead(CommitIdView head, int64_t timestamp) override;
+  Status RemoveHead(CommitIdView head) override;
+  Status AddCommitStorageBytes(const CommitId& commit_id,
+                               ftl::StringView storage_bytes) override;
+  Status RemoveCommit(const CommitId& commit_id) override;
   Status CreateJournal(JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override;
   Status CreateMergeJournal(const CommitId& base,
                             const CommitId& other,
-                            std::unique_ptr<Journal>* journal) override;
-
-  std::unique_ptr<PageDb::Batch> StartBatch() override;
-  Status GetHeads(std::vector<CommitId>* heads) override;
-  Status AddHead(CommitIdView head, int64_t timestamp) override;
-  Status RemoveHead(CommitIdView head) override;
-  Status GetCommitStorageBytes(CommitIdView commit_id,
-                               std::string* storage_bytes) override;
-  Status AddCommitStorageBytes(const CommitId& commit_id,
-                               ftl::StringView storage_bytes) override;
-  Status RemoveCommit(const CommitId& commit_id) override;
-  Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) override;
-  Status GetImplicitJournal(const JournalId& journal_id,
                             std::unique_ptr<Journal>* journal) override;
   Status RemoveExplicitJournals() override;
   Status RemoveJournal(const JournalId& journal_id) override;
@@ -40,32 +58,21 @@ class PageDbEmptyImpl : public PageDb {
                          ftl::StringView key,
                          ftl::StringView value,
                          KeyPriority priority) override;
-  Status GetJournalValue(const JournalId& journal_id,
-                         ftl::StringView key,
-                         std::string* value) override;
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
-  Status GetJournalEntries(
-      const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries) override;
   Status WriteObject(ObjectIdView object_id,
                      std::unique_ptr<DataSource::DataChunk> content,
-                     ObjectStatus object_status) override;
-  Status ReadObject(ObjectId object_id,
-                    std::unique_ptr<const Object>* object) override;
+                     PageDbObjectStatus object_status) override;
   Status DeleteObject(ObjectIdView object_id) override;
-  Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(const CommitId& commit_id,
                               uint64_t generation) override;
-  Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
-  Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
   Status SetObjectStatus(ObjectIdView object_id,
-                         ObjectStatus object_status) override;
-  Status GetObjectStatus(ObjectIdView object_id,
-                         ObjectStatus* object_status) override;
+                         PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
-  Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
+
+  // PageDb::Batch:
+  Status Execute() override;
 };
 
 }  // namespace storage

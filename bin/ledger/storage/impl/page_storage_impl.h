@@ -109,7 +109,8 @@ class PageStorageImpl : public PageStorage {
   friend class PageStorageImplAccessorForTest;
 
   // Marks all pieces needed for the given objects as local.
-  Status MarkAllPiecesLocal(std::vector<ObjectId> object_ids);
+  Status MarkAllPiecesLocal(PageDb::Batch* batch,
+                            std::vector<ObjectId> object_ids);
 
   void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,
                   ChangeSource source,

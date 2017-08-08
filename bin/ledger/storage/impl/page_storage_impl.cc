@@ -355,7 +355,7 @@ void PageStorageImpl::GetUnsyncedPieces(
 }
 
 Status PageStorageImpl::MarkPieceSynced(ObjectIdView object_id) {
-  return db_.SetObjectStatus(object_id, PageDb::ObjectStatus::SYNCED);
+  return db_.SetObjectStatus(object_id, PageDbObjectStatus::SYNCED);
 }
 
 void PageStorageImpl::AddObjectFromLocal(
@@ -568,14 +568,15 @@ void PageStorageImpl::NotifyWatchers() {
   }
 }
 
-Status PageStorageImpl::MarkAllPiecesLocal(std::vector<ObjectId> object_ids) {
+Status PageStorageImpl::MarkAllPiecesLocal(PageDb::Batch* batch,
+                                           std::vector<ObjectId> object_ids) {
   std::unordered_set<ObjectId> seen_ids;
   while (!object_ids.empty()) {
     auto it = seen_ids.insert(std::move(object_ids.back()));
     object_ids.pop_back();
     const ObjectId& object_id = *(it.first);
     FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-    db_.SetObjectStatus(object_id, PageDb::ObjectStatus::LOCAL);
+    batch->SetObjectStatus(object_id, PageDbObjectStatus::LOCAL);
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
       Status status = db_.ReadObject(object_id, &object);
@@ -659,7 +660,7 @@ void PageStorageImpl::AddCommits(
           }
         }
         // Remove the parent from the list of heads.
-        db_.RemoveHead(parent_id);
+        batch->RemoveHead(parent_id);
       }
 
       // The commit could not be added. Skip it.
@@ -676,8 +677,8 @@ void PageStorageImpl::AddCommits(
       // unsynced).
       s = ContainsCommit(commit->GetId());
       if (s == Status::NOT_FOUND) {
-        s = db_.AddCommitStorageBytes(commit->GetId(),
-                                      commit->GetStorageBytes());
+        s = batch->AddCommitStorageBytes(commit->GetId(),
+                                         commit->GetStorageBytes());
         if (s != Status::OK) {
           callback(s);
           return;
@@ -693,7 +694,7 @@ void PageStorageImpl::AddCommits(
         }
 
         // Update heads.
-        s = db_.AddHead(commit->GetId(), commit->GetTimestamp());
+        s = batch->AddHead(commit->GetId(), commit->GetTimestamp());
         if (s != Status::OK) {
           callback(s);
           return;
@@ -709,7 +710,7 @@ void PageStorageImpl::AddCommits(
         // same commit at roughly the same time. As commit writing is
         // asynchronous, the previous check in AddCommitsFromSync may have not
         // matched any commit, while a commit got added in between.
-        s = db_.MarkCommitIdSynced(commit->GetId());
+        s = batch->MarkCommitIdSynced(commit->GetId());
         if (s != Status::OK) {
           callback(s);
           return;
@@ -738,7 +739,7 @@ void PageStorageImpl::AddCommits(
   }
 
   // If adding local commits, mark all new pieces as local.
-  Status status = MarkAllPiecesLocal(std::move(new_objects));
+  Status status = MarkAllPiecesLocal(batch.get(), std::move(new_objects));
   if (status != Status::OK) {
     callback(status);
     return;
@@ -778,9 +779,9 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
   std::unique_ptr<const Object> object;
   Status status = db_.ReadObject(object_id, &object);
   if (status == Status::NOT_FOUND) {
-    PageDb::ObjectStatus object_status =
-        (source == ChangeSource::LOCAL ? PageDb::ObjectStatus::TRANSIENT
-                                       : PageDb::ObjectStatus::SYNCED);
+    PageDbObjectStatus object_status =
+        (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
+                                       : PageDbObjectStatus::SYNCED);
     callback(db_.WriteObject(object_id, std::move(data), object_status));
     return;
   }
@@ -885,10 +886,10 @@ bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
     return false;
   }
 
-  PageDb::ObjectStatus object_status;
+  PageDbObjectStatus object_status;
   Status status = db_.GetObjectStatus(object_id, &object_status);
   FTL_DCHECK(status == Status::OK);
-  return object_status == PageDb::ObjectStatus::TRANSIENT;
+  return object_status == PageDbObjectStatus::TRANSIENT;
 }
 
 void PageStorageImpl::FillBufferWithObjectContent(

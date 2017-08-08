@@ -15,9 +15,22 @@ class Db {
  public:
   class Batch {
    public:
+    // A |Batch| can be used to execute a number of updates in |Db| atomically.
     Batch() {}
     virtual ~Batch() {}
 
+    // Inserts the given key-value pair in the database.
+    virtual Status Put(convert::ExtendedStringView key,
+                       ftl::StringView value) = 0;
+
+    // Deletes the entry in the database with the given |key|.
+    virtual Status Delete(convert::ExtendedStringView key) = 0;
+
+    // Deletes all entries whose keys match the given |prefix|.
+    virtual Status DeleteByPrefix(convert::ExtendedStringView prefix) = 0;
+
+    // Executes this batch. No further operations in this batch are supported
+    // after a successful execution.
     virtual Status Execute() = 0;
 
    private:
@@ -27,23 +40,12 @@ class Db {
   Db() {}
   virtual ~Db() {}
 
-  // Starts a new batch. Only one batch can be active at a time. The batch
-  // will be written when Execute is called on the returned object. The Db
-  // object must outlive the batch object.
+  // Starts a new batch. The batch will be written when Execute is called on the
+  // returned object. The Db object must outlive the batch object.
   virtual std::unique_ptr<Batch> StartBatch() = 0;
-
-  // Returns true if a batch is in progress; false otherwise.
-  virtual bool BatchStarted() = 0;
-
-  // Inserts the given key-value pair in the database.
-  virtual Status Put(convert::ExtendedStringView key,
-                     ftl::StringView value) = 0;
 
   // Retrieves the value corresponding to |key|.
   virtual Status Get(convert::ExtendedStringView key, std::string* value) = 0;
-
-  // Deletes the entry in the database with the given |key|.
-  virtual Status Delete(convert::ExtendedStringView key) = 0;
 
   // Checks whether |key| is stored in this database.
   virtual Status HasKey(convert::ExtendedStringView key, bool* has_key) = 0;
@@ -72,9 +74,6 @@ class Db {
       std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
                                                convert::ExtendedStringView>>>*
           iterator) = 0;
-
-  // Deletes all entries whose keys match the given |prefix|.
-  virtual Status DeleteByPrefix(convert::ExtendedStringView prefix) = 0;
 };
 
 }  // namespace storage

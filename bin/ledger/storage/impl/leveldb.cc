@@ -27,23 +27,55 @@ Status ConvertStatus(leveldb::Status s) {
 
 class BatchImpl : public Db::Batch {
  public:
-  explicit BatchImpl(std::function<Status(bool)> callback)
-      : callback_(std::move(callback)), executed_(false) {}
+  // Creates a new Batch based on a leveldb batch. Once |Execute| is called,
+  // |callback| will be called with the same batch, ready to be written in
+  // leveldb. If the destructor is called without a previous execution of the
+  // batch, |callback| will be called with a |nullptr|.
+  BatchImpl(
+      std::unique_ptr<leveldb::WriteBatch> batch,
+      leveldb::DB* db,
+      std::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
+      : batch_(std::move(batch)), db_(db), callback_(std::move(callback)) {}
 
   ~BatchImpl() override {
-    if (!executed_)
-      callback_(false);
+    if (batch_)
+      callback_(nullptr);
+  }
+
+  Status Put(convert::ExtendedStringView key, ftl::StringView value) override {
+    FTL_DCHECK(batch_);
+    batch_->Put(key, convert::ToSlice(value));
+    return Status::OK;
+  }
+
+  Status Delete(convert::ExtendedStringView key) override {
+    FTL_DCHECK(batch_);
+    batch_->Delete(key);
+    return Status::OK;
+  }
+
+  Status DeleteByPrefix(convert::ExtendedStringView prefix) override {
+    FTL_DCHECK(batch_);
+    std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
+    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
+         it->Next()) {
+      batch_->Delete(it->key());
+    }
+    return ConvertStatus(it->status());
   }
 
   Status Execute() override {
-    FTL_DCHECK(!executed_);
-    executed_ = true;
-    return callback_(true);
+    FTL_DCHECK(batch_);
+    return callback_(std::move(batch_));
   }
 
  private:
-  std::function<Status(bool)> callback_;
-  bool executed_;
+  std::unique_ptr<leveldb::WriteBatch> batch_;
+
+  const leveldb::ReadOptions read_options_;
+  leveldb::DB* db_;
+
+  std::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback_;
 };
 
 class RowIterator
@@ -107,7 +139,8 @@ class RowIterator
 LevelDb::LevelDb(std::string db_path) : db_path_(std::move(db_path)) {}
 
 LevelDb::~LevelDb() {
-  FTL_DCHECK(!batch_);
+  FTL_DCHECK(!active_batches_count_)
+      << "Not all LevelDb batches have been executed or rolled back.";
 }
 
 Status LevelDb::Init() {
@@ -130,44 +163,26 @@ Status LevelDb::Init() {
 }
 
 std::unique_ptr<Db::Batch> LevelDb::StartBatch() {
-  FTL_DCHECK(!batch_);
-  batch_ = std::make_unique<leveldb::WriteBatch>();
-  return std::make_unique<BatchImpl>([this](bool execute) {
-    std::unique_ptr<leveldb::WriteBatch> batch = std::move(batch_);
-    if (execute) {
-      leveldb::Status status = db_->Write(write_options_, batch.get());
-      if (!status.ok()) {
-        FTL_LOG(ERROR) << "Failed to execute batch with status: "
-                       << status.ToString();
-        return Status::INTERNAL_IO_ERROR;
-      }
-    }
-    return Status::OK;
-  });
-}
-
-bool LevelDb::BatchStarted() {
-  return batch_ != nullptr;
-}
-
-Status LevelDb::Put(convert::ExtendedStringView key, ftl::StringView value) {
-  if (batch_) {
-    batch_->Put(key, convert::ToSlice(value));
-    return Status::OK;
-  }
-  return ConvertStatus(db_->Put(write_options_, key, convert::ToSlice(value)));
+  auto db_batch = std::make_unique<leveldb::WriteBatch>();
+  active_batches_count_++;
+  return std::make_unique<BatchImpl>(
+      std::move(db_batch), db_.get(),
+      [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
+        active_batches_count_--;
+        if (db_batch) {
+          leveldb::Status status = db_->Write(write_options_, db_batch.get());
+          if (!status.ok()) {
+            FTL_LOG(ERROR) << "Failed to execute batch with status: "
+                           << status.ToString();
+            return Status::INTERNAL_IO_ERROR;
+          }
+        }
+        return Status::OK;
+      });
 }
 
 Status LevelDb::Get(convert::ExtendedStringView key, std::string* value) {
   return ConvertStatus(db_->Get(read_options_, key, value));
-}
-
-Status LevelDb::Delete(convert::ExtendedStringView key) {
-  if (batch_) {
-    batch_->Delete(key);
-    return Status::OK;
-  }
-  return ConvertStatus(db_->Delete(write_options_, key));
 }
 
 Status LevelDb::HasKey(convert::ExtendedStringView key, bool* has_key) {
@@ -247,15 +262,6 @@ Status LevelDb::GetIteratorAtPrefix(
     iterator->swap(row_iterator);
   }
   return Status::OK;
-}
-
-Status LevelDb::DeleteByPrefix(convert::ExtendedStringView prefix) {
-  std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
-  for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
-       it->Next()) {
-    Delete(it->key());
-  }
-  return ConvertStatus(it->status());
 }
 
 }  // namespace storage

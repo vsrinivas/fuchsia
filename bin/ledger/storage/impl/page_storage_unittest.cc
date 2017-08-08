@@ -146,6 +146,10 @@ class FakePageDbImpl : public PageDbEmptyImpl {
     return Status::OK;
   }
 
+  std::unique_ptr<PageDb::Batch> StartBatch() override {
+    return std::make_unique<FakePageDbImpl>(coroutine_service_, storage_);
+  }
+
  private:
   coroutine::CoroutineService* coroutine_service_;
   PageStorageImpl* storage_;
@@ -332,7 +336,7 @@ class PageStorageTest : public StorageTest {
 
   Status WriteObject(
       ObjectData* data,
-      PageDb::ObjectStatus object_status = PageDb::ObjectStatus::TRANSIENT) {
+      PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
         data->object_id, data->ToChunk(), object_status);
   }

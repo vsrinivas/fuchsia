@@ -22,53 +22,26 @@ namespace storage {
 
 class PageStorageImpl;
 
-// |PageDb| manages all Ledger related data that are locally stored. This
-// includes commit objects, information on head commits, as well as metadata on
-// which objects and commits are not yet synchronized to the cloud.
-class PageDb {
+// Status of an object in the database.
+enum class PageDbObjectStatus {
+  // The object is not in the database.
+  UNKNOWN,
+  // The object is in the database, but not in any commit.
+  TRANSIENT,
+  // The object is associated to a commit, but not yet synced.
+  LOCAL,
+  // The object is synced.
+  SYNCED,
+};
+
+// |PageDbMutator| provides all update (insertion and deletion) operations
+// over |PageDb|.
+class PageDbMutator {
  public:
-  class Batch {
-   public:
-    Batch() {}
-    virtual ~Batch() {}
-
-    virtual Status Execute() = 0;
-
-   private:
-    FTL_DISALLOW_COPY_AND_ASSIGN(Batch);
-  };
-
-  // Status of an object in the database.
-  enum class ObjectStatus {
-    // The object is not in the database.
-    UNKNOWN,
-    // The object is in the database, but not in any commit.
-    TRANSIENT,
-    // The object is associated to a commit, but not yet synced.
-    LOCAL,
-    // The object is synced.
-    SYNCED,
-  };
-
-  PageDb() {}
-  virtual ~PageDb() {}
-
-  // Initializes PageDb or returns an |IO_ERROR| on failure.
-  virtual Status Init() = 0;
-
-  // Starts a new batch. Only one batch can be active at a time. The batch
-  // will be written when the Execute is called on the returned object. The
-  // PageDb object must outlive the batch object.
-  virtual std::unique_ptr<Batch> StartBatch() = 0;
+  PageDbMutator() {}
+  virtual ~PageDbMutator() {}
 
   // Heads.
-  // Finds all head commits and replaces the contents of |heads| with their ids.
-  // Returns |OK| on success or |IO_ERROR| in case of an error reading the
-  // values. It is not an error if no heads are found. The resulting |heads| are
-  // ordered by the timestamp given at their insertion and if identical, by
-  // their id.
-  virtual Status GetHeads(std::vector<CommitId>* heads) = 0;
-
   // Adds the given |head| in the set of commit heads.
   virtual Status AddHead(CommitIdView head, int64_t timestamp) = 0;
 
@@ -76,11 +49,6 @@ class PageDb {
   virtual Status RemoveHead(CommitIdView head) = 0;
 
   // Commits.
-  // Finds the commit with the given |commit_id| and stores its represenation in
-  // storage bytes in the |storage_bytes| string.
-  virtual Status GetCommitStorageBytes(CommitIdView commit_id,
-                                       std::string* storage_bytes) = 0;
-
   // Adds the given |commit| in the database.
   virtual Status AddCommitStorageBytes(const CommitId& commit_id,
                                        ftl::StringView storage_bytes) = 0;
@@ -101,15 +69,6 @@ class PageDb {
                                     const CommitId& other,
                                     std::unique_ptr<Journal>* journal) = 0;
 
-  // Finds all implicit journal ids and replaces the contents of |journal_ids|
-  // with their ids.
-  virtual Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) = 0;
-
-  // Stores the implicit journal with the given |journal_id| in the |journal|
-  // parameter.
-  virtual Status GetImplicitJournal(const JournalId& journal_id,
-                                    std::unique_ptr<Journal>* journal) = 0;
-
   // Removes all information on explicit journals from the database.
   virtual Status RemoveExplicitJournals() = 0;
 
@@ -124,14 +83,99 @@ class PageDb {
                                  ftl::StringView value,
                                  KeyPriority priority) = 0;
 
+  // Removes the given key from the journal with the given |journal_id|.
+  virtual Status RemoveJournalEntry(const JournalId& journal_id,
+                                    convert::ExtendedStringView key) = 0;
+
+  // Object data.
+  // Writes the content of the given object.
+  virtual Status WriteObject(ObjectIdView object_id,
+                             std::unique_ptr<DataSource::DataChunk> content,
+                             PageDbObjectStatus object_status) = 0;
+
+  // Deletes the object with the given identifier.
+  virtual Status DeleteObject(ObjectIdView object_id) = 0;
+
+  // Object sync metadata.
+  // Sets the status of the object with the given id.
+  virtual Status SetObjectStatus(ObjectIdView object_id,
+                                 PageDbObjectStatus object_status) = 0;
+
+  // Commit sync metadata.
+  // Marks the given |commit_id| as synced.
+  virtual Status MarkCommitIdSynced(const CommitId& commit_id) = 0;
+
+  // Marks the given |commit_id| as unsynced.
+  virtual Status MarkCommitIdUnsynced(const CommitId& commit_id,
+                                      uint64_t generation) = 0;
+
+  // Sets the opaque sync metadata associated with this page for the given key.
+  virtual Status SetSyncMetadata(ftl::StringView key,
+                                 ftl::StringView value) = 0;
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
+};
+
+// |PageDb| manages all Ledger related data that are locally stored. This
+// includes commit, value and tree node objects, information on head commits, as
+// well as metadata on which objects and commits are not yet synchronized to the
+// cloud.
+class PageDb : public PageDbMutator {
+ public:
+  // A |Batch| can be used to execute a number of updates in |PageDb|
+  // atomically.
+  class Batch : public PageDbMutator {
+   public:
+    Batch() {}
+    ~Batch() override {}
+
+    // Executes this batch. No further operations in this batch are supported
+    // after a successful execution.
+    virtual Status Execute() = 0;
+
+   private:
+    FTL_DISALLOW_COPY_AND_ASSIGN(Batch);
+  };
+
+  PageDb() {}
+  ~PageDb() override {}
+
+  // Initializes PageDb or returns an |IO_ERROR| on failure.
+  virtual Status Init() = 0;
+
+  // Starts a new batch. The batch will be written when the Execute is called on
+  // the returned object. The PageDb object must outlive the batch object.
+  virtual std::unique_ptr<Batch> StartBatch() = 0;
+
+  // Heads.
+  // Finds all head commits and replaces the contents of |heads| with their ids.
+  // Returns |OK| on success or |IO_ERROR| in case of an error reading the
+  // values. It is not an error if no heads are found. The resulting |heads| are
+  // ordered by the timestamp given at their insertion and if identical, by
+  // their id.
+  virtual Status GetHeads(std::vector<CommitId>* heads) = 0;
+
+  // Commits.
+  // Finds the commit with the given |commit_id| and stores its represenation in
+  // storage bytes in the |storage_bytes| string.
+  virtual Status GetCommitStorageBytes(CommitIdView commit_id,
+                                       std::string* storage_bytes) = 0;
+
+  // Journals.
+  // Finds all implicit journal ids and replaces the contents of |journal_ids|
+  // with their ids.
+  virtual Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) = 0;
+
+  // Stores the implicit journal with the given |journal_id| in the |journal|
+  // parameter.
+  virtual Status GetImplicitJournal(const JournalId& journal_id,
+                                    std::unique_ptr<Journal>* journal) = 0;
+
   // Finds the value for the given |key| in the journal with the given id.
   virtual Status GetJournalValue(const JournalId& journal_id,
                                  ftl::StringView key,
                                  std::string* value) = 0;
-
-  // Removes the given key from the journal with the given |journal_id|.
-  virtual Status RemoveJournalEntry(const JournalId& journal_id,
-                                    convert::ExtendedStringView key) = 0;
 
   // Finds all the entries of the journal with the given |journal_id| and stores
   // an interator over the results on |entires|.
@@ -139,31 +183,26 @@ class PageDb {
       const JournalId& journal_id,
       std::unique_ptr<Iterator<const EntryChange>>* entries) = 0;
 
-  // Object data
-  // Writes the content of the given object.
-  virtual Status WriteObject(ObjectIdView object_id,
-                             std::unique_ptr<DataSource::DataChunk> content,
-                             ObjectStatus object_status) = 0;
+  // Object data.
   // Reads the content of the given object. To check whether an object is stored
   // in the PageDb without retrieving its value, |nullptr| can be given for the
   // |object| argument.
   virtual Status ReadObject(ObjectId object_id,
                             std::unique_ptr<const Object>* object) = 0;
-  // Deletes the object with the given identifier.
-  virtual Status DeleteObject(ObjectIdView object_id) = 0;
+
+  // Checks whether the object with the given |object_id| is stored in the
+  // database.
+  virtual Status HasObject(ObjectIdView object_id, bool* has_object) = 0;
+
+  // Returns the status of the object with the given id.
+  virtual Status GetObjectStatus(ObjectIdView object_id,
+                                 PageDbObjectStatus* object_status) = 0;
 
   // Commit sync metadata.
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|
   // with their ids. The result is ordered by the timestamps given when calling
   // |MarkCommitIdUnsynced|.
   virtual Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) = 0;
-
-  // Marks the given |commit_id| as synced.
-  virtual Status MarkCommitIdSynced(const CommitId& commit_id) = 0;
-
-  // Marks the given |commit_id| as unsynced.
-  virtual Status MarkCommitIdUnsynced(const CommitId& commit_id,
-                                      uint64_t generation) = 0;
 
   // Checks if the commit with the given |commit_id| is synced.
   virtual Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) = 0;
@@ -173,18 +212,7 @@ class PageDb {
   // with their ids. |object_ids| will be lexicographically sorted.
   virtual Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) = 0;
 
-  // Sets the status of the object with the given id.
-  virtual Status SetObjectStatus(ObjectIdView object_id,
-                                 ObjectStatus object_status) = 0;
-
-  // Returns the status of the object with the given id.
-  virtual Status GetObjectStatus(ObjectIdView object_id,
-                                 ObjectStatus* object_status) = 0;
-
-  // Sets the opaque sync metadata associated with this page for the given key.
-  virtual Status SetSyncMetadata(ftl::StringView key,
-                                 ftl::StringView value) = 0;
-
+  // Sync metadata.
   // Retrieves the opaque sync metadata associated with this page for the given
   // key.
   virtual Status GetSyncMetadata(ftl::StringView key, std::string* value) = 0;
