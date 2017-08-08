@@ -111,6 +111,10 @@ func (f *Filesystem) FreeSize() int64 {
 	return 0
 }
 
+func (f *Filesystem) DevicePath() string {
+	return ""
+}
+
 var _ fs.FileSystem = (*Filesystem)(nil)
 
 type rootDirectory struct {
