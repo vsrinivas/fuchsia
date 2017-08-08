@@ -30,6 +30,20 @@ CLANG_TIDY_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
 NINJA_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "ninja")
 
 
+def find_ancestor_with(filepath, relpath):
+    """Returns the lowest ancestor of |filepath| that contains |relpath|."""
+    cur_dir_path = os.path.abspath(os.path.dirname(filepath))
+    while True:
+        if os.path.exists(os.path.join(cur_dir_path, relpath)):
+            return cur_dir_path
+
+        next_dir_path = os.path.dirname(cur_dir_path)
+        if next_dir_path != cur_dir_path:
+            cur_dir_path = next_dir_path
+        else:
+            return None
+
+
 def get_out_dir(args):
     if os.environ.get("FUCHSIA_BUILD_DIR"):
         return os.environ.get("FUCHSIA_BUILD_DIR")
@@ -69,18 +83,33 @@ def go(args):
     # generate the compilation database
     generate_db(out_dir)
 
-    # Find the files to be formatted.
+    # Find the files to be checked.
     if args.all:
         files = git_utils.get_all_files()
     else:
         files = git_utils.get_diff_files()
 
+    filtered_files = []
+    for file_path in files:
+        # Skip deleted files.
+        if not os.path.isfile(file_path):
+            if args.verbose:
+                print "skipping " + file_path + " (deleted)"
+            continue
+
+        # Skip files with parent directories containing .nolint
+        if find_ancestor_with(file_path, ".nolint"):
+            if args.verbose:
+                print "skipping " + file_path + " (.nolint)"
+            continue
+        filtered_files.append(file_path)
+
     if args.verbose:
         print
-        print "Files to be formatted:"
-        for file in files:
+        print "Files to be checked:"
+        for file in filtered_files:
             print " - " + file
-        if not files:
+        if not filtered_files:
             print " (no files)"
         print
 
@@ -99,13 +128,7 @@ def go(args):
 
     jobs = set()
 
-    for file_path in files:
-        # Skip deleted files.
-        if not os.path.isfile(file_path):
-            if args.verbose:
-                print "skipping " + file_path + " (deleted)"
-            continue
-
+    for file_path in filtered_files:
         _, extension = os.path.splitext(file_path)
         if extension == ".cc":
             relpath = os.path.relpath(file_path)
@@ -114,6 +137,8 @@ def go(args):
                 cmd.append("-checks=" + args.checks)
             if args.fix:
                 cmd.append("-fix")
+            if not args.verbose:
+                cmd.append("-quiet")
 
             if args.verbose:
                 print "checking " + file_path + ": " + str(cmd)
