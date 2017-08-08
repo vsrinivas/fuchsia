@@ -74,14 +74,10 @@ func main() {
 			log.Printf("amber: please provide keys for client %v\n", err)
 			return
 		}
-		for tries := 3; tries > 0; tries-- {
-			log.Println("amber: initializing client")
-			err = client.Init(rootKeys, len(rootKeys))
-			if err != nil {
-				log.Printf("amber: client failed to init with provided keys %v\n", err)
-				continue
-			}
-			break
+
+		err = initClient(client, rootKeys)
+		if err != nil {
+			log.Println("client initialization failed, exiting")
 		}
 	}
 
@@ -96,6 +92,34 @@ func main() {
 
 	//block forever
 	select {}
+}
+
+func initClient(client *tuf.Client, keys []*data.Key) error {
+	log.Println("initializing client")
+	delay := 1 * time.Second
+	maxStep := 30 * time.Second
+	maxDelay := 5 * time.Minute
+
+	// TODO(jmatt) consider giving up?
+	for {
+		err := client.Init(keys, len(keys))
+		if err == nil {
+			break
+		}
+		log.Println("client failed to init with provided keys")
+		time.Sleep(delay)
+
+		if delay > maxStep {
+			delay += maxStep
+		} else {
+			delay += delay
+		}
+
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+	}
+	return nil
 }
 
 func doDemo() {
