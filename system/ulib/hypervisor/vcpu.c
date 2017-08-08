@@ -10,6 +10,7 @@
 #include <hypervisor/bits.h>
 #include <hypervisor/block.h>
 #include <hypervisor/decode.h>
+#include <hypervisor/io_apic.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/ports.h>
 #include <hypervisor/uart.h>
@@ -27,8 +28,6 @@
 /* Memory-mapped device physical addresses. */
 #define LOCAL_APIC_PHYS_BASE                    0xfee00000
 #define LOCAL_APIC_PHYS_TOP                     (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
-#define IO_APIC_PHYS_BASE                       0xfec00000
-#define IO_APIC_PHYS_TOP                        (IO_APIC_PHYS_BASE + PAGE_SIZE - 1)
 
 /* PCI ECAM memory layout. These are provided to the guest via the MCFG ACPI
  * table.
@@ -56,20 +55,6 @@
 #define LOCAL_APIC_REGISTER_LVT_LINT1           0x0360
 #define LOCAL_APIC_REGISTER_LVT_ERROR           0x0370
 #define LOCAL_APIC_REGISTER_INITIAL_COUNT       0x0380
-
-/* IO APIC register addresses. */
-#define IO_APIC_IOREGSEL                        0x00
-#define IO_APIC_IOWIN                           0x10
-
-/* IO APIC register addresses. */
-#define IO_APIC_REGISTER_ID                     0x00
-#define IO_APIC_REGISTER_VER                    0x01
-#define IO_APIC_REGISTER_ARBITRATION            0x02
-
-/* IO APIC configuration constants. */
-#define IO_APIC_VERSION                         0x11
-#define FIRST_REDIRECT_OFFSET                   0x10
-#define LAST_REDIRECT_OFFSET                    (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
 
 /* PIC configuration constants. */
 #define PIC_INVALID                             UINT8_MAX
@@ -103,8 +88,8 @@
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT                        13u
 
-static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
-                                     const mx_guest_memory_t* memory, instruction_t* inst) {
+static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_memory_t* memory,
+                                     instruction_t* inst) {
     MX_ASSERT(memory->addr >= LOCAL_APIC_PHYS_BASE);
     mx_vaddr_t offset = memory->addr - LOCAL_APIC_PHYS_BASE;
     switch (offset) {
@@ -139,7 +124,7 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
     case LOCAL_APIC_REGISTER_LVT_THERMAL:
     case LOCAL_APIC_REGISTER_LVT_TIMER:
     case LOCAL_APIC_REGISTER_SVR:
-        return inst_rw32(inst, local_apic_state->apic_addr + offset);
+        return inst_rw32(inst, local_apic->apic_addr + offset);
     case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
         uint32_t initial_count;
         mx_status_t status = inst_write32(inst, &initial_count);
@@ -148,42 +133,7 @@ static mx_status_t handle_local_apic(local_apic_state_t* local_apic_state,
         return initial_count > 0 ? MX_ERR_NOT_SUPPORTED : MX_OK;
     }}
 
-    fprintf(stderr, "Unhandled local APIC %#lx\n", offset);
-    return MX_ERR_NOT_SUPPORTED;
-}
-
-static mx_status_t handle_io_apic(io_apic_state_t* io_apic_state,
-                                  const mx_guest_memory_t* memory, instruction_t* inst) {
-    MX_ASSERT(memory->addr >= IO_APIC_PHYS_BASE);
-    mx_vaddr_t offset = memory->addr - IO_APIC_PHYS_BASE;
-    switch (offset) {
-    case IO_APIC_IOREGSEL: {
-        mx_status_t status = inst_write32(inst, &io_apic_state->select);
-        if (status != MX_OK)
-            return status;
-        return io_apic_state->select > UINT8_MAX ? MX_ERR_INVALID_ARGS : MX_OK;
-    }
-    case IO_APIC_IOWIN:
-        switch (io_apic_state->select) {
-        case IO_APIC_REGISTER_ID:
-            return inst_rw32(inst, &io_apic_state->id);
-        case IO_APIC_REGISTER_VER:
-            // There are two redirect offsets per redirection entry. We return
-            // the maximum redirection entry index.
-            //
-            // From Intel 82093AA, Section 3.2.2.
-            return inst_read32(inst, (IO_APIC_REDIRECT_OFFSETS / 2 - 1) << 16 | IO_APIC_VERSION);
-        case IO_APIC_REGISTER_ARBITRATION:
-            // Since we have a single I/O APIC, it is always the winner
-            // of arbitration and its arbitration register is always 0.
-            return inst_read32(inst, 0);
-        case FIRST_REDIRECT_OFFSET ... LAST_REDIRECT_OFFSET: {
-            uint32_t i = io_apic_state->select - FIRST_REDIRECT_OFFSET;
-            return inst_rw32(inst, io_apic_state->redirect + i);
-        }}
-    }
-
-    fprintf(stderr, "Unhandled IO APIC %#lx\n", offset);
+    fprintf(stderr, "Unhandled local APIC address %#lx\n", offset);
     return MX_ERR_NOT_SUPPORTED;
 }
 
@@ -211,15 +161,14 @@ static mx_status_t handle_pci_write(guest_state_t* guest_state, uint8_t bus, uin
     return pci_device_write(&guest_state->bus[device], reg, len, value);
 }
 
-static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
-                                          uint8_t bus, uint8_t device,
+static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state, uint8_t bus, uint8_t device,
                                           uint8_t function, uint16_t reg,
-                                          instruction_t* inst,
-                                          const mx_guest_memory_t* memory) {
+                                          const mx_guest_memory_t* memory,
+                                          const instruction_t* inst) {
+    uint32_t value = 0;
     mx_status_t status;
     switch (inst->type) {
-    case INST_TEST: {
-        uint32_t value = 0;
+    case INST_TEST:
         status = handle_pci_read(guest_state, bus, device, function, reg, inst->mem, &value);
         if (status != MX_OK)
             return status;
@@ -230,9 +179,7 @@ static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
         default:
             return MX_ERR_NOT_SUPPORTED;
         }
-    }
-    case INST_MOV_READ: {
-        uint32_t value = 0;
+    case INST_MOV_READ:
         status = handle_pci_read(guest_state, bus, device, function, reg, inst->mem, &value);
         if (status != MX_OK)
             return status;
@@ -247,14 +194,11 @@ static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
         default:
             return MX_ERR_NOT_SUPPORTED;
         }
-    }
-    case INST_MOV_WRITE: {
-        uint32_t value = 0;
+    case INST_MOV_WRITE:
         switch (inst->mem) {
-        case 2: {
+        case 2:
             status = inst_write16(inst, (uint16_t*) &value);
             break;
-        }
         case 4:
             status = inst_write32(inst, &value);
             break;
@@ -266,11 +210,11 @@ static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state,
             return status;
 
         return handle_pci_write(guest_state, bus, device, function, reg, inst->mem, value);
-    }}
+    }
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, instruction_t* inst) {
+static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, const instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", memory->addr);
     if (inst->type == INST_MOV_READ)
         *inst->reg = UINT64_MAX;
@@ -304,11 +248,11 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
         guest_state_t* guest_state = vcpu_context->guest_state;
         switch (memory->addr) {
         case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
-            status = handle_local_apic(&vcpu_context->local_apic_state, memory, &inst);
+            status = handle_local_apic(&vcpu_context->local_apic, memory, &inst);
             break;
         case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
             mtx_lock(&guest_state->mutex);
-            status = handle_io_apic(&guest_state->io_apic_state, memory, &inst);
+            status = io_apic_handler(guest_state->io_apic, memory, &inst);
             mtx_unlock(&guest_state->mutex);
             break;
         case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP: {
@@ -318,7 +262,7 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
                                             PCI_ECAM_DEVICE(memory->addr),
                                             PCI_ECAM_FUNCTION(memory->addr),
                                             PCI_ECAM_REGISTER(memory->addr),
-                                            &inst, memory);
+                                            memory, &inst);
             mtx_unlock(&guest_state->mutex);
             break;
         }
@@ -381,10 +325,6 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
         return MX_ERR_NOT_SUPPORTED;
     }
     return MX_OK;
-}
-
-uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq) {
-    return io_apic_state->redirect[global_irq * 2] & UINT8_MAX;
 }
 
 static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {

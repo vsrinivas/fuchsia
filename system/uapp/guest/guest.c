@@ -12,6 +12,7 @@
 #include <hypervisor/acpi.h>
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
+#include <hypervisor/io_apic.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
@@ -92,14 +93,18 @@ int main(int argc, char** argv) {
     // Setup guest memory.
     guest_state.mem_addr = (void*)addr;
     guest_state.mem_size = kVmoSize;
-    // Setup PCI.
-    pci_bus_t bus;
-    guest_state.bus = bus;
-    pci_bus_init(bus);
     // Setup UART.
     uart_t uart;
     guest_state.uart = &uart;
     uart_init(&uart);
+    // Setup IO APIC.
+    io_apic_t io_apic;
+    guest_state.io_apic = &io_apic;
+    io_apic_init(&io_apic);
+    // Setup PCI.
+    pci_bus_t bus;
+    guest_state.bus = bus;
+    pci_bus_init(bus);
     // Setup block device.
     block_t block;
     guest_state.block = &block;
@@ -188,7 +193,7 @@ int main(int argc, char** argv) {
     vcpu_init(&vcpu_context);
     vcpu_context.vcpu = vcpu;
 #if __x86_64__
-    vcpu_context.local_apic_state.apic_addr = (void*)apic_addr;
+    vcpu_context.local_apic.apic_addr = (void*)apic_addr;
 #endif // __x86_64__
     vcpu_context.guest_state = &guest_state;
 

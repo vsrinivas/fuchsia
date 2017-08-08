@@ -9,21 +9,10 @@
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 
-#define IO_APIC_REDIRECT_OFFSETS    128u
-
 typedef struct block block_t;
+typedef struct io_apic io_apic_t;
 typedef struct pci_device pci_device_t;
 typedef struct uart uart_t;
-
-/* Stores the IO APIC state. */
-typedef struct io_apic_state {
-    // IO register-select register.
-    uint32_t select;
-    // IO APIC identification register.
-    uint32_t id;
-    // IO redirection table offsets.
-    uint32_t redirect[IO_APIC_REDIRECT_OFFSETS];
-} io_apic_state_t;
 
 /* Stores the IO port state. */
 typedef struct io_port_state {
@@ -45,19 +34,19 @@ typedef struct guest_state {
     void* mem_addr;
     size_t mem_size;
 
-    pci_device_t* bus;
     uart_t* uart;
+    io_apic_t* io_apic;
+    pci_device_t* bus;
     block_t* block;
 
-    io_apic_state_t io_apic_state;
     io_port_state_t io_port_state;
 } guest_state_t;
 
 /* Stores the local APIC state. */
-typedef struct local_apic_state {
+typedef struct local_apic {
     // Address of the local APIC.
     void* apic_addr;
-} local_apic_state_t;
+} local_apic_t;
 
 /* Typedefs to abstract reading and writing VCPU state. */
 typedef struct vcpu_context vcpu_context_t;
@@ -69,7 +58,7 @@ typedef mx_status_t (*write_state_fn_t)
 /* Stores the state associated with a single VCPU. */
 typedef struct vcpu_context {
     mx_handle_t vcpu;
-    local_apic_state_t local_apic_state;
+    local_apic_t local_apic;
     guest_state_t* guest_state;
 
     // Accessors to the VCPU registers. These are initialized in vcpu_init.
@@ -85,6 +74,3 @@ mx_status_t vcpu_loop(vcpu_context_t* context);
 
 /* Processes a single guest packet. */
 mx_status_t vcpu_handle_packet(vcpu_context_t* context, mx_guest_packet_t* packet);
-
-/* Returns the redirected IRQ for the given global one. */
-uint8_t irq_redirect(const io_apic_state_t* io_apic_state, uint8_t global_irq);

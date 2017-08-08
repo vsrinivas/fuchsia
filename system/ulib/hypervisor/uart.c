@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <hypervisor/bits.h>
+#include <hypervisor/io_apic.h>
 #include <hypervisor/ports.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
@@ -74,7 +75,7 @@ static mx_status_t raise_thr_empty(mx_handle_t vcpu, guest_state_t* guest_state)
     if (interrupt == 0) {
         // Lock concurrent access to io_apic_state.
         mtx_lock(&guest_state->mutex);
-        interrupt = irq_redirect(&guest_state->io_apic_state, X86_INT_UART);
+        interrupt = io_apic_redirect(guest_state->io_apic, X86_INT_UART);
         mtx_unlock(&guest_state->mutex);
 
         // UART IRQs overlap with CPU exception handlers, so they need to be remapped.

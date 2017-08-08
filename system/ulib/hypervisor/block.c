@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <hypervisor/block.h>
+#include <hypervisor/io_apic.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
@@ -42,7 +43,7 @@ mx_status_t block_init(block_t* block, const char* block_path) {
     return MX_OK;
 }
 
-mx_status_t block_read(block_t* block, uint16_t port, mx_vcpu_io_t* vcpu_io) {
+mx_status_t block_read(const block_t* block, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     switch (port) {
     case VIRTIO_PCI_DEVICE_FEATURES:
         vcpu_io->access_size = 4;
@@ -142,7 +143,7 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
             fprintf(stderr, "Block device operation failed %d\n", status);
             return status;
         }
-        uint32_t interrupt = irq_redirect(&guest_state->io_apic_state, X86_INT_BLOCK);
+        uint32_t interrupt = io_apic_redirect(guest_state->io_apic, X86_INT_BLOCK);
         return mx_vcpu_interrupt(vcpu, interrupt);
     }}
 
