@@ -27,7 +27,6 @@ class VuMeterView : public mozart::SkiaView {
   ~VuMeterView() override;
 
  private:
-  static constexpr uint32_t kChannels = 2;
   static constexpr uint32_t kBytesPerSample = 2;
   static constexpr float kVuFullWidth = 35000.0f;
   static constexpr float kFastDecay = 0.0001f;
@@ -76,6 +75,10 @@ class VuMeterView : public mozart::SkiaView {
   // Toggles between start and stop.
   void ToggleStartStop();
 
+  // Selects the media type to capture.
+  void OnGotSupportedMediaTypes(
+      fidl::Array<media::MediaTypeSetPtr> media_types);
+
   void OnPacketSupplied(
       std::unique_ptr<media::MediaPacketConsumerBase::SuppliedPacket>
           supplied_packet);
@@ -84,6 +87,8 @@ class VuMeterView : public mozart::SkiaView {
   media::MediaPacketProducerPtr packet_producer_;
   PacketConsumer packet_consumer_;
   bool started_ = false;
+  uint32_t channels_ = 0;
+  uint32_t frames_per_second_ = 0;
   PeakFilter fast_left_;
   PeakFilter fast_right_;
   PeakFilter slow_left_;

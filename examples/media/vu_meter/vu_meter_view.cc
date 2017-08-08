@@ -59,7 +59,11 @@ VuMeterView::VuMeterView(
   // the producer is preparing another one.
   packet_consumer_.SetDemand(2);
 
-  ToggleStartStop();
+  // Fetch the list of supported media types
+  media_capturer_->GetSupportedMediaTypes(
+      [this](fidl::Array<media::MediaTypeSetPtr> supported_media_types) {
+        OnGotSupportedMediaTypes(std::move(supported_media_types));
+      });
 }
 
 VuMeterView::~VuMeterView() {}
@@ -128,7 +132,7 @@ void VuMeterView::DrawContent(SkCanvas* canvas) {
 }
 
 void VuMeterView::ToggleStartStop() {
-  if (started_) {
+  if ((started_) || !channels_) {
     media_capturer_->Stop();
     started_ = false;
   } else {
@@ -139,25 +143,74 @@ void VuMeterView::ToggleStartStop() {
   InvalidateScene();
 }
 
+void VuMeterView::OnGotSupportedMediaTypes(
+    fidl::Array<media::MediaTypeSetPtr> media_types) {
+  // Look for a media type we like.
+  for (const auto& type : media_types) {
+    if (type->medium != media::MediaTypeMedium::AUDIO) {
+      continue;
+    }
+
+    FTL_DCHECK(!type->details.is_null());
+    FTL_DCHECK(type->details->is_audio());
+    const auto& audio_details = *(type->details->get_audio());
+    if (audio_details.sample_format != media::AudioSampleFormat::SIGNED_16)
+      continue;
+
+    channels_ = std::max(std::min(2u, audio_details.max_channels),
+                         audio_details.min_channels);
+    frames_per_second_ =
+      std::max(std::min(2u, audio_details.max_frames_per_second),
+               audio_details.min_frames_per_second);
+
+    auto tmp = media::AudioMediaTypeDetails::New();
+    tmp->sample_format = media::AudioSampleFormat::SIGNED_16;
+    tmp->channels = channels_;
+    tmp->frames_per_second = frames_per_second_;
+
+    auto cfg = media::MediaType::New();
+    cfg->medium = media::MediaTypeMedium::AUDIO;
+    cfg->encoding = media::MediaType::kAudioEncodingLpcm;
+    cfg->details = media::MediaTypeDetails::New();
+    cfg->details->set_audio(std::move(tmp));
+
+    FTL_LOG(INFO) << "Configured capture for "
+                  << channels_
+                  << " channel" << ((channels_ == 1) ? " " : "s ")
+                  << frames_per_second_
+                  << " Hz 16-bit LPCM";
+
+    media_capturer_->SetMediaType(std::move(cfg));
+    ToggleStartStop();
+    return;
+  }
+
+  FTL_LOG(WARNING) << "No compatible media types detect among the "
+                   << media_types.size()
+                   << " supplied.";
+}
+
 void VuMeterView::OnPacketSupplied(
     std::unique_ptr<media::MediaPacketConsumerBase::SuppliedPacket>
         supplied_packet) {
   // TODO(dalesat): Synchronize display and captured audio.
-  FTL_DCHECK(supplied_packet->payload_size() % (kBytesPerSample * kChannels) ==
+  FTL_DCHECK(supplied_packet->payload_size() % (kBytesPerSample * channels_) ==
              0);
   int16_t* sample = static_cast<int16_t*>(supplied_packet->payload());
   uint32_t frame_count =
-      supplied_packet->payload_size() / kBytesPerSample / kChannels;
+      supplied_packet->payload_size() / (kBytesPerSample * channels_);
 
+  uint32_t right_channel_ndx = (channels_ == 1) ? 0 : 1;
   for (uint32_t frame_index = 0; frame_index < frame_count; ++frame_index) {
-    int16_t abs_sample = std::abs(*sample);
+    int16_t abs_sample = std::abs(sample[0]);
     fast_left_.Process(abs_sample);
     slow_left_.Process(abs_sample);
-    ++sample;
-    abs_sample = std::abs(*sample);
+
+    abs_sample = std::abs(sample[right_channel_ndx]);
     fast_right_.Process(abs_sample);
     slow_right_.Process(abs_sample);
-    ++sample;
+
+    sample += channels_;
   }
 
   InvalidateScene();
