@@ -103,12 +103,13 @@ import("//build/rust/rust_info.gni")
             build_file.write("""
 rust_info("%s") {
   name = "%s"
-
-  deps = [
-""" % (info["label"], info["name"]))
-            for dep in info["deps"]:
-                build_file.write("    \":%s\",\n" % dep)
-            build_file.write("  ]\n")
+"""
+ % (info["label"], info["name"]))
+            if info["deps"]:
+                build_file.write("\n  deps = [\n")
+                for dep in info["deps"]:
+                    build_file.write("    \":%s\",\n" % dep)
+                build_file.write("  ]\n")
             if "native_lib" in info:
                 lib = info["native_lib"]
                 build_file.write("""
