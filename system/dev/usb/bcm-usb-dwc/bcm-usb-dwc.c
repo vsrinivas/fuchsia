@@ -294,8 +294,7 @@ static void complete_request(
 
     // Invalidate caches over this region since the DMA engine may have moved
     // data below us.
-    if (status == MX_OK && length) {
-        assert(txn->vmo_handle != MX_HANDLE_INVALID);
+    if (status == MX_OK) {
         iotxn_cacheop(txn, IOTXN_CACHE_INVALIDATE, txn->offset, length);
     }
 
@@ -449,10 +448,7 @@ static void dwc_iotxn_queue_hw(dwc_usb_t* dwc,
 
     // Writeback any items pending on the cache. We don't want these to be
     // flushed during a DMA op.
-    if (txn->length) {
-        assert(txn->vmo_handle != MX_HANDLE_INVALID);
-        iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, txn->offset, txn->length);
-    }
+    iotxn_cacheop(txn, IOTXN_CACHE_CLEAN, txn->offset, txn->length);
 
     // Append this transaction to the end of the Device/Endpoint's pending
     // transaction queue.
