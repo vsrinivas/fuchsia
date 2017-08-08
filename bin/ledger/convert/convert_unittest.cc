@@ -100,7 +100,9 @@ TEST(Convert, ImplicitConversion) {
   leveldb::Slice slice = esv;
   EXPECT_EQ(str, ToString(slice));
 
-  ftl::StringView string_view = esv;
+  // Suppress check warning that |string_view| is never modified so we could use
+  // |esv| instead.
+  ftl::StringView string_view = esv;  // NOLINT
   EXPECT_EQ(str, ToString(string_view));
 }
 

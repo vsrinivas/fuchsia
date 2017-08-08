@@ -60,9 +60,8 @@ bool EventStream::ProcessLine(ftl::StringView line) {
       data_.resize(data_.size() - 1);
     }
 
-    if (destruction_sentinel_.DestructedWhile([this] {
-          event_callback_(Status::OK, std::move(event_type_), std::move(data_));
-        })) {
+    if (destruction_sentinel_.DestructedWhile(
+            [this] { event_callback_(Status::OK, event_type_, data_); })) {
       return false;
     }
     event_type_.clear();
