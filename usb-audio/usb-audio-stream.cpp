@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
 #include <magenta/device/audio.h>
 #include <magenta/device/usb.h>
@@ -9,6 +10,8 @@
 #include <magenta/process.h>
 #include <magenta/types.h>
 #include <mx/vmar.h>
+#include <mxtl/algorithm.h>
+#include <mxtl/limits.h>
 #include <string.h>
 
 #include "debug-logging.h"
@@ -76,91 +79,11 @@ mx_status_t UsbAudioStream::Bind(const char* devname,
     if (!usb_interface || !usb_endpoint || !format_desc)
         return MX_ERR_INVALID_ARGS;
 
-    // Sanity check out bits per sample.
-    //
-    // TODO(johngro) : figure out how format descriptors are used to indicate
-    // 32-bit floating point, uLaw/aLaw compression, or 8 bit unsigned.  In
-    // theory, there should be a wFormatTag field somewhere in the structure
-    // which indicates this, but their does not appear to be one (currently).
-    // If it follows the pattern of a Type II MPEG audio format, it may be that
-    // bDescriptorSubtype is supposed to be USB_AUDIO_AS_FORMAT_SPECIFIC which
-    // will then be followed by a 2 byte wFormatTag instead of a single byte
-    // bFormatType.
-    switch (format_desc->bBitResolution) {
-    case 8:
-    case 16:
-    case 32: {
-        if (format_desc->bSubFrameSize != (format_desc->bBitResolution >> 3)) {
-            LOG("Unsupported format.  Subframe size (%u bytes) does not "
-                "match Bit Res (%u bits)\n",
-                format_desc->bSubFrameSize,
-                format_desc->bBitResolution);
-            return MX_ERR_NOT_SUPPORTED;
-        }
-        switch (format_desc->bBitResolution) {
-        case 8:  sample_format_ = AUDIO_SAMPLE_FORMAT_8BIT; break;
-        case 16: sample_format_ = AUDIO_SAMPLE_FORMAT_16BIT; break;
-        case 32: sample_format_ = AUDIO_SAMPLE_FORMAT_32BIT; break;
-        }
-    } break;
-
-    case 20:
-    case 24: {
-        if ((format_desc->bSubFrameSize != 3) && (format_desc->bSubFrameSize != 4)) {
-            LOG("Unsupported format.  %u-bit audio must be packed into a 3 "
-                "or 4 byte subframe (Subframe size %u)\n",
-                format_desc->bBitResolution,
-                format_desc->bSubFrameSize);
-            return MX_ERR_NOT_SUPPORTED;
-        }
-        switch (format_desc->bBitResolution) {
-        case 20: sample_format_ = (format_desc->bSubFrameSize == 3)
-                                ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED
-                                : AUDIO_SAMPLE_FORMAT_20BIT_IN32;
-        case 24: sample_format_ = (format_desc->bSubFrameSize == 3)
-                                ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED
-                                : AUDIO_SAMPLE_FORMAT_24BIT_IN32;
-        }
-    } break;
-
-    default:
-        LOG("Unsupported format.  Bad Bit Res (%u bits)\n",
-            format_desc->bBitResolution);
-        return MX_ERR_NOT_SUPPORTED;
-    }
-
-    // If bSamFreqType is 0, it means that we have a continuous range of
-    // sampling frequencies available.  Otherwise, we have a descrete number and
-    // bSamFreqType specifies how many.
-    //
-    // See Universal Serial Bus Device Class Definition for Audio Data Formats
-    // Release 1.0 Tables 2-2 and 2-3.
-    if (format_desc->bSamFreqType) {
-        num_sample_rates_ = format_desc->bSamFreqType;
-        continuous_sample_rates_ = false;
-    } else {
-        num_sample_rates_ = 2;
-        continuous_sample_rates_ = true;
-    }
-
-    sample_rates_.reset(new uint32_t[num_sample_rates_]);
-    for (uint32_t i = 0; i < format_desc->bSamFreqType; ++i)
-        sample_rates_[i] = ExtractSampleRate(format_desc->tSamFreq[i]);
-
-    if (!continuous_sample_rates_) {
-        // Keep this list sorted so we can search it with mxtl::lower_bound
-        ::qsort(sample_rates_.get(), num_sample_rates_, sizeof(sample_rates_[0]),
-                [](const void* pa, const void* pb) -> int {
-                    uint32_t a = *reinterpret_cast<const uint32_t*>(pa);
-                    uint32_t b = *reinterpret_cast<const uint32_t*>(pb);
-                    return (a < b) ? -1 : ((a == b) ? 0 : 1);
-                });
-    } else {
-        if (sample_rates_[0] > sample_rates_[1]) {
-            LOG("Invalid continuous sample rate range [%u, %u]\n",
-                sample_rates_[0], sample_rates_[1]);
-            return MX_ERR_INVALID_ARGS;
-        }
+    MX_DEBUG_ASSERT(!supported_formats_.size());
+    mx_status_t res = AddFormats(*format_desc, &supported_formats_);
+    if (res != MX_OK) {
+        LOG("Failed to parse format descriptor (res %d)\n", res);
+        return res;
     }
 
     // TODO(johngro): Do this differently when we have the ability to queue io
@@ -195,49 +118,11 @@ mx_status_t UsbAudioStream::Bind(const char* devname,
         }
     }
 
-    channel_count_ = format_desc->bNrChannels;
-    frame_size_    = channel_count_ * format_desc->bSubFrameSize;
-    iface_num_     = usb_interface->bInterfaceNumber;
-    alt_setting_   = usb_interface->bAlternateSetting;
-    usb_ep_addr_   = usb_endpoint->bEndpointAddress;
-
-#if DEBUG_LOGGING
-    if (continuous_sample_rates_) {
-        LOG("Continuous sample rate range [%u, %u] Hz, %u channel%s, %u bits per sample\n",
-                sample_rates_[0], sample_rates_[1],
-                channel_count_, (channel_count_ != 1) ? "s" : "",
-                format_desc->bBitResolution);
-    } else {
-        for (uint32_t i = 0; i < num_sample_rates_; ++i) {
-            LOG("[%2u/%2u] %u Hz, %u channel%s, %u bits per sample\n",
-                    i + 1, num_sample_rates_, sample_rates_[i],
-                    channel_count_, (channel_count_ != 1) ? "s" : "",
-                    format_desc->bBitResolution);
-        }
-    }
-#endif
+    iface_num_   = usb_interface->bInterfaceNumber;
+    alt_setting_ = usb_interface->bAlternateSetting;
+    usb_ep_addr_ = usb_endpoint->bEndpointAddress;
 
     return UsbAudioStreamBase::DdkAdd(devname);
-}
-
-bool UsbAudioStream::ValidateSampleRate(uint32_t rate) const {
-    MX_DEBUG_ASSERT(sample_rates_);
-
-    if (continuous_sample_rates_) {
-        MX_DEBUG_ASSERT(num_sample_rates_ == 2);
-        return ((rate >= sample_rates_[0]) && (rate < sample_rates_[1]));
-    } else {
-        MX_DEBUG_ASSERT(num_sample_rates_ > 0);
-        const uint32_t* first = sample_rates_.get();
-        const uint32_t* last  = first + num_sample_rates_;
-        return (last != mxtl::lower_bound(first, last, rate));
-    }
-}
-
-bool UsbAudioStream::ValidateSetFormatRequest(const audio_proto::StreamSetFmtReq& req) {
-    return ((req.channels == channel_count_) &&
-            (req.sample_format == sample_format_) &&
-            ValidateSampleRate(req.frames_per_second));
 }
 
 void UsbAudioStream::ReleaseRingBufferLocked() {
@@ -249,6 +134,121 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
         ring_buffer_size_ = 0;
     }
     ring_buffer_vmo_.reset();
+}
+
+mx_status_t UsbAudioStream::AddFormats(
+        const usb_audio_ac_format_type_i_desc& format_desc,
+        mxtl::Vector<audio_stream_format_range_t>* supported_formats) {
+    if (!supported_formats)
+        return MX_ERR_INVALID_ARGS;
+
+    // Record the min/max number of channels.
+    audio_stream_format_range_t range;
+    range.min_channels = format_desc.bNrChannels;
+    range.max_channels = format_desc.bNrChannels;
+
+    // Encode the bit resolution and subframe size from the audio descriptor as
+    // an audio device driver audio_sample_format_t
+    //
+    // TODO(johngro) : figure out how format descriptors are used to indicate
+    // 32-bit floating point, uLaw/aLaw compression, or 8 bit unsigned.  In
+    // theory, there should be a wFormatTag field somewhere in the structure
+    // which indicates this, but their does not appear to be one (currently).
+    // If it follows the pattern of a Type II MPEG audio format, it may be that
+    // bDescriptorSubtype is supposed to be USB_AUDIO_AS_FORMAT_SPECIFIC which
+    // will then be followed by a 2 byte wFormatTag instead of a single byte
+    // bFormatType.
+    switch (format_desc.bBitResolution) {
+    case 8:
+    case 16:
+    case 32: {
+        if (format_desc.bSubFrameSize != (format_desc.bBitResolution >> 3)) {
+            LOG("Unsupported format.  Subframe size (%u bytes) does not "
+                "match Bit Res (%u bits)\n",
+                format_desc.bSubFrameSize,
+                format_desc.bBitResolution);
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        switch (format_desc.bBitResolution) {
+        case 8:  range.sample_formats = AUDIO_SAMPLE_FORMAT_8BIT; break;
+        case 16: range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT; break;
+        case 32: range.sample_formats = AUDIO_SAMPLE_FORMAT_32BIT; break;
+        }
+    } break;
+
+    case 20:
+    case 24: {
+        if ((format_desc.bSubFrameSize != 3) && (format_desc.bSubFrameSize != 4)) {
+            LOG("Unsupported format.  %u-bit audio must be packed into a 3 "
+                "or 4 byte subframe (Subframe size %u)\n",
+                format_desc.bBitResolution,
+                format_desc.bSubFrameSize);
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        switch (format_desc.bBitResolution) {
+        case 20: range.sample_formats = (format_desc.bSubFrameSize == 3)
+                                      ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED
+                                      : AUDIO_SAMPLE_FORMAT_20BIT_IN32;
+        case 24: range.sample_formats = (format_desc.bSubFrameSize == 3)
+                                      ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED
+                                      : AUDIO_SAMPLE_FORMAT_24BIT_IN32;
+        }
+    } break;
+
+    default:
+        LOG("Unsupported format.  Bad Bit Res (%u bits)\n", format_desc.bBitResolution);
+        return MX_ERR_NOT_SUPPORTED;
+    }
+
+    // If bSamFreqType is 0, it means that we have a continuous range of
+    // sampling frequencies available.  Otherwise, we have a discrete number and
+    // bSamFreqType specifies how many.
+    //
+    // See Universal Serial Bus Device Class Definition for Audio Data Formats
+    // Release 1.0 Tables 2-2 and 2-3.
+    if (format_desc.bSamFreqType) {
+        if (!supported_formats->reserve(format_desc.bSamFreqType)) {
+            LOG("Out of memory attempting to reserve %u format ranges\n",
+                format_desc.bSamFreqType);
+            return MX_ERR_NO_MEMORY;
+        }
+
+        // TODO(johngro) : This could be encoded more compactly if wanted to do
+        // so by extracting all of the 48k and 44.1k rates into a bitmask, and
+        // then putting together ranges which represented continuous runs of
+        // frame rates in each of the families.
+        for (uint32_t i = 0; i < format_desc.bSamFreqType; ++i) {
+            uint32_t rate = ExtractSampleRate(format_desc.tSamFreq[i]);
+            range.min_frames_per_second = rate;
+            range.max_frames_per_second = rate;
+
+            if (audio::utils::FrameRateIn48kFamily(rate)) {
+                range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+            } else
+            if (audio::utils::FrameRateIn441kFamily(rate)) {
+                range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
+            } else {
+                range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
+            }
+
+            bool success __UNUSED = supported_formats->push_back(range);
+            MX_DEBUG_ASSERT(success);
+        }
+    } else {
+        if (!supported_formats->reserve(1)) {
+            LOG("Out of memory attempting to reserve 1 format range\n");
+            return MX_ERR_NO_MEMORY;
+        }
+
+        range.min_frames_per_second = ExtractSampleRate(format_desc.tSamFreq[0]);
+        range.max_frames_per_second = ExtractSampleRate(format_desc.tSamFreq[1]);
+        range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
+
+        bool success __UNUSED = supported_formats->push_back(range);
+        MX_DEBUG_ASSERT(success);
+    }
+
+    return MX_OK;
 }
 
 void UsbAudioStream::DdkUnbind() {
@@ -335,11 +335,12 @@ mx_status_t UsbAudioStream::ProcessStreamChannelLocked(DispatcherChannel* channe
     // dispatching audio driver requests into some form of utility class so it
     // can be shared with the IntelHDA codec implementations as well.
     union {
-        audio_proto::CmdHdr          hdr;
-        audio_proto::StreamSetFmtReq set_format;
-        audio_proto::GetGainReq      get_gain;
-        audio_proto::SetGainReq      set_gain;
-        audio_proto::PlugDetectReq   plug_detect;
+        audio_proto::CmdHdr           hdr;
+        audio_proto::StreamGetFmtsReq get_formats;
+        audio_proto::StreamSetFmtReq  set_format;
+        audio_proto::GetGainReq       get_gain;
+        audio_proto::SetGainReq       set_gain;
+        audio_proto::PlugDetectReq    plug_detect;
         // TODO(johngro) : add more commands here
     } req;
 
@@ -358,10 +359,11 @@ mx_status_t UsbAudioStream::ProcessStreamChannelLocked(DispatcherChannel* channe
     // Strip the NO_ACK flag from the request before selecting the dispatch target.
     auto cmd = static_cast<audio_proto::Cmd>(req.hdr.cmd & ~AUDIO_FLAG_NO_ACK);
     switch (cmd) {
-        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  OnSetStreamFormatLocked, false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    OnGetGainLocked,         false);
-        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    OnSetGainLocked,         true);
-        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,      true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, OnGetStreamFormatsLocked, false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_FORMAT,  set_format,  OnSetStreamFormatLocked,  false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_GET_GAIN,    get_gain,    OnGetGainLocked,          false);
+        HANDLE_REQ(AUDIO_STREAM_CMD_SET_GAIN,    set_gain,    OnSetGainLocked,          true);
+        HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked,       true);
         default:
             DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
             return MX_ERR_NOT_SUPPORTED;
@@ -408,23 +410,74 @@ mx_status_t UsbAudioStream::ProcessRingBufChannelLocked(DispatcherChannel* chann
 }
 #undef HANDLE_REQ
 
+mx_status_t UsbAudioStream::OnGetStreamFormatsLocked(DispatcherChannel* channel,
+                                                     const audio_proto::StreamGetFmtsReq& req) {
+    MX_DEBUG_ASSERT(channel != nullptr);
+    size_t formats_sent = 0;
+    audio_proto::StreamGetFmtsResp resp;
+
+    if (supported_formats_.size() > mxtl::numeric_limits<uint16_t>::max()) {
+        LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
+            supported_formats_.size());
+        return MX_ERR_INTERNAL;
+    }
+
+    resp.hdr = req.hdr;
+    resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
+
+    do {
+        uint16_t todo, payload_sz, to_send;
+        mx_status_t res;
+
+        todo = mxtl::min<uint16_t>(supported_formats_.size() - formats_sent,
+                                   AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
+        payload_sz = sizeof(resp.format_ranges[0]) * todo;
+        to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
+
+        resp.first_format_range_ndx = formats_sent;
+        ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
+
+        res = channel->Write(&resp, sizeof(resp));
+        if (res != MX_OK) {
+            DEBUG_LOG("Failed to send get stream formats response (res %d)\n", res);
+            return res;
+        }
+
+        formats_sent += todo;
+    } while (formats_sent < supported_formats_.size());
+
+    return MX_OK;
+}
+
 mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
                                                     const audio_proto::StreamSetFmtReq& req) {
     MX_DEBUG_ASSERT(channel != nullptr);
 
     mx::channel client_rb_channel;
     audio_proto::StreamSetFmtResp resp;
+    bool found_one = false;
+
     resp.hdr = req.hdr;
 
-    // Only the privleged stream channel is allowed to change the format.
+    // Only the privileged stream channel is allowed to change the format.
     if (channel->owner_ctx() != PRIVILEGED_CONNECTION_CTX) {
         MX_DEBUG_ASSERT(channel == stream_channel_.get());
         resp.result = MX_ERR_ACCESS_DENIED;
         goto finished;
     }
 
-    // Validate the request before proceeding.
-    if (!ValidateSetFormatRequest(req)) {
+    // Check the format for compatibility
+    for (const auto& fmt : supported_formats_) {
+        if (audio::utils::FormatIsCompatible(req.frames_per_second,
+                                             req.channels,
+                                             req.sample_format,
+                                             fmt)) {
+            found_one = true;
+            break;
+        }
+    }
+
+    if (!found_one) {
         resp.result = MX_ERR_INVALID_ARGS;
         goto finished;
     }
@@ -437,6 +490,14 @@ mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
             resp.result = MX_ERR_BAD_STATE;
             goto finished;
         }
+    }
+
+    // Determine the frame size.
+    frame_size_ = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
+    if (!frame_size_) {
+        LOG("Failed to compute frame size (ch %hu fmt 0x%08x)\n", req.channels, req.sample_format);
+        resp.result = MX_ERR_INTERNAL;
+        goto finished;
     }
 
     // Compute the size of our short packets, and the constants used to generate
