@@ -14,12 +14,12 @@
 namespace ledger {
 
 // The events to report.
-enum class CobaltEvent {
-  LEDGER_STARTED,
-  COMMITS_RECEIVED_OUT_OF_ORDER,
-  COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED,
-  COMMITS_MERGED,
-  MERGED_COMMITS_MERGED,
+enum class CobaltEvent : uint32_t {
+  LEDGER_STARTED = 0,
+  COMMITS_RECEIVED_OUT_OF_ORDER = 1,
+  COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED = 4,
+  COMMITS_MERGED = 2,
+  MERGED_COMMITS_MERGED = 3,
 };
 
 // Cobalt initialization. When cobalt is not need, the returned object must be

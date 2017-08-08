@@ -16,23 +16,8 @@
 namespace ledger {
 namespace {
 constexpr int32_t kLedgerCobaltProjectId = 100;
-constexpr int32_t kCobaltMetricId = 1;
-constexpr int32_t kCobaltEncodingId = 1;
-
-std::string ToObservation(CobaltEvent event) {
-  switch (event) {
-    case CobaltEvent::LEDGER_STARTED:
-      return "Ledger-startup";
-    case CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER:
-      return "Commits-received-out-of-order";
-    case CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED:
-      return "Commits-received-out-of-order-not-recovered";
-    case CobaltEvent::COMMITS_MERGED:
-      return "Commits-merged";
-    case CobaltEvent::MERGED_COMMITS_MERGED:
-      return "Merged-commits-merged";
-  }
-}
+constexpr int32_t kCobaltMetricId = 2;
+constexpr int32_t kCobaltEncodingId = 2;
 
 class CobaltContext {
  public:
@@ -129,8 +114,9 @@ void CobaltContext::SendEvents() {
   auto waiter =
       callback::StatusWaiter<cobalt::Status>::Create(cobalt::Status::OK);
   for (auto event : events_in_transit_) {
-    encoder_->AddStringObservation(kCobaltMetricId, kCobaltEncodingId,
-                                   ToObservation(event), waiter->NewCallback());
+    encoder_->AddIndexObservation(kCobaltMetricId, kCobaltEncodingId,
+                                  static_cast<uint32_t>(event),
+                                  waiter->NewCallback());
   }
   waiter->Finalize([this](cobalt::Status status) {
     if (status != cobalt::Status::OK) {
