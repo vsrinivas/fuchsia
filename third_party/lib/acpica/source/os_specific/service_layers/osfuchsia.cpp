@@ -14,6 +14,10 @@
 #include <magenta/assert.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <mxcpp/new.h>
+#include <mxtl/auto_lock.h>
+#include <mxtl/intrusive_hash_table.h>
+#include <mxtl/unique_ptr.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"
@@ -37,6 +41,36 @@ static mtx_t os_execute_lock = MTX_INIT;
 static cnd_t os_execute_cond;
 static int os_execute_tasks = 0;
 
+class AcpiOsMappingNode :
+      public mxtl::SinglyLinkedListable<mxtl::unique_ptr<AcpiOsMappingNode>> {
+public:
+    using HashTable =
+        mxtl::HashTable<uintptr_t, mxtl::unique_ptr<AcpiOsMappingNode>>;
+
+    // @param vaddr Virtual address returned to ACPI, used as key to the hashtable.
+    // @param vaddr_actual Actual virtual address of the mapping. May be different than
+    //                     vaddr if it is unaligned.
+    // @param length Length of the mapping
+    // @param vmo_handle Handle to the mapped VMO
+    AcpiOsMappingNode(uintptr_t vaddr, uintptr_t vaddr_actual,
+                      size_t length, mx_handle_t vmo_handle);
+    ~AcpiOsMappingNode();
+
+    // Trait implementation for mxtl::HashTable
+    uintptr_t GetKey() const { return vaddr_; }
+    static size_t GetHash(uintptr_t key) { return key; }
+
+private:
+    uintptr_t vaddr_;
+    uintptr_t vaddr_actual_;
+    size_t length_;
+    mx_handle_t vmo_handle_;
+};
+
+mxtl::Mutex os_mapping_lock;
+
+AcpiOsMappingNode::HashTable os_mapping_tbl;
+
 static struct {
     mx_handle_t vmo;
     mx_vaddr_t ecam;
@@ -48,6 +82,17 @@ static struct {
 const size_t PCIE_MAX_DEVICES_PER_BUS = 32;
 const size_t PCIE_MAX_FUNCTIONS_PER_DEVICE = 8;
 const size_t PCIE_EXTENDED_CONFIG_SIZE = 4096;
+
+AcpiOsMappingNode::AcpiOsMappingNode(uintptr_t vaddr, uintptr_t vaddr_actual,
+                                     size_t length, mx_handle_t vmo_handle)
+    : vaddr_(vaddr), vaddr_actual_(vaddr_actual),
+      length_(length), vmo_handle_(vmo_handle) {
+}
+
+AcpiOsMappingNode::~AcpiOsMappingNode() {
+    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)vaddr_actual_, length_);
+    mx_handle_close(vmo_handle_);
+}
 
 // Standard MMIO configuration
 static ACPI_STATUS acpi_pci_ecam_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
@@ -436,6 +481,8 @@ void *AcpiOsMapMemory(
         ACPI_PHYSICAL_ADDRESS PhysicalAddress,
         ACPI_SIZE Length) {
 
+    mxtl::AutoLock lock(&os_mapping_lock);
+
     // Caution: PhysicalAddress might not be page-aligned, Length might not
     // be a page multiple.
 
@@ -443,6 +490,7 @@ void *AcpiOsMapMemory(
     ACPI_PHYSICAL_ADDRESS end = (PhysicalAddress + Length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
     uintptr_t vaddr;
+    size_t length = end - aligned_address;
     mx_handle_t vmo;
     mx_status_t status = mmap_physical(aligned_address, end - aligned_address,
                                        MX_CACHE_POLICY_CACHED, &vmo, &vaddr);
@@ -450,7 +498,13 @@ void *AcpiOsMapMemory(
         return NULL;
     }
 
-    return (void*)(vaddr + (PhysicalAddress - aligned_address));
+    void* out_addr = (void*)(vaddr + (PhysicalAddress - aligned_address));
+    mxtl::unique_ptr<AcpiOsMappingNode> mn(
+            new AcpiOsMappingNode(reinterpret_cast<uintptr_t>(out_addr),
+                                  vaddr, length, vmo));
+    os_mapping_tbl.insert(mxtl::move(mn));
+
+    return out_addr;
 }
 
 /**
@@ -462,7 +516,11 @@ void *AcpiOsMapMemory(
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    // TODO(teisenbe): Implement
+    mxtl::AutoLock lock(&os_mapping_lock);
+    mxtl::unique_ptr<AcpiOsMappingNode> mn = os_mapping_tbl.erase((uintptr_t)LogicalAddress);
+    if (mn == NULL) {
+        printf("AcpiOsUnmapMemory nonexisting mapping %p\n", LogicalAddress);
+    }
 }
 
 /**

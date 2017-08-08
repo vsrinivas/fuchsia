@@ -33,6 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/acpisvc-client \
     third_party/ulib/acpica \
+    system/ulib/mxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \

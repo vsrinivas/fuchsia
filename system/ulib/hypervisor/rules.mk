@@ -38,5 +38,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/virtio \
     third_party/ulib/acpica \
+    system/ulib/mxcpp \
 
 include make/module.mk

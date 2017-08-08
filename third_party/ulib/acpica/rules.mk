@@ -196,7 +196,8 @@ MODULE_COMPILEFLAGS += -I$(SRC_DIR)/include/acpica
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/ulib/magenta
+    system/ulib/mxtl \
+    system/ulib/mxcpp \
 
 MODULE_LIBS := \
     system/ulib/c
