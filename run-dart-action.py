@@ -23,7 +23,8 @@ def gn_describe(out, path):
 
 class WorkerThread(threading.Thread):
     '''
-    A worker thread to run scripts from a queue and return exit codes and output on a queue.
+    A worker thread to run scripts from a queue and return exit codes and output
+    on a queue.
     '''
 
     def __init__(self, script_queue, result_queue, args):
@@ -118,12 +119,18 @@ Extra flags will be passed to the supporting Dart tool if applicable.
     for i in range(args.jobs):
         WorkerThread(script_queue, result_queue, extras).start()
 
+    def print_progress():
+        sys.stdout.write('\rProgress: %d/%d\033[K' % (len(script_results),
+                                                      len(scripts)))
+        sys.stdout.flush()
+
+    print_progress()
+
     # Handle results from workers.
     while len(script_results) < len(scripts):
         script, returncode, output = result_queue.get(True)
         script_results.append(returncode)
-        sys.stdout.write('\rProgress: %d/%d\033[K' % (len(script_results), len(scripts)))
-        sys.stdout.flush()
+        print_progress()
         if returncode != 0:
             failed_scripts.append(script)
         if args.verbose or returncode != 0:
