@@ -1,4 +1,5 @@
 #include "atomic.h"
+#include "gettext_impl.h"
 #include "libc.h"
 #include <errno.h>
 #include <libintl.h>

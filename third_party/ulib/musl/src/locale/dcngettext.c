@@ -1,3 +1,4 @@
+#include "gettext_impl.h"
 #include "libc.h"
 #include "locale_impl.h"
 #include <ctype.h>
@@ -97,12 +98,6 @@ struct msgcat {
     atomic_int nplurals;
     char name[];
 };
-
-static char* dummy_gettextdomain(void) {
-    return (char*)"messages";
-}
-
-weak_alias(dummy_gettextdomain, __gettextdomain);
 
 const unsigned char* __map_file(const char*, size_t*);
 int __munmap(void*, size_t);
