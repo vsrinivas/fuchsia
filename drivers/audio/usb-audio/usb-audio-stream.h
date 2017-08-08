@@ -10,6 +10,7 @@
 #include <magenta/listnode.h>
 #include <mx/vmo.h>
 #include <mxtl/mutex.h>
+#include <mxtl/vector.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -81,14 +82,19 @@ private:
                      usb_interface_descriptor_t* usb_interface,
                      usb_endpoint_descriptor_t* usb_endpoint,
                      usb_audio_ac_format_type_i_desc* format_desc);
-    bool ValidateSampleRate(uint32_t rate) const;
-    bool ValidateSetFormatRequest(const audio_proto::StreamSetFmtReq& req);
+
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
+
+    mx_status_t AddFormats(const usb_audio_ac_format_type_i_desc& format_desc,
+                           mxtl::Vector<audio_stream_format_range_t>* supported_formats);
 
     mx_status_t ProcessStreamChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
     mx_status_t ProcessRingBufChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
 
     // Stream command handlers
+    mx_status_t OnGetStreamFormatsLocked(DispatcherChannel* channel,
+                                         const audio_proto::StreamGetFmtsReq& req)
+        __TA_REQUIRES(lock_);
     mx_status_t OnSetStreamFormatLocked(DispatcherChannel* channel,
                                         const audio_proto::StreamSetFmtReq& req)
         __TA_REQUIRES(lock_);
@@ -123,13 +129,9 @@ private:
     // TODO(johngro) : support parsing and selecting from all of the format
     // descriptors present for a stream, not just a single format (with multiple
     // sample rates).
-    audio_sample_format_t          sample_format_;
-    mxtl::unique_ptr<uint32_t[]>    sample_rates_;
-    uint32_t                        channel_count_;
-    uint32_t                        frame_size_;
-    uint32_t                        num_sample_rates_;
-    bool                            continuous_sample_rates_;
+    mxtl::Vector<audio_stream_format_range_t> supported_formats_;
 
+    uint32_t                        frame_size_;
     uint32_t                        iso_packet_rate_;
     uint32_t                        bytes_per_packet_;
     uint32_t                        fifo_bytes_;
