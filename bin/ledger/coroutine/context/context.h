@@ -37,7 +37,10 @@ extern void SetContext(Context* context);
 // Initializes |context| to a new context. When this context is later activated,
 // |func| is called with |data| as parameter. The stack will be |stack|. |func|
 // must never return.
-void MakeContext(Context* context,
+//
+// NOLINT suppresses false-positive redundant declaration check due to a
+// friend declaration in stack.h.
+void MakeContext(Context* context,  // NOLINT
                  Stack* stack,
                  void (*func)(void*),
                  void* data);

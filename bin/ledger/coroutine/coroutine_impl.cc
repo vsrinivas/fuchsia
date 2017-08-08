@@ -126,7 +126,7 @@ void CoroutineServiceImpl::StartCoroutine(
       stack->Release();
       available_stack_.push_back(std::move(stack));
     }
-    handlers_.erase(std::remove_if(
+    handlers_.erase(std::find_if(
         handlers_.begin(), handlers_.end(),
         [handler_ptr](const std::unique_ptr<CoroutineHandlerImpl>& handler) {
           return handler.get() == handler_ptr;

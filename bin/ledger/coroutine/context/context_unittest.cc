@@ -150,7 +150,8 @@ TEST(Context, ThreadLocal) {
 
 __NO_SAFESTACK intptr_t GetSafeStackPointer() {
   char a = 0;
-  return reinterpret_cast<intptr_t>(&a);
+  // Suppress check about returning a stack memory address.
+  return reinterpret_cast<intptr_t>(&a);  // NOLINT
 }
 
 void CheckDistinctStack(void* context) {
