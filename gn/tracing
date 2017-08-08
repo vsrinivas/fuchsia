@@ -3,6 +3,9 @@
         "cpp",
         "go"
     ],
+    "labels": [
+        "//apps/tracing:host_utils"
+    ],
     "packages": {
         "trace": "//apps/tracing:trace",
         "trace_tests": "//apps/tracing:trace_tests",
