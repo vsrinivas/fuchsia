@@ -37,6 +37,8 @@
 #define LOCAL_APIC_REGISTER_IRR_31_0            0x0200
 #define LOCAL_APIC_REGISTER_IRR_255_224         0x0270
 #define LOCAL_APIC_REGISTER_ESR                 0x0280
+#define LOCAL_APIC_REGISTER_ICR_31_0            0x0300
+#define LOCAL_APIC_REGISTER_ICR_63_32           0x0310
 #define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
 #define LOCAL_APIC_REGISTER_LVT_THERMAL         0x0330
 #define LOCAL_APIC_REGISTER_LVT_PERFMON         0x0340
@@ -104,6 +106,7 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_me
     case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
         return inst_read32(inst, 0);
     case LOCAL_APIC_REGISTER_DFR:
+    case LOCAL_APIC_REGISTER_ICR_31_0 ... LOCAL_APIC_REGISTER_ICR_63_32:
     case LOCAL_APIC_REGISTER_ID:
     case LOCAL_APIC_REGISTER_LDR:
     case LOCAL_APIC_REGISTER_LVT_ERROR:
