@@ -973,6 +973,10 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     app_->account_provider_context_->GetAuthenticationContext(
         account_->id, auth_context_.NewRequest());
 
+    auth_context_.set_connection_error_handler([this] {
+      callback_(nullptr, "Overlay cancelled by device shell.");
+      Done();
+    });
     auth_context_->StartOverlay(std::move(view_owner));
   }
 
@@ -997,7 +1001,10 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     }
 
     // user accepted OAuth permissions - close the webview and exchange auth
-    // code to long lived credential
+    // code to long lived credential.
+    // Also, de-register previously registered error callbacks since calling
+    // StopOverlay() might cause this connection to be closed.
+    auth_context_.set_connection_error_handler([] {});
     auth_context_->StopOverlay();
 
     auto code = uri.substr(prefix.size(), std::string::npos);
@@ -1109,6 +1116,7 @@ class OAuthTokenManagerApp::GoogleUserCredsCall : Operation<>,
     FTL_LOG(ERROR) << "Failed with error status:" << status
                    << " ,and message:" << error_message;
     callback_(nullptr, error_message);
+    auth_context_.set_connection_error_handler([] {});
     auth_context_->StopOverlay();
     Done();
   }

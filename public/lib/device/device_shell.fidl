@@ -36,6 +36,8 @@ interface DeviceShellContext {
 
 // This interface is implemented by device shell. It is used to notify the
 // device shell that a view for login needs to be started / stopped.
+// The device shell can close this connection if it wants to cancel the current
+// authentication flow.
 interface AuthenticationContext {
   // Requests device shell to display |view_owner| for authentication. Note that
   // another call to StartOverlay() will not be made until StopOverlay() has
