@@ -13,13 +13,14 @@
 #pragma once
 
 #include <err.h>
+#include <lib/user_copy/user_ptr.h>
 #include <magenta/compiler.h>
 #include <stdint.h>
 
 status_t mtrace_control(uint32_t kind, uint32_t action, uint32_t options,
-                        void* arg, uint32_t size);
+                        user_ptr<void> arg, uint32_t size);
 
 #ifdef __x86_64__
 status_t mtrace_ipt_control(uint32_t action, uint32_t options,
-                            void* arg, uint32_t size);
+                            user_ptr<void> arg, uint32_t size);
 #endif

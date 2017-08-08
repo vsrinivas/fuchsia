@@ -40,7 +40,7 @@ bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
             os, sc, name_prefix.first,
             "\n" + string(indent_spaces, ' '),
             "\n" + string(indent_spaces, ' '),
-            allow_pointer_wrapping_ && !sc.is_no_wrap() && !sc.is_vdso(),
+            allow_pointer_wrapping_ && !sc.is_vdso(),
             no_args_type_);
 
         if (!allow_pointer_wrapping_) {

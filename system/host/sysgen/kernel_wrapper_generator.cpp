@@ -67,10 +67,10 @@ bool KernelWrapperGenerator::syscall(ofstream& os, const Syscall& sc) {
 
     // Writes all arguments.
     sc.for_each_kernel_arg([&](const TypeSpec& arg) {
-        if (sc.is_no_wrap() || !arg.arr_spec) {
-            os << arg.name << ", ";
-        } else {
+        if (arg.arr_spec) {
             os << "make_user_ptr(" << arg.name << "), ";
+        } else {
+            os << arg.name << ", ";
         }
     });
 

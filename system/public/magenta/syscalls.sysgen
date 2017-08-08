@@ -480,7 +480,7 @@ syscall ktrace_write
     (handle: mx_handle_t, id: uint32_t, arg0: uint32_t, arg1: uint32_t)
     returns (mx_status_t);
 
-syscall mtrace_control no_wrap
+syscall mtrace_control
     (handle: mx_handle_t,
         kind: uint32_t, action: uint32_t, options: uint32_t,
         ptr: any[size] INOUT, size: uint32_t)
@@ -488,15 +488,15 @@ syscall mtrace_control no_wrap
 
 # Legacy LK debug syscalls
 
-syscall debug_read no_wrap
+syscall debug_read
     (handle: mx_handle_t, buffer: any[length] OUT, length: uint32_t)
     returns (mx_status_t);
 
-syscall debug_write no_wrap
+syscall debug_write
     (buffer: any[length] IN, length: uint32_t)
     returns (mx_status_t);
 
-syscall debug_send_command no_wrap
+syscall debug_send_command
     (resource_handle: mx_handle_t, buffer: any[length] IN, length: uint32_t)
     returns (mx_status_t);
 

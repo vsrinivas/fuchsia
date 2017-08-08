@@ -14,7 +14,6 @@
 
 #include <inttypes.h>
 
-#include <arch/user_copy.h>
 #include "lib/mtrace.h"
 #include "trace.h"
 
@@ -25,9 +24,9 @@
 #define LOCAL_TRACE 0
 
 status_t mtrace_ipt_control(uint32_t action, uint32_t options,
-                            void* arg, uint32_t size) {
+                            user_ptr<void> arg, uint32_t size) {
     TRACEF("action %u, options 0x%x, arg %p, size 0x%x\n",
-           action, options, arg, size);
+           action, options, arg.get(), size);
 
     switch (action) {
     case MTRACE_IPT_SET_MODE: {
@@ -36,7 +35,7 @@ status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         uint32_t mode;
         if (size != sizeof(mode))
             return MX_ERR_INVALID_ARGS;
-        if (arch_copy_from_user(&mode, arg, size) != MX_OK)
+        if (arg.reinterpret<uint32_t>().copy_from_user(&mode) != MX_OK)
             return MX_ERR_INVALID_ARGS;
         TRACEF("action %u, mode 0x%x\n", action, mode);
         switch (mode) {
@@ -53,7 +52,7 @@ status_t mtrace_ipt_control(uint32_t action, uint32_t options,
         mx_x86_pt_regs_t regs;
         if (size != sizeof(regs))
             return MX_ERR_INVALID_ARGS;
-        if (arch_copy_from_user(&regs, arg, size) != MX_OK)
+        if (arg.reinterpret<mx_x86_pt_regs_t>().copy_from_user(&regs) != MX_OK)
             return MX_ERR_INVALID_ARGS;
         uint32_t cpu = MTRACE_IPT_OPTIONS_CPU(options);
         if ((options & ~MTRACE_IPT_OPTIONS_CPU_MASK) != 0)
@@ -75,7 +74,7 @@ status_t mtrace_ipt_control(uint32_t action, uint32_t options,
             return status;
         TRACEF("action %u, cpu %u, ctl 0x%" PRIx64 ", output_base 0x%" PRIx64 "\n",
                action, cpu, regs.ctl, regs.output_base);
-        if (arch_copy_to_user(arg, &regs, size) != MX_OK)
+        if (arg.reinterpret<mx_x86_pt_regs_t>().copy_to_user(regs) != MX_OK)
             return MX_ERR_INVALID_ARGS;
         return MX_OK;
     }

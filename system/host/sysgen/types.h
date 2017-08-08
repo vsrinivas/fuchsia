@@ -59,7 +59,6 @@ struct Syscall {
 
     bool is_vdso() const;
     bool is_noreturn() const;
-    bool is_no_wrap() const;
     bool is_blocking() const;
     bool is_internal() const;
     size_t num_kernel_args() const;

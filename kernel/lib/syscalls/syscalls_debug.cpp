@@ -32,8 +32,8 @@
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 
-mx_status_t sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
-    LTRACEF("ptr %p\n", ptr);
+mx_status_t sys_debug_read(mx_handle_t handle, user_ptr<void> ptr, uint32_t len) {
+    LTRACEF("ptr %p\n", ptr.get());
 
     // TODO(MG-971): finer grained validation
     mx_status_t status;
@@ -41,34 +41,34 @@ mx_status_t sys_debug_read(mx_handle_t handle, void* ptr, uint32_t len) {
         return status;
     }
 
-    if (!len)
-        return 0;
     // TODO: remove this cast.
-    auto uptr = reinterpret_cast<uint8_t*>(ptr);
-    auto end = uptr + len;
+    auto uptr = ptr.reinterpret<uint8_t>();
 
-    for (; uptr != end; ++uptr) {
+    uint32_t idx = 0;
+    for (; idx < len; ++idx) {
         int c = getchar();
         if (c < 0)
             break;
 
         if (c == '\r')
             c = '\n';
-        if (copy_to_user_u8_unsafe(uptr, static_cast<uint8_t>(c)) != MX_OK)
+
+        auto cur = uptr.byte_offset(idx);
+        if (cur.copy_to_user(static_cast<uint8_t>(c)) != MX_OK)
             break;
     }
     // TODO: fix this cast, which can overflow.
-    return static_cast<int>(reinterpret_cast<char*>(uptr) - reinterpret_cast<char*>(ptr));
+    return static_cast<mx_status_t>(idx);
 }
 
-mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
-    LTRACEF("ptr %p, len %u\n", ptr, len);
+mx_status_t sys_debug_write(user_ptr<const void> ptr, uint32_t len) {
+    LTRACEF("ptr %p, len %u\n", ptr.get(), len);
 
     if (len > kMaxDebugWriteSize)
         len = kMaxDebugWriteSize;
 
     char buf[kMaxDebugWriteSize];
-    if (magenta_copy_from_user(ptr, buf, len) != MX_OK)
+    if (ptr.copy_array_from_user(buf, len) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
     __kernel_serial_write(buf, len);
@@ -76,8 +76,8 @@ mx_status_t sys_debug_write(const void* ptr, uint32_t len) {
     return len;
 }
 
-mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t len) {
-    LTRACEF("ptr %p, len %u\n", ptr, len);
+mx_status_t sys_debug_send_command(mx_handle_t handle, user_ptr<const void> ptr, uint32_t len) {
+    LTRACEF("ptr %p, len %u\n", ptr.get(), len);
 
     // TODO(MG-971): finer grained validation
     mx_status_t status;
@@ -89,7 +89,7 @@ mx_status_t sys_debug_send_command(mx_handle_t handle, const void* ptr, uint32_t
         return MX_ERR_INVALID_ARGS;
 
     char buf[kMaxDebugWriteSize + 2];
-    if (magenta_copy_from_user(ptr, buf, len) != MX_OK)
+    if (ptr.copy_array_from_user(buf, len) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
     buf[len] = '\n';
@@ -114,7 +114,7 @@ mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> _data,
 }
 
 mx_status_t sys_ktrace_control(
-        mx_handle_t handle, uint32_t action,uint32_t options, user_ptr<void> _ptr) {
+        mx_handle_t handle, uint32_t action, uint32_t options, user_ptr<void> _ptr) {
     // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
@@ -158,12 +158,12 @@ mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg
 
 mx_status_t sys_mtrace_control(mx_handle_t handle,
                                uint32_t kind, uint32_t action, uint32_t options,
-                               void* _ptr, uint32_t size) {
+                               user_ptr<void> ptr, uint32_t size) {
     // TODO(MG-971): finer grained validation
     mx_status_t status;
     if ((status = validate_resource(handle, MX_RSRC_KIND_ROOT)) < 0) {
         return status;
     }
 
-    return mtrace_control(kind, action, options, _ptr, size);
+    return mtrace_control(kind, action, options, ptr, size);
 }

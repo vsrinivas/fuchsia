@@ -153,10 +153,6 @@ bool Syscall::is_noreturn() const {
     return has_attribute("noreturn", attributes);
 }
 
-bool Syscall::is_no_wrap() const {
-    return has_attribute("no_wrap", attributes);
-}
-
 bool Syscall::is_blocking() const {
     return has_attribute("blocking", attributes);
 }
@@ -275,7 +271,7 @@ bool Syscall::is_void_return() const {
 }
 
 bool Syscall::will_wrap(const string& type) const {
-    return !is_no_wrap() && type.find("reinterpret_cast") != string::npos;
+    return type.find("reinterpret_cast") != string::npos;
 }
 
 // TODO(andymutton): Rework this after changing arm and removing the invocation generator.
