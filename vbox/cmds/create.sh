@@ -22,6 +22,7 @@ VBoxManage modifyvm "${FUCHSIA_VBOX_NAME}" \
   --audio null \
   --audiocontroller hda \
   --acpi on \
+  --chipset piix3 \
   --ioapic on \
   --hpet on \
   --pae on \
