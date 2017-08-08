@@ -10,5 +10,3 @@ void* __tls_get_addr(size_t* v) {
         return (char*)self->head.dtv[v[0]] + v[1] + DTP_OFFSET;
     return __tls_get_new(v);
 }
-
-weak_alias(__tls_get_addr, __tls_get_new);
