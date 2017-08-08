@@ -13,6 +13,7 @@
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io_apic.h>
+#include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
@@ -93,18 +94,22 @@ int main(int argc, char** argv) {
     // Setup guest memory.
     guest_state.mem_addr = (void*)addr;
     guest_state.mem_size = kVmoSize;
-    // Setup UART.
-    uart_t uart;
-    guest_state.uart = &uart;
-    uart_init(&uart);
     // Setup IO APIC.
     io_apic_t io_apic;
     guest_state.io_apic = &io_apic;
     io_apic_init(&io_apic);
+    // Setup IO ports.
+    io_port_t io_port;
+    guest_state.io_port = &io_port;
+    io_port_init(&io_port);
     // Setup PCI.
     pci_bus_t bus;
     guest_state.bus = bus;
     pci_bus_init(bus);
+    // Setup UART.
+    uart_t uart;
+    guest_state.uart = &uart;
+    uart_init(&uart);
     // Setup block device.
     block_t block;
     guest_state.block = &block;
@@ -150,12 +155,12 @@ int main(int argc, char** argv) {
     status = setup_magenta(addr, kVmoSize, first_page, pt_end_off, fd, ramdisk_path,
                            cmdline, &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
-        char linux_cmdline[UINT8_MAX];
+        char linux_cmdline[PATH_MAX];
         const char* fmt_string = "earlyprintk=serial,ttyS,115200 acpi_rsdp=%#" PRIx64
                                  " io_delay=none console=ttyS0 %s";
-        snprintf(linux_cmdline, UINT8_MAX, fmt_string, pt_end_off, cmdline ? cmdline : "");
-        status = setup_linux(
-                addr, kVmoSize, first_page, fd, ramdisk_path, linux_cmdline, &guest_ip, &bootdata_off);
+        snprintf(linux_cmdline, PATH_MAX, fmt_string, pt_end_off, cmdline ? cmdline : "");
+        status = setup_linux(addr, kVmoSize, first_page, fd, ramdisk_path, linux_cmdline, &guest_ip,
+                             &bootdata_off);
     }
     if (status == MX_ERR_NOT_SUPPORTED) {
         fprintf(stderr, "Unknown kernel\n");

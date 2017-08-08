@@ -6,7 +6,6 @@
 
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <magenta/types.h>
 
 #define IO_APIC_REDIRECT_OFFSETS    128u
 

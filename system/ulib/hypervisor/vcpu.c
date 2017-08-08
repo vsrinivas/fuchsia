@@ -4,13 +4,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/block.h>
 #include <hypervisor/decode.h>
 #include <hypervisor/io_apic.h>
+#include <hypervisor/io_port.h>
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
@@ -19,65 +19,33 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
-#if __x86_64__
-#include <acpica/acpi.h>
-#include <acpica/actypes.h>
-#endif // __x86_64__
+#include "acpi_priv.h"
 
 /* Local APIC register addresses. */
-#define LOCAL_APIC_REGISTER_ID                  0x0020
-#define LOCAL_APIC_REGISTER_VERSION             0x0030
-#define LOCAL_APIC_REGISTER_LDR                 0x00d0
-#define LOCAL_APIC_REGISTER_DFR                 0x00e0
-#define LOCAL_APIC_REGISTER_SVR                 0x00f0
-#define LOCAL_APIC_REGISTER_ISR_31_0            0x0100
-#define LOCAL_APIC_REGISTER_ISR_255_224         0x0170
-#define LOCAL_APIC_REGISTER_TMR_31_0            0x0180
-#define LOCAL_APIC_REGISTER_TMR_255_224         0x01f0
-#define LOCAL_APIC_REGISTER_IRR_31_0            0x0200
-#define LOCAL_APIC_REGISTER_IRR_255_224         0x0270
-#define LOCAL_APIC_REGISTER_ESR                 0x0280
-#define LOCAL_APIC_REGISTER_ICR_31_0            0x0300
-#define LOCAL_APIC_REGISTER_ICR_63_32           0x0310
-#define LOCAL_APIC_REGISTER_LVT_TIMER           0x0320
-#define LOCAL_APIC_REGISTER_LVT_THERMAL         0x0330
-#define LOCAL_APIC_REGISTER_LVT_PERFMON         0x0340
-#define LOCAL_APIC_REGISTER_LVT_LINT0           0x0350
-#define LOCAL_APIC_REGISTER_LVT_LINT1           0x0360
-#define LOCAL_APIC_REGISTER_LVT_ERROR           0x0370
-#define LOCAL_APIC_REGISTER_INITIAL_COUNT       0x0380
-
-/* PIC configuration constants. */
-#define PIC_INVALID                             UINT8_MAX
-
-/* RTC register addresses. */
-#define RTC_REGISTER_SECONDS                    0u
-#define RTC_REGISTER_MINUTES                    2u
-#define RTC_REGISTER_HOURS                      4u
-#define RTC_REGISTER_DAY_OF_MONTH               7u
-#define RTC_REGISTER_MONTH                      8u
-#define RTC_REGISTER_YEAR                       9u
-#define RTC_REGISTER_A                          10u
-#define RTC_REGISTER_B                          11u
-
-/* RTC register B flags. */
-#define RTC_REGISTER_B_DAYLIGHT_SAVINGS         (1u << 0)
-#define RTC_REGISTER_B_HOUR_FORMAT              (1u << 1)
-
-/* I8042 status flags. */
-#define I8042_STATUS_OUTPUT_FULL                (1u << 0)
-#define I8042_STATUS_INPUT_FULL                 (1u << 1)
-
-/* I8042 test constants. */
-#define I8042_COMMAND_TEST                      0xaa
-#define I8042_DATA_TEST_RESPONSE                0x55
-
-/* PM register addresses. */
-#define PM1A_REGISTER_STATUS                    0
-#define PM1A_REGISTER_ENABLE                    (ACPI_PM1_REGISTER_WIDTH / 8)
+#define LOCAL_APIC_REGISTER_ID              0x0020
+#define LOCAL_APIC_REGISTER_VERSION         0x0030
+#define LOCAL_APIC_REGISTER_LDR             0x00d0
+#define LOCAL_APIC_REGISTER_DFR             0x00e0
+#define LOCAL_APIC_REGISTER_SVR             0x00f0
+#define LOCAL_APIC_REGISTER_ISR_31_0        0x0100
+#define LOCAL_APIC_REGISTER_ISR_255_224     0x0170
+#define LOCAL_APIC_REGISTER_TMR_31_0        0x0180
+#define LOCAL_APIC_REGISTER_TMR_255_224     0x01f0
+#define LOCAL_APIC_REGISTER_IRR_31_0        0x0200
+#define LOCAL_APIC_REGISTER_IRR_255_224     0x0270
+#define LOCAL_APIC_REGISTER_ESR             0x0280
+#define LOCAL_APIC_REGISTER_ICR_31_0        0x0300
+#define LOCAL_APIC_REGISTER_ICR_63_32       0x0310
+#define LOCAL_APIC_REGISTER_LVT_TIMER       0x0320
+#define LOCAL_APIC_REGISTER_LVT_THERMAL     0x0330
+#define LOCAL_APIC_REGISTER_LVT_PERFMON     0x0340
+#define LOCAL_APIC_REGISTER_LVT_LINT0       0x0350
+#define LOCAL_APIC_REGISTER_LVT_LINT1       0x0360
+#define LOCAL_APIC_REGISTER_LVT_ERROR       0x0370
+#define LOCAL_APIC_REGISTER_INITIAL_COUNT   0x0380
 
 /* Interrupt vectors. */
-#define X86_INT_GP_FAULT                        13u
+#define X86_INT_GP_FAULT                    13u
 
 static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_memory_t* memory,
                                      instruction_t* inst) {
@@ -265,8 +233,7 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
     }
 
     if (status != MX_OK) {
-        uint32_t vector = X86_INT_GP_FAULT;
-        return mx_vcpu_interrupt(vcpu_context->vcpu, vector);
+        return mx_vcpu_interrupt(vcpu_context->vcpu, X86_INT_GP_FAULT);
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
         return vcpu_context->write_state(vcpu_context, MX_VCPU_STATE, &vcpu_state,
@@ -275,80 +242,26 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
     return status;
 }
 
-static uint8_t to_bcd(uint8_t binary) {
-    return ((binary / 10) << 4) | (binary % 10);
-}
-
-static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
-    time_t now = time(NULL);
-    struct tm tm;
-    if (localtime_r(&now, &tm) == NULL)
-        return MX_ERR_INTERNAL;
-    switch (rtc_index) {
-    case RTC_REGISTER_SECONDS:
-        *value = to_bcd(tm.tm_sec);
-        break;
-    case RTC_REGISTER_MINUTES:
-        *value = to_bcd(tm.tm_min);
-        break;
-    case RTC_REGISTER_HOURS:
-        *value = to_bcd(tm.tm_hour);
-        break;
-    case RTC_REGISTER_DAY_OF_MONTH:
-        *value = to_bcd(tm.tm_mday);
-        break;
-    case RTC_REGISTER_MONTH:
-        *value = to_bcd(tm.tm_mon);
-        break;
-    case RTC_REGISTER_YEAR:
-        // RTC expects the number of years since 2000.
-        *value = to_bcd(tm.tm_year - 100);
-        break;
-     case RTC_REGISTER_A:
-        // Ensure that UIP is 0. Other values (clock frequency) are obsolete.
-        *value = 0;
-        break;
-    case RTC_REGISTER_B:
-        *value = RTC_REGISTER_B_HOUR_FORMAT;
-        if (tm.tm_isdst)
-            *value |= RTC_REGISTER_B_DAYLIGHT_SAVINGS;
-        break;
-    default:
-        return MX_ERR_NOT_SUPPORTED;
-    }
-    return MX_OK;
-}
-
 static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
 #if __x86_64__
-    mx_status_t status;
+    mx_status_t status = MX_OK;
     mx_vcpu_io_t vcpu_io;
     memset(&vcpu_io, 0, sizeof(vcpu_io));
-    io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
     switch (io->port) {
+    case I8042_COMMAND_PORT:
+    case I8042_DATA_PORT:
+    case PIC1_DATA_PORT:
+    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
+    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
+    case RTC_DATA_PORT:
+        status = io_port_read(vcpu_context->guest_state->io_port, io->port, &vcpu_io);
+        break;
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
         status = uart_read(vcpu_context->guest_state->uart, io->port, &vcpu_io);
-        if (status != MX_OK)
-            return status;
-        break;
-    case RTC_DATA_PORT:
-        vcpu_io.access_size = 1;
-        status = handle_rtc(io_port_state->rtc_index, &vcpu_io.u8);
-        if (status != MX_OK)
-            return status;
-        break;
-    case I8042_DATA_PORT:
-        vcpu_io.access_size = 1;
-        vcpu_io.u8 = io_port_state->i8042_command == I8042_COMMAND_TEST ?
-                       I8042_DATA_TEST_RESPONSE : 0;
-        break;
-    case I8042_COMMAND_PORT:
-        vcpu_io.access_size = 1;
-        vcpu_io.u8 = I8042_STATUS_OUTPUT_FULL;
         break;
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
         uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
-        uint32_t addr = io_port_state->pci_config_address >> bit_offset;
+        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address >> bit_offset;
         uint32_t bit_mask = (uint32_t) BIT_MASK(io->access_size * 8);
         vcpu_io.access_size = io->access_size;
         vcpu_io.u32 = (vcpu_io.u32 & ~bit_mask) | (addr & bit_mask);
@@ -356,61 +269,36 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
         size_t offset = io->port - PCI_CONFIG_DATA_PORT_BASE;
-        uint32_t addr = io_port_state->pci_config_address;
-        uint32_t value = 0;
-        status = handle_pci_read(vcpu_context->guest_state,
-                                 PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
-                                 PCI_TYPE1_FUNCTION(addr), PCI_TYPE1_REGISTER(addr) + offset,
-                                 io->access_size, &value);
-        if (status != MX_OK)
-            return status;
-
-        switch (io->access_size) {
-        case 1:
-            vcpu_io.u8 = value;
-            break;
-        case 2:
-            vcpu_io.u16 = value;
-            break;
-        case 4:
-            vcpu_io.u32 = value;
-            break;
-        default:
-            fprintf(stderr, "Unhandled port in %#x\n", io->port);
-            return MX_ERR_NOT_SUPPORTED;
-        }
+        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address;
         vcpu_io.access_size = io->access_size;
+        status = handle_pci_read(vcpu_context->guest_state,
+                                 PCI_TYPE1_BUS(addr),
+                                 PCI_TYPE1_DEVICE(addr),
+                                 PCI_TYPE1_FUNCTION(addr),
+                                 PCI_TYPE1_REGISTER(addr) + offset,
+                                 io->access_size, &vcpu_io.u32);
         break;
     }
-    case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-        vcpu_io.access_size = 2;
-        vcpu_io.u16 = 0;
-        break;
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-        vcpu_io.access_size = 2;
-        vcpu_io.u16 = io_port_state->pm1_enable;
-        break;
-    case PIC1_DATA_PORT:
-        vcpu_io.access_size = 1;
-        vcpu_io.u8 = PIC_INVALID;
-        break;
     default: {
         uint16_t port_off;
         pci_device_t* bus = vcpu_context->guest_state->bus;
         switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK:
             status = block_read(vcpu_context->guest_state->block, port_off, &vcpu_io);
-            if (status != MX_OK)
-                return status;
             break;
         default:
-            fprintf(stderr, "Unhandled port in %#x\n", io->port);
-            return MX_ERR_NOT_SUPPORTED;
+            status = MX_ERR_NOT_SUPPORTED;
         }
     }}
-
-    if (vcpu_io.access_size != io->access_size)
+    if (status != MX_OK) {
+        fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);
+        return status;
+    }
+    if (vcpu_io.access_size != io->access_size) {
+        fprintf(stderr, "Unexpected size (%u != %u) for port in %#x\n", vcpu_io.access_size,
+                io->access_size, io->port);
         return MX_ERR_IO_DATA_INTEGRITY;
+    }
     return vcpu_context->write_state(vcpu_context, MX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 #else // __x86_64__
     return MX_ERR_NOT_SUPPORTED;
@@ -419,25 +307,17 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
 
 static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
 #if __x86_64__
-    io_port_state_t* io_port_state = &vcpu_context->guest_state->io_port_state;
     switch (io->port) {
+    case I8042_COMMAND_PORT:
     case I8042_DATA_PORT:
     case I8253_CHANNEL_0:
     case I8253_CONTROL_PORT:
     case PIC1_COMMAND_PORT ... PIC1_DATA_PORT:
     case PIC2_COMMAND_PORT ... PIC2_DATA_PORT:
+    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
-        return MX_OK;
     case RTC_INDEX_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->rtc_index = io->u8;
-        return MX_OK;
-    case I8042_COMMAND_PORT:
-        if (io->access_size != 1)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->i8042_command = io->u8;
-        return MX_OK;
+        return io_port_write(vcpu_context->guest_state->io_port, io->port, io);
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
         // Software can (and Linux does) perform partial word accesses to the
         // PCI address register. This means we need to take care to read/write
@@ -445,29 +325,26 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
         uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
         uint32_t bit_size = io->access_size * 8;
         uint32_t bit_mask = (uint32_t) BIT_MASK(bit_size);
+        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address;
 
         // Clear out the bits we'll be modifying.
-        io_port_state->pci_config_address = CLEAR_BITS(io_port_state->pci_config_address,
-                                                       bit_size, bit_offset);
+        addr = CLEAR_BITS(addr, bit_size, bit_offset);
+        // Set the bits of the address.
+        addr |= (io->u32 & bit_mask) << bit_offset;
 
-        // Write config address.
-        io_port_state->pci_config_address |= ((io->u32 & bit_mask) << bit_offset);
+        vcpu_context->guest_state->io_port->pci_config_address = addr;
         return MX_OK;
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
         size_t offset = io->port - PCI_CONFIG_DATA_PORT_BASE;
-        uint32_t addr = io_port_state->pci_config_address;
-        return handle_pci_write(vcpu_context->guest_state, PCI_TYPE1_BUS(addr),
-                                PCI_TYPE1_DEVICE(addr), PCI_TYPE1_FUNCTION(addr),
-                                PCI_TYPE1_REGISTER(addr) + offset, io->access_size, io->u32);
-    }
-
-    case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
-        if (io->access_size != 2)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        io_port_state->pm1_enable = io->u16;
-        return MX_OK;
-    }
+        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address;
+        return handle_pci_write(vcpu_context->guest_state,
+                                PCI_TYPE1_BUS(addr),
+                                PCI_TYPE1_DEVICE(addr),
+                                PCI_TYPE1_FUNCTION(addr),
+                                PCI_TYPE1_REGISTER(addr) + offset,
+                                io->access_size, io->u32);
+    }}
 
     uint16_t port_off;
     pci_device_t* bus = vcpu_context->guest_state->bus;

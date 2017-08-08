@@ -5,7 +5,6 @@
 #pragma once
 
 #include <hypervisor/virtio.h>
-#include <magenta/types.h>
 
 #define SECTOR_SIZE 512u
 

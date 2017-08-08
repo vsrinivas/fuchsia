@@ -11,21 +11,11 @@
 
 typedef struct block block_t;
 typedef struct io_apic io_apic_t;
+typedef struct io_port io_port_t;
 typedef struct pci_device pci_device_t;
 typedef struct uart uart_t;
 
-/* Stores the IO port state. */
-typedef struct io_port_state {
-    // Index of the RTC register to use.
-    uint8_t rtc_index;
-    // Command being issued to the i8042 controller.
-    uint8_t i8042_command;
-    // State of power management enable register.
-    uint16_t pm1_enable;
-    // Selected address in PCI config space.
-    uint32_t pci_config_address;
-} io_port_state_t;
-
+/* Stores the state associated with the guest. */
 typedef struct guest_state {
     mx_handle_t guest;
     mtx_t mutex;
@@ -34,19 +24,13 @@ typedef struct guest_state {
     void* mem_addr;
     size_t mem_size;
 
-    uart_t* uart;
     io_apic_t* io_apic;
+    io_port_t* io_port;
     pci_device_t* bus;
+
+    uart_t* uart;
     block_t* block;
-
-    io_port_state_t io_port_state;
 } guest_state_t;
-
-/* Stores the local APIC state. */
-typedef struct local_apic {
-    // Address of the local APIC.
-    void* apic_addr;
-} local_apic_t;
 
 /* Typedefs to abstract reading and writing VCPU state. */
 typedef struct vcpu_context vcpu_context_t;
@@ -55,15 +39,21 @@ typedef mx_status_t (*read_state_fn_t)
 typedef mx_status_t (*write_state_fn_t)
     (vcpu_context_t* vcpu, uint32_t kind, const void* buffer, uint32_t len);
 
+/* Stores the local APIC state. */
+typedef struct local_apic {
+    // Address of the local APIC.
+    void* apic_addr;
+} local_apic_t;
+
 /* Stores the state associated with a single VCPU. */
 typedef struct vcpu_context {
     mx_handle_t vcpu;
-    local_apic_t local_apic;
-    guest_state_t* guest_state;
 
-    // Accessors to the VCPU registers. These are initialized in vcpu_init.
     read_state_fn_t read_state;
     write_state_fn_t write_state;
+
+    local_apic_t local_apic;
+    guest_state_t* guest_state;
 } vcpu_context_t;
 
 /* Initializes a VCPU context. */
