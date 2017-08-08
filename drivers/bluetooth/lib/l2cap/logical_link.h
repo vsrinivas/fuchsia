@@ -15,14 +15,19 @@
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
+#include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/l2cap/channel.h"
+#include "apps/bluetooth/lib/l2cap/fragmenter.h"
 #include "apps/bluetooth/lib/l2cap/l2cap.h"
 #include "apps/bluetooth/lib/l2cap/recombiner.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace bluetooth {
+
 namespace l2cap {
 
 class ChannelManager;
@@ -37,7 +42,7 @@ class ChannelImpl;
 class LogicalLink final {
  public:
   LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
-              hci::Connection::Role role, ChannelManager* owner);
+              hci::Connection::Role role, ftl::RefPtr<hci::Transport> hci);
 
   // When a logical link is destroyed it notifies all of its channels to close themselves. Data
   // packets will no longer be routed to the associated channels.
@@ -48,8 +53,19 @@ class LogicalLink final {
   // exists.
   std::unique_ptr<Channel> OpenFixedChannel(ChannelId channel_id);
 
-  // Takes ownership of |packet| for PDU processing and routes it to its target channel.
+  // Takes ownership of |packet| for PDU processing and routes it to its target channel. This must
+  // be called on the HCI I/O thread.
   void HandleRxPacket(hci::ACLDataPacketPtr packet);
+
+  // Sends a B-frame PDU out over the ACL data channel, where |payload| is the B-frame information
+  // payload. |id| identifies the L2CAP channel that this frame is coming from. This must be called
+  // on the HCI I/O thread.
+  void SendBasicFrame(ChannelId id, const common::ByteBuffer& payload);
+
+  // Returns the HCI I/O thread task runner.
+  ftl::RefPtr<ftl::TaskRunner> io_task_runner() const { return hci_->io_task_runner(); }
+
+  hci::Connection::LinkType type() const { return type_; }
 
  private:
   friend class ChannelImpl;
@@ -66,8 +82,7 @@ class LogicalLink final {
   // Notifies and closes all open channels on this link. Called by the destructor.
   void Close();
 
-  // The ChannelManager that uniquely owns this instance.
-  ChannelManager* owner_;  // weak
+  ftl::RefPtr<hci::Transport> hci_;
 
   // Information about the underlying controller logical link.
   hci::ConnectionHandle handle_;
@@ -76,6 +91,8 @@ class LogicalLink final {
 
   // TODO(armansito): Store a signaling channel implementation separately from other fixed channels.
 
+  // Fragmenter and Recombiner should always be accessed on the HCI I/O thread.
+  Fragmenter fragmenter_;
   Recombiner recombiner_;
 
   std::mutex mtx_;
@@ -85,7 +102,8 @@ class LogicalLink final {
   using ChannelMap = std::unordered_map<ChannelId, ChannelImpl*>;
   ChannelMap channels_ __TA_GUARDED(mtx_);
 
-  // Stores packets that have been received on
+  // Stores packets that have been received on a currently closed channel. We buffer these for fixed
+  // channels so that the data is available when the channel is opened.
   using PendingPduMap = std::unordered_map<ChannelId, std::list<PDU>>;
   PendingPduMap pending_pdus_ __TA_GUARDED(mtx_);
 

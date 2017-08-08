@@ -19,20 +19,55 @@ Channel::Channel(ChannelId id) : id_(id) {
 
 namespace internal {
 
-ChannelImpl::ChannelImpl(ChannelId id, internal::LogicalLink* link) : Channel(id), link_(link) {
+ChannelImpl::ChannelImpl(ChannelId id, internal::LogicalLink* link)
+    : Channel(id), tx_mtu_(kDefaultMTU), rx_mtu_(kDefaultMTU), link_(link) {
   FTL_DCHECK(link_);
 }
 
 ChannelImpl::~ChannelImpl() {
   FTL_DCHECK(IsCreationThreadCurrent());
 
+  // Cancel all unprocessed SDU tasks before acquiring |mtx_|.
+  send_sdu_task_factory_.CancelAll();
+
   std::lock_guard<std::mutex> lock(mtx_);
 
   if (link_) link_->RemoveChannel(this);
 }
 
-void ChannelImpl::SendBasicFrame(const common::ByteBuffer& payload) {
-  // TODO(armansito): Implement
+bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
+  FTL_DCHECK(sdu);
+
+  if (sdu->size() > tx_mtu_) {
+    FTL_VLOG(1) << ftl::StringPrintf("l2cap: SDU size exceeds channel TxMTU (channel-id: 0x%04x)",
+                                     id());
+    return false;
+  }
+
+  std::lock_guard<std::mutex> lock(mtx_);
+
+  if (!link_) {
+    FTL_LOG(ERROR) << "l2cap: Cannot send SDU on a closed link";
+    return false;
+  }
+
+  link_->io_task_runner()->PostTask(
+      send_sdu_task_factory_.MakeTask(ftl::MakeCopyable([ this, sdu = std::move(sdu) ] {
+        std::lock_guard<std::mutex> lock(mtx_);
+
+        // Check if the link was closed in the mean time.
+        if (!link_) {
+          FTL_LOG(ERROR) << "l2cap: Cannot send SDU on a closed link";
+          return;
+        }
+
+        // TODO(armansito): Since we only support Basic Mode we send the SDU out right away. This is
+        // the point where a channel mode implementation should take over.
+
+        link_->SendBasicFrame(id(), *sdu);
+      })));
+
+  return true;
 }
 
 void ChannelImpl::SetRxHandler(const RxCallback& rx_cb,
@@ -50,10 +85,10 @@ void ChannelImpl::SetRxHandler(const RxCallback& rx_cb,
   rx_task_runner_ = rx_task_runner;
 
   if (link_ && rx_cb_) {
-    while (!pending_sdus_.empty()) {
-      auto cb =
-          ftl::MakeCopyable([ cb = rx_cb_, sdu = std::move(pending_sdus_.front()) ] { cb(sdu); });
-      pending_sdus_.pop();
+    while (!pending_rx_sdus_.empty()) {
+      auto cb = ftl::MakeCopyable(
+          [ cb = rx_cb_, sdu = std::move(pending_rx_sdus_.front()) ] { cb(sdu); });
+      pending_rx_sdus_.pop();
       rx_task_runner_->PostTask(cb);
     }
   }
@@ -64,6 +99,9 @@ void ChannelImpl::OnLinkClosed() {
 
   ClosedCallback cb;
 
+  // Cancel all unprocessed SDU tasks before acquiring |mtx_|.
+  send_sdu_task_factory_.CancelAll();
+
   {
     std::lock_guard<std::mutex> lock(mtx_);
 
@@ -71,7 +109,7 @@ void ChannelImpl::OnLinkClosed() {
     link_ = nullptr;
 
     // Drop any previously buffered SDUs.
-    pending_sdus_ = {};
+    pending_rx_sdus_ = {};
 
     if (!closed_callback()) return;
 
@@ -84,7 +122,8 @@ void ChannelImpl::OnLinkClosed() {
 }
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
-  // Data is always received on a different thread.
+  // Data is always received on the HCI I/O thread which is assumed to be different from this
+  // Channel's creation thread.
   FTL_DCHECK(!IsCreationThreadCurrent());
 
   // TODO(armansito): This is the point where the channel mode implementation should take over the
@@ -92,9 +131,10 @@ void ChannelImpl::HandleRxPdu(PDU&& pdu) {
 
   std::lock_guard<std::mutex> lock(mtx_);
   FTL_DCHECK(link_);
+  FTL_DCHECK(link_->io_task_runner()->RunsTasksOnCurrentThread());
 
   if (!rx_cb_) {
-    pending_sdus_.emplace(std::forward<PDU>(pdu));
+    pending_rx_sdus_.emplace(std::forward<PDU>(pdu));
     return;
   }
 

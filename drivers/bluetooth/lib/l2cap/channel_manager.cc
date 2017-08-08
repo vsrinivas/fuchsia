@@ -38,7 +38,7 @@ void ChannelManager::Register(hci::ConnectionHandle handle, hci::Connection::Lin
   FTL_DCHECK(iter == ll_map_.end())
       << ftl::StringPrintf("l2cap: Connection registered more than once! (handle=0x%04x)", handle);
 
-  ll_map_[handle] = std::make_unique<internal::LogicalLink>(handle, ll_type, role, this);
+  ll_map_[handle] = std::make_unique<internal::LogicalLink>(handle, ll_type, role, hci_);
 
   // Handle pending packets on the link, if any.
   auto pp_iter = pending_packets_.find(handle);

@@ -31,7 +31,10 @@ class Fragmenter final {
   // NOTE: |max_acl_payload_size| is required by the spec to be at least 27 (see Core Spec v5.0, Vol
   // 2, Part E, Section 5.4.2). We do not enforce this here as unit tests are allowed to pass a
   // smaller number.
-  Fragmenter(hci::ConnectionHandle connection_handle, uint16_t max_acl_payload_size);
+  Fragmenter(hci::ConnectionHandle connection_handle,
+             uint16_t max_acl_payload_size = hci::kMaxACLPayloadSize);
+
+  void set_max_acl_payload_size(size_t value) { max_acl_payload_size_ = value; }
 
   // Constructs and returns a PDU to be sent over the L2CAP channel |channel_id|. |data| will be
   // treated as the Information payload of a B-frame, i.e. the PDU will contain:

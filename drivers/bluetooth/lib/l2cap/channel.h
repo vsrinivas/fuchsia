@@ -6,11 +6,13 @@
 
 #include <atomic>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <queue>
 
 #include <magenta/compiler.h>
 
+#include "apps/bluetooth/lib/common/cancelable_callback.h"
 #include "apps/bluetooth/lib/l2cap/sdu.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
@@ -52,9 +54,10 @@ class Channel {
 
   ChannelId id() const { return id_; }
 
-  // Sends the given payload over this channel. |payload| corresponds to the information payload of
-  // a basic L2CAP frame.
-  virtual void SendBasicFrame(const common::ByteBuffer& payload) = 0;
+  // Sends the given SDU payload over this channel. This takes ownership of |sdu|. Returns false if
+  // the SDU is rejected, for example because it exceeds the channel's MTU or because the link has
+  // been closed.
+  virtual bool Send(std::unique_ptr<const common::ByteBuffer> sdu) = 0;
 
   // Callback invoked when this channel has been closed without an explicit request from the owner
   // of this instance. For example, this can happen when the remote end closes a dynamically
@@ -106,7 +109,7 @@ class ChannelImpl : public Channel {
   ~ChannelImpl() override;
 
   // Channel overrides:
-  void SendBasicFrame(const common::ByteBuffer& payload) override;
+  bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
   void SetRxHandler(const RxCallback& rx_cb, ftl::RefPtr<ftl::TaskRunner> rx_task_runner) override;
 
  private:
@@ -122,6 +125,12 @@ class ChannelImpl : public Channel {
   // Called by |link_| when a PDU targeting this channel has been received. Contents of |pdu| will
   // be moved.
   void HandleRxPdu(PDU&& pdu);
+
+  // The maximum SDU sizes for this channel.
+  uint16_t tx_mtu_;
+  uint16_t rx_mtu_;
+
+  // TODO(armansito): Add MPS fields when we supported segmentation/flow-control.
 
   std::mutex mtx_;
 
@@ -139,7 +148,13 @@ class ChannelImpl : public Channel {
   // The pending SDUs on this channel. Received PDUs are buffered if |rx_cb_| is currently not set.
   // TODO(armansito): We should avoid STL containers for data packets as they all implicitly
   // allocate. This is a reminder to fix this elsewhere (especially in the HCI layer).
-  std::queue<SDU, std::list<SDU>> pending_sdus_;
+  std::queue<SDU, std::list<SDU>> pending_rx_sdus_ __TA_GUARDED(mtx_);
+
+  // We process all outgoing SDUs on the HCI I/O thread by posting a cancelable task.
+  // NOTE: This cannot be protected using |mtx_| as that can lead to deadlock if a vended callback
+  // attempts to acquire it. If access to this object needs to be protected, then it is better to
+  // use a different mutex for it.
+  common::CancelableCallbackFactory<void()> send_sdu_task_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ChannelImpl);
 };

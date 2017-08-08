@@ -4,11 +4,11 @@
 
 #include "logical_link.h"
 
+#include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
 #include "channel.h"
-#include "channel_manager.h"
 
 namespace bluetooth {
 namespace l2cap {
@@ -42,10 +42,20 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 }  // namespace
 
 LogicalLink::LogicalLink(hci::ConnectionHandle handle, hci::Connection::LinkType type,
-                         hci::Connection::Role role, ChannelManager* owner)
-    : owner_(owner), handle_(handle), type_(type), role_(role) {
-  FTL_DCHECK(owner_);
+                         hci::Connection::Role role, ftl::RefPtr<hci::Transport> hci)
+    : hci_(hci), handle_(handle), type_(type), role_(role), fragmenter_(handle) {
+  FTL_DCHECK(hci_);
   FTL_DCHECK(type_ == hci::Connection::LinkType::kLE || type_ == hci::Connection::LinkType::kACL);
+
+  if (type_ == hci::Connection::LinkType::kLE) {
+    FTL_DCHECK(hci_->acl_data_channel()->GetLEBufferInfo().IsAvailable());
+    fragmenter_.set_max_acl_payload_size(
+        hci_->acl_data_channel()->GetLEBufferInfo().max_data_length());
+  } else {
+    FTL_DCHECK(hci_->acl_data_channel()->GetBufferInfo().IsAvailable());
+    fragmenter_.set_max_acl_payload_size(
+        hci_->acl_data_channel()->GetBufferInfo().max_data_length());
+  }
 }
 
 LogicalLink::~LogicalLink() {
@@ -82,7 +92,7 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
   // Handle pending packets on the channel, if any.
   auto pp_iter = pending_pdus_.find(id);
   if (pp_iter != pending_pdus_.end()) {
-    owner_->io_task_runner()->PostTask(cancelable_callback_factory_.MakeTask([this, id] {
+    hci_->io_task_runner()->PostTask(cancelable_callback_factory_.MakeTask([this, id] {
       std::lock_guard<std::mutex> lock(mtx_);
 
       // Make sure the channel is still open.
@@ -108,6 +118,7 @@ std::unique_ptr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   // The creation thread of this object is expected to be different from the HCI I/O thread.
   FTL_DCHECK(!thread_checker_.IsCreationThreadCurrent());
+  FTL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
   FTL_DCHECK(!recombiner_.ready());
   FTL_DCHECK(packet);
 
@@ -162,6 +173,18 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
 
   // Off it goes.
   iter->second->HandleRxPdu(std::move(pdu));
+}
+
+void LogicalLink::SendBasicFrame(ChannelId id, const common::ByteBuffer& payload) {
+  FTL_DCHECK(io_task_runner()->RunsTasksOnCurrentThread());
+
+  // TODO(armansito): The following makes a copy of |payload| when constructing |pdu|. Think about
+  // how this could be optimized, especially when |payload| fits inside a single ACL data fragment.
+  PDU pdu = fragmenter_.BuildBasicFrame(id, payload);
+  auto fragments = pdu.ReleaseFragments();
+
+  FTL_DCHECK(!fragments.is_empty());
+  hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
 }
 
 bool LogicalLink::AllowsFixedChannel(ChannelId id) {

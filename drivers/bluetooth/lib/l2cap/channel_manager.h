@@ -14,7 +14,6 @@
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/hci.h"
-#include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/l2cap/channel.h"
 
 #include "lib/ftl/macros.h"
@@ -74,9 +73,6 @@ class ChannelManager final {
   // ChannelManager.
   std::unique_ptr<Channel> OpenFixedChannel(hci::ConnectionHandle connection_handle,
                                             ChannelId channel_id);
-
-  // Returns the HCI I/O thread task runner.
-  ftl::RefPtr<ftl::TaskRunner> io_task_runner() const { return hci_->io_task_runner(); }
 
  private:
   // Called when an ACL data packet is received from the controller. This method is responsible for
