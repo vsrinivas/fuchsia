@@ -38,4 +38,7 @@ type Device interface {
 	// Close calls Flush() and then closes the device, rendering it unusable for I/O.  It returns an error,
 	// if any.
 	Close() error
+
+	// Path returns the path to the underlying block device.
+	Path() string
 }

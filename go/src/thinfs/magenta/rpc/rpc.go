@@ -568,6 +568,11 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			copy(msg.Data[infoSize:], name)
 			msg.Datalen = totalSize
 			return mx.Status(msg.Datalen)
+		case mxio.IoctlVFSGetDevicePath:
+			path := vfs.fs.DevicePath()
+			copy(msg.Data[0:], path)
+			msg.Datalen = uint32(len(path))
+			return mx.Status(msg.Datalen)
 		default:
 			return mx.ErrNotSupported
 		}

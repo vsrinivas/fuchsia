@@ -209,6 +209,9 @@ type FileSystem interface {
 	// FreeSize returns the free capacity of the filesystem (in bytes). If the free capacity is
 	// unknown, it will instead return the value of Size().
 	FreeSize() int64
+
+	// DevicePath returns the path to the underlying block device as a string.
+	DevicePath() string
 }
 
 // Directory represents the generic methods that can be taken on directory.

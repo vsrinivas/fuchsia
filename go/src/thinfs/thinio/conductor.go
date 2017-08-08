@@ -151,6 +151,11 @@ func (d *device) Close() {
 	}
 }
 
+// Path is a convenience function for calling Path on the underlying block.Device.
+func (d *device) Path() string {
+	return d.dev.Path()
+}
+
 // Conductor orchestrates all I/O operations on a block.Device, maintaining an internal cache
 // of disk blocks for better performance
 type Conductor struct {
@@ -367,4 +372,9 @@ func (c *Conductor) Errors() []error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.errs
+}
+
+// Path returns the path to the underlying block device.
+func (c *Conductor) Path() string {
+	return c.dev.Path()
 }
