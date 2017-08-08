@@ -1,12 +1,30 @@
 # Lint
 
-We use clang-tidy to lint C++ code.
-
+We use clang-tidy to lint C++ code and aim to keep the repository warning-clean.
 The linter is configured in the [.clang-tidy](../.clang-tidy) file.
+
+## How to lint
+
+In order to run the current CL through the linter (assuming the current
+directory is `apps/ledger`), run:
+
+```
+../../scripts/git-file-tidy [--out-dir out/debug-x86-64]
+```
+
+In order to run the entire repository through the linter, add `--all`. You can
+also add `--fix` in order to automatically generate fixes for some (but not all)
+of the warnings.
+
+## Suppressing warnings
+
+Any warning can be suppressed by adding a `// NOLINT` comment on the line on
+which it occurs. It is also possible to disable the check entirely within Ledger
+repository by editing the [.clang-tidy](../.clang-tidy) file.
 
 ## Disabled checks
 
-This list tracks context on why we disabled particular [checks]:
+This list tracks the reasons for which we disabled particular [checks]:
 
  - `clang-analyzer-core.NullDereference`, `clang-analyzer-unix.Malloc` - these
     checks are triggering memory access warnings at rapidjson callsites (despite
