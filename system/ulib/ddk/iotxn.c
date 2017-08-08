@@ -390,6 +390,10 @@ void iotxn_release(iotxn_t* txn) {
 }
 
 void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
+    // Bail out if the syscall has nothing to do.
+    if (length == 0 || txn->vmo_length == 0)
+        return;
+
     mx_vmo_op_range(txn->vmo_handle, op, txn->vmo_offset + offset, length, NULL, 0);
 }
 
