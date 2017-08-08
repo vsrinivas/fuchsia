@@ -654,6 +654,48 @@ mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
     return r;
 }
 
+mx_status_t mxio_create_fd(mx_handle_t* handles, uint32_t* types, size_t hcount,
+                           int* fd_out) {
+    mxio_t* io;
+    mx_status_t r;
+    int fd;
+    uint32_t type;
+
+    switch (PA_HND_TYPE(types[0])) {
+    case PA_MXIO_REMOTE:
+        type = MXIO_PROTOCOL_REMOTE;
+        break;
+    case PA_MXIO_PIPE:
+        type = MXIO_PROTOCOL_PIPE;
+        break;
+    case PA_MXIO_SOCKET:
+        type = MXIO_PROTOCOL_SOCKET_CONNECTED;
+        break;
+    default:
+        r = MX_ERR_IO;
+        goto fail;
+    }
+
+    if ((r = mxio_from_handles(type, handles, hcount, NULL, 0, &io)) != MX_OK) {
+        goto fail;
+    }
+
+    fd = mxio_bind_to_fd(io, -1, 0);
+    if (fd < 0) {
+        mxio_close(io);
+        mxio_release(io);
+        return MX_ERR_BAD_STATE;
+    }
+
+    *fd_out = fd;
+    return MX_OK;
+fail:
+    for (size_t i = 0; i < hcount; i++) {
+        mx_handle_close(handles[i]);
+    }
+    return r;
+}
+
 mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
                               void* extra, uint32_t esize, mxio_t** out) {
     // All failure cases which require discard_handles set r and break
@@ -713,11 +755,13 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
             return MX_OK;
         }
     }
+    case MXIO_PROTOCOL_SOCKET_CONNECTED:
     case MXIO_PROTOCOL_SOCKET: {
+        int flags = (type == MXIO_PROTOCOL_SOCKET_CONNECTED) ? MXIO_FLAG_SOCKET_CONNECTED : 0;
         if (hcount == 1) {
-            io = mxio_socket_create(handles[0], MX_HANDLE_INVALID, 0);
+            io = mxio_socket_create(handles[0], MX_HANDLE_INVALID, flags);
         } else if (hcount == 2) {
-            io = mxio_socket_create(handles[0], handles[1], 0);
+            io = mxio_socket_create(handles[0], handles[1], flags);
         } else {
             r = MX_ERR_INVALID_ARGS;
             break;

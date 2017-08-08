@@ -23,6 +23,18 @@ mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* typ
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 
+// Attempt to create an mxio fd from some handles and their associated types,
+// as returned from mxio_transfer_fd.
+//
+// Can only create fds around:
+// - Remote IO objects
+// - Pipes
+// - Connected sockets
+//
+// This function transfers ownership of handles to the fd on success, and
+// closes them on failure.
+mx_status_t mxio_create_fd(mx_handle_t* handles, uint32_t* types, size_t hcount, int* fd_out);
+
 void bootfs_parse(mx_handle_t vmo, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
                   void* cb_arg);
