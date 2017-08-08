@@ -71,7 +71,7 @@ const char* cmdline_get(const char* key) {
     unsigned sz = strlen(key);
     const char* ptr = __kernel_cmdline;
     for (;;) {
-        if (!strncmp(ptr, key, sz)) {
+        if (!strncmp(ptr, key, sz) && (ptr[sz] == '=' || ptr[sz] == '\0')) {
             break;
         }
         ptr = strchr(ptr, 0) + 1;
