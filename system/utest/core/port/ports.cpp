@@ -543,6 +543,92 @@ static bool threads_event_repeat() {
     return threads_event(MX_WAIT_ASYNC_REPEATING);
 }
 
+
+static constexpr uint32_t kStressCount = 60000u;
+static constexpr uint64_t kSleeps[] = { 0, 10, 2, 0, 15, 0};
+
+static int signaler_thread(void* arg) {
+    auto ev = *reinterpret_cast<mx_handle_t*>(arg);
+
+    uint64_t count = 0;
+
+    while (true) {
+        auto st = mx_object_signal(ev, 0u, MX_EVENT_SIGNALED);
+        if (st != MX_OK)
+            return 1;
+        auto duration = kSleeps[count % mxtl::count_of(kSleeps)];
+        if (duration > 0)
+            mx_nanosleep(mx_deadline_after(duration));
+        st = mx_object_signal(ev, MX_EVENT_SIGNALED, 0u);
+        if (st != MX_OK)
+            return 1;
+
+        ++count;
+    }
+
+    return 0;
+}
+
+static int waiter_thread(void* arg) {
+    auto ob = reinterpret_cast<mx_handle_t*>(arg);
+    auto& port = ob[0];
+    auto& ev   = ob[1];
+    const auto key = 919u;
+
+    int st;
+
+    auto count = kStressCount;
+    while (--count) {
+        st = mx_object_wait_async(ev, port, key, MX_EVENT_SIGNALED, MX_WAIT_ASYNC_ONCE);
+        if (st != MX_OK)
+            break;
+
+        mx_signals_t observed;
+        st = mx_object_wait_one(ev, MX_EVENT_SIGNALED, MX_TIME_INFINITE, &observed);
+        if (st != MX_OK)
+            break;
+
+        st = mx_port_cancel(port, ev, key);
+        if (st != MX_OK)
+            break;
+    }
+
+    // Done, close the event so the other thread exits.
+    mx_handle_close(ev);
+    return st;
+}
+
+
+static bool cancel_stress() {
+    BEGIN_TEST;
+
+    // This tests a race that existed between the port observer
+    // removing itself from the event and the cancelation logic which is
+    // also working with the same internal object. The net effect of the
+    // bug is that port_cancel() would fail with MX_ERR_NOT_FOUND.
+    //
+    // When running on real hardware or KVM-accelerated emulation
+    // a good number to set for kStressCount is 50000000.
+
+    mx_handle_t ob[2];
+
+    EXPECT_EQ(mx_port_create(0, &ob[0]), MX_OK, "");
+    EXPECT_EQ(mx_event_create(0u, &ob[1]), MX_OK, "");
+
+    thrd_t thread[2];
+    EXPECT_EQ(thrd_create(&thread[0], waiter_thread, ob), thrd_success, "");
+    EXPECT_EQ(thrd_create(&thread[1], signaler_thread, &ob[1]), thrd_success, "");
+
+    int res;
+    EXPECT_EQ(thrd_join(thread[0], &res), thrd_success, "waiter");
+    EXPECT_EQ(res, MX_OK, "");
+
+    EXPECT_EQ(thrd_join(thread[1], &res), thrd_success, "signaler");
+    EXPECT_EQ(res, 1, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(port_tests)
 RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
@@ -563,6 +649,7 @@ RUN_TEST(cancel_event_key_once_after)
 RUN_TEST(cancel_event_key_repeat_after)
 RUN_TEST(threads_event_once)
 RUN_TEST(threads_event_repeat)
+RUN_TEST(cancel_stress)
 END_TEST_CASE(port_tests)
 
 #ifndef BUILD_COMBINED_TESTS

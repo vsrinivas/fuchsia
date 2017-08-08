@@ -30,7 +30,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
         return nullptr;
 
     mxtl::AllocChecker ac;
-    auto port_packet = new (&ac) PortPacket();
+    auto port_packet = new (&ac) PortPacket(nullptr);
     if (!ac.check())
         return nullptr;
 

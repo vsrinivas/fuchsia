@@ -82,13 +82,15 @@ class PortObserver;
 
 struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
     mx_port_packet_t packet;
+    const void* const handle;
     PortObserver* observer;
 
-    PortPacket();
+    explicit PortPacket(const void* handle);
     PortPacket(const PortPacket&) = delete;
     void operator=(PortPacket) = delete;
 
     uint32_t type() const { return packet.type; }
+    uint64_t key() const { return packet.key; }
 };
 
 // Observers are weakly contained in state trackers until |remove_| member

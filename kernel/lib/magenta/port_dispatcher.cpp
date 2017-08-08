@@ -23,7 +23,7 @@
 
 using mxtl::AutoLock;
 
-PortPacket::PortPacket() : packet{}, observer(nullptr) {
+PortPacket::PortPacket(const void* handle) : packet{}, handle(handle), observer(nullptr) {
     // Note that packet is initialized to zeros.
 }
 
@@ -33,7 +33,8 @@ PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispa
       key_(key),
       trigger_(signals),
       handle_(handle),
-      port_(mxtl::move(port)) {
+      port_(mxtl::move(port)),
+      packet_(handle) {
 
     auto& packet = packet_.packet;
     packet.status = MX_OK;
@@ -141,7 +142,7 @@ mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
     canary_.Assert();
 
     mxtl::AllocChecker ac;
-    auto port_packet = new (&ac) PortPacket();
+    auto port_packet = new (&ac) PortPacket(nullptr);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -281,17 +282,13 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
     bool packet_removed = false;
 
     for (auto it = packets_.begin(); it != packets_.end();) {
-        if (it->observer == nullptr) {
+        if (it->handle == nullptr) {
             ++it;
             continue;
         }
 
-        auto ob_handle = it->observer->handle();
-        auto ob_key = it->observer->key();
-
-        if ((ob_handle == handle) && (ob_key == key)) {
-            auto to_remove = it;
-            ++it;
+        if ((it->handle == handle) && (it->key() == key)) {
+            auto to_remove = it++;
             delete packets_.erase(to_remove)->observer;
             packet_removed = true;
         } else {
