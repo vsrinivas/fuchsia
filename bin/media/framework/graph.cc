@@ -209,6 +209,14 @@ void Graph::FlushAllOutputs(NodeRef node) {
   }
 }
 
+void Graph::UpdateOne() {
+  engine_.UpdateOne();
+}
+
+void Graph::UpdateUntilDone() {
+  engine_.UpdateUntilDone();
+}
+
 void Graph::PostTask(const ftl::Closure& function,
                      std::initializer_list<NodeRef> nodes) {
   std::vector<Stage*> stages;

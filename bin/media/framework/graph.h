@@ -111,6 +111,24 @@ class Graph {
 
   ~Graph();
 
+  // Sets the update callback. The update callback signals the need to update
+  // stages. |update_callback| is called on an arbitrary thread. If this method
+  // is never called, updates will run on the threads that the nodes use to
+  // signal external events (typically via a call to a demand or supply callback
+  // or in a call to the node's 'host'). A mutex is taken while updates are
+  // running, so this results in single-threaded execution. If this method *is*
+  // called, |update_callback| will be called on those threads instead. To
+  // enable multi-threaded operation, the callback should dispatch a thread to
+  // call |UpdateOne|. |update_callback| can be re-entered, so care should be
+  // taken to synchronize properly. To run single-threaded, the callback should
+  // call |UpdateUntilDone| or dispatch a thread to do so, keeping in mind that
+  // |UpdateUntilDone| cannot be re-entered. Calling |UpdateUntilDone| from the
+  // callback thread essentially replicates the behavior produced by never
+  // calling |SetUpdateCallback| in the first place.
+  void SetUpdateCallback(ftl::Closure update_callback) {
+    engine_.SetUpdateCallback(update_callback);
+  }
+
   // Adds a node to the graph.
   template <typename T>
   NodeRef Add(std::shared_ptr<T> t_ptr) {
@@ -182,6 +200,12 @@ class Graph {
 
   // Flushes the output and the subgraph downstream of it.
   void FlushAllOutputs(NodeRef node);
+
+  // Updates one node from the update backlog.
+  void UpdateOne();
+
+  // Updates nodes from the update backlog until the backlog is empty.
+  void UpdateUntilDone();
 
   // Executes |function| after having acquired |nodes|. No update or other
   // task will touch any of the nodes while |function| is executing.
