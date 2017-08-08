@@ -25,6 +25,7 @@
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
+#include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
 #include "apps/modular/src/user_runner/conflict_resolver_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -56,8 +57,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
  private:
   // |UserRunner|
   void Initialize(
-      auth::AccountPtr account,
-      AppConfigPtr user_shell,
+      auth::AccountPtr account, AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
@@ -114,6 +114,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
   std::unique_ptr<MessageQueueManager> message_queue_manager_;
+  std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
   std::unique_ptr<AgentRunner> agent_runner_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
   std::unique_ptr<RemoteInvokerImpl> remote_invoker_impl_;

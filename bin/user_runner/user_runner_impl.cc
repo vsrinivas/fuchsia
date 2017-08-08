@@ -132,9 +132,7 @@ void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunner> request) {
 }
 
 void UserRunnerImpl::Initialize(
-    auth::AccountPtr account,
-    AppConfigPtr user_shell,
-    AppConfigPtr story_shell,
+    auth::AccountPtr account, AppConfigPtr user_shell, AppConfigPtr story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
@@ -240,9 +238,12 @@ void UserRunnerImpl::Initialize(
                      }
                    });
 
+  agent_runner_storage_ =
+      std::make_unique<AgentRunnerStorageImpl>(std::move(agent_runner_page));
+
   agent_runner_ = std::make_unique<AgentRunner>(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
-      ledger_repository_.get(), std::move(agent_runner_page),
+      ledger_repository_.get(), agent_runner_storage_.get(),
       token_provider_factory_.get(), user_intelligence_provider_.get());
 
   if (!test_) {
@@ -406,9 +407,7 @@ void UserRunnerImpl::GetVisibleStoriesController(
   visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
-void UserRunnerImpl::Logout() {
-  user_context_->Logout();
-}
+void UserRunnerImpl::Logout() { user_context_->Logout(); }
 
 void UserRunnerImpl::LogoutAndResetLedgerState() {
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;

@@ -5,6 +5,7 @@
 #ifndef APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
 #define APPS_MODULAR_SRC_AGENT_RUNNER_AGENT_RUNNER_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -15,11 +16,11 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
+#include "apps/modular/src/agent_runner/agent_runner_storage.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -37,12 +38,12 @@ class XdrContext;
 
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
-class AgentRunner : AgentProvider, PageClient {
+class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
  public:
   AgentRunner(app::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
               ledger::LedgerRepository* ledger_repository,
-              ledger::PagePtr page,
+              AgentRunnerStorage* agent_runner_storage,
               auth::TokenProviderFactory* token_provider_factory,
               maxwell::UserIntelligenceProvider* user_intelligence_provider);
   ~AgentRunner() override;
@@ -56,8 +57,7 @@ class AgentRunner : AgentProvider, PageClient {
   // Connects to an agent (and starts it up if it doesn't exist). Called via
   // ComponentContext.
   void ConnectToAgent(
-      const std::string& requestor_url,
-      const std::string& agent_url,
+      const std::string& requestor_url, const std::string& agent_url,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
@@ -78,10 +78,6 @@ class AgentRunner : AgentProvider, PageClient {
   void DeleteTask(const std::string& agent_url, const std::string& task_id);
 
  private:
-  struct TriggerInfo;
-
-  static void XdrTriggerInfo(XdrContext* xdr, TriggerInfo* data);
-
   // Starts up an agent, or waits until the agent can start up if it is already
   // in a terminating state. Calls |done| once the agent has started.
   // Note that the agent could be in an INITIALIZING state.
@@ -93,9 +89,6 @@ class AgentRunner : AgentProvider, PageClient {
   // Will also start and initialize the agent as a consequence.
   void ForwardConnectionsToAgent(const std::string& agent_url);
 
-  void AddedTrigger(const std::string& key, std::string value);
-  void DeletedTrigger(const std::string& key);
-
   // For triggers based on message queues.
   void ScheduleMessageQueueTask(const std::string& agent_url,
                                 const std::string& task_id,
@@ -105,8 +98,7 @@ class AgentRunner : AgentProvider, PageClient {
 
   // For triggers based on alarms.
   void ScheduleAlarmTask(const std::string& agent_url,
-                         const std::string& task_id,
-                         uint32_t alarm_in_seconds,
+                         const std::string& task_id, uint32_t alarm_in_seconds,
                          bool is_new_request);
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);
@@ -117,11 +109,12 @@ class AgentRunner : AgentProvider, PageClient {
   // |AgentProvider|
   void Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) override;
 
-  // |PageClient|
-  void OnPageChange(const std::string& key, const std::string& value) override;
+  // |AgentRunnerStorage::Delegate|
+  void AddedTask(const std::string& key,
+                 AgentRunnerStorage::TriggerInfo data) override;
 
-  // |PageClient|
-  void OnPageDelete(const std::string& key) override;
+  // |AgentRunnerStorage::Delegate|
+  void DeletedTask(const std::string& key) override;
 
   // agent URL -> { task id -> queue name }
   std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
@@ -166,7 +159,8 @@ class AgentRunner : AgentProvider, PageClient {
   app::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;
   ledger::LedgerRepository* const ledger_repository_;
-  ledger::PagePtr page_;
+  // |agent_runner_storage_| must outlive this class.
+  AgentRunnerStorage* const agent_runner_storage_;
   auth::TokenProviderFactory* const token_provider_factory_;
   maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
 

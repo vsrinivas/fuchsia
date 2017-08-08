@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
+#include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -20,157 +21,21 @@ namespace modular {
 
 constexpr ftl::TimeDelta kTeardownTimeout = ftl::TimeDelta::FromSeconds(3);
 
-struct AgentRunner::TriggerInfo {
-  std::string agent_url;
-  std::string task_id;
-
-  // NOTE(mesch): We could include the TaskInfo fidl struct here
-  // directly, but it contains a union, and dealing with a fidl union
-  // in XDR is still rather complicated if we don't want to serialize
-  // the union tag enum value directly.
-  enum TaskType {
-    TYPE_ALARM = 0,
-    TYPE_QUEUE = 1,
-  };
-
-  TaskType task_type{};
-
-  std::string queue_name;
-  uint32_t alarm_in_seconds{};
-};
-
-void AgentRunner::XdrTriggerInfo(XdrContext* const xdr,
-                                 TriggerInfo* const data) {
-  xdr->Field("agent_url", &data->agent_url);
-  xdr->Field("task_id", &data->task_id);
-  xdr->Field("task_type", &data->task_type);
-
-  switch (data->task_type) {
-    case TriggerInfo::TYPE_ALARM:
-      xdr->Field("alarm_in_seconds", &data->alarm_in_seconds);
-      break;
-    case TriggerInfo::TYPE_QUEUE:
-      xdr->Field("queue_name", &data->queue_name);
-      break;
-  }
-}
-
-// Asynchronous operations of this service.
-
-class AgentRunner::InitializeCall : Operation<> {
- public:
-  InitializeCall(OperationContainer* const container,
-                 AgentRunner* const agent_runner,
-                 std::shared_ptr<ledger::PageSnapshotPtr> const snapshot)
-      : Operation("AgentRunner::InitializeCall", container, [] {}),
-        agent_runner_(agent_runner),
-        snapshot_(snapshot) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    GetEntries((*snapshot_).get(), &entries_,
-               [this, flow](ledger::Status status) {
-                 if (status != ledger::Status::OK) {
-                   FTL_LOG(ERROR) << "InitializeCall() "
-                                  << "GetEntries() " << status;
-                   return;
-                 }
-
-                 Cont(flow);
-               });
-  }
-
-  void Cont(FlowToken /*flow*/) {
-    if (entries_.empty()) {
-      // No existing entries.
-      return;
-    }
-
-    for (const auto& entry : entries_) {
-      std::string key(reinterpret_cast<const char*>(entry->key.data()),
-                      entry->key.size());
-      std::string value;
-      if (!mtl::StringFromVmo(entry->value, &value)) {
-        FTL_LOG(ERROR) << "VMO for key " << key << " couldn't be copied.";
-        continue;
-      }
-      agent_runner_->AddedTrigger(key, std::move(value));
-    }
-  }
-
-  AgentRunner* const agent_runner_;
-  std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
-  std::vector<ledger::EntryPtr> entries_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
-};
-
-class AgentRunner::UpdateCall : Operation<> {
- public:
-  UpdateCall(OperationContainer* const container,
-             AgentRunner* const agent_runner,
-             const std::string& key,
-             std::string value)
-      : Operation("AgentRunner::UpdateCall", container, [] {}, key),
-        agent_runner_(agent_runner),
-        key_(key),
-        value_(std::move(value)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    agent_runner_->AddedTrigger(key_, value_);
-    Done();
-  }
-
-  AgentRunner* const agent_runner_;
-  const std::string key_;
-  const std::string value_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(UpdateCall);
-};
-
-class AgentRunner::DeleteCall : Operation<> {
- public:
-  DeleteCall(OperationContainer* const container,
-             AgentRunner* const agent_runner,
-             const std::string& key)
-      : Operation("AgentRunner::DeleteCall", container, [] {}, key),
-        agent_runner_(agent_runner),
-        key_(key) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    agent_runner_->DeletedTrigger(key_);
-    Done();
-  }
-
-  AgentRunner* const agent_runner_;
-  const std::string key_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
-};
-
 AgentRunner::AgentRunner(
     app::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
     ledger::LedgerRepository* const ledger_repository,
-    ledger::PagePtr page,
+    AgentRunnerStorage* const agent_runner_storage,
     auth::TokenProviderFactory* const token_provider_factory,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
-    : PageClient("AgentRunner", page.get(), nullptr),
-      application_launcher_(application_launcher),
+    : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
       ledger_repository_(ledger_repository),
-      page_(std::move(page)),
+      agent_runner_storage_(agent_runner_storage),
       token_provider_factory_(token_provider_factory),
       user_intelligence_provider_(user_intelligence_provider),
       terminating_(std::make_shared<bool>(false)) {
-  new InitializeCall(&operation_queue_, this, page_snapshot());
+  agent_runner_storage_->Initialize(this, [] {});
 }
 
 AgentRunner::~AgentRunner() = default;
@@ -251,8 +116,7 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ConnectToAgent(
-    const std::string& requestor_url,
-    const std::string& agent_url,
+    const std::string& requestor_url, const std::string& agent_url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
@@ -306,48 +170,32 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,
                                TaskInfoPtr task_info) {
-  std::string key = MakeTriggerKey(agent_url, task_info->task_id);
-
-  TriggerInfo data;
+  AgentRunnerStorage::TriggerInfo data;
   data.agent_url = agent_url;
   data.task_id = task_info->task_id.get();
 
   if (task_info->trigger_condition->is_queue_name()) {
-    data.task_type = TriggerInfo::TYPE_QUEUE;
+    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE;
     data.queue_name = task_info->trigger_condition->get_queue_name().get();
   } else if (task_info->trigger_condition->is_alarm_in_seconds()) {
-    data.task_type = TriggerInfo::TYPE_ALARM;
+    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_ALARM;
     data.alarm_in_seconds =
         task_info->trigger_condition->get_alarm_in_seconds();
-
   } else {
     // Not a defined trigger condition.
     FTL_NOTREACHED();
   }
 
-  std::string value;
-  XdrWrite(&value, &data, XdrTriggerInfo);
-
-  page_->PutWithPriority(
-      to_array(key), to_array(value), ledger::Priority::EAGER,
-      [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-        }
-      });
+  agent_runner_storage_->WriteTask(agent_url, data, [](bool) {});
 }
 
-void AgentRunner::AddedTrigger(const std::string& key, std::string value) {
-  TriggerInfo data;
-  if (!XdrRead(value, &data, XdrTriggerInfo)) {
-    return;
-  }
-
+void AgentRunner::AddedTask(const std::string& key,
+                            AgentRunnerStorage::TriggerInfo data) {
   switch (data.task_type) {
-    case TriggerInfo::TYPE_QUEUE:
+    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE:
       ScheduleMessageQueueTask(data.agent_url, data.task_id, data.queue_name);
       break;
-    case TriggerInfo::TYPE_ALARM:
+    case AgentRunnerStorage::TriggerInfo::TYPE_ALARM:
       ScheduleAlarmTask(data.agent_url, data.task_id, data.alarm_in_seconds,
                         true);
       break;
@@ -357,7 +205,7 @@ void AgentRunner::AddedTrigger(const std::string& key, std::string value) {
   UpdateWatchers();
 }
 
-void AgentRunner::DeletedTrigger(const std::string& key) {
+void AgentRunner::DeletedTask(const std::string& key) {
   auto data = task_by_ledger_key_.find(key);
   if (data == task_by_ledger_key_.end()) {
     // Never scheduled, nothing to delete.
@@ -500,15 +348,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
 
 void AgentRunner::DeleteTask(const std::string& agent_url,
                              const std::string& task_id) {
-  std::string key = MakeTriggerKey(agent_url, task_id);
-  page_->Delete(to_array(key), [this](ledger::Status status) {
-    // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
-    // request to delete a token which does not exist. This is okay.
-    if (status != ledger::Status::OK &&
-        status != ledger::Status::INVALID_TOKEN) {
-      FTL_LOG(ERROR) << "Ledger operation returned status: " << status;
-    }
-  });
+  agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
 void AgentRunner::UpdateWatchers() {
@@ -542,15 +382,6 @@ void AgentRunner::UpdateWatchers() {
 void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
   agent_provider_watchers_.AddInterfacePtr(
       AgentProviderWatcherPtr::Create(std::move(watcher)));
-}
-
-void AgentRunner::OnPageChange(const std::string& key,
-                               const std::string& value) {
-  new UpdateCall(&operation_queue_, this, key, value);
-}
-
-void AgentRunner::OnPageDelete(const std::string& key) {
-  new DeleteCall(&operation_queue_, this, key);
 }
 
 }  // namespace modular
