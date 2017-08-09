@@ -315,7 +315,18 @@ static mx_status_t ownership_ph_cb(port_handler_t* ph, mx_signals_t signals, uin
 }
 
 int main(int argc, char** argv) {
-    bool keep_log = (getenv("virtcon.keep-log-visible") != NULL);
+    // NOTE: devmgr has getenv_bool. when more options are added, consider
+    // sharing that.
+    bool keep_log = false;
+    const char* value = getenv("virtcon.keep-log-visible");
+    if (value != NULL &&
+        ((strcmp(value, "0") == 0) ||
+        (strcmp(value, "false") == 0) ||
+        (strcmp(value, "off") == 0))) {
+        keep_log = false;
+    } else {
+      keep_log = true;
+    }
 
     if (port_init(&port) < 0) {
         return -1;

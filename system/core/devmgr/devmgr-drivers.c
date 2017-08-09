@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "devmgr.h"
 #include "devcoordinator.h"
 
 #include <driver-info/driver-info.h>
@@ -19,7 +20,7 @@ static bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
     char opt[16 + DRIVER_NAME_LEN_MAX];
     snprintf(opt, 16 + DRIVER_NAME_LEN_MAX, "driver.%s.disable", name);
-    return getenv(opt) != NULL;
+    return getenv_bool(opt, false);
 }
 
 static void found_driver(magenta_driver_note_payload_t* note,

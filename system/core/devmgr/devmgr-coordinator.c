@@ -1453,7 +1453,7 @@ void load_system_drivers(void) {
 void coordinator(void) {
     log(INFO, "devmgr: coordinator()\n");
 
-    if (getenv("devmgr.verbose")) {
+    if (getenv_bool("devmgr.verbose", false)) {
         log_flags |= LOG_DEVLC;
     }
     acpi_init();

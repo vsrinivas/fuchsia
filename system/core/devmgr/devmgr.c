@@ -38,6 +38,19 @@ mx_handle_t get_service_root(void) {
     return mxio_service_clone(svc_root_handle);
 }
 
+bool getenv_bool(const char* key, bool _default) {
+    const char* value = getenv(key);
+    if (value == NULL) {
+        return _default;
+    }
+    if ((strcmp(value, "0") == 0) ||
+        (strcmp(value, "false") == 0) ||
+        (strcmp(value, "off") == 0)) {
+        return false;
+    }
+    return true;
+}
+
 static mx_handle_t root_resource_handle;
 static mx_handle_t root_job_handle;
 static mx_handle_t svcs_job_handle;
@@ -125,7 +138,7 @@ int service_starter(void* arg) {
     // create a directory for sevice rendezvous
     mkdir("/svc", 0755);
 
-    if (getenv("virtcon.disable") == NULL) {
+    if (getenv_bool("virtcon.disable", false)) {
         // pass virtcon.* options along
         const char* envp[16];
         unsigned envc = 0;
@@ -146,11 +159,11 @@ int service_starter(void* arg) {
                       &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1);
     }
 
-    if (getenv("netsvc.disable") == NULL) {
+    if (getenv_bool("netsvc.disable", false)) {
         const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
         int argc = 1;
 
-        if (getenv("netsvc.netboot")) {
+        if (getenv_bool("netsvc.netboot", false)) {
             args[argc++] = "--netboot";
         }
 
@@ -384,7 +397,7 @@ int main(int argc, char** argv) {
     }
 
     // Start crashlogger.
-    if (!getenv("crashlogger.disable")) {
+    if (!getenv_bool("crashlogger.disable", false)) {
         static const char* argv_crashlogger[] = {
             "/boot/bin/crashlogger",
             NULL,  // room for -pton

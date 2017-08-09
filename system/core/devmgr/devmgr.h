@@ -38,4 +38,9 @@ mx_handle_t get_service_root(void);
 
 void block_device_watcher(mx_handle_t job);
 
+// getenv_bool looks in the environment for name. If not found, it returns
+// default. If found, it returns false if the found value matches "0", "off", or
+// "false", otherwise it returns true.
+bool getenv_bool(const char* key, bool _default);
+
 __END_CDECLS
