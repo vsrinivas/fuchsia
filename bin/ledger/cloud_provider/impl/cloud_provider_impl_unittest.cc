@@ -130,12 +130,11 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   }
 
   // CommitWatcher:
-  void OnRemoteCommits(std::vector<Commit> commits,
-                       std::string timestamp) override {
+  void OnRemoteCommits(std::vector<Record> records) override {
     on_remote_commits_calls_++;
-    for (auto& commit : commits) {
-      commits_.push_back(std::move(commit));
-      server_timestamps_.push_back(timestamp);
+    for (auto& record : records) {
+      commits_.push_back(std::move(record.commit));
+      server_timestamps_.push_back(record.timestamp);
     }
   }
 

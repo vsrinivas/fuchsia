@@ -124,12 +124,7 @@ void WatchClientImpl::CommitBatch() {
   std::sort(batch_.begin(), batch_.end(), [](const auto& lhs, const auto& rhs) {
     return lhs.batch_position < rhs.batch_position;
   });
-  std::vector<Commit> commits;
-  for (auto& record : batch_) {
-    commits.push_back(std::move(record.commit));
-  }
-  commit_watcher_->OnRemoteCommits(std::move(commits),
-                                   std::move(batch_timestamp_));
+  commit_watcher_->OnRemoteCommits(std::move(batch_));
   batch_.clear();
   batch_timestamp_.clear();
   batch_size_ = 0;

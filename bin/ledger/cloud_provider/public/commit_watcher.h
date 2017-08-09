@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "apps/ledger/src/cloud_provider/public/commit.h"
+#include "apps/ledger/src/cloud_provider/public/record.h"
 #include "lib/ftl/macros.h"
 
 namespace cloud_provider {
@@ -17,11 +18,8 @@ class CommitWatcher {
   CommitWatcher() {}
   virtual ~CommitWatcher() {}
 
-  // Called when a new batch of commits is added to the cloud. |timestamp| is
-  // opaque to the client, but can be passed back to CloudProvider as a query
-  // parameter.
-  virtual void OnRemoteCommits(std::vector<Commit> commits,
-                               std::string timestamp) = 0;
+  // Called when a new batch of commits is added to the cloud.
+  virtual void OnRemoteCommits(std::vector<Record> records) = 0;
 
   // Called upon failure to establish a network connection, or when such
   // connection breaks. No further commit notifications are delivered after this

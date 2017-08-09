@@ -150,13 +150,8 @@ void PageSyncImpl::GetObject(
                });
 }
 
-void PageSyncImpl::OnRemoteCommits(std::vector<cloud_provider::Commit> commits,
-                                   std::string timestamp) {
-  std::vector<cloud_provider::Record> records;
-  records.reserve(commits.size());
-  for (auto& commit : commits) {
-    records.emplace_back(std::move(commit), timestamp);
-  }
+void PageSyncImpl::OnRemoteCommits(
+    std::vector<cloud_provider::Record> records) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.

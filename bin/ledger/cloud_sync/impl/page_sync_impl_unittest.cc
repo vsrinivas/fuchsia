@@ -262,14 +262,12 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   void DeliverRemoteCommits() {
     for (auto& record : notifications_to_deliver) {
-      message_loop_->task_runner()->PostTask(ftl::MakeCopyable([
-        this, commit = std::move(record.commit),
-        timestamp = std::move(record.timestamp)
-      ]() mutable {
-        std::vector<cloud_provider::Commit> commits;
-        commits.push_back(std::move(commit));
-        watcher_->OnRemoteCommits(std::move(commits), std::move(timestamp));
-      }));
+      message_loop_->task_runner()->PostTask(
+          ftl::MakeCopyable([ this, record = std::move(record) ]() mutable {
+            std::vector<cloud_provider::Record> records;
+            records.push_back(std::move(record));
+            watcher_->OnRemoteCommits(std::move(records));
+          }));
     }
   }
 
@@ -522,9 +520,9 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   page_sync_->SetOnIdle(MakeQuitTask());
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
-  std::vector<cloud_provider::Commit> commits;
-  commits.push_back(cloud_provider::Commit("id1", "content1", {}));
-  page_sync_->OnRemoteCommits(std::move(commits), "44");
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "44");
+  page_sync_->OnRemoteCommits(std::move(records));
   page_sync_->OnNewCommits(storage_.NewCommit("id2", "content2")->AsList(),
                            storage::ChangeSource::LOCAL);
 
@@ -1002,9 +1000,9 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  std::vector<cloud_provider::Commit> commits;
-  commits.push_back(cloud_provider::Commit("id3", "content3", {}));
-  page_sync_->OnRemoteCommits(std::move(commits), "44");
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(cloud_provider::Commit("id3", "content3", {}), "44");
+  page_sync_->OnRemoteCommits(std::move(records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
@@ -1181,9 +1179,9 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   EXPECT_EQ(1, backoff_get_next_calls_);
 
   // Let's receive the same commit from the remote side.
-  std::vector<cloud_provider::Commit> commits;
-  commits.push_back(cloud_provider::Commit("id1", "content1", {}));
-  page_sync_->OnRemoteCommits(std::move(commits), "44");
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "44");
+  page_sync_->OnRemoteCommits(std::move(records));
 
   EXPECT_TRUE(RunLoopUntil([this] { return page_sync_->IsIdle(); }));
 
