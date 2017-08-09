@@ -15,7 +15,9 @@ import (
 	"path/filepath"
 )
 
-var output = flag.String("output", "fuchsia-sdk.tgz", "Output name")
+var archive = flag.Bool("archive", true, "Whether to archive the output")
+var output = flag.String("output", "fuchsia-sdk.tgz", "Name of the archive")
+var outDir = flag.String("out-dir", "", "Output directory")
 var toolchain = flag.Bool("toolchain", false, "Include toolchain")
 var toolchainLibs = flag.Bool("toolchain-lib", true, "Include toolchain libraries in SDK. Typically used when --toolchain is false")
 var sysroot = flag.Bool("sysroot", true, "Include sysroot")
@@ -190,16 +192,21 @@ only module.
 		flag.Usage()
 		log.Fatalf("Fuchsia root not found at \"%v\"\n", fuchsiaRoot)
 	}
-	tmpSdk, err := ioutil.TempDir("", "fuchsia-sdk")
-	if err != nil {
-		log.Fatal("Could not create temporary directory: ", err)
+	if *outDir == "" {
+		var err error
+		*outDir, err = ioutil.TempDir("", "fuchsia-sdk")
+		if err != nil {
+			log.Fatal("Could not create temporary directory: ", err)
+		}
+		defer os.RemoveAll(*outDir)
+	} else if _, err := os.Stat(fuchsiaRoot); os.IsNotExist(err) {
+		mkdir(filepath.Dir(*outDir))
 	}
-	defer os.RemoveAll(tmpSdk)
 
 	for _, c := range components {
 		if *c.flag {
 			src := filepath.Join(fuchsiaRoot, c.srcPrefix)
-			dst := filepath.Join(tmpSdk, c.dstPrefix)
+			dst := filepath.Join(*outDir, c.dstPrefix)
 			switch c.t {
 			case dir:
 				copyDir(src, dst)
@@ -210,5 +217,7 @@ only module.
 			}
 		}
 	}
-	tar(tmpSdk, *output)
+	if *archive {
+		tar(*outDir, *output)
+	}
 }
