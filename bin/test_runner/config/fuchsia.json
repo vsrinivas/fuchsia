@@ -5,8 +5,8 @@
       "exec": "/system/bin/report_result /system/test/go_os_test"
     },
     {
-      "name": "ledger_apptests",
-      "exec": "/system/test/ledger_apptests"
+      "name": "ledger_e2e_local",
+      "exec": "/system/test/ledger_e2e_local"
     },
     {
       "name": "ledger_unittests",
