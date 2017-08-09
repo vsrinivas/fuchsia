@@ -17,9 +17,6 @@
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
-/* PCI macros. */
-#define PCI_ALIGN(n)    ((((uintptr_t)n) + 4095) & ~4095)
-
 /* Block configuration constants. */
 #define QUEUE_SIZE      128u
 
@@ -116,19 +113,7 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
     case VIRTIO_PCI_QUEUE_PFN: {
         if (io->access_size != 4)
             return MX_ERR_IO_DATA_INTEGRITY;
-        queue->pfn = io->u32;
-        queue->desc = mem_addr + (queue->pfn * PAGE_SIZE);
-        queue->avail = (void*)&queue->desc[queue->size];
-        queue->used_event = (void*)&queue->avail->ring[queue->size];
-        queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
-        queue->avail_event = (void*)&queue->used->ring[queue->size];
-        volatile const void* end = queue->avail_event + 1;
-        if (end < (void*)queue->desc || end > mem_addr + mem_size) {
-            fprintf(stderr, "Ring is outside of guest memory\n");
-            memset(queue, 0, sizeof(virtio_queue_t));
-            return MX_ERR_OUT_OF_RANGE;
-        }
-        return MX_OK;
+        return virtio_queue_set_pfn(queue, io->u32, mem_addr, mem_size);
     }
     case VIRTIO_PCI_QUEUE_SIZE:
         if (io->access_size != 2)

@@ -36,6 +36,10 @@ typedef struct virtio_queue {
 
 typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
 
+/* Sets the queue PFN for the queue. */
+mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn,
+                                 void* mem_addr, size_t mem_size);
+
 /* Handles the next available descriptor in a Virtio queue, calling req_fn to
  * process individual payload buffers.
  *

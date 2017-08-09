@@ -2,10 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <hypervisor/virtio.h>
 #include <virtio/virtio_ring.h>
+
+/* PCI macros. */
+#define PCI_ALIGN(n)    ((((uintptr_t)n) + 4095) & ~4095)
 
 // Returns a circular index into a Virtio ring.
 static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
@@ -26,6 +31,24 @@ static uint8_t to_virtio_status(mx_status_t status) {
     default:
         return VIRTIO_STATUS_ERROR;
     }
+}
+
+mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn,
+                                 void* mem_addr, size_t mem_size) {
+    queue->pfn = pfn;
+    queue->desc = mem_addr + (queue->pfn * PAGE_SIZE);
+    queue->avail = (void*)&queue->desc[queue->size];
+    queue->used_event = (void*)&queue->avail->ring[queue->size];
+    queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
+    queue->avail_event = (void*)&queue->used->ring[queue->size];
+    volatile const void* end = queue->avail_event + 1;
+    if (end < (void*)queue->desc || end > mem_addr + mem_size) {
+        fprintf(stderr, "Ring is outside of guest memory\n");
+        memset(queue, 0, sizeof(virtio_queue_t));
+        return MX_ERR_OUT_OF_RANGE;
+    }
+
+    return MX_OK;
 }
 
 mx_status_t virtio_queue_handler(virtio_queue_t* queue, void* mem_addr,
