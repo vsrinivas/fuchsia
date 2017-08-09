@@ -59,7 +59,8 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
                 return MX_ERR_ALREADY_BOUND;
             }
 
-            options->readonly = true;
+            // TODO(MG-1008): replace getenv with cmdline_bool("magenta.system.writable", false);
+            options->readonly = getenv("magenta.system.writable") == NULL;
             options->wait_until_ready = true;
             options->create_mountpoint = true;
 

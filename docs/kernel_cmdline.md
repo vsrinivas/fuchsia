@@ -127,6 +127,11 @@ This option requests that the executable at *path* be launched once the
 system partition is mounted and *init* is launched.  If there is no system
 bootfs or system partition, it will never be launched.
 
+## magenta.system.writable=\<bool>
+
+This option requests that if a minfs partition with the system type GUID is
+found, it is to be mounted read-write rather than read-only.
+
 ## kernel.oom.enable=\<bool>
 
 This option (true by default) turns on the out-of-memory (OOM) kernel thread,
