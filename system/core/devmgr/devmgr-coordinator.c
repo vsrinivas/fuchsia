@@ -433,6 +433,10 @@ static mx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
             name = dev->name;
         } else if (!strcmp(misc_device.name, dev->name)) {
             name = "dev/misc";
+#if ACPI_BUS_DRV
+        } else if (!strcmp(acpi_device.name, dev->name)) {
+            name = "dev/acpi";
+#endif
         } else {
             name = "dev";
         }
