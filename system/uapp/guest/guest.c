@@ -91,9 +91,6 @@ int main(int argc, char** argv) {
     guest_state_t guest_state;
     memset(&guest_state, 0, sizeof(guest_state));
     guest_state.guest = guest;
-    // Setup guest memory.
-    guest_state.mem_addr = (void*)addr;
-    guest_state.mem_size = kVmoSize;
     // Setup IO APIC.
     io_apic_t io_apic;
     guest_state.io_apic = &io_apic;
@@ -114,7 +111,7 @@ int main(int argc, char** argv) {
     block_t block;
     guest_state.block = &block;
     if (block_path != NULL) {
-        status = block_init(&block, block_path);
+        status = block_init(&block, block_path, (void*)addr, kVmoSize, &io_apic);
         if (status != MX_OK)
             return status;
     } else {

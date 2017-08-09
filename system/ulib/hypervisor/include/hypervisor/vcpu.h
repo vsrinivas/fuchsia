@@ -20,10 +20,6 @@ typedef struct guest_state {
     mx_handle_t guest;
     mtx_t mutex;
 
-    // Guest memory.
-    void* mem_addr;
-    size_t mem_size;
-
     io_apic_t* io_apic;
     io_port_t* io_port;
     pci_bus_t* bus;

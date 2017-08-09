@@ -28,11 +28,9 @@ static mx_status_t block_queue_notify(virtio_queue_t* requestq, void* mem_addr, 
     return file_block_device(block, mem_addr, mem_size);
 }
 
-mx_status_t block_init(block_t* block, const char* block_path) {
+mx_status_t block_init(block_t* block, const char* block_path, void* guest_physmem_addr,
+                       size_t guest_physmem_size, io_apic_t* io_apic) {
     memset(block, 0, sizeof(*block));
-    block->queue.size = QUEUE_SIZE;
-    block->queue.notify = &block_queue_notify;
-    block->queue.device = block;
 
     // Open block file. First try to open as read-write but fall back to read
     // only if that fails.
@@ -56,6 +54,12 @@ mx_status_t block_init(block_t* block, const char* block_path) {
     }
     block->size = ret;
 
+    block->guest_physmem_addr = guest_physmem_addr;
+    block->guest_physmem_size = guest_physmem_size;
+    block->io_apic = io_apic;
+    block->queue.size = QUEUE_SIZE;
+    block->queue.notify = &block_queue_notify;
+    block->queue.device = block;
     return MX_OK;
 }
 
@@ -98,11 +102,9 @@ mx_status_t block_read(const block_t* block, uint16_t port, mx_vcpu_io_t* vcpu_i
     return MX_ERR_NOT_SUPPORTED;
 }
 
-mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t port,
-                        const mx_guest_io_t* io) {
-    void* mem_addr = guest_state->mem_addr;
-    size_t mem_size = guest_state->mem_size;
-    block_t* block = guest_state->block;
+mx_status_t block_write(block_t* block, mx_handle_t vcpu, uint16_t port, const mx_guest_io_t* io) {
+    void* guest_physmem_addr = block->guest_physmem_addr;
+    size_t guest_physmem_size = block->guest_physmem_size;
     virtio_queue_t* queue = &block->queue;
     switch (port) {
     case VIRTIO_PCI_DRIVER_FEATURES:
@@ -117,11 +119,10 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
             return MX_ERR_IO_DATA_INTEGRITY;
         block->status = io->u8;
         return MX_OK;
-    case VIRTIO_PCI_QUEUE_PFN: {
+    case VIRTIO_PCI_QUEUE_PFN:
         if (io->access_size != 4)
             return MX_ERR_IO_DATA_INTEGRITY;
-        return virtio_queue_set_pfn(queue, io->u32, mem_addr, mem_size);
-    }
+        return virtio_queue_set_pfn(queue, io->u32, guest_physmem_addr, guest_physmem_size);
     case VIRTIO_PCI_QUEUE_SIZE:
         if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
@@ -142,13 +143,13 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
             fprintf(stderr, "Only one queue per device is supported\n");
             return MX_ERR_NOT_SUPPORTED;
         }
-        mx_status_t status = queue->notify(queue, mem_addr, mem_size);
+        mx_status_t status = queue->notify(queue, guest_physmem_addr, guest_physmem_size);
         if (status != MX_OK) {
             fprintf(stderr, "Block device operation failed %d\n", status);
             return status;
         }
-        uint32_t interrupt = io_apic_redirect(guest_state->io_apic, X86_INT_BLOCK);
-        return mx_vcpu_interrupt(vcpu, interrupt);
+        uint32_t vector = io_apic_redirect(block->io_apic, X86_INT_BLOCK);
+        return mx_vcpu_interrupt(vcpu, vector);
     }}
 
     fprintf(stderr, "Unhandled block write %#x\n", port);
@@ -172,10 +173,10 @@ mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
     return MX_ERR_INVALID_ARGS;
 }
 
-mx_status_t null_block_device(block_t* block, void* mem_addr, size_t mem_size) {
+mx_status_t null_block_device(block_t* block, void* guest_physmem_addr, size_t guest_physmem_size) {
     mx_status_t status;
     do {
-        status = virtio_queue_handler(&block->queue, mem_addr, mem_size,
+        status = virtio_queue_handler(&block->queue, guest_physmem_addr, guest_physmem_size,
                                       sizeof(virtio_blk_req_t), null_req, NULL);
     } while (status == MX_ERR_NEXT);
     return status;
@@ -212,7 +213,6 @@ mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
         // the device, any write requests will fail.
         if (block->features & VIRTIO_BLK_F_RO)
             return MX_ERR_NOT_SUPPORTED;
-
         ret = write(block->fd, addr, len);
         break;
     case VIRTIO_BLK_T_FLUSH:
@@ -230,11 +230,11 @@ mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
     return ret != len ? MX_ERR_IO : MX_OK;
 }
 
-mx_status_t file_block_device(block_t* block, void* mem_addr, size_t mem_size) {
+mx_status_t file_block_device(block_t* block, void* guest_physmem_addr, size_t guest_physmem_size) {
     mx_status_t status;
     do {
         file_state_t state = { block, 0 };
-        status = virtio_queue_handler(&block->queue, mem_addr, mem_size,
+        status = virtio_queue_handler(&block->queue, guest_physmem_addr, guest_physmem_size,
                                       sizeof(virtio_blk_req_t), file_req, &state);
     } while (status == MX_ERR_NEXT);
     return status;

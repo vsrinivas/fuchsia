@@ -234,7 +234,7 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
     pci_bus_t* bus = vcpu_context->guest_state->bus;
     switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
     case PCI_DEVICE_VIRTIO_BLOCK: {
-        return block_write(vcpu_context->guest_state, vcpu_context->vcpu, port_off, io);
+        return block_write(vcpu_context->guest_state->block, vcpu_context->vcpu, port_off, io);
     }}
 
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
