@@ -366,10 +366,10 @@ mx_status_t get_process(ProcessDispatcher* up,
 
 // Counts and optionally prints all job/process descendants of a job.
 namespace {
-class OmmJobEnumerator final : public JobEnumerator {
+class OomJobEnumerator final : public JobEnumerator {
 public:
     // If |prefix| is non-null, also prints each job/process.
-    OmmJobEnumerator(const char* prefix)
+    OomJobEnumerator(const char* prefix)
         : prefix_(prefix) { reset_counts(); }
     void reset_counts() {
         num_jobs_ = 0;
@@ -434,8 +434,8 @@ static void oom_lowmem(size_t shortfall_bytes) {
     DumpProcessMemoryUsage("OOM:   ", /*min_pages=*/8 * MB / PAGE_SIZE);
     printf("OOM: Finding a job to kill...\n");
 
-    OmmJobEnumerator job_counter(nullptr);
-    OmmJobEnumerator job_printer("OOM:        + ");
+    OomJobEnumerator job_counter(nullptr);
+    OomJobEnumerator job_printer("OOM:        + ");
 
     bool killed = false;
     int next = 3; // Used to print a few "up next" jobs.
