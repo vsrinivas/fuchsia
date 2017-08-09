@@ -17,27 +17,34 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
+template <typename Factory>
 class FactoryServiceBase {
  public:
   // Provides common behavior for all objects created by the factory service.
   class ProductBase : public std::enable_shared_from_this<ProductBase> {
    public:
-    virtual ~ProductBase();
+    virtual ~ProductBase() {
+      if (quit_on_destruct_) {
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      }
+    }
 
     void QuitOnDestruct() { quit_on_destruct_ = true; }
 
    protected:
-    explicit ProductBase(FactoryServiceBase* owner);
+    explicit ProductBase(Factory* owner) : owner_(owner) { FTL_DCHECK(owner_); }
 
     // Returns the owner.
-    FactoryServiceBase* owner() { return owner_; }
+    Factory* owner() { return owner_; }
 
     // Tells the factory service to release this product. This method can only
     // be called after the first shared_ptr to the product is created.
-    void ReleaseFromOwner() { owner_->RemoveProduct(shared_from_this()); }
+    void ReleaseFromOwner() {
+      owner_->RemoveProduct(ProductBase::shared_from_this());
+    }
 
    private:
-    FactoryServiceBase* owner_;
+    Factory* owner_;
     bool quit_on_destruct_ = false;
   };
 
@@ -50,7 +57,7 @@ class FactoryServiceBase {
    protected:
     Product(Interface* impl,
             fidl::InterfaceRequest<Interface> request,
-            FactoryServiceBase* owner)
+            Factory* owner)
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FTL_DCHECK(impl);
       Retain();
@@ -83,7 +90,7 @@ class FactoryServiceBase {
         binding_.Close();
       }
 
-      ReleaseFromOwner();
+      ProductBase::ReleaseFromOwner();
     }
 
    private:
@@ -91,9 +98,11 @@ class FactoryServiceBase {
     fidl::Binding<Interface> binding_;
   };
 
-  FactoryServiceBase();
+  FactoryServiceBase()
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {}
 
-  virtual ~FactoryServiceBase();
+  virtual ~FactoryServiceBase() {}
 
   // Gets the application context.
   app::ApplicationContext* application_context() {
@@ -117,7 +126,11 @@ class FactoryServiceBase {
   }
 
   // Removes a product from the factory's collection of products. Threadsafe.
-  void RemoveProduct(std::shared_ptr<ProductBase> product);
+  void RemoveProduct(std::shared_ptr<ProductBase> product) {
+    ftl::MutexLocker locker(&mutex_);
+    bool erased = products_.erase(product);
+    FTL_DCHECK(erased);
+  }
 
   // Creates a new product (by calling |product_creator|) on a new thread. The
   // thread is destroyed when the product is deleted.

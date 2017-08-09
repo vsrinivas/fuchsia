@@ -33,7 +33,8 @@ namespace media {
 // component that produces or consumes packets as well as the readers that
 // deliver raw data to the demultiplexer. Other components are instantiated on
 // the same thread as the |MediaServiceImpl| instance.
-class MediaServiceImpl : public FactoryServiceBase, public MediaService {
+class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
+                         public MediaService {
  public:
   MediaServiceImpl();
 

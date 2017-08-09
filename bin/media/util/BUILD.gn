@@ -8,7 +8,6 @@ source_set("util") {
   sources = [
     "callback_joiner.cc",
     "callback_joiner.h",
-    "factory_service_base.cc",
     "factory_service_base.h",
     "fidl_publisher.h",
     "incident.cc",

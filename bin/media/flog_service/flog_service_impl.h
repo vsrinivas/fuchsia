@@ -8,15 +8,16 @@
 #include <memory>
 
 #include "apps/media/services/flog/flog.fidl.h"
+#include "apps/media/src/flog_service/flog_directory.h"
 #include "apps/media/src/util/factory_service_base.h"
 #include "apps/media/src/util/incident.h"
-#include "apps/media/src/flog_service/flog_directory.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace flog {
 
 // FlogService implementation.
-class FlogServiceImpl : public FactoryServiceBase, public FlogService {
+class FlogServiceImpl : public FactoryServiceBase<FlogServiceImpl>,
+                        public FlogService {
  public:
   FlogServiceImpl();
 

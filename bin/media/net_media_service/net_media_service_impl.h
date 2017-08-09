@@ -12,7 +12,8 @@
 
 namespace media {
 
-class NetMediaServiceImpl : public FactoryServiceBase, public NetMediaService {
+class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
+                            public NetMediaService {
  public:
   NetMediaServiceImpl();
 
