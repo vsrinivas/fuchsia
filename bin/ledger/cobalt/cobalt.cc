@@ -128,7 +128,12 @@ void CobaltContext::SendEvents() {
     backoff_.Reset();
     encoder_->SendObservations([this](cobalt::Status status) {
       if (status != cobalt::Status::OK) {
-        FTL_LOG(ERROR) << "Error sending observation to cobalt: " << status;
+        // Do not show errors when cobalt fail to send observation, see LE-285.
+        if (status != cobalt::Status::SEND_FAILED) {
+          FTL_LOG(ERROR)
+              << "Error asking cobalt to send observation to server: "
+              << status;
+        }
         OnConnectionError();
         return;
       }
