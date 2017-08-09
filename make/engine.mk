@@ -195,6 +195,9 @@ USER_LDFLAGS := \
 
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USER_LDFLAGS += -z rodynamic
+RODSO_LDFLAGS :=
+else
+RODSO_LDFLAGS := -T scripts/rodso.ld
 endif
 
 ifeq ($(call TOBOOL,$(USE_LTO)),true)

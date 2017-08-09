@@ -47,7 +47,7 @@ MODULE_SO_INSTALL_NAME := -
 # All the code this DSO is pure read-only/reentrant code that
 # does not need any writable data (except its caller's stack).
 # Make it use a simplified, hardened memory layout.
-MODULE_LDFLAGS := -T scripts/rodso.ld
+MODULE_LDFLAGS := $(RODSO_LDFLAGS)
 
 # Explicit dependency to make sure the file gets generated first.
 # MODULE_SRCDEPS is overkill for this since only one file uses it.

@@ -90,6 +90,6 @@ GENERATED += $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.ld.h
 MODULE_EXTRA_OBJS := $(BUILDDIR)/$(LOCAL_DIR)/vdso-syms.ld
 
 # userboot is a reentrant DSO (no writable segment) with an entry point.
-MODULE_LDFLAGS := -T scripts/rodso.ld -e _start
+MODULE_LDFLAGS := $(RODSO_LDFLAGS) -e _start
 
 include make/module.mk
