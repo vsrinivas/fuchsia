@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
@@ -10,6 +11,7 @@
 #include <threads.h>
 
 #include <hw/inout.h>
+#include <magenta/assert.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 
@@ -681,11 +683,29 @@ ACPI_STATUS AcpiOsDeleteSemaphore(ACPI_SEMAPHORE Handle) {
 ACPI_STATUS AcpiOsWaitSemaphore(
         ACPI_SEMAPHORE Handle,
         UINT32 Units,
-        UINT16 Time) {
-    // TODO(teisenbe): Implement this when we can calculate an absolute time to wait for
-    // sem_timedwait
-    if (sem_wait(Handle) < 0) {
-        return AE_ERROR;
+        UINT16 Timeout) {
+
+    if (Timeout == UINT16_MAX) {
+        if (sem_wait(Handle) < 0) {
+            MX_ASSERT_MSG(false, "sem_wait failed %d", errno);
+        }
+        return AE_OK;
+    }
+
+    mx_time_t now = mx_time_get(MX_CLOCK_UTC);
+    struct timespec then = {
+        .tv_sec = static_cast<time_t>(now / MX_SEC(1)),
+        .tv_nsec = static_cast<long>(now % MX_SEC(1)),
+    };
+    then.tv_nsec += MX_MSEC(Timeout);
+    if (then.tv_nsec > static_cast<long>(MX_SEC(1))) {
+        then.tv_sec += then.tv_nsec / MX_SEC(1);
+        then.tv_nsec %= MX_SEC(1);
+    }
+
+    if (sem_timedwait(Handle, &then) < 0) {
+        MX_ASSERT_MSG(errno == ETIMEDOUT, "sem_timedwait failed unexpectedly %d", errno);
+        return AE_TIME;
     }
     return AE_OK;
 }
