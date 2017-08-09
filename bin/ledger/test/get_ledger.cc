@@ -52,17 +52,14 @@ ledger::Status GetLedger(
     firebase_config->api_key = "";
   }
 
-  auto quitCallback = [&loop] { loop->PostQuitTask(); };
-
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   if (erase == Erase::ERASE_CLOUD) {
     modular::auth::TokenProviderPtr token_provider_ptr;
     token_provider_impl->AddBinding(token_provider_ptr.NewRequest());
     repository_factory->EraseRepository(
         ledger_repository_path, firebase_config.Clone(),
-        std::move(token_provider_ptr),
-        callback::Capture(quitCallback, &status));
-    if (RunGivenLoopWithTimeout(loop, kTimeout) ||
+        std::move(token_provider_ptr), callback::Capture([] {}, &status));
+    if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout) ||
         status != ledger::Status::OK) {
       FTL_LOG(ERROR) << "Unable to erase repository.";
       return ledger::Status::INTERNAL_ERROR;
@@ -74,8 +71,8 @@ ledger::Status GetLedger(
   repository_factory->GetRepository(
       ledger_repository_path, std::move(firebase_config),
       std::move(token_provider_ptr), repository.NewRequest(),
-      callback::Capture(quitCallback, &status));
-  if (RunGivenLoopWithTimeout(loop, kTimeout)) {
+      callback::Capture([] {}, &status));
+  if (!repository_factory.WaitForIncomingResponseWithTimeout(kTimeout)) {
     FTL_LOG(ERROR) << "Unable to get repository.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -85,8 +82,8 @@ ledger::Status GetLedger(
   }
 
   repository->GetLedger(convert::ToArray(ledger_name), ledger_ptr->NewRequest(),
-                        callback::Capture(quitCallback, &status));
-  if (RunGivenLoopWithTimeout(loop, kTimeout)) {
+                        callback::Capture([] {}, &status));
+  if (!repository.WaitForIncomingResponseWithTimeout(kTimeout)) {
     FTL_LOG(ERROR) << "Unable to get ledger.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -108,10 +105,9 @@ ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
                                         ledger::PagePtr* page,
                                         fidl::Array<uint8_t>* page_id) {
   ledger::Status status;
-  (*ledger)->GetPage(
-      std::move(requested_id), page->NewRequest(),
-      callback::Capture([loop] { loop->PostQuitTask(); }, &status));
-  if (RunGivenLoopWithTimeout(loop, kTimeout)) {
+  (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
+                     callback::Capture([] {}, &status));
+  if (!ledger->WaitForIncomingResponseWithTimeout(kTimeout)) {
     FTL_LOG(ERROR) << "Unable to get page.";
     return ledger::Status::INTERNAL_ERROR;
   }
@@ -124,8 +120,8 @@ ledger::Status GetPageEnsureInitialized(mtl::MessageLoop* loop,
     loop->PostQuitTask();
   });
 
-  (*page)->GetId(callback::Capture([loop] { loop->PostQuitTask(); }, page_id));
-  RunGivenLoopWithTimeout(loop, kTimeout);
+  (*page)->GetId(callback::Capture([] {}, page_id));
+  page->WaitForIncomingResponseWithTimeout(kTimeout);
   return status;
 }
 
