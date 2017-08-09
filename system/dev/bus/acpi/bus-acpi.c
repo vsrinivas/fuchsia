@@ -20,6 +20,7 @@
 #include <magenta/syscalls.h>
 
 #include "init.h"
+#include "battery.h"
 #include "ec.h"
 #include "pci.h"
 #include "powerbtn.h"
@@ -38,16 +39,14 @@
 
 #define MAX_NAMESPACE_DEPTH 100
 
+#define HID_LENGTH 8
+
 typedef struct acpi_device {
     mx_device_t* mxdev;
 
     // handle to the corresponding ACPI node
     ACPI_HANDLE ns_node;
 } acpi_device_t;
-
-typedef struct acpi_ns_walk_ctx {
-    mx_device_t* parents[MAX_NAMESPACE_DEPTH + 1];
-} acpi_ns_walk_ctx_t;
 
 mx_handle_t root_resource_handle;
 mx_handle_t rpc_handle;
@@ -69,6 +68,7 @@ static mx_protocol_device_t acpi_device_proto = {
     .release = acpi_device_release,
 };
 
+#if 0
 static mx_status_t acpi_to_mx_status(ACPI_STATUS acpi_status) {
     switch (acpi_status) {
     case AE_ERROR:
@@ -124,107 +124,20 @@ static mx_status_t acpi_to_mx_status(ACPI_STATUS acpi_status) {
         return MX_ERR_INTERNAL;
     }
 }
-
-static mx_status_t call_acpi_method(acpi_device_t* dev, const char* method, ACPI_OBJECT_LIST* args, void** out_pointer) {
-    ACPI_BUFFER buffer = {
-        .Length = ACPI_ALLOCATE_BUFFER,
-        .Pointer = NULL,
-    };
-    ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->ns_node, (char*)method, args, &buffer);
-    if (acpi_status != AE_OK) {
-        xprintf("acpi-bus: acpi error 0x%x in evaluate method=%s, dev=%s(%p) handle=%p\n", acpi_status, method, device_get_name(dev->mxdev), dev, (void*)dev->ns_node);
-        return acpi_to_mx_status(acpi_status);
-    } else {
-        *out_pointer = buffer.Pointer;
-        return MX_OK;
-    }
-}
-
-static mx_status_t acpi_bif(void* ctx, acpi_rsp_bif_t* rsp) {
-    acpi_device_t* dev = (acpi_device_t*)ctx;
-
-    ACPI_OBJECT* obj = NULL;
-    mx_status_t status = call_acpi_method(dev, "_BIF", NULL, (void**)&obj);
-    if (status != MX_OK) {
-        return status;
-    }
-
-    if ((obj->Type != ACPI_TYPE_PACKAGE) || (obj->Package.Count != 13)) {
-        status = MX_ERR_INTERNAL;
-        goto out;
-    }
-    ACPI_OBJECT* elem = obj->Package.Elements;
-    for (int i = 0; i < 9; i++) {
-        if (elem[i].Type != ACPI_TYPE_INTEGER) {
-            status = MX_ERR_INTERNAL;
-            goto out;
-        }
-    }
-    for (int i = 9; i < 13; i++) {
-        if (elem[i].Type != ACPI_TYPE_STRING) {
-            status = MX_ERR_INTERNAL;
-            goto out;
-        }
-    }
-
-    rsp->power_unit = elem[0].Integer.Value;
-    rsp->design_capacity = elem[1].Integer.Value;
-    rsp->last_full_charge_capacity = elem[2].Integer.Value;
-    rsp->battery_technology = elem[3].Integer.Value;
-    rsp->design_voltage = elem[4].Integer.Value;
-    rsp->design_capacity_of_warning = elem[5].Integer.Value;
-    rsp->design_capacity_of_low = elem[6].Integer.Value;
-    rsp->battery_capacity_granularity = elem[7].Integer.Value;
-    rsp->battery_capacity_granularity_2 = elem[8].Integer.Value;
-
-    strncpy(rsp->model_number, elem[9].String.Pointer, sizeof(rsp->model_number));
-    rsp->model_number[sizeof(rsp->model_number)-1] = '\0';
-    strncpy(rsp->serial_number, elem[9].String.Pointer, sizeof(rsp->serial_number));
-    rsp->serial_number[sizeof(rsp->serial_number)-1] = '\0';
-    strncpy(rsp->battery_type, elem[9].String.Pointer, sizeof(rsp->battery_type));
-    rsp->battery_type[sizeof(rsp->battery_type)-1] = '\0';
-    strncpy(rsp->oem_info, elem[9].String.Pointer, sizeof(rsp->oem_info));
-    rsp->oem_info[sizeof(rsp->oem_info)-1] = '\0';
-out:
-    AcpiOsFree(obj);
-    return status;
-}
-
-static mx_status_t acpi_bst(void* ctx, acpi_rsp_bst_t* rsp) {
-    acpi_device_t* dev = (acpi_device_t*)ctx;
-
-    ACPI_OBJECT* obj = NULL;
-    mx_status_t status = call_acpi_method(dev, "_BST", NULL, (void**)&obj);
-    if (status != MX_OK) {
-        return status;
-    }
-
-    if ((obj->Type != ACPI_TYPE_PACKAGE) || (obj->Package.Count != 4)) {
-        status = MX_ERR_INTERNAL;
-        goto out;
-    }
-    ACPI_OBJECT* elem = obj->Package.Elements;
-    for (int i = 0; i < 4; i++) {
-        if (elem[i].Type != ACPI_TYPE_INTEGER) {
-            status = MX_ERR_INTERNAL;
-            goto out;
-        }
-    }
-
-    rsp->battery_state = elem[0].Integer.Value;
-    rsp->battery_present_rate = elem[1].Integer.Value;
-    rsp->battery_remaining_capacity = elem[2].Integer.Value;
-    rsp->battery_present_voltage = elem[3].Integer.Value;
-
-out:
-    AcpiOsFree(obj);
-    return status;
-}
+#endif
 
 static acpi_protocol_ops_t acpi_proto = {
-    ._BIF = acpi_bif,
-    ._BST = acpi_bst,
 };
+
+static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
+    const char* hid = NULL;
+    if ((info->Valid & ACPI_VALID_HID) &&
+            (info->HardwareId.Length > 0) &&
+            ((info->HardwareId.Length - 1) <= sizeof(uint64_t))) {
+        hid = (const char*)info->HardwareId.String;
+    }
+    return hid;
+}
 
 static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI_DEVICE_INFO* info) {
 #if TRACE
@@ -237,24 +150,12 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
     char name[5] = { 0 };
     memcpy(name, &info->Name, sizeof(name) - 1);
 
-    // TODO: This is a temporary workaround until we have full ACPI device
-    // enumeration. If this is the I2C1 bus, we run _PS0 so the controller
-    // is active.
-    if (!memcmp(name, "I2C1", 5)) {
-        ACPI_STATUS acpi_status = AcpiEvaluateObject(handle, (char*)"_PS0", NULL, NULL);
-        if (acpi_status != AE_OK) {
-            printf("acpi-bus: acpi error 0x%x in I2C1._PS0\n", acpi_status);
-        }
-    }
-
     mx_device_prop_t props[4];
     int propcount = 0;
 
     // Publish HID in device props
-    const char* hid = (const char*)info->HardwareId.String;
-    if ((info->Valid & ACPI_VALID_HID) &&
-            (info->HardwareId.Length > 0) &&
-            ((info->HardwareId.Length - 1) <= sizeof(uint64_t))) {
+    const char* hid = hid_from_acpi_devinfo(info);
+    if (hid) {
         props[propcount].id = BIND_ACPI_HID_0_3;
         props[propcount++].value = htobe32(*((uint32_t*)(hid)));
         props[propcount].id = BIND_ACPI_HID_4_7;
@@ -332,42 +233,50 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
 
 static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_level,
                                          void* context, void** status) {
-    acpi_ns_walk_ctx_t* ctx = (acpi_ns_walk_ctx_t*)context;
-
     ACPI_DEVICE_INFO* info = NULL;
     ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
     if (acpi_status != AE_OK) {
         return acpi_status;
     }
 
-    xprintf("acpi-bus: handle %p nesting level %d\n", (void*)object, nesting_level);
-    mx_device_t* dev = publish_device(ctx->parents[nesting_level - 1], object, info);
-
-    // Store the newly created device for DFS traversal
-    if (dev) {
-        ctx->parents[nesting_level] = dev;
+    // TODO: This is a temporary workaround until we have full ACPI device
+    // enumeration. If this is the I2C1 bus, we run _PS0 so the controller
+    // is active.
+    if (!memcmp(&info->Name, "I2C1", 4)) {
+        ACPI_STATUS acpi_status = AcpiEvaluateObject(object, (char*)"_PS0", NULL, NULL);
+        if (acpi_status != AE_OK) {
+            printf("acpi-bus: acpi error 0x%x in I2C1._PS0\n", acpi_status);
+        }
     }
 
+    xprintf("acpi-bus: handle %p nesting level %d\n", (void*)object, nesting_level);
+
+    // Only publish PCIE/PCI roots
+    mx_device_t* parent = (mx_device_t*)context;
+    const char* hid = hid_from_acpi_devinfo(info);
+    if (hid == 0) {
+        goto out;
+    }
+    if (!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
+                !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH)) {
+        publish_device(parent, object, info);
+    } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
+        battery_init(parent, object);
+    }
+
+out:
     ACPI_FREE(info);
 
     return AE_OK;
 }
 
-static mx_status_t publish_all_devices(mx_device_t* parent) {
-    acpi_ns_walk_ctx_t* ctx = malloc(sizeof(acpi_ns_walk_ctx_t));
-    if (!ctx) {
-        return MX_ERR_NO_MEMORY;
-    }
-
-    ctx->parents[0] = parent;
-
+static mx_status_t publish_pci_roots(mx_device_t* parent) {
     // Walk the ACPI namespace for devices and publish them
     ACPI_STATUS acpi_status = AcpiWalkNamespace(ACPI_TYPE_DEVICE,
                                                 ACPI_ROOT_OBJECT,
                                                 MAX_NAMESPACE_DEPTH,
                                                 acpi_ns_walk_callback,
-                                                NULL, ctx, NULL);
-    free(ctx);
+                                                NULL, parent, NULL);
     if (acpi_status != AE_OK) {
         return MX_ERR_BAD_STATE;
     } else {
@@ -434,20 +343,11 @@ static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) 
         return MX_ERR_INTERNAL;
     }
 
-    // publish devices
-    publish_all_devices(parent);
+    // only publish the pci root. ACPI devices are managed by this driver.
+    publish_pci_roots(parent);
 
     return MX_OK;
 }
-
-#if 0
-// Make this a bus driver when more ACPI devices other than PCI root are published
-static mx_status_t acpi_drv_create(void* ctx, mx_device_t* parent,
-                                   const char* name, const char* args, mx_handle_t resource) {
-    xprintf("acpi_drv_create: name=%s\n", name);
-    return acpi_add_pci_root_device(parent, name);
-}
-#endif
 
 static mx_driver_ops_t acpi_driver_ops = {
     .version = DRIVER_OPS_VERSION,

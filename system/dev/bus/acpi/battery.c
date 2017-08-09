@@ -13,6 +13,10 @@
 #include <stdio.h>
 #include <threads.h>
 
+#include <acpica/acpi.h>
+
+#include "battery.h"
+
 #define TRACE 0
 
 #if TRACE
@@ -30,8 +34,10 @@
 typedef struct acpi_battery_device {
     mx_device_t* mxdev;
 
-    // acpi protocol
-    acpi_protocol_t acpi;
+    ACPI_HANDLE acpi_handle;
+
+    ACPI_BUFFER bst_buffer;
+    ACPI_BUFFER bif_buffer;
 
     // thread to poll for battery status
     thrd_t poll_thread;
@@ -72,7 +78,14 @@ static mx_status_t acpi_battery_read(void* ctx, void* buf, size_t count, mx_off_
 }
 
 static void acpi_battery_release(void* ctx) {
-    free(ctx);
+    acpi_battery_device_t* dev = ctx;
+    if (dev->bst_buffer.Length != ACPI_ALLOCATE_BUFFER) {
+        AcpiOsFree(dev->bst_buffer.Pointer);
+    }
+    if (dev->bif_buffer.Length != ACPI_ALLOCATE_BUFFER) {
+        AcpiOsFree(dev->bif_buffer.Pointer);
+    }
+    free(dev);
 }
 
 static mx_protocol_device_t acpi_battery_device_proto = {
@@ -84,44 +97,84 @@ static mx_protocol_device_t acpi_battery_device_proto = {
 static int acpi_battery_poll_thread(void* arg) {
     acpi_battery_device_t* dev = arg;
     for (;;) {
-        acpi_rsp_bst_t bst;
-        if (acpi_BST(&dev->acpi, &bst) != MX_OK) {
-            break;
+        ACPI_STATUS acpi_status = AcpiEvaluateObject(dev->acpi_handle,
+                (char*)"_BST", NULL, &dev->bst_buffer);
+        if (acpi_status != AE_OK) {
+            xprintf("acpi-battery: acpi error 0x%x in _BST\n", acpi_status);
+            goto out;
+        }
+        ACPI_OBJECT* bst_pkg = dev->bst_buffer.Pointer;
+        if ((bst_pkg->Type != ACPI_TYPE_PACKAGE) || (bst_pkg->Package.Count != 4)) {
+            xprintf("acpi-battery: unexpected _BST response\n");
+            goto out;
+        }
+        ACPI_OBJECT* bst_elem = bst_pkg->Package.Elements;
+        int i;
+        for (i = 0; i < 4; i++) {
+            if (bst_elem[i].Type != ACPI_TYPE_INTEGER) {
+                xprintf("acpi-battery: unexpected _BST response\n");
+                goto out;
+            }
         }
 
-        acpi_rsp_bif_t bif;
-        if (acpi_BIF(&dev->acpi, &bif) != MX_OK) {
-            break;
+        acpi_status = AcpiEvaluateObject(dev->acpi_handle,
+                (char*)"_BIF", NULL, &dev->bif_buffer);
+        if (acpi_status != AE_OK) {
+            xprintf("acpi-battery: acpi error 0x%x in _BIF\n", acpi_status);
+            goto out;
+        }
+        ACPI_OBJECT* bif_pkg = dev->bif_buffer.Pointer;
+        if ((bif_pkg->Type != ACPI_TYPE_PACKAGE) || (bif_pkg->Package.Count != 13)) {
+            xprintf("acpi-battery: unexpected _BIF response\n");
+            goto out;
+        }
+        ACPI_OBJECT* bif_elem = bif_pkg->Package.Elements;
+        for (i = 0; i < 9; i++) {
+            if (bif_elem[i].Type != ACPI_TYPE_INTEGER) {
+                xprintf("acpi-battery: unexpected _BIF response\n");
+                goto out;
+            }
+        }
+        for (i = 9; i < 13; i++) {
+            if (bif_elem[i].Type != ACPI_TYPE_STRING) {
+                xprintf("acpi-battery: unexpected _BIF response\n");
+                goto out;
+            }
         }
 
         mtx_lock(&dev->lock);
-        dev->state = bst.battery_state;
-        dev->capacity_remaining = bst.battery_remaining_capacity;
+        dev->state = bst_elem[0].Integer.Value;
+        dev->capacity_remaining = bst_elem[2].Integer.Value;
 
-        dev->capacity_design = bif.design_capacity;
-        dev->capacity_full = bif.last_full_charge_capacity;
+        dev->capacity_design = bif_elem[1].Integer.Value;
+        dev->capacity_full = bif_elem[2].Integer.Value;
         mtx_unlock(&dev->lock);
 
         mx_nanosleep(mx_deadline_after(MX_MSEC(1000)));
     }
+out:
     printf("acpi-battery: poll thread exiting\n");
     return 0;
 }
 
-static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* parent, void** cookie) {
-    xprintf("acpi-battery: bind\n");
+mx_status_t battery_init(mx_device_t* parent, ACPI_HANDLE acpi_handle) {
+    xprintf("acpi-battery: init\n");
 
     acpi_battery_device_t* dev = calloc(1, sizeof(acpi_battery_device_t));
     if (!dev) {
         return MX_ERR_NO_MEMORY;
     }
 
-    if (device_get_protocol(parent, MX_PROTOCOL_ACPI, &dev->acpi)) {
-        free(dev);
-        return MX_ERR_NOT_SUPPORTED;
-    }
+    dev->acpi_handle = acpi_handle;
 
-    int rc = thrd_create_with_name(&dev->poll_thread, acpi_battery_poll_thread, dev, "acpi-battery-poll");
+    dev->bst_buffer.Length = ACPI_ALLOCATE_BUFFER;
+    dev->bst_buffer.Pointer = NULL;
+
+    dev->bif_buffer.Length = ACPI_ALLOCATE_BUFFER;
+    dev->bif_buffer.Pointer = NULL;
+
+    int rc = thrd_create_with_name(&dev->poll_thread,
+            acpi_battery_poll_thread, dev, "acpi-battery-poll");
     if (rc != thrd_success) {
         xprintf("acpi-battery: polling thread did not start (%d)\n", rc);
         free(dev);
@@ -147,17 +200,3 @@ static mx_status_t acpi_battery_bind(void* ctx, mx_device_t* parent, void** cook
 
     return MX_OK;
 }
-
-static mx_driver_ops_t acpi_battery_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = acpi_battery_bind,
-};
-
-#define ACPI_BATTERY_HID_0_3 0x504e5030 // "PNP0"
-#define ACPI_BATTERY_HID_4_7 0x43304100 // "C0A"
-
-MAGENTA_DRIVER_BEGIN(acpi_battery, acpi_battery_driver_ops, "magenta", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
-    BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, ACPI_BATTERY_HID_0_3),
-    BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, ACPI_BATTERY_HID_4_7),
-MAGENTA_DRIVER_END(acpi_battery)

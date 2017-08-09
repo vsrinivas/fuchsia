@@ -20,6 +20,7 @@ MODULE_CFLAGS += -fno-strict-aliasing -Ithird_party/lib/acpica/source/include
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bus-acpi.c \
+    $(LOCAL_DIR)/battery.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/init.c \
     $(LOCAL_DIR)/ec.c \
