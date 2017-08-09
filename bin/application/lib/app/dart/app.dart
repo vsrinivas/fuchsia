@@ -23,21 +23,19 @@ class ApplicationContext {
   factory ApplicationContext.fromStartupInfo() {
     final ApplicationContext context = new ApplicationContext();
 
-    final int environmentHandle = MxStartupInfo.takeEnvironment();
+    final core.Handle environmentHandle = MxStartupInfo.takeEnvironment();
     if (environmentHandle != null) {
-      final core.Handle handle = new core.Handle(environmentHandle);
       context.environment
         ..ctrl.bind(new InterfaceHandle<ApplicationEnvironment>(
-            new core.Channel(handle), 0))
+            new core.Channel(environmentHandle), 0))
         ..getApplicationLauncher(context.launcher.ctrl.request())
         ..getServices(context.environmentServices.ctrl.request());
     }
 
-    final int outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
+    final core.Handle outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
     if (outgoingServicesHandle != null) {
-      final core.Handle handle = new core.Handle(outgoingServicesHandle);
       context.outgoingServices.bind(
-          new InterfaceRequest<ServiceProvider>(new core.Channel(handle)));
+          new InterfaceRequest<ServiceProvider>(new core.Channel(outgoingServicesHandle)));
     }
 
     return context;
