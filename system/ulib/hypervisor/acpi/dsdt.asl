@@ -26,11 +26,12 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "MX", "MX DSDT", 0x0)
 
             Name(_PRT, Package()
             {
-                // Device 0.
+                // Device 0-4.
                 Package() { 0x0000ffff, 0, Zero, 32 },
-
-                // Device 1.
                 Package() { 0x0001ffff, 0, Zero, 33 },
+                Package() { 0x0002ffff, 0, Zero, 34 },
+                Package() { 0x0003ffff, 0, Zero, 35 },
+                Package() { 0x0004ffff, 0, Zero, 36 },
             })
         }
     }
