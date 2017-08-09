@@ -49,6 +49,6 @@ go_test("power_manager_test") {
     },
   ]
   deps = [
-    "//apps/tracing/services",
+    "//apps/power-service/services",
   ]
 }
