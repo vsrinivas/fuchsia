@@ -179,6 +179,10 @@ USER_LDFLAGS := \
     -z combreloc -z relro -z now -z text \
     --hash-style=gnu --eh-frame-hdr
 
+ifeq ($(call TOBOOL,$(USE_LLD)),true)
+USER_LDFLAGS += -z rodynamic
+endif
+
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 ifeq ($(call TOBOOL,$(USE_LTO)),true)
 # LTO doesn't store -mcmodel=kernel information in the bitcode files as it
