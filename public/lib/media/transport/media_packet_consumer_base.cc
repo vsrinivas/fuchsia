@@ -5,6 +5,7 @@
 #include "apps/media/lib/transport/media_packet_consumer_base.h"
 
 #include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
 
@@ -320,14 +321,19 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
 }
 
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
-  FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  callback_(counter_->OnPacketDeparture(label_));
+  counter_->task_runner()->PostTask([
+    callback = callback_, counter = std::move(counter_), label = label_
+  ]() { callback(counter->OnPacketDeparture(label)); });
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
     MediaPacketConsumerBase* owner)
-    : owner_(owner), buffer_set_(MX_VM_FLAG_PERM_READ) {
+    : owner_(owner),
+      buffer_set_(MX_VM_FLAG_PERM_READ),
+      packets_outstanding_(0) {
   FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  FTL_DCHECK(task_runner_);
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {

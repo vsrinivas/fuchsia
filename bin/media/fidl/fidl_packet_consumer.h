@@ -7,6 +7,7 @@
 #include "apps/media/lib/transport/media_packet_consumer_base.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/src/framework/models/active_source.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace media {
 
@@ -67,6 +68,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   };
 
   std::function<void()> unbind_handler_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   Demand downstream_demand_ = Demand::kNegative;
   FlushRequestedCallback flush_requested_callback_;
   SupplyCallback supply_callback_;

@@ -4,6 +4,8 @@
 
 #include "apps/media/src/fidl/fidl_packet_consumer.h"
 
+#include "lib/mtl/tasks/message_loop.h"
+
 namespace media {
 
 FidlPacketConsumer::FidlPacketConsumer() {}
@@ -14,6 +16,8 @@ void FidlPacketConsumer::Bind(
     fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     const std::function<void()>& unbind_handler) {
   unbind_handler_ = unbind_handler;
+  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
+  FTL_DCHECK(task_runner_);
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
@@ -74,7 +78,9 @@ void FidlPacketConsumer::SetDownstreamDemand(Demand demand) {
   if (demand == Demand::kPositive &&
       supplied_packets_outstanding() >=
           current_demand().min_packets_outstanding) {
-    SetDemand(supplied_packets_outstanding() + 1);
+    task_runner_->PostTask([
+      this, demand = supplied_packets_outstanding() + 1
+    ]() { SetDemand(demand); });
   }
 }
 

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "apps/media/lib/flog/flog.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/lib/transport/shared_buffer_set.h"
@@ -12,6 +14,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/synchronization/thread_checker.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace media {
 
@@ -137,6 +140,8 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     ~SuppliedPacketCounter();
 
+    ftl::RefPtr<ftl::TaskRunner>& task_runner() { return task_runner_; }
+
     // Prevents any subsequent calls to the owner.
     void Detach() {
       FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -159,18 +164,16 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
     }
 
     // Returns number of packets currently outstanding.
-    uint32_t packets_outstanding() {
-      FTL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-      return packets_outstanding_;
-    }
+    uint32_t packets_outstanding() { return packets_outstanding_; }
 
     SharedBufferSet& buffer_set() { return buffer_set_; }
 
    private:
     MediaPacketConsumerBase* owner_;
     // We keep the buffer set here, because it needs to outlive SuppliedPackets.
+    ftl::RefPtr<ftl::TaskRunner> task_runner_;
     SharedBufferSet buffer_set_;
-    uint32_t packets_outstanding_ = 0;
+    std::atomic_uint32_t packets_outstanding_;
 
     FTL_DECLARE_THREAD_CHECKER(thread_checker_);
   };
