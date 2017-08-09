@@ -71,21 +71,21 @@ mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) 
 }
 
 static mx_status_t raise_thr_empty(mx_handle_t vcpu, guest_state_t* guest_state) {
-    static uint32_t interrupt = 0;
-    if (interrupt == 0) {
+    static uint32_t vector = 0;
+    if (vector == 0) {
         // Lock concurrent access to io_apic_state.
         mtx_lock(&guest_state->mutex);
-        interrupt = io_apic_redirect(guest_state->io_apic, X86_INT_UART);
+        vector = io_apic_redirect(guest_state->io_apic, X86_INT_UART);
         mtx_unlock(&guest_state->mutex);
 
         // UART IRQs overlap with CPU exception handlers, so they need to be remapped.
         // If that hasn't happened yet, don't fire the interrupt - it would be bad.
-        if (interrupt == 0) {
+        if (vector == 0) {
             return MX_OK;
         }
     }
 
-    return mx_vcpu_interrupt(vcpu, interrupt);
+    return mx_vcpu_interrupt(vcpu, vector);
 }
 
 mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_guest_io_t* io) {

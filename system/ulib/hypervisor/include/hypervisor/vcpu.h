@@ -63,4 +63,4 @@ void vcpu_init(vcpu_context_t* context);
 mx_status_t vcpu_loop(vcpu_context_t* context);
 
 /* Processes a single guest packet. */
-mx_status_t vcpu_handle_packet(vcpu_context_t* context, mx_guest_packet_t* packet);
+mx_status_t vcpu_packet_handler(vcpu_context_t* context, mx_guest_packet_t* packet);

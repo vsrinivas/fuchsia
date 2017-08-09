@@ -361,7 +361,7 @@ mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
             fprintf(stderr, "Failed to resume VCPU %d\n", status);
             return status;
         }
-        status = vcpu_handle_packet(vcpu_context, &packet);
+        status = vcpu_packet_handler(vcpu_context, &packet);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
             return status;
@@ -369,7 +369,7 @@ mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
     }
 }
 
-mx_status_t vcpu_handle_packet(vcpu_context_t* vcpu_context, mx_guest_packet_t* packet) {
+mx_status_t vcpu_packet_handler(vcpu_context_t* vcpu_context, mx_guest_packet_t* packet) {
     switch (packet->type) {
     case MX_GUEST_PKT_MEMORY:
         return handle_memory(vcpu_context, &packet->memory);
