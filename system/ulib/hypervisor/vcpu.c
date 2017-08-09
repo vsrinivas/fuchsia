@@ -51,6 +51,11 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_me
                                      instruction_t* inst) {
     MX_ASSERT(memory->addr >= LOCAL_APIC_PHYS_BASE);
     mx_vaddr_t offset = memory->addr - LOCAL_APIC_PHYS_BASE;
+    // From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
+    // accessed using 128-bit aligned 32-bit loads or stores. Some processors
+    // may support loads and stores of less than 32 bits to some of the APIC
+    // registers. This is model specific behavior and is not guaranteed to work
+    // on all processors.
     switch (offset) {
     case LOCAL_APIC_REGISTER_VERSION: {
         // From Intel Volume 3, Section 10.4.8.
