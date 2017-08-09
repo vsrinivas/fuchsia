@@ -1,0 +1,26 @@
+executable("e2e_sync") {
+  output_name = "ledger_e2e_sync"
+  testonly = true
+
+  sources = [
+    "convergence.cc",
+    "lib.cc",
+    "lib.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/fidl_helpers",
+    "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/test:app_test",
+    "//apps/ledger/src/test:lib",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

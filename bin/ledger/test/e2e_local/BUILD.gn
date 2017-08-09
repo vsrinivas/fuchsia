@@ -1,0 +1,28 @@
+executable("e2e_local") {
+  output_name = "ledger_e2e_local"
+
+  testonly = true
+
+  sources = [
+    "ledger_apptest.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/internal:internal_sync",
+    "//apps/ledger/services/public:public_sync",
+    "//apps/ledger/src/test:app_test",
+    "//apps/ledger/src/test:app_test_main",
+    "//apps/ledger/src/test:lib",
+    "//lib/fidl/cpp/bindings",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+
+  data_deps = [
+    "//apps/ledger/src/app",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}

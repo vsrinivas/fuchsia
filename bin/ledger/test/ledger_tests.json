@@ -1,8 +1,8 @@
 {
   "tests": [
     {
-      "name": "ledger_apptests",
-      "exec": "/system/test/ledger_apptests"
+      "name": "ledger_e2e_local",
+      "exec": "/system/test/ledger_e2e_local"
     },
     {
       "name": "ledger_integration_tests",

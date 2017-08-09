@@ -13,7 +13,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//apps/ledger/benchmark",
     "//apps/ledger/src:tests",
   ]
 }

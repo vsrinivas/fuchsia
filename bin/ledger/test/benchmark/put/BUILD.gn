@@ -1,0 +1,51 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("put") {
+  testonly = true
+
+  deps = [
+    ":ledger_benchmark_put",
+  ]
+}
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "put.cc",
+    "put.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+  ]
+
+  deps = [
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/ledger/src/convert",
+    "//apps/ledger/src/test:lib",
+    "//apps/ledger/src/test/benchmark/lib",
+    "//apps/tracing/lib/trace",
+    "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
+
+executable("ledger_benchmark_put") {
+  testonly = true
+
+  deps = [
+    ":lib",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+
+  sources = [
+    "app.cc",
+  ]
+}

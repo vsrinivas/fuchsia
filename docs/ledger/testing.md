@@ -22,27 +22,28 @@ binary, that by default can be executed on Fuchsia by running
 Ledger, although these services still run in the same process as the test code.
 
 Integration tests inherit from [IntegrationTest] and are placed under
-`src/app/integration_tests`.
+`src/test/integration`.
 
 All integration tests in the Ledger tree are built into a single
 `ledger_integration_tests` binary, that by default can be executed on Fuchsia by
 running `/system/test/ledger_integration_tests`.
 
-## Application tests
+## End-to-end tests
 
-**application tests** are also written against client-facing FIDL services
+**End-to-end tests** are also written against client-facing FIDL services
 exposed by Ledger, but in this case the test code runs in a separate process,
 and connects to Ledger the same way any other client application would do. This
 is the highest-level way of testing that exercises all of the Ledger stack.
 
-Application tests inherit from [LedgerAppTest] and are currently all placed in
-one file at `src/app/ledger_apptests.cc`.
+End-to-end tests inherit from [LedgerAppTest]. End-to-end tests exercising only the local part of the Ledger are in `src/test/e2e_local`. [Synchronization end-to-end tests] exercising multi-device synchronization are in `src/test/e2e_sync`.
 
-All application tests in the Ledger tree are built into a single
-`ledger_apptests` binary, that by default can be executed on Fuchsia by running
-`ledger_apptests`.
+All local application tests in the Ledger tree are built into a single
+`ledger_e2e_local` binary, that by default can be executed on Fuchsia by running
+`/system/test/ledger_e2e_local`. Synchronization tests are built into a single `ledger_e2e_sync`
+binary, that by default can be executed on Fuchsia by running `/system/test/ledger_e2e_sync`
 
 [Google Test]: https://github.com/google/googletest
 [TestWithMessageLoop]: https://fuchsia.googlesource.com/ledger/+/master/src/test/test_with_message_loop.h
-[IntegrationTest]: https://fuchsia.googlesource.com/ledger/+/master/src/app/integration_tests/integration_test.h
-[LedgerAppTest]: https://fuchsia.googlesource.com/ledger/+/master/src/app/ledger_apptest.cc
+[IntegrationTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/integration/integration_test.h
+[LedgerAppTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_local/e2e_local.cc
+[Synchronization end-to-end tests]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_sync/README.md
