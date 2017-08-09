@@ -225,11 +225,17 @@ static mx_status_t mmc_decode_csd(sdmmc_t* sdmmc, const uint8_t* raw_csd) {
     }
 
     xprintf("sdmmc: CSD version %u spec version %u\n", (raw_csd[14] >> 6) & 0x3, spec_vrsn);
+#if 0
+    xprintf("CSD:\n");
+    hexdump8_ex(raw_csd, 16, 0);
+#endif
 
     // Only support high capacity (> 2GB) cards
-    uint16_t c_size = (raw_csd[6] >> 2 & 0x3f) |
-                      ((raw_csd[7] & 0x3f) << 6);
+    uint16_t c_size = ((raw_csd[6] >> 6) & 0x3) |
+                      (raw_csd[7] << 6) |
+                      (raw_csd[8] & 0x3);
     if (c_size != 0xfff) {
+        xprintf("sdmmc: unsupported C_SIZE 0x%04x\n", c_size);
         return MX_ERR_NOT_SUPPORTED;
     }
     return MX_OK;
