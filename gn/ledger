@@ -16,39 +16,39 @@
     "resources": [
         {
             "bootfs_path": "data/ledger/benchmark/convergence.tspec",
-            "file": "apps/ledger/benchmark/convergence/convergence.tspec"
+            "file": "apps/ledger/src/test/benchmark/convergence/convergence.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/transaction.tspec",
-            "file": "apps/ledger/benchmark/put/transaction.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/transaction.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/entry_count.tspec",
-            "file": "apps/ledger/benchmark/put/entry_count.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/entry_count.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/entry_count_update.tspec",
-            "file": "apps/ledger/benchmark/put/entry_count_update.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/entry_count_update.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/key_size.tspec",
-            "file": "apps/ledger/benchmark/put/key_size.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/key_size.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/put.tspec",
-            "file": "apps/ledger/benchmark/put/put.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/put.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/transaction_size.tspec",
-            "file": "apps/ledger/benchmark/put/transaction_size.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/transaction_size.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/value_size.tspec",
-            "file": "apps/ledger/benchmark/put/value_size.tspec"
+            "file": "apps/ledger/src/test/benchmark/put/value_size.tspec"
         },
         {
             "bootfs_path": "data/ledger/benchmark/sync.tspec",
-            "file": "apps/ledger/benchmark/sync/sync.tspec"
+            "file": "apps/ledger/src/test/benchmark/sync/sync.tspec"
         }
     ],
     "binaries": [
@@ -63,10 +63,6 @@
         {
             "binary": "ledger",
             "bootfs_path": "apps/ledger"
-        },
-        {
-            "binary": "ledger_apptests",
-            "bootfs_path": "test/ledger_apptests"
         },
         {
             "binary": "launch_benchmark",
@@ -85,16 +81,20 @@
             "bootfs_path": "apps/ledger_benchmark_sync"
         },
         {
+            "binary": "ledger_e2e_local",
+            "bootfs_path": "test/ledger_e2e_local"
+        },
+        {
+            "binary": "ledger_e2e_sync",
+            "bootfs_path": "test/ledger_e2e_sync"
+        },
+        {
             "binary": "ledger_integration_tests",
             "bootfs_path": "test/ledger_integration_tests"
         },
         {
             "binary": "ledger_unittests",
             "bootfs_path": "test/ledger_unittests"
-        },
-        {
-            "binary": "ledger_sync_tests",
-            "bootfs_path": "test/ledger_sync_tests"
         }
     ]
 }
