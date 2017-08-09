@@ -21,10 +21,9 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
-namespace ledger {
-namespace integration_tests {
+namespace test {
+namespace integration {
 namespace {
-
 class LedgerAppInstanceImpl final : public IntegrationTest::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
@@ -33,47 +32,50 @@ class LedgerAppInstanceImpl final : public IntegrationTest::LedgerAppInstance {
   ~LedgerAppInstanceImpl() override;
   void Init();
 
-  LedgerRepositoryFactory* ledger_repository_factory() override {
+  ledger::LedgerRepositoryFactory* ledger_repository_factory() override {
     return ledger_repository_factory_.get();
   }
 
-  LedgerRepositoryPtr GetTestLedgerRepository() override;
-  LedgerPtr GetTestLedger() override;
-  PagePtr GetTestPage() override;
-  PagePtr GetPage(const fidl::Array<uint8_t>& page_id,
-                  Status expected_status) override;
+  ledger::LedgerRepositoryPtr GetTestLedgerRepository() override;
+  ledger::LedgerPtr GetTestLedger() override;
+  ledger::PagePtr GetTestPage() override;
+  ledger::PagePtr GetPage(const fidl::Array<uint8_t>& page_id,
+                          ledger::Status expected_status) override;
   void DeletePage(const fidl::Array<uint8_t>& page_id,
-                  Status expected_status) override;
+                  ledger::Status expected_status) override;
   void UnbindTokenProvider() override;
 
  private:
   class LedgerRepositoryFactoryContainer
-      : public LedgerRepositoryFactoryImpl::Delegate {
+      : public ledger::LedgerRepositoryFactoryImpl::Delegate {
    public:
     LedgerRepositoryFactoryContainer(
         ftl::RefPtr<ftl::TaskRunner> task_runner,
         std::function<network::NetworkServicePtr()> network_factory,
-        fidl::InterfaceRequest<LedgerRepositoryFactory> request)
+        fidl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
         : network_service_(task_runner, std::move(network_factory)),
           environment_(task_runner, &network_service_),
-          factory_impl_(this,
-                        &environment_,
-                        LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET),
+          factory_impl_(
+              this,
+              &environment_,
+              ledger::LedgerRepositoryFactoryImpl::ConfigPersistence::FORGET),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() override {}
 
    private:
     // LedgerRepositoryFactoryImpl::Delegate:
     void EraseRepository(
-        EraseRemoteRepositoryOperation /*erase_remote_repository_operation*/,
+        ledger::
+            EraseRemoteRepositoryOperation /*erase_remote_repository_operation*/
+        ,
         std::function<void(bool)> callback) override {
       FTL_NOTIMPLEMENTED();
       callback(false);
     }
-    NetworkServiceImpl network_service_;
-    Environment environment_;
-    LedgerRepositoryFactoryImpl factory_impl_;
-    fidl::Binding<LedgerRepositoryFactory> factory_binding_;
+    ledger::NetworkServiceImpl network_service_;
+    ledger::Environment environment_;
+    ledger::LedgerRepositoryFactoryImpl factory_impl_;
+    fidl::Binding<ledger::LedgerRepositoryFactory> factory_binding_;
 
     FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
@@ -85,8 +87,8 @@ class LedgerAppInstanceImpl final : public IntegrationTest::LedgerAppInstance {
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   std::thread thread_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  LedgerPtr ledger_;
+  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  ledger::LedgerPtr ledger_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
@@ -116,10 +118,10 @@ void LedgerAppInstanceImpl::Init() {
   ledger_ = GetTestLedger();
 }
 
-LedgerRepositoryPtr LedgerAppInstanceImpl::GetTestLedgerRepository() {
-  LedgerRepositoryPtr repository;
+ledger::LedgerRepositoryPtr LedgerAppInstanceImpl::GetTestLedgerRepository() {
+  ledger::LedgerRepositoryPtr repository;
 
-  FirebaseConfigPtr firebase_config = FirebaseConfig::New();
+  ledger::FirebaseConfigPtr firebase_config = ledger::FirebaseConfig::New();
   firebase_config->server_id = "server-id";
   firebase_config->api_key = "api_key";
 
@@ -133,49 +135,50 @@ LedgerRepositoryPtr LedgerAppInstanceImpl::GetTestLedgerRepository() {
           }),
       ftl::TimeDelta::FromSeconds(1)));
 
-  Status status;
+  ledger::Status status;
   ledger_repository_factory_->GetRepository(
       tmp_dir_.path(), std::move(firebase_config), std::move(token_provider),
-      repository.NewRequest(), [&status](Status s) { status = s; });
+      repository.NewRequest(), [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponseWithTimeout(
       ftl::TimeDelta::FromSeconds(1)));
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   return repository;
 }
 
-LedgerPtr LedgerAppInstanceImpl::GetTestLedger() {
-  LedgerPtr ledger;
+ledger::LedgerPtr LedgerAppInstanceImpl::GetTestLedger() {
+  ledger::LedgerPtr ledger;
 
-  LedgerRepositoryPtr repository = GetTestLedgerRepository();
-  Status status;
+  ledger::LedgerRepositoryPtr repository = GetTestLedgerRepository();
+  ledger::Status status;
   repository->GetLedger(RandomArray(1), ledger.NewRequest(),
-                        [&status](Status s) { status = s; });
+                        [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(repository.WaitForIncomingResponseWithTimeout(
       ftl::TimeDelta::FromSeconds(1)));
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   return ledger;
 }
 
-PagePtr LedgerAppInstanceImpl::GetTestPage() {
-  fidl::InterfaceHandle<Page> page;
-  Status status;
+ledger::PagePtr LedgerAppInstanceImpl::GetTestPage() {
+  fidl::InterfaceHandle<ledger::Page> page;
+  ledger::Status status;
 
   ledger_->GetPage(nullptr, page.NewRequest(),
-                   [&status](Status s) { status = s; });
+                   [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponseWithTimeout(
       ftl::TimeDelta::FromSeconds(1)));
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 
-  return fidl::InterfacePtr<Page>::Create(std::move(page));
+  return fidl::InterfacePtr<ledger::Page>::Create(std::move(page));
 }
 
-PagePtr LedgerAppInstanceImpl::GetPage(const fidl::Array<uint8_t>& page_id,
-                                       Status expected_status) {
-  PagePtr page_ptr;
-  Status status;
+ledger::PagePtr LedgerAppInstanceImpl::GetPage(
+    const fidl::Array<uint8_t>& page_id,
+    ledger::Status expected_status) {
+  ledger::PagePtr page_ptr;
+  ledger::Status status;
 
   ledger_->GetPage(page_id.Clone(), page_ptr.NewRequest(),
-                   [&status](Status s) { status = s; });
+                   [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponseWithTimeout(
       ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(expected_status, status);
@@ -184,11 +187,12 @@ PagePtr LedgerAppInstanceImpl::GetPage(const fidl::Array<uint8_t>& page_id,
 }
 
 void LedgerAppInstanceImpl::DeletePage(const fidl::Array<uint8_t>& page_id,
-                                       Status expected_status) {
-  fidl::InterfaceHandle<Page> page;
-  Status status;
+                                       ledger::Status expected_status) {
+  fidl::InterfaceHandle<ledger::Page> page;
+  ledger::Status status;
 
-  ledger_->DeletePage(page_id.Clone(), [&status](Status s) { status = s; });
+  ledger_->DeletePage(page_id.Clone(),
+                      [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponseWithTimeout(
       ftl::TimeDelta::FromSeconds(1)));
   EXPECT_EQ(expected_status, status);
@@ -248,5 +252,5 @@ IntegrationTest::NewLedgerAppInstance() {
   return result;
 }
 
-}  // namespace integration_tests
-}  // namespace ledger
+}  // namespace integration
+}  // namespace test

@@ -16,8 +16,8 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 
-namespace ledger {
-namespace integration_tests {
+namespace test {
+namespace integration {
 namespace {
 
 class PageIntegrationTest : public IntegrationTest {
@@ -33,14 +33,14 @@ TEST_F(PageIntegrationTest, LedgerRepositoryDuplicate) {
   auto instance = NewLedgerAppInstance();
 
   files::ScopedTempDir tmp_dir;
-  LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
+  ledger::LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
 
-  Status status;
-  LedgerRepositoryPtr duplicated_repository;
+  ledger::Status status;
+  ledger::LedgerRepositoryPtr duplicated_repository;
   repository->Duplicate(duplicated_repository.NewRequest(),
-                        [&status](Status s) { status = s; });
+                        [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(repository.WaitForIncomingResponse());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 }
 
 TEST_F(PageIntegrationTest, GetLedger) {
@@ -50,21 +50,21 @@ TEST_F(PageIntegrationTest, GetLedger) {
 
 TEST_F(PageIntegrationTest, GetRootPage) {
   auto instance = NewLedgerAppInstance();
-  LedgerPtr ledger = instance->GetTestLedger();
-  Status status;
-  PagePtr page;
+  ledger::LedgerPtr ledger = instance->GetTestLedger();
+  ledger::Status status;
+  ledger::PagePtr page;
   ledger->GetRootPage(page.NewRequest(),
                       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 }
 
 TEST_F(PageIntegrationTest, NewPage) {
   auto instance = NewLedgerAppInstance();
   // Get two pages and check that their ids are different.
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> id1 = PageGetId(&page1);
-  PagePtr page2 = instance->GetTestPage();
+  ledger::PagePtr page2 = instance->GetTestPage();
   fidl::Array<uint8_t> id2 = PageGetId(&page2);
 
   EXPECT_TRUE(!id1.Equals(id2));
@@ -73,15 +73,15 @@ TEST_F(PageIntegrationTest, NewPage) {
 TEST_F(PageIntegrationTest, GetPage) {
   auto instance = NewLedgerAppInstance();
   // Create a page and expect to find it by its id.
-  PagePtr page = instance->GetTestPage();
+  ledger::PagePtr page = instance->GetTestPage();
   fidl::Array<uint8_t> id = PageGetId(&page);
-  instance->GetPage(id, Status::OK);
+  instance->GetPage(id, ledger::Status::OK);
 
 // TODO(etiennej): Reactivate after LE-87 is fixed.
 #if 0
   // Search with a random id and expect a PAGE_NOT_FOUND result.
   fidl::Array<uint8_t> test_id = RandomArray(16);
-  instance->GetPage(test_id, Status::PAGE_NOT_FOUND);
+  instance->GetPage(test_id, ledger::Status::PAGE_NOT_FOUND);
 #endif
 }
 
@@ -89,11 +89,11 @@ TEST_F(PageIntegrationTest, GetPage) {
 TEST_F(PageIntegrationTest, MultiplePageConnections) {
   auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> page_id_1 = PageGetId(&page1);
 
   // Connect to the same page again.
-  PagePtr page2 = instance->GetPage(page_id_1, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(page_id_1, ledger::Status::OK);
   fidl::Array<uint8_t> page_id_2 = PageGetId(&page2);
   EXPECT_EQ(convert::ToString(page_id_1), convert::ToString(page_id_2));
 }
@@ -101,13 +101,13 @@ TEST_F(PageIntegrationTest, MultiplePageConnections) {
 TEST_F(PageIntegrationTest, DeletePage) {
   auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
-  PagePtr page = instance->GetTestPage();
+  ledger::PagePtr page = instance->GetTestPage();
   fidl::Array<uint8_t> id = PageGetId(&page);
 
   // Delete the page.
   bool page_closed = false;
   page.set_connection_error_handler([&page_closed] { page_closed = true; });
-  instance->DeletePage(id, Status::OK);
+  instance->DeletePage(id, ledger::Status::OK);
 
   // Verify that deletion of the page closed the page connection.
   EXPECT_FALSE(page.WaitForIncomingResponse());
@@ -116,36 +116,36 @@ TEST_F(PageIntegrationTest, DeletePage) {
 // TODO(etiennej): Reactivate after LE-87 is fixed.
 #if 0
   // Verify that the deleted page cannot be retrieved.
-  instance->GetPage(id, Status::PAGE_NOT_FOUND);
+  instance->GetPage(id, ledger::Status::PAGE_NOT_FOUND);
 #endif
 
   // Delete the same page again and expect a PAGE_NOT_FOUND result.
-  instance->DeletePage(id, Status::PAGE_NOT_FOUND);
+  instance->DeletePage(id, ledger::Status::PAGE_NOT_FOUND);
 }
 
 TEST_F(PageIntegrationTest, MultipleLedgerConnections) {
   auto instance = NewLedgerAppInstance();
   // Connect to the same ledger instance twice.
-  LedgerPtr ledger_connection_1 = instance->GetTestLedger();
-  LedgerPtr ledger_connection_2 = instance->GetTestLedger();
+  ledger::LedgerPtr ledger_connection_1 = instance->GetTestLedger();
+  ledger::LedgerPtr ledger_connection_2 = instance->GetTestLedger();
 
   // Create a page on the first connection.
-  PagePtr page;
-  Status status;
+  ledger::PagePtr page;
+  ledger::Status status;
   ledger_connection_1->GetPage(nullptr, page.NewRequest(),
-                               [&status](Status s) { status = s; });
+                               [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_1.WaitForIncomingResponse());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 
   // Delete this page on the second connection and verify that the operation
   // succeeds.
   fidl::Array<uint8_t> id = PageGetId(&page);
   ledger_connection_2->DeletePage(std::move(id),
-                                  [&status](Status s) { status = s; });
+                                  [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_2.WaitForIncomingResponse());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 }
 
 }  // namespace
-}  // namespace integration_tests
-}  // namespace ledger
+}  // namespace integration
+}  // namespace test

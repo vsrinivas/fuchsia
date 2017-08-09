@@ -16,8 +16,8 @@
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace ledger {
-namespace integration_tests {
+namespace test {
+namespace integration {
 namespace {
 
 class IntegrationTestTests : public IntegrationTest {};
@@ -31,5 +31,5 @@ TEST_F(IntegrationTestTests, MultipleLedgerAppInstances) {
 }
 
 }  // namespace
-}  // namespace integration_tests
-}  // namespace ledger
+}  // namespace integration
+}  // namespace test

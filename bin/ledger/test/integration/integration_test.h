@@ -15,8 +15,8 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 
-namespace ledger {
-namespace integration_tests {
+namespace test {
+namespace integration {
 
 // Base class for integration tests.
 //
@@ -32,21 +32,21 @@ class IntegrationTest : public test::TestWithMessageLoop {
 
     // Returns the LedgerRepositoryFactory associated with this application
     // instance.
-    virtual LedgerRepositoryFactory* ledger_repository_factory() = 0;
+    virtual ledger::LedgerRepositoryFactory* ledger_repository_factory() = 0;
     // Builds and returns a new connection to the default LedgerRepository
     // object.
-    virtual LedgerRepositoryPtr GetTestLedgerRepository() = 0;
+    virtual ledger::LedgerRepositoryPtr GetTestLedgerRepository() = 0;
     // Builds and returns a new connection to the default Ledger object.
-    virtual LedgerPtr GetTestLedger() = 0;
+    virtual ledger::LedgerPtr GetTestLedger() = 0;
     // Builds and returns a new connection to a new random page on the default
     // Ledger object.
-    virtual PagePtr GetTestPage() = 0;
+    virtual ledger::PagePtr GetTestPage() = 0;
     // Returns a connection to the given page on the default Ledger object.
-    virtual PagePtr GetPage(const fidl::Array<uint8_t>& page_id,
-                            Status expected_status) = 0;
+    virtual ledger::PagePtr GetPage(const fidl::Array<uint8_t>& page_id,
+                                    ledger::Status expected_status) = 0;
     // Deletes the given page on the default Ledger object.
     virtual void DeletePage(const fidl::Array<uint8_t>& page_id,
-                            Status expected_status) = 0;
+                            ledger::Status expected_status) = 0;
     // Unbinds current connections to the token provider.
     virtual void UnbindTokenProvider() = 0;
 
@@ -73,12 +73,12 @@ class IntegrationTest : public test::TestWithMessageLoop {
   std::thread services_thread_;
   ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
   ftl::RefPtr<ftl::TaskRunner> services_task_runner_;
-  FakeCloudNetworkService network_service_;
+  ledger::FakeCloudNetworkService network_service_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(IntegrationTest);
 };
 
-}  // namespace integration_tests
-}  // namespace ledger
+}  // namespace integration
+}  // namespace test
 
 #endif  // APPS_LEDGER_SRC_TEST_INTEGRATION_INTEGRATION_TEST_H_

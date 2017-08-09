@@ -9,8 +9,8 @@
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
-namespace ledger {
-namespace integration_tests {
+namespace test {
+namespace integration {
 namespace {
 
 class LedgerRepositoryIntegrationTest : public IntegrationTest {
@@ -64,12 +64,12 @@ TEST_F(LedgerRepositoryIntegrationTest, ShutDownOnTokenProviderError) {
   auto instance = NewLedgerAppInstance();
   const auto timeout = ftl::TimeDelta::FromSeconds(1);
 
-  LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
+  ledger::LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
   bool repository_disconnected = false;
   repository.set_connection_error_handler(
       [&repository_disconnected] { repository_disconnected = true; });
 
-  LedgerPtr ledger = instance->GetTestLedger();
+  ledger::LedgerPtr ledger = instance->GetTestLedger();
   bool ledger_disconnected = false;
   ledger.set_connection_error_handler(
       [&ledger_disconnected] { ledger_disconnected = true; });
@@ -84,5 +84,5 @@ TEST_F(LedgerRepositoryIntegrationTest, ShutDownOnTokenProviderError) {
 }
 
 }  // namespace
-}  // namespace integration_tests
-}  // namespace ledger
+}  // namespace integration
+}  // namespace test

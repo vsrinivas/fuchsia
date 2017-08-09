@@ -19,8 +19,8 @@
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace ledger {
-namespace integration_tests {
+namespace test {
+namespace integration {
 namespace {
 
 class MergingIntegrationTest : public IntegrationTest {
@@ -32,24 +32,24 @@ class MergingIntegrationTest : public IntegrationTest {
   FTL_DISALLOW_COPY_AND_ASSIGN(MergingIntegrationTest);
 };
 
-class Watcher : public PageWatcher {
+class Watcher : public ledger::PageWatcher {
  public:
-  Watcher(fidl::InterfaceRequest<PageWatcher> request,
+  Watcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
           ftl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
 
   uint changes_seen = 0;
-  PageSnapshotPtr last_snapshot_;
-  PageChangePtr last_page_change_;
+  ledger::PageSnapshotPtr last_snapshot_;
+  ledger::PageChangePtr last_page_change_;
 
  private:
   // PageWatcher:
-  void OnChange(PageChangePtr page_change,
-                ResultState result_state,
+  void OnChange(ledger::PageChangePtr page_change,
+                ledger::ResultState result_state,
                 const OnChangeCallback& callback) override {
     FTL_DCHECK(page_change);
-    FTL_DCHECK(result_state == ResultState::COMPLETED)
+    FTL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes_seen++;
     last_page_change_ = std::move(page_change);
@@ -62,14 +62,14 @@ class Watcher : public PageWatcher {
   ftl::Closure change_callback_;
 };
 
-PageChangePtr NewPageChange() {
-  PageChangePtr change = PageChange::New();
-  change->changes = fidl::Array<EntryPtr>::New(0);
+ledger::PageChangePtr NewPageChange() {
+  ledger::PageChangePtr change = ledger::PageChange::New();
+  change->changes = fidl::Array<ledger::EntryPtr>::New(0);
   change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
   return change;
 }
 
-void AppendChanges(PageChangePtr* base, PageChangePtr changes) {
+void AppendChanges(ledger::PageChangePtr* base, ledger::PageChangePtr changes) {
   (*base)->timestamp = changes->timestamp;
   for (size_t i = 0; i < changes->changes.size(); ++i) {
     (*base)->changes.push_back(std::move(changes->changes[i]));
@@ -84,7 +84,7 @@ enum class MergeType {
   MULTIPART,
 };
 
-class ConflictResolverImpl : public ConflictResolver {
+class ConflictResolverImpl : public ledger::ConflictResolver {
  public:
   explicit ConflictResolverImpl(
       fidl::InterfaceRequest<ConflictResolver> request)
@@ -97,61 +97,63 @@ class ConflictResolverImpl : public ConflictResolver {
   ~ConflictResolverImpl() override {}
 
   struct ResolveRequest {
-    fidl::InterfaceHandle<PageSnapshot> left_version;
-    fidl::InterfaceHandle<PageSnapshot> right_version;
-    fidl::InterfaceHandle<PageSnapshot> common_version;
-    MergeResultProviderPtr result_provider;
+    fidl::InterfaceHandle<ledger::PageSnapshot> left_version;
+    fidl::InterfaceHandle<ledger::PageSnapshot> right_version;
+    fidl::InterfaceHandle<ledger::PageSnapshot> common_version;
+    ledger::MergeResultProviderPtr result_provider;
 
-    ResolveRequest(fidl::InterfaceHandle<PageSnapshot> left_version,
-                   fidl::InterfaceHandle<PageSnapshot> right_version,
-                   fidl::InterfaceHandle<PageSnapshot> common_version,
-                   fidl::InterfaceHandle<MergeResultProvider> result_provider)
+    ResolveRequest(
+        fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
+        fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
+        fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+        fidl::InterfaceHandle<ledger::MergeResultProvider> result_provider)
         : left_version(std::move(left_version)),
           right_version(std::move(right_version)),
           common_version(std::move(common_version)),
-          result_provider(
-              MergeResultProviderPtr::Create(std::move(result_provider))) {}
+          result_provider(ledger::MergeResultProviderPtr::Create(
+              std::move(result_provider))) {}
 
     // Returns the changes from the left and right branch.
-    ::testing::AssertionResult GetDiff(PageChangePtr* change_left,
-                                       PageChangePtr* change_right) {
+    ::testing::AssertionResult GetDiff(ledger::PageChangePtr* change_left,
+                                       ledger::PageChangePtr* change_right) {
       return GetDiff(change_left, change_right, 0);
     }
 
     // Returns the changes from the left and right branch and makes sure that at
     // least |min_queries| of partial results are returned before retrieving the
     // complete result for the left and for the right changes.
-    ::testing::AssertionResult GetDiff(PageChangePtr* change_left,
-                                       PageChangePtr* change_right,
+    ::testing::AssertionResult GetDiff(ledger::PageChangePtr* change_left,
+                                       ledger::PageChangePtr* change_right,
                                        int min_queries) {
       *change_left = NewPageChange();
       *change_right = NewPageChange();
-      ::testing::AssertionResult left_result = GetDiff(
-          nullptr, change_left, 0, min_queries,
-          [this](fidl::Array<uint8_t> token,
-                 const std::function<void(Status, PageChangePtr change,
-                                          fidl::Array<uint8_t> next_token)>&
-                     callback) {
-            result_provider->GetLeftDiff(std::move(token), callback);
-          });
+      ::testing::AssertionResult left_result =
+          GetDiff(nullptr, change_left, 0, min_queries,
+                  [this](fidl::Array<uint8_t> token,
+                         const std::function<void(
+                             ledger::Status, ledger::PageChangePtr change,
+                             fidl::Array<uint8_t> next_token)>& callback) {
+                    result_provider->GetLeftDiff(std::move(token), callback);
+                  });
       if (!left_result) {
         return left_result;
       }
-      return GetDiff(
-          nullptr, change_right, 0, min_queries,
-          [this](fidl::Array<uint8_t> token,
-                 const std::function<void(Status, PageChangePtr change,
-                                          fidl::Array<uint8_t> next_token)>&
-                     callback) {
-            result_provider->GetRightDiff(std::move(token), callback);
-          });
+      return GetDiff(nullptr, change_right, 0, min_queries,
+                     [this](fidl::Array<uint8_t> token,
+                            const std::function<void(
+                                ledger::Status, ledger::PageChangePtr change,
+                                fidl::Array<uint8_t> next_token)>& callback) {
+                       result_provider->GetRightDiff(std::move(token),
+                                                     callback);
+                     });
     }
 
     // Resolves the conflict by sending the given merge results. If
     // |merge_type| is MULTIPART, the merge will be send in two parts, each
     // sending half of |results|' elements.
-    ::testing::AssertionResult Merge(fidl::Array<MergedValuePtr> results,
-                                     MergeType merge_type = MergeType::SIMPLE) {
+    ::testing::AssertionResult Merge(
+        fidl::Array<ledger::MergedValuePtr> results,
+        MergeType merge_type = MergeType::SIMPLE) {
       FTL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
       if (merge_type == MergeType::SIMPLE) {
         ::testing::AssertionResult merge_status =
@@ -161,7 +163,7 @@ class ConflictResolverImpl : public ConflictResolver {
         }
       } else {
         size_t part1_size = results.size() / 2;
-        fidl::Array<MergedValuePtr> part2;
+        fidl::Array<ledger::MergedValuePtr> part2;
         for (size_t i = part1_size; i < results.size(); ++i) {
           part2.push_back(std::move(results[i]));
         }
@@ -178,12 +180,12 @@ class ConflictResolverImpl : public ConflictResolver {
         }
       }
 
-      Status status;
-      result_provider->Done([&status](Status s) { status = s; });
+      ledger::Status status;
+      result_provider->Done([&status](ledger::Status s) { status = s; });
       if (!result_provider.WaitForIncomingResponse()) {
         return ::testing::AssertionFailure() << "Done failed.";
       }
-      if (status != Status::OK) {
+      if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure()
                << "Done failed with status " << status;
       }
@@ -193,20 +195,21 @@ class ConflictResolverImpl : public ConflictResolver {
    private:
     ::testing::AssertionResult GetDiff(
         fidl::Array<uint8_t> token,
-        PageChangePtr* page_change,
+        ledger::PageChangePtr* page_change,
         int num_queries,
         int min_queries,
-        std::function<
-            void(fidl::Array<uint8_t>,
-                 const std::function<
-                     void(Status, PageChangePtr, fidl::Array<uint8_t>)>&)>
+        std::function<void(fidl::Array<uint8_t>,
+                           const std::function<void(ledger::Status,
+                                                    ledger::PageChangePtr,
+                                                    fidl::Array<uint8_t>)>&)>
             get_left_or_right_diff) {
-      Status status;
+      ledger::Status status;
       fidl::Array<uint8_t> next_token;
       do {
         get_left_or_right_diff(
             std::move(token),
-            [&status, page_change, &next_token](Status s, PageChangePtr change,
+            [&status, page_change, &next_token](ledger::Status s,
+                                                ledger::PageChangePtr change,
                                                 fidl::Array<uint8_t> next) {
               status = s;
               AppendChanges(page_change, std::move(change));
@@ -215,11 +218,12 @@ class ConflictResolverImpl : public ConflictResolver {
         if (!result_provider.WaitForIncomingResponse()) {
           return ::testing::AssertionFailure() << "GetLeftDiff failed.";
         }
-        if (status != Status::OK && status != Status::PARTIAL_RESULT) {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
           return ::testing::AssertionFailure()
                  << "GetLeftDiff failed with status " << status;
         }
-        if (!next_token != (status == Status::OK)) {
+        if (!next_token != (status == ledger::Status::OK)) {
           return ::testing::AssertionFailure()
                  << "next_token is " << convert::ToString(next_token)
                  << ", but status is:" << status;
@@ -240,14 +244,14 @@ class ConflictResolverImpl : public ConflictResolver {
     }
 
     ::testing::AssertionResult PartialMerge(
-        fidl::Array<MergedValuePtr> partial_result) {
-      Status status;
+        fidl::Array<ledger::MergedValuePtr> partial_result) {
+      ledger::Status status;
       result_provider->Merge(std::move(partial_result),
-                             [&status](Status s) { status = s; });
+                             [&status](ledger::Status s) { status = s; });
       if (!result_provider.WaitForIncomingResponse()) {
         return ::testing::AssertionFailure() << "Merge failed.";
       }
-      if (status != Status::OK) {
+      if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure()
                << "Merge failed with status " << status;
       }
@@ -260,11 +264,11 @@ class ConflictResolverImpl : public ConflictResolver {
 
  private:
   // ConflictResolver:
-  void Resolve(
-      fidl::InterfaceHandle<PageSnapshot> left_version,
-      fidl::InterfaceHandle<PageSnapshot> right_version,
-      fidl::InterfaceHandle<PageSnapshot> common_version,
-      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
+  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
+               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
+               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+               fidl::InterfaceHandle<ledger::MergeResultProvider>
+                   result_provider) override {
     requests.emplace_back(std::move(left_version), std::move(right_version),
                           std::move(common_version),
                           std::move(result_provider));
@@ -274,11 +278,11 @@ class ConflictResolverImpl : public ConflictResolver {
   fidl::Binding<ConflictResolver> binding_;
 };
 
-class TestConflictResolverFactory : public ConflictResolverFactory {
+class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
  public:
   TestConflictResolverFactory(
-      MergePolicy policy,
-      fidl::InterfaceRequest<ConflictResolverFactory> request,
+      ledger::MergePolicy policy,
+      fidl::InterfaceRequest<ledger::ConflictResolverFactory> request,
       ftl::Closure on_get_policy_called_callback,
       ftl::TimeDelta response_delay = ftl::TimeDelta::FromMilliseconds(0))
       : policy_(policy),
@@ -306,13 +310,13 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
 
   void NewConflictResolver(
       fidl::Array<uint8_t> page_id,
-      fidl::InterfaceRequest<ConflictResolver> resolver) override {
+      fidl::InterfaceRequest<ledger::ConflictResolver> resolver) override {
     resolvers.emplace(std::piecewise_construct,
                       std::forward_as_tuple(convert::ToString(page_id)),
                       std::forward_as_tuple(std::move(resolver)));
   }
 
-  MergePolicy policy_;
+  ledger::MergePolicy policy_;
   fidl::Binding<ConflictResolverFactory> binding_;
   ftl::Closure callback_;
   ftl::TimeDelta response_delay_;
@@ -321,7 +325,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
 ::testing::AssertionResult ChangesMatch(
     std::vector<std::string> expected_keys,
     std::vector<std::string> expected_values,
-    const fidl::Array<EntryPtr>& found_entries) {
+    const fidl::Array<ledger::EntryPtr>& found_entries) {
   FTL_DCHECK(expected_keys.size() == expected_values.size());
   if (found_entries.size() != expected_keys.size()) {
     return ::testing::AssertionFailure()
@@ -346,62 +350,72 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
 
 TEST_F(MergingIntegrationTest, Merging) {
   auto instance = NewLedgerAppInstance();
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  PageWatcherPtr watcher1_ptr;
+  ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot1;
+  page1->GetSnapshot(
+      snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  PageWatcherPtr watcher2_ptr;
+  ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot2;
+  page2->GetSnapshot(
+      snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Bob"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("phone"), convert::ToArray("0123456789"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   // Verify that each change is seen by the right watcher.
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, watcher1.changes_seen);
-  PageChangePtr change = std::move(watcher1.last_page_change_);
+  ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", ToString(change->changes[0]->value));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
   EXPECT_EQ("Alice", ToString(change->changes[1]->value));
 
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -433,7 +447,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
 TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   auto instance = NewLedgerAppInstance();
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
@@ -441,68 +455,78 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   // Set up a resolver
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
+          ledger::MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
           [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  PageWatcherPtr watcher1_ptr;
+  ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot1;
+  page1->GetSnapshot(
+      snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  PageWatcherPtr watcher2_ptr;
+  ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
                    [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot2;
+  page2->GetSnapshot(
+      snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Bob"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("phone"), convert::ToArray("0123456789"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   // Verify that each change is seen by the right watcher.
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher1.changes_seen);
-  PageChangePtr change = std::move(watcher1.last_page_change_);
+  ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", ToString(change->changes[0]->value));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
   EXPECT_EQ("Alice", ToString(change->changes[1]->value));
 
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -519,11 +543,11 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   // Change the merge strategy.
   resolver_factory_ptr = nullptr;  // Suppress misc-use-after-move.
   resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
+      ledger::MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
       [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -550,45 +574,54 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("phone"), convert::ToArray("0123456789"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("email"), convert::ToArray("alice@example.org"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -602,8 +635,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  PageChangePtr change_left;
-  PageChangePtr change_right;
+  ledger::PageChangePtr change_left;
+  ledger::PageChangePtr change_right;
   ASSERT_TRUE(resolver_impl->requests[0].GetDiff(&change_left, &change_right));
 
   // Left change is the most recent, so the one made on |page2|.
@@ -617,44 +650,45 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
                            change_right->changes));
 
   // Common ancestor is empty.
-  PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
+  ledger::PageSnapshotPtr snapshot = ledger::PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
-  fidl::Array<EntryPtr> entries =
+  fidl::Array<ledger::EntryPtr> entries =
       SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   EXPECT_EQ(0u, entries.size());
 
   // Prepare the merged values
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("name");
-    merged_value->source = ValueSource::RIGHT;
+    merged_value->source = ledger::ValueSource::RIGHT;
     merged_values.push_back(std::move(merged_value));
   }
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("email");
-    merged_value->source = ValueSource::DELETE;
+    merged_value->source = ledger::ValueSource::DELETE;
     merged_values.push_back(std::move(merged_value));
   }
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("pager");
-    merged_value->source = ValueSource::NEW;
-    BytesOrReferencePtr value = BytesOrReference::New();
+    merged_value->source = ledger::ValueSource::NEW;
+    ledger::BytesOrReferencePtr value = ledger::BytesOrReference::New();
     value->set_bytes(convert::ToArray("pager@example.org"));
     merged_value->new_value = std::move(value);
     merged_values.push_back(std::move(merged_value));
   }
 
   // Watch for the change.
-  PageWatcherPtr watcher_ptr;
+  ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot2;
+  page1->GetSnapshot(
+      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -662,7 +696,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  fidl::Array<EntryPtr> final_entries =
+  fidl::Array<ledger::EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
@@ -672,24 +706,23 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
-  std::function<void(Status)> status_ok_callback = [](Status status) {
-    EXPECT_EQ(status, Status::OK);
-  };
+      ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
+  std::function<void(ledger::Status)> status_ok_callback =
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); };
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr),
                                          status_ok_callback);
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
   page1->StartTransaction(status_ok_callback);
   EXPECT_TRUE(page1.WaitForIncomingResponse());
@@ -728,8 +761,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  PageChangePtr change_left;
-  PageChangePtr change_right;
+  ledger::PageChangePtr change_left;
+  ledger::PageChangePtr change_right;
   ASSERT_TRUE(
       resolver_impl->requests[0].GetDiff(&change_left, &change_right, 1));
 
@@ -743,39 +776,46 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Bob"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -810,47 +850,54 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
 
   // Resolution should not crash the Ledger
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
 }
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Bob"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -866,13 +913,14 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   EXPECT_EQ(1u, resolver_impl->requests.size());
 
   // Change the factory.
-  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr2;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2), nullptr);
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2),
+          nullptr);
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr2),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
   // Two runs of the loop: one for the conflict resolution request, one for the
@@ -900,8 +948,8 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(500)));
 
   // Resolution should not crash the Ledger
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
 
   EXPECT_TRUE(resolver_impl2->requests[0].Merge(std::move(merged_values)));
   EXPECT_TRUE(RunLoopWithTimeout(ftl::TimeDelta::FromMilliseconds(200)));
@@ -913,39 +961,46 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 TEST_F(MergingIntegrationTest,
        CustomConflictResolutionResetFactory_FactoryRace) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Bob"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -961,14 +1016,14 @@ TEST_F(MergingIntegrationTest,
   EXPECT_EQ(1u, resolver_impl->requests.size());
 
   // Change the factory.
-  ConflictResolverFactoryPtr resolver_factory_ptr2;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr2;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory2 =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2), nullptr,
-          ftl::TimeDelta::FromMilliseconds(250));
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr2),
+          nullptr, ftl::TimeDelta::FromMilliseconds(250));
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr2),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
   // Two runs of the loop: one for the conflict resolution request, one for the
@@ -993,39 +1048,46 @@ TEST_F(MergingIntegrationTest,
 
 TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("email"), convert::ToArray("alice@example.org"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1040,37 +1102,38 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Prepare the merged values
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("name");
-    merged_value->source = ValueSource::RIGHT;
+    merged_value->source = ledger::ValueSource::RIGHT;
     merged_values.push_back(std::move(merged_value));
   }
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("email");
-    merged_value->source = ValueSource::DELETE;
+    merged_value->source = ledger::ValueSource::DELETE;
     merged_values.push_back(std::move(merged_value));
   }
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("pager");
-    merged_value->source = ValueSource::NEW;
-    BytesOrReferencePtr value = BytesOrReference::New();
+    merged_value->source = ledger::ValueSource::NEW;
+    ledger::BytesOrReferencePtr value = ledger::BytesOrReference::New();
     value->set_bytes(convert::ToArray("pager@example.org"));
     merged_value->new_value = std::move(value);
     merged_values.push_back(std::move(merged_value));
   }
 
   // Watch for the change.
-  PageWatcherPtr watcher_ptr;
+  ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
                   [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot;
+  page1->GetSnapshot(
+      snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
@@ -1079,7 +1142,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  fidl::Array<EntryPtr> final_entries =
+  fidl::Array<ledger::EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
@@ -1088,60 +1151,69 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
 
 TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
-          nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::AUTOMATIC_WITH_FALLBACK,
+          GetProxy(&resolver_factory_ptr), nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
   // Watch for changes.
-  PageWatcherPtr watcher_ptr;
+  ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
                   []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot2;
+  page1->GetSnapshot(
+      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("email"), convert::ToArray("alice@example.org"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("phone"), convert::ToArray("0123456789"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
   // We should have seen the first commit at this point.
   EXPECT_EQ(1u, watcher.changes_seen);
 
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1158,7 +1230,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
   EXPECT_EQ(2u, watcher.changes_seen);
 
-  fidl::Array<EntryPtr> final_entries =
+  fidl::Array<ledger::EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
   ASSERT_EQ(4u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
@@ -1169,43 +1241,50 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
 TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
-          nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::AUTOMATIC_WITH_FALLBACK,
+          GetProxy(&resolver_factory_ptr), nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("city"), convert::ToArray("San Francisco"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1219,8 +1298,8 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  PageChangePtr change_left;
-  PageChangePtr change_right;
+  ledger::PageChangePtr change_left;
+  ledger::PageChangePtr change_right;
   ASSERT_TRUE(resolver_impl->requests[0].GetDiff(&change_left, &change_right));
 
   // Left change is the most recent, so the one made on |page2|.
@@ -1232,29 +1311,30 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
                            std::vector<std::string>({"Paris"}),
                            change_right->changes));
   // Common ancestor is empty.
-  PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
+  ledger::PageSnapshotPtr snapshot = ledger::PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
-  fidl::Array<EntryPtr> entries =
+  fidl::Array<ledger::EntryPtr> entries =
       SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   EXPECT_EQ(0u, entries.size());
 
   // Prepare the merged values
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("city");
-    merged_value->source = ValueSource::RIGHT;
+    merged_value->source = ledger::ValueSource::RIGHT;
     merged_values.push_back(std::move(merged_value));
   }
 
   // Watch for the change.
-  PageWatcherPtr watcher_ptr;
+  ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
                   []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot2;
+  page1->GetSnapshot(
+      snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
@@ -1262,7 +1342,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  fidl::Array<EntryPtr> final_entries =
+  fidl::Array<ledger::EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
   ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
@@ -1271,43 +1351,50 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
 
 TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
-          nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::AUTOMATIC_WITH_FALLBACK,
+          GetProxy(&resolver_factory_ptr), nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Put(
+      convert::ToArray("city"), convert::ToArray("Paris"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->StartTransaction(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("name"), convert::ToArray("Alice"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"),
-             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Put(
+      convert::ToArray("city"), convert::ToArray("San Francisco"),
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
-  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page1->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  page2->Commit(
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -1322,30 +1409,31 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Prepare the merged values
-  fidl::Array<MergedValuePtr> merged_values =
-      fidl::Array<MergedValuePtr>::New(0);
+  fidl::Array<ledger::MergedValuePtr> merged_values =
+      fidl::Array<ledger::MergedValuePtr>::New(0);
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("city");
-    merged_value->source = ValueSource::RIGHT;
+    merged_value->source = ledger::ValueSource::RIGHT;
     merged_values.push_back(std::move(merged_value));
   }
   {
-    MergedValuePtr merged_value = MergedValue::New();
+    ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
     merged_value->key = convert::ToArray("previous_city");
-    merged_value->source = ValueSource::NEW;
-    merged_value->new_value = BytesOrReference::New();
+    merged_value->source = ledger::ValueSource::NEW;
+    merged_value->new_value = ledger::BytesOrReference::New();
     merged_value->new_value->set_bytes(convert::ToArray("San Francisco"));
     merged_values.push_back(std::move(merged_value));
   }
 
   // Watch for the change.
-  PageWatcherPtr watcher_ptr;
+  ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
                   []() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
-                     [](Status status) { EXPECT_EQ(Status::OK, status); });
+  ledger::PageSnapshotPtr snapshot;
+  page1->GetSnapshot(
+      snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
+      [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
@@ -1354,7 +1442,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   // Wait for the watcher to be called.
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  fidl::Array<EntryPtr> final_entries =
+  fidl::Array<ledger::EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
   ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
@@ -1367,69 +1455,69 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
 // made in a commit, then reverted in another commit).
 TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::AUTOMATIC_WITH_FALLBACK, GetProxy(&resolver_factory_ptr),
-          nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
-  Status status;
+          ledger::MergePolicy::AUTOMATIC_WITH_FALLBACK,
+          GetProxy(&resolver_factory_ptr), nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
+  ledger::Status status;
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
   EXPECT_FALSE(RunLoopWithTimeout());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
   // Watch for changes.
-  PageWatcherPtr watcher_ptr;
+  ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr), MakeQuitTask());
-  PageSnapshotPtr snapshot1;
+  ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher_ptr),
                      callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page2->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page1->Commit(callback::Capture(MakeQuitTask(), &status));
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   // We should have seen the first commit of page 1.
   EXPECT_EQ(1u, watcher.changes_seen);
 
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page1->Delete(convert::ToArray("name"),
                 callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page1->Commit(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   // We should have seen the second commit of page 1.
   EXPECT_EQ(2u, watcher.changes_seen);
@@ -1437,11 +1525,11 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   page2->Commit(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(status, ledger::Status::OK);
 
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -1457,7 +1545,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   EXPECT_EQ(3u, watcher.changes_seen);
 
-  fidl::Array<EntryPtr> final_entries =
+  fidl::Array<ledger::EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
   ASSERT_EQ(1u, final_entries.size());
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[0]->key));
@@ -1465,46 +1553,47 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
 TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
   auto instance = NewLedgerAppInstance();
-  ConflictResolverFactoryPtr resolver_factory_ptr;
+  ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
-          MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr), nullptr);
-  LedgerPtr ledger_ptr = instance->GetTestLedger();
+          ledger::MergePolicy::CUSTOM, GetProxy(&resolver_factory_ptr),
+          nullptr);
+  ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
-      [](Status status) { EXPECT_EQ(status, Status::OK); });
+      [](ledger::Status status) { EXPECT_EQ(status, ledger::Status::OK); });
   EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
 
-  PagePtr page1 = instance->GetTestPage();
+  ledger::PagePtr page1 = instance->GetTestPage();
   fidl::Array<uint8_t> test_page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
   EXPECT_FALSE(RunLoopWithTimeout());
-  PagePtr page2 = instance->GetPage(test_page_id, Status::OK);
+  ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
-  Status status = Status::UNKNOWN_ERROR;
+  ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 
   page2->StartTransaction(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
              callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Commit(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
   page2->Commit(callback::Capture(MakeQuitTask(), &status));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(ledger::Status::OK, status);
 
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -1517,11 +1606,11 @@ TEST_F(MergingIntegrationTest, DeleteDuringConflictResolution) {
             ->second);
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
-  instance->DeletePage(test_page_id, Status::OK);
-  EXPECT_FALSE(
-      resolver_impl->requests[0].Merge(fidl::Array<MergedValuePtr>::New(0)));
+  instance->DeletePage(test_page_id, ledger::Status::OK);
+  EXPECT_FALSE(resolver_impl->requests[0].Merge(
+      fidl::Array<ledger::MergedValuePtr>::New(0)));
 }
 
 }  // namespace
-}  // namespace integration_tests
-}  // namespace ledger
+}  // namespace integration
+}  // namespace test
