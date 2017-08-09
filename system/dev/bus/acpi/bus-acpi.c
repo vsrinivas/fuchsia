@@ -237,6 +237,16 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
     char name[5] = { 0 };
     memcpy(name, &info->Name, sizeof(name) - 1);
 
+    // TODO: This is a temporary workaround until we have full ACPI device
+    // enumeration. If this is the I2C1 bus, we run _PS0 so the controller
+    // is active.
+    if (!memcmp(name, "I2C1", 5)) {
+        ACPI_STATUS acpi_status = AcpiEvaluateObject(handle, (char*)"_PS0", NULL, NULL);
+        if (acpi_status != AE_OK) {
+            printf("acpi-bus: acpi error 0x%x in I2C1._PS0\n", acpi_status);
+        }
+    }
+
     mx_device_prop_t props[4];
     int propcount = 0;
 

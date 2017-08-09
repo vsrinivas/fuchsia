@@ -73,6 +73,10 @@ mx_status_t devhost_init_pcie(void) {
     return status;
 }
 
+void devhost_acpi_ps0(char* arg) {
+    acpi_ps0(&acpi_root, arg, strlen(arg));
+}
+
 #endif
 
 void devhost_acpi_set_rpc(mx_handle_t handle) {
@@ -87,9 +91,5 @@ void devhost_acpi_poweroff(void) {
 void devhost_acpi_reboot(void) {
     acpi_s_state_transition(&acpi_root, ACPI_S_STATE_REBOOT);
     mx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
-}
-
-void devhost_acpi_ps0(char* arg) {
-    acpi_ps0(&acpi_root, arg, strlen(arg));
 }
 

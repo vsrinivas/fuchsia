@@ -707,6 +707,7 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     if (status < 0)
         goto fail;
 
+#if !ACPI_BUS_DRV
     // This is a temporary workaround until we have full ACPI device
     // enumeration. If this is the I2C1 bus, we run _PS0 so the controller is
     // active.
@@ -724,6 +725,7 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
             close(dmctlfd);
         }
     }
+#endif
 
     // Configure the I2C controller. We don't need to hold the lock because
     // nobody else can see this controller yet.

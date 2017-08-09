@@ -66,7 +66,9 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
                      "kerneldebug - send a command to the kernel\n"
                      "ktraceoff   - stop kernel tracing\n"
                      "ktraceon    - start kernel tracing\n"
+#if !ACPI_BUS_DRV
                      "acpi-ps0    - invoke the _PS0 method on an acpi object\n"
+#endif
                      "devprops    - dump published devices and their binding properties\n"
                      "drivers     - list discovered drivers and their properties\n"
                      );
@@ -102,6 +104,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         mx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
         return MX_OK;
     }
+#if !ACPI_BUS_DRV
     if ((len > 9) && !memcmp(cmd, "acpi-ps0:", 9)) {
         char arg[len - 8];
         memcpy(arg, cmd + 9, len - 9);
@@ -109,6 +112,7 @@ static mx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         devhost_acpi_ps0(arg);
         return MX_OK;
     }
+#endif
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
         return mx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
     }
