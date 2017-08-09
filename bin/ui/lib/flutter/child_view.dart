@@ -25,9 +25,8 @@ import 'package:meta/meta.dart';
 export 'package:apps.mozart.services.views/view_token.fidl.dart' show ViewOwner;
 
 ViewContainerProxy _initViewContainer() {
-  final int viewContainerHandle = MozartStartupInfo.takeViewContainer();
-  if (viewContainerHandle == null) return null;
-  final core.Handle handle = new core.Handle(viewContainerHandle);
+  final core.Handle handle = MozartStartupInfo.takeViewContainer();
+  if (handle == null) return null;
   final ViewContainerProxy proxy = new ViewContainerProxy()
     ..ctrl.bind(new InterfaceHandle<ViewContainer>(new core.Channel(handle), 0))
     ..setListener(_ViewContainerListenerImpl.instance.createInterfaceHandle());
@@ -159,9 +158,9 @@ class ChildViewConnection {
     assert(_sceneHost == null);
     final core.Eventpair pair = new core.Eventpair();
     assert(pair.status == core.NO_ERROR);
-    _sceneHost = new ui.SceneHost(pair.passEndpoint0().handle.release());
+    _sceneHost = new ui.SceneHost(pair.passEndpoint0());
     _viewKey = _nextViewKey++;
-    _viewContainer.addChild(_viewKey, _viewOwner, pair.passEndpoint1().handle);
+    _viewContainer.addChild(_viewKey, _viewOwner, pair.passEndpoint1());
     _viewOwner = null;
     assert(!_ViewContainerListenerImpl.instance._connections
         .containsKey(_viewKey));
@@ -510,7 +509,6 @@ class View {
   /// |provider|.
   static void offerServiceProvider(
       InterfaceHandle<ServiceProvider> provider, List<String> services) {
-    Mozart.offerServiceProvider(
-        provider.passChannel().handle.release(), services);
+    Mozart.offerServiceProvider(provider.passChannel().handle, services);
   }
 }

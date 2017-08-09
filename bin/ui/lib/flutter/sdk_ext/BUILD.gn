@@ -11,6 +11,7 @@ source_set("sdk_ext") {
   deps = [
     "//apps/mozart/services/views",
     "//dart/runtime:dart_api",
+    "//lib/fidl/dart/sdk_ext",
     "//lib/ftl",
     "//lib/tonic",
     "//magenta/system/ulib/mx",

@@ -4,26 +4,28 @@
 
 library dart_mozart;
 
+import 'dart:fidl.internal' show Handle;
+
 // Should be set to a |mozart::NativesDelegate*| by the embedder.
 int _context;
 
-int _viewContainer;
+Handle _viewContainer;
 
 class MozartStartupInfo {
-  static int takeViewContainer() {
-    final int handle = _viewContainer;
+  static Handle takeViewContainer() {
+    final Handle handle = _viewContainer;
     _viewContainer = null;
     return handle;
   }
 }
 
 class Mozart {
-  static void offerServiceProvider(int handle, List<String> services) {
+  static void offerServiceProvider(Handle handle, List<String> services) {
     _offerServiceProvider(_context, handle, services);
   }
 
   static void _offerServiceProvider(int context,
-                                    int handle,
+                                    Handle handle,
                                     List<String> services) native
       'Mozart_offerServiceProvider';
 }

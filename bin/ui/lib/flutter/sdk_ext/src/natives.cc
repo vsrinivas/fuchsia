@@ -11,10 +11,10 @@
 #include <vector>
 
 #include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/fidl/dart/sdk_ext/src/handle.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/tonic/handle_table.h"
 
 namespace mozart {
 
@@ -96,9 +96,9 @@ NativesDelegate::~NativesDelegate() {}
 
 void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   intptr_t context = 0;
-  mx_handle_t handle = 0;
   CHECK_INTEGER_ARGUMENT(args, 0, &context);
-  CHECK_HANDLE_ARGUMENT(args, 1, &handle);
+  ftl::RefPtr<fidl::dart::Handle> handle =
+      fidl::dart::Handle::Unwrap(Dart_GetNativeArgument(args, 1));
 
   if (!context || !handle)
     return;
@@ -133,7 +133,7 @@ void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   NativesDelegate* delegate = reinterpret_cast<NativesDelegate*>(context);
   fidl::InterfaceHandle<app::ServiceProvider> provider =
       fidl::InterfaceHandle<app::ServiceProvider>(
-          mx::channel(handle), 0);
+          mx::channel(handle->ReleaseHandle()), 0);
 
   View* view = delegate->GetMozartView();
   view->OfferServiceProvider(std::move(provider), std::move(services));
