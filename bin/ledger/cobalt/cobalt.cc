@@ -63,19 +63,10 @@ void CobaltContext::ReportEvent(CobaltEvent event) {
 }
 
 void CobaltContext::ConnectToCobaltApplication() {
-  auto error_handler = [this] { OnConnectionError(); };
-
-  app::ServiceProviderPtr child_services;
-  auto launch_info = app::ApplicationLaunchInfo::New();
-  launch_info->url = "cobalt";
-  launch_info->services = child_services.NewRequest();
-  app_context_->launcher()->CreateApplication(std::move(launch_info),
-                                              cobalt_controller_.NewRequest());
-  cobalt_controller_.set_connection_error_handler(error_handler);
-  cobalt::CobaltEncoderFactoryPtr factory;
-  app::ConnectToService(child_services.get(), factory.NewRequest());
-  factory->GetEncoder(kLedgerCobaltProjectId, encoder_.NewRequest());
-  encoder_.set_connection_error_handler(error_handler);
+  auto encoder_factory =
+    app_context_->ConnectToEnvironmentService<cobalt::CobaltEncoderFactory>();
+  encoder_factory->GetEncoder(kLedgerCobaltProjectId, encoder_.NewRequest());
+  encoder_.set_connection_error_handler([this] { OnConnectionError(); });
 
   SendEvents();
 }
