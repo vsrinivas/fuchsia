@@ -37,18 +37,16 @@ TOYBOX_ROOTFS="$TOYBOX_BUILD_DIR/rootfs.ext2"
 # Where to prep the toybox directory structure.
 TOYBOX_SYSROOT="$TOYBOX_BUILD_DIR/fs"
 
-# The toybox version we're building.
-TOYBOX_VERSION="0.7.4"
-
 # Where the toybox srcs are expected to be.
-TOYBOX_SRC_DIR="$PULLDIR/toybox-$TOYBOX_VERSION"
+TOYBOX_SRC_DIR="$PULLDIR/toybox"
 
 usage() {
-    echo "usage: ${0} [-rif]"
+    echo "usage: ${0} [-rif] [-d toybox_dir]"
     echo ""
     echo "    -r Build ext2 filesystem image."
     echo "    -i Build initrd CPIO archive."
     echo "    -f Force a rebuild even if the artifact already exists."
+    echo "    -d Directory to clone toybox into."
     echo ""
     exit 1
 }
@@ -56,24 +54,15 @@ usage() {
 # Ensures the toybox sources are downloaded.
 #
 # $1 - Directory to unpack the sources into.
-# $2 - Toybox version requested.
 get_toybox_source() {
   local toybox_src=$1
-  local toybox_version=$2
 
   if [ ! -d "$toybox_src" ]; then
-    echo "Downloading toybox to $toybox_src"
-    if curl https://landley.net/toybox/downloads/toybox-$toybox_version.tar.gz | \
-        tar xz -C `dirname $toybox_src`; then
-      echo "We got the box"
-    else
-      echo "Some issues getting the box!"
-      exit 1
-    fi
+    git clone --depth 1 --branch machina https://magenta-guest.googlesource.com/third_party/toybox "$toybox_src"
   fi
 }
 
-# Build toybox and create and create a sysroot.
+# Build toybox and create a sysroot.
 #
 # $1 - Toybox source directory.
 # $2 - Directory to build the toybox sysroot with the toybox binary and symlinks.
@@ -82,22 +71,6 @@ build_toybox() {
   local sysroot_dir="$2"
 
   make -C "$toybox_src" defconfig
-
-  # Apply the patch to include the shell
-  echo "Applying config patches..."
-  patch "$toybox_src/.config" << '_EOF'
---- .config.old 2017-07-22 03:04:04.335638468 +1000
-+++ .config 2017-07-22 03:04:18.391546765 +1000
-@@ -159,7 +159,7 @@
- # CONFIG_PING is not set
- # CONFIG_ROUTE is not set
- # CONFIG_SETFATTR is not set
--# CONFIG_SH is not set
-+CONFIG_SH=y
- # CONFIG_CD is not set
- # CONFIG_EXIT is not set
- # CONFIG_SULOGIN is not set
-_EOF
 
   LDFLAGS="--static" make -C "$toybox_src" -j100
 
@@ -162,17 +135,18 @@ declare FORCE="${FORCE:-false}"
 declare BUILD_INITRD="${BUILD_INITRD:-false}"
 declare BUILD_ROOTFS="${BUILD_ROOTFS:-false}"
 
-while getopts "fir" opt; do
+while getopts "fird:" opt; do
   case "${opt}" in
     f) FORCE="true" ;;
     i) BUILD_INITRD="true" ;;
     r) BUILD_ROOTFS="true" ;;
+    d) TOYBOX_SRC_DIR="${OPTARG}" ;;
     *) usage ;;
   esac
 done
 
 # Do we have something to build?
-if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then 
+if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then
   echo "Either -r or -i is required."
   usage
 fi
@@ -186,14 +160,14 @@ if [[ ! "${FORCE}" = "true" ]]; then
     BUILD_ROOTFS="false"
   fi
 fi
-if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then 
+if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; then
   echo "All targets up to date. Pass -f to force a rebuild."
   exit 0
 fi
 
 readonly "${FORCE}" "${BUILD_INITRD}" "${BUILD_ROOTFS}"
 
-get_toybox_source "${TOYBOX_SRC_DIR}" "${TOYBOX_VERSION}"
+get_toybox_source "${TOYBOX_SRC_DIR}"
 
 build_toybox "${TOYBOX_SRC_DIR}" "${TOYBOX_SYSROOT}"
 
