@@ -23,9 +23,16 @@
 /* Interrupt vectors. */
 #define X86_INT_BLOCK   33u
 
+static mx_status_t block_queue_notify(virtio_queue_t* requestq, void* mem_addr, size_t mem_size) {
+    block_t* block = (block_t*) requestq->device;
+    return file_block_device(block, mem_addr, mem_size);
+}
+
 mx_status_t block_init(block_t* block, const char* block_path) {
     memset(block, 0, sizeof(*block));
     block->queue.size = QUEUE_SIZE;
+    block->queue.notify = &block_queue_notify;
+    block->queue.device = block;
 
     // Open block file. First try to open as read-write but fall back to read
     // only if that fails.
@@ -135,7 +142,7 @@ mx_status_t block_write(guest_state_t* guest_state, mx_handle_t vcpu, uint16_t p
             fprintf(stderr, "Only one queue per device is supported\n");
             return MX_ERR_NOT_SUPPORTED;
         }
-        mx_status_t status = file_block_device(block, mem_addr, mem_size);
+        mx_status_t status = queue->notify(queue, mem_addr, mem_size);
         if (status != MX_OK) {
             fprintf(stderr, "Block device operation failed %d\n", status);
             return status;

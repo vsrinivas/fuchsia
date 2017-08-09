@@ -16,6 +16,10 @@ enum {
     VIRTIO_STATUS_UNSUPPORTED   = 2,
 };
 
+typedef struct virtio_queue virtio_queue_t;
+typedef mx_status_t (*virtio_queue_notify_fn_t)(virtio_queue_t* queue, void* mem_addr,
+                                                size_t mem_size);
+
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
  * NOTE(abdulla): This structure points to guest-controlled memory.
@@ -25,6 +29,12 @@ typedef struct virtio_queue {
     uint32_t pfn;
     uint32_t size;
     uint16_t index;
+
+    // Callback function to handle notification events for this queue.
+    virtio_queue_notify_fn_t notify;
+    // Private pointer for use by the device that owns this queue.
+    void* device;
+
     volatile struct vring_desc* desc;   // guest-controlled
 
     volatile struct vring_avail* avail; // guest-controlled
