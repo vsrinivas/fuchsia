@@ -34,9 +34,9 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 namespace minfs {
 
-constexpr uint64_t kMinfsMagic0 = (0x002153466e694d21ULL);
-constexpr uint64_t kMinfsMagic1 = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsVersion = 0x00000004;
+constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
+constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
+constexpr uint32_t kMinfsVersion        = 0x00000005;
 
 constexpr uint32_t kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
@@ -46,12 +46,16 @@ constexpr uint32_t kMinfsBlockBits      = (kMinfsBlockSize * 8);
 constexpr uint32_t kMinfsInodeSize      = 256;
 constexpr uint32_t kMinfsInodesPerBlock = (kMinfsBlockSize / kMinfsInodeSize);
 
-constexpr uint32_t kMinfsDirect   = 16;
-constexpr uint32_t kMinfsIndirect = 32;
+constexpr uint32_t kMinfsDirect         = 16;
+constexpr uint32_t kMinfsIndirect       = 31;
+constexpr uint32_t kMinfsDoublyIndirect = 1;
 
+constexpr uint32_t kMinfsDirectPerIndirect = (kMinfsBlockSize / sizeof(uint32_t));
 // not possible to have a block at or past this one
 // due to the limitations of the inode and indirect blocks
-constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + kMinfsIndirect * (kMinfsBlockSize / sizeof(uint32_t)));
+constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect)
+                                        + (kMinfsDoublyIndirect * kMinfsDirectPerIndirect
+                                        * kMinfsDirectPerIndirect));
 constexpr uint64_t kMinfsMaxFileSize  = kMinfsMaxFileBlock * kMinfsBlockSize;
 
 constexpr uint32_t kMinfsTypeFile = 8;
@@ -118,6 +122,7 @@ typedef struct {
     uint32_t rsvd[5];
     uint32_t dnum[kMinfsDirect];    // direct blocks
     uint32_t inum[kMinfsIndirect];  // indirect blocks
+    uint32_t dinum[kMinfsDoublyIndirect]; // doubly indirect blocks
 } minfs_inode_t;
 
 static_assert(sizeof(minfs_inode_t) == kMinfsInodeSize,

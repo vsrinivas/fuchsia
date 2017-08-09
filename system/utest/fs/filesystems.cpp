@@ -38,7 +38,7 @@ const fsck_options_t test_fsck_options = {
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 #define TEST_BLOCK_SIZE 512
-#define TEST_BLOCK_COUNT (1 << 23)
+#define TEST_BLOCK_COUNT (1 << 20)
 // This slice size is intentionally somewhat small, so
 // we can test increasing the size of a "single-slice"
 // inode table. We may want support for tests with configurable

@@ -187,15 +187,15 @@ mx_status_t Minfs::InoFree(VnodeMinfs* vn) {
             return status;
         }
 
-        uintptr_t iaddr = reinterpret_cast<uintptr_t>(vn->vmo_indirect_->GetData());
-        uint32_t* entry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * n);
+        uint32_t* entry;
+        vn->ReadIndirectVmoBlock(n, &entry);
 #else
-        uint8_t idata[kMinfsBlockSize];
-        bc_->Readblk(vn->inode_.inum[n], idata);
-        uint32_t* entry = reinterpret_cast<uint32_t*>(idata);
+        uint32_t entry[kMinfsBlockSize];
+        vn->ReadIndirectBlock(vn->inode_.inum[n], entry);
 #endif
-        // release the blocks pointed at by the entries in the indirect block
-        for (unsigned m = 0; m < (kMinfsBlockSize / sizeof(uint32_t)); m++) {
+
+        // release the direct blocks pointed at by the entries in the indirect block
+        for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
             if (entry[m] == 0) {
                 continue;
             }
@@ -205,6 +205,62 @@ mx_status_t Minfs::InoFree(VnodeMinfs* vn) {
         // release the direct block itself
         block_count--;
         BlockFree(&txn, vn->inode_.inum[n]);
+
+    }
+
+    // release doubly indirect blocks
+    for (unsigned n = 0; n < kMinfsDoublyIndirect; n++) {
+        if (vn->inode_.dinum[n] == 0) {
+            continue;
+        }
+#ifdef __Fuchsia__
+        mx_status_t status;
+        if ((status = vn->InitIndirectVmo()) != MX_OK) {
+            return status;
+        }
+
+        uint32_t* dentry;
+        vn->ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(n), &dentry);
+#else
+        uint32_t dentry[kMinfsBlockSize];
+        vn->ReadIndirectBlock(vn->inode_.dinum[n], dentry);
+#endif
+        // release indirect blocks
+        for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
+            if (dentry[m] == 0) {
+                continue;
+            }
+
+#ifdef __Fuchsia__
+            if ((status = vn->LoadIndirectWithinDoublyIndirect(n)) != MX_OK) {
+                return status;
+            }
+
+            uint32_t* entry;
+            vn->ReadIndirectVmoBlock(GetVmoOffsetForIndirect(n) + m, &entry);
+
+#else
+            uint32_t entry[kMinfsBlockSize];
+            vn->ReadIndirectBlock(dentry[m], entry);
+#endif
+
+            // release direct blocks
+            for (unsigned k = 0; k < kMinfsDirectPerIndirect; k++) {
+                if (entry[k] == 0) {
+                    continue;
+                }
+
+                block_count--;
+                BlockFree(&txn, entry[k]);
+            }
+
+            block_count--;
+            BlockFree(&txn, dentry[m]);
+        }
+
+        // release the doubly indirect block itself
+        block_count--;
+        BlockFree(&txn, vn->inode_.dinum[n]);
     }
 
     CountUpdate(&txn);
@@ -356,7 +412,8 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* i
     void* bmdata;
     MX_DEBUG_ASSERT(ino <= inode_map_.size());
     uint32_t ibm_relative_bno = (ino / kMinfsBlockBits);
-    if ((bmdata = fs::GetBlock<kMinfsBlockSize>(inode_map_.StorageUnsafe()->GetData(), ibm_relative_bno)) == nullptr) {
+    if ((bmdata = fs::GetBlock<kMinfsBlockSize>(inode_map_.StorageUnsafe()->GetData(),
+        ibm_relative_bno)) == nullptr) {
         panic("inode not in bitmap");
     }
 
@@ -493,7 +550,6 @@ mx_status_t Minfs::BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno) {
     void* bmdata = fs::GetBlock<kMinfsBlockSize>(block_map_.StorageUnsafe()->GetData(), bmbno_rel);
     bc_->Writeblk(bmbno_abs, bmdata);
 #endif
-    ValidateBno(bno);
     *out_bno = bno;
 
     CountUpdate(txn);

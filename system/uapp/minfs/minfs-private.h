@@ -210,7 +210,8 @@ private:
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t Setattr(vnattr_t* a) final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
-    mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
+    mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len,
+                       uint32_t mode) final;
     mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
     mx_status_t Rename(mxtl::RefPtr<fs::Vnode> newdir,
                        const char* oldname, size_t oldlen,
@@ -224,15 +225,92 @@ private:
     mx_status_t AttachRemote(fs::MountChannel h) final;
     mx_status_t InitVmo();
     mx_status_t InitIndirectVmo();
+    // Loads indirect blocks up to and including the doubly indirect block at |index|
+    mx_status_t LoadIndirectWithinDoublyIndirect(uint32_t index);
+    // Initializes the indirect VMO, grows it to |size| bytes, and reads |count| indirect
+    // blocks from |iarray| into the indirect VMO, starting at block offset |offset|.
+    mx_status_t LoadIndirectBlocks(uint32_t* iarray, uint32_t count, uint32_t offset,
+                                   uint64_t size);
 #endif
 
-    // Get the disk block 'bno' corresponding to the 'nth' logical block of the file.
+    // Get the disk block 'bno' corresponding to the 'nth' block relative to the start of the
+    // current direct/indirect/doubly indirect block section.
     // Allocate the block if requested with a non-null "txn".
     mx_status_t GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno);
+    // Acquire (or allocate) a direct block |*bno|. If allocation occurs,
+    // |*dirty| is set to true, and the inode block is written to disk.
+    //
+    // Example call for accessing the 0th direct block in the inode:
+    // GetBnoDirect(txn, &inode_.dnum[0], &dirty);
+    mx_status_t GetBnoDirect(WriteTxn* txn, uint32_t* bno, bool* dirty);
+    // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within an indirect
+    // block |*ibno|, which is allocated if necessary. If allocation of the indirect block occurs,
+    // |*dirty| is set to true, and the indirect and inode blocks are written to disk.
+    //
+    // On Fuchsia, |ib_vmo_offset| contains the block offset of |*ibno| within the cached
+    // indirect VMO. On other platforms, this argument may be ignored.
+    //
+    // Example call for accessing the 3rd direct block within the 2nd indirect block:
+    // GetBnoIndirect(txn, 3, 2, &inode_.inum[2], &bno, &dirty);
+    mx_status_t GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t ib_vmo_offset,
+                               uint32_t* ibno, uint32_t* bno, bool* dirty);
+    // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within a doubly
+    // indirect block |*dibno|, at index |ibindex| within that indirect block. If allocation occurs,
+    // |*dirty| is set to true, and the doubly indirect, indirect, and inode blocks are written to
+    // disk. |dib_vmo_offset| and |ib_vmo_offset| are the offset of the doubly indirect block and
+    // the doubly indirect block's indirect block set within the indirect VMO, respectively.
+    //
+    // Example call for accessing the 3rd direct block in the 2nd indirect block
+    // in the 0th doubly indirect block:
+    // GetBnoDoublyIndirect(txn, 2, 3, GetVmoOffsetForDoublyIndirect(0), GetVmoOffsetForIndirect(0),
+    //                      &inode_.dinum[0], &bno, &dirty);
+    mx_status_t GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, uint32_t bindex,
+                                     uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
+                                     uint32_t* dibno, uint32_t* bno, bool* dirty);
 
     // Deletes all blocks (relateive to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
     mx_status_t BlocksShrink(WriteTxn* txn, uint32_t start);
+    // Shrink |count| direct blocks from the |barray| array of direct blocks. Sets |*dirty| to
+    // true if anything is deleted.
+    mx_status_t BlocksShrinkDirect(WriteTxn *txn, size_t count, uint32_t* barray, bool* dirty);
+    // Shrink |count| indirect blocks from the |iarray| array of indirect blocks. Sets |*dirty| to
+    // true if anything is deleted.
+    //
+    // For the first indirect block in a set, only remove the blocks from index |bindex| up to the
+    // end of the  indirect block. Only deletes this first indirect block if |bindex| is zero.
+    //
+    // On Fuchsia |ib_vmo_offset| contains the block offset of the |iarray| buffer within the
+    // cached indirect VMO. On other platforms, this argument may be ignored.
+    mx_status_t BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, size_t count,
+                                     uint32_t ib_vmo_offset, uint32_t* iarray, bool* dirty);
+    // Shrink |count| doubly indirect blocks from the |diarray| array of doubly indirect blocks.
+    // Sets |*dirty| to true if anything is deleted.
+    //
+    // For the first doubly indirect block in a set, only remove blocks from indirect blocks from
+    // index |ibindex| up to the end of the doubly indirect block. |bindex| is the first direct
+    // block to be deleted in the first indirect block of the first doubly indirect block. Only
+    // delete the doubly indirect block if |ibindex| is zero AND |bindex| is zero.
+    //
+    // On Fuchsia |dib_vmo_offset| contains the block offset of the |diarray| buffer within the
+    // cached indirect VMO, and |ib_vmo_offset| contains the block offset of the indirect blocks
+    // pointed to from the doubly indirect block at diarray[0]. On other platforms, this argument
+    // may be ignored.
+    mx_status_t BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibindex, uint32_t bindex,
+                                           size_t count, uint32_t dib_vmo_offset,
+                                           uint32_t ib_vmo_offset, uint32_t* diarray, bool* dirty);
+
+#ifdef __Fuchsia__
+    // Reads the block at |offset| in memory
+    void ReadIndirectVmoBlock(uint32_t offset, uint32_t** entry);
+    // Clears the block at |offset| in memory
+    void ClearIndirectVmoBlock(uint32_t offset);
+#else
+    // Reads the block at |bno| on disk
+    void ReadIndirectBlock(uint32_t bno, uint32_t* entry);
+    // Clears the block at |bno| on disk
+    void ClearIndirectBlock(uint32_t bno);
+#endif
 
     // Update the vnode's inode and write it to disk
     void InodeSync(WriteTxn* txn, uint32_t flags);
@@ -256,7 +334,14 @@ private:
     // avoid reading the entire file up-front. Until then, read the contents of
     // a VMO into memory when it is read/written.
     mx::vmo vmo_{};
+
+    // vmo_indirect_ contains all indirect and doubly indirect blocks in the following order:
+    // First kMinfsIndirect blocks                                - initial set of indirect blocks
+    // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
+    // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
+    //                                                              by doubly indirect blocks
     mxtl::unique_ptr<MappedVmo> vmo_indirect_{};
+
     vmoid_t vmoid_{};
     vmoid_t vmoid_indirect_{};
 
@@ -276,6 +361,29 @@ private:
     fs::WatcherContainer watcher_{};
 #endif
 };
+
+// Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect
+// block at dindex
+constexpr uint32_t GetVmoOffsetForIndirect(uint32_t dibindex) {
+    return kMinfsIndirect + kMinfsDoublyIndirect + (dibindex * kMinfsDirectPerIndirect);
+}
+
+// Return the required vmo size (in bytes) to store indirect blocks pointed to by doubly indirect
+// block dibindex
+constexpr size_t GetVmoSizeForIndirect(uint32_t dibindex) {
+    return GetVmoOffsetForIndirect(dibindex + 1) * kMinfsBlockSize;
+}
+
+// Return the block offset of doubly indirect blocks in vmo_indirect_
+constexpr uint32_t GetVmoOffsetForDoublyIndirect(uint32_t dibindex) {
+    MX_DEBUG_ASSERT(dibindex < kMinfsDoublyIndirect);
+    return kMinfsIndirect + dibindex;
+}
+
+// Return the required vmo size (in bytes) to store doubly indirect blocks in vmo_indirect_
+constexpr size_t GetVmoSizeForDoublyIndirect() {
+    return (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
+}
 
 // write the inode data of this vnode to disk (default does not update time values)
 void minfs_sync_vnode(mxtl::RefPtr<VnodeMinfs> vn, uint32_t flags);
@@ -319,6 +427,11 @@ private:
     uint32_t alloc_inodes_;
     uint32_t alloc_blocks_;
     mxtl::Array<int32_t> links_;
+
+    uint32_t cached_doubly_indirect_;
+    uint32_t cached_indirect_;
+    uint8_t doubly_indirect_cache_[kMinfsBlockSize];
+    uint8_t indirect_cache_[kMinfsBlockSize];
 };
 
 mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc);
