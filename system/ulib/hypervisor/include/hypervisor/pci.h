@@ -37,9 +37,10 @@
 #define PCI_ECAM_FUNCTION(addr)             (((addr) >> 12) & 0x7)
 #define PCI_ECAM_REGISTER(addr)             ((addr) & 0xfff)
 
-#define PCI_ECAM_ADDR(base, bus, device, function, reg) \
-    ((base) | ((bus) << 20) | ((device) << 15) | ((function) << 12) | (reg))
-
+typedef struct instruction instruction_t;
+typedef struct mx_guest_io mx_guest_io_t;
+typedef struct mx_guest_memory mx_guest_memory_t;
+typedef struct mx_vcpu_io mx_vcpu_io_t;
 typedef struct pci_device_attr pci_device_attr_t;
 
 /* Stores the state of PCI devices. */
@@ -49,14 +50,31 @@ typedef struct pci_device {
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
     // Device attributes.
-    const pci_device_attr_t* attributes;
+    const pci_device_attr_t* attr;
 } pci_device_t;
 
-typedef pci_device_t pci_bus_t[PCI_MAX_DEVICES];
+typedef struct pci_bus {
+    // Selected address in PCI config space.
+    uint32_t config_addr;
+    // Devices on the virtual PCI bus.
+    pci_device_t device[PCI_MAX_DEVICES];
+} pci_bus_t;
 
-void pci_bus_init(pci_bus_t bus);
-mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, size_t len, uint32_t* value);
-mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, size_t len, uint32_t value);
+void pci_bus_init(pci_bus_t* bus);
+
+/* Handle MMIO access to the PCI config space. */
+mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
+                            const instruction_t* inst);
+
+/* Handle PIO reads to the PCI config space. */
+mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,
+                         mx_vcpu_io_t* vcpu_io);
+
+/* Handle PIO writes to the PCI config space. */
+mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io);
+
+mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
+mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);
 
 /* Disable the given PCI device. By default, all devices on the bus are enabled
  * by pci_bus_init.
@@ -67,7 +85,7 @@ void pci_device_disable(pci_device_t* device);
  * given address with the specified IO type. Returns PCI_DEVICE_INVALID if no
  * mapping exists or IO is disabled for the mapping.
  */
-uint16_t pci_device_num(pci_bus_t bus, uint8_t io_type, uint16_t addr, uint16_t* off);
+uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off);
 
 /* Returns the bar size for the device. The device is the same value used to
  * index the device in PCI config space.

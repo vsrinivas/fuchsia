@@ -12,12 +12,13 @@ static bool read_config_register(void) {
     BEGIN_TEST;
 
     pci_bus_t bus;
-    pci_bus_init(bus);
+    pci_bus_init(&bus);
+    pci_device_t* device = &bus.device[PCI_DEVICE_ROOT_COMPLEX];
 
     // Access Vendor/Device ID as a single 32bit read.
     uint32_t value = 0;
-    EXPECT_EQ(pci_device_read(&bus[PCI_DEVICE_ROOT_COMPLEX], PCI_CONFIG_VENDOR_ID, 4, &value),
-              MX_OK, "Failed to read PCI_CONFIG_VENDOR_ID");
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_VENDOR_ID, 4, &value), MX_OK,
+              "Failed to read PCI_CONFIG_VENDOR_ID");
     EXPECT_EQ(value, PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16),
               "Unexpected value of PCI_CONFIG_VENDOR_ID");
 
@@ -29,13 +30,14 @@ static bool read_config_register_bytewise(void) {
     BEGIN_TEST;
 
     pci_bus_t bus;
-    pci_bus_init(bus);
+    pci_bus_init(&bus);
+    pci_device_t* device = &bus.device[PCI_DEVICE_ROOT_COMPLEX];
 
     uint32_t expected_device_vendor = PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
     for (int i = 0; i < 4; ++i) {
         uint16_t reg = PCI_CONFIG_VENDOR_ID + i;
         uint32_t value = 0;
-        EXPECT_EQ(pci_device_read(&bus[PCI_DEVICE_ROOT_COMPLEX], reg, 1, &value), MX_OK,
+        EXPECT_EQ(pci_device_read(device, reg, 1, &value), MX_OK,
                   "Failed to read PCI_CONFIG_VENDOR_ID");
         EXPECT_EQ(value, BITS_SHIFT(expected_device_vendor, i * 8 + 7, i * 8),
                   "Unexpected value of PCI_CONFIG_VENDOR_ID");
@@ -56,21 +58,22 @@ static bool read_bar_size(void) {
     BEGIN_TEST;
 
     pci_bus_t bus;
-    pci_bus_init(bus);
+    pci_bus_init(&bus);
+    pci_device_t* device = &bus.device[PCI_DEVICE_ROOT_COMPLEX];
 
     // Set all bits in the BAR register. The device will ignore writes to the
     // LSBs which we can read out to determine the size.
     EXPECT_EQ(
-        pci_device_write(&bus[PCI_DEVICE_ROOT_COMPLEX], PCI_CONFIG_BASE_ADDRESSES, 4, UINT32_MAX),
-        MX_OK, "Failed to write BAR0 to PCI config space");
+        pci_device_write(device, PCI_CONFIG_BASE_ADDRESSES, 4, UINT32_MAX), MX_OK,
+        "Failed to write BAR0 to PCI config space");
 
     // Read out BAR and compute size.
     uint32_t value = 0;
-    EXPECT_EQ(pci_device_read(&bus[PCI_DEVICE_ROOT_COMPLEX], PCI_CONFIG_BASE_ADDRESSES, 4, &value),
-              MX_OK, "Failed to read BAR0 from PCI config space");
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_BASE_ADDRESSES, 4, &value), MX_OK,
+              "Failed to read BAR0 from PCI config space");
     EXPECT_EQ(value & PCI_BAR_IO_TYPE_MASK, PCI_BAR_IO_TYPE_PIO,
               "Expected PIO bit to be set in BAR");
-    EXPECT_EQ(~(value & ~PCI_BAR_IO_TYPE_MASK) + 1, pci_bar_size(&bus[PCI_DEVICE_ROOT_COMPLEX]),
+    EXPECT_EQ(~(value & ~PCI_BAR_IO_TYPE_MASK) + 1, pci_bar_size(device),
               "Incorrect bar size read from pci device");
 
     END_TEST;

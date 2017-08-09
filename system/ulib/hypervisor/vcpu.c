@@ -102,83 +102,6 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_me
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t handle_pci_read(guest_state_t* guest_state, uint8_t bus, uint8_t device,
-                                   uint8_t function, uint16_t reg, size_t len, uint32_t* value) {
-    // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
-    //
-    // The host bus to PCI bridge must unambiguously report attempts to read the
-    // Vendor ID of non-existent devices. Since 0 FFFFh is an invalid Vendor ID,
-    // it is adequate for the host bus to PCI bridge to return a value of all
-    // 1's on read accesses to Configuration Space registers of non-existent
-    // devices.
-    if (bus > 0 || device >= PCI_MAX_DEVICES || function > 0) {
-        *value = (uint32_t) BIT_MASK(len * 8);
-        return MX_OK;
-    }
-    return pci_device_read(&guest_state->bus[device], reg, len, value);
-}
-
-static mx_status_t handle_pci_write(guest_state_t* guest_state, uint8_t bus, uint8_t device,
-                                    uint8_t function, uint16_t reg, size_t len, uint32_t value) {
-    // We don't expect software to ever write to an unimplemented device.
-    if (bus > 0 || device >= PCI_MAX_DEVICES || function > 0)
-        return MX_ERR_OUT_OF_RANGE;
-    return pci_device_write(&guest_state->bus[device], reg, len, value);
-}
-
-static mx_status_t handle_pci_mmio_access(guest_state_t* guest_state, uint8_t bus, uint8_t device,
-                                          uint8_t function, uint16_t reg,
-                                          const mx_guest_memory_t* memory,
-                                          const instruction_t* inst) {
-    uint32_t value = 0;
-    mx_status_t status;
-    switch (inst->type) {
-    case INST_TEST:
-        status = handle_pci_read(guest_state, bus, device, function, reg, inst->mem, &value);
-        if (status != MX_OK)
-            return status;
-
-        switch (inst->mem) {
-        case 1:
-            return inst_test8(inst, inst->imm, value);
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    case INST_MOV_READ:
-        status = handle_pci_read(guest_state, bus, device, function, reg, inst->mem, &value);
-        if (status != MX_OK)
-            return status;
-
-        switch (inst->mem) {
-        case 1:
-            return inst_read8(inst, value);
-        case 2:
-            return inst_read16(inst, value);
-        case 4:
-            return inst_read32(inst, value);
-        default:
-            return MX_ERR_NOT_SUPPORTED;
-        }
-    case INST_MOV_WRITE:
-        switch (inst->mem) {
-        case 2:
-            status = inst_write16(inst, (uint16_t*) &value);
-            break;
-        case 4:
-            status = inst_write32(inst, &value);
-            break;
-        default:
-            status = MX_ERR_NOT_SUPPORTED;
-            break;
-        }
-        if (status != MX_OK)
-            return status;
-
-        return handle_pci_write(guest_state, bus, device, function, reg, inst->mem, value);
-    }
-    return MX_ERR_NOT_SUPPORTED;
-}
-
 static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, const instruction_t* inst) {
     fprintf(stderr, "Unhandled address %#lx\n", memory->addr);
     if (inst->type == INST_MOV_READ)
@@ -222,12 +145,7 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
             break;
         case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP: {
             mtx_lock(&guest_state->mutex);
-            status = handle_pci_mmio_access(vcpu_context->guest_state,
-                                            PCI_ECAM_BUS(memory->addr),
-                                            PCI_ECAM_DEVICE(memory->addr),
-                                            PCI_ECAM_FUNCTION(memory->addr),
-                                            PCI_ECAM_REGISTER(memory->addr),
-                                            memory, &inst);
+            status = pci_bus_handler(vcpu_context->guest_state->bus, memory, &inst);
             mtx_unlock(&guest_state->mutex);
             break;
         }
@@ -264,29 +182,13 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
         status = uart_read(vcpu_context->guest_state->uart, io->port, &vcpu_io);
         break;
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
-        uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
-        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address >> bit_offset;
-        uint32_t bit_mask = (uint32_t) BIT_MASK(io->access_size * 8);
-        vcpu_io.access_size = io->access_size;
-        vcpu_io.u32 = (vcpu_io.u32 & ~bit_mask) | (addr & bit_mask);
+    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP:
+    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
+        status = pci_bus_read(vcpu_context->guest_state->bus, io->port, io->access_size, &vcpu_io);
         break;
-    }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
-        size_t offset = io->port - PCI_CONFIG_DATA_PORT_BASE;
-        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address;
-        vcpu_io.access_size = io->access_size;
-        status = handle_pci_read(vcpu_context->guest_state,
-                                 PCI_TYPE1_BUS(addr),
-                                 PCI_TYPE1_DEVICE(addr),
-                                 PCI_TYPE1_FUNCTION(addr),
-                                 PCI_TYPE1_REGISTER(addr) + offset,
-                                 io->access_size, &vcpu_io.u32);
-        break;
-    }
     default: {
         uint16_t port_off;
-        pci_device_t* bus = vcpu_context->guest_state->bus;
+        pci_bus_t* bus = vcpu_context->guest_state->bus;
         switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK:
             status = block_read(vcpu_context->guest_state->block, port_off, &vcpu_io);
@@ -322,37 +224,14 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_INDEX_PORT:
-        return io_port_write(vcpu_context->guest_state->io_port, io->port, io);
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
-        // Software can (and Linux does) perform partial word accesses to the
-        // PCI address register. This means we need to take care to read/write
-        // portions of the 32bit register without trampling the other bits.
-        uint32_t bit_offset = ((io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8);
-        uint32_t bit_size = io->access_size * 8;
-        uint32_t bit_mask = (uint32_t) BIT_MASK(bit_size);
-        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address;
-
-        // Clear out the bits we'll be modifying.
-        addr = CLEAR_BITS(addr, bit_size, bit_offset);
-        // Set the bits of the address.
-        addr |= (io->u32 & bit_mask) << bit_offset;
-
-        vcpu_context->guest_state->io_port->pci_config_address = addr;
-        return MX_OK;
+        return io_port_write(vcpu_context->guest_state->io_port, io);
+    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP:
+    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
+        return pci_bus_write(vcpu_context->guest_state->bus, io);
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
-        size_t offset = io->port - PCI_CONFIG_DATA_PORT_BASE;
-        uint32_t addr = vcpu_context->guest_state->io_port->pci_config_address;
-        return handle_pci_write(vcpu_context->guest_state,
-                                PCI_TYPE1_BUS(addr),
-                                PCI_TYPE1_DEVICE(addr),
-                                PCI_TYPE1_FUNCTION(addr),
-                                PCI_TYPE1_REGISTER(addr) + offset,
-                                io->access_size, io->u32);
-    }}
 
     uint16_t port_off;
-    pci_device_t* bus = vcpu_context->guest_state->bus;
+    pci_bus_t* bus = vcpu_context->guest_state->bus;
     switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
     case PCI_DEVICE_VIRTIO_BLOCK: {
         return block_write(vcpu_context->guest_state, vcpu_context->vcpu, port_off, io);

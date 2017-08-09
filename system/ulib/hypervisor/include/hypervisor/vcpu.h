@@ -12,7 +12,7 @@
 typedef struct block block_t;
 typedef struct io_apic io_apic_t;
 typedef struct io_port io_port_t;
-typedef struct pci_device pci_device_t;
+typedef struct pci_bus pci_bus_t;
 typedef struct uart uart_t;
 
 /* Stores the state associated with the guest. */
@@ -26,7 +26,7 @@ typedef struct guest_state {
 
     io_apic_t* io_apic;
     io_port_t* io_port;
-    pci_device_t* bus;
+    pci_bus_t* bus;
 
     uart_t* uart;
     block_t* block;

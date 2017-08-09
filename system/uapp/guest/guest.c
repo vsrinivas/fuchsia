@@ -104,8 +104,8 @@ int main(int argc, char** argv) {
     io_port_init(&io_port);
     // Setup PCI.
     pci_bus_t bus;
-    guest_state.bus = bus;
-    pci_bus_init(bus);
+    guest_state.bus = &bus;
+    pci_bus_init(&bus);
     // Setup UART.
     uart_t uart;
     guest_state.uart = &uart;
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
         if (status != MX_OK)
             return status;
     } else {
-        pci_device_disable(&bus[PCI_DEVICE_VIRTIO_BLOCK]);
+        pci_device_disable(&bus.device[PCI_DEVICE_VIRTIO_BLOCK]);
     }
 
     uintptr_t pt_end_off;

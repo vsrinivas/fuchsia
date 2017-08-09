@@ -46,10 +46,10 @@ static mx_status_t setup(test_t* test) {
     memset(test, 0, sizeof(*test));
     vcpu_init(&test->vcpu_context);
     io_port_init(&test->io_port);
-    pci_bus_init(test->bus);
+    pci_bus_init(&test->bus);
 
     test->guest_state.io_port = &test->io_port;
-    test->guest_state.bus = test->bus;
+    test->guest_state.bus = &test->bus;
     test->vcpu_context.guest_state = &test->guest_state;
 
     // Redirect read/writes to the VCPU state to just access a field in the
@@ -156,8 +156,7 @@ static bool write_pci_config_addr_port(void) {
     packet.io.u32 = 0x12345678;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu_context, &packet), MX_OK,
               "Failed to handle guest packet");
-    EXPECT_EQ(test.io_port.pci_config_address, 0x12345678u,
-              "Incorrect address read from PCI address port");
+    EXPECT_EQ(test.bus.config_addr, 0x12345678u, "Incorrect address read from PCI address port");
 
     // 16 bit write to bits 31..16. Other bits remain unchanged.
     packet.type = MX_GUEST_PKT_IO;
@@ -167,8 +166,7 @@ static bool write_pci_config_addr_port(void) {
     packet.io.u16 = 0xFACE;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu_context, &packet), MX_OK,
               "Failed to handle guest packet");
-    EXPECT_EQ(test.io_port.pci_config_address, 0xFACE5678u,
-              "Incorrect address read from PCI address port");
+    EXPECT_EQ(test.bus.config_addr, 0xFACE5678u, "Incorrect address read from PCI address port");
 
     // 8 bit write to bits (15..8). Other bits remain unchanged.
     packet.type = MX_GUEST_PKT_IO;
@@ -178,8 +176,7 @@ static bool write_pci_config_addr_port(void) {
     packet.io.u8 = 0x99;
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu_context, &packet), MX_OK,
               "Failed to handle guest packet");
-    EXPECT_EQ(test.io_port.pci_config_address, 0xFACE9978u,
-              "Incorrect address read from PCI address port");
+    EXPECT_EQ(test.bus.config_addr, 0xFACE9978u, "Incorrect address read from PCI address port");
 
     tear_down(&test);
 
@@ -196,7 +193,7 @@ static bool read_pci_config_addr_port(void) {
     test_t test;
     mx_guest_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test");
-    test.io_port.pci_config_address = 0x12345678;
+    test.bus.config_addr = 0x12345678;
 
     // 32 bit read (bits 31..0).
     packet.type = MX_GUEST_PKT_IO;
@@ -247,7 +244,7 @@ static bool read_pci_config_data_port(void) {
     ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test");
 
     // 16-bit read.
-    test.io_port.pci_config_address = PCI_TYPE1_ADDR(0, 0, 0, 0);
+    test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, 0);
     packet.type = MX_GUEST_PKT_IO;
     packet.io.input = true;
     packet.io.port = PCI_CONFIG_DATA_PORT_BASE;
@@ -273,10 +270,9 @@ static bool read_pci_config_data_port(void) {
     // address port is added to the data port address.
     test.vcpu_io.u32 = 0;
     packet.io.access_size = 2;
-    test.io_port.pci_config_address = PCI_TYPE1_ADDR(0, 0, 0,
-                                                                       PCI_CONFIG_DEVICE_ID);
+    test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID);
     // Verify we're using a 4b aligned register address.
-    EXPECT_EQ(test.io_port.pci_config_address & BIT_MASK(2), 0u, "");
+    EXPECT_EQ(test.bus.config_addr & BIT_MASK(2), 0u, "");
     // Add the register offset to the data port base address.
     packet.io.port = PCI_CONFIG_DATA_PORT_BASE + (PCI_CONFIG_DEVICE_ID & BIT_MASK(2));
     EXPECT_EQ(vcpu_handle_packet(&test.vcpu_context, &packet), MX_OK,

@@ -118,9 +118,9 @@ mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* 
 #endif // __x86_64__
 }
 
-mx_status_t io_port_write(io_port_t* io_port, uint16_t port, const mx_guest_io_t* io) {
+mx_status_t io_port_write(io_port_t* io_port, const mx_guest_io_t* io) {
 #ifdef __x86_64__
-    switch (port) {
+    switch (io->port) {
     case I8042_DATA_PORT:
     case I8253_CHANNEL_0:
     case I8253_CONTROL_PORT:
