@@ -1590,7 +1590,8 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
         // Write zeroes to the rest of the remaining block, if it exists
         if (len < inode_.size) {
             char bdata[kMinfsBlockSize];
-            if (GetBno(nullptr, static_cast<blk_t>(len / kMinfsBlockSize), &bno) != MX_OK) {
+            blk_t rel_bno = static_cast<blk_t>(len / kMinfsBlockSize);
+            if (GetBno(nullptr, rel_bno, &bno) != MX_OK) {
                 return MX_ERR_IO;
             }
             if (bno != 0) {
@@ -1601,21 +1602,19 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 
-                // TODO(smklein): Remove this write when shrinking VMO size
-                // automatically sets partial pages to zero.
                 if ((r = VmoWriteExact(bdata, len - adjust, kMinfsBlockSize)) != MX_OK) {
                     return MX_ERR_IO;
                 }
+                txn->Enqueue(vmoid_, rel_bno, bno + fs_->info_.dat_block, 1);
 #else
                 if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, bdata)) {
                     return MX_ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
-#endif
-
                 if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, bdata)) {
                     return MX_ERR_IO;
                 }
+#endif
             }
         }
     } else if (len > inode_.size) {
