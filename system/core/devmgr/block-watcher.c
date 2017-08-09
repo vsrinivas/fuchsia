@@ -148,21 +148,20 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         return MX_OK;
     }
     case DISK_FORMAT_FAT: {
-        // Use the GUID to avoid auto-mounting the EFI partition as writable
+        // Use the GUID to avoid auto-mounting the EFI partition
         uint8_t guid[GPT_GUID_LEN];
         ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
         bool efi = is_efi_guid(guid, r);
+        if (efi) {
+          close(fd);
+          printf("devmgr: not automounting efi\n");
+          return MX_OK;
+        }
         mount_options_t options = default_mount_options;
         options.create_mountpoint = true;
-        options.readonly = efi;
         static int fat_counter = 0;
-        static int efi_counter = 0;
         char mountpath[MXIO_MAX_FILENAME + 64];
-        if (efi) {
-            snprintf(mountpath, sizeof(mountpath), "%s/efi-%d", PATH_VOLUME, efi_counter++);
-        } else {
-            snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", PATH_VOLUME, fat_counter++);
-        }
+        snprintf(mountpath, sizeof(mountpath), "%s/fat-%d", PATH_VOLUME, fat_counter++);
         options.wait_until_ready = false;
         printf("devmgr: fatfs\n");
         mount(fd, mountpath, df, &options, launch_fat);
