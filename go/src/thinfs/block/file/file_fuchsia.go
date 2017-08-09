@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !linux
-// +build !fuchsia
+// +build fuchsia
 
 package file
 
 import (
 	"syscall"
+	"syscall/mx/mxio"
 )
 
 func ioctlBlockGetSize(fd uintptr) (int64, error) {
@@ -28,5 +28,13 @@ func fallocate(fd uintptr, off, len int64) error {
 }
 
 func ioctlDeviceGetTopoPath(fd uintptr) string {
+	m := syscall.MXIOForFD(int(fd))
+	path := make([]byte, 1024)
+	_, err := m.Ioctl(mxio.IoctlDeviceGetTopoPath, nil, path)
+
+	if err == nil {
+		return string(path)
+	}
+
 	return ""
 }
