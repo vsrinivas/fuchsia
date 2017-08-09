@@ -30,7 +30,7 @@ class AudioPlugDetector {
  private:
   void AddAudioDevice(int dir_fd, const std::string& name);
   std::unique_ptr<mtl::DeviceWatcher> watcher_;
-  AudioOutputManager* manager_;
+  AudioOutputManager* manager_ = nullptr;
 };
 
 }  // namespace audio
