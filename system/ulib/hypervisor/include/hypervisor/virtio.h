@@ -6,19 +6,86 @@
 
 #include <magenta/types.h>
 
+/* Accesses to this range are common accross device types. */
+#define VIRTIO_PCI_COMMON_CFG_BASE      0
+#define VIRTIO_PCI_COMMON_CFG_TOP       (VIRTIO_PCI_CONFIG_OFFSET_NOMSI - 1)
+
+/* Accesses to this range are device specific. */
+#define VIRTIO_PCI_DEVICE_CFG_BASE      VIRTIO_PCI_CONFIG_OFFSET_NOMSI
+#define VIRTIO_PCI_DEVICE_CFG_TOP(size) \
+    (VIRTIO_PCI_DEVICE_CFG_BASE + size - 1)
+
 struct vring_desc;
 struct vring_avail;
 struct vring_used;
 
 enum {
-    VIRTIO_STATUS_OK            = 0,
-    VIRTIO_STATUS_ERROR         = 1,
-    VIRTIO_STATUS_UNSUPPORTED   = 2,
+    VIRTIO_STATUS_OK                    = 0,
+    VIRTIO_STATUS_ERROR                 = 1,
+    VIRTIO_STATUS_UNSUPPORTED           = 2,
 };
 
+typedef struct io_apic io_apic_t;
+typedef struct mx_guest_io mx_guest_io_t;
+typedef struct mx_vcpu_io mx_vcpu_io_t;
 typedef struct virtio_queue virtio_queue_t;
-typedef mx_status_t (*virtio_queue_notify_fn_t)(virtio_queue_t* queue, void* mem_addr,
-                                                size_t mem_size);
+typedef struct virtio_device virtio_device_t;
+
+/* Device-specific operations. */
+typedef struct virtio_device_ops {
+    // Read a device configuration field.
+    mx_status_t (*read)(const virtio_device_t* device, uint16_t port,
+                        mx_vcpu_io_t* vcpu_io);
+
+    // Write a device configuration field.
+    mx_status_t (*write)(virtio_device_t* device, mx_handle_t vcpu, uint16_t port,
+                         const mx_guest_io_t* io);
+
+    // Handle notify events for one of this devices queues.
+    mx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);
+} virtio_device_ops_t;
+
+/* Common state shared by all virtio devices. */
+typedef struct virtio_device {
+    // Virtio feature flags.
+    uint32_t features;
+    // Virtio status register for the device.
+    uint8_t status;
+    // Currently selected queue.
+    uint16_t queue_sel;
+    // Size of queues array.
+    uint16_t num_queues;
+    // Virtqueues for this device.
+    virtio_queue_t* queues;
+
+    // Address of guest physical memory.
+    void* guest_physmem_addr;
+    // Size of guest physical memory.
+    size_t guest_physmem_size;
+    // IO APIC for use with interrupt redirects.
+    io_apic_t* io_apic;
+    // IRQ assignment for this device.
+    uint32_t irq_vector;
+
+    // Device-specific operations.
+    virtio_device_ops_t* ops;
+    // Private pointer for use by the device implementation.
+    void* impl;
+} virtio_device_t;
+
+/* Handle reads from legacy PCI virtio configuration space.
+ *
+ * Virtio 1.0 Section 4.1.4.8 Legacy Interfaces: A Note on PCI Device Layout.
+ */
+mx_status_t virtio_pci_legacy_read(const virtio_device_t* device, uint16_t port,
+                                   mx_vcpu_io_t* vcpu_id);
+
+/* Handle writes to legacy PCI virtio configuration space.
+ *
+ * Virtio 1.0 Section 4.1.4.8 Legacy Interfaces: A Note on PCI Device Layout.
+ */
+mx_status_t virtio_pci_legacy_write(virtio_device_t* device, mx_handle_t vcpu,
+                                    uint16_t port, const mx_guest_io_t* io);
 
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
@@ -30,10 +97,8 @@ typedef struct virtio_queue {
     uint32_t size;
     uint16_t index;
 
-    // Callback function to handle notification events for this queue.
-    virtio_queue_notify_fn_t notify;
-    // Private pointer for use by the device that owns this queue.
-    void* device;
+    // Pointer to the owning device.
+    virtio_device_t* virtio_device;
 
     volatile struct vring_desc* desc;   // guest-controlled
 
@@ -46,16 +111,11 @@ typedef struct virtio_queue {
 
 typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
 
-/* Sets the queue PFN for the queue. */
-mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn,
-                                 void* mem_addr, size_t mem_size);
-
 /* Handles the next available descriptor in a Virtio queue, calling req_fn to
  * process individual payload buffers.
  *
  * On success the function either returns MX_OK if there are no more descriptors
  * available, or MX_ERR_NEXT if there are more available descriptors to process.
  */
-mx_status_t virtio_queue_handler(virtio_queue_t* queue, void* mem_addr,
-                                 size_t mem_size, uint32_t hdr_size,
+mx_status_t virtio_queue_handler(virtio_queue_t* queue, uint32_t hdr_size,
                                  virtio_req_fn_t req_fn, void* ctx);
