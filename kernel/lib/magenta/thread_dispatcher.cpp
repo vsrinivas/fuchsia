@@ -825,7 +825,14 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
             info->state = MX_THREAD_STATE_BLOCKED;
             break;
         default:
-            info->state = MX_THREAD_STATE_RUNNING;
+            // If we're in the window where we've released |state_lock_| but
+            // haven't gone to sleep yet (to wait for an exception response)
+            // then we're still "blocked" as far as userspace is concerned.
+            if (excp_port_type != ExceptionPort::Type::NONE) {
+                info->state = MX_THREAD_STATE_BLOCKED;
+            } else {
+                info->state = MX_THREAD_STATE_RUNNING;
+            }
             break;
         }
         break;

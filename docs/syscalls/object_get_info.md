@@ -134,12 +134,33 @@ provided Resource handle.
 
 ```
 typedef struct mx_info_thread {
+    // One of MX_THREAD_STATE_* values.
+    uint32_t state;
+
     // If nonzero, the thread has gotten an exception and is waiting for
     // the exception to be handled by the specified port.
     // The value is one of MX_EXCEPTION_PORT_TYPE_*.
+    // Note: If the thread is waiting for an exception response then |state|
+    // will have the value MX_THREAD_STATE_BLOCKED.
     uint32_t wait_exception_port_type;
 } mx_info_thread_t;
 ```
+
+The values in this struct are mainly for informational and debugging
+purposes at the moment.
+
+The **MX_THREAD_STATE_\*** values are defined by
+
+```
+#include <magenta/syscalls/object.h>
+```
+
+*   *MX_THREAD_STATE_NEW*
+*   *MX_THREAD_STATE_RUNNING*
+*   *MX_THREAD_STATE_SUSPENDED*
+*   *MX_THREAD_STATE_BLOCKED*
+*   *MX_THREAD_STATE_DYING*
+*   *MX_THREAD_STATE_DEAD*
 
 The **MX_EXCEPTION_PORT_TYPE_\*** values are defined by
 

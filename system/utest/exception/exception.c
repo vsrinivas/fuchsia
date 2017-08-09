@@ -144,9 +144,7 @@ static void resume_thread_from_exception(mx_handle_t process, mx_koid_t tid,
         tu_fatal("mx_object_get_child", status);
 
     mx_info_thread_t info = tu_thread_get_info(thread);
-#if 0 // TODO(dje): there's a race here, fixed in subsequent patch
     EXPECT_EQ(info.state, MX_THREAD_STATE_BLOCKED, "");
-#endif
     if (excp_port_type != MX_EXCEPTION_PORT_TYPE_NONE) {
         EXPECT_EQ(info.wait_exception_port_type, excp_port_type, "");
     }

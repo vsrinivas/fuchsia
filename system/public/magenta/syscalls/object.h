@@ -106,6 +106,8 @@ typedef struct mx_info_thread {
     // If nonzero, the thread has gotten an exception and is waiting for
     // the exception to be handled by the specified port.
     // The value is one of MX_EXCEPTION_PORT_TYPE_*.
+    // Note: If the thread is waiting for an exception response then |state|
+    // will have the value MX_THREAD_STATE_BLOCKED.
     uint32_t wait_exception_port_type;
 } mx_info_thread_t;
 
