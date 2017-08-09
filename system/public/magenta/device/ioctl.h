@@ -57,6 +57,7 @@
 #define IOCTL_FAMILY_WLAN           0x24
 #define IOCTL_FAMILY_PTY            0x25
 #define IOCTL_FAMILY_NETCONFIG      0x26
+#define IOCTL_FAMILY_ETHERTAP       0x27
 
 // IOCTL constructor
 // --K-FFNN
