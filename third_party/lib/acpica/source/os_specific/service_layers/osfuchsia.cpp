@@ -1195,6 +1195,11 @@ void ACPI_INTERNAL_VAR_XFACE AcpiOsPrintf(const char *Format, ...) {
  * @param Args A variable parameter list
  */
 void AcpiOsVprintf(const char *Format, va_list Args) {
+    // Only implement if ACPI_DEBUG_OUTPUT is defined, otherwise this causes
+    // excess boot spew.
+#ifdef ACPI_DEBUG_OUTPUT
+    vprintf(Format, Args);
+#endif
 }
 
 /**

@@ -194,6 +194,10 @@ MODULE_CFLAGS += -fno-strict-aliasing
 
 MODULE_COMPILEFLAGS += -I$(SRC_DIR)/include/acpica
 
+ifeq ($(call TOBOOL,$(ENABLE_ACPI_DEBUG)),true)
+MODULE_COMPILEFLAGS += -DACPI_DEBUG_OUTPUT
+endif
+
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/mxtl \
