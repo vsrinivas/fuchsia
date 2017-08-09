@@ -277,7 +277,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 	for {
 		ios.wq.EventRegister(&waitEntry, waiter.EventIn)
 		var v buffer.View
-		var err error
+		var err *tcpip.Error
 		for {
 			v, err = ios.ep.Read(nil)
 			if err == nil {
@@ -381,7 +381,7 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 		ios.wq.EventRegister(&waitEntry, waiter.EventIn)
 		var sender tcpip.FullAddress
 		var v buffer.View
-		var err error
+		var err *tcpip.Error
 		for {
 			v, err = ios.ep.Read(&sender)
 			if err == nil {
@@ -408,7 +408,7 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 
 	writeLoop:
 		for {
-			_, err = dataHandle.Write(out, 0)
+			_, err := dataHandle.Write(out, 0)
 			switch mxerror.Status(err) {
 			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
@@ -616,19 +616,19 @@ func (s *socketServer) opSocket(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 	}
 
 	wq := new(waiter.Queue)
-	ep, err := s.stack.NewEndpoint(transProto, n, wq)
-	if err != nil {
+	ep, e := s.stack.NewEndpoint(transProto, n, wq)
+	if e != nil {
 		if debug {
-			log.Printf("socket: new endpoint: %v", err)
+			log.Printf("socket: new endpoint: %v", e)
 		}
-		return err
+		return mxerror.Errorf(mx.ErrInternal, "socket: new endpoint: %v", err)
 	}
 	if n == ipv6.ProtocolNumber {
 		if err := ep.SetSockOpt(tcpip.V6OnlyOption(0)); err != nil {
 			log.Printf("socket: setsockopt v6only option failed: %v", err)
 		}
 	}
-	ios, err = s.newIostate(h, nil, n, transProto, wq, ep)
+	_, err = s.newIostate(h, nil, n, transProto, wq, ep)
 	if err != nil {
 		if debug {
 			log.Printf("socket: new iostate: %v", err)
@@ -665,8 +665,8 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 	if ios.ep == nil {
 		return mxerror.Errorf(mx.ErrBadState, "accept: no socket")
 	}
-	newep, newwq, err := ios.ep.Accept()
-	if err == tcpip.ErrWouldBlock {
+	newep, newwq, e := ios.ep.Accept()
+	if e == tcpip.ErrWouldBlock {
 		return errShouldWait
 	}
 	if ios.ep.Readiness(waiter.EventIn) == 0 {
@@ -685,11 +685,11 @@ func (s *socketServer) opAccept(h mx.Handle, ios *iostate, msg *rio.Msg, path st
 			log.Printf("accept: clearing MXSIO_SIGNAL_INCOMING: %v", err)
 		}
 	}
-	if err != nil {
+	if e != nil {
 		if debug {
 			log.Printf("accept: %v", err)
 		}
-		return err
+		return mxerror.Errorf(mx.ErrInternal, "accept: %v", err)
 	}
 
 	_, err = s.newIostate(h, nil, ios.netProto, ios.transProto, newwq, newep)
@@ -704,7 +704,12 @@ func errStatus(err error) mx.Status {
 		return s.Status
 	}
 
-	switch err {
+	log.Printf("%v", err)
+	return mx.ErrInternal
+}
+
+func mxNetError(e *tcpip.Error) mx.Status {
+	switch e {
 	case tcpip.ErrUnknownProtocol:
 		return mx.ErrProtocolNotSupported
 	case tcpip.ErrDuplicateAddress, tcpip.ErrPortInUse:
@@ -741,7 +746,7 @@ func errStatus(err error) mx.Status {
 		return mx.ErrConnectionAborted
 	}
 
-	log.Printf("%v", err)
+	log.Printf("%v", e)
 	return mx.ErrInternal
 }
 
@@ -765,7 +770,8 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *rio.Msg) mx.Status {
 			errno := uint32(0)
 			err := ios.ep.GetSockOpt(o)
 			if err != nil {
-				errno = uint32(errStatus(err)) // TODO: convert from err?
+				// TODO: should this be a unix errno?
+				errno = uint32(mxNetError(err))
 			}
 			binary.LittleEndian.PutUint32(val.optval[:], errno)
 			val.optlen = c_socklen(4)
@@ -851,7 +857,7 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) (status mx.Status) {
 		return mx.ErrBadState
 	}
 	if err := ios.ep.Bind(*addr, nil); err != nil {
-		return errStatus(err)
+		return mxNetError(err)
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)
@@ -919,7 +925,7 @@ func mxioSockAddrReply(a tcpip.FullAddress, msg *rio.Msg) mx.Status {
 func (s *socketServer) opGetSockName(ios *iostate, msg *rio.Msg) mx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
-		return errStatus(err)
+		return mxNetError(err)
 	}
 	if debug2 {
 		log.Printf("getsockname(): %v", a)
@@ -933,7 +939,7 @@ func (s *socketServer) opGetPeerName(ios *iostate, msg *rio.Msg) (status mx.Stat
 	}
 	a, err := ios.ep.GetRemoteAddress()
 	if err != nil {
-		return errStatus(err)
+		return mxNetError(err)
 	}
 	return mxioSockAddrReply(a, msg)
 }
@@ -957,7 +963,7 @@ func (s *socketServer) opListen(ios *iostate, msg *rio.Msg) (status mx.Status) {
 		if debug {
 			log.Printf("listen: %v", err)
 		}
-		return errStatus(err)
+		return mxNetError(err)
 	}
 	go func() {
 		// When an incoming connection is queued up (that is,
@@ -1025,15 +1031,15 @@ func (s *socketServer) opConnect(ios *iostate, msg *rio.Msg) (status mx.Status) 
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-	err = ios.ep.Connect(*addr)
-	if err == tcpip.ErrConnectStarted {
+	e := ios.ep.Connect(*addr)
+	if e == tcpip.ErrConnectStarted {
 		<-notifyCh
-		err = ios.ep.GetSockOpt(tcpip.ErrorOption{})
+		e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
 	}
 	ios.wq.EventUnregister(&waitEntry)
-	if err != nil {
+	if e != nil {
 		log.Printf("connect: addr=%s, %v", *addr, err)
-		return errStatus(err)
+		return mxNetError(e)
 	}
 	if debug2 {
 		log.Printf("connect: connected")

@@ -31,7 +31,7 @@ func (ep *linkEndpoint) MTU() uint32                    { return uint32(ep.c.MTU
 func (ep *linkEndpoint) MaxHeaderLength() uint16        { return headerLength }
 func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return ep.linkAddr }
 
-func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) error {
+func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	ethHdr := hdr.Prepend(headerLength)
 	if r.RemoteLinkAddress == "" && r.RemoteAddress == "\xff\xff\xff\xff" {
 		r.RemoteLinkAddress = "\xff\xff\xff\xff\xff\xff"
@@ -62,13 +62,19 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 		}
 		if err := ep.c.WaitSend(); err != nil {
 			log.Printf("link: alloc error: %v", err)
-			return err
+			return tcpip.ErrWouldBlock
 		}
 	}
 	buf = buf[:pktlen]
 	copy(buf, hdr.UsedBytes())
 	copy(buf[len(hdr.UsedBytes()):], payload)
-	return ep.c.Send(buf)
+	if err := ep.c.Send(buf); err != nil {
+		if debug2 {
+			log.Printf("link: send error: %v", err)
+		}
+		return tcpip.ErrWouldBlock
+	}
+	return nil
 }
 
 func (ep *linkEndpoint) Attach(dispatcher stack.NetworkDispatcher) {
