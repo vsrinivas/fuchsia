@@ -32,7 +32,6 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
  private:
   void Run() override {
     FTL_CHECK(agent_context_impl_->state_ == State::INITIALIZING);
-    FTL_DLOG(INFO) << "Starting new agent, url: " << agent_context_impl_->url_;
 
     FlowToken flow{this};
 
