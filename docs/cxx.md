@@ -51,6 +51,7 @@ address our particular needs. This library is split into two parts:
   - [integer type limits](../system/ulib/mxtl/include/mxtl/limits.h)
   - [type traits](../system/ulib/mxtl/include/mxtl/type_support.h)
   - [atomics](../system/ulib/mxtl/include/mxtl/atomic.h)
+  - [alloc checking new](../system/ulib/mxtl/include/mxtl/alloc_checker.h)
 - allocators
   - [slab allocation](../system/ulib/mxtl/include/mxtl/slab_allocator.h)
   - [slab malloc](../system/ulib/mxtl/include/mxtl/slab_malloc.h)
@@ -71,6 +72,16 @@ address our particular needs. This library is split into two parts:
   - [auto call](../system/ulib/mxtl/include/mxtl/auto_call.h) to run
     code upon leaving scope
   - [AutoLock](../system/ulib/mxtl/include/mxtl/auto_lock.h)
+
+The standard operator new is assumed to either return valid memory or
+to throw std::bad_alloc. This policy is not suitable for the
+kernel. We also want to dynamically enforce that returns are
+explicitly checked. As such, mxtl introduces our own operator new
+overload which takes a reference to an `AllocChecker`. If the status
+of the `AllocChecker` is not queried after the new expression, an
+assertion is raised. This lets us enforce that the return value is
+checked without having to reason about optimizations of the standard
+operator new in the presence of -fno-exceptions and so on.
 
 ## mx
 
@@ -94,19 +105,3 @@ the libc. See extensive comments in musl's atexit implementation if
 you are curious.
 
 *This library is mutually exclusive of the standard C++ library.*
-
-## mxalloc
-
-The standard operator new is assumed to either return valid memory or
-to throw std::bad_alloc. This policy is not suitable for the
-kernel. We also want to dynamically enforce that returns are
-explicitly checked. As such, [the mxalloc
-library](../system/ulib/mxalloc) introduces our own operator new
-overload which takes a reference to an `AllocChecker`. If the status
-of the `AllocChecker` is not queried after the new expression, an
-assertion is raised. This lets us enforce that the return value is
-checked without having to reason about optimizations of the standard
-operator new in the presence of -fno-exceptions and so on.
-
-This library can be linked into programs that use the standard
-library, and also into programs that use `mxcpp`.
