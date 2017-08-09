@@ -39,12 +39,12 @@ enum Status {
   INTERNAL_ERROR = -1
 };
 
-[ServiceName="cobalt.CobaltEncoderFactory"]
+[ServiceName="cobalt::CobaltEncoderFactory"]
 // CobaltEncoderFactory creates a CobaltEncoder for a particular project.
 interface CobaltEncoderFactory {
   // Creates a CobaltEncoder for the specified project.
   // |project_id| Should be a project ID registered with the Cobalt system.
-  GetEncoder(int32 project_id, CobaltEncoder& encoder);
+  GetEncoder(int32 project_id, CobaltEncoder& cobalt_encoder);
 };
 
 // CobaltEncoder accumulates and sends observations. An instance of
