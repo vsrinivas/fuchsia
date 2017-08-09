@@ -180,7 +180,7 @@ class PageDb {
 
   // Marks the given |commit_id| as unsynced.
   virtual Status MarkCommitIdUnsynced(const CommitId& commit_id,
-                                      int64_t timestamp) = 0;
+                                      uint64_t generation) = 0;
 
   // Checks if the commit with the given |commit_id| is synced.
   virtual Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) = 0;

@@ -463,9 +463,9 @@ Status PageDbImpl::MarkCommitIdSynced(const CommitId& commit_id) {
 }
 
 Status PageDbImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
-                                        int64_t timestamp) {
+                                        uint64_t generation) {
   return db_.Put(GetUnsyncedCommitKeyFor(commit_id),
-                 SerializeNumber(timestamp));
+                 SerializeNumber(generation));
 }
 
 Status PageDbImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {

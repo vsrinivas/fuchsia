@@ -684,7 +684,8 @@ void PageStorageImpl::AddCommits(
         }
 
         if (source == ChangeSource::LOCAL) {
-          s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+          s = db_.MarkCommitIdUnsynced(commit->GetId(),
+                                       commit->GetGeneration());
           if (s != Status::OK) {
             callback(s);
             return;

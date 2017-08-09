@@ -115,7 +115,7 @@ Status PageDbEmptyImpl::MarkCommitIdSynced(const CommitId& /*commit_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::MarkCommitIdUnsynced(const CommitId& /*commit_id*/,
-                                             int64_t /*timestamp*/) {
+                                             uint64_t /*generation*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::IsCommitSynced(const CommitId& /*commit_id*/,

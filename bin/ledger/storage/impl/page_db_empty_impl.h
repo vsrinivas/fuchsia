@@ -65,7 +65,7 @@ class PageDbEmptyImpl : public PageDb {
   Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(const CommitId& commit_id,
-                              int64_t timestamp) override;
+                              uint64_t generation) override;
   Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
   Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
   Status SetObjectStatus(ObjectIdView object_id,

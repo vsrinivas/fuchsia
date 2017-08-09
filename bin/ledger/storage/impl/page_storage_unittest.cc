@@ -1349,5 +1349,68 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   EXPECT_EQ(0u, GetUnsyncedCommits().size());
 }
 
+// Verifies that GetUnsyncedCommits() returns commits ordered by their
+// generation, and not by the timestamp.
+//
+// In this test the commits have the following structure:
+//              (root)
+//             /   |   \
+//           (A)  (B)  (C)
+//             \   /
+//             (merge)
+// C is the last commit to be created. The test verifies that the unsynced
+// commits are returned in the generation order, with the merge commit being the
+// last despite not being the most recent.
+TEST_F(PageStorageTest, GetUnsyncedCommits) {
+  const auto root_id = GetFirstHead()->GetId();
+
+  std::unique_ptr<Journal> journal_a;
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(root_id, JournalType::EXPLICIT, &journal_a));
+  EXPECT_EQ(Status::OK,
+            journal_a->Put("a", RandomObjectId(), KeyPriority::EAGER));
+  std::unique_ptr<const Commit> commit_a =
+      TryCommitJournal(std::move(journal_a), Status::OK);
+  EXPECT_TRUE(commit_a);
+  EXPECT_EQ(1u, commit_a->GetGeneration());
+
+  std::unique_ptr<Journal> journal_b;
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(root_id, JournalType::EXPLICIT, &journal_b));
+  EXPECT_EQ(Status::OK,
+            journal_b->Put("b", RandomObjectId(), KeyPriority::EAGER));
+  std::unique_ptr<const Commit> commit_b =
+      TryCommitJournal(std::move(journal_b), Status::OK);
+  EXPECT_TRUE(commit_b);
+  EXPECT_EQ(1u, commit_b->GetGeneration());
+
+  std::unique_ptr<Journal> journal_merge;
+  EXPECT_EQ(Status::OK,
+            storage_->StartMergeCommit(commit_a->GetId(), commit_b->GetId(),
+                                       &journal_merge));
+  std::unique_ptr<const Commit> commit_merge =
+      TryCommitJournal(std::move(journal_merge), Status::OK);
+  EXPECT_EQ(2u, commit_merge->GetGeneration());
+
+  std::unique_ptr<Journal> journal_c;
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(root_id, JournalType::EXPLICIT, &journal_c));
+  EXPECT_EQ(Status::OK,
+            journal_c->Put("c", RandomObjectId(), KeyPriority::EAGER));
+  std::unique_ptr<const Commit> commit_c =
+      TryCommitJournal(std::move(journal_c), Status::OK);
+  EXPECT_TRUE(commit_c);
+  EXPECT_EQ(1u, commit_c->GetGeneration());
+
+  // Verify that the merge commit is returned as last, even though commit C is
+  // older.
+  std::vector<std::unique_ptr<const Commit>> unsynced_commits =
+      GetUnsyncedCommits();
+  EXPECT_EQ(4u, unsynced_commits.size());
+  EXPECT_EQ(commit_merge->GetId(), unsynced_commits.back()->GetId());
+  EXPECT_LT(commit_merge->GetTimestamp(), commit_c->GetTimestamp());
+}
+
 }  // namespace
+
 }  // namespace storage

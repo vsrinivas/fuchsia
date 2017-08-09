@@ -95,8 +95,10 @@ class PageStorage {
   // Unregisters the given CommitWatcher.
   virtual Status RemoveCommitWatcher(CommitWatcher* watcher) = 0;
 
-  // Finds the commits that have not yet been synced and adds them in the given
-  // |commit| vector.
+  // Finds the commits that have not yet been synced.
+  //
+  // The commits passed in the callback are sorted in a non-decreasing order of
+  // their generations.
   virtual void GetUnsyncedCommits(
       std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) = 0;
