@@ -12,12 +12,15 @@
 #include <lib/ktrace.h>
 #include <mxtl/atomic.h>
 
+namespace {
 // The first 1K koids are reserved.
-static mxtl::atomic<mx_koid_t> global_koid(1024ULL);
+mxtl::atomic<mx_koid_t> global_koid(1024ULL);
 
-mx_koid_t Dispatcher::GenerateKernelObjectId() {
+mx_koid_t GenerateKernelObjectId() {
     return global_koid.fetch_add(1ULL);
 }
+
+}  // namespace
 
 Dispatcher::Dispatcher()
     : koid_(GenerateKernelObjectId()),

@@ -87,9 +87,6 @@ public:
     // a CookieJar for those cookies to be stored in.
     virtual CookieJar* get_cookie_jar() { return nullptr; }
 
-protected:
-    static mx_koid_t GenerateKernelObjectId();
-
 private:
     const mx_koid_t koid_;
     uint32_t handle_count_;
