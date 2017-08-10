@@ -656,13 +656,6 @@ static bool test_reading_register_state(void) {
     ASSERT_EQ(mx_thread_read_state(thread_handle, MX_THREAD_STATE_REGSET0,
                                    &regs, sizeof(regs), &size_read), MX_OK, "");
     ASSERT_EQ(size_read, sizeof(regs), "");
-#if defined(__aarch64__)
-    // The following flag is reported by the kernel but is not modified by
-    // spin_with_regs().
-    uint64_t extra_flags = 1 << 8; // SError exception mask flag
-    ASSERT_EQ(regs.cpsr & extra_flags, extra_flags, "");
-    regs.cpsr &= ~extra_flags;
-#endif
     ASSERT_TRUE(regs_expect_eq(&regs, &regs_expected), "");
 
     // Clean up.
@@ -814,6 +807,74 @@ static bool test_noncanonical_rip_address(void) {
     END_TEST;
 }
 
+// Test that, on ARM64, userland cannot use mx_thread_write_state() to
+// modify flag bits such as I and F (bits 7 and 6), which are the IRQ and
+// FIQ interrupt disable flags.  We don't want userland to be able to set
+// those flags to 1, since that would disable interrupts.  Also, userland
+// should not be able to read these bits.
+static bool test_writing_arm_flags_register(void) {
+    BEGIN_TEST;
+
+#if defined(__aarch64__)
+    struct test_writing_thread_arg arg = { .v = 0 };
+    mxr_thread_t thread;
+    mx_handle_t thread_handle;
+    ASSERT_TRUE(start_thread(test_writing_thread_fn, &arg, &thread,
+                             &thread_handle), "");
+    // Wait for the thread to start executing and enter its main loop.
+    while (arg.v != 1) {
+        ASSERT_EQ(mx_nanosleep(mx_deadline_after(MX_USEC(1))), MX_OK, "");
+    }
+    // Attach to debugger port so we can see MX_EXCP_THREAD_SUSPENDED.
+    mx_handle_t eport;
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
+    ASSERT_TRUE(suspend_thread_synchronous(thread_handle, eport), "");
+
+    mx_general_regs_t regs;
+    uint32_t size_read;
+    ASSERT_EQ(mx_thread_read_state(thread_handle, MX_THREAD_STATE_REGSET0,
+                                   &regs, sizeof(regs), &size_read), MX_OK, "");
+    ASSERT_EQ(size_read, sizeof(regs), "");
+
+    // Check that mx_thread_read_state() does not report any more flag bits
+    // than are readable via userland instructions.
+    const uint64_t kUserVisibleFlags = 0xf0000000;
+    EXPECT_EQ(regs.cpsr & ~kUserVisibleFlags, 0u, "");
+
+    // Try setting more flag bits.
+    uint64_t original_cpsr = regs.cpsr;
+    regs.cpsr |= ~kUserVisibleFlags;
+    ASSERT_EQ(mx_thread_write_state(thread_handle, MX_THREAD_STATE_REGSET0,
+                                    &regs, sizeof(regs)), MX_OK, "");
+
+    // Firstly, if we read back the register flag, the extra flag bits
+    // should have been ignored and should not be reported as set.
+    ASSERT_EQ(mx_thread_read_state(thread_handle, MX_THREAD_STATE_REGSET0,
+                                   &regs, sizeof(regs), &size_read), MX_OK, "");
+    ASSERT_EQ(size_read, sizeof(regs), "");
+    EXPECT_EQ(regs.cpsr, original_cpsr, "");
+
+    // Secondly, if we resume the thread, we should be able to kill it.  If
+    // mx_thread_write_state() set the interrupt disable flags, then if the
+    // thread gets scheduled, it will never get interrupted and we will not
+    // be able to kill and join the thread.
+    arg.v = 0;
+    ASSERT_EQ(mx_task_resume(thread_handle, 0), MX_OK, "");
+    // Wait until the thread has actually resumed execution.
+    while (arg.v != 1) {
+        ASSERT_EQ(mx_nanosleep(mx_deadline_after(MX_USEC(1))), MX_OK, "");
+    }
+    ASSERT_EQ(mx_task_kill(thread_handle), MX_OK, "");
+    ASSERT_EQ(mx_object_wait_one(thread_handle, MX_THREAD_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), MX_OK, "");
+
+    // Clean up.
+    ASSERT_EQ(mx_handle_close(eport), MX_OK, "");
+#endif
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(test_basics)
 RUN_TEST(test_detach)
@@ -835,6 +896,7 @@ RUN_TEST(test_kill_suspended_thread)
 RUN_TEST(test_reading_register_state)
 RUN_TEST(test_writing_register_state)
 RUN_TEST(test_noncanonical_rip_address)
+RUN_TEST(test_writing_arm_flags_register)
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS

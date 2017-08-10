@@ -12,6 +12,10 @@
 #include <kernel/thread.h>
 #include <magenta/syscalls/debug.h>
 
+// Only the NZCV flags (bits 31 to 28 respectively) of the CPSR are
+// readable and writable by userland on ARM64.
+static uint32_t kUserVisibleFlags = 0xf0000000;
+
 uint arch_num_regsets(void)
 {
     return 1; // TODO(dje): Just the general regs for now.
@@ -45,7 +49,7 @@ static status_t arch_get_general_regs(struct thread *thread, mx_arm64_general_re
     out->lr = in->lr;
     out->sp = in->usp;
     out->pc = in->elr;
-    out->cpsr = in->spsr;
+    out->cpsr = in->spsr & kUserVisibleFlags;
 
     return MX_OK;
 }
@@ -75,7 +79,8 @@ static status_t arch_set_general_regs(struct thread *thread, const mx_arm64_gene
     out->lr = in->lr;
     out->usp = in->sp;
     out->elr = in->pc;
-    out->spsr = in->cpsr;
+    out->spsr = (out->spsr & ~kUserVisibleFlags)
+        | (in->cpsr & kUserVisibleFlags);
 
     return MX_OK;
 }
