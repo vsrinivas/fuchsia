@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_FIDL_BOUND_INTERFACE_H_
-#define APPS_LEDGER_SRC_FIDL_BOUND_INTERFACE_H_
+#ifndef APPS_LEDGER_SRC_FIDL_HELPERS_BOUND_INTERFACE_H_
+#define APPS_LEDGER_SRC_FIDL_HELPERS_BOUND_INTERFACE_H_
 
 #include "apps/ledger/src/fidl_helpers/boundable.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -47,4 +47,4 @@ class BoundInterface : public Boundable<Interface> {
 }  // namespace fidl_helpers
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_BOUND_INTERFACE_H_
+#endif  // APPS_LEDGER_SRC_FIDL_HELPERS_BOUND_INTERFACE_H_

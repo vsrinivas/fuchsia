@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_FIDL_BOUNDABLE_H_
-#define APPS_LEDGER_SRC_FIDL_BOUNDABLE_H_
+#ifndef APPS_LEDGER_SRC_FIDL_HELPERS_BOUNDABLE_H_
+#define APPS_LEDGER_SRC_FIDL_HELPERS_BOUNDABLE_H_
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
@@ -28,4 +28,4 @@ class SetBoundable {
 }  // namespace fidl_helpers
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_BOUNDABLE_H_
+#endif  // APPS_LEDGER_SRC_FIDL_HELPERS_BOUNDABLE_H_
