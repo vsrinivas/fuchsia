@@ -54,14 +54,6 @@ class PageDbEmptyImpl : public PageDb {
   Status ReadObject(ObjectId object_id,
                     std::unique_ptr<const Object>* object) override;
   Status DeleteObject(ObjectIdView object_id) override;
-  Status GetJournalValueCounter(const JournalId& journal_id,
-                                ftl::StringView value,
-                                int64_t* counter) override;
-  Status SetJournalValueCounter(const JournalId& journal_id,
-                                ftl::StringView value,
-                                int64_t counter) override;
-  Status GetJournalValues(const JournalId& journal_id,
-                          std::vector<std::string>* values) override;
   Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(const CommitId& commit_id,

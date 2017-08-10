@@ -133,23 +133,6 @@ class PageDb {
   virtual Status RemoveJournalEntry(const JournalId& journal_id,
                                     convert::ExtendedStringView key) = 0;
 
-  // Journal value counters can be used to keep track of how many times a given
-  // value is referenced in a journal. Returns the number of times the given
-  // value is refererenced.
-  virtual Status GetJournalValueCounter(const JournalId& journal_id,
-                                        ftl::StringView value,
-                                        int64_t* counter) = 0;
-
-  // Sets the number of times the given value is refererenced.
-  virtual Status SetJournalValueCounter(const JournalId& journal_id,
-                                        ftl::StringView value,
-                                        int64_t counter) = 0;
-
-  // Returns the set of values that are refererenced in the given journal, i.e.
-  // all values for which the journal value counter is a positive number.
-  virtual Status GetJournalValues(const JournalId& journal_id,
-                                  std::vector<std::string>* values) = 0;
-
   // Finds all the entries of the journal with the given |journal_id| and stores
   // an interator over the results on |entires|.
   virtual Status GetJournalEntries(

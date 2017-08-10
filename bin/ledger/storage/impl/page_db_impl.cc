@@ -35,7 +35,6 @@ const size_t kJournalIdSize = 16;
 constexpr ftl::StringView kJournalPrefix = "journals/";
 constexpr ftl::StringView kImplicitJournalMetaPrefix = "journals/implicit/";
 constexpr ftl::StringView kJournalEntry = "entry/";
-constexpr ftl::StringView kJournalCounter = "counter/";
 const char kImplicitJournalIdPrefix = 'I';
 const char kExplicitJournalIdPrefix = 'E';
 const size_t kJournalEntryPrefixSize =
@@ -137,15 +136,6 @@ Status ExtractObjectId(ftl::StringView db_value, ObjectId* id) {
   }
   *id = db_value.substr(kJournalEntryAddPrefixSize).ToString();
   return Status::OK;
-}
-
-std::string GetJournalCounterPrefixFor(const JournalId& id) {
-  return ftl::Concatenate({kJournalPrefix, id, "/", kJournalCounter});
-}
-
-std::string GetJournalCounterKeyFor(const JournalId& id,
-                                    ftl::StringView value) {
-  return ftl::Concatenate({GetJournalCounterPrefixFor(id), value});
 }
 
 std::string NewJournalId(JournalType journal_type) {
@@ -415,39 +405,6 @@ Status PageDbImpl::DeleteObject(ObjectIdView object_id) {
   db_.Delete(GetTransientObjectKeyFor(object_id));
   db_.Delete(GetLocalObjectKeyFor(object_id));
   return batch->Execute();
-}
-
-Status PageDbImpl::GetJournalValueCounter(const JournalId& journal_id,
-                                          ftl::StringView value,
-                                          int64_t* counter) {
-  std::string counter_str;
-  Status status =
-      db_.Get(GetJournalCounterKeyFor(journal_id, value), &counter_str);
-  if (status == Status::NOT_FOUND) {
-    *counter = 0;
-    return Status::OK;
-  }
-  if (status != Status::OK) {
-    return status;
-  }
-  *counter = DeserializeNumber<int64_t>(counter_str);
-  return Status::OK;
-}
-
-Status PageDbImpl::SetJournalValueCounter(const JournalId& journal_id,
-                                          ftl::StringView value,
-                                          int64_t counter) {
-  FTL_DCHECK(counter >= 0);
-  if (counter == 0) {
-    return db_.Delete(GetJournalCounterKeyFor(journal_id, value));
-  }
-  return db_.Put(GetJournalCounterKeyFor(journal_id, value),
-                 SerializeNumber(counter));
-}
-
-Status PageDbImpl::GetJournalValues(const JournalId& journal_id,
-                                    std::vector<std::string>* values) {
-  return db_.GetByPrefix(GetJournalCounterPrefixFor(journal_id), values);
 }
 
 Status PageDbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {

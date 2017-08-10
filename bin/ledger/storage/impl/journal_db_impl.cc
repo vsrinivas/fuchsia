@@ -5,6 +5,7 @@
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 
 #include <functional>
+#include <map>
 #include <string>
 #include <utility>
 
@@ -100,7 +101,7 @@ void JournalDBImpl::Commit(
             callback(status, nullptr);
             return;
           }
-          // If the commit is a no-op, returns early.
+          // If the commit is a no-op, return early.
           if (parents.size() == 1 &&
               parents.front()->GetRootId() == object_id) {
             FTL_DCHECK(new_nodes.empty());
@@ -111,7 +112,7 @@ void JournalDBImpl::Commit(
               CommitImpl::FromContentAndParents(page_storage_, object_id,
                                                 std::move(parents));
           std::vector<ObjectId> objects_to_sync;
-          status = db_->GetJournalValues(id_, &objects_to_sync);
+          status = GetObjectsToSync(&objects_to_sync);
           if (status != Status::OK) {
             callback(status, nullptr);
             return;
@@ -136,66 +137,29 @@ void JournalDBImpl::Commit(
   });
 }
 
-Status JournalDBImpl::UpdateValueCounter(
-    ObjectIdView object_id,
-    const std::function<int64_t(int64_t)>& operation) {
-  // Update the counter for untracked objects only.
-  if (!page_storage_->ObjectIsUntracked(object_id)) {
-    return Status::OK;
-  }
-  int64_t counter;
-  Status s = db_->GetJournalValueCounter(id_, object_id, &counter);
-  if (s != Status::OK) {
-    return s;
-  }
-  int64_t next_counter = operation(counter);
-  FTL_DCHECK(next_counter >= 0);
-  s = db_->SetJournalValueCounter(id_, object_id, next_counter);
-  return s;
-}
-
 Status JournalDBImpl::Put(convert::ExtendedStringView key,
                           ObjectIdView object_id,
                           KeyPriority priority) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     return Status::ILLEGAL_STATE;
   }
-  std::string prev_id;
-  Status prev_entry_status = db_->GetJournalValue(id_, key, &prev_id);
-
-  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch();
   Status s = db_->AddJournalEntry(id_, key, object_id, priority);
   if (s != Status::OK) {
     failed_operation_ = true;
-    return s;
   }
-  if (object_id != prev_id) {
-    UpdateValueCounter(object_id, [](int64_t counter) { return counter + 1; });
-    if (prev_entry_status == Status::OK) {
-      UpdateValueCounter(prev_id, [](int64_t counter) { return counter - 1; });
-    }
-  }
-  return batch->Execute();
+  return s;
 }
 
 Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     return Status::ILLEGAL_STATE;
   }
-  std::string prev_id;
-  Status prev_entry_status = db_->GetJournalValue(id_, key, &prev_id);
 
-  std::unique_ptr<PageDb::Batch> batch = db_->StartBatch();
   Status s = db_->RemoveJournalEntry(id_, key);
   if (s != Status::OK) {
     failed_operation_ = true;
-    return s;
   }
-
-  if (prev_entry_status == Status::OK) {
-    UpdateValueCounter(prev_id, [](int64_t counter) { return counter - 1; });
-  }
-  return batch->Execute();
+  return s;
 }
 
 void JournalDBImpl::GetParents(
@@ -221,6 +185,37 @@ Status JournalDBImpl::Rollback() {
     valid_ = false;
   }
   return s;
+}
+
+Status JournalDBImpl::GetObjectsToSync(std::vector<ObjectId>* objects_to_sync) {
+  std::unique_ptr<Iterator<const EntryChange>> entries;
+  Status s = db_->GetJournalEntries(id_, &entries);
+  if (s != Status::OK) {
+    return s;
+  }
+  // Compute the key-value pairs added in this journal.
+  std::map<std::string, ObjectId> key_values;
+  while (entries->Valid()) {
+    const Entry& entry = (*entries)->entry;
+    if ((*entries)->deleted) {
+      key_values.erase(entry.key);
+    } else {
+      key_values[entry.key] = entry.object_id;
+    }
+    entries->Next();
+  }
+  // Compute the set of values.
+  std::set<ObjectId> result_set;
+  for (const auto& key_value : key_values) {
+    // Only untracked objects should be synced.
+    if (page_storage_->ObjectIsUntracked(key_value.second)) {
+      result_set.insert(key_value.second);
+    }
+  }
+  std::vector<ObjectId> result;
+  std::copy(result_set.begin(), result_set.end(), std::back_inserter(result));
+  objects_to_sync->swap(result);
+  return Status::OK;
 }
 
 }  // namespace storage

@@ -72,13 +72,12 @@ class JournalDBImpl : public Journal {
                 JournalId id,
                 CommitId base);
 
-  Status UpdateValueCounter(ObjectIdView object_id,
-                            const std::function<int64_t(int64_t)>& operation);
-
   void GetParents(
       std::function<void(Status,
                          std::vector<std::unique_ptr<const storage::Commit>>)>
           callback);
+
+  Status GetObjectsToSync(std::vector<ObjectId>* objects_to_sync);
 
   const JournalType type_;
   coroutine::CoroutineService* const coroutine_service_;

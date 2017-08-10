@@ -93,20 +93,6 @@ Status PageDbEmptyImpl::ReadObject(ObjectId /*object_id*/,
 Status PageDbEmptyImpl::DeleteObject(ObjectIdView /*object_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetJournalValueCounter(const JournalId& /*journal_id*/,
-                                               ftl::StringView /*value*/,
-                                               int64_t* /*counter*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::SetJournalValueCounter(const JournalId& /*journal_id*/,
-                                               ftl::StringView /*value*/,
-                                               int64_t /*counter*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::GetJournalValues(const JournalId& /*journal_id*/,
-                                         std::vector<std::string>* /*values*/) {
-  return Status::NOT_IMPLEMENTED;
-}
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(
     std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;
