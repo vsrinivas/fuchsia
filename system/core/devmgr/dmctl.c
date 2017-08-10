@@ -71,7 +71,15 @@ static mx_status_t dmctl_ioctl(void* ctx, uint32_t op,
         memcpy(&cmd, in_buf, sizeof(cmd));
         cmd.name[sizeof(cmd.name) - 1] = 0;
         *out_actual = 0;
-        return dmctl_cmd(DC_OP_DM_COMMAND, cmd.name, strlen(cmd.name), cmd.h);
+        status = dmctl_cmd(DC_OP_DM_COMMAND, cmd.name, strlen(cmd.name), cmd.h);
+        // NOT_SUPPORTED tells the dispatcher to close the handle for
+        // ioctls that accept a handle argument, so we have to avoid
+        // returning that in this case where the handle has been passed
+        // to another process (and effectively closed)
+        if (status == MX_ERR_NOT_SUPPORTED) {
+            status = MX_ERR_INTERNAL;
+        }
+        return status;
     case IOCTL_DMCTL_OPEN_VIRTCON:
         if (in_len != sizeof(mx_handle_t)) {
             return MX_ERR_INVALID_ARGS;
