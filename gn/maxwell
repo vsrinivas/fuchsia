@@ -9,7 +9,8 @@
         "//apps/maxwell/src:unittests"
     ],
     "packages": {
-        "maxwell": "//apps/maxwell"
+        "maxwell": "//apps/maxwell",
+        "usage_log": "//apps/maxwell/src/agents/usage_log"
     },
     "binaries": [
         {
