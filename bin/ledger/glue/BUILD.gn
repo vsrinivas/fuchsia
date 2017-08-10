@@ -8,12 +8,15 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "crypto/hmac_unittests.cc",
     "socket/socket_drainer_client_unittest.cc",
     "socket/socket_writer_unittest.cc",
   ]
 
   deps = [
+    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/glue/socket",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
   ]
 
