@@ -44,6 +44,9 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     int Thread();
 
   private:
+    mx_status_t UpdateLinkStatus(mx_signals_t observed);
+    mx_status_t Recv(uint8_t* buffer, uint32_t capacity);
+
     // ethertap options
     uint32_t options_ = 0;
 
@@ -55,7 +58,10 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     mxtl::Mutex lock_;
     mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);
 
+    // Only accessed from Thread, so not locked.
+    bool online_ = false;
     mx::socket data_;
+
     thrd_t thread_;
 };
 

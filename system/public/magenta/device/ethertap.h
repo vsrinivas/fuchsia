@@ -14,6 +14,12 @@
 
 #define ETHERTAP_MAX_NAME_LEN 31
 
+// Ethertap signals on the socket are used to indicate link status. It is an error to assert that a
+// device is both online and offline; the device will be shutdown. A device is in the offline state
+// when it is created.
+#define ETHERTAP_SIGNAL_ONLINE  MX_USER_SIGNAL_0
+#define ETHERTAP_SIGNAL_OFFLINE MX_USER_SIGNAL_1
+
 // Enables tracing of the ethertap device itself
 #define ETHERTAP_OPT_TRACE         (1u << 0)
 #define ETHERTAP_OPT_TRACE_PACKETS (1u << 1)

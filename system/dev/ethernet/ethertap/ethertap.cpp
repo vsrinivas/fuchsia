@@ -142,27 +142,27 @@ int TapDevice::Thread() {
     mx_signals_t pending;
     mxtl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
+    mx_status_t status = MX_OK;
+    const mx_signals_t wait = MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | ETHERTAP_SIGNAL_ONLINE
+        | ETHERTAP_SIGNAL_OFFLINE | TAP_SHUTDOWN;
     while (true) {
-        mx_signals_t wait = MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | TAP_SHUTDOWN;
-        mx_status_t status = data_.wait_one(wait, MX_TIME_INFINITE, &pending);
+        status = data_.wait_one(wait, MX_TIME_INFINITE, &pending);
         if (status != MX_OK) {
             xprintf("error waiting on data: %d\n", status);
-            return static_cast<int>(status);
+            break;
         }
-        if (pending & MX_SOCKET_READABLE) {
-            size_t actual = 0;
-            status = data_.read(0u, buf.get(), mtu_, &actual);
+
+        if (pending & (ETHERTAP_SIGNAL_OFFLINE|ETHERTAP_SIGNAL_ONLINE)) {
+            status = UpdateLinkStatus(pending);
             if (status != MX_OK) {
-                printf("ethertap: error reading data: %d\n", status);
-                return static_cast<int>(status);
+                break;
             }
-            mxtl::AutoLock lock(&lock_);
-            if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
-                xprintf("received %zu bytes\n", actual);
-                hexdump8_ex(buf.get(), actual, 0);
-            }
-            if (ethmac_proxy_ != nullptr) {
-                ethmac_proxy_->Recv(buf.get(), actual, 0u);
+        }
+
+        if (pending & MX_SOCKET_READABLE) {
+            status = Recv(buf.get(), mtu_);
+            if (status != MX_OK) {
+                break;
             }
         }
         if (pending & MX_SOCKET_PEER_CLOSED) {
@@ -175,11 +175,75 @@ int TapDevice::Thread() {
         }
     }
 
-    data_.reset();
     printf("ethertap: device '%s' destroyed\n", name());
+    data_.reset();
     DdkRemove();
 
-    return 0;
+    return static_cast<int>(status);
+}
+
+static inline bool observed_online(mx_signals_t obs) {
+    return obs & ETHERTAP_SIGNAL_ONLINE;
+}
+
+static inline bool observed_offline(mx_signals_t obs) {
+    return obs & ETHERTAP_SIGNAL_OFFLINE;
+}
+
+mx_status_t TapDevice::UpdateLinkStatus(mx_signals_t observed) {
+    bool was_online = online_;
+    mx_signals_t clear = 0;
+
+    if (observed_online(observed) && observed_offline(observed)) {
+        printf("ethertap: error asserting both online and offline\n");
+        return MX_ERR_BAD_STATE;
+    }
+
+    if (observed_offline(observed)) {
+        xprintf("offline asserted\n");
+        online_ = false;
+        clear |= ETHERTAP_SIGNAL_OFFLINE;
+    }
+    if (observed_online(observed)) {
+        xprintf("online asserted\n");
+        online_ = true;
+        clear |= ETHERTAP_SIGNAL_ONLINE;
+    }
+
+    if (was_online != online_) {
+        mxtl::AutoLock lock(&lock_);
+        if (ethmac_proxy_ != nullptr) {
+            ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
+        }
+        xprintf("device '%s' is now %s\n", name(), online_ ? "online" : "offline");
+    }
+    if (clear) {
+        mx_status_t status = data_.signal(clear, 0);
+        if (status != MX_OK) {
+            printf("ethertap: could not clear status signals: %d\n", status);
+            return status;
+        }
+    }
+    return MX_OK;
+}
+
+mx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
+    size_t actual = 0;
+    mx_status_t status = data_.read(0u, buffer, capacity, &actual);
+    if (status != MX_OK) {
+        printf("ethertap: error reading data: %d\n", status);
+        return status;
+    }
+
+    mxtl::AutoLock lock(&lock_);
+    if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
+        xprintf("received %zu bytes\n", actual);
+        hexdump8_ex(buffer, actual, 0);
+    }
+    if (ethmac_proxy_ != nullptr) {
+        ethmac_proxy_->Recv(buffer, actual, 0u);
+    }
+    return MX_OK;
 }
 
 }  // namespace eth
