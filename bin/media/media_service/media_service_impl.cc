@@ -4,6 +4,8 @@
 
 #include "apps/media/src/media_service/media_service_impl.h"
 
+#include <magenta/syscalls.h>
+
 #include "apps/media/services/audio_policy_service.fidl.h"
 #include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/src/media_service/audio_capturer_impl.h"
@@ -22,7 +24,7 @@
 
 namespace media {
 
-MediaServiceImpl::MediaServiceImpl() {
+MediaServiceImpl::MediaServiceImpl() : dispatcher_(mx_system_get_num_cpus()) {
   tracing::InitializeTracer(application_context(), {"motown"});
   FLOG_INITIALIZE(application_context(), "media_service");
 
