@@ -37,7 +37,6 @@ void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
   delegate_->GetPage(
       kRootPageId, std::move(page_request),
       TRACE_CALLBACK(callback, "ledger", "ledger_get_root_page"));
-  ;
 }
 
 // GetPage(array<uint8, 16>? id, Page& page) => (Status status);
