@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -28,12 +29,22 @@ bool bad_access_test(void) {
     END_TEST;
 }
 
+static void try_bad_syscall(void* arg) {
+    uint64_t num = (uintptr_t)arg;
+    mx_status_t status = bad_syscall(num);
+    UNITTEST_TRACEF("bad syscall %#" PRIx64 " returned %d", num, status);
+}
+
+#define TRY_BAD_SYSCALL(num) \
+    ASSERT_DEATH(try_bad_syscall, (void*)(uintptr_t)(num), \
+                 "bad syscall did not crash")
+
 bool bad_syscall_num_test(void) {
     BEGIN_TEST;
-    EXPECT_EQ(bad_syscall(MX_SYS_COUNT), MX_ERR_BAD_SYSCALL, "");
-    EXPECT_EQ(bad_syscall(0x80000000ull), MX_ERR_BAD_SYSCALL, "");
-    EXPECT_EQ(bad_syscall(0xff00ff0000000000ull), MX_ERR_BAD_SYSCALL, "");
-    EXPECT_EQ(bad_syscall(0xff00ff0000000010ull), MX_ERR_BAD_SYSCALL, "");
+    TRY_BAD_SYSCALL(MX_SYS_COUNT);
+    TRY_BAD_SYSCALL(0x80000000ull);
+    TRY_BAD_SYSCALL(0xff00ff0000000000ull);
+    TRY_BAD_SYSCALL(0xff00ff0000000010ull);
     END_TEST;
 }
 
