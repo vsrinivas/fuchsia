@@ -4,9 +4,8 @@
 
 //! Type-safe bindings for Magenta channel objects.
 
-use {HandleBase, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time};
-use {sys, handle_drop, into_result, size_to_u32_sat};
-use conv::{ValueInto};
+use {HandleBase, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
+use {sys, handle_drop, into_result};
 use std::mem;
 
 /// An object representing a Magenta
@@ -99,8 +98,8 @@ impl Channel {
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
             -> Result<(), Status>
     {
-        let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::ErrOutOfRange));
-        let n_handles = try!(handles.len().value_into().map_err(|_| Status::ErrOutOfRange));
+        let n_bytes = try!(usize_into_u32(bytes.len()).map_err(|_| Status::ErrOutOfRange));
+        let n_handles = try!(usize_into_u32(handles.len()).map_err(|_| Status::ErrOutOfRange));
         unsafe {
             let status = sys::mx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::mx_handle_t, n_handles);
@@ -128,9 +127,9 @@ impl Channel {
     pub fn call(&self, options: u32, timeout: Time, bytes: &[u8], handles: &mut Vec<Handle>,
         buf: &mut MessageBuf) -> Result<(), (Status, Status)>
     {
-        let write_num_bytes = try!(bytes.len().value_into().map_err(
+        let write_num_bytes = try!(usize_into_u32(bytes.len()).map_err(
             |_| (Status::ErrOutOfRange, Status::NoError)));
-        let write_num_handles = try!(handles.len().value_into().map_err(
+        let write_num_handles = try!(usize_into_u32(handles.len()).map_err(
             |_| (Status::ErrOutOfRange, Status::NoError)));
         buf.reset_handles();
         let read_num_bytes: u32 = size_to_u32_sat(buf.bytes.capacity());

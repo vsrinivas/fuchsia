@@ -7,11 +7,8 @@
 
 extern crate core;
 extern crate magenta_sys;
-extern crate conv;
 
 use std::marker::PhantomData;
-
-use conv::{ValueInto, ValueFrom, UnwrapOrSaturate};
 
 mod channel;
 mod event;
@@ -499,7 +496,7 @@ fn handle_drop(handle: sys::mx_handle_t) {
 /// syscall.
 pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status>
 {
-    let len = try!(items.len().value_into().map_err(|_| Status::ErrOutOfRange));
+    let len = try!(usize_into_u32(items.len()).map_err(|_| Status::ErrOutOfRange));
     let items_ptr = items.as_mut_ptr() as *mut sys::mx_wait_item_t;
     let status = unsafe { sys::mx_object_wait_many( items_ptr, len, deadline) };
     if status == sys::MX_ERR_CANCELED {
@@ -546,10 +543,6 @@ impl Handle {
     pub unsafe fn from_raw(raw: sys::mx_handle_t) -> Handle {
         Handle(raw)
     }
-}
-
-fn size_to_u32_sat(size: usize) -> u32 {
-    u32::value_from(size).unwrap_or_saturate()
 }
 
 #[cfg(test)]
@@ -755,4 +748,21 @@ mod tests {
         let buffer = [0, 1, 2];
         assert_eq!(cprng_add_entropy(&buffer), Ok(()));
     }
+}
+
+pub fn usize_into_u32(n: usize) -> Result<u32, ()> {
+    if n > ::std::u32::MAX as usize || n < ::std::u32::MIN as usize {
+        return Err(())
+    }
+    Ok(n as u32)
+}
+
+pub fn size_to_u32_sat(n: usize) -> u32 {
+    if n > ::std::u32::MAX as usize {
+        return ::std::u32::MAX;
+    }
+    if n < ::std::u32::MIN as usize {
+        return ::std::u32::MIN;
+    }
+    n as u32
 }
