@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "apps/ledger/src/storage/impl/object_impl.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
 
 namespace storage {
@@ -110,6 +111,7 @@ LevelDb::~LevelDb() {
 }
 
 Status LevelDb::Init() {
+  TRACE_DURATION("ledger", "leveldb_init");
   if (!files::CreateDirectory(db_path_)) {
     FTL_LOG(ERROR) << "Failed to create directory under " << db_path_;
     return Status::INTERNAL_IO_ERROR;
