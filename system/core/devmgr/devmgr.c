@@ -138,7 +138,7 @@ int service_starter(void* arg) {
     // create a directory for sevice rendezvous
     mkdir("/svc", 0755);
 
-    if (getenv_bool("virtcon.disable", false)) {
+    if (!getenv_bool("virtcon.disable", false)) {
         // pass virtcon.* options along
         const char* envp[16];
         unsigned envc = 0;
@@ -159,7 +159,7 @@ int service_starter(void* arg) {
                       &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1);
     }
 
-    if (getenv_bool("netsvc.disable", false)) {
+    if (!getenv_bool("netsvc.disable", false)) {
         const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
         int argc = 1;
 
