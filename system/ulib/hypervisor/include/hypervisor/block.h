@@ -29,19 +29,12 @@ typedef struct block {
     virtio_queue_t queue;
 } block_t;
 
-/* Perform basic structure initialization that cannot fail. */
-void block_null_init(block_t* block, void* guest_physmem_addr, size_t guest_physmem_size,
-                     const io_apic_t* io_apic);
-
-mx_status_t block_init(block_t* block, const char* block_path, void* guest_physmem_addr,
+mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
                        size_t guest_physmem_size, const io_apic_t* io_apic);
 
 /* Start asynchronous handling of writes to the block device. */
 mx_status_t block_async(block_t* block, mx_handle_t vcpu, mx_handle_t guest, uint32_t bar_addr,
                         uint16_t bar_size);
-
-/* Block device that returns zeros when read, and ignores all writes. */
-mx_status_t null_block_device(block_t* block);
 
 /* Block device that returns reads and writes to a file. */
 mx_status_t file_block_device(block_t* block);

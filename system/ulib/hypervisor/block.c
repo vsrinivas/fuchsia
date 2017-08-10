@@ -60,14 +60,32 @@ static virtio_device_ops_t block_device_ops = {
     .queue_notify = &block_queue_notify,
 };
 
-void block_null_init(block_t* block, void* guest_physmem_addr,
-                     size_t guest_physmem_size, const io_apic_t* io_apic) {
+mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
+                       size_t guest_physmem_size, const io_apic_t* io_apic) {
     memset(block, 0, sizeof(*block));
 
-    block->queue.size = QUEUE_SIZE;
-    block->queue.virtio_device = &block->virtio_device;
+    // Open block file. First try to open as read-write but fall back to read
+    // only if that fails.
+    block->fd = open(path, O_RDWR);
+    if (block->fd < 0) {
+        block->fd = open(path, O_RDONLY);
+        if (block->fd < 0) {
+            fprintf(stderr, "Failed to open block file \"%s\"\n", path);
+            return MX_ERR_IO;
+        }
+        fprintf(stderr, "Unable to open block file \"%s\" read-write. "
+                        "Block device will be read-only.\n", path);
+        block->virtio_device.features |= VIRTIO_BLK_F_RO;
+    }
+    // Read file size.
+    off_t ret = lseek(block->fd, 0, SEEK_END);
+    if (ret < 0) {
+        fprintf(stderr, "Failed to read size of block file \"%s\"\n", path);
+        return MX_ERR_IO;
+    }
+    block->size = ret;
 
-    // Setup virtio device.
+    // Setup Virtio device.
     block->virtio_device.global_irq = X86_INT_BLOCK;
     block->virtio_device.impl = block;
     block->virtio_device.num_queues = 1;
@@ -76,31 +94,10 @@ void block_null_init(block_t* block, void* guest_physmem_addr,
     block->virtio_device.guest_physmem_addr = guest_physmem_addr;
     block->virtio_device.guest_physmem_size = guest_physmem_size;
     block->virtio_device.io_apic = io_apic;
-}
 
-mx_status_t block_init(block_t* block, const char* block_path, void* guest_physmem_addr,
-                       size_t guest_physmem_size, const io_apic_t* io_apic) {
-    block_null_init(block, guest_physmem_addr, guest_physmem_size, io_apic);
-    // Open block file. First try to open as read-write but fall back to read
-    // only if that fails.
-    block->fd = open(block_path, O_RDWR);
-    if (block->fd < 0) {
-        block->fd = open(block_path, O_RDONLY);
-        if (block->fd < 0) {
-            fprintf(stderr, "Failed to open block file \"%s\"\n", block_path);
-            return MX_ERR_IO;
-        }
-        fprintf(stderr, "Unable to open block file \"%s\" read-write. "
-                        "Block device will be read-only.\n", block_path);
-        block->virtio_device.features |= VIRTIO_BLK_F_RO;
-    }
-    // Read file size.
-    off_t ret = lseek(block->fd, 0, SEEK_END);
-    if (ret < 0) {
-        fprintf(stderr, "Failed to read size of block file \"%s\"\n", block_path);
-        return MX_ERR_IO;
-    }
-    block->size = ret;
+    // Setup Virtio queue.
+    block->queue.size = QUEUE_SIZE;
+    block->queue.virtio_device = &block->virtio_device;
     return MX_OK;
 }
 
@@ -115,33 +112,6 @@ mx_status_t block_async(block_t* block, mx_handle_t vcpu, mx_handle_t guest, uin
                         uint16_t bar_size) {
     block->bar_base = bar_base;
     return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, block_handler, block);
-}
-
-static mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
-    virtio_blk_req_t* blk_req = req;
-    switch (blk_req->type) {
-    case VIRTIO_BLK_T_IN:
-        memset(addr, 0, len);
-        /* fallthrough */
-    case VIRTIO_BLK_T_OUT:
-        return MX_OK;
-    case VIRTIO_BLK_T_FLUSH:
-        // See note in file_req.
-        if (blk_req->sector != 0)
-            return MX_ERR_IO_DATA_INTEGRITY;
-        return MX_OK;
-    }
-    return MX_ERR_INVALID_ARGS;
-}
-
-mx_status_t null_block_device(block_t* block) {
-    mx_status_t status;
-    mtx_lock(&block->mutex);
-    do {
-        status = virtio_queue_handler(&block->queue, sizeof(virtio_blk_req_t), null_req, NULL);
-    } while (status == MX_ERR_NEXT);
-    mtx_unlock(&block->mutex);
-    return status;
 }
 
 // Multiple data buffers can be chained in the payload of block read/write
