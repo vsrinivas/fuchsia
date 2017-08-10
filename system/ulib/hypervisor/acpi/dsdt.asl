@@ -24,7 +24,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "MX", "MX DSDT", 0x0)
             Name (_CID, EisaId ("PNP0A03") /* PCI Bus */)           // _CID: Compatible ID
             Name (_UID, 0)                                          // _UID: Unique ID
 
-            Name(_PRT, Package()
+            Name(_PRT, Package()                                    // _PRT: PCI Routing Table
             {
                 // Device 0-4.
                 Package() { 0x0000ffff, 0, Zero, 32 },
@@ -32,6 +32,44 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "MX", "MX DSDT", 0x0)
                 Package() { 0x0002ffff, 0, Zero, 34 },
                 Package() { 0x0003ffff, 0, Zero, 35 },
                 Package() { 0x0004ffff, 0, Zero, 36 },
+            })
+
+            NAME(_CRS, ResourceTemplate() {                         // _CRS: Current Resource Setting
+                // Allocate PCI Bus Numbers.
+                WORDBusNumber(                                      // Produce Bus 0-ff
+                    ResourceProducer,
+                    MinFixed,
+                    MaxFixed,
+                    PosDecode,
+                    0x0000,                                         // AddressGranularity
+                    0x0000,                                         // AddressMin
+                    0x00ff,                                         // AddressMax
+                    0x0000,                                         // AddressTranslation
+                    0x0100                                          // RangeLength
+                )
+
+                // Consume PCI Address/Data ports.
+                IO(                                                 // Consumed resource (CF8-CFF)
+                    Decode16,
+                    0x0cf8,                                         // AddressMin
+                    0x0cf8,                                         // AddressMax
+                    0x0001,                                         // AddressAlignment
+                    0x0008                                          // RangeLength
+                )
+
+                // Allocated port ranges that this bridge can map devices to.
+                WORDIO(                                             // Produce resource (8000-8FFF)
+                    ResourceProducer,
+                    MinFixed,
+                    MaxFixed,
+                    PosDecode,
+                    EntireRange,
+                    0x0000,                                         // AddressGranularity
+                    0x8000,                                         // AddressMin
+                    0x8fff,                                         // AddressMax
+                    0x0000,                                         // AddressTranslation
+                    0x1000                                          // RangeLength
+                )
             })
         }
     }
