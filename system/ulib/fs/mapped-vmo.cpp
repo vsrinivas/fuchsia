@@ -41,31 +41,24 @@ zx_status_t MappedVmo::Create(size_t size, const char* name, fbl::unique_ptr<Map
     return ZX_OK;
 }
 
-zx_status_t MappedVmo::Shrink(size_t off, size_t len) {
-    if (len == 0 || off + len > len_ || off > len_ || off + len < off) {
+zx_status_t MappedVmo::Shrink(size_t len) {
+    if (len == 0 || len > len_) {
         return ZX_ERR_INVALID_ARGS;
+    } else if (len == len_) {
+        return ZX_OK;
     }
 
     zx_status_t status;
-    zx_handle_t new_vmo;
-    if (off > 0) {
-        // Unmap everything before the offset
-        if ((status = zx_vmar_unmap(zx_vmar_root_self(), addr_, off)) != ZX_OK) {
-            return status;
-        }
-    }
-    if (off + len < len_) {
-        // Unmap everything after the offset
-        if ((status = zx_vmar_unmap(zx_vmar_root_self(), addr_ + off + len, len_ - (off + len))) != ZX_OK) {
-            return status;
-        }
-    }
-    if ((status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, off, len, &new_vmo)) != ZX_OK) {
+    // Unmap everything after the offset
+    if ((status = zx_vmar_unmap(zx_vmar_root_self(), addr_ + len, len_ - len)) != ZX_OK) {
         return status;
     }
-    zx_handle_close(vmo_);
-    vmo_ = new_vmo;
-    addr_ = addr_ + off;
+    if ((status = zx_vmo_op_range(vmo_, ZX_VMO_OP_DECOMMIT, len, len_ - len,
+                                  nullptr, 0)) != ZX_OK) {
+        // We can tolerate this error; from a client's perspective, the VMO
+        // still should appear smaller.
+        fprintf(stderr, "MappedVmo::Shrink: VMO Decommit failed: %d\n", status);
+    }
     len_ = len;
     return ZX_OK;
 }

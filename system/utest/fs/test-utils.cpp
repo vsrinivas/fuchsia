@@ -39,7 +39,7 @@ bool test_mapped_vmo() {
     ASSERT_EQ(mvmo->GetSize(), init_size + PAGE_SIZE);
 
     // Shrink vmo, verify size & data
-    ASSERT_EQ(mvmo->Shrink(0, min_size), ZX_OK);
+    ASSERT_EQ(mvmo->Shrink(min_size), ZX_OK);
     ASSERT_EQ(mvmo->GetSize(), min_size);
     ASSERT_EQ(memcmp(buf.get(), mvmo->GetData(), min_size), 0);
 

@@ -21,16 +21,13 @@ public:
 
     static zx_status_t Create(size_t size, const char* name, fbl::unique_ptr<MappedVmo>* out);
 
-    // Attempts to reduce both the VMO size and VMAR mapping:
-    // From [addr_, addr_ + len_]
-    // To   [addr_ + off, addr_ + off + len]
+    // Attempts to reduce both the VMO size and VMAR mapping
+    // from length |len_| to |len|.
     //
     // Attempting to shrink the mapping to a length of zero or
     // requesting a "shrink" that would increase the mapping size
     // returns an error.
-    //
-    // On failure, the Mapping may be partially removed, and should not be used.
-    zx_status_t Shrink(size_t off, size_t len);
+    zx_status_t Shrink(size_t len);
 
     // Attempts to increase both VMO size and VMAR mapping:
     // From [addr_, addr_ + len_]

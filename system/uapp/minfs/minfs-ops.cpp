@@ -253,7 +253,7 @@ zx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, blk_t start) {
 
 #ifdef __Fuchsia__
     if (vmo_indirect_ != nullptr && vmo_indirect_->GetSize() > size) {
-        if ((status = vmo_indirect_->Shrink(0, size)) != ZX_OK) {
+        if ((status = vmo_indirect_->Shrink(size)) != ZX_OK) {
             return status;
         }
     }
