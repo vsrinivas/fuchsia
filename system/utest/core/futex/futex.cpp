@@ -436,8 +436,8 @@ static bool test_futex_misaligned() {
     mx_futex_t* const futex = &buffer.futex[0];
     mx_futex_t* const futex_2 = &buffer.futex[1];
     ASSERT_GT(alignof(mx_futex_t), 1);
-    ASSERT_NEQ((uintptr_t)futex % alignof(mx_futex_t), 0);
-    ASSERT_NEQ((uintptr_t)futex_2 % alignof(mx_futex_t), 0);
+    ASSERT_NE((uintptr_t)futex % alignof(mx_futex_t), 0);
+    ASSERT_NE((uintptr_t)futex_2 % alignof(mx_futex_t), 0);
 
     // mx_futex_requeue might check the waited-for value before it
     // checks the second futex's alignment, so make sure the call is

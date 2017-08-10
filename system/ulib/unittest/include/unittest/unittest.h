@@ -40,7 +40,7 @@
  *      EXPECT_EQ(1, foo_value, "foo_func failed");
  *      ... there are EXPECT_* macros for many conditions...
  *      EXPECT_TRUE(foo_condition(), "condition should be true");
- *      EXPECT_NEQ(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
+ *      EXPECT_NE(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
  *
  *      END_TEST;
  * }
@@ -443,6 +443,7 @@ int unittest_set_verbosity_level(int new_level);
  * Use the EXPECT_* macros to check test results.
  */
 #define EXPECT_EQ(lhs, rhs, ...) EXPECT_CMP(==, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define EXPECT_NE(lhs, rhs, ...) EXPECT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_NEQ(lhs, rhs, ...) EXPECT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_LE(lhs, rhs, ...) EXPECT_CMP(<=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_GE(lhs, rhs, ...) EXPECT_CMP(>=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
@@ -478,6 +479,7 @@ int unittest_set_verbosity_level(int new_level);
     UT_CMP(op, lhs, rhs, lhs_str, rhs_str, RET_FALSE, ##__VA_ARGS__)
 
 #define ASSERT_EQ(lhs, rhs, ...) ASSERT_CMP(==, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
+#define ASSERT_NE(lhs, rhs, ...) ASSERT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_NEQ(lhs, rhs, ...) ASSERT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_LE(lhs, rhs, ...) ASSERT_CMP(<=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_GE(lhs, rhs, ...) ASSERT_CMP(>=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)

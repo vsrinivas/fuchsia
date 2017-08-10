@@ -46,7 +46,7 @@
  *      EXPECT_EQ(1, foo_value, "foo_func failed");
  *      ... there are EXPECT_* macros for many conditions...
  *      EXPECT_TRUE(foo_condition(), "condition should be true");
- *      EXPECT_NEQ(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
+ *      EXPECT_NE(MX_ERR_TIMED_OUT, foo_event(), "event timed out");
  *
  *      END_TEST;
  * }
@@ -249,6 +249,7 @@ int unittest_printf(const char* format, ...);
  * if the condition fails.
  */
 #define EXPECT_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, false)
+#define EXPECT_NE(expected, actual, msg)               UTCHECK_NEQ(expected, actual, msg, false)
 #define EXPECT_NEQ(expected, actual, msg)              UTCHECK_NEQ(expected, actual, msg, false)
 #define EXPECT_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, false)
 #define EXPECT_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, false)
@@ -267,6 +268,7 @@ int unittest_printf(const char* format, ...);
  * abort a test with a filure status if the condition fails.
  */
 #define REQUIRE_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, true)
+#define REQUIRE_NE(expected, actual, msg)               UTCHECK_NEQ(expected, actual, msg, true)
 #define REQUIRE_NEQ(expected, actual, msg)              UTCHECK_NEQ(expected, actual, msg, true)
 #define REQUIRE_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, true)
 #define REQUIRE_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, true)

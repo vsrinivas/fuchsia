@@ -200,7 +200,7 @@ static bool committing_tests(void* context) {
 
     // Allocate an object.
     auto obj = reinterpret_cast<vaddr_t>(arena.Alloc());
-    EXPECT_NEQ(0u, obj, "");
+    EXPECT_NE(0u, obj, "");
     size_t atotal = sizeof(TestObj);
 
     // The page containing the object should be committed.
