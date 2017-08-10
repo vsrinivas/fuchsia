@@ -313,7 +313,20 @@ void process_report(uint64_t pid, uint64_t tid, uint32_t type, bool use_libunwin
     if (type == MX_EXCP_POLICY_ERROR)
         fatal = "";
 
-    printf("<== %sexception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", fatal, pid, tid);
+    char process_name[MX_MAX_NAME_LEN];
+    status = mx_object_get_property(process, MX_PROP_NAME, process_name, sizeof(process_name));
+    if (status < 0) {
+        strlcpy(process_name, "unknown", sizeof(process_name));
+    }
+
+    char thread_name[MX_MAX_NAME_LEN];
+    status = mx_object_get_property(thread, MX_PROP_NAME, thread_name, sizeof(thread_name));
+    if (status < 0) {
+        strlcpy(thread_name, "unknown", sizeof(thread_name));
+    }
+
+    printf("<== %sexception: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", fatal,
+           process_name, pid, thread_name, tid);
     printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report.header.type), pc);
 
 #if defined(__x86_64__)
