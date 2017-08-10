@@ -28,13 +28,6 @@ static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
     return (block_t*) virtio_device->impl;
 }
 
-static mx_status_t block_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
-    if (queue_sel != 0)
-        return MX_ERR_INVALID_ARGS;
-
-    return file_block_device(virtio_device_to_block(device));
-}
-
 static mx_status_t block_read(const virtio_device_t* device, uint16_t port,
                               mx_vcpu_io_t* vcpu_io) {
     block_t* block = virtio_device_to_block(device);
@@ -55,6 +48,12 @@ static mx_status_t block_write(virtio_device_t* device, mx_handle_t vcpu,
     return MX_ERR_NOT_SUPPORTED;
 }
 
+static mx_status_t block_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
+    if (queue_sel != 0)
+        return MX_ERR_INVALID_ARGS;
+    return file_block_device(virtio_device_to_block(device));
+}
+
 static virtio_device_ops_t block_device_ops = {
     .read = &block_read,
     .write = &block_write,
@@ -62,14 +61,14 @@ static virtio_device_ops_t block_device_ops = {
 };
 
 void block_null_init(block_t* block, void* guest_physmem_addr,
-                     size_t guest_physmem_size, io_apic_t* io_apic) {
+                     size_t guest_physmem_size, const io_apic_t* io_apic) {
     memset(block, 0, sizeof(*block));
 
     block->queue.size = QUEUE_SIZE;
     block->queue.virtio_device = &block->virtio_device;
 
     // Setup virtio device.
-    block->virtio_device.irq_vector = X86_INT_BLOCK;
+    block->virtio_device.global_irq = X86_INT_BLOCK;
     block->virtio_device.impl = block;
     block->virtio_device.num_queues = 1;
     block->virtio_device.queues = &block->queue;
@@ -80,7 +79,7 @@ void block_null_init(block_t* block, void* guest_physmem_addr,
 }
 
 mx_status_t block_init(block_t* block, const char* block_path, void* guest_physmem_addr,
-                       size_t guest_physmem_size, io_apic_t* io_apic) {
+                       size_t guest_physmem_size, const io_apic_t* io_apic) {
     block_null_init(block, guest_physmem_addr, guest_physmem_size, io_apic);
     // Open block file. First try to open as read-write but fall back to read
     // only if that fails.
@@ -105,7 +104,20 @@ mx_status_t block_init(block_t* block, const char* block_path, void* guest_physm
     return MX_OK;
 }
 
-mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
+static mx_status_t block_handler(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet) {
+    block_t* block = ctx;
+    mx_guest_io_t* io = &packet->io;
+    const uint16_t port_off = io->port - block->bar_base;
+    return virtio_pci_legacy_write(&block->virtio_device, vcpu, port_off, io);
+}
+
+mx_status_t block_async(block_t* block, mx_handle_t vcpu, mx_handle_t guest, uint32_t bar_base,
+                        uint16_t bar_size) {
+    block->bar_base = bar_base;
+    return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, block_handler, block);
+}
+
+static mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
     virtio_blk_req_t* blk_req = req;
     switch (blk_req->type) {
     case VIRTIO_BLK_T_IN:
@@ -124,9 +136,11 @@ mx_status_t null_req(void* ctx, void* req, void* addr, uint32_t len) {
 
 mx_status_t null_block_device(block_t* block) {
     mx_status_t status;
+    mtx_lock(&block->mutex);
     do {
         status = virtio_queue_handler(&block->queue, sizeof(virtio_blk_req_t), null_req, NULL);
     } while (status == MX_ERR_NEXT);
+    mtx_unlock(&block->mutex);
     return status;
 }
 
@@ -138,7 +152,7 @@ typedef struct file_state {
     off_t off;
 } file_state_t;
 
-mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
+static mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
     file_state_t* state = ctx;
     block_t* block = state->block;
     virtio_blk_req_t* blk_req = req;
@@ -180,9 +194,11 @@ mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
 
 mx_status_t file_block_device(block_t* block) {
     mx_status_t status;
+    mtx_lock(&block->mutex);
     do {
         file_state_t state = { block, 0 };
         status = virtio_queue_handler(&block->queue, sizeof(virtio_blk_req_t), file_req, &state);
     } while (status == MX_ERR_NEXT);
+    mtx_unlock(&block->mutex);
     return status;
 }

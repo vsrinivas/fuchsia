@@ -159,15 +159,19 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
     switch (port) {
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
         uint32_t bit_offset = (port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
-        uint32_t addr = bus->config_addr >> bit_offset;
         uint32_t bit_mask = (uint32_t) BIT_MASK(access_size * 8);
+        mtx_lock((mtx_t*) &bus->mutex);
+        uint32_t addr = bus->config_addr >> bit_offset;
+        mtx_unlock((mtx_t*) &bus->mutex);
         vcpu_io->access_size = access_size;
         vcpu_io->u32 = (vcpu_io->u32 & ~bit_mask) | (addr & bit_mask);
         return MX_OK;
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
-        vcpu_io->access_size = access_size;
+        mtx_lock((mtx_t*) &bus->mutex);
         uint32_t addr = bus->config_addr;
+        mtx_unlock((mtx_t*) &bus->mutex);
+        vcpu_io->access_size = access_size;
         if (!pci_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
                             PCI_TYPE1_FUNCTION(addr))) {
             pci_addr_invalid_read(access_size, &vcpu_io->u32);
@@ -193,14 +197,18 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io) {
         uint32_t bit_size = io->access_size * 8;
         uint32_t bit_mask = (uint32_t) BIT_MASK(bit_size);
 
+        mtx_lock(&bus->mutex);
         // Clear out the bits we'll be modifying.
         bus->config_addr = CLEAR_BITS(bus->config_addr, bit_size, bit_offset);
         // Set the bits of the address.
         bus->config_addr |= (io->u32 & bit_mask) << bit_offset;
+        mtx_unlock(&bus->mutex);
         return MX_OK;
     }
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
+        mtx_lock(&bus->mutex);
         uint32_t addr = bus->config_addr;
+        mtx_unlock(&bus->mutex);
         if (!pci_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr), PCI_TYPE1_FUNCTION(addr)))
             return MX_ERR_OUT_OF_RANGE;
 
@@ -230,7 +238,9 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |   status    |    command   |
     //  ----------------------------
     case PCI_CONFIG_COMMAND:
+        mtx_lock((mtx_t*) &device->mutex);
         *value = device->command;
+        mtx_unlock((mtx_t*) &device->mutex);
         *value |= PCI_STATUS_INTERRUPT << 16;
         return MX_OK;
     //  -------------------------------------------------
@@ -248,7 +258,9 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
         *value = PCI_HEADER_TYPE_STANDARD << 16;
         return MX_OK;
     case PCI_REGISTER_BAR_0: {
+        mtx_lock((mtx_t*) &device->mutex);
         *value = device->bar[0] | PCI_BAR_IO_TYPE_PIO;
+        mtx_unlock((mtx_t*) &device->mutex);
         return MX_OK;
     }
     //  -------------------------------------------------------------
@@ -322,20 +334,22 @@ mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, ui
         // Read-only registers.
         return MX_ERR_NOT_SUPPORTED;
     case PCI_CONFIG_COMMAND:
-        if (len != 2) {
+        if (len != 2)
             return MX_ERR_NOT_SUPPORTED;
-        }
+        mtx_lock(&device->mutex);
         device->command = value;
+        mtx_unlock(&device->mutex);
         return MX_OK;
     case PCI_REGISTER_BAR_0: {
-        if (len != 4) {
+        if (len != 4)
             return MX_ERR_NOT_SUPPORTED;
-        }
+        mtx_lock(&device->mutex);
         uint32_t* bar = &device->bar[0];
         *bar = value;
         // We zero bits in the BAR in order to set the size.
         *bar &= ~(device->attr->bar_size - 1);
         *bar |= PCI_BAR_IO_TYPE_PIO;
+        mtx_unlock(&device->mutex);
         return MX_OK;
     }
     default:
@@ -358,42 +372,48 @@ static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
         return command & PCI_COMMAND_IO_EN;
     case PCI_BAR_IO_TYPE_MMIO:
         return command & PCI_COMMAND_MEM_EN;
+    default:
+        return false;
     }
-    return false;
-}
-
-static uint32_t pci_bar_address(uint8_t io_type, uint32_t bar) {
-    switch (io_type) {
-    case PCI_BAR_IO_TYPE_PIO:
-        return bar & kPioAddressMask;
-    case PCI_BAR_IO_TYPE_MMIO:
-        return bar & kMmioAddressMask;
-    }
-    return 0;
 }
 
 uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_t* device = &bus->device[i];
+        mtx_lock(&device->mutex);
+        uint16_t command = device->command;
+        uint32_t bar0 = device->bar[0];
+        uint32_t bar_base = pci_bar_base(device);
+        uint16_t bar_size = device->attr->bar_size;
+        mtx_unlock(&device->mutex);
+
+        // Ensure IO operations are enabled for this device.
+        if (!pci_device_io_enabled(io_type, command))
+            continue;
 
         // Check if the BAR is implemented and configured for the requested
-        // io type.
-        uint16_t bar0 = device->bar[0];
+        // IO type.
         if (!bar0 || (bar0 & PCI_BAR_IO_TYPE_MASK) != io_type)
             continue;
 
-        // Ensure IO operations are enabled for this device.
-        if (!pci_device_io_enabled(io_type, device->command))
-            continue;
-
-        uint16_t bar_base = pci_bar_address(io_type, bar0);
-        uint16_t bar_size = device->attr->bar_size;
         if (addr >= bar_base && addr < bar_base + bar_size) {
             *off = addr - bar_base;
             return i;
         }
     }
     return PCI_DEVICE_INVALID;
+}
+
+uint32_t pci_bar_base(pci_device_t* device) {
+    const uint32_t bar0 = device->bar[0];
+    switch (bar0 & PCI_BAR_IO_TYPE_MASK) {
+    case PCI_BAR_IO_TYPE_PIO:
+        return bar0 & kPioAddressMask;
+    case PCI_BAR_IO_TYPE_MMIO:
+        return bar0 & kMmioAddressMask;
+    default:
+        return 0;
+    }
 }
 
 uint16_t pci_bar_size(pci_device_t* device) {

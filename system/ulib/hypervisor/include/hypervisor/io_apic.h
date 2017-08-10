@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/hypervisor.h>
 
@@ -11,6 +13,7 @@
 
 /* Stores the IO APIC state. */
 typedef struct io_apic {
+    mtx_t mutex;
     // IO register-select register.
     uint32_t select;
     // IO APIC identification register.
@@ -26,4 +29,4 @@ mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_guest_memory_t* memory,
                             const instruction_t* inst);
 
 /* Returns the redirected interrupt vector for the given global one. */
-uint8_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_vector);
+uint8_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq);

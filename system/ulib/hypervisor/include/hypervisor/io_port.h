@@ -4,10 +4,13 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <magenta/syscalls/hypervisor.h>
 
 /* Stores the IO port state. */
 typedef struct io_port {
+    mtx_t mutex;
     // Index of the RTC register to use.
     uint8_t rtc_index;
     // Command being issued to the i8042 controller.

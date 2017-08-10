@@ -88,36 +88,6 @@ int main(int argc, char** argv) {
     }
     mx_handle_close(resource);
 
-    guest_state_t guest_state;
-    memset(&guest_state, 0, sizeof(guest_state));
-    guest_state.guest = guest;
-    // Setup IO APIC.
-    io_apic_t io_apic;
-    guest_state.io_apic = &io_apic;
-    io_apic_init(&io_apic);
-    // Setup IO ports.
-    io_port_t io_port;
-    guest_state.io_port = &io_port;
-    io_port_init(&io_port);
-    // Setup PCI.
-    pci_bus_t bus;
-    guest_state.bus = &bus;
-    pci_bus_init(&bus);
-    // Setup UART.
-    uart_t uart;
-    guest_state.uart = &uart;
-    uart_init(&uart);
-    // Setup block device.
-    block_t block;
-    guest_state.block = &block;
-    if (block_path != NULL) {
-        status = block_init(&block, block_path, (void*)addr, kVmoSize, &io_apic);
-        if (status != MX_OK)
-            return status;
-    } else {
-        pci_device_disable(&bus.device[PCI_DEVICE_VIRTIO_BLOCK]);
-    }
-
     uintptr_t pt_end_off;
     status = guest_create_page_table(addr, kVmoSize, &pt_end_off);
     if (status != MX_OK) {
@@ -191,13 +161,50 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    vcpu_context_t vcpu_context;
-    vcpu_init(&vcpu_context);
-    vcpu_context.vcpu = vcpu;
+    guest_ctx_t guest_ctx;
+    memset(&guest_ctx, 0, sizeof(guest_ctx));
+    // Setup IO APIC.
+    io_apic_t io_apic;
+    guest_ctx.io_apic = &io_apic;
+    io_apic_init(&io_apic);
+    // Setup IO ports.
+    io_port_t io_port;
+    guest_ctx.io_port = &io_port;
+    io_port_init(&io_port);
+    // Setup PCI.
+    pci_bus_t bus;
+    guest_ctx.bus = &bus;
+    pci_bus_init(&bus);
+    // Setup UART.
+    uart_t uart;
+    guest_ctx.uart = &uart;
+    uart_init(&uart, &io_apic);
+    status = uart_async(&uart, vcpu, guest);
+    if (status != MX_OK)
+        return status;
+    // Setup block device.
+    block_t block;
+    guest_ctx.block = &block;
+    pci_device_t* virtio_block = &bus.device[PCI_DEVICE_VIRTIO_BLOCK];
+    if (block_path != NULL) {
+        status = block_init(&block, block_path, (void*)addr, kVmoSize, &io_apic);
+        if (status != MX_OK)
+            return status;
+        status = block_async(&block, vcpu, guest, pci_bar_base(virtio_block),
+                             pci_bar_size(virtio_block));
+        if (status != MX_OK)
+            return status;
+    } else {
+        pci_device_disable(virtio_block);
+    }
+
+    vcpu_ctx_t vcpu_ctx;
+    vcpu_init(&vcpu_ctx);
+    vcpu_ctx.vcpu = vcpu;
 #if __x86_64__
-    vcpu_context.local_apic.apic_addr = (void*)apic_addr;
+    vcpu_ctx.local_apic.apic_addr = (void*)apic_addr;
 #endif // __x86_64__
-    vcpu_context.guest_state = &guest_state;
+    vcpu_ctx.guest_ctx = &guest_ctx;
 
     mx_vcpu_state_t vcpu_state;
     memset(&vcpu_state, 0, sizeof(vcpu_state));
@@ -210,8 +217,5 @@ int main(int argc, char** argv) {
         return status;
     }
 
-    status = vcpu_loop(&vcpu_context);
-    if (status != MX_OK)
-        fprintf(stderr, "Failed to enter guest %d\n", status);
-    return status;
+    return vcpu_loop(&vcpu_ctx);
 }

@@ -109,9 +109,9 @@ static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, const instr
     return MX_OK;
 }
 
-static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_memory_t* memory) {
+static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* memory) {
     mx_vcpu_state_t vcpu_state;
-    mx_status_t status = vcpu_context->read_state(vcpu_context, MX_VCPU_STATE, &vcpu_state,
+    mx_status_t status = vcpu_ctx->read_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
                                                   sizeof(vcpu_state));
     if (status != MX_OK)
         return status;
@@ -133,20 +133,16 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
 #endif // __x86_64__
         fprintf(stderr, "\n");
     } else {
-        guest_state_t* guest_state = vcpu_context->guest_state;
+        guest_ctx_t* guest_ctx = vcpu_ctx->guest_ctx;
         switch (memory->addr) {
         case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
-            status = handle_local_apic(&vcpu_context->local_apic, memory, &inst);
+            status = handle_local_apic(&vcpu_ctx->local_apic, memory, &inst);
             break;
         case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
-            mtx_lock(&guest_state->mutex);
-            status = io_apic_handler(guest_state->io_apic, memory, &inst);
-            mtx_unlock(&guest_state->mutex);
+            status = io_apic_handler(guest_ctx->io_apic, memory, &inst);
             break;
         case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP: {
-            mtx_lock(&guest_state->mutex);
-            status = pci_bus_handler(vcpu_context->guest_state->bus, memory, &inst);
-            mtx_unlock(&guest_state->mutex);
+            status = pci_bus_handler(vcpu_ctx->guest_ctx->bus, memory, &inst);
             break;
         }
         default:
@@ -156,16 +152,16 @@ static mx_status_t handle_memory(vcpu_context_t* vcpu_context, const mx_guest_me
     }
 
     if (status != MX_OK) {
-        return mx_vcpu_interrupt(vcpu_context->vcpu, X86_INT_GP_FAULT);
+        return mx_vcpu_interrupt(vcpu_ctx->vcpu, X86_INT_GP_FAULT);
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
-        return vcpu_context->write_state(vcpu_context, MX_VCPU_STATE, &vcpu_state,
+        return vcpu_ctx->write_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
                                          sizeof(vcpu_state));
     }
     return status;
 }
 
-static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
+static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
 #if __x86_64__
     mx_status_t status = MX_OK;
     mx_vcpu_io_t vcpu_io;
@@ -177,22 +173,21 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_DATA_PORT:
-        status = io_port_read(vcpu_context->guest_state->io_port, io->port, &vcpu_io);
+        status = io_port_read(vcpu_ctx->guest_ctx->io_port, io->port, &vcpu_io);
         break;
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
-        status = uart_read(vcpu_context->guest_state->uart, io->port, &vcpu_io);
+        status = uart_read(vcpu_ctx->guest_ctx->uart, io->port, &vcpu_io);
         break;
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
-        status = pci_bus_read(vcpu_context->guest_state->bus, io->port, io->access_size, &vcpu_io);
+        status = pci_bus_read(vcpu_ctx->guest_ctx->bus, io->port, io->access_size, &vcpu_io);
         break;
     default: {
         uint16_t port_off;
-        pci_bus_t* bus = vcpu_context->guest_state->bus;
+        pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
         switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
         case PCI_DEVICE_VIRTIO_BLOCK: {
-            virtio_device_t* virtio_device =
-                &vcpu_context->guest_state->block->virtio_device;
+            virtio_device_t* virtio_device = &vcpu_ctx->guest_ctx->block->virtio_device;
             status = virtio_pci_legacy_read(virtio_device, port_off, &vcpu_io);
             break;
         }
@@ -209,13 +204,13 @@ static mx_status_t handle_input(vcpu_context_t* vcpu_context, const mx_guest_io_
                 io->access_size, io->port);
         return MX_ERR_IO_DATA_INTEGRITY;
     }
-    return vcpu_context->write_state(vcpu_context, MX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
+    return vcpu_ctx->write_state(vcpu_ctx, MX_VCPU_IO, &vcpu_io, sizeof(vcpu_io));
 #else // __x86_64__
     return MX_ERR_NOT_SUPPORTED;
 #endif // __x86_64__
 }
 
-static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
+static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
 #if __x86_64__
     switch (io->port) {
     case I8042_COMMAND_PORT:
@@ -227,21 +222,11 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_INDEX_PORT:
-        return io_port_write(vcpu_context->guest_state->io_port, io);
+        return io_port_write(vcpu_ctx->guest_ctx->io_port, io);
     case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
-        return pci_bus_write(vcpu_context->guest_state->bus, io);
+        return pci_bus_write(vcpu_ctx->guest_ctx->bus, io);
     }
-
-    uint16_t port_off;
-    pci_bus_t* bus = vcpu_context->guest_state->bus;
-    switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
-    case PCI_DEVICE_VIRTIO_BLOCK: {
-        virtio_device_t* virtio_device =
-            &vcpu_context->guest_state->block->virtio_device;
-        return virtio_pci_legacy_write(virtio_device, vcpu_context->vcpu, port_off, io);
-    }}
-
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
     return MX_ERR_NOT_SUPPORTED;
 #else // __x86_64__
@@ -249,19 +234,52 @@ static mx_status_t handle_output(vcpu_context_t* vcpu_context, const mx_guest_io
 #endif // __x86_64__
 }
 
-static mx_status_t handle_io(vcpu_context_t* vcpu_context, const mx_guest_io_t* io) {
-    mtx_lock(&vcpu_context->guest_state->mutex);
-    mx_status_t status = io->input ?
-                         handle_input(vcpu_context, io) :
-                         handle_output(vcpu_context, io);
-    mtx_unlock(&vcpu_context->guest_state->mutex);
-    return status;
+static mx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
+    return io->input ? handle_input(vcpu_ctx, io) : handle_output(vcpu_ctx, io);
 }
 
-static mx_status_t fifo_create(mx_handle_t* out0, mx_handle_t* out1) {
-    const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
-    const uint32_t size = sizeof(mx_guest_packet_t);
-    return mx_fifo_create(count, size, 0, out0, out1);
+static mx_status_t vcpu_state_read(vcpu_ctx_t* vcpu_ctx, uint32_t kind, void* buffer,
+                                   uint32_t len) {
+    return mx_vcpu_read_state(vcpu_ctx->vcpu, kind, buffer, len);
+}
+
+static mx_status_t vcpu_state_write(vcpu_ctx_t* vcpu_ctx, uint32_t kind, const void* buffer,
+                                    uint32_t len) {
+    return mx_vcpu_write_state(vcpu_ctx->vcpu, kind, buffer, len);
+}
+
+void vcpu_init(vcpu_ctx_t* vcpu_ctx) {
+    memset(vcpu_ctx, 0, sizeof(*vcpu_ctx));
+    vcpu_ctx->read_state = vcpu_state_read;
+    vcpu_ctx->write_state = vcpu_state_write;
+}
+
+mx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
+    while (true) {
+        mx_guest_packet_t packet;
+        mx_status_t status = mx_vcpu_resume(vcpu_ctx->vcpu, &packet);
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to resume VCPU %d\n", status);
+            return status;
+        }
+        status = vcpu_packet_handler(vcpu_ctx, &packet);
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
+            return status;
+        }
+    }
+}
+
+mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_guest_packet_t* packet) {
+    switch (packet->type) {
+    case MX_GUEST_PKT_MEMORY:
+        return handle_memory(vcpu_ctx, &packet->memory);
+    case MX_GUEST_PKT_IO:
+        return handle_io(vcpu_ctx, &packet->io);
+    default:
+        fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
+        return MX_ERR_NOT_SUPPORTED;
+    }
 }
 
 static mx_status_t fifo_wait(mx_handle_t fifo, mx_signals_t signals) {
@@ -277,111 +295,89 @@ static mx_status_t fifo_wait(mx_handle_t fifo, mx_signals_t signals) {
     return MX_OK;
 }
 
-static int uart_loop(void* arg) {
-    vcpu_context_t* vcpu_context = arg;
-    guest_state_t* guest_state = vcpu_context->guest_state;
-    mx_handle_t user_fifo;
-    mx_handle_t kernel_fifo;
-    mx_status_t status = fifo_create(&user_fifo, &kernel_fifo);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to create UART FIFO %d\n", status);
-        return MX_ERR_INTERNAL;
-    }
+typedef struct device {
+    mx_handle_t fifo;
+    mx_handle_t vcpu;
+    device_handler_fn_t handler;
+    void* ctx;
+} device_t;
 
-    const mx_vaddr_t addr = UART_RECEIVE_PORT;
-    const size_t len = (UART_SCR_SCRATCH_PORT - addr) + 1;
-    status = mx_guest_set_trap(guest_state->guest, MX_GUEST_TRAP_IO, addr, len, kernel_fifo);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to set trap for UART FIFO %d\n", status);
-        goto cleanup;
-    }
-
+static int device_loop(void* ctx) {
+    device_t* device = ctx;
     mx_guest_packet_t packets[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
+
     while (true) {
-        status = fifo_wait(user_fifo, MX_FIFO_READABLE);
+        mx_status_t status = fifo_wait(device->fifo, MX_FIFO_READABLE);
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to wait for UART FIFO %d\n", status);
+            fprintf(stderr, "Failed to wait for device FIFO %d\n", status);
             goto cleanup;
         }
 
         uint32_t num_packets;
-        status = mx_fifo_read(user_fifo, packets, sizeof(packets), &num_packets);
+        status = mx_fifo_read(device->fifo, packets, sizeof(packets), &num_packets);
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to read from UART FIFO %d\n", status);
+            fprintf(stderr, "Failed to read from device FIFO %d\n", status);
             goto cleanup;
         }
 
         for (uint32_t i = 0; i < num_packets; i++) {
-            if (packets[i].type != MX_GUEST_PKT_IO) {
-                fprintf(stderr, "Invalid packet type for UART %d\n", packets[i].type);
-                goto cleanup;
-            }
-            status = uart_write(guest_state, vcpu_context->vcpu, &packets[i].io);
+            status = device->handler(device->ctx, device->vcpu, &packets[i]);
             if (status != MX_OK) {
-                fprintf(stderr, "Unable to handle packet for UART %d\n", status);
+                fprintf(stderr, "Unable to handle packet for device %d\n", status);
                 goto cleanup;
             }
         }
     }
 
 cleanup:
-    mx_handle_close(user_fifo);
-    mx_handle_close(kernel_fifo);
+    mx_handle_close(device->fifo);
+    free(device);
     return MX_ERR_INTERNAL;
 }
 
-static mx_status_t vcpu_state_read(vcpu_context_t* vcpu_context, uint32_t kind, void* buffer,
-                                   uint32_t len) {
-    return mx_vcpu_read_state(vcpu_context->vcpu, kind, buffer, len);
-}
+mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
+                         size_t len, device_handler_fn_t handler, void* ctx) {
+    device_t* device = calloc(1, sizeof(device_t));
+    if (device == NULL) {
+        fprintf(stderr, "Failed to allocate device\n");
+        return MX_ERR_NO_MEMORY;
+    }
+    device->vcpu = vcpu;
+    device->handler = handler;
+    device->ctx = ctx;
 
-static mx_status_t vcpu_state_write(vcpu_context_t* vcpu_context, uint32_t kind, const void* buffer,
-                                    uint32_t len) {
-    return mx_vcpu_write_state(vcpu_context->vcpu, kind, buffer, len);
-}
+    const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
+    const uint32_t size = sizeof(mx_guest_packet_t);
+    mx_handle_t kernel_fifo;
+    mx_status_t status = mx_fifo_create(count, size, 0, &device->fifo, &kernel_fifo);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to create device FIFO %d\n", status);
+        goto mem_cleanup;
+    }
 
-void vcpu_init(vcpu_context_t* vcpu_context) {
-    memset(vcpu_context, 0, sizeof(*vcpu_context));
-    vcpu_context->read_state = vcpu_state_read;
-    vcpu_context->write_state = vcpu_state_write;
-}
+    status = mx_guest_set_trap(guest, kind, addr, len, kernel_fifo);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to set trap for device FIFO %d\n", status);
+        goto cleanup;
+    }
 
-mx_status_t vcpu_loop(vcpu_context_t* vcpu_context) {
-    thrd_t uart_thread;
-    int ret = thrd_create(&uart_thread, uart_loop, vcpu_context);
+    thrd_t thread;
+    int ret = thrd_create(&thread, device_loop, device);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to create UART thread %d\n", ret);
-        return MX_ERR_INTERNAL;
+        fprintf(stderr, "Failed to create device thread %d\n", ret);
+        goto cleanup;
     }
-    ret = thrd_detach(uart_thread);
+
+    ret = thrd_detach(thread);
     if (ret != thrd_success) {
-        fprintf(stderr, "Failed to detach UART thread %d\n", ret);
-        return MX_ERR_INTERNAL;
+        fprintf(stderr, "Failed to detach device thread %d\n", ret);
+        goto cleanup;
     }
 
-    while (true) {
-        mx_guest_packet_t packet;
-        mx_status_t status = mx_vcpu_resume(vcpu_context->vcpu, &packet);
-        if (status != MX_OK) {
-            fprintf(stderr, "Failed to resume VCPU %d\n", status);
-            return status;
-        }
-        status = vcpu_packet_handler(vcpu_context, &packet);
-        if (status != MX_OK) {
-            fprintf(stderr, "Failed to handle guest packet %d: %d\n", packet.type, status);
-            return status;
-        }
-    }
-}
-
-mx_status_t vcpu_packet_handler(vcpu_context_t* vcpu_context, mx_guest_packet_t* packet) {
-    switch (packet->type) {
-    case MX_GUEST_PKT_MEMORY:
-        return handle_memory(vcpu_context, &packet->memory);
-    case MX_GUEST_PKT_IO:
-        return handle_io(vcpu_context, &packet->io);
-    default:
-        fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
-        return MX_ERR_NOT_SUPPORTED;
-    }
+    return MX_OK;
+cleanup:
+    mx_handle_close(device->fifo);
+mem_cleanup:
+    free(device);
+    return MX_ERR_INTERNAL;
 }

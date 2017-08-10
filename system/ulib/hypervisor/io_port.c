@@ -86,12 +86,18 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
 mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* vcpu_io) {
 #ifdef __x86_64__
     switch (port) {
-    case RTC_DATA_PORT:
+    case RTC_DATA_PORT: {
         vcpu_io->access_size = 1;
-        return handle_rtc(io_port->rtc_index, &vcpu_io->u8);
+        mtx_lock((mtx_t*) &io_port->mutex);
+        uint8_t rtc_index = io_port->rtc_index;
+        mtx_unlock((mtx_t*) &io_port->mutex);
+        return handle_rtc(rtc_index, &vcpu_io->u8);
+    }
     case I8042_DATA_PORT:
         vcpu_io->access_size = 1;
+        mtx_lock((mtx_t*) &io_port->mutex);
         vcpu_io->u8 = io_port->i8042_command == I8042_COMMAND_TEST ? I8042_DATA_TEST_RESPONSE : 0;
+        mtx_unlock((mtx_t*) &io_port->mutex);
         break;
     case I8042_COMMAND_PORT:
         vcpu_io->access_size = 1;
@@ -103,7 +109,9 @@ mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* 
         break;
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         vcpu_io->access_size = 2;
+        mtx_lock((mtx_t*) &io_port->mutex);
         vcpu_io->u16 = io_port->pm1_enable;
+        mtx_unlock((mtx_t*) &io_port->mutex);
         break;
     case PIC1_DATA_PORT:
         vcpu_io->access_size = 1;
@@ -131,17 +139,23 @@ mx_status_t io_port_write(io_port_t* io_port, const mx_guest_io_t* io) {
     case I8042_COMMAND_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
+        mtx_lock(&io_port->mutex);
         io_port->i8042_command = io->u8;
+        mtx_unlock(&io_port->mutex);
         break;
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
+        mtx_lock(&io_port->mutex);
         io_port->pm1_enable = io->u16;
+        mtx_unlock(&io_port->mutex);
         break;
     case RTC_INDEX_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
+        mtx_lock(&io_port->mutex);
         io_port->rtc_index = io->u8;
+        mtx_unlock(&io_port->mutex);
         break;
     default:
         return MX_ERR_NOT_SUPPORTED;

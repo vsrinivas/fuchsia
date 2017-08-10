@@ -130,7 +130,7 @@ mx_status_t virtio_pci_legacy_write(virtio_device_t* device, mx_handle_t vcpu,
             fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
             return status;
         }
-        uint32_t interrupt = io_apic_redirect(device->io_apic, device->irq_vector);
+        uint32_t interrupt = io_apic_redirect(device->io_apic, device->global_irq);
         return mx_vcpu_interrupt(vcpu, interrupt);
     }}
 

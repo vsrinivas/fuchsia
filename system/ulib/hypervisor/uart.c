@@ -29,8 +29,9 @@
 /* Interrupt vectors. */
 #define X86_INT_UART                    4u
 
-void uart_init(uart_t* uart) {
+void uart_init(uart_t* uart, const io_apic_t* io_apic) {
     memset(uart, 0, sizeof(*uart));
+    uart->io_apic = io_apic;
 }
 
 mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
@@ -70,30 +71,24 @@ mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) 
     return MX_OK;
 }
 
-static mx_status_t raise_thr_empty(mx_handle_t vcpu, guest_state_t* guest_state) {
+static mx_status_t raise_thr_empty(mx_handle_t vcpu, const io_apic_t* io_apic) {
     static uint32_t vector = 0;
     if (vector == 0) {
-        // Lock concurrent access to io_apic_state.
-        mtx_lock(&guest_state->mutex);
-        vector = io_apic_redirect(guest_state->io_apic, X86_INT_UART);
-        mtx_unlock(&guest_state->mutex);
-
-        // UART IRQs overlap with CPU exception handlers, so they need to be remapped.
-        // If that hasn't happened yet, don't fire the interrupt - it would be bad.
-        if (vector == 0) {
+        vector = io_apic_redirect(io_apic, X86_INT_UART);
+        // UART IRQs overlap with CPU exception handlers, so they need to be
+        // remapped. If that hasn't happened yet, don't fire the interrupt - it
+        // would be bad.
+        if (vector == 0)
             return MX_OK;
-        }
     }
 
     return mx_vcpu_interrupt(vcpu, vector);
 }
 
-mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_guest_io_t* io) {
+mx_status_t uart_write(uart_t* uart, mx_handle_t vcpu, const mx_guest_io_t* io) {
     static uint8_t buffer[UART_BUFFER_SIZE] = {};
     static uint16_t offset = 0;
     static bool thr_empty = false;
-
-    uart_t* uart = guest_state->uart;
 
     switch (io->port) {
     case UART_RECEIVE_PORT:
@@ -105,32 +100,40 @@ mx_status_t uart_write(guest_state_t* guest_state, mx_handle_t vcpu, const mx_gu
             }
         }
         if (thr_empty)
-            return raise_thr_empty(vcpu, guest_state);
-        break;
+            return raise_thr_empty(vcpu, uart->io_apic);
+        return MX_OK;
     case UART_INTERRUPT_ENABLE_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
         thr_empty = io->u8 & UART_INTERRUPT_ENABLE_THR_EMPTY;
-        mtx_lock(&guest_state->mutex);
+        mtx_lock(&uart->mutex);
         uart->interrupt_enable = io->u8;
         uart->interrupt_id = thr_empty ? UART_INTERRUPT_ID_THR_EMPTY : UART_INTERRUPT_ID_NONE;
-        mtx_unlock(&guest_state->mutex);
+        mtx_unlock(&uart->mutex);
         if (thr_empty)
-            return raise_thr_empty(vcpu, guest_state);
-        break;
+            return raise_thr_empty(vcpu, uart->io_apic);
+        return MX_OK;
     case UART_LINE_CONTROL_PORT:
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        mtx_lock(&guest_state->mutex);
+        mtx_lock(&uart->mutex);
         uart->line_control = io->u8;
-        mtx_unlock(&guest_state->mutex);
-        break;
+        mtx_unlock(&uart->mutex);
+        return MX_OK;
     case UART_INTERRUPT_ID_PORT:
     case UART_MODEM_CONTROL_PORT ... UART_SCR_SCRATCH_PORT:
-        break;
+        return MX_OK;
     default:
         return MX_ERR_INTERNAL;
     }
+}
 
-    return MX_OK;
+static mx_status_t uart_handler(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet) {
+    return uart_write(ctx, vcpu, &packet->io);
+}
+
+mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest) {
+    const mx_vaddr_t uart_addr = UART_RECEIVE_PORT;
+    const size_t uart_len = UART_SCR_SCRATCH_PORT + 1 - uart_addr;
+    return device_async(vcpu, guest, MX_GUEST_TRAP_IO, uart_addr, uart_len, uart_handler, uart);
 }

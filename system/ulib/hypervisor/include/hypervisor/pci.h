@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <magenta/types.h>
 #include <sys/types.h>
 
@@ -45,6 +47,7 @@ typedef struct pci_device_attr pci_device_attr_t;
 
 /* Stores the state of PCI devices. */
 typedef struct pci_device {
+    mtx_t mutex;
     // Command register.
     uint16_t command;
     // Base address registers.
@@ -54,6 +57,7 @@ typedef struct pci_device {
 } pci_device_t;
 
 typedef struct pci_bus {
+    mtx_t mutex;
     // Selected address in PCI config space.
     uint32_t config_addr;
     // Devices on the virtual PCI bus.
@@ -87,7 +91,8 @@ void pci_device_disable(pci_device_t* device);
  */
 uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off);
 
-/* Returns the bar size for the device. The device is the same value used to
- * index the device in PCI config space.
- */
+/* Returns the BAR base address for the device. */
+uint32_t pci_bar_base(pci_device_t* device);
+
+/* Returns the BAR size for the device. */
 uint16_t pci_bar_size(pci_device_t* device);
