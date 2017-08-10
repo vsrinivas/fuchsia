@@ -6,6 +6,7 @@ group("wifi") {
   deps = [
     "//drivers/wifi/mediatek/rt5370",
     "//drivers/wifi/testing",
+    "//drivers/wifi/third_party/atheros/fuchsia",
     "//drivers/wifi/wlan",
   ]
 }
