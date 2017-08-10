@@ -206,12 +206,14 @@ func (ios *iostate) loopSocketWrite(stk tcpip.Stack) {
 		n, err := dataHandle.Read([]byte(v), 0)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
-			// NOP
+			// Success. Pass the data to the endpoint and loop.
+		case mx.ErrBadState:
+			return // This side of the socket is closed.
 		case mx.ErrShouldWait:
 			obs, err := dataHandle.WaitOne(mx.SignalSocketReadable|mx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, mx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
-				// NOP
+				// Handle signal below.
 			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 				return
 			default:
@@ -313,7 +315,9 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 			v = v[n:]
 			switch mxerror.Status(err) {
 			case mx.ErrOk:
-				// NOP
+				// Success. Loop and keep writing.
+			case mx.ErrBadState:
+				return // This side of the socket is closed.
 			case mx.ErrShouldWait:
 				if debug2 {
 					log.Printf("loopSocketRead: gto mx.ErrShouldWait")
@@ -324,7 +328,7 @@ func (ios *iostate) loopSocketRead(stk tcpip.Stack) {
 				)
 				switch mxerror.Status(err) {
 				case mx.ErrOk:
-					// NOP
+					// Handle signal below.
 				case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 					return
 				default:
@@ -410,10 +414,12 @@ func (ios *iostate) loopDgramRead(stk tcpip.Stack) {
 		for {
 			_, err := dataHandle.Write(out, 0)
 			switch mxerror.Status(err) {
-			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
-				return
 			case mx.ErrOk:
 				break writeLoop
+			case mx.ErrBadState:
+				return // This side of the socket is closed.
+			case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
+				return
 			default:
 				log.Printf("socket write failed: %v", err) // TODO: communicate this
 				break writeLoop
@@ -432,7 +438,9 @@ func (ios *iostate) loopDgramWrite(stk tcpip.Stack) {
 		n, err := dataHandle.Read([]byte(v), 0)
 		switch mxerror.Status(err) {
 		case mx.ErrOk:
-			// NOP
+			// Success. Pass the data to the endpoint and loop.
+		case mx.ErrBadState:
+			return // This side of the socket is closed.
 		case mx.ErrBadHandle, mx.ErrCanceled, mx.ErrPeerClosed:
 			return
 		case mx.ErrShouldWait:
