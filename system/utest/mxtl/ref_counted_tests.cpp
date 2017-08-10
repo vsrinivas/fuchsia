@@ -47,7 +47,7 @@ static bool ref_counted_test() {
         mxtl::AllocChecker ac;
         mxtl::RefPtr<DestructionTracker> ptr =
             mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
 
         EXPECT_FALSE(destroyed, "should not be destroyed");
         void* arg = reinterpret_cast<void*>(ptr.get());
@@ -83,11 +83,11 @@ static bool wrap_dead_pointer_asserts() {
         mxtl::AllocChecker ac;
         mxtl::RefPtr<DestructionTracker> ptr =
             mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
         raw = ptr.get();
-        EXPECT_FALSE(destroyed, "");
+        EXPECT_FALSE(destroyed);
     }
-    EXPECT_TRUE(destroyed, "");
+    EXPECT_TRUE(destroyed);
 
     // Wrapping the now-destroyed object should trigger an assertion.
     mxtl::RefPtr<DestructionTracker> zombie = mxtl::WrapRefPtr(raw);
@@ -109,14 +109,14 @@ static bool extra_release_asserts() {
     mxtl::AllocChecker ac;
     mxtl::RefPtr<DestructionTracker> ptr =
         mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
     DestructionTracker* raw = ptr.get();
 
     // Manually release once, which should tell us to delete the object.
-    EXPECT_TRUE(raw->Release(), "");
+    EXPECT_TRUE(raw->Release());
     // (But it's not deleted since we didn't listen to the return value
     // of Release())
-    EXPECT_FALSE(destroyed, "");
+    EXPECT_FALSE(destroyed);
 
     // Manually releasing again should trigger the assertion.
     __UNUSED bool unused = raw->Release();
@@ -138,14 +138,14 @@ static bool wrap_after_last_release_asserts() {
     mxtl::AllocChecker ac;
     mxtl::RefPtr<DestructionTracker> ptr =
         mxtl::AdoptRef(new (&ac) DestructionTracker(&destroyed));
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
     DestructionTracker* raw = ptr.get();
 
     // Manually release once, which should tell us to delete the object.
-    EXPECT_TRUE(raw->Release(), "");
+    EXPECT_TRUE(raw->Release());
     // (But it's not deleted since we didn't listen to the return value
     // of Release())
-    EXPECT_FALSE(destroyed, "");
+    EXPECT_FALSE(destroyed);
 
     // Adding another ref (by wrapping) should trigger the assertion.
     mxtl::RefPtr<DestructionTracker> zombie = mxtl::WrapRefPtr(raw);
@@ -229,7 +229,7 @@ static bool upgrade_fail_test() {
     bool destroying = false;
 
     auto raw = new (&ac) RawUpgradeTester(&mutex, &destroying);
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
 
     pthread_t thread;
     {
@@ -258,7 +258,7 @@ static bool upgrade_success_test() {
     bool destroying = false;
 
     auto ref = mxtl::AdoptRef(new (&ac) RawUpgradeTester(&mutex, &destroying));
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
     auto raw = ref.get();
 
     {

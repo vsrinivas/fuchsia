@@ -68,9 +68,9 @@ static bool GenerateBlob(mxtl::unique_ptr<blob_info_t>* out, size_t blob_size) {
     // Generate a Blob of random data
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<blob_info_t> info(new (&ac) blob_info_t);
-    EXPECT_EQ(ac.check(), true, "");
+    EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[blob_size]);
-    EXPECT_EQ(ac.check(), true, "");
+    EXPECT_EQ(ac.check(), true);
     unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
     for (size_t i = 0; i < blob_size; i++) {
         info->data[i] = (char)rand_r(&seed);
@@ -83,7 +83,7 @@ static bool GenerateBlob(mxtl::unique_ptr<blob_info_t>* out, size_t blob_size) {
         info->merkle = nullptr;
     } else {
         info->merkle.reset(new (&ac) char[info->size_merkle]);
-        ASSERT_EQ(ac.check(), true, "");
+        ASSERT_EQ(ac.check(), true);
     }
     Digest digest;
     ASSERT_EQ(MerkleTree::Create(&info->data[0], info->size_data, &info->merkle[0],
@@ -149,9 +149,9 @@ TestData::~TestData() {
 }
 
 bool TestData::run_tests() {
-    ASSERT_TRUE(create_blobs(), "");
-    ASSERT_TRUE(read_blobs(), "");
-    ASSERT_TRUE(unlink_blobs(), "");
+    ASSERT_TRUE(create_blobs());
+    ASSERT_TRUE(read_blobs());
+    ASSERT_TRUE(unlink_blobs());
     return true;
 }
 
@@ -346,7 +346,7 @@ bool TestData::create_blobs() {
         record |= (order == LAST && i >= blob_count - END_COUNT);
 
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(&info, blob_size), "");
+        ASSERT_TRUE(GenerateBlob(&info, blob_size));
         strcpy(paths[i], info->path);
 
         // create
@@ -373,9 +373,9 @@ bool TestData::create_blobs() {
         }
     }
 
-    ASSERT_TRUE(report_test(CREATE), "");
-    ASSERT_TRUE(report_test(TRUNCATE), "");
-    ASSERT_TRUE(report_test(WRITE), "");
+    ASSERT_TRUE(report_test(CREATE));
+    ASSERT_TRUE(report_test(TRUNCATE));
+    ASSERT_TRUE(report_test(WRITE));
 
     return true;
 }
@@ -393,8 +393,8 @@ bool TestData::read_blobs() {
 
         mxtl::AllocChecker ac;
         mxtl::unique_ptr<char[]> buf(new (&ac) char[blob_size]);
-        EXPECT_EQ(ac.check(), true, "");
-        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
+        EXPECT_EQ(ac.check(), true);
+        ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
 
         // read
         start = mx_ticks_get();
@@ -409,9 +409,9 @@ bool TestData::read_blobs() {
         ASSERT_EQ(success, 0, "Failed to read data");
     }
 
-    ASSERT_TRUE(report_test(OPEN), "");
-    ASSERT_TRUE(report_test(READ), "");
-    ASSERT_TRUE(report_test(CLOSE), "");
+    ASSERT_TRUE(report_test(OPEN));
+    ASSERT_TRUE(report_test(READ));
+    ASSERT_TRUE(report_test(CLOSE));
     return true;
 }
 
@@ -426,7 +426,7 @@ bool TestData::unlink_blobs() {
         sample_end(start, UNLINK, i);
     }
 
-    ASSERT_TRUE(report_test(UNLINK), "");
+    ASSERT_TRUE(report_test(UNLINK));
     return true;
 }
 
@@ -455,7 +455,7 @@ static bool StartBlobstoreBenchmark(size_t blob_size, size_t blob_count, travers
 static bool EndBlobstoreBenchmark() {
     DIR* dir = opendir(MOUNT_PATH);
     struct dirent* de;
-    ASSERT_NONNULL(dir, "");
+    ASSERT_NONNULL(dir);
 
     while ((de = readdir(dir)) != nullptr) {
         char path[PATH_MAX];
@@ -463,18 +463,18 @@ static bool EndBlobstoreBenchmark() {
         ASSERT_EQ(unlink(path), 0, "Failed to unlink");
     }
 
-    ASSERT_EQ(closedir(dir), 0, "");
+    ASSERT_EQ(closedir(dir), 0);
     return true;
 }
 
 template <size_t BlobSize, size_t BlobCount, traversal_order_t Order>
 static bool benchmark_blob_basic() {
     BEGIN_TEST;
-    ASSERT_TRUE(StartBlobstoreBenchmark(BlobSize, BlobCount, Order), "");
+    ASSERT_TRUE(StartBlobstoreBenchmark(BlobSize, BlobCount, Order));
     TestData data(BlobSize, BlobCount, Order);
     bool success = data.run_tests();
-    ASSERT_TRUE(EndBlobstoreBenchmark(), ""); //clean up
-    ASSERT_TRUE(success, "");
+    ASSERT_TRUE(EndBlobstoreBenchmark()); //clean up
+    ASSERT_TRUE(success);
     END_TEST;
 }
 

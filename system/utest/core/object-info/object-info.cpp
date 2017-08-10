@@ -33,7 +33,7 @@ bool handle_valid_on_valid_handle_succeeds() {
     BEGIN_TEST;
     EXPECT_EQ(mx_object_get_info(mx_process_self(), MX_INFO_HANDLE_VALID,
                                  nullptr, 0, nullptr, nullptr),
-              MX_OK, "");
+              MX_OK);
     END_TEST;
 }
 
@@ -44,13 +44,13 @@ bool handle_valid_on_closed_handle_fails() {
     ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
     EXPECT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
                                  nullptr, 0, nullptr, nullptr),
-              MX_OK, "");
+              MX_OK);
 
     // Close the handle and show that it becomes invalid.
     mx_handle_close(event);
     EXPECT_NEQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
                                   nullptr, 0, nullptr, nullptr),
-               MX_OK, "");
+               MX_OK);
     END_TEST;
 }
 
@@ -296,10 +296,10 @@ bool process_maps_smoke() {
 
     // The first two entries should always be the ASpace and root VMAR.
     ASSERT_GE(actual, 2u, "Root aspace/vmar missing?");
-    EXPECT_EQ(maps[0].type, (uint32_t)MX_INFO_MAPS_TYPE_ASPACE, "");
+    EXPECT_EQ(maps[0].type, (uint32_t)MX_INFO_MAPS_TYPE_ASPACE);
     EXPECT_EQ(maps[0].depth, 0u, "ASpace depth");
     EXPECT_GT(maps[0].size, 1u * 1024 * 1024 * 1024 * 1024, "ASpace size");
-    EXPECT_EQ(maps[1].type, (uint32_t)MX_INFO_MAPS_TYPE_VMAR, "");
+    EXPECT_EQ(maps[1].type, (uint32_t)MX_INFO_MAPS_TYPE_VMAR);
     EXPECT_EQ(maps[1].depth, 1u, "Root VMAR depth");
     EXPECT_GT(maps[1].size, 1u * 1024 * 1024 * 1024 * 1024, "Root VMAR size");
 
@@ -363,8 +363,8 @@ bool process_maps_smoke() {
     }
 
     // Make sure we saw our VMAR and all of our mappings.
-    EXPECT_TRUE(saw_vmar, "");
-    EXPECT_EQ((uint32_t)(1 << test_info->num_mappings) - 1, saw_mapping, "");
+    EXPECT_TRUE(saw_vmar);
+    EXPECT_EQ((uint32_t)(1 << test_info->num_mappings) - 1, saw_mapping);
 
     // Do one more read with a short buffer to test actual < avail.
     const size_t bufsize2 = actual * 3 / 4 * sizeof(mx_info_maps_t);
@@ -375,13 +375,13 @@ bool process_maps_smoke() {
                                  maps2, bufsize2,
                                  &actual2, &avail2),
               MX_OK);
-    EXPECT_LT(actual2, avail2, "");
+    EXPECT_LT(actual2, avail2);
     // mini-process is very simple, and won't have modified its own memory
     // maps since the previous dump. Its "committed_pages" values could be
     // different, though.
-    EXPECT_EQ(avail, avail2, "");
+    EXPECT_EQ(avail, avail2);
     LTRACEF("\n");
-    EXPECT_GT(actual2, 3u, ""); // Make sure we're looking at something.
+    EXPECT_GT(actual2, 3u); // Make sure we're looking at something.
     for (size_t i = 0; i < actual2; i++) {
         mx_info_maps_t* e1 = maps + i;
         mx_info_maps_t* e2 = maps2 + i;
@@ -416,7 +416,7 @@ bool self_fails() {
     // lives inside the address space that's being examined.
     EXPECT_EQ(mx_object_get_info(mx_process_self(), Topic,
                                  entries, sizeof(entries), &actual, &avail),
-              MX_ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED);
     END_TEST;
 }
 
@@ -429,7 +429,7 @@ bool invalid_handle_fails() {
     // Passing MX_HANDLE_INVALID should fail.
     EXPECT_EQ(mx_object_get_info(MX_HANDLE_INVALID, Topic,
                                  entries, sizeof(entries), &actual, &avail),
-              MX_ERR_BAD_HANDLE, "");
+              MX_ERR_BAD_HANDLE);
     END_TEST;
 }
 
@@ -442,7 +442,7 @@ bool wrong_handle_type_fails() {
     // Passing a handle to an unsupported object type should fail.
     EXPECT_NEQ(mx_object_get_info(GetWrongHandle(), Topic,
                                   entries, sizeof(entries), &actual, &avail),
-               MX_OK, "");
+               MX_OK);
     END_TEST;
 }
 
@@ -457,7 +457,7 @@ bool missing_rights_fails() {
     size_t avail;
     EXPECT_EQ(mx_object_get_info(obj, Topic,
                                  entries, sizeof(entries), &actual, &avail),
-              MX_OK, "");
+              MX_OK);
 
     // Get the test object handle rights.
     mx_info_handle_basic_t hi;
@@ -476,7 +476,7 @@ bool missing_rights_fails() {
     // Call should fail without these rights.
     EXPECT_EQ(mx_object_get_info(handle, Topic,
                                  entries, sizeof(entries), &actual, &avail),
-              MX_ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED);
 
     mx_handle_close(handle);
     END_TEST;
@@ -494,9 +494,9 @@ bool single_zero_buffer_fails() {
                                  &entry, // buffer
                                  0, // len
                                  &actual, &avail),
-              MX_ERR_BUFFER_TOO_SMALL, "");
-    EXPECT_EQ(0u, actual, "");
-    EXPECT_GT(avail, 0u, "");
+              MX_ERR_BUFFER_TOO_SMALL);
+    EXPECT_EQ(0u, actual);
+    EXPECT_GT(avail, 0u);
     END_TEST;
 }
 
@@ -511,9 +511,9 @@ bool multi_zero_buffer_succeeds() {
                                  nullptr, // buffer
                                  0, // len
                                  &actual, &avail),
-              MX_OK, "");
-    EXPECT_EQ(0u, actual, "");
-    EXPECT_GT(avail, 0u, "");
+              MX_OK);
+    EXPECT_EQ(0u, actual);
+    EXPECT_GT(avail, 0u);
     END_TEST;
 }
 
@@ -528,9 +528,9 @@ bool short_buffer_succeeds() {
                                  entries,
                                  sizeof(entries),
                                  &actual, &avail),
-              MX_OK, "");
-    EXPECT_EQ(1u, actual, "");
-    EXPECT_GT(avail, actual, "");
+              MX_OK);
+    EXPECT_EQ(1u, actual);
+    EXPECT_GT(avail, actual);
     END_TEST;
 }
 
@@ -542,7 +542,7 @@ bool null_avail_actual_succeeds() {
                                  entries, sizeof(entries),
                                  nullptr, // actual
                                  nullptr), // avail
-              MX_OK, "");
+              MX_OK);
     END_TEST;
 }
 
@@ -556,7 +556,7 @@ bool bad_buffer_fails() {
                                  (EntryType*)1,
                                  sizeof(EntryType),
                                  &actual, &avail),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     END_TEST;
 }
 
@@ -601,7 +601,7 @@ bool partially_unmapped_buffer_fails() {
                                  entries, sizeof(EntryType) * 4,
                                  &actual, &avail),
               // Bad user buffer should return MX_ERR_INVALID_ARGS.
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
 
     mx_vmar_destroy(vmar);
     mx_handle_close(vmar);
@@ -619,7 +619,7 @@ bool bad_actual_fails() {
                                  // Bad actual pointer value.
                                  (size_t*)1,
                                  &avail),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     END_TEST;
 }
 
@@ -632,7 +632,7 @@ bool bad_avail_fails() {
                                  entries, sizeof(entries), &actual,
                                  // Bad available pointer value.
                                  (size_t*)1),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     END_TEST;
 }
 
@@ -717,7 +717,7 @@ bool process_vmos_smoke() {
     }
 
     // Make sure we saw all of the expected VMOs.
-    EXPECT_EQ((uint32_t)(1 << test_info->num_vmos) - 1, saw_vmo, "");
+    EXPECT_EQ((uint32_t)(1 << test_info->num_vmos) - 1, saw_vmo);
 
     // Do one more read with a short buffer to test actual < avail.
     const size_t bufsize2 = actual * 3 / 4 * sizeof(mx_info_vmo_t);
@@ -728,12 +728,12 @@ bool process_vmos_smoke() {
                                  vmos2, bufsize2,
                                  &actual2, &avail2),
               MX_OK);
-    EXPECT_LT(actual2, avail2, "");
+    EXPECT_LT(actual2, avail2);
     // mini-process is very simple, and won't have modified its own set of VMOs
     // since the previous dump.
-    EXPECT_EQ(avail, avail2, "");
+    EXPECT_EQ(avail, avail2);
     LTRACEF("\n");
-    EXPECT_GT(actual2, 3u, ""); // Make sure we're looking at something.
+    EXPECT_GT(actual2, 3u); // Make sure we're looking at something.
     for (size_t i = 0; i < actual2; i++) {
         mx_info_vmo_t* e1 = vmos + i;
         mx_info_vmo_t* e2 = vmos2 + i;
@@ -835,9 +835,9 @@ bool jobch_helper_smoke(uint32_t topic, size_t expected_count) {
     size_t avail;
     EXPECT_EQ(mx_object_get_info(get_test_job(), topic,
                                  koids, sizeof(koids), &actual, &avail),
-              MX_OK, "");
-    EXPECT_EQ(expected_count, actual, "");
-    EXPECT_EQ(expected_count, avail, "");
+              MX_OK);
+    EXPECT_EQ(expected_count, actual);
+    EXPECT_EQ(expected_count, avail);
 
     // All returned koids should produce a valid handle when passed to
     // mx_object_get_child.

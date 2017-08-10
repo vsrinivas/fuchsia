@@ -59,7 +59,7 @@ static bool test_process_exit_status_race() {
         // If the process was reported as exited, query its state again.
         if (info1.exited) {
             EXPECT_TRUE(info1.return_code == 100 ||
-                        info1.return_code == 200, "");
+                        info1.return_code == 200);
 
             mx_info_process_t info2;
             ASSERT_EQ(mx_object_get_info(
@@ -67,8 +67,8 @@ static bool test_process_exit_status_race() {
                           &records_read, NULL), MX_OK);
             ASSERT_EQ(records_read, 1u);
             // Do the results match what we got before?
-            EXPECT_TRUE(info2.exited, "");
-            EXPECT_EQ(info1.return_code, info2.return_code, "");
+            EXPECT_TRUE(info2.exited);
+            EXPECT_EQ(info1.return_code, info2.return_code);
             break;
         }
         sched_yield();

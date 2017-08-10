@@ -55,8 +55,8 @@ static bool ufptr_test_diff_scope_swap() {
             *ptr2 = 7;
 
             ptr1.swap(ptr2);
-            EXPECT_EQ(7, *ptr1, "");
-            EXPECT_EQ(4, *ptr2, "");
+            EXPECT_EQ(7, *ptr1);
+            EXPECT_EQ(4, *ptr2);
         }
     }
 
@@ -68,10 +68,10 @@ static bool ufptr_test_bool_op() {
 
 
     mxtl::unique_free_ptr<int> foo(static_cast<int*>(malloc(sizeof(int))));
-    EXPECT_TRUE(static_cast<bool>(foo), "");
+    EXPECT_TRUE(static_cast<bool>(foo));
 
     foo.reset();
-    EXPECT_FALSE(static_cast<bool>(foo), "");
+    EXPECT_FALSE(static_cast<bool>(foo));
 
     END_TEST;
 }
@@ -87,47 +87,47 @@ static bool ufptr_test_comparison() {
     mxtl::unique_free_ptr<int> greater_unique(static_cast<int*>(malloc(sizeof(int))));
     *greater_unique = 2;
 
-    EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
+    EXPECT_NEQ(lesser_unique.get(), greater_unique.get());
     if (lesser_unique.get() > greater_unique.get())
         lesser_unique.swap(greater_unique);
 
     // Comparison against nullptr
-    EXPECT_TRUE(   null_unique == nullptr, "");
-    EXPECT_TRUE( lesser_unique != nullptr, "");
-    EXPECT_TRUE(greater_unique != nullptr, "");
+    EXPECT_TRUE(   null_unique == nullptr);
+    EXPECT_TRUE( lesser_unique != nullptr);
+    EXPECT_TRUE(greater_unique != nullptr);
 
-    EXPECT_TRUE(nullptr ==    null_unique, "");
-    EXPECT_TRUE(nullptr !=  lesser_unique, "");
-    EXPECT_TRUE(nullptr != greater_unique, "");
+    EXPECT_TRUE(nullptr ==    null_unique);
+    EXPECT_TRUE(nullptr !=  lesser_unique);
+    EXPECT_TRUE(nullptr != greater_unique);
 
     // Comparison against other unique_free_ptr<>s
-    EXPECT_TRUE( lesser_unique  ==  lesser_unique, "");
-    EXPECT_FALSE( lesser_unique == greater_unique, "");
-    EXPECT_FALSE(greater_unique ==  lesser_unique, "");
-    EXPECT_TRUE(greater_unique  == greater_unique, "");
+    EXPECT_TRUE( lesser_unique  ==  lesser_unique);
+    EXPECT_FALSE( lesser_unique == greater_unique);
+    EXPECT_FALSE(greater_unique ==  lesser_unique);
+    EXPECT_TRUE(greater_unique  == greater_unique);
 
-    EXPECT_FALSE( lesser_unique !=  lesser_unique, "");
+    EXPECT_FALSE( lesser_unique !=  lesser_unique);
     EXPECT_TRUE ( lesser_unique != greater_unique, "");
     EXPECT_TRUE (greater_unique !=  lesser_unique, "");
-    EXPECT_FALSE(greater_unique != greater_unique, "");
+    EXPECT_FALSE(greater_unique != greater_unique);
 
-    EXPECT_FALSE( lesser_unique <   lesser_unique, "");
+    EXPECT_FALSE( lesser_unique <   lesser_unique);
     EXPECT_TRUE ( lesser_unique <  greater_unique, "");
-    EXPECT_FALSE(greater_unique <   lesser_unique, "");
-    EXPECT_FALSE(greater_unique <  greater_unique, "");
+    EXPECT_FALSE(greater_unique <   lesser_unique);
+    EXPECT_FALSE(greater_unique <  greater_unique);
 
-    EXPECT_FALSE( lesser_unique >   lesser_unique, "");
-    EXPECT_FALSE( lesser_unique >  greater_unique, "");
+    EXPECT_FALSE( lesser_unique >   lesser_unique);
+    EXPECT_FALSE( lesser_unique >  greater_unique);
     EXPECT_TRUE (greater_unique >   lesser_unique, "");
-    EXPECT_FALSE(greater_unique >  greater_unique, "");
+    EXPECT_FALSE(greater_unique >  greater_unique);
 
     EXPECT_TRUE ( lesser_unique <=  lesser_unique, "");
     EXPECT_TRUE ( lesser_unique <= greater_unique, "");
-    EXPECT_FALSE(greater_unique <=  lesser_unique, "");
+    EXPECT_FALSE(greater_unique <=  lesser_unique);
     EXPECT_TRUE (greater_unique <= greater_unique, "");
 
     EXPECT_TRUE ( lesser_unique >=  lesser_unique, "");
-    EXPECT_FALSE( lesser_unique >= greater_unique, "");
+    EXPECT_FALSE( lesser_unique >= greater_unique);
     EXPECT_TRUE (greater_unique >=  lesser_unique, "");
     EXPECT_TRUE (greater_unique >= greater_unique, "");
 

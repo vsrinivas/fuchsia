@@ -347,7 +347,7 @@ static mx_rights_t get_handle_rights(mx_handle_t h) {
     mx_status_t s = mx_object_get_info(h, MX_INFO_HANDLE_BASIC, &info,
                                        sizeof(info), nullptr, nullptr);
     if (s != MX_OK) {
-        EXPECT_EQ(s, MX_OK, "");  // Poison the test
+        EXPECT_EQ(s, MX_OK);  // Poison the test
         return 0;
     }
     return info.rights;
@@ -377,7 +377,7 @@ bool vmo_rights_test() {
         MX_RIGHT_MAP |
         MX_RIGHT_GET_PROPERTY |
         MX_RIGHT_SET_PROPERTY;
-    EXPECT_EQ(kExpectedRights, kExpectedRights & get_handle_rights(vmo), "");
+    EXPECT_EQ(kExpectedRights, kExpectedRights & get_handle_rights(vmo));
 
     // test that we can read/write it
     status = mx_vmo_read(vmo, buf, 0, 0, &r);
@@ -1199,14 +1199,14 @@ bool vmo_clone_rights_test() {
     mx_handle_t reduced_rights_vmo;
     ASSERT_EQ(mx_handle_duplicate(vmo, kOldVmoRights, &reduced_rights_vmo),
               MX_OK);
-    EXPECT_EQ(get_handle_rights(reduced_rights_vmo), kOldVmoRights, "");
+    EXPECT_EQ(get_handle_rights(reduced_rights_vmo), kOldVmoRights);
 
     mx_handle_t clone;
     ASSERT_EQ(mx_vmo_clone(reduced_rights_vmo, MX_VMO_CLONE_COPY_ON_WRITE,
                            0, PAGE_SIZE, &clone),
               MX_OK);
 
-    EXPECT_EQ(mx_handle_close(reduced_rights_vmo), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(reduced_rights_vmo), MX_OK);
 
     ASSERT_EQ(mx_object_set_property(clone, MX_PROP_NAME,
                                      kNewVmoName, sizeof(kNewVmoName)),
@@ -1215,20 +1215,20 @@ bool vmo_clone_rights_test() {
     char oldname[MX_MAX_NAME_LEN] = "bad";
     EXPECT_EQ(mx_object_get_property(vmo, MX_PROP_NAME,
                                      oldname, sizeof(oldname)),
-              MX_OK, "");
+              MX_OK);
     EXPECT_STR_EQ(oldname, kOldVmoName, sizeof(kOldVmoName),
                   "original VMO name");
 
     char newname[MX_MAX_NAME_LEN] = "bad";
     EXPECT_EQ(mx_object_get_property(clone, MX_PROP_NAME,
                                      newname, sizeof(newname)),
-              MX_OK, "");
+              MX_OK);
     EXPECT_STR_EQ(newname, kNewVmoName, sizeof(kNewVmoName),
                   "clone VMO name");
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(get_handle_rights(clone), kNewVmoRights, "");
-    EXPECT_EQ(mx_handle_close(clone), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(get_handle_rights(clone), kNewVmoRights);
+    EXPECT_EQ(mx_handle_close(clone), MX_OK);
 
     END_TEST;
 }

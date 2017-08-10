@@ -99,10 +99,10 @@ static bool do_test() {
     auto ptr = PtrTraits<T>::MakePointer(new (&ac) typename PtrTraits<T>::ObjType);
 
     ASSERT_TRUE(ac.check());
-    EXPECT_FALSE(TestBase::recycle_was_called(), "");
+    EXPECT_FALSE(TestBase::recycle_was_called());
 
     ptr = nullptr;
-    EXPECT_TRUE(TestBase::recycle_was_called(), "");
+    EXPECT_TRUE(TestBase::recycle_was_called());
 
     END_TEST;
 }

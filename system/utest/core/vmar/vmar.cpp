@@ -158,17 +158,17 @@ bool destroy_root_test() {
     ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), MX_OK);
 
-    EXPECT_EQ(mx_vmar_destroy(vmar), MX_OK, "");
+    EXPECT_EQ(mx_vmar_destroy(vmar), MX_OK);
 
     mx_handle_t region;
     uintptr_t region_addr;
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, &region_addr),
-              MX_ERR_BAD_STATE, "");
+              MX_ERR_BAD_STATE);
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -196,13 +196,13 @@ bool basic_allocate_test() {
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region2, &region2_addr),
               MX_OK);
-    EXPECT_GE(region2_addr, region1_addr, "");
-    EXPECT_LE(region2_addr + region2_size, region1_addr + region1_size, "");
+    EXPECT_GE(region2_addr, region1_addr);
+    EXPECT_LE(region2_addr + region2_size, region1_addr + region1_size);
 
-    EXPECT_EQ(mx_handle_close(region1), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(region2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(region1), MX_OK);
+    EXPECT_EQ(mx_handle_close(region2), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -232,19 +232,19 @@ bool map_in_compact_test() {
     ASSERT_EQ(mx_vmar_map(region, 0, vmo, 0, map_size,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &map_addr),
               MX_OK);
-    EXPECT_GE(map_addr, region_addr, "");
-    EXPECT_LE(map_addr + map_size, region_addr + region_size, "");
+    EXPECT_GE(map_addr, region_addr);
+    EXPECT_LE(map_addr + map_size, region_addr + region_size);
 
     // Make a second allocation
     ASSERT_EQ(mx_vmar_map(region, 0, vmo, 0, map_size,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &map_addr),
               MX_OK);
-    EXPECT_GE(map_addr, region_addr, "");
-    EXPECT_LE(map_addr + map_size, region_addr + region_size, "");
+    EXPECT_GE(map_addr, region_addr);
+    EXPECT_LE(map_addr + map_size, region_addr + region_size);
 
-    EXPECT_EQ(mx_handle_close(region), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(region), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -272,17 +272,17 @@ bool allocate_oob_test() {
     EXPECT_EQ(mx_vmar_allocate(region1, region1_size, PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
                                MX_VM_FLAG_SPECIFIC, &region2, &region2_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
 
     EXPECT_EQ(mx_vmar_allocate(region1, region1_size - PAGE_SIZE, PAGE_SIZE * 2,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
                                MX_VM_FLAG_SPECIFIC,
                                &region2, &region2_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
 
-    EXPECT_EQ(mx_handle_close(region1), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(region1), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -311,25 +311,25 @@ bool allocate_unsatisfiable_test() {
     EXPECT_EQ(mx_vmar_allocate(region1, 0, region1_size + PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region2, &region2_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
 
     // Allocate the whole range, should work
     ASSERT_EQ(mx_vmar_allocate(region1, 0, region1_size,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region2, &region2_addr),
               MX_OK);
-    EXPECT_EQ(region2_addr, region1_addr, "");
+    EXPECT_EQ(region2_addr, region1_addr);
 
     // Attempt to allocate a page inside of the full region
     EXPECT_EQ(mx_vmar_allocate(region1, 0, PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region3, &region3_addr),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
-    EXPECT_EQ(mx_handle_close(region2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(region1), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(region2), MX_OK);
+    EXPECT_EQ(mx_handle_close(region1), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -377,14 +377,14 @@ bool destroyed_vmar_test() {
         uint8_t buf = 5;
         size_t len;
         EXPECT_EQ(mx_process_write_memory(process, map_addr[0], &buf, 1, &len),
-                  MX_OK, "");
-        EXPECT_EQ(len, 1U, "");
+                  MX_OK);
+        EXPECT_EQ(len, 1U);
 
         buf = 0;
         EXPECT_EQ(mx_process_read_memory(process, map_addr[1], &buf, 1, &len),
-                  MX_OK, "");
-        EXPECT_EQ(len, 1U, "");
-        EXPECT_EQ(buf, 5U, "");
+                  MX_OK);
+        EXPECT_EQ(len, 1U);
+        EXPECT_EQ(buf, 5U);
     }
 
     // Destroy region[0], which should also destroy region[1]
@@ -393,28 +393,28 @@ bool destroyed_vmar_test() {
     for (size_t i = 0; i < 2; ++i) {
         // Make sure the handles are still valid
         EXPECT_EQ(mx_object_get_info(region[i], MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL),
-                  MX_OK, "");
+                  MX_OK);
 
         // Make sure we can't access the memory mappings anymore
         {
             uint8_t buf;
             size_t read;
             EXPECT_EQ(mx_process_read_memory(process, map_addr[i], &buf, 1, &read),
-                      MX_ERR_NO_MEMORY, "");
+                      MX_ERR_NO_MEMORY);
         }
 
         // All operations on region[0] and region[1] should fail with MX_ERR_BAD_STATE
-        EXPECT_EQ(mx_vmar_destroy(region[i]), MX_ERR_BAD_STATE, "");
+        EXPECT_EQ(mx_vmar_destroy(region[i]), MX_ERR_BAD_STATE);
         EXPECT_EQ(mx_vmar_allocate(region[i], 0, PAGE_SIZE,
                                    MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                    &region[1], &region_addr[2]),
-                  MX_ERR_BAD_STATE, "");
+                  MX_ERR_BAD_STATE);
         EXPECT_EQ(mx_vmar_unmap(region[i], map_addr[i], PAGE_SIZE),
-                  MX_ERR_BAD_STATE, "");
+                  MX_ERR_BAD_STATE);
         EXPECT_EQ(mx_vmar_protect(region[i], map_addr[i], PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-                  MX_ERR_BAD_STATE, "");
+                  MX_ERR_BAD_STATE);
         EXPECT_EQ(mx_vmar_map(region[i], 0, vmo, 0, PAGE_SIZE, MX_VM_FLAG_PERM_READ, &map_addr[i]),
-                  MX_ERR_BAD_STATE, "");
+                  MX_ERR_BAD_STATE);
     }
 
     // Make sure we can still operate on the parent of region[0]
@@ -425,12 +425,12 @@ bool destroyed_vmar_test() {
 
 
     for (mx_handle_t h : region) {
-        EXPECT_EQ(mx_handle_close(h), MX_OK, "");
+        EXPECT_EQ(mx_handle_close(h), MX_OK);
     }
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -475,13 +475,13 @@ bool map_over_destroyed_test() {
         uint8_t buf = 5;
         size_t len;
         ASSERT_EQ(mx_vmo_write(vmo, &buf, 0, 1, &len), MX_OK);
-        EXPECT_EQ(len, 1U, "");
+        EXPECT_EQ(len, 1U);
 
         buf = 0;
         EXPECT_EQ(mx_process_read_memory(process, map_addr, &buf, 1, &len),
-                  MX_OK, "");
-        EXPECT_EQ(len, 1U, "");
-        EXPECT_EQ(buf, 5U, "");
+                  MX_OK);
+        EXPECT_EQ(len, 1U);
+        EXPECT_EQ(buf, 5U);
     }
 
     // Destroy region[1], which should unmap the VMO
@@ -492,34 +492,34 @@ bool map_over_destroyed_test() {
         uint8_t buf;
         size_t read;
         EXPECT_EQ(mx_process_read_memory(process, map_addr, &buf, 1, &read),
-                  MX_ERR_NO_MEMORY, "");
+                  MX_ERR_NO_MEMORY);
     }
 
     uintptr_t new_map_addr;
     EXPECT_EQ(mx_vmar_map(region[0], map_addr - region_addr[0], vmo2, 0, PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &new_map_addr),
-              MX_OK, "");
-    EXPECT_EQ(new_map_addr, map_addr, "");
+              MX_OK);
+    EXPECT_EQ(new_map_addr, map_addr);
 
     // Make sure we can read, and we don't see the old memory mapping
     {
         uint8_t buf;
         size_t read;
         EXPECT_EQ(mx_process_read_memory(process, map_addr, &buf, 1, &read),
-                  MX_OK, "");
-        EXPECT_EQ(read, 1U, "");
-        EXPECT_EQ(buf, 0U, "");
+                  MX_OK);
+        EXPECT_EQ(read, 1U);
+        EXPECT_EQ(buf, 0U);
     }
 
     for (mx_handle_t h : region) {
-        EXPECT_EQ(mx_handle_close(h), MX_OK, "");
+        EXPECT_EQ(mx_handle_close(h), MX_OK);
     }
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo2), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -558,26 +558,26 @@ bool overmapping_test() {
     EXPECT_EQ(mx_vmar_map(region[0], map_addr[0] - region_addr[0], vmo2, 0, 2 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &map_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Attempt a partial overmapping
     EXPECT_EQ(mx_vmar_map(region[0], map_addr[0] - region_addr[0], vmo2, 0, PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &map_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Attempt an overmapping that is larger than the original mapping
     EXPECT_EQ(mx_vmar_map(region[0], map_addr[0] - region_addr[0], vmo2, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &map_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Attempt to allocate a region on top
     EXPECT_EQ(mx_vmar_allocate(region[0], map_addr[0] - region_addr[0], PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
                                MX_VM_FLAG_SPECIFIC,
                                &region[1], &region_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Unmap the mapping
     ASSERT_EQ(mx_vmar_unmap(region[0], map_addr[0], 2 * PAGE_SIZE), MX_OK);
@@ -594,33 +594,33 @@ bool overmapping_test() {
     EXPECT_EQ(mx_vmar_map(region[0], region_addr[1] - region_addr[0], vmo2, 0, 2 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &map_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Attempt a partial overmapping
     EXPECT_EQ(mx_vmar_map(region[0], region_addr[1] - region_addr[0], vmo2, 0, PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &map_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Attempt an overmapping that is larger than the original region
     EXPECT_EQ(mx_vmar_map(region[0], region_addr[1] - region_addr[0], vmo2, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &map_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
     // Attempt to allocate a region on top
     EXPECT_EQ(mx_vmar_allocate(region[0], region_addr[1] - region_addr[0], PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
                                MX_VM_FLAG_SPECIFIC,
                                &region[2], &region_addr[2]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(region[0]), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(region[1]), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo2), MX_OK);
+    EXPECT_EQ(mx_handle_close(region[0]), MX_OK);
+    EXPECT_EQ(mx_handle_close(region[1]), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -640,31 +640,31 @@ bool invalid_args_test() {
     ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), MX_OK);
 
     // Bad handle
-    EXPECT_EQ(mx_vmar_destroy(vmo), MX_ERR_WRONG_TYPE, "");
+    EXPECT_EQ(mx_vmar_destroy(vmo), MX_ERR_WRONG_TYPE);
     EXPECT_EQ(mx_vmar_allocate(vmo, 0, 10 * PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, &region_addr),
-              MX_ERR_WRONG_TYPE, "");
+              MX_ERR_WRONG_TYPE);
     EXPECT_EQ(mx_vmar_map(vmo, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_ERR_WRONG_TYPE, "");
+              MX_ERR_WRONG_TYPE);
     EXPECT_EQ(mx_vmar_map(vmar, 0, process, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_ERR_WRONG_TYPE, "");
-    EXPECT_EQ(mx_vmar_unmap(vmo, 0, 0), MX_ERR_WRONG_TYPE, "");
-    EXPECT_EQ(mx_vmar_protect(vmo, 0, 0, MX_VM_FLAG_PERM_READ), MX_ERR_WRONG_TYPE, "");
+              MX_ERR_WRONG_TYPE);
+    EXPECT_EQ(mx_vmar_unmap(vmo, 0, 0), MX_ERR_WRONG_TYPE);
+    EXPECT_EQ(mx_vmar_protect(vmo, 0, 0, MX_VM_FLAG_PERM_READ), MX_ERR_WRONG_TYPE);
 
     // Allocating with non-zero offset and without FLAG_SPECIFIC
     EXPECT_EQ(mx_vmar_allocate(vmar, PAGE_SIZE, 10 * PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
 
     // Bad OUT pointers
     uintptr_t *bad_addr_ptr = reinterpret_cast<uintptr_t*>(1);
@@ -672,26 +672,26 @@ bool invalid_args_test() {
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, bad_addr_ptr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 10 * PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                bad_handle_ptr, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           bad_addr_ptr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
 
     // Non-page-aligned arguments
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, PAGE_SIZE - 1,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_allocate(vmar, PAGE_SIZE - 1, PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
                                MX_VM_FLAG_CAN_MAP_SPECIFIC,
                                &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     // Try the invalid maps with and without MX_VM_FLAG_MAP_RANGE.
     for (size_t i = 0; i < 2; ++i) {
         const uint32_t map_range = i ? MX_VM_FLAG_MAP_RANGE : 0;
@@ -700,58 +700,58 @@ bool invalid_args_test() {
                               4 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC | map_range,
                               &map_addr),
-                  MX_ERR_INVALID_ARGS, "");
+                  MX_ERR_INVALID_ARGS);
         // Specific, misaligned vmo offset
         EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, PAGE_SIZE - 1,
                               3 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC | map_range,
                               &map_addr),
-                  MX_ERR_INVALID_ARGS, "");
+                  MX_ERR_INVALID_ARGS);
         // Non-specific, misaligned vmo offset
         EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, PAGE_SIZE - 1,
                               3 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | map_range,
                               &map_addr),
-                  MX_ERR_INVALID_ARGS, "");
+                  MX_ERR_INVALID_ARGS);
     }
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_OK, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr + 1, PAGE_SIZE), MX_ERR_INVALID_ARGS, "");
+              MX_OK);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr + 1, PAGE_SIZE), MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr + 1, PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK, "");
+              MX_ERR_INVALID_ARGS);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK);
 
     // Overflowing vmo_offset
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, UINT64_MAX + 1 - PAGE_SIZE,
                           PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, UINT64_MAX + 1 - 2 * PAGE_SIZE,
                           PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_OK, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, PAGE_SIZE), MX_OK, "");
+              MX_OK);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, PAGE_SIZE), MX_OK);
 
     // size=0
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 0,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 0, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_OK, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 0), MX_ERR_INVALID_ARGS, "");
+              MX_OK);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 0), MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 0, MX_VM_FLAG_PERM_READ),
-              MX_ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK, "");
+              MX_ERR_INVALID_ARGS);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK);
 
     // size rounds up to 0
     constexpr size_t bad_size = mxtl::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
@@ -759,58 +759,58 @@ bool invalid_args_test() {
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, bad_size,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, bad_size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, bad_size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_MAP_RANGE,
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     // Attempt bad protect/unmaps
     EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, 0,
                           4 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &map_addr),
-              MX_OK, "");
+              MX_OK);
     for (ssize_t i = -1; i < 2; ++i) {
         EXPECT_EQ(mx_vmar_protect(vmar, map_addr + PAGE_SIZE * i, bad_size, MX_VM_FLAG_PERM_READ),
-                  MX_ERR_INVALID_ARGS, "");
-        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr + PAGE_SIZE * i, bad_size), MX_ERR_INVALID_ARGS, "");
+                  MX_ERR_INVALID_ARGS);
+        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr + PAGE_SIZE * i, bad_size), MX_ERR_INVALID_ARGS);
     }
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK);
 
     // Flags with invalid bits set
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 4 * PAGE_SIZE,
                                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_CAN_MAP_READ |
                                MX_VM_FLAG_CAN_MAP_WRITE, &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 4 * PAGE_SIZE,
                                MX_VM_FLAG_CAN_MAP_READ | (1<<31),
                                &region, &region_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_CAN_MAP_EXECUTE,
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | (1<<31),
                           &map_addr),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
-              MX_OK, "");
+              MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_CAN_MAP_WRITE),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | (1<<31)),
-              MX_ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK, "");
+              MX_ERR_INVALID_ARGS);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -832,20 +832,20 @@ bool unaligned_len_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE - 1,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE),
-              MX_OK, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), MX_OK, "");
+              MX_OK);
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), MX_OK);
 
     // Make sure we can't access the last page of the memory mappings anymore
     {
         uint8_t buf;
         size_t read;
         EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
-                  MX_ERR_NO_MEMORY, "");
+                  MX_ERR_NO_MEMORY);
     }
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -874,22 +874,22 @@ bool unaligned_len_map_test() {
             uint8_t buf;
             size_t read;
             EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
-                      MX_OK, "");
+                      MX_OK);
         }
 
-        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), MX_OK, "");
+        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), MX_OK);
         // Make sure we can't access the last page of the memory mappings anymore
         {
             uint8_t buf;
             size_t read;
             EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
-                      MX_ERR_NO_MEMORY, "");
+                      MX_ERR_NO_MEMORY);
         }
     }
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -923,7 +923,7 @@ bool rights_drop_test() {
 
         // Try to create a mapping with permissions we don't have
         EXPECT_EQ(mx_vmar_map(new_h, 0, vmo, 0, PAGE_SIZE, kRwxMapPerm, &map_addr),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
         // Try to create a mapping with permissions we do have
         ASSERT_EQ(mx_vmar_map(new_h, 0, vmo, 0, PAGE_SIZE, perm, &map_addr),
@@ -931,21 +931,21 @@ bool rights_drop_test() {
 
         // Attempt to use protect to increase privileges
         EXPECT_EQ(mx_vmar_protect(new_h, map_addr, PAGE_SIZE, kRwxMapPerm),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
-        EXPECT_EQ(mx_vmar_unmap(new_h, map_addr, PAGE_SIZE), MX_OK, "");
+        EXPECT_EQ(mx_vmar_unmap(new_h, map_addr, PAGE_SIZE), MX_OK);
 
         // Attempt to create a region that can map write (this would allow us to
         // then make writeable mappings inside of it).
         EXPECT_EQ(mx_vmar_allocate(new_h, 0, 10 * PAGE_SIZE, kRwxAllocPerm, &region, &region_addr),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
-        EXPECT_EQ(mx_handle_close(new_h), MX_OK, "");
+        EXPECT_EQ(mx_handle_close(new_h), MX_OK);
     }
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -978,7 +978,7 @@ bool protect_test() {
 
         // Try to create a mapping with permissions we don't have
         EXPECT_EQ(mx_vmar_map(vmar, 0, new_h, 0, PAGE_SIZE, kRwxMapPerm, &map_addr),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
         // Try to create a mapping with permissions we do have
         ASSERT_EQ(mx_vmar_map(vmar, 0, new_h, 0, PAGE_SIZE, perm, &map_addr),
@@ -987,20 +987,20 @@ bool protect_test() {
         // Attempt to use protect to increase privileges to a level allowed by
         // the VMAR but not by the VMO handle
         EXPECT_EQ(mx_vmar_protect(vmar, map_addr, PAGE_SIZE, kRwxMapPerm),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
-        EXPECT_EQ(mx_handle_close(new_h), MX_OK, "");
+        EXPECT_EQ(mx_handle_close(new_h), MX_OK);
 
         // Try again now that we closed the VMO handle
         EXPECT_EQ(mx_vmar_protect(vmar, map_addr, PAGE_SIZE, kRwxMapPerm),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
-        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, PAGE_SIZE), MX_OK, "");
+        EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, PAGE_SIZE), MX_OK);
     }
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1041,31 +1041,31 @@ bool nested_region_perms_test() {
         // Should fail since region[0] does not have the right perms
         EXPECT_EQ(mx_vmar_allocate(region[0], 0, PAGE_SIZE, kRwxAllocPerm,
                                    &region[1], &region_addr[1]),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
         // Try to create a mapping in region[0] with the dropped rights
         EXPECT_EQ(mx_vmar_map(region[0], 0, vmo, 0, PAGE_SIZE, kRwxMapPerm, &map_addr),
-                  MX_ERR_ACCESS_DENIED, "");
+                  MX_ERR_ACCESS_DENIED);
 
         // Successfully create a mapping in region[0] (skip if we excluded READ,
         // since all mappings must be readable on most CPUs)
         if (excluded_map_perm != MX_VM_FLAG_PERM_READ) {
             EXPECT_EQ(mx_vmar_map(region[0], 0, vmo, 0, PAGE_SIZE,
                                   kRwxMapPerm ^ excluded_map_perm, &map_addr),
-                      MX_OK, "");
-            EXPECT_EQ(mx_vmar_unmap(region[0], map_addr, PAGE_SIZE), MX_OK, "");
+                      MX_OK);
+            EXPECT_EQ(mx_vmar_unmap(region[0], map_addr, PAGE_SIZE), MX_OK);
         }
 
         // Successfully create a subregion in region[0]
         EXPECT_EQ(mx_vmar_allocate(region[0], 0, PAGE_SIZE,
                                    kRwxAllocPerm ^ excluded_alloc_perm,
                                    &region[1], &region_addr[1]),
-                  MX_OK, "");
-        EXPECT_EQ(mx_vmar_destroy(region[1]), MX_OK, "");
-        EXPECT_EQ(mx_handle_close(region[1]), MX_OK, "");
+                  MX_OK);
+        EXPECT_EQ(mx_vmar_destroy(region[1]), MX_OK);
+        EXPECT_EQ(mx_handle_close(region[1]), MX_OK);
 
-        EXPECT_EQ(mx_vmar_destroy(region[0]), MX_OK, "");
-        EXPECT_EQ(mx_handle_close(region[0]), MX_OK, "");
+        EXPECT_EQ(mx_vmar_destroy(region[0]), MX_OK);
+        EXPECT_EQ(mx_handle_close(region[0]), MX_OK);
     }
 
     // Make sure we can't use SPECIFIC in a region without CAN_MAP_SPECIFIC
@@ -1075,16 +1075,16 @@ bool nested_region_perms_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_map(region[0], PAGE_SIZE, vmo, 0, PAGE_SIZE,
                           MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ, &map_addr),
-              MX_ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED);
     EXPECT_EQ(mx_vmar_map(region[0], PAGE_SIZE, vmo, 0, PAGE_SIZE,
                           MX_VM_FLAG_SPECIFIC_OVERWRITE | MX_VM_FLAG_PERM_READ,
                           &map_addr),
-              MX_ERR_ACCESS_DENIED, "");
-    EXPECT_EQ(mx_vmar_destroy(region[0]), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(region[0]), MX_OK, "");
+              MX_ERR_ACCESS_DENIED);
+    EXPECT_EQ(mx_vmar_destroy(region[0]), MX_OK);
+    EXPECT_EQ(mx_handle_close(region[0]), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1110,12 +1110,12 @@ bool object_info_test() {
     mx_info_vmar_t info;
     ASSERT_EQ(mx_object_get_info(region, MX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
               MX_OK);
-    EXPECT_EQ(info.base, region_addr, "");
-    EXPECT_EQ(info.len, region_size, "");
+    EXPECT_EQ(info.base, region_addr);
+    EXPECT_EQ(info.len, region_size);
 
-    EXPECT_EQ(mx_handle_close(region), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(region), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1139,30 +1139,30 @@ bool unmap_split_test() {
         EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                               &addr),
-                  MX_OK, "");
+                  MX_OK);
     }
 
     // Unmap from the left
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1100, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1100, 4));
     // Unmap the rest
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + 2 * PAGE_SIZE, 2 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + 2 * PAGE_SIZE, 2 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000, 4));
 
     // Unmap from the right
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 2 * PAGE_SIZE, 2 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[1], 0b0011, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 2 * PAGE_SIZE, 2 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[1], 0b0011, 4));
     // Unmap the rest
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1], 2 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[1], 0b0000, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1], 2 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[1], 0b0000, 4));
 
     // Unmap from the center
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2] + PAGE_SIZE, 2 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[2], 0b1001, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2] + PAGE_SIZE, 2 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[2], 0b1001, 4));
     // Unmap the rest
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2], PAGE_SIZE), MX_OK, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2] + 3 * PAGE_SIZE, PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[2], 0b0000, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2], PAGE_SIZE), MX_OK);
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2] + 3 * PAGE_SIZE, PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[2], 0b0000, 4));
 
     mx_info_vmar_t info;
     ASSERT_EQ(mx_object_get_info(vmar, MX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
@@ -1174,14 +1174,14 @@ bool unmap_split_test() {
         EXPECT_EQ(mx_vmar_map(vmar, offset, vmo, 0, 4 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                               &addr),
-                  MX_OK, "");
-        EXPECT_TRUE(check_pages_mapped(process, addr, 0b1111, 4), "");
-        EXPECT_EQ(mx_vmar_unmap(vmar, addr, 4 * PAGE_SIZE), MX_OK, "");
+                  MX_OK);
+        EXPECT_TRUE(check_pages_mapped(process, addr, 0b1111, 4));
+        EXPECT_EQ(mx_vmar_unmap(vmar, addr, 4 * PAGE_SIZE), MX_OK);
     }
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1210,14 +1210,14 @@ bool unmap_multiple_test() {
                               &mapping_addr[i]),
                   MX_OK);
     }
-    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1], "");
+    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1]);
     // Unmap from the right of the first and the left of the second
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + 2 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + 2 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK);
     EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0011, 8), "");
     // Unmap the rest
     EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * PAGE_SIZE), MX_OK, "");
     EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000, 8), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000, 8));
 
     // Create two mappings with a gap, and verify we can unmap them
     for (size_t i = 0; i < 2; ++i) {
@@ -1226,13 +1226,13 @@ bool unmap_multiple_test() {
                               &mapping_addr[i]),
                   MX_OK);
     }
-    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1], "");
+    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1]);
     // Unmap all of the left one and some of the right one
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12));
     // Unmap the rest
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Create two mappings with a subregion between, should be able to unmap
     // them (and destroy the subregion in the process).
@@ -1251,21 +1251,21 @@ bool unmap_multiple_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &mapping_addr[2]),
               MX_OK);
-    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1], "");
-    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[2], "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0001'1111, 12), "");
+    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1]);
+    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[2]);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0001'1111, 12));
     // Unmap all of the left one and some of the right one
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12));
     // Try to map in the subregion again, should fail due to being destroyed
     ASSERT_EQ(mx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &mapping_addr[2]),
               MX_ERR_BAD_STATE);
     // Unmap the rest
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
-    EXPECT_EQ(mx_handle_close(subregion), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
+    EXPECT_EQ(mx_handle_close(subregion), MX_OK);
 
     // Create two mappings with a subregion after.  Partial unmap of the
     // subregion should fail, full unmap should succeed.
@@ -1284,26 +1284,26 @@ bool unmap_multiple_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &mapping_addr[2]),
               MX_OK);
-    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1], "");
-    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[2], "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0001'1111'1111, 12), "");
+    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1]);
+    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[2]);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0001'1111'1111, 12));
     // Unmap some of the left one through to all but the last page of the subregion
     EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + PAGE_SIZE, 3 * mapping_size - 2 * PAGE_SIZE),
-              MX_ERR_INVALID_ARGS, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0001'1111'1111, 12), "");
+              MX_ERR_INVALID_ARGS);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0001'1111'1111, 12));
     // Try again, but unmapping all of the subregion
     EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + PAGE_SIZE, 3 * mapping_size - PAGE_SIZE),
-              MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0001, 12), "");
+              MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0001, 12));
     // Try to map in the subregion again, should fail due to being destroyed
     ASSERT_EQ(mx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &mapping_addr[2]),
               MX_ERR_BAD_STATE);
     // Unmap the rest
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
-    EXPECT_EQ(mx_handle_close(subregion), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
+    EXPECT_EQ(mx_handle_close(subregion), MX_OK);
 
     // Create two mappings with a subregion before.  Partial unmap of the
     // subregion should fail, full unmap should succeed.
@@ -1322,26 +1322,26 @@ bool unmap_multiple_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &mapping_addr[2]),
               MX_OK);
-    EXPECT_EQ(subregion_addr + mapping_size, mapping_addr[0], "");
-    EXPECT_EQ(subregion_addr + 2 * mapping_size, mapping_addr[1], "");
-    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b1111'1111'1000, 12), "");
+    EXPECT_EQ(subregion_addr + mapping_size, mapping_addr[0]);
+    EXPECT_EQ(subregion_addr + 2 * mapping_size, mapping_addr[1]);
+    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b1111'1111'1000, 12));
     // Try to unmap everything except the first page of the subregion
     EXPECT_EQ(mx_vmar_unmap(vmar, subregion_addr + PAGE_SIZE, 3 * mapping_size - PAGE_SIZE),
-              MX_ERR_INVALID_ARGS, "");
-    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b1111'1111'1000, 12), "");
+              MX_ERR_INVALID_ARGS);
+    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b1111'1111'1000, 12));
     // Try again, but unmapping all of the subregion
-    EXPECT_EQ(mx_vmar_unmap(vmar, subregion_addr, 3 * mapping_size), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b0000'0000'0000, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, subregion_addr, 3 * mapping_size), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b0000'0000'0000, 12));
     // Try to map in the subregion again, should fail due to being destroyed
     ASSERT_EQ(mx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &mapping_addr[2]),
               MX_ERR_BAD_STATE);
-    EXPECT_EQ(mx_handle_close(subregion), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(subregion), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1382,9 +1382,9 @@ bool unmap_base_not_mapped_test() {
                   MX_OK);
     }
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1427,29 +1427,29 @@ bool map_specific_overwrite_test() {
     EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, mapping_size,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC, &mapping_addr[1]),
-              MX_ERR_NO_MEMORY, "");
+              MX_ERR_NO_MEMORY);
     // Try again with SPECIFIC_OVERWRITE
     EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, mapping_size,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[1]),
-              MX_OK, "");
-    EXPECT_EQ(mapping_addr[0], mapping_addr[1], "");
+              MX_OK);
+    EXPECT_EQ(mapping_addr[0], mapping_addr[1]);
     for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
         EXPECT_EQ(mx_process_read_memory(process, mapping_addr[0] + i * PAGE_SIZE, buf, 1, &len),
-                  MX_OK, "");
-        EXPECT_EQ(buf[0], 2u, "");
+                  MX_OK);
+        EXPECT_EQ(buf[0], 2u);
     }
 
     // Overmap the middle of it
     EXPECT_EQ(mx_vmar_map(vmar, 2 * PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[0]),
-              MX_OK, "");
-    EXPECT_EQ(mapping_addr[0], mapping_addr[1] + PAGE_SIZE, "");
+              MX_OK);
+    EXPECT_EQ(mapping_addr[0], mapping_addr[1] + PAGE_SIZE);
     for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
         EXPECT_EQ(mx_process_read_memory(process, mapping_addr[1] + i * PAGE_SIZE, buf, 1, &len),
-                  MX_OK, "");
-        EXPECT_EQ(buf[0], (i == 0 || i == 3) ? 2u : 1u, "");
+                  MX_OK);
+        EXPECT_EQ(buf[0], (i == 0 || i == 3) ? 2u : 1u);
     }
 
     // Create an adjacent sub-region, try to overmap it
@@ -1458,21 +1458,21 @@ bool map_specific_overwrite_test() {
                                MX_VM_FLAG_SPECIFIC,
                                &subregion, &subregion_addr),
               MX_OK);
-    EXPECT_EQ(subregion_addr, mapping_addr[1] + mapping_size, "");
+    EXPECT_EQ(subregion_addr, mapping_addr[1] + mapping_size);
     EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, 2 * mapping_size,
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
                           MX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[0]),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     // Tear it all down
     EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1], 2 * mapping_size),
-              MX_OK, "");
+              MX_OK);
 
-    EXPECT_EQ(mx_handle_close(subregion), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(subregion), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo2), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1497,12 +1497,12 @@ bool protect_split_test() {
                           &mapping_addr),
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr, 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_OK, "");
+              MX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4));
 
     // Protect from the right
     ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
@@ -1511,12 +1511,12 @@ bool protect_split_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr + 2 * PAGE_SIZE,
                               2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_OK, "");
+              MX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4));
 
     // Protect from the center
     ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
@@ -1525,16 +1525,16 @@ bool protect_split_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr + PAGE_SIZE,
                               2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_OK, "");
+              MX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4));
 
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1573,12 +1573,12 @@ bool protect_multiple_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
                               3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_OK, "");
+              MX_OK);
     // TODO(teisenbe): Test to validate perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Same thing, but map middle region with a VMO without the WRITE right
     ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
@@ -1596,12 +1596,12 @@ bool protect_multiple_test() {
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
                               3 * mapping_size - 2 * PAGE_SIZE,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE),
-              MX_ERR_ACCESS_DENIED, "");
+              MX_ERR_ACCESS_DENIED);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Try to protect across a gap
     ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
@@ -1614,12 +1614,12 @@ bool protect_multiple_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
                               3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_ERR_NOT_FOUND, "");
+              MX_ERR_NOT_FOUND);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
 
     // Try to protect across an empty subregion
     ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
@@ -1637,13 +1637,13 @@ bool protect_multiple_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
                               3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
-    EXPECT_EQ(mx_handle_close(subregion), MX_OK, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
+    EXPECT_EQ(mx_handle_close(subregion), MX_OK);
 
     // Try to protect across a subregion filled with mappings
     ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
@@ -1665,18 +1665,18 @@ bool protect_multiple_test() {
               MX_OK);
     EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
                               3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              MX_ERR_INVALID_ARGS, "");
+              MX_ERR_INVALID_ARGS);
     // TODO(teisenbe): Test to validate no perms changed, need to export more debug
     // info
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12), "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK, "");
-    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
-    EXPECT_EQ(mx_handle_close(subregion), MX_OK, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12));
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), MX_OK);
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12));
+    EXPECT_EQ(mx_handle_close(subregion), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmo2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmo2), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     END_TEST;
 }
@@ -1696,7 +1696,7 @@ bool protect_over_demand_paged_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &mapping_addr),
               MX_OK);
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
     target[0] = 5;
@@ -1709,16 +1709,16 @@ bool protect_over_demand_paged_test() {
 
     // Attempt to write to the mapping again
     bool success;
-    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
 
-    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK);
 
     END_TEST;
 }
@@ -1739,7 +1739,7 @@ bool protect_large_uncommitted_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &mapping_addr),
               MX_OK);
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     // Make sure some pages exist
     volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
@@ -1757,16 +1757,16 @@ bool protect_large_uncommitted_test() {
 
     // Attempt to write to the mapping again
     bool success;
-    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK);
     EXPECT_TRUE(success, "mapping should still be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
 
-    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK);
 
     END_TEST;
 }
@@ -1787,7 +1787,7 @@ bool unmap_large_uncommitted_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &mapping_addr),
               MX_OK);
-    EXPECT_EQ(mx_handle_close(vmo), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     // Make sure some pages exist
     volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
@@ -1803,16 +1803,16 @@ bool unmap_large_uncommitted_test() {
 
     // Attempt to write to the mapping again
     bool success;
-    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr, true, &success), MX_OK);
     EXPECT_TRUE(success, "mapping should still be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
-    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK, "");
+    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), MX_OK);
     EXPECT_FALSE(success, "mapping should no longer be writeable");
 
-    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK, "");
+    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), MX_OK);
 
     END_TEST;
 }

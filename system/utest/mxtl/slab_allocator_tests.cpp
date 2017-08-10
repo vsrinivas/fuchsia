@@ -200,7 +200,7 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
     for (size_t i = 0; i < test_allocs; ++i) {
         typename Traits::PtrType ptr;
 
-        EXPECT_EQ(mxtl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count(), "");
+        EXPECT_EQ(mxtl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
 
         // Allocate the object; exercise the various constructors
         switch (i % 4) {
@@ -217,7 +217,7 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
             ASSERT_NULL(ptr, "Allocation succeeded when it should not have!");
         }
 
-        EXPECT_EQ(mxtl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count(), "");
+        EXPECT_EQ(mxtl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
     }
 
     // Now remove and de-allocate.
@@ -226,20 +226,20 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
         auto ptr = ref_list.pop_back();
 
         ASSERT_NONNULL(ptr, "nullptr in ref list!  This should be impossible.");
-        EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count(), "");
+        EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
 
         switch (i % 4) {
         case 0:
-            EXPECT_EQ(ConstructType::DEFAULT, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::DEFAULT, ptr->ctype());
             break;
         case 1:
-            EXPECT_EQ(ConstructType::LVALUE_REF, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::LVALUE_REF, ptr->ctype());
             break;
         case 2:
-            EXPECT_EQ(ConstructType::RVALUE_REF, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::RVALUE_REF, ptr->ctype());
             break;
         case 3:
-            EXPECT_EQ(ConstructType::L_THEN_R_REF, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::L_THEN_R_REF, ptr->ctype());
             break;
         }
 
@@ -247,7 +247,7 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
         ReleaseHelper<typename Traits::AllocTraits>::ReleasePtr(allocator, ptr);
     }
 
-    EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS), i, "");
+    EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS), i);
 
     END_TEST;
 }
@@ -359,7 +359,7 @@ bool do_static_slab_test(size_t test_allocs) {
     for (size_t i = 0; i < test_allocs; ++i) {
         typename Traits::PtrType ptr;
 
-        EXPECT_EQ(mxtl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count(), "");
+        EXPECT_EQ(mxtl::min(i, MAX_ALLOCS), TestBase::allocated_obj_count());
 
         // Allocate the object; exercise the various constructors
         switch (i % 4) {
@@ -376,7 +376,7 @@ bool do_static_slab_test(size_t test_allocs) {
             ASSERT_NULL(ptr, "Allocation succeeded when it should not have!");
         }
 
-        EXPECT_EQ(mxtl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count(), "");
+        EXPECT_EQ(mxtl::min(i + 1, MAX_ALLOCS), TestBase::allocated_obj_count());
     }
 
     // Now remove and de-allocate.
@@ -385,20 +385,20 @@ bool do_static_slab_test(size_t test_allocs) {
         auto ptr = ref_list.pop_back();
 
         ASSERT_NONNULL(ptr, "nullptr in ref list!  This should be impossible.");
-        EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count(), "");
+        EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS) - i, TestBase::allocated_obj_count());
 
         switch (i % 4) {
         case 0:
-            EXPECT_EQ(ConstructType::DEFAULT, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::DEFAULT, ptr->ctype());
             break;
         case 1:
-            EXPECT_EQ(ConstructType::LVALUE_REF, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::LVALUE_REF, ptr->ctype());
             break;
         case 2:
-            EXPECT_EQ(ConstructType::RVALUE_REF, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::RVALUE_REF, ptr->ctype());
             break;
         case 3:
-            EXPECT_EQ(ConstructType::L_THEN_R_REF, ptr->ctype(), "");
+            EXPECT_EQ(ConstructType::L_THEN_R_REF, ptr->ctype());
             break;
         }
 
@@ -406,7 +406,7 @@ bool do_static_slab_test(size_t test_allocs) {
         ReleaseHelper<typename Traits::AllocTraits>::ReleasePtr(ptr);
     }
 
-    EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS), i, "");
+    EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS), i);
     END_TEST;
 }
 

@@ -17,46 +17,46 @@ bool compare_test() {
     mxtl::StringPiece b(data + 1, 1);
     mxtl::StringPiece bc(data + 1, 2);
 
-    EXPECT_TRUE(a == a, "");
-    EXPECT_TRUE(ab == ab, "");
-    EXPECT_TRUE(a != ab, "");
-    EXPECT_TRUE(a != b, "");
-    EXPECT_TRUE(ab != a, "");
+    EXPECT_TRUE(a == a);
+    EXPECT_TRUE(ab == ab);
+    EXPECT_TRUE(a != ab);
+    EXPECT_TRUE(a != b);
+    EXPECT_TRUE(ab != a);
 
-    EXPECT_FALSE(a < a, "");
-    EXPECT_FALSE(a > a, "");
-    EXPECT_TRUE(a >= a, "");
-    EXPECT_TRUE(a <= a, "");
+    EXPECT_FALSE(a < a);
+    EXPECT_FALSE(a > a);
+    EXPECT_TRUE(a >= a);
+    EXPECT_TRUE(a <= a);
 
-    EXPECT_TRUE(a < ab, "");
-    EXPECT_FALSE(a > ab, "");
-    EXPECT_FALSE(a >= ab, "");
-    EXPECT_TRUE(a <= ab, "");
+    EXPECT_TRUE(a < ab);
+    EXPECT_FALSE(a > ab);
+    EXPECT_FALSE(a >= ab);
+    EXPECT_TRUE(a <= ab);
 
-    EXPECT_FALSE(ab < a, "");
-    EXPECT_TRUE(ab > a, "");
-    EXPECT_TRUE(ab >= a, "");
-    EXPECT_FALSE(ab <= a, "");
+    EXPECT_FALSE(ab < a);
+    EXPECT_TRUE(ab > a);
+    EXPECT_TRUE(ab >= a);
+    EXPECT_FALSE(ab <= a);
 
-    EXPECT_TRUE(a < b, "");
-    EXPECT_FALSE(a > b, "");
-    EXPECT_FALSE(a >= b, "");
-    EXPECT_TRUE(a <= b, "");
+    EXPECT_TRUE(a < b);
+    EXPECT_FALSE(a > b);
+    EXPECT_FALSE(a >= b);
+    EXPECT_TRUE(a <= b);
 
-    EXPECT_FALSE(b < a, "");
-    EXPECT_TRUE(b > a, "");
-    EXPECT_TRUE(b >= a, "");
-    EXPECT_FALSE(b <= a, "");
+    EXPECT_FALSE(b < a);
+    EXPECT_TRUE(b > a);
+    EXPECT_TRUE(b >= a);
+    EXPECT_FALSE(b <= a);
 
-    EXPECT_TRUE(a < bc, "");
-    EXPECT_FALSE(a > bc, "");
-    EXPECT_FALSE(a >= bc, "");
-    EXPECT_TRUE(a <= bc, "");
+    EXPECT_TRUE(a < bc);
+    EXPECT_FALSE(a > bc);
+    EXPECT_FALSE(a >= bc);
+    EXPECT_TRUE(a <= bc);
 
-    EXPECT_FALSE(bc < a, "");
-    EXPECT_TRUE(bc > a, "");
-    EXPECT_TRUE(bc >= a, "");
-    EXPECT_FALSE(bc <= a, "");
+    EXPECT_FALSE(bc < a);
+    EXPECT_TRUE(bc > a);
+    EXPECT_TRUE(bc >= a);
+    EXPECT_FALSE(bc <= a);
 
     END_TEST;
 }

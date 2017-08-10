@@ -34,7 +34,7 @@ bool address_space_limits_test() {
 #if defined(__x86_64__)
     size_t page_size = getpagesize();
     mx_handle_t vmo;
-    EXPECT_EQ(mx_vmo_create(page_size, 0, &vmo), MX_OK, "");
+    EXPECT_EQ(mx_vmo_create(page_size, 0, &vmo), MX_OK);
     EXPECT_LT(0, vmo, "vm_object_create");
 
     // This is the lowest non-canonical address on x86-64.  We want to

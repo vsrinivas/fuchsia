@@ -31,14 +31,14 @@ bool mini_process_sanity() {
     ASSERT_EQ(mx_event_create(0u, &event), MX_OK);
 
     mx_handle_t cmd_channel;
-    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, &cmd_channel), MX_OK, "");
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, &cmd_channel), MX_OK);
 
-    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_ECHO_MSG, nullptr), MX_OK, "");
+    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_ECHO_MSG, nullptr), MX_OK);
 
     mx_handle_t oev;
-    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_CREATE_EVENT, &oev), MX_OK, "");
+    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_CREATE_EVENT, &oev), MX_OK);
 
-    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_EXIT_NORMAL, nullptr), MX_ERR_PEER_CLOSED, "");
+    EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_EXIT_NORMAL, nullptr), MX_ERR_PEER_CLOSED);
 
     mx_handle_close(thread);
     mx_handle_close(proc);
@@ -63,8 +63,8 @@ bool process_start_fail() {
 
     // Test that calling process_start() again for an existing process fails in a
     // reasonable way. Also test that the transfered object is back into this process.
-    EXPECT_EQ(mx_process_start(process, other_thread, 0, 0, event2, 0), MX_ERR_BAD_STATE, "");
-    EXPECT_EQ(mx_object_signal(event2, 0u, MX_EVENT_SIGNALED), MX_OK, "");
+    EXPECT_EQ(mx_process_start(process, other_thread, 0, 0, event2, 0), MX_ERR_BAD_STATE);
+    EXPECT_EQ(mx_object_signal(event2, 0u, MX_EVENT_SIGNALED), MX_OK);
 
     mx_handle_close(event2);
     mx_handle_close(process);
@@ -84,14 +84,14 @@ bool kill_process_via_thread_close() {
     ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK);
 
     // closing the only thread handle should cause the process to terminate.
-    EXPECT_EQ(mx_handle_close(thread), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(thread), MX_OK);
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
+        process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE);
 
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
     END_TEST;
 }
 
@@ -106,14 +106,14 @@ bool kill_process_via_process_close() {
     ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK);
 
     // closing the only process handle should cause the process to terminate.
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        thread, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
+        thread, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE);
 
-    EXPECT_EQ(mx_handle_close(thread), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(thread), MX_OK);
     END_TEST;
 }
 
@@ -128,15 +128,15 @@ bool kill_process_via_thread_kill() {
     ASSERT_EQ(start_mini_process(mx_job_default(), event, &process, &thread), MX_OK);
 
     // Killing the only thread should cause the process to terminate.
-    EXPECT_EQ(mx_task_kill(thread), MX_OK, "");
+    EXPECT_EQ(mx_task_kill(thread), MX_OK);
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
+        process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE);
 
-    EXPECT_EQ(mx_handle_close(process), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(thread), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(process), MX_OK);
+    EXPECT_EQ(mx_handle_close(thread), MX_OK);
     END_TEST;
 }
 
@@ -156,20 +156,20 @@ bool kill_process_via_vmar_destroy() {
     // Make the process busy-wait rather than using a vDSO call because
     // if it maps in the vDSO then mx_vmar_destroy is prohibited.
     EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event, nullptr),
-              MX_OK, "");
+              MX_OK);
 
     // Destroying the root VMAR should cause the process to terminate.
-    EXPECT_EQ(mx_vmar_destroy(vmar), MX_OK, "");
+    EXPECT_EQ(mx_vmar_destroy(vmar), MX_OK);
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
+        proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
     signals &= MX_TASK_TERMINATED;
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED);
 
-    EXPECT_EQ(mx_handle_close(proc), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(thread), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(proc), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar), MX_OK);
+    EXPECT_EQ(mx_handle_close(thread), MX_OK);
     END_TEST;
 }
 
@@ -189,42 +189,42 @@ bool kill_process_handle_cycle() {
 
     mx_handle_t dup1, dup2;
 
-    EXPECT_EQ(mx_handle_duplicate(proc1, MX_RIGHT_SAME_RIGHTS, &dup1), MX_OK, "");
-    EXPECT_EQ(mx_handle_duplicate(proc2, MX_RIGHT_SAME_RIGHTS, &dup2), MX_OK, "");
+    EXPECT_EQ(mx_handle_duplicate(proc1, MX_RIGHT_SAME_RIGHTS, &dup1), MX_OK);
+    EXPECT_EQ(mx_handle_duplicate(proc2, MX_RIGHT_SAME_RIGHTS, &dup2), MX_OK);
 
     mx_handle_t minip_chn[2];
 
     EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, dup2, &minip_chn[0]),
-              MX_OK, "");
+              MX_OK);
     EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, dup1, &minip_chn[1]),
-              MX_OK, "");
+              MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmar2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar1), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar2), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar1), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(proc1), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(proc2), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(proc1), MX_OK);
+    EXPECT_EQ(mx_handle_close(proc2), MX_OK);
 
     // At this point each processes have each other last process handle.  Make sure
     // they are running.
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        thread1, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT, "");
+        thread1, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT);
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT);
 
-    EXPECT_EQ(mx_handle_close(thread1), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(thread1), MX_OK);
 
     // Closing thread1 should cause process 1 to exit which should cause process 2 to
     // exit which we test by waiting on the second process thread handle.
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
-    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE, "");
+        thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
+    EXPECT_EQ(signals, MX_TASK_TERMINATED | MX_SIGNAL_LAST_HANDLE);
 
-    EXPECT_EQ(mx_handle_close(thread2), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(thread2), MX_OK);
 
     END_TEST;
 }
@@ -259,11 +259,11 @@ bool kill_channel_handle_cycle() {
 
     // Now we stuff duplicated process and thread handles into each side of the channel.
 
-    EXPECT_EQ(dup_send_handle(chan[0], proc2), MX_OK, "");
-    EXPECT_EQ(dup_send_handle(chan[0], thread2), MX_OK, "");
+    EXPECT_EQ(dup_send_handle(chan[0], proc2), MX_OK);
+    EXPECT_EQ(dup_send_handle(chan[0], thread2), MX_OK);
 
-    EXPECT_EQ(dup_send_handle(chan[1], proc1), MX_OK, "");
-    EXPECT_EQ(dup_send_handle(chan[1], thread1), MX_OK, "");
+    EXPECT_EQ(dup_send_handle(chan[1], proc1), MX_OK);
+    EXPECT_EQ(dup_send_handle(chan[1], thread1), MX_OK);
 
     // The process start with each one side of the channel. We don't have access to the
     // channel anymore.
@@ -271,45 +271,45 @@ bool kill_channel_handle_cycle() {
     mx_handle_t minip_chn[2];
 
     EXPECT_EQ(start_mini_process_etc(proc1, thread1, vmar1, chan[0], &minip_chn[0]),
-              MX_OK, "");
+              MX_OK);
     EXPECT_EQ(start_mini_process_etc(proc2, thread2, vmar2, chan[1], &minip_chn[1]),
-              MX_OK, "");
+              MX_OK);
 
-    EXPECT_EQ(mx_handle_close(vmar2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(vmar1), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(vmar2), MX_OK);
+    EXPECT_EQ(mx_handle_close(vmar1), MX_OK);
 
-    EXPECT_EQ(mx_handle_close(proc1), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(proc2), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(proc1), MX_OK);
+    EXPECT_EQ(mx_handle_close(proc2), MX_OK);
 
     // Make (relatively) certain the processes are alive.
 
     mx_signals_t signals;
     EXPECT_EQ(mx_object_wait_one(
-        thread1, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT, "");
+        thread1, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT);
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT);
 
     // At this point the two processes have each other thread/process handles. For example
     // if we close the thread handles, unlike the previous test, the processes will
     // still be alive.
 
-    EXPECT_EQ(mx_handle_close(thread1), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(thread1), MX_OK);
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, mx_deadline_after(kTimeoutNs), &signals), MX_ERR_TIMED_OUT);
 
     // The only way out of this situation is to use the job handle.
 
-    EXPECT_EQ(mx_task_kill(job_child), MX_OK, "");
+    EXPECT_EQ(mx_task_kill(job_child), MX_OK);
 
     EXPECT_EQ(mx_object_wait_one(
-        thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
+        thread2, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK);
     signals &= MX_TASK_TERMINATED;
-    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED);
 
-    EXPECT_EQ(mx_handle_close(thread2), MX_OK, "");
-    EXPECT_EQ(mx_handle_close(job_child), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(thread2), MX_OK);
+    EXPECT_EQ(mx_handle_close(job_child), MX_OK);
 
     END_TEST;
 }

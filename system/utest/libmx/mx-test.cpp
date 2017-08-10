@@ -198,8 +198,8 @@ static bool thread_self_test() {
     mx_handle_t raw = mx_thread_self();
     ASSERT_EQ(validate_handle(raw), MX_OK);
 
-    EXPECT_TRUE(reference_thing<mx::thread>(mx::thread::self()), "");
-    EXPECT_EQ(validate_handle(raw), MX_OK, "");
+    EXPECT_TRUE(reference_thing<mx::thread>(mx::thread::self()));
+    EXPECT_EQ(validate_handle(raw), MX_OK);
 
     // This does not compile:
     //const mx::thread self = mx::thread::self();
@@ -213,8 +213,8 @@ static bool process_self_test() {
     mx_handle_t raw = mx_process_self();
     ASSERT_EQ(validate_handle(raw), MX_OK);
 
-    EXPECT_TRUE(reference_thing<mx::process>(mx::process::self()), "");
-    EXPECT_EQ(validate_handle(raw), MX_OK, "");
+    EXPECT_TRUE(reference_thing<mx::process>(mx::process::self()));
+    EXPECT_EQ(validate_handle(raw), MX_OK);
 
     // This does not compile:
     //const mx::process self = mx::process::self();
@@ -228,8 +228,8 @@ static bool vmar_root_self_test() {
     mx_handle_t raw = mx_vmar_root_self();
     ASSERT_EQ(validate_handle(raw), MX_OK);
 
-    EXPECT_TRUE(reference_thing<mx::vmar>(mx::vmar::root_self()), "");
-    EXPECT_EQ(validate_handle(raw), MX_OK, "");
+    EXPECT_TRUE(reference_thing<mx::vmar>(mx::vmar::root_self()));
+    EXPECT_EQ(validate_handle(raw), MX_OK);
 
     // This does not compile:
     //const mx::vmar root_self = mx::vmar::root_self();
@@ -243,8 +243,8 @@ static bool job_default_test() {
     mx_handle_t raw = mx_job_default();
     ASSERT_EQ(validate_handle(raw), MX_OK);
 
-    EXPECT_TRUE(reference_thing<mx::job>(mx::job::default_job()), "");
-    EXPECT_EQ(validate_handle(raw), MX_OK, "");
+    EXPECT_TRUE(reference_thing<mx::job>(mx::job::default_job()));
+    EXPECT_EQ(validate_handle(raw), MX_OK);
 
     // This does not compile:
     //const mx::job default_job = mx::job::default_job();

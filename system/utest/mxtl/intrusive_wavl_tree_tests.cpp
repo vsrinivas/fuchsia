@@ -215,7 +215,7 @@ public:
         EXPECT_LE(total_erase_rotations, op_counts_.erase_ops_,
                 "#erase_rotations must be <= #erases");
 
-        EXPECT_GE(max_depth, depth, "");
+        EXPECT_GE(max_depth, depth);
 
         END_TEST;
     }

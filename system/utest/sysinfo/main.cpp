@@ -31,7 +31,7 @@ bool get_root_resource_succeeds() {
     EXPECT_EQ(info.rights, MX_RIGHT_TRANSFER, "Unexpected rights");
 
     // Clean up.
-    EXPECT_EQ(mx_handle_close(root_resource), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(root_resource), MX_OK);
 
     END_TEST;
 }

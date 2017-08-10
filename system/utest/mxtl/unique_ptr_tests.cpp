@@ -48,10 +48,10 @@ static bool uptr_test_scoped_destruction() {
     // Construct and let a unique_ptr fall out of scope.
     {
         CountingPtr ptr(new (&ac) DeleteCounter);
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
     }
 
-    EXPECT_EQ(1, destroy_count, "");
+    EXPECT_EQ(1, destroy_count);
     END_TEST;
 }
 
@@ -63,13 +63,13 @@ static bool uptr_test_move() {
     // Construct and move into another unique_ptr.
     {
         CountingPtr ptr(new (&ac) DeleteCounter);
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
 
         CountingPtr ptr2 = mxtl::move(ptr);
         EXPECT_NULL(ptr, "expected ptr to be null");
     }
 
-    EXPECT_EQ(1, destroy_count, "");
+    EXPECT_EQ(1, destroy_count);
 
     END_TEST;
 }
@@ -84,7 +84,7 @@ static bool uptr_test_null_scoped_destruction() {
         CountingPtr ptr(nullptr);
     }
 
-    EXPECT_EQ(0, destroy_count, "");
+    EXPECT_EQ(0, destroy_count);
 
     END_TEST;
 }
@@ -100,18 +100,18 @@ static bool uptr_test_diff_scope_swap() {
     mxtl::AllocChecker ac;
     {
         CountingPtr ptr1(new (&ac) DeleteCounter(4));
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
         {
             CountingPtr ptr2(new (&ac) DeleteCounter(7));
-            EXPECT_TRUE(ac.check(), "");
+            EXPECT_TRUE(ac.check());
 
             ptr1.swap(ptr2);
-            EXPECT_EQ(7, ptr1->value, "");
-            EXPECT_EQ(4, ptr2->value, "");
+            EXPECT_EQ(7, ptr1->value);
+            EXPECT_EQ(4, ptr2->value);
         }
-        EXPECT_EQ(1, destroy_count, "");
+        EXPECT_EQ(1, destroy_count);
     }
-    EXPECT_EQ(2, destroy_count, "");
+    EXPECT_EQ(2, destroy_count);
 
     END_TEST;
 }
@@ -123,12 +123,12 @@ static bool uptr_test_bool_op() {
     mxtl::AllocChecker ac;
 
     CountingPtr foo(new (&ac) DeleteCounter);
-    EXPECT_TRUE(ac.check(), "");
-    EXPECT_TRUE(static_cast<bool>(foo), "");
+    EXPECT_TRUE(ac.check());
+    EXPECT_TRUE(static_cast<bool>(foo));
 
     foo.reset();
-    EXPECT_EQ(1, destroy_count, "");
-    EXPECT_FALSE(static_cast<bool>(foo), "");
+    EXPECT_EQ(1, destroy_count);
+    EXPECT_FALSE(static_cast<bool>(foo));
 
     END_TEST;
 }
@@ -140,52 +140,52 @@ static bool uptr_test_comparison() {
     // Test comparison operators.
     mxtl::unique_ptr<DeleteCounter> null_unique;
     mxtl::unique_ptr<DeleteCounter> lesser_unique(new (&ac) DeleteCounter(1));
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
 
     mxtl::unique_ptr<DeleteCounter> greater_unique(new (&ac) DeleteCounter(2));
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
 
-    EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
+    EXPECT_NEQ(lesser_unique.get(), greater_unique.get());
     if (lesser_unique.get() > greater_unique.get())
         lesser_unique.swap(greater_unique);
 
     // Comparison against nullptr
-    EXPECT_TRUE(   null_unique == nullptr, "");
-    EXPECT_TRUE( lesser_unique != nullptr, "");
-    EXPECT_TRUE(greater_unique != nullptr, "");
+    EXPECT_TRUE(   null_unique == nullptr);
+    EXPECT_TRUE( lesser_unique != nullptr);
+    EXPECT_TRUE(greater_unique != nullptr);
 
-    EXPECT_TRUE(nullptr ==    null_unique, "");
-    EXPECT_TRUE(nullptr !=  lesser_unique, "");
-    EXPECT_TRUE(nullptr != greater_unique, "");
+    EXPECT_TRUE(nullptr ==    null_unique);
+    EXPECT_TRUE(nullptr !=  lesser_unique);
+    EXPECT_TRUE(nullptr != greater_unique);
 
     // Comparison against other unique_ptr<>s
-    EXPECT_TRUE( lesser_unique  ==  lesser_unique, "");
-    EXPECT_FALSE( lesser_unique == greater_unique, "");
-    EXPECT_FALSE(greater_unique ==  lesser_unique, "");
-    EXPECT_TRUE(greater_unique  == greater_unique, "");
+    EXPECT_TRUE( lesser_unique  ==  lesser_unique);
+    EXPECT_FALSE( lesser_unique == greater_unique);
+    EXPECT_FALSE(greater_unique ==  lesser_unique);
+    EXPECT_TRUE(greater_unique  == greater_unique);
 
-    EXPECT_FALSE( lesser_unique !=  lesser_unique, "");
+    EXPECT_FALSE( lesser_unique !=  lesser_unique);
     EXPECT_TRUE ( lesser_unique != greater_unique, "");
     EXPECT_TRUE (greater_unique !=  lesser_unique, "");
-    EXPECT_FALSE(greater_unique != greater_unique, "");
+    EXPECT_FALSE(greater_unique != greater_unique);
 
-    EXPECT_FALSE( lesser_unique <   lesser_unique, "");
+    EXPECT_FALSE( lesser_unique <   lesser_unique);
     EXPECT_TRUE ( lesser_unique <  greater_unique, "");
-    EXPECT_FALSE(greater_unique <   lesser_unique, "");
-    EXPECT_FALSE(greater_unique <  greater_unique, "");
+    EXPECT_FALSE(greater_unique <   lesser_unique);
+    EXPECT_FALSE(greater_unique <  greater_unique);
 
-    EXPECT_FALSE( lesser_unique >   lesser_unique, "");
-    EXPECT_FALSE( lesser_unique >  greater_unique, "");
+    EXPECT_FALSE( lesser_unique >   lesser_unique);
+    EXPECT_FALSE( lesser_unique >  greater_unique);
     EXPECT_TRUE (greater_unique >   lesser_unique, "");
-    EXPECT_FALSE(greater_unique >  greater_unique, "");
+    EXPECT_FALSE(greater_unique >  greater_unique);
 
     EXPECT_TRUE ( lesser_unique <=  lesser_unique, "");
     EXPECT_TRUE ( lesser_unique <= greater_unique, "");
-    EXPECT_FALSE(greater_unique <=  lesser_unique, "");
+    EXPECT_FALSE(greater_unique <=  lesser_unique);
     EXPECT_TRUE (greater_unique <= greater_unique, "");
 
     EXPECT_TRUE ( lesser_unique >=  lesser_unique, "");
-    EXPECT_FALSE( lesser_unique >= greater_unique, "");
+    EXPECT_FALSE( lesser_unique >= greater_unique);
     EXPECT_TRUE (greater_unique >=  lesser_unique, "");
     EXPECT_TRUE (greater_unique >= greater_unique, "");
 
@@ -200,9 +200,9 @@ static bool uptr_test_array_scoped_destruction() {
     // Construct and let a unique_ptr fall out of scope.
     {
         CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
     }
-    EXPECT_EQ(1, destroy_count, "");
+    EXPECT_EQ(1, destroy_count);
 
     END_TEST;
 }
@@ -215,12 +215,12 @@ static bool uptr_test_array_move() {
     // Construct and move into another unique_ptr.
     {
         CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
 
         CountingArrPtr ptr2 = mxtl::move(ptr);
         EXPECT_NULL(ptr, "expected ptr to be null");
     }
-    EXPECT_EQ(1, destroy_count, "");
+    EXPECT_EQ(1, destroy_count);
 
     END_TEST;
 }
@@ -234,7 +234,7 @@ static bool uptr_test_array_null_scoped_destruction() {
     {
         CountingArrPtr ptr(nullptr);
     }
-    EXPECT_EQ(0, destroy_count, "");
+    EXPECT_EQ(0, destroy_count);
 
     END_TEST;
 }
@@ -250,21 +250,21 @@ static bool uptr_test_array_diff_scope_swap() {
 
     {
         CountingArrPtr ptr1(new (&ac) DeleteCounter[1]);
-        EXPECT_TRUE(ac.check(), "");
+        EXPECT_TRUE(ac.check());
 
         ptr1[0] = 4;
         {
             CountingArrPtr ptr2(new (&ac) DeleteCounter[1]);
-            EXPECT_TRUE(ac.check(), "");
+            EXPECT_TRUE(ac.check());
 
             ptr2[0] = 7;
             ptr1.swap(ptr2);
-            EXPECT_EQ(7, ptr1[0].value, "");
-            EXPECT_EQ(4, ptr2[0].value, "");
+            EXPECT_EQ(7, ptr1[0].value);
+            EXPECT_EQ(4, ptr2[0].value);
         }
-        EXPECT_EQ(1, destroy_count, "");
+        EXPECT_EQ(1, destroy_count);
     }
-    EXPECT_EQ(2, destroy_count, "");
+    EXPECT_EQ(2, destroy_count);
 
     END_TEST;
 }
@@ -276,12 +276,12 @@ static bool uptr_test_array_bool_op() {
     mxtl::AllocChecker ac;
 
     CountingArrPtr foo(new (&ac) DeleteCounter[1]);
-    EXPECT_TRUE(ac.check(), "");
-    EXPECT_TRUE(static_cast<bool>(foo), "");
+    EXPECT_TRUE(ac.check());
+    EXPECT_TRUE(static_cast<bool>(foo));
 
     foo.reset();
-    EXPECT_EQ(1, destroy_count, "");
-    EXPECT_FALSE(static_cast<bool>(foo), "");
+    EXPECT_EQ(1, destroy_count);
+    EXPECT_FALSE(static_cast<bool>(foo));
 
     END_TEST;
 }
@@ -293,51 +293,51 @@ static bool uptr_test_array_comparison() {
 
     mxtl::unique_ptr<DeleteCounter[]> null_unique;
     mxtl::unique_ptr<DeleteCounter[]> lesser_unique(new (&ac) DeleteCounter[1]);
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
     mxtl::unique_ptr<DeleteCounter[]> greater_unique(new (&ac) DeleteCounter[2]);
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
 
-    EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
+    EXPECT_NEQ(lesser_unique.get(), greater_unique.get());
     if (lesser_unique.get() > greater_unique.get())
         lesser_unique.swap(greater_unique);
 
     // Comparison against nullptr
-    EXPECT_TRUE(   null_unique == nullptr, "");
-    EXPECT_TRUE( lesser_unique != nullptr, "");
-    EXPECT_TRUE(greater_unique != nullptr, "");
+    EXPECT_TRUE(   null_unique == nullptr);
+    EXPECT_TRUE( lesser_unique != nullptr);
+    EXPECT_TRUE(greater_unique != nullptr);
 
-    EXPECT_TRUE(nullptr ==    null_unique, "");
-    EXPECT_TRUE(nullptr !=  lesser_unique, "");
-    EXPECT_TRUE(nullptr != greater_unique, "");
+    EXPECT_TRUE(nullptr ==    null_unique);
+    EXPECT_TRUE(nullptr !=  lesser_unique);
+    EXPECT_TRUE(nullptr != greater_unique);
 
     // Comparison against other unique_ptr<>s
-    EXPECT_TRUE( lesser_unique  ==  lesser_unique, "");
-    EXPECT_FALSE( lesser_unique == greater_unique, "");
-    EXPECT_FALSE(greater_unique ==  lesser_unique, "");
-    EXPECT_TRUE(greater_unique  == greater_unique, "");
+    EXPECT_TRUE( lesser_unique  ==  lesser_unique);
+    EXPECT_FALSE( lesser_unique == greater_unique);
+    EXPECT_FALSE(greater_unique ==  lesser_unique);
+    EXPECT_TRUE(greater_unique  == greater_unique);
 
-    EXPECT_FALSE( lesser_unique !=  lesser_unique, "");
+    EXPECT_FALSE( lesser_unique !=  lesser_unique);
     EXPECT_TRUE ( lesser_unique != greater_unique, "");
     EXPECT_TRUE (greater_unique !=  lesser_unique, "");
-    EXPECT_FALSE(greater_unique != greater_unique, "");
+    EXPECT_FALSE(greater_unique != greater_unique);
 
-    EXPECT_FALSE( lesser_unique <   lesser_unique, "");
+    EXPECT_FALSE( lesser_unique <   lesser_unique);
     EXPECT_TRUE ( lesser_unique <  greater_unique, "");
-    EXPECT_FALSE(greater_unique <   lesser_unique, "");
-    EXPECT_FALSE(greater_unique <  greater_unique, "");
+    EXPECT_FALSE(greater_unique <   lesser_unique);
+    EXPECT_FALSE(greater_unique <  greater_unique);
 
-    EXPECT_FALSE( lesser_unique >   lesser_unique, "");
-    EXPECT_FALSE( lesser_unique >  greater_unique, "");
+    EXPECT_FALSE( lesser_unique >   lesser_unique);
+    EXPECT_FALSE( lesser_unique >  greater_unique);
     EXPECT_TRUE (greater_unique >   lesser_unique, "");
-    EXPECT_FALSE(greater_unique >  greater_unique, "");
+    EXPECT_FALSE(greater_unique >  greater_unique);
 
     EXPECT_TRUE ( lesser_unique <=  lesser_unique, "");
     EXPECT_TRUE ( lesser_unique <= greater_unique, "");
-    EXPECT_FALSE(greater_unique <=  lesser_unique, "");
+    EXPECT_FALSE(greater_unique <=  lesser_unique);
     EXPECT_TRUE (greater_unique <= greater_unique, "");
 
     EXPECT_TRUE ( lesser_unique >=  lesser_unique, "");
-    EXPECT_FALSE( lesser_unique >= greater_unique, "");
+    EXPECT_FALSE( lesser_unique >= greater_unique);
     EXPECT_TRUE (greater_unique >=  lesser_unique, "");
     EXPECT_TRUE (greater_unique >= greater_unique, "");
 
@@ -381,7 +381,7 @@ private:
 template <typename UptrType>
 static bool handoff_fn(UptrType&& ptr) {
     BEGIN_TEST;
-    EXPECT_NONNULL(ptr, "");
+    EXPECT_NONNULL(ptr);
     END_TEST;
 }
 
@@ -424,24 +424,24 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
-        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_NONNULL(derived_ptr);
 
         mxtl::unique_ptr<Base> base_ptr(mxtl::move(derived_ptr));
 
-        EXPECT_NULL(derived_ptr, "");
-        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_NULL(derived_ptr);
+        EXPECT_NONNULL(base_ptr);
     }
 
     // Assign unique_ptr<Base> at declaration time with a mxtl::move
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
-        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_NONNULL(derived_ptr);
 
         mxtl::unique_ptr<Base> base_ptr = mxtl::move(derived_ptr);
 
-        EXPECT_NULL(derived_ptr, "");
-        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_NULL(derived_ptr);
+        EXPECT_NONNULL(base_ptr);
     }
 
     // Assign unique_ptr<Base> after declaration with a mxtl::move
@@ -456,12 +456,12 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check());
     {
-        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_NONNULL(derived_ptr);
 
         bool test_res = handoff_fn<mxtl::unique_ptr<Base>>(mxtl::move(derived_ptr));
 
-        EXPECT_NULL(derived_ptr, "");
-        EXPECT_TRUE(test_res, "");
+        EXPECT_NULL(derived_ptr);
+        EXPECT_TRUE(test_res);
     }
 
 #if TEST_WILL_NOT_COMPILE || 0
@@ -498,7 +498,7 @@ static bool test_upcast() {
     ASSERT_TRUE(ac.check());
     {
         bool test_res = handoff_fn<mxtl::unique_ptr<Base>>(derived_ptr);
-        EXPECT_FALSE(test_res, "");
+        EXPECT_FALSE(test_res);
     }
 #endif
 
@@ -513,19 +513,19 @@ static bool uptr_upcasting() {
     // This should work.  C derives from A, A has a virtual destructor, and
     // everything is using the default deleter.
     test_res = test_upcast<A, C>();
-    EXPECT_TRUE(test_res, "");
+    EXPECT_TRUE(test_res);
 
 #if TEST_WILL_NOT_COMPILE || 0
     // This should not work.  C derives from B, but B has no virtual destructor.
     test_res = test_upcast<B, C>();
-    EXPECT_FALSE(test_res, "");
+    EXPECT_FALSE(test_res);
 #endif
 
 #if TEST_WILL_NOT_COMPILE || 0
     // This should not work.  D has a virtual destructor, but it is not a base
     // class of C.
     test_res = test_upcast<D, C>();
-    EXPECT_FALSE(test_res, "");
+    EXPECT_FALSE(test_res);
 #endif
 
     // Test overload resolution.  Make a C and the try to pass it to
@@ -543,8 +543,8 @@ static bool uptr_upcasting() {
         OverloadTestHelper helper;
         helper.PassByMove(mxtl::move(ptr));
 
-        EXPECT_NULL(ptr, "");
-        EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result(), "");
+        EXPECT_NULL(ptr);
+        EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result());
     }
 
     END_TEST;

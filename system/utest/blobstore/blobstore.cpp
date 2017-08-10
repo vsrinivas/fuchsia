@@ -150,7 +150,7 @@ static bool VerifyContents(int fd, const char* data, size_t size_data) {
     // Verify the contents of the Blob
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
-    EXPECT_EQ(ac.check(), true, "");
+    EXPECT_EQ(ac.check(), true);
 
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), 0, "Failed to read data");
@@ -176,7 +176,7 @@ static bool VerifyCompromised(int fd, const char* data, size_t size_data) {
     // Verify the contents of the Blob
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<char[]> buf(new (&ac) char[size_data]);
-    EXPECT_EQ(ac.check(), true, "");
+    EXPECT_EQ(ac.check(), true);
 
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(StreamAll(read, fd, &buf[0], size_data), -1, "Expected reading to fail");
@@ -223,9 +223,9 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     // Generate a Blob of random data
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<blob_info_t> info(new (&ac) blob_info_t);
-    EXPECT_EQ(ac.check(), true, "");
+    EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[size_data]);
-    EXPECT_EQ(ac.check(), true, "");
+    EXPECT_EQ(ac.check(), true);
     unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
     for (size_t i = 0; i < size_data; i++) {
         info->data[i] = (char)rand_r(&seed);
@@ -457,7 +457,7 @@ static bool ReadTooLarge(void) {
         // Verify the contents of the Blob
         mxtl::AllocChecker ac;
         mxtl::unique_ptr<char[]> buf(new (&ac) char[info->size_data]);
-        EXPECT_EQ(ac.check(), true, "");
+        EXPECT_EQ(ac.check(), true);
 
         // Try read beyond end of blob
         off_t end_off = info->size_data;
@@ -1016,7 +1016,7 @@ static bool EarlyRead(void) {
     ASSERT_TRUE(VerifyContents(fd2, info->data.get(), info->size_data));
 
     // Cool, everything is readable. What if we try accessing the blob status now?
-    EXPECT_TRUE(check_readable(fd), "");
+    EXPECT_TRUE(check_readable(fd));
 
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(close(fd2), 0);
@@ -1044,9 +1044,9 @@ static bool WaitForRead(void) {
     // Launch a background thread to wait for fd to become readable
     auto wait_until_readable = [](void* arg) {
         int fd = *static_cast<int*>(arg);
-        EXPECT_TRUE(wait_readable(fd), "");
-        EXPECT_TRUE(check_readable(fd), "");
-        EXPECT_EQ(close(fd), 0, "");
+        EXPECT_TRUE(wait_readable(fd));
+        EXPECT_TRUE(check_readable(fd));
+        EXPECT_EQ(close(fd), 0);
         return 0;
     };
     int dupfd = dup(fd);
@@ -1061,7 +1061,7 @@ static bool WaitForRead(void) {
               "Failed to write Data");
 
     // Cool, everything is readable. What if we try accessing the blob status now?
-    EXPECT_TRUE(check_readable(fd), "");
+    EXPECT_TRUE(check_readable(fd));
 
     // Our background thread should have also completed successfully...
     int result;

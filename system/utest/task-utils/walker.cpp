@@ -34,29 +34,29 @@ public:
     // if any are not met.
     virtual void Validate() const {
         if (has_on_job()) {
-            EXPECT_GT(jobs_seen_, 0, "");
+            EXPECT_GT(jobs_seen_, 0);
         } else {
-            EXPECT_EQ(jobs_seen_, 0, "");
+            EXPECT_EQ(jobs_seen_, 0);
         }
         if (has_on_process()) {
-            EXPECT_GT(processes_seen_, 0, "");
+            EXPECT_GT(processes_seen_, 0);
         } else {
-            EXPECT_EQ(processes_seen_, 0, "");
+            EXPECT_EQ(processes_seen_, 0);
         }
         if (has_on_thread()) {
-            EXPECT_GT(threads_seen_, 0, "");
+            EXPECT_GT(threads_seen_, 0);
         } else {
-            EXPECT_EQ(threads_seen_, 0, "");
+            EXPECT_EQ(threads_seen_, 0);
         }
     }
 
 protected:
     virtual mx_status_t OnJob(int depth, mx_handle_t job, mx_koid_t koid,
                               mx_koid_t parent_koid) override {
-        EXPECT_TRUE(has_on_job(), "");
-        EXPECT_GE(depth, 0, "");
-        EXPECT_TRUE(is_valid_handle(job), "");
-        EXPECT_NEQ(koid, 0, "");
+        EXPECT_TRUE(has_on_job());
+        EXPECT_GE(depth, 0);
+        EXPECT_TRUE(is_valid_handle(job));
+        EXPECT_NEQ(koid, 0);
         if (depth == 0) {
             EXPECT_EQ(parent_koid, 0, "root job");
         } else {
@@ -68,22 +68,22 @@ protected:
     virtual mx_status_t OnProcess(int depth, mx_handle_t process,
                                   mx_koid_t koid,
                                   mx_koid_t parent_koid) override {
-        EXPECT_TRUE(has_on_process(), "");
+        EXPECT_TRUE(has_on_process());
         EXPECT_GT(depth, 0, "process depth should always be > 0");
-        EXPECT_TRUE(is_valid_handle(process), "");
-        EXPECT_NEQ(koid, 0, "");
-        EXPECT_NEQ(parent_koid, 0, "");
+        EXPECT_TRUE(is_valid_handle(process));
+        EXPECT_NEQ(koid, 0);
+        EXPECT_NEQ(parent_koid, 0);
         processes_seen_++;
         return MX_OK;
     }
     virtual mx_status_t OnThread(int depth, mx_handle_t thread,
                                  mx_koid_t koid,
                                  mx_koid_t parent_koid) override {
-        EXPECT_TRUE(has_on_thread(), "");
+        EXPECT_TRUE(has_on_thread());
         EXPECT_GT(depth, 1, "thread depth should always be > 1");
-        EXPECT_TRUE(is_valid_handle(thread), "");
-        EXPECT_NEQ(koid, 0, "");
-        EXPECT_NEQ(parent_koid, 0, "");
+        EXPECT_TRUE(is_valid_handle(thread));
+        EXPECT_NEQ(koid, 0);
+        EXPECT_NEQ(parent_koid, 0);
         threads_seen_++;
         return MX_OK;
     }
@@ -108,7 +108,7 @@ bool basic_cpp_walk() {
     // same for other tests in this file. utest/core/object-info and
     // utest/policy (and maybe more) already do their own test job-tree
     // building; create a common helper lib.
-    EXPECT_EQ(tte.WalkRootJobTree(), MX_OK, "");
+    EXPECT_EQ(tte.WalkRootJobTree(), MX_OK);
     tte.Validate();
     END_TEST;
 }
@@ -127,26 +127,26 @@ public:
 private:
     // Not worth calling since the walk will stop before completing.
     void Validate() const override {
-        EXPECT_TRUE(false, "");
+        EXPECT_TRUE(false);
     }
 
     mx_status_t OnJob(int depth, mx_handle_t job,
                       mx_koid_t koid, mx_koid_t parent_koid) override {
-        EXPECT_FALSE(poisoned_, "");
+        EXPECT_FALSE(poisoned_);
         return MaybePoison(
             depth,
             TestTaskEnumerator::OnJob(depth, job, koid, parent_koid));
     }
     mx_status_t OnProcess(int depth, mx_handle_t process,
                           mx_koid_t koid, mx_koid_t parent_koid) override {
-        EXPECT_FALSE(poisoned_, "");
+        EXPECT_FALSE(poisoned_);
         return MaybePoison(
             depth,
             TestTaskEnumerator::OnProcess(depth, process, koid, parent_koid));
     }
     mx_status_t OnThread(int depth, mx_handle_t thread,
                          mx_koid_t koid, mx_koid_t parent_koid) override {
-        EXPECT_FALSE(poisoned_, "");
+        EXPECT_FALSE(poisoned_);
         return MaybePoison(
             depth,
             TestTaskEnumerator::OnThread(depth, thread, koid, parent_koid));
@@ -169,7 +169,7 @@ template <unsigned int Flags, int PoisonDepth>
 bool cpp_walk_failure() {
     BEGIN_TEST;
     FailingTaskEnumerator fte(Flags, PoisonDepth);
-    EXPECT_EQ(fte.WalkRootJobTree(), FailingTaskEnumerator::FailingStatus, "");
+    EXPECT_EQ(fte.WalkRootJobTree(), FailingTaskEnumerator::FailingStatus);
     END_TEST;
 }
 

@@ -30,7 +30,7 @@ bool destructor_test() {
 
     mxtl::AllocChecker ac;
     DestructorSignaler* signalers = new (&ac) DestructorSignaler[2];
-    EXPECT_TRUE(ac.check(), "");
+    EXPECT_TRUE(ac.check());
 
     {
         mxtl::Array<DestructorSignaler> array(signalers, 2);
@@ -38,8 +38,8 @@ bool destructor_test() {
         array[0].result = &result;
     }
 
-    EXPECT_FALSE(result == &bogus, "");
-    EXPECT_TRUE(result == nullptr, "");
+    EXPECT_FALSE(result == &bogus);
+    EXPECT_TRUE(result == nullptr);
 
     END_TEST;
 }
