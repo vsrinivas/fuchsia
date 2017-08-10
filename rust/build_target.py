@@ -11,9 +11,11 @@ import string
 import subprocess
 import sys
 
-ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
-import pytoml as toml
+import pytoml
+
+import local_crates
 
 
 # Creates the directory containing the given file.
@@ -64,7 +66,7 @@ def gather_dependency_infos(root_gen_dir, deps):
         # Read the information attached to the target.
         info_path = os.path.join(base_path, "%s.info.toml" % name)
         with open(info_path, "r") as info_file:
-            result.append(toml.load(info_file))
+            result.append(pytoml.load(info_file))
     return result
 
 
@@ -82,7 +84,7 @@ def write_target_info(label, gen_dir, package_name, native_libs,
         "has_generated_code": has_generated_code,
     }
     with open(info_path, "w") as info_file:
-        toml.dump(info, info_file)
+        pytoml.dump(info, info_file)
 
 
 # Returns the list of native libs inherited from the given dependencies.
@@ -94,7 +96,7 @@ def extract_native_libs(dependency_infos):
 
 # Writes a cargo config file.
 def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
-                       native_libs):
+                       native_libs, local_paths):
     create_base_directory(path)
     config = {
         "source": {
@@ -106,6 +108,7 @@ def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
                 "directory": vendor_directory
             },
         },
+        "paths": local_paths,
     }
 
     if native_libs is not None:
@@ -119,7 +122,7 @@ def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
             }
 
     with open(path, "w") as config_file:
-        toml.dump(config, config_file)
+        pytoml.dump(config, config_file)
 
 
 # Fixes the target path in the given depfile.
@@ -209,7 +212,7 @@ def main():
     create_base_directory(generated_manifest)
     package_name = None
     with open(original_manifest, "r") as manifest:
-        config = toml.load(manifest)
+        config = pytoml.load(manifest)
         package_name = config["package"]["name"]
         default_name = package_name.replace("-", "_")
 
@@ -263,7 +266,7 @@ def main():
 
         # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
-            toml.dump(config, generated_config)
+            pytoml.dump(config, generated_config)
 
     # Gather the set of native libraries that will need to be linked.
     native_libs = extract_native_libs(dependency_infos)
@@ -275,8 +278,9 @@ def main():
 
     # Write a config file to allow cargo to find the vendored crates.
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
+    local_paths = local_crates.get_all_paths(relative=False)
     write_cargo_config(config_path, args.vendor_directory, args.target_triple,
-                       args.shared_libs_root, native_libs)
+                       args.shared_libs_root, native_libs, local_paths)
 
     if args.type == "lib":
         # Since the generated .rlib artifact won't actually be used (for now),
