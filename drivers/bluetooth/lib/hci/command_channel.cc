@@ -8,6 +8,7 @@
 
 #include <magenta/status.h>
 
+#include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
@@ -57,25 +58,14 @@ void CommandChannel::Initialize() {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FTL_DCHECK(!is_initialized_);
 
-  // We make sure that this method blocks until the I/O handler registration task has run.
-  std::mutex init_mutex;
-  std::condition_variable init_cv;
-  bool ready = false;
-
-  io_task_runner_ = transport_->io_task_runner();
-  io_task_runner_->PostTask([&] {
+  auto setup_handler_task = [this] {
     io_handler_key_ =
         mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
     FTL_LOG(INFO) << "hci: CommandChannel: I/O handler registered";
-    {
-      std::lock_guard<std::mutex> lock(init_mutex);
-      ready = true;
-    }
-    init_cv.notify_one();
-  });
+  };
 
-  std::unique_lock<std::mutex> lock(init_mutex);
-  init_cv.wait(lock, [&ready] { return ready; });
+  io_task_runner_ = transport_->io_task_runner();
+  common::RunTaskSync(setup_handler_task, io_task_runner_);
 
   is_initialized_ = true;
 
@@ -88,25 +78,14 @@ void CommandChannel::ShutDown() {
 
   FTL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
-  std::mutex init_mutex;
-  std::condition_variable init_cv;
-  bool ready = false;
-
-  io_task_runner_->PostTask([&, handler_key = io_handler_key_ ] {
+  auto handler_cleanup_task = [this] {
     FTL_DCHECK(mtl::MessageLoop::GetCurrent());
     FTL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
     SetPendingCommand(nullptr);
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(io_handler_key_);
+  };
 
-    {
-      std::lock_guard<std::mutex> lock(init_mutex);
-      ready = true;
-    }
-    init_cv.notify_one();
-  });
-
-  std::unique_lock<std::mutex> lock(init_mutex);
-  init_cv.wait(lock, [&ready] { return ready; });
+  common::RunTaskSync(handler_cleanup_task, io_task_runner_);
 
   is_initialized_ = false;
 

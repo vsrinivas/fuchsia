@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <magenta/status.h>
 
+#include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -51,27 +52,15 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   bredr_buffer_info_ = bredr_buffer_info;
   le_buffer_info_ = le_buffer_info;
 
-  // We make sure that this method blocks until the I/O handler registration task has run.
-  std::mutex init_mutex;
-  std::condition_variable init_cv;
-  bool ready = false;
-
-  io_task_runner_ = transport_->io_task_runner();
-  io_task_runner_->PostTask([&] {
-    // TODO(armansito): We'll need to pay attention to MX_CHANNEL_WRITABLE as well or perhaps not if
-    // we switch to mx fifo.
+  auto setup_handler_task = [this] {
+    // TODO(armansito): We'll need to pay attention to MX_CHANNEL_WRITABLE as well.
     io_handler_key_ =
         mtl::MessageLoop::GetCurrent()->AddHandler(this, channel_.get(), MX_CHANNEL_READABLE);
     FTL_LOG(INFO) << "hci: ACLDataChannel: I/O handler registered";
-    {
-      std::lock_guard<std::mutex> lock(init_mutex);
-      ready = true;
-    }
-    init_cv.notify_one();
-  });
+  };
 
-  std::unique_lock<std::mutex> lock(init_mutex);
-  init_cv.wait(lock, [&ready] { return ready; });
+  io_task_runner_ = transport_->io_task_runner();
+  common::RunTaskSync(setup_handler_task, io_task_runner_);
 
   event_handler_id_ = transport_->command_channel()->AddEventHandler(
       kNumberOfCompletedPacketsEventCode,
@@ -90,11 +79,13 @@ void ACLDataChannel::ShutDown() {
 
   FTL_LOG(INFO) << "hci: ACLDataChannel: shutting down";
 
-  io_task_runner_->PostTask([handler_key = io_handler_key_] {
+  auto handler_cleanup_task = [handler_key = io_handler_key_] {
     FTL_DCHECK(mtl::MessageLoop::GetCurrent());
     FTL_LOG(INFO) << "hci: ACLDataChannel Removing I/O handler";
     mtl::MessageLoop::GetCurrent()->RemoveHandler(handler_key);
-  });
+  };
+
+  common::RunTaskSync(handler_cleanup_task, io_task_runner_);
 
   transport_->command_channel()->RemoveEventHandler(event_handler_id_);
 

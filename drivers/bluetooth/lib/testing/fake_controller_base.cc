@@ -6,6 +6,7 @@
 
 #include <magenta/status.h>
 
+#include "apps/bluetooth/lib/common/run_task_sync.h"
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -32,29 +33,16 @@ void FakeControllerBase::Start() {
 
   thread_ = mtl::CreateThread(&task_runner_, "bluetooth-hci-test-controller");
 
-  // We make sure that this method blocks until the I/O handler registration task has run.
-  std::mutex init_mutex;
-  std::condition_variable init_cv;
-  bool ready = false;
-
-  task_runner_->PostTask([&] {
+  auto setup_task = [this] {
     cmd_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
         this, cmd_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     if (acl_channel_.is_valid()) {
       acl_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
           this, acl_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
     }
+  };
 
-    {
-      std::lock_guard<std::mutex> lock(init_mutex);
-      ready = true;
-    }
-
-    init_cv.notify_one();
-  });
-
-  std::unique_lock<std::mutex> lock(init_mutex);
-  init_cv.wait(lock, [&ready] { return ready; });
+  common::RunTaskSync(setup_task, task_runner_);
 }
 
 void FakeControllerBase::Stop() {

@@ -16,6 +16,8 @@ source_set("common") {
     "observer_list.h",
     "optional.h",
     "packet_view.h",
+    "run_task_sync.cc",
+    "run_task_sync.h",
     "slab_allocator_traits.h",
     "test_helpers.h",
     "uint128.h",
@@ -40,6 +42,7 @@ source_set("tests") {
     "observer_list_unittest.cc",
     "optional_unittest.cc",
     "packet_view_unittest.cc",
+    "run_task_sync_unittest.cc",
     "slab_allocator_traits_unittest.cc",
     "uuid_unittest.cc",
   ]
@@ -47,6 +50,7 @@ source_set("tests") {
   deps = [
     ":common",
     "//lib/ftl",
+    "//lib/mtl",
     "//third_party/gtest",
   ]
 }
