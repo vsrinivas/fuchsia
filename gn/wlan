@@ -4,6 +4,7 @@
     ],
     "packages": {
         "wlan": "//drivers/wifi/wlan",
+        "ath10k": "//drivers/wifi/third_party/atheros/fuchsia:ath10k",
         "rt5370": "//drivers/wifi/mediatek/rt5370"
     }
 }
