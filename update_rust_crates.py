@@ -14,16 +14,18 @@ import sys
 import tempfile
 
 sys.path += [os.path.join(paths.FUCHSIA_ROOT, "third_party", "pytoml")]
-import pytoml as toml
+import pytoml
+sys.path += [os.path.join(paths.FUCHSIA_ROOT, "build", "rust")]
+import local_crates
 
 from check_rust_licenses import check_licenses
 
 
+# Note that crates in //third_party/rust-crates/mirror will be automatically
+# taken into account, as will Fuchsia crates published to crates.io.
 CONFIGS = [
     "apps/xi/modules/xi-core",
     "lib/fidl/rust/fidl",
-    "rust/magenta-rs",
-    "rust/magenta-rs/magenta-sys",
     "rust/rust_sample_module",
     "third_party/xi-editor/rust/core-lib",
 ]
@@ -49,9 +51,12 @@ def parse_dependencies(lock_path):
     """Extracts the crate dependency tree from a lockfile."""
     result = []
     with open(lock_path, "r") as lock_file:
-        content = toml.load(lock_file)
+        content = pytoml.load(lock_file)
         dep_matcher = re.compile("^([^\s]+)\s([^\s]+)")
+        crates_source = "registry+https://github.com/rust-lang/crates.io-index"
         for package in content["package"]:
+            from_crates_io = ("source" in package and
+                              package["source"] == crates_source)
             deps = []
             if "dependencies" in package:
                 for dep in package["dependencies"]:
@@ -63,14 +68,58 @@ def parse_dependencies(lock_path):
                 "name": package["name"],
                 "label": label,
                 "deps": deps,
+                "from_crates_io": from_crates_io,
             })
     return result
 
 
-def filter_non_vendor_crates(crates, vendor_dir):
-    """Removes crates that are not vendored from the given list."""
-    def is_3p(c): return os.path.isdir(os.path.join(vendor_dir, c["label"]))
-    return filter(is_3p, crates)
+def update_crates(crates):
+    """Adjusts the list of crates and adds more data."""
+    print("Updating crates data...")
+    result = []
+
+    # Account for local crates.
+    for crate in crates:
+        name = crate["name"]
+        is_mirror = name in local_crates.RUST_CRATES["mirrors"]
+        is_from_crates_io = crate["from_crates_io"]
+
+        # Never generate build rules for Fuchsia crates.
+        if name in local_crates.RUST_CRATES["published"]:
+            print("Ignoring published crate '%s'" % name)
+            continue
+
+        if is_mirror:
+            if not is_from_crates_io:
+                # A build rule is needed for this crate.
+                print("Generating build rule for mirror '%s'" % name)
+                crate["path"] = os.path.join(paths.FUCHSIA_ROOT, "third_party",
+                                             "rust-mirrors", name)
+                result.append(crate)
+            continue
+
+        if not is_from_crates_io:
+            print("Ignoring local crate '%s'" % name)
+            continue
+
+        crate["path"] = os.path.join(paths.FUCHSIA_ROOT, "third_party",
+                                     "rust-crates", "vendor", crate["label"])
+        result.append(crate)
+
+    # Map deps to GN deps.
+    source_crates = dict(map(lambda (k, v): ("%s-%s" % (k, v["version"]),
+                                             v["target"]),
+                             local_crates.RUST_CRATES["published"].iteritems()))
+    for crate in result:
+        deps = []
+        for dep in crate["deps"]:
+            if dep in source_crates:
+                dep_target = source_crates[dep]
+            else:
+                dep_target = ":%s" % dep
+            deps.append(dep_target)
+        crate["deps"] = deps
+    return result
 
 
 def add_native_libraries(crates, vendor_dir):
@@ -78,9 +127,9 @@ def add_native_libraries(crates, vendor_dir):
        the given crate metadata."""
     result = True
     for crate in crates:
-        config_path = os.path.join(vendor_dir, crate["label"], "Cargo.toml")
+        config_path = os.path.join(crate["path"], "Cargo.toml")
         with open(config_path, "r") as config_file:
-            config = toml.load(config_file)
+            config = pytoml.load(config_file)
             if "links" in config["package"]:
                 library = config["package"]["links"]
                 if library not in NATIVE_LIBS:
@@ -108,7 +157,7 @@ rust_info("%s") {
             if info["deps"]:
                 build_file.write("\n  deps = [\n")
                 for dep in info["deps"]:
-                    build_file.write("    \":%s\",\n" % dep)
+                    build_file.write("    \"%s\",\n" % dep)
                 build_file.write("  ]\n")
             if "native_lib" in info:
                 lib = info["native_lib"]
@@ -153,20 +202,22 @@ def main():
     toml_path = os.path.join(base_dir, "Cargo.toml")
     lock_path = os.path.join(base_dir, "Cargo.lock")
 
+    all_configs = CONFIGS + local_crates.get_all_paths(relative=True)
+
     try:
         print("Downloading dependencies for:")
-        for config in CONFIGS:
+        for config in all_configs:
             print(" - %s" % config)
 
         # Create Cargo.toml.
         def mapper(p): return os.path.join(paths.FUCHSIA_ROOT, p)
         config = {
             "workspace": {
-                "members": list(map(mapper, CONFIGS))
+                "members": list(map(mapper, all_configs))
             }
         }
         with open(toml_path, "w") as config_file:
-            toml.dump(config, config_file)
+            pytoml.dump(config, config_file)
 
         cargo_bin = get_cargo_bin()
 
@@ -198,8 +249,7 @@ def main():
     shutil.rmtree(vendor_dir)
     shutil.move(os.path.join(paths.FUCHSIA_ROOT, "vendor"), vendor_dir)
 
-    # Remove members of the workspace from the list of crates.
-    crates = filter_non_vendor_crates(crates, vendor_dir)
+    crates = update_crates(crates)
 
     if not add_native_libraries(crates, vendor_dir):
         print("Unable to identify all required native libraries.")

@@ -66,7 +66,7 @@ def fetch_license(subdir):
 def check_licenses(directory, verify=False):
     success = True
     os.chdir(directory)
-    for subdir in os.listdir(os.getcwd()):
+    for subdir in sorted(os.listdir(os.getcwd())):
         if subdir.startswith('.') or not os.path.isdir(subdir):
             continue
         license_files = [file for file in os.listdir(subdir)
@@ -78,6 +78,11 @@ def check_licenses(directory, verify=False):
         if verify:
             print 'MISSING  %s' % subdir
             success = False
+            continue
+        # TODO(pylaligand): remove this temporary hack when a new version of
+        # the crate is published.
+        if subdir == 'magenta-sys-0.1.1':
+            print 'IGNORED  %s' % subdir
             continue
         try:
             fetch_license(subdir)
