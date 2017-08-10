@@ -67,10 +67,10 @@ MessageLoop::~MessageLoop() {
   FTL_DCHECK(g_current == this)
       << "Message loops must be destroyed on their own threads.";
 
-  incoming_tasks()->ClearDelegate();
-
   loop_.Shutdown();
   FTL_DCHECK(handlers_.empty());
+
+  incoming_tasks()->ClearDelegate();
 
   g_current = nullptr;
 }

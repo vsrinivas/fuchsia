@@ -10,12 +10,15 @@
 
 #include <poll.h>
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/fd_waiter.h"
@@ -33,14 +36,21 @@ TEST(MessageLoop, Current) {
 }
 
 TEST(MessageLoop, RunsTasksOnCurrentThread) {
-  MessageLoop loop;
-  EXPECT_TRUE(loop.task_runner()->RunsTasksOnCurrentThread());
-  bool run_on_other_thread;
-  std::thread t([&loop, &run_on_other_thread]() {
-    run_on_other_thread = loop.task_runner()->RunsTasksOnCurrentThread();
-  });
-  t.join();
-  EXPECT_FALSE(run_on_other_thread);
+  ftl::RefPtr<ftl::TaskRunner> task_runner;
+
+  {
+    MessageLoop loop;
+    task_runner = loop.task_runner();
+    EXPECT_TRUE(task_runner->RunsTasksOnCurrentThread());
+    bool run_on_other_thread;
+    std::thread t([task_runner, &run_on_other_thread]() {
+      run_on_other_thread = task_runner->RunsTasksOnCurrentThread();
+    });
+    t.join();
+    EXPECT_FALSE(run_on_other_thread);
+  }
+
+  EXPECT_FALSE(task_runner->RunsTasksOnCurrentThread());
 }
 
 TEST(MessageLoop, CanRunTasks) {
@@ -153,13 +163,13 @@ TEST(MessageLoop, RemoveAfterTaskCallbacksDuringCallback) {
   EXPECT_EQ("1", tasks[2]);
 }
 
-struct DestructorObserver {
-  DestructorObserver(bool* destructed) : destructed_(destructed) {
-    *destructed_ = false;
-  }
-  ~DestructorObserver() { *destructed_ = true; }
+class DestructorObserver {
+ public:
+  DestructorObserver(ftl::Closure callback) : callback_(std::move(callback)) {}
+  ~DestructorObserver() { callback_(); }
 
-  bool* destructed_;
+ private:
+  ftl::Closure callback_;
 };
 
 TEST(MessageLoop, TaskDestructionTime) {
@@ -171,14 +181,16 @@ TEST(MessageLoop, TaskDestructionTime) {
     task_runner = ftl::RefPtr<ftl::TaskRunner>(loop.task_runner());
     loop.PostQuitTask();
     loop.Run();
-    auto observer1 = std::make_unique<DestructorObserver>(&destructed);
+    auto observer1 = std::make_unique<DestructorObserver>(
+        [&destructed] { destructed = true; });
     task_runner->PostTask(ftl::MakeCopyable([p = std::move(observer1)](){}));
     EXPECT_FALSE(destructed);
   }
-
   EXPECT_TRUE(destructed);
-  auto observer2 = std::make_unique<DestructorObserver>(&destructed);
-  EXPECT_FALSE(destructed);
+
+  destructed = false;
+  auto observer2 = std::make_unique<DestructorObserver>(
+      [&destructed] { destructed = true; });
   task_runner->PostTask(ftl::MakeCopyable([p = std::move(observer2)](){}));
   EXPECT_TRUE(destructed);
 }
@@ -547,6 +559,98 @@ TEST(MessageLoop, FDWaiter) {
   }
 
   EXPECT_TRUE(callback_ran);
+}
+
+class ErrorHandler : public MessageLoopHandler {
+ public:
+  using Callback = std::function<void(mx_handle_t, mx_status_t)>;
+
+  ErrorHandler(Callback callback) : callback_(std::move(callback)) {}
+
+  void OnHandleError(mx_handle_t handle, mx_status_t error) override {
+    callback_(handle, error);
+  }
+
+ private:
+  Callback callback_;
+};
+
+// Tests that the message loop's task runner can still be accessed during
+// message loop destruction (while tearing down remaining tasks and handlers)
+// though any tasks posted to it are immediately destroyed.
+TEST(MessageLoop, TaskRunnerAvailableDuringLoopDestruction) {
+  mx::event event;
+  EXPECT_EQ(MX_OK, mx::event::create(0u, &event));
+
+  auto loop = std::make_unique<MessageLoop>();
+
+  // Set up a handler which will record some observed state then attempt to
+  // post a task.  The task should be destroyed immediately without running.
+  mx_handle_t handler_observed_handle = MX_HANDLE_INVALID;
+  mx_status_t handler_observed_error = MX_OK;
+  bool handler_observed_runs_tasks_on_current_thread = false;
+  bool task_posted_from_handler_destroyed = false;
+  bool task_posted_from_handler_ran = false;
+  ErrorHandler handler([
+    task_runner = loop->task_runner(),               //
+    &handler_observed_handle,                        //
+    &handler_observed_error,                         //
+    &handler_observed_runs_tasks_on_current_thread,  //
+    &task_posted_from_handler_ran,                   //
+    &task_posted_from_handler_destroyed
+  ](mx_handle_t handle, mx_status_t error) {
+    handler_observed_handle = handle;
+    handler_observed_error = error;
+    handler_observed_runs_tasks_on_current_thread =
+        task_runner->RunsTasksOnCurrentThread();
+    task_runner->PostTask([
+      &task_posted_from_handler_ran,
+      d = DestructorObserver([&task_posted_from_handler_destroyed] {
+        task_posted_from_handler_destroyed = true;
+      })
+    ] { task_posted_from_handler_ran = true; });
+  });
+
+  // Set up a task which will record some observed state during destruction
+  // then attempt to post another task.  The task should be destroyed
+  // immediately without running.
+  bool task_destroyed = false;
+  bool task_observed_runs_tasks_on_current_thread = false;
+  bool task_posted_from_task_ran = false;
+  bool task_posted_from_task_destroyed = false;
+  ftl::Closure task =
+      [d = DestructorObserver([
+         task_runner = loop->task_runner(),            //
+         &task_observed_runs_tasks_on_current_thread,  //
+         &task_destroyed,                              //
+         &task_posted_from_task_ran,                   //
+         &task_posted_from_task_destroyed
+       ] {
+         task_destroyed = true;
+         task_observed_runs_tasks_on_current_thread =
+             task_runner->RunsTasksOnCurrentThread();
+         task_runner->PostTask([
+           &task_posted_from_task_ran,
+           d = DestructorObserver([&task_posted_from_task_destroyed] {
+             task_posted_from_task_destroyed = true;
+           })
+         ] { task_posted_from_task_ran = true; });
+       })]{};
+
+  loop->task_runner()->PostTask(std::move(task));
+  loop->AddHandler(&handler, event.get(), MX_EVENT_SIGNALED);
+  loop.reset();
+
+  EXPECT_EQ(event.get(), handler_observed_handle);
+  EXPECT_EQ(MX_ERR_CANCELED, handler_observed_error);
+  EXPECT_TRUE(handler_observed_runs_tasks_on_current_thread);
+  EXPECT_FALSE(task_posted_from_handler_ran);
+  EXPECT_TRUE(task_posted_from_handler_destroyed);
+
+  EXPECT_TRUE(task_destroyed);
+  EXPECT_TRUE(task_observed_runs_tasks_on_current_thread);
+  EXPECT_FALSE(task_posted_from_task_ran);
+  EXPECT_TRUE(task_posted_from_task_destroyed);
 }
 
 }  // namespace
