@@ -17,6 +17,7 @@ ROOT_PUBSPECS = [
     'dart/pkg/analyzer',
     'dart/pkg/analyzer_cli',
     'dart/pkg/kernel',
+    'dart/pkg/telemetry',
     'dart/pkg/typed_mock',
     'flutter/sky/packages/sky_engine',
     'lib/flutter/examples/flutter_gallery',
@@ -31,8 +32,8 @@ PROJECT_DEPENDENCIES = [
     'apps/modules/chat',
     'apps/modules/common',
     'apps/modules/dashboard',
-    'apps/mondrian',
     'apps/xi',
+    'lib/widgets',
     'third_party/dart-pkg',
 ]
 
