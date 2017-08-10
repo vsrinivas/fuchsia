@@ -348,17 +348,17 @@ static bool channel_multithread_read(void) {
 
     for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
         uint32_t msg = received0[i];
-        ASSERT_NEQ(msg, MSG_READ_FAILED, "read failed");
-        ASSERT_NEQ(msg, MSG_WRONG_SIZE, "got wrong message size");
-        ASSERT_NEQ(msg, MSG_BAD_DATA, "got bad message data");
+        ASSERT_NE(msg, MSG_READ_FAILED, "read failed");
+        ASSERT_NE(msg, MSG_WRONG_SIZE, "got wrong message size");
+        ASSERT_NE(msg, MSG_BAD_DATA, "got bad message data");
         ASSERT_LT(msg, multithread_read_num_messages, "???");
         ASSERT_FALSE(received_flags[msg], "got duplicate message");
     }
     for (uint32_t i = 0; i < multithread_read_num_messages / 2; i++) {
         uint32_t msg = received1[i];
-        ASSERT_NEQ(msg, MSG_READ_FAILED, "read failed");
-        ASSERT_NEQ(msg, MSG_WRONG_SIZE, "got wrong message size");
-        ASSERT_NEQ(msg, MSG_BAD_DATA, "got bad message data");
+        ASSERT_NE(msg, MSG_READ_FAILED, "read failed");
+        ASSERT_NE(msg, MSG_WRONG_SIZE, "got wrong message size");
+        ASSERT_NE(msg, MSG_BAD_DATA, "got bad message data");
         ASSERT_LT(msg, multithread_read_num_messages, "???");
         ASSERT_FALSE(received_flags[msg], "got duplicate message");
     }

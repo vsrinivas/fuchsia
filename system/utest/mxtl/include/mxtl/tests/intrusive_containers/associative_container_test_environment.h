@@ -329,7 +329,7 @@ public:
                 // the existing object.
                 PtrType new_object = TestEnvTraits::CreateObject(i);
                 ASSERT_NONNULL(new_object, "");
-                EXPECT_NEQ(new_object->raw_ptr(), objects()[i], "");
+                EXPECT_NE(new_object->raw_ptr(), objects()[i], "");
                 new_object->SetKey(KeyTraits::GetKey(*objects()[i]));
 
                 // Attempt (but fail) to insert the object into the container
@@ -367,7 +367,7 @@ public:
                     EXPECT_TRUE(iter.IsValid(), "");
                     if (iter.IsValid(), "") {
                         EXPECT_EQ(objects()[i], iter->raw_ptr(), "");
-                        EXPECT_NEQ(PtrTraits::GetRaw(new_object), iter->raw_ptr(), "");
+                        EXPECT_NE(PtrTraits::GetRaw(new_object), iter->raw_ptr(), "");
                         EXPECT_TRUE(KeyTraits::EqualTo(KeyTraits::GetKey(*iter),
                                                        KeyTraits::GetKey(*new_object)), "");
                     }

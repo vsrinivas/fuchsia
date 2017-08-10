@@ -23,7 +23,7 @@ static bool basic_test(void) {
 
     // Never close the launchpad job.
     mx_handle_t job_parent = mx_job_default();
-    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+    ASSERT_NE(job_parent, MX_HANDLE_INVALID, "");
 
     // If the parent job is valid, one should be able to create a child job
     // and a child job of the child job.
@@ -45,7 +45,7 @@ static bool create_test(void) {
     BEGIN_TEST;
 
     mx_handle_t job_parent = mx_job_default();
-    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+    ASSERT_NE(job_parent, MX_HANDLE_INVALID, "");
 
     mx_handle_t job_child;
     ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), MX_OK, "");
@@ -72,7 +72,7 @@ static bool policy_basic_test(void) {
     BEGIN_TEST;
 
     mx_handle_t job_parent = mx_job_default();
-    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+    ASSERT_NE(job_parent, MX_HANDLE_INVALID, "");
 
     mx_handle_t job_child;
     ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), MX_OK, "");
@@ -94,7 +94,7 @@ static bool kill_test(void) {
     BEGIN_TEST;
 
     mx_handle_t job_parent = mx_job_default();
-    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+    ASSERT_NE(job_parent, MX_HANDLE_INVALID, "");
 
     mx_handle_t job_child;
     ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), MX_OK, "");
@@ -123,7 +123,7 @@ static bool wait_test(void) {
     BEGIN_TEST;
 
     mx_handle_t job_parent = mx_job_default();
-    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+    ASSERT_NE(job_parent, MX_HANDLE_INVALID, "");
 
     mx_handle_t job_child;
     ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), MX_OK, "");
@@ -156,10 +156,10 @@ static bool wait_test(void) {
 static bool info_task_stats_fails(void) {
     BEGIN_TEST;
     mx_info_task_stats_t info;
-    ASSERT_NEQ(mx_object_get_info(mx_job_default(), MX_INFO_TASK_STATS,
-                                  &info, sizeof(info), NULL, NULL),
-               MX_OK,
-               "Just added job support to info_task_status?");
+    ASSERT_NE(mx_object_get_info(mx_job_default(), MX_INFO_TASK_STATS,
+                                 &info, sizeof(info), NULL, NULL),
+              MX_OK,
+              "Just added job support to info_task_status?");
     // If so, replace this with a real test; see example in process.cpp.
     END_TEST;
 }

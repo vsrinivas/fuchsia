@@ -34,7 +34,7 @@ bool test_mmap_empty(void) {
 
     char tmp[] = "this is a temporary buffer";
     void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
-    ASSERT_NEQ(addr, MAP_FAILED);
+    ASSERT_NE(addr, MAP_FAILED);
     ASSERT_EQ(write(fd, tmp, sizeof(tmp)), sizeof(tmp));
     ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0);
 
@@ -62,7 +62,7 @@ bool test_mmap_readable(void) {
 
     // Demonstrate that a simple buffer can be mapped
     void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
-    ASSERT_NEQ(addr, MAP_FAILED);
+    ASSERT_NE(addr, MAP_FAILED);
     ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0);
 
     // Show that if we keep writing to the file, the mapping
@@ -98,7 +98,7 @@ bool test_mmap_writable(void) {
 
     // Demonstrate that a simple buffer can be mapped
     void* addr = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    ASSERT_NEQ(addr, MAP_FAILED);
+    ASSERT_NE(addr, MAP_FAILED);
     ASSERT_EQ(memcmp(addr, tmp1, sizeof(tmp1)), 0);
 
     // Extend the file length up to the necessary size
@@ -149,7 +149,7 @@ bool test_mmap_unlinked(void) {
 
     // Demonstrate that a simple buffer can be mapped
     void* addr = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
-    ASSERT_NEQ(addr, MAP_FAILED);
+    ASSERT_NE(addr, MAP_FAILED);
     ASSERT_EQ(memcmp(addr, tmp, sizeof(tmp)), 0);
 
     // If we close the file, we can still access the mapping
@@ -184,7 +184,7 @@ bool test_mmap_shared(void) {
 
     // Demonstrate that a simple buffer can be mapped
     void* addr1 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    ASSERT_NEQ(addr1, MAP_FAILED);
+    ASSERT_NE(addr1, MAP_FAILED);
     ASSERT_EQ(memcmp(addr1, tmp, sizeof(tmp)), 0);
 
     int fd2 = open(kFilename, O_RDWR);
@@ -192,7 +192,7 @@ bool test_mmap_shared(void) {
 
     // Demonstrate that the buffer can be mapped multiple times
     void* addr2 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd2, 0);
-    ASSERT_NEQ(addr2, MAP_FAILED);
+    ASSERT_NE(addr2, MAP_FAILED);
     ASSERT_EQ(memcmp(addr2, tmp, sizeof(tmp)), 0);
 
     // Demonstrate that updates to the file are shared between mappings
@@ -215,7 +215,7 @@ bool test_mmap_shared(void) {
     fd = open(kFilename, O_RDONLY);
     ASSERT_GT(fd, 0);
     addr2 = mmap(NULL, PAGE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
-    ASSERT_NEQ(addr2, MAP_FAILED);
+    ASSERT_NE(addr2, MAP_FAILED);
     ASSERT_EQ(memcmp(addr1, tmp3, sizeof(tmp3)), 0);
     ASSERT_EQ(memcmp(addr2, tmp3, sizeof(tmp3)), 0);
     ASSERT_EQ(close(fd), 0);
@@ -245,11 +245,11 @@ bool test_mmap_private(void) {
 
     // Demonstrate that a simple buffer can be mapped
     void* addr1 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-    ASSERT_NEQ(addr1, MAP_FAILED);
+    ASSERT_NE(addr1, MAP_FAILED);
     ASSERT_EQ(memcmp(addr1, buf, sizeof(buf)), 0);
     // ... multiple times
     void* addr2 = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-    ASSERT_NEQ(addr2, MAP_FAILED);
+    ASSERT_NE(addr2, MAP_FAILED);
     ASSERT_EQ(memcmp(addr2, buf, sizeof(buf)), 0);
 
     // File: 'a'

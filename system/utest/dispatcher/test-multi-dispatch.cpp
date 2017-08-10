@@ -129,7 +129,7 @@ static mx_status_t disp_cb(mx_handle_t h, void* handler_cb, void* handler_data) 
     auto cb = reinterpret_cast<fs::vfs_dispatcher_cb_t>(handler_cb);
 
     // read the message and call the handler
-    ASSERT_NEQ(h, 0, "unexpected handle close in dispatcher");
+    ASSERT_NE(h, 0, "unexpected handle close in dispatcher");
     Msg imsg(0, "", 0);
     uint32_t dsz = sizeof(imsg);
     mx_status_t r;

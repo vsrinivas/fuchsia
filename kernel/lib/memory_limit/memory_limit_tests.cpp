@@ -140,7 +140,7 @@ static bool ml_test_large_ramdisk(void* context) {
 
     EXPECT_EQ(true, ctx.found_kernel, "checking kernel");
     EXPECT_EQ(true, ctx.found_ramdisk, "checking ramdisk");
-    EXPECT_NEQ(memory_limit, size, "checking that size and limit don't match");
+    EXPECT_NE(memory_limit, size, "checking that size and limit don't match");
     EXPECT_EQ(ctx.kernel_size + ctx.ramdisk_size, size, "checking the limit grew to fit kernel + ramdisk");
     END_TEST;
 }

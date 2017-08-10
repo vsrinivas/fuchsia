@@ -236,7 +236,7 @@ bool run_send_test(struct test_params* tp) {
     tftp_session* session;
     size_t session_size = tftp_sizeof_session();
     void* session_buf = malloc(session_size);
-    ASSERT_NEQ(session_buf, NULL, "memory allocation failed");
+    ASSERT_NE(session_buf, NULL, "memory allocation failed");
 
     tftp_status status = tftp_init(&session, session_buf, session_size);
     ASSERT_EQ(status, TFTP_NO_ERROR, "unable to initialize a tftp session");
@@ -267,9 +267,9 @@ bool run_send_test(struct test_params* tp) {
     size_t buf_sz = tp->blksz > PATH_MAX ?
                     tp->blksz + 2 : PATH_MAX + 2;
     char* msg_in_buf = malloc(buf_sz);
-    ASSERT_NEQ(msg_in_buf, NULL, "memory allocation failure");
+    ASSERT_NE(msg_in_buf, NULL, "memory allocation failure");
     char* msg_out_buf = malloc(buf_sz);
-    ASSERT_NEQ(msg_out_buf, NULL, "memory allocation failure");
+    ASSERT_NE(msg_out_buf, NULL, "memory allocation failure");
 
     char err_msg_buf[128];
     size_t block_sz = tp->blksz;
@@ -306,7 +306,7 @@ bool run_recv_test(struct test_params* tp) {
     tftp_session* session;
     size_t session_size = tftp_sizeof_session();
     void* session_buf = malloc(session_size);
-    ASSERT_NEQ(session_buf, NULL, "memory allocation failed");
+    ASSERT_NE(session_buf, NULL, "memory allocation failed");
 
     tftp_status status = tftp_init(&session, session_buf, session_size);
     ASSERT_EQ(status, TFTP_NO_ERROR, "unable to initiate a tftp session");
@@ -336,9 +336,9 @@ bool run_recv_test(struct test_params* tp) {
     size_t buf_sz = tp->blksz > PATH_MAX ?
                     tp->blksz + 2 : PATH_MAX + 2;
     char* msg_in_buf = malloc(buf_sz);
-    ASSERT_NEQ(msg_in_buf, NULL, "memory allocation failure");
+    ASSERT_NE(msg_in_buf, NULL, "memory allocation failure");
     char* msg_out_buf = malloc(buf_sz);
-    ASSERT_NEQ(msg_out_buf, NULL, "memory allocation failure");
+    ASSERT_NE(msg_out_buf, NULL, "memory allocation failure");
 
     char err_msg_buf[128];
     tftp_handler_opts opts = { .inbuf = msg_in_buf,

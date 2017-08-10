@@ -170,7 +170,7 @@ static bool test_invoking_policy(
     mx_handle_t ctrl;
     auto proc = make_test_process(job, nullptr, &ctrl);
     ASSERT_TRUE(proc.is_valid());
-    ASSERT_NEQ(ctrl, MX_HANDLE_INVALID);
+    ASSERT_NE(ctrl, MX_HANDLE_INVALID);
 
     mx_handle_t obj;
     EXPECT_EQ(mini_process_cmd(ctrl, minip_cmd, &obj), expect);
@@ -279,7 +279,7 @@ static bool test_invoking_policy_with_exception(
     mx::thread thread;
     auto proc = make_test_process(job, &thread, &ctrl);
     ASSERT_TRUE(proc.is_valid());
-    ASSERT_NEQ(ctrl, MX_HANDLE_INVALID);
+    ASSERT_NE(ctrl, MX_HANDLE_INVALID);
 
     mx_handle_t exc_port;
     ASSERT_EQ(mx_port_create(0, &exc_port), MX_OK);

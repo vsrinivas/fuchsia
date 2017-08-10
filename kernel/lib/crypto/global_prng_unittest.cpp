@@ -18,7 +18,7 @@ bool identical(void*) {
     PRNG* prng1 = GlobalPRNG::GetInstance();
     PRNG* prng2 = GlobalPRNG::GetInstance();
 
-    EXPECT_NEQ(prng1, nullptr, "");
+    EXPECT_NE(prng1, nullptr, "");
     EXPECT_EQ(prng1, prng2, "");
 
     END_TEST;

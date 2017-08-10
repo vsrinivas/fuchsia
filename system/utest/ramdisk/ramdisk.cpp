@@ -684,8 +684,8 @@ bool ramdisk_test_fifo_unclean_shutdown(void) {
     request.txnid = txnid;
     request.vmoid = objs[0].vmoid;
     request.opcode = BLOCKIO_CLOSE_VMO;
-    ASSERT_NEQ(block_fifo_txn(client, &request, 1), MX_OK,
-               "Expected operation to fail after closing FIFO");
+    ASSERT_NE(block_fifo_txn(client, &request, 1), MX_OK,
+              "Expected operation to fail after closing FIFO");
 
     // Free the dead client
     block_fifo_release_client(client);

@@ -336,7 +336,7 @@ static bool pre_writes_channel_test(uint32_t mode) {
         wait_count++;
         if (out.signal.trigger != MX_CHANNEL_PEER_CLOSED)
             read_count += out.signal.count;
-        EXPECT_NEQ(out.signal.count, 0u);
+        EXPECT_NE(out.signal.count, 0u);
     }
 
     EXPECT_EQ(wait_count, 1u);

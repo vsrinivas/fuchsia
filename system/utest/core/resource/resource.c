@@ -16,7 +16,7 @@ static bool test_resource_actions(void) {
     BEGIN_TEST;
 
     mx_handle_t rrh = root_resource;
-    ASSERT_NEQ(rrh, MX_HANDLE_INVALID, "no root resource handle");
+    ASSERT_NE(rrh, MX_HANDLE_INVALID, "no root resource handle");
 
     mx_handle_t h;
 

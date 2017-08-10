@@ -361,7 +361,7 @@ bool info_reflects_process_state() {
             proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), MX_OK);
     EXPECT_TRUE(info.started, "process should appear as started");
     EXPECT_TRUE(info.exited, "process should appear as exited");
-    EXPECT_NEQ(info.return_code, 0, "killed process should have non-zero return code");
+    EXPECT_NE(info.return_code, 0, "killed process should have non-zero return code");
 
     END_TEST;
 }

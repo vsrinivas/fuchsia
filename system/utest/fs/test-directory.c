@@ -325,7 +325,7 @@ bool test_directory_rewind(void) {
     };
 
     DIR* dir = opendir("::a");
-    ASSERT_NEQ(dir, NULL, "");
+    ASSERT_NE(dir, NULL, "");
 
     // We should be able to repeatedly access the directory without
     // re-opening it.
@@ -367,7 +367,7 @@ bool test_directory_after_rmdir(void) {
     // Make a directory...
     ASSERT_EQ(mkdir("::dir", 0755), 0, "");
     DIR* dir = opendir("::dir");
-    ASSERT_NEQ(dir, NULL, "");
+    ASSERT_NE(dir, NULL, "");
     // We can make and delete subdirectories, since "::dir" exists...
     ASSERT_EQ(mkdir("::dir/subdir", 0755), 0, "");
     ASSERT_EQ(rmdir("::dir/subdir"), 0, "");

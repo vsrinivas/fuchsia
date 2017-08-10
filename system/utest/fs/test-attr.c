@@ -27,7 +27,7 @@ int64_t nstimespec(struct timespec ts) {
 bool test_attr(void) {
     BEGIN_TEST;
     int64_t now = mx_time_get(MX_CLOCK_UTC);
-    ASSERT_NEQ(now, 0, "mx_time_get only returns zero on error");
+    ASSERT_NE(now, 0, "mx_time_get only returns zero on error");
 
     int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
     ASSERT_GT(fd1, 0, "");

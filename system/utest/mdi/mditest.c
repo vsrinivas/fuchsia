@@ -106,7 +106,7 @@ bool simple_tests(void) {
     EXPECT_EQ(mdi_find_node(&root, MDI_TEST_STRING, &node), 0,
               "MDI_TEST_STRING not found");
     const char* string = mdi_node_string(&node);
-    ASSERT_NEQ(string, NULL, "mdi_node_string returned NULL");
+    ASSERT_NE(string, NULL, "mdi_node_string returned NULL");
     EXPECT_EQ(strcmp(string, "hello"), 0, "mdi_node_string failed");
 
     END_TEST;
@@ -127,8 +127,8 @@ bool array_tests(void) {
     EXPECT_EQ(mdi_array_boolean(&node, 0, &b[0]), 0, "mdi_array_boolean failed");
     EXPECT_EQ(mdi_array_boolean(&node, 1, &b[1]), 0, "mdi_array_boolean failed");
     EXPECT_EQ(mdi_array_boolean(&node, 2, &b[2]), 0, "mdi_array_boolean failed");
-    EXPECT_NEQ(mdi_array_boolean(&node, 3, &b[3]), 0,
-               "mdi_array_boolean succeeded for out of range index");
+    EXPECT_NE(mdi_array_boolean(&node, 3, &b[3]), 0,
+              "mdi_array_boolean succeeded for out of range index");
     EXPECT_EQ(b[0], true, "mdi_array_boolean returned wrong value");
     EXPECT_EQ(b[1], false, "mdi_array_boolean returned wrong value");
     EXPECT_EQ(b[2], true, "mdi_array_boolean returned wrong value");
@@ -146,8 +146,8 @@ bool array_tests(void) {
     EXPECT_EQ(mdi_array_uint8(&node, 0, &u8[0]), 0, "mdi_array_uint8 failed");
     EXPECT_EQ(mdi_array_uint8(&node, 1, &u8[1]), 0, "mdi_array_uint8 failed");
     EXPECT_EQ(mdi_array_uint8(&node, 2, &u8[2]), 0, "mdi_array_uint8 failed");
-    EXPECT_NEQ(mdi_array_uint8(&node, 3, &u8[3]), 0,
-               "mdi_array_uint8 succeeded for out of range index");
+    EXPECT_NE(mdi_array_uint8(&node, 3, &u8[3]), 0,
+              "mdi_array_uint8 succeeded for out of range index");
     EXPECT_EQ(u8[0], 1u, "mdi_array_uint8 returned wrong value");
     EXPECT_EQ(u8[1], 2u, "mdi_array_uint8 returned wrong value");
     EXPECT_EQ(u8[2], 3u, "mdi_array_uint8 returned wrong value");
@@ -160,8 +160,8 @@ bool array_tests(void) {
     EXPECT_EQ(mdi_array_int32(&node, 0, &i32[0]), 0, "mdi_array_int32 failed");
     EXPECT_EQ(mdi_array_int32(&node, 1, &i32[1]), 0, "mdi_array_int32 failed");
     EXPECT_EQ(mdi_array_int32(&node, 2, &i32[2]), 0, "mdi_array_int32 failed");
-    EXPECT_NEQ(mdi_array_int32(&node, 3, &i32[3]), 0,
-               "mdi_array_int32 succeeded for out of range index");
+    EXPECT_NE(mdi_array_int32(&node, 3, &i32[3]), 0,
+              "mdi_array_int32 succeeded for out of range index");
     EXPECT_EQ(i32[0], -1, "mdi_array_int32 returned wrong value");
     EXPECT_EQ(i32[1], -2, "mdi_array_int32 returned wrong value");
     EXPECT_EQ(i32[2], -3, "mdi_array_int32 returned wrong value");
@@ -174,8 +174,8 @@ bool array_tests(void) {
     EXPECT_EQ(mdi_array_uint32(&node, 0, &u32[0]), 0, "mdi_array_uint32 failed");
     EXPECT_EQ(mdi_array_uint32(&node, 1, &u32[1]), 0, "mdi_array_uint32 failed");
     EXPECT_EQ(mdi_array_uint32(&node, 2, &u32[2]), 0, "mdi_array_uint32 failed");
-    EXPECT_NEQ(mdi_array_uint32(&node, 3, &u32[3]), 0,
-               "mdi_array_uint32 succeeded for out of range index");
+    EXPECT_NE(mdi_array_uint32(&node, 3, &u32[3]), 0,
+              "mdi_array_uint32 succeeded for out of range index");
     EXPECT_EQ(u32[0], 1u, "mdi_array_uint32 returned wrong value");
     EXPECT_EQ(u32[1], 2u, "mdi_array_uint32 returned wrong value");
     EXPECT_EQ(u32[2], 3u, "mdi_array_uint32 returned wrong value");
@@ -188,8 +188,8 @@ bool array_tests(void) {
     EXPECT_EQ(mdi_array_uint64(&node, 0, &u64[0]), 0, "mdi_array_uint64 failed");
     EXPECT_EQ(mdi_array_uint64(&node, 1, &u64[1]), 0, "mdi_array_uint64 failed");
     EXPECT_EQ(mdi_array_uint64(&node, 2, &u64[2]), 0, "mdi_array_uint64 failed");
-    EXPECT_NEQ(mdi_array_uint64(&node, 3, &u64[3]), 0,
-               "mdi_array_uint64 succeeded for out of range index");
+    EXPECT_NE(mdi_array_uint64(&node, 3, &u64[3]), 0,
+              "mdi_array_uint64 succeeded for out of range index");
     EXPECT_EQ(u64[0], 0x100000000u, "mdi_array_uint64 returned wrong value");
     EXPECT_EQ(u64[1], 0x200000000u, "mdi_array_uint64 returned wrong value");
     EXPECT_EQ(u64[2], 0x300000000u, "mdi_array_uint64 returned wrong value");
@@ -229,11 +229,11 @@ bool anonymous_list_tests(void) {
         EXPECT_EQ(grand_child.node->id, (uint32_t)MDI_TEST_LIST_STR,
                   "expected MDI_TEST_LIST_ARRAY_STR");
         string = mdi_node_string(&grand_child);
-        ASSERT_NEQ(string, NULL, "mdi_node_string returned NULL");
+        ASSERT_NE(string, NULL, "mdi_node_string returned NULL");
         EXPECT_EQ(strcmp(string, test_strings[i]), 0, "mdi_node_string failed");
         // should be end of child list
-        EXPECT_NEQ(mdi_next_child(&grand_child, &grand_child), 0,
-                   "mdi_next_child shouldn't have succeeded");
+        EXPECT_NE(mdi_next_child(&grand_child, &grand_child), 0,
+                  "mdi_next_child shouldn't have succeeded");
 
         i++;
     }

@@ -20,8 +20,8 @@ static bool create_test(void) {
     {
         mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
         ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), MX_OK, "eventpair_create failed");
-        ASSERT_NEQ(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
-        ASSERT_NEQ(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+        ASSERT_NE(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+        ASSERT_NE(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
         mx_info_handle_basic_t info;
         memset(&info, 0, sizeof(info));
@@ -60,8 +60,8 @@ static bool signal_test(void) {
     BEGIN_TEST;
     mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
     ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), MX_OK, "eventpair_create failed");
-    ASSERT_NEQ(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
-    ASSERT_NEQ(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+    ASSERT_NE(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+    ASSERT_NE(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
     check_signals_state(h[0], MX_SIGNAL_LAST_HANDLE);
     check_signals_state(h[1], MX_SIGNAL_LAST_HANDLE);
@@ -85,8 +85,8 @@ static bool signal_peer_test(void) {
 
     mx_handle_t h[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
     ASSERT_EQ(mx_eventpair_create(0, &h[0], &h[1]), MX_OK, "eventpair_create failed");
-    ASSERT_NEQ(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
-    ASSERT_NEQ(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+    ASSERT_NE(h[0], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
+    ASSERT_NE(h[1], MX_HANDLE_INVALID, "invalid handle from eventpair_create");
 
     EXPECT_EQ(mx_object_signal_peer(h[0], 0u, MX_USER_SIGNAL_0), MX_OK, "object_signal failed");
     check_signals_state(h[0], MX_SIGNAL_LAST_HANDLE);

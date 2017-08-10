@@ -56,11 +56,11 @@ protected:
         EXPECT_TRUE(has_on_job());
         EXPECT_GE(depth, 0);
         EXPECT_TRUE(is_valid_handle(job));
-        EXPECT_NEQ(koid, 0);
+        EXPECT_NE(koid, 0);
         if (depth == 0) {
             EXPECT_EQ(parent_koid, 0, "root job");
         } else {
-            EXPECT_NEQ(parent_koid, 0, "non-root job");
+            EXPECT_NE(parent_koid, 0, "non-root job");
         }
         jobs_seen_++;
         return MX_OK;
@@ -71,8 +71,8 @@ protected:
         EXPECT_TRUE(has_on_process());
         EXPECT_GT(depth, 0, "process depth should always be > 0");
         EXPECT_TRUE(is_valid_handle(process));
-        EXPECT_NEQ(koid, 0);
-        EXPECT_NEQ(parent_koid, 0);
+        EXPECT_NE(koid, 0);
+        EXPECT_NE(parent_koid, 0);
         processes_seen_++;
         return MX_OK;
     }
@@ -82,8 +82,8 @@ protected:
         EXPECT_TRUE(has_on_thread());
         EXPECT_GT(depth, 1, "thread depth should always be > 1");
         EXPECT_TRUE(is_valid_handle(thread));
-        EXPECT_NEQ(koid, 0);
-        EXPECT_NEQ(parent_koid, 0);
+        EXPECT_NE(koid, 0);
+        EXPECT_NE(parent_koid, 0);
         threads_seen_++;
         return MX_OK;
     }

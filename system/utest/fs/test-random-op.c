@@ -74,7 +74,7 @@ typedef struct thread_list {
 
 static bool worker_new(env_t* env, const char* fn, uint32_t size) {
     worker_t* w = calloc(1, sizeof(worker_t));
-    ASSERT_NEQ(w, NULL, "");
+    ASSERT_NE(w, NULL, "");
 
     // per-thread random seed
     struct timespec ts;
@@ -671,7 +671,7 @@ bool test_random_op_multithreaded(void) {
         ASSERT_EQ(thrd_create(&t, do_random_ops, w), thrd_success, "");
 
         thread_list_t* thread = malloc(sizeof(thread_list_t));
-        ASSERT_NEQ(thread, NULL, "");
+        ASSERT_NE(thread, NULL, "");
         thread->t = t;
         list_add_tail(&env.threads, &thread->node);
     }

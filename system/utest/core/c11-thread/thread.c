@@ -47,7 +47,7 @@ bool c11_thread_test(void) {
     int ret = thrd_create_with_name(&thread, thread_entry, (void*)(intptr_t)4, NULL);
     ASSERT_EQ(ret, thrd_success, "Error returned from thread creation");
     mx_handle_t handle = thrd_get_mx_handle(thread);
-    ASSERT_NEQ(handle, MX_HANDLE_INVALID, "got invalid thread handle");
+    ASSERT_NE(handle, MX_HANDLE_INVALID, "got invalid thread handle");
     // Prove this is a valid handle by duplicating it.
     mx_handle_t dup_handle;
     mx_status_t status = mx_handle_duplicate(handle, MX_RIGHT_SAME_RIGHTS, &dup_handle);

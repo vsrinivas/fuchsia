@@ -27,8 +27,8 @@ static mx_status_t sink_test_loader_service(void* arg, uint32_t load_op,
     EXPECT_STR_EQ(TEST_SINK_NAME, name, sizeof(TEST_SINK_NAME) - 1,
                   "called with unexpected name");
 
-    EXPECT_NEQ(request_handle, MX_HANDLE_INVALID,
-              "called with invalid handle");
+    EXPECT_NE(request_handle, MX_HANDLE_INVALID,
+             "called with invalid handle");
 
     char vmo_name[MX_MAX_NAME_LEN];
     EXPECT_EQ(mx_object_get_property(request_handle, MX_PROP_NAME,
@@ -55,7 +55,7 @@ bool publish_data_test(void) {
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_NEQ(old, MX_HANDLE_INVALID, "dl_set_loader_service");
+    EXPECT_NE(old, MX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Make up a VMO to publish.
     mx_handle_t vmo;
@@ -95,7 +95,7 @@ static mx_status_t config_test_loader_service(void* arg, uint32_t load_op,
 
     mx_handle_t result = MX_HANDLE_INVALID;
     if (!strcmp(TEST_CONFIG_GOOD_NAME, name)) {
-        EXPECT_NEQ(test_config_vmo, MX_HANDLE_INVALID, "");
+        EXPECT_NE(test_config_vmo, MX_HANDLE_INVALID, "");
         *out = test_config_vmo;
         result = MX_OK;
     } else {
@@ -122,7 +122,7 @@ bool debug_config_test(void) {
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_NEQ(old, MX_HANDLE_INVALID, "dl_set_loader_service");
+    EXPECT_NE(old, MX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Make up a VMO that we'll get back from the service.
     ASSERT_EQ(mx_vmo_create(0, 0, &test_config_vmo), MX_OK, "");

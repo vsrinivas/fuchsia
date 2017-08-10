@@ -48,9 +48,9 @@ bool handle_valid_on_closed_handle_fails() {
 
     // Close the handle and show that it becomes invalid.
     mx_handle_close(event);
-    EXPECT_NEQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
-                                  nullptr, 0, nullptr, nullptr),
-               MX_OK);
+    EXPECT_NE(mx_object_get_info(event, MX_INFO_HANDLE_VALID,
+                                 nullptr, 0, nullptr, nullptr),
+              MX_OK);
     END_TEST;
 }
 
@@ -440,9 +440,9 @@ bool wrong_handle_type_fails() {
     size_t actual;
     size_t avail;
     // Passing a handle to an unsupported object type should fail.
-    EXPECT_NEQ(mx_object_get_info(GetWrongHandle(), Topic,
-                                  entries, sizeof(entries), &actual, &avail),
-               MX_OK);
+    EXPECT_NE(mx_object_get_info(GetWrongHandle(), Topic,
+                                 entries, sizeof(entries), &actual, &avail),
+              MX_OK);
     END_TEST;
 }
 
@@ -690,7 +690,7 @@ bool process_vmos_smoke() {
                 if (entry->flags & MX_INFO_VMO_VIA_HANDLE) {
                     EXPECT_EQ(entry->num_mappings, 0u, msg);
                 } else {
-                    EXPECT_NEQ(entry->flags & MX_INFO_VMO_VIA_MAPPING, 0u, msg);
+                    EXPECT_NE(entry->flags & MX_INFO_VMO_VIA_MAPPING, 0u, msg);
                     EXPECT_EQ(
                         entry->num_mappings, test_info->num_mappings, msg);
                 }
@@ -709,7 +709,7 @@ bool process_vmos_smoke() {
         // the way things work.
         const uint32_t kViaMask =
             MX_INFO_VMO_VIA_HANDLE | MX_INFO_VMO_VIA_MAPPING;
-        EXPECT_NEQ(entry->flags & kViaMask, kViaMask, msg);
+        EXPECT_NE(entry->flags & kViaMask, kViaMask, msg);
 
         // TODO(dbort): Test more fields/flags of mx_info_vmo_t by adding some
         // clones, shared VMOs, mapped+handle VMOs, physical VMOs if possible.

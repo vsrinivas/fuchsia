@@ -102,7 +102,7 @@ static bool guest_physical_address_space_get_page(void* context) {
     paddr_t vmo_paddr = 0;
     status = vmo->Lookup(0, PAGE_SIZE, 0, get_paddr, &vmo_paddr);
     EXPECT_EQ(MX_OK, status, "Failed to lookup physical address of VMO.\n");
-    EXPECT_NEQ(0u, vmo_paddr, "Failed to lookup physical address of VMO.\n");
+    EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO.\n");
 
     // Read physical address from GPAS & compare with address read from VMO.
     paddr_t gpas_paddr = 0;
@@ -175,7 +175,7 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
     paddr_t vmo_paddr = 0;
     status = vmo2->Lookup(0, PAGE_SIZE, 0, get_paddr, &vmo_paddr);
     EXPECT_EQ(MX_OK, status, "Failed to lookup physical address of VMO.\n");
-    EXPECT_NEQ(0u, vmo_paddr, "Failed to lookup physical address of VMO.\n");
+    EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO.\n");
 
     // Read physical address from GPAS.
     paddr_t gpas_paddr = 0;

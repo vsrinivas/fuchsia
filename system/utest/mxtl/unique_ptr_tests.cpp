@@ -145,7 +145,7 @@ static bool uptr_test_comparison() {
     mxtl::unique_ptr<DeleteCounter> greater_unique(new (&ac) DeleteCounter(2));
     EXPECT_TRUE(ac.check());
 
-    EXPECT_NEQ(lesser_unique.get(), greater_unique.get());
+    EXPECT_NE(lesser_unique.get(), greater_unique.get());
     if (lesser_unique.get() > greater_unique.get())
         lesser_unique.swap(greater_unique);
 
@@ -297,7 +297,7 @@ static bool uptr_test_array_comparison() {
     mxtl::unique_ptr<DeleteCounter[]> greater_unique(new (&ac) DeleteCounter[2]);
     EXPECT_TRUE(ac.check());
 
-    EXPECT_NEQ(lesser_unique.get(), greater_unique.get());
+    EXPECT_NE(lesser_unique.get(), greater_unique.get());
     if (lesser_unique.get() > greater_unique.get())
         lesser_unique.swap(greater_unique);
 

@@ -141,7 +141,7 @@ bool test_rename_absolute_relative(void) {
 
     // Make a "foo" directory in the cwd
     int fd = dirfd(dir);
-    ASSERT_NEQ(fd, -1, "");
+    ASSERT_NE(fd, -1, "");
     ASSERT_EQ(mkdirat(fd, "foo", 0755), 0, "");
     expected_dirent_t dir_contents_foo[] = {
         {false, ".", DT_DIR},

@@ -37,7 +37,7 @@ bool serve_echo_request(mx_handle_t handle) {
     // First, figure out size.
     uint32_t in_msg_size = 0u;
     mx_status_t read_status = mx_channel_read(handle, 0u, NULL, NULL, 0, 0, &in_msg_size, NULL);
-    ASSERT_NEQ(read_status, MX_ERR_NO_MEMORY, "unexpected sizing read status");
+    ASSERT_NE(read_status, MX_ERR_NO_MEMORY, "unexpected sizing read status");
 
     unittest_printf("reading message of size %u\n", in_msg_size);
     void* in_msg_buf = calloc(in_msg_size, 1u);

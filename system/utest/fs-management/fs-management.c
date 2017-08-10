@@ -133,10 +133,10 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     // Everything *would* be perfect to call fmount, when suddenly...
     ASSERT_EQ(rmdir(mount_path), 0, "");
     // The directory was unlinked! We can't mount now!
-    ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_async),
-               MX_OK, "");
-    ASSERT_NEQ(fumount(mountfd), MX_OK, "");
+    ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                   launch_stdio_async),
+              MX_OK, "");
+    ASSERT_NE(fumount(mountfd), MX_OK, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close unlinked not-mount point");
 
     // Re-acquire the ramdisk mount point; it's always consumed...
@@ -147,10 +147,10 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     mountfd = open(mount_path, O_CREAT | O_RDWR);
     ASSERT_GT(mountfd, 0, "");
     // Wait a sec, that was a file, not a directory! We can't mount that!
-    ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
-                      launch_stdio_async),
-               MX_OK, "");
-    ASSERT_NEQ(fumount(mountfd), MX_OK, "");
+    ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                     launch_stdio_async),
+              MX_OK, "");
+    ASSERT_NE(fumount(mountfd), MX_OK, "");
     ASSERT_EQ(close(mountfd), 0, "Couldn't close file not-mount point");
     ASSERT_EQ(unlink(mount_path), 0, "");
 
@@ -176,9 +176,9 @@ bool do_mount_evil(const char* parentfs_name, const char* mount_path) {
     // Awesome, that worked. But we shouldn't be able to mount again!
     fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0, "");
-    ASSERT_NEQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
-                    launch_stdio_async),
-               MX_OK, "");
+    ASSERT_NE(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options,
+                   launch_stdio_async),
+              MX_OK, "");
     ASSERT_TRUE(check_mounted_fs(mount_path, "minfs", strlen("minfs")), "");
 
     // Let's try removing the mount point (we shouldn't be allowed to do so)

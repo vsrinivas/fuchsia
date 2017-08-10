@@ -153,7 +153,7 @@ int worker_writer(worker_t* w) {
 bool worker_new(env_t* env, const char* where, const char* fn,
                 int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
     worker_t* w = calloc(1, sizeof(worker_t));
-    ASSERT_NEQ(w, NULL, "");
+    ASSERT_NE(w, NULL, "");
 
     w->env = env;
 
@@ -294,7 +294,7 @@ static bool test_work_concurrently(void) {
         thrd_t t;
         ASSERT_EQ(thrd_create(&t, do_threaded_work, w), thrd_success, "");
         thread_list_t* thread = malloc(sizeof(thread_list_t));
-        ASSERT_NEQ(thread, NULL, "");
+        ASSERT_NE(thread, NULL, "");
         thread->t = t;
         list_add_tail(&env.threads, &thread->node);
     }

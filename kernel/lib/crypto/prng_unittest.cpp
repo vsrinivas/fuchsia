@@ -85,7 +85,7 @@ bool prng_output(void*) {
     // implementation.
     prng1.Draw(out1, sizeof(out1));
 
-    EXPECT_NEQ(0, memcmp(out1, out2, sizeof(out1)), "prng output is constant");
+    EXPECT_NE(0, memcmp(out1, out2, sizeof(out1)), "prng output is constant");
 
     // We can expect the same output from prng2.
     prng2.Draw(out2, sizeof(out2));
@@ -103,7 +103,7 @@ bool prng_output(void*) {
     uint8_t out4[kDrawSize];
     prng3.Draw(out4, sizeof(out4));
 
-    EXPECT_NEQ(0, memcmp(out3, out4, sizeof(out3)), "prng output is constant");
+    EXPECT_NE(0, memcmp(out3, out4, sizeof(out3)), "prng output is constant");
 
     END_TEST;
 }

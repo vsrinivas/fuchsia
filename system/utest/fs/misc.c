@@ -25,7 +25,7 @@ bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
     size_t seen = 0;
     while (seen != len) {
         struct dirent* de = readdir(dir);
-        ASSERT_NEQ(de, NULL, "Didn't see all expected direntries");
+        ASSERT_NE(de, NULL, "Didn't see all expected direntries");
         bool found = false;
         for (size_t i = 0; i < len; i++) {
             if (strcmp(edirents[i].d_name, de->d_name) == 0) {
@@ -64,7 +64,7 @@ bool check_file_contents(int fd, const uint8_t* buf, size_t length) {
     BEGIN_HELPER;
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
     uint8_t* out = malloc(length);
-    ASSERT_NEQ(out, NULL, "Failed to allocate checking buffer");
+    ASSERT_NE(out, NULL, "Failed to allocate checking buffer");
     ASSERT_STREAM_ALL(read, fd, out, length);
     ASSERT_EQ(memcmp(buf, out, length), 0, "");
     free(out);

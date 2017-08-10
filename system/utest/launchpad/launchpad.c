@@ -40,7 +40,7 @@ static bool launchpad_test(void)
     launchpad_t* lp = NULL;
 
     mx_handle_t mxio_job = mx_job_default();
-    ASSERT_NEQ(mxio_job, MX_HANDLE_INVALID, "no mxio job object");
+    ASSERT_NE(mxio_job, MX_HANDLE_INVALID, "no mxio job object");
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_handle_duplicate(mxio_job, MX_RIGHT_SAME_RIGHTS, &job_copy),
@@ -63,7 +63,7 @@ static bool launchpad_test(void)
 
     mx_handle_t dynld_vmo = MX_HANDLE_INVALID;
     ASSERT_EQ(launchpad_vmo_from_file(dynld_path, &dynld_vmo), MX_OK, "");
-    ASSERT_NEQ(dynld_vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
+    ASSERT_NE(dynld_vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
     elf_load_header_t header;
     uintptr_t phoff;
     status = elf_load_prepare(dynld_vmo, NULL, 0, &header, &phoff);

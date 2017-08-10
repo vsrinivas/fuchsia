@@ -119,17 +119,17 @@ bool mmap_prot_test() {
     BEGIN_TEST;
 
     volatile uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_NONE, MAP_PRIVATE|MAP_ANON, -1, 0);
-    EXPECT_NEQ(MAP_FAILED, addr, "mmap should have succeeded for PROT_NONE");
+    EXPECT_NE(MAP_FAILED, addr, "mmap should have succeeded for PROT_NONE");
 
     addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
-    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed for read-only alloc");
+    EXPECT_NE(MAP_FAILED, addr, "mmap failed for read-only alloc");
 
     // This is somewhat pointless, to have a private read-only mapping, but we
     // should be able to read it.
     EXPECT_EQ(*addr, *addr, "could not read from mmaped address");
 
     addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed for read-write alloc");
+    EXPECT_NE(MAP_FAILED, addr, "mmap failed for read-write alloc");
 
     // Now we test writing to the mapped memory, and verify that we can read it
     // back.
@@ -155,10 +155,10 @@ bool mmap_flags_test() {
     EXPECT_EQ(EINVAL, test_errno, "mmap errno should be EINVAL with bad flags");
 
     addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_PRIVATE|MAP_ANON, -1, 0);
-    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed with MAP_PRIVATE flags");
+    EXPECT_NE(MAP_FAILED, addr, "mmap failed with MAP_PRIVATE flags");
 
     addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ, MAP_SHARED|MAP_ANON, -1, 0);
-    EXPECT_NEQ(MAP_FAILED, addr, "mmap failed with MAP_SHARED flags");
+    EXPECT_NE(MAP_FAILED, addr, "mmap failed with MAP_SHARED flags");
 
     END_TEST;
 }
@@ -167,7 +167,7 @@ bool mprotect_test() {
     BEGIN_TEST;
 
     uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-    ASSERT_NEQ(MAP_FAILED, addr, "mmap failed to map");
+    ASSERT_NE(MAP_FAILED, addr, "mmap failed to map");
 
     int page_size = getpagesize();
     // Should be able to write.

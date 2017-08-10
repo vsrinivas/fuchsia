@@ -303,7 +303,7 @@ static bool TestMmap(void) {
 
         void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_SHARED,
                           fd, 0);
-        ASSERT_NEQ(addr, MAP_FAILED, "Could not mmap blob");
+        ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
         ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");
         ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
         ASSERT_EQ(close(fd), 0);

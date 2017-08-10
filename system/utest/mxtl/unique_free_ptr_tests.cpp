@@ -87,7 +87,7 @@ static bool ufptr_test_comparison() {
     mxtl::unique_free_ptr<int> greater_unique(static_cast<int*>(malloc(sizeof(int))));
     *greater_unique = 2;
 
-    EXPECT_NEQ(lesser_unique.get(), greater_unique.get());
+    EXPECT_NE(lesser_unique.get(), greater_unique.get());
     if (lesser_unique.get() > greater_unique.get())
         lesser_unique.swap(greater_unique);
 

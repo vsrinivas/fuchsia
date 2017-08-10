@@ -38,29 +38,29 @@ static bool do_stack_tests(bool one_page_stack) {
     EXPECT_NONNULL(tls_buf, "thread_local's taken address is null");
     EXPECT_NONNULL(tp, "thread pointer is null");
 
-    EXPECT_NEQ(page_of(safe_stack), page_of(environ),
-               "safe stack collides with environ");
+    EXPECT_NE(page_of(safe_stack), page_of(environ),
+              "safe stack collides with environ");
 
-    EXPECT_NEQ(page_of(unsafe_stack), page_of(environ),
-               "unsafe stack collides with environ");
+    EXPECT_NE(page_of(unsafe_stack), page_of(environ),
+              "unsafe stack collides with environ");
 
-    EXPECT_NEQ(page_of(tls_buf), page_of(environ),
-               "TLS collides with environ");
+    EXPECT_NE(page_of(tls_buf), page_of(environ),
+              "TLS collides with environ");
 
-    EXPECT_NEQ(page_of(tls_buf), page_of(safe_stack),
-               "TLS collides with safe stack");
+    EXPECT_NE(page_of(tls_buf), page_of(safe_stack),
+              "TLS collides with safe stack");
 
-    EXPECT_NEQ(page_of(tls_buf), page_of(unsafe_stack),
-               "TLS collides with unsafe stack");
+    EXPECT_NE(page_of(tls_buf), page_of(unsafe_stack),
+              "TLS collides with unsafe stack");
 
-    EXPECT_NEQ(page_of(tp), page_of(environ),
-               "thread pointer collides with environ");
+    EXPECT_NE(page_of(tp), page_of(environ),
+              "thread pointer collides with environ");
 
-    EXPECT_NEQ(page_of(tp), page_of(safe_stack),
-               "thread pointer collides with safe stack");
+    EXPECT_NE(page_of(tp), page_of(safe_stack),
+              "thread pointer collides with safe stack");
 
-    EXPECT_NEQ(page_of(tp), page_of(unsafe_stack),
-               "thread pointer collides with unsafe stack");
+    EXPECT_NE(page_of(tp), page_of(unsafe_stack),
+              "thread pointer collides with unsafe stack");
 
 #ifdef __clang__
 # if __has_feature(safe_stack)
@@ -75,8 +75,8 @@ static bool do_stack_tests(bool one_page_stack) {
     EXPECT_EQ(page_of(unsafe_stack), page_of(unsafe_ptr),
               "unsafe stack and reported ptr not nearby");
 
-    EXPECT_NEQ(page_of(unsafe_stack), page_of(safe_stack),
-               "unsafe stack collides with safe stack");
+    EXPECT_NE(page_of(unsafe_stack), page_of(safe_stack),
+              "unsafe stack collides with safe stack");
 # endif
 #endif
 

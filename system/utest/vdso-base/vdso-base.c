@@ -80,8 +80,8 @@ bool vdso_unmap_test(void) {
             break;
         }
     }
-    ASSERT_NEQ(vdso_code_start, 0u, "vDSO has no code segment?");
-    ASSERT_NEQ(vdso_code_len, 0u, "vDSO has no code segment?");
+    ASSERT_NE(vdso_code_start, 0u, "vDSO has no code segment?");
+    ASSERT_NE(vdso_code_len, 0u, "vDSO has no code segment?");
 
     // Removing the vDSO code mapping is not allowed.
     status = mx_vmar_unmap(mx_vmar_root_self(),
@@ -101,7 +101,7 @@ bool vdso_map_test(void) {
     BEGIN_TEST;
 
     mx_handle_t vmo = mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0));
-    ASSERT_NEQ(vmo, MX_HANDLE_INVALID, "mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
+    ASSERT_NE(vmo, MX_HANDLE_INVALID, "mx_get_startup_handle(PA_HND(PA_VMO_VDSO, 0))");
 
     // Since we already have a vDSO mapping, loading it again should fail.
     void* h = dlopen_vmo(vmo, RTLD_LOCAL);

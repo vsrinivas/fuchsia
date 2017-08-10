@@ -79,7 +79,7 @@ static bool start_thread(mxr_thread_entry_t entry, void* arg,
     const size_t stack_size = 256u << 10;
     mx_handle_t thread_stack_vmo = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_vmo_create(stack_size, 0, &thread_stack_vmo), MX_OK, "");
-    ASSERT_NEQ(thread_stack_vmo, MX_HANDLE_INVALID, "");
+    ASSERT_NE(thread_stack_vmo, MX_HANDLE_INVALID, "");
 
     uintptr_t stack = 0u;
     ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, thread_stack_vmo, 0, stack_size,
@@ -337,10 +337,10 @@ static bool test_info_task_stats_fails(void) {
 
     // Ensure that task_stats doesn't work on it.
     mx_info_task_stats_t info;
-    EXPECT_NEQ(mx_object_get_info(thandle, MX_INFO_TASK_STATS,
-                                  &info, sizeof(info), NULL, NULL),
-               MX_OK,
-               "Just added thread support to info_task_status?");
+    EXPECT_NE(mx_object_get_info(thandle, MX_INFO_TASK_STATS,
+                                 &info, sizeof(info), NULL, NULL),
+              MX_OK,
+              "Just added thread support to info_task_status?");
     // If so, replace this with a real test; see example in process.cpp.
 
     ASSERT_EQ(mx_handle_close(thandle), MX_OK, "");

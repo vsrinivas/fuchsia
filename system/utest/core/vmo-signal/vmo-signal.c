@@ -16,7 +16,7 @@ bool vmo_signal_test(void) {
 
     mx_handle_t vmo = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_vmo_create(4096, 0, &vmo), MX_OK, "");
-    ASSERT_NEQ(vmo, MX_HANDLE_INVALID, "mx_vmo_create() failed");
+    ASSERT_NE(vmo, MX_HANDLE_INVALID, "mx_vmo_create() failed");
 
     mx_signals_t out_signals = 0;
     ASSERT_EQ(mx_object_wait_one(vmo, MX_USER_SIGNAL_0, mx_deadline_after(1), &out_signals),

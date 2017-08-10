@@ -94,7 +94,7 @@ static bool test_physmap_unaligned_offset2(void) {
     txn->vmo_length = (PAGE_SIZE * 2) + (PAGE_SIZE / 2);
     ASSERT_EQ(iotxn_physmap(txn), MX_OK, "");
     ASSERT_NONNULL(txn->phys, "expected phys to be set");
-    ASSERT_NEQ(txn->phys, &txn->phys_inline[0], "expected phys not to point to inline_phys");
+    ASSERT_NE(txn->phys, &txn->phys_inline[0], "expected phys not to point to inline_phys");
     ASSERT_EQ(txn->phys_count, 4u, "unexpected phys_count");
     iotxn_release(txn);
     END_TEST;

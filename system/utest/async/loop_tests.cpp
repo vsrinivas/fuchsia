@@ -184,7 +184,7 @@ bool c_api_basic_test() {
 
     thrd_t thread{};
     EXPECT_EQ(MX_OK, async_loop_start_thread(async, "name", &thread), "thread start");
-    EXPECT_NEQ(thrd_t{}, thread, "thread ws initialized");
+    EXPECT_NE(thrd_t{}, thread, "thread ws initialized");
     async_loop_quit(async);
     async_loop_join_threads(async);
 
@@ -799,7 +799,7 @@ bool threads_waits_run_concurrently_test() {
     }
 
     // Ensure that we actually ran many waits concurrently on different threads.
-    EXPECT_NEQ(1u, measure.max_threads(), "waits handled concurrently");
+    EXPECT_NE(1u, measure.max_threads(), "waits handled concurrently");
 
     END_TEST;
 }
@@ -875,7 +875,7 @@ bool threads_receivers_run_concurrently_test() {
     EXPECT_EQ(MX_OK, receiver.last_status, "status");
 
     // Ensure that we actually processed many packets concurrently on different threads.
-    EXPECT_NEQ(1u, measure.max_threads(), "packets handled concurrently");
+    EXPECT_NE(1u, measure.max_threads(), "packets handled concurrently");
 
     END_TEST;
 }

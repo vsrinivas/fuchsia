@@ -190,7 +190,7 @@ bool pthread_self_main_thread_test(void) {
     BEGIN_TEST;
     pthread_t self = pthread_self();
     pthread_t null = 0;
-    ASSERT_NEQ(self, null, "pthread_self() was NULL");
+    ASSERT_NE(self, null, "pthread_self() was NULL");
     END_TEST;
 }
 

@@ -235,7 +235,7 @@ static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t proce
     bool tid_seen = false;
     mx_port_packet_t packet;
 
-    ASSERT_NEQ(tid, MX_KOID_INVALID, "invalid koid");
+    ASSERT_NE(tid, MX_KOID_INVALID, "invalid koid");
 
     for (;;) {
         if (!read_exception(eport, &packet))
@@ -420,7 +420,7 @@ static int watchdog_thread_func(void* arg)
 // the non-debugger exception port.
 // This returns "bool" because it uses ASSERT_*.
 static bool test_set_close_set(mx_handle_t object, bool debugger) {
-    ASSERT_NEQ(object, MX_HANDLE_INVALID, "invalid handle");
+    ASSERT_NE(object, MX_HANDLE_INVALID, "invalid handle");
     uint32_t options = debugger ? MX_EXCEPTION_PORT_DEBUGGER : 0;
 
     // Bind an exception port to the object.
@@ -432,7 +432,7 @@ static bool test_set_close_set(mx_handle_t object, bool debugger) {
     // Try binding another exception port to the same object, which should fail.
     mx_handle_t eport2 = tu_io_port_create();
     status = mx_task_bind_exception_port(object, eport, 0, options);
-    ASSERT_NEQ(status, MX_OK, "setting exception port errantly succeeded");
+    ASSERT_NE(status, MX_OK, "setting exception port errantly succeeded");
 
     // Close the ports.
     tu_handle_close(eport2);
@@ -448,8 +448,8 @@ static bool test_set_close_set(mx_handle_t object, bool debugger) {
     // Try unbinding from an object without a bound port, which should fail.
     status =
         mx_task_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
-    ASSERT_NEQ(status, MX_OK,
-               "resetting unbound exception port errantly succeeded");
+    ASSERT_NE(status, MX_OK,
+              "resetting unbound exception port errantly succeeded");
 
     return true;
 }
@@ -496,7 +496,7 @@ static bool create_non_running_process(const char* name, proc_handles* ph) {
     mx_status_t status = mx_process_create(
         mx_job_default(), name, strlen(name), 0, &ph->proc, &ph->vmar);
     ASSERT_EQ(status, MX_OK, "mx_process_create");
-    ASSERT_NEQ(ph->proc, MX_HANDLE_INVALID, "proc handle");
+    ASSERT_NE(ph->proc, MX_HANDLE_INVALID, "proc handle");
     return true;
 }
 
@@ -552,7 +552,7 @@ static bool non_running_thread_set_close_set_test(void) {
     mx_status_t status =
         mx_thread_create(ph.proc, __func__, sizeof(__func__)-1, 0, &thread);
     ASSERT_EQ(status, MX_OK, "mx_thread_create");
-    ASSERT_NEQ(thread, MX_HANDLE_INVALID, "thread handle");
+    ASSERT_NE(thread, MX_HANDLE_INVALID, "thread handle");
 
     // Make sure binding and unbinding behaves.
     test_set_close_set(thread, /* debugger */ false);
@@ -601,7 +601,7 @@ static bool dead_process_unbind_helper(bool debugger, bool bind_while_alive) {
     if (bind_while_alive) {
         EXPECT_EQ(status, MX_OK, "matched unbind should have succeeded");
     } else {
-        EXPECT_NEQ(status, MX_OK, "unmatched unbind should have failed");
+        EXPECT_NE(status, MX_OK, "unmatched unbind should have failed");
     }
 
     // Clean up.
@@ -659,13 +659,13 @@ static bool dead_thread_unbind_helper(bool bind_while_alive) {
     tu_thread_create_c11(&cthread, thread_func, (void*)(uintptr_t)their_channel,
                          "thread-set-close-set");
     mx_handle_t thread = thrd_get_mx_handle(cthread);
-    ASSERT_NEQ(thread, MX_HANDLE_INVALID, "failed to get thread handle");
+    ASSERT_NE(thread, MX_HANDLE_INVALID, "failed to get thread handle");
 
     // Duplicate the thread's handle. thrd_join() will close the |thread|
     // handle, but we need to be able to refer to the thread after that.
     mx_handle_t thread_copy = MX_HANDLE_INVALID;
     mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, &thread_copy);
-    ASSERT_NEQ(thread_copy, MX_HANDLE_INVALID, "failed to copy thread handle");
+    ASSERT_NE(thread_copy, MX_HANDLE_INVALID, "failed to copy thread handle");
 
     // Possibly bind an eport to it.
     mx_handle_t eport = MX_HANDLE_INVALID;
@@ -685,7 +685,7 @@ static bool dead_thread_unbind_helper(bool bind_while_alive) {
     if (bind_while_alive) {
         EXPECT_EQ(status, MX_OK, "matched unbind should have succeeded");
     } else {
-        EXPECT_NEQ(status, MX_OK, "unmatched unbind should have failed");
+        EXPECT_NE(status, MX_OK, "unmatched unbind should have failed");
     }
 
     // Clean up. The |thread| and |their_channel| handles died

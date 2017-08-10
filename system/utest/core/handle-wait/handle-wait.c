@@ -87,8 +87,8 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
         return true;
     }
     ASSERT_GE(status, 0, "handle wait one failed");
-    ASSERT_NEQ(pending & MX_EVENT_SIGNALED, 0u,
-               "unexpected return in wait_signaled");
+    ASSERT_NE(pending & MX_EVENT_SIGNALED, 0u,
+              "unexpected return in wait_signaled");
     *result = WAIT_SIGNALED;
     return true;
 }
@@ -112,7 +112,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg) {
     unittest_printf("waiting for message on handle %u\n", handle);
     enum wait_result result;
     ASSERT_TRUE(wait_readable(handle, &result), "Error during waiting for read call");
-    ASSERT_NEQ(result, (enum wait_result)WAIT_CLOSED, "peer closed while trying to read message");
+    ASSERT_NE(result, (enum wait_result)WAIT_CLOSED, "peer closed while trying to read message");
     switch (result) {
     case WAIT_READABLE:
         break;
@@ -207,7 +207,7 @@ bool handle_wait_test(void) {
 
     event_handle = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_event_create(0u, &event_handle), 0, "");
-    ASSERT_NEQ(event_handle, MX_HANDLE_INVALID, "event creation failed");
+    ASSERT_NE(event_handle, MX_HANDLE_INVALID, "event creation failed");
 
     enum message msg;
     send_msg(thread1_channel[0], MSG_PING);
@@ -229,7 +229,7 @@ bool handle_wait_test(void) {
     mx_handle_t event_handle_dup = MX_HANDLE_INVALID;
     mx_status_t status = mx_handle_duplicate(event_handle, MX_RIGHT_SAME_RIGHTS, &event_handle_dup);
     ASSERT_EQ(status, MX_OK, "");
-    ASSERT_NEQ(event_handle_dup, MX_HANDLE_INVALID, "handle duplication failed");
+    ASSERT_NE(event_handle_dup, MX_HANDLE_INVALID, "handle duplication failed");
     ASSERT_EQ(mx_handle_close(event_handle), MX_OK, "handle close failed");
 
     ASSERT_TRUE(recv_msg(thread1_channel[0], &msg), "Error while receiving msg");

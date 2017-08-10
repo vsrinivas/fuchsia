@@ -29,7 +29,7 @@ bool dlopen_vmo_test(void) {
     mx_handle_t vmo = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_vmo_from_file(LIBPREFIX "liblaunchpad.so", &vmo);
     EXPECT_EQ(status, MX_OK, "");
-    EXPECT_NEQ(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
+    EXPECT_NE(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
 
     void* obj = dlopen_vmo(vmo, RTLD_LOCAL);
     EXPECT_NONNULL(obj, "dlopen_vmo");
@@ -79,7 +79,7 @@ static mx_status_t my_loader_service(void* arg, uint32_t load_op,
     mx_handle_t vmo = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_vmo_from_file(arg, &vmo);
     EXPECT_EQ(status, MX_OK, "");
-    EXPECT_NEQ(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
+    EXPECT_NE(vmo, MX_HANDLE_INVALID, "launchpad_vmo_from_file");
     if (status < 0) {
         return status;
     }
@@ -109,7 +109,7 @@ bool loader_service_test(void) {
 
     // Install the service.
     mx_handle_t old = dl_set_loader_service(my_service);
-    EXPECT_NEQ(old, MX_HANDLE_INVALID, "dl_set_loader_service");
+    EXPECT_NE(old, MX_HANDLE_INVALID, "dl_set_loader_service");
 
     // Now to a lookup that should go through our service.  It
     // should load up the new copy of the file, find that its
@@ -161,7 +161,7 @@ bool ioctl_test(void) {
 
     EXPECT_EQ(s, (ssize_t)sizeof(mx_handle_t),
               "unexpected return value from ioctl");
-    EXPECT_NEQ(h, MX_HANDLE_INVALID, "invalid handle from ioctl");
+    EXPECT_NE(h, MX_HANDLE_INVALID, "invalid handle from ioctl");
 
     mx_handle_close(h);
 

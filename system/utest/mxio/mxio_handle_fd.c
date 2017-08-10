@@ -20,7 +20,7 @@ bool close_test(void) {
 
     mx_handle_t h = MX_HANDLE_INVALID;
     ASSERT_EQ(MX_OK, mx_event_create(0u, &h), "mx_event_create() failed");
-    ASSERT_NEQ(h, MX_HANDLE_INVALID, "");
+    ASSERT_NE(h, MX_HANDLE_INVALID, "");
 
     // mxio_handle_fd() with shared_handle = true
     int fd = mxio_handle_fd(h, MX_USER_SIGNAL_0, MX_USER_SIGNAL_1, true);

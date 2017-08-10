@@ -24,8 +24,8 @@ static bool pmm_smoke_test(void* context) {
     paddr_t pa;
 
     vm_page_t* page = pmm_alloc_page(0, &pa);
-    EXPECT_NEQ(nullptr, page, "pmm_alloc single page");
-    EXPECT_NEQ(0u, pa, "pmm_alloc single page");
+    EXPECT_NE(nullptr, page, "pmm_alloc single page");
+    EXPECT_NE(0u, pa, "pmm_alloc single page");
 
     vm_page_t* page2 = paddr_to_vm_page(pa);
     EXPECT_EQ(page2, page, "paddr_to_vm_page on single page");
@@ -61,8 +61,8 @@ static bool pmm_oversized_alloc_test(void* context) {
         (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 128GB
 
     auto count = pmm_alloc_pages(alloc_count, 0, &list);
-    EXPECT_NEQ(alloc_count, 0, "pmm_alloc_pages too many pages count > 0");
-    EXPECT_NEQ(alloc_count, count, "pmm_alloc_pages too many pages count");
+    EXPECT_NE(alloc_count, 0, "pmm_alloc_pages too many pages count > 0");
+    EXPECT_NE(alloc_count, count, "pmm_alloc_pages too many pages count");
     EXPECT_EQ(count, list_length(&list),
               "pmm_alloc_pages too many pages list count");
 
@@ -139,7 +139,7 @@ static bool vmm_alloc_smoke_test(void* context) {
     auto err = kaspace->Alloc(
             "test", alloc_size, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
-    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
+    EXPECT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -164,7 +164,7 @@ static bool vmm_alloc_contiguous_smoke_test(void* context) {
                                         alloc_size, &ptr, 0,
                                         VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::AllocContiguous region of memory");
-    EXPECT_NEQ(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
+    EXPECT_NE(nullptr, ptr, "VmAspace::AllocContiguous region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -196,7 +196,7 @@ static bool multiple_regions_test(void* context) {
     static const size_t alloc_size = 16 * 1024;
 
     mxtl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
-    EXPECT_NEQ(nullptr, aspace, "VmAspace::Create pointer");
+    EXPECT_NE(nullptr, aspace, "VmAspace::Create pointer");
 
     vmm_aspace_t* old_aspace = get_current_thread()->aspace;
     vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
@@ -204,7 +204,7 @@ static bool multiple_regions_test(void* context) {
     // allocate region 0
     status_t err = aspace->Alloc("test0", alloc_size, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
-    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
+    EXPECT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -213,7 +213,7 @@ static bool multiple_regions_test(void* context) {
     // allocate region 1
     err = aspace->Alloc("test1", 16384, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
-    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
+    EXPECT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -222,7 +222,7 @@ static bool multiple_regions_test(void* context) {
     // allocate region 2
     err = aspace->Alloc("test2", 16384, &ptr, 0, 0, kArchRwFlags);
     EXPECT_EQ(0, err, "VmAspace::Alloc region of memory");
-    EXPECT_NEQ(nullptr, ptr, "VmAspace::Alloc region of memory");
+    EXPECT_NE(nullptr, ptr, "VmAspace::Alloc region of memory");
 
     // fill with known pattern and test
     if (!fill_and_test(ptr, alloc_size))
@@ -625,7 +625,7 @@ static bool vmo_double_remap_test(void* context) {
     ret = ka->MapObjectInternal(vmo, "test1", 0, alloc_size, &ptr2,
                         0, 0, kArchRwFlags);
     EXPECT_EQ(ret, MX_OK, "mapping object second time");
-    EXPECT_NEQ(ptr, ptr2, "second mapping is different");
+    EXPECT_NE(ptr, ptr2, "second mapping is different");
 
     // test that the pattern is still valid
     bool result = test_region((uintptr_t)ptr, ptr2, alloc_size);
@@ -637,8 +637,8 @@ static bool vmo_double_remap_test(void* context) {
     ret = ka->MapObjectInternal(vmo, "test2", alloc_offset, alloc_size - alloc_offset,
                         &ptr3, 0, 0, kArchRwFlags);
     EXPECT_EQ(ret, MX_OK, "mapping object third time");
-    EXPECT_NEQ(ptr3, ptr2, "third mapping is different");
-    EXPECT_NEQ(ptr3, ptr, "third mapping is different");
+    EXPECT_NE(ptr3, ptr2, "third mapping is different");
+    EXPECT_NE(ptr3, ptr, "third mapping is different");
 
     // test that the pattern is still valid
     int mc =
@@ -773,7 +773,7 @@ static bool vmo_cache_test(void* context) {
         EXPECT_EQ(status, MX_OK, "vmobject creation\n");
         EXPECT_TRUE(vmo, "vmobject creation\n");
         EXPECT_EQ(MX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
-        EXPECT_NEQ(cache_policy, cache_policy_get, "check initial cache policy");
+        EXPECT_NE(cache_policy, cache_policy_get, "check initial cache policy");
         EXPECT_EQ(MX_OK, vmo->SetMappingCachePolicy(cache_policy), "try set");
         EXPECT_EQ(MX_OK, vmo->GetMappingCachePolicy(&cache_policy_get), "try get");
         EXPECT_EQ(cache_policy, cache_policy_get, "compare flags");

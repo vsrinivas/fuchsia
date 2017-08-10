@@ -130,7 +130,7 @@ bool handle_transfer_cancel_wait_test(void) {
 
     mx_signals_t signals = MX_CHANNEL_PEER_CLOSED;
     status = mx_object_wait_one(A[0], signals, mx_deadline_after(MX_SEC(1)), NULL);
-    EXPECT_NEQ(MX_ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
+    EXPECT_NE(MX_ERR_TIMED_OUT, status, "failed to complete wait when handle transferred");
 
     thrd_join(thr, NULL);
     mx_handle_close(B[1]);

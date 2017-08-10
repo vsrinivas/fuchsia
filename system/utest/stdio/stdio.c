@@ -59,7 +59,7 @@ static bool stdio_launchpad_pipe_test(void)
     launchpad_t* lp = NULL;
 
     mx_handle_t mxio_job = mx_job_default();
-    ASSERT_NEQ(mxio_job, MX_HANDLE_INVALID, "no mxio job object");
+    ASSERT_NE(mxio_job, MX_HANDLE_INVALID, "no mxio job object");
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;
     ASSERT_EQ(mx_handle_duplicate(mxio_job, MX_RIGHT_SAME_RIGHTS, &job_copy),
@@ -104,7 +104,7 @@ static bool stdio_launchpad_pipe_test(void)
     mx_handle_t p = MX_HANDLE_INVALID;
     mx_status_t status = launchpad_go(lp, &p, NULL);
     ASSERT_EQ(status, MX_OK, "");
-    ASSERT_NEQ(p, MX_HANDLE_INVALID, "process handle != 0");
+    ASSERT_NE(p, MX_HANDLE_INVALID, "process handle != 0");
 
     // Read the stdio
     uint8_t* out = NULL;
