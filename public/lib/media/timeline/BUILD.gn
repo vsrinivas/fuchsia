@@ -6,6 +6,22 @@ import("//apps/test_runner/test.gni")
 
 source_set("timeline") {
   sources = [
+    "fidl_type_conversions.cc",
+    "fidl_type_conversions.h",
+  ]
+
+  public_deps = [
+    ":host_compatible",
+  ]
+
+  deps = [
+    "//apps/media/services",
+    "//lib/ftl",
+  ]
+}
+
+source_set("host_compatible") {
+  sources = [
     "timeline.h",
     "timeline_function.cc",
     "timeline_function.h",
@@ -14,7 +30,6 @@ source_set("timeline") {
   ]
 
   deps = [
-    "//apps/media/services",
     "//lib/ftl",
   ]
 }

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "apps/media/lib/timeline/fidl_type_conversions.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/logs/media_renderer_channel.fidl.h"
@@ -108,8 +109,8 @@ void MediaRenderer::SetMediaType(media::MediaTypePtr type) {
 }
 
 void MediaRenderer::PtsRate(uint32_t ticks, uint32_t seconds) {
-  terse_out() << EntryHeader(entry(), entry_index())
-              << "MediaRenderer.PtsRate" << std::endl;
+  terse_out() << EntryHeader(entry(), entry_index()) << "MediaRenderer.PtsRate"
+              << std::endl;
   terse_out() << indent;
   terse_out() << begl << "ticks: " << ticks << std::endl;
   terse_out() << begl << "seconds: " << seconds << std::endl;
@@ -236,8 +237,8 @@ void MediaRenderer::RenderRange(int64_t pts, uint32_t duration) {
     // not an integer.
     if (diff > 1 || diff < -1) {
       ReportProblem() << "Unexpected RenderRange pts: expected "
-                      << AsNsTime(expected_range_pts_) << ", got " << AsNsTime(pts)
-                      << ", diff " << diff;
+                      << AsNsTime(expected_range_pts_) << ", got "
+                      << AsNsTime(pts) << ", diff " << diff;
     }
   }
 

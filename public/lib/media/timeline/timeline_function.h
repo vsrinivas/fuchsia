@@ -5,7 +5,6 @@
 #pragma once
 
 #include "apps/media/lib/timeline/timeline_rate.h"
-#include "apps/media/services/timelines.fidl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -62,9 +61,7 @@ class TimelineFunction {
 
   explicit TimelineFunction(
       TimelineRate rate)  // subject_delta / reference_delta
-      : reference_time_(0),
-        subject_time_(0),
-        rate_(rate) {}
+      : reference_time_(0), subject_time_(0), rate_(rate) {}
 
   // Applies the function. Returns TimelineRate::kOverflow on overflow.
   int64_t Apply(int64_t reference_input) const {
@@ -126,19 +123,3 @@ inline TimelineFunction operator*(const TimelineFunction& bc,
 }
 
 }  // namespace media
-
-namespace fidl {
-
-template <>
-struct TypeConverter<media::TimelineTransformPtr, media::TimelineFunction> {
-  static media::TimelineTransformPtr Convert(
-      const media::TimelineFunction& input);
-};
-
-template <>
-struct TypeConverter<media::TimelineFunction, media::TimelineTransformPtr> {
-  static media::TimelineFunction Convert(
-      const media::TimelineTransformPtr& input);
-};
-
-}  // namespace fidl

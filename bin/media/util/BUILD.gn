@@ -6,19 +6,14 @@ import("//apps/test_runner/test.gni")
 
 source_set("util") {
   sources = [
-    "callback_joiner.cc",
-    "callback_joiner.h",
     "factory_service_base.h",
     "fidl_publisher.h",
-    "incident.cc",
-    "incident.h",
-    "priority_queue_of_unique_ptr.h",
-    "safe_clone.h",
     "timeline_control_point.cc",
     "timeline_control_point.h",
   ]
 
   public_deps = [
+    ":host_compatible",
     "//application/lib/app",
     "//apps/media/lib/flog",
   ]
@@ -28,6 +23,21 @@ source_set("util") {
     "//apps/media/services",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+source_set("host_compatible") {
+  sources = [
+    "callback_joiner.cc",
+    "callback_joiner.h",
+    "incident.cc",
+    "incident.h",
+    "priority_queue_of_unique_ptr.h",
+    "safe_clone.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
   ]
 }
 

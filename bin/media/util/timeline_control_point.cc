@@ -4,6 +4,7 @@
 
 #include "apps/media/src/util/timeline_control_point.h"
 
+#include "apps/media/lib/timeline/fidl_type_conversions.h"
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "lib/ftl/logging.h"

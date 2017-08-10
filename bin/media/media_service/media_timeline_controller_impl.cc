@@ -4,6 +4,7 @@
 
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
 
+#include "apps/media/lib/timeline/fidl_type_conversions.h"
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "apps/media/src/util/callback_joiner.h"

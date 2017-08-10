@@ -10,6 +10,7 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/media/examples/media_player/media_player_params.h"
+#include "apps/media/lib/timeline/fidl_type_conversions.h"
 #include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/media_service.fidl.h"

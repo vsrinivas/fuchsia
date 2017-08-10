@@ -63,8 +63,8 @@ source_set("framework") {
   ]
 
   deps = [
-    "//apps/media/lib/timeline",
-    "//apps/media/src/util",
+    "//apps/media/lib/timeline:host_compatible",
+    "//apps/media/src/util:host_compatible",
     "//lib/ftl",
   ]
 }

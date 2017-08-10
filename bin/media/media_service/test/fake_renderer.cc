@@ -8,6 +8,7 @@
 #include <iostream>
 #include <limits>
 
+#include "apps/media/lib/timeline/fidl_type_conversions.h"
 #include "apps/media/lib/timeline/timeline.h"
 
 namespace media {
