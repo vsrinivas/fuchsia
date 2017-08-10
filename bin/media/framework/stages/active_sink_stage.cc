@@ -63,11 +63,12 @@ void ActiveSinkStage::Update() {
 }
 
 void ActiveSinkStage::FlushInput(size_t index,
+                                 bool hold_frame,
                                  const DownstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(sink_);
   input_.Flush();
-  sink_->Flush();
+  sink_->Flush(hold_frame);
   sink_demand_ = Demand::kNegative;
 }
 

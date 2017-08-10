@@ -18,7 +18,6 @@ source_set("framework") {
     "models/active_source.h",
     "models/demand.h",
     "models/multistream_source.h",
-    "models/node.h",
     "models/transform.h",
     "packet.cc",
     "packet.h",

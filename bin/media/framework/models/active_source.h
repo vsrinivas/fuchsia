@@ -5,18 +5,20 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
 // Source that produces packets asynchronously.
-class ActiveSource : public Node {
+class ActiveSource {
  public:
   using SupplyCallback = std::function<void(PacketPtr packet)>;
 
-  ~ActiveSource() override {}
+  virtual ~ActiveSource() {}
+
+  // Flushes media state.
+  virtual void Flush(){};
 
   // Whether the source can accept an allocator.
   virtual bool can_accept_allocator() const = 0;

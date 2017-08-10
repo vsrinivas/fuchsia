@@ -163,7 +163,7 @@ void MediaDemuxImpl::GetStatus(uint64_t version_last_seen,
 void MediaDemuxImpl::Flush(bool hold_frame, const FlushCallback& callback) {
   RCHECK(init_complete_.occurred());
 
-  graph_.FlushAllOutputs(demux_node_);
+  graph_.FlushAllOutputs(demux_node_, hold_frame);
 
   std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
 

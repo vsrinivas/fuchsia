@@ -56,7 +56,7 @@ MediaDecoderImpl::MediaDecoderImpl(
       [this, consumer_ref](bool hold_frame,
                            const MediaPacketConsumer::FlushCallback& callback) {
         FTL_DCHECK(producer_);
-        graph_.FlushOutput(consumer_ref.output());
+        graph_.FlushOutput(consumer_ref.output(), hold_frame);
         producer_->FlushConnection(hold_frame, callback);
       });
 

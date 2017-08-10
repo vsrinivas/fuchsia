@@ -5,18 +5,21 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
 // Sink that consumes packets asynchronously.
-class ActiveSink : public Node {
+class ActiveSink {
  public:
   using DemandCallback = std::function<void(Demand demand)>;
 
-  ~ActiveSink() override {}
+  virtual ~ActiveSink() {}
+
+  // Flushes media state. |hold_frame| indicates whether a video renderer
+  // should hold (and display) the newest frame.
+  virtual void Flush(bool hold_frame){};
 
   // An allocator that must be used for supplied packets or nullptr if there's
   // no such requirement.

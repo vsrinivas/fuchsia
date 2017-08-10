@@ -4,15 +4,17 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
 
 // Synchronous source of packets for multiple streams.
-class MultistreamSource : public Node {
+class MultistreamSource {
  public:
-  ~MultistreamSource() override {}
+  virtual ~MultistreamSource() {}
+
+  // Flushes media state.
+  virtual void Flush(){};
 
   // Returns the number of streams the source produces.
   virtual size_t stream_count() const = 0;

@@ -39,7 +39,9 @@ class ActiveMultistreamSinkStage : public Stage,
                      PayloadAllocator* allocator,
                      const UpstreamCallback& callback) override;
 
-  void FlushInput(size_t index, const DownstreamCallback& callback) override;
+  void FlushInput(size_t index,
+                  bool hold_frame,
+                  const DownstreamCallback& callback) override;
 
   void FlushOutput(size_t index) override;
 

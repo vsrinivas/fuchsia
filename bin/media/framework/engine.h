@@ -87,8 +87,10 @@ class Engine {
   // Unprepares the input and the subgraph upstream of it.
   void UnprepareInput(Input* input);
 
-  // Flushes the output and the subgraph downstream of it.
-  void FlushOutput(Output* output);
+  // Flushes the output and the subgraph downstream of it. |hold_frame|
+  // indicates whether a video renderer should hold and display the newest
+  // frame.
+  void FlushOutput(Output* output, bool hold_frame);
 
   // Called to indicate that the specified stage needs to be updated.
   void StageNeedsUpdate(Stage* stage);

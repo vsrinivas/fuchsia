@@ -195,11 +195,15 @@ class Graph {
   // prepare subgraphs added when the rest of the graph is already prepared.
   void PrepareInput(const InputRef& input);
 
-  // Flushes the output and the subgraph downstream of it.
-  void FlushOutput(const OutputRef& output);
+  // Flushes the output and the subgraph downstream of it. |hold_frame|
+  // indicates whether a video renderer should hold and display the newest
+  // frame.
+  void FlushOutput(const OutputRef& output, bool hold_frame);
 
-  // Flushes the output and the subgraph downstream of it.
-  void FlushAllOutputs(NodeRef node);
+  // Flushes the output and the subgraph downstream of it. |hold_frame|
+  // indicates whether a video renderer should hold and display the newest
+  // frame.
+  void FlushAllOutputs(NodeRef node, bool hold_frame);
 
   // Updates one node from the update backlog.
   void UpdateOne();

@@ -4,16 +4,18 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
 // Synchronous packet transform.
-class Transform : public Node {
+class Transform {
  public:
-  ~Transform() override {}
+  virtual ~Transform() {}
+
+  // Flushes media state.
+  virtual void Flush() {};
 
   // Processes a packet. Returns true to indicate the transform is done
   // processing the input packet. Returns false to indicate the input

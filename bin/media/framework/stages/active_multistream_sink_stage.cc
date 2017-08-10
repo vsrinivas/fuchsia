@@ -78,10 +78,11 @@ void ActiveMultistreamSinkStage::Update() {
 
 void ActiveMultistreamSinkStage::FlushInput(
     size_t index,
+    bool hold_frame,
     const DownstreamCallback& callback) {
   FTL_DCHECK(sink_);
 
-  sink_->Flush();
+  sink_->Flush(hold_frame);
 
   ftl::MutexLocker locker(&mutex_);
   inputs_[index]->input_.Flush();

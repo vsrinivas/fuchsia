@@ -36,20 +36,21 @@ void Engine::UnprepareInput(Input* input) {
   });
 }
 
-void Engine::FlushOutput(Output* output) {
+void Engine::FlushOutput(Output* output, bool hold_frame) {
   FTL_DCHECK(output);
   if (!output->connected()) {
     return;
   }
 
-  VisitDownstream(output, [](Output* output, Input* input,
-                             const Stage::DownstreamCallback& callback) {
-    FTL_DCHECK(output);
-    FTL_DCHECK(input);
-    FTL_DCHECK(input->prepared());
-    output->stage()->FlushOutput(output->index());
-    input->stage()->FlushInput(input->index(), callback);
-  });
+  VisitDownstream(
+      output, [hold_frame](Output* output, Input* input,
+                           const Stage::DownstreamCallback& callback) {
+        FTL_DCHECK(output);
+        FTL_DCHECK(input);
+        FTL_DCHECK(input->prepared());
+        output->stage()->FlushOutput(output->index());
+        input->stage()->FlushInput(input->index(), hold_frame, callback);
+      });
 }
 
 void Engine::StageNeedsUpdate(Stage* stage) {

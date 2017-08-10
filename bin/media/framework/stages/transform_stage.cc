@@ -81,6 +81,7 @@ void TransformStage::Update() {
 }
 
 void TransformStage::FlushInput(size_t index,
+                                bool hold_frame,
                                 const DownstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
   input_.Flush();

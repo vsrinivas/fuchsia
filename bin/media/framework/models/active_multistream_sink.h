@@ -5,7 +5,6 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
-#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
@@ -30,9 +29,13 @@ class ActiveMultistreamSinkHost {
 };
 
 // Synchronous sink of packets for multiple streams.
-class ActiveMultistreamSink : public Node {
+class ActiveMultistreamSink {
  public:
-  ~ActiveMultistreamSink() override {}
+  virtual ~ActiveMultistreamSink() {}
+
+  // Flushes media state. |hold_frame| indicates whether a video renderer
+  // should hold (and display) the newest frame.
+  virtual void Flush(bool hold_frame){};
 
   // Sets the host callback interface.
   virtual void SetHost(ActiveMultistreamSinkHost* host) = 0;

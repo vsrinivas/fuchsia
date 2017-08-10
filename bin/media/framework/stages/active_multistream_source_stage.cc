@@ -139,6 +139,7 @@ void ActiveMultistreamSourceStage::Update() {
 
 void ActiveMultistreamSourceStage::FlushInput(
     size_t index,
+    bool hold_frame,
     const DownstreamCallback& callback) {
   FTL_CHECK(false) << "FlushInput called on source";
 }

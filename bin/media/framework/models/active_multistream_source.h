@@ -4,18 +4,20 @@
 
 #pragma once
 
-#include "apps/media/src/framework/models/node.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
 
 // Asynchronous source of packets for multiple streams.
-class ActiveMultistreamSource : public Node {
+class ActiveMultistreamSource {
  public:
   using SupplyCallback =
       std::function<void(size_t output_index, PacketPtr packet)>;
 
-  ~ActiveMultistreamSource() override {}
+  virtual ~ActiveMultistreamSource() {}
+
+  // Flushes media state.
+  virtual void Flush(){};
 
   // TODO(dalesat): Support dynamic output creation.
 

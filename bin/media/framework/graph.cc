@@ -196,16 +196,16 @@ void Graph::PrepareInput(const InputRef& input) {
   engine_.PrepareInput(input.actual());
 }
 
-void Graph::FlushOutput(const OutputRef& output) {
+void Graph::FlushOutput(const OutputRef& output, bool hold_frame) {
   FTL_DCHECK(output);
-  engine_.FlushOutput(output.actual());
+  engine_.FlushOutput(output.actual(), hold_frame);
 }
 
-void Graph::FlushAllOutputs(NodeRef node) {
+void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
   FTL_DCHECK(node);
   size_t output_count = node.output_count();
   for (size_t output_index = 0; output_index < output_count; output_index++) {
-    FlushOutput(node.output(output_index));
+    FlushOutput(node.output(output_index), hold_frame);
   }
 }
 

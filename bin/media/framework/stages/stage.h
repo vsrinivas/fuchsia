@@ -62,9 +62,12 @@ class Stage {
   // a consequence of unpreparing the output.
   virtual void UnprepareOutput(size_t index, const UpstreamCallback& callback);
 
-  // Flushes an input. The callback is used to indicate what outputs are ready
-  // to be flushed as a consequence of flushing the input.
-  virtual void FlushInput(size_t index, const DownstreamCallback& callback) = 0;
+  // Flushes an input. |hold_frame| indicates whether a video renderer should
+  // hold and display the newest frame. The callback is used to indicate what
+  // outputs are ready to be flushed as a consequence of flushing the input.
+  virtual void FlushInput(size_t index,
+                          bool hold_frame,
+                          const DownstreamCallback& callback) = 0;
 
   // Flushes an output.
   virtual void FlushOutput(size_t index) = 0;
