@@ -45,6 +45,25 @@ public:
         EXPECT_EQ(expected, value);
     }
 
+    class FormattedString {
+    public:
+        FormattedString(const char* fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            printf(": ");
+            int size = std::vsnprintf(nullptr, 0, fmt, args);
+            buf_ = std::vector<char>(size + 1);
+            std::vsnprintf(buf_.data(), buf_.size(), fmt, args);
+            va_end(args);
+        }
+
+        char* data() { return buf_.data(); }
+
+    private:
+        std::vector<char> buf_;
+    };
+
     void Dump()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
@@ -67,9 +86,30 @@ public:
         EXPECT_FALSE(dump_state.fault_present);
         EXPECT_TRUE(dump_state.render_cs.inflight_batches.empty());
 
+        dump_state.fault_present = true;
+        dump_state.fault_engine = 0;
+        dump_state.fault_src = 3;
+        dump_state.fault_type = 10;
+        dump_state.fault_gpu_address = 0xaabbccdd11223344;
+        dump_state.global = 1;
+
         std::string dump_string;
-        device->DumpToString(dump_string);
-        DLOG("%s", dump_string.c_str());
+        device->FormatDump(dump_state, dump_string);
+        EXPECT_NE(nullptr,
+                  strstr(dump_string.c_str(), FormattedString("sequence_number 0x%x",
+                                                              dump_state.render_cs.sequence_number)
+                                                  .data()));
+        EXPECT_NE(nullptr, strstr(dump_string.c_str(),
+                                  FormattedString("active head pointer: 0x%llx",
+                                                  dump_state.render_cs.active_head_pointer)
+                                      .data()));
+        EXPECT_NE(nullptr,
+                  strstr(dump_string.c_str(),
+                         FormattedString(
+                             "engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx global %d",
+                             dump_state.fault_engine, dump_state.fault_src, dump_state.fault_type,
+                             dump_state.fault_gpu_address, dump_state.global)
+                             .data()));
     }
 
     void MockDump()
@@ -77,12 +117,17 @@ public:
         std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(2 * 1024 * 1024)));
 
         reg_io->Write32(registers::FaultTlbReadData::kOffset0, 0xabcd1234);
-        reg_io->Write32(registers::FaultTlbReadData::kOffset1, 0xf);
+        reg_io->Write32(registers::FaultTlbReadData::kOffset1, 0x1f);
 
         MsdIntelDevice::DumpState dump_state;
         MsdIntelDevice::DumpFaultAddress(&dump_state, reg_io.get());
+        EXPECT_EQ(0xfabcd1234000ull, dump_state.fault_gpu_address);
+        EXPECT_TRUE(dump_state.global);
 
-        EXPECT_EQ(dump_state.fault_gpu_address, 0xfabcd1234000ull);
+        reg_io->Write32(registers::FaultTlbReadData::kOffset1, 0xf);
+        MsdIntelDevice::DumpFaultAddress(&dump_state, reg_io.get());
+        EXPECT_EQ(0xfabcd1234000ull, dump_state.fault_gpu_address);
+        EXPECT_FALSE(dump_state.global);
 
         uint32_t engine = 0;
         uint32_t src = 0xff;

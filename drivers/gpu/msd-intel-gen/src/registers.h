@@ -188,15 +188,16 @@ class FaultTlbReadData {
 public:
     static constexpr uint32_t kOffset0 = 0x4B10;
     static constexpr uint32_t kOffset1 = 0x4B14;
-    static constexpr uint32_t kGgttCycle = 1 << 4;
+    static constexpr uint64_t kGgttCycle = 1ull << 36;
 
-    static uint64_t addr(RegisterIo* reg_io)
+    static uint64_t read(RegisterIo* reg_io)
     {
-        return (static_cast<uint64_t>(reg_io->Read32(kOffset1) & 0xF) << 44) |
-               (static_cast<uint64_t>(reg_io->Read32(kOffset0)) << 12);
+        return (static_cast<uint64_t>(reg_io->Read32(kOffset1)) << 32) |
+               static_cast<uint64_t>(reg_io->Read32(kOffset0));
     }
 
-    static bool is_ggtt(RegisterIo* reg_io) { return reg_io->Read32(kOffset1) & kGgttCycle; }
+    static uint64_t addr(uint64_t val) { return (val & 0xFFFFFFFFFull) << 12; }
+    static bool is_ggtt(uint64_t val) { return val & kGgttCycle; }
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493

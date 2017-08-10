@@ -66,6 +66,7 @@ public:
         uint8_t fault_src;
         uint8_t fault_type;
         uint64_t fault_gpu_address;
+        bool global;
     };
 
     void Dump(DumpState* dump_state);
@@ -152,6 +153,7 @@ private:
 
     static void DumpFault(DumpState* dump_out, uint32_t fault);
     static void DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io);
+    void FormatDump(DumpState& dump_state, std::string& dump_string);
 
     int DeviceThreadLoop();
     int InterruptThreadLoop();

@@ -300,6 +300,7 @@ void MsdIntelDevice::Dump(DumpState* dump_out)
     DumpFault(dump_out, registers::AllEngineFault::read(register_io_.get()));
 
     dump_out->fault_gpu_address = kInvalidGpuAddr;
+    dump_out->global = false;
     if (dump_out->fault_present)
         DumpFaultAddress(dump_out, register_io_.get());
 }
@@ -314,14 +315,20 @@ void MsdIntelDevice::DumpFault(DumpState* dump_out, uint32_t fault)
 
 void MsdIntelDevice::DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io)
 {
-    dump_out->fault_gpu_address = registers::FaultTlbReadData::addr(register_io);
+    uint64_t val = registers::FaultTlbReadData::read(register_io);
+    dump_out->fault_gpu_address = registers::FaultTlbReadData::addr(val);
+    dump_out->global = registers::FaultTlbReadData::is_ggtt(val);
 }
 
 void MsdIntelDevice::DumpToString(std::string& dump_out)
 {
     DumpState dump_state;
     Dump(&dump_state);
+    FormatDump(dump_state, dump_out);
+}
 
+void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
+{
     const char* build = magma::kDebug ? "DEBUG" : "RELEASE";
     const char* fmt = "---- device dump begin ----\n"
                       "%s build\n"
@@ -339,12 +346,13 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
 
     if (dump_state.fault_present) {
         fmt = "ENGINE FAULT DETECTED\n"
-              "engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx\n";
-        size = std::snprintf(nullptr, 0, fmt, dump_state.fault_engine, dump_state.fault_src,
-                             dump_state.fault_type, dump_state.fault_gpu_address);
+              "engine 0x%x src 0x%x type 0x%x gpu_address 0x%lx global %d\n";
+        size =
+            std::snprintf(nullptr, 0, fmt, dump_state.fault_engine, dump_state.fault_src,
+                          dump_state.fault_type, dump_state.fault_gpu_address, dump_state.global);
         std::vector<char> buf(size + 1);
         std::snprintf(&buf[0], buf.size(), fmt, dump_state.fault_engine, dump_state.fault_src,
-                      dump_state.fault_type, dump_state.fault_gpu_address);
+                      dump_state.fault_type, dump_state.fault_gpu_address, dump_state.global);
         dump_out.append(&buf[0]);
     } else {
         dump_out.append("No engine faults detected.\n");
