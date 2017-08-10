@@ -25,8 +25,8 @@ usage() {
 declare KERNEL="$BUILDDIR/magenta.bin"
 declare BOOTDATA="$BUILDDIR/bootdata.bin"
 declare BZIMAGE="/tmp/linux/arch/x86/boot/bzImage"
-declare INITRD="$BUILDDIR/toybox-x86/initrd.gz"
-declare ROOTFS="$BUILDDIR/toybox-x86/rootfs.ext2"
+declare INITRD="/tmp/toybox/initrd.gz"
+declare ROOTFS="/tmp/toybox/rootfs.ext2"
 
 while getopts "k:b:l:i:r:" opt; do
   case "${opt}" in

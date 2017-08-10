@@ -17,28 +17,17 @@ set -eo pipefail
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Location of magenta and its build dir
-MAGENTADIR="${MAGENTA_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
-BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
-mkdir -p $BUILDDIR
-
-# Location to download tarballs to.
-PULLDIR="/tmp"
-
-# Where to build toybox.
-TOYBOX_BUILD_DIR="$BUILDDIR/toybox-x86"
+# Where the toybox sources are expected to be.
+TOYBOX_SRC_DIR="/tmp/toybox"
 
 # Toybox initrd file.
-TOYBOX_INITRD="$TOYBOX_BUILD_DIR/initrd.gz"
+TOYBOX_INITRD="$TOYBOX_SRC_DIR/initrd.gz"
 
 # Toybox root filesystem image.
-TOYBOX_ROOTFS="$TOYBOX_BUILD_DIR/rootfs.ext2"
+TOYBOX_ROOTFS="$TOYBOX_SRC_DIR/rootfs.ext2"
 
 # Where to prep the toybox directory structure.
-TOYBOX_SYSROOT="$TOYBOX_BUILD_DIR/fs"
-
-# Where the toybox srcs are expected to be.
-TOYBOX_SRC_DIR="$PULLDIR/toybox"
+TOYBOX_SYSROOT="$TOYBOX_SRC_DIR/fs"
 
 usage() {
     echo "usage: ${0} [-rif] [-d toybox_dir]"
