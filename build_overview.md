@@ -76,6 +76,9 @@ $ scripts/build-magenta.sh
 Then configure the content of the generated image by choosing the modules to
 incorporate:
 ```
+# fuchsia_base is typically one of "default", "magentix".
+# my_stuff is a possibly-empty list of extra modules to include.
+
 $ packages/gn/gen.py --modules fuchsia_base,my_stuff
 ```
 This will create an `out/debug-<arch>` directory containing Ninja files to run
