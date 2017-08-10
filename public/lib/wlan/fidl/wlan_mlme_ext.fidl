@@ -15,5 +15,15 @@ struct SignalReportIndication {
     uint8 rssi;
 };
 
+// EAPOL_FRAME.indication
+
+// IEEE Std 802.1X-2010, 11.3, Figure 11-1
+struct EapolFrameIndication {
+    uint8 version;
+    uint8 packet_type;
+    uint16 packet_body_length;
+    array<uint8> packet_body;
+};
+
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official
 // MLME primitives.

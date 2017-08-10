@@ -55,6 +55,7 @@ struct BSSDescription {
     uint32 dtim_period;
     uint64 timestamp;
     uint64 local_time;
+    bool rsn;
 
     uint8 channel;
 
@@ -282,6 +283,8 @@ enum Method {
     // Args: SignalReportIndication
     SIGNAL_REPORT_indication,
 
+    // Args: EapolFrameIndication
+    EAPOL_FRAME_indication,
 
-    LAST = SIGNAL_REPORT_indication,
+    LAST = EAPOL_FRAME_indication,
 };
