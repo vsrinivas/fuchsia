@@ -67,11 +67,11 @@ zx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockm
 
     if ((r = ioctl_block_get_fifos(fd, &fifo)) < 0) {
         return static_cast<zx_status_t>(r);
-    } else if ((r = ioctl_block_alloc_txn(fd, &bc->txnid_)) < 0) {
+    } else if (bc->TxnId() == TXNID_INVALID) {
         zx_handle_close(fifo);
-        return static_cast<zx_status_t>(r);
+        return static_cast<zx_status_t>(ZX_ERR_NO_RESOURCES);
     } else if ((status = block_fifo_create_client(fifo, &bc->fifo_client_)) != ZX_OK) {
-        ioctl_block_free_txn(fd, &bc->txnid_);
+        bc->FreeTxnId();
         zx_handle_close(fifo);
         return status;
     }
@@ -107,7 +107,7 @@ Bcache::Bcache(int fd, uint32_t blockmax) :
 Bcache::~Bcache() {
 #ifdef __Fuchsia__
     if (fifo_client_ != nullptr) {
-        ioctl_block_free_txn(fd_, &txnid_);
+        FreeTxnId();
         ioctl_block_fifo_close(fd_);
         block_fifo_release_client(fifo_client_);
     }

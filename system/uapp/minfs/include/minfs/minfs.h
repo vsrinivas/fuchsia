@@ -215,7 +215,6 @@ public:
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
         return block_fifo_txn(fifo_client_, requests, count);
     }
-    txnid_t TxnId() const { return txnid_; }
 
     zx_status_t FVMQuery(fvm_info_t* info) {
         ssize_t r = ioctl_block_fvm_query(fd_, info);
@@ -248,6 +247,31 @@ public:
         }
         return ZX_OK;
     }
+
+    // Acquires a Thread-local TxnId that can be used for sending messages
+    // over the block I/O FIFO.
+    txnid_t TxnId() const {
+        ZX_DEBUG_ASSERT(fd_ > 0);
+        thread_local txnid_t txnid_ = TXNID_INVALID;
+        if (txnid_ != TXNID_INVALID) {
+            return txnid_;
+        }
+        if (ioctl_block_alloc_txn(fd_, &txnid_) < 0) {
+            return TXNID_INVALID;
+        }
+        return txnid_;
+    }
+
+    // Frees the TxnId allocated for the thread (if one was allocated).
+    // Must be called separately by all threads which access TxnId().
+    void FreeTxnId() {
+        txnid_t tid = TxnId();
+        if (tid == TXNID_INVALID) {
+            return;
+        }
+        ioctl_block_free_txn(fd_, &tid);
+    }
+
 #endif
 
     int Sync();
@@ -259,7 +283,6 @@ private:
 
 #ifdef __Fuchsia__
     fifo_client_t* fifo_client_{}; // Fast path to interact with block device
-    txnid_t txnid_{}; // TODO(smklein): One per thread
 #endif
     int fd_ = -1;
     uint32_t blockmax_{};

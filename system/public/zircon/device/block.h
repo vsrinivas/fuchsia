@@ -106,6 +106,12 @@ IOCTL_WRAPPER_INOUT(ioctl_block_attach_vmo, IOCTL_BLOCK_ATTACH_VMO, zx_handle_t,
 
 typedef uint16_t txnid_t;
 
+// Dummy TXNID value reserved for "invalid". Will never be allocated; can be
+// used as a local value for unallocated / freed ID.
+#define TXNID_INVALID 0xFFFF
+
+static_assert(TXNID_INVALID > MAX_TXN_COUNT, "Invalid Txn ID may be valid");
+
 // ssize_t ioctl_block_alloc_txn(int fd, txnid_t* out_txnid);
 IOCTL_WRAPPER_OUT(ioctl_block_alloc_txn, IOCTL_BLOCK_ALLOC_TXN, txnid_t);
 
