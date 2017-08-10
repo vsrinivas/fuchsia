@@ -2,34 +2,8 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//apps/bluetooth",
-        "//apps/bluetooth:tests"
-    ],
-    "binaries": [
-        {
-            "binary": "bluetooth_service",
-            "bootfs_path": "apps/bluetooth"
-        },
-        {
-            "binary": "bluetooth_unittests",
-            "bootfs_path": "test/bluetooth_unittests"
-        },
-        {
-            "binary": "bluetooth_bluetoothcli",
-            "bootfs_path": "apps/bluetoothcli"
-        },
-        {
-            "binary": "bluetooth_btsnoop",
-            "bootfs_path": "bin/btsnoop"
-        },
-        {
-            "binary": "bluetooth_hci_acl_test",
-            "bootfs_path": "bin/hci_acl_test"
-        },
-        {
-            "binary": "bluetooth_hcitool",
-            "bootfs_path": "bin/hcitool"
-        }
-    ]
+    "packages": {
+        "bluetooth": "//apps/bluetooth",
+        "bluetooth_tests": "//apps/bluetooth/test"
+    }
 }
