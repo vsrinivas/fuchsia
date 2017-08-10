@@ -99,10 +99,15 @@ package_initrd() {
     | gzip -9 > $initrd)
 }
 
+# e2tools provides utilities for manipulating EXT2 filesystems.
+check_e2tools() {
+  type -P e2cp &>/dev/null && return 0
 
-# Generate an EXT2 filesystem impage of the toybox sysroot.
-#
-# Note: We need root here to mount the image as a loopback device.
+  echo "Required package e2tools is not installed. (sudo apt install e2tools)"
+  exit 1
+}
+
+# Generate an EXT2 filesystem image of the toybox sysroot.
 #
 # $1 - Toybox sysroot directory.
 # $2 - Filepath of the created EXT2 image file.
@@ -113,11 +118,23 @@ package_rootfs() {
   dd if=/dev/zero of=$rootfs bs=1M count=20
   mkfs.ext2 -F $rootfs
 
-  local mountpoint=`mktemp -d`
-  sudo mount -o loop $rootfs $mountpoint
-  sudo cp -r $sysroot/* $mountpoint
-  sudo umount $mountpoint
-  rm -rf $mountpoint
+  for dir in `find "${sysroot}" -type d -printf '%P\n'`; do
+    e2mkdir "${rootfs}:/${dir}"
+  done
+
+  for file in `find "${sysroot}" -type f -printf '%P\n'`; do
+    e2cp -p -G 0 -O 0 "${sysroot}/${file}" "${rootfs}:/${file}"
+  done
+
+  # e2cp follows symlinks which would create a copy of the toybox binary for
+  # every link. To work around this we enumerate all the symlinks in the
+  # sysroot and create a corresponding hardlink in the ext2 filesystem (e2ln
+  # does not currently support soft links).
+  for link in `find "${sysroot}" -type l -printf '%P\n'`; do
+    local dirname=`dirname ${link}`
+    local target=`readlink "${sysroot}/${link}"`
+    e2ln "${rootfs}:${dirname}/${target}" "/${link}"
+  done
 }
 
 declare FORCE="${FORCE:-false}"
@@ -155,6 +172,10 @@ if [[ ! "${BUILD_INITRD}" = "true" ]] && [[ ! "${BUILD_ROOTFS}" = "true" ]]; the
 fi
 
 readonly "${FORCE}" "${BUILD_INITRD}" "${BUILD_ROOTFS}"
+
+if [[ "${BUILD_ROOTFS}" = "true" ]]; then
+  check_e2tools
+fi
 
 get_toybox_source "${TOYBOX_SRC_DIR}"
 
