@@ -71,7 +71,7 @@ bool test_use_all_data(void) {
 
     constexpr size_t kBufSize = (1 << 20);
     constexpr size_t kFileBufCount = (1 << 5);
-    constexpr size_t kFileCount = (1 << 5);
+    constexpr size_t kFileCount = (1 << 4);
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBufSize]);

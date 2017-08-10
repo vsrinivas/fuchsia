@@ -19,6 +19,10 @@
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
 
+#ifdef __Fuchsia__
+#include <fbl/auto_lock.h>
+#endif
+
 #include "minfs-private.h"
 
 namespace minfs {
@@ -198,9 +202,8 @@ zx_status_t Minfs::InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inod
 #ifdef __Fuchsia__
     void* inodata = (void*)((uintptr_t)(inode_table_->GetData()) +
                             (uintptr_t)(inoblock_rel * kMinfsBlockSize));
-    auto itable_id = inode_table_vmoid_;
     memcpy((void*)((uintptr_t)inodata + off_of_ino), inode, kMinfsInodeSize);
-    txn->Enqueue(itable_id, inoblock_rel, inoblock_abs, 1);
+    txn->Enqueue(inode_table_->GetVmo(), inoblock_rel, inoblock_abs, 1);
 #else
     // Since host-side tools don't have "mapped vmos", just read / update /
     // write the single absolute indoe block.
@@ -211,6 +214,15 @@ zx_status_t Minfs::InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inod
 #endif
     return ZX_OK;
 }
+
+#ifdef __Fuchsia__
+zx_status_t Minfs::Sync(completion_t* completion) {
+    fbl::unique_ptr<WritebackWork> wb(new WritebackWork(bc_.get()));
+    wb->SetCompletion(completion);
+    EnqueueWork(fbl::move(wb));
+    return ZX_OK;
+}
+#endif
 
 Minfs::Minfs(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(fbl::move(bc)) {
     memcpy(&info_, info, sizeof(minfs_info_t));
@@ -245,11 +257,9 @@ Minfs::~Minfs() {
     vnode_hash_.clear();
 }
 
-zx_status_t Minfs::InoFree(VnodeMinfs* vn) {
-    // We're going to be updating block bitmaps repeatedly.
-    WriteTxn txn(bc_.get());
+zx_status_t Minfs::InoFree(VnodeMinfs* vn, WriteTxn* txn) {
 #ifdef __Fuchsia__
-    auto ibm_id = inode_map_vmoid_;
+    auto ibm_id = inode_map_.StorageUnsafe()->GetVmo();
 #else
     auto ibm_id = inode_map_.StorageUnsafe()->GetData();
 #endif
@@ -259,7 +269,7 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn) {
     info_.alloc_inode_count--;
 
     blk_t bitbno = vn->ino_ / kMinfsBlockBits;
-    txn.Enqueue(ibm_id, bitbno, info_.ibm_block + bitbno, 1);
+    txn->Enqueue(ibm_id, bitbno, info_.ibm_block + bitbno, 1);
     uint32_t block_count = vn->inode_.block_count;
 
     // release all direct blocks
@@ -269,7 +279,7 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn) {
         }
         ValidateBno(vn->inode_.dnum[n]);
         block_count--;
-        BlockFree(&txn, vn->inode_.dnum[n]);
+        BlockFree(txn, vn->inode_.dnum[n]);
     }
 
 
@@ -298,12 +308,11 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn) {
                 continue;
             }
             block_count--;
-            BlockFree(&txn, entry[m]);
+            BlockFree(txn, entry[m]);
         }
         // release the direct block itself
         block_count--;
-        BlockFree(&txn, vn->inode_.inum[n]);
-
+        BlockFree(txn, vn->inode_.inum[n]);
     }
 
     // release doubly indirect blocks
@@ -349,20 +358,21 @@ zx_status_t Minfs::InoFree(VnodeMinfs* vn) {
                 }
 
                 block_count--;
-                BlockFree(&txn, entry[k]);
+                BlockFree(txn, entry[k]);
             }
 
             block_count--;
-            BlockFree(&txn, dentry[m]);
+            BlockFree(txn, dentry[m]);
         }
 
         // release the doubly indirect block itself
         block_count--;
-        BlockFree(&txn, vn->inode_.dinum[n]);
+        BlockFree(txn, vn->inode_.dinum[n]);
     }
 
-    CountUpdate(&txn);
+    CountUpdate(txn);
     ZX_DEBUG_ASSERT(block_count == 0);
+    ZX_DEBUG_ASSERT(vn->IsUnlinked());
     return ZX_OK;
 }
 
@@ -387,18 +397,23 @@ zx_status_t Minfs::AddInodes() {
     if (ibmblks > kBlocksPerSlice) {
         // TODO(smklein): Increase the size of the inode bitmap,
         // in addition to the size of the inode table.
-        fprintf(stderr, "Minfs::AddInodes needs to increase inode bitmap size");
+        fprintf(stderr, "Minfs::AddInodes needs to increase inode bitmap size\n");
         return ZX_ERR_NO_SPACE;
     }
 
     if (bc_->FVMExtend(&request) != ZX_OK) {
         // TODO(smklein): Query FVM on reboot to verify our
         // superblock matches our allocated extents.
-        fprintf(stderr, "Minfs::AddInodes FVM Extend failure");
+        fprintf(stderr, "Minfs::AddInodes FVM Extend failure\n");
         return ZX_ERR_NO_SPACE;
     }
 
-    WriteTxn txn(bc_.get());
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    auto txn = wb->txn();
 
     // Update the inode bitmap, write the new blocks back to disk
     // as "zero".
@@ -409,8 +424,8 @@ zx_status_t Minfs::AddInodes() {
     // of kMinfsBlockSize.
     inode_map_.Shrink(inodes);
     if (ibmblks > ibmblks_old) {
-        txn.Enqueue(inode_map_vmoid_, ibmblks_old, info_.ibm_block + ibmblks_old,
-                    ibmblks - ibmblks_old);
+        txn->Enqueue(inode_map_.StorageUnsafe()->GetVmo(), ibmblks_old,
+                     info_.ibm_block + ibmblks_old, ibmblks - ibmblks_old);
     }
 
     // Update the inode table
@@ -423,9 +438,9 @@ zx_status_t Minfs::AddInodes() {
     info_.ino_slices += static_cast<uint32_t>(request.length);
     info_.inode_count = inodes;
     ibmblks_ = ibmblks;
-    txn.Enqueue(info_vmoid_, 0, 0, 1);
-
-    return txn.Flush();
+    txn->Enqueue(info_vmo_->GetVmo(), 0, 0, 1);
+    EnqueueWork(fbl::move(wb));
+    return ZX_OK;
 #else
     return ZX_ERR_NO_SPACE;
 #endif
@@ -450,18 +465,23 @@ zx_status_t Minfs::AddBlocks() {
 
     if (abmblks > kBlocksPerSlice) {
         // TODO(smklein): Increase the size of the block bitmap.
-        fprintf(stderr, "Minfs::AddBlocks needs to increase block bitmap size");
+        fprintf(stderr, "Minfs::AddBlocks needs to increase block bitmap size\n");
         return ZX_ERR_NO_SPACE;
     }
 
     if (bc_->FVMExtend(&request) != ZX_OK) {
         // TODO(smklein): Query FVM on reboot to verify our
         // superblock matches our allocated extents.
-        fprintf(stderr, "Minfs::AddBlocks FVM Extend failure");
+        fprintf(stderr, "Minfs::AddBlocks FVM Extend failure\n");
         return ZX_ERR_NO_SPACE;
     }
 
-    WriteTxn txn(bc_.get());
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    auto txn = wb->txn();
 
     // Update the block bitmap, write the new blocks back to disk
     // as "zero".
@@ -472,8 +492,8 @@ zx_status_t Minfs::AddBlocks() {
     // of kMinfsBlockSize.
     block_map_.Shrink(blocks);
     if (abmblks > abmblks_old) {
-        txn.Enqueue(block_map_vmoid_, abmblks_old, info_.abm_block + abmblks_old,
-                    abmblks - abmblks_old);
+        txn->Enqueue(block_map_.StorageUnsafe()->GetVmo(), abmblks_old,
+                     info_.abm_block + abmblks_old, abmblks - abmblks_old);
     }
 
     info_.vslice_count += request.length;
@@ -481,8 +501,9 @@ zx_status_t Minfs::AddBlocks() {
     info_.block_count = blocks;
 
     abmblks_ = abmblks;
-    txn.Enqueue(info_vmoid_, 0, 0, 1);
-    return txn.Flush();
+    txn->Enqueue(info_vmo_->GetVmo(), 0, 0, 1);
+    EnqueueWork(fbl::move(wb));
+    return ZX_OK;
 #else
     return ZX_ERR_NO_SPACE;
 #endif
@@ -526,9 +547,9 @@ zx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* ino_
 
 // Commit blocks to disk
 #ifdef __Fuchsia__
-    vmoid_t id = inode_map_vmoid_;
+    auto id = inode_map_.StorageUnsafe()->GetVmo();
 #else
-    const void* id = inode_map_.StorageUnsafe()->GetData();
+    auto id = inode_map_.StorageUnsafe()->GetData();
 #endif
     txn->Enqueue(id, ibm_relative_bno, info_.ibm_block + ibm_relative_bno, 1);
 
@@ -555,13 +576,47 @@ zx_status_t Minfs::VnodeNew(WriteTxn* txn, fbl::RefPtr<VnodeMinfs>* out, uint32_
         return status;
     }
 
-    vnode_hash_.insert(vn.get());
-
+    VnodeInsert(vn.get());
     *out = fbl::move(vn);
     return 0;
 }
 
-void Minfs::VnodeRelease(VnodeMinfs* vn) {
+void Minfs::VnodeInsert(VnodeMinfs* vn) {
+#ifdef __Fuchsia__
+    fbl::AutoLock lock(&hash_lock_);
+#endif
+    ZX_DEBUG_ASSERT_MSG(!vnode_hash_.find(vn->ino_).IsValid(), "ino %u already in map\n", vn->ino_);
+    vnode_hash_.insert(vn);
+}
+
+fbl::RefPtr<VnodeMinfs> Minfs::VnodeLookup(uint32_t ino) {
+#ifdef __Fuchsia__
+    fbl::AutoLock lock(&hash_lock_);
+    auto rawVn = vnode_hash_.find(ino);
+    if (!rawVn.IsValid()) {
+        // Nothing exists in the lookup table
+        return nullptr;
+    }
+    auto vn = fbl::internal::MakeRefPtrUpgradeFromRaw(rawVn.CopyPointer(), hash_lock_);
+    if (vn == nullptr) {
+        // The vn 'exists' in the map, but it is being deleted.
+        // Remove it (by key) so the next person doesn't trip on it,
+        // and so we can insert another node with the same key into the hash
+        // map.
+        // Notably, VnodeReleaseLocked erases the vnode by object, not key,
+        // so it will not attempt to replace any distinct Vnodes that happen
+        // to be re-using the same inode.
+        vnode_hash_.erase(ino);
+    } else if (vn->IsUnlinked()) {
+        vn = nullptr;
+    }
+    return vn;
+#else
+    return fbl::WrapRefPtr(vnode_hash_.find(ino).CopyPointer());
+#endif
+}
+
+void Minfs::VnodeReleaseLocked(VnodeMinfs* vn) {
     vnode_hash_.erase(*vn);
 }
 
@@ -569,7 +624,8 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
     if ((ino < 1) || (ino >= info_.inode_count)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
-    fbl::RefPtr<VnodeMinfs> vn = fbl::RefPtr<VnodeMinfs>(vnode_hash_.find(ino).CopyPointer());
+
+    fbl::RefPtr<VnodeMinfs> vn = VnodeLookup(ino);
     if (vn != nullptr) {
         *out = fbl::move(vn);
         return ZX_OK;
@@ -590,7 +646,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
 #endif
     memcpy(&vn->inode_, (void*)((uintptr_t)inodata + off_of_ino), kMinfsInodeSize);
     vn->ino_ = ino;
-    vnode_hash_.insert(vn.get());
+    VnodeInsert(vn.get());
 
     *out = fbl::move(vn);
     return ZX_OK;
@@ -600,7 +656,7 @@ zx_status_t Minfs::BlockFree(WriteTxn* txn, blk_t bno) {
     ValidateBno(bno);
 
 #ifdef __Fuchsia__
-    auto bbm_id = block_map_vmoid_;
+    auto bbm_id = block_map_.StorageUnsafe()->GetVmo();
 #else
     auto bbm_id = block_map_.StorageUnsafe()->GetData();
 #endif
@@ -643,7 +699,7 @@ zx_status_t Minfs::BlockNew(WriteTxn* txn, blk_t hint, blk_t* out_bno) {
 
 // commit the bitmap
 #ifdef __Fuchsia__
-    txn->Enqueue(block_map_vmoid_, bmbno_rel, bmbno_abs, 1);
+    txn->Enqueue(block_map_.StorageUnsafe()->GetVmo(), bmbno_rel, bmbno_abs, 1);
 #else
     void* bmdata = fs::GetBlock<kMinfsBlockSize>(block_map_.StorageUnsafe()->GetData(), bmbno_rel);
     bc_->Writeblk(bmbno_abs, bmdata);
@@ -661,7 +717,7 @@ zx_status_t Minfs::CountUpdate(WriteTxn* txn) {
     void* infodata = info_vmo_->GetData();
     memcpy(infodata, &info_, sizeof(info_));
     //TODO(planders): look into delaying this transaction.
-    txn->Enqueue(info_vmoid_, 0, 0, 1);
+    txn->Enqueue(info_vmo_->GetVmo(), 0, 0, 1);
 #else
     uint8_t blk[kMinfsBlockSize];
     memset(blk, 0, sizeof(blk));
@@ -775,6 +831,23 @@ zx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_i
         return status;
     }
 
+    fbl::unique_ptr<MappedVmo> buffer;
+    // At rest, this buffer will have zero committed pages, and consume a
+    // minimal amount of memory.
+    // TODO(smklein): Create max buffer size relative to total RAM size.
+    constexpr size_t kWriteBufferSize = 64 * (1LU << 20);
+    static_assert(kWriteBufferSize % kMinfsBlockSize == 0,
+                  "Buffer Size must be a multiple of the MinFS Block Size");
+    if ((status = MappedVmo::Create(kWriteBufferSize, "minfs-writeback",
+                                    &buffer)) != ZX_OK) {
+        return status;
+    }
+
+    if ((status = WritebackBuffer::Create(fs->bc_.get(), fbl::move(buffer),
+                                          &fs->writeback_)) != ZX_OK) {
+        return status;
+    }
+
 #else
     for (uint32_t n = 0; n < fs->abmblks_; n++) {
         void* bmdata = fs::GetBlock<kMinfsBlockSize>(fs->block_map_.StorageUnsafe()->GetData(), n);
@@ -823,6 +896,12 @@ zx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc
 }
 
 zx_status_t Minfs::Unmount() {
+#ifdef __Fuchsia__
+    // Ensure writeback buffer completes before auxilliary structures
+    // are deleted.
+    writeback_ = nullptr;
+#endif
+    bc_->Sync();
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
     // closed.

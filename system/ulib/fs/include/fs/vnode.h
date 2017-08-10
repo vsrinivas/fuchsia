@@ -44,9 +44,10 @@ inline bool vfs_valid_name(fbl::StringPiece name) {
 // The lower half of flags (VFS_FLAG_RESERVED_MASK) is reserved
 // for usage by fs::Vnode, but the upper half of flags may
 // be used by subclasses of Vnode.
-class Vnode : public fbl::RefCounted<Vnode> {
+class Vnode : public fbl::RefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 public:
     virtual ~Vnode();
+    virtual void fbl_recycle() { delete this; }
 
     // Ensures that it is valid to access the vnode with given flags.
     virtual zx_status_t ValidateFlags(uint32_t flags);

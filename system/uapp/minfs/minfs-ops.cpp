@@ -17,6 +17,7 @@
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
 #include <fdio/vfs.h>
+#include <fbl/auto_lock.h>
 #endif
 
 #include "minfs-private.h"
@@ -36,7 +37,7 @@ zx_time_t minfs_gettime_utc() {
 namespace minfs {
 
 #ifdef __Fuchsia__
-zx_status_t VnodeMinfs::VmoReadExact(void* data, uint64_t offset, size_t len) {
+zx_status_t VnodeMinfs::VmoReadExact(void* data, uint64_t offset, size_t len) const {
     size_t actual;
     zx_status_t status = vmo_.read(data, offset, len, &actual);
     if (status != ZX_OK) {
@@ -122,8 +123,8 @@ zx_status_t VnodeMinfs::BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, siz
         // only update the indirect block if an entry was deleted
         if (*dirty) {
 #ifdef __Fuchsia__
-            validate_vmo_size(vmo_indirect_->GetVmo(), ib_vmo_offset + i);
-            txn->Enqueue(vmoid_indirect_, ib_vmo_offset + i, iarray[i] + fs_->info_.dat_block, 1);
+            txn->Enqueue(vmo_indirect_->GetVmo(), ib_vmo_offset + i, iarray[i] +
+                         fs_->info_.dat_block, 1);
 #else
             fs_->bc_->Writeblk(iarray[i] + fs_->info_.dat_block, entry);
 #endif
@@ -177,8 +178,8 @@ zx_status_t VnodeMinfs::BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibind
         // only update the indirect block if an entry was deleted
         if (*dirty) {
 #ifdef __Fuchsia__
-            validate_vmo_size(vmo_indirect_->GetVmo(), dib_vmo_offset + i);
-            txn->Enqueue(vmoid_indirect_, dib_vmo_offset + i, diarray[i] + fs_->info_.dat_block, 1);
+            txn->Enqueue(vmo_indirect_->GetVmo(), dib_vmo_offset + i, diarray[i] +
+                         fs_->info_.dat_block, 1);
 #else
             fs_->bc_->Writeblk(diarray[i] + fs_->info_.dat_block, dientry);
 #endif
@@ -203,8 +204,8 @@ zx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, blk_t start) {
     bool dirty = false;
     zx_status_t status = ZX_OK;
     size_t size = (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
-
     size_t count = start <= kMinfsDirect ? kMinfsDirect - start : 0;
+
     if ((status = BlocksShrinkDirect(txn, count, &inode_.dnum[start], &dirty))
         != ZX_OK) {
         return status;
@@ -353,8 +354,8 @@ zx_status_t VnodeMinfs::InitVmo() {
     }
 
     zx_status_t status;
-    if ((status = zx::vmo::create(fbl::round_up(inode_.size, kMinfsBlockSize),
-                                  0, &vmo_)) != ZX_OK) {
+    const size_t vmo_size = fbl::round_up(inode_.size, kMinfsBlockSize);
+    if ((status = zx::vmo::create(vmo_size, 0, &vmo_)) != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
@@ -444,7 +445,9 @@ zx_status_t VnodeMinfs::InitVmo() {
         }
     }
 
-    return txn.Flush();
+    status = txn.Flush();
+    ValidateVmoTail();
+    return status;
 }
 #endif
 
@@ -520,7 +523,7 @@ zx_status_t VnodeMinfs::GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t 
     if (*dirty || direct_dirty) {
         // Write back the indirect block if a new block was allocated
 #ifdef __Fuchsia__
-        txn->Enqueue(vmoid_indirect_, ib_vmo_offset, *ibno + fs_->info_.dat_block, 1);
+        txn->Enqueue(vmo_indirect_->GetVmo(), ib_vmo_offset, *ibno + fs_->info_.dat_block, 1);
 #else
         fs_->bc_->Writeblk(*ibno + fs_->info_.dat_block, ientry);
 #endif
@@ -577,7 +580,7 @@ zx_status_t VnodeMinfs::GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, ui
     if (*dirty || indirect_dirty) {
         // Write back the doubly indirect block if a new block was allocated
 #ifdef __Fuchsia__
-        txn->Enqueue(vmoid_indirect_, dib_vmo_offset, *dibno + fs_->info_.dat_block, 1);
+        txn->Enqueue(vmo_indirect_->GetVmo(), dib_vmo_offset, *dibno + fs_->info_.dat_block, 1);
 #else
         fs_->bc_->Writeblk(*dibno + fs_->info_.dat_block, dientry);
 #endif
@@ -754,7 +757,7 @@ zx_status_t VnodeMinfs::CanUnlink() const {
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
+zx_status_t VnodeMinfs::UnlinkChild(WritebackWork* wb,
                                     fbl::RefPtr<VnodeMinfs> childvn,
                                     minfs_dirent_t* de, DirectoryOffset* offs) {
     // Coalesce the current dirent with the previous/next dirent, if they
@@ -808,14 +811,14 @@ zx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
     de->reclen = static_cast<uint32_t>(coalesced_size & kMinfsReclenMask) |
         (de->reclen & kMinfsReclenLast);
     // Erase dirent (replace with 'empty' dirent)
-    if ((status = WriteExactInternal(txn, de, MINFS_DIRENT_SIZE, off)) != ZX_OK) {
+    if ((status = WriteExactInternal(wb->txn(), de, MINFS_DIRENT_SIZE, off)) != ZX_OK) {
         return status;
     }
 
     if (de->reclen & kMinfsReclenLast) {
         // Truncating the directory merely removed unused space; if it fails,
         // the directory contents are still valid.
-        TruncateInternal(txn, off + MINFS_DIRENT_SIZE);
+        TruncateInternal(wb->txn(), off + MINFS_DIRENT_SIZE);
     }
 
     inode_.dirent_count--;
@@ -824,7 +827,9 @@ zx_status_t VnodeMinfs::UnlinkChild(WriteTxn* txn,
         // Child directory had '..' which pointed to parent directory
         inode_.link_count--;
     }
-    childvn->RemoveInodeLink(txn);
+    childvn->RemoveInodeLink(wb->txn());
+    wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    wb->PinVnode(childvn);
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -837,8 +842,11 @@ void VnodeMinfs::RemoveInodeLink(WriteTxn* txn) {
             // to themselves via ".". Thus, when they reach "one link", they
             // are only pointed to by themselves, and should be deleted.
             inode_.link_count--;
-            flags_ |= kMinfsFlagDeletedDirectory;
         }
+    }
+
+    if (fd_count_ == 0 && IsUnlinked()) {
+        Purge(txn);
     }
 
     InodeSync(txn, kMxFsSyncMtime);
@@ -864,7 +872,7 @@ static zx_status_t cb_dir_unlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* 
     if ((status = vn->CanUnlink()) != ZX_OK) {
         return status;
     }
-    return vndir->UnlinkChild(args->txn, fbl::move(vn), de, offs);
+    return vndir->UnlinkChild(args->wb, fbl::move(vn), de, offs);
 }
 
 // same as unlink, but do not validate vnode
@@ -879,7 +887,7 @@ static zx_status_t cb_dir_force_unlink(fbl::RefPtr<VnodeMinfs> vndir, minfs_dire
     if ((status = vndir->fs_->VnodeGet(&vn, de->ino)) < 0) {
         return status;
     }
-    return vndir->UnlinkChild(args->txn, fbl::move(vn), de, offs);
+    return vndir->UnlinkChild(args->wb, fbl::move(vn), de, offs);
 }
 
 // Given a (name, inode, type) combination:
@@ -917,13 +925,16 @@ static zx_status_t cb_dir_attempt_rename(fbl::RefPtr<VnodeMinfs> vndir, minfs_di
     // the parent (link count of 1), but the new directory will ALSO have a ".."
     // entry, making the rename operation idempotent w.r.t. the parent link
     // count.
-    vn->RemoveInodeLink(args->txn);
+    vn->RemoveInodeLink(args->wb->txn());
 
     de->ino = args->ino;
-    status = vndir->WriteExactInternal(args->txn, de, DirentSize(de->namelen), offs->off);
+    status = vndir->WriteExactInternal(args->wb->txn(), de, DirentSize(de->namelen), offs->off);
     if (status != ZX_OK) {
         return status;
     }
+
+    args->wb->PinVnode(vn);
+    args->wb->PinVnode(vndir);
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -934,12 +945,13 @@ static zx_status_t cb_dir_update_inode(fbl::RefPtr<VnodeMinfs> vndir, minfs_dire
     }
 
     de->ino = args->ino;
-    zx_status_t status = vndir->WriteExactInternal(args->txn, de,
+    zx_status_t status = vndir->WriteExactInternal(args->wb->txn(), de,
                                                    DirentSize(de->namelen),
                                                    offs->off);
     if (status != ZX_OK) {
         return status;
     }
+    args->wb->PinVnode(vndir);
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -949,7 +961,7 @@ static zx_status_t add_dirent(fbl::RefPtr<VnodeMinfs> vndir,
     de->type = static_cast<uint8_t>(args->type);
     de->namelen = static_cast<uint8_t>(args->name.length());
     memcpy(de->name, args->name.data(), de->namelen);
-    zx_status_t status = vndir->WriteExactInternal(args->txn, de,
+    zx_status_t status = vndir->WriteExactInternal(args->wb->txn(), de,
                                                    DirentSize(de->namelen),
                                                    off);
     if (status != ZX_OK) {
@@ -960,6 +972,7 @@ static zx_status_t add_dirent(fbl::RefPtr<VnodeMinfs> vndir,
         // Child directory has '..' which will point to parent directory
         vndir->inode_.link_count++;
     }
+    args->wb->PinVnode(vndir);
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -986,7 +999,7 @@ static zx_status_t cb_dir_append(fbl::RefPtr<VnodeMinfs> vndir, minfs_dirent_t* 
         // shrink existing entry
         bool was_last_record = de->reclen & kMinfsReclenLast;
         de->reclen = size;
-        zx_status_t status = vndir->WriteExactInternal(args->txn, de,
+        zx_status_t status = vndir->WriteExactInternal(args->wb->txn(), de,
                                                        DirentSize(de->namelen),
                                                        offs->off);
         if (status != ZX_OK) {
@@ -1035,7 +1048,8 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
             break;
         case DIR_CB_SAVE_SYNC:
             inode_.seq_num++;
-            InodeSync(args->txn, kMxFsSyncMtime);
+            InodeSync(args->wb->txn(), kMxFsSyncMtime);
+            args->wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
             return ZX_OK;
         case DIR_CB_DONE:
         default:
@@ -1045,12 +1059,21 @@ zx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
     return ZX_ERR_NOT_FOUND;
 }
 
-VnodeMinfs::~VnodeMinfs() {
-    if (inode_.link_count == 0) {
-        fs_->InoFree(this);
+void VnodeMinfs::fbl_recycle() {
+    if (fd_count_ != 0 || !IsUnlinked()) {
+        // If this node has not been purged already, remove it from the
+        // hash map. If it has been purged; it will already be absent
+        // from the map (and may have already been replaced with a new
+        // node, if the inode has been re-used).
+#ifdef __Fuchsia__
+        fbl::AutoLock lock(&fs_->hash_lock_);
+#endif
+        fs_->VnodeReleaseLocked(this);
     }
+    delete this;
+}
 
-    fs_->VnodeRelease(this);
+VnodeMinfs::~VnodeMinfs() {
 #ifdef __Fuchsia__
     // Detach the vmoids from the underlying block device,
     // so the underlying VMO may be released.
@@ -1087,11 +1110,48 @@ zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
             return ZX_ERR_NOT_FILE;
         }
     }
+    return ZX_OK;
+}
 
+zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
+    fd_count_++;
+    return ZX_OK;
+}
+
+void VnodeMinfs::Purge(WriteTxn* txn) {
+    ZX_DEBUG_ASSERT(fd_count_ == 0);
+    ZX_DEBUG_ASSERT(IsUnlinked());
+#ifdef __Fuchsia__
+    {
+        fbl::AutoLock lock(&fs_->hash_lock_);
+        fs_->VnodeReleaseLocked(this);
+    }
+    // TODO(smklein): Only init indirect vmo if it's needed
+    if (InitIndirectVmo() == ZX_OK) {
+        fs_->InoFree(this, txn);
+    } else {
+        fprintf(stderr, "minfs: Failed to Init Indirect VMO while purging %u\n", ino_);
+    }
+#else
+    fs_->VnodeReleaseLocked(this);
+    fs_->InoFree(this, txn);
+#endif
+}
+
+zx_status_t VnodeMinfs::Close() {
+    ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing ino with no fds open");
+    fd_count_--;
+
+    if (fd_count_ == 0 && IsUnlinked()) {
+        fbl::unique_ptr<WritebackWork> wb(new WritebackWork(fs_->bc_.get()));
+        Purge(wb->txn());
+        fs_->EnqueueWork(fbl::move(wb));
+    }
     return ZX_OK;
 }
 
 zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_actual) {
+    ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Reading from ino with no fds open");
     FS_TRACE(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, off);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
@@ -1159,18 +1219,27 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
     return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
+zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
+                              size_t* out_actual) {
+    ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Writing to ino with no fds open");
     FS_TRACE(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, ino_, len, offset);
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
-    WriteTxn txn(fs_->bc_.get());
-    zx_status_t status = WriteInternal(&txn, data, len, offset, out_actual);
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = WriteInternal(wb->txn(), data, len, offset, out_actual);
     if (status != ZX_OK) {
         return status;
     }
     if (*out_actual != 0) {
-        InodeSync(&txn, kMxFsSyncMtime);  // Successful writes updates mtime
+        InodeSync(wb->txn(), kMxFsSyncMtime);  // Successful writes updates mtime
+        wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+        fs_->EnqueueWork(fbl::move(wb));
     }
     return ZX_OK;
 }
@@ -1213,8 +1282,8 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
 #ifdef __Fuchsia__
         size_t xfer_off = n * kMinfsBlockSize + adjust;
         if ((xfer_off + xfer) > inode_.size) {
-            size_t new_size = xfer_off + xfer;
-            if ((status = vmo_.set_size(fbl::round_up(new_size, kMinfsBlockSize))) != ZX_OK) {
+            size_t new_size = fbl::round_up(xfer_off + xfer, kMinfsBlockSize);
+            if ((status = vmo_.set_size(new_size)) != ZX_OK) {
                 goto done;
             }
         }
@@ -1230,7 +1299,7 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
             goto done;
         }
         ZX_DEBUG_ASSERT(bno != 0);
-        txn->Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
+        txn->Enqueue(vmo_.get(), n, bno + fs_->info_.dat_block, 1);
 #else
         blk_t bno;
         if ((status = GetBno(txn, n, &bno)) != ZX_OK) {
@@ -1272,6 +1341,7 @@ done:
     }
 
     *actual = len;
+    ValidateVmoTail();
     return ZX_OK;
 }
 
@@ -1331,8 +1401,14 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     }
     if (dirty) {
         // write to disk, but don't overwrite the time
-        WriteTxn txn(fs_->bc_.get());
-        InodeSync(&txn, kMxFsSyncDefault);
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        InodeSync(wb->txn(), kMxFsSyncDefault);
+        wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+        fs_->EnqueueWork(fbl::move(wb));
     }
     return ZX_OK;
 }
@@ -1459,7 +1535,7 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (IsDeletedDirectory()) {
+    if (IsUnlinked()) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -1474,10 +1550,15 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
     // creating a directory?
     uint32_t type = S_ISDIR(mode) ? kMinfsTypeDir : kMinfsTypeFile;
 
-    WriteTxn txn(fs_->bc_.get());
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     // mint a new inode and vnode for it
     fbl::RefPtr<VnodeMinfs> vn;
-    if ((status = fs_->VnodeNew(&txn, &vn, type)) < 0) {
+    if ((status = fs_->VnodeNew(wb->txn(), &vn, type)) < 0) {
         return status;
     }
 
@@ -1486,22 +1567,27 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
         char bdata[DirentSize(1) + DirentSize(2)];
         minfs_dir_init(bdata, vn->ino_, ino_);
         size_t expected = DirentSize(1) + DirentSize(2);
-        if (vn->WriteExactInternal(&txn, bdata, expected, 0) != ZX_OK) {
+        if (vn->WriteExactInternal(wb->txn(), bdata, expected, 0) != ZX_OK) {
             return ZX_ERR_IO;
         }
         vn->inode_.dirent_count = 2;
-        vn->InodeSync(&txn, kMxFsSyncDefault);
+        vn->InodeSync(wb->txn(), kMxFsSyncDefault);
     }
 
     // add directory entry for the new child node
     args.ino = vn->ino_;
     args.type = type;
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-    args.txn = &txn;
+    args.wb = wb.get();
     if ((status = ForEachDirent(&args, cb_dir_append)) < 0) {
         return status;
     }
 
+    wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    wb->PinVnode(vn);
+    fs_->EnqueueWork(fbl::move(wb));
+
+    vn->fd_count_ = 1;
     *out = fbl::move(vn);
     return ZX_OK;
 }
@@ -1559,12 +1645,21 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    WriteTxn txn(fs_->bc_.get());
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
     DirArgs args = DirArgs();
     args.name = name;
     args.type = must_be_dir ? kMinfsTypeDir : 0;
-    args.txn = &txn;
-    return ForEachDirent(&args, cb_dir_unlink);
+    args.wb = wb.get();
+    zx_status_t status = ForEachDirent(&args, cb_dir_unlink);
+    if (status == ZX_OK) {
+        wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+        fs_->EnqueueWork(fbl::move(wb));
+    }
+    return status;
 }
 
 zx_status_t VnodeMinfs::Truncate(size_t len) {
@@ -1572,12 +1667,18 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
         return ZX_ERR_NOT_FILE;
     }
 
-    WriteTxn txn(fs_->bc_.get());
-    zx_status_t status = TruncateInternal(&txn, len);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    zx_status_t status = TruncateInternal(wb->txn(), len);
     if (status == ZX_OK) {
         // Successful truncates update inode
-        InodeSync(&txn, kMxFsSyncMtime);
+        InodeSync(wb->txn(), kMxFsSyncMtime);
     }
+    wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    fs_->EnqueueWork(fbl::move(wb));
     return status;
 }
 
@@ -1627,7 +1728,7 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
                 if ((r = VmoWriteExact(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
                     return ZX_ERR_IO;
                 }
-                txn->Enqueue(vmoid_, rel_bno, bno + fs_->info_.dat_block, 1);
+                txn->Enqueue(vmo_.get(), rel_bno, bno + fs_->info_.dat_block, 1);
 #else
                 if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, bdata)) {
                     return ZX_ERR_IO;
@@ -1644,6 +1745,8 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
         if (kMinfsMaxFileSize < len) {
             return ZX_ERR_INVALID_ARGS;
         }
+    } else {
+        return ZX_OK;
     }
 
     inode_.size = static_cast<uint32_t>(len);
@@ -1653,6 +1756,7 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
     }
 #endif
 
+    ValidateVmoTail();
     return ZX_OK;
 }
 
@@ -1706,8 +1810,12 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
 
     // if the entry for 'newname' exists, make sure it can be replaced by
     // the vnode behind 'oldname'.
-    WriteTxn txn(fs_->bc_.get());
-    args.txn = &txn;
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    args.wb = wb.get();
     args.name = newname;
     args.ino = oldvn->ino_;
     args.type = oldvn->IsDirectory() ? kMinfsTypeDir : kMinfsTypeFile;
@@ -1743,7 +1851,11 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
 
     // finally, remove oldname from its original position
     args.name = oldname;
-    return ForEachDirent(&args, cb_dir_force_unlink);
+    status = ForEachDirent(&args, cb_dir_force_unlink);
+    wb->PinVnode(oldvn);
+    wb->PinVnode(newdir);
+    fs_->EnqueueWork(fbl::move(wb));
+    return status;
 }
 
 zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {
@@ -1751,7 +1863,7 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
-    } else if (IsDeletedDirectory()) {
+    } else if (IsUnlinked()) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -1769,29 +1881,45 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
         return (status == ZX_OK) ? ZX_ERR_ALREADY_EXISTS : status;
     }
 
-    WriteTxn txn(fs_->bc_.get());
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
     args.ino = target->ino_;
     args.type = kMinfsTypeFile; // We can't hard link directories
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-    args.txn = &txn;
+    args.wb = wb.get();
     if ((status = ForEachDirent(&args, cb_dir_append)) < 0) {
         return status;
     }
 
     // We have successfully added the vn to a new location. Increment the link count.
     target->inode_.link_count++;
-    target->InodeSync(&txn, kMxFsSyncDefault);
-
+    target->InodeSync(wb->txn(), kMxFsSyncDefault);
+    wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
+    wb->PinVnode(target);
+    fs_->EnqueueWork(fbl::move(wb));
     return ZX_OK;
 }
 
+#ifdef __Fuchsia__
+// TODO(ZX-1308): The Sync ioctl should probably not block the calling thread;
+// rather, it should pass a handle back to the client which is signalled
+// when the completion is signalled.
 zx_status_t VnodeMinfs::Sync() {
+    completion_t completion;
+    zx_status_t status;
+    if ((status = fs_->Sync(&completion)) != ZX_OK) {
+        return status;
+    } else if ((status = completion_wait(&completion, ZX_SEC(15))) != ZX_OK) {
+        return status;
+    }
     return fs_->bc_->Sync();
 }
 
-#ifdef __Fuchsia__
 zx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {
-    if (!IsDirectory() || IsDeletedDirectory()) {
+    if (!IsDirectory() || IsUnlinked()) {
         return ZX_ERR_NOT_DIR;
     } else if (IsRemote()) {
         return ZX_ERR_ALREADY_BOUND;

@@ -21,6 +21,7 @@ MODULE_SRCS += \
 MODULE_SRCS += \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
+    $(LOCAL_DIR)/minfs-writeback.cpp \
     $(LOCAL_DIR)/minfs-check.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -48,6 +49,7 @@ MODULE_HOST_SRCS := \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
     $(LOCAL_DIR)/minfs-check.cpp \
+    $(LOCAL_DIR)/minfs-writeback.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
