@@ -15,10 +15,10 @@
 
 set -eo pipefail
 
-SRCFILE="$PWD/${BASH_SOURCE[0]}"
+GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Location of magenta and its build dir
-MAGENTADIR="${SRCFILE%magenta/*}magenta"
+MAGENTADIR="${MAGENTA_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
 BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
 mkdir -p $BUILDDIR
 
