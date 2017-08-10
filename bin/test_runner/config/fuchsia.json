@@ -1,6 +1,10 @@
 {
   "tests": [
     {
+      "name": "bluetooth_unittests",
+      "exec": "/system/test/bluetooth_unittests"
+    },
+    {
       "name": "go_os_test",
       "exec": "/system/bin/report_result /system/test/go_os_test"
     },
