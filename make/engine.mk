@@ -451,8 +451,7 @@ find-clang-solib = \
 # needs to link with $(ASAN_SOLIB).  module-user{app,lib}.mk adds it
 # to MODULE_EXTRA_OBJS so the linking target will depend on it.
 ASAN_SONAME := libclang_rt.asan-$(CLANG_ARCH).so
-# TODO(TO-376): It shouldn't need the lib/fuchsia/ prefix here, but it does.
-ASAN_SOLIB := $(call find-clang-solib,lib/fuchsia/$(ASAN_SONAME))
+ASAN_SOLIB := $(call find-clang-solib,$(ASAN_SONAME))
 USER_MANIFEST_LINES += lib/$(ASAN_SONAME)=$(ASAN_SOLIB)
 
 # The ASan runtime DSO depends on more DSOs from the toolchain.  We don't
