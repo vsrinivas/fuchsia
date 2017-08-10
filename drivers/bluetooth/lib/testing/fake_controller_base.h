@@ -71,6 +71,10 @@ class FakeControllerBase : ::mtl::MessageLoopHandler {
   void HandleCommandPacket();
   void HandleACLPacket();
 
+  // Cleans up the channel handles. This must be run on |task_runner_|'s thread.
+  void CloseCommandChannelInternal();
+  void CloseACLDataChannelInternal();
+
   // Used to assert that certain public functions are only called on the creation thread.
   ftl::ThreadChecker thread_checker_;
 

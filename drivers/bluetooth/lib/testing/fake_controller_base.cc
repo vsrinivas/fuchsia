@@ -50,8 +50,8 @@ void FakeControllerBase::Stop() {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   task_runner_->PostTask([this] {
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
+    CloseCommandChannelInternal();
+    CloseACLDataChannelInternal();
     mtl::MessageLoop::GetCurrent()->QuitNow();
   });
   if (thread_.joinable()) thread_.join();
@@ -72,11 +72,13 @@ void FakeControllerBase::SendACLDataChannelPacket(const common::ByteBuffer& pack
 }
 
 void FakeControllerBase::CloseCommandChannel() {
-  cmd_channel_.reset();
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  common::RunTaskSync([this] { CloseCommandChannelInternal(); }, task_runner_);
 }
 
 void FakeControllerBase::CloseACLDataChannel() {
-  acl_channel_.reset();
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  common::RunTaskSync([this] { CloseACLDataChannelInternal(); }, task_runner_);
 }
 
 void FakeControllerBase::OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) {
@@ -100,7 +102,7 @@ void FakeControllerBase::HandleCommandPacket() {
     else
       FTL_LOG(ERROR) << "Failed to read on cmd channel: " << mx_status_get_string(status);
 
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
+    CloseCommandChannelInternal();
     return;
   }
 
@@ -126,12 +128,30 @@ void FakeControllerBase::HandleACLPacket() {
     else
       FTL_LOG(ERROR) << "Failed to read on ACL channel: " << mx_status_get_string(status);
 
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
+    CloseACLDataChannelInternal();
     return;
   }
 
   common::BufferView view(buffer.data(), read_size);
   OnACLDataPacketReceived(view);
+}
+
+void FakeControllerBase::CloseCommandChannelInternal() {
+  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  if (!cmd_handler_key_) return;
+
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(cmd_handler_key_);
+  cmd_handler_key_ = 0u;
+  cmd_channel_.reset();
+}
+
+void FakeControllerBase::CloseACLDataChannelInternal() {
+  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  if (!acl_handler_key_) return;
+
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(acl_handler_key_);
+  acl_handler_key_ = 0u;
+  acl_channel_.reset();
 }
 
 }  // namespace testing
