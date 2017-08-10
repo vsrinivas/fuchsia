@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 group("tools") {
-  deps = [
+  public_deps = [
     "bluetoothcli",
     "btsnoop",
-    "hci_acl_test",
     "hcitool",
   ]
 }

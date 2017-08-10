@@ -16,9 +16,9 @@ static_library("hci") {
     "connection.h",
     "control_packets.cc",
     "control_packets.h",
+    "defaults.h",
     "device_wrapper.cc",
     "device_wrapper.h",
-    "defaults.h",
     "legacy_low_energy_scanner.cc",
     "legacy_low_energy_scanner.h",
     "low_energy_connector.cc",
@@ -40,8 +40,6 @@ static_library("hci") {
     "//lib/ftl",
     "//lib/mtl",
   ]
-
-  all_dependent_configs = [ "//apps/bluetooth:cpp_thread_safety" ]
 }
 
 source_set("tests") {

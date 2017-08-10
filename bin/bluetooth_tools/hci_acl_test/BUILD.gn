@@ -4,6 +4,7 @@
 
 executable("hci_acl_test") {
   output_name = "bluetooth_hci_acl_test"
+  testonly = true
 
   sources = [
     "le_connection_test.cc",

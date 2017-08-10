@@ -2,27 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("bluetooth") {
+import("//packages/package.gni")
+
+package("bluetooth") {
   deps = [
     "//apps/bluetooth/lib",
     "//apps/bluetooth/service",
     "//apps/bluetooth/tools",
   ]
-}
 
-group("tests") {
-  testonly = true
-  deps = [
-    "//apps/bluetooth/test:bluetooth_unittests",
+  binaries = [
+    {
+      name = "bluetooth_service"
+    },
+
+    {
+      name = "bluetooth_bluetoothcli"
+    },
+
+    {
+      name = "bluetooth_btsnoop"
+    },
+
+    {
+      name = "bluetooth_hcitool"
+    },
   ]
-}
-
-# Enables libc++ thread safety annotations. Use this to enable macros from
-# lib/ftl/synchronization/thread_safety_annotations.h to be used with std::mutex and friends.
-config("cpp_thread_safety") {
-  defines = [
-    "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS",
-  ]
-
-  cflags = [ "-Wthread-safety" ]
 }
