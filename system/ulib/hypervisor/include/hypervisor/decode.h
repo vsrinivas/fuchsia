@@ -27,7 +27,7 @@ typedef struct instruction {
     uint8_t mem;
     uint32_t imm;
     uint64_t* reg;
-    uint16_t* flags;
+    uint32_t* flags;
 } instruction_t;
 
 mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_state_t* vcpu_state,

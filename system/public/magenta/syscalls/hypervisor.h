@@ -97,8 +97,8 @@ typedef struct mx_vcpu_state {
     uint64_t r13;
     uint64_t r14;
     uint64_t r15;
-    // Only the user-controllable lower 16-bits of the flags register.
-    uint16_t flags;
+    // Only the user-controllable lower 32-bits of the flags register.
+    uint32_t flags;
 #endif
 } mx_vcpu_state_t;
 

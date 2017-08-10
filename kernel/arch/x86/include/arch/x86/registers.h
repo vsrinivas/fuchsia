@@ -98,7 +98,10 @@
                                          X86_FLAGS_SF | \
                                          X86_FLAGS_TF | \
                                          X86_FLAGS_DF | \
-                                         X86_FLAGS_OF)
+                                         X86_FLAGS_OF | \
+                                         X86_FLAGS_NT | \
+                                         X86_FLAGS_AC | \
+                                         X86_FLAGS_ID)
 
 #ifndef ASSEMBLY
 

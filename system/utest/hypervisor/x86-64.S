@@ -50,7 +50,8 @@ FUNCTION(vcpu_read_write_state_start)
     add $15, %r14
     add $16, %r15
 
-    stc
+    stc  // Set carry flag (bit 0)
+    stac // Set AC flag (bit 18)
 
     out %al, $EXIT_TEST_PORT
 FUNCTION(vcpu_read_write_state_end)

@@ -712,17 +712,6 @@ static bool test_writing_register_state(void) {
     ASSERT_EQ(mx_task_resume(thread_handle, 0), MX_OK, "");
     ASSERT_EQ(mx_object_wait_one(thread_handle, MX_THREAD_TERMINATED,
                                  MX_TIME_INFINITE, NULL), MX_OK, "");
-#if defined(__x86_64__)
-    // The mx_thread_write_state() syscall currently ignores and unsets the
-    // following x86 flags:
-    uint64_t regs_unset =
-        (1 << 14) | // NT: nested task flag
-        (1 << 18) | // AC: alignment check flag
-        (1 << 21);  // ID: used for testing CPUID support
-    // Check that we're testing all those flags.
-    EXPECT_EQ(regs_to_set.rflags & regs_unset, regs_unset, "");
-    regs_to_set.rflags &= ~regs_unset;
-#endif
     EXPECT_TRUE(regs_expect_eq(&regs_to_set, &stack.regs_got), "");
 
     // Clean up.

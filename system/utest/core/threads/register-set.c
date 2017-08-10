@@ -13,10 +13,27 @@ void regs_fill_test_values(mx_general_regs_t* regs) {
     }
     // Set various flags bits that will read back the same.
 #if defined(__x86_64__)
-    // Note that this sets the direction flag (bit 10), which helps test
-    // whether the kernel correctly handles taking an interrupt when that
-    // flag is set (see MG-998).
-    regs->rflags = 0x244ed7;
+    // Here we set all flag bits that are modifiable from user space or
+    // that are not modifiable but are expected to read back as 1, with the
+    // exception of the trap flag (bit 8, which would interfere with
+    // execution if we set it).
+    //
+    // Note that setting the direction flag (bit 10) helps test whether the
+    // kernel correctly handles taking an interrupt when that flag is set
+    // (see MG-998).
+    regs->rflags =
+        (1 << 0) | // CF: carry flag
+        (1 << 1) | // Reserved, always 1
+        (1 << 2) | // PF: parity flag
+        (1 << 4) | // AF: adjust flag
+        (1 << 6) | // ZF: zero flag
+        (1 << 7) | // SF: sign flag
+        (1 << 9) | // IF: interrupt enable flag (set by kernel)
+        (1 << 10) | // DF: direction flag
+        (1 << 11) | // OF: overflow flag
+        (1 << 14) | // NT: nested task flag
+        (1 << 18) | // AC: alignment check flag
+        (1 << 21);  // ID: used for testing for CPUID support
 #elif defined(__aarch64__)
     // Only set the 4 flag bits that are readable and writable by the
     // instructions "msr nzcv, REG" and "mrs REG, nzcv".
