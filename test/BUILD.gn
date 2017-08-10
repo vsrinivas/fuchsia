@@ -5,12 +5,9 @@
 executable("bluetooth_unittests") {
   testonly = true
 
-  sources = [
-    "test_main.cc",
-  ]
-
   deps = [
     "//apps/bluetooth/lib:tests",
+    "//apps/test_runner/src:gtest_main",
     "//third_party/gtest",
   ]
 }
