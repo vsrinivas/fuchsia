@@ -4,6 +4,7 @@
 
 #include "apps/media/src/fidl/fidl_packet_consumer.h"
 
+#include "apps/media/src/fidl/fidl_type_conversions.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -93,6 +94,12 @@ FidlPacketConsumer::PacketImpl::PacketImpl(
              supplied_packet->packet()->end_of_stream,
              supplied_packet->payload_size(),
              supplied_packet->payload()),
-      supplied_packet_(std::move(supplied_packet)) {}
+      supplied_packet_(std::move(supplied_packet)) {
+  if (supplied_packet_->packet()->revised_media_type) {
+    SetRevisedStreamType(
+        supplied_packet_->packet()
+            ->revised_media_type.To<std::unique_ptr<StreamType>>());
+  }
+}
 
 }  // namespace media
