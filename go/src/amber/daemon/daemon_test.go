@@ -30,13 +30,18 @@ type testSrc struct {
 	UpdateReqs map[string]int
 	getReqs    map[Package]*struct{}
 	interval   time.Duration
+	pkgs       map[string]struct{}
+	replyDelay time.Duration
 }
 
 func (t *testSrc) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
 	t.mu.Lock()
-
+	time.Sleep(t.replyDelay)
 	updates := make(map[Package]Package)
 	for _, p := range pkgs {
+		if _, ok := t.pkgs[p.Name]; !ok {
+			continue
+		}
 		t.UpdateReqs[p.Name] = t.UpdateReqs[p.Name] + 1
 		up := Package{Name: p.Name, Version: randSeq(6)}
 		t.getReqs[up] = &struct{}{}
@@ -96,10 +101,12 @@ func (t *testTicker) makeTick() {
 	t.C <- t.last
 }
 
-func processPackage(update *Package, orig *Package, src Source, pkgs *PackageSet) error {
-	pkgs.Replace(orig, update, false)
-	_, err := src.FetchPkg(update)
-	return err
+func processPackage(r *GetResult, pkgs *PackageSet) error {
+	if r.Err != nil {
+		return r.Err
+	}
+	pkgs.Replace(&r.Orig, &r.Update, false)
+	return nil
 }
 
 // TestDaemon tests daemon.go with a fake package source. The test runs for ~30
@@ -115,7 +122,7 @@ func TestDaemon(t *testing.T) {
 		return t
 	}
 
-	tickerGroup.Add(2)
+	tickerGroup.Add(1)
 
 	sources := createTestSrcs()
 	pkgSet := createMonitorPkgs()
@@ -128,49 +135,48 @@ func TestDaemon(t *testing.T) {
 	tickerGroup.Wait()
 
 	// protect against improper test rewrites
-	if len(tickers) != 2 {
+	if len(tickers) != 1 {
 		t.Errorf("Unexpected number of tickers!", len(tickers))
 	}
 
-	sepRuns := 10
-	simulRuns := 20
-
-	// run 10 times with a slight separation
-	for i := 0; i < sepRuns; i++ {
-		o := i % 2
-		tickers[o].makeTick()
+	// run 10 times with a slight separation so as not to exceed the
+	// throttle rate
+	runs := 10
+	for i := 0; i < runs; i++ {
 		time.Sleep(10 * time.Millisecond)
-		o++
-		o = o % 2
-		tickers[o].makeTick()
-	}
-
-	// run 20 times together
-	for i := 0; i < simulRuns; i++ {
-		o := i % 2
-		tickers[o].makeTick()
-		o++
-		o = o % 2
-		tickers[o].makeTick()
+		tickers[0].makeTick()
 	}
 
 	d.CancelAll()
 
-	for _, src := range sources {
-		verify(t, src, pkgSet, sepRuns+simulRuns+1)
-	}
+	verifyReqCount(t, sources, pkgSet, runs+1)
 }
 
-func TestOneShot(t *testing.T) {
-	// run the test a good number of times to try to catch rac-y failures
-	for i := 0; i < 25; i++ {
-		testDaemonOneShot(t)
-	}
-}
+func TestGetRequest(t *testing.T) {
+	emailPkg := Package{Name: "email", Version: "23af90ee"}
+	videoPkg := Package{Name: "video", Version: "f2b8006c"}
+	srchPkg := Package{Name: "search", Version: "fa08207e"}
 
-// TODO(jmatt) rewrite this test
-/*
-func testDaemonOneShot(t *testing.T) {
+	// create some test sources where neither has the full pkg set and
+	// they overlap
+	pkgs := make(map[string]struct{})
+	pkgs[emailPkg.Name] = struct{}{}
+	pkgs[videoPkg.Name] = struct{}{}
+	srcRateLimit := time.Millisecond * 1
+	tSrc := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: srcRateLimit,
+		pkgs:     pkgs}
+
+	pkgs = make(map[string]struct{})
+	pkgs[videoPkg.Name] = struct{}{}
+	pkgs[srchPkg.Name] = struct{}{}
+	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: srcRateLimit,
+		pkgs:     pkgs}
+	sources := []*testSrc{&tSrc, &tSrc2}
+
 	tickers := []testTicker{}
 	muTickers := sync.Mutex{}
 	tickerGroup := sync.WaitGroup{}
@@ -181,51 +187,134 @@ func testDaemonOneShot(t *testing.T) {
 		return t
 	}
 
-	tSrc := testSrc{UpdateReqs: make(map[string]int),
-		getReqs:  make(map[Package]*struct{}),
-		interval: time.Second * 3}
 	tickerGroup.Add(1)
-	monitoredPkgs := createMonitorPkgs()
-	oneShotPkgsA := createOneShotPkgsA()
-	oneShotPkgsB := createOneShotPkgsB()
 
-	d := NewDaemon(monitoredPkgs, processPackage)
-	d.AddSource(&tSrc)
-	tickerGroup.Wait()
-	// protect against improper test rewrites
-	if len(tickers) != 1 {
-		t.Errorf("Unexpected number of tickers!", len(tickers))
+	d := NewDaemon(NewPackageSet(), processPackage)
+	for _, src := range sources {
+		d.AddSource(src)
 	}
 
-	d.GetUpdates(oneShotPkgsA)
-	tickers[0].makeTick()
-	d.GetUpdates(oneShotPkgsB)
-	// allow a brief pause for requests to start before we shut down
-	// otherwise the stop request beats the GetUpdates request
-	time.Sleep(5 * time.Millisecond)
+	tickerGroup.Wait()
+
+	pkgSet := NewPackageSet()
+	pkgSet.Add(&emailPkg)
+	pkgSet.Add(&videoPkg)
+	pkgSet.Add(&srchPkg)
+	updateRes := d.GetUpdates(pkgSet)
+	verifyGetResults(t, pkgSet, updateRes)
+
+	time.Sleep(srcRateLimit * 2)
+	pkgSet = NewPackageSet()
+	pkgSet.Add(&videoPkg)
+	updateRes = d.GetUpdates(pkgSet)
+	verifyGetResults(t, pkgSet, updateRes)
 
 	d.CancelAll()
-	// verify a single request for the one-shot pkgs and a single
-	// request for the monitored pkgs
-	verify(t, &tSrc, oneShotPkgsA, 1)
-	verify(t, &tSrc, oneShotPkgsB, 1)
-	verify(t, &tSrc, monitoredPkgs, 2)
-}
-*/
-func createOneShotPkgsA() *PackageSet {
-	pkgSet := NewPackageSet()
-	pkgSet.Add(&Package{Name: "one", Version: "18facd43"})
-	pkgSet.Add(&Package{Name: "two", Version: "2ade0092"})
-	pkgSet.Add(&Package{Name: "three", Version: "34a077fe"})
-	return pkgSet
 }
 
-func createOneShotPkgsB() *PackageSet {
+func TestRateLimit(t *testing.T) {
+	srcRateLimit := 20 * time.Millisecond
+	tSrc := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: srcRateLimit,
+		pkgs:     make(map[string]struct{})}
+	wrapped := NewSourceKeeper(&tSrc)
+	dummy := []*Package{&Package{Name: "None", Version: "aaaaaa"}}
+
+	if _, err := wrapped.AvailableUpdates(dummy); err == ErrRateExceeded {
+		t.Errorf("Initial request was rate limited unexpectedly.\n")
+	}
+
+	if _, err := wrapped.AvailableUpdates(dummy); err != ErrRateExceeded {
+		t.Errorf("Request was not rate limited\n")
+	}
+
+	time.Sleep(srcRateLimit)
+	if _, err := wrapped.AvailableUpdates(dummy); err == ErrRateExceeded {
+		t.Errorf("Rate-allowed request failed.\n")
+	}
+}
+
+func TestRequestCollapse(t *testing.T) {
 	pkgSet := NewPackageSet()
-	pkgSet.Add(&Package{Name: "four", Version: "18facd43"})
-	pkgSet.Add(&Package{Name: "five", Version: "2ade0092"})
-	pkgSet.Add(&Package{Name: "six", Version: "34a077fe"})
-	return pkgSet
+	emailPkg := Package{Name: "email", Version: "23af90ee"}
+	videoPkg := Package{Name: "video", Version: "f2b8006c"}
+	srchPkg := Package{Name: "search", Version: "fa08207e"}
+	pkgSet.Add(&emailPkg)
+	pkgSet.Add(&videoPkg)
+	pkgSet.Add(&srchPkg)
+
+	// create some test sources where neither has the full pkg set and
+	// they overlap
+	pkgs := make(map[string]struct{})
+	pkgs[emailPkg.Name] = struct{}{}
+	pkgs[videoPkg.Name] = struct{}{}
+	srcRateLimit := time.Millisecond
+	replyDelay := 20 * time.Millisecond
+	tSrc := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: srcRateLimit,
+		pkgs:     pkgs}
+
+	pkgs = make(map[string]struct{})
+	pkgs[videoPkg.Name] = struct{}{}
+	pkgs[srchPkg.Name] = struct{}{}
+	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
+		getReqs:  make(map[Package]*struct{}),
+		interval: srcRateLimit,
+		pkgs:     pkgs}
+	sources := []*testSrc{&tSrc, &tSrc2}
+
+	tickers := []testTicker{}
+	muTickers := sync.Mutex{}
+	tickerGroup := sync.WaitGroup{}
+
+	newTicker = func(d time.Duration) *time.Ticker {
+		t, tt := testBuildTicker(d, &tickerGroup, &muTickers)
+		tickers = append(tickers, tt)
+		return t
+	}
+
+	tickerGroup.Add(1)
+
+	d := NewDaemon(NewPackageSet(), processPackage)
+	for _, src := range sources {
+		// introduce a reply delay so we can make sure to run
+		// simultaneously
+		src.replyDelay = replyDelay
+		d.AddSource(src)
+	}
+
+	tickerGroup.Wait()
+
+	// we expect to generate only one request, since whichever arrives
+	// second should just subscribe to the results of the first
+	go d.GetUpdates(pkgSet)
+	time.Sleep(2 * srcRateLimit)
+	updateRes := d.GetUpdates(pkgSet)
+	verifyReqCount(t, sources, pkgSet, 1)
+	verifyGetResults(t, pkgSet, updateRes)
+
+	// verify that if we do two more requests sequentially that the total
+	// request found is as expected
+	d.GetUpdates(pkgSet)
+	time.Sleep(srcRateLimit)
+	d.GetUpdates(pkgSet)
+	verifyReqCount(t, sources, pkgSet, 3)
+
+	pkgSetA := NewPackageSet()
+	pkgSetA.Add(&emailPkg)
+	pkgSetA.Add(&srchPkg)
+	pkgSetB := NewPackageSet()
+	pkgSetB.Add(&videoPkg)
+	pkgSetB.Add(&srchPkg)
+	go d.GetUpdates(pkgSetA)
+	time.Sleep(srcRateLimit * 2)
+	res := d.GetUpdates(pkgSetB)
+	verifyReqCount(t, sources, pkgSet, 4)
+	verifyGetResults(t, pkgSetB, res)
+
+	d.CancelAll()
 }
 
 func createMonitorPkgs() *PackageSet {
@@ -237,24 +326,67 @@ func createMonitorPkgs() *PackageSet {
 }
 
 func createTestSrcs() []*testSrc {
+	pkgs := make(map[string]struct{})
+	pkgs["email"] = struct{}{}
+	pkgs["video"] = struct{}{}
 	tSrc := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[Package]*struct{}),
-		interval: time.Second * 3}
+		interval: time.Millisecond * 3,
+		pkgs:     pkgs}
+
+	pkgs = make(map[string]struct{})
+	pkgs["video"] = struct{}{}
+	pkgs["search"] = struct{}{}
 	tSrc2 := testSrc{UpdateReqs: make(map[string]int),
 		getReqs:  make(map[Package]*struct{}),
-		interval: time.Second * 5}
+		interval: time.Millisecond * 5,
+		pkgs:     pkgs}
 	return []*testSrc{&tSrc, &tSrc2}
 }
 
-func verify(t *testing.T, src *testSrc, pkgs *PackageSet, runs int) {
+func verifyReqCount(t *testing.T, srcs []*testSrc, pkgs *PackageSet, runs int) {
+	pkgChecks := make(map[Package]int)
+
 	for _, pkg := range pkgs.Packages() {
-		actRuns := src.UpdateReqs[pkg.Name]
-		if actRuns != runs {
-			t.Errorf("Incorrect execution count, found %d, but expected %d for %s\n", actRuns, runs, pkg.Name)
+		pkgChecks[*pkg] = 0
+
+		for _, src := range srcs {
+			pkgChecks[*pkg] += src.UpdateReqs[pkg.Name]
+		}
+
+		//actRuns := src.UpdateReqs[pkg.Name]
+		if pkgChecks[*pkg] != runs {
+			t.Errorf("Incorrect execution count, found %d, but expected %d for %s\n", pkgChecks[*pkg], runs, pkg.Name)
 		}
 	}
 
-	if len(src.getReqs) != 0 {
-		t.Errorf("Error, some pkgs were not requested!")
+	for _, src := range srcs {
+		if len(src.getReqs) != 0 {
+			t.Errorf("Error, some pkgs were not requested!")
+		}
+	}
+}
+
+func verifyGetResults(t *testing.T, pkgSet *PackageSet,
+	updates map[Package]*GetResult) {
+	if len(updates) != len(pkgSet.Packages()) {
+		t.Errorf("Expected %d updates, but found %d\n",
+			len(pkgSet.Packages()), len(updates))
+	}
+
+	for _, p := range pkgSet.Packages() {
+		r, ok := updates[*p]
+		if !ok {
+			t.Errorf("No result returned for package %q\n", p.Name)
+		}
+
+		if r.Err != nil {
+			t.Errorf("Error finding update for package %q: %v",
+				p.Name, r.Err)
+		}
+
+		if r.Orig.Name != p.Name || r.Orig.Version != p.Version {
+			t.Errorf("Update result does not match original key, expected %q, but found %q", r.Orig.String(), p.String())
+		}
 	}
 }
