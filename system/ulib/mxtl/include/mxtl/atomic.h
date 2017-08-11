@@ -156,6 +156,11 @@ struct atomic {
     }
 
 private:
+    template <typename U>
+    friend void atomic_init(atomic<U>* atomic_ptr, U value);
+    template <typename U>
+    friend void atomic_init(volatile atomic<U>* atomic_ptr, U value);
+
     T value_;
 };
 

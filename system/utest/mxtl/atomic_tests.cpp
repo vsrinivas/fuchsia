@@ -167,7 +167,7 @@ static_assert(IsSameAsSomeBuiltin<mxtl::atomic_uint_fast64_t>(), "");
 bool atomic_wont_compile_test() {
     BEGIN_TEST;
 
-// mxtl::atomic only supports integer types.
+    // mxtl::atomic only supports integer types.
 
 #if TEST_WILL_NOT_COMPILE || 0
     struct not_integral {};
@@ -467,16 +467,18 @@ struct cas_function {
 
 template <typename T>
 cas_function<T> cas_functions[] = {
-    { mxtl::atomic_compare_exchange_weak, true },
-    { mxtl::atomic_compare_exchange_strong, false },
-    { [](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-            return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
-        }, true },
-    { [](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-            return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
-        }, false },
+    {mxtl::atomic_compare_exchange_weak, true},
+    {mxtl::atomic_compare_exchange_strong, false},
+    {[](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+        mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+         return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
+     },
+     true},
+    {[](mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+        mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+         return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
+     },
+     false},
 };
 
 template <typename T>
@@ -488,17 +490,18 @@ struct volatile_cas_function {
 
 template <typename T>
 volatile_cas_function<T> volatile_cas_functions[] = {
-    { mxtl::atomic_compare_exchange_weak, true },
-    { mxtl::atomic_compare_exchange_strong, false },
-    { [](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-            return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
-        }, true },
-    { [](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
-         mxtl::memory_order success_order, mxtl::memory_order failure_order) {
-            return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
-        }, false }
-};
+    {mxtl::atomic_compare_exchange_weak, true},
+    {mxtl::atomic_compare_exchange_strong, false},
+    {[](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+        mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+         return atomic_ptr->compare_exchange_weak(expected, desired, success_order, failure_order);
+     },
+     true},
+    {[](volatile mxtl::atomic<T>* atomic_ptr, T* expected, T desired,
+        mxtl::memory_order success_order, mxtl::memory_order failure_order) {
+         return atomic_ptr->compare_exchange_strong(expected, desired, success_order, failure_order);
+     },
+     false}};
 
 template <typename T>
 bool compare_exchange_test() {
@@ -654,6 +657,21 @@ bool atomic_fence_test() {
     END_TEST;
 }
 
+bool atomic_init_test() {
+    BEGIN_TEST;
+
+    mxtl::atomic_uint32_t atomic1;
+    mxtl::atomic_init(&atomic1, 1u);
+    EXPECT_EQ(1u, atomic1.load());
+
+    mxtl::atomic_uint32_t atomic2;
+    volatile mxtl::atomic_uint32_t* vatomic2 = &atomic2;
+    mxtl::atomic_init(vatomic2, 2u);
+    EXPECT_EQ(2u, atomic2.load());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(atomic_tests)
@@ -665,4 +683,5 @@ RUN_NAMED_TEST("Atomic load/store test", atomic_load_store_test)
 RUN_NAMED_TEST("Atomic exchange test", atomic_exchange_test)
 RUN_NAMED_TEST("Atomic compare-exchange test", atomic_compare_exchange_test)
 RUN_NAMED_TEST("Atomic fence test", atomic_fence_test)
+RUN_NAMED_TEST("Atomic init test", atomic_init_test)
 END_TEST_CASE(atomic_tests);
