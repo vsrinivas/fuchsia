@@ -15,25 +15,25 @@
 #define __ALIGNED(x) __attribute__((aligned(x)))
 #define __PRINTFLIKE(__fmt,__varargs) __attribute__((__format__ (__printf__, __fmt, __varargs)))
 #define __SCANFLIKE(__fmt,__varargs) __attribute__((__format__ (__scanf__, __fmt, __varargs)))
-#define __SECTION(x) __attribute((section(x)))
-#define __PURE __attribute((pure))
-#define __CONST __attribute((const))
-#define __NO_RETURN __attribute__((noreturn))
-#define __MALLOC __attribute__((malloc))
-#define __WEAK __attribute__((weak))
-#define __GNU_INLINE __attribute__((gnu_inline))
+#define __SECTION(x) __attribute__((__section__(x)))
+#define __PURE __attribute__((__pure__))
+#define __CONST __attribute__((__const__))
+#define __NO_RETURN __attribute__((__noreturn__))
+#define __MALLOC __attribute__((__malloc__))
+#define __WEAK __attribute__((__weak__))
+#define __GNU_INLINE __attribute__((__gnu_inline__))
 #define __GET_CALLER(x) __builtin_return_address(0)
 #define __GET_FRAME(x) __builtin_frame_address(0)
-#define __NAKED __attribute__((naked))
+#define __NAKED __attribute__((__naked__))
 #define __ISCONSTANT(x) __builtin_constant_p(x)
-#define __NO_INLINE __attribute((noinline))
+#define __NO_INLINE __attribute__((__noinline__))
 #define __SRAM __NO_INLINE __SECTION(".sram.text")
-#define __CONSTRUCTOR __attribute__((constructor))
-#define __DESTRUCTOR __attribute__((destructor))
+#define __CONSTRUCTOR __attribute__((__constructor__))
+#define __DESTRUCTOR __attribute__((__destructor__))
 
 #ifndef __clang__
-#define __OPTIMIZE(x) __attribute__((optimize(x)))
-#define __EXTERNALLY_VISIBLE __attribute__((externally_visible))
+#define __OPTIMIZE(x) __attribute__((__optimize__(x)))
+#define __EXTERNALLY_VISIBLE __attribute__((__externally_visible__))
 #define __THREAD_ANNOTATION(x)
 #define __NO_SAFESTACK
 #define __has_feature(x) 0
@@ -45,37 +45,37 @@
 #else
 #define __THREAD_ANNOTATION(x)
 #endif
-#define __NO_SAFESTACK __attribute__((no_sanitize("safe-stack")))
+#define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack")))
 #endif
 
-#define __ALWAYS_INLINE __attribute__((always_inline))
-#define __MAY_ALIAS __attribute__((may_alias))
-#define __NONNULL(x) __attribute((nonnull x))
-#define __WARN_UNUSED_RESULT __attribute((warn_unused_result))
+#define __ALWAYS_INLINE __attribute__((__always_inline__))
+#define __MAY_ALIAS __attribute__((__may_alias__))
+#define __NONNULL(x) __attribute__((__nonnull__ x))
+#define __WARN_UNUSED_RESULT __attribute__((__warn_unused_result__))
 #define __UNREACHABLE __builtin_unreachable()
-#define __WEAK_ALIAS(x) __attribute__((weak, alias(x)))
-#define __ALIAS(x) __attribute__((alias(x)))
-#define __EXPORT __attribute__ ((visibility("default")))
-#define __LOCAL  __attribute__ ((visibility("hidden")))
+#define __WEAK_ALIAS(x) __attribute__((__weak__, __alias__(x)))
+#define __ALIAS(x) __attribute__((__alias__(x)))
+#define __EXPORT __attribute__ ((__visibility__("default")))
+#define __LOCAL  __attribute__ ((__visibility__("hidden")))
 #define __THREAD __thread
 #define __offsetof(type, field) __builtin_offsetof(type, field)
 
 // Publicly exposed thread annotation macros. These have a long and ugly name to
 // minimize the chance of collision with consumers of Magenta's public headers.
-#define __TA_CAPABILITY(x) __THREAD_ANNOTATION(capability(x))
-#define __TA_GUARDED(x) __THREAD_ANNOTATION(guarded_by(x))
-#define __TA_ACQUIRE(...) __THREAD_ANNOTATION(acquire_capability(__VA_ARGS__))
-#define __TA_ACQUIRED_BEFORE(...) __THREAD_ANNOTATION(acquired_before(__VA_ARGS__))
-#define __TA_ACQUIRED_AFTER(...) __THREAD_ANNOTATION(acquired_after(__VA_ARGS__))
-#define __TA_RELEASE(...) __THREAD_ANNOTATION(release_capability(__VA_ARGS__))
-#define __TA_REQUIRES(...) __THREAD_ANNOTATION(requires_capability(__VA_ARGS__))
-#define __TA_EXCLUDES(...) __THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
-#define __TA_RETURN_CAPABILITY(x) __THREAD_ANNOTATION(lock_returned(x))
-#define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(scoped_lockable)
-#define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(no_thread_safety_analysis)
+#define __TA_CAPABILITY(x) __THREAD_ANNOTATION(__capability__(x))
+#define __TA_GUARDED(x) __THREAD_ANNOTATION(__guarded_by__(x))
+#define __TA_ACQUIRE(...) __THREAD_ANNOTATION(__acquire_capability__(__VA_ARGS__))
+#define __TA_ACQUIRED_BEFORE(...) __THREAD_ANNOTATION(__acquired_before__(__VA_ARGS__))
+#define __TA_ACQUIRED_AFTER(...) __THREAD_ANNOTATION(__acquired_after__(__VA_ARGS__))
+#define __TA_RELEASE(...) __THREAD_ANNOTATION(__release_capability__(__VA_ARGS__))
+#define __TA_REQUIRES(...) __THREAD_ANNOTATION(__requires_capability__(__VA_ARGS__))
+#define __TA_EXCLUDES(...) __THREAD_ANNOTATION(__locks_excluded__(__VA_ARGS__))
+#define __TA_RETURN_CAPABILITY(x) __THREAD_ANNOTATION(__lock_returned__(x))
+#define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(__scoped_lockable__)
+#define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(__no_thread_safety_analysis__)
 
 #if !defined __DEPRECATED
-#define __DEPRECATED __attribute((deprecated))
+#define __DEPRECATED __attribute__((__deprecated__))
 #endif
 
 /* compiler fence */
