@@ -24,6 +24,8 @@ var newTicker = time.NewTicker
 // passed in Source is not known to the Daemon
 var ErrSrcNotFound = errors.New("amber/daemon: no corresponding source found")
 
+const CheckInterval = 5 * time.Minute
+
 // Deamon provides access to a set of Sources and oversees the polling of those
 // Sources for updates to Packages in the supplied PackageSet. GetUpdates can be
 // used for a one-and-done set of packages.
@@ -38,9 +40,7 @@ type Daemon struct {
 	runCount sync.WaitGroup
 	// takes an update Package, an original Package and a Source to get the
 	// update Package content from.
-	processor func(*Package, *Package, Source, *PackageSet) error
-	// sources must claim this before running updates
-	updateLock sync.Mutex
+	processor func(*GetResult, *PackageSet) error
 
 	//blobSrc       *BlobFetcher
 	muBlobUpdates sync.Mutex
@@ -53,14 +53,21 @@ type Daemon struct {
 }
 
 // NewDaemon creates a Daemon with the given SourceSet
-func NewDaemon(r *PackageSet, f func(*Package, *Package, Source, *PackageSet) error) *Daemon {
+func NewDaemon(r *PackageSet, f func(*GetResult, *PackageSet) error) *Daemon {
 	d := &Daemon{pkgs: r,
-		updateLock: sync.Mutex{},
-		srcMons:    []*SourceMonitor{},
-		processor:  f,
-		repos:      []BlobRepo{},
-		muInProg:   sync.Mutex{},
-		inProg:     make(map[Package]*upRec)}
+		runCount:  sync.WaitGroup{},
+		srcMons:   []*SourceMonitor{},
+		processor: f,
+		repos:     []BlobRepo{},
+		muInProg:  sync.Mutex{},
+		inProg:    make(map[Package]*upRec)}
+	mon := NewSourceMonitor(d, r, f, CheckInterval)
+	d.runCount.Add(1)
+	d.srcMons = append(d.srcMons, mon)
+	go func() {
+		mon.Run()
+		d.runCount.Done()
+	}()
 	return d
 }
 
@@ -68,15 +75,9 @@ func NewDaemon(r *PackageSet, f func(*Package, *Package, Source, *PackageSet) er
 // Source is added, the Daemon will start polling it at the interval from
 // Source.GetInterval()
 func (d *Daemon) AddSource(s Source) {
+	// TODO(jmatt) make GetUpdates thread-safe with respect to sources
 	s = NewSourceKeeper(s)
 	d.srcs = append(d.srcs, s)
-	mon := NewSourceMonitor(s, d.pkgs, d.processor, &d.updateLock)
-	d.srcMons = append(d.srcMons, mon)
-	d.runCount.Add(1)
-	go func() {
-		defer d.runCount.Done()
-		mon.Run()
-	}()
 }
 
 func (d *Daemon) blobRepos() []BlobRepo {
@@ -168,6 +169,19 @@ func (d *Daemon) awaitResults(c chan map[Package]*GetResult, awaiting []*Package
 // reasonable period will be automatically deleted. Callers should check the
 // GetResult's Err member to see if the update attempt was successful.
 func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
+	// GetUpdates provides safe concurrent fetching from multiple update
+	// sources. To do this we maintain a map in Daemon, inProg, which
+	// contains enties for any package which is currently being updated.
+	// When GetUpdates is called we first see if any of the packages passed
+	// in is already being updated. If so, we subscribe to its results by
+	// adding this instance's reply channel to the list of channels for
+	// that result. For any requested packages that aren't already being
+	// updated we create an entry in inProg for that set, add our reply
+	// channel to that entry, and then call getUpdates to actually fetch
+	// that set. For each update operation whose results we subscribe to
+	// (including the one this call might start) we start a go routine to
+	// await those results. Calls to GetUpdates then block until all go
+	// routines terminate.
 	totalRes := make(map[Package]*GetResult)
 	resLock := sync.Mutex{}
 	// LOCK ACQUIRE
@@ -198,6 +212,11 @@ func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
 					d.awaitResults(c, wanted, totalRes, &resLock)
 					wg.Done()
 				}()
+				// note that we'll always receive the results
+				// because before they are delivered to all
+				// subscribers muInProg is locked and the in
+				// progress entries are deleted before it is
+				// unlocked
 				r.c = append(r.c, c)
 			}
 		} else {
@@ -247,7 +266,6 @@ func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
 
 	// close our reply channel
 	close(c)
-
 	return totalRes
 }
 
@@ -259,6 +277,9 @@ func (d *Daemon) getUpdates(rec *upRec) map[Package]*GetResult {
 	for i := 0; i < len(d.srcs) && len(unfoundPkgs) > 0; i++ {
 		updates, err := d.srcs[i].AvailableUpdates(unfoundPkgs)
 		if len(updates) == 0 || err != nil {
+			if err == ErrRateExceeded {
+				log.Printf("Source rate limit exceeded\n")
+			}
 			continue
 		}
 
@@ -317,7 +338,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[Package]*GetResult {
 
 func cleanupFiles(files []*os.File) {
 	// TODO(jmatt) something better for cleanup
-	time.Sleep(1 * time.Minute)
+	time.Sleep(5 * time.Minute)
 	for _, f := range files {
 		os.Remove(f.Name())
 	}
@@ -328,20 +349,6 @@ func cleanupFiles(files []*os.File) {
 // on the Source to complete. This method returns ErrSrcNotFound if the supplied
 // Source is not know to this Daemon.
 func (d *Daemon) RemoveSource(src Source) error {
-	found := false
-	for i, m := range d.srcMons {
-		if m.src.Equals(src) {
-			d.srcMons = append(d.srcMons[:i], d.srcMons[i+1:]...)
-			m.Stop()
-			found = true
-		}
-
-	}
-
-	if !found {
-		return ErrSrcNotFound
-	}
-
 	for i, m := range d.srcs {
 		if m.Equals(src) {
 			d.srcs = append(d.srcs[:i], d.srcs[i+1:]...)
@@ -379,32 +386,34 @@ func (e ErrProcessPackage) Error() string {
 // from the supplied Source. If retrieval from the Source fails, the Source's
 // error is returned. If there is a local I/O error when processing the package
 // an ErrProcPkgIO is returned.
-func ProcessPackage(update *Package, orig *Package, src Source, pkgs *PackageSet) error {
+func ProcessPackage(data *GetResult, pkgs *PackageSet) error {
+	if data.Err != nil {
+		return data.Err
+	}
 	// TODO(jmatt) Checking is needed to validate that the original package
 	// hasn't already been updated.
 
 	// this package processor can only deal with names that look like
 	// file paths
 	// TODO(jmatt) better checking that this could be a valid file path
-	if strings.Index(update.Name, "/") != 0 {
+	if strings.Index(data.Update.Name, "/") != 0 {
 		return NewErrProcessPackage("invalid path")
 	}
 
-	file, e := src.FetchPkg(update)
+	e := data.Open()
 	if e != nil {
 		return e
 	}
-	defer file.Close()
-	defer os.Remove(file.Name())
+	defer data.Close()
 
-	dstPath := filepath.Join(DstUpdate, update.Name)
+	dstPath := filepath.Join(DstUpdate, data.Update.Name)
 	dst, e := os.Create(dstPath)
 	if e != nil {
 		return NewErrProcessPackage("couldn't open file to write update %v", e)
 	}
 	defer dst.Close()
 
-	i, err := file.Stat()
+	i, err := data.Stat()
 	if err != nil {
 		return NewErrProcessPackage("couldn't stat temp file", e)
 	}
@@ -413,12 +422,12 @@ func ProcessPackage(update *Package, orig *Package, src Source, pkgs *PackageSet
 	if err != nil {
 		return NewErrProcessPackage("couldn't truncate file destination", e)
 	}
-	_, e = io.Copy(dst, file)
+	_, e = io.Copy(dst, data)
 	// TODO(jmatt) validate file on disk, size, hash, etc
 	if e != nil {
 		return NewErrProcessPackage("couldn't write update to file %v", e)
 	}
 
-	pkgs.Replace(orig, update, false)
+	pkgs.Replace(&data.Orig, &data.Update, false)
 	return nil
 }

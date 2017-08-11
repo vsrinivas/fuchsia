@@ -5,6 +5,8 @@
 package daemon
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -14,18 +16,33 @@ import (
 // the Source. This prevents concurrent network operations from occurring in
 // some cases.
 type SourceKeeper struct {
-	src Source
-	mu  *sync.Mutex
+	src  Source
+	mu   *sync.Mutex
+	last time.Time
 }
 
+// TODO(jmatt) include a notion of when we can retry
+var ErrRateExceeded = fmt.Errorf("Source rate limited exceeded, try back later")
+
 func NewSourceKeeper(src Source) *SourceKeeper {
-	return &SourceKeeper{src: src, mu: &sync.Mutex{}}
+	return &SourceKeeper{
+		src:  src,
+		mu:   &sync.Mutex{},
+		last: time.Now().Add(0 - src.CheckInterval()),
+	}
 }
 
 func (k *SourceKeeper) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	return k.src.AvailableUpdates(pkgs)
+	n := time.Now().Sub(k.last)
+	if n < k.CheckInterval() {
+		log.Printf("Query rate exceeded %d \n", n)
+		return nil, ErrRateExceeded
+	}
+	k.last = time.Now()
+	r, e := k.src.AvailableUpdates(pkgs)
+	return r, e
 }
 
 func (k *SourceKeeper) FetchPkg(pkg *Package) (*os.File, error) {
