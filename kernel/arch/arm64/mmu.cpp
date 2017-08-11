@@ -17,6 +17,7 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/pmm.h>
 #include <lib/heap.h>
+#include <mxtl/atomic.h>
 #include <rand.h>
 #include <stdlib.h>
 #include <string.h>
@@ -393,7 +394,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
         } else if (pte) {
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
-            CF;
+            mxtl::atomic_signal_fence();
             if (asid == MMU_ARM64_GLOBAL_ASID)
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             else
@@ -546,7 +547,7 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                     page_table, index, pte);
             page_table[index] = pte;
 
-            CF;
+            mxtl::atomic_signal_fence();
             if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             } else {

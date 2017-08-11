@@ -23,6 +23,7 @@
 #include <string.h>
 #include <printf.h>
 #include <err.h>
+#include <kernel/atomic.h>
 #include <kernel/percpu.h>
 #include <kernel/sched.h>
 #include <kernel/stats.h>
@@ -459,7 +460,7 @@ static void thread_free_dpc(struct dpc *dpc)
      * the thread that is queuing itself for destruction.
      */
     THREAD_LOCK(state);
-    CF;
+    atomic_signal_fence();
     THREAD_UNLOCK(state);
 
     free_thread_resources(t);

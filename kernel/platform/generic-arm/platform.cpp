@@ -8,6 +8,7 @@
 #include <debug.h>
 #include <err.h>
 #include <mxtl/auto_lock.h>
+#include <mxtl/atomic.h>
 #include <mxtl/ref_ptr.h>
 #include <reg.h>
 #include <trace.h>
@@ -340,7 +341,7 @@ void platform_halt_cpu(void) {
                reinterpret_cast<const void*>(bcm28xx_park_cpu),
                bcm28xx_park_cpu_length);
 
-        CF;
+        mxtl::atomic_signal_fence();
         arch_clean_cache_range(KERNEL_ASPACE_BASE, 4096);     // clean out all the VC bootstrap area
         arch_sync_cache_range(KERNEL_ASPACE_BASE, 4096);     // clean out all the VC bootstrap area
 

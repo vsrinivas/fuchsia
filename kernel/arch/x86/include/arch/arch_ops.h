@@ -14,20 +14,21 @@
 
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
+#include <kernel/atomic.h>
 
 __BEGIN_CDECLS
 
 /* override of some routines */
 static inline void arch_enable_ints(void)
 {
-    CF;
+    atomic_signal_fence();
     __asm__ volatile("sti");
 }
 
 static inline void arch_disable_ints(void)
 {
     __asm__ volatile("cli");
-    CF;
+    atomic_signal_fence();
 }
 
 static inline bool arch_ints_disabled(void)

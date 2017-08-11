@@ -8,6 +8,7 @@
 #pragma once
 
 #include <arch/x86.h>
+#include <kernel/atomic.h>
 #include <magenta/compiler.h>
 #include <stdbool.h>
 
@@ -47,7 +48,7 @@ arch_interrupt_save(spin_lock_saved_state_t *statep, spin_lock_save_flags_t flag
 {
     *statep = x86_save_flags();
     __asm__ volatile("cli");
-    CF;
+    atomic_signal_fence();
 }
 
 static inline void
@@ -57,4 +58,3 @@ arch_interrupt_restore(spin_lock_saved_state_t old_state, spin_lock_save_flags_t
 }
 
 __END_CDECLS
-

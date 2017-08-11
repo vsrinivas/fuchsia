@@ -8,19 +8,21 @@
 
 #ifndef ASSEMBLY
 
+#include <kernel/atomic.h>
+
 __BEGIN_CDECLS
 
 // override of some routines
 static inline void arch_enable_ints(void)
 {
-    CF;
+    atomic_signal_fence();
     __asm__ volatile("msr daifclr, #2" ::: "memory");
 }
 
 static inline void arch_disable_ints(void)
 {
     __asm__ volatile("msr daifset, #2" ::: "memory");
-    CF;
+    atomic_signal_fence();
 }
 
 static inline bool arch_ints_disabled(void)
@@ -35,14 +37,14 @@ static inline bool arch_ints_disabled(void)
 
 static inline void arch_enable_fiqs(void)
 {
-    CF;
+    atomic_signal_fence();
     __asm__ volatile("msr daifclr, #1" ::: "memory");
 }
 
 static inline void arch_disable_fiqs(void)
 {
     __asm__ volatile("msr daifset, #1" ::: "memory");
-    CF;
+    atomic_signal_fence();
 }
 
 // XXX

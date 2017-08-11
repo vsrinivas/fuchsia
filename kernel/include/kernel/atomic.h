@@ -175,4 +175,9 @@ static inline void atomic_store_u64(volatile uint64_t *ptr, uint64_t newval)
     __atomic_store_n(ptr, newval, __ATOMIC_SEQ_CST);
 }
 
+static inline void atomic_signal_fence(void)
+{
+    __atomic_signal_fence(__ATOMIC_SEQ_CST);
+}
+
 __END_CDECLS
