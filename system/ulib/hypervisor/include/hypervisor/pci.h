@@ -43,7 +43,16 @@ typedef struct instruction instruction_t;
 typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_guest_memory mx_guest_memory_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
-typedef struct pci_device_attr pci_device_attr_t;
+
+typedef struct pci_device_attr {
+    uint16_t device_id;
+    uint16_t vendor_id;
+    uint16_t subsystem_id;
+    uint16_t subsystem_vendor_id;
+    // Both class & subclass fields combined.
+    uint16_t class_code;
+    uint16_t bar_size;
+} pci_device_attr_t;
 
 /* Stores the state of PCI devices. */
 typedef struct pci_device {
@@ -61,10 +70,19 @@ typedef struct pci_bus {
     // Selected address in PCI config space.
     uint32_t config_addr;
     // Devices on the virtual PCI bus.
-    pci_device_t device[PCI_MAX_DEVICES];
+    pci_device_t* device[PCI_MAX_DEVICES];
+    // Embedded root complex device.
+    pci_device_t root_complex;
 } pci_bus_t;
 
-void pci_bus_init(pci_bus_t* bus);
+mx_status_t pci_bus_init(pci_bus_t* bus);
+
+/* Connect a PCI device to the bus.
+ *
+ * slot must be between 1 and PCI_MAX_DEVICES (slot 0 is reserved for
+ * the root complex).
+ */
+mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot);
 
 /* Handle MMIO access to the PCI config space. */
 mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
@@ -79,11 +97,6 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io);
 
 mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
 mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);
-
-/* Disable the given PCI device. By default, all devices on the bus are enabled
- * by pci_bus_init.
- */
-void pci_device_disable(pci_device_t* device);
 
 /* Return the device number for the PCI device that has a BAR mapped to the
  * given address with the specified IO type. Returns PCI_DEVICE_INVALID if no

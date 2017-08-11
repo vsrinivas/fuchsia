@@ -20,8 +20,6 @@ typedef struct block {
     int fd;
     // Size of file backing the block device.
     uint64_t size;
-    // PCI BAR base address.
-    uint32_t bar_base;
 
     // Common virtio device state.
     virtio_device_t virtio_device;

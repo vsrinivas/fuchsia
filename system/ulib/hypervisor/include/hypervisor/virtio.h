@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <hypervisor/pci.h>
 
 /* Accesses to this range are common accross device types. */
 #define VIRTIO_PCI_COMMON_CFG_BASE      0
@@ -71,6 +72,8 @@ typedef struct virtio_device {
     virtio_device_ops_t* ops;
     // Private pointer for use by the device implementation.
     void* impl;
+    // PCI device for the virtio-pci transport.
+    pci_device_t pci_device;
 } virtio_device_t;
 
 /* Handle reads from legacy PCI virtio configuration space.

@@ -13,7 +13,7 @@ static bool read_config_register(void) {
 
     pci_bus_t bus;
     pci_bus_init(&bus);
-    pci_device_t* device = &bus.device[PCI_DEVICE_ROOT_COMPLEX];
+    pci_device_t* device = &bus.root_complex;
 
     // Access Vendor/Device ID as a single 32bit read.
     uint32_t value = 0;
@@ -31,7 +31,7 @@ static bool read_config_register_bytewise(void) {
 
     pci_bus_t bus;
     pci_bus_init(&bus);
-    pci_device_t* device = &bus.device[PCI_DEVICE_ROOT_COMPLEX];
+    pci_device_t* device = &bus.root_complex;
 
     uint32_t expected_device_vendor = PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
     for (int i = 0; i < 4; ++i) {
@@ -59,7 +59,7 @@ static bool read_bar_size(void) {
 
     pci_bus_t bus;
     pci_bus_init(&bus);
-    pci_device_t* device = &bus.device[PCI_DEVICE_ROOT_COMPLEX];
+    pci_device_t* device = &bus.root_complex;
 
     // Set all bits in the BAR register. The device will ignore writes to the
     // LSBs which we can read out to determine the size.

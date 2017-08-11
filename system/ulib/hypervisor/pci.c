@@ -26,56 +26,38 @@ static const uint32_t kPioBase = 0x8000;
 static const uint32_t kPioAddressMask = (uint32_t)~BIT_MASK(2);
 static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
 
-typedef struct pci_device_attr {
-    uint16_t device_id;
-    uint16_t vendor_id;
-    uint16_t subsystem_id;
-    uint16_t subsystem_vendor_id;
-    // Both class & subclass fields combined.
-    uint16_t class_code;
-    uint16_t bar_size;
-} pci_device_attr_t;
-
-static const pci_device_attr_t kDisabledDeviceAttributes = {
-    .vendor_id = UINT16_MAX,
-    .device_id = UINT16_MAX,
-    .subsystem_vendor_id = UINT16_MAX,
-    .subsystem_id = UINT16_MAX,
-    .class_code = UINT16_MAX,
-    .bar_size = UINT16_MAX,
+static const pci_device_attr_t kRootComplexDeviceAttributes = {
+    .vendor_id = PCI_VENDOR_ID_INTEL,
+    .device_id = PCI_DEVICE_ID_INTEL_Q35,
+    .subsystem_vendor_id = 0,
+    .subsystem_id = 0,
+    .class_code = PCI_CLASS_BRIDGE_HOST,
+    .bar_size = 0x10,
 };
 
-static const pci_device_attr_t kDeviceAttributes[] = {
-    [PCI_DEVICE_ROOT_COMPLEX] = {
-        .vendor_id = PCI_VENDOR_ID_INTEL,
-        .device_id = PCI_DEVICE_ID_INTEL_Q35,
-        .subsystem_vendor_id = 0,
-        .subsystem_id = 0,
-        .class_code = PCI_CLASS_BRIDGE_HOST,
-        .bar_size = 0x10,
-    },
-    [PCI_DEVICE_VIRTIO_BLOCK] = {
-        .vendor_id = PCI_VENDOR_ID_VIRTIO,
-        .device_id = PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY,
-        .subsystem_vendor_id = 0,
-        .subsystem_id = VIRTIO_ID_BLOCK,
-        .class_code = PCI_CLASS_MASS_STORAGE,
-        .bar_size = 0x40,
-    },
-};
-
-void pci_bus_init(pci_bus_t* bus) {
+mx_status_t pci_bus_init(pci_bus_t* bus) {
     memset(bus, 0, sizeof(*bus));
-    for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
-        pci_device_t* device = &bus->device[i];
-        device->command = PCI_COMMAND_IO_EN;
-        device->bar[0] = kPioBase + (i << 8);
-        device->attr = &kDeviceAttributes[i];
-    }
+    bus->root_complex.attr = &kRootComplexDeviceAttributes;
+    return pci_bus_connect(bus, &bus->root_complex, PCI_DEVICE_ROOT_COMPLEX);
 }
 
-static bool pci_addr_valid(uint8_t bus, uint8_t device, uint8_t function) {
-    return bus == 0 && device < PCI_MAX_DEVICES && function == 0;
+mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) {
+    if (slot >= PCI_MAX_DEVICES)
+        return MX_ERR_OUT_OF_RANGE;
+    if (bus->device[slot])
+        return MX_ERR_ALREADY_EXISTS;
+    // We currently allocate a fixed IO range per bar.
+    if (device->attr->bar_size > (1 << 8))
+        return MX_ERR_NOT_SUPPORTED;
+
+    device->command = PCI_COMMAND_IO_EN;
+    device->bar[0] = kPioBase + (slot << 8);
+    bus->device[slot] = device;
+    return MX_OK;
+}
+
+static bool pci_addr_valid(const pci_bus_t* b, uint8_t bus, uint8_t device, uint8_t function) {
+    return bus == 0 && device < PCI_MAX_DEVICES && function == 0 && b->device[device];
 }
 
 static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
@@ -94,7 +76,7 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
     const mx_vaddr_t addr = memory->addr;
     const uint8_t device = PCI_ECAM_DEVICE(addr);
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
-    const bool valid = pci_addr_valid(PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
+    const bool valid = pci_addr_valid(bus, PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
 
     uint32_t value = 0;
     mx_status_t status;
@@ -103,7 +85,7 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
         if (!valid) {
             pci_addr_invalid_read(inst->mem, &value);
         } else {
-            status = pci_device_read(&bus->device[device], reg, inst->mem, &value);
+            status = pci_device_read(bus->device[device], reg, inst->mem, &value);
             if (status != MX_OK)
                 return status;
         }
@@ -118,7 +100,7 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
         if (!valid) {
             pci_addr_invalid_read(inst->mem, &value);
         } else {
-            status = pci_device_read(&bus->device[device], reg, inst->mem, &value);
+            status = pci_device_read(bus->device[device], reg, inst->mem, &value);
             if (status != MX_OK)
                 return status;
         }
@@ -148,7 +130,7 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
         }
         if (status != MX_OK)
             return status;
-        return pci_device_write(&bus->device[device], reg, inst->mem, value);
+        return pci_device_write(bus->device[device], reg, inst->mem, value);
     default:
         return MX_ERR_NOT_SUPPORTED;
     }
@@ -172,13 +154,13 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
         uint32_t addr = bus->config_addr;
         mtx_unlock((mtx_t*) &bus->mutex);
         vcpu_io->access_size = access_size;
-        if (!pci_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
+        if (!pci_addr_valid(bus, PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
                             PCI_TYPE1_FUNCTION(addr))) {
             pci_addr_invalid_read(access_size, &vcpu_io->u32);
             return MX_OK;
         }
 
-        const pci_device_t* device = &bus->device[PCI_TYPE1_DEVICE(addr)];
+        const pci_device_t* device = bus->device[PCI_TYPE1_DEVICE(addr)];
         uint16_t reg = PCI_TYPE1_REGISTER(addr) + port - PCI_CONFIG_DATA_PORT_BASE;
         return pci_device_read(device, reg, access_size, &vcpu_io->u32);
     }
@@ -209,10 +191,10 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io) {
         mtx_lock(&bus->mutex);
         uint32_t addr = bus->config_addr;
         mtx_unlock(&bus->mutex);
-        if (!pci_addr_valid(PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr), PCI_TYPE1_FUNCTION(addr)))
+        if (!pci_addr_valid(bus, PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr), PCI_TYPE1_FUNCTION(addr)))
             return MX_ERR_OUT_OF_RANGE;
 
-        pci_device_t* device = &bus->device[PCI_TYPE1_DEVICE(addr)];
+        pci_device_t* device = bus->device[PCI_TYPE1_DEVICE(addr)];
         uint16_t reg = PCI_TYPE1_REGISTER(addr) + io->port - PCI_CONFIG_DATA_PORT_BASE;
         return pci_device_write(device, reg, io->access_size, io->u32);
     }
@@ -362,10 +344,6 @@ mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, ui
     }
 }
 
-void pci_device_disable(pci_device_t* device) {
-    device->attr = &kDisabledDeviceAttributes;
-}
-
 static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
     switch (io_type) {
     case PCI_BAR_IO_TYPE_PIO:
@@ -379,7 +357,10 @@ static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
 
 uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
-        pci_device_t* device = &bus->device[i];
+        pci_device_t* device = bus->device[i];
+        if (!device)
+            continue;
+
         mtx_lock(&device->mutex);
         uint16_t command = device->command;
         uint32_t bar0 = device->bar[0];
