@@ -7,4 +7,4 @@ description = "Rust bindings for the Magenta kernel"
 repository = "https://fuchsia.googlesource.com/magenta-rs/"
 
 [dependencies]
-magenta-sys = { path = "magenta-sys", version = "0.1.1" }
+magenta-sys = { path = "magenta-sys", version = "0.2.0" }
