@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 #![allow(non_camel_case_types)]
-#![feature(untagged_unions)]
-
-extern crate core;
 
 #[macro_use]
 extern crate bitflags;
+
+use std::{cmp, fmt};
 
 pub type mx_handle_t = i32;
 
@@ -57,7 +56,7 @@ pub const MX_ERR_NEXT              : mx_status_t = -61;
 
 pub type mx_time_t = u64;
 pub type mx_duration_t = u64;
-pub const MX_TIME_INFINITE : mx_time_t = core::u64::MAX;
+pub const MX_TIME_INFINITE : mx_time_t = ::std::u64::MAX;
 
 bitflags! {
     #[repr(C)]
@@ -215,6 +214,7 @@ pub enum mx_cache_policy_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_wait_item_t {
     pub handle: mx_handle_t,
     pub waitfor: mx_signals_t,
@@ -222,6 +222,7 @@ pub struct mx_wait_item_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_waitset_result_t {
     pub cookie: u64,
     pub status: mx_status_t,
@@ -229,6 +230,7 @@ pub struct mx_waitset_result_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_channel_call_args_t {
     pub wr_bytes: *const u8,
     pub wr_handles: *const mx_handle_t,
@@ -243,6 +245,7 @@ pub struct mx_channel_call_args_t {
 pub type mx_pci_irq_swizzle_lut_t = [[[u32; 4]; 8]; 32];
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_pci_init_arg_t {
     pub dev_pin_to_global_irq: mx_pci_irq_swizzle_lut_t,
     pub num_irqs: u32,
@@ -254,6 +257,7 @@ pub struct mx_pci_init_arg_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_irq_t {
     pub global_irq: u32,
     pub level_triggered: bool,
@@ -261,6 +265,7 @@ pub struct mx_irq_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_ecam_window_t {
     pub base: u64,
     pub size: usize,
@@ -269,6 +274,7 @@ pub struct mx_ecam_window_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_pcie_device_info_t {
     pub vendor_id: u16,
     pub device_id: u16,
@@ -282,6 +288,7 @@ pub struct mx_pcie_device_info_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_pci_resource_t {
     pub type_: u32,
     pub size: usize,
@@ -331,6 +338,7 @@ pub struct mx_port_packet_t {
 }
 
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_guest_io_t {
     port: u16,
     access_size: u8,
@@ -341,6 +349,7 @@ pub struct mx_guest_io_t {
 
 #[cfg(target_arch="aarch64")]
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_guest_memory_t {
     addr: mx_vaddr_t,
     inst: u32,
@@ -350,6 +359,7 @@ pub const X86_MAX_INST_LEN: usize = 15;
 
 #[cfg(target_arch="x86_64")]
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_guest_memory_t {
     addr: mx_vaddr_t,
     inst_len: u8,
@@ -364,6 +374,7 @@ pub enum mx_guest_packet_t_type {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub union mx_guest_packet_t_union {
     // MX_GUEST_PKT_MEMORY
     memory: mx_guest_memory_t,
@@ -371,14 +382,49 @@ pub union mx_guest_packet_t_union {
     io: mx_guest_io_t,
 }
 
+// Note: values of this type must maintain the invariant that
+// `packet_type` correctly indicates the type of `contents`.
+// Failure to do so will result in unsafety.
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct mx_guest_packet_t {
     packet_type: mx_guest_packet_t_type,
     contents: mx_guest_packet_t_union,
 }
 
+impl fmt::Debug for mx_guest_packet_t {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "mx_guest_packet_t {{ packet_type: {:?}, contents: ", self.packet_type)?;
+        match self.packet_type {
+            mx_guest_packet_t_type::MX_GUEST_PKT_MEMORY =>
+                write!(f, "mx_guest_packet_t_union {{ memory: {:?} }} }}",
+                    unsafe { self.contents.memory }
+                ),
+            mx_guest_packet_t_type::MX_GUEST_PKT_IO =>
+                write!(f, "mx_guest_packet_t_union {{ io: {:?} }} }}",
+                    unsafe { self.contents.io }
+                ),
+        }
+    }
+}
+
+impl cmp::PartialEq for mx_guest_packet_t {
+    fn eq(&self, other: &Self) -> bool {
+        (self.packet_type == other.packet_type) &&
+        match self.packet_type {
+            mx_guest_packet_t_type::MX_GUEST_PKT_MEMORY =>
+                unsafe { self.contents.memory == other.contents.memory },
+            mx_guest_packet_t_type::MX_GUEST_PKT_IO =>
+                unsafe { self.contents.io == other.contents.io },
+        }
+    }
+}
+
+impl cmp::Eq for mx_guest_packet_t {}
+
 #[cfg(target_arch="x86_64")]
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_vcpu_create_args_t {
     pub ip: mx_vaddr_t,
     pub cr3: mx_vaddr_t,
@@ -387,6 +433,7 @@ pub struct mx_vcpu_create_args_t {
 
 #[cfg(not(target_arch="x86_64"))]
 #[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct mx_vcpu_create_args_t {
     pub ip: mx_vaddr_t,
 }
