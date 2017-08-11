@@ -19,7 +19,7 @@ static mtx_t lock = MTX_INIT;
 void __funcs_on_exit(void) {
     void (*func)(void*), *arg;
     mtx_lock(&lock);
-    for (; head; head = head->next, slot = COUNT)
+    for (; head; head = head->next, slot = COUNT) {
         while (slot-- > 0) {
             func = head->f[slot];
             arg = head->a[slot];
@@ -27,6 +27,8 @@ void __funcs_on_exit(void) {
             func(arg);
             mtx_lock(&lock);
         }
+    }
+    mtx_unlock(&lock);
 }
 
 void __cxa_finalize(void* dso) {}
