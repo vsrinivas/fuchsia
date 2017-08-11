@@ -43,10 +43,6 @@
     {
       "name": "power_manager_tests",
       "exec": "/system/bin/report_result /system/test/power_manager_test"
-    },
-    {
-      "name": "time_service_tests",
-      "exec": "/system/test/time_service_tests"
     }
   ]
 }
