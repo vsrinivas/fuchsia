@@ -59,7 +59,9 @@ void ActiveSinkStage::Update() {
     sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
   }
 
-  input_.SetDemand(sink_demand_);
+  if (sink_demand_ != Demand::kNegative) {
+    input_.SetDemand(sink_demand_);
+  }
 }
 
 void ActiveSinkStage::FlushInput(size_t index,
