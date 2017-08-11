@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
 
 #include "apps/mozart/src/scene_manager/displays/display.h"
-#include "apps/mozart/src/scene_manager/swapchain.h"
+#include "apps/mozart/src/scene_manager/engine/display_swapchain.h"
 
 namespace scene_manager {
 
@@ -24,12 +24,8 @@ DisplayCompositor::DisplayCompositor(
                  std::move(swapchain)),
       display_(display) {
   FTL_DCHECK(display_);
-
-  display_->Claim();
 }
 
-DisplayCompositor::~DisplayCompositor() {
-  display_->Unclaim();
-}
+DisplayCompositor::~DisplayCompositor() = default;
 
 }  // namespace scene_manager

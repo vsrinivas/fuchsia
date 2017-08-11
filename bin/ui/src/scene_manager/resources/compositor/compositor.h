@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include "apps/mozart/src/scene_manager/engine/swapchain.h"
 #include "apps/mozart/src/scene_manager/resources/resource.h"
-#include "apps/mozart/src/scene_manager/swapchain.h"
 
 namespace escher {
+class Escher;
 class Image;
 class Model;
 class PaperRenderer;
@@ -19,10 +20,12 @@ using SemaphorePtr = ftl::RefPtr<Semaphore>;
 
 namespace scene_manager {
 
+class FrameTimings;
 class Layer;
 class LayerStack;
 class Scene;
 class Swapchain;
+using FrameTimingsPtr = ftl::RefPtr<FrameTimings>;
 using LayerStackPtr = ftl::RefPtr<LayerStack>;
 
 // A Compositor composes multiple layers into a single image.  This is intended
@@ -43,7 +46,8 @@ class Compositor : public Resource {
   // Determine the appropriate order to render all layers, and then combine them
   // into a single output image.  Subclasses determine how to obtain and present
   // the output image.
-  void DrawFrame(escher::PaperRenderer* renderer);
+  void DrawFrame(const FrameTimingsPtr& frame_timings,
+                 escher::PaperRenderer* renderer);
 
  protected:
   escher::Escher* escher() const { return escher_; }

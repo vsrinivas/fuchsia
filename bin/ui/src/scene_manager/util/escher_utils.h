@@ -13,10 +13,10 @@
 #include "escher/escher.h"
 #include "escher/renderer/semaphore_wait.h"
 
-namespace shadertoy {
+namespace scene_manager {
 
 // Create a new escher::Semaphore and a corresponding mx::event using
-// the VK_KHR_EXTERNAL_SEMAPHORE_FD extension.  If it fails, both elements
+// the VK_KHX_EXTERNAL_SEMAPHORE_FD extension.  If it fails, both elements
 // of the pair will be null.
 std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
     escher::Escher* escher);
@@ -24,4 +24,4 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
 // Export the escher::GpuMem as a mx::vmo.
 mx::vmo ExportMemoryAsVMO(escher::Escher* escher, const escher::GpuMemPtr& mem);
 
-}  // namespace shadertoy
+}  // namespace scene_manager

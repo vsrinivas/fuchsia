@@ -12,12 +12,12 @@
 #include "escher/scene/stage.h"
 
 #include "apps/mozart/src/scene_manager/engine/session.h"
+#include "apps/mozart/src/scene_manager/engine/swapchain.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
 #include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
-#include "apps/mozart/src/scene_manager/swapchain.h"
 #include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
@@ -103,7 +103,8 @@ void Compositor::DrawLayer(escher::PaperRenderer* escher_renderer,
                              frame_done_semaphore, nullptr);
 }
 
-void Compositor::DrawFrame(escher::PaperRenderer* escher_renderer) {
+void Compositor::DrawFrame(const FrameTimingsPtr& frame_timings,
+                           escher::PaperRenderer* escher_renderer) {
   TRACE_DURATION("gfx", "Compositor::DrawFrame");
 
   // Obtain a list of drawable layers.
@@ -149,15 +150,18 @@ void Compositor::DrawFrame(escher::PaperRenderer* escher_renderer) {
   }
   escher::Model overlay_model(std::move(layer_objects));
 
-  swapchain_->DrawAndPresentFrame([
-    this, escher_renderer, layer = drawable_layers[0], overlay = &overlay_model
-  ](const escher::ImagePtr& output_image,
-    const escher::SemaphorePtr& acquire_semaphore,
-    const escher::SemaphorePtr& frame_done_semaphore) {
-    output_image->SetWaitSemaphore(acquire_semaphore);
-    DrawLayer(escher_renderer, layer, output_image, frame_done_semaphore,
-              overlay);
-  });
+  swapchain_->DrawAndPresentFrame(
+      frame_timings,
+      [
+        this, escher_renderer, layer = drawable_layers[0],
+        overlay = &overlay_model
+      ](const escher::ImagePtr& output_image,
+        const escher::SemaphorePtr& acquire_semaphore,
+        const escher::SemaphorePtr& frame_done_semaphore) {
+        output_image->SetWaitSemaphore(acquire_semaphore);
+        DrawLayer(escher_renderer, layer, output_image, frame_done_semaphore,
+                  overlay);
+      });
 
   if (FTL_VLOG_IS_ON(3)) {
     std::ostringstream output;

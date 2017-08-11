@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <magenta/types.h>
 #include <cstdint>
 
 #include "lib/ftl/macros.h"
@@ -22,9 +23,9 @@ class Display {
   Display(uint32_t width, uint32_t height, float device_pixel_ratio);
 
   // Obtain the time of the last Vsync, in nanoseconds.
-  uint64_t GetLastVsyncTime() const;
+  mx_time_t GetLastVsyncTime();
 
-  // Obtain the interval between Vsyncs.
+  // Obtain the interval between Vsyncs, in nanoseconds.
   uint64_t GetVsyncInterval() const;
 
   // Claiming a display means that no other display renderer can use it.
@@ -37,7 +38,13 @@ class Display {
   float device_pixel_ratio() const { return device_pixel_ratio_; }
 
  private:
-  uint64_t const first_vsync_;
+  // Temporary friendship to allow FrameScheduler to feed back the Vsync timings
+  // gleaned from EventTimestamper.  This should go away once we receive real
+  // VSync times from the display driver.
+  friend class FrameScheduler;
+  void set_last_vsync_time(mx_time_t vsync_time);
+
+  mx_time_t last_vsync_time_;
   uint32_t const width_;
   uint32_t const height_;
   float const device_pixel_ratio_;

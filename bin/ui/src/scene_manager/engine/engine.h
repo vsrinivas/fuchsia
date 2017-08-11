@@ -15,11 +15,13 @@
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
 
 #include "apps/mozart/src/scene_manager/displays/display_manager.h"
+#include "apps/mozart/src/scene_manager/engine/display_swapchain.h"
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/release_fence_signaller.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/scene.h"
 #include "apps/mozart/src/scene_manager/resources/resource_linker.h"
+#include "apps/mozart/src/scene_manager/util/event_timestamper.h"
 
 namespace scene_manager {
 
@@ -81,6 +83,8 @@ class Engine : private FrameSchedulerDelegate {
     return release_fence_signaller_.get();
   }
 
+  EventTimestamper* event_timestamper() { return &event_timestamper_; }
+
   // Tell the FrameScheduler to schedule a frame, and remember the Session so
   // that we can tell it to apply updates when the FrameScheduler notifies us
   // via OnPrepareFrame().
@@ -95,6 +99,10 @@ class Engine : private FrameSchedulerDelegate {
   void CreateSession(
       ::fidl::InterfaceRequest<mozart2::Session> request,
       ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+
+  // Create a swapchain for the specified display.  The display must not already
+  // be claimed by another swapchain.
+  std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(Display* display);
 
   // Finds the session handler corresponding to the given id.
   SessionHandler* FindSession(SessionId id);
@@ -123,7 +131,8 @@ class Engine : private FrameSchedulerDelegate {
   void TearDownSession(SessionId id);
 
   // |FrameSchedulerDelegate|:
-  void RenderFrame(uint64_t presentation_time,
+  void RenderFrame(const FrameTimingsPtr& frame,
+                   uint64_t presentation_time,
                    uint64_t presentation_interval) override;
 
   // Returns true if rendering is needed.
@@ -151,6 +160,7 @@ class Engine : private FrameSchedulerDelegate {
   escher::PaperRendererPtr paper_renderer_;
 
   ResourceLinker resource_linker_;
+  EventTimestamper event_timestamper_;
   std::unique_ptr<escher::SimpleImageFactory> image_factory_;
   std::unique_ptr<escher::RoundedRectFactory> rounded_rect_factory_;
   std::unique_ptr<ReleaseFenceSignaller> release_fence_signaller_;

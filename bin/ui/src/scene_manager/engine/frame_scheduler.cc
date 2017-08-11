@@ -7,6 +7,8 @@
 #include <magenta/syscalls.h>
 
 #include "apps/mozart/src/scene_manager/displays/display.h"
+#include "apps/mozart/src/scene_manager/engine/frame_timings.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -14,11 +16,13 @@ namespace scene_manager {
 
 // Hard-coded estimate of how long it takes the SceneManager to render a frame.
 // TODO: more sophisticated prediction.
-constexpr uint64_t kPredictedFrameRenderTime = 4'000'000;  // 4ms
+constexpr uint64_t kPredictedFrameRenderTime = 8'000'000;  // 8ms
 
 FrameScheduler::FrameScheduler(Display* display)
     : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner().get()),
-      display_(display) {}
+      display_(display) {
+  outstanding_frames_.reserve(kMaxOutstandingFrames);
+}
 
 FrameScheduler::~FrameScheduler() {}
 
@@ -123,8 +127,13 @@ void FrameScheduler::MaybeRenderFrame() {
 
   // Go render the frame.
   if (delegate_) {
-    delegate_->RenderFrame(next_presentation_time_,
+    FTL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
+    auto frame_timings = ftl::MakeRefCounted<FrameTimings>(
+        this, ++frame_number_, next_presentation_time_);
+    delegate_->RenderFrame(frame_timings, next_presentation_time_,
                            display_->GetVsyncInterval());
+    // TODO(MZ-260): enable this.
+    // outstanding_frames_.push_back(frame_timings);
   }
 
   // The frame is in flight, and will be presented.  Check if another frame
@@ -133,10 +142,50 @@ void FrameScheduler::MaybeRenderFrame() {
   MaybeScheduleFrame();
 }
 
+void FrameScheduler::ReceiveFrameTimings(FrameTimings* timings) {
+  FTL_DCHECK(!outstanding_frames_.empty());
+  // TODO: how should we handle this case?  It is theoretically possible, but if
+  // if it happens then it means that the EventTimestamper is receiving signals
+  // out-of-order and is therefore generating bogus data.
+  FTL_DCHECK(outstanding_frames_[0].get() == timings) << "out-of-order.";
+
+// TODO(MZ-260): enable this.
+#if 0
+  mx_time_t presentation_time = ????;  // obtain from FrameTimings
+  display_->set_last_vsync(timings->actual_presentation_time());
+#endif
+
+  // Log trace data.
+  // TODO: just pass the whole Frame to a listener.
+  int64_t error_usecs =
+      static_cast<int64_t>(timings->actual_presentation_time() -
+                           timings->target_presentation_time()) /
+      1000;
+  TRACE_INSTANT("gfx", "FramePresented", TRACE_SCOPE_PROCESS, "frame_number",
+                timings->frame_number(), "time",
+                timings->actual_presentation_time(), "error", error_usecs);
+
+  // Pop the front Frame off the queue.
+  for (size_t i = 1; i < outstanding_frames_.size(); ++i) {
+    outstanding_frames_[i - 1] = std::move(outstanding_frames_[i]);
+  }
+  outstanding_frames_.resize(outstanding_frames_.size() - 1);
+
+  // If a frame was not scheduled due to back-pressure, try again.
+  if (back_pressure_applied_) {
+    back_pressure_applied_ = false;
+    MaybeScheduleFrame();
+  }
+}
+
 bool FrameScheduler::TooMuchBackPressure() {
-  // TODO: implement back-pressure in case we can't hit our desired frame rate.
-  // If this returns true, then MaybeScheduleFrame() MUST be called once the
-  // back-pressure is relieved.
+// TODO(MZ-260): enable this.
+#if 0
+  if (outstanding_frames_.size() >= kMaxOutstandingFrames) {
+    back_pressure_applied_ = true;
+    return true;
+  }
+#endif
   return false;
 }
 

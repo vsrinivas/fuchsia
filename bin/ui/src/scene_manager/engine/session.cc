@@ -760,9 +760,7 @@ ResourcePtr Session::CreateDisplayCompositor(
     return nullptr;
   }
   return ftl::MakeRefCounted<DisplayCompositor>(
-      this, id, display,
-      std::make_unique<DisplaySwapchain>(engine()->escher(),
-                                         engine()->GetVulkanSwapchain()));
+      this, id, display, engine()->CreateDisplaySwapchain(display));
 }
 
 ResourcePtr Session::CreateImagePipeCompositor(

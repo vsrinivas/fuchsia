@@ -7,6 +7,7 @@
 #include <set>
 
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
+#include "apps/mozart/src/scene_manager/engine/frame_timings.h"
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
@@ -111,7 +112,7 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
     // Apply update immediately.  This is done for tests.
     FTL_LOG(WARNING)
         << "No FrameScheduler available; applying update immediately";
-    RenderFrame(presentation_time, 0);
+    RenderFrame(FrameTimingsPtr(), presentation_time, 0);
   }
 }
 
@@ -124,6 +125,13 @@ void Engine::CreateSession(
       CreateSessionHandler(session_id, std::move(request), std::move(listener));
   sessions_.insert({session_id, std::move(handler)});
   ++session_count_;
+}
+
+std::unique_ptr<DisplaySwapchain> Engine::CreateDisplaySwapchain(
+    Display* display) {
+  FTL_DCHECK(!display->is_claimed());
+  return std::make_unique<DisplaySwapchain>(display, event_timestamper(),
+                                            escher(), GetVulkanSwapchain());
 }
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
@@ -159,10 +167,11 @@ void Engine::TearDownSession(SessionId id) {
   }
 }
 
-void Engine::RenderFrame(uint64_t presentation_time,
+void Engine::RenderFrame(const FrameTimingsPtr& timings,
+                         uint64_t presentation_time,
                          uint64_t presentation_interval) {
-  TRACE_DURATION("gfx", "RenderFrame", "time", presentation_time, "interval",
-                 presentation_interval);
+  TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
+                 "time", presentation_time, "interval", presentation_interval);
 
   if (!ApplyScheduledSessionUpdates(presentation_time, presentation_interval))
     return;
@@ -170,7 +179,7 @@ void Engine::RenderFrame(uint64_t presentation_time,
   UpdateAndDeliverMetrics(presentation_time);
 
   for (auto& compositor : compositors_) {
-    compositor->DrawFrame(paper_renderer_.get());
+    compositor->DrawFrame(timings, paper_renderer_.get());
   }
 }
 

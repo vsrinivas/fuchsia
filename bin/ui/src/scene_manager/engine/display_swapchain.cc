@@ -2,32 +2,63 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/src/scene_manager/swapchain.h"
+#include "apps/mozart/src/scene_manager/engine/display_swapchain.h"
 
+#include "apps/mozart/src/scene_manager/displays/display.h"
+#include "apps/mozart/src/scene_manager/engine/frame_timings.h"
+#include "apps/mozart/src/scene_manager/util/escher_utils.h"
 #include "apps/tracing/lib/trace/event.h"
+
 #include "escher/escher.h"
 
 namespace scene_manager {
 
-DisplaySwapchain::DisplaySwapchain(escher::Escher* escher,
+DisplaySwapchain::DisplaySwapchain(Display* display,
+                                   EventTimestamper* timestamper,
+                                   escher::Escher* escher,
                                    escher::VulkanSwapchain swapchain)
-    : swapchain_(std::move(swapchain)),
-      device_(escher->device()->vk_device()),
+    : display_(display),
+      event_timestamper_(timestamper),
+      swapchain_(std::move(swapchain)),
+      device_(escher->vk_device()),
       queue_(escher->device()->vk_main_queue()) {
+  display_->Claim();
+
   image_available_semaphores_.reserve(swapchain_.images.size());
   render_finished_semaphores_.reserve(swapchain_.images.size());
   for (size_t i = 0; i < swapchain_.images.size(); ++i) {
+// TODO: Use timestamper to listen for event notifications
+#if 1
     image_available_semaphores_.push_back(escher::Semaphore::New(device_));
     render_finished_semaphores_.push_back(escher::Semaphore::New(device_));
+#else
+    auto pair = NewSemaphoreEventPair(escher);
+    image_available_semaphores_.push_back(std::move(pair.first));
+    watches_.push_back(
+        timestamper, std::move(pair.second), kFenceSignalled,
+        [this, i](mx_time_t timestamp) { OnFramePresented(i, timestamp); });
+#endif
   }
 }
 
 // TODO(MZ-142): We should manage the lifetime of the swapchain object, and
 // destroy it here.  However, we currently obtain the swapchain from the
 // escher::DemoHarness that eventually destroys it.
-DisplaySwapchain::~DisplaySwapchain() = default;
+DisplaySwapchain::~DisplaySwapchain() {
+  display_->Unclaim();
+}
 
-bool DisplaySwapchain::DrawAndPresentFrame(DrawCallback draw_callback) {
+bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
+                                           DrawCallback draw_callback) {
+  // TODO(MZ-260): replace Vulkan swapchain with Magma C ABI calls, and use
+  // EventTimestamper::Wait to notify |frame| when the frame is finished
+  // rendering, and when it is presented.
+  // auto timing_index = frame->AddSwapchain(this);
+  if (event_timestamper_ && !event_timestamper_) {
+    // Avoid unused-variable error.
+    FTL_CHECK(false) << "I don't believe you.";
+  }
+
   auto& image_available_semaphore =
       image_available_semaphores_[next_semaphore_index_];
   auto& render_finished_semaphore =
