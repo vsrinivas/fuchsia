@@ -13,7 +13,7 @@ BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
 usage() {
     echo "usage: ${0} [options]"
     echo ""
-    echo "    -k kernel.bin             Magenta kernel."
+    echo "    -m magenta.bin            Magenta kernel."
     echo "    -b bootdata.bin           Magenta bootdata."
     echo "    -l bzImage                Linux kernel."
     echo "    -i initrd                 Linux initrd."
@@ -22,15 +22,15 @@ usage() {
     exit 1
 }
 
-declare KERNEL="$BUILDDIR/magenta.bin"
+declare MAGENTA="$BUILDDIR/magenta.bin"
 declare BOOTDATA="$BUILDDIR/bootdata.bin"
 declare BZIMAGE="/tmp/linux/arch/x86/boot/bzImage"
 declare INITRD="/tmp/toybox/initrd.gz"
 declare ROOTFS="/tmp/toybox/rootfs.ext2"
 
-while getopts "k:b:l:i:r:" opt; do
+while getopts "m:b:l:i:r:" opt; do
   case "${opt}" in
-    k) KERNEL="${OPTARG}" ;;
+    m) MAGENTA="${OPTARG}" ;;
     b) BOOTDATA="${OPTARG}" ;;
     l) BZIMAGE="${OPTARG}" ;;
     i) INITRD="${OPTARG}" ;;
@@ -39,13 +39,13 @@ while getopts "k:b:l:i:r:" opt; do
   esac
 done
 
-readonly KERNEL BOOTDATA BZIMAGE INITRD ROOTFS
+readonly MAGENTA BOOTDATA BZIMAGE INITRD ROOTFS
 
 echo "
 data/dsdt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/dsdt.aml
 data/madt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/madt.aml
 data/mcfg.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/mcfg.aml
-data/kernel.bin=$KERNEL
+data/magenta.bin=$MAGENTA
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
 
 if [ -f "$BZIMAGE" ]; then
@@ -62,6 +62,6 @@ fi
 
 $BUILDDIR/tools/mkbootfs \
     --target=boot \
-    -o $BUILDDIR/bootdata-with-kernel.bin \
+    -o $BUILDDIR/bootdata-with-guest.bin \
     $BUILDDIR/bootdata.bin \
     /tmp/guest.manifest
