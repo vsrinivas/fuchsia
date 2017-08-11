@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![allow(non_camel_case_types)]
+#![feature(untagged_unions)]
 
 extern crate core;
 
@@ -14,7 +15,9 @@ pub type mx_handle_t = i32;
 pub type mx_status_t = i32;
 
 pub type mx_futex_t = isize;
+pub type mx_addr_t = usize;
 pub type mx_paddr_t = usize;
+pub type mx_vaddr_t = usize;
 
 // Auto-generated using tools/gen_status.py
 pub const MX_OK                    : mx_status_t = 0;
@@ -325,6 +328,67 @@ pub struct mx_port_packet_t {
     pub packet_type: mx_packet_type_t,
     pub status: i32,
     pub union: [u8; 32],
+}
+
+#[repr(C)]
+pub struct mx_guest_io_t {
+    port: u16,
+    access_size: u8,
+    input: bool,
+    // TODO: Actually a union
+    data: [u8; 4],
+}
+
+#[cfg(target_arch="aarch64")]
+#[repr(C)]
+pub struct mx_guest_memory_t {
+    addr: mx_vaddr_t,
+    inst: u32,
+}
+
+pub const X86_MAX_INST_LEN: usize = 15;
+
+#[cfg(target_arch="x86_64")]
+#[repr(C)]
+pub struct mx_guest_memory_t {
+    addr: mx_vaddr_t,
+    inst_len: u8,
+    inst_buf: [u8; X86_MAX_INST_LEN],
+}
+
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum mx_guest_packet_t_type {
+    MX_GUEST_PKT_MEMORY = 1,
+    MX_GUEST_PKT_IO = 2,
+}
+
+#[repr(C)]
+pub union mx_guest_packet_t_union {
+    // MX_GUEST_PKT_MEMORY
+    memory: mx_guest_memory_t,
+    // MX_GUEST_PKT_IO
+    io: mx_guest_io_t,
+}
+
+#[repr(C)]
+pub struct mx_guest_packet_t {
+    packet_type: mx_guest_packet_t_type,
+    contents: mx_guest_packet_t_union,
+}
+
+#[cfg(target_arch="x86_64")]
+#[repr(C)]
+pub struct mx_vcpu_create_args_t {
+    pub ip: mx_vaddr_t,
+    pub cr3: mx_vaddr_t,
+    pub apic_vmo: mx_handle_t,
+}
+
+#[cfg(not(target_arch="x86_64"))]
+#[repr(C)]
+pub struct mx_vcpu_create_args_t {
+    pub ip: mx_vaddr_t,
 }
 
 include!("definitions.rs");

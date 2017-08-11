@@ -22,6 +22,12 @@ extern {
         nanoseconds: mx_duration_t
         ) -> mx_time_t;
 
+    pub fn mx_clock_adjust(
+        handle: mx_handle_t,
+        clock_id: u32,
+        offset: i64
+        ) -> mx_status_t;
+
     pub fn mx_system_get_num_cpus(
         ) -> u32;
 
@@ -167,7 +173,6 @@ extern {
         ) -> mx_status_t;
 
     pub fn mx_channel_call_finish(
-        handle: mx_handle_t,
         deadline: mx_time_t,
         args: *const mx_channel_call_args_t,
         actual_bytes: *mut u32,
@@ -239,6 +244,10 @@ extern {
         kind: u32,
         buffer: *const u8,
         buffer_len: u32
+        ) -> mx_status_t;
+
+    pub fn mx_thread_set_priority(
+        prio: i32
         ) -> mx_status_t;
 
     pub fn mx_process_exit(
@@ -377,6 +386,12 @@ extern {
         handle: mx_handle_t,
         deadline: mx_time_t,
         period: mx_duration_t,
+        slack: mx_duration_t
+        ) -> mx_status_t;
+
+    pub fn mx_timer_set(
+        handle: mx_handle_t,
+        deadline: mx_time_t,
         slack: mx_duration_t
         ) -> mx_status_t;
 
@@ -591,8 +606,9 @@ extern {
     pub fn mx_interrupt_create(
         handle: mx_handle_t,
         vector: u32,
-        options: u32
-        ) -> mx_handle_t;
+        options: u32,
+        out_handle: *mut mx_handle_t
+        ) -> mx_status_t;
 
     pub fn mx_interrupt_complete(
         handle: mx_handle_t
@@ -612,24 +628,17 @@ extern {
         len: u32
         ) -> mx_status_t;
 
-    pub fn mx_mmap_device_memory(
-        handle: mx_handle_t,
-        paddr: mx_paddr_t,
-        len: u32,
-        cache_policy: mx_cache_policy_t,
-        out_vaddr: *mut usize
-        ) -> mx_status_t;
-
-    pub fn mx_io_mapping_get_info(
-        handle: mx_handle_t,
-        out_vaddr: *mut usize,
-        out_size: *mut u64
-        ) -> mx_status_t;
-
     pub fn mx_vmo_create_contiguous(
         rsrc_handle: mx_handle_t,
         size: usize,
         alignment_log2: u32,
+        out: *mut mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_vmo_create_physical(
+        rsrc_handle: mx_handle_t,
+        paddr: mx_paddr_t,
+        size: usize,
         out: *mut mx_handle_t
         ) -> mx_status_t;
 
@@ -660,17 +669,12 @@ extern {
         stride: u32
         ) -> mx_status_t;
 
-    pub fn mx_clock_adjust(
-        handle: mx_handle_t,
-        clock_id: u32,
-        offset: i64
-        ) -> mx_status_t;
-
     pub fn mx_pci_get_nth_device(
         handle: mx_handle_t,
         index: u32,
-        out_info: *mut mx_pcie_device_info_t
-        ) -> mx_handle_t;
+        out_info: *mut mx_pcie_device_info_t,
+        out_handle: *mut mx_handle_t
+        ) -> mx_status_t;
 
     pub fn mx_pci_enable_bus_master(
         handle: mx_handle_t,
@@ -684,6 +688,17 @@ extern {
 
     pub fn mx_pci_reset_device(
         handle: mx_handle_t
+        ) -> mx_status_t;
+
+    pub fn mx_pci_cfg_pio_rw(
+        handle: mx_handle_t,
+        bus: u8,
+        dev: u8,
+        func: u8,
+        offset: u8,
+        val: *mut u32,
+        width: usize,
+        write: bool
         ) -> mx_status_t;
 
     pub fn mx_pci_get_bar(
@@ -755,58 +770,69 @@ extern {
 
     pub fn mx_resource_create(
         parent_handle: mx_handle_t,
-        records: *const mx_rrec_t,
-        count: u32,
+        kind: u32,
+        low: u64,
+        high: u64,
         resource_out: *mut mx_handle_t
         ) -> mx_status_t;
 
-    pub fn mx_resource_destroy(
-        handle: mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_resource_get_handle(
-        handle: mx_handle_t,
-        index: u32,
+    pub fn mx_guest_create(
+        resource: mx_handle_t,
         options: u32,
+        physmem_vmo: mx_handle_t,
         out: *mut mx_handle_t
         ) -> mx_status_t;
 
-    pub fn mx_resource_do_action(
-        handle: mx_handle_t,
-        index: u32,
-        action: u32,
-        arg0: u32,
-        arg1: u32
+    pub fn mx_guest_set_trap(
+        guest: mx_handle_t,
+        kind: u32,
+        addr: mx_vaddr_t,
+        len: usize,
+        fifo: mx_handle_t
         ) -> mx_status_t;
 
-    pub fn mx_resource_connect(
-        handle: mx_handle_t,
-        channel: mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_resource_accept(
-        handle: mx_handle_t,
-        channel: *mut mx_handle_t
-        ) -> mx_status_t;
-
-    pub fn mx_hypervisor_create(
-        handle: mx_handle_t,
+    pub fn mx_vcpu_create(
+        guest: mx_handle_t,
         options: u32,
+        args: *const mx_vcpu_create_args_t,
         out: *mut mx_handle_t
         ) -> mx_status_t;
 
-    pub fn mx_hypervisor_op(
-        handle: mx_handle_t,
-        opcode: u32,
-        args: *const u8,
-        args_len: u32,
-        result: *mut u8,
-        result_len: u32
+    pub fn mx_vcpu_resume(
+        vcpu: mx_handle_t,
+        packet: *mut mx_guest_packet_t
+        ) -> mx_status_t;
+
+    pub fn mx_vcpu_interrupt(
+        vcpu: mx_handle_t,
+        vector: u32
+        ) -> mx_status_t;
+
+    pub fn mx_vcpu_read_state(
+        vcpu: mx_handle_t,
+        kind: u32,
+        buffer: *mut u8,
+        len: u32
+        ) -> mx_status_t;
+
+    pub fn mx_vcpu_write_state(
+        vcpu: mx_handle_t,
+        kind: u32,
+        buffer: *const u8,
+        len: u32
         ) -> mx_status_t;
 
     pub fn mx_system_mexec(
         kernel: mx_handle_t,
-        bootimage: mx_handle_t
+        bootimage: mx_handle_t,
+        cmdline: *const u8,
+        cmdline_len: u32
+        ) -> mx_status_t;
+
+    pub fn mx_job_set_relative_importance(
+        root_resource: mx_handle_t,
+        job: mx_handle_t,
+        less_important_job: mx_handle_t
         ) -> mx_status_t;
 
     pub fn mx_syscall_test_0(
