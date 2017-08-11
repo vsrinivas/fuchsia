@@ -22,7 +22,7 @@ void __funcs_on_quick_exit(void) {
 }
 
 int at_quick_exit(void (*func)(void)) {
-    if (count == 32)
+    if (count == COUNT)
         return -1;
     mtx_lock(&lock);
     funcs[count++] = func;
