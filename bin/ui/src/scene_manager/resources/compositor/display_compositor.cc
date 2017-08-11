@@ -5,7 +5,7 @@
 #include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
 
 #include "apps/mozart/src/scene_manager/displays/display.h"
-#include "apps/mozart/src/scene_manager/vulkan_swapchain.h"
+#include "apps/mozart/src/scene_manager/swapchain.h"
 
 namespace scene_manager {
 

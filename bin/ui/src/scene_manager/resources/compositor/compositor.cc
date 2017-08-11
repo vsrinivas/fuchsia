@@ -17,7 +17,7 @@
 #include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
 #include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
-#include "apps/mozart/src/scene_manager/vulkan_swapchain.h"
+#include "apps/mozart/src/scene_manager/swapchain.h"
 #include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
