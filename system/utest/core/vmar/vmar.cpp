@@ -13,6 +13,7 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
+#include <mxtl/atomic.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/limits.h>
 #include <unittest/unittest.h>
@@ -53,18 +54,16 @@ bool check_pages_mapped(mx_handle_t process, uintptr_t base, uint64_t bitmap, si
 
 // Thread run by test_local_address, used to attempt an access to memory
 void test_write_address_thread(uintptr_t address, bool* success) {
-    auto p = reinterpret_cast<volatile uint8_t*>(address);
-    *p = 5;
-    CF;
+    auto p = reinterpret_cast<mxtl::atomic_uint8_t*>(address);
+    p->store(5);
     *success = true;
 
     mx_thread_exit();
 }
 // Thread run by test_local_address, used to attempt an access to memory
 void test_read_address_thread(uintptr_t address, bool* success) {
-    auto p = reinterpret_cast<volatile uint8_t*>(address);
-    *p;
-    CF;
+    auto p = reinterpret_cast<mxtl::atomic_uint8_t*>(address);
+    (void)p->load();
     *success = true;
 
     mx_thread_exit();
@@ -1698,10 +1697,11 @@ bool protect_over_demand_paged_test() {
               MX_OK);
     EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
-    volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
-    target[0] = 5;
-    target[size / 2] = 6;
-    target[size - 1] = 7;
+    mxtl::atomic_uint8_t* target =
+        reinterpret_cast<mxtl::atomic_uint8_t*>(mapping_addr);
+    target[0].store(5);
+    target[size / 2].store(6);
+    target[size - 1].store(7);
 
     ASSERT_EQ(mx_vmar_protect(mx_vmar_root_self(), mapping_addr, size,
                               MX_VM_FLAG_PERM_READ),
@@ -1742,10 +1742,11 @@ bool protect_large_uncommitted_test() {
     EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     // Make sure some pages exist
-    volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
-    target[0] = 5;
-    target[size / 2] = 6;
-    target[size - 1] = 7;
+    mxtl::atomic_uint8_t* target =
+        reinterpret_cast<mxtl::atomic_uint8_t*>(mapping_addr);
+    target[0].store(5);
+    target[size / 2].store(6);
+    target[size - 1].store(7);
 
     // Ensure we're misaligned relative to a larger paging structure level.
     // TODO(teisenbe): Would be nice for this to be more arch aware.
@@ -1790,10 +1791,11 @@ bool unmap_large_uncommitted_test() {
     EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     // Make sure some pages exist
-    volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
-    target[0] = 5;
-    target[size / 2] = 6;
-    target[size - 1] = 7;
+    mxtl::atomic_uint8_t* target =
+        reinterpret_cast<mxtl::atomic_uint8_t*>(mapping_addr);
+    target[0].store(5);
+    target[size / 2].store(6);
+    target[size - 1].store(7);
 
     // Ensure we're misaligned relative to a larger paging structure level.
     // TODO(teisenbe): Would be nice for this to be more arch aware.
