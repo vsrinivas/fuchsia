@@ -1,0 +1,15 @@
+{
+    "languages": [
+        "cpp",
+        "rust"
+    ],
+    "labels": [
+        "//rust/magenta-rs/examples"
+    ],
+    "binaries": [
+        {
+            "binary": "mx_toy",
+            "bootfs_path": "bin/example_mx_toy"
+        }
+    ]
+}
