@@ -78,9 +78,6 @@
 #define __DEPRECATED __attribute__((__deprecated__))
 #endif
 
-/* compiler fence */
-#define CF do { __asm__ volatile("" ::: "memory"); } while(0)
-
 #else  // if __GNUC__ || defined(__clang__)
 
 #warning "Unrecognized compiler!  Please update global/include/compiler.h"
@@ -124,8 +121,6 @@
 #if !defined __DEPRECATED
 #define __DEPRECATED
 #endif
-
-#define CF
 
 #endif  // if __GNUC__ || defined(__clang__)
 #endif  // ifndef __ASSEMBLY__
