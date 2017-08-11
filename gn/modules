@@ -6,6 +6,7 @@
         "calendar",
         "chat",
         "contacts",
+        "drive",
         "email",
         "music",
         "video"
@@ -15,7 +16,6 @@
         "modules": "//apps/modules/common:modules"
     },
     "components": [
-        "apps/modules/common/modules/gallery/gallery_component.json",
         "apps/modules/common/modules/interactive_receipt/interactive_receipt_component.json",
         "apps/modules/common/modules/map/map_component.json",
         "apps/modules/common/modules/usps/usps_component.json",
