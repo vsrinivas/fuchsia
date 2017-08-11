@@ -12,6 +12,8 @@ source_set("crypto") {
     "hash.h",
     "hmac.cc",
     "hmac.h",
+    "kdf.cc",
+    "kdf.h",
     "rand.cc",
     "rand.h",
   ]

@@ -11,6 +11,6 @@ namespace glue {
 // Compute the HMAC defined by RFC 2104 using SHA-256 for the hash algorithm.
 // |key| must be at least 256 bits long.
 std::string SHA256HMAC(ftl::StringView key, ftl::StringView data);
-}
+}  // namespace glue
 
 #endif  // APPS_LEDGER_SRC_GLUE_CRYPTO_HMAC_H_

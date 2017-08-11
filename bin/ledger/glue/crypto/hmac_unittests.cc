@@ -6,21 +6,10 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "apps/ledger/src/glue/crypto/crypto_test_util.h"
 
 namespace glue {
 namespace {
-
-std::string FromHex(ftl::StringView data) {
-  std::string result;
-  result.reserve(data.size() / 2);
-  while (!data.empty()) {
-    result.push_back(
-        ftl::StringToNumber<uint8_t>(data.substr(0, 2), ftl::Base::k16));
-    data = data.substr(2);
-  }
-  return result;
-}
 
 TEST(HMAC, Correctness) {
   std::string key = FromHex(
