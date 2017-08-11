@@ -51,17 +51,10 @@ to:
 
 ## Run Stories
 
-### Magenta Vs. Fuchsia Prompt.
+### Virtual consoles.
 
-A booted Fuchsia system has shells running in two different environments.  The
-Magenta shell (`magenta$` prompt) runs in an empty environment at the root
-of the environment tree.  The Fuchsia shell (`$` prompt) runs further down
-the environment tree and has access to many more resources including the
-graphics server.  For more information see
-[Fuchsia Boot Sequence](boot_sequence.md).
-
-The systems boots up with three Fuchsia shells and one Magenta shell.  Alt-F1
-through Alt-F4 can be used to switch between virtual consoles.
+The systems boots up with three virtual consoles.  Alt-F1 through
+Alt-F3 can be used to switch between virtual consoles.
 
 ### Wipe Data
 

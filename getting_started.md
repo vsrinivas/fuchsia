@@ -182,13 +182,8 @@ highlighted in yellow at the top of the screen. You can switch to the next
 tab using Alt-Tab on the keyboard.
 
 - Tab zero is the console and displays the boot and application log.
-- Tabs 1, 2 and 3 contain Fuchsia shells.
+- Tabs 1, 2 and 3 contain shells.
 - Tabs 4 and higher contain applications you've launched.
-
-Fuchsia has two shells. The Magenta shell talks directly to Magenta and has the
-prompt "magenta$". The Fuchsia shell supports additional features like the
-Application Manager. The prompt for the Fuchsia shell is just "$". You should
-use the Fuchsia shell for the examples below.
 
 Note: to select tabs, you may need to enter "console mode". See the next section for details.
 

@@ -14,7 +14,7 @@ program crashes and prints a backtrace of the crashing thread.
 Example:
 
 ```
-magenta$ /boot/test/debugger-test segfault
+$ /boot/test/debugger-test segfault
 [00029.042] 01093.01133> <== fatal exception: process [6354] thread [6403]
 [00029.042] 01093.01133> <== fatal page fault, PC at 0x1001df9
 [00029.044] 01093.01133>  CS:                   0 RIP:          0x1001df9 EFL:              0x207 CR2:               0x2a
