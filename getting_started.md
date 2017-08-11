@@ -183,8 +183,7 @@ tab using Alt-Tab on the keyboard.
 
 - Tab zero is the console and displays the boot and application log.
 - Tabs 1, 2 and 3 contain Fuchsia shells.
-- Tab 4 contains a Magenta shell.
-- Tabs 5 and higher contain applications you've launched.
+- Tabs 4 and higher contain applications you've launched.
 
 Fuchsia has two shells. The Magenta shell talks directly to Magenta and has the
 prompt "magenta$". The Fuchsia shell supports additional features like the
