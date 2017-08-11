@@ -43,12 +43,6 @@ func (pm *PowerManager) GetBatteryStatus() (power_manager.BatteryStatus, error) 
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	if pm.battery_status.Status == power_manager.Status_NotInitialized {
-		pm.mu.Unlock()
-		pm.updateStatus()
-		pm.mu.Lock()
-	}
-
 	return pm.battery_status, nil
 }
 
@@ -64,14 +58,10 @@ func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcher_Pointer)
 // Updates the status and returns false if battery status
 // cannot be updated in future.
 func (pm *PowerManager) updateStatus() bool {
-	logger.Println("update status")
 
 	f, err := os.Open("/dev/class/battery/000")
 	if err != nil {
 		logger.Printf("Error while getting status: %s\n", err)
-		pm.mu.Lock()
-		pm.battery_status.Status = power_manager.Status_NotAvailable
-		pm.mu.Unlock()
 		return false
 	}
 	defer f.Close()
@@ -91,7 +81,7 @@ func (pm *PowerManager) updateStatus() bool {
 
 	m := re.FindStringSubmatch(string(b[:n-1]))
 	if len(m) != 3 {
-		logger.Printf("Warning: Battery status format wrong: %s, %v\n", string(b[:n-1]), m)
+		logger.Printf("Warning: Battery status format wrong, text: %q, submatch: %v\n", string(b[:n-1]), m)
 		// Not fatal
 		return true
 	}
@@ -104,9 +94,9 @@ func (pm *PowerManager) updateStatus() bool {
 	i, _ := strconv.Atoi(m[2])
 	pm.battery_status.Level = uint16(i)
 	pm.battery_status.Status = power_manager.Status_Ok
-	logger.Printf("Battery status: %v", pm.battery_status)
 
 	if oldStatus != pm.battery_status {
+		logger.Printf("Battery status changed from %v to %v", oldStatus, pm.battery_status)
 		for _, pmw := range pm.watchers {
 			go pmw.OnChangeBatteryStatus(pm.battery_status)
 		}
@@ -116,9 +106,12 @@ func (pm *PowerManager) updateStatus() bool {
 }
 
 func (pm *PowerManager) Bind(r power_manager.PowerManager_Request) {
+	logger.Println("Bind")
+
 	s := r.NewStub(pm, bindings.GetAsyncWaiter())
 
 	go func() {
+		defer logger.Println("bye Bind")
 		for {
 			if err := s.ServeRequest(); err != nil {
 				if mxerror.Status(err) != mx.ErrPeerClosed {
@@ -141,7 +134,7 @@ func main() {
 	}
 	pm := &PowerManager{
 		battery_status: power_manager.BatteryStatus{
-			Status:   power_manager.Status_NotInitialized,
+			Status:   power_manager.Status_NotAvailable,
 			Level:    uint16(0),
 			Charging: false,
 		},
@@ -158,7 +151,9 @@ func main() {
 			break
 		}
 	}
+
 	go func() {
+		logger.Println("update status")
 		for {
 			if !pm.updateStatus() {
 				break

@@ -6,8 +6,7 @@ module power;
 
 enum Status {
   OK,
-  NotAvailable,
-  NotInitialized
+  NotAvailable
 };
 // Provides battery status
 struct BatteryStatus {

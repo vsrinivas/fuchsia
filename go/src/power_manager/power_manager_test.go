@@ -38,12 +38,9 @@ func TestPowerManager(t *testing.T) {
 	r, p := pmClient.pm.NewRequest(bindings.GetAsyncWaiter())
 	pmClient.pm = p
 	ctx.ConnectToEnvService(r)
-	bt, err := pmClient.pm.GetBatteryStatus()
+	_, err := pmClient.pm.GetBatteryStatus()
 	if err != nil {
 		t.Fatal(err)
-	}
-	if bt.Status == power_manager.Status_NotInitialized {
-		t.Fatalf("Status should not be NotInitialized")
 	}
 	pmClient.pm.Close()
 }
