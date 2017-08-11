@@ -70,15 +70,15 @@ class {{union|name}} extends bindings.Union {
     return result;
   }
 
-  void encode(bindings.Encoder encoder0, int offset) {
+  void encode(bindings.Encoder encoder_0, int offset) {
     {# TODO(azani): Error when trying to encode an unknown member. #}
-    encoder0.encodeUint32(16, offset);
-    encoder0.encodeUint32(_tagToInt[_tag], offset + 4);
+    encoder_0.encodeUint32(16, offset);
+    encoder_0.encodeUint32(_tagToInt[_tag], offset + 4);
     switch (_tag) {
 {%-   for field in union.fields %}
       case {{union|name}}Tag.{{field|name}}:
 {%-     if field.kind|is_union_kind %}
-        encoder0.encodeNestedUnion({{field|name}}, offset + 8, {{field.kind|is_nullable_kind|dart_true_false}});
+        encoder_0.encodeNestedUnion({{field|name}}, offset + 8, {{field.kind|is_nullable_kind|dart_true_false}});
 {%-     else %}
         {{encoding_macros.encode(field|name, field.kind, "offset + 8", 0)|indent(8)}}
 {%-     endif %}

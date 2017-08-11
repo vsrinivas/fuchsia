@@ -56,11 +56,11 @@ class {{struct|name}} extends bindings.Struct {
     return result;
   }
 
-  void encode(bindings.Encoder encoder) {
+  void encode(bindings.Encoder encoder_) {
 {%- if not struct.bytes %}
-    encoder.getStructEncoderAtOffset(kVersions.last);
+    encoder_.getStructEncoderAtOffset(kVersions.last);
 {%- else %}
-    var encoder0 = encoder.getStructEncoderAtOffset(kVersions.last);
+    var encoder_0 = encoder_.getStructEncoderAtOffset(kVersions.last);
 {%- endif %}
     const String structName = "{{struct|name}}";
     String fieldName;

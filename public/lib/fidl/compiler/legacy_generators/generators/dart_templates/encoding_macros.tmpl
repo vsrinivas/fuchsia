@@ -9,17 +9,17 @@
 {%-   endif %}
 {%-   if check_for_null -%}
 if ({{variable}} == null) {
-  encoder{{level}}.encodeNullPointer({{offset}}, {{kind|is_nullable_kind|dart_true_false}});
+  encoder_{{level}}.encodeNullPointer({{offset}}, {{kind|is_nullable_kind|dart_true_false}});
 } else {
 {%-   else %}
 {
 {%-   endif %}
 {%-   if sub_kind|is_union_kind %}
-  var encoder{{level + 1}} = encoder{{level}}.encodeUnionArray({{variable}}.length, {{offset}}, {{kind|array_expected_length}});
+  var encoder_{{level + 1}} = encoder_{{level}}.encodeUnionArray({{variable}}.length, {{offset}}, {{kind|array_expected_length}});
 {%-   elif sub_kind|is_enum_kind %}
-  var encoder{{level + 1}} = encoder{{level}}.encodeEnumArray({{variable}}.length, {{offset}}, {{kind|array_expected_length}});
+  var encoder_{{level + 1}} = encoder_{{level}}.encodeEnumArray({{variable}}.length, {{offset}}, {{kind|array_expected_length}});
 {%-   else %}
-  var encoder{{level + 1}} = encoder{{level}}.encodePointerArray({{variable}}.length, {{offset}}, {{kind|array_expected_length}});
+  var encoder_{{level + 1}} = encoder_{{level}}.encodePointerArray({{variable}}.length, {{offset}}, {{kind|array_expected_length}});
 {%-   endif %}
   for (int i{{level}} = 0; i{{level}} < {{variable}}.length; ++i{{level}}) {
     {{encode(variable~'[i'~level~']', sub_kind, 'bindings.ArrayDataHeader.kHeaderSize + ' ~ sub_kind_size ~ ' * i'~level, 0, level+1)|indent(4)}}
@@ -27,16 +27,16 @@ if ({{variable}} == null) {
 }
 {%- elif kind|is_map_kind -%}
 if ({{variable}} == null) {
-  encoder{{level}}.encodeNullPointer({{offset}}, {{kind|is_nullable_kind|dart_true_false}});
+  encoder_{{level}}.encodeNullPointer({{offset}}, {{kind|is_nullable_kind|dart_true_false}});
 } else {
-  var encoder{{level + 1}} = encoder{{level}}.encoderForMap({{offset}});
+  var encoder_{{level + 1}} = encoder_{{level}}.encoderForMap({{offset}});
   var keys{{level}} = {{variable}}.keys.toList();
   var values{{level}} = {{variable}}.values.toList();
   {{encode('keys'~level, kind.key_kind|array, 'bindings.ArrayDataHeader.kHeaderSize', 0, level+1, False)|indent(2)}}
   {{encode('values'~level, kind.value_kind|array, 'bindings.ArrayDataHeader.kHeaderSize + bindings.kPointerSize', 0, level+1, False)|indent(2)}}
 }
 {%- else -%}
-encoder{{level}}.{{kind|encode_method(variable, offset, bit)}};
+encoder_{{level}}.{{kind|encode_method(variable, offset, bit)}};
 {%- endif %}
 {%- endmacro %}
 
