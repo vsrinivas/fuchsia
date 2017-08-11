@@ -8,9 +8,9 @@
 
 namespace mxtl {
 
-int StringPiece::compare(StringPiece other) const {
+int StringPiece::compare(const StringPiece& other) const {
     size_t len = min(length_, other.length_);
-    int retval = memcmp(ptr_, other.ptr_, len);
+    int retval = memcmp(data_, other.data_, len);
     if (retval == 0) {
         if (length_ == other.length_) {
             return 0;
@@ -20,16 +20,9 @@ int StringPiece::compare(StringPiece other) const {
     return retval;
 }
 
-bool operator==(StringPiece lhs, StringPiece rhs) {
-  if (lhs.length() != rhs.length())
-    return false;
-  return lhs.compare(rhs) == 0;
+bool operator==(const StringPiece& lhs, const StringPiece& rhs) {
+    return lhs.length() == rhs.length() &&
+           memcmp(lhs.data(), rhs.data(), lhs.length()) == 0;
 }
 
-bool operator!=(StringPiece lhs, StringPiece rhs) {
-  if (lhs.length() != rhs.length())
-    return true;
-  return lhs.compare(rhs) != 0;
-}
-
-}  // namespace mxtl
+} // namespace mxtl

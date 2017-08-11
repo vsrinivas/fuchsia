@@ -17,55 +17,89 @@ constexpr static size_t constexpr_strlen(const char* str) {
 }
 
 // A string-like object that points to a sized piece of memory.
-// |length_| does NOT include a trailing NUL and no guarantee is made that
-// you can check |ptr_[length_]| to see if a NUL is there.
+//
+// mxtl::StringPiece is designed to resemble std::string_view.
+//
+// |length()| does NOT include a trailing NUL and no guarantee is made that
+// you can check |data()[length()]| to see if a NUL is there.
+//
 // Basically, these aren't C strings, don't think otherwise.
 // The string piece does not own the data it points to.
-
 class StringPiece {
 public:
-    constexpr StringPiece() : ptr_(nullptr), length_(0) {}
-    StringPiece(const char* str) : ptr_(str), length_((str == nullptr) ? 0 : strlen(str)) {}
-    constexpr StringPiece(const char* str, size_t len) : ptr_(str), length_(len) {}
+    constexpr StringPiece()
+        : data_(nullptr), length_(0u) {}
 
-    const char* data() const {
-        return ptr_;
-    }
-    size_t length() const {
-        return length_;
+    constexpr StringPiece(const char* data)
+        : data_(data), length_(data != nullptr ? constexpr_strlen(data) : 0u) {}
+
+    constexpr StringPiece(const char* data, size_t length)
+        : data_(data), length_(length) {}
+
+    constexpr StringPiece(const StringPiece& other) = default;
+    constexpr StringPiece(StringPiece&& other) = default;
+
+    constexpr const char* data() const { return data_; }
+
+    constexpr size_t length() const { return length_; }
+    constexpr size_t size() const { return length_; }
+    constexpr bool empty() const { return length_ == 0u; }
+
+    constexpr const char* begin() const { return data_; }
+    constexpr const char* cbegin() const { return data_; }
+    constexpr const char* end() const { return data_ + length_; }
+    constexpr const char* cend() const { return data_ + length_; }
+
+    constexpr const char& operator[](size_t pos) const { return data_[pos]; }
+
+    int compare(const StringPiece& other) const;
+
+    void clear() {
+        data_ = nullptr;
+        length_ = 0u;
     }
 
-    void set(const char* data_in, size_t len) {
-        ptr_ = data_in;
-        length_ = len;
+    constexpr StringPiece& operator=(const StringPiece& other) = default;
+    constexpr StringPiece& operator=(StringPiece&& other) = default;
+
+    void set(const char* data) {
+        data_ = data;
+        length_ = data != nullptr ? constexpr_strlen(data) : 0u;
     }
 
-    int compare(StringPiece other) const;
+    void set(const char* data, size_t length) {
+        data_ = data;
+        length_ = length;
+    }
 
 private:
-    // Pointer to string data, not necessarily null terminated
-    const char* ptr_;
-    // Length of the string data
+    // Pointer to string data, not necessarily null terminated.
+    const char* data_;
+
+    // Length of the string data.
     size_t length_;
 };
 
-bool operator==(StringPiece lhs, StringPiece rhs);
-bool operator!=(StringPiece lhs, StringPiece rhs);
+bool operator==(const StringPiece& lhs, const StringPiece& rhs);
 
-inline bool operator<(StringPiece lhs, StringPiece rhs) {
-  return lhs.compare(rhs) < 0;
+inline bool operator!=(const StringPiece& lhs, const StringPiece& rhs) {
+    return !(lhs == rhs);
 }
 
-inline bool operator>(StringPiece lhs, StringPiece rhs) {
-  return lhs.compare(rhs) > 0;
+inline bool operator<(const StringPiece& lhs, const StringPiece& rhs) {
+    return lhs.compare(rhs) < 0;
 }
 
-inline bool operator<=(StringPiece lhs, StringPiece rhs) {
-  return lhs.compare(rhs) <= 0;
+inline bool operator>(const StringPiece& lhs, const StringPiece& rhs) {
+    return lhs.compare(rhs) > 0;
 }
 
-inline bool operator>=(StringPiece lhs, StringPiece rhs) {
-  return lhs.compare(rhs) >= 0;
+inline bool operator<=(const StringPiece& lhs, const StringPiece& rhs) {
+    return lhs.compare(rhs) <= 0;
 }
 
-}  // namespace mxtl
+inline bool operator>=(const StringPiece& lhs, const StringPiece& rhs) {
+    return lhs.compare(rhs) >= 0;
+}
+
+} // namespace mxtl
