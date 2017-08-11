@@ -19,6 +19,13 @@ static_assert(mxtl::is_const<int* const>::value, "");
 static_assert(!mxtl::is_const<const int*>::value, "");
 static_assert(mxtl::is_const<const int* const>::value, "");
 
+// underlying_type:
+
+enum int_enum : int {};
+enum char_enum : char {};
+static_assert(mxtl::is_same<mxtl::underlying_type<int_enum>::type, int>::value, "expected int");
+static_assert(mxtl::is_same<mxtl::underlying_type<char_enum>::type, char>::value, "expected char");
+
 // match_cv tests:
 static_assert(mxtl::is_same<mxtl::match_cv<int, void>::type, void>::value, "wrong type");
 static_assert(mxtl::is_same<mxtl::match_cv<const int, void>::type, const void>::value,

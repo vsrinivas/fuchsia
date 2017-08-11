@@ -182,6 +182,12 @@ struct is_pod : integral_constant<bool, __is_pod(T)> { };
 template<typename T>
 struct is_standard_layout : integral_constant<bool, __is_standard_layout(T)> { };
 
+// underlying_type is a builtin
+template<typename T>
+struct underlying_type {
+  using type = __underlying_type(T);
+};
+
 // match_cv: match_cv<SrcType, DestType>::type is DestType cv-qualified in the same way as SrcType.
 
 // Primary template:
