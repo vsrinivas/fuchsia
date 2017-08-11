@@ -155,9 +155,15 @@ config("internal_config") {
   # but to do this we'll need to provide an equivalent implementation, e.g.
   # "crypto/cpu-aarch64-fuchsia.c".
   if (current_cpu == "arm64") {
-    defines += [ "OPENSSL_NO_ASM" ]
+    if (is_fuchsia) {
+      defines += [ "OPENSSL_NO_ASM" ]
+    } else if (!is_linux && !is_mac) {
+      assert(false, "unsupported OS: {{current_os}}")
+    }
   } else if (current_cpu == "x64") {
-    # No-op
+    if (!is_fuchsia && !is_linux && !is_mac) {
+      assert(false, "unsupported OS: {{current_os}}")
+    }
   } else {
     assert(false, "unsupported architecture: {{current_cpu}}")
   }
