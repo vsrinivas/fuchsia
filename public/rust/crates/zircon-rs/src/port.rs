@@ -6,7 +6,7 @@
 
 use std::mem;
 
-use {HandleBase, Handle, HandleRef, Signals, Status, Time};
+use {AsHandleRef, HandleBased, Handle, HandleRef, Signals, Status, Time};
 use {sys, into_result};
 
 /// An object representing a Magenta
@@ -15,16 +15,7 @@ use {sys, into_result};
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Port(Handle);
-
-impl HandleBase for Port {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Port(handle)
-    }
-}
+impl_handle_based!(Port);
 
 /// A packet sent through a port. This is a type-safe wrapper for
 /// [mx_port_packet_t](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/port_wait2.md).
@@ -131,7 +122,7 @@ impl Port {
         unsafe {
             let mut handle = 0;
             let status = sys::mx_port_create(opts as u32, &mut handle);
-            into_result(status, || Self::from_handle(Handle(handle)))
+            into_result(status, || Self::from(Handle(handle)))
         }
     }
 
@@ -167,7 +158,7 @@ impl Port {
     /// Wraps the
     /// [mx_port_cancel](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/port_cancel.md)
     /// syscall.
-    pub fn cancel<H>(&self, source: &H, key: u64) -> Result<(), Status> where H: HandleBase {
+    pub fn cancel<H>(&self, source: &H, key: u64) -> Result<(), Status> where H: HandleBased {
         let status = unsafe {
             sys::mx_port_cancel(self.raw_handle(), source.raw_handle(), key)
         };

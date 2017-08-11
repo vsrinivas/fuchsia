@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta event objects.
 
-use {Cookied, HandleBase, Handle, HandleRef, Status};
+use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
 use {sys, into_result};
 
 /// An object representing a Magenta
@@ -13,19 +13,8 @@ use {sys, into_result};
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Event(Handle);
-
-impl HandleBase for Event {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Event(handle)
-    }
-}
-
-impl Cookied for Event {
-}
+impl_handle_based!(Event);
+impl Cookied for Event {}
 
 impl Event {
     /// Create an event object, an object which is signalable but nothing else. Wraps the
@@ -34,7 +23,7 @@ impl Event {
     pub fn create(options: EventOpts) -> Result<Event, Status> {
         let mut out = 0;
         let status = unsafe { sys::mx_event_create(options as u32, &mut out) };
-        into_result(status, || Self::from_handle(Handle(out)))
+        into_result(status, || Self::from(Handle(out)))
     }
 }
 

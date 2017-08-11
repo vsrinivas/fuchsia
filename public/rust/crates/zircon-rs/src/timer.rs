@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta timer objects.
 
-use {ClockId, Duration, HandleBase, Handle, HandleRef, Status, Time};
+use {AsHandleRef, ClockId, Duration, HandleBased, Handle, HandleRef, Status, Time};
 use {sys, into_result};
 
 /// An object representing a Magenta
@@ -13,16 +13,7 @@ use {sys, into_result};
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Timer(Handle);
-
-impl HandleBase for Timer {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Timer(handle)
-    }
-}
+impl_handle_based!(Timer);
 
 impl Timer {
     /// Create a timer, an object that can signal when a specified point in time has been reached.
@@ -32,7 +23,7 @@ impl Timer {
     pub fn create(options: TimerOpts, clock_id: ClockId) -> Result<Timer, Status> {
         let mut out = 0;
         let status = unsafe { sys::mx_timer_create(options as u32, clock_id as u32, &mut out) };
-        into_result(status, || Self::from_handle(Handle(out)))
+        into_result(status, || Self::from(Handle(out)))
     }
 
     /// Starts a timer which will fire when `deadline` passes. Wraps the

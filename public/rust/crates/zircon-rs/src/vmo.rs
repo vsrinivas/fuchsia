@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta vmo objects.
 
-use {Cookied, HandleBase, Handle, HandleRef, Status};
+use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
 use {sys, into_result};
 use std::{mem, ptr};
 
@@ -14,19 +14,8 @@ use std::{mem, ptr};
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Vmo(Handle);
-
-impl HandleBase for Vmo {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Vmo(handle)
-    }
-}
-
-impl Cookied for Vmo {
-}
+impl_handle_based!(Vmo);
+impl Cookied for Vmo {}
 
 impl Vmo {
     /// Create a virtual memory object.
@@ -40,7 +29,7 @@ impl Vmo {
         let mut handle = 0;
         let status = unsafe { sys::mx_vmo_create(size, options as u32, &mut handle) };
         into_result(status, ||
-            Vmo::from_handle(Handle(handle)))
+            Vmo::from(Handle(handle)))
     }
 
     /// Read from a virtual memory object.
@@ -122,7 +111,7 @@ impl Vmo {
         let status = unsafe {
             sys::mx_vmo_clone(self.raw_handle(), options as u32, offset, size, &mut out)
         };
-        into_result(status, || Vmo::from_handle(Handle(out)))
+        into_result(status, || Vmo::from(Handle(out)))
     }
 }
 

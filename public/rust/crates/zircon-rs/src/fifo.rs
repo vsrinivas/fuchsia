@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta fifo objects.
 
-use {HandleBase, Handle, HandleRef, Status};
+use {AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use {sys, into_result};
 
 /// An object representing a Magenta fifo.
@@ -12,16 +12,7 @@ use {sys, into_result};
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Fifo(Handle);
-
-impl HandleBase for Fifo {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Fifo(handle)
-    }
-}
+impl_handle_based!(Fifo);
 
 impl Fifo {
     /// Create a pair of fifos and return their endpoints. Writing to one endpoint enqueues an
@@ -36,7 +27,7 @@ impl Fifo {
         let status = unsafe {
             sys::mx_fifo_create(elem_count, elem_size, options as u32, &mut out0, &mut out1)
         };
-        into_result(status, || (Self::from_handle(Handle(out0)), Self::from_handle(Handle(out1))))
+        into_result(status, || (Self::from(Handle(out0)), Self::from(Handle(out1))))
     }
 
     /// Attempts to write some number of elements into the fifo. The number of bytes written will be

@@ -4,20 +4,11 @@
 
 //! Type-safe bindings for Magenta job.
 
-use {HandleBase, Handle, HandleRef};
+use {AsHandleRef, HandleBased, Handle, HandleRef};
 
 /// An object representing a Magenta job.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Job(Handle);
-
-impl HandleBase for Job {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Job(handle)
-    }
-}
+impl_handle_based!(Job);

@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta channel objects.
 
-use {HandleBase, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
+use {AsHandleRef, HandleBased, Handle, HandleRef, INVALID_HANDLE, Peered, Status, Time, usize_into_u32, size_to_u32_sat};
 use {sys, handle_drop, into_result};
 use std::mem;
 
@@ -14,19 +14,8 @@ use std::mem;
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Channel(Handle);
-
-impl HandleBase for Channel {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Channel(handle)
-    }
-}
-
-impl Peered for Channel {
-}
+impl_handle_based!(Channel);
+impl Peered for Channel {}
 
 impl Channel {
     /// Create a channel, resulting an a pair of `Channel` objects representing both
@@ -41,8 +30,8 @@ impl Channel {
             let mut handle1 = 0;
             let status = sys::mx_channel_create(opts as u32, &mut handle0, &mut handle1);
             into_result(status, ||
-                (Self::from_handle(Handle(handle0)),
-                    Self::from_handle(Handle(handle1))))
+                (Self::from(Handle(handle0)),
+                    Self::from(Handle(handle1))))
         }
     }
 
@@ -324,7 +313,7 @@ mod tests {
         assert!(buf.take_handle(0).is_none());
 
         // Now to test that we got the right handle, try writing something to it...
-        let received_vmo = Vmo::from_handle(received_handle);
+        let received_vmo = Vmo::from(received_handle);
         assert_eq!(received_vmo.write(b"hello", 0).unwrap(), hello_length);
 
         // ... and reading it back from the original VMO.

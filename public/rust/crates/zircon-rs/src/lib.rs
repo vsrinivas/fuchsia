@@ -10,6 +10,30 @@ extern crate magenta_sys;
 
 use std::marker::PhantomData;
 
+macro_rules! impl_handle_based {
+    ($type_name:path) => {
+        impl AsHandleRef for $type_name {
+            fn as_handle_ref(&self) -> HandleRef {
+                self.0.as_handle_ref()
+            }
+        }
+
+        impl From<Handle> for $type_name {
+            fn from(handle: Handle) -> Self {
+                $type_name(handle)
+            }
+        }
+
+        impl Into<Handle> for $type_name {
+            fn into(self) -> Handle {
+                self.0
+            }
+        }
+
+        impl HandleBased for $type_name {}
+    }
+}
+
 mod channel;
 mod event;
 mod eventpair;
@@ -144,7 +168,6 @@ impl Status {
 /// See [rights.md](https://fuchsia.googlesource.com/magenta/+/master/docs/rights.md)
 /// for more information.
 pub type Rights = sys::mx_rights_t;
-
 pub use magenta_sys::{
     MX_RIGHT_NONE,
     MX_RIGHT_DUPLICATE,
@@ -330,34 +353,31 @@ fn into_result<T, F>(status: sys::mx_status_t, f: F) -> Result<T, Status>
 /// A borrowed reference to a `Handle`.
 ///
 /// Mostly useful as part of a `WaitItem`.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct HandleRef<'a> {
     handle: sys::mx_handle_t,
     phantom: PhantomData<&'a sys::mx_handle_t>,
 }
 
 impl<'a> HandleRef<'a> {
-    fn duplicate(&self, rights: Rights) -> Result<Handle, Status> {
+    pub fn raw_handle(&self) -> sys::mx_handle_t {
+        self.handle
+    }
+
+    pub fn duplicate(&self, rights: Rights) -> Result<Handle, Status> {
         let handle = self.handle;
         let mut out = 0;
         let status = unsafe { sys::mx_handle_duplicate(handle, rights, &mut out) };
         into_result(status, || Handle(out))
     }
 
-    fn replace(self, rights: Rights) -> Result<Handle, Status> {
-        let handle = self.handle;
-        let mut out = 0;
-        let status = unsafe { sys::mx_handle_replace(handle, rights, &mut out) };
-        into_result(status, || Handle(out))
-    }
-
-    fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+    pub fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.handle;
         let status = unsafe { sys::mx_object_signal(handle, clear_mask.bits(), set_mask.bits()) };
         into_result(status, || ())
     }
 
-    fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
+    pub fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
         let handle = self.handle;
         let mut pending = sys::mx_signals_t::empty();
         let status = unsafe {
@@ -366,7 +386,7 @@ impl<'a> HandleRef<'a> {
         into_result(status, || pending)
     }
 
-    fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
+    pub fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
         -> Result<(), Status>
     {
         let handle = self.handle;
@@ -377,82 +397,79 @@ impl<'a> HandleRef<'a> {
     }
 }
 
-/// A trait implemented by all handle objects.
-///
-/// Note: it is reasonable for user-defined objects wrapping a handle to implement
-/// this trait. For example, a specific interface in some protocol might be
-/// represented as a newtype of `Channel`, and implement the `get_ref` and
-/// `from_handle` methods to facilitate conversion from and to the interface.
-pub trait HandleBase: Sized {
+/// A trait to get a reference to the underlying handle of an object.
+pub trait AsHandleRef {
     /// Get a reference to the handle. One important use of such a reference is
     /// for `object_wait_many`.
-    fn get_ref(&self) -> HandleRef;
+    fn as_handle_ref(&self) -> HandleRef;
 
     /// Interpret the reference as a raw handle (an integer type). Two distinct
     /// handles will have different raw values (so it can perhaps be used as a
     /// key in a data structure).
     fn raw_handle(&self) -> sys::mx_handle_t {
-        self.get_ref().handle
+        self.as_handle_ref().raw_handle()
     }
 
+    /// Set and clear userspace-accessible signal bits on an object. Wraps the
+    /// [mx_object_signal](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
+    /// syscall.
+    fn signal_handle(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
+        self.as_handle_ref().signal(clear_mask, set_mask)
+    }
+
+    /// Waits on a handle. Wraps the
+    /// [mx_object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
+    /// syscall.
+    fn wait_handle(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
+        self.as_handle_ref().wait(signals, deadline)
+    }
+
+    /// Causes packet delivery on the given port when the object changes state and matches signals.
+    /// [mx_object_wait_async](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_async.md)
+    /// syscall.
+    fn wait_async_handle(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
+        -> Result<(), Status>
+    {
+        self.as_handle_ref().wait_async(port, key, signals, options)
+    }
+}
+
+impl<'a> AsHandleRef for HandleRef<'a> {
+    fn as_handle_ref(&self) -> HandleRef { *self }
+}
+
+/// A trait implemented by all handle-based types.
+///
+/// Note: it is reasonable for user-defined objects wrapping a handle to implement
+/// this trait. For example, a specific interface in some protocol might be
+/// represented as a newtype of `Channel`, and implement the `as_handle_ref`
+/// method and the `From<Handle>` trait to facilitate conversion from and to the
+/// interface.
+pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
     /// Duplicate a handle, possibly reducing the rights available. Wraps the
     /// [mx_handle_duplicate](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_duplicate.md)
     /// syscall.
-    fn duplicate(&self, rights: Rights) -> Result<Self, Status> {
-        self.get_ref().duplicate(rights).map(|handle|
-            Self::from_handle(handle))
+    fn duplicate_handle(&self, rights: Rights) -> Result<Self, Status> {
+        self.as_handle_ref().duplicate(rights).map(|handle| Self::from(handle))
     }
 
     /// Create a replacement for a handle, possibly reducing the rights available. This invalidates
     /// the original handle. Wraps the
     /// [mx_handle_replace](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/handle_replace.md)
     /// syscall.
-    fn replace(self, rights: Rights) -> Result<Self, Status> {
-        self.get_ref().replace(rights).map(|handle| Self::from_handle(handle))
-    }
-
-    /// Set and clear userspace-accessible signal bits on an object. Wraps the
-    /// [mx_object_signal](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
-    /// syscall.
-    fn signal(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        self.get_ref().signal(clear_mask, set_mask)
-    }
-
-    /// Waits on a handle. Wraps the
-    /// [mx_object_wait_one](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_one.md)
-    /// syscall.
-    fn wait(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
-        self.get_ref().wait(signals, deadline)
-    }
-
-    /// Causes packet delivery on the given port when the object changes state and matches signals.
-    /// [mx_object_wait_async](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_wait_async.md)
-    /// syscall.
-    fn wait_async(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
-        -> Result<(), Status>
-    {
-        self.get_ref().wait_async(port, key, signals, options)
-    }
-
-    /// A method for converting an untyped `Handle` into a more specific reference.
-    fn from_handle(handle: Handle) -> Self;
-
-    /// A method for converting the object into a generic Handle.
-    // Not implemented as "From" because it would conflict in From<Handle> case
-    fn into_handle(self) -> Handle {
-        let raw_handle = self.get_ref().handle;
-        std::mem::forget(self);
-        Handle(raw_handle)
+    fn replace_handle(self, rights: Rights) -> Result<Self, Status> {
+        <Self as Into<Handle>>::into(self)
+            .replace(rights).map(|handle| Self::from(handle))
     }
 }
 
 /// A trait implemented by all handles for objects which have a peer.
-pub trait Peered: HandleBase {
+pub trait Peered: HandleBased {
     /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
     /// [mx_object_signal_peer](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/object_signal.md)
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
-        let handle = self.get_ref().handle;
+        let handle = self.as_handle_ref().handle;
         let status = unsafe {
             sys::mx_object_signal_peer(handle, clear_mask.bits(), set_mask.bits())
         };
@@ -461,12 +478,12 @@ pub trait Peered: HandleBase {
 }
 
 /// A trait implemented by all handles for objects which can have a cookie attached.
-pub trait Cookied: HandleBase {
+pub trait Cookied: HandleBased {
     /// Get the cookie attached to this object, if any. Wraps the
     /// [mx_object_get_cookie](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/object_get_cookie.md)
     /// syscall.
     fn get_cookie(&self, scope: &HandleRef) -> Result<u64, Status> {
-        let handle = self.get_ref().handle;
+        let handle = self.as_handle_ref().handle;
         let mut cookie = 0;
         let status = unsafe { sys::mx_object_get_cookie(handle, scope.handle, &mut cookie) };
         into_result(status, || cookie)
@@ -477,7 +494,7 @@ pub trait Cookied: HandleBase {
     /// [mx_object_set_cookie](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/syscalls/object_set_cookie.md)
     /// syscall.
     fn set_cookie(&self, scope: &HandleRef, cookie: u64) -> Result<(), Status> {
-        let handle = self.get_ref().handle;
+        let handle = self.as_handle_ref().handle;
         let status = unsafe { sys::mx_object_set_cookie(handle, scope.handle, cookie) };
         into_result(status, || ())
     }
@@ -518,18 +535,16 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
 /// enforced in the type system; attempting to use them will result in errors
 /// returned by the kernel. These conversions don't change the underlying
 /// representation, but do change the type and thus what operations are available.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Handle(sys::mx_handle_t);
 
-impl HandleBase for Handle {
-    fn get_ref(&self) -> HandleRef {
+impl AsHandleRef for Handle {
+    fn as_handle_ref(&self) -> HandleRef {
         HandleRef { handle: self.0, phantom: Default::default() }
     }
-
-    fn from_handle(handle: Handle) -> Self {
-        handle
-    }
 }
+
+impl HandleBased for Handle {}
 
 impl Drop for Handle {
     fn drop(&mut self) {
@@ -542,6 +557,13 @@ impl Handle {
     /// it into a type-safe owned handle.
     pub unsafe fn from_raw(raw: sys::mx_handle_t) -> Handle {
         Handle(raw)
+    }
+
+    pub fn replace(self, rights: Rights) -> Result<Handle, Status> {
+        let handle = self.0;
+        let mut out = 0;
+        let status = unsafe { sys::mx_handle_replace(handle, rights, &mut out) };
+        into_result(status, || Handle(out))
     }
 }
 
@@ -674,8 +696,8 @@ mod tests {
 
         // Waiting on them now should time out.
         let mut items = vec![
-          WaitItem { handle: e1.get_ref(), waitfor: MX_USER_SIGNAL_0, pending: MX_SIGNAL_NONE },
-          WaitItem { handle: e2.get_ref(), waitfor: MX_USER_SIGNAL_1, pending: MX_SIGNAL_NONE },
+          WaitItem { handle: e1.as_handle_ref(), waitfor: MX_USER_SIGNAL_0, pending: MX_SIGNAL_NONE },
+          WaitItem { handle: e2.as_handle_ref(), waitfor: MX_USER_SIGNAL_1, pending: MX_SIGNAL_NONE },
         ];
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
         assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
@@ -707,22 +729,22 @@ mod tests {
         let scope = Event::create(EventOpts::Default).unwrap();
 
         // Getting a cookie when none has been set should fail.
-        assert_eq!(event.get_cookie(&scope.get_ref()), Err(Status::ErrAccessDenied));
+        assert_eq!(event.get_cookie(&scope.as_handle_ref()), Err(Status::ErrAccessDenied));
 
         // Set a cookie.
-        assert_eq!(event.set_cookie(&scope.get_ref(), 42), Ok(()));
+        assert_eq!(event.set_cookie(&scope.as_handle_ref(), 42), Ok(()));
 
         // Should get it back....
-        assert_eq!(event.get_cookie(&scope.get_ref()), Ok(42));
+        assert_eq!(event.get_cookie(&scope.as_handle_ref()), Ok(42));
 
         // but not with the wrong scope!
-        assert_eq!(event.get_cookie(&event.get_ref()), Err(Status::ErrAccessDenied));
+        assert_eq!(event.get_cookie(&event.as_handle_ref()), Err(Status::ErrAccessDenied));
 
         // Can change it, with the same scope...
-        assert_eq!(event.set_cookie(&scope.get_ref(), 123), Ok(()));
+        assert_eq!(event.set_cookie(&scope.as_handle_ref(), 123), Ok(()));
 
         // but not with a different scope.
-        assert_eq!(event.set_cookie(&event.get_ref(), 123), Err(Status::ErrAccessDenied));
+        assert_eq!(event.set_cookie(&event.as_handle_ref(), 123), Err(Status::ErrAccessDenied));
     }
 
     #[test]

@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta sockets.
 
-use {HandleBase, Handle, HandleRef, Peered};
+use {AsHandleRef, HandleBased, Handle, HandleRef, Peered};
 use {sys, Status, into_result};
 
 use std::ptr;
@@ -15,19 +15,8 @@ use std::ptr;
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Socket(Handle);
-
-impl HandleBase for Socket {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Socket(handle)
-    }
-}
-
-impl Peered for Socket {
-}
+impl_handle_based!(Socket);
+impl Peered for Socket {}
 
 /// Options for creating a socket pair.
 #[repr(u32)]
@@ -84,8 +73,8 @@ impl Socket {
             let mut out1 = 0;
             let status = sys::mx_socket_create(opts as u32, &mut out0, &mut out1);
             into_result(status, ||
-                (Self::from_handle(Handle(out0)),
-                    Self::from_handle(Handle(out1))))
+                (Self::from(Handle(out0)),
+                    Self::from(Handle(out1))))
         }
     }
 

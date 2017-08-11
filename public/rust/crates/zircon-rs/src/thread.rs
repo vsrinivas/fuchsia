@@ -4,20 +4,11 @@
 
 //! Type-safe bindings for Magenta thread.
 
-use {HandleBase, Handle, HandleRef};
+use {AsHandleRef, HandleBased, Handle, HandleRef};
 
 /// An object representing a Magenta thread.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Thread(Handle);
-
-impl HandleBase for Thread {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        Thread(handle)
-    }
-}
+impl_handle_based!(Thread);

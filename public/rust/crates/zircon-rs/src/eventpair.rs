@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Magenta event pairs.
 
-use {Cookied, HandleBase, Handle, HandleRef, Peered, Status};
+use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Peered, Status};
 use {sys, into_result};
 
 /// An object representing a Magenta
@@ -13,22 +13,9 @@ use {sys, into_result};
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
 pub struct EventPair(Handle);
-
-impl HandleBase for EventPair {
-    fn get_ref(&self) -> HandleRef {
-        self.0.get_ref()
-    }
-
-    fn from_handle(handle: Handle) -> Self {
-        EventPair(handle)
-    }
-}
-
-impl Peered for EventPair {
-}
-
-impl Cookied for EventPair {
-}
+impl_handle_based!(EventPair);
+impl Peered for EventPair {}
+impl Cookied for EventPair {}
 
 impl EventPair {
     /// Create an event pair, a pair of objects which can signal each other. Wraps the
@@ -39,8 +26,8 @@ impl EventPair {
         let mut out1 = 0;
         let status = unsafe { sys::mx_eventpair_create(options as u32, &mut out0, &mut out1) };
         into_result(status, ||
-            (Self::from_handle(Handle(out0)),
-                Self::from_handle(Handle(out1))))
+            (Self::from(Handle(out0)),
+                Self::from(Handle(out1))))
     }
 }
 
