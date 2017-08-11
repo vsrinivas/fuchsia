@@ -31,7 +31,7 @@ struct DefaultAllocatorTraits {
     // the underlying memory used by the object.
     static void Deallocate(void* object) {
         if (object != nullptr) {
-            delete reinterpret_cast<char*>(object);
+            delete[] reinterpret_cast<char*>(object);
         }
     }
 };
