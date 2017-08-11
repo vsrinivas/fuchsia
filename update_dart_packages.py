@@ -39,11 +39,15 @@ PROJECT_DEPENDENCIES = [
 
 
 def main():
-    if len(sys.argv) < 2:
-        print('Usage: %s <path to host out directory>' % sys.argv[0])
+    if sys.platform.startswith('linux'):
+        platform = 'linux'
+    elif sys.platform.startswith('darwin'):
+        platform = 'mac'
+    else:
+        print('Unsupported platform: %s' % sys.platform)
         return 1
-    host_path = os.path.abspath(sys.argv[1])
-    pub_path = os.path.join(host_path, 'dart-sdk', 'bin', 'pub')
+    pub_path = os.path.join(paths.FUCHSIA_ROOT, 'dart', 'tools', 'sdks',
+                            platform, 'dart-sdk', 'bin', 'pub')
     importer_path = os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'dart-pkg',
                                  'importer', 'importer.py')
     flutter_root = os.path.join(paths.FUCHSIA_ROOT, 'lib', 'flutter');
