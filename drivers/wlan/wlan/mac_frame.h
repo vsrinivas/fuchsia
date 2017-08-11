@@ -481,4 +481,12 @@ struct EthernetII {
     uint8_t payload[];
 } __PACKED;
 
+// IEEE Std 802.1X-2010, 11.3, Figure 11-1
+struct EapolFrame {
+    uint8_t version;
+    uint8_t packet_type;
+    uint16_t packet_body_length;
+    uint8_t packet_body[];
+} __PACKED;
+
 }  // namespace wlan

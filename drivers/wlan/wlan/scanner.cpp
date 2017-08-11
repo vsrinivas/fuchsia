@@ -246,6 +246,12 @@ mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
             debugbcn("country: %.*s\n", 3, country->country);
             break;
         }
+        case element_id::kRsn: {
+            auto rsn = reader.read<RsnElement>();
+            if (rsn == nullptr) goto done_iter;
+            bss->rsn = true;
+            break;
+        }
         default:
             debugbcn("unknown element id: %u len: %u\n", hdr->id, hdr->len);
             reader.skip(sizeof(ElementHeader) + hdr->len);

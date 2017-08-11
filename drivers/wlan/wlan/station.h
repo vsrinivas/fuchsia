@@ -23,6 +23,11 @@ class Station {
   public:
     Station(DeviceInterface* device, mxtl::unique_ptr<Timer> timer);
 
+    enum class PortState : bool {
+      kBlocked = false,
+      kOpen = true
+    };
+
     enum class WlanState {
         // State 0
         kUnjoined,
@@ -81,6 +86,8 @@ class Station {
     mx_status_t SendDisassociateIndication(uint16_t code);
 
     mx_status_t SendSignalReportIndication(uint8_t rssi);
+    mx_status_t SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
+                                    const uint8_t dst[]);
 
     mx_status_t SetPowerManagementMode(bool ps_mode);
     mx_status_t SendPsPoll();
@@ -103,6 +110,7 @@ class Station {
     uint16_t aid_ = 0;
     common::MovingAverage<uint8_t, uint16_t, 20> avg_rssi_;
     AuthAlgorithm auth_alg_ = AuthAlgorithm::kOpenSystem;
+    PortState controlled_port_ = PortState::kBlocked;
 };
 
 }  // namespace wlan

@@ -440,6 +440,9 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     avg_rssi_.add(rxinfo->rssi);
     SendSignalReportIndication(rxinfo->rssi);
 
+    // Open port if user connected to an open network.
+    if (!bss_->rsn) controlled_port_ = PortState::kOpen;
+
     std::printf("associated\n");
 
     return MX_OK;
@@ -506,6 +509,26 @@ mx_status_t Station::HandleData(const Packet* packet) {
         return MX_ERR_IO;
     }
     MX_DEBUG_ASSERT(packet->len() >= kDataPayloadHeader);
+
+    // Forward EAPOL frames to SME.
+    if (be16toh(llc->protocol_id) == kEapolProtocolId) {
+        size_t offset = sizeof(DataFrameHeader) + sizeof(LlcHeader);
+        auto eapol = packet->field<EapolFrame>(offset);
+        if (eapol == nullptr) {
+            return MX_OK;
+        }
+        uint16_t actual_body_len = packet->len() - (offset + sizeof(EapolFrame));
+        uint16_t expected_body_len = be16toh(eapol->packet_body_length);
+        if (actual_body_len >= expected_body_len) {
+            SendEapolIndication(eapol, hdr->addr3, hdr->addr1);
+        }
+        return MX_OK;
+    }
+
+    // Drop packets if RSN was not yet authorized.
+    if (controlled_port_ == PortState::kBlocked) {
+        return MX_OK;
+    }
 
     // PS-POLL if there are more buffered unicast frames.
     bool unicast = !(hdr->addr1[0] & 1);
@@ -772,6 +795,48 @@ mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
         status = device_->SendService(std::move(packet));
     }
 
+    return status;
+}
+
+mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
+                                         const uint8_t dst[]) {
+    debugfn();
+    size_t payload_len = be16toh(eapol->packet_body_length);
+    auto ind = EapolIndication::New();
+    ind->data = EapolPdu::New();
+    ind->data->version = eapol->version;
+    ind->data->packet_type = eapol->packet_type;
+    ind->data->packet_body_length = payload_len;
+
+    // Limit EAPOL packet size. The EAPOL packet's size depends on the link transport protocol and
+    // can exceed 255 octets. However, we don't support EAP yet and EAPOL Key frames are always
+    // shorter.
+    // TODO(hahnr): If necessary, find a better upper bound once we support EAP.
+    if (payload_len > 255) {
+        return MX_OK;
+    }
+
+    ind->data->packet_body = fidl::Array<uint8_t>::New(payload_len);
+    std::memcpy(ind->data->packet_body.data(), eapol->packet_body, payload_len);
+    ind->src_addr = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
+    std::memcpy(ind->src_addr.data(), src, DeviceAddress::kSize);
+    ind->dst_addr = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
+    std::memcpy(ind->dst_addr.data(), dst, DeviceAddress::kSize);
+
+    size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
+    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
+    if (status != MX_OK) {
+        errorf("could not serialize EapolIndication: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
     return status;
 }
 

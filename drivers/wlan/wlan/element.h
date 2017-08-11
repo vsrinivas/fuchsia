@@ -419,6 +419,7 @@ enum AkmSuiteType : uint8_t {
 
 const uint8_t kRsneSuiteOui[3] = { 0x00, 0x0F, 0xAC };
 const uint8_t kRsneVersion = 1;
+const uint16_t kEapolProtocolId = 0x888E;
 
 // IEEE Std 802.11-2016, 9.4.2.25.4, Figure 9-257
 class RsnCapabilities : public common::BitField<uint16_t> {
