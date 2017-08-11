@@ -15,14 +15,12 @@ DEFCONFIG=machina_defconfig
 
 while getopts "c:d:" OPT; do
   case $OPT in
-    c)
-      DEFCONFIG="$OPTARG"
-      shift ;;
-    d)
-      LINUXDIR="$OPTARG"
-      shift ;;
+    c) DEFCONFIG="$OPTARG" ;;
+    d) LINUXDIR="$OPTARG" ;;
   esac
 done
+
+echo "Building linux with $DEFCONFIG in $LINUXDIR"
 
 # Shallow clone the repository.
 if [ ! -d "$LINUXDIR" ]; then
