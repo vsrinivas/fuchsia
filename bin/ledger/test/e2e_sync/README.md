@@ -1,6 +1,6 @@
 # Synchronization tests
 
-This directory contains a test suite for the Ledger synchronization. This is an "end-to-end" test and needs a working Firebase instance to run correctly.
+This directory contains an "end-to-end" test suite for synchronization and needs a working Firebase instance to run correctly. It uses the synchronization tests from the integration test suite.
 
 To run this test suite, use the following command:
 ```

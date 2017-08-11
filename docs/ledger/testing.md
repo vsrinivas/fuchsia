@@ -26,7 +26,9 @@ Integration tests inherit from [IntegrationTest] and are placed under
 
 All integration tests in the Ledger tree are built into a single
 `ledger_integration_tests` binary, that by default can be executed on Fuchsia by
-running `/system/test/ledger_integration_tests`.
+running `/system/test/ledger_integration_tests`. Some end-to-end tests
+(synchronization tests, see below) are also run as integration tests using fake
+implementations of cloud services.
 
 ## End-to-end tests
 
@@ -35,7 +37,10 @@ exposed by Ledger, but in this case the test code runs in a separate process,
 and connects to Ledger the same way any other client application would do. This
 is the highest-level way of testing that exercises all of the Ledger stack.
 
-End-to-end tests inherit from [LedgerAppTest]. End-to-end tests exercising only the local part of the Ledger are in `src/test/e2e_local`. [Synchronization end-to-end tests] exercising multi-device synchronization are in `src/test/e2e_sync`.
+End-to-end tests exercising only the local part of the Ledger are in
+`src/test/e2e_local`. [Synchronization end-to-end tests] exercising multi-device
+synchronization are in `src/test/e2e_sync` and compiled both as end-to-end tests
+exercising real cloud services, and as integration tests using fake services.
 
 All local application tests in the Ledger tree are built into a single
 `ledger_e2e_local` binary, that by default can be executed on Fuchsia by running
@@ -45,5 +50,4 @@ binary, that by default can be executed on Fuchsia by running `/system/test/ledg
 [Google Test]: https://github.com/google/googletest
 [TestWithMessageLoop]: https://fuchsia.googlesource.com/ledger/+/master/src/test/test_with_message_loop.h
 [IntegrationTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/integration/integration_test.h
-[LedgerAppTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_local/ledger_apptest.cc
 [Synchronization end-to-end tests]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_sync/README.md

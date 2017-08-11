@@ -40,9 +40,11 @@ fidl::Array<uint8_t> TestArray() {
   return result;
 }
 
-class LedgerAppTest : public ::test::AppTest {
+class LedgerAppTest : public ::test::TestWithMessageLoop {
  public:
-  LedgerAppTest() {}
+  LedgerAppTest()
+      : application_context_(
+            app::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
   ~LedgerAppTest() override {}
 
  protected:
@@ -76,9 +78,14 @@ class LedgerAppTest : public ::test::AppTest {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
+  app::ApplicationContext* application_context() {
+    return application_context_.get();
+  }
+
  private:
   app::ApplicationControllerPtr ledger_controller_;
   std::vector<std::function<void()>> ledger_shutdown_callbacks_;
+  std::unique_ptr<app::ApplicationContext> application_context_;
 
  protected:
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;

@@ -10,19 +10,6 @@
 
 namespace test {
 
-class AppTest : public TestWithMessageLoop {
- public:
-  AppTest();
-  ~AppTest() override;
-
- protected:
-  app::ApplicationContext* application_context() {
-    return application_context_.get();
-  }
-
-  std::unique_ptr<app::ApplicationContext> application_context_;
-};
-
 int TestMain(int argc, char** argv);
 
 }  // namespace test

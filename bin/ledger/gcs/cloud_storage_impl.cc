@@ -116,13 +116,6 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
     content_length_header->value = ftl::NumberToString(data_size);
     request->headers.push_back(std::move(content_length_header));
 
-    // x-goog-if-generation-match header. This ensures that files are never
-    // overwritten.
-    network::HttpHeaderPtr generation_match_header = network::HttpHeader::New();
-    generation_match_header->name = "x-goog-if-generation-match";
-    generation_match_header->value = "0";
-    request->headers.push_back(std::move(generation_match_header));
-
     mx::vmo duplicated_data;
     data.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ,
                    &duplicated_data);

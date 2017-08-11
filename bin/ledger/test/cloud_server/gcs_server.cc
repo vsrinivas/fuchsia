@@ -38,11 +38,8 @@ void GcsServer::HandlePost(
   url::GURL url(request->url);
 
   auto path = url.path();
-  if (data_.count(path)) {
-    callback(BuildResponse(request->url, Server::ResponseCode::kUnauthorized,
-                           "Document already exist."));
-    return;
-  }
+  // Do not verify whether the object already exists - the real Firebase Storage
+  // doesn't do that either.
 
   std::string content;
   if (!mtl::StringFromVmo(request->body->get_buffer(), &content)) {

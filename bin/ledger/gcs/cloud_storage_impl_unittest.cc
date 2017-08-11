@@ -107,12 +107,6 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_TRUE(ftl::StringToNumberWithError(content_length_header->value.get(),
                                            &content_length));
   EXPECT_EQ(content.size(), content_length);
-
-  network::HttpHeaderPtr if_generation_match_header =
-      GetHeader(fake_network_service_.GetRequest()->headers,
-                "x-goog-if-generation-match");
-  EXPECT_TRUE(if_generation_match_header);
-  EXPECT_EQ("0", if_generation_match_header->value);
 }
 
 TEST_F(CloudStorageImplTest, TestUploadAuth) {

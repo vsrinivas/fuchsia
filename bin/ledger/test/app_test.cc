@@ -12,12 +12,6 @@
 
 namespace test {
 
-AppTest::AppTest()
-    : application_context_(
-          app::ApplicationContext::CreateFromStartupInfoNotChecked()) {}
-
-AppTest::~AppTest() {}
-
 int TestMain(int argc, char** argv) {
   test_runner::Reporter reporter(argv[0]);
   test_runner::GTestListener listener(argv[0], &reporter);

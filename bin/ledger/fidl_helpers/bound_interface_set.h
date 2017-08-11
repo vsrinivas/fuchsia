@@ -22,6 +22,8 @@ class BoundInterfaceSet : public SetBoundable<Interface> {
     binding_.AddBinding(&impl_, std::move(request));
   }
 
+  void CloseAllBindings() { binding_.CloseAllBindings(); }
+
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     binding_.set_connection_error_handler([this, on_empty_callback]() {
       binding_.Close();

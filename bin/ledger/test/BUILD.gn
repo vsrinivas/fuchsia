@@ -91,3 +91,28 @@ source_set("unittests") {
 
   configs += [ "//apps/ledger/src:ledger_config" ]
 }
+
+source_set("ledger_instance_factory") {
+  testonly = true
+
+  sources = [
+    "ledger_app_instance_factory.cc",
+    "ledger_app_instance_factory.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
+    "//apps/ledger/src/fidl_helpers",
+    "//lib/ftl",
+  ]
+
+  deps = [
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+    "//third_party/gtest",
+  ]
+
+  configs += [ "//apps/ledger/src:ledger_config" ]
+}
