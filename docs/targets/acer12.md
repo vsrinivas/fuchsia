@@ -54,12 +54,12 @@ It’s possible to end up in a situation where the machine *really* wants to hel
 7. Check that “Windows Boot Manager” didn’t get moved to the top of the boot order, fix it if it did
 
 ## How to Create a Bootable USB Flash Drive
-1. Build the bootloader
-  * `(cd $MAGENTA_ROOT; make bootloader)`
+1. Build everything
+  * `(cd $FUCHSIA_ROOT; fbuild)`
 2. Format your USB Flash Drive with a FAT32 partition as the first partition
-3. Copy `$MAGENTA_ROOT/build-magenta-pc-x86-64/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
+3. Copy `$FUCHSIA_ROOT/out/build-magenta/build-magenta-pc-x86-64/bootloader/bootx64.efi` to `EFI/BOOT/BOOTX64.EFI` on the USB Flash Drive.
 If you plan to netboot, you're done.
-4. Copy `build-magenta-pc-x86-64/magenta.bin` to the root of the USB Flash Drive
+4. Copy `$FUCHSIA_ROOT/out/build-magenta/build-magenta-pc-x86-64/magenta.bin` to the root of the USB Flash Drive
 5. Optionally copy an additional bootfs image to `ramdisk.bin` on the root of the USB Flash Drive (for a Fuchsia build, a bootfs image can be found at `$FUCHSIA_ROOT/out/debug-x86-64/user.bootfs`)
 
 If you need to boot magenta over the network, skip step 4 and/or delete
