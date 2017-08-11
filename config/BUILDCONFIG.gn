@@ -68,7 +68,7 @@ if (current_os == "fuchsia") {
 }
 
 # All binary targets will get this list of configs by default.
-default_shared_binary_configs = [
+default_common_binary_configs = [
   "//build/config:compiler",
   "//build/config:relative_paths",
   "//build/config:default_include_dirs",
@@ -79,13 +79,13 @@ default_shared_binary_configs = [
 ]
 
 if (is_debug) {
-  default_shared_binary_configs += [ "//build/config:debug" ]
+  default_common_binary_configs += [ "//build/config:debug" ]
 } else {
-  default_shared_binary_configs += [ "//build/config:release" ]
+  default_common_binary_configs += [ "//build/config:release" ]
 }
 
 if (is_fuchsia) {
-  default_shared_binary_configs += [
+  default_common_binary_configs += [
     "//build/config/fuchsia:icf",
     "//build/config/fuchsia:safestack",
     "//build/config/fuchsia:thread_safety_annotations",
@@ -94,28 +94,28 @@ if (is_fuchsia) {
 }
 
 if (use_lto) {
-  default_shared_binary_configs += [ "//build/config/lto" ]
+  default_common_binary_configs += [ "//build/config/lto" ]
 }
 
-default_shared_library_configs = default_shared_binary_configs + [
+default_shared_library_configs = default_common_binary_configs + [
                                    "//build/config:shared_library_config",
                                    "//build/config:symbol_no_undefined",
                                  ]
-default_executable_configs = default_shared_binary_configs + [
+default_executable_configs = default_common_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
                              ]
 
 if (is_pic_default) {
-  default_shared_binary_configs += [ "//build/config:shared_library_config" ]
+  default_common_binary_configs += [ "//build/config:shared_library_config" ]
 }
 
 # Apply that default list to the binary target types.
 set_defaults("source_set") {
-  configs = default_shared_binary_configs
+  configs = default_common_binary_configs
 }
 set_defaults("static_library") {
-  configs = default_shared_binary_configs
+  configs = default_common_binary_configs
 }
 set_defaults("shared_library") {
   configs = default_shared_library_configs
@@ -153,7 +153,7 @@ template("component") {
 }
 
 set_defaults("component") {
-  configs = default_shared_binary_configs
+  configs = default_common_binary_configs
 }
 
 if (target_os == "fuchsia") {
