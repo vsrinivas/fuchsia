@@ -214,12 +214,15 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
                                 0, &process, &vmar), MX_OK, "");
     ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
                                0, &thread), MX_OK, "");
+
+    REGISTER_CRASH(process);
     ASSERT_EQ(mx_process_start(process, thread, 0, 0, thread, 0), MX_OK, "");
 
-    // Give crashlogger a little time to print info about the new thread
-    // (since it will start and crash), otherwise that output gets
-    // interleaved with the test runner's output.
-    mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
+    mx_signals_t signals;
+    EXPECT_EQ(mx_object_wait_one(
+        process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), MX_OK, "");
+    signals &= MX_TASK_TERMINATED;
+    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
 
     ASSERT_EQ(mx_handle_close(process), MX_OK, "");
     ASSERT_EQ(mx_handle_close(vmar), MX_OK, "");
@@ -880,7 +883,7 @@ RUN_TEST(test_basics)
 RUN_TEST(test_detach)
 RUN_TEST(test_long_name_succeeds)
 RUN_TEST(test_thread_start_on_initial_thread)
-RUN_TEST(test_thread_start_with_zero_instruction_pointer)
+RUN_TEST_ENABLE_CRASH_HANDLER(test_thread_start_with_zero_instruction_pointer)
 RUN_TEST(test_kill_busy_thread)
 RUN_TEST(test_kill_sleep_thread)
 RUN_TEST(test_kill_wait_thread)

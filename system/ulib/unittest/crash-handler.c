@@ -37,12 +37,10 @@ static void process_exception(crash_list_t crash_list,
                               const mx_packet_exception_t* exception) {
     // Check if the crashed process is in the registered list and remove
     // it if so.
-    bool is_process = true;
     mx_handle_t match = crash_list_delete_koid(crash_list, exception->pid);
     if (match == MX_HANDLE_INVALID) {
         // The test may have registered a thread handle instead.
         match = crash_list_delete_koid(crash_list, exception->tid);
-        is_process = false;
     }
 
     // The crash was not registered. We should let crashlogger print out the
@@ -99,10 +97,9 @@ static void process_exception(crash_list_t crash_list,
         exit(MX_ERR_INTERNAL);
     }
 
-    mx_signals_t signals = is_process ? MX_PROCESS_TERMINATED : MX_THREAD_TERMINATED;
     // The exception is still unprocessed. We should wait for termination so
     // there is no race condition with when we unbind the exception port.
-    status = mx_object_wait_one(match, signals, MX_TIME_INFINITE, NULL);
+    status = mx_object_wait_one(match, MX_TASK_TERMINATED, MX_TIME_INFINITE, NULL);
     if (status != MX_OK) {
         UNITTEST_TRACEF("FATAL: failed to wait for termination  : error %s\n",
                         mx_status_get_string(status));
@@ -214,13 +211,13 @@ static int run_test(void* arg) {
 
 // Runs the function in a separate thread with the given argument,
 // catching any crashes.
-// If bind_to_process is true, this will bind to the process exception port
+// If bind_to_job is true, this will bind to the job exception port
 // before starting the test.
 // If false, this will bind to the test thread's exception port once started
 // and add the thread to the expected crashes list.
 mx_status_t run_with_crash_handler(crash_list_t crash_list,
                                    bool (*fn_to_run)(void*), void* arg,
-                                   bool bind_to_process,
+                                   bool bind_to_job,
                                    test_result_t* test_result) {
     mx_handle_t port;
     mx_status_t status = mx_port_create(0, &port);
@@ -229,9 +226,8 @@ mx_status_t run_with_crash_handler(crash_list_t crash_list,
                         mx_status_get_string(status));
         return status;
     }
-    if (bind_to_process) {
-        // TODO: replace with job level exception handling.
-        status = mx_task_bind_exception_port(mx_process_self(), port,
+    if (bind_to_job) {
+        status = mx_task_bind_exception_port(mx_job_default(), port,
                                              EXCEPTION_PORT_KEY, 0);
         if (status != MX_OK) {
             UNITTEST_TRACEF("failed to bind to exception port: error %s\n",
@@ -269,7 +265,7 @@ mx_status_t run_with_crash_handler(crash_list_t crash_list,
         .test_ended_event = test_ended_event,
         .port = port,
         .crash_list = crash_list,
-        .bind_to_thread = !bind_to_process};
+        .bind_to_thread = !bind_to_job};
 
     int thrd_res = thrd_create(&test_thread, run_test, (void*)&test_data);
     if (thrd_res != thrd_success) {

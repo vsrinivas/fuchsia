@@ -159,6 +159,7 @@ bool kill_process_via_vmar_destroy() {
               MX_OK);
 
     // Destroying the root VMAR should cause the process to terminate.
+    REGISTER_CRASH(proc);
     EXPECT_EQ(mx_vmar_destroy(vmar), MX_OK);
 
     mx_signals_t signals;
@@ -374,7 +375,7 @@ RUN_TEST(process_start_fail);
 RUN_TEST(kill_process_via_thread_close);
 RUN_TEST(kill_process_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
-RUN_TEST(kill_process_via_vmar_destroy);
+RUN_TEST_ENABLE_CRASH_HANDLER(kill_process_via_vmar_destroy);
 RUN_TEST(kill_process_handle_cycle);
 RUN_TEST(kill_channel_handle_cycle);
 RUN_TEST(info_reflects_process_state);
