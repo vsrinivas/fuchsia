@@ -785,15 +785,15 @@ go() {
 }
 
 function fssh() {
-  ssh -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+  SSH_AUTH_SOCK="" ssh -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
 }
 
 function fscp() {
-  scp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+  SSH_AUTH_SOCK="" scp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
 }
 
 function fsftp() {
-  sftp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
+  SSH_AUTH_SOCK="" sftp -F $FUCHSIA_BUILD_DIR/ssh-keys/ssh_config $*
 }
 
 function fcmd() {
