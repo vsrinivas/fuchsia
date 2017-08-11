@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 constexpr size_t B = (1);
 constexpr size_t KB = (1 << 10);
 constexpr size_t MB = (1 << 20);

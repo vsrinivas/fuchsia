@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#pragma once
+
 #include <lib/crypto/entropy/collector.h>
 #include <magenta/types.h>
 
