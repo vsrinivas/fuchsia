@@ -231,6 +231,12 @@ func parseResponse(buf []byte) (interface{}, error) {
 			return nil, fmt.Errorf("could not decode SignalReportIndication: %v", err)
 		}
 		return &ind, nil
+	case int32(mlme.Method_EapolIndication):
+		var ind mlme_ext.EapolIndication
+		if err := ind.Decode(dec); err != nil {
+			return nil, fmt.Errorf("could not decode EapolIndication: %v", err)
+		}
+		return &ind, nil
 	default:
 		return nil, fmt.Errorf("unknown ordinal: %v", header.ordinal)
 	}

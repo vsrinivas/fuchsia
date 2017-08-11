@@ -4,6 +4,8 @@
 
 module wlan;
 
+import "wlan_mlme.fidl";
+
 // Custom primitives for communicating between the wlan service and the MLME drivers.
 // The primitives defined here are not part of the official 802.11 MLME SAP interface specification,
 // but follow the same principle for the sake of consistency.
@@ -15,14 +17,12 @@ struct SignalReportIndication {
     uint8 rssi;
 };
 
-// EAPOL_FRAME.indication
+// EAPOL.indication
 
-// IEEE Std 802.1X-2010, 11.3, Figure 11-1
-struct EapolFrameIndication {
-    uint8 version;
-    uint8 packet_type;
-    uint16 packet_body_length;
-    array<uint8> packet_body;
+struct EapolIndication {
+    array<uint8, 6> src_addr;
+    array<uint8, 6> dst_addr;
+    EapolPdu data;
 };
 
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official

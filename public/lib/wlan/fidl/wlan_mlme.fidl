@@ -216,6 +216,22 @@ struct DisassociateIndication {
     // VendorSpecificInfo
 };
 
+// MLME-EAPOL.request (IEEE Std 802.11-2016 6.3.22.1)
+
+// IEEE Std 802.1X-2010, 11.3, Figure 11-1
+struct EapolPdu {
+    uint8 version;
+    uint8 packet_type;
+    uint16 packet_body_length;
+    array<uint8> packet_body;
+};
+
+struct EapolRequest {
+    array<uint8, 6> src_addr;
+    array<uint8, 6> dst_addr;
+    EapolPdu data;
+};
+
 // Method ordinals
 // To be replaced once FIDL interfaces are available for Go
 enum Method {
@@ -275,6 +291,9 @@ enum Method {
     // Args: DisassociateIndication
     DISASSOCIATE_indication,
 
+    // MLME-EAPOL.request
+    // Args: EapolRequest
+    EAPOL_request,
 
 
     // Custom primitives extending 802.11 MLME SAP interface.
@@ -283,8 +302,8 @@ enum Method {
     // Args: SignalReportIndication
     SIGNAL_REPORT_indication,
 
-    // Args: EapolFrameIndication
-    EAPOL_FRAME_indication,
+    // Args: EapolIndication
+    EAPOL_indication,
 
-    LAST = EAPOL_FRAME_indication,
+    LAST = EAPOL_indication,
 };

@@ -290,6 +290,9 @@ func (s *associatedState) handleMsg(msg interface{}, c *Client) (state, error) {
 			PrintSignalReportIndication(v)
 		}
 		return s, nil
+	case *mlme_ext.EapolIndication:
+		// TODO(hahnr): Handle EAPOL frame.
+		return s, nil
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)
 	}
