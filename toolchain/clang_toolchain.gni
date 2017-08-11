@@ -287,7 +287,6 @@ template("clang_toolchain") {
       current_os = invoker.toolchain_os
 
       # These values need to be passed through unchanged.
-      target_toolchain = target_toolchain
       target_os = target_os
       target_cpu = target_cpu
 

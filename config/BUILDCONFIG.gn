@@ -21,12 +21,6 @@ if (current_os == "") {
 }
 
 declare_args() {
-  # This should not be set as a build argument.
-  target_toolchain = ""
-
-  # This should not be set as a build argument.
-  host_toolchain = ""
-
   # Whether the toolchain defaults to PIC.
   is_pic_default = false
 
