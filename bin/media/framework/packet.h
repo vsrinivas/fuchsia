@@ -97,6 +97,10 @@ class Packet {
     revised_stream_type_ = std::move(stream_type);
   }
 
+  // Returns a numeric label used in instrumentation. The default implementation
+  // returns 0. Specialized implementations are free to do otherwise.
+  virtual uint64_t GetLabel();
+
  protected:
   Packet(int64_t pts,
          TimelineRate pts_rate,

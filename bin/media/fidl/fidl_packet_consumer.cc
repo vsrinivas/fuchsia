@@ -102,4 +102,8 @@ FidlPacketConsumer::PacketImpl::PacketImpl(
   }
 }
 
+uint64_t FidlPacketConsumer::PacketImpl::GetLabel() {
+  return supplied_packet_->label();
+}
+
 }  // namespace media

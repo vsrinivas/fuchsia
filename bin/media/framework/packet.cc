@@ -38,6 +38,10 @@ int64_t Packet::GetPts(TimelineRate pts_rate) {
                 TimelineRate::Product(pts_rate, pts_rate_.Inverse(), false));
 }
 
+uint64_t Packet::GetLabel() {
+  return 0;
+}
+
 void Packet::SetPtsRate(TimelineRate pts_rate) {
   if (pts_rate == pts_rate_) {
     return;

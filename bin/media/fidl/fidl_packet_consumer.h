@@ -63,6 +63,8 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 
     PacketImpl(std::unique_ptr<SuppliedPacket> supplied_packet);
 
+    uint64_t GetLabel() override;
+
    private:
     std::unique_ptr<SuppliedPacket> supplied_packet_;
   };
