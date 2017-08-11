@@ -63,7 +63,7 @@ mx_status_t Station::Join(JoinRequestPtr req) {
     }
 
     join_timeout_ = deadline_after_bcn_period(req->join_failure_timeout);
-    status = timer_->StartTimer(join_timeout_);
+    status = timer_->SetTimer(join_timeout_);
     if (status != MX_OK) {
         errorf("could not set join timer: %d\n", status);
         Reset();
@@ -136,7 +136,7 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
     }
 
     auth_timeout_ = deadline_after_bcn_period(req->auth_failure_timeout);
-    status = timer_->StartTimer(auth_timeout_);
+    status = timer_->SetTimer(auth_timeout_);
     if (status != MX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
@@ -238,7 +238,7 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
 
     // TODO(tkilbourn): get the assoc timeout from somewhere
     assoc_timeout_ = deadline_after_bcn_period(kAssocTimeoutTu);
-    status = timer_->StartTimer(assoc_timeout_);
+    status = timer_->SetTimer(assoc_timeout_);
     if (status != MX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
@@ -412,7 +412,7 @@ mx_status_t Station::HandleAssociationResponse(const Packet* packet) {
     SendAssocResponse(AssociateResultCodes::SUCCESS);
 
     signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
-    timer_->StartTimer(signal_report_timeout_);
+    timer_->SetTimer(signal_report_timeout_);
     auto rxinfo = packet->ctrl_data<wlan_rx_info_t>();
     MX_DEBUG_ASSERT(rxinfo);
     avg_rssi_.reset();
@@ -594,7 +594,7 @@ mx_status_t Station::HandleTimeout() {
     if (signal_report_timeout_ > 0 && now > signal_report_timeout_ &&
         state_ == WlanState::kAssociated) {
         signal_report_timeout_ = deadline_after_bcn_period(kSignalReportTimeoutTu);
-        timer_->StartTimer(signal_report_timeout_);
+        timer_->SetTimer(signal_report_timeout_);
         SendSignalReportIndication(avg_rssi_.avg());
     }
 

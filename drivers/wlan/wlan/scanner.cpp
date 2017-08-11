@@ -62,7 +62,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req, ScanResponsePtr resp) {
     } else {
         timeout = channel_start_ + WLAN_TU(req_->probe_delay);
     }
-    mx_status_t status = timer_->StartTimer(timeout);
+    mx_status_t status = timer_->SetTimer(timeout);
     if (status != MX_OK) {
         errorf("could not start scan timer: %d\n", status);
     }
@@ -108,7 +108,7 @@ mx_status_t Scanner::Start(ScanRequestPtr req) {
         return status;
     }
 
-    status = timer_->StartTimer(timeout);
+    status = timer_->SetTimer(timeout);
     if (status != MX_OK) {
         errorf("could not start scan timer: %d\n", status);
         resp_->result_code = ScanResultCodes::NOT_SUPPORTED;
@@ -274,7 +274,7 @@ mx_status_t Scanner::HandleTimeout() {
             return status;
         } else {
             channel_start_ = timer_->Now();
-            status = timer_->StartTimer(InitialTimeout());
+            status = timer_->SetTimer(InitialTimeout());
             if (status != MX_OK) {
                 goto timer_fail;
             }
@@ -291,7 +291,7 @@ mx_status_t Scanner::HandleTimeout() {
         // one
         // For now, just continue the scan.
         mx_time_t timeout = channel_start_ + WLAN_TU(req_->max_channel_time);
-        status = timer_->StartTimer(timeout);
+        status = timer_->SetTimer(timeout);
         if (status != MX_OK) {
             goto timer_fail;
         }
@@ -304,7 +304,7 @@ mx_status_t Scanner::HandleTimeout() {
         debugf("Reached probe delay\n");
         // TODO(hahnr): Add support for CCA as described in IEEE Std 802.11-2016 11.1.4.3.2 f)
         mx_time_t timeout = channel_start_ + WLAN_TU(req_->min_channel_time);
-        status = timer_->StartTimer(timeout);
+        status = timer_->SetTimer(timeout);
         if (status != MX_OK) {
             goto timer_fail;
         }

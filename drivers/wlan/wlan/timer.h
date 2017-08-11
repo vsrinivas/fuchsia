@@ -18,14 +18,15 @@ class Timer {
 
     virtual mx_time_t Now() const = 0;
 
-    mx_status_t StartTimer(mx_time_t deadline);
+    // TODO(tkilbourn): add slack
+    mx_status_t SetTimer(mx_time_t deadline);
     mx_status_t CancelTimer();
 
     uint64_t id() const { return id_; }
     mx_time_t deadline() const { return deadline_; }
 
   protected:
-    virtual mx_status_t StartTimerImpl(mx_time_t deadline) = 0;
+    virtual mx_status_t SetTimerImpl(mx_time_t deadline) = 0;
     virtual mx_status_t CancelTimerImpl() = 0;
 
   private:
@@ -40,7 +41,7 @@ class SystemTimer final : public Timer {
     mx_time_t Now() const override { return clock_.Now(); }
 
   protected:
-    mx_status_t StartTimerImpl(mx_time_t deadline) override;
+    mx_status_t SetTimerImpl(mx_time_t deadline) override;
     mx_status_t CancelTimerImpl() override;
 
   private:
@@ -55,7 +56,7 @@ class TestTimer final : public Timer {
     mx_time_t Now() const override { return clock_->Now(); }
 
   protected:
-    mx_status_t StartTimerImpl(mx_time_t duration) override;
+    mx_status_t SetTimerImpl(mx_time_t duration) override;
     mx_status_t CancelTimerImpl() override;
 
   private:

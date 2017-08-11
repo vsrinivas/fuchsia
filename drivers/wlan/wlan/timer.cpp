@@ -12,9 +12,9 @@ Timer::Timer(uint64_t id) : id_(id) {}
 
 Timer::~Timer() {}
 
-mx_status_t Timer::StartTimer(mx_time_t deadline) {
+mx_status_t Timer::SetTimer(mx_time_t deadline) {
     deadline_ = deadline;
-    return StartTimerImpl(deadline);
+    return SetTimerImpl(deadline);
 }
 
 mx_status_t Timer::CancelTimer() {
@@ -25,15 +25,15 @@ mx_status_t Timer::CancelTimer() {
 SystemTimer::SystemTimer(uint64_t id, mx::timer timer)
   : Timer(id), timer_(std::move(timer)) {}
 
-mx_status_t SystemTimer::StartTimerImpl(mx_time_t deadline) {
-    return timer_.start(deadline, 0, 0);
+mx_status_t SystemTimer::SetTimerImpl(mx_time_t deadline) {
+    return timer_.set(deadline, 0);
 }
 
 mx_status_t SystemTimer::CancelTimerImpl() {
     return timer_.cancel();
 }
 
-mx_status_t TestTimer::StartTimerImpl(mx_time_t duration) {
+mx_status_t TestTimer::SetTimerImpl(mx_time_t duration) {
     return MX_OK;
 }
 
