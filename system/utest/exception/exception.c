@@ -758,6 +758,7 @@ static bool job_handler_test(void)
     start_test_child(job, NULL, &child, &our_channel);
     mx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(job, eport, 0, 0);
+    REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_JOB);
     tu_handle_close(job);
@@ -775,6 +776,7 @@ static bool grandparent_job_handler_test(void)
     start_test_child(job, NULL, &child, &our_channel);
     mx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(grandparent_job, eport, 0, 0);
+    REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_JOB);
     tu_handle_close(job);
@@ -792,6 +794,7 @@ static bool process_handler_test(void)
     start_test_child(mx_job_default(), NULL, &child, &our_channel);
     mx_handle_t eport = tu_io_port_create();
     tu_set_exception_port(child, eport, 0, 0);
+    REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH, MX_EXCEPTION_PORT_TYPE_PROCESS);
     END_TEST;
@@ -809,6 +812,7 @@ static bool thread_handler_test(void)
     mx_handle_t thread;
     recv_msg_new_thread_handle(our_channel, &thread);
     tu_set_exception_port(thread, eport, 0, 0);
+    REGISTER_CRASH(child);
 
     finish_basic_test(child, eport, our_channel, MSG_CRASH_AUX_THREAD, MX_EXCEPTION_PORT_TYPE_THREAD);
 
@@ -1002,13 +1006,14 @@ static void __NO_RETURN trigger_hw_bkpt(void)
 static const struct {
     mx_excp_type_t type;
     const char* name;
+    bool crashes;
     void __NO_RETURN (*trigger_function) (void);
 } exceptions[] = {
-    { MX_EXCP_GENERAL, "general", trigger_general },
-    { MX_EXCP_FATAL_PAGE_FAULT, "page-fault", trigger_fatal_page_fault },
-    { MX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn", trigger_undefined_insn },
-    { MX_EXCP_SW_BREAKPOINT, "sw-bkpt", trigger_sw_bkpt },
-    { MX_EXCP_HW_BREAKPOINT, "hw-bkpt", trigger_hw_bkpt },
+    { MX_EXCP_GENERAL, "general", false, trigger_general },
+    { MX_EXCP_FATAL_PAGE_FAULT, "page-fault", true, trigger_fatal_page_fault },
+    { MX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn", true, trigger_undefined_insn },
+    { MX_EXCP_SW_BREAKPOINT, "sw-bkpt", true, trigger_sw_bkpt },
+    { MX_EXCP_HW_BREAKPOINT, "hw-bkpt", false, trigger_hw_bkpt },
 };
 
 static void __NO_RETURN trigger_exception(const char* excp_name)
@@ -1044,6 +1049,10 @@ static bool trigger_test(void)
         setup_test_child_with_eport(mx_job_default(), arg,
                                     &child, &eport, &our_channel);
         free(arg);
+
+        if (exceptions[i].crashes) {
+            REGISTER_CRASH(child);
+        }
 
         mx_koid_t tid = MX_KOID_INVALID;
         (void) read_and_verify_exception(eport, child, MX_EXCP_THREAD_STARTING, &tid);
@@ -1466,15 +1475,15 @@ RUN_TEST(dead_process_debugger_matched_unbind_succeeds_test);
 RUN_TEST(dead_process_debugger_mismatched_unbind_fails_test);
 RUN_TEST(dead_thread_matched_unbind_succeeds_test);
 RUN_TEST(dead_thread_mismatched_unbind_fails_test);
-RUN_TEST(job_handler_test);
-RUN_TEST(grandparent_job_handler_test);
-RUN_TEST(process_handler_test);
-RUN_TEST(thread_handler_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(job_handler_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(grandparent_job_handler_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(process_handler_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(thread_handler_test);
 RUN_TEST(packet_pid_test);
 RUN_TEST(process_start_test);
 RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
-RUN_TEST(trigger_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(trigger_test);
 RUN_TEST(unbind_walkthrough_by_reset_test);
 RUN_TEST(unbind_walkthrough_by_close_test);
 RUN_TEST(unbind_while_stopped_test);
