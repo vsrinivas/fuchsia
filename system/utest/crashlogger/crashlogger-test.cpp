@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <magenta/processargs.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 #include <launchpad/launchpad.h>
 #include <unittest/unittest.h>
@@ -93,7 +94,7 @@ bool test_crash(const char* crash_arg) {
     // Launch the crasher process.
     launchpad_load_from_file(crasher_lp, argv[0]);
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
-    launchpad_set_args(crasher_lp, countof(argv), argv);
+    launchpad_set_args(crasher_lp, mxtl::count_of(argv), argv);
     const char* errmsg;
     ASSERT_EQ(launchpad_go(crasher_lp, &crasher_proc, &errmsg), MX_OK);
 
@@ -103,11 +104,11 @@ bool test_crash(const char* crash_arg) {
     launchpad_create(0, "crashlogger-test-instance", &crashlogger_lp);
     launchpad_load_from_file(crashlogger_lp, crashlogger_argv[0]);
     launchpad_clone(crasher_lp, LP_CLONE_ALL);
-    launchpad_set_args(crashlogger_lp, countof(crashlogger_argv),
+    launchpad_set_args(crashlogger_lp, mxtl::count_of(crashlogger_argv),
                        crashlogger_argv);
     mx_handle_t handles[] = { exception_port };
     uint32_t handle_types[] = { PA_HND(PA_USER0, 0) };
-    launchpad_add_handles(crashlogger_lp, countof(handles), handles,
+    launchpad_add_handles(crashlogger_lp, mxtl::count_of(handles), handles,
                           handle_types);
     int pipe_fd;
     launchpad_add_pipe(crashlogger_lp, &pipe_fd, STDOUT_FILENO);

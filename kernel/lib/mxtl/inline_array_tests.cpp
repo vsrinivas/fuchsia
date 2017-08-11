@@ -5,6 +5,7 @@
 #include <mxtl/inline_array.h>
 
 #include <stddef.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
 #include <unittest.h>
 
@@ -53,7 +54,7 @@ bool non_inline_test(void* unused) {
 
     BEGIN_TEST;
 
-    for (size_t i = 0u; i < countof(test_sizes); i++) {
+    for (size_t i = 0u; i < mxtl::count_of(test_sizes); i++) {
         size_t sz = test_sizes[i];
 
         TestType::ResetRunCounts();

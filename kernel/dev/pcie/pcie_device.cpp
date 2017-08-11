@@ -376,7 +376,7 @@ status_t PcieDevice::ProbeBarsLocked() {
 
     DEBUG_ASSERT((header_type == PCI_HEADER_TYPE_STANDARD) ||
                  (header_type == PCI_HEADER_TYPE_PCI_BRIDGE));
-    DEBUG_ASSERT(bar_count_ <= countof(bars_));
+    DEBUG_ASSERT(bar_count_ <= mxtl::count_of(bars_));
 
     for (uint i = 0; i < bar_count_; ++i) {
         /* If this is a re-scan of the bus, We should not be re-enumerating BARs. */
@@ -408,7 +408,7 @@ status_t PcieDevice::ProbeBarsLocked() {
 status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     DEBUG_ASSERT(cfg_);
     DEBUG_ASSERT(bar_id < bar_count_);
-    DEBUG_ASSERT(bar_id < countof(bars_));
+    DEBUG_ASSERT(bar_id < mxtl::count_of(bars_));
 
     /* Determine the type of BAR this is.  Make sure that it is one of the types we understand */
     pcie_bar_info_t& bar_info  = bars_[bar_id];
@@ -507,7 +507,7 @@ status_t PcieDevice::AllocateBarsLocked() {
         return MX_ERR_UNAVAILABLE;
 
     /* Allocate BARs for the device */
-    DEBUG_ASSERT(bar_count_ <= countof(bars_));
+    DEBUG_ASSERT(bar_count_ <= mxtl::count_of(bars_));
     for (size_t i = 0; i < bar_count_; ++i) {
         if (bars_[i].size) {
             status_t ret = AllocateBarLocked(bars_[i]);

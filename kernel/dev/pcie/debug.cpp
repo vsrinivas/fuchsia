@@ -254,7 +254,7 @@ static const char* pci_device_type(const PcieDevice& dev)
         default: break;
     }
 
-    for (size_t i = 0; i < countof(PCI_DEV_TYPE_LUT); ++i) {
+    for (size_t i = 0; i < mxtl::count_of(PCI_DEV_TYPE_LUT); ++i) {
         const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
         if ((dev.class_id() == entry->class_code)    &&

@@ -97,13 +97,13 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
     // recognize this host bridge.
     size_t i;
     uint32_t vid_did = (static_cast<uint32_t>(dev->vendor_id()) << 16) | dev->device_id();
-    for (i = 0; i < countof(TOLUD_CHIPSET_LUT); ++i) {
+    for (i = 0; i < mxtl::count_of(TOLUD_CHIPSET_LUT); ++i) {
         const auto& entry = TOLUD_CHIPSET_LUT[i];
         if ((vid_did & entry.mask) == entry.match)
             break;
     }
 
-    if (i >= countof(TOLUD_CHIPSET_LUT))
+    if (i >= mxtl::count_of(TOLUD_CHIPSET_LUT))
         return;
 
     // Looks like we recognize this chip.  Check our table to see if there is a

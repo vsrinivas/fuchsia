@@ -12,8 +12,8 @@ namespace utils {
 // Note: these sets must be kept in monotonically increasing order.
 static const uint32_t RATES_48000_FAMILY[] = { 8000,16000,32000,48000,96000,192000,384000,768000 };
 static const uint32_t RATES_44100_FAMILY[] = { 11025,22050,44100,88200,176400 };
-static const uint32_t* RATES_48000_FAMILY_LAST = RATES_48000_FAMILY + countof(RATES_48000_FAMILY);
-static const uint32_t* RATES_44100_FAMILY_LAST = RATES_44100_FAMILY + countof(RATES_44100_FAMILY);
+static const uint32_t* RATES_48000_FAMILY_LAST = RATES_48000_FAMILY + mxtl::count_of(RATES_48000_FAMILY);
+static const uint32_t* RATES_44100_FAMILY_LAST = RATES_44100_FAMILY + mxtl::count_of(RATES_44100_FAMILY);
 static constexpr auto DISCRETE_FLAGS = ASF_RANGE_FLAG_FPS_48000_FAMILY
                                      | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 

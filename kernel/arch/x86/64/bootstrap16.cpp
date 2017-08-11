@@ -76,7 +76,7 @@ status_t x86_bootstrap16_prep(
         // 4) The kernel's version of the bootstrap code page (matched mapping)
         // 5) The page containing the aps_still_booting counter (matched mapping)
     };
-    for (unsigned int i = 0; i < countof(page_mappings); ++i) {
+    for (unsigned int i = 0; i < mxtl::count_of(page_mappings); ++i) {
         void *vaddr = (void *)page_mappings[i].start_vaddr;
         status_t status = bootstrap_aspace->AllocPhysical(
                 "bootstrap_mapping",

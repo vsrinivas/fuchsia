@@ -31,7 +31,7 @@ static bool quirk_should_force_pcie(const PcieDevice& dev) {
         { .vendor_id = 0x8086, .device_id = 0x1616 },  // Wildcat Point GPU
     };
 
-    for (size_t i = 0; i < countof(QUIRK_LIST); ++i) {
+    for (size_t i = 0; i < mxtl::count_of(QUIRK_LIST); ++i) {
         if ((QUIRK_LIST[i].vendor_id == dev.vendor_id()) &&
             (QUIRK_LIST[i].device_id == dev.device_id()))
             return true;

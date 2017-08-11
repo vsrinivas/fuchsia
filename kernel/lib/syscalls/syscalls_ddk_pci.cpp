@@ -74,9 +74,9 @@ public:
 
     status_t Swizzle(uint dev_id, uint func_id, uint pin, uint* irq) override {
         if ((irq == nullptr) ||
-            (dev_id >= countof(lut_)) ||
-            (func_id >= countof(lut_[dev_id])) ||
-            (pin >= countof(lut_[dev_id][func_id])))
+            (dev_id >= mxtl::count_of(lut_)) ||
+            (func_id >= mxtl::count_of(lut_[dev_id])) ||
+            (pin >= mxtl::count_of(lut_[dev_id][func_id])))
             return MX_ERR_INVALID_ARGS;
 
         *irq = lut_[dev_id][func_id][pin];
@@ -167,7 +167,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
         return MX_ERR_INVALID_ARGS;
     }
 
-    if (arg->num_irqs > countof(arg->irqs)) {
+    if (arg->num_irqs > mxtl::count_of(arg->irqs)) {
         return MX_ERR_INVALID_ARGS;
     }
 

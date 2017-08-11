@@ -6,6 +6,7 @@
 
 #include <err.h>
 #include <lib/memory_limit.h>
+#include <mxtl/algorithm.h>
 #include <sys/types.h>
 #include <unittest.h>
 
@@ -119,9 +120,9 @@ static bool test_runner(const platform_test_case_t test, size_t mem_limit) {
 // more useful if some specific cases are written, but those should be easily
 // addable as we find new problems down the line.
 const platform_test_case_t test_cases[] = {
-    {nuc_ctx, nuc_ranges, countof(nuc_ranges)},
-    {switch_alpha_12_ctx, switch_alpha_12_ranges, countof(switch_alpha_12_ranges)},
-    {rpi3_ctx, rpi3_ranges, countof(rpi3_ranges)},
+    {nuc_ctx, nuc_ranges, mxtl::count_of(nuc_ranges)},
+    {switch_alpha_12_ctx, switch_alpha_12_ranges, mxtl::count_of(switch_alpha_12_ranges)},
+    {rpi3_ctx, rpi3_ranges, mxtl::count_of(rpi3_ranges)},
 };
 
 // Test that the memory limit is expanded if the ramdisk would otherwise be
@@ -136,7 +137,7 @@ static bool ml_test_large_ramdisk(void* context) {
 
     ctx.ramdisk_size = 64 * MB;
     ctx.memory_limit = memory_limit;
-    for (size_t i = 0; i < countof(nuc_ranges); i++) {
+    for (size_t i = 0; i < mxtl::count_of(nuc_ranges); i++) {
         status_t status = mem_limit_get_iovs(&ctx, nuc_ranges[i].base, nuc_ranges[i].size, vecs, &used);
         EXPECT_EQ(MX_OK, status, "checking status");
         for (size_t i = 0; i < used; i++) {
