@@ -37,6 +37,10 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   // Returns the message loop associated with the current thread, if any.
   static MessageLoop* GetCurrent();
 
+  // Gets the underlying libasync dispatcher.
+  // See <async/async.h> for details on how to use this.
+  async_t* async() const { return loop_.async(); }
+
   // Return an interface for posting tasks to this message loop.
   const ftl::RefPtr<ftl::TaskRunner>& task_runner() const {
     return task_runner_;
