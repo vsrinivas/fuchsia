@@ -106,62 +106,89 @@ class _MediaPlayerState extends State<MediaPlayer> {
     return new Stack(
       children: <Widget>[
         new Center(
-          child: new IconButton(
-            icon: widget.controller.problem != null
-                ? new Icon(Icons.error_outline)
-                : widget.controller.loading
-                    ? new Icon(Icons.hourglass_empty)
-                    : widget.controller.playing
-                        ? new Icon(Icons.pause)
-                        : new Icon(Icons.play_arrow),
-            iconSize: 60.0,
-            onPressed: () {
-              if (widget.controller.playing) {
-                widget.controller.pause();
-              } else {
-                widget.controller.play();
-              }
-            },
-            color: Colors.white,
+          child: new PhysicalModel(
+            elevation: 2.0,
+            color: Colors.transparent,
+            borderRadius: new BorderRadius.circular(60.0),
+            child: new IconButton(
+              icon: widget.controller.problem != null
+                  ? new Icon(Icons.error_outline)
+                  : widget.controller.loading
+                      ? new Icon(Icons.hourglass_empty)
+                      : widget.controller.playing
+                          ? new Icon(Icons.pause)
+                          : new Icon(Icons.play_arrow),
+              iconSize: 60.0,
+              onPressed: () {
+                if (widget.controller.playing) {
+                  widget.controller.pause();
+                } else {
+                  widget.controller.play();
+                }
+              },
+              color: Colors.white,
+            ),
           ),
         ),
         new Positioned(
-          left: 10.0,
-          bottom: 9.0,
-          child: new AnimatedBuilder(
-            animation:
-                _secondsNotifier.withResolution(const Duration(seconds: 1)),
-            builder: (BuildContext context, Widget child) => new Text(
-                  _durationToString(widget.controller.progress),
-                  style: new TextStyle(color: Colors.white),
+          left: 2.0,
+          bottom: 8.0,
+          child: new PhysicalModel(
+            elevation: 2.0,
+            color: Colors.transparent,
+            borderRadius: new BorderRadius.circular(10.0),
+            child: new AnimatedBuilder(
+              animation:
+                  _secondsNotifier.withResolution(const Duration(seconds: 1)),
+              builder: (BuildContext context, Widget child) => new Container(
+                width: 65.0,
+                child: new Text(
+                    _durationToString(widget.controller.progress),
+                    style: new TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
+            ),
           ),
         ),
         new Positioned(
-          left: 35.0,
-          right: 35.0,
+          left: 48.0,
+          right: 48.0,
           bottom: 0.0,
-          child: new LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) =>
-                new AnimatedBuilder(
-                  animation: _sliderNotifier.withExcursion(
-                      constraints.maxWidth, context),
-                  builder: (BuildContext context, Widget child) => new Slider(
-                      min: 0.0,
-                      max: 1.0,
-                      activeColor: Colors.red[900],
-                      value: widget.controller.normalizedProgress,
-                      onChanged: (double value) =>
-                          widget.controller.normalizedSeek(value)),
-                ),
+          child: new PhysicalModel(
+            elevation: 3.0,
+            color: Colors.transparent,
+            child: new LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) =>
+                  new AnimatedBuilder(
+                    animation: _sliderNotifier.withExcursion(
+                        constraints.maxWidth, context),
+                    builder: (BuildContext context, Widget child) => new Slider(
+                        min: 0.0,
+                        max: 1.0,
+                        activeColor: Colors.red[900],
+                        value: widget.controller.normalizedProgress,
+                        onChanged: (double value) =>
+                            widget.controller.normalizedSeek(value)),
+                  ),
+            ),
           ),
         ),
         new Positioned(
-          right: 10.0,
-          bottom: 9.0,
-          child: new Text(
-            _durationToString(widget.controller.duration),
-            style: new TextStyle(color: Colors.white),
+          right: 2.0,
+          bottom: 8.0,
+          child: new PhysicalModel(
+            elevation: 2.0,
+            color: Colors.transparent,
+            borderRadius: new BorderRadius.circular(10.0),
+            child: new Container(
+              width: 65.0,
+              child: new Text(
+                _durationToString(widget.controller.duration),
+                style: new TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ),
       ],

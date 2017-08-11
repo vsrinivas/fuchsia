@@ -263,20 +263,28 @@ class _PlaybackScreenState extends State<_PlaybackScreen> {
           new Positioned(
             right: 0.0,
             top: 0.0,
-            child: new IconButton(
-              icon: new Icon(
-                  _assets.length == 1 ? Icons.close : Icons.arrow_back),
-              iconSize: 60.0,
-              onPressed: () {
-                if (_assets.length == 1) {
-                  io.exit(0);
-                  return;
-                }
+            child: new Offstage(
+              offstage: !_controller.shouldShowControlOverlay,
+              child: new PhysicalModel(
+                elevation: 2.0,
+                color: Colors.transparent,
+                borderRadius: new BorderRadius.circular(60.0),
+                child: new IconButton(
+                  icon: new Icon(
+                      _assets.length == 1 ? Icons.close : Icons.arrow_back),
+                  iconSize: 60.0,
+                  onPressed: () {
+                    if (_assets.length == 1) {
+                      io.exit(0);
+                      return;
+                    }
 
-                _controller.pause();
-                Navigator.of(context).pop();
-              },
-              color: Colors.white,
+                    _controller.pause();
+                    Navigator.of(context).pop();
+                  },
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],
@@ -361,13 +369,17 @@ class _ChooserScreenState extends State<_ChooserScreen> {
           new Positioned(
             right: 0.0,
             top: 0.0,
-            child: new IconButton(
-              icon: new Icon(Icons.close),
-              iconSize: 60.0,
-              onPressed: () {
-                io.exit(0);
-              },
-              color: Colors.white,
+            child: new PhysicalModel(
+              elevation: 2.0,
+              color: Colors.transparent,
+              child: new IconButton(
+                icon: new Icon(Icons.close),
+                iconSize: 60.0,
+                onPressed: () {
+                  io.exit(0);
+                },
+                color: Colors.white,
+              ),
             ),
           ),
         ],
