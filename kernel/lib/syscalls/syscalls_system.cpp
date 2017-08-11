@@ -133,7 +133,7 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, const size_t extra_by
 
     arch_clean_invalidate_cache_range((addr_t)dst_addr, vmo_size);
 
-    *size = vmo_size;
+    *size = num_pages * PAGE_SIZE;
     *addr = base_addr;
     if (vaddr)
         *vaddr = dst_addr;
