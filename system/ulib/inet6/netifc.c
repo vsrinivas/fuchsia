@@ -253,8 +253,8 @@ static mx_status_t netifc_open_cb(int dirfd, int event, const char* fn, void* co
         netfd = -1;
         return MX_OK;
     }
-    if (info.features & ETH_FEATURE_WLAN) {
-        // Don't run netsvc for wireless network devices
+    if (info.features & (ETH_FEATURE_WLAN | ETH_FEATURE_SYNTH)) {
+        // Don't run netsvc for wireless or synthetic network devices
         close(netfd);
         netfd = -1;
         return MX_OK;
