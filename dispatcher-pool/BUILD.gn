@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/shared.gni")
-
-fuchsia_shared_library("audio-dispatcher-pool") {
+shared_library("audio-dispatcher-pool") {
   public = [
     "dispatcher-thread.h",
     "dispatcher-channel.h",
