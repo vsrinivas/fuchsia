@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 if (is_fuchsia) {
-  import("//build/toolchain/shared.gni")
   import("//packages/package.gni")
 }
 
@@ -178,7 +177,7 @@ source_set("ftl_logging_lib") {
 }
 
 if (is_fuchsia) {
-  fuchsia_shared_library("ftl_logging") {
+  shared_library("ftl_logging") {
     public_deps = [
       ":ftl_logging_lib",
     ]
@@ -192,7 +191,7 @@ if (is_fuchsia) {
 }
 
 if (is_fuchsia) {
-  fuchsia_shared_library("ftl") {
+  shared_library("ftl") {
     public_deps = [
       ":ftl_lib",
     ]
