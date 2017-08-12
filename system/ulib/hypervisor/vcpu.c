@@ -185,15 +185,13 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
     default: {
         uint16_t port_off;
         pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
-        switch (pci_device_num(bus, PCI_BAR_IO_TYPE_PIO, io->port, &port_off)) {
-        case PCI_DEVICE_VIRTIO_BLOCK: {
-            virtio_device_t* virtio_device = &vcpu_ctx->guest_ctx->block->virtio_device;
-            status = virtio_pci_legacy_read(virtio_device, port_off, &vcpu_io);
+        pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_PIO, io->port,
+                                                     &port_off);
+        if (pci_device) {
+            status = pci_device->ops->read_bar(pci_device, port_off, &vcpu_io);
             break;
         }
-        default:
-            status = MX_ERR_NOT_SUPPORTED;
-        }
+       status = MX_ERR_NOT_SUPPORTED;
     }}
     if (status != MX_OK) {
         fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);

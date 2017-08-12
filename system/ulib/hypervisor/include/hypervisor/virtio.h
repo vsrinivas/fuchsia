@@ -50,10 +50,18 @@ typedef struct virtio_device_ops {
 typedef struct virtio_device {
     // Virtio feature flags.
     uint32_t features;
+    // Virtio device id.
+    uint8_t device_id;
     // Virtio status register for the device.
     uint8_t status;
     // Currently selected queue.
     uint16_t queue_sel;
+    // Number of bytes used for this devices configuration space.
+    //
+    // This should cover only bytes used for the device-specific portions of
+    // the configuration header, omitting any of the (transport-specific)
+    // shared configuration space.
+    uint32_t config_size;
     // Size of queues array.
     uint16_t num_queues;
     // Virtqueues for this device.
@@ -76,19 +84,13 @@ typedef struct virtio_device {
     pci_device_t pci_device;
 } virtio_device_t;
 
-/* Handle reads from legacy PCI virtio configuration space.
+/* Configures a device for Virtio PCI functionality.
  *
- * Virtio 1.0 Section 4.1.4.8 Legacy Interfaces: A Note on PCI Device Layout.
+ * Should be invoked after the rest of the virtio_device_t structure has
+ * already been intialized as the PCI configuration depends on some of the
+ * virtio device attributes.
  */
-mx_status_t virtio_pci_legacy_read(const virtio_device_t* device, uint16_t port,
-                                   mx_vcpu_io_t* vcpu_id);
-
-/* Handle writes to legacy PCI virtio configuration space.
- *
- * Virtio 1.0 Section 4.1.4.8 Legacy Interfaces: A Note on PCI Device Layout.
- */
-mx_status_t virtio_pci_legacy_write(virtio_device_t* device, mx_handle_t vcpu,
-                                    uint16_t port, const mx_guest_io_t* io);
+void virtio_pci_init(virtio_device_t* device);
 
 /* Stores the Virtio queue based on the ring provided by the guest.
  *

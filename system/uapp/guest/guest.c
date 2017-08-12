@@ -199,8 +199,7 @@ int main(int argc, char** argv) {
         if (status != MX_OK)
             return status;
 
-        status = block_async(&block, vcpu, guest, pci_bar_base(virtio_block),
-                             pci_bar_size(virtio_block));
+        status = pci_device_async(virtio_block, vcpu, guest);
         if (status != MX_OK)
             return status;
     }

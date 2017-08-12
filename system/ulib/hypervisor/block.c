@@ -62,15 +62,6 @@ static virtio_device_ops_t block_device_ops = {
     .queue_notify = &block_queue_notify,
 };
 
-static void block_pci_init(pci_device_t* pci_device) {
-    pci_device->vendor_id = PCI_VENDOR_ID_VIRTIO;
-    pci_device->device_id = PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY;
-    pci_device->subsystem_vendor_id = 0;
-    pci_device->subsystem_id = VIRTIO_ID_BLOCK;
-    pci_device->class_code = PCI_CLASS_MASS_STORAGE;
-    pci_device->bar_size = 0x40;
-}
-
 mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
                        size_t guest_physmem_size, const io_apic_t* io_apic) {
     memset(block, 0, sizeof(*block));
@@ -97,6 +88,8 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
     block->size = ret;
 
     // Setup Virtio device.
+    block->virtio_device.device_id = VIRTIO_ID_BLOCK;
+    block->virtio_device.config_size = sizeof(virtio_blk_config_t);
     block->virtio_device.global_irq = X86_INT_BLOCK;
     block->virtio_device.impl = block;
     block->virtio_device.num_queues = 1;
@@ -106,27 +99,14 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
     block->virtio_device.guest_physmem_size = guest_physmem_size;
     block->virtio_device.io_apic = io_apic;
 
-    // PCI Transport.
-    block_pci_init(&block->virtio_device.pci_device);
-
     // Setup Virtio queue.
     block->queue.size = QUEUE_SIZE;
     block->queue.virtio_device = &block->virtio_device;
 
+    // PCI Transport.
+    virtio_pci_init(&block->virtio_device);
+
     return MX_OK;
-}
-
-static mx_status_t block_handler(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet) {
-    block_t* block = ctx;
-    mx_guest_io_t* io = &packet->io;
-    uint32_t bar_base = pci_bar_base(&block->virtio_device.pci_device);
-    const uint16_t port_off = io->port - bar_base;
-    return virtio_pci_legacy_write(&block->virtio_device, vcpu, port_off, io);
-}
-
-mx_status_t block_async(block_t* block, mx_handle_t vcpu, mx_handle_t guest, uint32_t bar_base,
-                        uint16_t bar_size) {
-    return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, block_handler, block);
 }
 
 // Multiple data buffers can be chained in the payload of block read/write

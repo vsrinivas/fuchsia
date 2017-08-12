@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
+
 #define VIRTIO_STATUS_ACKNOWLEDGE           (1u << 0)
 #define VIRTIO_STATUS_DRIVER                (1u << 1)
 #define VIRTIO_STATUS_DRIVER_OK             (1u << 2)
@@ -25,3 +27,18 @@
 
 #define VIRTIO_PCI_CONFIG_OFFSET_NOMSI      0x14    // uint16_t
 #define VIRTIO_PCI_CONFIG_OFFSET_MSI        0x18    // uint16_t
+
+__BEGIN_CDECLS
+
+typedef struct virtio_pci_legacy_config {
+    uint32_t device_features;
+    uint32_t guest_features;
+    uint32_t queue_address;
+    uint16_t queue_size;
+    uint16_t queue_select;
+    uint16_t queue_notify;
+    uint8_t device_status;
+    uint8_t isr_status;
+} __PACKED virtio_pci_legacy_config_t;
+
+__END_CDECLS

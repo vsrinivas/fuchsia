@@ -11,6 +11,7 @@
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/decode.h>
+#include <hypervisor/vcpu.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <virtio/virtio_ids.h>
 
@@ -23,8 +24,25 @@
 #define PCI_REGISTER_BAR_5                      0x24
 
 static const uint32_t kPioBase = 0x8000;
+static const uint32_t kMaxBarSize = 1 << 8;
 static const uint32_t kPioAddressMask = (uint32_t)~BIT_MASK(2);
 static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
+
+static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t port,
+                                            mx_vcpu_io_t* vcpu_io) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+
+
+static mx_status_t pci_bar_write_unsupported(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
+                                             const mx_guest_io_t* io) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+
+static pci_device_ops_t kRootComplexDeviceOps = {
+    .read_bar = &pci_bar_read_unsupported,
+    .write_bar = &pci_bar_write_unsupported,
+};
 
 static void pci_root_complex_init(pci_device_t* host_bridge) {
     host_bridge->vendor_id = PCI_VENDOR_ID_INTEL;
@@ -33,6 +51,7 @@ static void pci_root_complex_init(pci_device_t* host_bridge) {
     host_bridge->subsystem_id = 0;
     host_bridge->class_code = PCI_CLASS_BRIDGE_HOST;
     host_bridge->bar_size = 0x10;
+    host_bridge->ops = &kRootComplexDeviceOps;
 }
 
 mx_status_t pci_bus_init(pci_bus_t* bus) {
@@ -46,12 +65,18 @@ mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) 
         return MX_ERR_OUT_OF_RANGE;
     if (bus->device[slot])
         return MX_ERR_ALREADY_EXISTS;
-    // We currently allocate a fixed IO range per bar.
-    if (device->bar_size > (1 << 8))
+
+    // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
+    //
+    // This design implies that all address spaces used are a power of two in
+    // size and are naturally aligned.
+    uint32_t bar_size = round_up_pow2(device->bar_size);
+    if (bar_size > kMaxBarSize)
         return MX_ERR_NOT_SUPPORTED;
 
+    device->bar_size = bar_size;
+    device->bar[0] = kPioBase + (slot * kMaxBarSize);
     device->command = PCI_COMMAND_IO_EN;
-    device->bar[0] = kPioBase + (slot << 8);
     bus->device[slot] = device;
     return MX_OK;
 }
@@ -354,7 +379,7 @@ static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
     }
 }
 
-uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off) {
+pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_t* device = bus->device[i];
         if (!device)
@@ -378,10 +403,10 @@ uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t
 
         if (addr >= bar_base && addr < bar_base + bar_size) {
             *off = addr - bar_base;
-            return i;
+            return bus->device[i];
         }
     }
-    return PCI_DEVICE_INVALID;
+    return NULL;
 }
 
 uint32_t pci_bar_base(pci_device_t* device) {
@@ -398,4 +423,18 @@ uint32_t pci_bar_base(pci_device_t* device) {
 
 uint16_t pci_bar_size(pci_device_t* device) {
     return device->bar_size;
+}
+
+static mx_status_t pci_handler(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet) {
+    pci_device_t* pci_device = ctx;
+    mx_guest_io_t* io = &packet->io;
+    uint32_t bar_base = pci_bar_base(pci_device);
+
+    return pci_device->ops->write_bar(pci_device, vcpu, io->port - bar_base, io);
+}
+
+mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t guest) {
+    uint32_t bar_base = pci_bar_base(device);
+    uint16_t bar_size = pci_bar_size(device);
+    return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, pci_handler, device);
 }

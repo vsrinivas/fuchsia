@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #define _ONE(x) (1 + ((x) - (x)))
 
 #define BIT(x, bit) ((x) & (_ONE(x) << (bit)))
@@ -14,3 +16,14 @@
 
 #define BIT_MASK(x) (((x) >= sizeof(unsigned long) * 8) ? (0UL-1) : ((1UL << (x)) - 1))
 #define CLEAR_BITS(x, nbits, shift) ((x) & (~(((1UL << (nbits)) - 1) << (shift))))
+
+// From: https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+static inline uint32_t round_up_pow2(uint32_t v) {
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    return ++v;
+}

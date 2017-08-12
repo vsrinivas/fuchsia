@@ -19,9 +19,7 @@
 #define PCI_BAR_IO_TYPE_MASK                0x0001u
 #define PCI_BAR_IO_TYPE_PIO                 0x0001u
 #define PCI_BAR_IO_TYPE_MMIO                0x0000u
-#define PCI_VENDOR_ID_VIRTIO                0x1af4u
 #define PCI_VENDOR_ID_INTEL                 0x8086u
-#define PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY   0x1001u
 #define PCI_DEVICE_ID_INTEL_Q35             0x29c0u
 #define PCI_CLASS_BRIDGE_HOST               0x0600u
 #define PCI_CLASS_MASS_STORAGE              0x0100u
@@ -43,6 +41,17 @@ typedef struct instruction instruction_t;
 typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_guest_memory mx_guest_memory_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
+typedef struct pci_device pci_device_t;
+
+/* Device specific callbacks. */
+typedef struct pci_device_ops {
+    // Read from a region mapped by a BAR register.
+    mx_status_t (*read_bar)(const pci_device_t* device, uint16_t port, mx_vcpu_io_t* vcpu_io);
+
+    // Write to a region mapped by a BAR register.
+    mx_status_t (*write_bar)(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
+                             const mx_guest_io_t* io);
+} pci_device_ops_t;
 
 /* Stores the state of PCI devices. */
 typedef struct pci_device {
@@ -60,6 +69,11 @@ typedef struct pci_device {
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
     uint16_t bar_size;
+
+    // Private pointer for use by the device implementation.
+    void* impl;
+    // Device specific operations.
+    const pci_device_ops_t* ops;
 } pci_device_t;
 
 typedef struct pci_bus {
@@ -95,14 +109,16 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io);
 mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
 mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);
 
-/* Return the device number for the PCI device that has a BAR mapped to the
- * given address with the specified IO type. Returns PCI_DEVICE_INVALID if no
- * mapping exists or IO is disabled for the mapping.
+/* Return the device that has a BAR mapped to the given address with the specified IO type.
+ * Returns NULL if no mapping exists or IO is disabled for the mapping.
  */
-uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off);
+pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off);
 
 /* Returns the BAR base address for the device. */
 uint32_t pci_bar_base(pci_device_t* device);
 
 /* Returns the BAR size for the device. */
 uint16_t pci_bar_size(pci_device_t* device);
+
+/* Start asynchronous handling of writes to the pci device. */
+mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t guest);

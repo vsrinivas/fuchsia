@@ -17,12 +17,20 @@
 /* PCI macros. */
 #define PCI_ALIGN(n)    ((((uintptr_t)n) + 4095) & ~4095)
 
+#define PCI_VENDOR_ID_VIRTIO                0x1af4u
+#define PCI_DEVICE_ID_VIRTIO_LEGACY(id)     (0xfff + (id))
+
+static virtio_device_t* pci_device_to_virtio(const pci_device_t* device) {
+    return (virtio_device_t*) device->impl;
+}
+
 static virtio_queue_t* selected_queue(const virtio_device_t* device) {
     return device->queue_sel < device->num_queues ? &device->queues[device->queue_sel] : NULL;
 }
 
-mx_status_t virtio_pci_legacy_read(const virtio_device_t* device, uint16_t port,
-                                   mx_vcpu_io_t* vcpu_io) {
+static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint16_t port,
+                                          mx_vcpu_io_t* vcpu_io) {
+    virtio_device_t* device = pci_device_to_virtio(pci_device);
     const virtio_queue_t* queue = selected_queue(device);
     switch (port) {
     case VIRTIO_PCI_DEVICE_FEATURES:
@@ -81,8 +89,9 @@ static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
     return MX_OK;
 }
 
-mx_status_t virtio_pci_legacy_write(virtio_device_t* device, mx_handle_t vcpu,
-                                    uint16_t port, const mx_guest_io_t* io) {
+static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t vcpu,
+                                           uint16_t port, const mx_guest_io_t* io) {
+    virtio_device_t* device = pci_device_to_virtio(pci_device);
     virtio_queue_t* queue = selected_queue(device);
     switch (port) {
     case VIRTIO_PCI_DRIVER_FEATURES:
@@ -142,6 +151,22 @@ mx_status_t virtio_pci_legacy_write(virtio_device_t* device, mx_handle_t vcpu,
 
     fprintf(stderr, "Unhandled virtio device write %#x\n", port);
     return MX_ERR_NOT_SUPPORTED;
+}
+
+static const pci_device_ops_t kVirtioPciLegacyDeviceOps = {
+    .read_bar = &virtio_pci_legacy_read,
+    .write_bar = &virtio_pci_legacy_write,
+};
+
+void virtio_pci_init(virtio_device_t* device) {
+    device->pci_device.vendor_id = PCI_VENDOR_ID_VIRTIO;
+    device->pci_device.device_id = PCI_DEVICE_ID_VIRTIO_LEGACY(device->device_id);
+    device->pci_device.subsystem_vendor_id = 0;
+    device->pci_device.subsystem_id = device->device_id;
+    device->pci_device.class_code = 0;
+    device->pci_device.bar_size = sizeof(virtio_pci_legacy_config_t) + device->config_size;
+    device->pci_device.impl = device;
+    device->pci_device.ops = &kVirtioPciLegacyDeviceOps;
 }
 
 // Returns a circular index into a Virtio ring.
