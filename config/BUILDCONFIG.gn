@@ -20,6 +20,27 @@ if (current_os == "") {
   current_os = target_os
 }
 
+if (target_os == "fuchsia") {
+  target_toolchain = "//build/toolchain/fuchsia:${target_cpu}"
+} else {
+  assert(false, "Target OS not supported")
+}
+
+# References should use "label($shlib_toolchain)" rather than
+# "label(${target_toolchain}-shared)" or anything else.
+shlib_toolchain = "${target_toolchain}-shared"
+
+if (host_os == "linux" || host_os == "mac") {
+  host_toolchain = "//build/toolchain:host_${host_cpu}"
+} else {
+  assert(false, "Host OS not supported")
+}
+
+set_default_toolchain(target_toolchain)
+
+# Some projects expect a default value for sources_assignment_filter.
+sources_assignment_filter = []
+
 declare_args() {
   # Whether the toolchain defaults to PIC.
   is_pic_default = false
@@ -141,7 +162,7 @@ if (is_fuchsia && !is_pic_default) {
         public_deps = []
       }
       public_deps +=
-          [ ":$target_name(//build/toolchain/fuchsia:${target_cpu}-shared)" ]
+          [ ":$target_name($shlib_toolchain)" ]
     }
   }
 }
@@ -174,20 +195,3 @@ template("component") {
 set_defaults("component") {
   configs = default_common_binary_configs
 }
-
-if (target_os == "fuchsia") {
-  target_toolchain = "//build/toolchain/fuchsia:${target_cpu}"
-} else {
-  assert(false, "Target OS not supported")
-}
-
-if (host_os == "linux" || host_os == "mac") {
-  host_toolchain = "//build/toolchain:host_${host_cpu}"
-} else {
-  assert(false, "Host OS not supported")
-}
-
-set_default_toolchain(target_toolchain)
-
-# Some projects expect a default value for sources assigment filters.
-sources_assignment_filter = []
