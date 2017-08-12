@@ -120,6 +120,7 @@ mx_status_t TapDevice::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) 
         return MX_ERR_ALREADY_BOUND;
     } else {
         ethmac_proxy_.swap(proxy);
+        ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
     }
     return MX_OK;
 }
