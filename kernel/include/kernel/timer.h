@@ -21,13 +21,19 @@ typedef enum handler_return (*timer_callback)(struct timer *, lk_time_t now, voi
 
 #define TIMER_MAGIC (0x74696D72)  //'timr'
 
+enum slack_mode {
+    TIMER_SLACK_CENTER,         // slack is centered arround dealine
+    TIMER_SLACK_LATE,           // slack interval is [deadline, dealine + slack)
+    TIMER_SLACK_EARLY,          // slack interval is (deadline - slack, dealine]
+};
+
 typedef struct timer {
     int magic;
     struct list_node node;
 
     lk_time_t scheduled_time;
-    int64_t slack;              // after timer is queued it stores
-                                // the adjustment if timer was coalesced
+    int64_t slack;              // Stores the applied slack adjustment from
+                                // the ideal scheduled_time.
     timer_callback callback;
     void *arg;
 
@@ -72,6 +78,7 @@ void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg)
  *
  * timer: the timer to use
  * deadline: absolute time, in ns, after which the timer is executed
+ * mode: type of slack to apply, either symmetrical or one-sided to early or late
  * slack: delta time in nanoseconds from |deadline| after or before is
  *        acceptable to execute the timer.
  * callback: the function to call when the timer expires
@@ -80,13 +87,16 @@ void timer_set_oneshot(timer_t *, lk_time_t deadline, timer_callback, void *arg)
  * The timer function is declared as:
  *   enum handler_return callback(struct timer *, lk_time_t now, void *arg) { ... }
  *
- * The |slack| parameter defines an interval from
- * |deadline - slack| to |deadline + slack| in which is acceptable to fire
- * the timer. If the old (precise) behavior is desired pass 0 in |slack|
+ * The |slack| parameter defines an interval depending on the |mode| in which
+ * is acceptable to fire the timer:
+ *
+ * - TIMER_SLACK_CENTER: |deadline - slack| to |deadline + slack|
+ * - TIMER_SLACK_LATE: |dealine| to |deadline + slack|
+ * - TIMER_SLACK_EARLY: |deadline - slack| to |deadline|
  *
  */
-void timer_set(
-    timer_t *timer, lk_time_t deadline, uint64_t slack, timer_callback callback, void *arg);
+void timer_set(timer_t *timer, lk_time_t deadline,
+    enum slack_mode mode, uint64_t slack, timer_callback callback, void *arg);
 
 /**
  * Cancel a pending timer

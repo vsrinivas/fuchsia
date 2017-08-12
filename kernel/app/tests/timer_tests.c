@@ -6,13 +6,15 @@
 
 #include "tests.h"
 
-#include <stdio.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/timer.h>
+#include <malloc.h>
+#include <platform.h>
+#include <stdio.h>
+
 #include <kernel/event.h>
 #include <kernel/thread.h>
-#include <platform.h>
+#include <kernel/timer.h>
 
 static enum handler_return timer_cb(struct timer* timer, lk_time_t now, void* arg)
 {
@@ -30,7 +32,7 @@ static int timer_do_one_thread(void* arg)
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, current_time() + LK_MSEC(10), 0, timer_cb, &event);
+    timer_set(&timer, current_time() + LK_MSEC(10), TIMER_SLACK_CENTER, 0, timer_cb, &event);
     event_wait(&event);
 
     printf("got timer on cpu %u\n", arch_curr_cpu_num());
@@ -69,15 +71,44 @@ static void timer_test_all_cpus(void)
     printf("%u threads created, %u threads joined\n", max, joined);
 }
 
-static int cb2_timer_count = 0;
-
 static enum handler_return timer_cb2(struct timer* timer, lk_time_t now, void* arg)
 {
-    atomic_add(&cb2_timer_count, 1);
+    int* timer_count = (int*) arg;
+    atomic_add(timer_count, 1);
     return INT_RESCHEDULE;
 }
 
-static void timer_test_coalescing(void)
+static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
+    const lk_time_t* deadline, const int64_t* expected_adj, int count)
+{
+    printf("testing coalsecing mode %d\n", mode);
+
+    int timer_count = 0;
+
+    timer_t* timer = malloc(sizeof(timer_t) * count);
+
+    printf("       orig         new       adjustment\n");
+    for (int ix = 0; ix != count; ++ix) {
+        timer_init(&timer[ix]);
+        lk_time_t dl = deadline[ix];
+        timer_set(&timer[ix], dl, mode, slack, timer_cb2, &timer_count);
+        printf("[%d] %" PRIu64 "  -> %" PRIu64 ", %" PRIi64 "\n",
+            ix, dl, timer[ix].scheduled_time, timer[ix].slack);
+
+        if (timer[ix].slack != expected_adj[ix]) {
+            printf("\n!! unexpected adjustment! expected %" PRIi64 "\n", expected_adj[ix]);
+        }
+    }
+
+    // Wait for the timers to fire.
+    while(atomic_load(&timer_count) != count) {
+        thread_sleep(current_time() + LK_MSEC(5));
+    }
+
+    free(timer);
+}
+
+static void timer_test_coalescing_center(void)
 {
     lk_time_t when = current_time() + LK_MSEC(1);
     lk_time_t off = LK_USEC(10);
@@ -94,29 +125,57 @@ static void timer_test_coalescing(void)
         when - (3u * off),          // non-coalesced, same as [3], adjustment = 0
     } ;
 
-    const int64_t expected_adj[] = { 0, 0, LK_USEC(10), 0, -LK_USEC(10), 0, LK_USEC(10), 0 };
+    const int64_t expected_adj[countof(deadline)] = {
+        0, 0, LK_USEC(10), 0, -LK_USEC(10), 0, LK_USEC(10), 0 };
 
-    timer_t timer[countof(deadline)];
+    timer_test_coalescing(
+        TIMER_SLACK_CENTER, slack, deadline, expected_adj, countof(deadline));
+}
 
-    printf("       orig         new       adjustment\n");
-    for (int ix = 0; ix != countof(deadline); ++ix) {
-        timer_init(&timer[ix]);
-        lk_time_t dl = deadline[ix];
-        timer_set(&timer[ix], dl, slack, timer_cb2, NULL);
-        printf("[%d] %" PRIu64 "  -> %" PRIu64 ", %" PRIi64 "\n",
-            ix, dl, timer[ix].scheduled_time, timer[ix].slack);
+static void timer_test_coalescing_late(void)
+{
+    lk_time_t when = current_time() + LK_MSEC(1);
+    lk_time_t off = LK_USEC(10);
+    lk_time_t slack = 3u * off;
 
-        if (timer[ix].slack != expected_adj[ix]) {
-            printf("unexpected adjustment! expected %" PRIi64 "\n", expected_adj[ix]);
-        }
-    }
+    const lk_time_t deadline[] = {
+        when + off,                 // non-coalesced, adjustment = 0
+        when + (2u * off),          // non-coalesced, adjustment = 0
+        when - off,                 // coalesced with [0], adjustment = 20u
+        when - (3u * off),          // non-coalesced, adjustment = 0
+        when + (3u * off),          // non-coalesced, adjustment = 0
+        when + (2u * off),          // non-coalesced, same as [1]
+        when - (4u * off),          // coalesced with [3], adjustment = 10u
+    } ;
 
-    // Wait for the timers to fire.
-    while(atomic_load(&cb2_timer_count) != countof(timer)) {
-        thread_sleep(when + LK_MSEC(5));
-    }
+    const int64_t expected_adj[countof(deadline)] = {
+        0, 0, LK_USEC(20), 0, 0, 0, LK_USEC(10) };
 
-    atomic_store(&cb2_timer_count, 0u);
+    timer_test_coalescing(
+        TIMER_SLACK_LATE, slack, deadline, expected_adj, countof(deadline));
+}
+
+static void timer_test_coalescing_early(void)
+{
+    lk_time_t when = current_time() + LK_MSEC(1);
+    lk_time_t off = LK_USEC(10);
+    lk_time_t slack = 3u * off;
+
+    const lk_time_t deadline[] = {
+        when,                       // non-coalesced, adjustment = 0
+        when + (2u * off),          // coalesced with [0], adjustment = -20u
+        when - off,                 // non-coalesced, adjustment = 0
+        when - (3u * off),          // non-coalesced, adjustment = 0
+        when + (4u * off),          // non-coalesced, adjustment = 0
+        when + (5u * off),          // coalesced with [4], adjustment = -10u
+        when - (2u * off),          // coalesced with [3], adjustment = -10u
+    } ;
+
+    const int64_t expected_adj[countof(deadline)] = {
+        0, -LK_USEC(20), 0, 0, 0, -LK_USEC(10), -LK_USEC(10) };
+
+    timer_test_coalescing(
+        TIMER_SLACK_EARLY, slack, deadline, expected_adj, countof(deadline));
 }
 
 static void timer_far_deadline(void)
@@ -127,7 +186,7 @@ static void timer_far_deadline(void)
     event_init(&event, false, 0);
     timer_init(&timer);
 
-    timer_set(&timer, UINT64_MAX - 5, 0, timer_cb, &event);
+    timer_set(&timer, UINT64_MAX - 5, TIMER_SLACK_CENTER, 0, timer_cb, &event);
     status_t st = event_wait_deadline(&event, current_time() + LK_MSEC(100), false);
     if (st != MX_ERR_TIMED_OUT) {
         printf("error: unexpected timer fired!\n");
@@ -140,7 +199,9 @@ static void timer_far_deadline(void)
 
 void timer_tests(void)
 {
-    timer_test_coalescing();
+    timer_test_coalescing_center();
+    timer_test_coalescing_late();
+    timer_test_coalescing_early();
     timer_test_all_cpus();
     timer_far_deadline();
 }

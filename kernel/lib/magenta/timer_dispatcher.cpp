@@ -111,7 +111,9 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack, mx_dur
     // timer again.  So cancel the timer if we haven't already.
     if (!did_cancel)
         timer_cancel(&timer_);
-    timer_set(&timer_, deadline_, slack_, &timer_irq_callback, &timer_dpc_);
+    timer_set(&timer_, deadline_, TIMER_SLACK_CENTER, slack_,
+        &timer_irq_callback, &timer_dpc_);
+
     return MX_OK;
 }
 
@@ -185,7 +187,8 @@ void TimerDispatcher::OnTimerFired() {
             // possibly on a different CPU) has completed before set try to set the
             // timer again.
             timer_cancel(&timer_);
-            timer_set(&timer_, deadline_, slack_, &timer_irq_callback, &timer_dpc_);
+            timer_set(&timer_, deadline_, TIMER_SLACK_CENTER, slack_,
+                &timer_irq_callback, &timer_dpc_);
             return;
         }
     }

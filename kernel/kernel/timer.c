@@ -43,111 +43,157 @@ void timer_init(timer_t *timer) {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
 }
 
-static void insert_timer_in_queue(uint cpu, timer_t *timer) {
-    timer_t *entry;
+static void insert_timer_in_queue(uint cpu, timer_t *timer,
+    uint64_t early_slack, uint64_t late_slack) {
 
     DEBUG_ASSERT(arch_ints_disabled());
-
     LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 "\n", timer, cpu, timer->scheduled_time);
 
-    // For inserting the timer we consider 3 cases. Let |c| and  |n| be the deadlines
-    // for the current and next timers already in the queue and (t) the deadline for
-    // the next with the slack range represented by |(| and |)|.
+    lk_time_t earliest_deadline = timer->scheduled_time - early_slack;
+    lk_time_t latest_deadline   = timer->scheduled_time + late_slack;
+
+    // For inserting the timer we consider several cases. In general we
+    // want to coalesce with the current timer unless we can prove that
+    // either that:
+    //  1- there is no slack overlap with current timer OR
+    //  2- the next timer is a better fit.
     //
-    //  First case, no coalescing, effective slack is zero:
+    // In diagrams that follow
+    // - Let |e| be the current (existing) timer deadline
+    // - Let |t| be the deadline of the timer we are inserting
+    // - Let |n| be the next timer deadline if any
+    // - Let |x| be the end of the list (not a timer)
+    // - Let |(| and |)| the earliest_deadline and latest_deadline.
     //
-    //    -----(---t---)--c------------------n------------> time
-    //
-    //   Second case, coalescing with |c| by firing late:
-    //
-    //    --------(----t--c-)----------------n------------> time
-    //
-    //   Third case, coalescing with |c| by firing early:
-    //
-    //    --------------(-c--t----)----------n------------> time
-    //
-    //   This case is handled as the first case in the next iteration
-    //
-    //    ----------------c--(---t---)-------n------------> time
-    //
-    //   In the case of overlapping two or more timers from the left
-    //   the timer is coalesced with the current |c| one.
-    //
-    //    --------(-----t--c-n)---------------------------> time
-    //
-    //    In the case of overlapping with two or more timers the distance |t|-|c| and |n|-|t|
-    //    is compared if first one is smaller the timer is coalesced with |c|. This is a
-    //    special case of the third case.
-    //
-    //    --------------(-c--t--n-)-----------------------> time
+    timer_t *entry;
 
     list_for_every_entry(&percpu[cpu].timer_queue, entry, timer_t, node) {
-        if (entry->scheduled_time > (timer->scheduled_time + timer->slack)) {
-            //  First case: new timer latest is earlier than the earliest timer.
-            // Just add as is, without slack.
+        if (entry->scheduled_time > latest_deadline) {
+            // New timer latest is earlier than the current timer.
+            // Just add upfront as is, without slack.
+            //
+            //   ---------t---)--e-------------------------------> time
+            //
             timer->slack = 0ull;
             list_add_before(&entry->node, &timer->node);
             return;
         }
 
         if (entry->scheduled_time >= timer->scheduled_time) {
-            // Second case: coalesce with current timer by scheduling late.
+            //  New timer slack overlaps and is to the left (or equal). We
+            //  coalesce with current by scheduling late.
+            //
+            //  --------(----t---e-)----------------------------> time
+            //
             timer->slack =  entry->scheduled_time - timer->scheduled_time;
             timer->scheduled_time = entry->scheduled_time;
             list_add_after(&entry->node, &timer->node);
             return;
         }
 
+        if (entry->scheduled_time < earliest_deadline) {
+            // new timer earliest is later than the current timer. This case
+            // is handled in a future iteration.
+            //
+            //   ----------------e--(---t-----------------------> time
+            //
+            continue;
+        }
+
+        // New timer is to the right of current timer and there is overlap
+        // with the current timer, but could the next timer (if any) be
+        // a better fit?
+        //
+        //  -------------(--e---t-----?-------------------> time
+        //
+
         const timer_t* next =
             list_next_type(&percpu[cpu].timer_queue, &entry->node, timer_t, node);
 
-        if ((next == NULL) || (next->scheduled_time < timer->scheduled_time)) {
-            // This case should be handled in a future loop iteration. This also covers
-            // the case when |next| has the same deadline as |entry|.
-            continue;
+        if (next != NULL) {
+            if (next->scheduled_time <= timer->scheduled_time) {
+                // The new timer is to the right of the next timer. There is no
+                // chance the current timer is a better fit.
+                //
+                //  -------------(--e---n---t----------------------> time
+                //
+                continue;
+            }
+
+            if (next->scheduled_time < latest_deadline) {
+                // There is slack overlap with the next timer, and also with the
+                // current timer. Which coalescing is a better match?
+                //
+                //  --------------(-e---t---n-)-----------------------> time
+                //
+                lk_time_t delta_entry = timer->scheduled_time - entry->scheduled_time;
+                lk_time_t delta_next  = next->scheduled_time - timer->scheduled_time;
+                if (delta_next < delta_entry) {
+                    // New timer is closer to the next timer, handle it in the
+                    // next iteration.
+                    continue;
+                }
+
+            }
         }
 
-        // The deadline falls in between current and next, but the slack can be large
-        // enough to encompass both.
-
-        lk_time_t delta_entry = timer->scheduled_time - entry->scheduled_time;
-        lk_time_t delta_next  = next->scheduled_time - timer->scheduled_time;
-
-        if (delta_next < delta_entry) {
-            // The next deadline is closer. Handle in the next loop.
-            continue;
-        }
-
-        if (entry->scheduled_time >= (timer->scheduled_time - timer->slack)) {
-            // Third case: coalesce with current timer by scheduling early.
-            timer->slack = entry->scheduled_time - timer->scheduled_time;
-            timer->scheduled_time = entry->scheduled_time;
-            list_add_after(&entry->node, &timer->node);
-            return;
-        }
+        // Handles the remaining cases, note that there is overlap with
+        // the current timer.
+        //
+        //  1- this is the last timer (next == NULL) or
+        //  2- there is no overlap with the next timer, or
+        //  3- there is overlap with both current and next but
+        //     current is closer.
+        //
+        //  So we coalesce by scheduling early.
+        //
+        timer->slack = entry->scheduled_time - timer->scheduled_time;
+        timer->scheduled_time = entry->scheduled_time;
+        list_add_after(&entry->node, &timer->node);
+        return;
     }
 
-    // Walked off the end of the list.
-    //
-    // It is possible that a variant of the third case can get here
-    // when |c| is the last:
-    //
-    // --------------(-c--t----)----------------------> time
-    //
-    // This case is not coalesced but the timer placement is correct.
-
+    // Walked off the end of the list and there was no overlap.
+    timer->slack = 0ull;
     list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
-void timer_set(timer_t *timer,
-               lk_time_t deadline, uint64_t slack,
+
+void timer_set(timer_t *timer, lk_time_t deadline,
+               enum slack_mode mode, uint64_t slack,
                timer_callback callback, void *arg) {
     LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
+    DEBUG_ASSERT(mode <= TIMER_SLACK_EARLY);
 
     if (list_in_list(&timer->node)) {
         panic("timer %p already in list\n", timer);
+    }
+
+    lk_time_t late_slack;
+    lk_time_t early_slack;
+
+    if (slack == 0u) {
+        late_slack = 0u;
+        early_slack = 0u;
+    } else {
+        switch (mode) {
+        case TIMER_SLACK_CENTER:
+            late_slack = ((deadline + slack) < deadline) ? (UINT64_MAX - deadline) : slack;
+            early_slack = ((deadline - slack) > deadline) ? deadline : slack;
+            break;
+        case TIMER_SLACK_LATE:
+            late_slack = ((deadline + slack) < deadline) ? (UINT64_MAX - deadline) : slack;
+            early_slack = 0u;
+            break;
+        case TIMER_SLACK_EARLY:
+            early_slack = ((deadline - slack) > deadline) ? deadline : slack;
+            late_slack = 0u;
+            break;
+        default:
+            panic("invalid timer mode\n");
+        };
     }
 
     spin_lock_saved_state_t state;
@@ -164,9 +210,8 @@ void timer_set(timer_t *timer,
         panic("timer %p currently active on a different cpu %d\n", timer, timer->active_cpu);
     }
 
-    /* set up the structure */
+    // Set up the structure.
     timer->scheduled_time = deadline;
-    timer->slack = slack;
     timer->callback = callback;
     timer->arg = arg;
     timer->cancel = false;
@@ -174,7 +219,7 @@ void timer_set(timer_t *timer,
 
     LTRACEF("scheduled time %" PRIu64 "\n", timer->scheduled_time);
 
-    insert_timer_in_queue(cpu, timer);
+    insert_timer_in_queue(cpu, timer, early_slack, late_slack);
 
     if (list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node) == timer) {
         /* we just modified the head of the timer queue */
@@ -188,7 +233,7 @@ out:
 
 void timer_set_oneshot(
     timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg) {
-    return timer_set(timer, deadline, 0ull, callback, arg);
+    return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
 }
 
 bool timer_cancel(timer_t *timer)
@@ -200,7 +245,7 @@ bool timer_cancel(timer_t *timer)
 
     uint cpu = arch_curr_cpu_num();
 
-    /* mark the timer as cancelled */
+    /* mark the timer as canceled */
     timer->cancel = true;
     smp_mb();
 
@@ -371,7 +416,10 @@ void timer_transition_off_cpu(uint old_cpu)
     /* Move all timers from old_cpu to this cpu */
     list_for_every_entry_safe(&percpu[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
         list_delete(&entry->node);
-        insert_timer_in_queue(cpu, entry);
+        // We lost the original asymmetric slack information so when we combine them
+        // with the other timer queue they are not coalesced again.
+        // TODO(cpu): figure how important this case is.
+        insert_timer_in_queue(cpu, entry, 0u, 0u);
     }
 
     timer_t *new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
