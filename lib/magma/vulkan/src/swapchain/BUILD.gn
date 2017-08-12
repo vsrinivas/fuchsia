@@ -2,13 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/shared.gni")
 import("//magma/gnbuild/magma.gni")
 
 loader_build_root = "//third_party/vulkan_loader_and_validation_layers"
 mozart_build_root = "//apps/mozart"
 
-fuchsia_shared_library("swapchain") {
+shared_library("swapchain") {
   output_name = "VkLayer_image_pipe_swapchain"
 
   include_dirs = [
