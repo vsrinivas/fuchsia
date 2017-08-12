@@ -319,13 +319,13 @@ int main(int argc, char** argv) {
     // sharing that.
     bool keep_log = false;
     const char* value = getenv("virtcon.keep-log-visible");
-    if (value != NULL &&
+    if (value == NULL ||
         ((strcmp(value, "0") == 0) ||
         (strcmp(value, "false") == 0) ||
         (strcmp(value, "off") == 0))) {
         keep_log = false;
     } else {
-      keep_log = true;
+        keep_log = true;
     }
 
     if (port_init(&port) < 0) {
