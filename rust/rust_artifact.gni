@@ -76,7 +76,7 @@ template("rust_artifact") {
     assert(false, "Host OS not supported")
   }
 
-  rust_base = "//buildtools/$_cipd_cpu-$_cipd_os/rust"
+  rust_base = "//buildtools/$_cipd_os-$_cipd_cpu/rust"
 
   if (is_debug) {
     build_type = "debug"
