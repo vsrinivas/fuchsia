@@ -188,7 +188,6 @@ int main(int argc, char** argv) {
         return status;
     // Setup block device.
     block_t block;
-    guest_ctx.block = &block;
     pci_device_t* virtio_block = &block.virtio_device.pci_device;
     if (block_path != NULL) {
         status = block_init(&block, block_path, (void*)addr, kVmoSize);

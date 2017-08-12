@@ -8,7 +8,6 @@
 
 #include <magenta/syscalls/hypervisor.h>
 
-typedef struct block block_t;
 typedef struct io_apic io_apic_t;
 typedef struct io_port io_port_t;
 typedef struct pci_bus pci_bus_t;
@@ -21,7 +20,6 @@ typedef struct guest_ctx {
     pci_bus_t* bus;
 
     uart_t* uart;
-    block_t* block;
 } guest_ctx_t;
 
 /* Typedefs to abstract reading and writing VCPU state. */
