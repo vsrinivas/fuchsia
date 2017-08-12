@@ -142,27 +142,45 @@ set_defaults("executable") {
   configs = default_executable_configs
 }
 
-if (is_fuchsia && !is_pic_default) {
-  template("shared_library") {
-    group(target_name) {
-      # Mark all variables as not needed to supress errors for unused variables.
-      not_needed(invoker, "*")
-      forward_variables_from(invoker,
-                             [
-                               "data_deps",
-                               "deps",
-                               "public_deps",
-                               "all_dependent_configs",
-                               "public_configs",
-                               "testonly",
-                               "visibility",
-                             ])
+if (is_fuchsia) {
+  if (!is_pic_default) {
+    # In the main toolchain, shared_library just redirects to the same
+    # target in $shlib_toolchain.
+    template("shared_library") {
+      group(target_name) {
+        # Mark all variables as not needed to suppress errors for unused
+        # variables.  The other variables normally passed to shared_library
+        # are actually used by the shared_library instantiation in
+        # $shlib_toolchain, so any going truly unused will be caught there.
+        not_needed(invoker, "*")
+        forward_variables_from(invoker,
+                               [
+                                 "data_deps",
+                                 "deps",
+                                 "public_deps",
+                                 "all_dependent_configs",
+                                 "public_configs",
+                                 "testonly",
+                                 "visibility",
+                              ])
 
-      if (!defined(public_deps)) {
-        public_deps = []
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += [ ":$target_name($shlib_toolchain)" ]
       }
-      public_deps +=
-          [ ":$target_name($shlib_toolchain)" ]
+    }
+  } else {
+    # In $shlib_toolchain, shared_library is just its normal self,
+    # but if the invoker constrained the visibility, we must make
+    # sure the dependency from the main toolchain is still allowed
+    template("shared_library") {
+      shared_library(target_name) {
+        forward_variables_from(invoker, "*")
+        if (defined(visibility)) {
+          visibility += [ ":$target_name" ]
+        }
+      }
     }
   }
 }
