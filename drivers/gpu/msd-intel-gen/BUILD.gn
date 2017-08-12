@@ -2,12 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/shared.gni")
 import("//magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
-fuchsia_shared_library("msd_vendor") {
+shared_library("msd_vendor") {
   deps = [
     "$magma_build_root/src/main",
     "src",
@@ -16,7 +15,7 @@ fuchsia_shared_library("msd_vendor") {
   ldflags = [ "$shared_ldflags" ]
 }
 
-fuchsia_shared_library("test") {
+shared_library("test") {
   testonly = true
 
   output_name = "msd-intel-gen-test"
