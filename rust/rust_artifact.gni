@@ -60,14 +60,23 @@ template("rust_artifact") {
     }
   }
 
-  assert(host_cpu == "x64")
-  assert(host_os == "mac" || host_os == "linux")
-  if (host_os == "mac") {
-    host_triple = "x86_64-apple-darwin"
-  } else if (host_os == "linux") {
-    host_triple = "x86_64-unknown-linux-gnu"
+  if (host_cpu == "arm64") {
+    _cipd_cpu = "arm64"
+  } else if (host_cpu == "x64") {
+    _cipd_cpu = "amd64"
+  } else {
+    assert(false, "Host CPU not supported")
   }
-  rust_base = "//buildtools/rust/rust-$host_triple"
+
+  if (host_os == "linux") {
+    _cipd_os = "linux"
+  } else if (host_os == "mac") {
+    _cipd_os = "mac"
+  } else {
+    assert(false, "Host OS not supported")
+  }
+
+  rust_base = "//buildtools/$_cipd_cpu-$_cipd_os/rust"
 
   if (is_debug) {
     build_type = "debug"
