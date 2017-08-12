@@ -635,7 +635,7 @@ mod tests {
         assert!(vmo.write(b"hello", 0).is_ok());
 
         // Replace, reducing rights to read.
-        let readonly_vmo = vmo.duplicate(MX_RIGHT_READ).unwrap();
+        let readonly_vmo = vmo.duplicate_handle(MX_RIGHT_READ).unwrap();
         // Make sure we can read but not write.
         let mut read_vec = vec![0; hello_length];
         assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
@@ -658,7 +658,7 @@ mod tests {
         assert!(vmo.write(b"hello", 0).is_ok());
 
         // Replace, reducing rights to read.
-        let readonly_vmo = vmo.replace(MX_RIGHT_READ).unwrap();
+        let readonly_vmo = vmo.replace_handle(MX_RIGHT_READ).unwrap();
         // Make sure we can read but not write.
         let mut read_vec = vec![0; hello_length];
         assert_eq!(readonly_vmo.read(&mut read_vec, 0).unwrap(), hello_length);
@@ -672,20 +672,22 @@ mod tests {
         let ten_ms: Duration = 10_000_000;
 
         // Waiting on it without setting any signal should time out.
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(event.wait_handle(
+            MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // If we set a signal, we should be able to wait for it.
-        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert_eq!(event.wait_handle(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
             MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+        assert_eq!(event.wait_handle(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
             MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Now clear it, and waiting should time out again.
-        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(event.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert!(event.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
+        assert_eq!(event.wait_handle(
+            MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 
     #[test]
@@ -704,20 +706,20 @@ mod tests {
         assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
 
         // Signal one object and it should return success.
-        assert!(e1.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(e1.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
         assert_eq!(items[0].pending, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
         assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);
 
         // Signal the other and it should return both.
-        assert!(e2.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
+        assert!(e2.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_1).is_ok());
         assert!(object_wait_many(&mut items, deadline_after(ten_ms)).is_ok());
         assert_eq!(items[0].pending, MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
         assert_eq!(items[1].pending, MX_USER_SIGNAL_1 | MX_SIGNAL_LAST_HANDLE);
 
         // Clear signals on both; now it should time out again.
-        assert!(e1.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
-        assert!(e2.signal(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
+        assert!(e1.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
+        assert!(e2.signal_handle(MX_USER_SIGNAL_1, MX_SIGNAL_NONE).is_ok());
         assert_eq!(object_wait_many(&mut items, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
         assert_eq!(items[0].pending, MX_SIGNAL_LAST_HANDLE);
         assert_eq!(items[1].pending, MX_SIGNAL_LAST_HANDLE);

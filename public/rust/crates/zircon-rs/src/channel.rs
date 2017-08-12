@@ -295,7 +295,7 @@ mod tests {
         let vmo = Vmo::create(hello_length as u64, VmoOpts::Default).unwrap();
 
         // Duplicate VMO handle and send it down the channel.
-        let duplicate_vmo_handle = vmo.duplicate(MX_RIGHT_SAME_RIGHTS).unwrap().into_handle();
+        let duplicate_vmo_handle = vmo.duplicate_handle(MX_RIGHT_SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         assert!(p1.write(b"", &mut handles_to_send, 0).is_ok());
         // Handle should be removed from vector.
@@ -331,7 +331,7 @@ mod tests {
         let vmo = Vmo::create(0 as u64, VmoOpts::Default).unwrap();
 
         // Duplicate VMO handle and send it along with the call.
-        let duplicate_vmo_handle = vmo.duplicate(MX_RIGHT_SAME_RIGHTS).unwrap().into_handle();
+        let duplicate_vmo_handle = vmo.duplicate_handle(MX_RIGHT_SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         let mut buf = MessageBuf::new();
         assert_eq!(p1.call(0, deadline_after(ten_ms), b"call", &mut handles_to_send, &mut buf),
@@ -356,7 +356,7 @@ mod tests {
 
         // Start a new thread to respond to the call.
         let server = thread::spawn(move || {
-            assert_eq!(p2.wait(MX_CHANNEL_READABLE, deadline_after(hundred_ms)),
+            assert_eq!(p2.wait_handle(MX_CHANNEL_READABLE, deadline_after(hundred_ms)),
                 Ok(MX_CHANNEL_READABLE | MX_CHANNEL_WRITABLE | MX_SIGNAL_LAST_HANDLE));
             let mut buf = MessageBuf::new();
             assert_eq!(p2.read(0, &mut buf), Ok(()));

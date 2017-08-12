@@ -86,16 +86,16 @@ mod tests {
         let timer = Timer::create(TimerOpts::Default, ClockId::Monotonic).unwrap();
 
         // Should not signal yet.
-        assert_eq!(timer.wait(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // Start it, and soon it should signal.
         assert_eq!(timer.start(ten_ms, 0, 0), Ok(()));
-        assert_eq!(timer.wait(MX_TIMER_SIGNALED, deadline_after(twenty_ms)).unwrap(),
+        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(twenty_ms)).unwrap(),
             MX_TIMER_SIGNALED | MX_SIGNAL_LAST_HANDLE);
 
         // Cancel it, and it should stop signalling.
         assert_eq!(timer.cancel(), Ok(()));
-        assert_eq!(timer.wait(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 
     #[test]
@@ -107,15 +107,15 @@ mod tests {
         let timer = Timer::create(TimerOpts::Default, ClockId::Monotonic).unwrap();
 
         // Should not signal yet.
-        assert_eq!(timer.wait(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // Set it, and soon it should signal.
         assert_eq!(timer.set(ten_ms, 0), Ok(()));
-        assert_eq!(timer.wait(MX_TIMER_SIGNALED, deadline_after(twenty_ms)).unwrap(),
+        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(twenty_ms)).unwrap(),
             MX_TIMER_SIGNALED | MX_SIGNAL_LAST_HANDLE);
 
         // Cancel it, and it should stop signalling.
         assert_eq!(timer.cancel(), Ok(()));
-        assert_eq!(timer.wait(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 }

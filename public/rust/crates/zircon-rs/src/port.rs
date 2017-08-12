@@ -225,14 +225,14 @@ mod tests {
         let port = Port::create(PortOpts::Default).unwrap();
         let event = Event::create(EventOpts::Default).unwrap();
 
-        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,
+        assert!(event.wait_async_handle(&port, key, MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,
             WaitAsyncOpts::Once).is_ok());
 
         // Waiting without setting any signal should time out.
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // If we set a signal, we should be able to wait for it.
-        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
@@ -249,7 +249,7 @@ mod tests {
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // Calling wait_async again should result in another packet.
-        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
+        assert!(event.wait_async_handle(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
@@ -262,17 +262,17 @@ mod tests {
             _ => panic!("wrong packet type"),
         }
 
-        // Calling wait_async then cancel, we should not get a packet as cancel will remove it from
-        // the queue.
-        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
+        // Calling wait_async_handle then cancel, we should not get a packet as cancel will
+        // remove it from  the queue.
+        assert!(event.wait_async_handle(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // If the event is signalled after the cancel, we also shouldn't get a packet.
-        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
-        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
+        assert!(event.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
+        assert!(event.wait_async_handle(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
-        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 
@@ -284,14 +284,14 @@ mod tests {
         let port = Port::create(PortOpts::Default).unwrap();
         let event = Event::create(EventOpts::Default).unwrap();
 
-        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,
+        assert!(event.wait_async_handle(&port, key, MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,
             WaitAsyncOpts::Repeating).is_ok());
 
         // Waiting without setting any signal should time out.
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // If we set a signal, we should be able to wait for it.
-        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
@@ -310,8 +310,8 @@ mod tests {
 
         // If we clear and resignal, we should get the same packet again,
         // even though we didn't call event.wait_async again.
-        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
-        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(event.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
+        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);
@@ -328,12 +328,13 @@ mod tests {
         assert!(port.cancel(&event, key).is_ok());
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
         // ... even if we clear and resignal
-        assert!(event.signal(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
-        assert!(event.signal(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
+        assert!(event.signal_handle(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());  // clear signal
+        assert!(event.signal_handle(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
         assert_eq!(port.wait(deadline_after(ten_ms)), Err(Status::ErrTimedOut));
 
         // Calling wait_async again should result in another packet.
-        assert!(event.wait_async(&port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Repeating).is_ok());
+        assert!(event.wait_async_handle(
+            &port, key, MX_USER_SIGNAL_0, WaitAsyncOpts::Repeating).is_ok());
         let read_packet = port.wait(deadline_after(ten_ms)).unwrap();
         assert_eq!(read_packet.key(), key);
         assert_eq!(read_packet.status(), 0);

@@ -54,22 +54,22 @@ mod tests {
     #[test]
     fn wait_and_signal_peer() {
         let (p1, p2) = EventPair::create(EventPairOpts::Default).unwrap();
-        let ten_ms: Duration = 10_000_000;
+        let eighty_ms: Duration = 80_000_000;
 
         // Waiting on one without setting any signal should time out.
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(p2.wait_handle(MX_USER_SIGNAL_0, deadline_after(eighty_ms)), Err(Status::ErrTimedOut));
 
         // If we set a signal, we should be able to wait for it.
         assert!(p1.signal_peer(MX_SIGNAL_NONE, MX_USER_SIGNAL_0).is_ok());
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+        assert_eq!(p2.wait_handle(MX_USER_SIGNAL_0, deadline_after(eighty_ms)).unwrap(),
             MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Should still work, signals aren't automatically cleared.
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)).unwrap(),
+        assert_eq!(p2.wait_handle(MX_USER_SIGNAL_0, deadline_after(eighty_ms)).unwrap(),
             MX_USER_SIGNAL_0 | MX_SIGNAL_LAST_HANDLE);
 
         // Now clear it, and waiting should time out again.
         assert!(p1.signal_peer(MX_USER_SIGNAL_0, MX_SIGNAL_NONE).is_ok());
-        assert_eq!(p2.wait(MX_USER_SIGNAL_0, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
+        assert_eq!(p2.wait_handle(MX_USER_SIGNAL_0, deadline_after(eighty_ms)), Err(Status::ErrTimedOut));
     }
 }
