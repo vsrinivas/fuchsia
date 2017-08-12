@@ -20,6 +20,7 @@ type EthInfo struct {
 } // eth_info_t
 
 const FeatureWlan = 0x01
+const FeatureSynth = 0x02
 
 type ethfifos struct {
 	// fifo handles

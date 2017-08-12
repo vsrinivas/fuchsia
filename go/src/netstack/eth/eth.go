@@ -93,6 +93,10 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 	if err != nil {
 		return nil, err
 	}
+	if info.Features&FeatureSynth != 0 {
+		return nil, fmt.Errorf("eth: ignoring synthetic device")
+	}
+
 	fifos, err := IoctlGetFifos(m)
 	if err != nil {
 		return nil, err
