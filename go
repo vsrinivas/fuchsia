@@ -10,11 +10,11 @@ readonly SCRIPT_ROOT="$(cd $(dirname ${BASH_SOURCE[0]} ) && pwd)"
 case "$(uname -s)" in
   Darwin)
     readonly CCHOST="darwin"
-    readonly HOST_PLATFORM="mac"
+    readonly HOST_PLATFORM="mac-x64"
     ;;
   Linux)
     readonly CCHOST="linux"
-    readonly HOST_PLATFORM="linux64"
+    readonly HOST_PLATFORM="linux-x64"
     ;;
   *)
     echo "Unknown operating system. Cannot run go."

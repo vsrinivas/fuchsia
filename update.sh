@@ -76,7 +76,7 @@ function download_rust() {
 }
 
 function download_go() {
-  download_host_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
+  download_cipd_package go go "${SCRIPT_ROOT}/${GN_PLATFORM}/go"
 }
 
 function download_godepfile() {
