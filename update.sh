@@ -70,7 +70,7 @@ function download_clang() {
 }
 
 function download_rust() {
-  download_host_tarball rust "rust/${HOST_PLATFORM}" "${SCRIPT_ROOT}/rust"
+  download_cipd_package rust rust "${SCRIPT_ROOT}/${CIPD_PLATFORM}/rust"
 }
 
 function download_go() {
