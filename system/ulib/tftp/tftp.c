@@ -100,7 +100,7 @@ static void __ATTR_PRINTF(4, 5) append_option(char** body, size_t* left, const c
 
 #define OPCODE(session, msg, value)                                                           \
     do {                                                                                      \
-        if (session->options.use_opcode_prefix) {                                             \
+        if (session->use_opcode_prefix) {                                                     \
             (msg)->opcode = htons((value & 0xff) | ((uint16_t)session->opcode_prefix << 8));  \
         } else {                                                                              \
             (msg)->opcode = htons(value);                                                     \
@@ -186,15 +186,15 @@ int tftp_init(tftp_session** session, void* buffer, size_t size) {
     memset(s, 0, sizeof(tftp_session));
 
     // Sensible defaults for negotiated values
-    s->file_size = s->options.file_size = DEFAULT_FILESIZE;
     s->window_size = s->options.window_size = DEFAULT_WINDOWSIZE;
     s->block_size = s->options.block_size = DEFAULT_BLOCKSIZE;
     s->timeout = s->options.timeout = DEFAULT_TIMEOUT;
-    s->mode = s->options.mode = DEFAULT_MODE;
 
     // Sensible defaults for non-negotiated values
-    s->options.max_timeouts = DEFAULT_MAX_TIMEOUTS;
-    s->options.use_opcode_prefix = DEFAULT_USE_OPCODE_PREFIX;
+    s->file_size = DEFAULT_FILESIZE;
+    s->mode = DEFAULT_MODE;
+    s->max_timeouts = DEFAULT_MAX_TIMEOUTS;
+    s->use_opcode_prefix = DEFAULT_USE_OPCODE_PREFIX;
 
     return TFTP_NO_ERROR;
 }
@@ -249,7 +249,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
         xprintf("filename too long %zd > %zd\n", strlen(filename), left - kMaxMode);
         return TFTP_ERR_INVALID_ARGS;
     }
-    strncpy(session->options.filename, filename, sizeof(session->options.filename));
+    strncpy(session->filename, filename, sizeof(session->filename));
     memcpy(body, filename, strlen(filename));
     body += strlen(filename) + 1;
     left -= strlen(filename) + 1;
@@ -266,7 +266,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
     default:
         return TFTP_ERR_INVALID_ARGS;
     }
-    session->options.mode = mode;
+    session->mode = mode;
 
     if (left < kMaxTsizeOpt) {
         return TFTP_ERR_BUFFER_TOO_SMALL;
@@ -280,7 +280,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
         }
         append_option(&body, &left, kBlkSize, "%zu", block_size);
         session->options.block_size = block_size;
-        session->options.requested |= BLOCKSIZE_OPTION;
+        session->options.mask |= BLOCKSIZE_OPTION;
     }
 
     if (timeout > 0) {
@@ -289,7 +289,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
         }
         append_option(&body, &left, kTimeout, "%d", timeout);
         session->options.timeout = timeout;
-        session->options.requested |= TIMEOUT_OPTION;
+        session->options.mask |= TIMEOUT_OPTION;
     }
 
     if (window_size > 1) {
@@ -298,7 +298,7 @@ tftp_status tftp_generate_write_request(tftp_session* session,
         }
         append_option(&body, &left, kWindowSize, "%d", window_size);
         session->options.window_size = window_size;
-        session->options.requested |= WINDOWSIZE_OPTION;
+        session->options.mask |= WINDOWSIZE_OPTION;
     }
 
     *outlen = *outlen - left;
@@ -357,14 +357,14 @@ tftp_status tftp_handle_wrq(tftp_session* session,
 
     xprintf("filename = '%s', mode = '%s'\n", option, value);
 
-    strncpy(session->options.filename, option, sizeof(session->options.filename));
+    strncpy(session->filename, option, sizeof(session->filename));
     char* mode = value;
     if (!strncmp(mode, kNetascii, strlen(kNetascii))) {
-        session->options.mode = MODE_NETASCII;
+        session->mode = MODE_NETASCII;
     } else if (!strncmp(mode, kOctet, strlen(kOctet))) {
-        session->options.mode = MODE_OCTET;
+        session->mode = MODE_OCTET;
     } else if (!strncmp(mode, kMail, strlen(kMail))) {
-        session->options.mode = MODE_MAIL;
+        session->mode = MODE_MAIL;
     } else {
         xprintf("Unknown write request mode\n");
         set_error(session, OPCODE_ERROR, resp, resp_len);
@@ -374,6 +374,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
     // TODO(tkilbourn): refactor option handling code to share with
     // tftp_handle_oack
     cur += offset;
+    bool file_size_seen = false;
     while (offset > 0 && left > 0) {
         offset = next_option(cur, left, &option, &value);
         if (!offset) {
@@ -392,7 +393,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             }
             // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             session->options.block_size = val;
-            session->options.requested |= BLOCKSIZE_OPTION;
+            session->options.mask |= BLOCKSIZE_OPTION;
         } else if (!strncmp(option, kTimeout, strlen(kTimeout))) { // RFC 2349
             // Valid values range between "1" and "255" seconds inclusive.
             long val = atol(value);
@@ -402,7 +403,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
                 return TFTP_ERR_INTERNAL;
             }
             session->options.timeout = val;
-            session->options.requested |= TIMEOUT_OPTION;
+            session->options.mask |= TIMEOUT_OPTION;
         } else if (!strncmp(option, kTsize, strlen(kTsize))) { // RFC 2349
             long val = atol(value);
             if (val < 0) {
@@ -410,8 +411,8 @@ tftp_status tftp_handle_wrq(tftp_session* session,
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
             }
-            session->options.file_size = val;
-            session->options.requested |= FILESIZE_OPTION;
+            session->file_size = val;
+            file_size_seen = true;
         } else if (!strncmp(option, kWindowSize, strlen(kWindowSize))) { // RFC 7440
             // The valid values range MUST be between 1 and 65535 blocks, inclusive.
             long val = atol(value);
@@ -421,7 +422,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
                 return TFTP_ERR_INTERNAL;
             }
             session->options.window_size = val;
-            session->options.requested |= WINDOWSIZE_OPTION;
+            session->options.mask |= WINDOWSIZE_OPTION;
         } else {
             // Options which the server does not support should be omitted from the
             // OACK; they should not cause an ERROR packet to be generated.
@@ -436,33 +437,32 @@ tftp_status tftp_handle_wrq(tftp_session* session,
     left = *resp_len - sizeof(*resp);
 
     OPCODE(session, resp, OPCODE_OACK);
-    if (session->options.requested & FILESIZE_OPTION) {
-        append_option(&body, &left, kTsize, "%d", session->options.file_size);
-        session->file_size = session->options.file_size;
+    if (file_size_seen) {
+        append_option(&body, &left, kTsize, "%zu", session->file_size);
     } else {
         xprintf("No TSIZE option specified\n");
         set_error(session, OPCODE_ERROR, resp, resp_len);
         return TFTP_ERR_BAD_STATE;
     }
-    if (session->options.requested & BLOCKSIZE_OPTION) {
+    if (session->options.mask & BLOCKSIZE_OPTION) {
         // TODO(jpoichet) Make sure this block size is possible. Need API upwards to
         // request allocation of block size * window size memory
         append_option(&body, &left, kBlkSize, "%d", session->options.block_size);
         session->block_size = session->options.block_size;
     }
-    if (session->options.requested & TIMEOUT_OPTION) {
+    if (session->options.mask & TIMEOUT_OPTION) {
         // TODO(jpoichet) Make sure this timeout is possible. Need API upwards to
         // request allocation of block size * window size memory
         append_option(&body, &left, kTimeout, "%d", session->options.timeout);
         session->timeout = session->options.timeout;
         *timeout_ms = 1000 * session->timeout;
     }
-    if (session->options.requested & WINDOWSIZE_OPTION) {
+    if (session->options.mask & WINDOWSIZE_OPTION) {
         append_option(&body, &left, kWindowSize, "%d", session->options.window_size);
         session->window_size = session->options.window_size;
     }
     if (!session->file_interface.open_write ||
-            session->file_interface.open_write(session->options.filename, session->options.file_size, cookie)) {
+            session->file_interface.open_write(session->filename, session->file_size, cookie)) {
         xprintf("Could not open file on write request\n");
         set_error(session, OPCODE_ERROR, resp, resp_len);
         return TFTP_ERR_BAD_STATE;
@@ -471,16 +471,15 @@ tftp_status tftp_handle_wrq(tftp_session* session,
     session->state = RECV_WRQ;
 
     xprintf("Read/Write Request Parsed\n");
-    xprintf("Options requested: %08x\n", session->options.requested);
+    xprintf("Options requested: %08x\n", session->options.mask);
+    xprintf("    File Size  : %d\n", session->file_size);
     xprintf("    Block Size : %d\n", session->options.block_size);
     xprintf("    Timeout    : %d\n", session->options.timeout);
-    xprintf("    File Size  : %d\n", session->options.file_size);
     xprintf("    Window Size: %d\n", session->options.window_size);
 
     xprintf("Using options\n");
     xprintf("    Block Size : %d\n", session->block_size);
     xprintf("    Timeout    : %d\n", session->timeout);
-    xprintf("    File Size  : %zu\n", session->file_size);
     xprintf("    Window Size: %d\n", session->window_size);
 
     return TFTP_NO_ERROR;
@@ -542,7 +541,7 @@ tftp_status tftp_handle_data(tftp_session* session,
                 session->block_number + 1);
         session->window_index = session->window_size;
         // It's possible that a previous ACK wasn't received, increment the prefix
-        if (session->options.use_opcode_prefix) {
+        if (session->use_opcode_prefix) {
             session->opcode_prefix++;
         }
     }
@@ -590,7 +589,7 @@ tftp_status tftp_handle_ack(tftp_session* session,
     if (block_offset < session->window_size) {
         // If it looks like some of our data might have been dropped, modify the prefix
         // before resending.
-        if (session->options.use_opcode_prefix) {
+        if (session->use_opcode_prefix) {
             session->opcode_prefix++;
         }
     }
@@ -643,14 +642,13 @@ tftp_status tftp_handle_oack(tftp_session* session,
     size_t offset;
     char *option, *value;
 
-    session->mode = session->options.mode;
-    if (session->options.requested & BLOCKSIZE_OPTION) {
+    if (session->options.mask & BLOCKSIZE_OPTION) {
         session->block_size = session->options.block_size;
     }
-    if (session->options.requested & TIMEOUT_OPTION) {
+    if (session->options.mask & TIMEOUT_OPTION) {
         session->timeout = session->options.timeout;
     }
-    if (session->options.requested & WINDOWSIZE_OPTION) {
+    if (session->options.mask & WINDOWSIZE_OPTION) {
         session->window_size = session->options.window_size;
     }
     while (left > 0) {
@@ -661,7 +659,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
         }
 
         if (!strncmp(option, kBlkSize, strlen(kBlkSize))) { // RFC 2348
-            if (!(session->options.requested & BLOCKSIZE_OPTION)) {
+            if (!(session->options.mask & BLOCKSIZE_OPTION)) {
                 xprintf("block size not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -676,7 +674,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
             // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             session->block_size = val;
         } else if (!strncmp(option, kTimeout, strlen(kTimeout))) { // RFC 2349
-            if (!(session->options.requested & TIMEOUT_OPTION)) {
+            if (!(session->options.mask & TIMEOUT_OPTION)) {
                 xprintf("timeout not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -690,7 +688,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
             }
             session->timeout = val;
         } else if (!strncmp(option, kWindowSize, strlen(kWindowSize))) { // RFC 7440
-            if (!(session->options.requested & WINDOWSIZE_OPTION)) {
+            if (!(session->options.mask & WINDOWSIZE_OPTION)) {
                 xprintf("window size not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -806,12 +804,12 @@ tftp_status tftp_prepare_data(tftp_session* session,
 
 void tftp_session_set_max_timeouts(tftp_session* session,
                                    uint16_t max_timeouts) {
-    session->options.max_timeouts = max_timeouts;
+    session->max_timeouts = max_timeouts;
 }
 
 void tftp_session_set_opcode_prefix_use(tftp_session* session,
                                         bool enable) {
-    session->options.use_opcode_prefix = enable;
+    session->use_opcode_prefix = enable;
 }
 
 tftp_status tftp_timeout(tftp_session* session,
@@ -822,12 +820,12 @@ tftp_status tftp_timeout(tftp_session* session,
                          uint32_t* timeout_ms,
                          void* file_cookie) {
     xprintf("Timeout\n");
-    if (++session->consecutive_timeouts > session->options.max_timeouts) {
+    if (++session->consecutive_timeouts > session->max_timeouts) {
         return TFTP_ERR_TIMED_OUT;
     }
     // It's possible our previous transmission was dropped because of checksum errors.
     // Use a different opcode prefix when we resend.
-    if (session->options.use_opcode_prefix) {
+    if (session->use_opcode_prefix) {
         session->opcode_prefix++;
     }
     if (session->state == SENT_WRQ || session->state == RECV_WRQ) {

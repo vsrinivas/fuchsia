@@ -34,8 +34,7 @@ typedef struct tftp_data_msg_t {
 
 #define BLOCKSIZE_OPTION 0x01  // RFC 2348
 #define TIMEOUT_OPTION 0x02    // RFC 2349
-#define FILESIZE_OPTION 0x04   // RFC 2349
-#define WINDOWSIZE_OPTION 0x08 // RFC 7440
+#define WINDOWSIZE_OPTION 0x04 // RFC 7440
 
 #define DEFAULT_BLOCKSIZE 512
 #define DEFAULT_TIMEOUT 1
@@ -46,26 +45,15 @@ typedef struct tftp_data_msg_t {
 #define DEFAULT_USE_OPCODE_PREFIX true
 
 typedef struct tftp_options_t {
-    // Maximum filename really is 505 including \0
-    // max request size (512) - opcode (2) - shortest mode (4) - null (1)
-    char filename[512];
-    tftp_mode mode;
-    uint8_t requested;
+    // For the server, a bitmask of the options that are non-negotiable (we will always
+    // override the settings). For the client, a bitmask of the options that we requested.
+    // Note that we always transmit the file size, even though it is technically optional,
+    // since the client relies on this being present.
+    uint8_t mask;
 
     uint16_t block_size;
     uint8_t timeout;
-    uint32_t file_size;
-
     uint16_t window_size;
-
-    // Maximum number of times we will retransmit a single msg before aborting
-    uint16_t max_timeouts;
-
-    // Add an 8-bit prefix to the opcode so that retransmissions differ from the
-    // original transmission. This fixes problems with checksums on asix 88179 USB
-    // adapters (they send 0 checksums when they should send 0xffff, which is a
-    // no-no in IPv6). This modification is not RFC-compatible.
-    bool use_opcode_prefix;
 } tftp_options;
 
 /**
@@ -103,20 +91,35 @@ typedef enum {
 } tftp_state;
 
 struct tftp_session_t {
+    // For a server, these are used to hold our override settings, and can be specified
+    // using tftp_server_set_options(). For a client, these hold the settings that we
+    // sent to the server, and expect to see present in an OACK response.
     tftp_options options;
+
+    // Maximum filename really is 505 including \0
+    // max request size (512) - opcode (2) - shortest mode (4) - null (1)
+    char filename[512];
+    tftp_mode mode;
+
+    // General state values
     tftp_state state;
     size_t offset;
-
+    uint32_t consecutive_timeouts;
     uint8_t opcode_prefix;
-
     uint32_t block_number;
     uint32_t window_index;
 
-    uint32_t consecutive_timeouts;
+    // Maximum number of times we will retransmit a single msg before aborting
+    uint16_t max_timeouts;
+
+    // Add an 8-bit prefix to the opcode so that retransmissions differ from the
+    // original transmission. This fixes problems with checksums on asix 88179 USB
+    // adapters (they send 0 checksums when they should send 0xffff, which is a
+    // no-no in IPv6). This modification is not RFC-compatible.
+    bool use_opcode_prefix;
 
     // "Negotiated" values
     size_t file_size;
-    tftp_mode mode;
     uint16_t window_size;
     uint16_t block_size;
     uint8_t timeout;
