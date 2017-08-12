@@ -333,7 +333,16 @@ def main():
         test_args[1] = "test"
         test_args.append("--no-run")
         test_args.append("--message-format=json")
-        messages = subprocess.check_output(test_args, env=env, cwd=args.gen_dir)
+        try:
+            messages = subprocess.check_output(test_args, env=env,
+                                               cwd=args.gen_dir)
+        except subprocess.CalledProcessError as e:
+            # The output is attached to the exception but not particularly
+            # useful as it is formatted in JSON.
+            # Re-run the command with a user-friendly format instead.
+            del test_args[-1]
+            subprocess.call(test_args, env=env, cwd=args.gen_dir)
+            return e.returncode
         generated_test_path = None
         for line in messages.splitlines():
             data = json.loads(line)
