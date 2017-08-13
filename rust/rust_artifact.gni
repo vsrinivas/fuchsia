@@ -60,23 +60,7 @@ template("rust_artifact") {
     }
   }
 
-  if (host_cpu == "arm64") {
-    _cipd_cpu = "arm64"
-  } else if (host_cpu == "x64") {
-    _cipd_cpu = "amd64"
-  } else {
-    assert(false, "Host CPU not supported")
-  }
-
-  if (host_os == "linux") {
-    _cipd_os = "linux"
-  } else if (host_os == "mac") {
-    _cipd_os = "mac"
-  } else {
-    assert(false, "Host OS not supported")
-  }
-
-  rust_base = "//buildtools/$_cipd_os-$_cipd_cpu/rust"
+  rust_base = "//buildtools/${host_os}-${host_cpu}/rust"
 
   if (is_debug) {
     build_type = "debug"
