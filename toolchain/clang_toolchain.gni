@@ -11,35 +11,45 @@ declare_args() {
   clang_prefix = rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
 }
 
-# Defines a clang-based toolchain
+# Defines a clang-based toolchain.
 #
 # Parameters
 #
+#   toolchain_cpu
+#     Required: Value of "current_cpu" inside this toolchain.
+#
+#   toolchain_os
+#     Required: Value of "current_os" inside this toolchain.
+#
+#   toolchain_args
+#     Optional: Scope specifying build arguments to override in this
+#     toolchain context.
+#     NOTE! Do not use this in the toolchain used as the default toolchain.
+#     It will have no effect, and you will be confused.
+#
+#   use_strip
+#     Required: Whether to strip binaries, leaving unstripped ones
+#     in lib.unstripped and exe.unstripped subdirectories.
+#
 #   prefix
-#     If given the path from which "cc", "cxx", "ar", "ld" and "strip" will be
-#     found (unless overridden).
-#     If not given, prefix defaults to $clang_prefix.
+#     Optional: The path from which "cc", "cxx", "ar", "ld" and
+#     "strip" will be found (unless overridden).  If not given,
+#     prefix defaults to $clang_prefix.
 #
 #   cc
 #   cxx
 #   ar
 #   ld
 #   strip
+#     Optional: Override default tool names.
 #
-#   toolchain_cpu
-#     What "current_cpu" should be set to when invoking a build
-#     using this toolchain.
-#
-#   toolchain_os
-#     What "current_os" should be set to when invoking a
-#     build using this toolchain.
-#
-#   use_goma
-#     Override the global use_goma setting, useful to opt-out of goma in a
-#     particular toolchain by setting use_goma = false in it.
+#   use_ccache, use_goma
+#     Optional: Override the global setting, useful to opt out of
+#     ccache/goma in a particular toolchain.
 #
 #   deps
-#     Dependencies of this toolchain.
+#     Optional: Dependencies of this toolchain.
+#
 template("clang_toolchain") {
   toolchain(target_name) {
     assert(defined(invoker.toolchain_cpu),
@@ -47,15 +57,19 @@ template("clang_toolchain") {
     assert(defined(invoker.toolchain_os),
            "clang_toolchain() must specify a \"toolchain_os\"")
 
+    compiler_prefix = ""
     if (defined(invoker.use_goma)) {
       use_goma = invoker.use_goma
     }
     if (use_goma) {
       compiler_prefix = "$goma_dir/gomacc "
-    } else if (use_ccache) {
-      compiler_prefix = "ccache "
     } else {
-      compiler_prefix = ""
+      if (defined(invoker.use_ccache)) {
+        use_ccache = invoker.use_ccache
+      }
+      if (use_ccache) {
+        compiler_prefix = "ccache "
+      }
     }
 
     prefix = clang_prefix
@@ -271,7 +285,13 @@ template("clang_toolchain") {
       target_os = target_os
       target_cpu = target_cpu
 
-      is_pic_default = invoker.is_pic_default
+      if (defined(invoker.toolchain_args)) {
+        # The invoker isn't allowed to fiddle with the essential settings.
+        forward_variables_from(invoker.toolchain_args, "*", [
+                                  "current_cpu", "current_os",
+                                  "target_os", "target_cpu",
+                              ])
+      }
     }
   }
 }

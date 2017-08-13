@@ -20,7 +20,9 @@ fuchsia_toolchain(target_cpu) {
 }
 
 fuchsia_toolchain("${target_cpu}-shared") {
-  is_pic_default = true
+  toolchain_args = {
+    is_pic_default = true
+  }
 }
 
 if (current_cpu == "arm64") {
