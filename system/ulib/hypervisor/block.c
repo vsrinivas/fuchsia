@@ -62,14 +62,14 @@ static virtio_device_ops_t block_device_ops = {
     .queue_notify = &block_queue_notify,
 };
 
-static const pci_device_attr_t kVirtioBlockPciDeviceAttributes = {
-    .vendor_id = PCI_VENDOR_ID_VIRTIO,
-    .device_id = PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY,
-    .subsystem_vendor_id = 0,
-    .subsystem_id = VIRTIO_ID_BLOCK,
-    .class_code = PCI_CLASS_MASS_STORAGE,
-    .bar_size = 0x40,
-};
+static void block_pci_init(pci_device_t* pci_device) {
+    pci_device->vendor_id = PCI_VENDOR_ID_VIRTIO;
+    pci_device->device_id = PCI_DEVICE_ID_VIRTIO_BLOCK_LEGACY;
+    pci_device->subsystem_vendor_id = 0;
+    pci_device->subsystem_id = VIRTIO_ID_BLOCK;
+    pci_device->class_code = PCI_CLASS_MASS_STORAGE;
+    pci_device->bar_size = 0x40;
+}
 
 mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
                        size_t guest_physmem_size, const io_apic_t* io_apic) {
@@ -107,7 +107,7 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
     block->virtio_device.io_apic = io_apic;
 
     // PCI Transport.
-    block->virtio_device.pci_device.attr = &kVirtioBlockPciDeviceAttributes;
+    block_pci_init(&block->virtio_device.pci_device);
 
     // Setup Virtio queue.
     block->queue.size = QUEUE_SIZE;

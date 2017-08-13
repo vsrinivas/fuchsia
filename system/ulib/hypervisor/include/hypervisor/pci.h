@@ -44,25 +44,22 @@ typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_guest_memory mx_guest_memory_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 
-typedef struct pci_device_attr {
+/* Stores the state of PCI devices. */
+typedef struct pci_device {
+    mtx_t mutex;
+    // Device attributes.
     uint16_t device_id;
     uint16_t vendor_id;
     uint16_t subsystem_id;
     uint16_t subsystem_vendor_id;
     // Both class & subclass fields combined.
     uint16_t class_code;
-    uint16_t bar_size;
-} pci_device_attr_t;
 
-/* Stores the state of PCI devices. */
-typedef struct pci_device {
-    mtx_t mutex;
     // Command register.
     uint16_t command;
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
-    // Device attributes.
-    const pci_device_attr_t* attr;
+    uint16_t bar_size;
 } pci_device_t;
 
 typedef struct pci_bus {

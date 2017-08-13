@@ -26,18 +26,18 @@ static const uint32_t kPioBase = 0x8000;
 static const uint32_t kPioAddressMask = (uint32_t)~BIT_MASK(2);
 static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
 
-static const pci_device_attr_t kRootComplexDeviceAttributes = {
-    .vendor_id = PCI_VENDOR_ID_INTEL,
-    .device_id = PCI_DEVICE_ID_INTEL_Q35,
-    .subsystem_vendor_id = 0,
-    .subsystem_id = 0,
-    .class_code = PCI_CLASS_BRIDGE_HOST,
-    .bar_size = 0x10,
-};
+static void pci_root_complex_init(pci_device_t* host_bridge) {
+    host_bridge->vendor_id = PCI_VENDOR_ID_INTEL;
+    host_bridge->device_id = PCI_DEVICE_ID_INTEL_Q35;
+    host_bridge->subsystem_vendor_id = 0;
+    host_bridge->subsystem_id = 0;
+    host_bridge->class_code = PCI_CLASS_BRIDGE_HOST;
+    host_bridge->bar_size = 0x10;
+}
 
 mx_status_t pci_bus_init(pci_bus_t* bus) {
     memset(bus, 0, sizeof(*bus));
-    bus->root_complex.attr = &kRootComplexDeviceAttributes;
+    pci_root_complex_init(&bus->root_complex);
     return pci_bus_connect(bus, &bus->root_complex, PCI_DEVICE_ROOT_COMPLEX);
 }
 
@@ -47,7 +47,7 @@ mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) 
     if (bus->device[slot])
         return MX_ERR_ALREADY_EXISTS;
     // We currently allocate a fixed IO range per bar.
-    if (device->attr->bar_size > (1 << 8))
+    if (device->bar_size > (1 << 8))
         return MX_ERR_NOT_SUPPORTED;
 
     device->command = PCI_COMMAND_IO_EN;
@@ -205,15 +205,14 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io) {
 
 /* Read a 4 byte aligned value from PCI config space. */
 static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg, uint32_t* value) {
-    const pci_device_attr_t* attr = device->attr;
     switch (reg) {
     //  ---------------------------------
     // |   (31..16)     |    (15..0)     |
     // |   device_id    |   vendor_id    |
     //  ---------------------------------
     case PCI_CONFIG_VENDOR_ID:
-        *value = attr->vendor_id;
-        *value |= attr->device_id << 16;
+        *value = device->vendor_id;
+        *value |= device->device_id << 16;
         return MX_OK;
     //  ----------------------------
     // |   (31..16)  |   (15..0)    |
@@ -230,7 +229,7 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |   class_code   |    prog_if   |    revision_id  |
     //  -------------------------------------------------
     case PCI_CONFIG_REVISION_ID:
-        *value = attr->class_code << 16;
+        *value = device->class_code << 16;
         return MX_OK;
     //  ---------------------------------------------------------------
     // |   (31..24)  |   (23..16)    |    (15..8)    |      (7..0)     |
@@ -259,8 +258,8 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |   subsystem_id    |  subsystem_vendor_id  |
     //  -------------------------------------------
     case PCI_CONFIG_SUBSYS_VENDOR_ID:
-        *value = attr->subsystem_vendor_id;
-        *value |= attr->subsystem_id << 16;
+        *value = device->subsystem_vendor_id;
+        *value |= device->subsystem_id << 16;
         return MX_OK;
     //  ------------------------------------------
     // |     (31..8)     |         (7..0)         |
@@ -329,7 +328,7 @@ mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, ui
         uint32_t* bar = &device->bar[0];
         *bar = value;
         // We zero bits in the BAR in order to set the size.
-        *bar &= ~(device->attr->bar_size - 1);
+        *bar &= ~(device->bar_size - 1);
         *bar |= PCI_BAR_IO_TYPE_PIO;
         mtx_unlock(&device->mutex);
         return MX_OK;
@@ -365,7 +364,7 @@ uint16_t pci_device_num(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t
         uint16_t command = device->command;
         uint32_t bar0 = device->bar[0];
         uint32_t bar_base = pci_bar_base(device);
-        uint16_t bar_size = device->attr->bar_size;
+        uint16_t bar_size = device->bar_size;
         mtx_unlock(&device->mutex);
 
         // Ensure IO operations are enabled for this device.
@@ -398,5 +397,5 @@ uint32_t pci_bar_base(pci_device_t* device) {
 }
 
 uint16_t pci_bar_size(pci_device_t* device) {
-    return device->attr->bar_size;
+    return device->bar_size;
 }
