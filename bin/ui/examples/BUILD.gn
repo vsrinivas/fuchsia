@@ -13,6 +13,7 @@ group("examples") {
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
+    "sketchy",
     "spinning_square",
     "tile",
   ]

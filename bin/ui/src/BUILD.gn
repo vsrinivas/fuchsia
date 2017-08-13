@@ -10,6 +10,7 @@ group("src") {
     "print_input",
     "root_presenter",
     "scene_manager",
+    "sketchy",
     "view_manager",
   ]
 }

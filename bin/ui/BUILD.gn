@@ -225,6 +225,26 @@ package("shadertoy") {
   ]
 }
 
+package("sketchy") {
+  archive = true
+
+  deps = [
+    "examples/sketchy",
+    "src/sketchy",
+  ]
+
+  binaries = [
+    {
+      name = "sketchy_client"
+      dest = "app"
+    },
+    {
+      name = "sketchy_service"
+      dest = "app"
+    },
+  ]
+}
+
 package("mozart") {
   app = true
 
@@ -254,5 +274,11 @@ package("mozart") {
     {
       name = "shadertoy_client"
     },
+    {
+      name = "sketchy_client"
+    },
+    {
+      name = "sketchy_service"
+    }
   ]
 }
