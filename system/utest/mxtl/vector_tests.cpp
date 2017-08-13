@@ -529,6 +529,69 @@ bool vector_test_iterator() {
     END_TEST;
 }
 
+template <typename ItemTraits, size_t size>
+bool vector_test_insert_delete() {
+    using ItemType = typename ItemTraits::ItemType;
+
+    BEGIN_TEST;
+
+    Generator<ItemTraits> gen;
+
+    {
+        mxtl::Vector<ItemType> vector;
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
+            ASSERT_TRUE(vector.insert(i, gen.NextItem()));
+        }
+
+        // Insert at position zero and one
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
+        ASSERT_TRUE(vector.insert(0, gen.NextItem()));
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 1));
+        ASSERT_TRUE(vector.insert(1, gen.NextItem()));
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+        gen.Reset();
+
+        // Verify the contents
+        for (size_t i = 2; i < size + 2; i++) {
+            ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue());
+        }
+        ASSERT_EQ(ItemTraits::GetValue(vector[0]), gen.NextValue());
+        ASSERT_EQ(ItemTraits::GetValue(vector[1]), gen.NextValue());
+        gen.Reset();
+
+        {
+            // Erase from position one
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+            auto erasedval1 = vector.erase(1);
+            // Erase from position zero
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+            auto erasedval0 = vector.erase(0);
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+
+            // Verify the remaining contents
+            for (size_t i = 0; i < size; i++) {
+                ASSERT_EQ(ItemTraits::GetValue(vector[i]), gen.NextValue());
+            }
+            ASSERT_EQ(ItemTraits::GetValue(erasedval0), gen.NextValue());
+            ASSERT_EQ(ItemTraits::GetValue(erasedval1), gen.NextValue());
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
+        }
+        ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
+        gen.Reset();
+
+        // Erase the remainder of the vector
+        for (size_t i = 0; i < size; i++) {
+            vector.erase(0);
+        }
+        ASSERT_EQ(vector.size(), 0);
+
+    }
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
+
+    END_TEST;
+}
+
 }  // namespace anonymous
 
 #define RUN_FOR_ALL_TRAITS(test_base, test_size)              \
@@ -554,6 +617,7 @@ RUN_FOR_ALL(vector_test_allocation_failure)
 RUN_FOR_ALL(vector_test_move)
 RUN_FOR_ALL(vector_test_swap)
 RUN_FOR_ALL(vector_test_iterator)
+RUN_FOR_ALL(vector_test_insert_delete)
 RUN_TEST((vector_test_push_back_by_const_ref_in_capacity<ValueTypeTraits, 100>))
 RUN_TEST((vector_test_push_back_by_const_ref_beyond_capacity<ValueTypeTraits, 100>))
 END_TEST_CASE(vector_tests)

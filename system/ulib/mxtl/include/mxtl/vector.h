@@ -121,17 +121,58 @@ public:
         return true;
     }
 
+    // Insert an element into the |index| position in the vector, shifting
+    // all subsequent elements back one position.
+    //
+    // Returns a bool indicating success (true) or failure (due to lack
+    // of memory), like "push_back".
+    //
+    // Index must be less than or equal to the size of the vector.
+    bool insert(size_t index, const T& value) __WARN_UNUSED_RESULT {
+        MX_DEBUG_ASSERT(index <= size_);
+        if (!grow_for_new_element()) {
+            return false;
+        }
+        size_++;
+        for (size_t i = size_; i > index; i--) {
+            ptr_[i] = mxtl::move(ptr_[i - 1]);
+        }
+        ptr_[index] = value;
+        return true;
+    }
+
+    bool insert(size_t index, T&& value) __WARN_UNUSED_RESULT {
+        MX_DEBUG_ASSERT(index <= size_);
+        if (!grow_for_new_element()) {
+            return false;
+        }
+        size_++;
+        for (size_t i = size_; i > index; i--) {
+            ptr_[i] = mxtl::move(ptr_[i - 1]);
+        }
+        ptr_[index] = mxtl::forward<T>(value);
+        return true;
+    }
+
+    // Remove an element from the |index| position in the vector, shifting
+    // all subsequent elements one position to fill in the gap.
+    // Returns the removed element.
+    //
+    // Index must be less than the size of the vector.
+    T erase(size_t index) {
+        MX_DEBUG_ASSERT(index < size_);
+        auto val = mxtl::move(ptr_[index]);
+        for (size_t i = index; (i + 1) < size_; i++) {
+            ptr_[i] = mxtl::move(ptr_[i + 1]);
+        }
+        pop_back();
+        return mxtl::move(val);
+    }
+
     void pop_back() {
         MX_DEBUG_ASSERT(size_ > 0);
         ptr_[--size_].~T();
-        if (size_ * kCapacityShrinkFactor < capacity_ &&
-            capacity_ > kCapacityMinimum) {
-            // Try to shrink the underlying storage
-            static_assert((kCapacityMinimum + 1) >= kCapacityShrinkFactor,
-                          "Capacity heuristics risk reallocating to zero capacity");
-            size_t newCapacity = capacity_ / kCapacityShrinkFactor;
-            reallocate(newCapacity);
-        }
+        consider_shrinking();
     }
 
     T* get() const {
@@ -168,6 +209,19 @@ private:
             }
         }
         return true;
+    }
+
+    // Shrink the vector to fit a smaller number of elements, if we reach
+    // under the shrink factor.
+    void consider_shrinking() {
+        if (size_ * kCapacityShrinkFactor < capacity_ &&
+            capacity_ > kCapacityMinimum) {
+            // Try to shrink the underlying storage
+            static_assert((kCapacityMinimum + 1) >= kCapacityShrinkFactor,
+                          "Capacity heuristics risk reallocating to zero capacity");
+            size_t newCapacity = capacity_ / kCapacityShrinkFactor;
+            reallocate(newCapacity);
+        }
     }
 
     // Forces capacity to become newCapcity.
