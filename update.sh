@@ -19,10 +19,12 @@ case "$(uname -s)" in
   Darwin)
     readonly HOST_PLATFORM="mac"
     readonly CIPD_PLATFORM="mac-amd64"
+    readonly GN_PLATFORM="mac-x64"
     ;;
   Linux)
     readonly HOST_PLATFORM="linux64"
     readonly CIPD_PLATFORM="linux-amd64"
+    readonly GN_PLATFORM="linux-x64"
     ;;
   *)
     echo "Unknown operating system. Cannot install build tools."
@@ -70,7 +72,7 @@ function download_clang() {
 }
 
 function download_rust() {
-  download_cipd_package rust rust "${SCRIPT_ROOT}/${CIPD_PLATFORM}/rust"
+  download_cipd_package rust rust "${SCRIPT_ROOT}/${GN_PLATFORM}/rust"
 }
 
 function download_go() {
