@@ -17,6 +17,7 @@ class App {
  public:
   App();
 
+ private:
   // Called asynchronously by constructor.
   void Init(mozart2::DisplayInfoPtr display_info);
 
@@ -25,7 +26,6 @@ class App {
   // presentation is asynchronously received.
   void Update(uint64_t next_presentation_time);
 
- private:
   std::unique_ptr<app::ApplicationContext> application_context_;
   mtl::MessageLoop* loop_;
   mozart2::SceneManagerPtr scene_manager_;

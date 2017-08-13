@@ -84,8 +84,10 @@ void Compositor::DrawLayer(escher::PaperRenderer* escher_renderer,
     // output image, but we're not that fancy yet.
     layer->error_reporter()->ERROR()
         << "TODO(MZ-248): scene_manager::Compositor::DrawLayer()"
-           ": layer size does not match output image size of "
-        << stage_width << "x" << stage_height;
+           ": layer size of "
+        << layer->size().x << "x" << layer->size().y
+        << " does not match output image size of " << stage_width << "x"
+        << stage_height;
     return;
   }
 

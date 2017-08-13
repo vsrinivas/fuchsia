@@ -7,6 +7,8 @@ executable("hello_scene_manager") {
 
   sources = [
     "app.cc",
+    "app.h",
+    "main.cc",
   ]
 
   deps = [

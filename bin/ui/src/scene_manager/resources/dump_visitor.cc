@@ -204,10 +204,13 @@ void DumpVisitor::Visit(LayerStack* r) {
 void DumpVisitor::Visit(Layer* r) {
   BeginItem("Layer", r);
   if (r->renderer()) {
-    VisitResource(r->renderer().get());
+    BeginSection("renderer");
+    r->renderer()->Accept(this);
+    EndSection();
   } else {
     // TODO(MZ-249): Texture or ImagePipe or whatever.
   }
+  VisitResource(r);
   EndItem();
 }
 

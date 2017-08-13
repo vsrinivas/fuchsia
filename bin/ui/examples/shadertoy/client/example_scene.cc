@@ -41,6 +41,7 @@ ExampleScene::ExampleScene(mozart::client::Session* session,
 
   mozart::client::Renderer renderer(session);
   layer.SetRenderer(renderer);
+  layer.SetSize(scene_width, scene_height);
 
   mozart::client::Scene scene(session);
   renderer.SetCamera(mozart::client::Camera(scene));
