@@ -30,6 +30,7 @@ typedef struct test {
 
     mx_handle_t guest;
     mx_handle_t guest_physmem;
+    uintptr_t guest_physaddr;
 
     mx_handle_t vcpu;
 #if __x86_64__
@@ -37,13 +38,29 @@ typedef struct test {
 #endif // __x86_64__
 } test_t;
 
+static bool teardown(test_t *test) {
+    if (test->vcpu != MX_HANDLE_INVALID)
+        ASSERT_EQ(mx_handle_close(test->vcpu), MX_OK, "");
+#if __x86_64__
+    if (test->vcpu_apicmem != MX_HANDLE_INVALID)
+        ASSERT_EQ(mx_handle_close(test->vcpu_apicmem), MX_OK, "");
+#endif // __x86_64__
+
+    if (test->guest != MX_HANDLE_INVALID)
+        ASSERT_EQ(mx_handle_close(test->guest), MX_OK, "");
+    ASSERT_EQ(mx_vmar_unmap(mx_vmar_root_self(), test->guest_physaddr, kVmoSize), MX_OK, "");
+    ASSERT_EQ(mx_handle_close(test->guest_physmem), MX_OK, "");
+
+    return true;
+}
 
 static bool setup(test_t *test, const char *start, const char *end) {
+    memset(test, 0, sizeof(*test));
+
     ASSERT_EQ(mx_vmo_create(kVmoSize, 0, &test->guest_physmem), MX_OK, "");
 
-    uintptr_t addr;
     ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, test->guest_physmem, 0, kVmoSize, kMapFlags,
-                          &addr),
+                          &test->guest_physaddr),
               MX_OK, "");
 
     mx_handle_t resource;
@@ -52,17 +69,18 @@ static bool setup(test_t *test, const char *start, const char *end) {
     mx_status_t status = mx_guest_create(resource, 0, test->guest_physmem, &test->guest);
     test->supported = status != MX_ERR_NOT_SUPPORTED;
     if (!test->supported) {
-        return true;
+        fprintf(stderr, "Guest creation not supported\n");
+        return teardown(test);
     }
     ASSERT_EQ(status, MX_OK, "");
     mx_handle_close(resource);
 
     // Setup the guest.
     uintptr_t guest_ip;
-    ASSERT_EQ(guest_create_page_table(addr, kVmoSize, &guest_ip), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table(test->guest_physaddr, kVmoSize, &guest_ip), MX_OK, "");
 
 #if __x86_64__
-    memcpy((void*)(addr + guest_ip), start, end - start);
+    memcpy((void*)(test->guest_physaddr + guest_ip), start, end - start);
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &test->vcpu_apicmem), MX_OK, "");
 #endif // __x86_64__
 
@@ -74,17 +92,11 @@ static bool setup(test_t *test, const char *start, const char *end) {
     };
     status = mx_vcpu_create(test->guest, 0, &args, &test->vcpu);
     test->supported = status != MX_ERR_NOT_SUPPORTED;
-    return true;
-}
-
-static bool teardown(test_t *test) {
-    ASSERT_EQ(mx_handle_close(test->guest), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(test->guest_physmem), MX_OK, "");
-    ASSERT_EQ(mx_handle_close(test->vcpu), MX_OK, "");
-
-#if __x86_64__
-    ASSERT_EQ(mx_handle_close(test->vcpu_apicmem), MX_OK, "");
-#endif // __x86_64__
+    if (!test->supported) {
+        fprintf(stderr, "VCPU creation not supported\n");
+        return teardown(test);
+    }
+    ASSERT_EQ(status, MX_OK, "");
 
     return true;
 }
