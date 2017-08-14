@@ -161,22 +161,28 @@ static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
 
 static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint8_t interface_id,
                                                      uint8_t alt_setting) {
-    usb_endpoint_descriptor_t* new_endpoints[USB_MAX_EPS];
-    memset(new_endpoints, 0, sizeof(new_endpoints));
+    usb_endpoint_descriptor_t* new_endpoints[USB_MAX_EPS] = {};
+    bool interface_endpoints[USB_MAX_EPS] = {};
     mx_status_t status = MX_OK;
 
     // iterate through our descriptors to find which endpoints should be active
     usb_descriptor_header_t* header = intf->descriptor;
     usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)header + intf->descriptor_length);
+    int cur_interface = -1;
 
     bool enable_endpoints = false;
     while (header < end) {
         if (header->bDescriptorType == USB_DT_INTERFACE) {
             usb_interface_descriptor_t* intf_desc = (usb_interface_descriptor_t*)header;
+            cur_interface = intf_desc->bInterfaceNumber;
             enable_endpoints = (intf_desc->bAlternateSetting == alt_setting);
-        } else if (header->bDescriptorType == USB_DT_ENDPOINT && enable_endpoints) {
+        } else if (header->bDescriptorType == USB_DT_ENDPOINT && cur_interface == interface_id) {
             usb_endpoint_descriptor_t* ep = (usb_endpoint_descriptor_t*)header;
-            new_endpoints[get_usb_endpoint_index(ep)] = ep;
+            int ep_index = get_usb_endpoint_index(ep);
+            interface_endpoints[ep_index] = true;
+            if (enable_endpoints) {
+                new_endpoints[ep_index] = ep;
+            }
         }
         header = NEXT_DESCRIPTOR(header);
     }
@@ -184,25 +190,27 @@ static mx_status_t usb_interface_configure_endpoints(usb_interface_t* intf, uint
     // update to new set of endpoints
     // FIXME - how do we recover if we fail half way through processing the endpoints?
     for (size_t i = 0; i < countof(new_endpoints); i++) {
-        usb_endpoint_descriptor_t* old_ep = intf->active_endpoints[i];
-        usb_endpoint_descriptor_t* new_ep = new_endpoints[i];
-        if (old_ep != new_ep) {
-            if (old_ep) {
-                mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, NULL, false);
-                if (ret != MX_OK) status = ret;
-            }
-            if (new_ep) {
-                usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
-                usb_descriptor_header_t* next =
-                                (usb_descriptor_header_t *)((void *)new_ep + new_ep->bLength);
-                if (next + sizeof(*ss_comp_desc) <= end
-                    && next->bDescriptorType == USB_DT_SS_EP_COMPANION) {
-                    ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)next;
+        if (interface_endpoints[i]) {
+            usb_endpoint_descriptor_t* old_ep = intf->active_endpoints[i];
+            usb_endpoint_descriptor_t* new_ep = new_endpoints[i];
+            if (old_ep != new_ep) {
+                if (old_ep) {
+                    mx_status_t ret = usb_interface_enable_endpoint(intf, old_ep, NULL, false);
+                    if (ret != MX_OK) status = ret;
                 }
-                mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, ss_comp_desc, true);
-                if (ret != MX_OK) status = ret;
+                if (new_ep) {
+                    usb_ss_ep_comp_descriptor_t* ss_comp_desc = NULL;
+                    usb_descriptor_header_t* next =
+                                    (usb_descriptor_header_t *)((void *)new_ep + new_ep->bLength);
+                    if (next + sizeof(*ss_comp_desc) <= end
+                        && next->bDescriptorType == USB_DT_SS_EP_COMPANION) {
+                        ss_comp_desc = (usb_ss_ep_comp_descriptor_t *)next;
+                    }
+                    mx_status_t ret = usb_interface_enable_endpoint(intf, new_ep, ss_comp_desc, true);
+                    if (ret != MX_OK) status = ret;
+                }
+                intf->active_endpoints[i] = new_ep;
             }
-            intf->active_endpoints[i] = new_ep;
         }
     }
     return status;
