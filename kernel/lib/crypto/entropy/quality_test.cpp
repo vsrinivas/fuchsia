@@ -11,6 +11,7 @@
 #include <kernel/vm/vm_object_paged.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
+#include <lib/crypto/entropy/jitterentropy_collector.h>
 #include <lk/init.h>
 #include <magenta/types.h>
 #include <string.h>
@@ -72,6 +73,13 @@ void EarlyBootTest() {
 
     // TODO(andrewkrieger): find a nicer way to enumerate all entropy collectors
     if (HwRngCollector::GetInstance(&candidate) == MX_OK) {
+        candidate->get_name(candidate_name, sizeof(candidate_name));
+        if (strncmp(candidate_name, src_name, MX_MAX_NAME_LEN) == 0) {
+            collector = candidate;
+        }
+    }
+    if (!collector &&
+        JitterentropyCollector::GetInstance(&candidate) == MX_OK) {
         candidate->get_name(candidate_name, sizeof(candidate_name));
         if (strncmp(candidate_name, src_name, MX_MAX_NAME_LEN) == 0) {
             collector = candidate;

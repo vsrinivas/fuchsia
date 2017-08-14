@@ -56,10 +56,10 @@
  * - Change #include line for Magenta file conventions.
  * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
  * - Add jent_entropy_collector_init definition.
+ * - Remove '#pragma GCC optimize ("O0")' (not recognized by clang)
  */
 
 #undef _FORTIFY_SOURCE
-#pragma GCC optimize ("O0")
 
 #include <assert.h>
 #include <lib/jitterentropy/jitterentropy.h>
@@ -805,7 +805,7 @@ void jent_entropy_collector_init(
         struct rand_data* ec, uint8_t* mem, size_t mem_size,
         unsigned int mem_block_size, unsigned int mem_block_count,
         unsigned int mem_loops, bool stir) {
-    DEBUG_ASSERT(((size_t)mem_block_size) * mem_block_count < mem_size);
+    DEBUG_ASSERT(((size_t)mem_block_size) * mem_block_count <= mem_size);
     memset(ec, 0, sizeof(*ec));
     /* Oversample rate. The jitterentropy man page (not included with Magenta)
      * suggests a value of 1. Higher values cause jitterentropy to discount its

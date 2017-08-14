@@ -10,9 +10,11 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/collector.cpp \
     $(LOCAL_DIR)/collector_unittest.cpp \
     $(LOCAL_DIR)/hw_rng_collector.cpp \
+    $(LOCAL_DIR)/jitterentropy_collector.cpp \
     $(LOCAL_DIR)/quality_test.cpp
 
 MODULE_DEPS += \
     kernel/dev/hw_rng \
     kernel/lib/mxtl \
-    kernel/lib/unittest
+    kernel/lib/unittest \
+    third_party/lib/jitterentropy
