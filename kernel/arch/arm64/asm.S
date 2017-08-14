@@ -11,6 +11,7 @@
 /* void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp); */
 FUNCTION(arm64_context_switch)
     /* save old frame */
+    /* This layout should match struct context_switch_frame */
     push_regs x29, x30
     push_regs x27, x28
     push_regs x25, x26

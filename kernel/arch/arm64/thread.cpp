@@ -16,6 +16,7 @@
 
 #define LOCAL_TRACE 0
 
+// Register state layout used by arm64_context_switch().
 struct context_switch_frame {
     uint64_t tpidr_el0;
     uint64_t tpidrro_el0;

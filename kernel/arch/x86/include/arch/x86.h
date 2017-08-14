@@ -41,6 +41,7 @@ struct arch_exception_context {
     uint64_t cr2;
 };
 
+// Register state layout used by x86_64_context_switch().
 struct x86_64_context_switch_frame {
     uint64_t r15, r14, r13, r12;
     uint64_t rbp;

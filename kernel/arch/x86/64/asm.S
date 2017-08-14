@@ -11,6 +11,7 @@
 /* void x86_64_context_switch(uint64_t *oldsp, uint64_t newsp) */
 FUNCTION(x86_64_context_switch)
     /* save the old context and restore the new */
+    /* This layout should match struct x86_64_context_switch_frame */
     push_flags
     push_reg %rbx
     push_reg %rbp
