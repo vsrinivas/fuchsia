@@ -11,7 +11,7 @@ declare_args() {
   magenta_build_root = "//magenta"
   lib_vulkan_root = "$magma_build_root/vulkan"
 
-  magma_python_path = rebase_path("//third_party/mako", root_build_dir)
+  magma_python_path = rebase_path("//third_party/mako")
 
   # A service driver can supply a testing target here.
   # These tests are run when the test driver is configured to
