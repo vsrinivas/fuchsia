@@ -11,7 +11,7 @@ declare_args() {
   clang_prefix = rebase_path("//buildtools/${host_platform}/clang/bin", root_build_dir)
 }
 
-# Defines a clang-based toolchain.
+# Defines a Clang-based toolchain.
 #
 # Parameters
 #
@@ -294,4 +294,40 @@ template("clang_toolchain") {
       }
     }
   }
+}
+
+# Defines a standard suite of Clang-based toolchains.
+#
+# Parameters
+#
+#   with_shared:
+#     Optional: If this toolchain will have a "-shared" companion.
+#     Pre-set to true.  Set this to false if either no shared libraries
+#     are used in this toolchain, or it's used to build nothing but
+#     shared libraries anyway.
+#
+# See clang_toolchain for others.  Most parameters are just forwarded there.
+#
+template("clang_toolchain_suite") {
+  clang_toolchain(target_name) {
+    forward_variables_from(invoker, "*", ["with_shared"])
+  }
+
+  if (invoker.with_shared) {
+    assert(!invoker.is_pic_default,
+           "If setting is_pic_default, use with_shared=false")
+    clang_toolchain("${target_name}-shared") {
+      forward_variables_from(invoker, "*", ["with_shared", "toolchain_args"])
+      toolchain_args = {
+        is_pic_default = true
+        if (defined(invoker.toolchain_args)) {
+          forward_variables_from(invoker.toolchain_args, "*")
+        }
+      }
+    }
+  }
+}
+
+set_defaults("clang_toolchain_suite") {
+  with_shared = true
 }

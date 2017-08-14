@@ -43,7 +43,9 @@ set_default_toolchain(target_toolchain)
 sources_assignment_filter = []
 
 declare_args() {
-  # Whether the toolchain defaults to PIC.
+  # This should never be set as a build argument.
+  # It exists only to be set in toolchain_args.
+  # See //build/toolchain/clang_toolchain.gni for details.
   is_pic_default = false
 
   # Use link time optimization (LTO).

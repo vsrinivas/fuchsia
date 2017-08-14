@@ -3,26 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/toolchain/clang_toolchain.gni")
-import("//build/config/fuchsia/config.gni")
 import("//packages/package.gni")
 
-template("fuchsia_toolchain") {
-  clang_toolchain(target_name) {
-    use_strip = true
-    forward_variables_from(invoker, "*")
+clang_toolchain_suite(target_cpu) {
+  toolchain_cpu = target_cpu
+  toolchain_os = target_os
 
-    toolchain_cpu = target_cpu
-    toolchain_os = target_os
-  }
-}
-
-fuchsia_toolchain(target_cpu) {
-}
-
-fuchsia_toolchain("${target_cpu}-shared") {
-  toolchain_args = {
-    is_pic_default = true
-  }
+  use_strip = true
 }
 
 if (current_cpu == "arm64") {
