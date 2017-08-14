@@ -55,6 +55,7 @@ struct ContainerPtrTraits<T*> {
     using ConstRawPtrType = const T*;
 
     static constexpr bool IsManaged = false;
+    static constexpr bool CanCopy = true;
 
     static inline T*       GetRaw(const ConstPtrType& ptr) { return const_cast<RawPtrType>(ptr); }
     static inline PtrType  Copy(RawPtrType& ptr)           { return PtrType(ptr); }
@@ -100,6 +101,7 @@ struct ContainerPtrTraits<::mxtl::unique_ptr<T>> {
     using ConstRawPtrType = const T*;
 
     static constexpr bool IsManaged = true;
+    static constexpr bool CanCopy = false;
 
     static inline T*       GetRaw(const PtrType& ptr)      { return ptr.get(); }
     static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }
@@ -137,6 +139,7 @@ struct ContainerPtrTraits<::mxtl::RefPtr<T>> {
     using ConstRawPtrType = const T*;
 
     static constexpr bool IsManaged = true;
+    static constexpr bool CanCopy = true;
 
     static inline T*       GetRaw(const PtrType& ptr)      { return ptr.get(); }
     static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }

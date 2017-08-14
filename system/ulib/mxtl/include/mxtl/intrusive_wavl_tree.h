@@ -215,7 +215,7 @@ public:
     }
 
     void insert(const PtrType& ptr) { insert(PtrType(ptr)); }
-    void insert(PtrType&& ptr)      { internal_insert(mxtl::move(ptr)); }
+    void insert(PtrType&& ptr)      { internal_insert(ptr); }
 
     // insert or find
     //
@@ -238,12 +238,40 @@ public:
         RawPtrType obj = PtrTraits::GetRaw(ptr);
         RawPtrType collision = nullptr;
 
-        internal_insert(mxtl::move(ptr), &collision);
+        internal_insert(ptr, &collision);
 
         if (iter)
             *iter = collision ? iterator(collision) : iterator(obj);
 
         return !collision;
+    }
+
+    // insert_or_replace
+    //
+    // Find the element in the tree with the same key as *ptr and replace
+    // it with ptr, then return the pointer to the element which was replaced.
+    // If no element in the tree shares a key with *ptr, simply add ptr to
+    // the tree and return nullptr.
+    //
+    PtrType insert_or_replace(const PtrType& ptr) {
+        return insert_or_replace(PtrType(ptr));
+    }
+
+    PtrType insert_or_replace(PtrType&& ptr) {
+        MX_DEBUG_ASSERT(ptr != nullptr);
+        MX_DEBUG_ASSERT(! NodeTraits::node_state(*ptr).InContainer());
+
+        RawPtrType collision = nullptr;
+        internal_insert(ptr, &collision);
+
+        // If there was a collision, swap our node with the node we collided
+        // with.
+        if (collision) {
+            MX_DEBUG_ASSERT(ptr != nullptr);
+            return internal_swap(collision, mxtl::move(ptr));
+        }
+
+        return nullptr;
     }
 
     // pop_front and pop_back
@@ -643,7 +671,7 @@ private:
     // move semantics only
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(WAVLTree);
 
-    void internal_insert(PtrType&& ptr, RawPtrType* collision = nullptr) {
+    void internal_insert(PtrType& ptr, RawPtrType* collision = nullptr) {
         MX_DEBUG_ASSERT(ptr != nullptr);
 
         auto& ns = NodeTraits::node_state(*ptr);
@@ -903,6 +931,66 @@ private:
 
         // Release the pointer to the node we just removed back to the caller.
         return removed;
+    }
+
+    // Swap a node which is currently in the tree with a new node.
+    //
+    // old_node *must* already be in the tree.
+    // new_node *must* not be in the tree.
+    // old_node and new_node *must* have the same key.
+    //
+    PtrType internal_swap(RawPtrType old_node, PtrType&& new_node) {
+        MX_DEBUG_ASSERT(old_node != nullptr);
+        MX_DEBUG_ASSERT(new_node != nullptr);
+        MX_DEBUG_ASSERT(KeyTraits::EqualTo(KeyTraits::GetKey(*old_node),
+                                           KeyTraits::GetKey(*new_node)));
+
+        auto& old_ns  = NodeTraits::node_state(*old_node);
+        auto& new_ns  = NodeTraits::node_state(*new_node);
+        auto  new_raw = PtrTraits::GetRaw(new_node);
+
+        MX_DEBUG_ASSERT(old_ns.InContainer());
+        MX_DEBUG_ASSERT(!new_ns.InContainer());
+
+        // Start with the left child state.
+        if (PtrTraits::IsValid(old_ns.left_)) {
+            // Fix the left-child's parent pointer.
+            NodeTraits::node_state(*old_ns.left_).parent_ = new_raw;
+        } else {
+            // We have no left child, so there is no left-child parent pointer
+            // to fixup, but we may need to fix the left-most bookkeeping.
+            if (PtrTraits::IsSentinel(old_ns.left_)) {
+                MX_DEBUG_ASSERT(left_most_ == old_node);
+                left_most_ = new_raw;
+            }
+        }
+        PtrTraits::Swap(old_ns.left_, new_ns.left_);
+
+        // Same routine, but this time with the right child state.
+        if (PtrTraits::IsValid(old_ns.right_)) {
+            // Fix the right-child's parent pointer.
+            NodeTraits::node_state(*old_ns.right_).parent_ = new_raw;
+        } else {
+            // We have no right child, so there is no right-child parent pointer
+            // to fixup, but we may need to fix the right-most bookkeeping.
+            if (PtrTraits::IsSentinel(old_ns.right_)) {
+                MX_DEBUG_ASSERT(right_most_ == old_node);
+                right_most_ = new_raw;
+            }
+        }
+        PtrTraits::Swap(old_ns.right_, new_ns.right_);
+
+        // Don't forget to swap the rank bookkeeping
+        pod_swap(old_ns.rank_, new_ns.rank_);
+
+        // Finally, swap the pointer which pointed to the node we collided
+        // with with new_node.  This will either fixup head, or old_node's
+        // parent's left or right child pointer, and leave us with the
+        // reference in old_node stored in new_node and ready to release to the
+        // caller.
+        PtrTraits::Swap(GetLinkPtrToNode(old_node), new_node);
+        pod_swap(old_ns.parent_, new_ns.parent_);
+        return mxtl::move(new_node);
     }
 
     template <typename BoundTraits>

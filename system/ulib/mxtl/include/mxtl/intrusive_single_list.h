@@ -446,6 +446,75 @@ public:
         return iterator(citer.node_);
     }
 
+    // replace_if (copy)
+    //
+    // Find the first member of the list which satisfies the predicate given by
+    // 'fn' and replace it in the list, returning a referenced pointer to the
+    // replaced element.  If no member satisfies the predicate, simply return
+    // nullptr instead.
+    template <typename UnaryFn>
+    PtrType replace_if(UnaryFn fn, const PtrType& ptr) {
+        using ConstRefType  = typename PtrTraits::ConstRefType;
+        MX_DEBUG_ASSERT(ptr != nullptr);
+
+        auto& ptr_ns = NodeTraits::node_state(*ptr);
+        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+
+        auto iter = begin();
+        if (iter.IsValid()) {
+            PtrType* prev_next_ptr = &head_;
+
+            while (iter.IsValid()) {
+                auto& iter_ns = NodeTraits::node_state(*iter);
+
+                if (fn(static_cast<ConstRefType>(*iter))) {
+                    PtrType replaced(ptr);
+                    PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
+                    PtrTraits::Swap(*prev_next_ptr, replaced);
+                    return mxtl::move(replaced);
+                }
+
+                prev_next_ptr = &iter_ns.next_;
+                ++iter;
+            }
+        }
+
+        return nullptr;
+    }
+
+    // replace_if (move)
+    //
+    // Same as the copy version, except that if no member satisfies the
+    // predicate, the original reference is returned instead of nullptr.
+    template <typename UnaryFn>
+    PtrType replace_if(UnaryFn fn, PtrType&& ptr) {
+        using ConstRefType  = typename PtrTraits::ConstRefType;
+        MX_DEBUG_ASSERT(ptr != nullptr);
+
+        auto& ptr_ns = NodeTraits::node_state(*ptr);
+        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+
+        auto iter = begin();
+        if (iter.IsValid()) {
+            PtrType* prev_next_ptr = &head_;
+
+            while (iter.IsValid()) {
+                auto& iter_ns = NodeTraits::node_state(*iter);
+
+                if (fn(static_cast<ConstRefType>(*iter))) {
+                    PtrTraits::Swap(iter_ns.next_, ptr_ns.next_);
+                    PtrTraits::Swap(*prev_next_ptr, ptr);
+                    return mxtl::move(ptr);
+                }
+
+                prev_next_ptr = &iter_ns.next_;
+                ++iter;
+            }
+        }
+
+        return mxtl::move(ptr);
+    }
+
 private:
     // The traits of a non-const iterator
     struct iterator_traits {

@@ -192,6 +192,10 @@ RUN_NAMED_TEST("EraseByKey (RefPtr)",          RPTE::EraseByKeyTest)
 RUN_NAMED_TEST("InsertOrFind (unmanaged)",     UMTE::InsertOrFindTest)
 RUN_NAMED_TEST("InsertOrFind (unique)",        UPTE::InsertOrFindTest)
 RUN_NAMED_TEST("InsertOrFind (RefPtr)",        RPTE::InsertOrFindTest)
+
+RUN_NAMED_TEST("InsertOrReplace (unmanaged)",  UMTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (unique)",     UPTE::InsertOrReplaceTest)
+RUN_NAMED_TEST("InsertOrReplace (RefPtr)",     RPTE::InsertOrReplaceTest)
 END_TEST_CASE(hashtable_dll_tests);
 
 }  // namespace intrusive_containers

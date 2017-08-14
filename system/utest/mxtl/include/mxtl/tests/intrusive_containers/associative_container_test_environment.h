@@ -392,6 +392,65 @@ public:
         END_TEST;
     }
 
+    template <typename CopyOrMoveUtil>
+    bool DoInsertOrReplace() {
+        BEGIN_TEST;
+
+        ASSERT_EQ(0u, ObjType::live_obj_count(), "");
+        EXPECT_TRUE(Populate(container(), PopulateMethod::AscendingKey), "");
+
+        // Attempt to replace every element in the container with one that has
+        // the same key.  Then attempt to replace some which were not in the
+        // container to start with and verify that they were inserted instead.
+        for (size_t i = 0; i < OBJ_COUNT + 10; ++i) {
+            PtrType new_obj = TestEnvTraits::CreateObject(i);
+            ASSERT_NONNULL(new_obj, "");
+            new_obj->SetKey(i);
+
+            PtrType replaced = container().insert_or_replace(CopyOrMoveUtil::Op(new_obj));
+            EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
+            if (i < OBJ_COUNT) {
+                EXPECT_EQ(OBJ_COUNT + 1, ObjType::live_obj_count(), "");
+                EXPECT_EQ(OBJ_COUNT, container().size(), "");
+                ASSERT_NONNULL(replaced, "");
+                ASSERT_LT(replaced->value(), OBJ_COUNT);
+                EXPECT_TRUE(KeyTraits::EqualTo(KeyTraits::GetKey(*replaced), i));
+                EXPECT_TRUE(KeyTraits::EqualTo(KeyTraits::GetKey(*replaced), replaced->value()));
+
+                ASSERT_EQ(objects()[i], PtrTraits::GetRaw(replaced));
+                ReleaseObject(i);
+                replaced = nullptr;
+                EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+                EXPECT_EQ(OBJ_COUNT, container().size(), "");
+            } else {
+                EXPECT_EQ(i + 1, ObjType::live_obj_count());
+                EXPECT_EQ(i + 1, container().size(), "");
+                EXPECT_NULL(replaced, "");
+            }
+        }
+
+        EXPECT_TRUE(ContainerChecker::SanityCheck(container()), "");
+
+        while (!container().is_empty()) {
+            PtrType ptr = container().erase(container().begin());
+            TestEnvTraits::ReleaseObject(ptr);
+        }
+
+        END_TEST;
+    }
+
+    bool InsertOrReplace() {
+        BEGIN_TEST;
+
+        EXPECT_TRUE(DoInsertOrReplace<MoveUtil>(), "");
+        if (CopyUtil<PtrTraits>::CanCopy) {
+            EXPECT_TRUE(DoInsertOrReplace<CopyUtil<PtrTraits>>(), "");
+        }
+
+        END_TEST;
+    }
+
 protected:
     // Accessors for base class memebers so we don't have to type
     // this->base_member all of the time.
@@ -412,6 +471,52 @@ protected:
     Lfsr<KeyType>      key_lfsr_        = Lfsr<KeyType>(0xa2328b73e343fd0f);
     Lfsr<OtherKeyType> other_key_lfsr_  = Lfsr<OtherKeyType>(0xbd5a2efcc5ba8344);
     KeyType            max_key_         = 0u;
+
+private:
+    // Notes about CopyUtil/MoveUtil.
+    //
+    // CopyUtil is a partially specialized trait template which acts as a helper
+    // when we want to test both the copy and the move forms of an operation in
+    // a (mostly) generic test.  It defines a single static operation which
+    // returns a const PtrType& form of a pointer triggering the copy form of
+    // an operation being tested when the test environment's pointer type
+    // supports copying (eg, T* or RefPtr<T>).
+    //
+    // When copying is not supported (unique_ptr<T>), it will use mxtl::move to
+    // return an rvalue reference to the pointer instead.  This is *only* to
+    // keep the compiler happy.  In general, tests should exercise themselves
+    // using the MoveUtil helper, then test again using CopyUtil, but only if
+    // CopyUtil::CanCopy is true.  Failure to check this before calling the test
+    // again will simply result in the move version of the test being executed
+    // twice (which is in-efficient, but not fatal).
+    //
+    // If/when if-constexpr becomes a real thing (C++17 is the hypothetical
+    // target), we can eliminate the need to
+    // use these partial specialization tricks and just rely on the compiler
+    // eliminating the copy form of the test if the constexpr properties of the
+    // pointer type indicate that it does not support copying.
+    template <typename Traits, typename = void>
+    struct CopyUtil;
+
+    template <typename Traits>
+    struct CopyUtil<Traits, typename mxtl::enable_if<Traits::CanCopy == true>::type> {
+        static constexpr bool CanCopy = Traits::CanCopy;
+        static const PtrType& Op(PtrType& ptr) { return ptr; }
+    };
+
+    template <typename Traits>
+    struct CopyUtil<Traits, typename mxtl::enable_if<Traits::CanCopy == false>::type> {
+        static constexpr bool CanCopy = Traits::CanCopy;
+#if TEST_WILL_NOT_COMPILE || 0
+        static const PtrType& Op(PtrType& ptr) { return ptr; }
+#else
+        static PtrType&& Op(PtrType& ptr) { return mxtl::move(ptr); }
+#endif
+    };
+
+    struct MoveUtil {
+        static PtrType&& Op(PtrType& ptr) { return mxtl::move(ptr); }
+    };
 };
 
 // Explicit declaration of constexpr storage.

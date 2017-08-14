@@ -180,6 +180,38 @@ public:
         return true;
     }
 
+    // insert_or_replace
+    //
+    // Find the element in the hashtable with the same key as *ptr and replace
+    // it with ptr, then return the pointer to the element which was replaced.
+    // If no element in the hashtable shares a key with *ptr, simply add ptr to
+    // the hashtable and return nullptr.
+    //
+    PtrType insert_or_replace(const PtrType& ptr) {
+        return insert_or_replace(PtrType(ptr));
+    }
+
+    PtrType insert_or_replace(PtrType&& ptr) {
+        MX_DEBUG_ASSERT(ptr != nullptr);
+        KeyType  key    = KeyTraits::GetKey(*ptr);
+        HashType ndx    = GetHash(key);
+        auto&    bucket = buckets_[ndx];
+        auto     orig   = PtrTraits::GetRaw(ptr);
+
+        PtrType replaced = bucket.replace_if(
+            [key](const ValueType& other) -> bool {
+                return KeyTraits::EqualTo(key, KeyTraits::GetKey(other));
+            },
+            mxtl::move(ptr));
+
+        if (orig == PtrTraits::GetRaw(replaced)) {
+            bucket.push_front(PtrTraits::Take(replaced));
+            count_++;
+        }
+
+        return mxtl::move(replaced);
+    }
+
     iterator find(const KeyType& key) {
         HashType ndx         = GetHash(key);
         auto&    bucket      = buckets_[ndx];
@@ -502,8 +534,7 @@ private:
     BucketType buckets_[kNumBuckets];
 };
 
-// Explicit declaration of constexpr storage.  Appologies for the macro, but the
-// template declarations are just too hideous with it.
+// Explicit declaration of constexpr storage.
 #define HASH_TABLE_PROP(_type, _name) \
 template <typename KeyType, typename PtrType, typename BucketType, typename HashType, \
           HashType NumBuckets, typename KeyTraits, typename HashTraits> \

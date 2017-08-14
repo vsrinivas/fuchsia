@@ -161,6 +161,16 @@ RUN_NAMED_TEST("Splice (unmanaged)",            UMTE::SpliceTest)
 RUN_NAMED_TEST("Splice (unique)",               UPTE::SpliceTest)
 RUN_NAMED_TEST("Splice (RefPtr)",               RPTE::SpliceTest)
 
+RUN_NAMED_TEST("ReplaceIfCopy (unmanaged)",     UMTE::ReplaceIfCopyTest)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("ReplaceIfCopy (unique)",        UPTE::ReplaceIfCopyTest)
+#endif
+RUN_NAMED_TEST("ReplaceIfCopy (RefPtr)",        RPTE::ReplaceIfCopyTest)
+
+RUN_NAMED_TEST("ReplaceIfMove (unmanaged)",     UMTE::ReplaceIfMoveTest)
+RUN_NAMED_TEST("ReplaceIfMove (unique)",        UPTE::ReplaceIfMoveTest)
+RUN_NAMED_TEST("ReplaceIfMove (RefPtr)",        RPTE::ReplaceIfMoveTest)
+
 END_TEST_CASE(double_linked_list_tests);
 
 }  // namespace intrusive_containers

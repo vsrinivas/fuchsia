@@ -82,6 +82,7 @@ public:
     using NodeState     = DoublyLinkedListNodeState<T>;
     using PtrType       = typename PtrTraits::PtrType;
     using RawPtrType    = typename PtrTraits::RawPtrType;
+    using RawPtrTraits  = internal::ContainerPtrTraits<RawPtrType>;
     using ValueType     = typename PtrTraits::ValueType;
     using CheckerType   = ::mxtl::tests::intrusive_containers::DoublyLinkedListChecker;
     using ContainerType = DoublyLinkedList<T, NodeTraits>;
@@ -358,6 +359,36 @@ public:
         return iterator(citer.node_);
     }
 
+    // replace_if (copy)
+    //
+    // Find the first member of the list which satisfies the predicate given by
+    // 'fn' and replace it in the list, returning a referenced pointer to the
+    // replaced element.  If no member satisfies the predicate, simply return
+    // nullptr instead.
+    template <typename UnaryFn>
+    PtrType replace_if(UnaryFn fn, const PtrType& ptr) {
+        iterator iter = find_if(fn);
+
+        if (!iter.IsValid())
+            return nullptr;
+
+        return internal_swap(*iter, PtrType(ptr));
+    }
+
+    // replace_if (move)
+    //
+    // Same as the copy version, except that if no member satisfies the
+    // predicate, the original reference is returned instead of nullptr.
+    template <typename UnaryFn>
+    PtrType replace_if(UnaryFn fn, PtrType&& ptr) {
+        iterator iter = find_if(fn);
+
+        if (!iter.IsValid())
+            return mxtl::move(ptr);
+
+        return internal_swap(*iter, mxtl::move(ptr));
+    }
+
 private:
     // The traits of a non-const iterator
     struct iterator_traits {
@@ -545,6 +576,51 @@ private:
 
         PtrTraits::Swap(tgt_next, node_ns.next_);
         return PtrTraits::Take(node_ns.next_);
+    }
+
+    PtrType internal_swap(typename PtrTraits::RefType node, PtrType&& ptr) {
+        MX_DEBUG_ASSERT(ptr != nullptr);
+        auto& ptr_ns = NodeTraits::node_state(*ptr);
+        MX_DEBUG_ASSERT(!ptr_ns.InContainer());
+
+        auto& node_ns = NodeTraits::node_state(node);
+        MX_DEBUG_ASSERT(node_ns.InContainer());
+
+        // Handle the case of there being only a single node in the list.
+        MX_DEBUG_ASSERT(PtrTraits::IsValid(head_));
+        if (PtrTraits::IsSentinel(NodeTraits::node_state(*head_).next_)) {
+            MX_DEBUG_ASSERT(PtrTraits::GetRaw(head_) == &node);
+            MX_DEBUG_ASSERT(PtrTraits::IsSentinel(node_ns.next_));
+            MX_DEBUG_ASSERT(&node == node_ns.prev_);
+
+            ptr_ns.prev_  = PtrTraits::GetRaw(ptr);
+            node_ns.prev_ = nullptr;
+            PtrTraits::Swap(ptr_ns.next_, node_ns.next_);
+            PtrTraits::Swap(head_, ptr);
+
+            return mxtl::move(ptr);
+        }
+
+        // Find the prev pointer we need to update.  If we are swapping the tail
+        // of the list, the prev pointer is head_'s prev pointer.  Otherwise, it
+        // is the prev pointer of the node which currently follows "ptr".
+        auto& tgt_prev = PtrTraits::IsSentinel(node_ns.next_)
+                       ? NodeTraits::node_state(*head_).prev_
+                       : NodeTraits::node_state(*node_ns.next_).prev_;
+
+        // Find the next pointer we need to update.  If we are swapping the
+        // head of the list, this is head_.  Otherwise it is the next pointer of
+        // the node which comes before us in the list.
+        auto& tgt_next = PtrTraits::GetRaw(head_) == &node
+                       ? head_
+                       : NodeTraits::node_state(*node_ns.prev_).next_;
+
+        PtrTraits::Swap(ptr_ns.next_, node_ns.next_);
+        RawPtrTraits::Swap(ptr_ns.prev_, node_ns.prev_);
+        tgt_prev = PtrTraits::GetRaw(ptr);
+        PtrTraits::Swap(tgt_next, ptr);
+
+        return mxtl::move(ptr);
     }
 
     RawPtrType tail() const {

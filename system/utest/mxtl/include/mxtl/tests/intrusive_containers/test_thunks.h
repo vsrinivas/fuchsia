@@ -51,12 +51,15 @@ struct TestThunks {
     MAKE_TEST_THUNK(Insert);
     MAKE_TEST_THUNK(DirectInsert);
     MAKE_TEST_THUNK(Splice);
+    MAKE_TEST_THUNK(ReplaceIfCopy);
+    MAKE_TEST_THUNK(ReplaceIfMove);
 
     // Associative container specific tests
     MAKE_TEST_THUNK(InsertByKey);
     MAKE_TEST_THUNK(FindByKey);
     MAKE_TEST_THUNK(EraseByKey);
     MAKE_TEST_THUNK(InsertOrFind);
+    MAKE_TEST_THUNK(InsertOrReplace);
 
     // Ordered Associative container specific tests
     MAKE_TEST_THUNK(OrderedIter)
