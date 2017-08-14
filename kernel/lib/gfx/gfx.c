@@ -693,7 +693,7 @@ int gfx_init_surface_from_display(gfx_surface *surface, struct display_info *inf
             format = GFX_FORMAT_MONO;
             break;
         default:
-            DEBUG_ASSERT_MSG(0, "invalid graphics format %d", info->format);
+            dprintf(CRITICAL, "invalid graphics format %d", info->format);
             return MX_ERR_INVALID_ARGS;
     }
 
