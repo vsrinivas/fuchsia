@@ -21,9 +21,19 @@ if [ ! -d "$sysroot" ]; then
 	exit 1
 fi
 
+pushd $fuchsia_root/third_party/vulkan-cts
+python external/fetch_sources.py
+popd
+
+builds the test executable for the host in order to write out test cases
+pushd $fuchsia_root/third_party/vulkan-cts
+mkdir -p cases
+python scripts/build_caselists.py cases
+popd
+
 mkdir -p $build_dir
-cd $build_dir
-cmake $fuchsia_root/third_party/vulkan-cts -GNinja  -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=$tools_path/ninja -DCMAKE_SYSTEM_NAME=Fuchsia -DCMAKE_SYSROOT=$sysroot -DCMAKE_C_COMPILER=$cc -DCMAKE_CXX_COMPILER=$cxx -DCMAKE_AR=$ar -DCMAKE_RANLIB=$ranlib -DCMAKE_C_FLAGS="-m64 --target=x86_64-fuchsia" -DCMAKE_CXX_FLAGS="-m64 --target=x86_64-fuchsia" -DDE_OS=DE_OS_FUCHSIA -DDEQP_TARGET=fuchsia
+pushd $build_dir
+cmake $fuchsia_root/third_party/vulkan-cts -GNinja  -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=$tools_path/ninja -DFUCHSIA_SYSROOT=$sysroot -DFUCHSIA_SYSTEM_PROCESSOR=x86_64 -DCMAKE_TOOLCHAIN_FILE=$fuchsia_root/build/Fuchsia.cmake -DDE_OS=DE_OS_FUCHSIA -DDEQP_TARGET=fuchsia
 $tools_path/ninja
 $strip $build_dir/external/vulkancts/modules/vulkan/deqp-vk -o $build_dir/external/vulkancts/modules/vulkan/deqp-vk-stripped
-cd -
+popd
