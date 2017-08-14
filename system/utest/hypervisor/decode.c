@@ -400,6 +400,19 @@ static bool decode_test_f6(void) {
     END_TEST;
 }
 
+static bool test_computing_flags(void) {
+    BEGIN_TEST;
+
+    EXPECT_EQ(x86_flags_for_test8(1, 1), 2, "");
+    EXPECT_EQ(x86_flags_for_test8(1, -1), 2, "");
+    EXPECT_EQ(x86_flags_for_test8(-1, 1), 2, "");
+    EXPECT_EQ(x86_flags_for_test8(3, 3), 6, "");
+    EXPECT_EQ(x86_flags_for_test8(0, 0), 0x46, "");
+    EXPECT_EQ(x86_flags_for_test8(-1, -1), 0x86, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(decode)
 RUN_TEST(decode_failure)
 RUN_TEST(decode_mov_89)
@@ -408,4 +421,5 @@ RUN_TEST(decode_mov_c7)
 RUN_TEST(decode_movz_0f_b6)
 RUN_TEST(decode_movz_0f_b7)
 RUN_TEST(decode_test_f6)
+RUN_TEST(test_computing_flags)
 END_TEST_CASE(decode)

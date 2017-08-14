@@ -79,21 +79,28 @@ DEFINE_INST_RW(32);
 DEFINE_INST_RW(16);
 #undef DEFINE_INST_RW
 
-static inline mx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val, uint8_t value) {
-    if (inst->type != INST_TEST || inst->mem != 1u || inst_val8(inst) != inst_val)
-        return MX_ERR_NOT_SUPPORTED;
-#if __x86_64__
+#if defined(__x86_64__)
+// Returns the flags that are assigned to the x86 flags register by an
+// 8-bit TEST instruction for the given two operand values.
+static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
     uint16_t flags;
     __asm__ volatile (
         "testb %[i1], %[i2];"
         "pushfw;"
         "popw %[flags];"
         : [flags] "=r"(flags)
-        : [i1] "r"(inst_val), [i2] "r"(value)
+        : [i1] "r"(value1), [i2] "r"(value2)
         : "cc");
+    return flags & X86_FLAGS_STATUS;
+}
+#endif
 
+static inline mx_status_t inst_test8(const instruction_t* inst, uint8_t inst_val, uint8_t value) {
+    if (inst->type != INST_TEST || inst->mem != 1u || inst_val8(inst) != inst_val)
+        return MX_ERR_NOT_SUPPORTED;
+#if __x86_64__
     *inst->flags &= ~X86_FLAGS_STATUS;
-    *inst->flags |= (flags & X86_FLAGS_STATUS);
+    *inst->flags |= x86_flags_for_test8(inst_val, value);
     return MX_OK;
 #else // __x86_64__
     return MX_ERR_NOT_SUPPORTED;
