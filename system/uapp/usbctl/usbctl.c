@@ -29,7 +29,7 @@ static const usb_device_string_t manufacturer_string = {
 
 static const usb_device_string_t product_string = {
     .index = PRODUCT_INDEX,
-    .string = "USB Test Function",
+    .string = "USB Mass Storage",
 };
 
 static const usb_device_string_t serial_string = {
@@ -98,7 +98,7 @@ static int device_command(int argc, const char** argv) {
     const char* command = argv[1];
     if (!strcmp(command, "reset")) {
         status = ioctl_usb_device_clear_functions(fd);
-    } else if (!strcmp(command, "init-test")) {
+    } else if (!strcmp(command, "init-ums")) {
         // set device descriptor
         status = ioctl_usb_device_set_device_desc(fd, &device_desc);
         if (status < 0) {
@@ -128,9 +128,9 @@ static int device_command(int argc, const char** argv) {
 
         // add our test function
         usb_function_descriptor_t function_desc = {
-            .interface_class = USB_CLASS_VENDOR,
-            .interface_subclass = 1,
-            .interface_protocol = 0,
+            .interface_class = USB_CLASS_MSC,
+            .interface_subclass = USB_SUBCLASS_MSC_SCSI,
+            .interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY,
         };
         status = ioctl_usb_device_add_function(fd, &function_desc);
         if (status < 0) {
@@ -153,7 +153,7 @@ fail:
 
 usage:
     close(fd);
-    fprintf(stderr, "usage: usbctl device [reset|init-test]\n");
+    fprintf(stderr, "usage: usbctl device [reset|init-ums]\n");
     return -1;
 }
 
@@ -205,8 +205,8 @@ static usbctl_command_t commands[] = {
     {
         "device",
         device_command,
-        "device [reset|init-test] resets the device or "
-        "initializes the test function"
+        "device [reset|init-ums] resets the device or "
+        "initializes the UMS function"
     },
     {
         "virtual",
