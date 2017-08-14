@@ -171,7 +171,7 @@ static void hidctl_root_release(void* ctx) {
     device_destroy(root->mxdev);
     free(root);
 }
- 
+
 static mx_protocol_device_t hidctl_device_proto = {
     .open = hidctl_open,
     .release = hidctl_root_release,
@@ -187,7 +187,7 @@ static mx_status_t hidctl_bind(void* ctx, mx_device_t* parent, void** cookie) {
     if ((status = device_create("hidctl", root, &hidctl_device_proto, driver, &root->mxdev)) < 0) {
         free(root);
         return status;
-    }   
+    }
     if ((status = device_add(root->mxdev, parent)) < 0) {
         device_destroy(root->mxdev);
         free(root);
