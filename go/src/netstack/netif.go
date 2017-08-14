@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strings"
 	"sync"
 
@@ -103,41 +102,12 @@ func (nif *netif) stateChange(s eth.State) {
 	nif.ns.dispatcher.dnsClient.SetRuntimeServers(nif.ns.flattenDNSServers())
 }
 
-type byRoutability []*netif
-
-func (l byRoutability) Len() int      { return len(l) }
-func (l byRoutability) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
-func (l byRoutability) Less(i, j int) bool {
-	if hasGateway(l[i]) && !hasGateway(l[j]) {
-		return true
-	}
-	if l[i].addr != "" && l[j].addr == "" {
-		return true
-	}
-	return l[i].nicid < l[j].nicid
-}
-
-func hasGateway(netif *netif) bool {
-	for _, r := range netif.routes {
-		if r.Gateway != "" {
-			return true
-		}
-	}
-	return false
-}
-
 func (ns *netstack) flattenRouteTables() []tcpip.Route {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	netifs := make([]*netif, 0, len(ns.netifs))
-	for _, netif := range ns.netifs {
-		netifs = append(netifs, netif)
-	}
-	sort.Sort(byRoutability(netifs))
-
 	routeTable := []tcpip.Route{}
-	for _, netif := range netifs {
+	for _, netif := range ns.netifs {
 		routeTable = append(routeTable, netif.routes...)
 	}
 	return routeTable
