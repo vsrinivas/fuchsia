@@ -129,7 +129,6 @@ if (is_fuchsia) {
 # Configs
 config("boringssl_config") {
   include_dirs = [ "include" ]
-  defines = [ "BORINGSSL_IMPLEMENTATION" ]
   if (is_fuchsia) {
     # rand_fuchsia uses a system call
     libs = [ "magenta" ]
@@ -139,6 +138,7 @@ config("boringssl_config") {
 config("internal_config") {
   visibility = [ "./*" ]
   defines = [
+    "BORINGSSL_IMPLEMENTATION",
     "BORINGSSL_SHARED_LIBRARY",
     "BORINGSSL_NO_STATIC_INITIALIZER",
     "OPENSSL_SMALL",
