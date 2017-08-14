@@ -78,7 +78,7 @@ if (is_fuchsia) {
         } ]
     resources = [ {
           path = rebase_path("//third_party/root_certificates/certdata.pem")
-          dest = "data/boringssl/cert.pem"
+          dest = "boringssl/cert.pem"
         } ]
   }
   fuchsia_shared_library("ssl") {
@@ -130,12 +130,9 @@ if (is_fuchsia) {
 config("boringssl_config") {
   include_dirs = [ "include" ]
   defines = [ "BORINGSSL_IMPLEMENTATION" ]
-  if (defined(is_fuchsia) && is_fuchsia) {
+  if (is_fuchsia) {
     # rand_fuchsia uses a system call
     libs = [ "magenta" ]
-  } else {
-    # pthread_rwlock_t on host requires a feature flag.
-    defines += [ "_XOPEN_SOURCE=700" ]
   }
 }
 
@@ -146,6 +143,10 @@ config("internal_config") {
     "BORINGSSL_NO_STATIC_INITIALIZER",
     "OPENSSL_SMALL",
   ]
+  if (is_linux || is_mac) {
+    # pthread_rwlock_t on host requires a feature flag.
+    defines += [ "_XOPEN_SOURCE=700" ]
+  }
 
   # TODO(aarongreen): Before we can enable the optimized assembly on ARM, we
   # need to have GN arguments or similar to indicate whether we have crypto
