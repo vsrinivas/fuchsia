@@ -34,7 +34,7 @@ const _cobaltEncodingID = 1;
 
 // connection to context reader
 final _contextReader = new ContextReaderProxy();
-ContextListenerImpl _contextListener;
+ContextListenerForTopicsImpl _contextListener;
 
 // connection to Cobalt
 final _encoder = new CobaltEncoderProxy();
@@ -42,8 +42,8 @@ final _encoder = new CobaltEncoderProxy();
 // Deduplication Map
 var _topicDedupSet = new LinkedHashSet<String>();
 
-// ContextListener callback
-void onContextUpdate(ContextUpdate update) {
+// ContextListenerForTopics callback
+void onContextUpdateForTopics(ContextUpdateForTopics update) {
   update.values.forEach((String key, String value) {
     // To record module launches, we only process each topic once
     if (!_topicDedupSet.contains(key)) {
@@ -90,14 +90,14 @@ void main(List args) {
   final appContext = new ApplicationContext.fromStartupInfo();
 
   // Connect to the ContextReader
-  _contextListener = new ContextListenerImpl(onContextUpdate);
+  _contextListener = new ContextListenerForTopicsImpl(onContextUpdateForTopics);
   connectToService(appContext.environmentServices, _contextReader.ctrl);
   assert(_contextReader.ctrl.isBound);
 
   // Subscribe to all topics
   // TODO(jwnichols): Subscribe to a smaller subset of topics when it becomes
   // possible after thatguy's context engine refactor
-  ContextQuery query = new ContextQuery();
+  ContextQueryForTopics query = new ContextQueryForTopics();
   query.topics = []; // empty list is the wildcard query
   _contextReader.subscribeToTopics(query, _contextListener.getHandle());
 

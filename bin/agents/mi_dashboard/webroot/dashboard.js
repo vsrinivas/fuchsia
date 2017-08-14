@@ -68,7 +68,7 @@ function handleWebSocketMessage(evt) {
   // parse the JSON message
   var message = JSON.parse(evt.data);
   if ("context.update" in message) {
-    handleContextUpdate(message["context.update"]);
+    handleContextUpdateForTopics(message["context.update"]);
   }
   if ("context.subscribers" in message) {
     handleContextSubscribers(message["context.subscribers"]);
@@ -153,7 +153,7 @@ function makeContextTopicRow(topic,topicValue) {
   return row;
 }
 
-function handleContextUpdate(context) {
+function handleContextUpdateForTopics(context) {
   updateOverviewFromContext(context);
 
   $.each(context, function(topic, rawValue) {

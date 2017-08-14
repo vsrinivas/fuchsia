@@ -46,7 +46,7 @@ ProposalPtr MkUrlProposal(const std::string& query) {
 
 // Subscribe to selected entities in ApplicationContext, and Suggest any found
 // selected entities to the user.
-class ProposalMaker : ContextListener {
+class ProposalMaker : ContextListenerForTopics {
  public:
   ProposalMaker()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -54,14 +54,14 @@ class ProposalMaker : ContextListener {
         proposal_out_(
             app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         binding_(this) {
-    auto query = ContextQuery::New();
+    auto query = ContextQueryForTopics::New();
     query->topics.push_back(kSelectedEntitiesTopic);
     reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
   }
 
  private:
-  // |ContextListener|
-  void OnUpdate(ContextUpdatePtr result) override {
+  // |ContextListenerForTopics|
+  void OnUpdate(ContextUpdateForTopicsPtr result) override {
     if (!KeyInUpdateResult(result, kSelectedEntitiesTopic)) {
       return;
     }
@@ -82,7 +82,7 @@ class ProposalMaker : ContextListener {
   std::unique_ptr<app::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ProposalPublisherPtr proposal_out_;
-  fidl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListenerForTopics> binding_;
 };
 
 }  // namespace maxwell

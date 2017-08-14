@@ -21,10 +21,10 @@ ContextReaderImpl::~ContextReaderImpl() {
 };
 
 void ContextReaderImpl::SubscribeToTopics(
-    ContextQueryPtr query,
-    fidl::InterfaceHandle<ContextListener> listener) {
-  ContextListenerPtr listener_ptr =
-      ContextListenerPtr::Create(std::move(listener));
+    ContextQueryForTopicsPtr query,
+    fidl::InterfaceHandle<ContextListenerForTopics> listener) {
+  ContextListenerForTopicsPtr listener_ptr =
+      ContextListenerForTopicsPtr::Create(std::move(listener));
   auto it = listeners_.emplace(listeners_.begin());
   it->listener = std::move(listener_ptr);
   it->debug_subscription_id = debug_->OnAddSubscription(*scope_, *query);

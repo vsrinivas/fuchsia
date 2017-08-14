@@ -41,8 +41,8 @@ class ContextRepository {
 
   // Does not take ownership of |listener|. |listener| must remain valid until
   // RemoveSubscription() is called with the returned SubscriptionId.
-  SubscriptionId AddSubscription(ContextQueryPtr query,
-                                 ContextListener* listener);
+  SubscriptionId AddSubscription(ContextQueryForTopicsPtr query,
+                                 ContextListenerForTopics* listener);
   void RemoveSubscription(SubscriptionId id);
 
   // Add a ContextCoprocessor. Coprocessors are executed in order as part of
@@ -64,22 +64,22 @@ class ContextRepository {
  private:
   void SetInternal(const std::string& topic, ContextValue value);
 
-  bool EvaluateQueryAndBuildUpdate(const ContextQueryPtr& query,
-                                   ContextUpdatePtr* update_output);
+  bool EvaluateQueryAndBuildUpdate(const ContextQueryForTopicsPtr& query,
+                                   ContextUpdateForTopicsPtr* update_output);
 
   // Keyed by context topic.
   std::map<std::string, ContextValue> values_;
 
   struct Subscription {
-    ContextQueryPtr query;
-    ContextListener* listener;  // Not owned.
+    ContextQueryForTopicsPtr query;
+    ContextListenerForTopics* listener;  // Not owned.
   };
   // A map of SubscriptionId (int) to Subscription.
   SubscriptionId next_subscription_id_;
   std::map<int, Subscription> subscriptions_;
 
   // A map of topic string to subscriptions that have listed that topic
-  // in their |ContextQuery.topics| field.
+  // in their |ContextQueryForTopics.topics| field.
   std::map<std::string, std::set<SubscriptionId>> topic_to_subscription_id_;
   std::set<SubscriptionId> wildcard_subscription_ids_;
 

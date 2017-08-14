@@ -22,20 +22,20 @@ import "metadata.fidl";
 [ServiceName="maxwell.ContextReader"]
 interface ContextReader {
   // When any conditions that would cause the resulting set of context values
-  // selected by |query| to change, a ContextUpdate is sent to |listener|.
+  // selected by |query| to change, a ContextUpdateForTopics is sent to |listener|.
   //
   // The current state of values selected by |query| are sent to |listener|
   // immediately.
   //
   // The subscription will continue to stay active as long as the |listener|
   // handle is not closed.
-  SubscribeToTopics(ContextQuery query, ContextListener listener);
+  SubscribeToTopics(ContextQueryForTopics query, ContextListenerForTopics listener);
 
-  Get(ContextQuery query) => ContextUpdate result;
+  Get(ContextQueryForTopics query) => ContextUpdateForTopics result;
 };
 
-interface ContextListener {
-  OnUpdate(ContextUpdate result);
+interface ContextListenerForTopics {
+  OnUpdate(ContextUpdateForTopics result);
 };
 
 struct ContextValue {
@@ -53,15 +53,15 @@ struct ContextValue {
   ContextMetadata meta;
 };
 
-struct ContextUpdate {
-  // A list of ContextValue for each key in |ContextQuery.selector|. An empty
+struct ContextUpdateForTopics {
+  // A list of ContextValue for each key in |ContextQueryForTopics.selector|. An empty
   // list means no values matched the given ContextSelector.
   map<string, array<ContextValue>> values;
 };
 
 ContextSelector {
   // A partial metadata struct. Any metadata value given in |meta| restricts
-  // the set of values in the eventual ContextUpdate to include only those
+  // the set of values in the eventual ContextUpdateForTopics to include only those
   // whose metadata match values given.
   //
   // For example, to select all context values in a given story, one would
@@ -74,9 +74,9 @@ ContextSelector {
   ContextType? type;
 };
 
-struct ContextQuery {
+struct ContextQueryForTopics {
   // A map of ContextSelector structs. The keys are specified by the client.
-  // Each key gets a corresponding entry in |ContextUpdate.values| when it is
+  // Each key gets a corresponding entry in |ContextUpdateForTopics.values| when it is
   // generated in response to this query.
   map<string, ContextSelector> selector;
 };

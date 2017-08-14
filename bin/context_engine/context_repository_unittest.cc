@@ -18,27 +18,27 @@ class ContextRepositoryTest : public ::testing::Test {
   ContextRepository repository_;
 };
 
-class TestListener : public ContextListener {
+class TestListener : public ContextListenerForTopics {
  public:
-  ContextUpdatePtr last_update;
+  ContextUpdateForTopicsPtr last_update;
 
-  void OnUpdate(ContextUpdatePtr update) override {
+  void OnUpdate(ContextUpdateForTopicsPtr update) override {
     last_update = std::move(update);
   }
 
   void reset() { last_update.reset(); }
 };
 
-ContextQueryPtr CreateQuery(const std::vector<std::string>& topics) {
-  auto query = ContextQuery::New();
+ContextQueryForTopicsPtr CreateQuery(const std::vector<std::string>& topics) {
+  auto query = ContextQueryForTopics::New();
   for (const auto& topic : topics) {
     query->topics.push_back(topic);
   }
   return query;
 }
 
-ContextQueryPtr CreateWildcardQuery() {
-  auto query = ContextQuery::New();
+ContextQueryForTopicsPtr CreateWildcardQuery() {
+  auto query = ContextQueryForTopics::New();
   query->topics.resize(0);
   return query;
 }

@@ -14,7 +14,7 @@ constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
 namespace maxwell {
 namespace {
 
-class CarmenSandiegoApp : public ContextListener {
+class CarmenSandiegoApp : public ContextListenerForTopics {
  public:
   CarmenSandiegoApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -22,14 +22,14 @@ class CarmenSandiegoApp : public ContextListener {
             app_context_->ConnectToEnvironmentService<ContextPublisher>()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this) {
-    auto query = ContextQuery::New();
+    auto query = ContextQueryForTopics::New();
     query->topics.push_back(acquirers::GpsAcquirer::kLabel);
     reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
   }
 
  private:
-  // |ContextListener|
-  void OnUpdate(ContextUpdatePtr update) override {
+  // |ContextListenerForTopics|
+  void OnUpdate(ContextUpdateForTopicsPtr update) override {
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
@@ -59,7 +59,7 @@ class CarmenSandiegoApp : public ContextListener {
 
   ContextPublisherPtr publisher_;
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListenerForTopics> binding_;
 };
 
 }  // namespace

@@ -29,11 +29,11 @@ ComponentScopePtr MakeModuleScope(const std::string& module_url,
   return scope;
 }
 
-class TestListener : public ContextListener {
+class TestListener : public ContextListenerForTopics {
  public:
   TestListener() : binding_(this) {}
 
-  void OnUpdate(ContextUpdatePtr update) override {
+  void OnUpdate(ContextUpdateForTopicsPtr update) override {
     FTL_LOG(INFO) << "OnUpdate(" << update << ")";
     last_update_ = std::move(update);
   }
@@ -42,19 +42,19 @@ class TestListener : public ContextListener {
     WaitUntil([this] { return last_update_ ? true : false; });
   }
 
-  ContextUpdate* PeekLast() { return last_update_.get(); }
-  ContextUpdatePtr PopLast() { return std::move(last_update_); }
+  ContextUpdateForTopics* PeekLast() { return last_update_.get(); }
+  ContextUpdateForTopicsPtr PopLast() { return std::move(last_update_); }
 
   // Binds a new handle to |binding_| and returns it.
-  fidl::InterfaceHandle<ContextListener> GetHandle() {
+  fidl::InterfaceHandle<ContextListenerForTopics> GetHandle() {
     return binding_.NewBinding();
   }
 
   void Reset() { last_update_.reset(); }
 
  private:
-  ContextUpdatePtr last_update_;
-  fidl::Binding<ContextListener> binding_;
+  ContextUpdateForTopicsPtr last_update_;
+  fidl::Binding<ContextListenerForTopics> binding_;
 };
 
 class ContextEngineTest : public ContextEngineTestBase {
@@ -81,8 +81,8 @@ class ContextEngineTest : public ContextEngineTestBase {
   ContextPublisherPtr publisher_;
 };
 
-ContextQueryPtr CreateQuery(const std::vector<std::string> topics) {
-  auto query = ContextQuery::New();
+ContextQueryForTopicsPtr CreateQuery(const std::vector<std::string> topics) {
+  auto query = ContextQueryForTopics::New();
   for (const auto& topic : topics) {
     query->topics.push_back(topic);
   }
@@ -102,7 +102,7 @@ TEST_F(ContextEngineTest, PublishAndSubscribe) {
   reader_->SubscribeToTopics(CreateQuery({"topic"}), listener.GetHandle());
   listener.WaitForUpdate();
 
-  ContextUpdatePtr update;
+  ContextUpdateForTopicsPtr update;
   ASSERT_TRUE((update = listener.PopLast()));
   EXPECT_EQ(1ul, update->values.size());
   EXPECT_EQ(update->values["topic"], "1");
@@ -192,7 +192,7 @@ TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
       listener.GetHandle());
   listener.WaitForUpdate();
 
-  ContextUpdatePtr update;
+  ContextUpdateForTopicsPtr update;
   ASSERT_TRUE((update = listener.PopLast()));
   EXPECT_EQ("1", update->values[kTopicString]);
 

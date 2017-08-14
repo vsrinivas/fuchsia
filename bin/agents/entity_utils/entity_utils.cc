@@ -9,7 +9,7 @@
 
 namespace maxwell {
 
-bool KeyInUpdateResult(const ContextUpdatePtr& result, const std::string& key) {
+bool KeyInUpdateResult(const ContextUpdateForTopicsPtr& result, const std::string& key) {
   // TODO(travismart): Currently, when we lose focus, several values become null
   // but this isn't reflected in their "is_null" methods. The string comparison,
   // below, however, does work.

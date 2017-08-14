@@ -136,7 +136,7 @@ class AskProposinator : public Proposinator, public AskHandler {
 };
 
 // maintains the number of proposals specified by the context field "n"
-class NProposals : public Proposinator, public ContextListener {
+class NProposals : public Proposinator, public ContextListenerForTopics {
  public:
   NProposals(ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
@@ -144,13 +144,13 @@ class NProposals : public Proposinator, public ContextListener {
     scope->set_global_scope(GlobalScope::New());
     context_engine->GetReader(std::move(scope), reader_.NewRequest());
 
-    auto query = ContextQuery::New();
+    auto query = ContextQueryForTopics::New();
     query->topics.push_back("n");
     reader_->SubscribeToTopics(std::move(query),
                                listener_binding_.NewBinding());
   }
 
-  void OnUpdate(ContextUpdatePtr update) override {
+  void OnUpdate(ContextUpdateForTopicsPtr update) override {
     int n = std::stoi(update->values["n"]);
 
     for (int i = n_; i < n; i++)
@@ -163,7 +163,7 @@ class NProposals : public Proposinator, public ContextListener {
 
  private:
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> listener_binding_;
+  fidl::Binding<ContextListenerForTopics> listener_binding_;
 
   int n_ = 0;
 };

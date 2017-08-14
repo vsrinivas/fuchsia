@@ -9,8 +9,8 @@
 
 namespace maxwell {
 
-std::ostream& operator<<(std::ostream& os, const ContextUpdate& update);
+std::ostream& operator<<(std::ostream& os, const ContextUpdateForTopics& update);
 
-std::ostream& operator<<(std::ostream& os, const ContextQuery& query);
+std::ostream& operator<<(std::ostream& os, const ContextQueryForTopics& query);
 
 }  // namespace maxwell

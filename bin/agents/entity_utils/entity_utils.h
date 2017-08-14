@@ -29,6 +29,6 @@ const std::string kSelectedEntitiesTopic = "/inferred/selected_entities";
 
 // Return true iff key is in the Context Engine update given by result,
 // and the value of key is not null.
-bool KeyInUpdateResult(const ContextUpdatePtr& result, const std::string& key);
+bool KeyInUpdateResult(const ContextUpdateForTopicsPtr& result, const std::string& key);
 
 }  // namespace maxwell

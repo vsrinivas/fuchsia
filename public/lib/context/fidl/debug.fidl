@@ -26,5 +26,5 @@ interface SubscriberListener {
 struct SubscriberUpdate {
   ComponentScope subscriber;
   // the nonempty collection of current active queries
-  array<ContextQuery> queries;
+  array<ContextQueryForTopics> queries;
 };

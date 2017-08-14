@@ -20,7 +20,7 @@ class ContextDataHandler extends DataHandler {
 
   // connection to context reader
   ContextReaderProxy _contextReader;
-  ContextListenerImpl _contextListener;
+  ContextListenerForTopicsImpl _contextListener;
 
   SendWebSocketMessage _sendMessage;
 
@@ -30,12 +30,12 @@ class ContextDataHandler extends DataHandler {
 
     // Connect to the ContextReader
     _contextReader = new ContextReaderProxy();
-    _contextListener = new ContextListenerImpl(this.onContextUpdate);
+    _contextListener = new ContextListenerForTopicsImpl(this.onContextUpdateForTopics);
     connectToService(appContext.environmentServices, _contextReader.ctrl);
     assert(_contextReader.ctrl.isBound);
 
     // Subscribe to all topics
-    ContextQuery query = new ContextQuery();
+    ContextQueryForTopics query = new ContextQueryForTopics();
     query.topics = []; // empty list is the wildcard query
     _contextReader.subscribeToTopics(query, _contextListener.getHandle());
   }
@@ -64,7 +64,7 @@ class ContextDataHandler extends DataHandler {
     socket.add(message);
   }
 
-  void onContextUpdate(ContextUpdate update) {
+  void onContextUpdateForTopics(ContextUpdateForTopics update) {
     // Cache all context values that we receive
     update.values.forEach((String key, String value) {
       // print("[DASHBOARD UPDATE] ${key}: ${value}");

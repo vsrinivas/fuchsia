@@ -13,7 +13,7 @@ import "metadata.fidl";
 // component.
 [ServiceName="maxwell.ContextReader"]
 interface ContextReader {
-  // When any of the conditions in |query| change, a ContextUpdate is sent to
+  // When any of the conditions in |query| change, a ContextUpdateForTopics is sent to
   // |listener|.
   //
   // If current context values match the query, a result is sent immediately.
@@ -21,20 +21,20 @@ interface ContextReader {
   // The query will continue to stay active as long as the |listener| handle is
   // not closed.
   //
-  // TODO(thatguy): Currently a ContextUpdate doesn't indicate when the filter
-  // conditions in |ContextQuery.filters| changes from matching to not
-  // matching.  We should add some indicator in ContextUpdate so clients can
+  // TODO(thatguy): Currently a ContextUpdateForTopics doesn't indicate when the filter
+  // conditions in |ContextQueryForTopics.filters| changes from matching to not
+  // matching.  We should add some indicator in ContextUpdateForTopics so clients can
   // differentiate between "no change" and "your query no longer matches".
-  SubscribeToTopics(ContextQuery query, ContextListener listener);
+  SubscribeToTopics(ContextQueryForTopics query, ContextListenerForTopics listener);
 };
 
-interface ContextListener {
+interface ContextListenerForTopics {
   // Receives an update for a context label.
-  OnUpdate(ContextUpdate result);
+  OnUpdate(ContextUpdateForTopics result);
 };
 
-struct ContextUpdate {
-  // A map of the latest values of each topic specified in the ContextQuery's
+struct ContextUpdateForTopics {
+  // A map of the latest values of each topic specified in the ContextQueryForTopics's
   // |topics| field that was issued during |SubscribeToTopics()|.
   //
   // Topics that don't have a current value are not present in |values|.
@@ -45,8 +45,8 @@ struct ContextUpdate {
   map<string, ContextMetadata> meta;
 };
 
-struct ContextQuery {
-  // A set of topics to include in the ContextUpdate when the following
+struct ContextQueryForTopics {
+  // A set of topics to include in the ContextUpdateForTopics when the following
   // conditions match. An empty list indicates a wildcard query and includes
   // all topics.
   //
@@ -58,7 +58,7 @@ struct ContextQuery {
   // only be notified of an update if every specified filter evaluates to true.
   //
   // Some ContextFilters modify the context value during evaluation. In those
-  // cases, the modified value will be present in |ContextUpdate.values|
+  // cases, the modified value will be present in |ContextUpdateForTopics.values|
   // instead of the current value in the context service.
   //
   // Filters for topics not listed in |topics| are ignored.  Filters on a

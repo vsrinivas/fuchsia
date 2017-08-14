@@ -22,15 +22,15 @@ class ContextReaderImpl : public ContextReader {
 
  private:
   struct Subscription {
-    ContextListenerPtr listener;
+    ContextListenerForTopicsPtr listener;
     ContextRepository::SubscriptionId repo_subscription_id;
     ContextDebugImpl::SubscriptionId debug_subscription_id;
   };
 
   // |ContextReader|
   void SubscribeToTopics(
-      ContextQueryPtr query,
-      fidl::InterfaceHandle<ContextListener> listener) override;
+      ContextQueryForTopicsPtr query,
+      fidl::InterfaceHandle<ContextListenerForTopics> listener) override;
 
   const ComponentScopePtr scope_;
   ContextRepository* repository_;

@@ -16,19 +16,19 @@ constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 namespace maxwell {
 namespace {
 
-class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
+class IdeasAgentApp : public agents::IdeasAgent, public ContextListenerForTopics {
  public:
   IdeasAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
-    auto query = ContextQuery::New();
+    auto query = ContextQueryForTopics::New();
     query->topics.push_back("/location/region");
     reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
   }
 
-  void OnUpdate(ContextUpdatePtr update) override {
+  void OnUpdate(ContextUpdateForTopicsPtr update) override {
     rapidjson::Document d;
     d.Parse(update->values["/location/region"].data());
 
@@ -72,7 +72,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
   std::unique_ptr<app::ApplicationContext> app_context_;
 
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListenerForTopics> binding_;
   ProposalPublisherPtr out_;
 };
 

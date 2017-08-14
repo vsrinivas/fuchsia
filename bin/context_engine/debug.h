@@ -13,7 +13,7 @@ namespace maxwell {
 
 class ContextDebugImpl : public ContextDebug {
   using Subscriptions = std::multimap<ComponentScopePtr,
-                                      ContextQueryPtr,
+                                      ContextQueryForTopicsPtr,
                                       bool (*)(const ComponentScopePtr&,
                                                const ComponentScopePtr&)>;
 
@@ -23,7 +23,7 @@ class ContextDebugImpl : public ContextDebug {
   ContextDebugImpl();
 
   SubscriptionId OnAddSubscription(const ComponentScope& subscriber,
-                                   const ContextQuery& query);
+                                   const ContextQueryForTopics& query);
 
   void OnRemoveSubscription(SubscriptionId subscription);
 

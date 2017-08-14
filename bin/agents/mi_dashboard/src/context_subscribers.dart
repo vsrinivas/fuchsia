@@ -49,7 +49,7 @@ class ContextSubscribersDataHandler extends SubscriberListener
         default:
           return {"type": "unknown"};
       }
-    } else if (object is ContextQuery) {
+    } else if (object is ContextQueryForTopics) {
       return object.topics;
     } else {
       return object.toJson();

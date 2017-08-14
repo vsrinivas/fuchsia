@@ -17,7 +17,7 @@ namespace maxwell {
 
 // Subscribe to entities and selection in the Context Engine, and Publish any
 // selected entities back to the Context Engine.
-class SelectedEntityFinder : ContextListener {
+class SelectedEntityFinder : ContextListenerForTopics {
  public:
   SelectedEntityFinder()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
@@ -26,7 +26,7 @@ class SelectedEntityFinder : ContextListener {
             app_context_->ConnectToEnvironmentService<ContextPublisher>()),
         topics_({kFocalEntitiesTopic, kRawTextSelectionTopic}),
         binding_(this) {
-    auto query = ContextQuery::New();
+    auto query = ContextQueryForTopics::New();
     for (const std::string& s : topics_) {
       query->topics.push_back(s);
     }
@@ -79,8 +79,8 @@ class SelectedEntityFinder : ContextListener {
     return modular::JsonValueToString(entities_json);
   }
 
-  // |ContextListener|
-  void OnUpdate(ContextUpdatePtr result) override {
+  // |ContextListenerForTopics|
+  void OnUpdate(ContextUpdateForTopicsPtr result) override {
     if (!KeyInUpdateResult(result, kFocalEntitiesTopic) ||
         !KeyInUpdateResult(result, kRawTextSelectionTopic)) {
       return;
@@ -98,7 +98,7 @@ class SelectedEntityFinder : ContextListener {
   ContextReaderPtr reader_;
   ContextPublisherPtr publisher_;
   const std::vector<std::string> topics_;
-  fidl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListenerForTopics> binding_;
 };
 
 }  // namespace maxwell

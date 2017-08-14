@@ -20,7 +20,7 @@ namespace {
 // query which contained |filter|. If |*output_value| is a null
 // rapidjson::Value, the |value| is sent to clients instead.
 //
-// FilterFunctions are applied independently to topics during ContextQuery
+// FilterFunctions are applied independently to topics during ContextQueryForTopics
 // evaluation.
 using FilterFunction = std::function<bool(const ContextFilterPtr& filter,
                                           const rapidjson::Value& value,
@@ -159,11 +159,11 @@ const ContextValue* ContextRepository::Get(const std::string& topic) const {
 }
 
 ContextRepository::SubscriptionId ContextRepository::AddSubscription(
-    ContextQueryPtr query,
-    ContextListener* listener) {
+    ContextQueryForTopicsPtr query,
+    ContextListenerForTopics* listener) {
   // If the query already matches our current state, notify the listener
   // immediately.
-  ContextUpdatePtr update;
+  ContextUpdateForTopicsPtr update;
   if (EvaluateQueryAndBuildUpdate(query, &update)) {
     FTL_DCHECK(!update->values.is_null());
     listener->OnUpdate(std::move(update));
@@ -281,7 +281,7 @@ void ContextRepository::SetInternal(const std::string& topic,
     auto it = subscriptions_.find(id);
     FTL_DCHECK(it != subscriptions_.end());
     const auto& subscription = it->second;
-    ContextUpdatePtr update;
+    ContextUpdateForTopicsPtr update;
     if (EvaluateQueryAndBuildUpdate(subscription.query, &update)) {
       FTL_DCHECK(!update->values.is_null());
       subscription.listener->OnUpdate(std::move(update));
@@ -290,13 +290,13 @@ void ContextRepository::SetInternal(const std::string& topic,
 }
 
 bool ContextRepository::EvaluateQueryAndBuildUpdate(
-    const ContextQueryPtr& query,
-    ContextUpdatePtr* update_output) {
+    const ContextQueryForTopicsPtr& query,
+    ContextUpdateForTopicsPtr* update_output) {
   // Wildcard query? Send everything.
   if (query->topics.size() == 0) {
     for (const auto& entry : values_) {
       if (!(*update_output))
-        *update_output = ContextUpdate::New();
+        *update_output = ContextUpdateForTopics::New();
       (*update_output)->values[entry.first] = entry.second.json;
       (*update_output)->meta[entry.first] = entry.second.meta.Clone();
     }
@@ -330,7 +330,7 @@ bool ContextRepository::EvaluateQueryAndBuildUpdate(
     }
 
     if (!(*update_output))
-      *update_output = ContextUpdate::New();
+      *update_output = ContextUpdateForTopics::New();
     (*update_output)->values[topic] = value_to_send;
     (*update_output)->meta[topic] = values_[topic].meta.Clone();
   }

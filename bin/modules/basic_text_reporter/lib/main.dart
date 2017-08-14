@@ -33,18 +33,18 @@ void _log(String msg) {
 
 // A listener for finding updated focal entities and applying UI treatment to
 // them.
-class ContextListenerImpl extends ContextListener {
-  final ContextListenerBinding _binding = new ContextListenerBinding();
+class ContextListenerForTopicsImpl extends ContextListenerForTopics {
+  final ContextListenerForTopicsBinding _binding = new ContextListenerForTopicsBinding();
 
   /// Constructor
-  ContextListenerImpl();
+  ContextListenerForTopicsImpl();
 
   /// Gets the [InterfaceHandle]
   /// The returned handle should only be used once.
-  InterfaceHandle<ContextListener> getHandle() => _binding.wrap(this);
+  InterfaceHandle<ContextListenerForTopics> getHandle() => _binding.wrap(this);
 
   @override
-  Future<Null> onUpdate(ContextUpdate result) async {
+  Future<Null> onUpdate(ContextUpdateForTopics result) async {
     if (!result.values.containsKey(_kCurrentFocalEntitiesTopic)) {
       return;
     }
@@ -91,7 +91,7 @@ class ModuleImpl extends Module {
       new IntelligenceServicesProxy();
 
   final ContextReaderProxy _contextReader = new ContextReaderProxy();
-  ContextListenerImpl _contextListenerImpl;
+  ContextListenerForTopicsImpl _contextListenerImpl;
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bind(InterfaceRequest<Module> request) {
@@ -120,8 +120,8 @@ class ModuleImpl extends Module {
 
     // Listen to updates from the context service.
     _intelligenceServices.getContextReader(_contextReader.ctrl.request());
-    _contextListenerImpl = new ContextListenerImpl();
-    ContextQuery query = new ContextQuery.init(
+    _contextListenerImpl = new ContextListenerForTopicsImpl();
+    ContextQueryForTopics query = new ContextQueryForTopics.init(
         <String>[_kCurrentFocalEntitiesTopic], null /* filters */);
     _contextReader.subscribeToTopics(query, _contextListenerImpl.getHandle());
 

@@ -44,7 +44,7 @@ ContextDebugImpl::ContextDebugImpl() : subscriptions_(CompareScopes) {}
 
 ContextDebugImpl::SubscriptionId ContextDebugImpl::OnAddSubscription(
     const ComponentScope& subscriber,
-    const ContextQuery& query) {
+    const ContextQueryForTopics& query) {
   SubscriptionId id = subscriptions_.emplace(subscriber.Clone(), query.Clone());
   DispatchAll();
   return id;
@@ -70,7 +70,7 @@ void ContextDebugImpl::DispatchAll() {
 void ContextDebugImpl::Dispatch(SubscriberListener* listener) {
   auto updates = fidl::Array<SubscriberUpdatePtr>::New(0);
   const ComponentScopePtr* scope = nullptr;
-  fidl::Array<ContextQueryPtr>* queries;
+  fidl::Array<ContextQueryForTopicsPtr>* queries;
   for (const auto& subscription : subscriptions_) {
     // Create a scope/update for each distinct subscriber in the multimap.
     if (!scope || CompareScopes(*scope, subscription.first)) {
