@@ -66,7 +66,6 @@ space of the application and used to send or receive audio data as appropriate.
 Generally, the operations conducted over the ring buffer channel include...
  * Requesting a shared buffer
  * Starting and Stopping stream playback/capture
- * Watchdog-style automatic stream shutdown
  * Receiving notifications of playback/capture progress
  * Receiving notifications of error conditions such as HW FIFO under/overflow,
    bus transaction failure, etc...
@@ -717,12 +716,19 @@ quickly enough that aliasing does not occur.
 > TODO: define these and what the behavior of drivers should be in case they
 > occur.
 
-### Automatic shutdown
+### Unexpected application termination
 
-> TODO: define a mechanism by which the application may inform the driver that
-> it will periodically indicate that it is still alive and producing data.  For
-> output streams, this allows the driver to cleanly shutdown without looping an
-> audio buffer forever in the case that a client application wedges.
+If the other side of a ring buffer control channel is closed for any reason,
+drivers **must** immediately close the control channel, and shut down the ring
+buffer such that playback ring buffers begin to produce silence.  While drivers
+are encouraged to do so in a way which produces a graceful transition to
+silence, the requirement is that the audio stream go silent instead of looping.
+Once the transition to silence is complete, the resources associated with
+playback may be released and reused by the driver.
+
+This way, if an application teminates unexpectedly, the kernel will close the
+application's channels and cause audio playback to stop instead of continuing to
+loop.
 
 ### Clock recovery
 
