@@ -17,6 +17,7 @@ pub type mx_futex_t = isize;
 pub type mx_addr_t = usize;
 pub type mx_paddr_t = usize;
 pub type mx_vaddr_t = usize;
+pub type mx_off_t = u64;
 
 // Auto-generated using tools/gen_status.py
 pub const MX_OK                    : mx_status_t = 0;
