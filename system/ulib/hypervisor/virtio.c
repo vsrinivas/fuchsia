@@ -125,7 +125,7 @@ mx_status_t virtio_pci_legacy_write(virtio_device_t* device, mx_handle_t vcpu,
             fprintf(stderr, "Notify queue does not exist.\n");
             return MX_ERR_NOT_SUPPORTED;
         }
-        mx_status_t status = device->ops->queue_notify(device, device->queue_sel);
+        mx_status_t status = device->ops->queue_notify(device, io->u16);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
             return status;
