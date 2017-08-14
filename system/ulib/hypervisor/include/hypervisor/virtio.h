@@ -71,10 +71,6 @@ typedef struct virtio_device {
     void* guest_physmem_addr;
     // Size of guest physical memory.
     size_t guest_physmem_size;
-    // IO APIC for use with interrupt redirects.
-    const io_apic_t* io_apic;
-    // IRQ assignment for this device.
-    uint32_t global_irq;
 
     // Device-specific operations.
     virtio_device_ops_t* ops;

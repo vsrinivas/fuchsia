@@ -22,9 +22,6 @@
 /* Block configuration constants. */
 #define QUEUE_SIZE      128u
 
-/* Interrupt vectors. */
-#define X86_INT_BLOCK   33u
-
 /* Get a pointer to a block_t from the underlying virtio device. */
 static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
     return (block_t*) virtio_device->impl;
@@ -63,7 +60,7 @@ static virtio_device_ops_t block_device_ops = {
 };
 
 mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
-                       size_t guest_physmem_size, const io_apic_t* io_apic) {
+                       size_t guest_physmem_size) {
     memset(block, 0, sizeof(*block));
 
     // Open block file. First try to open as read-write but fall back to read
@@ -90,14 +87,12 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
     // Setup Virtio device.
     block->virtio_device.device_id = VIRTIO_ID_BLOCK;
     block->virtio_device.config_size = sizeof(virtio_blk_config_t);
-    block->virtio_device.global_irq = X86_INT_BLOCK;
     block->virtio_device.impl = block;
     block->virtio_device.num_queues = 1;
     block->virtio_device.queues = &block->queue;
     block->virtio_device.ops = &block_device_ops;
     block->virtio_device.guest_physmem_addr = guest_physmem_addr;
     block->virtio_device.guest_physmem_size = guest_physmem_size;
-    block->virtio_device.io_apic = io_apic;
 
     // Setup Virtio queue.
     block->queue.size = QUEUE_SIZE;

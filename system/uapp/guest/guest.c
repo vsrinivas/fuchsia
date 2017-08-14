@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
     // Setup PCI.
     pci_bus_t bus;
     guest_ctx.bus = &bus;
-    status = pci_bus_init(&bus);
+    status = pci_bus_init(&bus, &io_apic);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to create PCI bus.\n");
         return status;
@@ -191,7 +191,7 @@ int main(int argc, char** argv) {
     guest_ctx.block = &block;
     pci_device_t* virtio_block = &block.virtio_device.pci_device;
     if (block_path != NULL) {
-        status = block_init(&block, block_path, (void*)addr, kVmoSize, &io_apic);
+        status = block_init(&block, block_path, (void*)addr, kVmoSize);
         if (status != MX_OK)
             return status;
 

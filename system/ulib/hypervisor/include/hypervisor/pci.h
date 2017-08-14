@@ -38,10 +38,12 @@
 #define PCI_ECAM_REGISTER(addr)             ((addr) & 0xfff)
 
 typedef struct instruction instruction_t;
+typedef struct io_apic io_apic_t;
 typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_guest_memory mx_guest_memory_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 typedef struct pci_device pci_device_t;
+typedef struct pci_bus pci_bus_t;
 
 /* Device specific callbacks. */
 typedef struct pci_device_ops {
@@ -74,6 +76,10 @@ typedef struct pci_device {
     void* impl;
     // Device specific operations.
     const pci_device_ops_t* ops;
+    // PCI bus this device is connected to.
+    pci_bus_t* bus;
+    // IRQ vector assigned by the bus.
+    uint32_t global_irq;
 } pci_device_t;
 
 typedef struct pci_bus {
@@ -82,11 +88,13 @@ typedef struct pci_bus {
     uint32_t config_addr;
     // Devices on the virtual PCI bus.
     pci_device_t* device[PCI_MAX_DEVICES];
+    // IO APIC for use with interrupt redirects.
+    const io_apic_t* io_apic;
     // Embedded root complex device.
     pci_device_t root_complex;
 } pci_bus_t;
 
-mx_status_t pci_bus_init(pci_bus_t* bus);
+mx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
 
 /* Connect a PCI device to the bus.
  *
@@ -122,3 +130,6 @@ uint16_t pci_bar_size(pci_device_t* device);
 
 /* Start asynchronous handling of writes to the pci device. */
 mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t guest);
+
+/* Raise the configured interrupt for the given PCI device. */
+mx_status_t pci_interrupt(pci_device_t* device, mx_handle_t vcpu);

@@ -49,7 +49,7 @@ static mx_status_t setup(test_t* test) {
     vcpu_init(&test->vcpu_ctx);
     io_apic_init(&test->io_apic);
     io_port_init(&test->io_port);
-    pci_bus_init(&test->bus);
+    pci_bus_init(&test->bus, &test->io_apic);
 
     test->guest_ctx.io_apic = &test->io_apic;
     test->guest_ctx.io_port = &test->io_port;

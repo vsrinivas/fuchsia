@@ -11,7 +11,9 @@
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/decode.h>
+#include <hypervisor/io_apic.h>
 #include <hypervisor/vcpu.h>
+#include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <virtio/virtio_ids.h>
 
@@ -27,6 +29,11 @@ static const uint32_t kPioBase = 0x8000;
 static const uint32_t kMaxBarSize = 1 << 8;
 static const uint32_t kPioAddressMask = (uint32_t)~BIT_MASK(2);
 static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
+/* Per-device IRQ assignments.
+ *
+ * These are provided to the guest via the _SB section in the DSDT ACPI table.
+ */
+static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = { 32, 33 };
 
 static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t port,
                                             mx_vcpu_io_t* vcpu_io) {
@@ -54,8 +61,9 @@ static void pci_root_complex_init(pci_device_t* host_bridge) {
     host_bridge->ops = &kRootComplexDeviceOps;
 }
 
-mx_status_t pci_bus_init(pci_bus_t* bus) {
+mx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic) {
     memset(bus, 0, sizeof(*bus));
+    bus->io_apic = io_apic;
     pci_root_complex_init(&bus->root_complex);
     return pci_bus_connect(bus, &bus->root_complex, PCI_DEVICE_ROOT_COMPLEX);
 }
@@ -74,9 +82,11 @@ mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) 
     if (bar_size > kMaxBarSize)
         return MX_ERR_NOT_SUPPORTED;
 
+    device->bus = bus;
     device->bar_size = bar_size;
     device->bar[0] = kPioBase + (slot * kMaxBarSize);
     device->command = PCI_COMMAND_IO_EN;
+    device->global_irq = kPciGlobalIrqAssigments[slot];
     bus->device[slot] = device;
     return MX_OK;
 }
@@ -437,4 +447,13 @@ mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t
     uint32_t bar_base = pci_bar_base(device);
     uint16_t bar_size = pci_bar_size(device);
     return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, pci_handler, device);
+}
+
+mx_status_t pci_interrupt(pci_device_t* pci_device, mx_handle_t vcpu) {
+    pci_bus_t* bus = pci_device->bus;
+    if (!bus)
+        return MX_ERR_BAD_STATE;
+
+    uint32_t interrupt = io_apic_redirect(bus->io_apic, pci_device->global_irq);
+    return mx_vcpu_interrupt(vcpu, interrupt);
 }
