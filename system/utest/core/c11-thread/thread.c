@@ -93,9 +93,30 @@ bool long_name_succeeds(void) {
     END_TEST;
 }
 
+static int detach_thrd(void* arg) {
+    BEGIN_HELPER;
+    thrd_t* thrd = (thrd_t*) arg;
+    EXPECT_EQ(thrd_detach(*thrd), 0, "");
+    free(thrd);
+    END_HELPER;
+}
+
+bool detach_self_test(void) {
+    BEGIN_TEST;
+
+    for (size_t i = 0; i < 1000; i++) {
+        thrd_t* thrd = calloc(sizeof(thrd_t), 1);
+        ASSERT_NONNULL(thrd, "");
+        ASSERT_EQ(thrd_create(thrd, detach_thrd, thrd), 0, "");
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(c11_thread_tests)
 RUN_TEST(c11_thread_test)
 RUN_TEST(long_name_succeeds)
+RUN_TEST(detach_self_test)
 END_TEST_CASE(c11_thread_tests)
 
 #ifndef BUILD_COMBINED_TESTS
