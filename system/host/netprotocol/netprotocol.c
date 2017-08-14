@@ -29,7 +29,7 @@
 
 static uint32_t cookie = 0x12345678;
 static int netboot_timeout = 250;
-bool netboot_wait = true;
+static bool netboot_wait = true;
 
 static struct timeval netboot_timeout_init(int msec) {
     struct timeval timeout_tv;
@@ -151,17 +151,55 @@ static bool netboot_receive_query(int socket, on_device_cb callback, void* data)
     return false;
 }
 
-static struct option longopts[] = {
+static struct option default_opts[] = {
     {"help",    no_argument,       NULL, 'h'},
     {"timeout", required_argument, NULL, 't'},
     {"nowait",  no_argument,       NULL, 'n'},
-    {NULL,      0,                 NULL, 0}
+    {NULL,      0,                 NULL, 0},
 };
 
-int netboot_handle_getopt(int argc, char * const *argv) {
-    int ch;
+static const struct option netboot_zero_opt = {NULL, 0, NULL, 0};
 
-    while ((ch = getopt_long_only(argc, argv, "t:", longopts, NULL)) != -1) {
+static size_t netboot_count_opts(const struct option *opts) {
+    if (!opts) {
+        return 0;
+    }
+    size_t count = 0;
+    while (memcmp(&opts[count], &netboot_zero_opt, sizeof(netboot_zero_opt))) {
+        count++;
+    }
+    return count;
+}
+
+static void netboot_copy_opts(struct option *dst_opts, const struct option *src_opts) {
+    if (!src_opts) {
+        return;
+    }
+    size_t i;
+    for (i = 0; memcmp(&src_opts[i], &netboot_zero_opt, sizeof(netboot_zero_opt)); i++) {
+        dst_opts[i] = src_opts[i];
+    }
+}
+
+int netboot_handle_custom_getopt(int argc, char * const *argv,
+                                 const struct option *custom_opts,
+                                 size_t num_custom_opts0,
+                                 bool (*opt_callback)(int ch, int argc, char * const *argv)) {
+    size_t num_default_opts = netboot_count_opts(default_opts);
+    size_t num_custom_opts = netboot_count_opts(custom_opts);
+
+    struct option *combined_opts;
+    combined_opts = (struct option*)malloc(sizeof(struct option) *
+                                           (num_default_opts + num_custom_opts +1));
+
+    netboot_copy_opts(combined_opts, default_opts);
+    netboot_copy_opts(combined_opts + num_default_opts, custom_opts);
+    memset(&combined_opts[num_default_opts + num_custom_opts], 0x0,
+           sizeof(struct option));
+
+    int retval = -1;
+    int ch;
+    while ((ch = getopt_long_only(argc, argv, "t:", combined_opts, NULL)) != -1) {
         switch (ch) {
             case 't':
                 netboot_timeout = atoi(optarg);
@@ -170,10 +208,21 @@ int netboot_handle_getopt(int argc, char * const *argv) {
                 netboot_wait = false;
                 break;
             default:
-                return -1;
+                if (opt_callback && opt_callback(ch, argc, argv)) {
+                    break;
+                } else {
+                    goto err;
+                }
         }
     }
-    return optind;
+    retval = optind;
+err:
+    free(combined_opts);
+    return retval;
+}
+
+int netboot_handle_getopt(int argc, char * const *argv) {
+    return netboot_handle_custom_getopt(argc, argv, NULL, 0, NULL);
 }
 
 void netboot_usage(void) {
@@ -181,8 +230,6 @@ void netboot_usage(void) {
     fprintf(stderr, "    --help            Print this message.\n");
     fprintf(stderr, "    --timeout=<msec>  Set discovery timeout to <msec>.\n");
     fprintf(stderr, "    --nowait          Do not wait for first packet before timing out.\n");
-
-
 }
 
 int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, void* data) {

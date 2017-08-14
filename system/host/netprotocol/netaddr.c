@@ -23,6 +23,8 @@ static const char* hostname;
 static struct sockaddr_in6 addr;
 static bool found = false;
 static char found_device_nodename[MAX_NODENAME_LENGTH];
+static bool fuchsia_address = false;
+static const char* appname;
 
 static bool on_device(device_info_t* device, void* cookie) {
     if (hostname != NULL && strcmp(hostname, device->nodename)) {
@@ -42,40 +44,46 @@ static bool on_device(device_info_t* device, void* cookie) {
     return true;
 }
 
-static struct option longopts[] = {
-    {"help", no_argument, NULL, 'h'},
-    {"fuchsia", no_argument, NULL, 'f'},
-    {NULL, 0, NULL, 0},
-};
-
-static void usage(const char* argv0) {
-  fprintf(stderr, "%s [--fuchsia] [hostname]\n", argv0);
-  exit(1);
+static void usage(void) {
+    fprintf(stderr, "usage: %s [options] [hostname]\n", appname);
+    netboot_usage();
+    fprintf(stderr, "    --fuchsia         Use fuchsia link local addresses.\n");
 }
 
-int main(int argc, char** argv) {
-    bool fuchsia_address = false;
-    int ch;
-    while ((ch = getopt_long_only(argc, argv, "hf", longopts, NULL)) != -1) {
-        switch (ch) {
+static struct option netaddr_opts[] = {
+    {"fuchsia", no_argument, NULL, 'f'},
+    {NULL,      0,           NULL, 0},
+};
+
+static bool netaddr_opt_callback(int ch, int argc, char * const *argv) {
+    switch (ch) {
         case 'f':
             fuchsia_address = true;
             break;
         default:
-            usage(argv[0]);
-            break;
-        }
+            return false;
+    }
+    return true;
+}
+
+int main(int argc, char** argv) {
+    appname = argv[0];
+    int index = netboot_handle_custom_getopt(argc, argv, netaddr_opts, 1, netaddr_opt_callback);
+    if (index < 0) {
+        usage();
+        return -1;
     }
 
-    if (optind + 1 == argc) {
-        hostname = argv[optind];
-        if (!*hostname || (*hostname == ':' && hostname[1] == '\0'))
-            hostname = NULL;
-    } else if (optind != argc) {
-        usage(argv[0]);
+    argv += index;
+    argc -= index;
+
+    if (argc > 1) {
+        usage();
     }
 
-    netboot_wait = false;
+    if (argc == 1) {
+        hostname = argv[0];
+    }
 
     if (netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL) || !found) {
         fprintf(stderr, "Failed to discover %s\n", hostname?hostname:"");

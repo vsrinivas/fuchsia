@@ -5,6 +5,7 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <getopt.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -30,10 +31,12 @@ typedef struct device_info {
   uint16_t bootloader_port;
 } device_info_t;
 
-extern bool netboot_wait;
-
 // Handle netboot command line options.
 int netboot_handle_getopt(int argc, char * const *argv);
+int netboot_handle_custom_getopt(int argc, char * const *argv,
+                                 const struct option *custom_opts,
+                                 size_t num_custom_opts,
+                                 bool (*opt_callback)(int ch, int argc, char * const *argv));
 void netboot_usage(void);
 
 // Returns whether discovery should continue or not.
