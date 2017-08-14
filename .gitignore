@@ -3,6 +3,7 @@
 /.versions
 /cmake
 /gdb
+/linux-x64/
 /linux64/bootserver
 /linux64/bootserver.stamp
 /linux64/clang.stamp
@@ -26,6 +27,7 @@
 /linux64/qemu.stamp
 /linux64/rust.stamp
 /linux64/sysroot.stamp
+/mac-x64/
 /mac64/bootserver
 /mac64/bootserver.stamp
 /mac/clang.stamp
@@ -48,7 +50,6 @@
 /mac/qemu.stamp
 /mac/rust.stamp
 /qemu
-/rust
 /sysroot
 /toolchain
 /win/gn.exe
