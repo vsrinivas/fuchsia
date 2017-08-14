@@ -28,20 +28,21 @@
 syscall_entry_begin \name
     .cfi_same_value %r12
     .cfi_same_value %r13
-.if \nargs <= 6
+.if \nargs <= 3
+    magenta_syscall \num, \name, \name
+    ret
+.elseif \nargs <= 6
     mov      %rcx, %r10  // Argument 4
     magenta_syscall \num, \name, \name
     ret
-.endif
-.if \nargs == 7
+.elseif \nargs == 7
     push_reg %r12
     mov      0x10(%rsp), %r12  // Argument 7
     mov      %rcx, %r10  // Argument 4
     magenta_syscall \num, \name, \name
     pop_reg  %r12
     ret
-.endif
-.if \nargs == 8
+.elseif \nargs == 8
     push_reg %r12
     push_reg %r13
     mov      0x18(%rsp), %r12  // Argument 7
