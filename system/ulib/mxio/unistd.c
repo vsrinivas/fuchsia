@@ -751,6 +751,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case MX_ERR_ADDRESS_UNREACHABLE: return ENETUNREACH;
     case MX_ERR_ADDRESS_IN_USE: return EADDRINUSE;
     case MX_ERR_NOT_CONNECTED: return ENOTCONN;
+    case MX_ERR_CONNECTION_REFUSED: return ECONNREFUSED;
     case MX_ERR_CONNECTION_RESET: return ECONNRESET;
     case MX_ERR_CONNECTION_ABORTED: return ECONNABORTED;
 
