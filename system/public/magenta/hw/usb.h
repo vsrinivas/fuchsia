@@ -61,6 +61,9 @@ __BEGIN_CDECLS;
 #define USB_CLASS_MISC                      0xef
 #define USB_CLASS_VENDOR                    0xFf
 
+#define USB_SUBCLASS_MSC_SCSI               0x06
+#define USB_PROTOCOL_MSC_BULK_ONLY          0x50
+
 /* Descriptor Types */
 #define USB_DT_DEVICE                      0x01
 #define USB_DT_CONFIG                      0x02
