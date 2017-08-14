@@ -10,7 +10,7 @@ namespace modular {
 
 ContextHandler::ContextHandler(
     maxwell::IntelligenceServices* const intelligence_services)
-    : value_(maxwell::ContextUpdate::New()), binding_(this) {
+    : value_(maxwell::ContextUpdateForTopics::New()), binding_(this) {
   intelligence_services->GetContextReader(context_reader_.NewRequest());
   query_.topics.resize(0);
 }
@@ -30,7 +30,7 @@ void ContextHandler::Watch(const std::function<void()>& watcher) {
   watchers_.push_back(watcher);
 }
 
-void ContextHandler::OnUpdate(maxwell::ContextUpdatePtr value) {
+void ContextHandler::OnUpdate(maxwell::ContextUpdateForTopicsPtr value) {
   value_ = std::move(value);
 
   for (auto& watcher : watchers_) {

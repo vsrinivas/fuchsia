@@ -23,7 +23,7 @@ namespace modular {
 // importance. Therefore, it watches only selected topics. This will be revised
 // later. The dimensions of context and their current values are available form
 // values().
-class ContextHandler : maxwell::ContextListener {
+class ContextHandler : maxwell::ContextListenerForTopics {
  public:
   explicit ContextHandler(maxwell::IntelligenceServices* intelligence_services);
   ~ContextHandler() override;
@@ -41,18 +41,18 @@ class ContextHandler : maxwell::ContextListener {
   const ContextState& values() const { return value_->values; }
 
  private:
-  // |ContextListener|
-  void OnUpdate(maxwell::ContextUpdatePtr value) override;
+  // |ContextListenerForTopics|
+  void OnUpdate(maxwell::ContextUpdateForTopicsPtr value) override;
 
   fidl::InterfacePtr<maxwell::ContextReader> context_reader_;
 
   // Current set of watched topics.
-  maxwell::ContextQuery query_;
+  maxwell::ContextQueryForTopics query_;
 
   // Current value of the context.
-  maxwell::ContextUpdatePtr value_;
+  maxwell::ContextUpdateForTopicsPtr value_;
 
-  fidl::Binding<maxwell::ContextListener> binding_;
+  fidl::Binding<maxwell::ContextListenerForTopics> binding_;
   std::vector<std::function<void()>> watchers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextHandler);

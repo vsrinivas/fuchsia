@@ -137,18 +137,18 @@ class FocusWatcherImpl : modular::FocusWatcher {
 };
 
 // A context reader watcher implementation.
-class ContextListenerImpl : maxwell::ContextListener {
+class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
  public:
-  ContextListenerImpl() : binding_(this) {
+  ContextListenerForTopicsImpl() : binding_(this) {
     handler_ = [](fidl::String, fidl::String) {};
   }
 
-  ~ContextListenerImpl() override = default;
+  ~ContextListenerForTopicsImpl() override = default;
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
   void Listen(maxwell::ContextReader* const context_reader) {
-    auto query = maxwell::ContextQuery::New();
+    auto query = maxwell::ContextQueryForTopics::New();
     query->topics.resize(0);
     context_reader->SubscribeToTopics(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
@@ -163,20 +163,20 @@ class ContextListenerImpl : maxwell::ContextListener {
   void Reset() { binding_.Close(); }
 
  private:
-  // |ContextListener|
-  void OnUpdate(maxwell::ContextUpdatePtr update) override {
-    FTL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
+  // |ContextListenerForTopics|
+  void OnUpdate(maxwell::ContextUpdateForTopicsPtr update) override {
+    FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate()";
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << i.GetKey() << " "
+      FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate() " << i.GetKey() << " "
                   << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
   }
 
-  fidl::Binding<maxwell::ContextListener> binding_;
+  fidl::Binding<maxwell::ContextListenerForTopics> binding_;
   Handler handler_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerForTopicsImpl);
 };
 
 // Tests the story importance machinery. We set context to home, start one
@@ -427,7 +427,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
 
   maxwell::ContextPublisherPtr context_publisher_;
   maxwell::ContextReaderPtr context_reader_;
-  ContextListenerImpl context_listener_;
+  ContextListenerForTopicsImpl context_listener_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
