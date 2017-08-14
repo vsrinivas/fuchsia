@@ -7,5 +7,5 @@ description = "Low-level Rust bindings for Magenta runtime services"
 repository = "https://fuchsia.googlesource.com/mxruntime/"
 
 [dependencies]
-magenta-sys = { path = "../../magenta-rs/magenta-sys", version = "0.1" }
+magenta-sys = { path = "../../magenta-rs/magenta-sys", version = "0.2" }
 

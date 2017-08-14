@@ -8,7 +8,7 @@ extern crate magenta;
 extern crate magenta_sys;
 extern crate mxruntime_sys;
 
-use magenta::{Handle, HandleBase, Channel, ChannelOpts, Status};
+use magenta::{AsHandleRef, Handle, Channel, ChannelOpts, Status};
 
 use magenta_sys::{mx_handle_t, MX_OK};
 

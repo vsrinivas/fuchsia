@@ -8,13 +8,8 @@
 extern crate magenta;
 extern crate mxruntime;
 
-use magenta::{Channel, MessageBuf, HandleBase, MX_TIME_INFINITE};
+use magenta::{AsHandleRef, Channel, MessageBuf, MX_TIME_INFINITE, MX_CHANNEL_READABLE};
 use mxruntime::{HandleType, get_startup_handle};
-
-// TODO: this is the expected name for the signal, but the new name hasn't landed
-// yet in //magenta/system/public/magenta/types.h so it's not reflected in
-// magenta-rs.
-const MX_CHANNEL_SIGNAL_READABLE: magenta::Signals = magenta::MX_OBJECT_SIGNAL_0;
 
 fn align(offset: usize, alignment: usize) -> usize {
     (offset.wrapping_sub(1) | (alignment - 1)).wrapping_add(1)
@@ -32,13 +27,13 @@ fn main() {
     let h1 = get_startup_handle(HandleType::OutgoingServices)
         .expect("couldn't get outgoing services handle");
     // wait for ConnectToService request
-    let c1 = Channel::from_handle(h1);
-    let _ = c1.wait(MX_CHANNEL_SIGNAL_READABLE, MX_TIME_INFINITE);
+    let c1 = Channel::from(h1);
+    let _ = c1.wait_handle(MX_CHANNEL_READABLE, MX_TIME_INFINITE);
     let mut buf = MessageBuf::new();
     let _ = c1.read(0, &mut buf);
     let h2 = buf.take_handle(0).expect("couldn't get service provider handle");
-    let c2 = Channel::from_handle(h2);
-    let _ = c2.wait(MX_CHANNEL_SIGNAL_READABLE, MX_TIME_INFINITE);
+    let c2 = Channel::from(h2);
+    let _ = c2.wait_handle(MX_CHANNEL_READABLE, MX_TIME_INFINITE);
     let _ = c2.read(0, &mut buf);
     let mut empty = vec![];
     let answer = "hello from Rust";
