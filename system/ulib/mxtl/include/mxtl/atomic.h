@@ -26,6 +26,23 @@
 // subtle. We similarly don't have _explicit vs. not variants of
 // things, as the std:: versions do.
 
+// This file also provides nonmember functions that operate on
+// mxtl::atomic<T>:
+//   - atomic_init value initializes a default constructed atomic<T>
+//   - atomic_OP are nonmember versions of atomic<T>::OP
+
+// It also provides barriers that are not tied to a particular memory
+// location:
+//   - atomic_thread_fence issues a memory barrier
+//   - atomic_signal_fence issues a compiler barrier
+
+// In addition, mxtl::atomic does not provide the same compatibility
+// guarantees with C11's <stdatomic.h> is std::atomic does
+// (std::atomic is designed to allow interop with C by #define
+// _Atomic(T) std::atomic<T> and so on). The types are not guaranteed
+// to be ABI or operationally compatible, and no effort is made to
+// make any of the mxtl::atomic functions extern "C".
+
 namespace mxtl {
 
 // The underlying builtins specify the memory order parameters as an
@@ -265,6 +282,20 @@ T atomic_fetch_xor(volatile atomic<T>* atomic_ptr, T value, memory_order order =
 }
 
 // Other atomic functions.
+
+// atomic_init value initializes an uninitialized atomic<T>. Only
+// default constructed atomic<T>s are uninitialized.
+//
+// This function is _not_ atomic: any other concurrent access (even if
+// that access is atomic) is a data race.
+//
+// This function is _not_ a substitute for constructing the atomic<T>:
+// it does not begin the lifetime of an atomic<T> object.
+//
+// Using the value constructors is preferrable to using this
+// function. This function exists because calling the value
+// constructor is occasionally more awkward than separating
+// construction from initializing.
 template <typename T>
 void atomic_init(atomic<T>* atomic_ptr, T value) {
     atomic_ptr->value_ = value;
@@ -274,10 +305,33 @@ void atomic_init(volatile atomic<T>* atomic_ptr, T value) {
     atomic_ptr->value_ = value;
 }
 
+// atomic_thread_fence issues a memory barrier according to the given
+// memory order, which synchronizes with other atomic operations and
+// with other atomic_thread_fences.
+//
+// For instance, suppose there is a call to
+// atomic_thread_fence(memory_order_acquire). No actual memory
+// accesses (reads or writes) can be moved before reads before the
+// fence.
+//
+// Because the barrier applies to all memory rather than a particular
+// location, it is a strong guarantee for the given memory order than
+// the corresponding atomic operation on a memory location, and may be
+// more expenisve.
 inline void atomic_thread_fence(memory_order order = memory_order_seq_cst) {
     __atomic_thread_fence(order);
 }
 
+// atomic_signal_fence issues a compiler barrier. No compiler
+// reorderings that violate the memory guarantees of the given memory
+// order may be performed.
+//
+// For instance, suppose there is a call to
+// atomic_signal_fence(memory_order_release). No compiler accesses
+// (reads or writes) can be moved after writes after the fence.
+//
+// The name of this function comes from signal handlers, which often
+// need to prevent compiler reordering but not issue a memory barrier.
 inline void atomic_signal_fence(memory_order order = memory_order_seq_cst) {
     __atomic_signal_fence(order);
 }
