@@ -14,12 +14,12 @@ RUST_CRATES = {
     # Fuchsia crates.
     "published": {
         "magenta": {
-            "version": "0.1.1",
+            "version": "0.2.0",
             "path": "rust/magenta-rs",
             "target": "//rust/magenta-rs:magenta",
         },
         "magenta-sys": {
-            "version": "0.1.1",
+            "version": "0.2.0",
             "path": "rust/magenta-rs/magenta-sys",
             "target": "//rust/magenta-rs/magenta-sys",
         },
