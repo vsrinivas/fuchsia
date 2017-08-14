@@ -40,9 +40,9 @@ BLOCK_SIZE=1024
 STAGING_DIR="${FUCHSIA_OUT_DIR:-${script_dir}}/build-installer"
 # TODO take a size for the magenta partition as well
 bytes_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024 * 1024))
-# FAT wants the sector count to be a multiple of 63. This is approximately a
-# GiB.
-bytes_efi=$(($DEFAULT_SIZE_EFI * 512 * 33288 * 63))
+# FAT wants the sector count to be a multiple of 63 (for total sectors) and of
+# 32 (sectors per track) and this value gets us close to 1GiB
+bytes_efi=$(($DEFAULT_SIZE_EFI * 512 * 1040 * 32 * 63))
 release=0
 debug=0
 platform="x86-64"
