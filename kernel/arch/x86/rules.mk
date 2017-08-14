@@ -85,6 +85,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
 	kernel/lib/bitmap \
 	kernel/lib/hypervisor \
+	kernel/lib/mxtl \
 
 include $(LOCAL_DIR)/toolchain.mk
 

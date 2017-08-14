@@ -19,6 +19,7 @@
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lk/init.h>
+#include <mxtl/algorithm.h>
 #include <string.h>
 #include <trace.h>
 

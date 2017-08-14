@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/ref_ptr.h>
 #include <trace.h>
 

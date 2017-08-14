@@ -11,6 +11,7 @@
 #include <kernel/mp.h>
 #include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
+#include <mxtl/algorithm.h>
 #include <arch/ops.h>
 
 #include <arch/x86.h>

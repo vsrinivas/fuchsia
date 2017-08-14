@@ -24,6 +24,7 @@
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
 #include <magenta/vm_object_dispatcher.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>

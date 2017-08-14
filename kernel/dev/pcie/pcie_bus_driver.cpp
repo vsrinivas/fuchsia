@@ -13,6 +13,7 @@
 #include <kernel/vm/vm_aspace.h>
 #include <lib/pci/pio.h>
 #include <lk/init.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>

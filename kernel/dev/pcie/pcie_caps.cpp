@@ -10,6 +10,7 @@
 #include <err.h>
 #include <string.h>
 #include <trace.h>
+#include <mxtl/algorithm.h>
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 

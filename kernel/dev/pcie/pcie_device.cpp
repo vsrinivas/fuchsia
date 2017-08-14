@@ -19,6 +19,7 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <list.h>
 #include <lk/init.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
 #include <dev/interrupt.h>

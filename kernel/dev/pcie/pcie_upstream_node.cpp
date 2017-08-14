@@ -15,6 +15,7 @@
 #include <kernel/vm.h>
 #include <list.h>
 #include <lk/init.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>

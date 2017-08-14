@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <err.h>
 #include <kernel/vm/pmm.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/auto_call.h>
 #include <string.h>
 #include <trace.h>
