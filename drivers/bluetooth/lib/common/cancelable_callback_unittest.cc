@@ -59,43 +59,44 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
   EXPECT_FALSE(called);
 }
 
-#if 0
 TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
-  constexpr int64_t kBlockTimeMs = 100;
+  constexpr int kLoopCount = 100;
+  constexpr int64_t kBlockTimeMs = 10;
 
-  CancelableCallbackFactory<void()> factory;
-  EXPECT_FALSE(factory.canceled());
+  for (int i = 0; i < kLoopCount; ++i) {
+    CancelableCallbackFactory<void()> factory;
+    EXPECT_FALSE(factory.canceled());
 
-  std::mutex mtx;
-  std::condition_variable cv;
-  bool ready = false;
+    std::mutex mtx;
+    std::condition_variable cv;
+    bool ready = false;
 
-  auto callback = [&] {
-    // This makes sure that CancelAll() is called after this.
-    {
-      std::lock_guard<std::mutex> lock(mtx);
-      ready = true;
-    }
-    cv.notify_one();
+    auto callback = [&] {
+      // This makes sure that CancelAll() is called after this.
+      {
+        std::lock_guard<std::mutex> lock(mtx);
+        ready = true;
+      }
+      cv.notify_one();
 
-    ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(kBlockTimeMs));
-  };
+      ftl::SleepFor(ftl::TimeDelta::FromMilliseconds(kBlockTimeMs));
+    };
 
-  std::thread thrd(factory.MakeTask(callback));
-  thrd.detach();
+    ftl::Stopwatch sw;
+    sw.Start();
 
-  std::unique_lock<std::mutex> lock(mtx);
-  cv.wait(lock, [&ready] { return ready; });
+    std::thread thrd(factory.MakeTask(callback));
+    thrd.detach();
 
-  ftl::Stopwatch sw;
-  sw.Start();
+    std::unique_lock<std::mutex> lock(mtx);
+    cv.wait(lock, [&ready] { return ready; });
 
-  // This should block for at least |kBlockTimeMs| milliseconds as that is how long |callback| will
-  // sleep for.
-  factory.CancelAll();
-  EXPECT_GE(sw.Elapsed().ToMilliseconds(), kBlockTimeMs);
+    // This should block for at least |kBlockTimeMs| milliseconds as that is how long |callback|
+    // will sleep for.
+    factory.CancelAll();
+    ASSERT_GE(sw.Elapsed().ToMilliseconds(), kBlockTimeMs);
+  }
 }
-#endif
 
 }  // namespace
 }  // namespace common
