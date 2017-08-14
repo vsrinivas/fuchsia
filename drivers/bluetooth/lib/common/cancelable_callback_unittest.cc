@@ -59,6 +59,7 @@ TEST(CancelableCallbackTest, CancelAndRunOnDifferentThreads) {
   EXPECT_FALSE(called);
 }
 
+#if 0
 TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
   constexpr int64_t kBlockTimeMs = 100;
 
@@ -94,6 +95,7 @@ TEST(CancelableCallbackTest, CancelAllBlocksDuringCallback) {
   factory.CancelAll();
   EXPECT_GE(sw.Elapsed().ToMilliseconds(), kBlockTimeMs);
 }
+#endif
 
 }  // namespace
 }  // namespace common
