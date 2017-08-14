@@ -25,10 +25,6 @@
         {
             "binary": "hello_fuchsia.dart",
             "bootfs_path": "apps/hello_fuchsia.dart"
-        },
-        {
-            "binary": "libhello_fuchsia.so",
-            "bootfs_path": "apps/libhello_fuchsia.so"
         }
     ]
 }
