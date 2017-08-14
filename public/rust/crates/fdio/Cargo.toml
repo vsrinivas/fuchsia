@@ -7,6 +7,6 @@ description = "Rust bindings for Magenta mxio"
 repository = "https://fuchsia.googlesource.com/mxio-rs/"
 
 [dependencies]
-magenta = { path = "../magenta-rs", version = "0.1" }
+magenta = { path = "../magenta-rs", version = "0.2" }
 
-magenta-sys = { path = "../magenta-rs/magenta-sys", version = "0.1" }
+magenta-sys = { path = "../magenta-rs/magenta-sys", version = "0.2" }
