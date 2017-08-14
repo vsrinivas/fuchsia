@@ -27,6 +27,14 @@ export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
 export QEMU_DIR="${FUCHSIA_DIR}/buildtools/qemu/bin"
 export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
+function __netaddr() {
+  # We want to give the user time to accept Darwin's firewall dialog.
+  if [[ "$(uname -s)" = "Darwin" ]]; then
+    netaddr "$@"
+  else
+    netaddr --nowait "$@"
+  fi
+}
 ### envhelp: print usage for command or list of commands
 
 function env_sh_version() {
@@ -605,7 +613,7 @@ function fbuild-sync() {
   done < ${FUCHSIA_BUILD_DIR}/gen/packages/gn/packages
 
   echo "Syncing changed system.bootfs files..."
-  host="$(netaddr --fuchsia)"
+  host="$(__netaddr --fuchsia)"
   fsftp -q -b "${batch_file}" "[${host}]" > /dev/null
   if [ $? -ne 0 ]; then
     echo failed > "${status_file}"
@@ -797,7 +805,7 @@ function fsftp() {
 }
 
 function fcmd() {
-  local host="$(netaddr --fuchsia)"
+  local host="$(__netaddr --fuchsia)"
   fssh -q "${host}" $*
   local r=$?
   if [ $r -ne 0 ]; then
@@ -821,7 +829,7 @@ function fcp() {
 
   local src=$1
   local dst=$2
-  local host="$(netaddr --fuchsia)"
+  local host="$(__netaddr --fuchsia)"
 
   fsftp -q -b - "[${host}]" > /dev/null << EOF
 - rm ${dst}
