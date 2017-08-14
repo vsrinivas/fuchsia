@@ -274,7 +274,7 @@ ninja_path="buildtools/ninja"
 
 "$script_dir/../../$gn_gen_path" --outdir out/magentix --target_cpu "$build_arch" --modules magentix,install-fuchsia
 
-mgtix_out="out/magentix-${build_arch}"
+mgtix_out="${script_dir}/../../out/magentix-${build_arch}"
 "${script_dir}/../../${ninja_path}" -C "$mgtix_out"
 
 # create a suitably large file
