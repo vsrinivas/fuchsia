@@ -2,12 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("auth") {
-  testonly = true
-
+group("src") {
   deps = [
-    "//apps/auth/services",
-    "//apps/auth/src",
+    "//apps/auth/src/store",
   ]
 }
 
@@ -15,6 +12,14 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//apps/auth/src:tests",
+    ":auth_unittests",
+  ]
+}
+
+executable("auth_unittests") {
+  testonly = true
+
+  deps = [
+    "//apps/auth/src/store:unittests",
   ]
 }
