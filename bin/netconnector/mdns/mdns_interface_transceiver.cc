@@ -15,6 +15,7 @@
 #include "apps/netconnector/src/mdns/mdns_addresses.h"
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver_v4.h"
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver_v6.h"
+#include "apps/netstack/services/netstack.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
@@ -25,11 +26,11 @@ namespace mdns {
 
 // static
 std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
-    const netc_if_info_t& if_info,
+    const netstack::NetInterface* if_info,
     uint32_t index) {
   MdnsInterfaceTransceiver* interface_transceiver;
 
-  if (if_info.addr.ss_family == AF_INET) {
+  if (if_info->addr->ipv4.get()) {
     interface_transceiver = new MdnsInterfaceTransceiverV4(if_info, index);
   } else {
     interface_transceiver = new MdnsInterfaceTransceiverV6(if_info, index);
@@ -39,11 +40,11 @@ std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
 }
 
 MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(
-    const netc_if_info_t& if_info,
+    const netstack::NetInterface* if_info,
     uint32_t index)
-    : address_((struct sockaddr*)&if_info.addr),
+    : address_(if_info->addr.get()),
       index_(index),
-      name_(if_info.name),
+      name_(if_info->name),
       inbound_buffer_(kMaxPacketSize),
       outbound_buffer_(kMaxPacketSize) {}
 

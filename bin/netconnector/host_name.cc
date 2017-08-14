@@ -7,8 +7,10 @@
 #include <limits.h>
 #include <unistd.h>
 
+#include "application/lib/app/application_context.h"
 #include "apps/netconnector/src/socket_address.h"
 #include "apps/netstack/apps/include/netconfig.h"
+#include "apps/netstack/services/netstack.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 
@@ -17,59 +19,53 @@ namespace {
 
 static const std::string kFuchsia = "fuchsia";
 
-bool AddressIsSet(const IpAddress& address) {
-  size_t word_count = address.word_count();
-  const uint16_t* words = address.as_words();
-
-  for (size_t i = 0; i < word_count; ++i, ++words) {
-    if (*words != 0) {
-      return true;
-    }
+class NetstackClient {
+ public:
+  static void GetInterfaces(
+      const netstack::Netstack::GetInterfacesCallback& callback) {
+    NetstackClient* client = new NetstackClient();
+    client->netstack_->GetInterfaces(
+        [client, callback](fidl::Array<netstack::NetInterfacePtr> interfaces) {
+          callback(std::move(interfaces));
+          delete client;
+        });
   }
 
-  return false;
-}
+ private:
+  NetstackClient()
+      : context_(app::ApplicationContext::CreateFromStartupInfo()) {
+    FTL_DCHECK(context_);
+    netstack_ = context_->ConnectToEnvironmentService<netstack::Netstack>();
+    FTL_DCHECK(netstack_);
+  }
+
+  std::unique_ptr<app::ApplicationContext> context_;
+  netstack::NetstackPtr netstack_;
+};
 
 // Returns a host address, preferably V4. Returns an invalid address if no
 // network interface could be found or if the interface hasn't obtained an
 // address.
 IpAddress GetHostAddress() {
-  ftl::UniqueFD socket_fd = ftl::UniqueFD(socket(AF_INET, SOCK_DGRAM, 0));
-  if (!socket_fd.is_valid()) {
-    return IpAddress::kInvalid;
-  }
+  static IpAddress ip_address;
+  if (ip_address)
+    return ip_address;
 
-  netc_get_if_info_t get_if_info;
-  ssize_t size = ioctl_netc_get_if_info(socket_fd.get(), &get_if_info);
-  if (size < 0) {
-    return IpAddress::kInvalid;
-  }
+  NetstackClient::GetInterfaces(
+      [](const fidl::Array<netstack::NetInterfacePtr>& interfaces) {
+        for (const auto& interface : interfaces) {
+          if (interface->addr->family == netstack::NetAddressFamily::IPV4) {
+            ip_address = IpAddress(interface->addr.get());
+            break;
+          }
+          if (interface->addr->family == netstack::NetAddressFamily::IPV6) {
+            ip_address = IpAddress(interface->addr.get());
+            // Keep looking...v4 is preferred.
+          }
+        }
+      });
 
-  if (get_if_info.n_info == 0) {
-    return IpAddress::kInvalid;
-  }
-
-  IpAddress ip_address;
-
-  for (uint32_t i = 0; i < get_if_info.n_info; ++i) {
-    netc_if_info_t* if_info = &get_if_info.info[i];
-
-    SocketAddress socket_address(if_info->addr);
-    ip_address = socket_address.address();
-
-    if (!AddressIsSet(ip_address)) {
-      ip_address = IpAddress::kInvalid;
-      continue;
-    }
-
-    if (ip_address.is_v4()) {
-      break;
-    }
-
-    // Keep looking...v4 is preferred.
-  }
-
-  return ip_address;
+  return IpAddress::kInvalid;
 }
 
 }  // namespace
@@ -78,6 +74,7 @@ bool NetworkIsReady() {
   return GetHostAddress().is_valid();
 }
 
+// TODO: this should probably be an asynchronous interface.
 std::string GetHostName() {
   char host_name_buffer[HOST_NAME_MAX + 1];
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));

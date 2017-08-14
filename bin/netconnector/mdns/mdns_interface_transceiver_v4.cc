@@ -15,7 +15,7 @@ namespace netconnector {
 namespace mdns {
 
 MdnsInterfaceTransceiverV4::MdnsInterfaceTransceiverV4(
-    const netc_if_info_t& if_info,
+    const netstack::NetInterface* if_info,
     uint32_t index)
     : MdnsInterfaceTransceiver(if_info, index) {}
 

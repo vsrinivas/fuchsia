@@ -9,7 +9,9 @@
 
 #include <netinet/in.h>
 
+#include "application/lib/app/application_context.h"
 #include "apps/netconnector/src/mdns/mdns_interface_transceiver.h"
+#include "apps/netstack/services/netstack.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
@@ -61,7 +63,7 @@ class MdnsTransceiver {
   };
 
   // Determines if the interface is enabled.
-  bool InterfaceEnabled(netc_if_info_t* if_info);
+  bool InterfaceEnabled(const netstack::NetInterface* if_info);
 
   // Creates a new |MdnsInterfaceTransciver| for each interface that's ready
   // and doesn't already have one. Schedules another call to this method if
@@ -81,6 +83,8 @@ class MdnsTransceiver {
   std::string host_full_name_;
   std::vector<std::unique_ptr<MdnsInterfaceTransceiver>> interfaces_;
   ftl::TimeDelta address_recheck_delay_ = kMinAddressRecheckDelay;
+  std::unique_ptr<app::ApplicationContext> application_context_;
+  netstack::NetstackPtr netstack_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MdnsTransceiver);
 };

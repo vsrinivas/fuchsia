@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 
 #include "apps/netconnector/src/ip_address.h"
+#include "apps/netstack/services/netstack.fidl.h"
 
 namespace netconnector {
 
@@ -115,6 +116,23 @@ IpAddress::IpAddress(const sockaddr* addr) {
     v4_ = reinterpret_cast<const sockaddr_in*>(addr)->sin_addr;
   } else {
     v6_ = reinterpret_cast<const sockaddr_in6*>(addr)->sin6_addr;
+  }
+}
+
+IpAddress::IpAddress(const netstack::NetAddress* addr) {
+  FTL_DCHECK(addr != nullptr);
+  switch (addr->family) {
+    case netstack::NetAddressFamily::IPV4:
+      family_ = AF_INET;
+      memcpy(&v4_, &addr->ipv4->addr[0], 4);
+      break;
+    case netstack::NetAddressFamily::IPV6:
+      family_ = AF_INET6;
+      memcpy(&v6_, &addr->ipv6->addr[0], 16);
+      break;
+    default:
+      FTL_DCHECK(false);
+      break;
   }
 }
 

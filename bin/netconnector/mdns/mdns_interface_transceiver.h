@@ -15,6 +15,10 @@
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/fd_waiter.h"
 
+namespace netstack {
+class NetInterface;
+}  // namespace netstack
+
 namespace netconnector {
 namespace mdns {
 
@@ -32,7 +36,7 @@ class MdnsInterfaceTransceiver {
   // address family specified in |if_info|. |index| is the index of the
   // interface.
   static std::unique_ptr<MdnsInterfaceTransceiver> Create(
-      const netc_if_info_t& if_info,
+      const netstack::NetInterface* if_info,
       uint32_t index);
 
   virtual ~MdnsInterfaceTransceiver();
@@ -63,7 +67,7 @@ class MdnsInterfaceTransceiver {
   static constexpr int kTimeToLive_ = 255;
   static constexpr size_t kMaxPacketSize = 1500;
 
-  MdnsInterfaceTransceiver(const netc_if_info_t& if_info, uint32_t index);
+  MdnsInterfaceTransceiver(const netstack::NetInterface* if_info, uint32_t index);
 
   uint32_t index() const { return index_; }
 

@@ -79,6 +79,7 @@ executable("netconnector") {
     "//apps/media/src/util",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
+    "//apps/netstack/services",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/rapidjson",
