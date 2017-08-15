@@ -1,7 +1,6 @@
 #include "pthread_impl.h"
 #include <errno.h>
 #include <magenta/syscalls.h>
-#include <pthread.h>
 #include <time.h>
 
 #include "clock_impl.h"
