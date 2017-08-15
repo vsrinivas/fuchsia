@@ -11,13 +11,13 @@ typedef struct __pthread* thrd_t;
 #define thread_local _Thread_local
 #endif
 
-typedef int once_flag;
 typedef unsigned tss_t;
 typedef int (*thrd_start_t)(void*);
 typedef void (*tss_dtor_t)(void*);
 
 #define __NEED_cnd_t
 #define __NEED_mtx_t
+#define __NEED_once_flag
 
 #include <bits/alltypes.h>
 

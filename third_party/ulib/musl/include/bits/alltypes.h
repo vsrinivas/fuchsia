@@ -387,9 +387,15 @@ typedef unsigned mode_t;
 typedef struct __sigset_t { unsigned long __bits[128 / sizeof(long)]; } sigset_t;
 #define __DEFINED_sigset_t
 #endif
+
 #if defined(__NEED_pthread_once_t) && !defined(__DEFINED_pthread_once_t)
 typedef _Atomic(int) pthread_once_t;
 #define __DEFINED_pthread_once_t
+#endif
+
+#if defined(__NEED_once_flag) && !defined(__DEFINED_once_flag)
+typedef _Atomic(int) once_flag;
+#define __DEFINED_once_flag
 #endif
 
 #if defined(__NEED_pthread_key_t) && !defined(__DEFINED_pthread_key_t)
