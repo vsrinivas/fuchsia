@@ -28,7 +28,13 @@ static const uint64_t kVmoSize = 1u << 30;
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
 
 static mx_status_t usage(const char* cmd) {
-    fprintf(stderr, "usage: %s [-b block.bin] [-r ramdisk.bin] [-c cmdline] kernel.bin\n", cmd);
+    fprintf(stderr, "usage: %s [OPTIONS] kernel.bin\n", cmd);
+    fprintf(stderr, "\n");
+    fprintf(stderr, "OPTIONS:\n");
+    fprintf(stderr, "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device.\n");
+    fprintf(stderr, "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk.\n");
+    fprintf(stderr, "\t-c [cmdline]       Use string 'cmdline' as the kernel command line.\n");
+    fprintf(stderr, "\n");
     return MX_ERR_INVALID_ARGS;
 }
 
