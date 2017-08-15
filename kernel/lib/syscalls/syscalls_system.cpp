@@ -200,34 +200,62 @@ mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
     return MX_OK;
 }
 
+static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
+                                           const size_t cmdlinebuf_size,
+                                           uint8_t* bootimage_buffer,
+                                           const size_t bootimage_buflen) {
+    // Bootdata section header length fields are uint32_ts. Make sure we're not
+    // truncating the command line length by casting it from size_t to a uint32_t.
+    static_assert(CMDLINE_MAX <= UINT32_MAX, "cmdline max must fit into bootdata header");
+
+    // If the user passes us a command line that's longer than our limit, we
+    // fail immediately.
+    if (cmdlinebuf_size > CMDLINE_MAX) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    // No command line provided, nothing to be done.
+    if (cmdlinebuf_size == 0) {
+        return MX_OK;
+    }
+
+    // Allocate a buffer large enough to accomodate the whole command line.
+    // Use brace initializers to initialize this buffer to 0.
+    mxtl::AllocChecker ac;
+    auto deleter = mxtl::unique_ptr<char[]>(new (&ac) char[CMDLINE_MAX]{});
+    char* buffer = deleter.get();
+    if (!ac.check()) {
+        return MX_ERR_NO_MEMORY;
+    }
+
+    // Copy contents from the user buffer to the local kernel buffer.
+    _cmdlinebuf.copy_array_from_user(buffer, cmdlinebuf_size);
+
+    // Ensure that the user provided string buffer is either already null
+    // terminated or that it can be null terminated without blowing the buffer.
+    // Add 1 to the result of strnlen to ensure that we account for the null
+    // terminator.
+    const size_t cmdline_len = strnlen(buffer, cmdlinebuf_size) + 1;
+    if (cmdline_len > CMDLINE_MAX) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    return bootdata_append_section(bootimage_buffer, bootimage_buflen,
+                                   reinterpret_cast<const uint8_t*>(buffer),
+                                   static_cast<uint32_t>(cmdline_len),
+                                   BOOTDATA_CMDLINE, 0, 0);
+}
+
 mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
                              user_ptr<const char> _cmdline, uint32_t cmdline_len) {
     mx_status_t result;
-
-    // Copy the command line to a local buffer
-    char* cmdline_buf = (char*)calloc(1, CMDLINE_MAX);
-    if (!cmdline_buf)
-        return MX_ERR_NO_MEMORY;
-
-    mxtl::StringPiece cmdline;
-    result = magenta_copy_user_string((const char*)_cmdline.get(), cmdline_len, cmdline_buf,
-                                      CMDLINE_MAX, &cmdline);
-    if (result != MX_OK) {
-        free(cmdline_buf);
-        return result;
-    }
-
-    // WARNING
-    // It is unsafe to return from this function beyond this point.
-    // This is because we have swapped out the user address space and halted the
-    // secondary cores and there is no trivial way to bring both of these back.
 
     paddr_t new_kernel_addr;
     size_t new_kernel_len;
     result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, nullptr,
                                 &new_kernel_len);
     if (result != MX_OK) {
-        panic("Failed to coalesce vmo kernel pages");
+        return result;
     }
 
     paddr_t new_bootimage_addr;
@@ -237,24 +265,14 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
                                 &new_bootimage_addr, &bootimage_buffer,
                                 &new_bootimage_len);
     if (result != MX_OK) {
-        panic("Failed to coalesce vmo kernel pages");
+        return result;
     }
 
-
-    // Ensure that the length of the command line (including the trailing null)
-    // fits inside the command line buffer
-    DEBUG_ASSERT((cmdline.length() + 1) < CMDLINE_MAX);
-
-    // magenta_copy_user_string ensures that the copied string is null terminated
-    // ensure that this invariant is maintained.
-    DEBUG_ASSERT(cmdline.data()[cmdline.length()] == '\0');
-
-    result = bootdata_append_section(bootimage_buffer, new_bootimage_len,
-                                     (const uint8_t*)cmdline.data(), (uint32_t)(cmdline.length() + 1),
-                                     BOOTDATA_CMDLINE, 0, 0);
+    result = bootdata_append_cmdline(_cmdline, cmdline_len, bootimage_buffer, new_bootimage_len);
     if (result != MX_OK) {
-        panic("Failed to append command line to bootdata\n");
+        return result;
     }
+
 
     // WARNING
     // It is unsafe to return from this function beyond this point.
