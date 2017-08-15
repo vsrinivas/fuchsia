@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
 
     auto vulkan_device = escher::VulkanDeviceQueues::New(
         vulkan_instance,
-        {{VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME}, vk::SurfaceKHR()});
+        {{VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME}, vk::SurfaceKHR()});
 
     escher::Escher escher(vulkan_device);
 

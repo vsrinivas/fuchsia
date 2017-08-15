@@ -6,6 +6,18 @@
 
 #include "escher/vk/gpu_mem.h"
 
+// TODO: Used during transition to SDK 1.0.57.  Remove once Magma Vulkan SDK
+// is also updated to >= 1.0.57.
+#ifndef VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
+#ifdef VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
+#define VkImportSemaphoreFdInfoKHR VkImportSemaphoreFdInfoKHX
+namespace vk {
+using ExternalSemaphoreHandleTypeFlagBitsKHR =
+    ExternalSemaphoreHandleTypeFlagBitsKHX;
+}
+#endif
+#endif
+
 namespace shadertoy {
 
 std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
@@ -29,12 +41,11 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
   vk::ImportSemaphoreFdInfoKHX info;
   info.semaphore = sema->vk_semaphore();
   info.fd = event_copy.release();
-  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHX::eFenceFd;
+  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFenceFd;
 
-  if (VK_SUCCESS !=
-      device->proc_addrs().ImportSemaphoreFdKHX(
-          device->vk_device(),
-          reinterpret_cast<VkImportSemaphoreFdInfoKHX*>(&info))) {
+  if (VK_SUCCESS != device->proc_addrs().ImportSemaphoreFdKHR(
+                        device->vk_device(),
+                        reinterpret_cast<VkImportSemaphoreFdInfoKHR*>(&info))) {
     FTL_LOG(ERROR) << "Failed to import event as VkSemaphore.";
     // Don't leak handle.
     mx_handle_close(info.fd);
