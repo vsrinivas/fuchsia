@@ -16,11 +16,11 @@ mx_status_t mx_timer_cancel(mx_handle_t handle);
 ## DESCRIPTION
 
 **mx_timer_cancel**() cancels a pending timer that was started with
-**timer_start**().
+**timer_set**().
 
 Upon success the pending timer is canceled and the MX_TIMER_SIGNALED
 signal is de-asserted. If a new pending timer is immediately needed
-rather than calling **timer_cancel**() first, call **timer_start**()
+rather than calling **timer_cancel**() first, call **timer_set**()
 with the new deadline.
 
 ## RETURN VALUE
@@ -36,9 +36,9 @@ In the event of failure, a negative error value is returned.
 
 ## NOTE
 
-Calling this function before **timer_start**() has no effect.
+Calling this function before **timer_set**() has no effect.
 
 ## SEE ALSO
 
 [timer_create](timer_create.md),
-[timer_start](timer_start.md)
+[timer_set](timer_set.md)

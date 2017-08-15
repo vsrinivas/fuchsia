@@ -49,19 +49,6 @@ mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_ha
     return MX_OK;
 }
 
-// This syscall is deprecated. The clients should transiton to sys_timer_set().
-mx_status_t sys_timer_start(
-    mx_handle_t handle, mx_time_t deadline, mx_duration_t period, mx_duration_t slack) {
-    auto up = ProcessDispatcher::GetCurrent();
-
-    mxtl::RefPtr<TimerDispatcher> timer;
-    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
-    if (status != MX_OK)
-        return status;
-
-    return timer->Set(deadline, 0u, period);
-}
-
 mx_status_t sys_timer_set(
     mx_handle_t handle, mx_time_t deadline, mx_duration_t slack) {
     auto up = ProcessDispatcher::GetCurrent();

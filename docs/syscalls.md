@@ -101,7 +101,6 @@
 
 ## Timers
 + [timer_create](syscalls/timer_create.md) - create a timer object
-+ [timer_start (deprecated)](syscalls/timer_start.md) - start a timer
 + [timer_set](syscalls/timer_set.md) - start a timer
 + [timer_cancel](syscalls/timer_cancel.md) - cancel a timer
 

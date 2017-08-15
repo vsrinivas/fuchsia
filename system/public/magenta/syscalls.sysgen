@@ -339,10 +339,6 @@ syscall timer_create
     (options: uint32_t, clock_id: uint32_t)
     returns (mx_status_t, out: mx_handle_t handle_acquire);
 
-syscall timer_start
-    (handle: mx_handle_t, deadline: mx_time_t, period: mx_duration_t, slack: mx_duration_t)
-    returns (mx_status_t);
-
 syscall timer_set
     (handle: mx_handle_t, deadline: mx_time_t, slack: mx_duration_t)
     returns (mx_status_t);
