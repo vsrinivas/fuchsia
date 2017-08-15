@@ -20,92 +20,168 @@ struct StringTestHelper;
 // is immutable.  This makes it easy to share string buffers so that copying
 // strings does not incur any allocation cost.
 //
-// Allocation only occurs when initializing or setting a string to a non-empty value.
+// Empty string objects do not incur any allocation.  Non-empty strings are
+// stored on the heap.  Note that mxtl::String does not have a null state
+// distinct from the empty state.
+//
+// The content of a mxtl::String object is always stored with a null terminator
+// so that |c_str()| is fast.  However, be aware that the string may also contain
+// embedded null characters (this is not checked by the implementation).
 class String {
 public:
+    // Creates an empty string.
+    // Does not allocate heap memory.
     String() { InitWithEmpty(); }
 
+    // Creates a copy of another string.
+    // Does not allocate heap memory.
     String(const String& other)
         : data_(other.data_) {
         AcquireRef(data_);
     }
 
+    // Move constructs from another string.
+    // The other string is set to empty.
+    // Does not allocate heap memory.
     String(String&& other)
         : data_(other.data_) {
         other.InitWithEmpty();
     }
 
+    // Creates a string from the contents of a null-terminated C string.
+    // Allocates heap memory only if |data| is non-empty.
+    // |data| must not be null.
     String(const char* data) {
         Init(data, constexpr_strlen(data));
     }
 
+    // Creates a string from the contents of a null-terminated C string.
+    // Allocates heap memory only if |data| is non-empty.
+    // |data| and |ac| must not be null.
     String(const char* data, AllocChecker* ac) {
         Init(data, constexpr_strlen(data), ac);
     }
 
+    // Creates a string from the contents of a character array of given length.
+    // Allocates heap memory only if |length| is non-zero.
+    // |data| must not be null.
     String(const char* data, size_t length) {
         Init(data, length);
     }
 
+    // Creates a string from the contents of a character array of given length.
+    // Allocates heap memory only if |length| is non-zero.
+    // |data| and |ac| must not be null.
     String(const char* data, size_t length, AllocChecker* ac) {
         Init(data, length, ac);
     }
 
+    // Creates a string from the contents of a string piece.
+    // Allocates heap memory only if |piece.length()| is non-zero.
     explicit String(const StringPiece& piece)
         : String(piece.data(), piece.length()) {}
 
+    // Creates a string from the contents of a string piece.
+    // Allocates heap memory only if |piece.length()| is non-zero.
+    // |ac| must not be null.
     explicit String(const StringPiece& piece, AllocChecker* ac)
         : String(piece.data(), piece.length(), ac) {}
 
+    // Destroys the string.
     ~String() { ReleaseRef(data_); }
 
+    // Returns a pointer to the null-terminated contents of the string.
     const char* data() const { return data_; }
     const char* c_str() const { return data(); }
 
+    // Returns the length of the string, excluding its null terminator.
     size_t length() const { return *length_field_of(data_); }
     size_t size() const { return length(); }
+
+    // Returns true if the string's length is zero.
     bool empty() const { return length() == 0u; }
 
+    // Character iterators, excluding the null terminator.
     const char* begin() const { return data(); }
     const char* cbegin() const { return data(); }
     const char* end() const { return data() + length(); }
     const char* cend() const { return data() + length(); }
 
+    // Gets the character at the specified index.
+    // Position must be greater than or equal to 0 and less than |length()|.
     const char& operator[](size_t pos) const { return data()[pos]; }
 
+    // Performs a lexicographical character by character comparison.
+    // Returns a negative value if |*this| comes before |other| in lexicographical order.
+    // Returns zero if the strings are equivalent.
+    // Returns a positive value if |*this| comes after |other| in lexicographical order.
     int compare(const String& other) const;
 
+    // Sets this string to empty.
+    // Does not allocate heap memory.
     void clear();
+
+    // Swaps the contents of this string with another string.
+    // Does not allocate heap memory.
     void swap(String& other);
 
+    // Assigns this string to a copy of another string.
+    // Does not allocate heap memory.
     String& operator=(const String& other);
+
+    // Move assigns from another string.
+    // The other string is set to empty.
+    // Does not allocate heap memory.
     String& operator=(String&& other);
 
+    // Assigns this string from the contents of a null-terminated C string.
+    // Allocates heap memory only if |data| is non-empty.
+    // |data| must not be null.
     String& operator=(const char* data) {
         Set(data);
         return *this;
     }
 
+    // Assigns this string from the contents of a string piece.
+    // Allocates heap memory only if |piece.length()| is non-zero.
     String& operator=(const StringPiece& piece) {
         Set(piece);
         return *this;
     }
 
+    // Assigns this string from the contents of a null-terminated C string.
+    // Allocates heap memory only if |data| is non-empty.
+    // |data| must not be null.
     void Set(const char* data) {
         Set(data, constexpr_strlen(data));
     }
 
+    // Assigns this string from the contents of a null-terminated C string.
+    // Allocates heap memory only if |data| is non-empty.
+    // |data| and |ac| must not be null.
     void Set(const char* data, AllocChecker* ac) {
         Set(data, constexpr_strlen(data), ac);
     }
 
+    // Assigns this string from the contents of a character array of given length.
+    // Allocates heap memory only if |length| is non-zero.
+    // |data| must not be null.
     void Set(const char* data, size_t length);
+
+    // Assigns this string from the contents of a character array of given length.
+    // Allocates heap memory only if |length| is non-zero.
+    // |data| and |ac| must not be null.
     void Set(const char* data, size_t length, AllocChecker* ac);
 
+    // Assigns this string from the contents of a string piece.
+    // Allocates heap memory only if |piece.length()| is non-zero.
     void Set(const StringPiece& piece) {
         Set(piece.data(), piece.length());
     }
 
+    // Assigns this string from the contents of a string piece.
+    // Allocates heap memory only if |piece.length()| is non-zero.
+    // |ac| must not be null.
     void Set(const StringPiece& piece, AllocChecker* ac) {
         Set(piece.data(), piece.length(), ac);
     }

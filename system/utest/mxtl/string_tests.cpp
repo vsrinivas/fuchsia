@@ -164,20 +164,20 @@ bool copy_move_and_assignment_test() {
 
     {
         mxtl::String abc("abc");
-        mxtl::String str(abc);
+        mxtl::String copy(abc);
         EXPECT_CSTR_EQ("abc", abc.data());
-        EXPECT_EQ(abc.data(), str.data());
-        EXPECT_EQ(3u, str.length());
+        EXPECT_EQ(abc.data(), copy.data());
+        EXPECT_EQ(3u, copy.length());
     }
 
     {
         mxtl::String abc("abc");
         mxtl::String copy(abc);
-        mxtl::String str(mxtl::move(copy));
+        mxtl::String move(mxtl::move(copy));
         EXPECT_CSTR_EQ("abc", abc.data());
         EXPECT_CSTR_EQ("", copy.data());
-        EXPECT_EQ(abc.data(), str.data());
-        EXPECT_EQ(3u, str.length());
+        EXPECT_EQ(abc.data(), move.data());
+        EXPECT_EQ(3u, move.length());
     }
 
     {
@@ -209,6 +209,16 @@ bool copy_move_and_assignment_test() {
         str = "";
         EXPECT_CSTR_EQ("", str.data());
         EXPECT_EQ(0u, str.length());
+
+        mxtl::String copy(str);
+        EXPECT_CSTR_EQ("", copy.data());
+        EXPECT_EQ(0u, copy.length());
+
+        mxtl::String move(copy);
+        EXPECT_CSTR_EQ("", copy.data());
+        EXPECT_EQ(0u, copy.length());
+        EXPECT_CSTR_EQ("", move.data());
+        EXPECT_EQ(0u, move.length());
     }
 
     END_TEST;
@@ -394,6 +404,14 @@ bool alloc_checker_test() {
 
     {
         mxtl::AllocChecker ac;
+        mxtl::String str(mxtl::StringPiece("abcdef", 5u), &ac);
+        EXPECT_TRUE(ac.check());
+        EXPECT_CSTR_EQ("abcde", str.data());
+        EXPECT_EQ(5u, str.length());
+    }
+
+    {
+        mxtl::AllocChecker ac;
         mxtl::String str;
         str.Set("abc", &ac);
         EXPECT_TRUE(ac.check());
@@ -474,6 +492,24 @@ bool ref_count_test() {
                 mxtl::String another_empty("");
                 EXPECT_EQ(empty.data(), another_empty.data());
                 EXPECT_EQ(initial_ref_count + 2u, StringTestHelper::GetRefCount(empty));
+                {
+                    mxtl::String assigned_from_empty = another_empty;
+                    EXPECT_EQ(empty.data(), assigned_from_empty.data());
+                    EXPECT_EQ(initial_ref_count + 3u, StringTestHelper::GetRefCount(empty));
+
+                    assigned_from_empty = "";
+                    EXPECT_EQ(empty.data(), assigned_from_empty.data());
+                    EXPECT_EQ(initial_ref_count + 3u, StringTestHelper::GetRefCount(empty));
+
+                    assigned_from_empty = empty;
+                    EXPECT_EQ(empty.data(), assigned_from_empty.data());
+                    EXPECT_EQ(initial_ref_count + 3u, StringTestHelper::GetRefCount(empty));
+
+                    assigned_from_empty.clear();
+                    EXPECT_EQ(empty.data(), assigned_from_empty.data());
+                    EXPECT_EQ(initial_ref_count + 3u, StringTestHelper::GetRefCount(empty));
+                }
+                EXPECT_EQ(initial_ref_count + 2u, StringTestHelper::GetRefCount(empty));
             }
             EXPECT_EQ(initial_ref_count + 1u, StringTestHelper::GetRefCount(empty));
         }
@@ -490,6 +526,24 @@ bool ref_count_test() {
             {
                 mxtl::String copy2(abc);
                 EXPECT_EQ(abc.data(), copy2.data());
+                EXPECT_EQ(3u, StringTestHelper::GetRefCount(abc));
+                {
+                    mxtl::String assigned_from_abc = abc;
+                    EXPECT_EQ(abc.data(), assigned_from_abc.data());
+                    EXPECT_EQ(4u, StringTestHelper::GetRefCount(abc));
+
+                    assigned_from_abc = "";
+                    EXPECT_CSTR_EQ("", assigned_from_abc.data());
+                    EXPECT_EQ(3u, StringTestHelper::GetRefCount(abc));
+
+                    assigned_from_abc = abc;
+                    EXPECT_EQ(abc.data(), assigned_from_abc.data());
+                    EXPECT_EQ(4u, StringTestHelper::GetRefCount(abc));
+
+                    assigned_from_abc.clear();
+                    EXPECT_CSTR_EQ("", assigned_from_abc.data());
+                    EXPECT_EQ(3u, StringTestHelper::GetRefCount(abc));
+                }
                 EXPECT_EQ(3u, StringTestHelper::GetRefCount(abc));
             }
             EXPECT_EQ(2u, StringTestHelper::GetRefCount(abc));
