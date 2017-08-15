@@ -719,7 +719,7 @@ static int ax88179_thread(void* arg) {
         iotxn_queue(eth->usb_device, txn);
         completion_wait(&eth->completion, MX_TIME_INFINITE);
         if (txn->status != MX_OK) {
-            break;
+            return txn->status;
         }
         count++;
         ax88179_handle_interrupt(eth, txn);
