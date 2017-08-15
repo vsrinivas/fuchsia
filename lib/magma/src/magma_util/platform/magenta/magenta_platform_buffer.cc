@@ -4,6 +4,7 @@
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "mxio/io.h"
 #include "platform_buffer.h"
 #include "platform_object.h"
 #include "platform_trace.h"
@@ -160,6 +161,8 @@ public:
         return true;
     }
 
+    bool GetFd(int* fd_out) const override;
+
     // PlatformBuffer implementation
     bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
     bool MapCpu(void** addr_out) override;
@@ -198,6 +201,19 @@ private:
     std::map<uint32_t, void*> mapped_pages_;
     mx::vmar paged_vmar_;
 };
+
+bool MagentaPlatformBuffer::GetFd(int* fd_out) const
+{
+    mx::vmo duplicate;
+    mx_status_t status = vmo_.duplicate(MX_RIGHT_SAME_RIGHTS, &duplicate);
+    if (status < 0)
+        return DRETF(false, "mx_handle_duplicate failed");
+
+    *fd_out = mxio_vmo_fd(duplicate.release(), 0, size());
+    if (!*fd_out)
+        return DRETF(false, "mxio_vmo_fd failed");
+    return true;
+}
 
 bool MagentaPlatformBuffer::MapCpu(void** addr_out)
 {
@@ -457,4 +473,14 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
 
     return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(std::move(vmo), size));
 }
+
+std::unique_ptr<PlatformBuffer> PlatformBuffer::ImportFromFd(int fd)
+{
+    mx_handle_t handle;
+    mx_status_t status = mxio_get_exact_vmo(fd, &handle);
+    if (status != MX_OK)
+        return DRETP(nullptr, "mxio_get_exact_vmo failed");
+    return Import(handle);
+}
+
 } // namespace magma

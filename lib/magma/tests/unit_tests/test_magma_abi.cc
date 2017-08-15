@@ -129,6 +129,40 @@ public:
         test2->BufferImport(handle, id);
     }
 
+    void BufferExportFd(int* fd_out, uint64_t* id_out)
+    {
+        ASSERT_NE(connection_, nullptr);
+
+        uint64_t size = PAGE_SIZE;
+        magma_buffer_t buffer;
+
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_alloc(connection_, size, &size, &buffer));
+
+        *id_out = magma_get_buffer_id(buffer);
+
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_export_fd(connection_, buffer, fd_out));
+    }
+
+    void BufferImportFd(int fd, uint64_t id)
+    {
+        ASSERT_NE(connection_, nullptr);
+
+        magma_buffer_t buffer;
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_import_fd(connection_, fd, &buffer));
+        EXPECT_EQ(magma_get_buffer_id(buffer), id);
+    }
+
+    static void BufferImportExportFd(TestConnection* test1, TestConnection* test2)
+    {
+        int fd;
+        uint64_t id;
+        test1->BufferExportFd(&fd, &id);
+        test2->BufferImportFd(fd, id);
+
+        // fd should still be open.
+        EXPECT_EQ(0, close(fd));
+    }
+
     void Semaphore()
     {
         ASSERT_NE(connection_, nullptr);
@@ -223,6 +257,13 @@ TEST(MagmaAbi, BufferImportExport)
     TestConnection test1;
     TestConnection test2;
     TestConnection::BufferImportExport(&test1, &test2);
+}
+
+TEST(MagmaAbi, BufferImportExportFd)
+{
+    TestConnection test1;
+    TestConnection test2;
+    TestConnection::BufferImportExportFd(&test1, &test2);
 }
 
 TEST(MagmaAbi, Semaphore)

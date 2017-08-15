@@ -139,6 +139,30 @@ magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffe
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_export_fd(struct magma_connection_t* connection, magma_buffer_t buffer,
+                               int* fd_out)
+{
+    return reinterpret_cast<magma::PlatformBuffer*>(buffer)->GetFd(fd_out)
+               ? MAGMA_STATUS_OK
+               : MAGMA_STATUS_MEMORY_ERROR;
+}
+
+magma_status_t magma_import_fd(magma_connection_t* connection, int fd, magma_buffer_t* buffer_out)
+{
+    auto platform_buffer = magma::PlatformBuffer::ImportFromFd(fd);
+    if (!platform_buffer)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "PlatformBuffer::ImportFromFd failed");
+
+    magma_status_t result =
+        magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
+    if (result != MAGMA_STATUS_OK)
+        return DRET_MSG(result, "ImportBuffer failed");
+
+    *buffer_out = reinterpret_cast<magma_buffer_t>(platform_buffer.release());
+
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_map(magma_connection_t* connection, magma_buffer_t buffer, void** addr_out)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);

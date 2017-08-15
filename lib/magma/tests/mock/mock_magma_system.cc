@@ -119,6 +119,19 @@ magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffe
     return MAGMA_STATUS_OK;
 }
 
+magma_status_t magma_export_fd(magma_connection_t* connection, magma_buffer_t buffer, int* fd)
+{
+    reinterpret_cast<magma::PlatformBuffer*>(buffer)->GetFd(fd);
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_import_fd(magma_connection_t* connection, int fd, magma_buffer_t* buffer_out)
+{
+    *buffer_out =
+        reinterpret_cast<magma_buffer_t>(magma::PlatformBuffer::ImportFromFd(fd).release());
+    return MAGMA_STATUS_OK;
+}
+
 magma_status_t magma_import(magma_connection_t* connection, uint32_t buffer_handle,
                             magma_buffer_t* buffer_out)
 {

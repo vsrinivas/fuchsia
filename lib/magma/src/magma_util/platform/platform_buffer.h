@@ -16,6 +16,8 @@ public:
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size, const char* name);
     // Import takes ownership of the handle.
     static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
+    // ImportFromFd does not close the given file descriptor.
+    static std::unique_ptr<PlatformBuffer> ImportFromFd(int fd);
 
     virtual ~PlatformBuffer() {}
 
@@ -27,6 +29,9 @@ public:
 
     // on success, duplicate of the underlying handle which is owned by the caller
     virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
+
+    // creates a new fd which can be used to import this buffer.
+    virtual bool GetFd(int* fd_out) const = 0;
 
     // ensures the specified pages are backed by real memory
     // note: the implementation of this function is required to be threadsafe

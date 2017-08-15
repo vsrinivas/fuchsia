@@ -59,9 +59,17 @@ void magma_wait_rendering(struct magma_connection_t* connection, magma_buffer_t 
 magma_status_t magma_export(struct magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out);
 
+// makes the buffer returned by |buffer| able to be imported via the fd at |fd_out|
+magma_status_t magma_export_fd(struct magma_connection_t* connection, magma_buffer_t buffer,
+                               int* fd_out);
+
 // imports the buffer referred to by |buffer_handle| and makes it accessible via |buffer_out|
 magma_status_t magma_import(struct magma_connection_t* connection, uint32_t buffer_handle,
                             magma_buffer_t* buffer_out);
+
+// imports the buffer referred to by |fd| and makes it accessible via |buffer_out|
+magma_status_t magma_import_fd(struct magma_connection_t* connection, int fd,
+                               magma_buffer_t* buffer_out);
 
 // Reads the size of the display in pixels.
 magma_status_t magma_display_get_size(int fd, struct magma_display_size* size_out);
