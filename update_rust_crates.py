@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import uuid
 
 sys.path += [os.path.join(paths.FUCHSIA_ROOT, "third_party", "pytoml")]
 import pytoml
@@ -38,13 +39,13 @@ NATIVE_LIBS = {
 def get_cargo_bin():
     host_os = platform.system()
     if host_os == "Darwin":
-        host_triple = "x86_64-apple-darwin"
+        platform_dir = "mac-x64"
     elif host_os == "Linux":
-        host_triple = "x86_64-unknown-linux-gnu"
+        platform_dir = "linux-x64"
     else:
         raise Exception("Platform not supported: %s" % host_os)
-    return os.path.join(paths.FUCHSIA_ROOT, "buildtools", "rust",
-                        "rust-%s" % host_triple, "bin", "cargo")
+    return os.path.join(paths.FUCHSIA_ROOT, "buildtools", platform_dir, "rust",
+                        "bin", "cargo")
 
 
 def parse_dependencies(lock_path):
@@ -263,12 +264,12 @@ def main():
         print("Some licenses are missing!")
         return 1
 
-    update_file = os.path.join(crates_dir, ".vendor-update.stamp")
+    update_path = os.path.join(crates_dir, ".vendor-update.stamp")
     # Write the timestamp file.
     # This file is necessary in order to trigger rebuilds of Rust artifacts
     # whenever third-party dependencies are updated.
-    with open(update_file, "a"):
-        os.utime(update_file, None)
+    with open(update_path, "w") as update_file:
+        update_file.write("%s\n" % uuid.uuid1())
 
     print("Vendor directory updated at %s" % vendor_dir)
 

@@ -69,7 +69,7 @@ def check_licenses(directory, verify=False):
     for subdir in sorted(os.listdir(os.getcwd())):
         # TODO(pylaligand): remove this temporary hack when a new version of
         # the crate is published.
-        if subdir == 'magenta-sys-0.1.1':
+        if subdir.startswith('magenta-sys'):
             print 'IGNORED  %s' % subdir
             continue
         if subdir.startswith('.') or not os.path.isdir(subdir):
