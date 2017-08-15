@@ -133,6 +133,10 @@ static inline pthread_t __pthread_self(void) {
     return tp_to_pthread(mxr_tp_get());
 }
 
+static inline thrd_t __thrd_current(void) {
+    return (thrd_t)__pthread_self();
+}
+
 static inline pid_t __thread_get_tid(void) {
     // We rely on the fact that the high bit is not set. For now,
     // let's incur the cost of this check, until we consider the
