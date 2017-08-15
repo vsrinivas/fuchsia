@@ -28,17 +28,17 @@ bool RoughTimeServer::IsValid() const {
   return valid_;
 }
 
-bool RoughTimeServer::GetTimeFromServer(
+Status RoughTimeServer::GetTimeFromServer(
     roughtime::rough_time_t* timestamp) const {
   if (!IsValid()) {
     TS_LOG(ERROR) << "Time server not supported: " << address_;
-    return false;
+    return NOT_SUPPORTED;
   }
   // Create Socket
   const size_t colon_offset = address_.rfind(':');
   if (colon_offset == std::string::npos) {
     TS_LOG(ERROR) << "No port number in server address: " << address_;
-    return false;
+    return NOT_SUPPORTED;
   }
 
   std::string host(address_.substr(0, colon_offset));
@@ -61,20 +61,20 @@ bool RoughTimeServer::GetTimeFromServer(
   if (err != 0) {
     TS_LOG(ERROR) << "Failed to resolve " << address_ << ": "
                   << gai_strerror(err);
-    return false;
+    return NETWORK_ERROR;
   }
   auto ac1 = ftl::MakeAutoCall([&]() { freeaddrinfo(addrs); });
   ftl::UniqueFD sock_ufd(
       socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
     TS_LOG(ERROR) << "Failed to create UDP socket: " << strerror(errno);
-    return false;
+    return NETWORK_ERROR;
   }
   int sock_fd = sock_ufd.get();
 
   if (connect(sock_fd, addrs->ai_addr, addrs->ai_addrlen)) {
     TS_LOG(ERROR) << "Failed to connect UDP socket: " << strerror(errno);
-    return false;
+    return NETWORK_ERROR;
   }
 
   char dest_str[INET6_ADDRSTRLEN];
@@ -83,7 +83,7 @@ bool RoughTimeServer::GetTimeFromServer(
 
   if (err != 0) {
     TS_LOG(ERROR) << "getnameinfo: " << gai_strerror(err);
-    return false;
+    return NETWORK_ERROR;
   }
 
   TS_LOG(INFO) << "Sending request to " << dest_str << ", port " << port_str;
@@ -102,7 +102,7 @@ bool RoughTimeServer::GetTimeFromServer(
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
     TS_LOG(ERROR) << "send on UDP socket" << strerror(errno);
-    return false;
+    return NETWORK_ERROR;
   }
 
   uint8_t recv_buf[roughtime::kMinRequestSize];
@@ -115,15 +115,15 @@ bool RoughTimeServer::GetTimeFromServer(
   int ret = poll(&readfd, 1, timeout);
   if (ret < 0) {
     TS_LOG(ERROR) << "poll on UDP socket: " << strerror(errno);
-    return false;
+    return NETWORK_ERROR;
   }
   if (ret == 0) {
     TS_LOG(ERROR) << "timeout while poll";
-    return false;
+    return NETWORK_ERROR;
   }
   if (readfd.revents != POLLIN) {
     TS_LOG(ERROR) << "Error poll, revents = " << readfd.revents;
-    return false;
+    return NETWORK_ERROR;
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
 
@@ -131,7 +131,7 @@ bool RoughTimeServer::GetTimeFromServer(
 
   if (buf_len == -1) {
     TS_LOG(ERROR) << "recv from UDP socket: " << strerror(errno);
-    return false;
+    return NETWORK_ERROR;
   }
 
   uint32_t radius;
@@ -140,11 +140,11 @@ bool RoughTimeServer::GetTimeFromServer(
                                 recv_buf, buf_len, nonce)) {
     TS_LOG(ERROR) << "Response from " << address_ << " failed verification: ",
         error;
-    return false;
+    return BAD_RESPONSE;
   }
 
   *timestamp += (end_us - start_us) / 2;
-  return true;
+  return OK;
 }
 
 }  // namespace timeservice

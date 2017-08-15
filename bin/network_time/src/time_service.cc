@@ -48,12 +48,16 @@ bool TimeService::UpdateSystemTime(uint8_t tries) {
   for (uint8_t i = 0; i < tries; i++) {
     TS_LOG(INFO) << "Updating system time, attempt: " << i + 1;
     roughtime::rough_time_t timestamp;
-    if (!server->GetTimeFromServer(&timestamp)) {
+    Status ret = server->GetTimeFromServer(&timestamp);
+    if (ret == NETWORK_ERROR) {
       if (i != tries - 1) {
         TS_LOG(INFO) << "Can't get time, sleeping for 10 sec";
         sleep(10);
       }
       continue;
+    } else if (ret != OK) {
+      TS_LOG(ERROR) << "Error with roughtime server, abort";
+      return false;
     }
 
     struct tm ptm;

@@ -33,11 +33,16 @@ TEST(RoughTimeServerTest, TestValid) {
 #define BUFSIZE 1024
 void listen(int sock) {
   struct sockaddr_in client;
-  pollfd readfd;
-  readfd.fd = sock;
-  readfd.events = POLLIN;
-  int timeout = 3 * 1000;
-  int ret = poll(&readfd, 1, timeout);
+  int attempts = 3;
+  int ret;
+  do {
+    attempts--;
+    int timeout = 3 * 1000;
+    pollfd readfd;
+    readfd.fd = sock;
+    readfd.events = POLLIN;
+    ret = poll(&readfd, 1, timeout);
+  } while (attempts > 0 && ret != 1);
   ASSERT_NE(ret, 0) << "poll timeout";
   ASSERT_EQ(ret, 1) << "poll: " << strerror(errno);
   char buf[BUFSIZE];
@@ -78,7 +83,12 @@ TEST(RoughTimeServerTest, TestServerRequest) {
   std::thread t1(listen, sock);
 
   roughtime::rough_time_t t;
-  ASSERT_EQ(server.GetTimeFromServer(&t), false);
+  timeservice::Status ret;
+  int attempts = 3;
+  do {
+    attempts--;
+    ret = server.GetTimeFromServer(&t);
+  } while (attempts > 0 && ret == timeservice::Status::NETWORK_ERROR);
   t1.join();
 }
 

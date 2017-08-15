@@ -13,10 +13,19 @@
 
 namespace timeservice {
 
+enum Status {
+  OK,
+  NOT_SUPPORTED,  // Server conf is invalid/not supported
+  BAD_RESPONSE,   // Bad response from server, most probably can't verify
+                  // certificate
+  NETWORK_ERROR   // Either timeout while poll or error with other network
+                  // operations
+};
+
 class RoughTimeServer {
  public:
   bool IsValid() const;
-  bool GetTimeFromServer(roughtime::rough_time_t* timestamp) const;
+  Status GetTimeFromServer(roughtime::rough_time_t* timestamp) const;
   RoughTimeServer(std::string name,
                   std::string address,
                   uint8_t public_key[],
