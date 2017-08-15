@@ -273,6 +273,17 @@ size_t size(RsnOptionalList<U>* list) {
 
 } // namespace
 
+// Explicit template instantiations
+// TODO(tkilbourn): decide whether to keep these or rework the definition of next_optional
+template CipherSuite* RsnElement::next_optional(const uint8_t*, size_t) const;
+template RsnOptionalList<CipherSuite>* RsnElement::next_optional(const CipherSuite*, size_t) const;
+template RsnOptionalList<AkmSuite>*
+RsnElement::next_optional(const RsnOptionalList<CipherSuite>*, size_t) const;
+template RsnCapabilities* RsnElement::next_optional(const RsnOptionalList<AkmSuite>*, size_t) const;
+template RsnOptionalList<__uint128_t>*
+RsnElement::next_optional(const RsnCapabilities*, size_t) const;
+template CipherSuite* RsnElement::next_optional(const RsnOptionalList<__uint128_t>*, size_t) const;
+
 template <typename T, typename U>
 T* RsnElement::next_optional(const U* previous, size_t len) const {
   if (hdr.len < sizeof(version)) return nullptr;
