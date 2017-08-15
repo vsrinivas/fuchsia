@@ -524,7 +524,7 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
         deadline = 0ULL;
     }
 
-    mx_status_t status = mx_timer_start(loop->timer, deadline, 0, 0);
+    mx_status_t status = mx_timer_set(loop->timer, deadline, 0);
     MX_ASSERT(status == MX_OK);
 }
 
