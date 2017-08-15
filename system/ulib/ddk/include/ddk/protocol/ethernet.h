@@ -25,10 +25,13 @@ __BEGIN_CDECLS;
 // these will not be loaded.
 //
 // The FEATURE_WLAN flag indicates a device that supports wlan operations.
+//
+// The FEATURE_SYNTH flag indicates a device that is not backed by hardware.
 
 #define ETHMAC_FEATURE_RX_QUEUE (1u)
 #define ETHMAC_FEATURE_TX_QUEUE (2u)
 #define ETHMAC_FEATURE_WLAN     (4u)
+#define ETHMAC_FEATURE_SYNTH    (8u)
 
 typedef struct ethmac_info {
     uint32_t features;

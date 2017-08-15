@@ -74,7 +74,7 @@ int tap_device_thread(void* arg) {
 TapDevice::TapDevice(mx_device_t* device, const ethertap_ioctl_config* config, mx::socket data)
   : ddk::Device<TapDevice, ddk::Unbindable>(device),
     options_(config->options),
-    features_(config->features),
+    features_(config->features | ETHMAC_FEATURE_SYNTH),
     mtu_(config->mtu),
     data_(mxtl::move(data)) {
     MX_DEBUG_ASSERT(data_.is_valid());

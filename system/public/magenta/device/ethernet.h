@@ -26,7 +26,13 @@ typedef struct eth_info_t {
 } eth_info_t;
 
 #define ETH_SIGNAL_STATUS MX_USER_SIGNAL_0
-#define ETH_FEATURE_WLAN 1
+
+// Ethernet device features
+
+// Device is a wireless network device
+#define ETH_FEATURE_WLAN  1
+// Device is a synthetic network device
+#define ETH_FEATURE_SYNTH 2
 
 // Get the fifos to submit tx and rx operations
 //   in: none

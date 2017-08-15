@@ -491,6 +491,9 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
             if (edev->edev0->info.features & ETHMAC_FEATURE_WLAN) {
                 info->features |= ETH_FEATURE_WLAN;
             }
+            if (edev->edev0->info.features & ETHMAC_FEATURE_SYNTH) {
+                info->features |= ETH_FEATURE_SYNTH;
+            }
             info->mtu = edev->edev0->info.mtu;
             *out_actual = sizeof(*info);
             status = MX_OK;
