@@ -80,7 +80,8 @@ class PortObserver;
 #define PKT_FLAG_EPHEMERAL  0x10000000u
 #define PKT_FLAG_MASK       0x0FFFFFFFu
 
-struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
+class PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
+public:
     static PortPacket* Make();
     static void Delete(PortPacket* packet);
 
@@ -94,6 +95,10 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
 
     uint32_t type() const { return packet.type; }
     uint64_t key() const { return packet.key; }
+
+private:
+    friend class PortObserver;
+    ~PortPacket() = default;
 };
 
 // Observers are weakly contained in state trackers until |remove_| member
