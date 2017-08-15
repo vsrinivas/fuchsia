@@ -426,6 +426,11 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     if (!intf)
         return MX_ERR_NO_MEMORY;
 
+    mtx_init(&intf->callback_lock, mtx_plain);
+    completion_reset(&intf->callback_thread_completion);
+    list_initialize(&intf->completed_txns);
+
+    intf->device = device;
     intf->hci_mxdev = device->hci_mxdev;
     memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
