@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 executable("bluetoothcli") {
-  output_name = "bluetooth_bluetoothcli"
+  output_name = "bluetoothcli"
 
   sources = [
     "app.cc",

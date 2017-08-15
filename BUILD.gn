@@ -13,19 +13,19 @@ package("bluetooth") {
 
   binaries = [
     {
-      name = "bluetooth_service"
+      name = "bluetooth"
     },
 
     {
-      name = "bluetooth_bluetoothcli"
+      name = "bluetoothcli"
     },
 
     {
-      name = "bluetooth_btsnoop"
+      name = "btsnoop"
     },
 
     {
-      name = "bluetooth_hcitool"
+      name = "hcitool"
     },
   ]
 }

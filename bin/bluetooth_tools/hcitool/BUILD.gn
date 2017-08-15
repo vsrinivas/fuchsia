@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 executable("hcitool") {
-  output_name = "bluetooth_hcitool"
+  output_name = "hcitool"
 
   sources = [
     "commands.cc",

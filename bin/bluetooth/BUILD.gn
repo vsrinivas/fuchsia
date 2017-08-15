@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 executable("service") {
-  output_name = "bluetooth_service"
+  output_name = "bluetooth"
 
   sources = [
     "src/adapter_fidl_impl.cc",
