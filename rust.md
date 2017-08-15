@@ -25,6 +25,7 @@ Third-party dependencies should be added to the manifest file just like in the
 normal Rust development workflow - see the next section for how third-party
 dependencies are inserted into the build.
 All dependencies should be added to the build file as target dependencies.
+Third-party dependencies are all defined under `//third_party/rust-crates`.
 
 Here's an example of a library depending on the third-party crate `bitflags`
 and on a FIDL library at `//apps/framework/services`:
@@ -48,6 +49,7 @@ version = "0.1.0"
 bitflags = "0.7.0"
 ```
 
+
 ## Testing
 
 Both `rust_library` and `rust_binary` have a `with_tests` attribute which, if
@@ -63,23 +65,29 @@ Third-party crates are stored in [`//third-party/rust-crates/vendor`][3p-crates]
 which we use as a [directory source][source-replacement] automatically set up
 by the build system.
 
-To be able to run the update script, you first need to build the
-`cargo-vendor` utility:
+In addition, we maintain some local mirrors of projects with Fuchsia-specific
+changes which haven't made it to *crates.io*. These mirrors are located in
+`//third_party/rust-mirrors` and their build rules in
+`//third_party/rust-crates`.
+
+To be able to run the script updating third-party crates, you first need to
+build the `cargo-vendor` utility:
 ```
 scripts/build_cargo_vendor.sh
 ```
 
 To update these crates, run the following command:
 ```
-scripts/update_rust_crates.py --cargo-vendor third_party/rust-crates/manual/cargo-vendor/target/debug/cargo-vendor
+scripts/update_rust_crates.py
 ```
 
 The configurations used as a reference to generate the set of required crates
 are listed in the [`update_rust_crates.py`][update-script] script.
 
-### Adding a new third-party dependency
+### Adding a new vendored dependency
 
-If a crate is not available in the vendor directory, it needs to be added with the following steps.
+If a crate is not available in the vendor directory, it needs to be added with
+the following steps.
 
 1. Create your crate's manifest file and reference the crates you need;
 1. Add your crate root to `CONFIGS` in the [update script][update-script];
@@ -87,6 +95,20 @@ If a crate is not available in the vendor directory, it needs to be added with t
 
 If a crate needs to link against a native library, the library needs to be
 present in the `NATIVE_LIBS` parameter in the [update script][update-script].
+
+### Adding a new mirror
+
+1. Request the addition of a mirror on *fuchsia.googlesource.com*;
+1. Add the mirror to the [Jiri manifest][jiri-manifest] for the Rust runtime;
+1. Reference the new project in the [build configuration file][local-crates];
+1. Run the update script.
+
+
+## Published crates
+
+Some Fuchsia crates are already available on *crates.io*. These crates need to
+be referenced in the [build configuration file][local-crates] so that the local
+version is used instead of the published copy.
 
 
 ## GN build strategy
@@ -123,6 +145,8 @@ libraries built independently from the crate.
 [3p-crates]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/vendor "Third-party crates"
 [source-replacement]: http://doc.crates.io/source-replacement.html "Source replacement"
 [update-script]: https://fuchsia.googlesource.com/scripts/+/master/update_rust_crates.py "Update script"
+[jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
+[local-crates]: https://fuchsia.googlesource.com/build/+/master/rust/local_crates.py "Local crates"
 [build-integration]: https://github.com/rust-lang/rust-roadmap/issues/12 "Build integration"
 [cargo]: https://github.com/rust-lang/cargo "Cargo"
 [cargo-vendor]: https://github.com/alexcrichton/cargo-vendor "cargo-vendor"
