@@ -20,7 +20,6 @@
 #include <platform.h>
 #include <platform/pc.h>
 #include <platform/pc/bootloader.h>
-#include <platform/pc/memmap.h>
 #include <platform/console.h>
 #include <platform/debug.h>
 #include <trace.h>
