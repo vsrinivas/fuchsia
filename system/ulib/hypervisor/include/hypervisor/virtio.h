@@ -20,12 +20,6 @@ struct vring_desc;
 struct vring_avail;
 struct vring_used;
 
-enum {
-    VIRTIO_STATUS_OK                    = 0,
-    VIRTIO_STATUS_ERROR                 = 1,
-    VIRTIO_STATUS_UNSUPPORTED           = 2,
-};
-
 typedef struct io_apic io_apic_t;
 typedef struct mx_guest_io mx_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
@@ -110,13 +104,25 @@ typedef struct virtio_queue {
     volatile uint16_t* avail_event;     // guest-controlled
 } virtio_queue_t;
 
-typedef mx_status_t (* virtio_req_fn_t)(void* ctx, void* req, void* addr, uint32_t len);
+/* Callback function for virtio_queue_handler.
+ *
+ * For chained buffers uing VRING_DESC_F_NEXT, this function will be called once for each buffer
+ * in the chain.
+ *
+ * addr     - Pointer to the descriptor buffer.
+ * len      - Length of the descriptor buffer.
+ * flags    - Flags from the vring descriptor.
+ * used     - To be incremented by the number of bytes used from addr.
+ * ctx      - The same pointer passed to virtio_queue_handler.
+ */
+typedef mx_status_t (* virtio_queue_fn_t)(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
+                                          void* ctx);
 
-/* Handles the next available descriptor in a Virtio queue, calling req_fn to
+
+/* Handles the next available descriptor in a Virtio queue, calling handler to
  * process individual payload buffers.
  *
  * On success the function either returns MX_OK if there are no more descriptors
  * available, or MX_ERR_NEXT if there are more available descriptors to process.
  */
-mx_status_t virtio_queue_handler(virtio_queue_t* queue, uint32_t hdr_size,
-                                 virtio_req_fn_t req_fn, void* ctx);
+mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* ctx);

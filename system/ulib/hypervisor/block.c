@@ -110,12 +110,15 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
 typedef struct file_state {
     block_t* block;
     off_t off;
+
+    bool has_payload;
+    virtio_blk_req_t* blk_req;
+    uint8_t status;
 } file_state_t;
 
-static mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
-    file_state_t* state = ctx;
+static mx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
     block_t* block = state->block;
-    virtio_blk_req_t* blk_req = req;
+    virtio_blk_req_t* blk_req = state->blk_req;
 
     off_t ret;
     if (blk_req->type != VIRTIO_BLK_T_FLUSH) {
@@ -152,12 +155,69 @@ static mx_status_t file_req(void* ctx, void* req, void* addr, uint32_t len) {
     return ret != len ? MX_ERR_IO : MX_OK;
 }
 
+/* Map mx_status_t values to their Virtio counterparts. */
+static uint8_t to_virtio_status(mx_status_t status) {
+    switch (status) {
+    case MX_OK:
+        return VIRTIO_BLK_S_OK;
+    case MX_ERR_NOT_SUPPORTED:
+        return VIRTIO_BLK_S_UNSUPP;
+    default:
+        return VIRTIO_BLK_S_IOERR;
+    }
+}
+
+static mx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
+                                       void* context) {
+    file_state_t* file_state = (file_state_t*) context;
+
+    // Header.
+    if (file_state->blk_req == NULL) {
+        if (len != sizeof(*file_state->blk_req))
+            return MX_ERR_INVALID_ARGS;
+        file_state->blk_req = addr;
+        return MX_OK;
+    }
+
+    // Payload.
+    if (flags & VRING_DESC_F_NEXT) {
+        file_state->has_payload = true;
+        mx_status_t status = file_req(file_state, addr, len);
+        if (status != MX_OK) {
+            file_state->status = to_virtio_status(status);
+        } else {
+            *used += len;
+        }
+        return MX_OK;
+    }
+
+    // Status.
+    if (len != sizeof(uint8_t))
+        return MX_ERR_INVALID_ARGS;
+
+    // If there was no payload, call the handler function once.
+    if (!file_state->has_payload) {
+        mx_status_t status = file_req(file_state, addr, len);
+        if (status != MX_OK)
+            file_state->status = to_virtio_status(status);
+    }
+    uint8_t* status = addr;
+    *status = file_state->status;
+    return MX_OK;
+}
+
 mx_status_t file_block_device(block_t* block) {
     mx_status_t status;
     mtx_lock(&block->mutex);
     do {
-        file_state_t state = { block, 0 };
-        status = virtio_queue_handler(&block->queue, sizeof(virtio_blk_req_t), file_req, &state);
+        file_state_t state = {
+            .block = block,
+            .off = 0,
+            .has_payload = false,
+            .blk_req = NULL,
+            .status = VIRTIO_BLK_S_OK,
+        };
+        status = virtio_queue_handler(&block->queue, &block_queue_handler, &state);
     } while (status == MX_ERR_NEXT);
     mtx_unlock(&block->mutex);
     return status;

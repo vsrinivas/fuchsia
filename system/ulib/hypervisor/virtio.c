@@ -174,23 +174,11 @@ static int ring_avail_count(virtio_queue_t* queue) {
     return queue->avail->idx - queue->index;
 }
 
-/* Map mx_status_t values to their Virtio counterparts. */
-static uint8_t to_virtio_status(mx_status_t status) {
-    switch (status) {
-    case MX_OK:
-        return VIRTIO_STATUS_OK;
-    case MX_ERR_NOT_SUPPORTED:
-        return VIRTIO_STATUS_UNSUPPORTED;
-    default:
-        return VIRTIO_STATUS_ERROR;
-    }
-}
-
-mx_status_t virtio_queue_handler(virtio_queue_t* queue, uint32_t hdr_size,
-                                 virtio_req_fn_t req_fn, void* ctx) {
+mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* context) {
     if (ring_avail_count(queue) < 1)
         return MX_OK;
 
+    mx_status_t status = MX_OK;
     void* mem_addr = queue->virtio_device->guest_physmem_addr;
     size_t mem_size = queue->virtio_device->guest_physmem_size;
     uint16_t desc_index = queue->avail->ring[ring_index(queue, queue->index)];
@@ -200,47 +188,26 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, uint32_t hdr_size,
         &queue->used->ring[ring_index(queue, queue->used->idx)];
     used->id = desc_index;
 
-    void* req = NULL;
-    bool has_payload = false;
-    uint8_t req_status = VIRTIO_STATUS_OK;
-    while (true) {
-        struct vring_desc desc = queue->desc[desc_index];
+
+    uint32_t used_len = 0;
+    struct vring_desc desc = queue->desc[desc_index];
+    do {
+        desc = queue->desc[desc_index];
+
         const uint64_t end = desc.addr + desc.len;
         if (end < desc.addr || end > mem_size)
             return MX_ERR_OUT_OF_RANGE;
-        if (req == NULL) {
-            // Header.
-            if (desc.len != hdr_size)
-                return MX_ERR_INVALID_ARGS;
-            req = mem_addr + desc.addr;
-        } else if (desc.flags & VRING_DESC_F_NEXT) {
-            // Payload.
-            has_payload = true;
-            mx_status_t status = req_fn(ctx, req, mem_addr + desc.addr, desc.len);
-            if (status != MX_OK) {
-                fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n",
-                        desc.addr, desc.len, status);
-                req_status = to_virtio_status(status);
-            } else {
-                used->len += desc.len;
-            }
-        } else {
-            // Status.
-            if (desc.len != sizeof(uint8_t))
-                return MX_ERR_INVALID_ARGS;
-            // If there was no payload, call the request function once.
-            if (!has_payload) {
-                mx_status_t status = req_fn(ctx, req, NULL, 0);
-                if (status != MX_OK)
-                    req_status = to_virtio_status(status);
-            }
-            uint8_t* virtio_status = mem_addr + desc.addr;
-            *virtio_status = req_status;
-            break;
-        }
-        desc_index = desc.next;
-    }
 
+        status = handler(mem_addr + desc.addr, desc.len, desc.flags, &used_len, context);
+        if (status != MX_OK) {
+            fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n", desc.addr, desc.len, status);
+            return status;
+        }
+
+        desc_index = desc.next;
+    } while (desc.flags & VRING_DESC_F_NEXT);
+
+    used->len = used_len;
     queue->index++;
     queue->used->idx++;
     return ring_avail_count(queue) > 0 ? MX_ERR_NEXT : MX_OK;
