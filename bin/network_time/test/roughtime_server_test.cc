@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -32,15 +33,13 @@ TEST(RoughTimeServerTest, TestValid) {
 #define BUFSIZE 1024
 void listen(int sock) {
   struct sockaddr_in client;
-  fd_set rset;
-  FD_ZERO(&rset);
-  FD_SET(sock, &rset);
-  struct timeval timeout;
-  timeout.tv_sec = 3;
-  timeout.tv_usec = 0;
-  ASSERT_GE(select(sock + 1, &rset, NULL, NULL, &timeout), 0)
-      << "select: " << strerror(errno);
-  ASSERT_EQ(FD_ISSET(sock, &rset), 1) << "select timeout";
+  pollfd readfd;
+  readfd.fd = sock;
+  readfd.events = POLLIN;
+  int timeout = 3 * 1000;
+  int ret = poll(&readfd, 1, timeout);
+  ASSERT_NE(ret, 0) << "poll timeout";
+  ASSERT_EQ(ret, 1) << "poll: " << strerror(errno);
   char buf[BUFSIZE];
   socklen_t len = sizeof(client);
   int n = recvfrom(sock, buf, BUFSIZE, 0, (struct sockaddr*)&client, &len);

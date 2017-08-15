@@ -8,6 +8,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <netdb.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -91,9 +92,7 @@ bool RoughTimeServer::GetTimeFromServer(
   RAND_bytes(nonce, sizeof(nonce));
   const std::string request = roughtime::CreateRequest(nonce);
 
-  struct timeval timeout;
-  timeout.tv_sec = 3;
-  timeout.tv_usec = 0;
+  int timeout = 3 * 1000;  // in milliseconds
 
   ssize_t r;
   do {
@@ -108,19 +107,25 @@ bool RoughTimeServer::GetTimeFromServer(
 
   uint8_t recv_buf[roughtime::kMinRequestSize];
   ssize_t buf_len;
+  pollfd readfd;
+  readfd.fd = sock_fd;
+  readfd.events = POLLIN;
   fd_set readfds;
   FD_SET(sock_fd, &readfds);
-  int ret = select(sock_fd + 1, &readfds, NULL, NULL, &timeout);
+  int ret = poll(&readfd, 1, timeout);
   if (ret < 0) {
-    TS_LOG(ERROR) << "select on UDP socket: " << strerror(errno);
+    TS_LOG(ERROR) << "poll on UDP socket: " << strerror(errno);
     return false;
   }
-  if (FD_ISSET(sock_fd, &readfds)) {
-    buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
-  } else {
-    TS_LOG(ERROR) << "timeout while select";
+  if (ret == 0) {
+    TS_LOG(ERROR) << "timeout while poll";
     return false;
   }
+  if (readfd.revents != POLLIN) {
+    TS_LOG(ERROR) << "Error poll, revents = " << readfd.revents;
+    return false;
+  }
+  buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
 
   const uint64_t end_us = mx_time_get(MX_CLOCK_MONOTONIC);
 
