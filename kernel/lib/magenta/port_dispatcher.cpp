@@ -18,10 +18,36 @@
 #include <magenta/syscalls/port.h>
 
 #include <mxtl/alloc_checker.h>
-
+#include <mxtl/arena.h>
 #include <mxtl/auto_lock.h>
 
 using mxtl::AutoLock;
+
+namespace {
+constexpr size_t kMaxPendingPacketCount = 16 * 1024u;
+
+mxtl::Mutex arena_mutex;
+mxtl::Arena TA_GUARDED(arena_mutex) packet_arena;
+
+}  // namespace.
+
+
+PortPacket* PortPacket::Make() {
+    AutoLock lock(&arena_mutex);
+    void* addr = packet_arena.Alloc();
+    if (addr == nullptr) {
+        lock.release();
+        printf("WARNING: Could not allocate new port packet\n");
+        return nullptr;
+    }
+    return new (addr) PortPacket(nullptr);
+}
+
+void PortPacket::Delete(PortPacket* packet) {
+    AutoLock lock(&arena_mutex);
+    packet_arena.Free(packet);
+}
+
 
 PortPacket::PortPacket(const void* handle) : packet{}, handle(handle), observer(nullptr) {
     // Note that packet is initialized to zeros.
@@ -96,6 +122,11 @@ StateObserver::Flags PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t c
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
+void PortDispatcher::Init() {
+    packet_arena.Init("packets", sizeof(PortPacket), kMaxPendingPacketCount);
+}
+
+
 mx_status_t PortDispatcher::Create(uint32_t options,
                                      mxtl::RefPtr<Dispatcher>* dispatcher,
                                      mx_rights_t* rights) {
@@ -141,9 +172,8 @@ void PortDispatcher::on_zero_handles() {
 mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
     canary_.Assert();
 
-    mxtl::AllocChecker ac;
-    auto port_packet = new (&ac) PortPacket(nullptr);
-    if (!ac.check())
+    auto port_packet = PortPacket::Make();
+    if (!port_packet)
         return MX_ERR_NO_MEMORY;
 
     port_packet->packet = packet;
@@ -151,7 +181,7 @@ mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
 
     auto status = Queue(port_packet, 0u, 0u);
     if (status < 0)
-        delete port_packet;
+        PortPacket::Delete(port_packet);
     return status;
 }
 
@@ -202,7 +232,8 @@ mx_status_t PortDispatcher::DeQueue(mx_time_t deadline, mx_port_packet_t* packet
         if (observer)
             delete observer;
         else if (packet && (packet->type & PKT_FLAG_EPHEMERAL))
-            delete port_packet;
+            PortPacket::Delete(port_packet);
+
         return MX_OK;
 
 wait:

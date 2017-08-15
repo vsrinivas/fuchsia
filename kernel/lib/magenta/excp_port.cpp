@@ -30,9 +30,8 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
     if (!MX_PKT_IS_EXCEPTION(type))
         return nullptr;
 
-    mxtl::AllocChecker ac;
-    auto port_packet = new (&ac) PortPacket(nullptr);
-    if (!ac.check())
+    auto port_packet = PortPacket::Make();
+    if (!port_packet)
         return nullptr;
 
     port_packet->packet.key = key;

@@ -22,6 +22,7 @@
 #include <magenta/handle.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/policy_manager.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
 #include <magenta/state_tracker.h>
@@ -490,6 +491,7 @@ void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
     policy_manager = PolicyManager::Create();
+    PortDispatcher::Init();
     // Be sure to update kernel_cmdline.md if any of these defaults change.
     oom_init(cmdline_get_bool("kernel.oom.enable", true),
              LK_SEC(cmdline_get_uint64("kernel.oom.sleep-sec", 1)),

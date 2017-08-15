@@ -81,6 +81,9 @@ class PortObserver;
 #define PKT_FLAG_MASK       0x0FFFFFFFu
 
 struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
+    static PortPacket* Make();
+    static void Delete(PortPacket* packet);
+
     mx_port_packet_t packet;
     const void* const handle;
     PortObserver* observer;
@@ -133,6 +136,7 @@ private:
 
 class PortDispatcher final : public Dispatcher {
 public:
+    static void Init() TA_NO_THREAD_SAFETY_ANALYSIS;
     static status_t Create(uint32_t options,
                            mxtl::RefPtr<Dispatcher>* dispatcher,
                            mx_rights_t* rights);
