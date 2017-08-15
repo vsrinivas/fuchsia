@@ -180,24 +180,6 @@ static bool devnode_is_local(devnode_t* dn) {
     return false;
 }
 
-static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t* out) {
-    watcher_t* watcher = calloc(1, sizeof(watcher_t));
-    if (watcher == NULL) {
-        return MX_ERR_NO_MEMORY;
-    }
-    mx_status_t r = mx_channel_create(0, &watcher->handle, out);
-    if (r < 0) {
-        free(watcher);
-        return r;
-    }
-
-    watcher->devnode = dn;
-    watcher->next = dn->watchers;
-    watcher->mask = VFS_WATCH_MASK_ADDED;
-    dn->watchers = watcher;
-    return MX_OK;
-}
-
 static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     watcher_t* w = dn->watchers;
     if (w == NULL) {
@@ -234,7 +216,7 @@ static void devfs_notify(devnode_t* dn, const char* name, unsigned op) {
     }
 }
 
-static mx_status_t devfs_watch_v2(devnode_t* dn, mx_handle_t h, uint32_t mask) {
+static mx_status_t devfs_watch(devnode_t* dn, mx_handle_t h, uint32_t mask) {
     watcher_t* watcher = calloc(1, sizeof(watcher_t));
     if (watcher == NULL) {
         return MX_ERR_NO_MEMORY;
@@ -656,7 +638,7 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
                 (wd->mask & (~VFS_WATCH_MASK_ALL))) {
                 r = MX_ERR_INVALID_ARGS;
             } else {
-                r = devfs_watch_v2(dn, msg->handle[0], wd->mask);
+                r = devfs_watch(dn, msg->handle[0], wd->mask);
             }
             if (r != MX_OK) {
                 mx_handle_close(msg->handle[0]);
