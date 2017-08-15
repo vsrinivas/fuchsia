@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <time.h>
 
-int __clock_gettime(clockid_t, struct timespec*);
+#include "clock_impl.h"
 
 /* This assumes that a check for the
    template size has already been made */

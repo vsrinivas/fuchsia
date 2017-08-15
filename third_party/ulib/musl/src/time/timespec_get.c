@@ -1,6 +1,6 @@
 #include <time.h>
 
-int __clock_gettime(clockid_t, struct timespec*);
+#include "clock_impl.h"
 
 /* There is no other implemented value than TIME_UTC; all other values
  * are considered erroneous. */

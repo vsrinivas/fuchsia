@@ -1,6 +1,6 @@
 #include <time.h>
 
-int __clock_gettime(clockid_t, struct timespec*);
+#include "clock_impl.h"
 
 time_t time(time_t* t) {
     struct timespec ts;

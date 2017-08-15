@@ -1,9 +1,9 @@
 #include <limits.h>
 #include <time.h>
 
-int __clock_gettime(clockid_t, struct timespec*);
+#include "clock_impl.h"
 
-clock_t clock() {
+clock_t clock(void) {
     struct timespec ts;
 
     if (__clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts))

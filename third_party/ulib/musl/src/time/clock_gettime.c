@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <time.h>
 
-#include <magenta/syscalls.h>
+#include "clock_impl.h"
 
-#define NS_PER_S (1000000000ull)
+#include <magenta/syscalls.h>
 
 int __clock_gettime(clockid_t clk, struct timespec* ts) {
     uint32_t mx_clock;
@@ -25,8 +25,8 @@ int __clock_gettime(clockid_t clk, struct timespec* ts) {
         return -1;
     }
     mx_time_t now = _mx_time_get(mx_clock);
-    ts->tv_sec = now / NS_PER_S;
-    ts->tv_nsec = now % NS_PER_S;
+    ts->tv_sec = now / MX_SEC(1);
+    ts->tv_nsec = now % MX_SEC(1);
     return 0;
 }
 
