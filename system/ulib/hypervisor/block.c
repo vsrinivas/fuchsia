@@ -53,7 +53,7 @@ static mx_status_t block_queue_notify(virtio_device_t* device, uint16_t queue_se
     return file_block_device(virtio_device_to_block(device));
 }
 
-static virtio_device_ops_t block_device_ops = {
+static const virtio_device_ops_t kBlockVirtioDeviceOps = {
     .read = &block_read,
     .write = &block_write,
     .queue_notify = &block_queue_notify,
@@ -91,7 +91,7 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
     block->virtio_device.impl = block;
     block->virtio_device.num_queues = 1;
     block->virtio_device.queues = &block->queue;
-    block->virtio_device.ops = &block_device_ops;
+    block->virtio_device.ops = &kBlockVirtioDeviceOps;
     block->virtio_device.guest_physmem_addr = guest_physmem_addr;
     block->virtio_device.guest_physmem_size = guest_physmem_size;
 

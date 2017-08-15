@@ -147,7 +147,7 @@ static mx_status_t balloon_write(virtio_device_t* device, mx_handle_t vcpu,
     return MX_OK;
 }
 
-static virtio_device_ops_t balloon_device_ops = {
+static const virtio_device_ops_t kBalloonVirtioDeviceOps = {
     .read = &balloon_read,
     .write = &balloon_write,
     .queue_notify = &balloon_queue_notify,
@@ -171,7 +171,7 @@ void balloon_init(balloon_t* balloon, void* guest_physmem_addr, size_t guest_phy
     balloon->virtio_device.impl = balloon;
     balloon->virtio_device.num_queues = VIRTIO_BALLOON_Q_COUNT;
     balloon->virtio_device.queues = balloon->queues;
-    balloon->virtio_device.ops = &balloon_device_ops;
+    balloon->virtio_device.ops = &kBalloonVirtioDeviceOps;
     balloon->virtio_device.guest_physmem_addr = guest_physmem_addr;
     balloon->virtio_device.guest_physmem_size = guest_physmem_size;
 

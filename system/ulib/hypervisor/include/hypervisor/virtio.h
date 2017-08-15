@@ -70,7 +70,7 @@ typedef struct virtio_device {
     size_t guest_physmem_size;
 
     // Device-specific operations.
-    virtio_device_ops_t* ops;
+    const virtio_device_ops_t* ops;
     // Private pointer for use by the device implementation.
     void* impl;
     // PCI device for the virtio-pci transport.
