@@ -261,7 +261,7 @@ mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koi
 
     mx_status_t status = port_->Queue(iopk, 0, 0);
     if (status != MX_OK) {
-        delete iopk;
+        PortPacket::Delete(iopk);
     }
     return status;
 }
