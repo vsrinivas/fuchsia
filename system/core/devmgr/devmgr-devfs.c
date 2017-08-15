@@ -649,7 +649,7 @@ static mx_status_t devfs_rio_handler(mxrio_msg_t* msg, void* cookie) {
             }
             return r;
         }
-        case IOCTL_VFS_WATCH_DIR_V2: {
+        case IOCTL_VFS_WATCH_DIR: {
             vfs_watch_dir_t* wd = (vfs_watch_dir_t*) msg->data;
             if ((len != sizeof(vfs_watch_dir_t)) ||
                 (wd->options != 0) ||

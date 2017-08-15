@@ -432,7 +432,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
                    void* out_buf, size_t out_len) {
     switch (op) {
 #ifdef __Fuchsia__
-    case IOCTL_VFS_WATCH_DIR_V2: {
+    case IOCTL_VFS_WATCH_DIR: {
         if (in_len != sizeof(vfs_watch_dir_t)) {
             return MX_ERR_INVALID_ARGS;
         }
