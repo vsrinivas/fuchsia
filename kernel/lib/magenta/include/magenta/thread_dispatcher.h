@@ -103,7 +103,6 @@ public:
                    bool initial_thread);
     void Exit() __NO_RETURN;
     void Kill();
-    void DispatcherClosed();
 
     status_t Suspend();
     status_t Resume();
