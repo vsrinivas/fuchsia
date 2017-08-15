@@ -8,11 +8,5 @@
     },
     "components": [
         "apps/modules/drive/modules/gallery/gallery_component.json"
-    ],
-    "binaries": [
-        {
-            "binary": "gen/apps/modules/drive/modules/gallery/gallery.flx",
-            "bootfs_path": "apps/gallery"
-        }
     ]
 }
