@@ -881,20 +881,20 @@ func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
 		s.ns.mu.Lock()
 		defer s.ns.mu.Unlock()
 		index := uint32(0)
-		for nicid, netif := range s.ns.netifs {
-			if netif.addr == header.IPv4Loopback {
+		for nicid, ifs := range s.ns.ifStates {
+			if ifs.nic.Addr == header.IPv4Loopback {
 				continue
 			}
 			rep.info[index].index = uint16(index)
 			rep.info[index].flags |= NETC_IFF_UP
 			copy(rep.info[index].name[:], []byte(fmt.Sprintf("en%d", nicid)))
-			writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: netif.addr})
-			writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(netif.netmask)})
+			writeSockaddrStorage(&rep.info[index].addr, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr})
+			writeSockaddrStorage(&rep.info[index].netmask, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)})
 
-			// Long-hand for: broadaddr = netif.addr | ^netif.netmask
-			broadaddr := []byte(netif.addr)
+			// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
+			broadaddr := []byte(ifs.nic.Addr)
 			for i := range broadaddr {
-				broadaddr[i] |= ^netif.netmask[i]
+				broadaddr[i] |= ^ifs.nic.Netmask[i]
 			}
 			writeSockaddrStorage(&rep.info[index].broadaddr, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)})
 			index++

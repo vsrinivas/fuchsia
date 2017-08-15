@@ -3,20 +3,36 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//build/go/go_test.gni")
 import("//packages/package.gni")
 
 package("netstack") {
   deps = [
     ":netstack_bin",
-    "//apps/netstack/services",
     "//apps/netstack/getaddrtest",
+    "//apps/netstack/services",
   ]
 
-  binaries = [ {
-    name = "netstack"
-  }, {
-    name = "getaddrtest"
-  } ]
+  binaries = [
+    {
+      name = "netstack"
+    },
+    {
+      name = "getaddrtest"
+    },
+  ]
+}
+
+package("netstack_gotests") {
+  testonly = true
+
+  deps = [
+    ":netstack_netiface_test",
+  ]
+
+  tests = [ {
+        name = "netstack_netiface_test"
+      } ]
 }
 
 go_binary("netstack_bin") {
@@ -49,5 +65,19 @@ go_binary("netstack_bin") {
 
   deps = [
     "//apps/netstack/services",
+  ]
+}
+
+go_test("netstack_netiface_test") {
+  gopackage = "apps/netstack/netiface"
+  go_dependencies = [
+    {
+      package = "apps/netstack"
+      source = "//apps/netstack"
+    },
+    {
+      package = "github.com/google/netstack"
+      source = "//third_party/netstack"
+    },
   ]
 }

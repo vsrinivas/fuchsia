@@ -61,7 +61,7 @@ func main() {
 		arena:      arena,
 		stack:      stk,
 		dispatcher: s,
-		netifs:     make(map[tcpip.NICID]*netif),
+		ifStates:   make(map[tcpip.NICID]*ifState),
 	}
 	if err := ns.addLoopback(); err != nil {
 		log.Fatalf("loopback: %v", err)

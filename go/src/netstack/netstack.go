@@ -14,6 +14,7 @@ import (
 
 	"apps/netstack/deviceid"
 	"apps/netstack/eth"
+	"apps/netstack/netiface"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
@@ -34,59 +35,55 @@ type netstack struct {
 
 	mu       sync.Mutex
 	nodename string
-	netifs   map[tcpip.NICID]*netif
+	ifStates map[tcpip.NICID]*ifState
 }
 
-// A netif is a network interface.
-type netif struct {
+// Each ifState tracks the state of a network interface.
+type ifState struct {
 	ns     *netstack
 	ctx    context.Context
 	cancel context.CancelFunc
-	nicid  tcpip.NICID
 	eth    *eth.Client
 	dhcp   *dhcp.Client
 
 	// guarded by ns.mu
-	addr       tcpip.Address
-	netmask    tcpip.AddressMask
-	routes     []tcpip.Route
-	dnsServers []tcpip.Address
+	nic *netiface.NIC
 }
 
-func (nif *netif) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
+func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
 	if oldAddr != "" && oldAddr != newAddr {
-		log.Printf("NIC %d: DHCP IP %s expired", nif.nicid, oldAddr)
+		log.Printf("NIC %d: DHCP IP %s expired", ifs.nic.ID, oldAddr)
 	}
 	if config.Error != nil {
 		log.Printf("%v", config.Error)
 		return
 	}
 	if newAddr == "" {
-		log.Printf("NIC %d: DHCP could not acquire address", nif.nicid)
+		log.Printf("NIC %d: DHCP could not acquire address", ifs.nic.ID)
 		return
 	}
-	log.Printf("NIC %d: DHCP acquired IP %s for %s", nif.nicid, newAddr, config.LeaseLength)
-	log.Printf("NIC %d: DNS servers: %v", nif.nicid, config.DNS)
+	log.Printf("NIC %d: DHCP acquired IP %s for %s", ifs.nic.ID, newAddr, config.LeaseLength)
+	log.Printf("NIC %d: DNS servers: %v", ifs.nic.ID, config.DNS)
 
 	// Update default route with new gateway.
-	nif.ns.mu.Lock()
-	nif.routes = defaultRouteTable(nif.nicid, config.Gateway)
-	nif.netmask = config.SubnetMask
-	nif.addr = newAddr
-	nif.dnsServers = config.DNS
-	nif.ns.mu.Unlock()
+	ifs.ns.mu.Lock()
+	ifs.nic.Routes = defaultRouteTable(ifs.nic.ID, config.Gateway)
+	ifs.nic.Netmask = config.SubnetMask
+	ifs.nic.Addr = newAddr
+	ifs.nic.DNSServers = config.DNS
+	ifs.ns.mu.Unlock()
 
-	nif.ns.stack.SetRouteTable(nif.ns.flattenRouteTables())
-	nif.ns.dispatcher.dnsClient.SetRuntimeServers(nif.ns.flattenDNSServers())
+	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+	ifs.ns.dispatcher.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
 }
 
-func (nif *netif) stateChange(s eth.State) {
+func (ifs *ifState) stateChange(s eth.State) {
 	if s != eth.StateStopped {
 		return
 	}
-	log.Printf("NIC %d: stopped", nif.nicid)
-	if nif.cancel != nil {
-		nif.cancel()
+	log.Printf("NIC %d: stopped", ifs.nic.ID)
+	if ifs.cancel != nil {
+		ifs.cancel()
 	}
 
 	// TODO(crawshaw): more cleanup to be done here:
@@ -94,51 +91,36 @@ func (nif *netif) stateChange(s eth.State) {
 	// 	- remove link endpoint
 	//	- reclaim NICID?
 
-	nif.ns.mu.Lock()
-	nif.routes = nil
-	nif.dnsServers = nil
-	nif.ns.mu.Unlock()
+	ifs.ns.mu.Lock()
+	ifs.nic.Routes = nil
+	ifs.nic.DNSServers = nil
+	ifs.ns.mu.Unlock()
 
-	nif.ns.stack.SetRouteTable(nif.ns.flattenRouteTables())
-	nif.ns.dispatcher.dnsClient.SetRuntimeServers(nif.ns.flattenDNSServers())
-}
-
-type byRoutability []*netif
-
-func (l byRoutability) Len() int      { return len(l) }
-func (l byRoutability) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
-func (l byRoutability) Less(i, j int) bool {
-	if hasGateway(l[i]) && !hasGateway(l[j]) {
-		return true
-	}
-	if l[i].addr != "" && l[j].addr == "" {
-		return true
-	}
-	return l[i].nicid < l[j].nicid
-}
-
-func hasGateway(netif *netif) bool {
-	for _, r := range netif.routes {
-		if r.Gateway != "" {
-			return true
-		}
-	}
-	return false
+	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
+	ifs.ns.dispatcher.dnsClient.SetRuntimeServers(ifs.ns.flattenDNSServers())
 }
 
 func (ns *netstack) flattenRouteTables() []tcpip.Route {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	netifs := make([]*netif, 0, len(ns.netifs))
-	for _, netif := range ns.netifs {
-		netifs = append(netifs, netif)
+	ifss := make([]*ifState, 0, len(ns.ifStates))
+	for _, ifs := range ns.ifStates {
+		ifss = append(ifss, ifs)
 	}
-	sort.Sort(byRoutability(netifs))
+	sort.Slice(ifss, func(i, j int) bool {
+		return netiface.Less(ifss[i].nic, ifss[j].nic)
+	})
+	if debug2 {
+		for i, ifs := range ifss {
+			log.Printf("[%v] nicid: %v, addr: %v, routes: %v",
+				i, ifs.nic.ID, ifs.nic.Addr, ifs.nic.Routes)
+		}
+	}
 
 	routeTable := []tcpip.Route{}
-	for _, netif := range netifs {
-		routeTable = append(routeTable, netif.routes...)
+	for _, ifs := range ifss {
+		routeTable = append(routeTable, ifs.nic.Routes...)
 	}
 	return routeTable
 }
@@ -148,8 +130,8 @@ func (ns *netstack) flattenDNSServers() []tcpip.Address {
 	defer ns.mu.Unlock()
 
 	uniqServers := make(map[tcpip.Address]struct{})
-	for _, netif := range ns.netifs {
-		for _, server := range netif.dnsServers {
+	for _, ifs := range ns.ifStates {
+		for _, server := range ifs.nic.DNSServers {
 			uniqServers[server] = struct{}{}
 		}
 	}
@@ -163,14 +145,11 @@ func (ns *netstack) flattenDNSServers() []tcpip.Address {
 func (ns *netstack) addLoopback() error {
 	const nicid = 1
 	ctx, cancel := context.WithCancel(context.Background())
-	loopbackIf := &netif{
-		ns:      ns,
-		ctx:     ctx,
-		cancel:  cancel,
-		nicid:   nicid,
-		addr:    header.IPv4Loopback,
-		netmask: tcpip.AddressMask(strings.Repeat("\xff", 4)),
-		routes: []tcpip.Route{
+	nic := &netiface.NIC{
+		ID:      nicid,
+		Addr:    header.IPv4Loopback,
+		Netmask: tcpip.AddressMask(strings.Repeat("\xff", 4)),
+		Routes: []tcpip.Route{
 			{
 				Destination: header.IPv4Loopback,
 				Mask:        tcpip.Address(strings.Repeat("\xff", 4)),
@@ -183,13 +162,19 @@ func (ns *netstack) addLoopback() error {
 			},
 		},
 	}
+	loopbackIf := &ifState{
+		ns:     ns,
+		ctx:    ctx,
+		cancel: cancel,
+		nic:    nic,
+	}
 
 	ns.mu.Lock()
-	if len(ns.netifs) > 0 {
+	if len(ns.ifStates) > 0 {
 		ns.mu.Unlock()
 		return fmt.Errorf("loopback: other interfaces already registered")
 	}
-	ns.netifs[nicid] = loopbackIf
+	ns.ifStates[nicid] = loopbackIf
 	ns.mu.Unlock()
 
 	loopbackID := loopback.New()
@@ -214,17 +199,18 @@ func (ns *netstack) addLoopback() error {
 func (ns *netstack) addEth(path string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	nif := &netif{
+	ifs := &ifState{
 		ns:     ns,
 		ctx:    ctx,
 		cancel: cancel,
+		nic:    &netiface.NIC{},
 	}
 
-	client, err := eth.NewClient("netstack", path, ns.arena, nif.stateChange)
+	client, err := eth.NewClient("netstack", path, ns.arena, ifs.stateChange)
 	if err != nil {
 		return err
 	}
-	nif.eth = client
+	ifs.eth = client
 	ep := newLinkEndpoint(client)
 	if err := ep.init(); err != nil {
 		log.Fatalf("%s: endpoint init failed: %v", path, err)
@@ -234,9 +220,9 @@ func (ns *netstack) addEth(path string) error {
 
 	ns.mu.Lock()
 	var nicid tcpip.NICID
-	for _, netif := range ns.netifs {
-		if netif.nicid > nicid {
-			nicid = netif.nicid
+	for _, ifs := range ns.ifStates {
+		if ifs.nic.ID > nicid {
+			nicid = ifs.nic.ID
 		}
 	}
 	nicid++
@@ -252,9 +238,9 @@ func (ns *netstack) addEth(path string) error {
 		copy(mac[:], ep.linkAddr)
 		ns.nodename = deviceid.DeviceID(mac)
 	}
-	nif.nicid = nicid
-	nif.routes = defaultRouteTable(nicid, "")
-	ns.netifs[nicid] = nif
+	ifs.nic.ID = nicid
+	ifs.nic.Routes = defaultRouteTable(nicid, "")
+	ns.ifStates[nicid] = ifs
 	ns.mu.Unlock()
 
 	log.Printf("NIC %d added using ethernet device %q", nicid, path)
@@ -276,12 +262,12 @@ func (ns *netstack) addEth(path string) error {
 		return fmt.Errorf("NIC %d: adding solicited-node IPv6 failed: %v", nicid, err)
 	}
 
-	nif.dhcp = dhcp.NewClient(ns.stack, nicid, ep.linkAddr, nif.dhcpAcquired)
+	ifs.dhcp = dhcp.NewClient(ns.stack, nicid, ep.linkAddr, ifs.dhcpAcquired)
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
 
-	go nif.dhcp.Run(nif.ctx)
+	go ifs.dhcp.Run(ifs.ctx)
 
 	return nil
 }

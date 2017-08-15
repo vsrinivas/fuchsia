@@ -78,15 +78,15 @@ func (ni *NetstackImpl) GetInterfaces() (out []nsfidl.NetInterface, err error) {
 	defer ns.mu.Unlock()
 
 	index := uint32(0)
-	for nicid, netif := range ns.netifs {
-		if netif.addr == header.IPv4Loopback {
+	for nicid, ifs := range ns.ifStates {
+		if ifs.nic.Addr == header.IPv4Loopback {
 			continue
 		}
 
-		// Long-hand for: broadaddr = netif.addr | ^netif.netmask
-		broadaddr := []byte(netif.addr)
+		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
+		broadaddr := []byte(ifs.nic.Addr)
 		for i := range broadaddr {
-			broadaddr[i] |= ^netif.netmask[i]
+			broadaddr[i] |= ^ifs.nic.Netmask[i]
 		}
 
 		// TODO: set flags based on actual link status. NET-134
@@ -94,8 +94,8 @@ func (ni *NetstackImpl) GetInterfaces() (out []nsfidl.NetInterface, err error) {
 			Id:        uint32(nicid),
 			Flags:     nsfidl.NetInterfaceFlagUp,
 			Name:      fmt.Sprintf("en%d", nicid),
-			Addr:      toNetAddress(netif.addr),
-			Netmask:   toNetAddress(tcpip.Address(netif.netmask)),
+			Addr:      toNetAddress(ifs.nic.Addr),
+			Netmask:   toNetAddress(tcpip.Address(ifs.nic.Netmask)),
 			Broadaddr: toNetAddress(tcpip.Address(broadaddr)),
 		}
 
