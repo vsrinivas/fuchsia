@@ -25,7 +25,7 @@ pushd $fuchsia_root/third_party/vulkan-cts
 python external/fetch_sources.py
 popd
 
-builds the test executable for the host in order to write out test cases
+# builds the test executable for the host in order to write out test cases
 pushd $fuchsia_root/third_party/vulkan-cts
 mkdir -p cases
 python scripts/build_caselists.py cases
