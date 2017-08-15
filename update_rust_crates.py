@@ -67,6 +67,7 @@ def parse_dependencies(lock_path):
             label = "%s-%s" % (package["name"], package["version"])
             result.append({
                 "name": package["name"],
+                "version": package["version"],
                 "label": label,
                 "deps": deps,
                 "from_crates_io": from_crates_io,
@@ -82,13 +83,16 @@ def update_crates(crates):
     # Account for local crates.
     for crate in crates:
         name = crate["name"]
+        version = crate["version"]
         is_mirror = name in local_crates.RUST_CRATES["mirrors"]
         is_from_crates_io = crate["from_crates_io"]
 
         # Never generate build rules for Fuchsia crates.
         if name in local_crates.RUST_CRATES["published"]:
-            print("Ignoring published crate '%s'" % name)
-            continue
+            published = local_crates.RUST_CRATES["published"][name]
+            if published["version"] == version:
+                print("Ignoring published crate '%s'" % crate["label"])
+                continue
 
         if is_mirror:
             if not is_from_crates_io:
