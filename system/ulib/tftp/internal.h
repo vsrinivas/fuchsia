@@ -45,10 +45,7 @@ typedef struct tftp_data_msg_t {
 #define DEFAULT_USE_OPCODE_PREFIX true
 
 typedef struct tftp_options_t {
-    // For the server, a bitmask of the options that are non-negotiable (we will always
-    // override the settings). For the client, a bitmask of the options that we requested.
-    // Note that we always transmit the file size, even though it is technically optional,
-    // since the client relies on this being present.
+    // A bitmask of the options that have been set
     uint8_t mask;
 
     uint16_t block_size;
@@ -91,10 +88,12 @@ typedef enum {
 } tftp_state;
 
 struct tftp_session_t {
-    // For a server, these are used to hold our override settings, and can be specified
-    // using tftp_server_set_options(). For a client, these hold the settings that we
-    // sent to the server, and expect to see present in an OACK response.
-    tftp_options options;
+    // Hold our override settings, specified with tftp_server_set_options()
+    tftp_options server_min_opts;
+    tftp_options server_max_opts;
+
+    // Hold the settings that we sent to the server, and expect to see present in an OACK response
+    tftp_options client_opts;
 
     // Maximum filename really is 505 including \0
     // max request size (512) - opcode (2) - shortest mode (4) - null (1)

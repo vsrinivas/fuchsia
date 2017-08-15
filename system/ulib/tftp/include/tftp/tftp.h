@@ -73,7 +73,7 @@ typedef enum {
 
 // These are the default values used when sending a tftp request
 #define TFTP_DEFAULT_CLIENT_BLOCKSZ 1024
-#define TFTP_DEFAULT_CLIENT_TIMEOUT 0
+#define TFTP_DEFAULT_CLIENT_TIMEOUT 1
 #define TFTP_DEFAULT_CLIENT_WINSZ 64
 #define TFTP_DEFAULT_CLIENT_MODE MODE_OCTET
 
@@ -208,6 +208,15 @@ void tftp_session_set_max_timeouts(tftp_session* session,
 // generate incorrect checksums for certain packets.
 void tftp_session_set_opcode_prefix_use(tftp_session* session,
                                         bool enable);
+
+// When acting as a server, the options that will be overridden when a
+// value is requested by the client that is outside the specified range.
+// Note that if the client does not specify a setting, the default will be
+// used regardless of server setting.
+tftp_status tftp_server_set_options(tftp_session* session,
+                                    uint16_t* min_block_size, uint16_t* max_block_size,
+                                    uint8_t* min_timeout, uint8_t* max_timeout,
+                                    uint16_t* min_window_size, uint16_t* max_window_size);
 
 // If no response from the peer is received before the most recent timeout_ms
 // value, this function should be called to take the next appropriate action

@@ -123,9 +123,9 @@ static bool test_tftp_generate_write_request_default(void) {
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
 
     // Test TFTP state, but not internal session state
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->options.block_size, "bad session options: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->options.timeout, "bad session options: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->options.window_size, "bad session options: window size");
+    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session options: block size");
+    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session options: timeout");
+    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session options: window size");
 
     EXPECT_EQ(SENT_WRQ, ts.session->state, "bad session: state");
     EXPECT_EQ(ts.msg_size, ts.session->file_size, "bad session: file size");
@@ -150,9 +150,12 @@ static bool test_tftp_generate_write_request_blocksize(void) {
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
     EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
-    EXPECT_EQ(kBlockSize, ts.session->options.block_size, "bad session options: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->options.timeout, "bad session options: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->options.window_size, "bad session options: window size");
+    // Options we are requesting
+    EXPECT_EQ(BLOCKSIZE_OPTION, ts.session->client_opts.mask, "bad session option mask");
+    EXPECT_EQ(kBlockSize, ts.session->client_opts.block_size, "bad session options: block size");
+    // Default options
+    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session options: timeout");
+    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session options: window size");
 
     END_TEST;
 }
@@ -170,9 +173,12 @@ static bool test_tftp_generate_write_request_timeout(void) {
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
     EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->options.block_size, "bad session options: block size");
-    EXPECT_EQ(kTimeout, ts.session->options.timeout, "bad session options: timeout");
-    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->options.window_size, "bad session options: window size");
+    // Options we are requesting
+    EXPECT_EQ(TIMEOUT_OPTION, ts.session->client_opts.mask, "bad session option mask");
+    EXPECT_EQ(kTimeout, ts.session->client_opts.timeout, "bad session options: timeout");
+    // Default options
+    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session options: block size");
+    EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session options: window size");
     // We still have to negotiate the timeout, so we use the default here.
     EXPECT_EQ(DEFAULT_TIMEOUT * 1000, ts.timeout, "timeout not set correctly");
 
@@ -192,9 +198,12 @@ static bool test_tftp_generate_write_request_windowsize(void) {
     EXPECT_EQ(TFTP_NO_ERROR, status, "error generating write request");
     EXPECT_TRUE(verify_write_request(ts), "bad write request");
     EXPECT_EQ(DEFAULT_MODE, ts.session->mode, "bad session: mode");
-    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->options.block_size, "bad session options: block size");
-    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->options.timeout, "bad session options: timeout");
-    EXPECT_EQ(kWindowSize, ts.session->options.window_size, "bad session options: window size");
+    // Options we are requesting
+    EXPECT_EQ(WINDOWSIZE_OPTION, ts.session->client_opts.mask, "bad session option mask");
+    EXPECT_EQ(kWindowSize, ts.session->client_opts.window_size, "bad session options: window size");
+    // Default options
+    EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session options: block size");
+    EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session options: timeout");
 
     END_TEST;
 }
@@ -309,6 +318,11 @@ static bool test_tftp_receive_write_request_blocksize(void) {
     ts.reset(1024, 1024, 1500);
     tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
+    uint16_t min_window_size = 33;
+    uint16_t max_window_size = 33;
+    tftp_status status = tftp_server_set_options(ts.session, NULL, NULL, NULL, NULL,
+                                                 &min_window_size, &max_window_size);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failed to set server options");
 
     uint8_t buf[] = {
         0x00, 0x02,                                   // Opcode (WRQ)
@@ -319,10 +333,11 @@ static bool test_tftp_receive_write_request_blocksize(void) {
         'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,      // Option
         '1', '0', '2', '4', 0x00,                     // BLKSIZE value
     };
-    auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
     EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
     EXPECT_EQ(kBlocksize, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
+    // Verify that server options are ignored when the client doesn't specify them
     EXPECT_EQ(DEFAULT_WINDOWSIZE, ts.session->window_size, "bad session: window size");
     EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
@@ -382,6 +397,86 @@ static bool test_tftp_receive_write_request_windowsize(void) {
     EXPECT_EQ(DEFAULT_BLOCKSIZE, ts.session->block_size, "bad session: block size");
     EXPECT_EQ(DEFAULT_TIMEOUT, ts.session->timeout, "bad session: timeout");
     EXPECT_EQ(kWindowsize, ts.session->window_size, "bad session: window size");
+    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+
+    END_TEST;
+}
+
+static bool test_tftp_receive_write_request_below_min(void) {
+    BEGIN_TEST;
+
+    test_state ts;
+    ts.reset(1024, 1024, 1500);
+    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
+    tftp_session_set_file_interface(ts.session, &ifc);
+    uint16_t min_block_size = 16;
+    uint8_t min_timeout = 5;
+    uint8_t max_timeout = 10;
+    uint16_t max_window_size = 128;
+    tftp_status status;
+    status = tftp_server_set_options(ts.session, &min_block_size, NULL,
+                                                 &min_timeout, &max_timeout,
+                                                 NULL, &max_window_size);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failed to set server options");
+
+    uint8_t buf[] = {
+        0x00, 0x02,                                                  // Opcode (WRQ)
+        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                // Filename
+        'O', 'C', 'T', 'E', 'T', 0x00,                               // Mode
+        'T', 'S', 'I', 'Z', 'E', 0x00,                               // Option
+        '1', '0', '2', '4', 0x00,                                    // TSIZE value
+        'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,                     // Option
+        '8', 0x00,                                                   // BLKSIZE value
+        'T', 'I', 'M', 'E', 'O', 'U', 'T', 0x00,                     // Option
+        '4', 0x00,                                                   // TIMEOUT value
+        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
+        '3', '2', 0x00,                                              // WINDOWSIZE value
+    };
+    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
+    EXPECT_EQ(16, ts.session->block_size, "bad session: block size");
+    EXPECT_EQ(5, ts.session->timeout, "bad session: timeout");
+    EXPECT_EQ(32, ts.session->window_size, "bad session: window size");
+    EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
+
+    END_TEST;
+}
+
+static bool test_tftp_receive_write_request_above_max(void) {
+    BEGIN_TEST;
+
+    test_state ts;
+    ts.reset(1024, 1024, 1500);
+    tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
+    tftp_session_set_file_interface(ts.session, &ifc);
+    uint16_t max_block_size = 16;
+    uint8_t min_timeout = 2;
+    uint16_t min_window_size = 64;
+    uint16_t max_window_size = 128;
+    tftp_status status;
+    status = tftp_server_set_options(ts.session, NULL, &max_block_size,
+                                                 &min_timeout, NULL,
+                                                 &min_window_size, &max_window_size);
+    ASSERT_EQ(TFTP_NO_ERROR, status, "failed to set server options");
+
+    uint8_t buf[] = {
+        0x00, 0x02,                                                  // Opcode (WRQ)
+        'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                // Filename
+        'O', 'C', 'T', 'E', 'T', 0x00,                               // Mode
+        'T', 'S', 'I', 'Z', 'E', 0x00,                               // Option
+        '1', '0', '2', '4', 0x00,                                    // TSIZE value
+        'B', 'L', 'K', 'S', 'I', 'Z', 'E', 0x00,                     // Option
+        '1', '0', '2', '4', 0x00,                                    // BLKSIZE value
+        'T', 'I', 'M', 'E', 'O', 'U', 'T', 0x00,                     // Option
+        '4', 0x00,                                                   // TIMEOUT value
+        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', 0x00,      // Option
+        '5', '1', '2', 0x00,                                         // WINDOWSIZE value
+    };
+    status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);
+    EXPECT_EQ(TFTP_NO_ERROR, status, "receive write request failed");
+    EXPECT_EQ(16, ts.session->block_size, "bad session: block size");
+    EXPECT_EQ(4, ts.session->timeout, "bad session: timeout");
+    EXPECT_EQ(128, ts.session->window_size, "bad session: window size");
     EXPECT_TRUE(verify_response_opcode(ts, OPCODE_OACK), "bad response");
 
     END_TEST;
@@ -1432,6 +1527,8 @@ RUN_TEST(test_tftp_receive_write_request_send_oack)
 RUN_TEST(test_tftp_receive_write_request_blocksize)
 RUN_TEST(test_tftp_receive_write_request_timeout)
 RUN_TEST(test_tftp_receive_write_request_windowsize)
+RUN_TEST(test_tftp_receive_write_request_below_min)
+RUN_TEST(test_tftp_receive_write_request_above_max)
 END_TEST_CASE(tftp_receive_write_request)
 
 BEGIN_TEST_CASE(tftp_receive_oack)
