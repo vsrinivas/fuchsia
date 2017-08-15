@@ -15,6 +15,7 @@ MODULE_CFLAGS += \
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
+    $(LOCAL_DIR)/balloon.c \
     $(LOCAL_DIR)/block.c \
     $(LOCAL_DIR)/guest.c \
     $(LOCAL_DIR)/io_apic.c \

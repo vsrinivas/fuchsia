@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <hypervisor/acpi.h>
+#include <hypervisor/balloon.h>
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io_apic.h>
@@ -209,6 +210,16 @@ int main(int argc, char** argv) {
         if (status != MX_OK)
             return status;
     }
+    // Setup memory balloon.
+    balloon_t balloon;
+    balloon_init(&balloon, (void*)addr, kVmoSize, physmem_vmo);
+    status = pci_bus_connect(&bus, &balloon.virtio_device.pci_device,
+                             PCI_DEVICE_VIRTIO_BALLOON);
+    if (status != MX_OK)
+        return status;
+    status = pci_device_async(&balloon.virtio_device.pci_device, vcpu, guest);
+    if (status != MX_OK)
+        return status;
 
     vcpu_ctx_t vcpu_ctx;
     vcpu_init(&vcpu_ctx);

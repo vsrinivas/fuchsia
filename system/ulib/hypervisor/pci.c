@@ -33,7 +33,7 @@ static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
  *
  * These are provided to the guest via the _SB section in the DSDT ACPI table.
  */
-static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33};
+static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34};
 
 static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t port,
                                             mx_vcpu_io_t* vcpu_io) {
