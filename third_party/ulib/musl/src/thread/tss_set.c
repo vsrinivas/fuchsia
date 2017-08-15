@@ -2,7 +2,7 @@
 #include <threads.h>
 
 int tss_set(tss_t k, void* x) {
-    struct pthread* self = __pthread_self();
+    thrd_t self = __thrd_current();
     /* Avoid unnecessary COW */
     if (self->tsd[k] != x) {
         self->tsd[k] = x;

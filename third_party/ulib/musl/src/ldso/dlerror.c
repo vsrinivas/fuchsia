@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 char* dlerror() {
-    pthread_t self = __pthread_self();
+    thrd_t self = __thrd_current();
     if (!self->dlerror_flag)
         return 0;
     self->dlerror_flag = 0;
@@ -17,7 +17,7 @@ char* dlerror() {
 }
 
 void __dl_thread_cleanup(void) {
-    pthread_t self = __pthread_self();
+    thrd_t self = __thrd_current();
     if (self->dlerror_buf != (void*)-1)
         free(self->dlerror_buf);
 }
@@ -25,7 +25,7 @@ void __dl_thread_cleanup(void) {
 __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char* fmt, va_list ap) {
     va_list ap2;
     va_copy(ap2, ap);
-    pthread_t self = __pthread_self();
+    thrd_t self = __thrd_current();
     if (self->dlerror_buf != (void*)-1)
         free(self->dlerror_buf);
     size_t len = vsnprintf(0, 0, fmt, ap2);

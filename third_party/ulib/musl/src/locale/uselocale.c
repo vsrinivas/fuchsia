@@ -3,7 +3,7 @@
 #include "pthread_impl.h"
 
 locale_t __uselocale(locale_t new) {
-    pthread_t self = __pthread_self();
+    thrd_t self = __thrd_current();
     locale_t old = self->locale;
     locale_t global = &libc.global_locale;
 

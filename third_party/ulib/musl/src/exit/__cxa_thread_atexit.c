@@ -17,7 +17,7 @@ struct tls_dtor {
 
 void __tls_run_dtors(void) {
     struct tls_dtor *cur;
-    pthread_t self = __pthread_self();
+    thrd_t self = __thrd_current();
     while (self->tls_dtors) {
         cur = self->tls_dtors;
         self->tls_dtors = self->tls_dtors->next;
@@ -37,7 +37,7 @@ int __cxa_thread_atexit_impl(void (*func)(void*), void* arg, void* dso) {
     // Prepend function to the list, the thread local destructors have to be
     // called in an order determined by the sequenced-before rule according to
     // C++ standard [basic.start.term].
-    pthread_t self = __pthread_self();
+    thrd_t self = __thrd_current();
     new_td->next = self->tls_dtors;
     self->tls_dtors = new_td;
 
