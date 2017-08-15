@@ -1,0 +1,14 @@
+{
+    "languages": [
+        "rust"
+    ],
+    "labels": [
+        "//rust/ddk-rs/examples"
+    ],
+    "binaries": [
+        {
+            "binary": "ddk_toy",
+            "bootfs_path": "bin/example_ddk_toy"
+        }
+    ]
+}
