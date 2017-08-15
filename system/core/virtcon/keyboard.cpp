@@ -137,7 +137,7 @@ static mx_status_t vc_timer_cb(port_handler_t* ph, mx_signals_t signals, uint32_
             vi->repeat_interval = HIGH_REPEAT_KEY_FREQ;
         }
 
-        mx_timer_start(vi->timer, mx_deadline_after(vi->repeat_interval), 0, 0);
+        mx_timer_set(vi->timer, mx_deadline_after(vi->repeat_interval), 0);
     }
 
     // We've set this up as repeating so we always
@@ -167,7 +167,7 @@ static mx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t
 
     if (vc_input_process(vi, vi->report_buf) && vi->repeat_enabled) {
         vi->repeat_interval = LOW_REPEAT_KEY_FREQ;
-        mx_timer_start(vi->timer, mx_deadline_after(vi->repeat_interval), 0, 0);
+        mx_timer_set(vi->timer, mx_deadline_after(vi->repeat_interval), 0);
     } else {
         vi->repeat_interval = MX_TIME_INFINITE;
     }
