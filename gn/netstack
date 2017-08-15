@@ -10,6 +10,7 @@
         }
     ],
     "packages": {
-        "netstack": "//apps/netstack"
+        "netstack": "//apps/netstack",
+        "netstack_gotests" : "//apps/netstack:netstack_gotests"
     }
 }
