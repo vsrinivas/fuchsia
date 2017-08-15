@@ -241,8 +241,16 @@ mx_status_t sys_system_mexec(mx_handle_t kernel_vmo, mx_handle_t bootimage_vmo,
     }
 
 
+    // Ensure that the length of the command line (including the trailing null)
+    // fits inside the command line buffer
+    DEBUG_ASSERT((cmdline.length() + 1) < CMDLINE_MAX);
+
+    // magenta_copy_user_string ensures that the copied string is null terminated
+    // ensure that this invariant is maintained.
+    DEBUG_ASSERT(cmdline.data()[cmdline.length()] == '\0');
+
     result = bootdata_append_section(bootimage_buffer, new_bootimage_len,
-                                     (const uint8_t*)cmdline.data(), (uint32_t)cmdline.length(),
+                                     (const uint8_t*)cmdline.data(), (uint32_t)(cmdline.length() + 1),
                                      BOOTDATA_CMDLINE, 0, 0);
     if (result != MX_OK) {
         panic("Failed to append command line to bootdata\n");
