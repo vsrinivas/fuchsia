@@ -4,12 +4,22 @@
 
 #pragma once
 
+#include <string.h>
+
 #include <magenta/assert.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/macros.h>
+#include <mxtl/new.h>
 #include <mxtl/type_support.h>
 
 namespace mxtl {
+
+namespace internal {
+
+template <typename U>
+using remove_cv_ref = typename remove_cv<typename remove_reference<U>::type>::type;
+
+}  // namespace internal
 
 struct DefaultAllocatorTraits {
     // Allocate receives a request for "size" contiguous bytes.
@@ -20,7 +30,7 @@ struct DefaultAllocatorTraits {
     static void* Allocate(size_t size) {
         MX_DEBUG_ASSERT(size > 0);
         AllocChecker ac;
-        void* object = new (&ac) char[size]();
+        void* object = new (&ac) char[size];
         return ac.check() ? object : nullptr;
     }
 
@@ -105,19 +115,17 @@ public:
         other.capacity_ = capacity;
     }
 
-    bool push_back(const T& value) __WARN_UNUSED_RESULT {
+    // TODO(smklein): In the future, if we want to be able to push back
+    // function pointers and arrays with impunity without requiring exact
+    // types, this 'remove_cv_ref' call should probably be replaced with a
+    // 'mxtl::decay' call.
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    bool __WARN_UNUSED_RESULT push_back(U&& value) {
         if (!grow_for_new_element()) {
             return false;
         }
-        ptr_[size_++] = value;
-        return true;
-    }
-
-    bool push_back(T&& value) __WARN_UNUSED_RESULT {
-        if (!grow_for_new_element()) {
-            return false;
-        }
-        ptr_[size_++] = mxtl::forward<T>(value);
+        new (&ptr_[size_++]) T(mxtl::forward<U>(value));
         return true;
     }
 
@@ -128,29 +136,24 @@ public:
     // of memory), like "push_back".
     //
     // Index must be less than or equal to the size of the vector.
-    bool insert(size_t index, const T& value) __WARN_UNUSED_RESULT {
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    bool __WARN_UNUSED_RESULT insert(size_t index, U&& value) {
         MX_DEBUG_ASSERT(index <= size_);
         if (!grow_for_new_element()) {
             return false;
         }
-        size_++;
-        for (size_t i = size_; i > index; i--) {
-            ptr_[i] = mxtl::move(ptr_[i - 1]);
+        if (index == size_) {
+            // Inserting into the end of the vector; nothing to shift
+            size_++;
+            new (&ptr_[index]) T(mxtl::forward<U>(value));
+        } else {
+            // Avoid calling both a destructor and move constructor, preferring
+            // to simply call a move assignment operator if the index contains
+            // a valid (yet already moved-from) object.
+            shift_back(index);
+            ptr_[index] = mxtl::forward<U>(value);
         }
-        ptr_[index] = value;
-        return true;
-    }
-
-    bool insert(size_t index, T&& value) __WARN_UNUSED_RESULT {
-        MX_DEBUG_ASSERT(index <= size_);
-        if (!grow_for_new_element()) {
-            return false;
-        }
-        size_++;
-        for (size_t i = size_; i > index; i--) {
-            ptr_[i] = mxtl::move(ptr_[i - 1]);
-        }
-        ptr_[index] = mxtl::forward<T>(value);
         return true;
     }
 
@@ -162,10 +165,8 @@ public:
     T erase(size_t index) {
         MX_DEBUG_ASSERT(index < size_);
         auto val = mxtl::move(ptr_[index]);
-        for (size_t i = index; (i + 1) < size_; i++) {
-            ptr_[i] = mxtl::move(ptr_[i + 1]);
-        }
-        pop_back();
+        shift_forward(index);
+        consider_shrinking();
         return mxtl::move(val);
     }
 
@@ -197,6 +198,65 @@ public:
     }
 
 private:
+    // Moves all objects in the internal storage (at & after index) back by one,
+    // leaving an 'empty' object at index.
+    // Increases the size of the vector by one.
+    template <typename U = T>
+    typename enable_if<is_pod<U>::value, void>::type
+    shift_back(size_t index) {
+        MX_DEBUG_ASSERT(size_ < capacity_);
+        MX_DEBUG_ASSERT(size_ > 0);
+        size_++;
+        memmove(&ptr_[index + 1], &ptr_[index], sizeof(T) * (size_ - (index + 1)));
+    }
+
+    template <typename U = T>
+    typename enable_if<!is_pod<U>::value, void>::type
+    shift_back(size_t index) {
+        MX_DEBUG_ASSERT(size_ < capacity_);
+        MX_DEBUG_ASSERT(size_ > 0);
+        size_++;
+        new (&ptr_[size_ - 1]) T(mxtl::move(ptr_[size_ - 2]));
+        for (size_t i = size_ - 2; i > index; i--) {
+            ptr_[i] = mxtl::move(ptr_[i - 1]);
+        }
+    }
+
+    // Moves all objects in the internal storage (after index) forward by one.
+    // Decreases the size of the vector by one.
+    template <typename U = T>
+    typename enable_if<is_pod<U>::value, void>::type
+    shift_forward(size_t index) {
+        MX_DEBUG_ASSERT(size_ > 0);
+        memmove(&ptr_[index], &ptr_[index + 1], sizeof(T) * (size_ - (index + 1)));
+        size_--;
+    }
+
+    template <typename U = T>
+    typename enable_if<!is_pod<U>::value, void>::type
+    shift_forward(size_t index) {
+        MX_DEBUG_ASSERT(size_ > 0);
+        for (size_t i = index; (i + 1) < size_; i++) {
+            ptr_[i] = mxtl::move(ptr_[i + 1]);
+        }
+        ptr_[--size_].~T();
+    }
+
+    template <typename U = T>
+    typename enable_if<is_pod<U>::value, void>::type
+    transfer_to(T* newPtr, size_t elements) {
+        memcpy(newPtr, ptr_, elements * sizeof(T));
+    }
+
+    template <typename U = T>
+    typename enable_if<!is_pod<U>::value, void>::type
+    transfer_to(T* newPtr, size_t elements) {
+        for (size_t i = 0; i < elements; i++) {
+            new (&newPtr[i]) T(mxtl::move(ptr_[i]));
+            ptr_[i].~T();
+        }
+    }
+
     // Grows the vector's capacity to accommodate one more element.
     // Returns true on success, false on failure.
     bool grow_for_new_element() {
@@ -234,9 +294,7 @@ private:
         if (newPtr == nullptr) {
             return false;
         }
-        for (size_t i = 0; i < size_; i++) {
-            newPtr[i] = mxtl::move(ptr_[i]);
-        }
+        transfer_to(newPtr, size_);
         AllocatorTraits::Deallocate(ptr_);
         capacity_ = newCapacity;
         ptr_ = newPtr;
