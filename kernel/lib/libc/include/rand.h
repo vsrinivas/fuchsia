@@ -5,13 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __RAND_H
-#define __RAND_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <sys/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 int rand(void);
 void srand(unsigned int seed);
@@ -19,7 +18,4 @@ void srand(unsigned int seed);
 /* non standard extension to add some entropy to the seed */
 void rand_add_entropy(const void *buf, size_t len);
 
-__END_CDECLS;
-
-#endif
-
+__END_CDECLS

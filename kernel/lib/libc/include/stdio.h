@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __STDIO_H
-#define __STDIO_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <printf.h>
@@ -39,6 +38,3 @@ int vsnprintf(char *str, size_t len, const char *fmt, va_list ap);
 
 
 __END_CDECLS
-
-#endif
-

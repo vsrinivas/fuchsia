@@ -9,7 +9,7 @@
 
 #include <magenta/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 void *cmpct_alloc(size_t);
 void *cmpct_realloc(void *, size_t);
@@ -22,4 +22,4 @@ void cmpct_get_info(size_t *size_bytes, size_t *free_bytes);
 void cmpct_test(void);
 void cmpct_trim(void);
 
-__END_CDECLS;
+__END_CDECLS

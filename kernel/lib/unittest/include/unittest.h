@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef _LIB_UNITTEST_INCLUDE_UNITTEST_H_
-#define _LIB_UNITTEST_INCLUDE_UNITTEST_H_
+#pragma once
 /*
  * Macros for writing unit tests.
  *
@@ -361,5 +360,3 @@ typedef struct unitest_testcase_registration {
 #endif  // WITH_LIB_UNITTEST
 
 __END_CDECLS
-
-#endif /* _LIB_UNITTEST_INCLUDE_UNITTEST_H_ */

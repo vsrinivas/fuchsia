@@ -6,10 +6,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __PLATFORM_PC_H
-#define __PLATFORM_PC_H
+#pragma once
 
-#include <platform/pc/memmap.h>
 #include <platform/pc/iomap.h>
 #include <arch/x86/interrupts.h>
 
@@ -30,6 +28,3 @@
 /* PIC remap bases */
 #define PIC1_BASE X86_INT_PLATFORM_BASE
 #define PIC2_BASE (PIC1_BASE + 8)
-
-#endif
-

@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __SYS_TYPES_H
-#define __SYS_TYPES_H
+#pragma once
 
 #include <limits.h>
 #include <stdint.h>
@@ -45,4 +44,3 @@ typedef intptr_t ssize_t;
 #define MB (1024UL * KB)
 #define GB (1024UL * MB)
 
-#endif

@@ -10,14 +10,14 @@
 #include <magenta/compiler.h>
 #include <err.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 status_t udisplay_init(void);
 status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size);
 status_t udisplay_set_display_info(struct display_info* display);
 status_t udisplay_bind_gfxconsole(void);
 
-__END_CDECLS;
+__END_CDECLS
 
 #ifdef __cplusplus
 #include <magenta/dispatcher.h>

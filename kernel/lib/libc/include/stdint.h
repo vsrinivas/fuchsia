@@ -4,8 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __STDINT_H
-#define __STDINT_H
+#pragma once
 
 // The compiler predefines macros __<type>_TYPE__, __<type>_MAX__,
 // and __<type>_C for the various types.  All we have to do here is
@@ -270,5 +269,3 @@ typedef __UINTMAX_TYPE__  uintmax_t;
 
 #define INTMAX_C(c)       __INTMAX_C(c)
 #define UINTMAX_C(c)      __UINTMAX_C(c)
-
-#endif

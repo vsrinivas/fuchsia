@@ -5,13 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __APP_H
-#define __APP_H
+#pragma once
 
 #include <stddef.h>
 #include <magenta/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /* app support api */
 void apps_init(void); /* one time setup */
@@ -40,6 +39,4 @@ struct app_descriptor {
 
 #define APP_END };
 
-__END_CDECLS;
-
-#endif
+__END_CDECLS

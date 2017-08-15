@@ -5,12 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __CTYPE_H
-#define __CTYPE_H
+#pragma once
 
 #include <magenta/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 int isalnum(int c);
 int isalpha(int c);
@@ -28,7 +27,4 @@ int isxdigit(int c);
 int tolower(int c);
 int toupper(int c);
 
-__END_CDECLS;
-
-#endif
-
+__END_CDECLS

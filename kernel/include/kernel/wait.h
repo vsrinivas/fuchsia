@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __KERNEL_WAIT_H
-#define __KERNEL_WAIT_H
+#pragma once
 
 #include <sys/types.h>
 #include <list.h>
@@ -15,7 +14,7 @@
 #include <arch/ops.h>
 #include <arch/thread.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /* wait queue stuff */
 #define WAIT_QUEUE_MAGIC (0x77616974) // 'wait'
@@ -65,7 +64,4 @@ status_t thread_unblock_from_wait_queue(struct thread *t, status_t wait_queue_er
 /* is the wait queue currently empty */
 bool wait_queue_is_empty(wait_queue_t *);
 
-__END_CDECLS;
-
-#endif
-
+__END_CDECLS

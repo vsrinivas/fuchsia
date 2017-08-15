@@ -5,14 +5,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+#pragma once
 
 #include <sys/types.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #define BOOT_CPU_ID 0
 
@@ -121,6 +120,4 @@ size_t platform_stow_crashlog(void* log, size_t len);
 size_t platform_recover_crashlog(size_t len, void* cookie,
                                  void (*func)(const void* data, size_t off, size_t len, void* cookie));
 
-__END_CDECLS;
-
-#endif
+__END_CDECLS

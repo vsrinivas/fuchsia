@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __LIB_PRINTF_H
-#define __LIB_PRINTF_H
+#pragma once
 
 #include <stdarg.h>
 #include <magenta/compiler.h>
@@ -25,5 +24,3 @@ typedef int (*_printf_engine_output_func)(const char *str, size_t len, void *sta
 int _printf_engine(_printf_engine_output_func out, void *state, const char *fmt, va_list ap);
 
 __END_CDECLS
-
-#endif

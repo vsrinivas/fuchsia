@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __STDLIB_H
-#define __STDLIB_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <sys/types.h>
@@ -16,7 +15,7 @@
 #include <rand.h>
 #include <arch/defines.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 int atoi(const char *num);
 unsigned int atoui(const char *num);
@@ -46,7 +45,4 @@ void *bsearch(const void *key, const void *base, size_t num_elems, size_t size,
 unsigned long int strtoul(const char *nptr, char **endptr, int base);
 char *getenv(const char *name);
 
-__END_CDECLS;
-
-#endif
-
+__END_CDECLS

@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __LIB_STRING_H
-#define __LIB_STRING_H
+#pragma once
 
 #include <stddef.h>
 #include <magenta/compiler.h>
@@ -46,5 +45,3 @@ int    strnicmp(char const *, char const *, size_t) __PURE;
 size_t strnlen(char const *s, size_t count) __PURE;
 
 __END_CDECLS
-
-#endif

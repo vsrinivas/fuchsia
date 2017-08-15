@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __LIB_GFXCONSOLE_H
-#define __LIB_GFXCONSOLE_H
+#pragma once
 
 #include <lib/gfx.h>
 #include <magenta/compiler.h>
@@ -19,6 +18,4 @@ void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb);
 void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color);
 
 __END_CDECLS
-
-#endif
 

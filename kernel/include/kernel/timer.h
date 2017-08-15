@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __KERNEL_TIMER_H
-#define __KERNEL_TIMER_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <list.h>
@@ -115,6 +114,4 @@ void timer_thaw_percpu(void);
 status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock);
 
 __END_CDECLS
-
-#endif
 

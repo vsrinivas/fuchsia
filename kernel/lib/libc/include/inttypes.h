@@ -4,8 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __INTTYPES_H
-#define __INTTYPES_H
+#pragma once
 
 // This (or the compiler) defines all the __<type>_FMT<letter>__ macros.
 #include <stdint.h>
@@ -113,5 +112,3 @@
 #define PRIuPTR     __UINTPTR_FMTu__
 #define PRIxPTR     __UINTPTR_FMTx__
 #define PRIXPTR     __UINTPTR_FMTX__
-
-#endif

@@ -6,8 +6,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __KERNEL_MUTEX_H
-#define __KERNEL_MUTEX_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <magenta/thread_annotations.h>
@@ -71,5 +70,3 @@ static inline bool is_mutex_held(const mutex_t *m)
 }
 
 __END_CDECLS
-
-#endif

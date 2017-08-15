@@ -5,9 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __KERNEL_EVENT_H
-#define __KERNEL_EVENT_H
-
 #pragma once
 
 #include <err.h>
@@ -17,7 +14,7 @@
 #include <sys/types.h>
 #include <kernel/thread.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #define EVENT_MAGIC (0x65766E74)  // "evnt"
 
@@ -75,9 +72,7 @@ static inline bool event_initialized(const event_t *e) { return e->magic == EVEN
 
 static inline bool event_signaled(const event_t *e) { return e->signaled; }
 
-__END_CDECLS;
-
-#endif
+__END_CDECLS
 
 #ifdef __cplusplus
 

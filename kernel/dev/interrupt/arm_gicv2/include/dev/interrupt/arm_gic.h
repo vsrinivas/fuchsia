@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __DEV_INTERRUPT_ARM_GIC_H
-#define __DEV_INTERRUPT_ARM_GIC_H
+#pragma once
 
 #include <sys/types.h>
 
@@ -24,6 +23,3 @@ enum {
     /* Only forward the interrupt to CPUs that has the interrupt configured as group 1 (non-secure) */
     ARM_GIC_SGI_FLAG_NS = 0x4,
 };
-
-#endif
-

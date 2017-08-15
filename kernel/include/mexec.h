@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
 //          function. Do not modify without also updating mexec.S.
@@ -52,6 +52,6 @@ static_assert(__offsetof(memmov_ops_t, dst) == MEMMOV_OPS_DST_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, src) == MEMMOV_OPS_SRC_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, len) == MEMMOV_OPS_LEN_OFFSET, "");
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif // ASSEMBLY

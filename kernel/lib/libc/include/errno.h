@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __ERRNO_H
-#define __ERRNO_H
+#pragma once
 
 #include <magenta/compiler.h>
 
@@ -144,5 +143,3 @@ extern int *__geterrno(void);
 #define __ELASTERROR 2000   /* Users can add values starting here */
 
 __END_CDECLS
-
-#endif

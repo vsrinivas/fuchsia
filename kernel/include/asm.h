@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __ASM_H
-#define __ASM_H
+#pragma once
 
 #ifndef ASSEMBLY
 #error for assembly files only
@@ -42,4 +41,3 @@
 // WARNING: This is a subtle side-effect of including this file. Heads up!
 .cfi_sections .debug_frame
 
-#endif

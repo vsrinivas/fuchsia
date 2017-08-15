@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __TRACE_H
-#define __TRACE_H
+#pragma once
 
 #include <stdio.h>
 
@@ -30,4 +29,3 @@
 #define LTRACEF(x...) do { if (LOCAL_TRACE) { TRACEF(x); } } while (0)
 #define LTRACEF_LEVEL(level, x...) do { if (LOCAL_TRACE >= (level)) { TRACEF(x); } } while (0)
 
-#endif

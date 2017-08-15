@@ -4,8 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __PLATFORM_ACPI_H
-#define __PLATFORM_ACPI_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
@@ -39,5 +38,3 @@ status_t platform_enumerate_interrupt_source_overrides(
 status_t platform_find_hpet(struct acpi_hpet_descriptor *hpet);
 
 __END_CDECLS
-
-#endif

@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __ASSERT_H
-#define __ASSERT_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <debug.h>
@@ -66,5 +65,3 @@
 #endif
 
 #define assert(x) DEBUG_ASSERT(x)
-
-#endif

@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __DEV_DISPLAY_H
-#define __DEV_DISPLAY_H
+#pragma once
 
 #include <magenta/compiler.h>
 
@@ -51,6 +50,3 @@ struct display_info {
 __BEGIN_CDECLS
 status_t display_get_info(struct display_info *info);
 __END_CDECLS
-
-#endif
-

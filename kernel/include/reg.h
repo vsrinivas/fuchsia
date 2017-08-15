@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __REG_H
-#define __REG_H
+#pragma once
 
 #include <stdint.h>
 
@@ -29,5 +28,3 @@
 #define readw(a) (*REG16(a))
 #define writeb(v, a) (*REG8(a) = (v))
 #define readb(a) (*REG8(a))
-
-#endif

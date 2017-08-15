@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __ENDIAN_H
-#define __ENDIAN_H
+#pragma once
 
 #include <sys/types.h>
 
@@ -81,7 +80,4 @@ static inline uint16_t SWAP_16(uint16_t x) {
 #define WRITE_MEM_WORD(ptr, data)   (*(word *)(ptr) = SWAPIT_32(data))
 #define WRITE_MEM_HALFWORD(ptr, data)   (*(halfword *)(ptr) = SWAPIT_16(data))
 #define WRITE_MEM_BYTE(ptr, data)   (*(byte *)(ptr) = (data))
-#endif
-
-
 #endif

@@ -5,13 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef __TARGET_H
-#define __TARGET_H
+#pragma once
 
 #include <magenta/compiler.h>
 #include <stdbool.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /* super early platform initialization, before almost everything */
 void target_early_init(void);
@@ -31,6 +30,4 @@ void target_set_debug_led(unsigned int led, bool on);
 #define target_set_debug_led(led, on) ((void)(0))
 #endif
 
-__END_CDECLS;
-
-#endif
+__END_CDECLS
