@@ -10,6 +10,7 @@ group("services") {
     "config",
     "device",
     "entity",
+    "lifecycle",
     "module",
     "remote",
     "story",
