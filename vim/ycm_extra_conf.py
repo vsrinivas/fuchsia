@@ -13,20 +13,20 @@ fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
 fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
 fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
 
-def find_toolchain_builtins():
-  for f in os.listdir(os.path.join(fuchsia_buildtools, 'toolchain')):
-    if f.startswith('clang'):
-      return os.path.join(fuchsia_buildtools, 'toolchain', f, 'x86_64-fuchsia')
-  assert False, 'Could not find toolchain in {}'.format(fuchsia_buildtools)
-fuchsia_toolchain_builtins = find_toolchain_builtins()
+for f in os.listdir(os.path.join(fuchsia_buildtools, 'toolchain')):
+  if f.startswith('clang'):
+    fuchsia_toolchain_builtins = os.path.join(
+        fuchsia_buildtools, 'toolchain', f, 'x86_64-fuchsia')
+assert fuchsia_toolchain_builtins, \
+    'Could not find toolchain in {}'.format(fuchsia_buildtools)
 
 common_flags = [
     '-std=c++14',
     '-xc++',
     '-isystem',
-    '{}/include'.format(fuchsia_toolchain_builtins),
+    fuchsia_toolchain_builtins + '/include',
     '-isystem',
-    '{}/include/c++/v1'.format(fuchsia_toolchain_builtins),
+    fuchsia_toolchain_builtins + '/include/c++/v1',
 ]
 
 default_flags = [
