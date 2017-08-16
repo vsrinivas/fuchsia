@@ -8,6 +8,7 @@
 #include <device_id.h>
 #include <inet6.h>
 #include <netifc.h>
+#include <xefi.h>
 
 #include <magenta/boot/netboot.h>
 #include <tftp/tftp.h>
@@ -240,6 +241,14 @@ static int udp_timeout_set(uint32_t timeout_ms, void* cookie) {
     return 0;
 }
 
+static int strcmp8to16(const char* str8, const char16_t* str16) {
+    while (*str8 != '\0' && *str8 == *str16) {
+        str8++;
+        str16++;
+    }
+    return *str8 - *str16;
+}
+
 void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
                const ip6_addr* saddr, uint16_t sport) {
     static tftp_session* session = NULL;
@@ -256,6 +265,12 @@ void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
             printf("netboot: failed to initiate tftp session\n");
             session = NULL;
             return;
+        }
+
+        // Limit our window size on the Acer tablet
+        if (!strcmp8to16("INSYDE Corp.", gSys->FirmwareVendor)) {
+            uint16_t max_window_size = 8;
+            tftp_server_set_options(session, NULL, NULL, NULL, NULL, NULL, &max_window_size);
         }
 
         // Initialize file interface
