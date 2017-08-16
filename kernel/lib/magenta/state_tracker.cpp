@@ -124,27 +124,6 @@ void StateTracker::UpdateState(mx_signals_t clear_mask,
         thread_reschedule();
 }
 
-void StateTracker::StrobeState(mx_signals_t notify_mask) {
-    canary_.Assert();
-
-    StateObserver::Flags flags;
-    ObserverList obs_to_remove;
-
-    {
-        AutoLock lock(&lock_);
-        // include currently active signals as well
-        notify_mask |= signals_;
-        flags = UpdateInternalLocked(&obs_to_remove, notify_mask);
-    }
-
-    while (!obs_to_remove.is_empty()) {
-        obs_to_remove.pop_front()->OnRemoved();
-    }
-
-    if (flags & StateObserver::kWokeThreads)
-        thread_reschedule();
-}
-
 void StateTracker::UpdateLastHandleSignal(uint32_t* count) {
     canary_.Assert();
 
