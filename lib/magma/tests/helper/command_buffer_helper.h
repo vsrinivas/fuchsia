@@ -24,8 +24,8 @@ public:
             msd_drv.get(), platform_device ? platform_device->GetDeviceHandle() : nullptr);
         if (!msd_dev)
             return DRETP(nullptr, "failed to create msd device");
-        auto dev = std::make_shared<MagmaSystemDevice>(
-            msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
+        auto dev = std::shared_ptr<MagmaSystemDevice>(
+            MagmaSystemDevice::Create(MsdDeviceUniquePtr(msd_dev)));
         uint32_t ctx_id = 0;
         auto msd_connection_t = msd_device_open(msd_dev, 0);
         if (!msd_connection_t)

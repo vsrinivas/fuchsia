@@ -16,6 +16,14 @@ extern "C" {
 
 typedef uint32_t msd_client_id;
 
+// callback type for magma_system_pageflip and msd_device_pageflip
+// |status| indicates whether an error occurred
+// |vblank_time_ns| is the time in nanoseconds that the vblank occurred; from a monotonic clock
+// that is not related to wall clock time.
+// |data| is a user defined parameter which is passed into the page flip function
+typedef void (*msd_present_buffer_callback_t)(magma_status_t status, uint64_t vblank_time_ns,
+                                              void* data);
+
 // The magma system driver... driver :)
 struct msd_driver_t {
     int32_t magic_;

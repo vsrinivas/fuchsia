@@ -41,20 +41,22 @@ struct msd_connection_t* msd_device_open(struct msd_device_t* dev, msd_client_id
 magma_status_t msd_device_display_get_size(struct msd_device_t* dev,
                                            struct magma_display_size* size_out);
 
-// Provides a buffer to be scanned out on the next vblank event.
-// The first |wait_semaphore_count| of |semaphores| will be waited upon prior to scanning
-// out the buffer.  The following |signal_semaphore_count| semaphores will be signalled when
-// |buf| is no longer being displayed and is safe to be reused.
-void msd_device_page_flip(struct msd_device_t* dev, struct msd_buffer_t* buf,
-                          struct magma_system_image_descriptor* image_desc,
-                          uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-                          struct msd_semaphore_t** semaphores);
-
 // Closes the given connection to the device.
 void msd_connection_close(struct msd_connection_t* connection);
 
 // Creates a context for the given connection. returns null on failure.
 struct msd_context_t* msd_connection_create_context(struct msd_connection_t* connection);
+
+// Provides a buffer to be scanned out on the next vblank event.
+// The first |wait_semaphore_count| of |semaphores| will be waited upon prior to scanning
+// out the buffer.  The following |signal_semaphore_count| semaphores will be signalled when
+// |buf| is no longer being displayed and is safe to be reused.
+// |callback| will be invoked when the vblank occurs and |callback_data| will be passed back.
+void msd_connection_present_buffer(struct msd_connection_t* connection, struct msd_buffer_t* buf,
+                                   struct magma_system_image_descriptor* image_desc,
+                                   uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                                   struct msd_semaphore_t** semaphores,
+                                   msd_present_buffer_callback_t callback, void* callback_data);
 
 // Returns 0 on success.
 // Blocks until all currently outstanding work on the given buffer completes.

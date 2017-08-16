@@ -74,11 +74,6 @@ struct magma_system_command_buffer {
     uint32_t signal_semaphore_count;
 };
 
-// callback type for magma_system_pageflip and msd_device_pageflip
-// |status| indicates whether an error occurred
-// |data| is a user defined parameter which is passed into the page flip function
-typedef void (*magma_system_pageflip_callback_t)(magma_status_t status, void* data);
-
 struct magma_system_connection_request {
     uint32_t client_id;
     uint32_t capabilities;

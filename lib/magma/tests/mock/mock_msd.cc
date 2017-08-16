@@ -36,24 +36,6 @@ magma_status_t msd_device_display_get_size(struct msd_device_t* dev,
     return MAGMA_STATUS_INTERNAL_ERROR;
 }
 
-void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
-                          magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
-                          uint32_t signal_semaphore_count, msd_semaphore_t** semaphores)
-{
-    static std::vector<magma::PlatformSemaphore*> last_semaphores;
-
-    for (uint32_t i = 0; i < last_semaphores.size(); i++) {
-        last_semaphores[i]->Signal();
-    }
-
-    last_semaphores.clear();
-
-    for (uint32_t i = wait_semaphore_count; i < wait_semaphore_count + signal_semaphore_count;
-         i++) {
-        last_semaphores.push_back(reinterpret_cast<magma::PlatformSemaphore*>(semaphores[i]));
-    }
-}
-
 msd_connection_t* msd_device_open(msd_device_t* dev, msd_client_id client_id)
 {
     return MsdMockDevice::cast(dev)->Open(client_id);
@@ -74,6 +56,29 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* val
 msd_context_t* msd_connection_create_context(msd_connection_t* dev)
 {
     return MsdMockConnection::cast(dev)->CreateContext();
+}
+
+void msd_connection_present_buffer(msd_connection_t* abi_connection, msd_buffer_t* abi_buffer,
+                                   magma_system_image_descriptor* image_desc,
+                                   uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                                   msd_semaphore_t** semaphores,
+                                   msd_present_buffer_callback_t callback, void* callback_data)
+{
+    static std::vector<magma::PlatformSemaphore*> last_semaphores;
+
+    for (uint32_t i = 0; i < last_semaphores.size(); i++) {
+        last_semaphores[i]->Signal();
+    }
+
+    last_semaphores.clear();
+
+    if (callback)
+        callback(MAGMA_STATUS_OK, 0, callback_data);
+
+    for (uint32_t i = wait_semaphore_count; i < wait_semaphore_count + signal_semaphore_count;
+         i++) {
+        last_semaphores.push_back(reinterpret_cast<magma::PlatformSemaphore*>(semaphores[i]));
+    }
 }
 
 magma_status_t msd_connection_wait_rendering(struct msd_connection_t* connection,

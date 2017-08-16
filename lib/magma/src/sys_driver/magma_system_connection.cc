@@ -253,7 +253,7 @@ magma::Status MagmaSystemConnection::PageFlip(uint64_t id, uint32_t wait_semapho
 
     magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
 
-    device->PageFlip(buf, &image_desc, wait_semaphore_count, signal_semaphore_count,
+    device->PageFlip(this, buf, &image_desc, wait_semaphore_count, signal_semaphore_count,
                      std::move(semaphores));
     return MAGMA_STATUS_OK;
 }
