@@ -15,6 +15,7 @@
 #include <mx/vmo.h>
 #include <mxio/watcher.h>
 #include <mxtl/auto_call.h>
+#include <mxtl/intrusive_single_list.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 #include <mxtl/vector.h>
@@ -122,11 +123,17 @@ mx_status_t OpenEthertapDev(int* fd) {
     }
 }
 
+struct FifoEntry : public mxtl::SinglyLinkedListable<mxtl::unique_ptr<FifoEntry>> {
+    eth_fifo_entry_t e;
+};
+
 class EthernetClient {
   public:
     explicit EthernetClient(int fd) : fd_(fd) {}
     ~EthernetClient() {
-        mx::vmar::root_self().unmap(mapped_, nbufs_ * bufsize_);
+        if (mapped_ > 0) {
+            mx::vmar::root_self().unmap(mapped_, vmo_size_);
+        }
         close(fd_);
     }
 
@@ -150,12 +157,13 @@ class EthernetClient {
         nbufs_ = nbufs;
         bufsize_ = bufsize;
 
-        mx_status_t status = mx::vmo::create(2 * nbufs_ * bufsize_, 0u, &buf_);
+        vmo_size_ = 2 * nbufs_ * bufsize_;
+        mx_status_t status = mx::vmo::create(vmo_size_, 0u, &buf_);
         if (status != MX_OK) {
             return status;
         }
 
-        status = mx::vmar::root_self().map(0, buf_, 0, nbufs_ * bufsize_,
+        status = mx::vmar::root_self().map(0, buf_, 0, vmo_size_,
                                            MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                                            &mapped_);
         if (status != MX_OK) {
@@ -189,16 +197,13 @@ class EthernetClient {
             }
         }
 
-        if (!tx_available_.reserve(nbufs) || !tx_pending_.reserve(nbufs)) {
-            return MX_ERR_NO_MEMORY;
-        }
         for (; idx < 2 * nbufs; idx++) {
-            auto entry = mxtl::unique_ptr<eth_fifo_entry_t>(new eth_fifo_entry_t);
-            entry->offset = idx * bufsize_;
-            entry->length = bufsize_;
-            entry->flags = 0;
-            entry->cookie = nullptr;
-            bool __UNUSED r = tx_available_.push_back(mxtl::move(entry));
+            auto entry = mxtl::unique_ptr<FifoEntry>(new FifoEntry);
+            entry->e.offset = idx * bufsize_;
+            entry->e.length = bufsize_;
+            entry->e.flags = 0;
+            entry->e.cookie = reinterpret_cast<uint8_t*>(mapped_) + entry->e.offset;
+            tx_available_.push_front(mxtl::move(entry));
         }
 
         return MX_OK;
@@ -219,30 +224,50 @@ class EthernetClient {
         return rc < 0 ? static_cast<mx_status_t>(rc) : MX_OK;
     }
 
-    using EntryPtr = mxtl::unique_ptr<eth_fifo_entry_t>;
-    mxtl::Vector<EntryPtr>* AvailableTxBuffers() { return &tx_available_; }
-    mxtl::Vector<EntryPtr>* PendingTxBuffers() { return &tx_pending_; }
-
     mx::fifo* tx_fifo() { return &tx_; }
     mx::fifo* rx_fifo() { return &rx_; }
     uint32_t tx_depth() { return tx_depth_; }
     uint32_t rx_depth() { return rx_depth_; }
 
+    uint8_t* GetRxBuffer(uint32_t offset) {
+        return reinterpret_cast<uint8_t*>(mapped_) + offset;
+    }
+
+    eth_fifo_entry_t* GetTxBuffer() {
+        auto entry_ptr = tx_available_.pop_front();
+        eth_fifo_entry_t* entry = nullptr;
+        if (entry_ptr != nullptr) {
+            entry = &entry_ptr->e;
+            tx_pending_.push_front(mxtl::move(entry_ptr));
+        }
+        return entry;
+    }
+
+    void ReturnTxBuffer(eth_fifo_entry_t* entry) {
+        auto entry_ptr = tx_pending_.erase_if(
+                [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
+        if (entry_ptr != nullptr) {
+            tx_available_.push_front(mxtl::move(entry_ptr));
+        }
+    }
+
   private:
     int fd_;
 
+    uint64_t vmo_size_ = 0;
     mx::vmo buf_;
-    uintptr_t mapped_;
-    uint32_t nbufs_;
-    uint16_t bufsize_;
+    uintptr_t mapped_ = 0;
+    uint32_t nbufs_ = 0;
+    uint16_t bufsize_ = 0;
 
     mx::fifo tx_;
     mx::fifo rx_;
-    uint32_t tx_depth_;
-    uint32_t rx_depth_;
+    uint32_t tx_depth_ = 0;
+    uint32_t rx_depth_ = 0;
 
-    mxtl::Vector<EntryPtr> tx_available_;
-    mxtl::Vector<EntryPtr> tx_pending_;
+    using FifoEntryPtr = mxtl::unique_ptr<FifoEntry>;
+    mxtl::SinglyLinkedList<FifoEntryPtr> tx_available_;
+    mxtl::SinglyLinkedList<FifoEntryPtr> tx_pending_;
 };
 
 }  // namespace
@@ -339,10 +364,150 @@ static bool EthernetLinkStatusTest() {
     return true;
 }
 
+static bool EthernetDataTest_Send() {
+    // Set up the tap device and the ethernet client
+    mx::socket sock;
+    ASSERT_EQ(MX_OK, CreateEthertap(1500, &sock));
+
+    int devfd = -1;
+    ASSERT_EQ(MX_OK, OpenEthertapDev(&devfd));
+    ASSERT_GE(devfd, 0);
+
+    EthernetClient client(devfd);
+    ASSERT_EQ(MX_OK, client.Register(kTapDevName, 32, 2048));
+    ASSERT_EQ(MX_OK, client.Start());
+
+    sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
+
+    // Ensure that the fifo is writable
+    mx_signals_t obs;
+    EXPECT_EQ(MX_OK, client.tx_fifo()->wait_one(MX_FIFO_WRITABLE, 0, &obs));
+    ASSERT_TRUE(obs & MX_FIFO_WRITABLE);
+
+    // Grab an available TX fifo entry
+    auto entry = client.GetTxBuffer();
+    ASSERT_TRUE(entry != nullptr);
+
+    // Populate some data
+    uint8_t* buf = static_cast<uint8_t*>(entry->cookie);
+    for (int i = 0; i < 32; i++) {
+        buf[i] = static_cast<uint8_t>(i & 0xff);
+    }
+    entry->length = 32;
+
+    // Write to the TX fifo
+    uint32_t actual = 0;
+    ASSERT_EQ(MX_OK, client.tx_fifo()->write(entry, sizeof(eth_fifo_entry_t), &actual));
+    EXPECT_EQ(1u, actual);
+
+    // The socket should be readable
+    EXPECT_EQ(MX_OK, sock.wait_one(MX_SOCKET_READABLE, mx::deadline_after(MX_MSEC(10)), &obs));
+    ASSERT_TRUE(obs & MX_SOCKET_READABLE);
+
+    // Read the data from the socket, which should match what was written to the fifo
+    uint8_t read_buf[32];
+    size_t actual_sz = 0;
+    EXPECT_EQ(MX_OK, sock.read(0u, static_cast<void*>(read_buf), 32, &actual_sz));
+    ASSERT_EQ(32, actual_sz);
+    EXPECT_BYTES_EQ(buf, read_buf, 32, "");
+
+    // Now the TX completion entry should be available to read from the TX fifo
+    EXPECT_EQ(MX_OK,
+            client.tx_fifo()->wait_one(MX_FIFO_READABLE, mx::deadline_after(MX_MSEC(10)), &obs));
+    ASSERT_TRUE(obs & MX_FIFO_READABLE);
+
+    eth_fifo_entry_t return_entry;
+    ASSERT_EQ(MX_OK, client.tx_fifo()->read(&return_entry, sizeof(eth_fifo_entry_t), &actual));
+    EXPECT_EQ(1u, actual);
+
+    // Check the flags on the returned entry
+    EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
+    return_entry.flags = 0;
+
+    // Verify the bytes from the rest of the entry match what we wrote
+    auto expected_entry = reinterpret_cast<uint8_t*>(entry);
+    auto actual_entry = reinterpret_cast<uint8_t*>(&return_entry);
+    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(eth_fifo_entry_t), "");
+
+    // Return the buffer to our client; the client destructor will make sure no TXs are still
+    // pending at the end of te test.
+    client.ReturnTxBuffer(&return_entry);
+
+    // Shutdown the client and cleanup the tap device
+    EXPECT_EQ(MX_OK, client.Stop());
+    sock.reset();
+
+    return true;
+}
+
+static bool EthernetDataTest_Recv() {
+    // Set up the tap device and the ethernet client
+    mx::socket sock;
+    ASSERT_EQ(MX_OK, CreateEthertap(1500, &sock));
+
+    int devfd = -1;
+    ASSERT_EQ(MX_OK, OpenEthertapDev(&devfd));
+    ASSERT_GE(devfd, 0);
+
+    EthernetClient client(devfd);
+    ASSERT_EQ(MX_OK, client.Register(kTapDevName, 32, 2048));
+    ASSERT_EQ(MX_OK, client.Start());
+
+    sock.signal_peer(0, ETHERTAP_SIGNAL_ONLINE);
+
+    // The socket should be writable
+    mx_signals_t obs;
+    EXPECT_EQ(MX_OK, sock.wait_one(MX_SOCKET_WRITABLE, 0, &obs));
+    ASSERT_TRUE(obs & MX_SOCKET_WRITABLE);
+
+    // Send a buffer through the socket
+    uint8_t buf[32];
+    for (int i = 0; i < 32; i++) {
+        buf[i] = static_cast<uint8_t>(i & 0xff);
+    }
+    size_t actual = 0;
+    EXPECT_EQ(MX_OK, sock.write(0, static_cast<void*>(buf), 32, &actual));
+    EXPECT_EQ(32, actual);
+
+    // The fifo should be readable
+    EXPECT_EQ(MX_OK,
+            client.rx_fifo()->wait_one(MX_FIFO_READABLE, mx::deadline_after(MX_MSEC(10)), &obs));
+    ASSERT_TRUE(obs & MX_FIFO_READABLE);
+
+    // Read the RX fifo
+    eth_fifo_entry_t entry;
+    uint32_t actual_entries = 0;
+    EXPECT_EQ(MX_OK, client.rx_fifo()->read(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
+    EXPECT_EQ(1, actual_entries);
+
+    // Check the bytes in the VMO compared to what we sent through the socket
+    auto return_buf = client.GetRxBuffer(entry.offset);
+    EXPECT_BYTES_EQ(buf, return_buf, entry.length, "");
+
+    // RX fifo should be readable, and we can return the buffer to the driver
+    EXPECT_EQ(MX_OK, client.rx_fifo()->wait_one(MX_FIFO_WRITABLE, 0, &obs));
+    ASSERT_TRUE(obs & MX_FIFO_WRITABLE);
+
+    entry.length = 2048;
+    EXPECT_EQ(MX_OK, client.rx_fifo()->write(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
+    EXPECT_EQ(1, actual_entries);
+
+    // Shutdown the client and cleanup the tap device
+    EXPECT_EQ(MX_OK, client.Stop());
+    sock.reset();
+
+    return true;
+}
+
 BEGIN_TEST_CASE(EthernetSetupTests)
 RUN_TEST_MEDIUM(EthernetStartTest)
 RUN_TEST_MEDIUM(EthernetLinkStatusTest)
 END_TEST_CASE(EthernetSetupTests)
+
+BEGIN_TEST_CASE(EthernetDataTests)
+RUN_TEST_MEDIUM(EthernetDataTest_Send)
+RUN_TEST_MEDIUM(EthernetDataTest_Recv)
+END_TEST_CASE(EthernetDataTests)
 
 int main(int argc, char* argv[]) {
     bool success = unittest_run_all_tests(argc, argv);
