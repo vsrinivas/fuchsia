@@ -84,7 +84,7 @@ function download_godepfile() {
 }
 
 function download_qemu() {
-  download_host_tarball qemu "qemu/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+  download_cipd_package qemu qemu "${SCRIPT_ROOT}/${GN_PLATFORM}/qemu"
 }
 
 if [[ "${HOST_PLATFORM}" == "linux64" ]]; then
