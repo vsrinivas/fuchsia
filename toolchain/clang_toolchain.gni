@@ -4,6 +4,7 @@
 
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
+import("//build/toolchain/variant.gni")
 
 declare_args() {
   # The default clang toolchain provided by the buildtools. This variable is
@@ -366,29 +367,6 @@ template("clang_toolchain_suite") {
       }
     }
   }
-}
-
-declare_args() {
-  # List of variants that will form the basis for variant toolchains.
-  # Each element of the list is one variant, which itself is a list of
-  # of configs (labels).  The simple names (not the full label, just
-  # the part after all /s and :s) of these configs will be used in
-  # toolchain names (each prefixed by a "-"), so the list of config
-  # names forming each variant must be unique among the lists in
-  # `known_variants + extra_variants` and it's a good idea to make it
-  # something concise and meaningful when seen as e.g. part of a
-  # directory name under `$root_build_dir`.
-  #
-  # Normally this is not set as a build argument, but it serves to document
-  # the available set of variants.  Only set this to remove all the default
-  # variants here.  To add more, set `extra_variants` instead.
-  #
-  # To make use of a variant, set `select_variant` (which see).
-  known_variants = []
-
-  # Additional variant toolchain configs to support.
-  # This is just added to known_variants, which see.
-  extra_variants = []
 }
 
 set_defaults("clang_toolchain_suite") {

@@ -361,7 +361,11 @@ template("executable") {
       current_toolchain == current_base_toolchain + current_toolchain_variant) {
     # This is the toolchain selected to actually build this target.
     executable(target_name) {
+      deps = []
       forward_variables_from(invoker, "*")
+      foreach(variant, toolchain_variant) {
+        deps += [ "${variant}_deps" ]
+      }
       if (defined(visibility)) {
         # Other toolchains will define this target as a group or copy
         # rule that depends on this toolchain's definition.  If the
