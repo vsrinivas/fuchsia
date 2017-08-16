@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
-import("//build/toolchain/shared.gni")
 import("//packages/package.gni")
 
 driver_module("rt5370_driver") {
@@ -47,10 +46,10 @@ package("rt5370") {
   deps = [
     ":rt5370_driver",
 
-    # The 'firmware' step has to build in the shared toolchain since we treat
-    # firmware blobs as if they were libraries which always use the shared
-    # toolchain to build.
-    ":rt5370-firmware($shared_toolchain)",
+    # The copy step has to be in the shared-library toolchain to use the
+    # expected output directory, since we treat firmware blobs as if they
+    # were libraries which always use the shared-library toolchain to build.
+    ":rt5370-firmware($shlib_toolchain)",
   ]
 
   drivers = [ {
