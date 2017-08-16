@@ -11,15 +11,22 @@ import subprocess
 
 fuchsia_root = os.path.realpath(os.environ['FUCHSIA_DIR'])
 fuchsia_build = os.path.realpath(os.environ['FUCHSIA_BUILD_DIR'])
-fuchsia_sysroot = os.path.realpath(os.path.join(fuchsia_build, 'sysroot'))
 fuchsia_buildtools = os.path.realpath(os.path.join(fuchsia_root, 'buildtools'))
+
+def find_toolchain_builtins():
+  for f in os.listdir(os.path.join(fuchsia_buildtools, 'toolchain')):
+    if f.startswith('clang'):
+      return os.path.join(fuchsia_buildtools, 'toolchain', f, 'x86_64-fuchsia')
+  assert False, 'Could not find toolchain in {}'.format(fuchsia_buildtools)
+fuchsia_toolchain_builtins = find_toolchain_builtins()
 
 common_flags = [
     '-std=c++14',
+    '-xc++',
     '-isystem',
-    fuchsia_build + '/sysroot/include',
+    '{}/include'.format(fuchsia_toolchain_builtins),
     '-isystem',
-    fuchsia_build + '/sysroot/include/c++/v1',
+    '{}/include/c++/v1'.format(fuchsia_toolchain_builtins),
 ]
 
 default_flags = [
@@ -99,8 +106,6 @@ def GetClangCommandFromNinjaForFilename(filename):
     elif ((flag.startswith('-') and flag[1] in 'DWFfmO') or
           flag.startswith('-std=') or flag.startswith('--target=') or
           flag.startswith('--sysroot=')):
-      if flag == '--sysroot=sysroot':
-        flag = '--sysroot=%s' % fuchsia_sysroot
       fuchsia_flags.append(flag)
     else:
       print('Ignoring flag: %s' % flag)
