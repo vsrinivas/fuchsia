@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
+#include "apps/test_runner/lib/application_context.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
 #include "apps/test_runner/lib/reporting/results_queue.h"
@@ -17,10 +18,8 @@ int main(int argc, char** argv) {
   test_runner::GTestListener listener(argv[0], &queue);
 
   reporting_thread.Run();
-  reporting_thread.TaskRunner()->PostTask([&reporter] {
-    auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
-    reporter.Start(context.get());
-  });
+  reporting_thread.TaskRunner()->PostTask(
+      [&reporter] { reporter.Start(test_runner::GetApplicationContext()); });
 
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);

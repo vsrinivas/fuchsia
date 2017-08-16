@@ -20,3 +20,16 @@ source_set("lib") {
     "//third_party/rapidjson",
   ]
 }
+
+source_set("application_context") {
+  testonly = true
+
+  sources = [
+    "application_context.cc",
+    "application_context.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+  ]
+}
