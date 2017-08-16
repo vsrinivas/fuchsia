@@ -22,23 +22,26 @@ struct ContextMetadata {
   ModuleMetadata? mod;
 
   EntityMetadata? entity;
+
+  // TODO(thatguy): Add Agent metadata.
+  // TODO(thatguy): Add Link metadata.
 };
 
 struct StoryMetadata {
   string? id;
   FocusedState? focused;
+  // TODO(thatguy): Add modular.StoryState
+  // TODO(thatguy): Add visible state.
 };
 
 struct ModuleMetadata {
-  string? name;
-  array<string>? path;
   string? url;
+  array<string>? path;
 };
 
 struct EntityMetadata {
   string? topic;
   array<string>? type;
-  uint32 ctime;  // seconds since epoch UTC
 };
 
 // bool type cannot be made optional (in StoryMetadata above), so we cannot

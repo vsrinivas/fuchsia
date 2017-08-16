@@ -16,21 +16,29 @@ constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 namespace maxwell {
 namespace {
 
-class IdeasAgentApp : public agents::IdeasAgent, public ContextListenerForTopics {
+const char kLocationTopic[] = "location/region";
+
+class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  public:
   IdeasAgentApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this),
         out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
-    auto query = ContextQueryForTopics::New();
-    query->topics.push_back("/location/region");
-    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
+    auto query = ContextQuery::New();
+    auto selector = ContextSelector::New();
+    selector->type = ContextValueType::ENTITY;
+    selector->meta = ContextMetadata::New();
+    selector->meta->entity = EntityMetadata::New();
+    selector->meta->entity->topic = kLocationTopic;
+    query->selector[kLocationTopic] = std::move(selector);
+    reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
-  void OnUpdate(ContextUpdateForTopicsPtr update) override {
+  void OnContextUpdate(ContextUpdatePtr update) override {
+    if (update->values[kLocationTopic].empty()) return;
     rapidjson::Document d;
-    d.Parse(update->values["/location/region"].data());
+    d.Parse(update->values[kLocationTopic][0]->content.data());
 
     if (d.IsString()) {
       const std::string region = d.GetString();
@@ -72,7 +80,7 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListenerForTopics
   std::unique_ptr<app::ApplicationContext> app_context_;
 
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListenerForTopics> binding_;
+  fidl::Binding<ContextListener> binding_;
   ProposalPublisherPtr out_;
 };
 

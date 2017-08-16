@@ -23,12 +23,12 @@ IntelligenceServicesImpl::IntelligenceServicesImpl(
 
 void IntelligenceServicesImpl::GetContextReader(
     fidl::InterfaceRequest<ContextReader> request) {
-  context_engine_->GetReader(scope_->Clone(), std::move(request));
+  context_engine_->GetReader(scope_.Clone(), std::move(request));
 }
 
-void IntelligenceServicesImpl::GetContextPublisher(
-    fidl::InterfaceRequest<ContextPublisher> request) {
-  context_engine_->GetPublisher(scope_->Clone(), std::move(request));
+void IntelligenceServicesImpl::GetContextWriter(
+    fidl::InterfaceRequest<ContextWriter> request) {
+  context_engine_->GetWriter(scope_.Clone(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(
@@ -42,12 +42,14 @@ void IntelligenceServicesImpl::GetProposalPublisher(
     component_id = "global";
   }
 
+  // TODO(thatguy): Change |component_id| to use ComponentScope once it is
+  // renamed to something like ComponentInfo.
   suggestion_engine_->RegisterPublisher(component_id, std::move(request));
 }
 
 void IntelligenceServicesImpl::GetActionLog(
     fidl::InterfaceRequest<ComponentActionLog> request) {
-  user_action_log_->GetComponentActionLog(scope_->Clone(), std::move(request));
+  user_action_log_->GetComponentActionLog(scope_.Clone(), std::move(request));
 }
 
 }  // namespace maxwell

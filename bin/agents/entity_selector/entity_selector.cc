@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
@@ -17,20 +17,24 @@ namespace maxwell {
 
 // Subscribe to entities and selection in the Context Engine, and Publish any
 // selected entities back to the Context Engine.
-class SelectedEntityFinder : ContextListenerForTopics {
+class SelectedEntityFinder : ContextListener {
  public:
   SelectedEntityFinder()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
-        publisher_(
-            app_context_->ConnectToEnvironmentService<ContextPublisher>()),
-        topics_({kFocalEntitiesTopic, kRawTextSelectionTopic}),
+        writer_(
+            app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
-    auto query = ContextQueryForTopics::New();
-    for (const std::string& s : topics_) {
-      query->topics.push_back(s);
+    auto query = ContextQuery::New();
+    for (const std::string& topic : {kFocalEntitiesTopic, kRawTextSelectionTopic}) {
+      auto selector = ContextSelector::New();
+      selector->type = ContextValueType::ENTITY;
+      selector->meta = ContextMetadata::New();
+      selector->meta->entity = EntityMetadata::New();
+      selector->meta->entity->topic = topic;
+      query->selector[topic] = std::move(selector);
     }
-    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
+    reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
@@ -79,26 +83,25 @@ class SelectedEntityFinder : ContextListenerForTopics {
     return modular::JsonValueToString(entities_json);
   }
 
-  // |ContextListenerForTopics|
-  void OnUpdate(ContextUpdateForTopicsPtr result) override {
-    if (!KeyInUpdateResult(result, kFocalEntitiesTopic) ||
-        !KeyInUpdateResult(result, kRawTextSelectionTopic)) {
+  // |ContextListener|
+  void OnContextUpdate(ContextUpdatePtr result) override {
+    if (result->values[kFocalEntitiesTopic].empty() ||
+        result->values[kRawTextSelectionTopic].empty()) {
       return;
     }
     const std::vector<EntitySpan> entities =
-        EntitySpan::EntitiesFromJson(result->values[kFocalEntitiesTopic]);
+        EntitySpan::FromContextValues(result->values[kFocalEntitiesTopic]);
     const std::pair<int, int> start_and_end =
-        GetSelectionFromJson(result->values[kRawTextSelectionTopic]);
-    publisher_->Publish(kSelectedEntitiesTopic,
+        GetSelectionFromJson(result->values[kRawTextSelectionTopic][0]->content);
+    writer_->WriteEntityTopic(kSelectedEntitiesTopic,
                         GetSelectedEntities(entities, start_and_end.first,
                                             start_and_end.second));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
-  ContextPublisherPtr publisher_;
-  const std::vector<std::string> topics_;
-  fidl::Binding<ContextListenerForTopics> binding_;
+  ContextWriterPtr writer_;
+  fidl::Binding<ContextListener> binding_;
 };
 
 }  // namespace maxwell

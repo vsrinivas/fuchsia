@@ -8,8 +8,11 @@ import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
-import 'package:apps.maxwell.services.context/context_publisher.fidl.dart';
+import 'package:apps.maxwell.services.context/context_writer.fidl.dart';
 import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
+import 'package:apps.maxwell.services.context/metadata.fidl.dart';
+import 'package:apps.maxwell.services.context/value.fidl.dart';
+import 'package:apps.maxwell.services.context/value_type.fidl.dart';
 import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
@@ -20,8 +23,8 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-/// The context topic for "focal entities" for the current story.
-const String _kCurrentFocalEntitiesTopic = '/inferred/focal_entities';
+/// The context topic for "focal entities".
+const String _kFocalEntitiesTopic = 'inferred/focal_entities';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final TextEditingController _controller = new TextEditingController();
@@ -35,36 +38,36 @@ void _log(String msg) {
 
 // A listener for finding updated focal entities and applying UI treatment to
 // them.
-class ContextListenerForTopicsImpl extends ContextListenerForTopics {
-  final ContextListenerForTopicsBinding _binding = new ContextListenerForTopicsBinding();
+class ContextListenerImpl extends ContextListener {
+  final ContextListenerBinding _binding = new ContextListenerBinding();
 
   /// Constructor
-  ContextListenerForTopicsImpl();
+  ContextListenerImpl();
 
   /// Gets the [InterfaceHandle]
   /// The returned handle should only be used once.
-  InterfaceHandle<ContextListenerForTopics> getHandle() => _binding.wrap(this);
+  InterfaceHandle<ContextListener> getHandle() => _binding.wrap(this);
 
   @override
-  Future<Null> onUpdate(ContextUpdateForTopics result) async {
-    if (!result.values.containsKey(_kCurrentFocalEntitiesTopic)) {
+  Future<Null> onContextUpdate(ContextUpdate result) async {
+    if (result.values[_kFocalEntitiesTopic].length == 0) {
       return;
     }
-
-    List<dynamic> data =
-        JSON.decode(result.values[_kCurrentFocalEntitiesTopic]);
 
     String outputText = "";
     int lastEnd = 0;
     final String allControllerText = _controller.text;
     // Without this, selection might be overwritten.
     final TextSelection oldSelection = _controller.selection;
-    for (dynamic entity in data) {
-      if (!(entity is Map<String, dynamic>) &&
-          entity.containsKey('start') &&
-          entity.containsKey('end')) {
-        final int start = entity['start'];
-        final int end = entity['end'];
+    for (ContextValue value in result.values[_kFocalEntitiesTopic]) {
+      final content = JSON.decode(value.content);
+      // TODO(thatguy): Give the Entity a type instead of this ad-hoc schema
+      // checking. Then use that type in the ContextQuery below.
+      if (!(content is Map<String, dynamic>) &&
+          content.containsKey('start') &&
+          content.containsKey('end')) {
+        final int start = content['start'];
+        final int end = content['end'];
         outputText += allControllerText.substring(lastEnd, start).toLowerCase();
         outputText += allControllerText.substring(start, end).toUpperCase();
         lastEnd = end;
@@ -89,12 +92,12 @@ class ModuleImpl implements Module, Lifecycle {
   final ModuleContextProxy _moduleContext = new ModuleContextProxy();
   final LinkProxy _link = new LinkProxy();
 
-  final ContextPublisherProxy _publisher = new ContextPublisherProxy();
+  final ContextWriterProxy _writer = new ContextWriterProxy();
   final IntelligenceServicesProxy _intelligenceServices =
       new IntelligenceServicesProxy();
 
   final ContextReaderProxy _contextReader = new ContextReaderProxy();
-  ContextListenerForTopicsImpl _contextListenerImpl;
+  ContextListenerImpl _contextListenerImpl;
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
   void bindModule(InterfaceRequest<Module> request) {
@@ -124,14 +127,24 @@ class ModuleImpl implements Module, Lifecycle {
     // Do something with the story and link services.
     _moduleContext
         .getIntelligenceServices(_intelligenceServices.ctrl.request());
-    _intelligenceServices.getContextPublisher(_publisher.ctrl.request());
+    _intelligenceServices.getContextWriter(_writer.ctrl.request());
 
     // Listen to updates from the context service.
     _intelligenceServices.getContextReader(_contextReader.ctrl.request());
-    _contextListenerImpl = new ContextListenerForTopicsImpl();
-    ContextQueryForTopics query = new ContextQueryForTopics()
-        ..topics = <String>[_kCurrentFocalEntitiesTopic];
-    _contextReader.subscribeToTopics(query, _contextListenerImpl.getHandle());
+    _contextListenerImpl = new ContextListenerImpl();
+
+    ContextSelector selector = new ContextSelector();
+    selector.type = ContextValueType.entity;
+    selector.meta = new ContextMetadata();
+    selector.meta.story = new StoryMetadata();
+    selector.meta.story.focused = new FocusedState();
+    selector.meta.story.focused.state = FocusedStateState.focused;
+    selector.meta.entity = new EntityMetadata();
+    selector.meta.entity.topic = _kFocalEntitiesTopic;
+    ContextQuery query = new ContextQuery();
+    query.selector[_kFocalEntitiesTopic] = selector;
+
+    _contextReader.subscribe(query, _contextListenerImpl.getHandle());
 
     // Indicate readiness
     _moduleContext.ready();
@@ -152,7 +165,7 @@ class ModuleImpl implements Module, Lifecycle {
   }
 
   void publishText(String text) {
-    _publisher.publish(
+    _writer.writeEntityTopic(
       'raw/text',
       JSON.encode(
         <String, String>{
@@ -163,7 +176,7 @@ class ModuleImpl implements Module, Lifecycle {
   }
 
   void publishSelection(int start, int end) {
-    _publisher.publish(
+    _writer.writeEntityTopic(
       'raw/text_selection',
       JSON.encode(
         <String, int>{

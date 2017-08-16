@@ -49,15 +49,14 @@
     <section class="panels">
       <div id="overview-panel" class="panel active" role="tabpanel">
         <div class="mdc-layout-grid__inner">
-          <!--
-          <div class="cell mdc-layout-grid__cell overview-header-card">
+          <div class="cell mdc-layout-grid__cell overview-header-card" style="display:none">
             <div class="mdc-card">
               <section class="mdc-card__primary">
                 <h1 class="mdc-card__title mdc-card__title--large">Header</h1>
               </section>
-            </div> <!-- card
+            </div> <!-- card -->
           </div> <!-- grid__cell -->
-          <div class="cell mdc-layout-grid__cell overview-story-card">
+          <div class="cell mdc-layout-grid__cell overview-story-card" style="display:none">
             <div class="mdc-card">
               <section class="mdc-card__primary">
                 <h1 class="mdc-card__title mdc-card__title--large">Stories</h1>
@@ -87,13 +86,12 @@
               </ul>
             </div> <!-- card -->
           </div> <!-- grid__cell -->
-          <!--
-          <div class="cell mdc-layout-grid__cell overview-suggestions-card">
+          <div class="cell mdc-layout-grid__cell overview-suggestions-card" style="display:none">
             <div class="mdc-card">
               <section class="mdc-card__primary">
                 <h1 class="mdc-card__title mdc-card__title--large">Suggestions</h1>
               </section>
-            </div> <!-- card
+            </div> <!-- card -->
           </div> <!-- grid__cell -->
         </div> <!-- grid__inner -->
       </div> <!-- overview-panel -->
@@ -102,18 +100,14 @@
           <div class="cell mdc-layout-grid__cell context-topics-card">
             <div class="mdc-card">
               <section class="mdc-card__primary">
-                <h1 class="mdc-card__title mdc-card__title--large">Context Topics</h1>
+                <h1 class="mdc-card__title mdc-card__title--large">Context Values</h1>
               </section>
               <section class="mdc-card__supporting-text">
-                All of the context parameters currently recorded
+                All of the context values currently recorded
                 in the system.
               </section>
               <section class="mdc-card__supporting-text">
-                <table>
-                  <thead><tr><th>Topic</th><th>Value</th></tr></thead>
-                  <tbody id="context">
-                  </tbody>
-                </table>
+                <div id="context"></div>
               </section>
             </div> <!-- mdc_card -->
           </div> <!-- cell -->

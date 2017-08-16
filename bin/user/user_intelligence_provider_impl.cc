@@ -15,6 +15,7 @@
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/ftl/files/file.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace maxwell {
 
@@ -77,17 +78,17 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
   suggestion_engine_ = app::ConnectToService<maxwell::SuggestionEngine>(
       suggestion_services_.get());
 
-  // Generate a ContextPublisher to pass to the SuggestionEngine.
-  fidl::InterfaceHandle<ContextPublisher> context_publisher;
+  // Generate a ContextWriter to pass to the SuggestionEngine.
+  fidl::InterfaceHandle<ContextWriter> context_writer;
   auto scope = ComponentScope::New();
   scope->set_global_scope(GlobalScope::New());
-  context_engine_->GetPublisher(std::move(scope),
-                                context_publisher.NewRequest());
+  context_engine_->GetWriter(std::move(scope),
+                                context_writer.NewRequest());
 
   // Initialize the SuggestionEngine.
   suggestion_engine_->Initialize(Duplicate(story_provider),
                                  Duplicate(focus_provider),
-                                 std::move(context_publisher));
+                                 std::move(context_writer));
 
   StartActionLog(suggestion_engine_.get());
 
@@ -104,8 +105,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
           AddStandardServices(url, agent_host);
           agent_host->AddService<maxwell::ContextDebug>(
               [=](fidl::InterfaceRequest<maxwell::ContextDebug> request) {
-                app::ConnectToService(context_services_.get(),
-                                      std::move(request));
+                context_engine_->GetContextDebug(std::move(request));
               });
           agent_host->AddService<maxwell::SuggestionDebug>(
               [=](fidl::InterfaceRequest<maxwell::SuggestionDebug> request) {
@@ -175,26 +175,26 @@ void UserIntelligenceProviderImpl::StartActionLog(
 void UserIntelligenceProviderImpl::AddStandardServices(
     const std::string& url,
     app::ServiceNamespace* agent_host) {
+  auto agent_info = ComponentScope::New();
+  auto agent_scope = AgentScope::New();
+  agent_scope->url = url;
+  agent_info->set_agent_scope(std::move(agent_scope));
+
   agent_host->AddService<cobalt::CobaltEncoderFactory>(
-      [this, url](fidl::InterfaceRequest<cobalt::CobaltEncoderFactory> request) {
+      [this,
+       url](fidl::InterfaceRequest<cobalt::CobaltEncoderFactory> request) {
         app_context_->ConnectToEnvironmentService(std::move(request));
       });
-  agent_host->AddService<maxwell::ContextPublisher>(
-      [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
-        auto scope = ComponentScope::New();
-        auto agent_scope = AgentScope::New();
-        agent_scope->url = url;
-        scope->set_agent_scope(std::move(agent_scope));
-        context_engine_->GetPublisher(std::move(scope), std::move(request));
-      });
-  agent_host->AddService<maxwell::ContextReader>(
-      [this, url](fidl::InterfaceRequest<maxwell::ContextReader> request) {
-        auto scope = ComponentScope::New();
-        auto agent_scope = AgentScope::New();
-        agent_scope->url = url;
-        scope->set_agent_scope(std::move(agent_scope));
-        context_engine_->GetReader(std::move(scope), std::move(request));
-      });
+  agent_host->AddService<maxwell::ContextWriter>(ftl::MakeCopyable([
+    this, client_info = agent_info.Clone(), url
+  ](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
+    context_engine_->GetWriter(client_info.Clone(), std::move(request));
+  }));
+  agent_host->AddService<maxwell::ContextReader>(ftl::MakeCopyable([
+    this, client_info = agent_info.Clone(), url
+  ](fidl::InterfaceRequest<maxwell::ContextReader> request) {
+    context_engine_->GetReader(client_info.Clone(), std::move(request));
+  }));
   agent_host->AddService<maxwell::ProposalPublisher>(
       [this, url](fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
         suggestion_engine_->RegisterPublisher(url, std::move(request));

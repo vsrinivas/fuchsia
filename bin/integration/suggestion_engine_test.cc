@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/suggestion/debug.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
@@ -25,18 +25,18 @@ namespace maxwell {
 namespace {
 
 // context agent that publishes an int n
-class NPublisher {
+class NWriter {
  public:
-  NPublisher(ContextEngine* context_engine) {
+  NWriter(ContextEngine* context_engine) {
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine->GetPublisher(std::move(scope), pub_.NewRequest());
+    context_engine->GetWriter(std::move(scope), pub_.NewRequest());
   }
 
-  void Publish(int n) { pub_->Publish("n", std::to_string(n)); }
+  void Publish(int n) { pub_->WriteEntityTopic("n", std::to_string(n)); }
 
  private:
-  ContextPublisherPtr pub_;
+  ContextWriterPtr pub_;
 };
 
 ProposalPtr CreateProposal(const std::string& id,
@@ -136,7 +136,7 @@ class AskProposinator : public Proposinator, public AskHandler {
 };
 
 // maintains the number of proposals specified by the context field "n"
-class NProposals : public Proposinator, public ContextListenerForTopics {
+class NProposals : public Proposinator, public ContextListener {
  public:
   NProposals(ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
@@ -144,14 +144,19 @@ class NProposals : public Proposinator, public ContextListenerForTopics {
     scope->set_global_scope(GlobalScope::New());
     context_engine->GetReader(std::move(scope), reader_.NewRequest());
 
-    auto query = ContextQueryForTopics::New();
-    query->topics.push_back("n");
-    reader_->SubscribeToTopics(std::move(query),
-                               listener_binding_.NewBinding());
+    auto selector = ContextSelector::New();
+    selector->type = ContextValueType::ENTITY;
+    selector->meta = ContextMetadata::New();
+    selector->meta->entity = EntityMetadata::New();
+    selector->meta->entity->topic = "n";
+    auto query = ContextQuery::New();
+    query->selector["n"] = std::move(selector);
+    reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
-  void OnUpdate(ContextUpdateForTopicsPtr update) override {
-    int n = std::stoi(update->values["n"]);
+  void OnContextUpdate(ContextUpdatePtr update) override {
+    if (update->values["n"].empty()) return;
+    int n = std::stoi(update->values["n"][0]->content);
 
     for (int i = n_; i < n; i++)
       Propose(std::to_string(i));
@@ -163,7 +168,7 @@ class NProposals : public Proposinator, public ContextListenerForTopics {
 
  private:
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListenerForTopics> listener_binding_;
+  fidl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
 };
@@ -188,15 +193,15 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
     focus_provider_handle.NewRequest();
 
-    fidl::InterfaceHandle<maxwell::ContextPublisher> context_publisher_handle;
+    fidl::InterfaceHandle<maxwell::ContextWriter> context_writer_handle;
     auto scope = ComponentScope::New();
     scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetPublisher(std::move(scope),
-                                   context_publisher_handle.NewRequest());
+    context_engine()->GetWriter(std::move(scope),
+                                context_writer_handle.NewRequest());
 
     suggestion_engine()->Initialize(std::move(story_provider_handle),
                                     std::move(focus_provider_handle),
-                                    std::move(context_publisher_handle));
+                                    std::move(context_writer_handle));
   }
 
  protected:
@@ -391,7 +396,7 @@ class NextTest : public virtual SuggestionEngineTest {
 class ResultCountTest : public NextTest {
  public:
   ResultCountTest()
-      : pub_(new NPublisher(context_engine())),
+      : pub_(new NWriter(context_engine())),
         sub_(new NProposals(context_engine(), suggestion_engine())) {}
 
  protected:
@@ -399,7 +404,7 @@ class ResultCountTest : public NextTest {
   void PublishNewSignal(int n = 1) { pub_->Publish(n_ += n); }
 
  private:
-  std::unique_ptr<NPublisher> pub_;
+  std::unique_ptr<NWriter> pub_;
   std::unique_ptr<NProposals> sub_;
   int n_ = 0;
 };

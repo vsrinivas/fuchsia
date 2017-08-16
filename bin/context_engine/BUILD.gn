@@ -2,18 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("context_publisher_impl") {
+executable("context_engine") {
   sources = [
-    "context_publisher_impl.cc",
-    "context_publisher_impl.h",
+    "context_engine_main.cc",
   ]
 
   deps = [
-    ":context_repository",
-    ":scope_utils",
+    ":context_engine_impl",
+    "//application/lib/app",
+    "//garnet/public/lib/mtl",
+  ]
+}
+
+source_set("context_index") {
+  sources = [
+    "index.h",
+    "index.cc",
+  ]
+
+  deps = [
     "//apps/maxwell/services/context",
-    "//apps/maxwell/services/user:scope",
-    "//third_party/rapidjson",
+  ]
+}
+
+executable("context_index_unittest") {
+  testonly = true
+
+  sources = [
+    "index_unittest.cc",
+  ]
+
+  deps = [
+    ":context_index",
+    "//apps/maxwell/lib/context:formatting",
+    "//apps/maxwell/services/context",
+    "//garnet/public/lib/mtl",
+    "//third_party/gtest",
   ]
 }
 
@@ -25,7 +49,7 @@ source_set("context_reader_impl") {
 
   deps = [
     ":context_repository",
-    ":debug",
+    "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
   ]
@@ -35,10 +59,12 @@ source_set("context_repository") {
   sources = [
     "context_repository.cc",
     "context_repository.h",
+    "debug.cc",
+    "debug.h",
   ]
 
   deps = [
-    ":scope_utils",
+    ":context_index",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/src:bound_set",
@@ -63,6 +89,22 @@ executable("context_repository_unittest") {
   ]
 }
 
+source_set("context_writer_impl") {
+  sources = [
+    "context_writer_impl.cc",
+    "context_writer_impl.h",
+  ]
+
+  deps = [
+    ":context_repository",
+    "//apps/maxwell/lib/async:future_value",
+    "//apps/maxwell/lib/context:formatting",
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/user:scope",
+    "//third_party/rapidjson",
+  ]
+}
+
 source_set("context_engine_impl") {
   sources = [
     "context_engine_impl.cc",
@@ -74,25 +116,10 @@ source_set("context_engine_impl") {
   ]
 
   deps = [
-    ":context_publisher_impl",
     ":context_reader_impl",
+    ":context_writer_impl",
     ":context_repository",
-    ":debug",
     "//apps/maxwell/services/context",
-    "//apps/maxwell/src/context_engine/coprocessors:aggregate",
-    "//apps/maxwell/src/context_engine/coprocessors:focused_story",
-    "//garnet/public/lib/fidl/cpp/bindings",
-  ]
-}
-
-source_set("debug") {
-  sources = [
-    "debug.cc",
-    "debug.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context:debug",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
@@ -104,20 +131,9 @@ source_set("scope_utils") {
   ]
 
   deps = [
+    "//apps/maxwell/services/context",
     "//apps/maxwell/services/user:scope",
     "//garnet/public/lib/ftl",
     "//third_party/boringssl",  # for sha256
-  ]
-}
-
-executable("context_engine") {
-  sources = [
-    "context_engine_main.cc",
-  ]
-
-  deps = [
-    ":context_engine_impl",
-    "//application/lib/app",
-    "//garnet/public/lib/mtl",
   ]
 }

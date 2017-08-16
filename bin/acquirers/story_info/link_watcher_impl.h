@@ -9,7 +9,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/lib/async/future_value.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
@@ -24,8 +25,9 @@ class LinkWatcherImpl : modular::LinkWatcher {
  public:
   LinkWatcherImpl(StoryWatcherImpl* const owner,
                   modular::StoryController* const story_controller,
-                  ContextPublisher* const publisher,
+                  ContextWriter* const writer,
                   const std::string& story_id,
+                  const fidl::String& parent_value_id,
                   const modular::LinkPathPtr& link_path);
 
   ~LinkWatcherImpl() override;
@@ -38,10 +40,14 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
   StoryWatcherImpl* const owner_;
   modular::StoryController* const story_controller_;
-  ContextPublisher* const publisher_;
+  ContextWriter* const writer_;
 
   const std::string story_id_;
+  const fidl::String parent_value_id_;
   const modular::LinkPathPtr link_path_;
+
+  // Per context link topic, the context value id.
+  std::map<fidl::String, FutureValue<fidl::String>> value_ids_;
 
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 

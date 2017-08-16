@@ -27,6 +27,28 @@ bool IsInterruption(const SuggestionPrototype* suggestion) {
             maxwell::AnnoyanceType::PEEK)));
 }
 
+SuggestionEngineImpl::SuggestionEngineImpl()
+    : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
+      ask_suggestions_(new RankedSuggestions(&ask_channel_)),
+      next_suggestions_(new RankedSuggestions(&next_channel_)) {
+  app_context_->outgoing_services()->AddService<SuggestionEngine>(
+      [this](fidl::InterfaceRequest<SuggestionEngine> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
+  app_context_->outgoing_services()->AddService<SuggestionProvider>(
+      [this](fidl::InterfaceRequest<SuggestionProvider> request) {
+        suggestion_provider_bindings_.AddBinding(this, std::move(request));
+      });
+  app_context_->outgoing_services()->AddService<SuggestionDebug>(
+      [this](fidl::InterfaceRequest<SuggestionDebug> request) {
+        debug_bindings_.AddBinding(&debug_, std::move(request));
+      });
+
+  // The Next suggestions are always ranked with a static ranking function.
+  next_suggestions_->UpdateRankingFunction(
+      maxwell::ranking::GetNextRankingFunction());
+}
+
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
                                            ProposalPtr proposal) {
   // The component_url and proposal ID form a unique identifier for a proposal.
@@ -95,7 +117,7 @@ void SuggestionEngineImpl::DispatchAsk(UserInputPtr input) {
   if (!query.empty()) {
     std::string formattedQuery;
     modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
-    context_publisher_->Publish(kQueryContextKey, formattedQuery);
+    context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
   }
 
   // TODO(andrewosh): Include/exclude logic improves upon this, but with
@@ -204,10 +226,10 @@ void SuggestionEngineImpl::RegisterPublisher(
 void SuggestionEngineImpl::Initialize(
     fidl::InterfaceHandle<modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    fidl::InterfaceHandle<ContextPublisher> context_publisher) {
+    fidl::InterfaceHandle<ContextWriter> context_writer) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
-  context_publisher_.Bind(std::move(context_publisher));
+  context_writer_.Bind(std::move(context_writer));
 
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
 }

@@ -7,7 +7,7 @@
 #include <map>
 
 #include "application/lib/svc/service_namespace.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
@@ -21,15 +21,15 @@ namespace maxwell {
 class StoryWatcherImpl;
 
 // This class pulls info about Stories from Framework and stores it in
-// the Context service as follows (note all values are JSON-encoded):
+// the Context service.
 //
-// /story/focused_id = ID string of currently focused story, or null
-// /story/visible_count = number of visible stories
-// /story/visible_ids = array of story IDs that are visible
+// It maintains a hierarchy of context values to represent:
+// Stories -> Modules
+//         -> Link Entities
 //
-// /story/id/<id>/url = URL of root Module
-// /story/id/<id>/state = modular.StoryState enum as string
-// /story/id/<id>/deleted = true or false
+// TODO(thatguy): Add Link value types to the Context engine and use them here.
+// Then update the resulting published value to remove its added JSON
+// structure, since it will all be represented in the metadata of the value.
 class StoryInfoAcquirer : public modular::Agent,
                           public modular::VisibleStoriesWatcher,
                           public modular::StoryProviderWatcher,
@@ -71,7 +71,8 @@ class StoryInfoAcquirer : public modular::Agent,
   void OnChange(modular::StoryInfoPtr info, modular::StoryState state) override;
   void OnDelete(const fidl::String& story_id) override;
 
-  ContextPublisherPtr context_publisher_;
+  ContextWriterPtr context_writer_;
+  ContextReaderPtr context_reader_;
   modular::StoryProviderPtr story_provider_;
   modular::FocusProviderPtr focus_provider_;
 
@@ -81,6 +82,12 @@ class StoryInfoAcquirer : public modular::Agent,
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::FocusWatcher> focus_watcher_binding_;
 
+  // Local state.
+  // story id -> context value id
+  std::map<fidl::String, fidl::String> story_value_ids_;
+  fidl::String focused_story_id_;
+  std::set<fidl::String> visible_story_ids_;
+
   // A collection of all active stories we watch. Keys are story IDs, Values are
   // the StoryWatcher instances.
   std::map<std::string, std::unique_ptr<StoryWatcherImpl>> stories_;
@@ -89,8 +96,5 @@ class StoryInfoAcquirer : public modular::Agent,
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoAcquirer);
 };
-
-std::string CreateKey(const std::string suffix);
-std::string CreateKey(const std::string& story_id, const std::string suffix);
 
 }  // namespace maxwell

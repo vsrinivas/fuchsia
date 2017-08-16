@@ -6,6 +6,7 @@
 
 #include <sstream>
 
+#include "apps/maxwell/services/context/value.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/src/acquirers/story_info/modular.h"
 #include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
@@ -15,23 +16,6 @@
 #include "rapidjson/writer.h"
 
 namespace maxwell {
-
-namespace {
-
-const std::string kStoryPrefix = "/story";
-}
-
-std::string CreateKey(const std::string suffix) {
-  std::stringstream s;
-  s << kStoryPrefix << "/" << suffix;
-  return s.str();
-}
-
-std::string CreateKey(const std::string& story_id, const std::string suffix) {
-  std::stringstream s;
-  s << kStoryPrefix << "/id/" << story_id << "/" << suffix;
-  return s.str();
-}
 
 StoryInfoAcquirer::StoryInfoAcquirer()
     : initializer_binding_(this),
@@ -60,7 +44,8 @@ void StoryInfoAcquirer::Initialize(
       modular::AgentContextPtr::Create(std::move(agent_context_handle));
   IntelligenceServicesPtr intelligence_services;
   agent_context->GetIntelligenceServices(intelligence_services.NewRequest());
-  intelligence_services->GetContextPublisher(context_publisher_.NewRequest());
+  intelligence_services->GetContextWriter(context_writer_.NewRequest());
+  intelligence_services->GetContextReader(context_reader_.NewRequest());
   callback();
 }
 
@@ -101,47 +86,40 @@ void StoryInfoAcquirer::Initialize(
 }
 
 void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
-  std::string value;
-  modular::XdrWrite(&value, &info->focused_story_id,
-                    modular::XdrFilter<fidl::String>);
-  context_publisher_->Publish(CreateKey("focused_id"), value);
+  // Set all stories to *not* focused, then set the one that's focused to
+  // "focused".
+  for (const auto& e : stories_) {
+    if (!info->focused_story_id || e.first != info->focused_story_id) {
+      e.second->OnFocusChange(false);
+    }
+  }
+  if (info->focused_story_id) {
+    stories_[info->focused_story_id]->OnFocusChange(true);
+  }
 }
 
 void StoryInfoAcquirer::OnVisibleStoriesChange(fidl::Array<fidl::String> ids) {
-  std::string array_value;
-  modular::XdrWrite(&array_value, &ids, modular::XdrFilter<fidl::String>);
-  context_publisher_->Publish(CreateKey("visible_ids"), array_value);
-  context_publisher_->Publish(CreateKey("visible_count"),
-                              std::to_string(ids.size()));
+  // TODO(thatguy)
 }
 
 void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
                                  modular::StoryState state) {
-  const std::string id = info->id.get();
-
-  // If we aren't already watching this story, get a controller and create
-  // a watcher.
-  if (stories_.find(id) == stories_.end()) {
-    stories_.emplace(std::make_pair(
-        id, std::make_unique<StoryWatcherImpl>(this, context_publisher_.get(),
-                                               story_provider_.get(), id)));
+  // Here we only check if a story is new, and if so create a StoryWatcherImpl.
+  // We proxy all future change events to it.
+  auto it = stories_.find(info->id);
+  if (it == stories_.end()) {
+    auto ret = stories_.emplace(std::make_pair(
+        info->id, std::make_unique<StoryWatcherImpl>(
+                      this, context_writer_.get(), story_provider_.get(),
+                      info->id)));
+    it = ret.first;
   }
-
-  std::string url_json;
-  modular::XdrWrite(&url_json, &info->url, modular::XdrFilter<fidl::String>);
-  context_publisher_->Publish(CreateKey(id, "url"), url_json);
-  // TODO(jwnichols): Choose between recording the state here vs. the
-  // StoryWatcher once the bug in StoryProviderWatcher is fixed.
-  std::string state_text = StoryStateToString(state);
-  std::string state_json;
-  modular::XdrWrite(&state_json, &state_text, modular::XdrFilter<std::string>);
-  context_publisher_->Publish(CreateKey(id, "state"), state_json);
-  context_publisher_->Publish(CreateKey(id, "deleted"), "false");
+  it->second->OnStoryStateChange(std::move(info), state);
 }
 
 void StoryInfoAcquirer::OnDelete(const fidl::String& story_id) {
   const std::string id = story_id.get();
-  context_publisher_->Publish(CreateKey(id, "deleted"), "true");
+  // TODO(thatguy)
 }
 
 }  // namespace maxwell

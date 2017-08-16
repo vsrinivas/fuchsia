@@ -6,21 +6,43 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:application.lib.app.dart/app.dart';
-import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
-import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
+import 'package:apps.maxwell.services.context/debug.fidl.dart';
+import 'package:apps.maxwell.services.user/scope.fidl.dart';
 
 import 'data_handler.dart';
 
-class ContextDataHandler extends DataHandler {
+class ContextDataHandler extends ContextDebugListener
+    with DataHandler {
   @override
   String get name => "context";
 
-  // cache for current context state
-  final _contextCache = new Map<String, String>();
+  final JsonCodec json = new JsonCodec(toEncodable: (dynamic object) {
+    if (object is ComponentScope) {
+      switch (object.tag) {
+        case ComponentScopeTag.globalScope:
+          return {"type": "global"};
+        case ComponentScopeTag.moduleScope:
+          return {
+            "type": "module",
+            "url": object.moduleScope.url,
+            "storyId": object.moduleScope.storyId
+          };
+        case ComponentScopeTag.agentScope:
+          return {"type": "agent", "url": object.agentScope.url};
+        default:
+          return {"type": "unknown"};
+      }
+    } else {
+      return object.toJson();
+    }
+  });
 
-  // connection to context reader
-  ContextReaderProxy _contextReader;
-  ContextListenerForTopicsImpl _contextListener;
+  // cache for current state
+  final Map<String, ContextDebugSubscription> _subscriptionsCache = {};
+  final Map<String, ContextDebugValue> _valuesCache = {};
+
+  // connection to context debug
+  ContextDebugListenerBinding _contextDebugListenerBinding;
 
   SendWebSocketMessage _sendMessage;
 
@@ -28,49 +50,69 @@ class ContextDataHandler extends DataHandler {
   void init(ApplicationContext appContext, SendWebSocketMessage sender) {
     this._sendMessage = sender;
 
-    // Connect to the ContextReader
-    _contextReader = new ContextReaderProxy();
-    _contextListener = new ContextListenerForTopicsImpl(this.onContextUpdateForTopics);
-    connectToService(appContext.environmentServices, _contextReader.ctrl);
-    assert(_contextReader.ctrl.isBound);
+    final contextDebug = new ContextDebugProxy();
+    connectToService(appContext.environmentServices, contextDebug.ctrl);
+    assert(contextDebug.ctrl.isBound);
 
-    // Subscribe to all topics
-    ContextQueryForTopics query = new ContextQueryForTopics();
-    query.topics = []; // empty list is the wildcard query
-    _contextReader.subscribeToTopics(query, _contextListener.getHandle());
+    // Watch subscription changes.
+    _contextDebugListenerBinding = new ContextDebugListenerBinding();
+    contextDebug.watch(_contextDebugListenerBinding.wrap(this));
+    contextDebug.ctrl.close();
   }
 
   @override
   bool handleRequest(String requestString, HttpRequest request) {
-    // The requestString will contain just the topic
-    // /data/context/<topic>
-    //     return JSON data from the context service for the given topic
-    var topic = requestString;
-    var topicValue = _contextCache[topic];
-    // print("[DASHBOARD] Request for context topic ${topic} with value ${topicValue}");
-    if (topicValue != null) {
-      // Write the data to the response.
-      request.response.write(topicValue);
-      request.response.close();
-      return true;
-    }
     return false;
   }
 
   @override
   void handleNewWebSocket(WebSocket socket) {
-    // send all cached context data to the socket
-    String message = JSON.encode({"context.update": _contextCache});
-    socket.add(message);
+    // Send all cached context data to the new socket.
+    socket.add(this._encode());
   }
 
-  void onContextUpdateForTopics(ContextUpdateForTopics update) {
-    // Cache all context values that we receive
-    update.values.forEach((String key, String value) {
-      // print("[DASHBOARD UPDATE] ${key}: ${value}");
-      _contextCache[key] = value;
+  @override
+  void onValuesChanged(List<ContextDebugValue> values) {
+    values.forEach((ContextDebugValue update) {
+      if (update.value != null) {
+        // This is a new value or an update.
+        this._valuesCache[update.id] = update;
+      } else {
+        // This is a removal.
+        this._valuesCache.remove(update.id);
+      }
     });
+    this._send();
+  }
 
-    this._sendMessage(JSON.encode({"context.update": update.values}));
+  @override
+  void onSubscriptionsChanged(List<ContextDebugSubscription> subscriptions) {
+    subscriptions.forEach((ContextDebugSubscription update) {
+      if (update.query != null) {
+        // This is a new subscription.
+        this._subscriptionsCache[update.id] = update;
+      } else {
+        // This is a removal.
+        this._subscriptionsCache.remove(update.id);
+      }
+    });
+    this._send();
+  }
+
+  String _encode() {
+    // TODO(thatguy): It would be better to send the frontend updates as they
+    // come in instead of storing a bunch of state here. In order to do that
+    // we'd have to have each new web-socket get its own listener, so that
+    // it is sent a complete state snapshot from the ContextEngine when it is
+    // initialized in handleNewWebSocket().
+    final String message = json.encode({
+      "context.values": new List.from(_valuesCache.values),
+      "context.subscriptions": new List.from(_subscriptionsCache.values)
+    });
+    return message;
+  }
+
+  void _send() {
+    this._sendMessage(this._encode());
   }
 }

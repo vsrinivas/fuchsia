@@ -4,116 +4,153 @@
 
 #pragma once
 
-#include <deque>
-#include <list>
 #include <map>
+#include <set>
+#include <string>
 
 #include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "apps/maxwell/services/context/debug.fidl.h"
 #include "apps/maxwell/services/context/metadata.fidl.h"
+#include "apps/maxwell/services/context/value.fidl.h"
+#include "apps/maxwell/src/context_engine/index.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {
 
-class ContextCoprocessor;  // See below for definition.
-struct ContextValue;       // See below.
+class ContextDebug;
+class ContextDebugImpl;
 
-// Tracks current values of context topics as well as subscriptions to those
-// topics. Is responsible for notifying any subscribed clients whenever a topic
-// changes value.
+// This class represents a "multiparent hierarchy", which is another way
+// of saying a directed graph that cannot have any cycles.
+// TODO(thatguy): Actually enforce the no cycles constraint :).
+class ContextGraph {
+ public:
+  using Id = std::string;
+  // Adds a graph edge from |from| to |to|.
+  void AddEdge(const Id& from, const Id& to);
+
+  // Removes the node |id| and removes any incoming or outgoing edges.
+  // TODO(thatguy): Decide what to do about orphaned children.
+  void Remove(const Id& id);
+
+  std::set<Id> GetParents(const Id& id) const;
+
+  // Returns all |id|'s children and their children, recursively.
+  std::set<Id> GetChildrenRecursive(const Id& id) const;
+
+  // Returns all ancestors for |id|, guaranteeing that all node ids appear in
+  // the return value before their children (ie, in order of seniority).
+  std::vector<Id> GetAncestors(const Id& id) const;
+
+ private:
+  // From node to its parents.
+  std::map<Id, std::set<Id>> parents_;
+  // From parent to its immediate children.
+  std::map<Id, std::set<Id>> children_;
+};
+
+// Stores a graph of ContextValue structs (values). Supports fetching lists of
+// values based on a) the value's type and b) ContextMetadata fields.
 //
-// Additionally supports coprocessors (extensions to change how new topic
-// values are processed), and provides convenience methods for retrieving
-// context values across various scopes.
+// The graph structure is used to represent value namespaces or scope, although
+// the exact meaning or what concepts are represented is up to the client. When
+// a value is queried against and returned, its metadata is "flattened" with
+// its ancestors' metadata. For example, if an ENTITY value is a child of a
+// MODULE value, the ENTITY value will inherit the MODULE value's metadata (ie,
+// the |mod| field of the ContextMetadata struct).
 class ContextRepository {
+  struct ValueInternal;
   struct Subscription;
+  struct InProgressUpdate;
 
  public:
-  using SubscriptionId = uint32_t;
+  using Id = ContextIndex::Id;
 
   ContextRepository();
   ~ContextRepository();
 
-  // TODO(thatguy): Deprecate this as part of MW-137.
-  void Set(const std::string& topic, const std::string& json_value);
+  bool Contains(const Id& id) const;
+  Id Add(ContextValuePtr value);
+  Id Add(const Id& parent_id, ContextValuePtr value);
+  void Update(const Id& id, ContextValuePtr value);
+  void Remove(const Id& id);
 
-  void Set(const std::string& topic, ContextValue value);
-  // Returns nullptr if |topic| does not exist.
-  const ContextValue* Get(const std::string& topic) const;
+  // Returns a copy of the ContextValue for |id|. Returns a null
+  // |ContextValuePtr| if |id| is not valid.
+  ContextValuePtr Get(const Id& id) const;
+
+  // Returns a copy of the ContextValue for |id|, with metadata merged
+  // from ancestors. Returns a null |ContextValuePtr| if |id| is not valid.
+  ContextValuePtr GetMerged(const Id& id) const;
+
+  std::set<Id> Select(const ContextSelectorPtr& selector);
 
   // Does not take ownership of |listener|. |listener| must remain valid until
-  // RemoveSubscription() is called with the returned SubscriptionId.
-  SubscriptionId AddSubscription(ContextQueryForTopicsPtr query,
-                                 ContextListenerForTopics* listener);
-  void RemoveSubscription(SubscriptionId id);
+  // RemoveSubscription() is called with the returned Id.
+  Id AddSubscription(ContextQueryPtr query,
+                     ContextListener* listener,
+                     SubscriptionDebugInfoPtr debug_info);
+  void RemoveSubscription(Id id);
 
-  // Add a ContextCoprocessor. Coprocessors are executed in order as part of
-  // SetInternal().  See documentation for ContextCoprocessor below.
-  //
-  // Takes ownership of |coprocessor|.
-  void AddCoprocessor(ContextCoprocessor* coprocessor);
+  // Like AddSubscription above, but takes ownership of the FIDL service proxy
+  // object, |listener|. The subscription is automatically removed when
+  // |listener| experiences a connection error.
+  void AddSubscription(ContextQueryPtr query,
+                       ContextListenerPtr listener,
+                       SubscriptionDebugInfoPtr debug_info);
 
-  // Stores into |output| a list of all values for a given topic across all
-  // Modules within the scope of a specific Story.
-  void GetAllValuesInStoryScope(const std::string& story_id,
-                                const std::string& topic,
-                                std::vector<const ContextValue*>* output) const;
-
-  // Stores into |output| all context topics with the given string prefix.
-  void GetAllTopicsWithPrefix(const std::string& prefix,
-                              std::vector<std::string>* output) const;
+  void AddDebugBinding(fidl::InterfaceRequest<ContextDebug> request);
 
  private:
-  void SetInternal(const std::string& topic, ContextValue value);
+  Id AddInternal(const Id& parent_id, ContextValuePtr value);
+  void RecomputeMergedMetadata(ValueInternal* value);
+  void ReindexAndNotify(InProgressUpdate update);
+  void QueryAndMaybeNotify(Subscription* subscription, bool force);
 
-  bool EvaluateQueryAndBuildUpdate(const ContextQueryForTopicsPtr& query,
-                                   ContextUpdateForTopicsPtr* update_output);
+  // Keyed by internal id.
+  std::map<Id, ValueInternal> values_;
+  ContextGraph graph_;
 
-  // Keyed by context topic.
-  std::map<std::string, ContextValue> values_;
+  // A map of Id (int) to Subscription.
+  std::map<Id, Subscription> subscriptions_;
 
-  struct Subscription {
-    ContextQueryForTopicsPtr query;
-    ContextListenerForTopics* listener;  // Not owned.
-  };
-  // A map of SubscriptionId (int) to Subscription.
-  SubscriptionId next_subscription_id_;
-  std::map<int, Subscription> subscriptions_;
+  ContextIndex index_;
 
-  // A map of topic string to subscriptions that have listed that topic
-  // in their |ContextQueryForTopics.topics| field.
-  std::map<std::string, std::set<SubscriptionId>> topic_to_subscription_id_;
-  std::set<SubscriptionId> wildcard_subscription_ids_;
-
-  std::vector<std::unique_ptr<ContextCoprocessor>> coprocessors_;
+  friend class ContextDebugImpl;
+  std::unique_ptr<ContextDebugImpl> debug_;
+  fidl::BindingSet<ContextDebug> debug_bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextRepository);
 };
 
-// Executed as part of ContextRepository::SetInternal(). Every
-// ContextCoprocessor that was added to a ContextRepository (through
-// AddCoprocessor()) is executed in order when SetInternal() is called. The
-// Coprocessor recieves the current context state, as well as a list of topics
-// that have been updated thus far, and can instruct the ContextRepository to
-// create additional updates.
-class ContextCoprocessor {
- public:
-  virtual ~ContextCoprocessor();
-
-  // Recieves a |repository| which represents current state, as well as a list
-  // of |topics_updated| so far. The Coprocessor can optionally populate |out|
-  // with additional topics and values to update.
-  virtual void ProcessTopicUpdate(const ContextRepository* repository,
-                                  const std::set<std::string>& topics_updated,
-                                  std::map<std::string, ContextValue>* out) = 0;
+struct ContextRepository::ValueInternal {
+  // The contents of |value.meta| merged with metadata from all
+  // of this value's ancestors.
+  Id id;
+  ContextMetadataPtr merged_metadata;
+  ContextValuePtr value;
+  uint32_t version;  // Incremented on change.
 };
 
-struct ContextValue {
-  ContextValue();
-  explicit ContextValue(const std::string& json);
+struct ContextRepository::Subscription {
+  using IdAndVersionSet = std::set<std::pair<Id, uint32_t>>;
 
-  ContextValue Clone() const;
+  ContextQueryPtr query;
+  ContextListener* listener;  // Optionally owned by |listener_storage|.
+  ContextListenerPtr listener_storage;
+  SubscriptionDebugInfoPtr debug_info;
+  // The set of value id and version we sent the last time we notified
+  // |listener|. Used to calculate if a new update is different.
+  IdAndVersionSet last_update;
+};
 
-  std::string json;
-  ContextMetadataPtr meta;
+// Holds interim values necessary for processing an update to at least one
+// context value.
+struct ContextRepository::InProgressUpdate {
+  // These values are having their values added or updated.
+  std::vector<ValueInternal*> updated_values;
+  // These values are being removed.
+  std::vector<ValueInternal> removed_values;
 };
 
 }  // namespace maxwell

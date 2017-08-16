@@ -4,7 +4,6 @@
 
 module maxwell;
 
-import "apps/maxwell/services/context/context_publisher.fidl";
 import "apps/modular/services/story/story_provider.fidl";
 import "apps/modular/services/user/focus.fidl";
 

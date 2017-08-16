@@ -2,21 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("entity_span") {
+source_set("future_value") {
   sources = [
-    "entity_span.cc",
-    "entity_span.h",
+    "future_value.h",
   ]
 
   public_deps = [
-    "//apps/maxwell/services/context",
-    "//apps/modular/lib/rapidjson",
     "//garnet/public/lib/ftl",
-  ]
-}
-
-source_set("entity_utils") {
-  sources = [
-    "entity_utils.h",
+    "//garnet/public/lib/mtl",
   ]
 }

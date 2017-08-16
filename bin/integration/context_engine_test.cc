@@ -17,44 +17,39 @@ ComponentScopePtr MakeGlobalScope() {
   return scope;
 }
 
-ComponentScopePtr MakeModuleScope(const std::string& module_url,
+/*
+ComponentScopePtr MakeModuleScope(const std::string& path,
                                   const std::string& story_id) {
   auto scope = ComponentScope::New();
   auto module_scope = ModuleScope::New();
-  module_scope->url = module_url;
+  module_scope->url = path;
   module_scope->story_id = story_id;
   module_scope->module_path = fidl::Array<fidl::String>::New(1);
-  module_scope->module_path[0] = module_url;
+  module_scope->module_path[0] = path;
   scope->set_module_scope(std::move(module_scope));
   return scope;
 }
+*/
 
-class TestListener : public ContextListenerForTopics {
+class TestListener : public ContextListener {
  public:
+  ContextUpdatePtr last_update;
+
   TestListener() : binding_(this) {}
 
-  void OnUpdate(ContextUpdateForTopicsPtr update) override {
+  void OnContextUpdate(ContextUpdatePtr update) override {
     FTL_LOG(INFO) << "OnUpdate(" << update << ")";
-    last_update_ = std::move(update);
+    last_update = std::move(update);
   }
 
-  void WaitForUpdate() {
-    WaitUntil([this] { return last_update_ ? true : false; });
-  }
-
-  ContextUpdateForTopics* PeekLast() { return last_update_.get(); }
-  ContextUpdateForTopicsPtr PopLast() { return std::move(last_update_); }
-
-  // Binds a new handle to |binding_| and returns it.
-  fidl::InterfaceHandle<ContextListenerForTopics> GetHandle() {
+  fidl::InterfaceHandle<ContextListener> GetHandle() {
     return binding_.NewBinding();
   }
 
-  void Reset() { last_update_.reset(); }
+  void Reset() { last_update.reset(); }
 
  private:
-  ContextUpdateForTopicsPtr last_update_;
-  fidl::Binding<ContextListenerForTopics> binding_;
+  fidl::Binding<ContextListener> binding_;
 };
 
 class ContextEngineTest : public ContextEngineTestBase {
@@ -63,147 +58,125 @@ class ContextEngineTest : public ContextEngineTestBase {
 
  protected:
   void InitAllGlobalScope() {
-    InitProvider(MakeGlobalScope());
-    InitPublisher(MakeGlobalScope());
+    InitReader(MakeGlobalScope());
+    InitWriter(MakeGlobalScope());
   }
 
-  void InitProvider(ComponentScopePtr scope) {
+  void InitReader(ComponentScopePtr scope) {
     reader_.reset();
     context_engine()->GetReader(std::move(scope), reader_.NewRequest());
   }
 
-  void InitPublisher(ComponentScopePtr scope) {
-    publisher_.reset();
-    context_engine()->GetPublisher(std::move(scope), publisher_.NewRequest());
+  void InitWriter(ComponentScopePtr client_info) {
+    writer_.reset();
+    context_engine()->GetWriter(std::move(client_info), writer_.NewRequest());
   }
 
   ContextReaderPtr reader_;
-  ContextPublisherPtr publisher_;
+  ContextWriterPtr writer_;
 };
 
-ContextQueryForTopicsPtr CreateQuery(const std::vector<std::string> topics) {
-  auto query = ContextQueryForTopics::New();
+/*
+ContextQueryPtr CreateQuery(const std::vector<std::string> topics) {
+  auto query = ContextQuery::New();
   for (const auto& topic : topics) {
     query->topics.push_back(topic);
   }
   return query;
 }
+*/
 
 }  // namespace
 
-TEST_F(ContextEngineTest, PublishAndSubscribe) {
-  // Show that we can publish to a topic and that we can subscribe to that
-  // topic. Querying behavior and other Listener dynamics are tested elsewhere.
-  InitAllGlobalScope();
-  publisher_->Publish("topic", "1");
-  publisher_->Publish("a_different_topic", "2");
+// Tests to add:
+// * Write with parent.
+// * Update.
+// * Remove.
+// * Compat:
+//   - Write to Module scope if it exists
+//   - Read to:
+//     /story/visible_ids
+//     /story/focused/link/<topic>
+//     /story/id/<id>/link/<topic>
+//     /story/focused/explicit/<topic>
+//     /story/id/<id>/explicit/<topic>
+
+TEST_F(ContextEngineTest, BasicWriteSubscribe) {
+  auto value = ContextValue::New();
+  value->type = ContextValueType::ENTITY;
+  value->content = R"({ "@type": "someType", "foo": "bar" })";
+  value->meta = ContextMetadata::New();
+  value->meta->entity = EntityMetadata::New();
+  value->meta->entity->topic = "topic";
+
+  fidl::String value1_id;
+  writer_->AddValue(std::move(value),
+                    [&value1_id](const fidl::String& id) { value1_id = id; });
+  WAIT_UNTIL(value1_id);
+
+  value = ContextValue::New();
+  value->type = ContextValueType::ENTITY;
+  value->content = R"({ "@type": ["someType", "alsoAnotherType"], "baz": "bang" })";
+  value->meta = ContextMetadata::New();
+  value->meta->entity = EntityMetadata::New();
+  value->meta->entity->topic = "frob";
+
+  fidl::String value2_id;
+  writer_->AddValue(std::move(value),
+                    [&value2_id](const fidl::String& id) { value2_id = id; });
+  WAIT_UNTIL(value2_id);
+
+  // Subscribe to those values.
+  auto selector = ContextSelector::New();
+  selector->type = ContextValueType::ENTITY;
+  selector->meta = ContextMetadata::New();
+  selector->meta->entity = EntityMetadata::New();
+  selector->meta->entity->type.push_back("someType");
+  auto query = ContextQuery::New();
+  query->selector["a"] = std::move(selector);
 
   TestListener listener;
-  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener.GetHandle());
-  listener.WaitForUpdate();
+  reader_->Subscribe(std::move(query), listener.GetHandle());
+  WAIT_UNTIL(listener.last_update);
 
-  ContextUpdateForTopicsPtr update;
-  ASSERT_TRUE((update = listener.PopLast()));
-  EXPECT_EQ(1ul, update->values.size());
-  EXPECT_EQ(update->values["topic"], "1");
-
-  // Show that if we try to publish invalid JSON, it doesn't go through.
-  publisher_->Publish("topic", "not valid JSON");
-  ASYNC_CHECK(!listener.PeekLast());
+  EXPECT_EQ(2lu, listener.last_update->values["a"].size());
+  EXPECT_EQ("topic", listener.last_update->values["a"][0]->meta->entity->topic);
+  EXPECT_EQ("frob", listener.last_update->values["a"][1]->meta->entity->topic);
 }
 
-TEST_F(ContextEngineTest, MultipleSubscribers) {
-  // When multiple subscriptions are made to the same topic, all listeners
-  // should be notified of new values.
-  TestListener listener1;
-  TestListener listener2;
-  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener1.GetHandle());
-  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener2.GetHandle());
+TEST_F(ContextEngineTest, CloseListenerAndReader) {
+  // Ensure that listeners can be closed individually, and that the reader itself
+  // can be closed and listeners are still valid.
+  auto selector = ContextSelector::New();
+  selector->type = ContextValueType::ENTITY;
+  selector->meta = ContextMetadata::New();
+  selector->meta->entity = EntityMetadata::New();
+  selector->meta->entity->topic = "topic";
+  auto query = ContextQuery::New();
+  query->selector["a"] = std::move(selector);
 
-  publisher_->Publish("topic", "1");
-  WAIT_UNTIL(listener1.PopLast());
-  WAIT_UNTIL(listener2.PopLast());
-}
-
-TEST_F(ContextEngineTest, CloseListener) {
-  // Ensure that listeners can be closed individually.
   TestListener listener2;
   {
     TestListener listener1;
-    reader_->SubscribeToTopics(CreateQuery({"topic"}), listener1.GetHandle());
-    reader_->SubscribeToTopics(CreateQuery({"topic"}), listener2.GetHandle());
+    reader_->Subscribe(query.Clone(), listener1.GetHandle());
+    reader_->Subscribe(query.Clone(), listener2.GetHandle());
+    InitReader(MakeGlobalScope());
+    WAIT_UNTIL(listener2.last_update);
+    listener2.Reset();
   }
 
-  publisher_->Publish("topic", "\"don't crash\"");
-  WAIT_UNTIL(listener2.PopLast());
-}
-
-TEST_F(ContextEngineTest, CloseProvider) {
-  // After a provider is closed, its listeners should no longer recieve updates.
-  TestListener listener1;
-  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener1.GetHandle());
-
-  // Close the provider and open a new one to ensure we're still running.
-  InitProvider(MakeGlobalScope());
-
-  publisher_->Publish("topic", "\"please don't crash\"");
-  TestListener listener2;
-  reader_->SubscribeToTopics(CreateQuery({"topic"}), listener2.GetHandle());
-
-  WAIT_UNTIL(listener2.PopLast());
-  // Since the ContextReader owns subscriptions, and we closed it
-  // (through InitProvider), we should not have seen our listener
-  // notified of the published topic.
-  //
-  // Unfortunately, it's a race between when the subscription is
-  // actually removed on the service side, so we can't check it here.
-  // EXPECT_FALSE(listener1.PeekLast());
-
-  // However, by now (after the WAIT_UNTIL) we always seem to have
-  // caught up, so try changing the value here.
-  listener1.Reset();
-  publisher_->Publish("topic", "\"still don't crash\"");
-  WAIT_UNTIL(listener2.PopLast());
-  EXPECT_FALSE(listener1.PeekLast());
-}
-
-TEST_F(ContextEngineTest, ModuleScope_BasicReadWrite) {
-  // Show that when the ContextPublisher is created with Module scope,
-  // that the topic is prefixed with a Module-scope prefix.
-  InitPublisher(MakeModuleScope("url", "story_id"));
-  InitProvider(MakeGlobalScope());
-
-  publisher_->Publish("/topic", "1");
-  publisher_->Publish("/topic_type", R"({"@type": "type", "foo": "bar"})");
-  publisher_->Publish("/topic_type_array",
-                      R"({"@type": ["t1", "t2"], "foo": "bar"})");
-
-  TestListener listener;
-  // This is the 5-char prefix of the sha1 of url.
-  const char kSha1OfUrl[] = "81736";
-  const std::string kTopicString =
-      MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic");
-  const std::string kTopicStringType =
-      MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic_type");
-  const std::string kTopicStringTypeArray =
-      MakeModuleScopeTopic("story_id", kSha1OfUrl, "explicit/topic_type_array");
-  reader_->SubscribeToTopics(
-      CreateQuery({kTopicString, kTopicStringType, kTopicStringTypeArray}),
-      listener.GetHandle());
-  listener.WaitForUpdate();
-
-  ContextUpdateForTopicsPtr update;
-  ASSERT_TRUE((update = listener.PopLast()));
-  EXPECT_EQ("1", update->values[kTopicString]);
-
-  ASSERT_FALSE(update->meta[kTopicStringType]->entity.is_null());
-  ASSERT_EQ(1u, update->meta[kTopicStringType]->entity->type.size());
-  EXPECT_EQ("type", update->meta[kTopicStringType]->entity->type[0]);
-
-  ASSERT_FALSE(update->meta[kTopicStringTypeArray]->entity.is_null());
-  ASSERT_EQ(2u, update->meta[kTopicStringTypeArray]->entity->type.size());
-  EXPECT_EQ("t1", update->meta[kTopicStringTypeArray]->entity->type[0]);
-  EXPECT_EQ("t2", update->meta[kTopicStringTypeArray]->entity->type[1]);
+  auto value = ContextValue::New();
+  value->type = ContextValueType::ENTITY;
+  value->meta = ContextMetadata::New();
+  value->meta->entity = EntityMetadata::New();
+  value->meta->entity->topic = "topic";
+  // We don't want to crash. There's no way to assert that here, but it will
+  // show up in the logs.
+  fidl::String value_id;
+  writer_->AddValue(std::move(value),
+                    [&value_id](const fidl::String& id) { value_id = id; });
+  WAIT_UNTIL(value_id);
+  WAIT_UNTIL(listener2.last_update);
 }
 
 }  // namespace maxwell

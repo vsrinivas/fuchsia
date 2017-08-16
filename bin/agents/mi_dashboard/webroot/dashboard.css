@@ -42,6 +42,19 @@ body {
   grid-column-end: span 4;
 }
 
+.context-root-value {
+  padding-top: 1em;
+}
+
+.context-indent {
+  padding-left: 2em;
+}
+
+.context-selector-type, .context-selector-metadata {
+  font-size: 0.75rem;
+  padding-left: 1em;
+}
+
 .entity-list-item {
   padding-left: 30px;
 }

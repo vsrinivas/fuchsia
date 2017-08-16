@@ -16,13 +16,13 @@ MockGps::MockGps(ContextEngine* context_engine) {
   auto agent_scope = AgentScope::New();
   agent_scope->url = "MockGps";
   scope->set_agent_scope(std::move(agent_scope));
-  context_engine->GetPublisher(std::move(scope), publisher_.NewRequest());
+  context_engine->GetWriter(std::move(scope), writer_.NewRequest());
 }
 
 void MockGps::Publish(float latitude, float longitude) {
   std::ostringstream json;
   json << "{ \"lat\": " << latitude << ", \"lng\": " << longitude << " }";
-  publisher_->Publish(kLabel, json.str());
+  writer_->WriteEntityTopic(kLabel, json.str());
 }
 
 }  // namespace acquirers

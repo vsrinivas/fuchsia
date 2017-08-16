@@ -7,23 +7,15 @@ import("//garnet/public/lib/fidl/fidl.gni")
 fidl("context") {
   sources = [
     "context_engine.fidl",
-    "context_publisher.fidl",
     "context_reader.fidl",
-    "metadata.fidl",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/user:scope",
-  ]
-}
-
-fidl("debug") {
-  sources = [
+    "context_writer.fidl",
     "debug.fidl",
+    "metadata.fidl",
+    "value_type.fidl",
+    "value.fidl",
   ]
 
   deps = [
-    ":context",
     "//apps/maxwell/services/user:scope",
   ]
 }

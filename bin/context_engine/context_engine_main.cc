@@ -15,20 +15,12 @@ class App {
   App(app::ApplicationContext* app_context) {
     app_context->outgoing_services()->AddService<ContextEngine>(
         [this](fidl::InterfaceRequest<ContextEngine> request) {
-          engine_bindings_.AddBinding(&context_engine_impl_,
-                                      std::move(request));
-        });
-    app_context->outgoing_services()->AddService<ContextDebug>(
-        [this](fidl::InterfaceRequest<ContextDebug> request) {
-          debug_bindings_.AddBinding(context_engine_impl_.debug(),
-                                     std::move(request));
+          context_engine_impl_.AddBinding(std::move(request));
         });
   }
 
  private:
   ContextEngineImpl context_engine_impl_;
-  fidl::BindingSet<ContextEngine> engine_bindings_;
-  fidl::BindingSet<ContextDebug> debug_bindings_;
 };
 
 }  // namespace

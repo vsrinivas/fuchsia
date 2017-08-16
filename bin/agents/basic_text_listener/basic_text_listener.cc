@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_span.h"
 #include "apps/maxwell/src/agents/entity_utils/entity_utils.h"
@@ -22,20 +22,24 @@ const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
 
 // Subscribe to the Context Engine and Publish any entities found back to
 // the Context Engine.
-class BasicTextListener : ContextListenerForTopics {
+class BasicTextListener : ContextListener {
  public:
   BasicTextListener()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
-        publisher_(
-            app_context_->ConnectToEnvironmentService<ContextPublisher>()),
-        topics_({kRawTextTopic}),
+        writer_(
+            app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
-    auto query = ContextQueryForTopics::New();
-    for (const std::string& s : topics_) {
-      query->topics.push_back(s);
-    }
-    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
+    auto selector = ContextSelector::New();
+    selector->type = ContextValueType::ENTITY;
+    selector->meta = ContextMetadata::New();
+    selector->meta->entity = EntityMetadata::New();
+    selector->meta->entity->topic = kRawTextTopic;
+
+    auto query = ContextQuery::New();
+    query->selector[kRawTextTopic] = std::move(selector);
+
+    reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
@@ -65,13 +69,14 @@ class BasicTextListener : ContextListenerForTopics {
     return modular::JsonValueToString(entities_json);
   }
 
-  // |ContextListenerForTopics|
-  void OnUpdate(ContextUpdateForTopicsPtr result) override {
-    if (!KeyInUpdateResult(result, kRawTextTopic)) {
-      return;
-    }
+  // |ContextListener|
+  void OnContextUpdate(ContextUpdatePtr result) override {
+    if (result->values[kRawTextTopic].empty()) return;
     rapidjson::Document text_doc;
-    text_doc.Parse(result->values[kRawTextTopic]);
+    // TODO(thatguy): This is only taking the first raw_text entry. We should be
+    // keeping track of each one, and writing N new context values out for Entities
+    // we extracted.
+    text_doc.Parse(result->values[kRawTextTopic][0]->content);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
     if (!text_doc[0].HasMember("text") || !text_doc[0]["text"].IsString()) {
@@ -80,14 +85,13 @@ class BasicTextListener : ContextListenerForTopics {
     }
     const std::string raw_text = text_doc[0]["text"].GetString();
 
-    publisher_->Publish(kFocalEntitiesTopic, GetEntitiesFromText(raw_text));
+    writer_->WriteEntityTopic(kFocalEntitiesTopic, GetEntitiesFromText(raw_text));
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
-  ContextPublisherPtr publisher_;
-  const std::vector<std::string> topics_;
-  fidl::Binding<ContextListenerForTopics> binding_;
+  ContextWriterPtr writer_;
+  fidl::Binding<ContextListener> binding_;
 };
 
 }  // namespace maxwell

@@ -27,8 +27,8 @@ source_set("bound_set") {
 group("unittests") {
   testonly = true
   deps = [
+    "//apps/maxwell/src/context_engine:context_index_unittest",
     "//apps/maxwell/src/context_engine:context_repository_unittest",
-    "//apps/maxwell/src/context_engine/coprocessors:coprocessors_unittest",
   ]
 }
 

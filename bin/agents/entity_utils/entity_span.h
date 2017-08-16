@@ -5,11 +5,13 @@
 #pragma once
 
 #include <string>
+#include <vector>
+
+#include "apps/maxwell/services/context/value.fidl.h"
 
 namespace maxwell {
 
-// An entity and its location in the Context Engine, under topic:
-// /story/focused/explicit/raw/text.
+// An entity and its location in the Context Engine, under topic: "raw/text".
 // For example, this could be an email address from the basic_text_reporter
 // module.
 // TODO(travismart): When functionality improves to deal with multiple Flutter
@@ -30,9 +32,8 @@ class EntitySpan {
   // fields given in the above constructor as keys.
   static EntitySpan FromJson(const std::string& json_string);
 
-  // Parse a JSON representation of an array of EntitySpans.
-  static std::vector<EntitySpan> EntitiesFromJson(
-      const std::string& json_string);
+  static std::vector<EntitySpan> FromContextValues(
+      const fidl::Array<ContextValuePtr>& values);
 
   std::string GetContent() const { return content_; }
   std::string GetType() const { return type_; }

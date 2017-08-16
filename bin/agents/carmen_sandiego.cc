@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -14,26 +14,33 @@ constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
 namespace maxwell {
 namespace {
 
-class CarmenSandiegoApp : public ContextListenerForTopics {
+class CarmenSandiegoApp : public ContextListener {
  public:
   CarmenSandiegoApp()
       : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        publisher_(
-            app_context_->ConnectToEnvironmentService<ContextPublisher>()),
+        writer_(
+            app_context_->ConnectToEnvironmentService<ContextWriter>()),
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         binding_(this) {
-    auto query = ContextQueryForTopics::New();
-    query->topics.push_back(acquirers::GpsAcquirer::kLabel);
-    reader_->SubscribeToTopics(std::move(query), binding_.NewBinding());
+    auto selector = ContextSelector::New();
+    selector->type = ContextValueType::ENTITY;
+    selector->meta = ContextMetadata::New();
+    selector->meta->entity = EntityMetadata::New();
+    selector->meta->entity->topic = acquirers::GpsAcquirer::kLabel;
+    auto query = ContextQuery::New();
+    query->selector["gps"] = std::move(selector);
+    reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
-  // |ContextListenerForTopics|
-  void OnUpdate(ContextUpdateForTopicsPtr update) override {
+  // |ContextListener|
+  void OnContextUpdate(ContextUpdatePtr update) override {
+    if (update->values["gps"].empty()) return;
+
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
-    d.Parse(update->values[acquirers::GpsAcquirer::kLabel].data());
+    d.Parse(update->values["gps"][0]->content);
 
     if (d.IsObject()) {
       const float latitude = d["lat"].GetFloat(),
@@ -52,14 +59,14 @@ class CarmenSandiegoApp : public ContextListenerForTopics {
     std::ostringstream json;
     json << "\"" << hlloc << "\"";
 
-    publisher_->Publish("/location/region", json.str());
+    writer_->WriteEntityTopic("/location/region", json.str());
   }
 
   std::unique_ptr<app::ApplicationContext> app_context_;
 
-  ContextPublisherPtr publisher_;
+  ContextWriterPtr writer_;
   ContextReaderPtr reader_;
-  fidl::Binding<ContextListenerForTopics> binding_;
+  fidl::Binding<ContextListener> binding_;
 };
 
 }  // namespace

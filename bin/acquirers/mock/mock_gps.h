@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -17,7 +18,7 @@ class MockGps : public GpsAcquirer {
   void Publish(float latitude, float longitude);
 
  private:
-  ContextPublisherPtr publisher_;
+  ContextWriterPtr writer_;
 };
 
 }  // namespace acquirers

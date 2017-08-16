@@ -5,41 +5,37 @@
 #include "apps/maxwell/src/context_engine/context_engine_impl.h"
 
 #include "application/lib/app/application_context.h"
-#include "apps/maxwell/src/context_engine/context_publisher_impl.h"
 #include "apps/maxwell/src/context_engine/context_reader_impl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
-#include "apps/maxwell/src/context_engine/coprocessors/aggregate.h"
-#include "apps/maxwell/src/context_engine/coprocessors/focused_story.h"
+#include "apps/maxwell/src/context_engine/context_writer_impl.h"
 
 namespace maxwell {
 
-ContextEngineImpl::ContextEngineImpl() {
-  repository_.AddCoprocessor(
-      new AggregateCoprocessor("explicit/focal_entities"));
-  repository_.AddCoprocessor(new AggregateCoprocessor("explicit/raw/text"));
-  repository_.AddCoprocessor(
-      new AggregateCoprocessor("explicit/raw/text_selection"));
-  repository_.AddCoprocessor(new AggregateCoprocessor("explicit/music_artist"));
-  // Put this last after all other aggregators
-  repository_.AddCoprocessor(new FocusedStoryCoprocessor());
-}
-
+ContextEngineImpl::ContextEngineImpl() = default;
 ContextEngineImpl::~ContextEngineImpl() = default;
 
-void ContextEngineImpl::GetPublisher(
-    ComponentScopePtr scope,
-    fidl::InterfaceRequest<ContextPublisher> request) {
-  publisher_bindings_.AddBinding(
-      std::make_unique<ContextPublisherImpl>(std::move(scope), &repository_),
-      std::move(request));
+void ContextEngineImpl::AddBinding(
+    fidl::InterfaceRequest<ContextEngine> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+void ContextEngineImpl::GetWriter(
+    ComponentScopePtr client_info,
+    fidl::InterfaceRequest<ContextWriter> request) {
+  writers_.emplace_back(std::make_unique<ContextWriterImpl>(
+      std::move(client_info), &repository_, std::move(request)));
 }
 
 void ContextEngineImpl::GetReader(
-    ComponentScopePtr scope,
+    ComponentScopePtr client_info,
     fidl::InterfaceRequest<ContextReader> request) {
-  reader_bindings_.AddBinding(std::make_unique<ContextReaderImpl>(
-                                  std::move(scope), &repository_, &debug_),
-                              std::move(request));
+  readers_.emplace_back(std::make_unique<ContextReaderImpl>(
+      std::move(client_info), &repository_, std::move(request)));
+}
+
+void ContextEngineImpl::GetContextDebug(
+    fidl::InterfaceRequest<ContextDebug> request) {
+  repository_.AddDebugBinding(std::move(request));
 }
 
 }  // namespace maxwell

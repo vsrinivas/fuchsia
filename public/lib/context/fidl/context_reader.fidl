@@ -5,6 +5,8 @@
 module maxwell;
 
 import "metadata.fidl";
+import "value.fidl";
+import "value_type.fidl";
 
 // Exposes access to Context values, each of which are explicitly named by a
 // 'topic'. Each topic has a known/pre-defined value representation.
@@ -13,74 +15,58 @@ import "metadata.fidl";
 // component.
 [ServiceName="maxwell.ContextReader"]
 interface ContextReader {
-  // When any of the conditions in |query| change, a ContextUpdateForTopics is sent to
-  // |listener|.
+  // When any conditions that would cause the resulting set of context values
+  // selected by |query| to change, a ContextUpdate is sent to |listener|.
   //
-  // If current context values match the query, a result is sent immediately.
+  // The current state of values selected by |query| are sent to |listener|
+  // immediately.
   //
-  // The query will continue to stay active as long as the |listener| handle is
-  // not closed.
-  //
-  // TODO(thatguy): Currently a ContextUpdateForTopics doesn't indicate when the filter
-  // conditions in |ContextQueryForTopics.filters| changes from matching to not
-  // matching.  We should add some indicator in ContextUpdateForTopics so clients can
-  // differentiate between "no change" and "your query no longer matches".
-  SubscribeToTopics(ContextQueryForTopics query, ContextListenerForTopics listener);
+  // The subscription will continue to stay active as long as the |listener|
+  // handle is not closed.
+  Subscribe(ContextQuery query, ContextListener listener);
 };
 
-interface ContextListenerForTopics {
-  // Receives an update for a context label.
-  OnUpdate(ContextUpdateForTopics result);
+interface ContextListener {
+  // Receives a full snapshot of context state every time context is updated
+  // in such a way that results in a changed set of values for the ContextQuery
+  // used in the subscription for this listener.
+  //
+  // TODO(thatguy): A broad ContextQuery will result in a large
+  // |ContextUpdate|, which may exceed the FIDL max message size. In this case
+  // updates would not be propagated. If this becomes an issue, allowing
+  // clients to opt for delta-updates instead of state snapshots would suffice,
+  // albeit also add some complexity to client implementations.
+  OnContextUpdate(ContextUpdate update);
 };
 
-struct ContextUpdateForTopics {
-  // A map of the latest values of each topic specified in the ContextQueryForTopics's
-  // |topics| field that was issued during |SubscribeToTopics()|.
-  //
-  // Topics that don't have a current value are not present in |values|.
-  map<string, string> values;
-
-  // Map of context topic to metadata. Every entry in |values| has a
-  // corresponding entry here.
-  map<string, ContextMetadata> meta;
+struct ContextUpdate {
+  // A list of ContextValue for each key in |ContextQuery.selector|. An empty
+  // list means no values matched the given ContextSelector.
+  map<string, array<ContextValue>> values;
 };
 
-struct ContextQueryForTopics {
-  // A set of topics to include in the ContextUpdateForTopics when the following
-  // conditions match. An empty list indicates a wildcard query and includes
-  // all topics.
-  //
-  // If no conditions/filters are given below, the query will match whenever
-  // any of |topics| changes.
-  array<string> topics;
-
-  // A map from topics to filters applied to each topic. A subscription will
-  // only be notified of an update if every specified filter evaluates to true.
-  //
-  // Some ContextFilters modify the context value during evaluation. In those
-  // cases, the modified value will be present in |ContextUpdateForTopics.values|
-  // instead of the current value in the context service.
-  //
-  // Filters for topics not listed in |topics| are ignored.  Filters on a
-  // wildcard query have no effect because in a wildcard query, no topics are
-  // listed in |topics|).
-  map<string, ContextFilter>? filters;
+struct ContextQuery {
+  // A map of ContextSelector structs. The keys are specified by the client.
+  // Each key gets a corresponding entry in |ContextUpdate.values| when it is
+  // generated in response to this query.
+  map<string, ContextSelector> selector;
 };
 
-union ContextFilter {
-  // This JSON value is compared to the JSON value of the topic this filter is
-  // listed for. Only if this JSON value is fully contained in the JSON value
-  // of the topic (i.e. the JSON tree structure is covered by the tree
-  // structure of the context topic JSON value, and all scalar values at the
-  // leaves of this JSON value match their counterpart in the context topic
-  // JSON value), this filter evaluates to true.
+struct ContextSelector {
+  // A partial metadata struct. Any metadata value given in |meta| restricts
+  // the set of values in the eventual ContextUpdate to include only those
+  // whose metadata match values given.
   //
-  // Nowhere in this JSON value may there be an array. Matching an array is
-  // undefined and evaluates to false.
-  string partial_eq;
+  // A null |meta| will match any value of the given |type|. Use this sparingly
+  // as a full update could become quite large.
+  // TODO(thatguy): Find users of this and eliminate them if it becomes a
+  // scaling problem.
+  //
+  // For example, to select all context values in a given story, one would
+  // specify:
+  //    meta.value["story"]["id"] = "..."
+  ContextMetadata? meta;
 
-  // If the context topic value is an array, then only elements of that array
-  // are retained in the topic value that is sent in the notification to the
-  // subscriber that match the ContextFilter provided here.
-  ContextFilter for_each;
+  // A string specifying the type of context object to return.
+  ContextValueType type;
 };

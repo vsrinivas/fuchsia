@@ -5,35 +5,11 @@
 #include <string>
 
 #include "apps/maxwell/services/user/scope.fidl.h"
+#include "apps/maxwell/services/context/metadata.fidl.h"
+#include "apps/maxwell/services/context/context_reader.fidl.h"
 
 namespace maxwell {
 
-std::string ConcatTopic(const std::string t1, const std::string t2);
-
-std::string ScopeAndTopicToString(const ComponentScopePtr& scope,
-                                  const std::string& topic);
-
-std::string MakeStoryScopeTopic(const std::string& story_id,
-                                const std::string& topic);
-
-std::string MakeModuleScopeTopic(const std::string& story_id,
-                                 const fidl::Array<fidl::String>& module_path,
-                                 const std::string& topic);
-
-// Expects |module_id| to be a short hash of the module path.
-std::string MakeModuleScopeTopic(const std::string& story_id,
-                                 const std::string& module_id,
-                                 const std::string& topic);
-
-std::string MakeFocusedStoryScopeTopic(const std::string& topic);
-
-bool ParseStoryScopeTopic(const std::string& full_topic,
-                          std::string* story_id,
-                          std::string* relative_topic);
-
-bool ParseModuleScopeTopic(const std::string& full_topic,
-                           std::string* story_id,
-                           std::string* module_id,
-                           std::string* relative_topic);
+ContextSelectorPtr ComponentScopeToContextSelector(const ComponentScopePtr& scope);
 
 }  // namespace maxwell

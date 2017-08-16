@@ -26,7 +26,6 @@ executable("suggestion_engine") {
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src:bound_set",
     "//apps/modular/lib/fidl:json_xdr",
-    "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/modular/services/user",

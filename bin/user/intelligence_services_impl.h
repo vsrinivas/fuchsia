@@ -23,9 +23,7 @@ class IntelligenceServicesImpl : public IntelligenceServices {
                            UserActionLog* user_action_log);
 
   void GetContextReader(fidl::InterfaceRequest<ContextReader> request) override;
-
-  void GetContextPublisher(
-      fidl::InterfaceRequest<ContextPublisher> request) override;
+  void GetContextWriter(fidl::InterfaceRequest<ContextWriter> request) override;
 
   void GetProposalPublisher(
       fidl::InterfaceRequest<ProposalPublisher> request) override;

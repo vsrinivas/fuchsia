@@ -6,22 +6,22 @@ import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
 /// Signature for callbacks that handle context updates.
-typedef void UpdateCallback(ContextUpdateForTopics value);
+typedef void UpdateCallback(ContextUpdate value);
 
-/// Functional wrapper class for [ContextListenerForTopics], using callbacks to
+/// Functional wrapper class for [ContextListener], using callbacks to
 /// implement interface methods.
-class ContextListenerForTopicsImpl extends ContextListenerForTopics {
-  final _binding = new ContextListenerForTopicsBinding();
+class ContextListenerImpl extends ContextListener {
+  final _binding = new ContextListenerBinding();
   final UpdateCallback _onUpdate;
 
-  ContextListenerForTopicsImpl(this._onUpdate);
+  ContextListenerImpl(this._onUpdate);
 
-  /// Gets the [InterfaceHandle] for this [ContextListenerForTopics]
+  /// Gets the [InterfaceHandle] for this [ContextListener]
   /// implementation. The returned handle should only be used once.
-  InterfaceHandle<ContextListenerForTopics> getHandle() => _binding.wrap(this);
+  InterfaceHandle<ContextListener> getHandle() => _binding.wrap(this);
 
   @override
-  void onUpdate(ContextUpdateForTopics update) => _onUpdate(update);
+  void onContextUpdate(ContextUpdate update) => _onUpdate(update);
 
   void close() => _binding.close();
 }

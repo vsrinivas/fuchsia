@@ -3,39 +3,30 @@
 // found in the LICENSE file.
 
 #include "apps/maxwell/src/context_engine/context_reader_impl.h"
+
+#include "apps/maxwell/lib/context/formatting.h"
+#include "apps/maxwell/services/context/debug.fidl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 
 namespace maxwell {
 
-ContextReaderImpl::ContextReaderImpl(ComponentScopePtr scope,
-                                     ContextRepository* repository,
-                                     ContextDebugImpl* debug)
-    : scope_(std::move(scope)), repository_(repository), debug_(debug) {}
-ContextReaderImpl::~ContextReaderImpl() {
-  // Connection error handlers are not executed when closing from our side, so
-  // we need to clean up subscriptions ourselves.
-  for (auto& listener : listeners_) {
-    repository_->RemoveSubscription(listener.repo_subscription_id);
-    debug_->OnRemoveSubscription(listener.debug_subscription_id);
-  }
-};
+ContextReaderImpl::ContextReaderImpl(
+    ComponentScopePtr client_info,
+    ContextRepository* repository,
+    fidl::InterfaceRequest<ContextReader> request)
+    : binding_(this, std::move(request)), repository_(repository) {
+  debug_ = SubscriptionDebugInfo::New();
+  debug_->client_info = std::move(client_info);
+}
 
-void ContextReaderImpl::SubscribeToTopics(
-    ContextQueryForTopicsPtr query,
-    fidl::InterfaceHandle<ContextListenerForTopics> listener) {
-  ContextListenerForTopicsPtr listener_ptr =
-      ContextListenerForTopicsPtr::Create(std::move(listener));
-  auto it = listeners_.emplace(listeners_.begin());
-  it->listener = std::move(listener_ptr);
-  it->debug_subscription_id = debug_->OnAddSubscription(*scope_, *query);
-  it->repo_subscription_id =
-      repository_->AddSubscription(std::move(query), it->listener.get());
+ContextReaderImpl::~ContextReaderImpl() = default;
 
-  it->listener.set_connection_error_handler([=] {
-    repository_->RemoveSubscription(it->repo_subscription_id);
-    debug_->OnRemoveSubscription(it->debug_subscription_id);
-    listeners_.erase(it);
-  });
+void ContextReaderImpl::Subscribe(
+    ContextQueryPtr query,
+    fidl::InterfaceHandle<ContextListener> listener) {
+  auto listener_ptr = ContextListenerPtr::Create(std::move(listener));
+  repository_->AddSubscription(std::move(query), std::move(listener_ptr),
+                               debug_.Clone());
 }
 
 }  // namespace maxwell

@@ -5,8 +5,8 @@
 module maxwell;
 
 import "apps/maxwell/services/action_log/component.fidl";
-import "apps/maxwell/services/context/context_publisher.fidl";
 import "apps/maxwell/services/context/context_reader.fidl";
+import "apps/maxwell/services/context/context_writer.fidl";
 import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 
 // A container for component-scoped services. This contains any and all
@@ -14,8 +14,8 @@ import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 interface IntelligenceServices {
   // These are just here for illustrative purposes, and are not a complete
   // list.
-  GetContextReader (ContextReader& context_reader);
-  GetContextPublisher(ContextPublisher& context_publisher);
+  GetContextReader(ContextReader& context_reader);
+  GetContextWriter(ContextWriter& context_writer);
 
   GetProposalPublisher(ProposalPublisher& proposal_publisher);
   GetActionLog(ComponentActionLog& action_log);

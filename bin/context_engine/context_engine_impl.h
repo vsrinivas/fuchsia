@@ -5,39 +5,42 @@
 #pragma once
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/src/context_engine/context_repository.h"
 #include "apps/maxwell/src/context_engine/debug.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 
 namespace maxwell {
 
-class ContextEngineImpl : public ContextEngine {
+class ContextReaderImpl;
+class ContextWriterImpl;
+
+class ContextEngineImpl : ContextEngine {
  public:
   ContextEngineImpl();
   ~ContextEngineImpl() override;
 
-  ContextDebug* debug() { return &debug_; }
+  void AddBinding(fidl::InterfaceRequest<ContextEngine> request);
 
  private:
   // |ContextEngine|
-  void GetPublisher(ComponentScopePtr scope,
-                    fidl::InterfaceRequest<ContextPublisher> request) override;
+  void GetWriter(ComponentScopePtr client_info,
+                 fidl::InterfaceRequest<ContextWriter> request) override;
 
   // |ContextEngine|
-  void GetReader(ComponentScopePtr scope,
+  void GetReader(ComponentScopePtr client_info,
                  fidl::InterfaceRequest<ContextReader> request) override;
 
-  ContextRepository repository_;
-  ContextDebugImpl debug_;
+  // |ContextEngine|
+  void GetContextDebug(fidl::InterfaceRequest<ContextDebug> request) override;
 
-  fidl::BindingSet<ContextPublisher, std::unique_ptr<ContextPublisher>>
-      publisher_bindings_;
-  fidl::BindingSet<ContextReader, std::unique_ptr<ContextReader>>
-      reader_bindings_;
+  ContextRepository repository_;
 
   fidl::BindingSet<ContextEngine> bindings_;
+
+  std::vector<std::unique_ptr<ContextReaderImpl>> readers_;
+  std::vector<std::unique_ptr<ContextWriterImpl>> writers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextEngineImpl);
 };

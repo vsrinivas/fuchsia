@@ -22,7 +22,7 @@
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_filter.h"
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
 
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
@@ -73,27 +73,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
                              public SuggestionProvider,
                              public AskDispatcher {
  public:
-  SuggestionEngineImpl()
-      : app_context_(app::ApplicationContext::CreateFromStartupInfo()),
-        ask_suggestions_(new RankedSuggestions(&ask_channel_)),
-        next_suggestions_(new RankedSuggestions(&next_channel_)) {
-    app_context_->outgoing_services()->AddService<SuggestionEngine>(
-        [this](fidl::InterfaceRequest<SuggestionEngine> request) {
-          bindings_.AddBinding(this, std::move(request));
-        });
-    app_context_->outgoing_services()->AddService<SuggestionProvider>(
-        [this](fidl::InterfaceRequest<SuggestionProvider> request) {
-          suggestion_provider_bindings_.AddBinding(this, std::move(request));
-        });
-    app_context_->outgoing_services()->AddService<SuggestionDebug>(
-        [this](fidl::InterfaceRequest<SuggestionDebug> request) {
-          debug_bindings_.AddBinding(&debug_, std::move(request));
-        });
-
-    // The Next suggestions are always ranked with a static ranking function.
-    next_suggestions_->UpdateRankingFunction(
-        maxwell::ranking::GetNextRankingFunction());
-  }
+  SuggestionEngineImpl();
 
   // TODO(andrewosh): The following two methods should be removed. New
   // ProposalPublishers should be created whenever they're requested, and they
@@ -181,7 +161,7 @@ class SuggestionEngineImpl : public SuggestionEngine,
   void Initialize(
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
-      fidl::InterfaceHandle<ContextPublisher> context_publisher) override;
+      fidl::InterfaceHandle<ContextWriter> context_writer) override;
 
   // |AskDispatcher|
   void DispatchAsk(UserInputPtr input) override;
@@ -266,9 +246,9 @@ class SuggestionEngineImpl : public SuggestionEngine,
   // TODO(andrewosh): Why is this necessary at this level?
   ProposalFilter filter_;
 
-  // The ContextPublisher that publishes the current user query to the
+  // The ContextWriter that publishes the current user query to the
   // ContextEngine.
-  ContextPublisherPtr context_publisher_;
+  ContextWriterPtr context_writer_;
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;

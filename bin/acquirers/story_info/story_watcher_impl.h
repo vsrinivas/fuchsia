@@ -9,7 +9,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/lib/async/future_value.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
@@ -24,7 +25,7 @@ class LinkWatcherImpl;
 class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
  public:
   StoryWatcherImpl(StoryInfoAcquirer* const owner,
-                   ContextPublisher* const publisher,
+                   ContextWriter* const writer,
                    modular::StoryProvider* const story_provider,
                    const std::string& story_id);
 
@@ -32,6 +33,10 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
 
   // Used by LinkWatcherImpl.
   void DropLink(const std::string& link_key);
+
+  // Used by |owner_|.
+  void OnStoryStateChange(modular::StoryInfoPtr info, modular::StoryState state);
+  void OnFocusChange(bool focused);
 
  private:
   // |StoryWatcher|
@@ -45,15 +50,21 @@ class StoryWatcherImpl : modular::StoryWatcher, modular::StoryLinksWatcher {
 
   void WatchLink(const modular::LinkPathPtr& link_path);
 
+  void UpdateContext();
+
   StoryInfoAcquirer* const owner_;
-  ContextPublisher* const publisher_;
+  ContextWriter* const writer_;
   modular::StoryControllerPtr story_controller_;
   const std::string story_id_;
+  FutureValue<fidl::String> context_value_id_;
+  ContextMetadataPtr metadata_;
 
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
   fidl::Binding<modular::StoryLinksWatcher> story_links_watcher_binding_;
 
   std::map<std::string, std::unique_ptr<LinkWatcherImpl>> links_;
+  // serialized module path -> context value id.
+  std::map<std::string, FutureValue<fidl::String>> module_value_ids_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };

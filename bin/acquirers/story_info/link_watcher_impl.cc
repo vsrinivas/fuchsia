@@ -4,11 +4,12 @@
 
 #include "apps/maxwell/src/acquirers/story_info/link_watcher_impl.h"
 
+#include "apps/maxwell/lib/context/formatting.h"
 #include "apps/maxwell/src/acquirers/story_info/story_watcher_impl.h"
-#include "apps/maxwell/src/context_engine/scope_utils.h"
 #include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "garnet/public/lib/ftl/functional/make_copyable.h"
 
 namespace maxwell {
 
@@ -42,13 +43,15 @@ void XdrSource(modular::XdrContext* const xdr, Source* const data) {
 LinkWatcherImpl::LinkWatcherImpl(
     StoryWatcherImpl* const owner,
     modular::StoryController* const story_controller,
-    ContextPublisher* const publisher,
+    ContextWriter* const writer,
     const std::string& story_id,
+    const fidl::String& parent_value_id,
     const modular::LinkPathPtr& link_path)
     : owner_(owner),
       story_controller_(story_controller),
-      publisher_(publisher),
+      writer_(writer),
       story_id_(story_id),
+      parent_value_id_(parent_value_id),
       link_path_(link_path->Clone()),
       link_watcher_binding_(this) {
   modular::LinkPtr link;
@@ -109,13 +112,35 @@ void LinkWatcherImpl::ProcessContext(const fidl::String& value) {
   modular::XdrWrite(&source_doc, &source, XdrSource);
   doc.AddMember(kSourceProperty, source_doc, doc.GetAllocator());
 
+  auto context_value = ContextValue::New();
   std::string json = modular::JsonValueToString(doc);
-  auto scoped_topic =
-      MakeStoryScopeTopic(story_id_, ConcatTopic("link", context.topic));
-  publisher_->Publish(scoped_topic, json);
+  context_value->content = json;
+  context_value->type = ContextValueType::ENTITY;
+  context_value->meta = ContextMetadata::New();
+  context_value->meta->entity = EntityMetadata::New();
+  context_value->meta->entity->topic = context.topic;
 
-  FTL_LOG(INFO) << "Context published: " << json << std::endl
-                << "Original link value: " << value;
+  FTL_LOG(INFO) << "Publishing context: " << context_value << std::endl
+                << "Original link value: " << value << std::endl
+                << "Parent context value ID: " << parent_value_id_;
+  auto it = value_ids_.find(context.topic);
+  // TODO(thatguy): This pattern of wanting to have a single Context value
+  // and update its state seems to come up. Might be worth creating a
+  // ScopedContextValue class that wraps this logic right here and exposes
+  // a simple Set() operation.
+  if (it == value_ids_.end()) {
+    const fidl::String topic = context.topic;
+    value_ids_.emplace(topic, FutureValue<fidl::String>());
+    writer_->AddChildValue(parent_value_id_, std::move(context_value),
+                           [this, topic](const fidl::String& value_id) {
+                             value_ids_[topic] = value_id;
+                           });
+  } else {
+    it->second.OnValue(ftl::MakeCopyable([ this, value = std::move(context_value) ](
+        const fidl::String& value_id) mutable {
+      writer_->Update(value_id, std::move(value));
+    }));
+  }
 }
 
 }  // namespace maxwell

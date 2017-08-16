@@ -17,12 +17,13 @@
 // report for the complete set of data.
 
 import 'dart:collection';
-import 'dart:convert';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.cobalt_client.services..cobalt/cobalt.fidl.dart';
 import 'package:apps.maxwell.lib.context.dart/context_listener_impl.dart';
 import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
+import 'package:apps.maxwell.services.context/value.fidl.dart';
+import 'package:apps.maxwell.services.context/value_type.fidl.dart';
 
 // The project ID of the usage_log registered in Cobalt.
 const _cobaltProjectID = 101;
@@ -34,7 +35,7 @@ const _cobaltEncodingID = 1;
 
 // connection to context reader
 final _contextReader = new ContextReaderProxy();
-ContextListenerForTopicsImpl _contextListener;
+ContextListenerImpl _contextListener;
 
 // connection to Cobalt
 final _encoder = new CobaltEncoderProxy();
@@ -42,29 +43,20 @@ final _encoder = new CobaltEncoderProxy();
 // Deduplication Map
 var _topicDedupSet = new LinkedHashSet<String>();
 
-// ContextListenerForTopics callback
-void onContextUpdateForTopics(ContextUpdateForTopics update) {
-  update.values.forEach((String key, String value) {
+// ContextListener callback
+void onContextUpdate(ContextUpdate update) {
+  update.values["modules"].forEach((ContextValue value) {
+    String dedupKey = value.meta.story.id + value.meta.mod.url;
     // To record module launches, we only process each topic once
-    if (!_topicDedupSet.contains(key)) {
-      _topicDedupSet.add(key);
-
-      // Find module IDs under the /story/id topics and send them to Cobalt
-      // Topics to look for are of the form:
-      // /story/id/<story id>/module/<module id>/meta
-      // The contents of the topic is JSON, that should conain a url field
-      var moduleTopicPattern = new RegExp("/story/id/[^/]+/module/[^/]+/meta");
-      var match = moduleTopicPattern.firstMatch(key);
-      if (match != null) {
-        Map moduleData = JSON.decode(value);
-        String url = moduleData['url'];
-        if (url != null && url != "") {
-          // print("[USAGE LOG] Recording module url $url");
-          _encoder.addStringObservation(_cobaltMetricID, _cobaltEncodingID, url,
-                                        onAddObservationStatus);
-        }
-      }
+    if (_topicDedupSet.contains(dedupKey)) {
+      return;
     }
+    _topicDedupSet.add(dedupKey);
+
+    // print("[USAGE LOG] Recording module url $url");
+    _encoder.addStringObservation(
+        _cobaltMetricID, _cobaltEncodingID, value.meta.mod.url,
+        onAddObservationStatus);
   });
 }
 
@@ -90,16 +82,16 @@ void main(List args) {
   final appContext = new ApplicationContext.fromStartupInfo();
 
   // Connect to the ContextReader
-  _contextListener = new ContextListenerForTopicsImpl(onContextUpdateForTopics);
+  _contextListener = new ContextListenerImpl(onContextUpdate);
   connectToService(appContext.environmentServices, _contextReader.ctrl);
   assert(_contextReader.ctrl.isBound);
 
   // Subscribe to all topics
-  // TODO(jwnichols): Subscribe to a smaller subset of topics when it becomes
-  // possible after thatguy's context engine refactor
-  ContextQueryForTopics query = new ContextQueryForTopics();
-  query.topics = []; // empty list is the wildcard query
-  _contextReader.subscribeToTopics(query, _contextListener.getHandle());
+  ContextSelector selector = new ContextSelector();
+  selector.type = ContextValueType.module;
+  ContextQuery query = new ContextQuery();
+  query.selector = <String, ContextSelector>{"modules": selector};
+  _contextReader.subscribe(query, _contextListener.getHandle());
 
   // Connect to Cobalt
   var encoderFactory = new CobaltEncoderFactoryProxy();

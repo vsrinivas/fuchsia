@@ -7,36 +7,41 @@
 #include <map>
 
 #include "apps/maxwell/services/context/debug.fidl.h"
+#include "apps/maxwell/src/context_engine/index.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {
 
+class ContextRepository;
+
 class ContextDebugImpl : public ContextDebug {
-  using Subscriptions = std::multimap<ComponentScopePtr,
-                                      ContextQueryForTopicsPtr,
-                                      bool (*)(const ComponentScopePtr&,
-                                               const ComponentScopePtr&)>;
-
+  using Id = ContextIndex::Id;
  public:
-  using SubscriptionId = Subscriptions::iterator;
+  ContextDebugImpl(const ContextRepository* repository);
+  ~ContextDebugImpl();
 
-  ContextDebugImpl();
+  void OnValueChanged(const std::set<Id>& parent_ids,
+                      const Id& id,
+                      const ContextValuePtr& value);
+  void OnValueRemoved(const Id& id);
 
-  SubscriptionId OnAddSubscription(const ComponentScope& subscriber,
-                                   const ContextQueryForTopics& query);
-
-  void OnRemoveSubscription(SubscriptionId subscription);
+  void OnSubscriptionAdded(const Id& id,
+                           const ContextQueryPtr& query,
+                           const SubscriptionDebugInfoPtr& debug_info);
+  void OnSubscriptionRemoved(const Id& id);
 
  private:
   // |ContextDebug|
-  void WatchSubscribers(
-      fidl::InterfaceHandle<SubscriberListener> listener) override;
+  void Watch(fidl::InterfaceHandle<ContextDebugListener> listener) override;
 
-  void DispatchAll();
-  void Dispatch(SubscriberListener* listener);
+  void DispatchOneValue(ContextDebugValuePtr value);
+  void DispatchValues(fidl::Array<ContextDebugValuePtr> values);
+  void DispatchOneSubscription(ContextDebugSubscriptionPtr value);
+  void DispatchSubscriptions(fidl::Array<ContextDebugSubscriptionPtr> values);
 
-  Subscriptions subscriptions_;
-  fidl::InterfacePtrSet<SubscriberListener> listeners_;
+  // Used in order to get a complete state snapshot when Watch() is called.
+  const ContextRepository* const repository_;
+  fidl::InterfacePtrSet<ContextDebugListener> listeners_;
 };
 
 }  // namespace maxwell

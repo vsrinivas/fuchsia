@@ -67,11 +67,11 @@ function handleWebSocketClose(evt) {
 function handleWebSocketMessage(evt) {
   // parse the JSON message
   var message = JSON.parse(evt.data);
-  if ("context.update" in message) {
-    handleContextUpdateForTopics(message["context.update"]);
+  if ("context.values" in message) {
+    handleContextUpdate(message["context.values"]);
   }
-  if ("context.subscribers" in message) {
-    handleContextSubscribers(message["context.subscribers"]);
+  if ("context.subscriptions" in message) {
+    handleContextSubscribers(message["context.subscriptions"]);
   }
   if ("suggestions" in message) {
     handleSuggestionsUpdate(message["suggestions"]);
@@ -153,33 +153,114 @@ function makeContextTopicRow(topic,topicValue) {
   return row;
 }
 
-function handleContextUpdateForTopics(context) {
+function makeContextRowId(id) {
+  var elementId = "context-" + id;
+  return $.escapeSelector(elementId);
+}
+
+function findContextRow(id) {
+  var valueRows = $("#context li[id^='" + makeContextRowId(id) + "']");
+  if (valueRows.length == 0) return null;
+  return valueRows[0];
+}
+
+function contextTypeToString(type) {
+  switch (type) {
+    case 1: return "STORY";
+    case 2: return "MODULE";
+    case 3: return "AGENT";
+    case 4: return "ENTITY";
+    default: return "???";
+  }
+}
+
+function contextValueMetadataToList(meta) {
+  ret = [];
+  if (meta.story) {
+    if (meta.story.id) {
+      ret.push(["story", "id", meta.story.id]);
+    }
+    function focusedStateToString(state) {
+      switch (state) {
+        case 1: return "YES";
+        case 2: return "NO";
+      }
+    }
+    if (meta.story.focused) {
+      ret.push(["story", "focused", focusedStateToString(meta.story.focused.state)]);
+    }
+  }
+  if (meta.mod) {
+    if (meta.mod.url) {
+      ret.push(["module", "url", meta.mod.url]);
+    }
+    if (meta.mod.path) {
+      ret.push(["module", "path", meta.mod.path.join(", ")]);
+    }
+  }
+  if (meta.entity) {
+    if (meta.entity.topic) {
+      ret.push(["entity", "topic", meta.entity.topic]);
+    }
+    if (meta.entity.type) {
+      ret.push(["entity", "type", meta.entity.type.join(", ")]);
+    }
+  }
+
+  return ret;
+}
+
+function clientInfoToString(info) {
+  return JSON.stringify(info);
+}
+
+function handleContextUpdate(context) {
   updateOverviewFromContext(context);
 
-  $.each(context, function(topic, rawValue) {
-    // make a pretty string for the topic's value
-    var topicValue;
-    var danger;
-    try {
-      topicValue = JSON.stringify(JSON.parse(rawValue), null, 2);
-      danger = false; // can't just leave it undefined;
-                      // .toggleClass has a 1-arg overload
-    } catch (e) {
-      topicValue = rawValue;
-      danger = true;
+  // |context| is a list of elements, where each has a |parentIds| field.
+  // Invert this so we have a map of values where the children are listed,
+  // and a list of root elements.
+  var contextTree = {};
+  var rootValueIds = [];
+  $.each(context, function(idx, value) {
+    value.children = [];
+    contextTree[value.id] = value;
+
+    if (value.parentIds.length > 0) {
+      $.each(value.parentIds, function(idx, parentId) {
+        contextTree[parentId].children.push(value.id);
+      });
+    } else {
+      rootValueIds.push(value.id);
     }
-    var topicId = "topic-" + topic;
-    var escapedTopic = $.escapeSelector(topicId);
-    var contextTopic = $("#context td[topic^='" + topic + "']");
-    if (contextTopic.length == 0) {
-      // element does not exist in the context section, add it to the table
-      makeContextTopicRow(topic,topicValue).appendTo("#context");
+  });
+
+  // Rebuild the context display.
+  var buildValueDomRecursive = function(id) {
+    var entry = contextTree[id];
+    var div = $("<div/>");
+    div.append($("<b/>").text(contextTypeToString(entry.value.type)));
+    $.each(contextValueMetadataToList(entry.value.meta), function(idx, pair) {
+      div.append("<br/>");
+      div.append($("<span/>").html(pair[0] + "." + pair[1] + " = " + pair[2]));
+    });
+    if (entry.value.content != null) {
+      try {
+        div.append($("<pre/>").text(
+          JSON.stringify(JSON.parse(entry.value.content), null, 2)));
+      } catch (e) {
+        div.append($("<pre/>").text(entry.value.content));
+      }
     }
-    // modify all elements showing this topic
-    // (may be others on agent tab, for example)
-    $("td[topic^='" + topic + "']").find("pre")
-        .text(topicValue)
-        .toggleClass("text-danger", danger);
+    $.each(entry.children, function(idx, childId) {
+      div.append(buildValueDomRecursive(childId).addClass("context-indent"));
+    });
+    return div;
+  };
+
+  $("#context").empty();
+  $.each(rootValueIds, function(idx, id) {
+    buildValueDomRecursive(id).addClass("context-root-value").appendTo("#context");
   });
 }
 
@@ -195,37 +276,39 @@ function handleContextSubscribers(subscribers) {
     //   </span>
     // </li>
     // <li class="mdc-list-divider" role="separator"></li>
-    var listText = $('<span/>').addClass('mdc-list-item__text');
+    var listElem = $('<div/>');
 
-    var agentNameText = update.subscriber.type;
-    if (update.subscriber.url) {
-      agentNameText += ' ' + update.subscriber.url;
-    }
-    if (update.subscriber.storyId) {
-      agentNameText += ' from story ' + update.subscriber.storyId;
-    }
-
-    listText.append($("<span/>").addClass("subscriber")
-                                .text(agentNameText));
-    listText.append(' ').append(update.queries.map(function(query) {
-      var querySpan = $('<span/>')
+    // TODO(thatguy): Make the client identity more useful.
+    listElem.append($("<div/>").addClass("subscriber")
+                                .text(clientInfoToString(update.debugInfo.clientInfo)));
+    $.each(update.query.selector, function(key, selector) {
+      listElem.append(' ');
+      $('<div/>')
         .addClass('mdc-list-item__text__secondary')
-        .addClass('context-topic');
-      if (query.length == 0) {
-        querySpan.append($('<span/>').text('(all topics)'));
-      } else {
-        query.forEach(function(topic) {
-          querySpan.append($('<span/>').text(topic))
-            .append(' ');
-        })
-      }
-      return querySpan;
-    }));
+        .addClass('context-selector-key')
+        .text(key + ":")
+        .appendTo(listElem);
+      $('<div/>')
+        .addClass('mdc-list-item__text__secondary')
+        .addClass('context-selector-type')
+        .text("for type " + contextTypeToString(selector.type))
+        .appendTo(listElem);
+      var metadataValues = contextValueMetadataToList(selector.meta);
+      $.each(metadataValues, function(idx, parts) {
+        $("<div/>")
+          .addClass('mdc-list-item__text__secondary')
+          .addClass("context-selector-metadata")
+          .text(parts[0] + "." + parts[1] + " == " + parts[2])
+          .appendTo(listElem);
+      });
+    });
 
     $("#contextSubscriptions")
-      .append($('<li/>').addClass('mdc-list-item').append(listText))
+      .append($('<li/>').append(listElem))
       .append($('<li/>').addClass('mdc-list-divider').attr('role','divider'));
 
+    /*
+     * TODO(thatguy): Update this.
     // update agents page information
     if (update.subscriber.type == "agent") {
       var agentElems = getOrCreateAgentElements(update.subscriber.url);
@@ -236,6 +319,7 @@ function handleContextSubscribers(subscribers) {
         }
       });
     }
+    */
   });
 }
 
@@ -301,59 +385,7 @@ function attemptReconnect() {
   }
 }
 
-function updateOverviewFromContext(context) {
-  $.each(context, function(topic, rawValue) {
-    // loop through the context updates and modify anything related
-    // on the overview panel
-    var storyRegex = /\/story\/id\/([^\/]+)\/(.+)/;
-    var storyRegexResults = topic.match(storyRegex);
-
-    if (storyRegexResults != null && storyRegexResults[1] != null) {
-      // this is a story-related topic
-      var storyId = storyRegexResults[1];
-      var overviewStoryElems = getOrCreateStoryOverviewElements(storyId);
-
-      switch(storyRegexResults[2]) {
-        case "url":
-          setStoryName(JSON.parse(rawValue), overviewStoryElems);
-          break;
-
-        case "state":
-          setStoryState(rawValue, overviewStoryElems);
-          break;
-
-        default:
-          processComplexStoryTopic(storyId,storyRegexResults[2],rawValue);
-          break;
-      }
-
-      // move this story to the top of the list
-      $('#story-overview-list')
-        .prepend(overviewStoryElems);
-    } else if (topic == '/story/focused_id') {
-      if (_focusedStoryId != null) {
-        var oldFocusedStoryElems = getOrCreateStoryOverviewElements(_focusedStoryId);
-        setStoryVisible(false, oldFocusedStoryElems);
-      }
-      var newFocusedStoryId = JSON.parse(rawValue);
-      if (newFocusedStoryId != null) {
-        var newFocusedStoryElems = getOrCreateStoryOverviewElements(newFocusedStoryId);
-        setStoryVisible(true, newFocusedStoryElems);
-      }
-      _focusedStoryId = newFocusedStoryId;
-    } else if (topic == '/suggestion_engine/current_query') {
-      var query = JSON.parse(rawValue);
-      _activeAskQueryFlag = (query.length > 0);
-      if (_activeAskQueryFlag) {
-        $('#askQueryOverview').empty()
-          .append($('<span/>').addClass('ask-query').text('"' + query + '"'));
-      } else {
-        $('#askQueryOverview').empty().append($('<i/>').text('No Query'));
-        $('#askSuggestionsOverview').empty();
-      }
-    }
-  });
-}
+function updateOverviewFromContext(context) {}
 
 function processComplexStoryTopic(storyId,complexTopic,rawValue) {
   var moduleRegex = /module\/([^\/]+)\/(.+)/;

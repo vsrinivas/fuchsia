@@ -16,7 +16,6 @@ dart_app("mi_dashboard_dart") {
     "//application/lib/app/dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
-    "//apps/maxwell/services/context:debug_dart",
     "//apps/maxwell/services/suggestion:debug_dart",
     "//apps/maxwell/services/suggestion:suggestion_dart",
     "//apps/maxwell/services/user:user_dart",
