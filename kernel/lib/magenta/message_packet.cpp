@@ -36,9 +36,10 @@ mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
         return MX_ERR_NO_MEMORY;
     }
 
-    // The storage space for the Handle*s is not initialized because the only
-    // creators of MessagePackets (sys_channel_write and _call) fill that array
-    // immediately after creation of the object.
+    // The storage space for the Handle*s is not initialized because
+    // the only creators of MessagePackets (sys_channel_write and
+    // _call, and userboot) fill that array immediately after creation
+    // of the object.
     msg->reset(new (ptr) MessagePacket(
         data_size, num_handles,
         reinterpret_cast<Handle**>(ptr + sizeof(MessagePacket))));
