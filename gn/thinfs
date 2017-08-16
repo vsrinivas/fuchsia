@@ -3,18 +3,7 @@
         "cpp",
         "go"
     ],
-    "gopaths": [
-        {
-            "apps/thinfs": "fuchsia.googlesource.com/thinfs"
-        }
-    ],
-    "labels": [
-        "//apps/thinfs"
-    ],
-    "binaries": [
-        {
-            "binary": "thinfs",
-            "bootfs_path": "bin/thinfs"
-        }
-    ]
+    "packages": {
+        "thinfs": "//apps/thinfs"
+    }
 }
