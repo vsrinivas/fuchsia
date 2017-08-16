@@ -283,9 +283,13 @@ int main(int argc, char** argv) {
     uart_t uart;
     guest_ctx.uart = &uart;
     uart_init(&uart, &io_apic);
-    status = uart_async(&uart, vcpu, guest);
+    status = uart_output_async(&uart, guest);
     if (status != MX_OK)
         return status;
+    status = uart_input_async(&uart);
+    if (status != MX_OK)
+        return status;
+
     // Setup block device.
     block_t block;
     pci_device_t* virtio_block = &block.virtio_device.pci_device;
