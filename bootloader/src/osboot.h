@@ -34,3 +34,6 @@ int boot_deprecated(efi_handle img, efi_system_table* sys,
                     void* image, size_t sz,
                     void* ramdisk, size_t rsz,
                     void* cmdline, size_t csz);
+
+int mxboot(efi_handle img, efi_system_table* sys,
+           void* image, size_t sz);

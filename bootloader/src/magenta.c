@@ -65,24 +65,44 @@ static int add_bootdata(void** ptr, size_t* avail,
     return 0;
 }
 
+static int header_check(void* image, size_t sz) {
+    magenta_kernel_t* kernel = image;
+    if ((sz < sizeof(magenta_kernel_t)) ||
+        (kernel->hdr_kernel.type != BOOTDATA_KERNEL)) {
+        printf("boot: invalid magenta kernel header\n");
+        return -1;
+    }
+
+    uint32_t flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
+    if (flen > (sz - sizeof(bootdata_t))) {
+        printf("boot: invalid magenta kernel header (bad flen)\n");
+        return -1;
+    }
+
+    uint32_t klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
+    if (klen > (sz - (sizeof(bootdata_t) * 2))) {
+        printf("boot: invalid magenta kernel header (bad klen)\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int boot_magenta(efi_handle img, efi_system_table* sys,
                  void* image, size_t isz, void* ramdisk, size_t rsz,
                  void* cmdline, size_t csz) {
 
     efi_boot_services* bs = sys->BootServices;
 
-    magenta_kernel_t* kernel = image;
-    if ((isz < sizeof(magenta_kernel_t)) ||
-        (kernel->hdr_kernel.type != BOOTDATA_KERNEL)) {
-        printf("boot: invalid magenta kernel header\n");
+    if (header_check(image, isz)) {
         return -1;
     }
-
     if ((ramdisk == NULL) || (rsz < sizeof(bootdata_t))) {
         printf("boot: ramdisk missing or too small\n");
         return -1;
     }
 
+    magenta_kernel_t* kernel = image;
     bootdata_t* hdr0 = ramdisk;
     if ((hdr0->type != BOOTDATA_CONTAINER) ||
         (hdr0->extra != BOOTDATA_MAGIC) ||
@@ -231,6 +251,56 @@ fail:
 }
 
 static char cmdline[CMDLINE_MAX];
+
+int mxboot(efi_handle img, efi_system_table* sys,
+           void* image, size_t sz) {
+
+    if (header_check(image, sz)) {
+        return -1;
+    }
+
+    magenta_kernel_t* kernel = image;
+    uint32_t flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
+    uint32_t klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
+
+    // ramdisk portion is file - headers - kernel len
+    uint32_t rlen = flen - sizeof(bootdata_t) - klen;
+    uint32_t roff = (sizeof(bootdata_t) * 2) + klen;
+    if (rlen == 0) {
+        printf("mxboot: no ramdisk?!\n");
+        return -1;
+    }
+
+    // allocate space for the ramdisk
+    efi_boot_services* bs = sys->BootServices;
+    size_t rsz = rlen + sizeof(bootdata_t) + FRONT_BYTES;
+    size_t pages = BYTES_TO_PAGES(rsz);
+    void* ramdisk = NULL;
+    efi_status r = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages,
+                                     (efi_physical_addr*)&ramdisk);
+    if (r) {
+        printf("mxboot: cannot allocate ramdisk buffer\n");
+        return -1;
+    }
+
+    ramdisk += FRONT_BYTES;
+    bootdata_t* hdr = ramdisk;
+    hdr->type = BOOTDATA_CONTAINER;
+    hdr->length = rlen;
+    hdr->extra = BOOTDATA_MAGIC;
+    hdr->flags = 0;
+    memcpy(ramdisk + sizeof(bootdata_t), image + roff, rlen);
+    rlen += sizeof(bootdata_t);
+
+    printf("ramdisk @ %p\n", ramdisk);
+
+    size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
+
+    // shrink original image header to include only the kernel
+    kernel->hdr_file.length = sizeof(bootdata_t) + klen;
+
+    return boot_magenta(img, sys, image, roff, ramdisk, rlen, cmdline, csz);
+}
 
 int boot_kernel(efi_handle img, efi_system_table* sys,
                 void* image, size_t sz,

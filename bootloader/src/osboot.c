@@ -374,11 +374,17 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     printf("\n\n");
     print_cmdline();
 
-    // Look for a kernel image on disk
-    // TODO: use the filesystem protocol
+    // First look for a self-contained magentaboot image
     size_t ksz = 0;
-    void* kernel = xefi_load_file(L"magenta.bin", &ksz, 0);
+    void* kernel = xefi_load_file(L"mxboot.bin", &ksz, 0);
 
+    if (kernel) {
+        mxboot(img, sys, kernel, ksz);
+    }
+
+    // Look for a kernel image on disk
+    ksz = 0;
+    kernel = xefi_load_file(L"magenta.bin", &ksz, 0);
     if (!have_network && kernel == NULL) {
         goto fail;
     }
