@@ -307,10 +307,16 @@ bool Presentation::UpdateAnimation(uint64_t presentation_time) {
   // dependent on the screen size, but also the depth of the stage's viewing
   // volume (currently hardcoded in the SceneManager implementation to 1000, and
   // not available outside).  Since this is a demo feature, it seems OK for now.
-  constexpr float kOrthoEyeDist = 5000;
+  constexpr float kOrthoEyeDist = 60000;
   const float fovy = 2.f * atan(half_height / kOrthoEyeDist);
   glm::vec3 eye_start(half_width, half_height, kOrthoEyeDist);
-  glm::vec3 eye_end(0, 10000, 7000);
+  glm::vec3 eye_mid(half_width, half_height, 1.3f * kOrthoEyeDist);
+  glm::vec3 eye_end(-0.2f * kOrthoEyeDist, 2.f * kOrthoEyeDist,
+                    1.5f * kOrthoEyeDist);
+
+  // Always look at the middle of the stage.
+  float target[3] = {half_width, half_height, 0};
+  float up[3] = {0, 1, 0};
 
   double secs = static_cast<double>(presentation_time - animation_start_time_) /
                 1'000'000'000;
@@ -319,17 +325,22 @@ bool Presentation::UpdateAnimation(uint64_t presentation_time) {
   if (param >= 1.f) {
     param = 1.f;
     is_animating_ = false;
+
+    if (!use_perspective_) {
+      // Switch back to ortho view.
+      float ortho_eye[3] = {half_width, half_height, 1100.f};
+      camera_.SetProjection(ortho_eye, target, up, 0.f);
+      return true;
+    }
   }
   if (!use_perspective_) {
     param = 1.f - param;  // Animating back to regular position.
   }
+  param = glm::smoothstep(0.f, 1.f, param);
 
-  glm::vec3 eye =
-      glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
-
-  // Always look at the middle of the stage.
-  float target[3] = {half_width, half_height, 0};
-  float up[3] = {0, 1, 0};
+  // Quadratic bezier.
+  glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, param),
+                           glm::mix(eye_mid, eye_end, param), param);
 
   camera_.SetProjection(glm::value_ptr(eye), target, up, fovy);
 
