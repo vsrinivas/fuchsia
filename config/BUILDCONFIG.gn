@@ -66,10 +66,6 @@ declare_args() {
   magenta_project = ""
 }
 
-# References should use "label($shlib_toolchain)" rather than
-# "label(${target_toolchain}-shared)" or anything else.
-shlib_toolchain = "${current_base_toolchain}-shared"
-
 if (magenta_project == "") {
   if (current_cpu == "arm64") {
     magenta_project = "magenta-qemu-arm64"
@@ -99,6 +95,20 @@ if (current_os == "fuchsia") {
   is_mac = true
   is_fuchsia_host = true
 }
+
+# Each variant toolchain's name is formed by taking the base toolchain
+# name and successively appending "-$name" for each config listed in
+# the variant, where name is `get_label_name(config, "name")`.
+# NOTE: This must match the method used in
+# //build/toolchain/clang_toolchain.gni:clang_toolchain_suite
+current_toolchain_variant = ""
+foreach(subvariant, toolchain_variant) {
+  current_toolchain_variant += "-" + get_label_info(subvariant, "name")
+}
+
+# References should use "label($shlib_toolchain)" rather than
+# "label(${target_toolchain}-shared)" or anything else.
+shlib_toolchain = "${current_base_toolchain}${current_toolchain_variant}-shared"
 
 # All binary targets will get this list of configs by default.
 default_common_binary_configs = [
@@ -183,7 +193,7 @@ if (is_fuchsia) {
                                  "public_configs",
                                  "testonly",
                                  "visibility",
-                              ])
+                               ])
 
         if (!defined(public_deps)) {
           public_deps = []
@@ -201,6 +211,193 @@ if (is_fuchsia) {
         if (defined(visibility)) {
           visibility += [ ":$target_name" ]
         }
+      }
+    }
+  }
+}
+
+declare_args() {
+  # List of "selectors" to request variant builds of certain targets.
+  # Each selector specifies matching criteria and a chosen variant.
+  # The first selector in the list to match a given target determines
+  # which variant is used for that target.  Each selector is a scope,
+  # defining some of these:
+  #
+  #   variant
+  #     Required: The variant that applies if this selector matches.
+  #     This can be false to choose no variant, or a string that names
+  #     the variant.  Variant names are composed of the names of configs
+  #     that make up the variant, separated by "-" if there is more than
+  #     one config.  `known_variants + extra_variants` is the set of
+  #     available variants; see those build arguments.
+  #
+  # The rest below are matching criteria.
+  # The selector matches if and only if all of its criteria match.
+  # If none of these is defined, then the selector always matches.
+  # Each "Strings" criterion is a list of strings, and the criterion
+  # is satisfied if any of the strings match against the candidate string.
+  #
+  #   host
+  #     Boolean: If true, the selector matches in the host toolchain.
+  #     If false, the selector matches in the target toolchain.
+  #
+  #   output_name
+  #     Strings: Matches the target's `output_name` (default: its target name).
+  #
+  #   label
+  #     Strings: Matches the target's full label (without toolchain).
+  #
+  #   name
+  #     Strings: Matches the target's simple name (label after last / or :).
+  #
+  #   dir
+  #     Strings: Matches target's label directory.
+  select_variant = []
+}
+
+template("executable") {
+  if (current_toolchain == shlib_toolchain ||
+      current_toolchain == "${current_base_toolchain}-shared") {
+    # If this executable is in the deps of a shared_library, that
+    # deps will be in the -shared toolchain instantiation of shared_library,
+    # but we don't want to actually instantiate the executable in that
+    # toolchain.  So instead, define a group of the same name that just
+    # redirects to the executable in the base toolchain.
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                            ])
+      not_needed(invoker, "*")
+      public_deps = [
+        ":${target_name}(${current_base_toolchain})",
+      ]
+    }
+  } else {
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    } else {
+      output_name = target_name
+    }
+    target_label = get_label_info(":$target_name", "label_no_toolchain")
+
+    # These are not actually used in all possible if branches below,
+    # so defang GN's extremely sensitive "unused variable" errors.
+    not_needed([
+                "output_name",
+                "target_label",
+              ])
+
+    target_variant = false
+    if (toolchain_variant == [] && select_variant != []) {
+      # See if there is a selector that matches this target.
+      selected = false
+      foreach(selector, select_variant) {
+        # The first match wins.
+        # GN's loops don't have "break", so do nothing on later iterations.
+        if (!selected) {
+
+          # Expand the selector so we don't have to do a lot of defined(...)
+          # tests below.
+          select = {}
+          select = {
+            output_name = []
+            label = []
+            name = []
+            dir = []
+            forward_variables_from(selector, "*")
+          }
+
+          selected = true
+          if (selected && defined(selector.host)) {
+            selected = is_fuchsia_host == selector.host
+          }
+
+          if (selected && select.output_name != []) {
+            selected = false
+            candidate = output_name
+            foreach(try, select.output_name) {
+              if (try == candidate) {
+                selected = true
+              }
+            }
+          }
+
+          if (selected && select.label != []) {
+            selected = false
+            candidate = target_label
+            foreach(try, select.label) {
+              if (try == candidate) {
+                selected = true
+              }
+            }
+          }
+
+          if (selected && select.name != []) {
+            selected = false
+            candidate = get_label_info(target_label, "name")
+            foreach(try, select.name) {
+              if (try == candidate) {
+                selected = true
+              }
+            }
+          }
+
+          if (selected && select.dir != []) {
+            selected = false
+            candidate = get_label_info(target_label, "dir")
+            foreach(try, select.dir) {
+              if (try == candidate) {
+                selected = true
+              }
+            }
+          }
+
+          if (selected && selector.variant != false) {
+            target_variant = "-${selector.variant}"
+          }
+        }
+      }
+    }
+
+    if (target_variant == false) {
+      # If this is just the base toolchain and no variant was selected,
+      # then executable is just its normal self with no modifications.
+      # In each variant toolchain, executable is just its normal self,
+      # but if the invoker constrained the visibility, we must make
+      # sure the dependency from the base toolchain is still allowed.
+      executable(target_name) {
+        forward_variables_from(invoker, "*")
+        if (toolchain_variant != [] && defined(visibility)) {
+          visibility += [ ":${target_name}(${current_base_toolchain})" ]
+        }
+      }
+    } else {
+      # In the base toolchain, executable redirects to this copy rule.
+      # The executable is built in the selected variant toolchain, but
+      # then copied to its usual name in $root_out_dir so that things
+      # can find it there.
+      assert(current_toolchain == current_base_toolchain)
+      copy(target_name) {
+        not_needed(invoker, "*")
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                              ])
+
+        deps = [
+          ":$target_name(${current_base_toolchain}${target_variant})",
+        ]
+        variant_out_dir = get_label_info(deps[0], "root_out_dir")
+
+        sources = [
+          "$variant_out_dir/$output_name",
+        ]
+        outputs = [
+          "$root_out_dir/$output_name",
+        ]
       }
     }
   }

@@ -332,6 +332,8 @@ template("clang_toolchain_suite") {
     # Each variant toolchain's name is formed by taking the base toolchain
     # name and successively appending "-$name" for each config listed in
     # the variant, where name is `get_label_name(config, "name")`.
+    # NOTE: This must match the method used in
+    # //build/config/BUILDCONFIG.gn:current_variant
     suffix = ""
     foreach(subvariant, variant) {
       suffix += "-" + get_label_info(subvariant, "name")
@@ -380,6 +382,8 @@ declare_args() {
   # Normally this is not set as a build argument, but it serves to document
   # the available set of variants.  Only set this to remove all the default
   # variants here.  To add more, set `extra_variants` instead.
+  #
+  # To make use of a variant, set `select_variant` (which see).
   known_variants = []
 
   # Additional variant toolchain configs to support.
