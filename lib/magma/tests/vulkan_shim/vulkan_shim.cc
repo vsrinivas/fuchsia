@@ -6,6 +6,11 @@
 #include <assert.h>
 #include <stdio.h>
 
+//#define LOG(...) printf(__VA_ARGS__)
+#ifndef LOG
+#define LOG(...)
+#endif
+
 extern "C" {
 // Exposed statically by the vulkan implementation.
 PFN_vkVoidFunction vk_icdGetInstanceProcAddr(VkInstance instance, const char* pName);
@@ -14,9 +19,8 @@ PFN_vkVoidFunction vk_icdGetInstanceProcAddr(VkInstance instance, const char* pN
 static PFN_vkVoidFunction vulkan_shim_get_proc_addr(VkInstance instance, const char* name)
 {
     PFN_vkVoidFunction address = vk_icdGetInstanceProcAddr(instance, name);
-    if (address == nullptr) {
-        printf("vk_icdGetInstanceProcAddr failed for name %s\n", name);
-    }
+    if (!address)
+        LOG("vk_icdGetInstanceProcAddr failed for name %s\n", name);
 
     return address;
 }
