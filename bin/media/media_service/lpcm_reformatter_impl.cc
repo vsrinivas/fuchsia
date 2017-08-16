@@ -48,8 +48,8 @@ LpcmReformatterImpl::LpcmReformatterImpl(
               MediaType::From(reformatter_->output_stream_type()),
               FLOG_ADDRESS(consumer_.get()), FLOG_ADDRESS(producer_.get())));
 
-  graph_.SetUpdateCallback(
-      [this]() { this->owner()->dispatcher().PostUpdate(&graph_); });
+  // graph_.SetUpdateCallback(
+  //    [this]() { this->owner()->dispatcher().PostUpdate(&graph_); });
 
   NodeRef consumer_ref = graph_.Add(consumer_);
   NodeRef reformatter_ref = graph_.Add(reformatter_);

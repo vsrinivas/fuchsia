@@ -132,8 +132,8 @@ void ActiveMultistreamSourceStage::Update() {
   }
 
   if (need_packet && !packet_request_outstanding_) {
-    source_->RequestPacket();
     packet_request_outstanding_ = true;
+    source_->RequestPacket();
   }
 }
 

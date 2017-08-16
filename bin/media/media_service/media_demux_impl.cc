@@ -59,8 +59,8 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
         callback(version, std::move(status));
       });
 
-  graph_.SetUpdateCallback(
-      [this]() { this->owner()->dispatcher().PostUpdate(&graph_); });
+  // graph_.SetUpdateCallback(
+  //    [this]() { this->owner()->dispatcher().PostUpdate(&graph_); });
 
   std::shared_ptr<Reader> reader_ptr = FidlReader::Create(std::move(reader));
   if (!reader_ptr) {
