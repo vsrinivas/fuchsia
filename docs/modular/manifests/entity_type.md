@@ -42,8 +42,10 @@ here](../src/package_manager/metadata_schemas/entity_type.json)):
 
 ```
 
-`name` is a string identifier that must be unqiue within this metadata file. Names are constrained to the following letters: `[a-zA-Z0-9_]`.
+`name` is a string identifier that must be unqiue within this metadata
+file. Names are constrained to the following letters: `[a-zA-Z0-9_]`.
 
-`schema` is a path to a file within the package that contains a [JSON Schema](http://json-schema.org/).
+`schema` is a path to a file within the package that contains a [JSON
+Schema](http://json-schema.org/).
 
 Any number of `Entity` types can be defined in one `entity_type` file.

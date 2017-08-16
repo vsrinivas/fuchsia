@@ -6,7 +6,9 @@ Verb Template
 > rather somewhere within the build tree, since they are strictly only necessary
 > at build time, not at runtime.
 
-**Verbs** represent high-level operations that `Modules` can perform. The operations are described independently of the specific data types they operate on or the modules that implement them.
+A **verb** represents a high-level operation that a `Module` can perform. The
+operations are described independently of the specific data types they operate
+on or the modules that implement them.
 
 A **verb template** defines the *call signature* and *semantics* for a single
 *verb*. Verbs are labels given to high-level operations in Fuchsia that may be

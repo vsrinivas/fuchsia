@@ -14,7 +14,9 @@ schema [available here](../src/package_manager/metadata_schemas/module.json)).
 Each element in the array defines a single verb implementation.
 
 ## Example `module` metadata file
-The following sample `module` file describes a `Module` that implements a number of `verb`s.
+
+The following sample `module` file describes a `Module` that implements a number
+of `verb`s.
 
 ```javascript
 [
@@ -83,9 +85,9 @@ Let's break down the example above and detail the properties in each list elemen
 "binary": "bin/myPreviewer",
 ```
 
-Specifies the relative path from the root of the package where the Module executable file
-can be found. Different verb implementations within the same package can share
-a single `binary`.
+Specifies the relative path from the root of the package where the Module
+executable file can be found. Different verb implementations within the same
+package can share a single `binary`.
 
 #### local_name
 
@@ -94,8 +96,8 @@ a single `binary`.
 ```
 
 The `local_name` attribute must be unique within this `module` metadata file.
-It is used to inform the `Module` at runtime which verb implementation specified in the 
-`module` file is being invoked.
+It is used to inform the `Module` at runtime which verb implementation specified
+in the `module` file is being invoked.
 
 The `local_name` is passed to the Module in its `Module::Initialize()` FIDL
 call. (**TODO(thatguy)**: create and document this in FIDL file)
@@ -157,7 +159,11 @@ is made up of the following fields:
      - `package`: the Fuchsia package ID where the [Entity type](entity_type.md) is defined.
      - `name`: the name of the Entity type found in `package`'s `meta/entity_type.md` file.
 
-At runtime, this `Module` will communicate with its parent (the invoker of the `Module`) through a `Link` interface (**TODO** link). The `Link` enforces the typing described here, making any attempt to write an `Entity` with an incompatible type an error. This applies for all values of `direction` (`input`, `output` and `input/output`) on the nouns.
+At runtime, this `Module` will communicate with its parent (the invoker of the
+`Module`) through a `Link` interface (**TODO** link). The `Link` enforces the
+typing described here, making any attempt to write an `Entity` with an
+incompatible type an error. This applies for all values of `direction` (`input`,
+`output` and `input/output`) on the nouns.
 
 #### outgoing services
 
