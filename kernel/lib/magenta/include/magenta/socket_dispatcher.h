@@ -20,9 +20,6 @@
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 
-class VmMapping;
-class VmObject;
-
 class SocketDispatcher final : public Dispatcher {
 public:
     static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
