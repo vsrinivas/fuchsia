@@ -186,7 +186,7 @@ template("rust_artifact") {
 
     args += [
       "--shared-libs-root",
-      rebase_path(get_label_info("//($shlib_toolchain)", "root_out_dir"))),
+      rebase_path(get_label_info("//default($shlib_toolchain)", "root_out_dir")),
     ]
 
     if (defined(invoker.with_tests) && invoker.with_tests) {
