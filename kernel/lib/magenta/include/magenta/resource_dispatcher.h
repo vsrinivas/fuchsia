@@ -26,7 +26,7 @@ public:
                            mx_rights_t* rights, uint32_t kind,
                            uint64_t low, uint64_t hight);
 
-    virtual ~ResourceDispatcher() final;
+    ~ResourceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
     StateTracker* get_state_tracker()  final { return &state_tracker_; }
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
