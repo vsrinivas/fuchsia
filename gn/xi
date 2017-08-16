@@ -3,17 +3,7 @@
         "dart",
         "rust"
     ],
-    "labels": [
-        "//apps/xi"
-    ],
-    "binaries": [
-        {
-            "binary": "xi-core",
-            "bootfs_path": "apps/xi-core"
-        },
-        {
-            "binary": "gen/apps/xi/modules/xi_app/xi_app.flx",
-            "bootfs_path": "apps/xi_app"
-        }
-    ]
+    "packages": {
+        "xi": "//apps/xi"
+    }
 }
