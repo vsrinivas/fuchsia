@@ -58,7 +58,7 @@ mx_status_t sys_timer_set(
     if (status != MX_OK)
         return status;
 
-    return timer->Set(deadline, slack, 0u);
+    return timer->Set(deadline, slack);
 }
 
 

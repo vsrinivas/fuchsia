@@ -29,7 +29,7 @@ public:
     void on_zero_handles() final;
 
     // Timer specific ops.
-    mx_status_t Set(mx_time_t deadline, mx_duration_t slack, mx_duration_t period);
+    mx_status_t Set(mx_time_t deadline, mx_duration_t slack);
     mx_status_t Cancel();
 
     // Timer callback.
@@ -44,7 +44,6 @@ private:
     mxtl::Mutex lock_;
     mx_time_t deadline_ TA_GUARDED(lock_);
     mx_duration_t slack_ TA_GUARDED(lock_);
-    mx_duration_t period_ TA_GUARDED(lock_);
     bool cancel_pending_ TA_GUARDED(lock_);
     timer_t timer_ TA_GUARDED(lock_);
     StateTracker state_tracker_;

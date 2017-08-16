@@ -17,11 +17,7 @@
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 
-#include <safeint/safe_math.h>
-
 using mxtl::AutoLock;
-
-constexpr mx_duration_t kMinTimerPeriod = MX_TIMER_MIN_PERIOD;
 
 static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
@@ -49,7 +45,7 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
 
 TimerDispatcher::TimerDispatcher(uint32_t /*options*/)
     : timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
-      deadline_(0u), slack_(0u), period_(0u), cancel_pending_(false),
+      deadline_(0u), slack_(0u), cancel_pending_(false),
       timer_(TIMER_INITIAL_VALUE(timer_)) {
 }
 
@@ -69,30 +65,23 @@ void TimerDispatcher::on_zero_handles() {
         timer_cancel(&timer_);
 }
 
-mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack, mx_duration_t period) {
+mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
     canary_.Assert();
-    // zero period is valid but other small values are not.
-    if ((period < kMinTimerPeriod) && (period != 0u))
-        return MX_ERR_NOT_SUPPORTED;
 
     AutoLock al(&lock_);
 
     bool did_cancel = CancelTimerLocked();
 
-    // If the timer is already due and this is a one-shot, then we can set the signal
-    // immediately without starting the timer.
-    // TODO(MG-991): We could handle the repeating case here too but we're thinking
-    // about removing repeating timers so we might as well keep this optimization
-    // as simple as possible.
-    if ((period == 0u) && ((deadline == 0u) || (deadline <= current_time()))) {
+    // If the timer is already due, then we can set the signal immediately without
+    // starting the timer.
+    if ((deadline == 0u) || (deadline <= current_time())) {
         state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
         return MX_OK;
     }
 
     // The timer is always a one shot timer which in the periodic case
     // is re-issued in the timer callback.
-    deadline_ = (deadline == 0u) ? 1u: deadline;
-    period_ = period;
+    deadline_ = deadline;
     slack_ = slack;
 
     // If we're imminently awaiting a timer callback due to a prior cancelation request,
@@ -132,7 +121,6 @@ bool TimerDispatcher::CancelTimerLocked() {
     if (!deadline_)
         return false; // didn't call timer_cancel
     deadline_ = 0u;
-    period_ = 0u;
     slack_ = 0;
 
     // If we're already waiting for the timer to be canceled, then we don't need
@@ -166,32 +154,22 @@ void TimerDispatcher::OnTimerFired() {
             // been queued.  Suppress handling of this callback but take care to
             // restart the timer if its deadline was set in the meantime.
             cancel_pending_ = false;
-        } else if (period_ != 0) {
-            // The timer is a periodic timer.
-            state_tracker_.StrobeState(MX_TIMER_SIGNALED);
-
-            // Compute the next deadline while guarding for integer overflows.
-            // If an overflow occurs, the deadline will be set to 0 which causes
-            // repeating to cease.
-            safeint::CheckedNumeric<mx_time_t> next_deadline(deadline_);
-            next_deadline += period_;
-            deadline_ = next_deadline.ValueOrDefault(0u);
+            if (deadline_ != 0u) {
+                // We must ensure that the timer callback (running in interrupt context,
+                // possibly on a different CPU) has completed before set try to set the
+                // timer again.
+                timer_cancel(&timer_);
+                timer_set(&timer_, deadline_, TIMER_SLACK_CENTER, slack_,
+                          &timer_irq_callback, &timer_dpc_);
+                return;
+            }
         } else {
-            // The timer is a one-shot timer.
+            // The timer is firing.
             state_tracker_.UpdateState(0u, MX_TIMER_SIGNALED);
             deadline_ = 0u;
         }
-
-        if (deadline_ != 0u) {
-            // We must ensure that the timer callback (running in interrupt context,
-            // possibly on a different CPU) has completed before set try to set the
-            // timer again.
-            timer_cancel(&timer_);
-            timer_set(&timer_, deadline_, TIMER_SLACK_CENTER, slack_,
-                &timer_irq_callback, &timer_dpc_);
-            return;
-        }
     }
+
 
     // This could be the last reference so we might need to destroy ourselves.
     // In Magenta RefPtrs, the 'delete' is called by the holder of the object.
