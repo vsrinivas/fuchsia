@@ -25,7 +25,13 @@ declare_args() {
   # automatically used by every target built in that variant.  For each
   # config ${label}, there must also be a target ${label}_deps, which
   # each target built in the variant will automatically depend on.
-  known_variants = []
+  known_variants = [
+    [ "//build/config/sanitizers:asan" ],
+    [ "//build/config/sanitizers:asan_no_detect_leaks" ],
+    [ "//build/config/sanitizers:ubsan" ],
+    [ "//build/config/sanitizers:asan", "//build/config/sanitizers:sancov" ],
+    [ "//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov" ],
+  ]
 
   # Additional variant toolchain configs to support.
   # This is just added to known_variants, which see.
