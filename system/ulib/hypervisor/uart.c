@@ -134,7 +134,7 @@ mx_status_t uart_write(uart_t* uart, mx_handle_t vcpu, const mx_guest_io_t* io) 
     }
 }
 
-static mx_status_t uart_handler(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet) {
+static mx_status_t uart_handler(mx_handle_t vcpu, mx_guest_packet_t* packet, void* ctx) {
     return uart_write(ctx, vcpu, &packet->io);
 }
 

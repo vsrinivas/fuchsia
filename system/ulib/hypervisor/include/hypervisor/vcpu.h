@@ -55,7 +55,7 @@ mx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx);
 /* Processes a single guest packet. */
 mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_guest_packet_t* packet);
 
-typedef mx_status_t (* device_handler_fn_t)(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet);
+typedef mx_status_t (* device_handler_fn_t)(mx_handle_t vcpu, mx_guest_packet_t* packet, void* ctx);
 
 /* Start asynchronous handling of device operations, based on a trap defined by
  * kind, addr, and len. See mx_guest_set_trap for more details on trap args.

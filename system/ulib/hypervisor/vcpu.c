@@ -319,7 +319,7 @@ static int device_loop(void* ctx) {
         }
 
         for (uint32_t i = 0; i < num_packets; i++) {
-            status = device->handler(device->ctx, device->vcpu, &packets[i]);
+            status = device->handler(device->vcpu, &packets[i], device->ctx);
             if (status != MX_OK) {
                 fprintf(stderr, "Unable to handle packet for device %d\n", status);
                 goto cleanup;

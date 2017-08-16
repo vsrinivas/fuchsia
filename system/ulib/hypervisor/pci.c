@@ -435,7 +435,7 @@ uint16_t pci_bar_size(pci_device_t* device) {
     return device->bar_size;
 }
 
-static mx_status_t pci_handler(void* ctx, mx_handle_t vcpu, mx_guest_packet_t* packet) {
+static mx_status_t pci_handler(mx_handle_t vcpu, mx_guest_packet_t* packet, void* ctx) {
     pci_device_t* pci_device = ctx;
     mx_guest_io_t* io = &packet->io;
     uint32_t bar_base = pci_bar_base(pci_device);
