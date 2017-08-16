@@ -392,6 +392,11 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   user_shell_link_->Connect(std::move(request));
 }
 
+void UserRunnerImpl::GetProposalPublisher(
+    fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
+  intelligence_services_->GetProposalPublisher(std::move(request));
+}
+
 void UserRunnerImpl::GetStoryProvider(
     fidl::InterfaceRequest<StoryProvider> request) {
   story_provider_impl_->Connect(std::move(request));
