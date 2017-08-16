@@ -2,14 +2,7 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//lib/url",
-        "//lib/url:url_apptests"
-    ],
-    "binaries": [
-        {
-            "binary": "url_apptests",
-            "bootfs_path": "test/url_apptests"
-        }
-    ]
+    "packages": {
+        "url_tests": "//lib/url:url_tests"
+    }
 }
