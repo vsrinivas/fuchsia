@@ -7,7 +7,8 @@ import("fidl.gni")
 group("fidl") {
   testonly = true
   deps = [
-    "fuzz:fidl-fuzzer(//build/toolchain:host_x64)",
+    # TODO(phosek): disable fuzz target until we roll the new toolchain
+    #"fuzz:fidl-fuzzer(//build/toolchain:host_x64)",
     "compiler/interfaces",
     "cpp/bindings/tests:lib_fidl_cpp_tests",
   ]
