@@ -115,7 +115,7 @@ static bool handle_output_packet(void) {
     io.port = UART_LINE_CONTROL_PORT;
     io.access_size = 1;
     io.u8 = 0xaf;
-    EXPECT_EQ(uart_write(&uart, 0, &io), MX_OK, "Failed to handle UART IO packet");
+    EXPECT_EQ(uart_write(&uart, &io), MX_OK, "Failed to handle UART IO packet");
 
     // Verify packet value was saved to the host port state.
     EXPECT_EQ(io.u8, uart.line_control, "UART was not populated with expected value");

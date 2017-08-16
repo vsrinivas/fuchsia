@@ -17,6 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/decode.c \
     $(LOCAL_DIR)/page_table.c \
     $(LOCAL_DIR)/pci.c \
+    $(LOCAL_DIR)/uart.c \
     $(LOCAL_DIR)/vcpu.c \
     $(LOCAL_DIR)/x86-64.S
 
