@@ -61,6 +61,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/mmu_tests.cpp \
 	$(LOCAL_DIR)/mp.cpp \
 	$(LOCAL_DIR)/ops.S \
+	$(LOCAL_DIR)/perf_mon.cpp \
 	$(LOCAL_DIR)/proc_trace.cpp \
 	$(LOCAL_DIR)/registers.cpp \
 	$(LOCAL_DIR)/start.S \

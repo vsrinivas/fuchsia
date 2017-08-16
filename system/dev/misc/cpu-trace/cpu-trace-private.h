@@ -16,7 +16,11 @@ typedef struct cpu_trace_device {
     bool opened;
 
     struct ipt_device* ipt;
+    struct ipm_device* ipm;
 } cpu_trace_device_t;
+
+
+// Intel Processor Trace
 
 void ipt_init_once(void);
 
@@ -25,4 +29,17 @@ zx_status_t ipt_ioctl(cpu_trace_device_t* dev, uint32_t op,
                       void* reply, size_t replymax,
                       size_t* out_actual);
 
+
 void ipt_release(cpu_trace_device_t* dev);
+
+
+// Intel Performance Monitor
+
+void ipm_init_once(void);
+
+zx_status_t ipm_ioctl(cpu_trace_device_t* dev, uint32_t op,
+                      const void* cmd, size_t cmdlen,
+                      void* reply, size_t replymax,
+                      size_t* out_actual);
+
+void ipm_release(cpu_trace_device_t* dev);

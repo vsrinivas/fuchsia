@@ -46,6 +46,10 @@ static zx_status_t cpu_trace_ioctl(void* ctx, uint32_t op,
 
     ssize_t result;
     switch (IOCTL_FAMILY(op)) {
+        case IOCTL_FAMILY_IPM:
+            result = ipm_ioctl(dev, op, cmd, cmdlen,
+                               reply, replymax, out_actual);
+            break;
         case IOCTL_FAMILY_IPT:
             result = ipt_ioctl(dev, op, cmd, cmdlen,
                                reply, replymax, out_actual);
@@ -64,6 +68,7 @@ static void cpu_trace_release(void* ctx) {
     cpu_trace_device_t* dev = ctx;
 
     ipt_release(dev);
+    ipm_release(dev);
 
     free(dev);
 }
@@ -78,6 +83,7 @@ static zx_protocol_device_t cpu_trace_device_proto = {
 
 static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent, void** cookie) {
     ipt_init_once();
+    ipm_init_once();
 
     cpu_trace_device_t* dev = calloc(1, sizeof(*dev));
     if (!dev)

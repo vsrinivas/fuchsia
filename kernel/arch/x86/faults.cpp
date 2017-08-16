@@ -15,6 +15,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/descriptor.h>
+#include <arch/x86/perf_mon.h>
 #include <kernel/thread.h>
 #include <kernel/stats.h>
 #include <platform.h>
@@ -405,6 +406,11 @@ void x86_exception_handler(x86_iframe_t *frame)
         case X86_INT_IPI_HALT: {
             x86_ipi_halt_handler();
             /* no return */
+            break;
+        }
+        case X86_INT_APIC_PMI: {
+            ret = apic_pmi_interrupt_handler(frame);
+            // Note: apic_pmi_interrupt_handler calls apic_issue_eoi().
             break;
         }
         /* pass all other non-Intel defined irq vectors to the platform */

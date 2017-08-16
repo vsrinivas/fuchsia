@@ -60,6 +60,7 @@
 #define IOCTL_FAMILY_ETHERTAP       0x27
 #define IOCTL_FAMILY_USB_DEVICE     0x28
 #define IOCTL_FAMILY_USB_VIRT_BUS   0x29
+#define IOCTL_FAMILY_IPM            0x2A  // ioctls for Intel Perf Monitoring
 #define IOCTL_FAMILY_POWER          0x30
 
 // IOCTL constructor

@@ -70,6 +70,9 @@ void apic_timer_mask(void);
 void apic_timer_unmask(void);
 void apic_timer_stop(void);
 
+void apic_pmi_mask(void);
+void apic_pmi_unmask(void);
+
 enum handler_return apic_error_interrupt_handler(void);
 enum handler_return apic_timer_interrupt_handler(void);
 
