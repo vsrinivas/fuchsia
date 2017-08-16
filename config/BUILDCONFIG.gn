@@ -106,6 +106,18 @@ foreach(subvariant, toolchain_variant) {
   current_toolchain_variant += "-" + get_label_info(subvariant, "name")
 }
 
+# When we are in a variant of host_toolchain, change the value of
+# host_toolchain so that `if (current_toolchain == host_toolchain)`
+# tests still match, since that is the conventional way to detect being
+# in host context.  This means that any "...($host_toolchain)" label
+# references from inside a variant of host_toolchain will refer to the
+# variant (current_toolchain rather than host_toolchain).  To handle
+# this, the executable() template below will define its target in other
+# variant toolchains as a copy of the real executable.
+if (is_fuchsia_host) {
+  host_toolchain += current_toolchain_variant
+}
+
 # References should use "label($shlib_toolchain)" rather than
 # "label(${target_toolchain}-shared)" or anything else.
 shlib_toolchain = "${current_base_toolchain}${current_toolchain_variant}-shared"
@@ -256,149 +268,135 @@ declare_args() {
 }
 
 template("executable") {
-  if (current_toolchain == shlib_toolchain ||
-      current_toolchain == "${current_base_toolchain}-shared") {
-    # If this executable is in the deps of a shared_library, that
-    # deps will be in the -shared toolchain instantiation of shared_library,
-    # but we don't want to actually instantiate the executable in that
-    # toolchain.  So instead, define a group of the same name that just
-    # redirects to the executable in the base toolchain.
-    group(target_name) {
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  } else {
+    output_name = target_name
+  }
+  target_label = get_label_info(":$target_name", "label_no_toolchain")
+
+  # These are not actually used in all possible if branches below,
+  # so defang GN's extremely sensitive "unused variable" errors.
+  not_needed([
+              "output_name",
+              "target_label",
+            ])
+
+  target_variant = false
+  if (select_variant != []) {
+    # See if there is a selector that matches this target.
+    selected = false
+    foreach(selector, select_variant) {
+      # The first match wins.
+      # GN's loops don't have "break", so do nothing on later iterations.
+      if (!selected) {
+
+        # Expand the selector so we don't have to do a lot of defined(...)
+        # tests below.
+        select = {}
+        select = {
+          output_name = []
+          label = []
+          name = []
+          dir = []
+          forward_variables_from(selector, "*")
+        }
+
+        selected = true
+        if (selected && defined(selector.host)) {
+          selected = is_fuchsia_host == selector.host
+        }
+
+        if (selected && select.output_name != []) {
+          selected = false
+          candidate = output_name
+          foreach(try, select.output_name) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.label != []) {
+          selected = false
+          candidate = target_label
+          foreach(try, select.label) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.name != []) {
+          selected = false
+          candidate = get_label_info(target_label, "name")
+          foreach(try, select.name) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.dir != []) {
+          selected = false
+          candidate = get_label_info(target_label, "dir")
+          foreach(try, select.dir) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && selector.variant != false) {
+          target_variant = "-${selector.variant}"
+        }
+      }
+    }
+  }
+  if (target_variant == false) {
+    target_variant = ""
+  }
+
+  if (target_variant == current_toolchain_variant &&
+      current_toolchain == current_base_toolchain + current_toolchain_variant) {
+    # This is the toolchain selected to actually build this target.
+    executable(target_name) {
+      forward_variables_from(invoker, "*")
+      if (defined(visibility)) {
+        # Other toolchains will define this target as a group or copy
+        # rule that depends on this toolchain's definition.  If the
+        # invoker constrained the visibility, make sure those
+        # dependencies from other toolchains are still allowed.
+        visibility += [ ":${target_name}" ]
+      }
+    }
+  } else {
+    # When some variant was selected, then this target in all other
+    # toolchains is actually just this copy rule.  The target is built in
+    # the selected variant toolchain, but then copied to its usual name in
+    # $root_out_dir so that things can find it there.
+    copy(target_name) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                             ])
+      if (defined(visibility)) {
+        visibility += [ ":${target_name}" ]
+      }
       not_needed(invoker, "*")
-      public_deps = [
-        ":${target_name}(${current_base_toolchain})",
+
+      deps = [
+        ":$target_name(${current_base_toolchain}${target_variant})",
       ]
-    }
-  } else {
-    if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
-    } else {
-      output_name = target_name
-    }
-    target_label = get_label_info(":$target_name", "label_no_toolchain")
+      variant_out_dir = get_label_info(deps[0], "root_out_dir")
 
-    # These are not actually used in all possible if branches below,
-    # so defang GN's extremely sensitive "unused variable" errors.
-    not_needed([
-                "output_name",
-                "target_label",
-              ])
-
-    target_variant = false
-    if (toolchain_variant == [] && select_variant != []) {
-      # See if there is a selector that matches this target.
-      selected = false
-      foreach(selector, select_variant) {
-        # The first match wins.
-        # GN's loops don't have "break", so do nothing on later iterations.
-        if (!selected) {
-
-          # Expand the selector so we don't have to do a lot of defined(...)
-          # tests below.
-          select = {}
-          select = {
-            output_name = []
-            label = []
-            name = []
-            dir = []
-            forward_variables_from(selector, "*")
-          }
-
-          selected = true
-          if (selected && defined(selector.host)) {
-            selected = is_fuchsia_host == selector.host
-          }
-
-          if (selected && select.output_name != []) {
-            selected = false
-            candidate = output_name
-            foreach(try, select.output_name) {
-              if (try == candidate) {
-                selected = true
-              }
-            }
-          }
-
-          if (selected && select.label != []) {
-            selected = false
-            candidate = target_label
-            foreach(try, select.label) {
-              if (try == candidate) {
-                selected = true
-              }
-            }
-          }
-
-          if (selected && select.name != []) {
-            selected = false
-            candidate = get_label_info(target_label, "name")
-            foreach(try, select.name) {
-              if (try == candidate) {
-                selected = true
-              }
-            }
-          }
-
-          if (selected && select.dir != []) {
-            selected = false
-            candidate = get_label_info(target_label, "dir")
-            foreach(try, select.dir) {
-              if (try == candidate) {
-                selected = true
-              }
-            }
-          }
-
-          if (selected && selector.variant != false) {
-            target_variant = "-${selector.variant}"
-          }
-        }
-      }
-    }
-
-    if (target_variant == false) {
-      # If this is just the base toolchain and no variant was selected,
-      # then executable is just its normal self with no modifications.
-      # In each variant toolchain, executable is just its normal self,
-      # but if the invoker constrained the visibility, we must make
-      # sure the dependency from the base toolchain is still allowed.
-      executable(target_name) {
-        forward_variables_from(invoker, "*")
-        if (toolchain_variant != [] && defined(visibility)) {
-          visibility += [ ":${target_name}(${current_base_toolchain})" ]
-        }
-      }
-    } else {
-      # In the base toolchain, executable redirects to this copy rule.
-      # The executable is built in the selected variant toolchain, but
-      # then copied to its usual name in $root_out_dir so that things
-      # can find it there.
-      assert(current_toolchain == current_base_toolchain)
-      copy(target_name) {
-        not_needed(invoker, "*")
-        forward_variables_from(invoker,
-                               [
-                                 "testonly",
-                                 "visibility",
-                              ])
-
-        deps = [
-          ":$target_name(${current_base_toolchain}${target_variant})",
-        ]
-        variant_out_dir = get_label_info(deps[0], "root_out_dir")
-
-        sources = [
-          "$variant_out_dir/$output_name",
-        ]
-        outputs = [
-          "$root_out_dir/$output_name",
-        ]
-      }
+      sources = [
+        "$variant_out_dir/$output_name",
+      ]
+      outputs = [
+        "$root_out_dir/$output_name",
+      ]
     }
   }
 }
