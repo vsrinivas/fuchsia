@@ -21,12 +21,15 @@ class PageDbBatchImpl : public PageDb::Batch {
 
   // Heads.
   Status AddHead(CommitIdView head, int64_t timestamp) override;
-  Status RemoveHead(CommitIdView head) override;
+  Status RemoveHead(coroutine::CoroutineHandler* handler,
+                    CommitIdView head) override;
 
   // Commits.
-  Status AddCommitStorageBytes(const CommitId& commit_id,
+  Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
+                               const CommitId& commit_id,
                                ftl::StringView storage_bytes) override;
-  Status RemoveCommit(const CommitId& commit_id) override;
+  Status RemoveCommit(coroutine::CoroutineHandler* handler,
+                      const CommitId& commit_id) override;
 
   // Journals.
   Status CreateJournal(JournalType journal_type,
@@ -47,10 +50,12 @@ class PageDbBatchImpl : public PageDb::Batch {
                             convert::ExtendedStringView key) override;
 
   // Object data.
-  Status WriteObject(ObjectIdView object_id,
+  Status WriteObject(coroutine::CoroutineHandler* handler,
+                     ObjectIdView object_id,
                      std::unique_ptr<DataSource::DataChunk> content,
                      PageDbObjectStatus object_status) override;
-  Status DeleteObject(ObjectIdView object_id) override;
+  Status DeleteObject(coroutine::CoroutineHandler* handler,
+                      ObjectIdView object_id) override;
   Status SetObjectStatus(ObjectIdView object_id,
                          PageDbObjectStatus object_status) override;
 

@@ -69,15 +69,18 @@ Status PageDbEmptyImpl::GetSyncMetadata(ftl::StringView /*key*/,
 Status PageDbEmptyImpl::AddHead(CommitIdView /*head*/, int64_t /*timestamp*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::RemoveHead(CommitIdView /*head*/) {
+Status PageDbEmptyImpl::RemoveHead(coroutine::CoroutineHandler* /*handler*/,
+                                   CommitIdView /*head*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddCommitStorageBytes(
+    coroutine::CoroutineHandler* /*handler*/,
     const CommitId& /*commit_id*/,
     ftl::StringView /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::RemoveCommit(const CommitId& /*commit_id*/) {
+Status PageDbEmptyImpl::RemoveCommit(coroutine::CoroutineHandler* /*handler*/,
+                                     const CommitId& /*commit_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::CreateJournal(JournalType /*journal_type*/,
@@ -109,12 +112,14 @@ Status PageDbEmptyImpl::RemoveJournalEntry(
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(
+    coroutine::CoroutineHandler* /*handler*/,
     ObjectIdView /*object_id*/,
     std::unique_ptr<DataSource::DataChunk> /*content*/,
     PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::DeleteObject(ObjectIdView /*object_id*/) {
+Status PageDbEmptyImpl::DeleteObject(coroutine::CoroutineHandler* /*handler*/,
+                                     ObjectIdView /*object_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::SetObjectStatus(ObjectIdView /*object_id*/,

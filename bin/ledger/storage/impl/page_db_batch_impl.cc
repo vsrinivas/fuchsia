@@ -28,16 +28,20 @@ Status PageDbBatchImpl::AddHead(CommitIdView head, int64_t timestamp) {
   return batch_->Put(HeadRow::GetKeyFor(head), SerializeNumber(timestamp));
 }
 
-Status PageDbBatchImpl::RemoveHead(CommitIdView head) {
+Status PageDbBatchImpl::RemoveHead(coroutine::CoroutineHandler* /*handler*/,
+                                   CommitIdView head) {
   return batch_->Delete(HeadRow::GetKeyFor(head));
 }
 
-Status PageDbBatchImpl::AddCommitStorageBytes(const CommitId& commit_id,
-                                              ftl::StringView storage_bytes) {
+Status PageDbBatchImpl::AddCommitStorageBytes(
+    coroutine::CoroutineHandler* /*handler*/,
+    const CommitId& commit_id,
+    ftl::StringView storage_bytes) {
   return batch_->Put(CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
-Status PageDbBatchImpl::RemoveCommit(const CommitId& commit_id) {
+Status PageDbBatchImpl::RemoveCommit(coroutine::CoroutineHandler* /*handler*/,
+                                     const CommitId& commit_id) {
   return batch_->Delete(CommitRow::GetKeyFor(commit_id));
 }
 
@@ -63,8 +67,9 @@ Status PageDbBatchImpl::CreateMergeJournal(const CommitId& base,
 }
 
 Status PageDbBatchImpl::RemoveExplicitJournals() {
-  static std::string kExplicitJournalPrefix = ftl::Concatenate(
-      {JournalEntryRow::kPrefix, ftl::StringView(&JournalEntryRow::kImplicitPrefix, 1)});
+  static std::string kExplicitJournalPrefix =
+      ftl::Concatenate({JournalEntryRow::kPrefix,
+                        ftl::StringView(&JournalEntryRow::kImplicitPrefix, 1)});
   return batch_->DeleteByPrefix(kExplicitJournalPrefix);
 }
 
@@ -94,6 +99,7 @@ Status PageDbBatchImpl::RemoveJournalEntry(const JournalId& journal_id,
 }
 
 Status PageDbBatchImpl::WriteObject(
+    coroutine::CoroutineHandler* /*handler*/,
     ObjectIdView object_id,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
@@ -127,7 +133,8 @@ Status PageDbBatchImpl::WriteObject(
   return Status::OK;
 }
 
-Status PageDbBatchImpl::DeleteObject(ObjectIdView object_id) {
+Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* /*handler*/,
+                                     ObjectIdView object_id) {
   batch_->Delete(ObjectRow::GetKeyFor(object_id));
   batch_->Delete(TransientObjectRow::GetKeyFor(object_id));
   batch_->Delete(LocalObjectRow::GetKeyFor(object_id));

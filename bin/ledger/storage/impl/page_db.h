@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "apps/ledger/src/coroutine/coroutine.h"
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/public/data_source.h"
 #include "apps/ledger/src/storage/public/iterator.h"
@@ -46,15 +47,18 @@ class PageDbMutator {
   virtual Status AddHead(CommitIdView head, int64_t timestamp) = 0;
 
   // Removes the given |head| from the head commits.
-  virtual Status RemoveHead(CommitIdView head) = 0;
+  virtual Status RemoveHead(coroutine::CoroutineHandler* handler,
+                            CommitIdView head) = 0;
 
   // Commits.
   // Adds the given |commit| in the database.
-  virtual Status AddCommitStorageBytes(const CommitId& commit_id,
+  virtual Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
+                                       const CommitId& commit_id,
                                        ftl::StringView storage_bytes) = 0;
 
   // Removes the commit with the given |commit_id| from the commits.
-  virtual Status RemoveCommit(const CommitId& commit_id) = 0;
+  virtual Status RemoveCommit(coroutine::CoroutineHandler* handler,
+                              const CommitId& commit_id) = 0;
 
   // Journals.
   // Creates a new |Journal| with the given |base| commit id and stores it on
@@ -89,12 +93,14 @@ class PageDbMutator {
 
   // Object data.
   // Writes the content of the given object.
-  virtual Status WriteObject(ObjectIdView object_id,
+  virtual Status WriteObject(coroutine::CoroutineHandler* handler,
+                             ObjectIdView object_id,
                              std::unique_ptr<DataSource::DataChunk> content,
                              PageDbObjectStatus object_status) = 0;
 
   // Deletes the object with the given identifier.
-  virtual Status DeleteObject(ObjectIdView object_id) = 0;
+  virtual Status DeleteObject(coroutine::CoroutineHandler* handler,
+                              ObjectIdView object_id) = 0;
 
   // Object sync metadata.
   // Sets the status of the object with the given id.

@@ -42,10 +42,13 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
 
   Status AddHead(CommitIdView head, int64_t timestamp) override;
-  Status RemoveHead(CommitIdView head) override;
-  Status AddCommitStorageBytes(const CommitId& commit_id,
+  Status RemoveHead(coroutine::CoroutineHandler* handler,
+                    CommitIdView head) override;
+  Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
+                               const CommitId& commit_id,
                                ftl::StringView storage_bytes) override;
-  Status RemoveCommit(const CommitId& commit_id) override;
+  Status RemoveCommit(coroutine::CoroutineHandler* /*handler*/,
+                      const CommitId& commit_id) override;
   Status CreateJournal(JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override;
@@ -60,10 +63,12 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                          KeyPriority priority) override;
   Status RemoveJournalEntry(const JournalId& journal_id,
                             convert::ExtendedStringView key) override;
-  Status WriteObject(ObjectIdView object_id,
+  Status WriteObject(coroutine::CoroutineHandler* handler,
+                     ObjectIdView object_id,
                      std::unique_ptr<DataSource::DataChunk> content,
                      PageDbObjectStatus object_status) override;
-  Status DeleteObject(ObjectIdView object_id) override;
+  Status DeleteObject(coroutine::CoroutineHandler* handler,
+                      ObjectIdView object_id) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(const CommitId& commit_id,
                               uint64_t generation) override;

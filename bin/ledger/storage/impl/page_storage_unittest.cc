@@ -174,6 +174,10 @@ class PageStorageTest : public StorageTest {
     message_loop_.Run();
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(id, storage_->GetId());
+
+    coroutine_service_.StartCoroutine(
+        callback::Capture(MakeQuitTask(), &handler_));
+    EXPECT_FALSE(RunLoopWithTimeout());
   }
 
  protected:
@@ -338,7 +342,7 @@ class PageStorageTest : public StorageTest {
       ObjectData* data,
       PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
-        data->object_id, data->ToChunk(), object_status);
+        handler_, data->object_id, data->ToChunk(), object_status);
   }
 
   Status ReadObject(ObjectId object_id, std::unique_ptr<const Object>* object) {
@@ -348,9 +352,10 @@ class PageStorageTest : public StorageTest {
 
   Status DeleteObject(ObjectId object_id) {
     return PageStorageImplAccessorForTest::GetDb(storage_).DeleteObject(
-        object_id);
+        handler_, object_id);
   }
 
+  coroutine::CoroutineHandler* handler_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   std::thread io_thread_;
   files::ScopedTempDir tmp_dir_;
@@ -690,9 +695,9 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
 
   std::unique_ptr<Journal> journal;
   // Explicit journals.
-  // The first call will fail because FakePageDbImpl::AddJournalEntry() returns
-  // an error. After a failed call all other Put/Delete/Commit operations should
-  // fail with ILLEGAL_STATE.
+  // The first call will fail because FakePageDbImpl::AddJournalEntry()
+  // returns an error. After a failed call all other Put/Delete/Commit
+  // operations should fail with ILLEGAL_STATE.
   db.CreateJournal(JournalType::EXPLICIT, RandomCommitId(), &journal);
   EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
   EXPECT_EQ(Status::ILLEGAL_STATE,

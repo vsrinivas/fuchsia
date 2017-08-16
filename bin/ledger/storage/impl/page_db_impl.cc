@@ -248,22 +248,25 @@ Status PageDbImpl::AddHead(CommitIdView head, int64_t timestamp) {
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveHead(CommitIdView head) {
+Status PageDbImpl::RemoveHead(coroutine::CoroutineHandler* handler,
+                              CommitIdView head) {
   auto batch = StartBatch();
-  batch->RemoveHead(head);
+  batch->RemoveHead(handler, head);
   return batch->Execute();
 }
 
-Status PageDbImpl::AddCommitStorageBytes(const CommitId& commit_id,
+Status PageDbImpl::AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
+                                         const CommitId& commit_id,
                                          ftl::StringView storage_bytes) {
   auto batch = StartBatch();
-  batch->AddCommitStorageBytes(commit_id, storage_bytes);
+  batch->AddCommitStorageBytes(handler, commit_id, storage_bytes);
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveCommit(const CommitId& commit_id) {
+Status PageDbImpl::RemoveCommit(coroutine::CoroutineHandler* handler,
+                                const CommitId& commit_id) {
   auto batch = StartBatch();
-  batch->RemoveCommit(commit_id);
+  batch->RemoveCommit(handler, commit_id);
   return batch->Execute();
 }
 
@@ -311,17 +314,19 @@ Status PageDbImpl::RemoveJournalEntry(const JournalId& journal_id,
   return batch->Execute();
 }
 
-Status PageDbImpl::WriteObject(ObjectIdView object_id,
+Status PageDbImpl::WriteObject(coroutine::CoroutineHandler* handler,
+                               ObjectIdView object_id,
                                std::unique_ptr<DataSource::DataChunk> content,
                                PageDbObjectStatus object_status) {
   auto batch = StartBatch();
-  batch->WriteObject(object_id, std::move(content), object_status);
+  batch->WriteObject(handler, object_id, std::move(content), object_status);
   return batch->Execute();
 }
 
-Status PageDbImpl::DeleteObject(ObjectIdView object_id) {
+Status PageDbImpl::DeleteObject(coroutine::CoroutineHandler* handler,
+                                ObjectIdView object_id) {
   auto batch = StartBatch();
-  batch->DeleteObject(object_id);
+  batch->DeleteObject(handler, object_id);
   return batch->Execute();
 }
 

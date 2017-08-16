@@ -618,151 +618,156 @@ void PageStorageImpl::AddCommits(
   FTL_DCHECK(new_objects.empty() || source == ChangeSource::LOCAL)
       << "New objects must only be used when adding local commit.";
 
-  // Apply all changes atomically.
-  std::unique_ptr<PageDb::Batch> batch = db_.StartBatch();
-  std::set<const CommitId*, StringPointerComparator> added_commits;
-  std::vector<std::unique_ptr<const Commit>> commits_to_send;
+  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+    this, commits = std::move(commits), source,
+    new_objects = std::move(new_objects), callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    // Apply all changes atomically.
+    std::unique_ptr<PageDb::Batch> batch = db_.StartBatch();
+    std::set<const CommitId*, StringPointerComparator> added_commits;
+    std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
-  std::map<CommitId, int64_t> heads_to_add;
+    std::map<CommitId, int64_t> heads_to_add;
 
-  // If commits arrive out of order, some commits might be skipped. Continue
-  // trying adding commits as long as at least one commit is added on each
-  // iteration.
-  bool commits_were_out_of_order = false;
-  bool continue_trying = true;
-  while (continue_trying && !commits.empty()) {
-    continue_trying = false;
-    std::vector<std::unique_ptr<const Commit>> remaining_commits;
+    // If commits arrive out of order, some commits might be skipped. Continue
+    // trying adding commits as long as at least one commit is added on each
+    // iteration.
+    bool commits_were_out_of_order = false;
+    bool continue_trying = true;
+    while (continue_trying && !commits.empty()) {
+      continue_trying = false;
+      std::vector<std::unique_ptr<const Commit>> remaining_commits;
 
-    for (auto& commit : commits) {
-      Status s;
+      for (auto& commit : commits) {
+        Status s;
 
-      // Commits should arrive in order. Check that the parents are either
-      // present in PageDb or in the list of already processed commits.
-      // If the commit arrive out of order, print an error, but skip it
-      // temporarly so that the Ledger can recover if all the needed commits are
-      // received in a single batch.
-      for (const CommitIdView& parent_id : commit->GetParentIds()) {
-        if (added_commits.count(&parent_id) == 0) {
-          s = ContainsCommit(parent_id);
-          if (s != Status::OK) {
-            FTL_LOG(ERROR) << "Failed to find parent commit \""
-                           << ToHex(parent_id) << "\" of commit \""
-                           << convert::ToHex(commit->GetId())
-                           << "\". Temporarily skipping in case the commits "
-                              "are out of order.";
-            if (s == Status::NOT_FOUND) {
-              remaining_commits.push_back(std::move(commit));
-              commit.reset();
-              break;
+        // Commits should arrive in order. Check that the parents are either
+        // present in PageDb or in the list of already processed commits.
+        // If the commit arrive out of order, print an error, but skip it
+        // temporarly so that the Ledger can recover if all the needed commits
+        // are received in a single batch.
+        for (const CommitIdView& parent_id : commit->GetParentIds()) {
+          if (added_commits.count(&parent_id) == 0) {
+            s = ContainsCommit(parent_id);
+            if (s != Status::OK) {
+              FTL_LOG(ERROR)
+                  << "Failed to find parent commit \"" << ToHex(parent_id)
+                  << "\" of commit \"" << convert::ToHex(commit->GetId())
+                  << "\". Temporarily skipping in case the commits "
+                     "are out of order.";
+              if (s == Status::NOT_FOUND) {
+                remaining_commits.push_back(std::move(commit));
+                commit.reset();
+                break;
+              }
+              callback(Status::INTERNAL_IO_ERROR);
+
+              return;
             }
-            callback(Status::INTERNAL_IO_ERROR);
-
-            return;
+          }
+          // Remove the parent from the list of heads.
+          if (!heads_to_add.erase(parent_id.ToString())) {
+            // parent_id was not added in the batch: remove it from heads in Db.
+            batch->RemoveHead(handler, parent_id);
           }
         }
-        // Remove the parent from the list of heads.
-        if (!heads_to_add.erase(parent_id.ToString())) {
-          // parent_id was not added in the batch: remove it from heads in Db.
-          batch->RemoveHead(parent_id);
+
+        // The commit could not be added. Skip it.
+        if (!commit) {
+          continue;
         }
-      }
 
-      // The commit could not be added. Skip it.
-      if (!commit) {
-        continue;
-      }
+        continue_trying = true;
 
-      continue_trying = true;
+        // NOTE(etiennej, 2017-08-04): This code works because db_ operations
+        // are synchronous. If they are not, then ContainsCommit may return
+        // NOT_FOUND while a commit is added, and batch->Execute() will break
+        // the invariants of this system (in particular, that synced commits
+        // cannot become unsynced).
+        s = ContainsCommit(commit->GetId());
+        if (s == Status::NOT_FOUND) {
+          s = batch->AddCommitStorageBytes(handler, commit->GetId(),
+                                           commit->GetStorageBytes());
+          if (s != Status::OK) {
+            callback(s);
+            return;
+          }
 
-      // NOTE(etiennej, 2017-08-04): This code works because db_ operations are
-      // synchronous. If they are not, then ContainsCommit may return NOT_FOUND
-      // while a commit is added, and batch->Execute() will break the invariants
-      // of this system (in particular, that synced commits cannot become
-      // unsynced).
-      s = ContainsCommit(commit->GetId());
-      if (s == Status::NOT_FOUND) {
-        s = batch->AddCommitStorageBytes(commit->GetId(),
-                                         commit->GetStorageBytes());
-        if (s != Status::OK) {
+          if (source == ChangeSource::LOCAL) {
+            s = db_.MarkCommitIdUnsynced(commit->GetId(),
+                                         commit->GetGeneration());
+            if (s != Status::OK) {
+              callback(s);
+              return;
+            }
+          }
+
+          // Update heads_to_add.
+          heads_to_add[commit->GetId()] = commit->GetTimestamp();
+
+          added_commits.insert(&commit->GetId());
+          commits_to_send.push_back(std::move(commit));
+        } else if (s != Status::OK) {
           callback(s);
           return;
-        }
-
-        if (source == ChangeSource::LOCAL) {
-          s = db_.MarkCommitIdUnsynced(commit->GetId(),
-                                       commit->GetGeneration());
+        } else if (source == ChangeSource::SYNC) {
+          // We need to check again if we are adding an already present remote
+          // commit here because we might both download and locally commit the
+          // same commit at roughly the same time. As commit writing is
+          // asynchronous, the previous check in AddCommitsFromSync may have not
+          // matched any commit, while a commit got added in between.
+          s = batch->MarkCommitIdSynced(commit->GetId());
           if (s != Status::OK) {
             callback(s);
             return;
           }
         }
+      }
 
-        // Update heads_to_add.
-        heads_to_add[commit->GetId()] = commit->GetTimestamp();
-
-        added_commits.insert(&commit->GetId());
-        commits_to_send.push_back(std::move(commit));
-      } else if (s != Status::OK) {
-        callback(s);
-        return;
-      } else if (source == ChangeSource::SYNC) {
-        // We need to check again if we are adding an already present remote
-        // commit here because we might both download and locally commit the
-        // same commit at roughly the same time. As commit writing is
-        // asynchronous, the previous check in AddCommitsFromSync may have not
-        // matched any commit, while a commit got added in between.
-        s = batch->MarkCommitIdSynced(commit->GetId());
+      if (!remaining_commits.empty()) {
+        // If |remaining_commits| is not empty, some commits were out of order.
+        commits_were_out_of_order = true;
+      }
+      // Update heads in Db.
+      for (const auto& head_timestamp : heads_to_add) {
+        Status s = batch->AddHead(head_timestamp.first, head_timestamp.second);
         if (s != Status::OK) {
           callback(s);
           return;
         }
       }
+      std::swap(commits, remaining_commits);
     }
 
-    if (!remaining_commits.empty()) {
-      // If |remaining_commits| is not empty, some commits were out of order.
-      commits_were_out_of_order = true;
+    if (commits_were_out_of_order) {
+      ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
     }
-    // Update heads in Db.
-    for (const auto& head_timestamp : heads_to_add) {
-      Status s = batch->AddHead(head_timestamp.first, head_timestamp.second);
-      if (s != Status::OK) {
-        callback(s);
-        return;
-      }
+    if (!commits.empty()) {
+      FTL_DCHECK(commits_were_out_of_order);
+      ledger::ReportEvent(
+          ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
+      FTL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
+                     << " orphaned commits.";
+      callback(Status::ILLEGAL_STATE);
+      return;
     }
-    std::swap(commits, remaining_commits);
-  }
 
-  if (commits_were_out_of_order) {
-    ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER);
-  }
-  if (!commits.empty()) {
-    FTL_DCHECK(commits_were_out_of_order);
-    ledger::ReportEvent(
-        ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
-    FTL_LOG(ERROR) << "Failed adding commits. Found " << commits.size()
-                   << " orphaned commits.";
-    callback(Status::ILLEGAL_STATE);
-    return;
-  }
+    // If adding local commits, mark all new pieces as local.
+    Status status = MarkAllPiecesLocal(batch.get(), std::move(new_objects));
+    if (status != Status::OK) {
+      callback(status);
+      return;
+    }
 
-  // If adding local commits, mark all new pieces as local.
-  Status status = MarkAllPiecesLocal(batch.get(), std::move(new_objects));
-  if (status != Status::OK) {
+    status = batch->Execute();
+    bool notify_watchers = commits_to_send_.empty();
+    commits_to_send_.emplace(source, std::move(commits_to_send));
     callback(status);
-    return;
-  }
 
-  status = batch->Execute();
-  bool notify_watchers = commits_to_send_.empty();
-  commits_to_send_.emplace(source, std::move(commits_to_send));
-  callback(status);
-
-  if (status == Status::OK && notify_watchers) {
-    NotifyWatchers();
-  }
+    if (status == Status::OK && notify_watchers) {
+      NotifyWatchers();
+    }
+  }));
 }
 
 Status PageStorageImpl::ContainsCommit(CommitIdView id) {
@@ -781,21 +786,27 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
                                std::unique_ptr<DataSource::DataChunk> data,
                                ChangeSource source,
                                std::function<void(Status)> callback) {
-  FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-  FTL_DCHECK(
-      object_id ==
-      ComputeObjectId(GetObjectType(GetObjectIdType(object_id)), data->Get()));
+  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+    this, object_id = std::move(object_id), data = std::move(data), source,
+    callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
+    FTL_DCHECK(object_id ==
+               ComputeObjectId(GetObjectType(GetObjectIdType(object_id)),
+                               data->Get()));
 
-  std::unique_ptr<const Object> object;
-  Status status = db_.ReadObject(object_id, &object);
-  if (status == Status::NOT_FOUND) {
-    PageDbObjectStatus object_status =
-        (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
-                                       : PageDbObjectStatus::SYNCED);
-    callback(db_.WriteObject(object_id, std::move(data), object_status));
-    return;
-  }
-  callback(status);
+    std::unique_ptr<const Object> object;
+    Status status = db_.ReadObject(object_id, &object);
+    if (status == Status::NOT_FOUND) {
+      PageDbObjectStatus object_status =
+          (source == ChangeSource::LOCAL ? PageDbObjectStatus::TRANSIENT
+                                         : PageDbObjectStatus::SYNCED);
+      callback(
+          db_.WriteObject(handler, object_id, std::move(data), object_status));
+      return;
+    }
+    callback(status);
+  }));
 }
 
 void PageStorageImpl::DownloadFullObject(ObjectIdView object_id,
