@@ -623,6 +623,8 @@ void PageStorageImpl::AddCommits(
   std::set<const CommitId*, StringPointerComparator> added_commits;
   std::vector<std::unique_ptr<const Commit>> commits_to_send;
 
+  std::map<CommitId, int64_t> heads_to_add;
+
   // If commits arrive out of order, some commits might be skipped. Continue
   // trying adding commits as long as at least one commit is added on each
   // iteration.
@@ -660,7 +662,10 @@ void PageStorageImpl::AddCommits(
           }
         }
         // Remove the parent from the list of heads.
-        batch->RemoveHead(parent_id);
+        if (!heads_to_add.erase(parent_id.ToString())) {
+          // parent_id was not added in the batch: remove it from heads in Db.
+          batch->RemoveHead(parent_id);
+        }
       }
 
       // The commit could not be added. Skip it.
@@ -693,12 +698,9 @@ void PageStorageImpl::AddCommits(
           }
         }
 
-        // Update heads.
-        s = batch->AddHead(commit->GetId(), commit->GetTimestamp());
-        if (s != Status::OK) {
-          callback(s);
-          return;
-        }
+        // Update heads_to_add.
+        heads_to_add[commit->GetId()] = commit->GetTimestamp();
+
         added_commits.insert(&commit->GetId());
         commits_to_send.push_back(std::move(commit));
       } else if (s != Status::OK) {
@@ -721,6 +723,14 @@ void PageStorageImpl::AddCommits(
     if (!remaining_commits.empty()) {
       // If |remaining_commits| is not empty, some commits were out of order.
       commits_were_out_of_order = true;
+    }
+    // Update heads in Db.
+    for (const auto& head_timestamp : heads_to_add) {
+      Status s = batch->AddHead(head_timestamp.first, head_timestamp.second);
+      if (s != Status::OK) {
+        callback(s);
+        return;
+      }
     }
     std::swap(commits, remaining_commits);
   }
