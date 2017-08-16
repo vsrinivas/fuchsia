@@ -32,10 +32,18 @@ class Buffer : public WaitableResource {
                        vk::BufferUsageFlags usage_flags,
                        vk::MemoryPropertyFlags memory_property_flags);
 
+  static BufferPtr New(ResourceManager* manager,
+                       GpuMemPtr mem,
+                       vk::BufferUsageFlags usage_flags,
+                       vk::DeviceSize size,
+                       vk::DeviceSize offset = 0);
+
   Buffer(ResourceManager* manager,
          GpuMemPtr mem,
          vk::Buffer buffer,
-         vk::DeviceSize size);
+         vk::DeviceSize size,
+         vk::DeviceSize offset = 0);
+
   ~Buffer() override;
 
   // Return the underlying Vulkan buffer object.
@@ -47,6 +55,8 @@ class Buffer : public WaitableResource {
   // If the buffer is host-accessible, then this returns a direct pointer to
   // cache-coherent device memory.  Otherwise, returns nullptr.
   uint8_t* ptr() const { return ptr_; }
+
+  const GpuMemPtr& mem() const { return mem_; }
 
  private:
   GpuMemPtr mem_;

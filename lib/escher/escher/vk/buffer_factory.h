@@ -20,6 +20,10 @@ class BufferFactory : private ResourceRecycler {
   virtual BufferPtr NewBuffer(vk::DeviceSize size,
                               vk::BufferUsageFlags usage_flags,
                               vk::MemoryPropertyFlags memory_property_flags);
+
+  // Expose escher()... this is one aspect of ResourceRecycler that we want to
+  // inherit publicly.
+  using ResourceRecycler::escher;
 };
 
 }  // namespace escher
