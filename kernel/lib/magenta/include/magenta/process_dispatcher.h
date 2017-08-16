@@ -31,7 +31,7 @@
 
 class JobDispatcher;
 
-class ProcessDispatcher : public Dispatcher {
+class ProcessDispatcher final : public Dispatcher {
 public:
     static mx_status_t Create(
         mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags,

@@ -21,6 +21,8 @@
 //   to allow userspace to set bits for "virtual" interrupts
 // - return state via out param on sys_interrupt_wait
 
+// Note that unlike most Dispatcher subclasses, this one is further
+// subclassed, and so cannot be final.
 class InterruptDispatcher : public Dispatcher {
 public:
     InterruptDispatcher& operator=(const InterruptDispatcher &) = delete;
