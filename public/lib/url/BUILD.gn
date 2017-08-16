@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 static_library("url") {
   sources = [
     "gurl.cc",
@@ -57,6 +59,18 @@ executable("url_apptests") {
   sources = [
     "dummy_unittest.cc",
   ]
+}
+
+package("url_tests") {
+  testonly = true
+
+  deps = [
+    ":url_apptests",
+  ]
+
+  tests = [ {
+        name = "url_apptests"
+      } ]
 }
 # mojo_native_application("url_apptests") {
 #   testonly = true
