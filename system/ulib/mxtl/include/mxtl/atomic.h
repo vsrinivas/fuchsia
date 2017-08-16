@@ -43,6 +43,9 @@
 // to be ABI or operationally compatible, and no effort is made to
 // make any of the mxtl::atomic functions extern "C".
 
+// However, mxtl::atomic<T> _is_ guaranteed to have the same size and
+// alignment as T, and to be standard layout.
+
 namespace mxtl {
 
 // The underlying builtins specify the memory order parameters as an

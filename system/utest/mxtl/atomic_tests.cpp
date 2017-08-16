@@ -646,6 +646,46 @@ bool atomic_compare_exchange_test() {
     END_TEST;
 }
 
+// Code wants to rely on the ABI of mxtl::atomic types. This means
+// matching the underlying types' size and alignment, and the class
+// being standard layout.
+
+static_assert(sizeof(mxtl::atomic<char>) == sizeof(char), "");
+static_assert(sizeof(mxtl::atomic<signed char>) == sizeof(signed char), "");
+static_assert(sizeof(mxtl::atomic<unsigned char>) == sizeof(unsigned char), "");
+static_assert(sizeof(mxtl::atomic<short>) == sizeof(short), "");
+static_assert(sizeof(mxtl::atomic<unsigned short>) == sizeof(unsigned short), "");
+static_assert(sizeof(mxtl::atomic<int>) == sizeof(int), "");
+static_assert(sizeof(mxtl::atomic<unsigned int>) == sizeof(unsigned int), "");
+static_assert(sizeof(mxtl::atomic<long>) == sizeof(long), "");
+static_assert(sizeof(mxtl::atomic<unsigned long>) == sizeof(unsigned long), "");
+static_assert(sizeof(mxtl::atomic<long long>) == sizeof(long long), "");
+static_assert(sizeof(mxtl::atomic<unsigned long long>) == sizeof(unsigned long long), "");
+
+static_assert(alignof(mxtl::atomic<char>) == alignof(char), "");
+static_assert(alignof(mxtl::atomic<signed char>) == alignof(signed char), "");
+static_assert(alignof(mxtl::atomic<unsigned char>) == alignof(unsigned char), "");
+static_assert(alignof(mxtl::atomic<short>) == alignof(short), "");
+static_assert(alignof(mxtl::atomic<unsigned short>) == alignof(unsigned short), "");
+static_assert(alignof(mxtl::atomic<int>) == alignof(int), "");
+static_assert(alignof(mxtl::atomic<unsigned int>) == alignof(unsigned int), "");
+static_assert(alignof(mxtl::atomic<long>) == alignof(long), "");
+static_assert(alignof(mxtl::atomic<unsigned long>) == alignof(unsigned long), "");
+static_assert(alignof(mxtl::atomic<long long>) == alignof(long long), "");
+static_assert(alignof(mxtl::atomic<unsigned long long>) == alignof(unsigned long long), "");
+
+static_assert(mxtl::is_standard_layout<mxtl::atomic<char>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<signed char>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<unsigned char>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<short>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<unsigned short>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<int>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<unsigned int>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<long>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<unsigned long>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<long long>>::value, "");
+static_assert(mxtl::is_standard_layout<mxtl::atomic<unsigned long long>>::value, "");
+
 bool atomic_fence_test() {
     BEGIN_TEST;
 
