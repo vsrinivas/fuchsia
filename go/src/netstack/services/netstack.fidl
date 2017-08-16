@@ -11,6 +11,22 @@ enum Protocol {
   TCP,
 };
 
+// TODO: include other related stats. See
+// https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
+// https://linux.die.net/man/7/netdevice
+struct NetInterface {
+  uint32 id;
+  uint32 flags;
+  string name;
+  NetAddress addr;
+  NetAddress netmask;
+  NetAddress broadaddr;
+  array<uint8> hwaddr;
+};
+
+// Flags for NetInterface.flags.
+const uint32 NetInterfaceFlagUp = 0x1;  // Set if the interface is up.
+
 [ServiceName="netstack::Netstack"]
 interface Netstack {
   // Finds the port number from a given service name and protocol. [service] can be a
@@ -22,4 +38,10 @@ interface Netstack {
   // requests via DNS to look up domain names. E.g.
   // GetAddress("example.com", 80) => [{142.42.42.1}]
   GetAddress(string address, uint16 port) => (array<NetAddress> addresses);
+
+  // Returns the list of registered network interfaces.
+  GetInterfaces() => (array<NetInterface> interfaces);
+
+  // Returns the netstack's node name.
+  GetNodeName() => (string node_name);
 };

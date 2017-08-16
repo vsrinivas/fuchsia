@@ -873,6 +873,7 @@ func (s *socketServer) opBind(ios *iostate, msg *rio.Msg) (status mx.Status) {
 }
 
 func (s *socketServer) opIoctl(ios *iostate, msg *rio.Msg) mx.Status {
+	// TODO: deprecated in favor of FIDL service. Remove.
 	switch msg.IoctlOp() {
 	case ioctlNetcGetIfInfo:
 		rep := c_netc_get_if_info{}
