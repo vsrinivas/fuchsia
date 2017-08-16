@@ -3,7 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/go/go_binary.gni")
+import("//packages/package.gni")
 
-go_binary("thinfs") {
+go_binary("thinfs_bin") {
+  output_name = "thinfs"
   gopackage = "fuchsia.googlesource.com/thinfs/cmd/thinfs"
+}
+
+package("thinfs") {
+  deps = [
+    ":thinfs_bin",
+  ]
+
+  binaries = [ {
+        name = "thinfs"
+      } ]
 }
