@@ -11,10 +11,10 @@ typedef test_ioctl_test_report_t test_report_t;
 typedef mx_status_t (*test_func_t)(void* cookie, test_report_t* report, const void* arg, size_t arglen);
 
 typedef struct test_protocol_ops {
-    // sets test output channel
+    // sets test output socket
     void (*set_output_socket)(void* ctx, mx_handle_t handle);
 
-    // gets test output channel
+    // gets test output socket
     mx_handle_t (*get_output_socket)(void* ctx);
 
     // sets control channel
