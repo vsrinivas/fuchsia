@@ -41,6 +41,7 @@ source_set("public") {
   sources = [
     "agent_runner.h",
     "agent_runner_storage.h",
+    "agent_runner_storage.cc",
   ]
 
   deps = [

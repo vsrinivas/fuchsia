@@ -8,7 +8,6 @@
 #include <functional>
 #include <string>
 
-#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -18,8 +17,8 @@ namespace modular {
 // an implementation of an AgentRunnerStorage.
 class AgentRunnerStorage {
  public:
-  AgentRunnerStorage() = default;
-  virtual ~AgentRunnerStorage() {}
+  AgentRunnerStorage();
+  virtual ~AgentRunnerStorage();
 
   struct TriggerInfo {
     std::string agent_url;
@@ -50,20 +49,22 @@ class AgentRunnerStorage {
     virtual void DeletedTask(const std::string& key) = 0;
   };
 
-  // Loads up all tasks (across all agents) from storage.
-  // |NotifcationDelegate| is notified of each added task, and also for any
-  // added and deleted tasks in the future.
+  // Loads up all tasks (across all agents) from storage. |NotifcationDelegate|
+  // is notified of each added task, and also for any added and deleted tasks in
+  // the future.
   virtual void Initialize(NotificationDelegate* delegate,
-                          const ftl::Closure done) = 0;
-  // Writes a new task to storage. |NotificationDelegate| will be notified
-  // of the new task.
+                          std::function<void()> done) = 0;
+
+  // Writes a new task to storage. |NotificationDelegate| will be notified of
+  // the new task.
   virtual void WriteTask(const std::string& agent_url, TriggerInfo info,
-                         const std::function<void(bool)> done) = 0;
+                         std::function<void(bool)> done) = 0;
+
   // Deletes existing task on the storage. |NotificationDelegate| will be
   // notified of the deleted task.
   virtual void DeleteTask(const std::string& agent_url,
                           const std::string& task_id,
-                          const std::function<void(bool)> done) = 0;
+                          std::function<void(bool)> done) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerStorage);

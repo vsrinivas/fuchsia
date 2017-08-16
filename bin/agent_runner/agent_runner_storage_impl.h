@@ -17,21 +17,21 @@ namespace modular {
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
   AgentRunnerStorageImpl(ledger::PagePtr page);
-  ~AgentRunnerStorageImpl();
+  ~AgentRunnerStorageImpl() override;
 
+ private:
   // |AgentRunnerStorage|
   void Initialize(NotificationDelegate* delegate,
-                  const ftl::Closure done) override;
+                  std::function<void()> done) override;
 
   // |AgentRunnerStorage|
   void WriteTask(const std::string& agent_url, TriggerInfo info,
-                 const std::function<void(bool)> done) override;
+                 std::function<void(bool)> done) override;
 
   // |AgentRunnerStorage|
   void DeleteTask(const std::string& agent_url, const std::string& task_id,
-                  const std::function<void(bool)> done) override;
+                  std::function<void(bool)> done) override;
 
- private:
   // Operation subclasses:
   class InitializeCall;
   class WriteTaskCall;
