@@ -53,33 +53,6 @@ MAGENTA\_DRIVER\_BEGIN macro.
 
 Example: `driver.usb-audio.disable`
 
-## kernel.entropy.cmdline=\<hex>
-
-Provides entropy to be mixed into the kernel's CPRNG.
-
-## kernel.entropy_test.src=\<source>
-
-When running an entropy collector quality test, use the provided entropy source.
-Currently recognized sources: `hw_rng`.
-
-## kernel.entropy_test.len=\<len>
-
-When running an entropy collector quality test, collect the provided number of
-bytes. Defaults to the maximum value `ENTROPY_COLLECTOR_TEST_MAXLEN`.
-
-The default value for the compile-time constant `ENTROPY_COLLECTOR_TEST_MAXLEN`
-is 128 KiB.
-
-## kernel.halt_on_panic=\<bool>
-If this option is set (disabled by default), the system will halt on
-a kernel panic instead of rebooting.
-
-## kernel.memory-limit-mb=\<num>
-
-This option tells the kernel to limit system memory to the MB value specified
-by 'num'. Using this effectively allows a user to simulate the system having
-less physical memory than physically present.
-
 ## gfxconsole.early=\<bool>
 
 This option (disabled by default) requests that the kernel start a graphics
@@ -95,22 +68,60 @@ needed for debugging it may speed up boot to disable it.
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
-## virtcon.disable
+## kernel.entropy.cmdline=\<hex>
 
-Do not launch the virtual console service if this option is present.
+Provides entropy to be mixed into the kernel's CPRNG.
 
-## virtcon.keep-log-visible
+## kernel.entropy_test.len=\<len>
 
-If this option is present, the virtual console service will keep the
-debug log (vc0) visible instead of switching to the first shell (vc1) at startup.
+When running an entropy collector quality test, collect the provided number of
+bytes. Defaults to the maximum value `ENTROPY_COLLECTOR_TEST_MAXLEN`.
 
-## virtcon.keymap=\<name>
+The default value for the compile-time constant `ENTROPY_COLLECTOR_TEST_MAXLEN`
+is 128 KiB.
 
-Specify the keymap for the virtual console.  "qwerty" and "dvorak" are supported.
+## kernel.entropy_test.src=\<source>
 
-## virtcon.font=\<name>
+When running an entropy collector quality test, use the provided entropy source.
+Currently recognized sources: `hw_rng`.
 
-Specify the font for the virtual console.  "9x16" and "18x32" are supported.
+## kernel.halt_on_panic=\<bool>
+If this option is set (disabled by default), the system will halt on
+a kernel panic instead of rebooting.
+
+## kernel.memory-limit-mb=\<num>
+
+This option tells the kernel to limit system memory to the MB value specified
+by 'num'. Using this effectively allows a user to simulate the system having
+less physical memory than physically present.
+
+## kernel.oom.enable=\<bool>
+
+This option (true by default) turns on the out-of-memory (OOM) kernel thread,
+which kills processes when the PMM has less than `kernel.oom.redline_mb` free
+memory, sleeping for `kernel.oom.sleep_sec` between checks.
+
+The OOM thread can be manually started/stopped at runtime with the `k oom start`
+and `k oom stop` commands, and `k oom info` will show the current state.
+
+See `k oom` for a list of all OOM kernel commands.
+
+## kernel.oom.redline-mb=\<num>
+
+This option (50 MB by default) specifies the free-memory threshold at which the
+out-of-memory (OOM) thread will trigger a low-memory event and begin killing
+processes.
+
+The `k oom info` command will show the current value of this and other
+parameters.
+
+## kernel.oom.sleep-sec=\<num>
+
+This option (1 second by default) specifies how long the out-of-memory (OOM)
+kernel thread should sleep between checks.
+
+The `k oom info` command will show the current value of this and other
+parameters.
 
 ## ktrace.bufsize
 
@@ -144,34 +155,6 @@ bootfs or system partition, it will never be launched.
 
 This option requests that if a minfs partition with the system type GUID is
 found, it is to be mounted read-write rather than read-only.
-
-## kernel.oom.enable=\<bool>
-
-This option (true by default) turns on the out-of-memory (OOM) kernel thread,
-which kills processes when the PMM has less than `kernel.oom.redline_mb` free
-memory, sleeping for `kernel.oom.sleep_sec` between checks.
-
-The OOM thread can be manually started/stopped at runtime with the `k oom start`
-and `k oom stop` commands, and `k oom info` will show the current state.
-
-See `k oom` for a list of all OOM kernel commands.
-
-## kernel.oom.sleep-sec=\<num>
-
-This option (1 second by default) specifies how long the out-of-memory (OOM)
-kernel thread should sleep between checks.
-
-The `k oom info` command will show the current value of this and other
-parameters.
-
-## kernel.oom.redline-mb=\<num>
-
-This option (50 MB by default) specifies the free-memory threshold at which the
-out-of-memory (OOM) thread will trigger a low-memory event and begin killing
-processes.
-
-The `k oom info` command will show the current value of this and other
-parameters.
 
 ## smp.maxcpus=\<num>
 
@@ -221,6 +204,23 @@ when the process it launches exits.
 If this option is set, the `mx_ticks_get` and `mx_ticks_per_second` system
 calls will use `mx_time_get(MX_CLOCK_MONOTONIC)` in nanoseconds rather than
 hardware cycle counters in a hardware-based time unit.  Defaults to false.
+
+## virtcon.disable
+
+Do not launch the virtual console service if this option is present.
+
+## virtcon.keep-log-visible
+
+If this option is present, the virtual console service will keep the
+debug log (vc0) visible instead of switching to the first shell (vc1) at startup.
+
+## virtcon.keymap=\<name>
+
+Specify the keymap for the virtual console.  "qwerty" and "dvorak" are supported.
+
+## virtcon.font=\<name>
+
+Specify the font for the virtual console.  "9x16" and "18x32" are supported.
 
 # Additional Gigaboot Commandline Options
 
