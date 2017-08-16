@@ -280,6 +280,14 @@ void AdvertisingData::SetServiceData(const common::UUID& uuid, const common::Byt
   service_data_[uuid] = std::move(srv_data);
 }
 
+const std::unordered_set<common::UUID> AdvertisingData::service_data_uuids() const {
+  std::unordered_set<common::UUID> uuids;
+  for (const auto& it : manufacturer_data_) {
+    uuids.emplace(it.first);
+  }
+  return uuids;
+}
+
 const common::BufferView AdvertisingData::service_data(const common::UUID& uuid) const {
   if (service_data_.count(uuid) == 0) return common::BufferView();
   return common::BufferView(*service_data_.at(uuid));
@@ -290,6 +298,14 @@ void AdvertisingData::SetManufacturerData(const uint16_t company_id,
   std::unique_ptr<common::DynamicByteBuffer> manuf_data(new common::DynamicByteBuffer(data.size()));
   data.Copy(manuf_data.get());
   manufacturer_data_[company_id] = std::move(manuf_data);
+}
+
+const std::unordered_set<uint16_t> AdvertisingData::manufacturer_data_ids() const {
+  std::unordered_set<uint16_t> manuf_ids;
+  for (const auto& it : manufacturer_data_) {
+    manuf_ids.emplace(it.first);
+  }
+  return manuf_ids;
 }
 
 const common::BufferView AdvertisingData::manufacturer_data(

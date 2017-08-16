@@ -62,6 +62,9 @@ class AdvertisingData {
   // Set some service data for the service specified by |uuid|.
   void SetServiceData(const common::UUID& uuid, const common::ByteBuffer& data);
 
+  // Get a set of which UUIDs have service data in this advertisement.
+  const std::unordered_set<common::UUID> service_data_uuids() const;
+
   // View the currently set service data for |uuid|.
   // This view is not stable; it should be used only ephemerally.
   // Returns an empty BufferView if no service data is set for |uuid|
@@ -71,9 +74,15 @@ class AdvertisingData {
   // |company_id|
   void SetManufacturerData(const uint16_t company_id, const common::BufferView& data);
 
+  // Get a set of which IDs have manufacturer data in this advertisement.
+  const std::unordered_set<uint16_t> manufacturer_data_ids() const;
+
   // View the currently set manufacturer data for the company |company_id|.
+  // Returns an empty BufferView if no manufacturer data is set for
+  // |company_id|.
+  // NOTE: it is valid to send a manufacturer data with no data. Check that one
+  // exists using manufacturer_data_ids() first.
   // This view is not stable; it should be used only ephemerally.
-  // Returns an empty BufferView if no manufacturer data is set for |company_id|
   const common::BufferView manufacturer_data(const uint16_t company_id) const;
 
   // Sets the local TX Power

@@ -72,6 +72,18 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_moved));
 }
 
+TEST(ByteBufferTest, DynamicByteBufferZeroSize) {
+  DynamicByteBuffer buffer;
+
+  EXPECT_EQ(0u, buffer.size());
+  EXPECT_EQ(nullptr, buffer.data());
+
+  DynamicByteBuffer zerosize(0);
+
+  EXPECT_EQ(0u, zerosize.size());
+  EXPECT_EQ(nullptr, buffer.data());
+}
+
 TEST(ByteBufferTest, DynamicByteBufferConstructFromBuffer) {
   constexpr size_t kBufferSize = 3;
   StaticByteBuffer<kBufferSize> buffer({1, 2, 3});

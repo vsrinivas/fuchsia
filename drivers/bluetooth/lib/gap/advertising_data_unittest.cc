@@ -113,6 +113,23 @@ TEST(AdvertisingDataTest, ParseFIDL) {
   EXPECT_FALSE(data.tx_power());
 }
 
+TEST(AdvertisingDataTest, ManufacturerZeroLength) {
+  auto bytes = common::CreateStaticByteBuffer(
+      // Complete 16-bit UUIDs
+      0x05, 0x03, 0x12, 0x02, 0x22, 0x11,
+      // Manufacturer Data with no data
+      0x03, 0xFF, 0x34, 0x12);
+
+  AdvertisingData data;
+
+  EXPECT_EQ(0u, data.manufacturer_data_ids().size());
+
+  EXPECT_TRUE(AdvertisingData::FromBytes(bytes, &data));
+
+  EXPECT_EQ(1u, data.manufacturer_data_ids().count(0x1234));
+  EXPECT_EQ(0u, data.manufacturer_data(0x1234).size());
+}
+
 TEST(AdvertisingDataTest, ReaderMalformedData) {
   // TLV length exceeds the size of the payload
   auto bytes0 = common::CreateStaticByteBuffer(0x01);

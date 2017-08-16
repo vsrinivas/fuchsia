@@ -50,7 +50,7 @@ MutableBufferView MutableByteBuffer::mutable_view(size_t pos, size_t size) {
 DynamicByteBuffer::DynamicByteBuffer() : buffer_size_(0u) {}
 
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size) : buffer_size_(buffer_size) {
-  FTL_DCHECK(buffer_size_) << "|buffer_size| must be non-zero";
+  if (buffer_size == 0) return;
   buffer_ = std::make_unique<uint8_t[]>(buffer_size);
 
   // TODO(armansito): For now this is dumb but we should properly handle the
