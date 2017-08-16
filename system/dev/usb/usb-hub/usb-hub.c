@@ -146,6 +146,7 @@ static mx_status_t usb_hub_wait_for_port(usb_hub_t* hub, int port, port_status_t
         if (result != MX_OK) {
             return result;
         }
+        hub->port_status[port] = *out_status;
 
         if ((*out_status & status_mask) == status_bits) {
             stable += poll_delay;
@@ -223,22 +224,27 @@ static void usb_hub_port_disconnected(usb_hub_t* hub, int port) {
 }
 
 static void usb_hub_handle_port_status(usb_hub_t* hub, int port, port_status_t status) {
-    xprintf("usb_hub_handle_port_status port: %d status: %04X\n", port, status);
-
     port_status_t old_status = hub->port_status[port];
+
+    xprintf("usb_hub_handle_port_status port: %d status: %04X old_status: %04X\n", port, status,
+            old_status);
+
     hub->port_status[port] = status;
 
-    if ((status & USB_PORT_CONNECTION) != (old_status & USB_PORT_CONNECTION)) {
+    if ((status & USB_PORT_CONNECTION) && !(status & USB_PORT_ENABLE)) {
         // Handle race condition where device is quickly disconnected and reconnected.
         // This happens when Android devices switch USB configurations.
         // In this case, any change to the connect state should trigger a disconnect
         // before handling a connect event.
         if (usb_hub_is_port_attached(hub, port)) {
             usb_hub_port_disconnected(hub, port);
+            old_status &= ~USB_PORT_CONNECTION;
         }
-        if (status & USB_PORT_CONNECTION) {
-            usb_hub_port_connected(hub, port);
-        }
+    }
+    if ((status & USB_PORT_CONNECTION) && !(old_status & USB_PORT_CONNECTION)) {
+        usb_hub_port_connected(hub, port);
+    } else if (!(status & USB_PORT_CONNECTION) && (old_status & USB_PORT_CONNECTION)) {
+        usb_hub_port_disconnected(hub, port);
     } else if ((status & USB_PORT_ENABLE) && !(old_status & USB_PORT_ENABLE)) {
         usb_hub_port_enabled(hub, port);
     }
