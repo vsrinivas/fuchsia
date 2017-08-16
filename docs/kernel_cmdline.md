@@ -156,6 +156,15 @@ bootfs or system partition, it will never be launched.
 This option requests that if a minfs partition with the system type GUID is
 found, it is to be mounted read-write rather than read-only.
 
+## netsvc.netboot=\<bool>
+
+If true, magenta will attempt to netboot into another instance of magenta upon
+booting.
+
+More specifically, magenta will fetch a new magenta system from a bootserver on
+the local link and attempt to kexec into the new image, thereby replacing the
+currently running instance of magenta.
+
 ## smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than
