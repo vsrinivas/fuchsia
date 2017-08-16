@@ -106,6 +106,14 @@ public:
                                std::shared_ptr<MsdIntelBuffer> buffer) override
             {
             }
+            void
+            PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
+                          magma_system_image_descriptor* image_desc,
+                          std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                          std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+                          present_buffer_callback_t callback) override
+            {
+            }
 
             std::function<void(std::unique_ptr<CommandBuffer>)> callback_;
             std::unique_ptr<magma::PlatformSemaphore> semaphore_;

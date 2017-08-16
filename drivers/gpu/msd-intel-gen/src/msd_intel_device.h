@@ -73,11 +73,13 @@ public:
     void DumpToString(std::string& dump_string);
     void DumpStatusToLog();
 
-    void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
-              std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-              std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
-
     void DisplayGetSize(magma_display_size* size_out);
+
+    void PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
+                       magma_system_image_descriptor* image_desc,
+                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+                       present_buffer_callback_t callback) override;
 
 private:
     MsdIntelDevice();
@@ -137,13 +139,14 @@ private:
     magma::Status
     ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
                 const magma_system_image_descriptor& image_desc,
-                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
-    magma::Status ProcessInterrupts();
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+                present_buffer_callback_t callback);
+    magma::Status ProcessInterrupts(uint64_t interrupt_time_ns);
     magma::Status ProcessDumpStatusToLog();
 
     void ProcessPendingFlip();
     void ProcessPendingFlipSync();
-    void ProcessFlipComplete();
+    void ProcessFlipComplete(uint64_t interrupt_time_ns);
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
 
     bool WaitIdle();
@@ -201,6 +204,7 @@ private:
     std::shared_ptr<magma::PlatformSemaphore> flip_ready_semaphore_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_[2];
     std::shared_ptr<GpuMapping> saved_display_mapping_[2];
+    present_buffer_callback_t flip_callback_;
 
     class CommandBufferRequest;
     class FlipRequest;

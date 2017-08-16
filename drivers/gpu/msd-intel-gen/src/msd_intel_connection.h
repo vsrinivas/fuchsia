@@ -21,6 +21,12 @@ public:
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
         virtual void ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                    std::shared_ptr<MsdIntelBuffer> buffer) = 0;
+        virtual void
+        PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
+                      magma_system_image_descriptor* image_desc,
+                      std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                      std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+                      present_buffer_callback_t callback) = 0;
     };
 
     static std::unique_ptr<MsdIntelConnection>
@@ -43,6 +49,16 @@ public:
     void DestroyContext(std::shared_ptr<ClientContext> client_context)
     {
         return owner_->DestroyContext(std::move(client_context));
+    }
+
+    void PresentBuffer(std::shared_ptr<MsdIntelBuffer> buffer,
+                       magma_system_image_descriptor* image_desc,
+                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+                       std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+                       present_buffer_callback_t callback)
+    {
+        return owner_->PresentBuffer(std::move(buffer), image_desc, std::move(wait_semaphores),
+                                     std::move(signal_semaphores), std::move(callback));
     }
 
     bool context_killed() { return context_killed_; }

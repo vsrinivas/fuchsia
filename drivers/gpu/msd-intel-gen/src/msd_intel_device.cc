@@ -19,6 +19,13 @@
 
 constexpr bool kWaitForFlip = MSD_INTEL_WAIT_FOR_FLIP ? true : false;
 
+inline uint64_t get_current_time_ns()
+{
+    return std::chrono::time_point_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now())
+        .time_since_epoch()
+        .count();
+}
+
 class MsdIntelDevice::CommandBufferRequest : public DeviceRequest {
 public:
     CommandBufferRequest(std::unique_ptr<CommandBuffer> command_buffer)
@@ -76,10 +83,11 @@ class MsdIntelDevice::FlipRequest : public DeviceRequest {
 public:
     FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
                 std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
+                std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+                present_buffer_callback_t callback)
         : buffer_(std::move(buffer)), image_desc_(*image_desc),
           wait_semaphores_(std::move(wait_semaphores)),
-          signal_semaphores_(std::move(signal_semaphores))
+          signal_semaphores_(std::move(signal_semaphores)), callback_(callback)
     {
     }
 
@@ -97,7 +105,8 @@ public:
 protected:
     magma::Status Process(MsdIntelDevice* device) override
     {
-        return device->ProcessFlip(buffer_, image_desc_, std::move(signal_semaphores_));
+        return device->ProcessFlip(buffer_, image_desc_, std::move(signal_semaphores_),
+                                   std::move(callback_));
     }
 
 private:
@@ -105,14 +114,19 @@ private:
     magma_system_image_descriptor image_desc_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores_;
     std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores_;
+    present_buffer_callback_t callback_;
 };
 
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
 public:
-    InterruptRequest() {}
+    InterruptRequest(uint64_t interrupt_time_ns) : interrupt_time_ns_(interrupt_time_ns) {}
 
 protected:
-    magma::Status Process(MsdIntelDevice* device) override { return device->ProcessInterrupts(); }
+    magma::Status Process(MsdIntelDevice* device) override
+    {
+        return device->ProcessInterrupts(interrupt_time_ns_);
+    }
+    uint64_t interrupt_time_ns_;
 };
 
 class MsdIntelDevice::DumpRequest : public DeviceRequest {
@@ -353,7 +367,7 @@ int MsdIntelDevice::InterruptThreadLoop()
         if (interrupt_thread_quit_flag_)
             break;
 
-        auto request = std::make_unique<InterruptRequest>();
+        auto request = std::make_unique<InterruptRequest>(get_current_time_ns());
         auto reply = request->GetReply();
 
         EnqueueDeviceRequest(std::move(request), true);
@@ -406,12 +420,13 @@ void MsdIntelDevice::ReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
         std::make_unique<ReleaseBufferRequest>(std::move(address_space), std::move(buffer)));
 }
 
-void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
-                          magma_system_image_descriptor* image_desc,
-                          std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
-                          std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
+void MsdIntelDevice::PresentBuffer(
+    std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+    present_buffer_callback_t callback)
 {
-    DLOG("Flip buffer %lu", buffer->platform_buffer()->id());
+    DLOG("Present buffer %lu", buffer->platform_buffer()->id());
 
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
     DASSERT(buffer);
@@ -419,7 +434,7 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     TRACE_DURATION("magma", "Flip", "buffer", buffer->platform_buffer()->id());
 
     auto request = std::make_unique<FlipRequest>(buffer, image_desc, std::move(wait_semaphores),
-                                                 std::move(signal_semaphores));
+                                                 std::move(signal_semaphores), std::move(callback));
 
     std::unique_lock<std::mutex> lock(pageflip_request_mutex_);
     pageflip_pending_queue_.push(std::move(request));
@@ -579,7 +594,7 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers()
     progress_->Completed(sequence_number);
 }
 
-magma::Status MsdIntelDevice::ProcessInterrupts()
+magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns)
 {
     uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
     DLOG("ProcessInterrupts 0x%08x", master_interrupt_control);
@@ -623,7 +638,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts()
             registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, &flip_done);
         DASSERT(flip_done);
 
-        ProcessFlipComplete();
+        ProcessFlipComplete(interrupt_time_ns);
     }
 
     interrupt_->Complete();
@@ -707,7 +722,8 @@ magma::Status MsdIntelDevice::ProcessReleaseBuffer(std::shared_ptr<AddressSpace>
 
 magma::Status MsdIntelDevice::ProcessFlip(
     std::shared_ptr<MsdIntelBuffer> buffer, const magma_system_image_descriptor& image_desc,
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores)
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores,
+    present_buffer_callback_t callback)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(buffer);
@@ -724,8 +740,11 @@ magma::Status MsdIntelDevice::ProcessFlip(
 
     std::shared_ptr<GpuMapping> mapping =
         AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
-    if (!mapping)
+    if (!mapping) {
+        if (callback)
+            callback(MAGMA_STATUS_MEMORY_ERROR, 0);
         return DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt");
+    }
 
     uint32_t pipe_number = 0;
     registers::PipeRegs pipe(pipe_number);
@@ -775,16 +794,21 @@ magma::Status MsdIntelDevice::ProcessFlip(
     saved_display_mapping_[1] = std::move(mapping);
     signal_semaphores_[1] = std::move(signal_semaphores);
 
+    flip_callback_ = std::move(callback);
+
     if (!kWaitForFlip)
-        ProcessFlipComplete();
+        ProcessFlipComplete(get_current_time_ns());
 
     return status;
 }
 
-void MsdIntelDevice::ProcessFlipComplete()
+void MsdIntelDevice::ProcessFlipComplete(uint64_t interrupt_time_ns)
 {
     TRACE_DURATION("magma", "ProcessFlipComplete");
     DLOG("ProcessFlipComplete");
+
+    if (flip_callback_)
+        flip_callback_(MAGMA_STATUS_OK, interrupt_time_ns);
 
     for (auto& semaphore : signal_semaphores_[0]) {
         DLOG("signalling flip semaphore 0x%" PRIx64 "\n", semaphore->id());
@@ -922,23 +946,4 @@ magma_status_t msd_device_display_get_size(msd_device_t* dev, magma_display_size
 {
     *size_out = MsdIntelDevice::cast(dev)->display_size();
     return MAGMA_STATUS_OK;
-}
-
-void msd_device_page_flip(msd_device_t* dev, msd_buffer_t* buf,
-                          magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
-                          uint32_t signal_semaphore_count, msd_semaphore_t** semaphores)
-{
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores(wait_semaphore_count);
-    uint32_t index = 0;
-    for (uint32_t i = 0; i < wait_semaphore_count; i++) {
-        wait_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
-    }
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores(
-        signal_semaphore_count);
-    for (uint32_t i = 0; i < signal_semaphore_count; i++) {
-        signal_semaphores[i] = MsdIntelAbiSemaphore::cast(semaphores[index++])->ptr();
-    }
-
-    MsdIntelDevice::cast(dev)->Flip(MsdIntelAbiBuffer::cast(buf)->ptr(), image_desc,
-                                    std::move(wait_semaphores), std::move(signal_semaphores));
 }
