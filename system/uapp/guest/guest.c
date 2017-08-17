@@ -129,8 +129,8 @@ int main(int argc, char** argv) {
                            cmdline, &guest_ip, &bootdata_off);
     if (status == MX_ERR_NOT_SUPPORTED) {
         char linux_cmdline[PATH_MAX];
-        const char* fmt_string = "earlyprintk=serial,ttyS,115200 acpi_rsdp=%#" PRIx64
-                                 " io_delay=none console=ttyS0 %s";
+        const char* fmt_string = "earlyprintk=serial,ttyS,115200 console=ttyS0,115200 "
+                                 "io_delay=none acpi_rsdp=%#lx %s";
         snprintf(linux_cmdline, PATH_MAX, fmt_string, pt_end_off, cmdline ? cmdline : "");
         status = setup_linux(addr, kVmoSize, first_page, fd, ramdisk_path, linux_cmdline, &guest_ip,
                              &bootdata_off);
