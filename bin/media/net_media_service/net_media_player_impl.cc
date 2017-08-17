@@ -33,10 +33,23 @@ NetMediaPlayerImpl::NetMediaPlayerImpl(
       media_player_(MediaPlayerPtr::Create(std::move(media_player))),
       responder_(this, service_name, owner->application_context()) {
   FTL_DCHECK(owner);
+
+  media_player_.set_connection_error_handler([this]() {
+    media_player_.reset();
+    UnbindAndReleaseFromOwner();
+  });
+
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
+  media_service_.set_connection_error_handler([this]() {
+    media_service_.reset();
+    UnbindAndReleaseFromOwner();
+  });
 }
 
-NetMediaPlayerImpl::~NetMediaPlayerImpl() {}
+NetMediaPlayerImpl::~NetMediaPlayerImpl() {
+  media_service_.reset();
+  media_player_.reset();
+}
 
 void NetMediaPlayerImpl::SetUrl(const fidl::String& url_as_string) {
   url::GURL url = url::GURL(url_as_string);
