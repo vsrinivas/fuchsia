@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
 #include "lib/mtl/socket/socket_drainer.h"
+#include "gtest/gtest.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "mx/socket.h"
@@ -56,6 +56,20 @@ TEST(SocketDrainer, DeleteOnCallback) {
   message_loop.Run();
   EXPECT_EQ("H", client.GetValue());
   EXPECT_EQ(nullptr, drainer.get());
+}
+
+TEST(SocketDrainer, ShutdownRead) {
+  MessageLoop message_loop;
+  Client client([] {}, [&message_loop] { message_loop.QuitNow(); });
+  SocketDrainer drainer(&client);
+  mx::socket socket1, socket2;
+  ASSERT_EQ(MX_OK, mx::socket::create(0u, &socket1, &socket2));
+  drainer.Start(std::move(socket2));
+  char buf[] = {'H', 'e', 'l', 'l', 'o'};
+  socket1.write(0u, buf, sizeof(buf), nullptr);
+  socket1.write(MX_SOCKET_SHUTDOWN_WRITE, nullptr, 0u, nullptr);
+  message_loop.Run();
+  EXPECT_EQ("Hello", client.GetValue());
 }
 
 }  // namespace

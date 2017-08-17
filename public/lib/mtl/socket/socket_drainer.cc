@@ -51,7 +51,7 @@ void SocketDrainer::ReadData() {
     WaitForData();
   } else if (rv == MX_ERR_SHOULD_WAIT) {
     WaitForData();
-  } else if (rv == MX_ERR_PEER_CLOSED) {
+  } else if (rv == MX_ERR_PEER_CLOSED || rv == MX_ERR_BAD_STATE) {
     client_->OnDataComplete();
   } else {
     FTL_DCHECK(false) << "Unhandled mx_status_t: " << rv;
@@ -60,9 +60,10 @@ void SocketDrainer::ReadData() {
 
 void SocketDrainer::WaitForData() {
   FTL_DCHECK(!wait_id_);
-  wait_id_ = waiter_->AsyncWait(source_.get(),
-                                MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-                                MX_TIME_INFINITE, &WaitComplete, this);
+  wait_id_ = waiter_->AsyncWait(
+      source_.get(),
+      MX_SOCKET_READABLE | MX_SOCKET_READ_DISABLED | MX_SOCKET_PEER_CLOSED,
+      MX_TIME_INFINITE, &WaitComplete, this);
 }
 
 void SocketDrainer::WaitComplete(mx_status_t result,
