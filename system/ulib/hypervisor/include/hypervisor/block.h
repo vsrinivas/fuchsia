@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <hypervisor/virtio.h>
 
 #define SECTOR_SIZE 512u
@@ -14,8 +12,6 @@ typedef struct io_apic io_apic_t;
 
 /* Stores the state of a block device. */
 typedef struct block {
-    mtx_t mutex;
-
     // File descriptor backing the block device.
     int fd;
     // Size of file backing the block device.

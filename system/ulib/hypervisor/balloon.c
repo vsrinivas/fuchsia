@@ -100,7 +100,7 @@ static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint
     return MX_OK;
 }
 
-static mx_status_t balloon_queue_notify_locked(balloon_t* balloon, uint16_t queue_sel) {
+static mx_status_t handle_queue_notify(balloon_t* balloon, uint16_t queue_sel) {
     queue_ctx_t ctx;
     switch (queue_sel) {
     case VIRTIO_BALLOON_Q_INFLATEQ:
@@ -119,11 +119,9 @@ static mx_status_t balloon_queue_notify_locked(balloon_t* balloon, uint16_t queu
 static mx_status_t balloon_queue_notify(virtio_device_t* device, uint16_t queue_sel) {
     mx_status_t status;
     balloon_t* balloon = virtio_device_to_balloon(device);
-    mtx_lock(&balloon->mutex);
     do {
-        status = balloon_queue_notify_locked(balloon, queue_sel);
+        status = handle_queue_notify(balloon, queue_sel);
     } while (status == MX_ERR_NEXT);
-    mtx_unlock(&balloon->mutex);
     return status;
 }
 
@@ -156,7 +154,6 @@ static const virtio_device_ops_t kBalloonVirtioDeviceOps = {
 void balloon_init(balloon_t* balloon, void* guest_physmem_addr, size_t guest_physmem_size,
                   mx_handle_t guest_physmem_vmo) {
     memset(balloon, 0, sizeof(*balloon));
-    mtx_init(&balloon->mutex, 0);
 
     // Virt queue initialization.
     for (int i = 0; i < VIRTIO_BALLOON_Q_COUNT; ++i) {

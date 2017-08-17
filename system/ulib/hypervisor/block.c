@@ -209,7 +209,6 @@ static mx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags,
 
 mx_status_t file_block_device(block_t* block) {
     mx_status_t status;
-    mtx_lock(&block->mutex);
     do {
         file_state_t state = {
             .block = block,
@@ -220,6 +219,5 @@ mx_status_t file_block_device(block_t* block) {
         };
         status = virtio_queue_handler(&block->queue, &block_queue_handler, &state);
     } while (status == MX_ERR_NEXT);
-    mtx_unlock(&block->mutex);
     return status;
 }

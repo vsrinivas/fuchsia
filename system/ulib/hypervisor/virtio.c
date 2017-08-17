@@ -179,22 +179,48 @@ static int ring_avail_count(virtio_queue_t* queue) {
     return queue->avail->idx - queue->index;
 }
 
-mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* context) {
-    if (ring_avail_count(queue) < 1)
-        return MX_OK;
+mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index) {
+    mtx_lock(&queue->mutex);
+    if (ring_avail_count(queue) < 1) {
+        mtx_unlock(&queue->mutex);
+        return MX_ERR_NOT_FOUND;
+    }
 
-    mx_status_t status = MX_OK;
-    void* mem_addr = queue->virtio_device->guest_physmem_addr;
-    size_t mem_size = queue->virtio_device->guest_physmem_size;
-    uint16_t desc_index = queue->avail->ring[ring_index(queue, queue->index)];
-    if (desc_index >= queue->size)
-        return MX_ERR_OUT_OF_RANGE;
+    *index = queue->avail->ring[ring_index(queue, queue->index++)];
+    mtx_unlock(&queue->mutex);
+    return MX_OK;
+}
+
+void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
+    mtx_lock(&queue->mutex);
+
     volatile struct vring_used_elem* used =
         &queue->used->ring[ring_index(queue, queue->used->idx)];
-    used->id = desc_index;
 
+    used->id = index;
+    used->len = len;
+    queue->used->idx++;
+
+    mtx_unlock(&queue->mutex);
+}
+
+mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* context) {
+    uint16_t head;
     uint32_t used_len = 0;
-    struct vring_desc desc = queue->desc[desc_index];
+    void* mem_addr = queue->virtio_device->guest_physmem_addr;
+    size_t mem_size = queue->virtio_device->guest_physmem_size;
+
+    // Get the next descriptor from the available ring. If none are available
+    // we can just no-op.
+    mx_status_t status = virtio_queue_next_avail(queue, &head);
+    if (status == MX_ERR_NOT_FOUND)
+        return MX_OK;
+    if (status != MX_OK)
+        return status;
+
+    status = MX_OK;
+    uint16_t desc_index = head;
+    struct vring_desc desc;
     do {
         desc = queue->desc[desc_index];
 
@@ -211,8 +237,7 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
         desc_index = desc.next;
     } while (desc.flags & VRING_DESC_F_NEXT);
 
-    used->len = used_len;
-    queue->index++;
-    queue->used->idx++;
+    virtio_queue_return(queue, head, used_len);
+
     return ring_avail_count(queue) > 0 ? MX_ERR_NEXT : MX_OK;
 }

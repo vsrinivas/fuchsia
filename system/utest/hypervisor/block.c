@@ -111,22 +111,27 @@ static bool file_block_device_bad_header(void) {
     setup_block(&block, path, &mem);
     block.queue.avail->idx = 1;
 
+    block.queue.index = 0;
     set_desc(&mem, 0, sizeof(virtio_mem_t), 1, 0);
     ASSERT_EQ(file_block_device(&block), MX_ERR_OUT_OF_RANGE, "");
     ASSERT_EQ(block.queue.used->idx, 0u, "");
 
+    block.queue.index = 0;
     set_desc(&mem, 0, UINT64_MAX, 0, 0);
     ASSERT_EQ(file_block_device(&block), MX_ERR_OUT_OF_RANGE, "");
     ASSERT_EQ(block.queue.used->idx, 0u, "");
 
+    block.queue.index = 0;
     set_desc(&mem, 0, 0, UINT32_MAX, 0);
     ASSERT_EQ(file_block_device(&block), MX_ERR_OUT_OF_RANGE, "");
     ASSERT_EQ(block.queue.used->idx, 0u, "");
 
+    block.queue.index = 0;
     set_desc(&mem, 0, UINT64_MAX, UINT32_MAX, 0);
     ASSERT_EQ(file_block_device(&block), MX_ERR_OUT_OF_RANGE, "");
     ASSERT_EQ(block.queue.used->idx, 0u, "");
 
+    block.queue.index = 0;
     set_desc(&mem, 0, 0, 1, 0);
     ASSERT_EQ(file_block_device(&block), MX_ERR_INVALID_ARGS, "");
     ASSERT_EQ(block.queue.used->idx, 0u, "");

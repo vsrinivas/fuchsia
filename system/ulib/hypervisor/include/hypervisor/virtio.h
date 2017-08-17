@@ -90,6 +90,8 @@ void virtio_pci_init(virtio_device_t* device);
  * NOTE(abdulla): This structure points to guest-controlled memory.
  */
 typedef struct virtio_queue {
+    mtx_t mutex;
+
     // Queue PFN used to locate this queue in guest physical address space.
     uint32_t pfn;
     uint32_t size;
@@ -128,3 +130,20 @@ typedef mx_status_t (*virtio_queue_fn_t)(void* addr, uint32_t len, uint16_t flag
  * available, or MX_ERR_NEXT if there are more available descriptors to process.
  */
 mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* ctx);
+
+/* Get the index of the next descriptor in the available ring.
+ *
+ * If a buffer is a available, the descriptor index is written to |index|, the
+ * queue index pointer is incremented, and MX_OK is returned.
+ *
+ * If no buffers are available MX_ERR_NOT_FOUND is returned.
+ */
+mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
+
+/* Return a descriptor to the used ring.
+ *
+ * |index| must be a value received from a call to virtio_queue_next_avail. Any
+ * buffers accessed via |index| or any chained descriptors must not be used
+ * after calling virtio_queue_return.
+ */
+void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len);

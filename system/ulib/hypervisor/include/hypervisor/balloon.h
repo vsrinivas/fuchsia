@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <threads.h>
-
 #include <hypervisor/virtio.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
@@ -17,7 +15,6 @@
 
 /* Virtio memory balloon device. */
 typedef struct balloon {
-    mtx_t mutex;
     // Handle to the guest phsycial memory VMO for memory management.
     mx_handle_t vmo;
 
