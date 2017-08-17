@@ -65,14 +65,12 @@ void ActiveSinkStage::Update() {
   FTL_DCHECK(sink_);
 
   Demand demand;
-  bool supplied_packet = false;
 
   {
     ftl::MutexLocker locker(&mutex_);
 
     if (input_.packet()) {
       sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
-      supplied_packet = true;
     }
 
     demand = sink_demand_;
