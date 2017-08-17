@@ -2,14 +2,7 @@
     "languages": [
         "dart"
     ],
-    "labels": [
-        "//apps/modules/contacts",
-        "//apps/modules/contacts:test"
-    ],
-    "binaries": [
-        {
-            "binary": "gen/apps/modules/contacts/modules/contacts/contacts.flx",
-            "bootfs_path": "apps/contacts"
-        }
-    ]
+    "packages": {
+        "contacts": "//apps/modules/contacts"
+    }
 }
