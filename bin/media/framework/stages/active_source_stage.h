@@ -8,6 +8,8 @@
 
 #include "apps/media/src/framework/models/active_source.h"
 #include "apps/media/src/framework/stages/stage.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -49,7 +51,9 @@ class ActiveSourceStage : public Stage {
   std::shared_ptr<ActiveSource> source_;
   bool prepared_;
   ActiveSource::SupplyCallback supply_function_;
-  std::deque<PacketPtr> packets_;
+
+  mutable ftl::Mutex mutex_;
+  std::deque<PacketPtr> packets_ FTL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media

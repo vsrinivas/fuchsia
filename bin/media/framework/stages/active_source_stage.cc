@@ -12,9 +12,18 @@ ActiveSourceStage::ActiveSourceStage(Engine* engine,
   FTL_DCHECK(source_);
 
   supply_function_ = [this](PacketPtr packet) {
-    bool packets_was_empty_ = packets_.empty();
-    packets_.push_back(std::move(packet));
-    if (packets_was_empty_ && prepared_) {
+    bool needs_update = false;
+
+    {
+      ftl::MutexLocker locker(&mutex_);
+      bool packets_was_empty_ = packets_.empty();
+      packets_.push_back(std::move(packet));
+      if (packets_was_empty_ && prepared_) {
+        needs_update = true;
+      }
+    }
+
+    if (needs_update) {
       NeedsUpdate();
     }
   };
@@ -79,13 +88,16 @@ void ActiveSourceStage::UnprepareOutput(size_t index,
 void ActiveSourceStage::Update() {
   Demand demand = output_.demand();
 
-  if (demand != Demand::kNegative && !packets_.empty()) {
-    output_.SupplyPacket(std::move(packets_.front()));
-    packets_.pop_front();
-    source_->SetDownstreamDemand(Demand::kNegative);
-  } else {
-    source_->SetDownstreamDemand(demand);
+  {
+    ftl::MutexLocker locker(&mutex_);
+    if (demand != Demand::kNegative && !packets_.empty()) {
+      output_.SupplyPacket(std::move(packets_.front()));
+      packets_.pop_front();
+      demand = Demand::kNegative;
+    }
   }
+
+  source_->SetDownstreamDemand(demand);
 }
 
 void ActiveSourceStage::FlushInput(size_t index,
@@ -97,6 +109,7 @@ void ActiveSourceStage::FlushInput(size_t index,
 void ActiveSourceStage::FlushOutput(size_t index) {
   FTL_DCHECK(source_);
   source_->Flush();
+  ftl::MutexLocker locker(&mutex_);
   packets_.clear();
 }
 
