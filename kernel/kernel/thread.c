@@ -830,6 +830,18 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
     return INT_RESCHEDULE;
 }
 
+#define MIN_SLEEP_SLACK     LK_USEC(1)
+#define MAX_SLEEP_SLACK     LK_SEC(1)
+#define DIV_SLEEP_SLACK     10u
+
+/* computes the amount of slack the thread_sleep timer will use */
+static uint64_t sleep_slack(lk_time_t deadline, lk_time_t now) {
+    if (deadline < now)
+        return MIN_SLEEP_SLACK;
+    lk_time_t slack = (deadline - now) / DIV_SLEEP_SLACK;
+    return MAX(MIN_SLEEP_SLACK, MIN(slack, MAX_SLEEP_SLACK));
+}
+
 /**
  * @brief  Put thread to sleep; deadline specified in ns
  *
@@ -846,6 +858,7 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
 status_t thread_sleep_etc(lk_time_t deadline, bool interruptable)
 {
     thread_t *current_thread = get_current_thread();
+    lk_time_t now = current_time();
     status_t blocked_status;
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
@@ -870,7 +883,8 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable)
 
     if (deadline != INFINITE_TIME) {
         /* set a one shot timer to wake us up and reschedule */
-        timer_set_oneshot(&timer, deadline, thread_sleep_handler, (void *)current_thread);
+        uint64_t slack = sleep_slack(deadline, now);
+        timer_set(&timer, deadline, TIMER_SLACK_LATE, slack, thread_sleep_handler, current_thread);
     }
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = MX_OK;
