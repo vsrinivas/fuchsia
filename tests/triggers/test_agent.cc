@@ -6,6 +6,7 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/agent/agent.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/modular/tests/triggers/trigger_test_agent_interface.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -68,9 +69,15 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    modular::testing::GetStore()->Put(
-        "trigger_test_agent_stopped", "",
-        [callback, this] { DeleteAndQuit(callback); });
+    FTL_CHECK(false) << "Shouldn't be here.";
+    callback();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
+    modular::testing::GetStore()->Put("trigger_test_agent_stopped", "", [this] {
+      DeleteAndQuitAndUnbind();
+    });
   }
 
   // |TriggerAgentInterface|
@@ -80,11 +87,12 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
         [callback](const fidl::String& token) { callback(token); });
   }
 
+  app::ServiceNamespace agent_services_;
+
   modular::AgentContextPtr agent_context_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
-  app::ServiceNamespace agent_services_;
   fidl::BindingSet<modular::testing::TriggerAgentInterface>
       trigger_agent_interface_;
 

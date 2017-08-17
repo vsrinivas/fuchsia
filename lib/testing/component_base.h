@@ -66,22 +66,33 @@ class ComponentBase : protected SingleServiceApp<Component> {
     };
   }
 
-  // Delete alone is used to simulate the "unstoppable agent"
+  // Delete alone is used to simulate the "unstoppable agent".
   void Delete(const std::function<void()>& done) {
+    Base::PassBinding()->Close();
     modular::testing::Done([this, done] {
-      auto binding =
-          Base::PassBinding();  // To invoke done() after delete this.
       delete this;
       done();
     });
   }
 
+  // Used by non-Agents.
+  // TODO(vardhan): Once all components convert to using |Lifecycle|,
+  // don't PassBinding() here anymore, replace this with
+  // DeleteAndQuitWithoutBinding.
   void DeleteAndQuit(const std::function<void()>& done = [] {}) {
     modular::testing::Done([this, done] {
       auto binding =
           Base::PassBinding();  // To invoke done() after delete this.
       delete this;
       done();
+      mtl::MessageLoop::GetCurrent()->QuitNow();
+    });
+  }
+
+  void DeleteAndQuitAndUnbind() {
+    Base::PassBinding()->Close();
+    modular::testing::Done([this] {
+      delete this;
       mtl::MessageLoop::GetCurrent()->QuitNow();
     });
   }

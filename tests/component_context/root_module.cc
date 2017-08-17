@@ -74,7 +74,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
  private:
   ParentApp()
-      : steps_(kTotalSimultaneousTests, [this] { DeleteAndQuit([] {}); }) {
+      : steps_(kTotalSimultaneousTests, [this] { module_context_->Done(); }) {
     TestInit(__FILE__);
   }
   ~ParentApp() override = default;
@@ -97,16 +97,13 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
                                        agent1_controller.NewRequest());
     ConnectToService(agent1_services.get(), agent1_interface_.NewRequest());
 
-    modular::testing::GetStore()->Get("test_agent1_connected",
-                                      [this](const fidl::String&) {
-                                        agent_connected_.Pass();
-                                        TestMessageQueue([this] {
-                                          TestAgentController(Protect([this] {
-                                            module_context_->Done();
-                                            steps_.Step();
-                                          }));
-                                        });
-                                      });
+    modular::testing::GetStore()->Get(
+        "test_agent1_connected", [this](const fidl::String&) {
+          agent1_connected_.Pass();
+          TestMessageQueue([this] {
+            TestAgentController(Protect([this] { steps_.Step(); }));
+          });
+        });
 
     TestUnstoppableAgent(Protect([this] { steps_.Step(); }));
 
@@ -150,7 +147,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
     modular::testing::GetStore()->Get("test_agent1_stopped",
                                       [this, done_cb](const fidl::String&) {
-                                        agent_stopped_.Pass();
+                                        agent1_stopped_.Pass();
                                         done_cb();
                                       });
   }
@@ -177,7 +174,7 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    steps_.Cancel();
+    DeleteAndQuit(done);
   }
 
   CounterTrigger steps_;
@@ -194,8 +191,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint stopped_{"Root module stopped"};
-  TestPoint agent_connected_{"Agent1 accepted connection"};
-  TestPoint agent_stopped_{"Agent1 stopped"};
+  TestPoint agent1_connected_{"Agent1 accepted connection"};
+  TestPoint agent1_stopped_{"Agent1 stopped"};
   TestPoint msg_queue_communicated_{
       "Communicated message between Agent1 using a MessageQueue"};
 };

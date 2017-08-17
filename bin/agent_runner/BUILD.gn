@@ -29,6 +29,7 @@ source_set("agent_runner") {
     "//apps/modular/services/agent/agent_controller",
     "//apps/modular/services/auth",
     "//apps/modular/services/component",
+    "//apps/modular/services/lifecycle",
     "//apps/modular/src/component",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

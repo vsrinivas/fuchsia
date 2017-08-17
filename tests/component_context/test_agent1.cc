@@ -41,10 +41,6 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
     app::ServiceProviderPtr agent_services;
     component_context_->ConnectToAgent(kTest2Agent, agent_services.NewRequest(),
                                        agent2_controller_.NewRequest());
-
-    // Killing the agent controller should stop it.
-    agent2_controller_.reset();
-
     callback();
   }
 
@@ -61,14 +57,21 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
+    FTL_CHECK(false) << "Shouldn't be here.";
+    callback();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     // Before reporting that we stop, we wait until agent2 has connected.
     modular::testing::GetStore()->Get(
-        "test_agent2_connected", [this, callback](const fidl::String&) {
+        "test_agent2_connected", [this](const fidl::String&) {
+          // Killing the agent controller should stop it.
+          agent2_controller_.reset();
           agent2_connected_.Pass();
-          modular::testing::GetStore()->Put("test_agent1_stopped", "", [] {});
-
-          TEST_PASS("Test agent1 exited");
-          DeleteAndQuit(callback);
+          modular::testing::GetStore()->Put("test_agent1_stopped", "", [this] {
+            DeleteAndQuitAndUnbind();
+          });
         });
   }
 

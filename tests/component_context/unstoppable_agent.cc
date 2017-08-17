@@ -43,8 +43,14 @@ class UnstoppableAgentApp : modular::testing::ComponentBase<modular::Agent> {
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
+    FTL_CHECK(false) << "Shouldn't be here.";
+    callback();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     stopped_.Pass();
-    Delete(callback);  // We don't post Quit here.
+    Delete([] {});  // We don't post Quit here.
   }
 
   modular::AgentContextPtr agent_context_;

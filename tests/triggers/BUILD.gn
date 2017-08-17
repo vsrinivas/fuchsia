@@ -41,6 +41,7 @@ executable("trigger_test_agent") {
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",
     "//apps/modular/services/agent",
+    "//apps/modular/services/lifecycle",
     "//lib/mtl",
   ]
 }

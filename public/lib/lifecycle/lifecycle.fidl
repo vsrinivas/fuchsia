@@ -10,8 +10,7 @@ interface Lifecycle {
   // The client of this application has requested that this application
   // terminate gracefully.
   //
-  // The application acknowledges that it is ready to terminate by closing this
-  // interface. If the application does not acknowledge this request in a timely
-  // manner, the client may forcibly terminate the application.
+  // If the application does not terminate itself in a timely manner, the client
+  // may forcibly terminate the application.
   Terminate();
 };

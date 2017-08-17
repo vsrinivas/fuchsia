@@ -9,6 +9,8 @@
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
+using modular::testing::TestPoint;
+
 namespace {
 
 class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
@@ -39,9 +41,17 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    TEST_PASS("Test agent2 exited");
-    DeleteAndQuit(callback);
+    FTL_CHECK(false) << "Shouldn't be here.";
+    callback();
   }
+
+  // |Lifecycle|
+  void Terminate() override {
+    terminate_called_.Pass();
+    DeleteAndQuitAndUnbind();
+  }
+
+  TestPoint terminate_called_{"Terminate() called."};
 };
 
 }  // namespace

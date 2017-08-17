@@ -71,13 +71,19 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
+    FTL_CHECK(false) << "Shouldn't be here.";
+    callback();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     // Stop processing messages, since we do async operations below and don't
     // want our receiver to fire.
     msg_receiver_.reset();
 
     modular::testing::GetStore()->Put(
         "queue_persistence_test_agent_stopped", "",
-        [this, callback] { DeleteAndQuit(callback); });
+        [this] { DeleteAndQuitAndUnbind(); });
   }
 
   // |QueuePersistenceAgentInterface|

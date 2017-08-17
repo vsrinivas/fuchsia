@@ -18,6 +18,7 @@
 #include "apps/modular/services/agent/agent_controller/agent_controller.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/modular/src/component/component_context_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -94,6 +95,7 @@ class AgentContextImpl : AgentContext, AgentController {
   app::ApplicationControllerPtr application_controller_;
   app::ServiceProviderPtr application_services_;
   AgentPtr agent_;
+  LifecyclePtr lifecycle_;
   fidl::Binding<AgentContext> agent_context_binding_;
   fidl::BindingSet<AgentController> agent_controller_bindings_;
 

@@ -43,8 +43,17 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
     agent_context_impl_->application_launcher_->CreateApplication(
         std::move(launch_info),
         agent_context_impl_->application_controller_.NewRequest());
+
+    ConnectToService(agent_context_impl_->application_services_.get(),
+                     agent_context_impl_->lifecycle_.NewRequest());
     ConnectToService(agent_context_impl_->application_services_.get(),
                      agent_context_impl_->agent_.NewRequest());
+
+    // We only want to use Lifecycle if it exists.
+    agent_context_impl_->lifecycle_.set_connection_error_handler(
+        [agent_context_impl = agent_context_impl_] {
+          agent_context_impl->lifecycle_.reset();
+        });
 
     // When the agent process dies, we remove it.
     // TODO(alhaad): In the future we would want to detect a crashing agent and
@@ -125,10 +134,17 @@ class AgentContextImpl::StopCall : Operation<bool> {
       agent_context_impl_->application_services_.reset();
       agent_context_impl_->agent_.reset();
       agent_context_impl_->agent_context_binding_.Close();
+      agent_context_impl_->lifecycle_.reset();
     };
 
-    // Whichever of the 3 signals triggers first:
-    agent_context_impl_->agent_->Stop(kill_agent);
+    // Whichever of these signals triggers first:
+    // TODO(vardhan): Once all agents convert to using |app.Lifecycle|, remove
+    // Agent.Stop().
+    if (!agent_context_impl_->lifecycle_) {
+      agent_context_impl_->agent_->Stop(kill_agent);
+    } else {
+      agent_context_impl_->lifecycle_->Terminate();
+    }
     agent_context_impl_->application_controller_.set_connection_error_handler(
         kill_agent);
     kill_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
