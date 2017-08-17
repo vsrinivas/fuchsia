@@ -8,6 +8,7 @@ import 'package:lib.widgets/model.dart';
 import '../modular/module_model.dart';
 import 'scan_filter_dialog.dart';
 
+/// Button that brings up the scan filter dialog
 class ScanFilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

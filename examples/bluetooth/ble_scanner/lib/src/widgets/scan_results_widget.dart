@@ -12,6 +12,7 @@ import 'package:lib.widgets/model.dart';
 import '../manufacturer_names.dart';
 import '../modular/module_model.dart';
 
+/// A scrollable view that displays BLE scan results
 class ScanResultsWidget extends StatefulWidget {
   @override
   ScanResultsState createState() => new ScanResultsState();
@@ -24,6 +25,7 @@ class _AdvertisingDataEntry {
   _AdvertisingDataEntry(this.fieldTitle, this.widgetBuilder);
 }
 
+/// State corresponding to ScanResultsWidget
 class ScanResultsState extends State<ScanResultsWidget> {
   final Map<String, bool> _expandedStateMap = <String, bool>{};
 

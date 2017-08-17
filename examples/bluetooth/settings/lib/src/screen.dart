@@ -58,7 +58,9 @@ class _SettingsScaffold extends StatelessWidget {
           title: new Text(
               'Bluetooth Settings (${moduleModel.activeAdapterDescription})'),
           bottom: moduleModel.isDiscovering
-              ? new PreferredSize(child: new LinearProgressIndicator())
+              ? new PreferredSize(
+                  child: new LinearProgressIndicator(),
+                  preferredSize: Size.zero)
               : null,
           actions: <Widget>[
             new IconButton(

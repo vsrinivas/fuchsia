@@ -18,5 +18,5 @@ flutter_app("ble_scanner") {
     "//lib/widgets/packages/widgets:lib.widgets",
   ]
 
-  analysis_options = "//apps/modules/common/.analysis_options"
+  analysis_options = "//apps/bluetooth/examples/.analysis_options"
 }
