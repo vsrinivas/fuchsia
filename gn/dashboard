@@ -2,13 +2,7 @@
     "languages": [
         "dart"
     ],
-    "labels": [
-        "//apps/modules/dashboard"
-    ],
-    "binaries": [
-        {
-            "binary": "gen/apps/modules/dashboard/dashboard.flx",
-            "bootfs_path": "apps/dashboard"
-        }
-    ]
+    "packages": {
+        "dashboard": "//apps/modules/dashboard"
+    }
 }
