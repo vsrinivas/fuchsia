@@ -4,6 +4,7 @@
         "asio",
         "auth",
         "bluetooth",
+        "bluetooth_examples",
         "boringssl",
         "cmdutils",
         "curl",
