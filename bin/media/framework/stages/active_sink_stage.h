@@ -8,6 +8,8 @@
 
 #include "apps/media/src/framework/models/active_sink.h"
 #include "apps/media/src/framework/stages/stage.h"
+#include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace media {
 
@@ -45,8 +47,9 @@ class ActiveSinkStage : public Stage {
  private:
   Input input_;
   std::shared_ptr<ActiveSink> sink_;
-  ActiveSink::DemandCallback demand_function_;
-  Demand sink_demand_ = Demand::kNegative;
+
+  mutable ftl::Mutex mutex_;
+  Demand sink_demand_ FTL_GUARDED_BY(mutex_) = Demand::kNegative;
 };
 
 }  // namespace media

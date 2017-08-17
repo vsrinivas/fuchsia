@@ -11,14 +11,23 @@ ActiveSinkStage::ActiveSinkStage(Engine* engine,
     : Stage(engine), input_(this, 0), sink_(sink) {
   FTL_DCHECK(sink_);
 
-  demand_function_ = [this](Demand demand) {
-    if (sink_demand_ != demand) {
-      sink_demand_ = demand;
+  sink_->SetDemandCallback([this](Demand demand) {
+    bool needs_update = false;
+
+    {
+      ftl::MutexLocker locker(&mutex_);
+      if (sink_demand_ != demand) {
+        sink_demand_ = demand;
+        needs_update = true;
+      }
+    }
+
+    if (needs_update) {
+      // This can't be called with the mutex taken, because |Update| can be
+      // called from |NeedsUpdate|.
       NeedsUpdate();
     }
-  };
-
-  sink_->SetDemandCallback(demand_function_);
+  });
 }
 
 ActiveSinkStage::~ActiveSinkStage() {}
@@ -55,12 +64,22 @@ void ActiveSinkStage::PrepareOutput(size_t index,
 void ActiveSinkStage::Update() {
   FTL_DCHECK(sink_);
 
-  if (input_.packet()) {
-    sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
+  Demand demand;
+  bool supplied_packet = false;
+
+  {
+    ftl::MutexLocker locker(&mutex_);
+
+    if (input_.packet()) {
+      sink_demand_ = sink_->SupplyPacket(input_.TakePacket(Demand::kNegative));
+      supplied_packet = true;
+    }
+
+    demand = sink_demand_;
   }
 
-  if (sink_demand_ != Demand::kNegative) {
-    input_.SetDemand(sink_demand_);
+  if (demand != Demand::kNegative) {
+    input_.SetDemand(demand);
   }
 }
 
@@ -71,6 +90,7 @@ void ActiveSinkStage::FlushInput(size_t index,
   FTL_DCHECK(sink_);
   input_.Flush();
   sink_->Flush(hold_frame);
+  ftl::MutexLocker locker(&mutex_);
   sink_demand_ = Demand::kNegative;
 }
 
