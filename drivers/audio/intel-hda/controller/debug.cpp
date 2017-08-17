@@ -21,8 +21,10 @@ fbl::Mutex snapshot_regs_buffer_lock;
 ihda_controller_snapshot_regs_resp_t snapshot_regs_buffer TA_GUARDED(snapshot_regs_buffer_lock);
 }  // anon namespace
 
-zx_status_t IntelHDAController::SnapshotRegs(const DispatcherChannel& channel,
+zx_status_t IntelHDAController::SnapshotRegs(dispatcher::Channel* channel,
                                              const ihda_controller_snapshot_regs_req_t& req) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+
     // TODO(johngro) : What an enormous PITA.  Every register needs to be
     // accessed with the proper sized transaction on the PCI bus, so we cannot
     // just use memcpy to do this.  Life will be better when we have VMOs in
@@ -95,7 +97,7 @@ zx_status_t IntelHDAController::SnapshotRegs(const DispatcherChannel& channel,
         sout.bdpu      = REG_RD(&sin.bdpu);
     }
 
-    return channel.Write(&snapshot_regs_buffer, sizeof(snapshot_regs_buffer));
+    return channel->Write(&snapshot_regs_buffer, sizeof(snapshot_regs_buffer));
 }
 
 }  // namespace intel_hda

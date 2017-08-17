@@ -458,8 +458,11 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
 }
 
 zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
-    zx_status_t res;
+    default_domain_ = dispatcher::ExecutionDomain::Create();
+    if (default_domain_ == nullptr)
+        return ZX_ERR_NO_MEMORY;
 
+    zx_status_t res;
     res = SetupPCIDevice(pci_dev);
     if (res != ZX_OK)
         return res;

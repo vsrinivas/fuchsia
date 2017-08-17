@@ -20,20 +20,14 @@
 namespace audio {
 namespace intel_hda {
 
+class IntelHDACodec;
+
 class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
                        public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>> {
 public:
     using RefPtr = fbl::RefPtr<IntelHDAStream>;
     using Tree   = fbl::WAVLTree<uint16_t, RefPtr>;
     enum class Type { INVALID, INPUT, OUTPUT, BIDIR };
-
-    union RequestBufferType {
-        audio_proto::CmdHdr                 hdr;
-        audio_proto::RingBufGetFifoDepthReq get_fifo_depth;
-        audio_proto::RingBufGetBufferReq    get_buffer;
-        audio_proto::RingBufStartReq        start;
-        audio_proto::RingBufStopReq         stop;
-    };
 
     // Hardware allows buffer descriptor lists (BDLs) to be up to 256
     // entries long.  With 30 maximum stream contexts, and 16 bytes per
@@ -59,16 +53,10 @@ public:
     uint16_t id()              const { return id_; }
     uint16_t GetKey()          const { return id(); }
 
-    zx_status_t SetStreamFormat(uint16_t encoded_fmt,
-                                const fbl::RefPtr<DispatcherChannel>& channel)
-        TA_EXCL(channel_lock_);
+    zx_status_t SetStreamFormat(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
+                                uint16_t encoded_fmt,
+                                zx::channel* client_endpoint_out) TA_EXCL(channel_lock_);
     void Deactivate() TA_EXCL(channel_lock_);
-    void OnChannelClosed(const DispatcherChannel& channel) TA_EXCL(channel_lock_);
-
-    zx_status_t ProcessClientRequest(DispatcherChannel* channel,
-                                     const RequestBufferType& req,
-                                     uint32_t req_size,
-                                     zx::handle&& rxed_handle) TA_EXCL(channel_lock_);
 
     void ProcessStreamIRQ() TA_EXCL(notif_lock_);
 
@@ -89,6 +77,8 @@ private:
     void EnsureStoppedLocked() TA_REQ(channel_lock_) { EnsureStopped(regs_); }
 
     // Client request handlers
+    zx_status_t ProcessClientRequest(dispatcher::Channel* channel) TA_EXCL(channel_lock_);
+    void ProcessClientDeactivate(const dispatcher::Channel* channel) TA_EXCL(channel_lock_);
     zx_status_t ProcessGetFifoDepthLocked(const audio_proto::RingBufGetFifoDepthReq& req)
         TA_REQ(channel_lock_);
     zx_status_t ProcessGetBufferLocked(const audio_proto::RingBufGetBufferReq& req)
@@ -131,7 +121,7 @@ private:
     // The channel used by the application to talk to us once our format has
     // been set by the codec.
     fbl::Mutex channel_lock_;
-    fbl::RefPtr<DispatcherChannel> channel_ TA_GUARDED(channel_lock_);
+    fbl::RefPtr<dispatcher::Channel> channel_ TA_GUARDED(channel_lock_);
     zx::vmo ring_buffer_vmo_ TA_GUARDED(channel_lock_);
 
     // Paramters determined after stream format configuration.
@@ -148,7 +138,7 @@ private:
 
     // State used by the IRQ thread to deliver position update notifications.
     fbl::Mutex notif_lock_ TA_ACQ_AFTER(channel_lock_);
-    fbl::RefPtr<DispatcherChannel> irq_channel_ TA_GUARDED(notif_lock_);
+    fbl::RefPtr<dispatcher::Channel> irq_channel_ TA_GUARDED(notif_lock_);
 };
 
 }  // namespace intel_hda

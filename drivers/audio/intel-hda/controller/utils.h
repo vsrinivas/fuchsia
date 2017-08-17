@@ -6,8 +6,12 @@
 
 #include <ddk/device.h>
 #include <zircon/types.h>
+#include <zx/channel.h>
 #include <zx/vmo.h>
 #include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
+
+#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 
 namespace audio {
 namespace intel_hda {
@@ -140,6 +144,32 @@ struct StreamFormat {
 
     uint16_t raw_data_ = 0;
 };
+
+// Boilerplate code to handle an IOCTL request to create a channel from an
+// application.  Assuming that the request passes all of the sanity checks,
+// attempts to create a channel and bind it to this owner using the supplied
+// dispatching behavior, then send the other end of the channel back to the
+// application.
+zx_status_t HandleDeviceIoctl(uint32_t op,
+                              void* out_buf,
+                              size_t out_len,
+                              size_t* out_actual,
+                              const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
+                              dispatcher::Channel::ProcessHandler phandler,
+                              dispatcher::Channel::ChannelClosedHandler chandler);
+
+
+// Attempts to create and activate a channel using the supplied dispatcher
+// bindings and binding it to this ExeuctionDomain in the process.  Callers must
+// take ownership of the remote channel endpoint, but may choose to ignore the
+// local channel endpoint by passing nullptr for local_endpoint_out.  Upon
+// success, a reference to the created dispatcher::Channel will be held by the
+// channel's ExeuctionDomain (as a result of the activation operation)
+zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
+                                     dispatcher::Channel::ProcessHandler phandler,
+                                     dispatcher::Channel::ChannelClosedHandler chandler,
+                                     fbl::RefPtr<dispatcher::Channel>* local_endpoint_out,
+                                     zx::channel* remote_endpoint_out);
 
 }  // namespace intel_hda
 }  // namespace audio

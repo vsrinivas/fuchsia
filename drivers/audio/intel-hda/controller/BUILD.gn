@@ -18,8 +18,6 @@ driver_module("ihda-controller") {
         "intel-hda-controller-init.cpp",
         "intel-hda-controller.cpp",
         "intel-hda-controller.h",
-        "intel-hda-device.cpp",
-        "intel-hda-device.h",
         "intel-hda-stream.cpp",
         "intel-hda-stream.h",
         "irq-thread.cpp",
