@@ -162,8 +162,17 @@ fi
 # by default use the qemu binary located in the fuchsia buildtools
 # repo if we can find it, but allow -q to override it for people
 # who want to use their own.
-if [[ -z $QEMUDIR && -d "$DIR/../../buildtools/qemu/bin" ]]; then
-    QEMUDIR="$DIR/../../buildtools/qemu/bin/"
+case "$(uname -s)" in
+  Darwin)
+    readonly HOST_PLATFORM="mac-x64"
+    ;;
+  Linux)
+    readonly HOST_PLATFORM="linux-x64"
+    ;;
+esac
+
+if [[ -z $QEMUDIR && -d "$DIR/../../buildtools/${HOST_PLATFORM}/qemu/bin" ]]; then
+    QEMUDIR="$DIR/../../buildtools/${HOST_PLATFORM}/qemu/bin/"
 fi
 
 if [[ -z $BUILDDIR ]]; then
