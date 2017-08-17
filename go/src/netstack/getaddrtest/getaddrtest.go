@@ -32,10 +32,10 @@ func (a *NetstackClientApp) Start(name string) {
 		log.Println(err)
 	} else {
 		for _, addr := range resp {
-			if addr.Ipv4 != nil {
-				fmt.Printf("ipv4=%v\n", addr.Ipv4)
+			if addr.Addr.Ipv4 != nil {
+				fmt.Printf("ipv4=%v\n", addr.Addr.Ipv4)
 			} else {
-				fmt.Printf("ipv6=%v\n", addr.Ipv6)
+				fmt.Printf("ipv6=%v\n", addr.Addr.Ipv6)
 			}
 
 		}

@@ -26,24 +26,19 @@ import (
 
 type NetstackImpl struct{}
 
-func toNetAddress(addr tcpip.Address, port uint16) nsaddr.NetAddress {
+func toNetAddress(addr tcpip.Address) nsaddr.NetAddress {
+	out := nsaddr.NetAddress{Family: nsaddr.NetAddressFamily_Unspecified}
 	switch len(addr) {
 	case 4:
-		out := nsaddr.NetAddress{
-			Family: nsaddr.NetAddressFamily_Ipv4,
-			Ipv4:   &nsaddr.NetAddressIPv4{Port: port},
-		}
-		copy(out.Ipv4.Addr[:], addr[:])
-		return out
+		out.Family = nsaddr.NetAddressFamily_Ipv4
+		out.Ipv4 = &[4]uint8{}
+		copy(out.Ipv4[:], addr[:])
 	case 16:
-		out := nsaddr.NetAddress{
-			Family: nsaddr.NetAddressFamily_Ipv6,
-			Ipv6:   &nsaddr.NetAddressIPv6{Port: port},
-		}
-		copy(out.Ipv6.Addr[:], addr[:])
-		return out
+		out.Family = nsaddr.NetAddressFamily_Ipv6
+		out.Ipv6 = &[16]uint8{}
+		copy(out.Ipv6[:], addr[:])
 	}
-	return nsaddr.NetAddress{Family: nsaddr.NetAddressFamily_Unspecified}
+	return out
 }
 
 func (ni *NetstackImpl) GetPortForService(service string, protocol nsfidl.Protocol) (port uint16, err error) {
@@ -61,24 +56,17 @@ func (ni *NetstackImpl) GetPortForService(service string, protocol nsfidl.Protoc
 	return port, err
 }
 
-func (ni *NetstackImpl) GetAddress(name string, port uint16) (out []nsaddr.NetAddress, err error) {
+func (ni *NetstackImpl) GetAddress(name string, port uint16) (out []nsaddr.SocketAddress, err error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
 	// mxio's getaddrinfo into here.
 	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
 	if err == nil {
-		out = make([]nsaddr.NetAddress, len(addrs))
+		out = make([]nsaddr.SocketAddress, len(addrs))
 		for i, addr := range addrs {
 			switch len(addr) {
-			case 0:
-				// skip
-			case 4:
-				out[i].Family = nsaddr.NetAddressFamily_Ipv4
-				out[i].Ipv4 = &nsaddr.NetAddressIPv4{Port: port}
-				copy(out[i].Ipv4.Addr[:], addr[:])
-			case 16:
-				out[i].Family = nsaddr.NetAddressFamily_Ipv6
-				out[i].Ipv6 = &nsaddr.NetAddressIPv6{Port: port}
-				copy(out[i].Ipv6.Addr[:], addr[:])
+			case 4, 16:
+				out[i].Addr = toNetAddress(addr)
+				out[i].Port = port
 			}
 		}
 	}
@@ -106,9 +94,9 @@ func (ni *NetstackImpl) GetInterfaces() (out []nsfidl.NetInterface, err error) {
 			Id:        uint32(nicid),
 			Flags:     nsfidl.NetInterfaceFlagUp,
 			Name:      fmt.Sprintf("en%d", nicid),
-			Addr:      toNetAddress(netif.addr, 0),
-			Netmask:   toNetAddress(tcpip.Address(netif.netmask), 0),
-			Broadaddr: toNetAddress(tcpip.Address(broadaddr), 0),
+			Addr:      toNetAddress(netif.addr),
+			Netmask:   toNetAddress(tcpip.Address(netif.netmask)),
+			Broadaddr: toNetAddress(tcpip.Address(broadaddr)),
 		}
 
 		out = append(out, outif)

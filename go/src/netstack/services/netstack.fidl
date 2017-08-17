@@ -37,7 +37,7 @@ interface Netstack {
   // Finds the IP address for a given host name and port. This may issue network
   // requests via DNS to look up domain names. E.g.
   // GetAddress("example.com", 80) => [{142.42.42.1}]
-  GetAddress(string address, uint16 port) => (array<NetAddress> addresses);
+  GetAddress(string address, uint16 port) => (array<SocketAddress> addresses);
 
   // Returns the list of registered network interfaces.
   GetInterfaces() => (array<NetInterface> interfaces);
