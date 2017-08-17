@@ -27,10 +27,6 @@ if (target_os == "fuchsia") {
   assert(false, "Target OS not supported")
 }
 
-# References should use "label($shlib_toolchain)" rather than
-# "label(${target_toolchain}-shared)" or anything else.
-shlib_toolchain = "${target_toolchain}-shared"
-
 if (host_os == "linux" || host_os == "mac") {
   host_toolchain = "//build/toolchain:host_${host_cpu}"
 } else {
@@ -43,10 +39,25 @@ set_default_toolchain(target_toolchain)
 sources_assignment_filter = []
 
 declare_args() {
+  # This should never be set as a build argument.  It exists only to be
+  # set in toolchain_args when defining a toolchain.  These configs
+  # will be appended to the default list common to all target types.
+  toolchain_configs = []
+
   # This should never be set as a build argument.
   # It exists only to be set in toolchain_args.
   # See //build/toolchain/clang_toolchain.gni for details.
   is_pic_default = false
+
+  # This should never be set as a build argument.
+  # It exists only to be set in toolchain_args.
+  # See //build/toolchain/clang_toolchain.gni for details.
+  toolchain_variant = []
+
+  # This should never be set as a build argument.
+  # It exists only to be set in toolchain_args.
+  # See //build/toolchain/clang_toolchain.gni for details.
+  current_base_toolchain = target_toolchain
 
   # Use link time optimization (LTO).
   use_lto = false
@@ -54,6 +65,10 @@ declare_args() {
   # magenta build project
   magenta_project = ""
 }
+
+# References should use "label($shlib_toolchain)" rather than
+# "label(${target_toolchain}-shared)" or anything else.
+shlib_toolchain = "${current_base_toolchain}-shared"
 
 if (magenta_project == "") {
   if (current_cpu == "arm64") {
@@ -115,6 +130,9 @@ if (use_lto) {
   default_common_binary_configs += [ "//build/config/lto" ]
 }
 
+# Add configs set by the toolchain definition.
+default_common_binary_configs += toolchain_configs + toolchain_variant
+
 default_shared_library_configs = default_common_binary_configs + [
                                    "//build/config:shared_library_config",
                                    "//build/config:symbol_no_undefined",
@@ -148,13 +166,13 @@ set_defaults("executable") {
 if (is_fuchsia) {
   if (!is_pic_default) {
     # In the main toolchain, shared_library just redirects to the same
-    # target in $shlib_toolchain.
+    # target in the -shared toolchain.
     template("shared_library") {
       group(target_name) {
         # Mark all variables as not needed to suppress errors for unused
         # variables.  The other variables normally passed to shared_library
-        # are actually used by the shared_library instantiation in
-        # $shlib_toolchain, so any going truly unused will be caught there.
+        # are actually used by the shared_library instantiation in the
+        # -shared toolchain, so any going truly unused will be caught there.
         not_needed(invoker, "*")
         forward_variables_from(invoker,
                                [
@@ -170,13 +188,13 @@ if (is_fuchsia) {
         if (!defined(public_deps)) {
           public_deps = []
         }
-        public_deps += [ ":$target_name($shlib_toolchain)" ]
+        public_deps += [ ":$target_name(${current_toolchain}-shared)" ]
       }
     }
   } else {
-    # In $shlib_toolchain, shared_library is just its normal self,
-    # but if the invoker constrained the visibility, we must make
-    # sure the dependency from the main toolchain is still allowed
+    # In the -shared toolchain, shared_library is just its normal self,
+    # but if the invoker constrained the visibility, we must make sure
+    # the dependency from the main toolchain is still allowed.
     template("shared_library") {
       shared_library(target_name) {
         forward_variables_from(invoker, "*")

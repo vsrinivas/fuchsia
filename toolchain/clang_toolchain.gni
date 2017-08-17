@@ -300,8 +300,16 @@ template("clang_toolchain") {
 #
 # Parameters
 #
+#   variants:
+#     Optional: Pre-set with the default list of supported variants from
+#     the `known_variants` and `extra_variants` build arguments, which see.
+#     The invoker scope can add remove to the list or remove variants from
+#     the list to control the set of variants available for this suite of
+#     toolchains.  Each variant (element of this list) is a list of configs.
+#
 #   with_shared:
 #     Optional: If this toolchain will have a "-shared" companion.
+#     (Each variant toolchain has its own "-shared" companion.)
 #     Pre-set to true.  Set this to false if either no shared libraries
 #     are used in this toolchain, or it's used to build nothing but
 #     shared libraries anyway.
@@ -309,25 +317,77 @@ template("clang_toolchain") {
 # See clang_toolchain for others.  Most parameters are just forwarded there.
 #
 template("clang_toolchain_suite") {
-  clang_toolchain(target_name) {
-    forward_variables_from(invoker, "*", ["with_shared"])
+  # Exclude the arguments that are for us or are verboten.
+  invoker_clang_toolchain_args = {
+    forward_variables_from(invoker, "*",
+                           [
+                             "toolchain_args",
+                             "toolchain_variant",
+                             "with_shared",
+                             "variants",
+                          ])
   }
 
-  if (invoker.with_shared) {
-    assert(!invoker.is_pic_default,
-           "If setting is_pic_default, use with_shared=false")
-    clang_toolchain("${target_name}-shared") {
-      forward_variables_from(invoker, "*", ["with_shared", "toolchain_args"])
-      toolchain_args = {
-        is_pic_default = true
-        if (defined(invoker.toolchain_args)) {
-          forward_variables_from(invoker.toolchain_args, "*")
+  foreach(variant, [[]] + invoker.variants) {
+    # Each variant toolchain's name is formed by taking the base toolchain
+    # name and successively appending "-$name" for each config listed in
+    # the variant, where name is `get_label_name(config, "name")`.
+    suffix = ""
+    foreach(subvariant, variant) {
+      suffix += "-" + get_label_info(subvariant, "name")
+    }
+
+    toolchain_args_for_clang = {}
+    toolchain_args_for_clang = {
+      toolchain_variant = variant
+      current_base_toolchain = get_label_info(":$target_name",
+                                              "label_no_toolchain")
+      if (defined(invoker.toolchain_args)) {
+        forward_variables_from(invoker.toolchain_args, "*")
+      }
+    }
+
+    clang_toolchain("${target_name}${suffix}") {
+      forward_variables_from(invoker_clang_toolchain_args, "*")
+      toolchain_args = toolchain_args_for_clang
+    }
+
+    if (invoker.with_shared) {
+      assert(!invoker.is_pic_default,
+             "If setting is_pic_default, use with_shared=false")
+      clang_toolchain("${target_name}${suffix}-shared") {
+        forward_variables_from(invoker_clang_toolchain_args, "*")
+        toolchain_args = {
+          is_pic_default = true
+          forward_variables_from(toolchain_args_for_clang, "*")
         }
       }
     }
   }
 }
 
+declare_args() {
+  # List of variants that will form the basis for variant toolchains.
+  # Each element of the list is one variant, which itself is a list of
+  # of configs (labels).  The simple names (not the full label, just
+  # the part after all /s and :s) of these configs will be used in
+  # toolchain names (each prefixed by a "-"), so the list of config
+  # names forming each variant must be unique among the lists in
+  # `known_variants + extra_variants` and it's a good idea to make it
+  # something concise and meaningful when seen as e.g. part of a
+  # directory name under `$root_build_dir`.
+  #
+  # Normally this is not set as a build argument, but it serves to document
+  # the available set of variants.  Only set this to remove all the default
+  # variants here.  To add more, set `extra_variants` instead.
+  known_variants = []
+
+  # Additional variant toolchain configs to support.
+  # This is just added to known_variants, which see.
+  extra_variants = []
+}
+
 set_defaults("clang_toolchain_suite") {
+  variants = known_variants + extra_variants
   with_shared = true
 }
