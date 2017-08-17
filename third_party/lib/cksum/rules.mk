@@ -10,7 +10,6 @@ MODULE_SRCS := \
     $(SRC_DIR)/adler32.c \
     $(SRC_DIR)/crc16.c \
     $(SRC_DIR)/crc32.c \
-    $(SRC_DIR)/debug.c
 
 MODULE_CFLAGS := -Wno-strict-prototypes
 

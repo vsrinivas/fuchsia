@@ -1,6 +1,9 @@
 #ifndef __CKSUM_H
 #define __CKSUM_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 #include <magenta/compiler.h>
 
 __BEGIN_CDECLS
@@ -10,7 +13,7 @@ __BEGIN_CDECLS
  * buf: the data on which to apply the checksum
  * length: the number of bytes of data in 'buf' to be calculated.
  */
-unsigned short crc16(const unsigned char *buf, unsigned int length);
+uint16_t crc16(const uint8_t *buf, size_t length);
 
 /*
  * Computes an updated version of the CRC-CCITT from existing CRC.
@@ -18,11 +21,17 @@ unsigned short crc16(const unsigned char *buf, unsigned int length);
  * buf: the data on which to apply the checksum
  * length: the number of bytes of data in 'buf' to be calculated.
  */
-unsigned short update_crc16(unsigned short crc, const unsigned char *buf, unsigned int len);
+uint16_t update_crc16(uint16_t crc, const uint8_t *buf, size_t len);
 
-unsigned long crc32(unsigned long crc, const unsigned char *buf, unsigned int len);
+uint32_t crc32(uint32_t crc, const uint8_t *buf, size_t len);
 
-unsigned long adler32(unsigned long adler, const unsigned char *buf, unsigned int len);
+uint32_t crc32_combine(uint32_t crc1, uint32_t crc2, size_t len2);
+
+uint32_t adler32(uint32_t adler, const uint8_t *buf, size_t len);
+
+uint32_t adler32_combine(uint32_t adler1, uint32_t adler2, size_t len2);
+
+const uint32_t* get_crc_table(void);
 
 __END_CDECLS
 
