@@ -94,9 +94,6 @@ fbuild
 
 This builds Magenta, the sysroot, and the default Fuchsia build.
 
-After Fuchsia is built, you will have a Magenta (`magenta.bin`) image and a
-`user.bootfs` file in `out/debug-{arch}/`.
-
 ## Boot Fuchsia
 
 ### Boot from hardware
