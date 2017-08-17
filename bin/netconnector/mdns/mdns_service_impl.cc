@@ -56,8 +56,8 @@ void MdnsServiceImpl::ResolveHostName(const fidl::String& host_name,
       [this, callback](const std::string& host_name,
                        const IpAddress& v4_address,
                        const IpAddress& v6_address) {
-        callback(MdnsFidlUtil::CreateNetAddressIPv4(v4_address),
-                 MdnsFidlUtil::CreateNetAddressIPv6(v6_address));
+        callback(MdnsFidlUtil::CreateSocketAddressIPv4(v4_address),
+                 MdnsFidlUtil::CreateSocketAddressIPv6(v6_address));
       });
 }
 

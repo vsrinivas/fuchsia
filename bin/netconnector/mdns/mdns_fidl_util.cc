@@ -26,11 +26,11 @@ MdnsServiceInstancePtr MdnsFidlUtil::CreateServiceInstance(
   service_instance->text = fidl::Array<fidl::String>::From(text);
 
   if (v4_address.is_valid()) {
-    service_instance->v4_address = CreateNetAddressIPv4(v4_address);
+    service_instance->v4_address = CreateSocketAddressIPv4(v4_address);
   }
 
   if (v6_address.is_valid()) {
-    service_instance->v6_address = CreateNetAddressIPv6(v6_address);
+    service_instance->v6_address = CreateSocketAddressIPv6(v6_address);
   }
 
   return service_instance;
@@ -46,8 +46,8 @@ bool MdnsFidlUtil::UpdateServiceInstance(
 
   if (v4_address.is_valid()) {
     if (!service_instance->v4_address) {
-      service_instance->v4_address = CreateNetAddressIPv4(v4_address);
-    } else if (UpdateNetAddressIPv4(service_instance->v4_address, v4_address)) {
+      service_instance->v4_address = CreateSocketAddressIPv4(v4_address);
+    } else if (UpdateSocketAddressIPv4(service_instance->v4_address, v4_address)) {
       changed = true;
     }
   } else if (service_instance->v4_address) {
@@ -57,8 +57,8 @@ bool MdnsFidlUtil::UpdateServiceInstance(
 
   if (v6_address.is_valid()) {
     if (!service_instance->v6_address) {
-      service_instance->v6_address = CreateNetAddressIPv6(v6_address);
-    } else if (UpdateNetAddressIPv6(service_instance->v6_address, v6_address)) {
+      service_instance->v6_address = CreateSocketAddressIPv6(v6_address);
+    } else if (UpdateSocketAddressIPv6(service_instance->v6_address, v6_address)) {
       changed = true;
     }
   } else if (service_instance->v6_address) {
@@ -82,7 +82,7 @@ bool MdnsFidlUtil::UpdateServiceInstance(
 }
 
 // static
-netstack::NetAddressIPv4Ptr MdnsFidlUtil::CreateNetAddressIPv4(
+netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
     const IpAddress& ip_address) {
   if (!ip_address) {
     return nullptr;
@@ -90,18 +90,19 @@ netstack::NetAddressIPv4Ptr MdnsFidlUtil::CreateNetAddressIPv4(
 
   FTL_DCHECK(ip_address.is_v4());
 
-  netstack::NetAddressIPv4Ptr result = netstack::NetAddressIPv4::New();
-  result->addr = fidl::Array<uint8_t>::New(4);
+  netstack::SocketAddressPtr result = netstack::SocketAddress::New();
+  result->addr = netstack::NetAddress::New();
+  result->addr->ipv4 = fidl::Array<uint8_t>::New(4);
   result->port = 0;
 
-  FTL_DCHECK(result->addr.size() == ip_address.byte_count());
-  std::memcpy(result->addr.data(), ip_address.as_bytes(), result->addr.size());
+  FTL_DCHECK(result->addr->ipv4.size() == ip_address.byte_count());
+  std::memcpy(result->addr->ipv4.data(), ip_address.as_bytes(), result->addr->ipv4.size());
 
   return result;
 }
 
 // static
-netstack::NetAddressIPv6Ptr MdnsFidlUtil::CreateNetAddressIPv6(
+netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
     const IpAddress& ip_address) {
   if (!ip_address) {
     return nullptr;
@@ -109,18 +110,19 @@ netstack::NetAddressIPv6Ptr MdnsFidlUtil::CreateNetAddressIPv6(
 
   FTL_DCHECK(ip_address.is_v6());
 
-  netstack::NetAddressIPv6Ptr result = netstack::NetAddressIPv6::New();
-  result->addr = fidl::Array<uint8_t>::New(16);
+  netstack::SocketAddressPtr result = netstack::SocketAddress::New();
+  result->addr = netstack::NetAddress::New();
+  result->addr->ipv6 = fidl::Array<uint8_t>::New(16);
   result->port = 0;
 
-  FTL_DCHECK(result->addr.size() == ip_address.byte_count());
-  std::memcpy(result->addr.data(), ip_address.as_bytes(), result->addr.size());
+  FTL_DCHECK(result->addr->ipv6.size() == ip_address.byte_count());
+  std::memcpy(result->addr->ipv6.data(), ip_address.as_bytes(), result->addr->ipv6.size());
 
   return result;
 }
 
 // static
-netstack::NetAddressIPv4Ptr MdnsFidlUtil::CreateNetAddressIPv4(
+netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv4(
     const SocketAddress& socket_address) {
   if (!socket_address) {
     return nullptr;
@@ -128,8 +130,8 @@ netstack::NetAddressIPv4Ptr MdnsFidlUtil::CreateNetAddressIPv4(
 
   FTL_DCHECK(socket_address.is_v4());
 
-  netstack::NetAddressIPv4Ptr result =
-      CreateNetAddressIPv4(socket_address.address());
+  netstack::SocketAddressPtr result =
+      CreateSocketAddressIPv4(socket_address.address());
 
   result->port = socket_address.port().as_uint16_t();
 
@@ -137,7 +139,7 @@ netstack::NetAddressIPv4Ptr MdnsFidlUtil::CreateNetAddressIPv4(
 }
 
 // static
-netstack::NetAddressIPv6Ptr MdnsFidlUtil::CreateNetAddressIPv6(
+netstack::SocketAddressPtr MdnsFidlUtil::CreateSocketAddressIPv6(
     const SocketAddress& socket_address) {
   if (!socket_address) {
     return nullptr;
@@ -145,8 +147,8 @@ netstack::NetAddressIPv6Ptr MdnsFidlUtil::CreateNetAddressIPv6(
 
   FTL_DCHECK(socket_address.is_v6());
 
-  netstack::NetAddressIPv6Ptr result =
-      CreateNetAddressIPv6(socket_address.address());
+  netstack::SocketAddressPtr result =
+      CreateSocketAddressIPv6(socket_address.address());
 
   result->port = socket_address.port().as_uint16_t();
 
@@ -154,8 +156,8 @@ netstack::NetAddressIPv6Ptr MdnsFidlUtil::CreateNetAddressIPv6(
 }
 
 // static
-bool MdnsFidlUtil::UpdateNetAddressIPv4(
-    const netstack::NetAddressIPv4Ptr& net_address,
+bool MdnsFidlUtil::UpdateSocketAddressIPv4(
+    const netstack::SocketAddressPtr& net_address,
     const SocketAddress& socket_address) {
   FTL_DCHECK(net_address);
   FTL_DCHECK(socket_address.is_v4());
@@ -167,11 +169,11 @@ bool MdnsFidlUtil::UpdateNetAddressIPv4(
     changed = true;
   }
 
-  FTL_DCHECK(net_address->addr.size() == socket_address.address().byte_count());
-  if (std::memcmp(net_address->addr.data(), socket_address.address().as_bytes(),
-                  net_address->addr.size()) != 0) {
-    std::memcpy(net_address->addr.data(), socket_address.address().as_bytes(),
-                net_address->addr.size());
+  FTL_DCHECK(net_address->addr->ipv4.size() == socket_address.address().byte_count());
+  if (std::memcmp(net_address->addr->ipv4.data(), socket_address.address().as_bytes(),
+                  net_address->addr->ipv4.size()) != 0) {
+    std::memcpy(net_address->addr->ipv4.data(), socket_address.address().as_bytes(),
+                net_address->addr->ipv4.size());
     changed = true;
   }
 
@@ -179,8 +181,8 @@ bool MdnsFidlUtil::UpdateNetAddressIPv4(
 }
 
 // static
-bool MdnsFidlUtil::UpdateNetAddressIPv6(
-    const netstack::NetAddressIPv6Ptr& net_address,
+bool MdnsFidlUtil::UpdateSocketAddressIPv6(
+    const netstack::SocketAddressPtr& net_address,
     const SocketAddress& socket_address) {
   FTL_DCHECK(net_address);
   FTL_DCHECK(socket_address.is_v4());
@@ -192,11 +194,11 @@ bool MdnsFidlUtil::UpdateNetAddressIPv6(
     changed = true;
   }
 
-  FTL_DCHECK(net_address->addr.size() == socket_address.address().byte_count());
-  if (std::memcmp(net_address->addr.data(), socket_address.address().as_bytes(),
-                  net_address->addr.size()) != 0) {
-    std::memcpy(net_address->addr.data(), socket_address.address().as_bytes(),
-                net_address->addr.size());
+  FTL_DCHECK(net_address->addr->ipv6.size() == socket_address.address().byte_count());
+  if (std::memcmp(net_address->addr->ipv6.data(), socket_address.address().as_bytes(),
+                  net_address->addr->ipv6.size()) != 0) {
+    std::memcpy(net_address->addr->ipv6.data(), socket_address.address().as_bytes(),
+                net_address->addr->ipv6.size());
     changed = true;
   }
 

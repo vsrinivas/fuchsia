@@ -124,11 +124,11 @@ IpAddress::IpAddress(const netstack::NetAddress* addr) {
   switch (addr->family) {
     case netstack::NetAddressFamily::IPV4:
       family_ = AF_INET;
-      memcpy(&v4_, &addr->ipv4->addr[0], 4);
+      memcpy(&v4_, &addr->ipv4[0], 4);
       break;
     case netstack::NetAddressFamily::IPV6:
       family_ = AF_INET6;
-      memcpy(&v6_, &addr->ipv6->addr[0], 16);
+      memcpy(&v6_, &addr->ipv6[0], 16);
       break;
     default:
       FTL_DCHECK(false);

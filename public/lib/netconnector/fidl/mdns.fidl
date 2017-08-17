@@ -11,7 +11,7 @@ import "apps/netstack/services/net_address.fidl";
 interface MdnsService {
   // Gets the addresses for the specified host name.
   ResolveHostName(string host_name, uint32 timeout_ms) =>
-    (netstack.NetAddressIPv4? v4_address, netstack.NetAddressIPv6? v6_address);
+    (netstack.SocketAddress? v4_address, netstack.SocketAddress? v6_address);
 
   // Subscribes to a service. The subscription lasts until |subscription| is
   // unbound.
@@ -49,7 +49,7 @@ interface MdnsServiceSubscription {
 struct MdnsServiceInstance {
   string service_name;
   string instance_name;
-  netstack.NetAddressIPv4? v4_address;
-  netstack.NetAddressIPv6? v6_address;
+  netstack.SocketAddress? v4_address;
+  netstack.SocketAddress? v6_address;
   array<string>? text;
 };

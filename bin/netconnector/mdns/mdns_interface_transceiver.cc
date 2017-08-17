@@ -30,7 +30,7 @@ std::unique_ptr<MdnsInterfaceTransceiver> MdnsInterfaceTransceiver::Create(
     uint32_t index) {
   MdnsInterfaceTransceiver* interface_transceiver;
 
-  if (if_info->addr->ipv4.get()) {
+  if (!if_info->addr->ipv4.is_null()) {
     interface_transceiver = new MdnsInterfaceTransceiverV4(if_info, index);
   } else {
     interface_transceiver = new MdnsInterfaceTransceiverV6(if_info, index);
