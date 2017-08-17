@@ -26,14 +26,6 @@ impl Timer {
         into_result(status, || Self::from(Handle(out)))
     }
 
-    /// Starts a timer which will fire when `deadline` passes. Wraps the
-    /// [mx_timer_start](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/timer_start.md)
-    /// syscall.
-    pub fn start(&self, deadline: Time, period: Duration, slack: Duration) -> Result<(), Status> {
-        let status = unsafe { sys::mx_timer_start(self.raw_handle(), deadline, period, slack) };
-        into_result(status, || ())
-    }
-
     /// Start a one-shot timer that will fire when `deadline` passes. Wraps the
     /// [mx_timer_set](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/timer_set.md)
     /// syscall.
@@ -75,27 +67,6 @@ mod tests {
     fn create_timer_invalid_clock() {
         assert_eq!(Timer::create(TimerOpts::Default, ClockId::UTC).unwrap_err(), Status::ErrInvalidArgs);
         assert_eq!(Timer::create(TimerOpts::Default, ClockId::Thread), Err(Status::ErrInvalidArgs));
-    }
-
-    #[test]
-    fn timer_deprecated_start() {
-        let ten_ms: Duration = 10_000_000;
-        let twenty_ms: Duration = 20_000_000;
-
-        // Create a timer
-        let timer = Timer::create(TimerOpts::Default, ClockId::Monotonic).unwrap();
-
-        // Should not signal yet.
-        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
-
-        // Start it, and soon it should signal.
-        assert_eq!(timer.start(ten_ms, 0, 0), Ok(()));
-        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(twenty_ms)).unwrap(),
-            MX_TIMER_SIGNALED | MX_SIGNAL_LAST_HANDLE);
-
-        // Cancel it, and it should stop signalling.
-        assert_eq!(timer.cancel(), Ok(()));
-        assert_eq!(timer.wait_handle(MX_TIMER_SIGNALED, deadline_after(ten_ms)), Err(Status::ErrTimedOut));
     }
 
     #[test]

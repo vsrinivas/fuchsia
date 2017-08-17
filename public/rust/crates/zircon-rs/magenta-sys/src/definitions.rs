@@ -382,13 +382,6 @@ extern {
         out: *mut mx_handle_t
         ) -> mx_status_t;
 
-    pub fn mx_timer_start(
-        handle: mx_handle_t,
-        deadline: mx_time_t,
-        period: mx_duration_t,
-        slack: mx_duration_t
-        ) -> mx_status_t;
-
     pub fn mx_timer_set(
         handle: mx_handle_t,
         deadline: mx_time_t,
