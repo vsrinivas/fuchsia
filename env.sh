@@ -21,10 +21,20 @@ if [[ -n "${ZSH_VERSION}" ]]; then
 else
   export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
+
+case "$(uname -s)" in
+  Darwin)
+    readonly HOST_PLATFORM="mac-x64"
+    ;;
+  Linux)
+    readonly HOST_PLATFORM="linux-x64"
+    ;;
+esac
+
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
-export QEMU_DIR="${FUCHSIA_DIR}/buildtools/qemu/bin"
+export QEMU_DIR="${FUCHSIA_DIR}/buildtools/${HOST_PLATFORM}/qemu/bin"
 export FUCHSIA_ENV_SH_VERSION="$(git --git-dir=${FUCHSIA_SCRIPTS_DIR}/.git rev-parse HEAD)"
 
 function __netaddr() {

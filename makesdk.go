@@ -116,7 +116,7 @@ func init() {
 		},
 		{
 			qemu,
-			"buildtools/qemu",
+			fmt.Sprintf("buildtools/%s-%s/qemu", hostOs, hostCpu),
 			"qemu",
 			dir,
 			nil,
