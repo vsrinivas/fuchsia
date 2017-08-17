@@ -3,6 +3,11 @@
         "cpp",
         "go"
     ],
+    "gopaths": [
+        {
+            "apps/thinfs": "fuchsia.googlesource.com/thinfs"
+        }
+    ],
     "packages": {
         "thinfs": "//apps/thinfs"
     }
