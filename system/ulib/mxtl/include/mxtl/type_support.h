@@ -162,17 +162,41 @@ template <typename T>
 struct is_arithmetic :
     integral_constant<bool, is_integral<T>::value || is_floating_point<T>::value> { };
 
-template <typename T>
-struct is_signed : integral_constant<bool, is_arithmetic<T>::value && (T(-1) < T(0))> { };
+namespace internal {
+
+template<typename T, bool = is_arithmetic<T>::value>
+struct is_signed : integral_constant<bool, T(-1) < T(0)> {};
+template<typename T>
+struct is_signed<T, false> : mxtl::false_type {};
+
+template<typename T, bool = is_arithmetic<T>::value>
+struct is_unsigned : integral_constant<bool, T(0) < T(-1)> {};
+template<typename T>
+struct is_unsigned<T, false> : mxtl::false_type {};
+
+template<typename T, bool = is_integral<T>::value>
+struct is_signed_integer : integral_constant<bool, T(-1) < T(0)> {};
+template<typename T>
+struct is_signed_integer<T, false> : mxtl::false_type {};
+
+template<typename T, bool = is_integral<T>::value>
+struct is_unsigned_integer : integral_constant<bool, T(0) < T(-1)> {};
+template<typename T>
+struct is_unsigned_integer<T, false> : mxtl::false_type {};
+
+} // namespace internal
 
 template <typename T>
-struct is_unsigned : integral_constant<bool, is_arithmetic<T>::value && (T(0) < T(-1))> { };
+struct is_signed : internal::is_signed<T>::type {};
 
 template <typename T>
-struct is_signed_integer : integral_constant<bool, is_integral<T>::value && (T(-1) < T(0))> { };
+struct is_unsigned : internal::is_unsigned<T>::type {};
 
 template <typename T>
-struct is_unsigned_integer : integral_constant<bool, is_integral<T>::value && (T(0) < T(-1))> { };
+struct is_signed_integer : internal::is_signed_integer<T>::type {};
+
+template <typename T>
+struct is_unsigned_integer : internal::is_unsigned_integer<T>::type {};
 
 // is_pod is a builtin
 template<typename T>

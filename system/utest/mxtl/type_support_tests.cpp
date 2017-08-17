@@ -140,6 +140,134 @@ static_assert( mxtl::has_virtual_destructor<E>::value, "E should have a virtual 
 
 }  // namespace has_virtual_destructor_tests
 
+namespace is_floating_point {
+
+static_assert(mxtl::is_floating_point<float>::value, "float is floating point");
+static_assert(mxtl::is_floating_point<double>::value, "double is floating point");
+static_assert(mxtl::is_floating_point<long double>::value, "long double is floating point");
+
+static_assert(!mxtl::is_floating_point<int>::value, "int is not floating point");
+static_assert(!mxtl::is_floating_point<decltype(nullptr)>::value, "nullptr is not floating point");
+
+struct A {};
+static_assert(!mxtl::is_floating_point<A>::value, "A is not floating point");
+static_assert(!mxtl::is_floating_point<A*>::value, "A pointer is not floating point");
+
+} // namespace is_floating_point
+
+namespace is_integral_tests {
+
+static_assert(mxtl::is_integral<bool>::value, "bool is integral");
+static_assert(mxtl::is_integral<char>::value, "char is integral");
+static_assert(mxtl::is_integral<char16_t>::value, "char16_t is integral");
+static_assert(mxtl::is_integral<char32_t>::value, "char32_t is integral");
+static_assert(mxtl::is_integral<wchar_t>::value, "wchar_t is integral");
+static_assert(mxtl::is_integral<signed char>::value, "signed char is integral");
+static_assert(mxtl::is_integral<unsigned char>::value, "unsigned char is integral");
+static_assert(mxtl::is_integral<short int>::value, "short int is integral");
+static_assert(mxtl::is_integral<unsigned short int>::value, "unsigned short int is integral");
+static_assert(mxtl::is_integral<int>::value, "int is integral");
+static_assert(mxtl::is_integral<unsigned int>::value, "unsigned int is integral");
+static_assert(mxtl::is_integral<long int>::value, "long int is integral");
+static_assert(mxtl::is_integral<unsigned long int>::value, "unsigned long int is integral");
+static_assert(mxtl::is_integral<long long int>::value, "long long int is integral");
+static_assert(mxtl::is_integral<unsigned long long int>::value, "unsigned long long int is integral");
+
+static_assert(!mxtl::is_integral<float>::value, "float is not integral");
+static_assert(!mxtl::is_integral<decltype(nullptr)>::value, "nullptr is not integral");
+
+struct A {};
+static_assert(!mxtl::is_integral<A>::value, "A is not floating point");
+static_assert(!mxtl::is_integral<A*>::value, "A pointer is not integral");
+
+} // namespace is_integral_tests
+
+namespace is_arithmetic_tests {
+
+static_assert(mxtl::is_arithmetic<bool>::value, "bool is arithmetic");
+static_assert(mxtl::is_arithmetic<char>::value, "char is arithmetic");
+static_assert(mxtl::is_arithmetic<char16_t>::value, "char16_t is arithmetic");
+static_assert(mxtl::is_arithmetic<char32_t>::value, "char32_t is arithmetic");
+static_assert(mxtl::is_arithmetic<wchar_t>::value, "wchar_t is arithmetic");
+static_assert(mxtl::is_arithmetic<signed char>::value, "signed char is arithmetic");
+static_assert(mxtl::is_arithmetic<unsigned char>::value, "unsigned char is arithmetic");
+static_assert(mxtl::is_arithmetic<short int>::value, "short int is arithmetic");
+static_assert(mxtl::is_arithmetic<unsigned short int>::value, "unsigned short int is arithmetic");
+static_assert(mxtl::is_arithmetic<int>::value, "int is arithmetic");
+static_assert(mxtl::is_arithmetic<unsigned int>::value, "unsigned int is arithmetic");
+static_assert(mxtl::is_arithmetic<long int>::value, "long int is arithmetic");
+static_assert(mxtl::is_arithmetic<unsigned long int>::value, "unsigned long int is arithmetic");
+static_assert(mxtl::is_arithmetic<long long int>::value, "long long int is arithmetic");
+static_assert(mxtl::is_arithmetic<unsigned long long int>::value, "unsigned long long int is arithmetic");
+
+static_assert(mxtl::is_arithmetic<float>::value, "float is arithmetic");
+static_assert(mxtl::is_arithmetic<double>::value, "double is arithmetic");
+static_assert(mxtl::is_arithmetic<long double>::value, "long double is arithmetic");
+
+static_assert(!mxtl::is_arithmetic<decltype(nullptr)>::value, "nullptr is not arithmetic");
+
+struct A {};
+static_assert(!mxtl::is_arithmetic<A>::value, "A is not arithmetic");
+static_assert(!mxtl::is_arithmetic<A*>::value, "A pointer is not arithmetic");
+
+} // namespace is_arithmetic_tests
+
+namespace is_signed_tests {
+
+static_assert(mxtl::is_signed<int>::value, "int is signed");
+static_assert(!mxtl::is_signed<unsigned int>::value, "unsigned int is not signed");
+static_assert(mxtl::is_signed<float>::value, "float is signed");
+
+static_assert(!mxtl::is_signed<decltype(nullptr)>::value, "nullptr is not signed");
+
+struct A {};
+static_assert(!mxtl::is_signed<A>::value, "A is not signed");
+static_assert(!mxtl::is_signed<A*>::value, "A pointer is not signed");
+
+} // namespace is_signed_tests
+
+namespace is_unsigned_tests {
+
+static_assert(!mxtl::is_unsigned<int>::value, "int is not unsigned");
+static_assert(mxtl::is_unsigned<unsigned int>::value, "unsigned int is unsigned");
+static_assert(!mxtl::is_unsigned<float>::value, "float is not unsigned");
+
+static_assert(!mxtl::is_unsigned<decltype(nullptr)>::value, "nullptr is not unsigned");
+
+struct A {};
+static_assert(!mxtl::is_unsigned<A>::value, "A is not unsigned");
+static_assert(!mxtl::is_unsigned<A*>::value, "A pointer is not unsigned");
+
+} // namespace is_unsigned_tests
+
+namespace is_signed_integer_tests {
+
+static_assert(mxtl::is_signed_integer<int>::value, "int is signed integer");
+static_assert(!mxtl::is_signed_integer<unsigned int>::value, "unsigned int is not signed integer");
+static_assert(!mxtl::is_signed_integer<float>::value, "float is not signed integer");
+
+static_assert(!mxtl::is_signed_integer<decltype(nullptr)>::value, "nullptr is not signed integer");
+
+struct A {};
+static_assert(!mxtl::is_signed_integer<A>::value, "A is not signed integer");
+static_assert(!mxtl::is_signed_integer<A*>::value, "A pointer is not signed integer");
+
+} // namespace is_signed_integer_tests
+
+namespace is_unsigned_integer_tests {
+
+static_assert(!mxtl::is_unsigned_integer<int>::value, "int is not unsigned integer");
+static_assert(mxtl::is_unsigned_integer<unsigned int>::value, "unsigned int is unsigned integer");
+static_assert(!mxtl::is_unsigned_integer<float>::value, "float is not unsigned integer");
+
+static_assert(!mxtl::is_unsigned_integer<decltype(nullptr)>::value, "nullptr is not unsigned integer");
+
+struct A {};
+static_assert(!mxtl::is_unsigned_integer<A>::value, "A is not unsigned integer");
+static_assert(!mxtl::is_unsigned_integer<A*>::value, "A pointer is not unsigned integer");
+
+} // namespace is_unsigned_integer_tests
+
 namespace is_pointer_tests {
 
 struct StructType   {
