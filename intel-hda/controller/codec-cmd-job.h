@@ -30,7 +30,7 @@ public:
     uint16_t     nid()       const { return cmd_.nid(); }
     CodecVerb    verb()      const { return cmd_.verb(); }
 
-    const fbl::RefPtr<DispatcherChannel>& response_channel() const { return response_channel_; }
+    const fbl::RefPtr<dispatcher::Channel>& response_channel() const { return response_channel_; }
     zx_txid_t transaction_id() const { return transaction_id_; }
 
 private:
@@ -40,7 +40,7 @@ private:
     friend fbl::unique_ptr<CodecCmdJob>;
 
     CodecCmdJob(CodecCommand cmd) : cmd_(cmd) { }
-    CodecCmdJob(fbl::RefPtr<DispatcherChannel>&& response_channel,
+    CodecCmdJob(fbl::RefPtr<dispatcher::Channel>&& response_channel,
                 uint32_t transaction_id,
                 CodecCommand cmd)
         : cmd_(cmd),
@@ -51,7 +51,7 @@ private:
 
     const CodecCommand cmd_;
     const zx_txid_t    transaction_id_ = IHDA_INVALID_TRANSACTION_ID;
-    fbl::RefPtr<DispatcherChannel> response_channel_ = nullptr;
+    fbl::RefPtr<dispatcher::Channel> response_channel_ = nullptr;
 };
 
 }  // namespace intel_hda

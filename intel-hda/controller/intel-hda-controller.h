@@ -14,29 +14,21 @@
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
 #include "codec-cmd-job.h"
 #include "intel-hda-codec.h"
-#include "intel-hda-device.h"
 #include "thread-annotations.h"
 #include "utils.h"
 
 namespace audio {
 namespace intel_hda {
 
-class IntelHDAController : public IntelHDADevice<IntelHDAController> {
+class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 public:
-    // Type export for IntelHDADevice<>
-    union RequestBufferType {
-        ihda_cmd_hdr_t                      hdr;
-        ihda_get_ids_req_t                  get_ids;
-        ihda_controller_snapshot_regs_req_t snapshot_regs;
-    };
-
     IntelHDAController();
     ~IntelHDAController();
 
@@ -83,6 +75,7 @@ private:
     // Device interface implementation
     void        DeviceShutdown();
     zx_status_t DeviceRelease();
+    zx_status_t DeviceIoctl(uint32_t op, void* out_buf, size_t out_len, size_t* out_actual);
 
     // State control
     // TODO(johngro) : extend fbl::atomic to support enum classes as well.
@@ -116,18 +109,13 @@ private:
     void ProcessStreamIRQ(uint32_t intsts);
     void ProcessControllerIRQ();
 
-    // Implementation of IntelHDADevice<> callback.
-    friend class IntelHDADevice<IntelHDAController>;
-    zx_status_t ProcessClientRequest(DispatcherChannel* channel,
-                                     const RequestBufferType& req,
-                                     uint32_t req_size,
-                                     zx::handle&& rxed_handle)
-        TA_REQ(process_lock());
+    // Thunk for interacting with client channels
+    zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
+    zx_status_t SnapshotRegs(dispatcher::Channel* channel,
+                             const ihda_controller_snapshot_regs_req_t& req);
 
-    // Client requests
-    zx_status_t SnapshotRegs(const DispatcherChannel& channel,
-                             const ihda_controller_snapshot_regs_req_t& req)
-        TA_REQ(process_lock());
+    // Dispatcher framework state
+    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // IRQ thread and state machine.
     fbl::atomic<StateStorage> state_;
@@ -138,7 +126,7 @@ private:
     char debug_tag_[ZX_DEVICE_NAME_MAX] = { 0 };
 
     // Upstream PCI device, protocol interface, and device info.
-    zx_device_t*          pci_dev_   = nullptr;
+    zx_device_t*          pci_dev_ = nullptr;
     pci_protocol_t        pci_ = { nullptr, nullptr };
     zx_pcie_device_info_t pci_dev_info_;
 

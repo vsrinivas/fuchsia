@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/assert.h>
 #include <ddk/binding.h>
+#include <zircon/assert.h>
+#include <zircon/device/intel-hda.h>
 #include <zircon/process.h>
+#include <zx/channel.h>
 #include <fbl/algorithm.h>
 #include <string.h>
 
+#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
 #include "utils.h"
 
 namespace audio {
@@ -200,6 +204,62 @@ void ContigPhysMem::Release() {
     phys_ = 0;
     size_ = 0;
     actual_size_ = 0;
+}
+
+zx_status_t HandleDeviceIoctl(uint32_t op,
+                              void* out_buf,
+                              size_t out_len,
+                              size_t* out_actual,
+                              const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
+                              dispatcher::Channel::ProcessHandler phandler,
+                              dispatcher::Channel::ChannelClosedHandler chandler) {
+    if (op != IHDA_IOCTL_GET_CHANNEL) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if ((out_buf == nullptr) ||
+        (out_actual == nullptr) ||
+        (out_len != sizeof(zx_handle_t))) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx::channel remote_endpoint_out;
+    zx_status_t res = CreateAndActivateChannel(domain,
+                                               fbl::move(phandler),
+                                               fbl::move(chandler),
+                                               nullptr,
+                                               &remote_endpoint_out);
+    if (res == ZX_OK) {
+        *(reinterpret_cast<zx_handle_t*>(out_buf)) = remote_endpoint_out.release();
+        *out_actual = sizeof(zx_handle_t);
+    }
+
+    return res;
+}
+
+zx_status_t CreateAndActivateChannel(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
+                                     dispatcher::Channel::ProcessHandler phandler,
+                                     dispatcher::Channel::ChannelClosedHandler chandler,
+                                     fbl::RefPtr<dispatcher::Channel>* local_endpoint_out,
+                                     zx::channel* remote_endpoint_out) {
+    if (remote_endpoint_out == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto channel = dispatcher::Channel::Create();
+    if (channel == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t res = channel->Activate(remote_endpoint_out,
+                                        domain,
+                                        fbl::move(phandler),
+                                        fbl::move(chandler));
+    if ((res == ZX_OK) && (local_endpoint_out != nullptr)) {
+        *local_endpoint_out = fbl::move(channel);
+    }
+
+    return res;
 }
 
 }  // namespace intel_hda

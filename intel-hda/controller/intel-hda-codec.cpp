@@ -28,10 +28,6 @@ constexpr size_t IntelHDACodec::PROP_VENDOR_REV;
 constexpr size_t IntelHDACodec::PROP_VENDOR_STEP;
 constexpr size_t IntelHDACodec::PROP_COUNT;
 
-// Special ID we use to distinguish the codec driver channel from all of the
-// other channels we manage.
-constexpr uintptr_t DRIVER_CHANNEL_ID = fbl::numeric_limits<uintptr_t>::max();
-
 #define SET_DEVICE_PROP(_prop, _value) do { \
     static_assert(PROP_##_prop < countof(dev_props_), "Invalid Device Property ID"); \
     dev_props_[PROP_##_prop].id = BIND_IHDA_CODEC_##_prop; \
@@ -61,15 +57,14 @@ zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
     .iotxn_queue  = nullptr,
     .get_size     = nullptr,
     .ioctl        = [](void* ctx,
-                      uint32_t op,
-                      const void* in_buf,
-                      size_t in_len,
-                      void* out_buf,
-                      size_t out_len,
-                      size_t* out_actual) -> zx_status_t {
-                        return reinterpret_cast<IntelHDACodec*>(ctx)->
-                            DeviceIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-                   },
+                       uint32_t op,
+                       const void* in_buf,
+                       size_t in_len,
+                       void* out_buf,
+                       size_t out_len,
+                       size_t* out_actual) -> zx_status_t {
+                        return DEV->DeviceIoctl(op, out_buf, out_len, out_actual);
+                    },
     .suspend      = nullptr,
     .resume       = nullptr,
 };
@@ -89,12 +84,20 @@ IntelHDACodec::IntelHDACodec(IntelHDAController& controller, uint8_t codec_id)
     ::memset(&dev_props_, 0, sizeof(dev_props_));
     dev_props_[PROP_PROTOCOL].id    = BIND_PROTOCOL;
     dev_props_[PROP_PROTOCOL].value = ZX_PROTOCOL_IHDA_CODEC;
+    default_domain_ = dispatcher::ExecutionDomain::Create();
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
-                                                      uint8_t codec_id) {
+                                                  uint8_t codec_id) {
     ZX_DEBUG_ASSERT(codec_id < HDA_MAX_CODECS);
-    return fbl::AdoptRef(new IntelHDACodec(controller, codec_id));
+
+    auto ret = fbl::AdoptRef(new IntelHDACodec(controller, codec_id));
+    if (ret->default_domain_ == nullptr) {
+        LOG_EX(*ret, "Out of memory attempting to allocate execution domain\n");
+        return nullptr;
+    }
+
+    return ret;
 }
 
 zx_status_t IntelHDACodec::Startup() {
@@ -119,7 +122,7 @@ zx_status_t IntelHDACodec::Startup() {
     return ZX_OK;
 }
 
-void IntelHDACodec::SendCORBResponse(const fbl::RefPtr<DispatcherChannel>& channel,
+void IntelHDACodec::SendCORBResponse(const fbl::RefPtr<dispatcher::Channel>& channel,
                                      const CodecResponse& resp,
                                      uint32_t transaction_id) {
     ZX_DEBUG_ASSERT(channel != nullptr);
@@ -134,7 +137,6 @@ void IntelHDACodec::SendCORBResponse(const fbl::RefPtr<DispatcherChannel>& chann
     if (res != ZX_OK) {
         DEBUG_LOG("Error writing CORB response (%08x, %08x) res = %d\n",
                   resp.data, resp.data_ex, res);
-        channel->Deactivate(true);
     }
 }
 
@@ -171,7 +173,7 @@ void IntelHDACodec::ProcessSolicitedResponse(const CodecResponse& resp,
 void IntelHDACodec::ProcessUnsolicitedResponse(const CodecResponse& resp) {
     // If we still have a channel to our codec driver, grab a reference to it
     // and send the unsolicited response to it.
-    fbl::RefPtr<DispatcherChannel> codec_driver_channel;
+    fbl::RefPtr<dispatcher::Channel> codec_driver_channel;
     {
         fbl::AutoLock codec_driver_channel_lock(&codec_driver_channel_lock_);
         codec_driver_channel = codec_driver_channel_;
@@ -198,7 +200,7 @@ void IntelHDACodec::BeginShutdown() {
     // Close all existing connections and synchronize with any client threads
     // who are currently processing requests.
     state_ = State::SHUTTING_DOWN;
-    IntelHDADevice::Shutdown();
+    default_domain_->Deactivate();
 
     // Give any active streams we had back to our controller.
     IntelHDAStream::Tree streams;
@@ -269,75 +271,91 @@ zx_status_t IntelHDACodec::ParseRevisionId(const CodecResponse& resp) {
     return PublishDevice();
 }
 
-#define PROCESS_CMD(_req_ack, _ioctl, _payload, _handler)       \
-case _ioctl:                                                    \
-    if (req_size != sizeof(req._payload)) {               \
-        DEBUG_LOG("Bad " #_payload                              \
-                  " request length (%u != %zu)\n",              \
-                  req_size, sizeof(req._payload));        \
-        return ZX_ERR_INVALID_ARGS;                                \
-    }                                                           \
-    if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG))  {   \
-        DEBUG_LOG("Cmd " #_payload                              \
-                  " requires acknowledgement, but the "         \
-                  "NOACK flag was set!\n");                     \
-        return ZX_ERR_INVALID_ARGS;                                \
-    }                                                           \
+zx_status_t IntelHDACodec::DeviceIoctl(uint32_t op,
+                                       void*    out_buf,
+                                       size_t   out_len,
+                                       size_t*  out_actual) {
+    dispatcher::Channel::ProcessHandler phandler(
+    [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+        return codec->ProcessClientRequest(channel, false);
+    });
+
+    return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
+                             default_domain_,
+                             fbl::move(phandler),
+                             nullptr);
+}
+
+#define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
+case _ioctl:                                                                \
+    if (req_size != sizeof(req._payload)) {                                 \
+        DEBUG_LOG("Bad " #_payload                                          \
+                  " request length (%u != %zu)\n",                          \
+                  req_size, sizeof(req._payload));                          \
+        return ZX_ERR_INVALID_ARGS;                                         \
+    }                                                                       \
+    if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG))  {                     \
+        DEBUG_LOG("Cmd " #_payload                                          \
+                  " requires acknowledgement, but the "                     \
+                  "NOACK flag was set!\n");                                 \
+        return ZX_ERR_INVALID_ARGS;                                         \
+    }                                                                       \
+    if (_req_driver_chan  && !is_driver_channel) {                          \
+        DEBUG_LOG("Cmd " #_payload                                          \
+                  " requires a privileged driver channel.\n");              \
+        return ZX_ERR_ACCESS_DENIED;                                        \
+    }                                                                       \
     return _handler(channel, req._payload)
+zx_status_t IntelHDACodec::ProcessClientRequest(dispatcher::Channel* channel,
+                                                bool is_driver_channel) {
+    zx_status_t res;
+    uint32_t req_size;
+    union {
+        ihda_proto::CmdHdr           hdr;
+        ihda_proto::GetIDsReq        get_ids;
+        ihda_proto::SendCORBCmdReq   corb_cmd;
+        ihda_proto::RequestStreamReq request_stream;
+        ihda_proto::ReleaseStreamReq release_stream;
+        ihda_proto::SetStreamFmtReq  set_stream_fmt;
+    } req;
+    // TODO(johngro) : How large is too large?
+    static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
 
-zx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
-                                                const RequestBufferType& full_req,
-                                                uint32_t req_size,
-                                                zx::handle&& rxed_handle) {
+    // Read the client request.
     ZX_DEBUG_ASSERT(channel != nullptr);
-
-    // Is this a request from a Stream channel?  If so, send it off to the
-    // stream for processing (assuming that the stream still exists)
-    bool is_stream_channel;
-    auto stream = GetStreamForChannel(*channel, &is_stream_channel);
-    if (is_stream_channel) {
-        if (stream != nullptr) {
-            return stream->ProcessClientRequest(channel,
-                                                full_req.stream_requests,
-                                                req_size,
-                                                fbl::move(rxed_handle));
-        } else {
-            return ZX_ERR_BAD_STATE;
-        }
+    res = channel->Read(&req, sizeof(req), &req_size);
+    if (res != ZX_OK) {
+        DEBUG_LOG("Failed to read client request (res %d)\n", res);
+        return res;
     }
 
-    // This must be a request for the codec.  Sanity check that portion of the
-    // request payload.
-    const auto& req = full_req.codec;
+    // Sanity checks.
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
         return ZX_ERR_INVALID_ARGS;
     }
 
-    VERBOSE_LOG("Client Request (cmd 0x%04x tid %u) len %u\n",
-            req.hdr.cmd,
-            req.hdr.transaction_id,
-            req_size);
-
     auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
-
     if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
         DEBUG_LOG("Invalid transaction ID in client request 0x%04x\n", cmd_id);
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (rxed_handle.is_valid()) {
-        DEBUG_LOG("Received unexpected handle in client request 0x%04x\n", cmd_id);
-        return ZX_ERR_INVALID_ARGS;
-    }
+    // Dispatch
+    VERBOSE_LOG("Client Request (cmd 0x%04x tid %u) len %u\n",
+            req.hdr.cmd,
+            req.hdr.transaction_id,
+            req_size);
 
     switch (cmd_id) {
-    PROCESS_CMD(true,  IHDA_CMD_GET_IDS,             get_ids,        ProcessGetIDs);
-    PROCESS_CMD(false, IHDA_CODEC_SEND_CORB_CMD,     corb_cmd,       ProcessSendCORBCmd);
-    PROCESS_CMD(true,  IHDA_CODEC_REQUEST_STREAM,    request_stream, ProcessRequestStream);
-    PROCESS_CMD(false, IHDA_CODEC_RELEASE_STREAM,    release_stream, ProcessReleaseStream);
-    PROCESS_CMD(false, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
+    PROCESS_CMD(true,  false, IHDA_CMD_GET_IDS,             get_ids,        ProcessGetIDs);
+    PROCESS_CMD(true,  true,  IHDA_CODEC_REQUEST_STREAM,    request_stream, ProcessRequestStream);
+    PROCESS_CMD(false, true,  IHDA_CODEC_RELEASE_STREAM,    release_stream, ProcessReleaseStream);
+    PROCESS_CMD(false, true,  IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
+    PROCESS_CMD(false, CodecVerb(req.corb_cmd.verb).is_set(),
+                IHDA_CODEC_SEND_CORB_CMD, corb_cmd, ProcessSendCORBCmd);
     default:
         DEBUG_LOG("Unrecognized command ID 0x%04x\n", req.hdr.cmd);
         return ZX_ERR_INVALID_ARGS;
@@ -346,7 +364,33 @@ zx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
 
 #undef PROCESS_CMD
 
-zx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel* channel,
+void IntelHDACodec::ProcessClientDeactivate(const dispatcher::Channel* channel) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+
+    // This should be the driver channel (client channels created with IOCTL do
+    // not register a deactivate handler).  Start by releasing the internal
+    // channel reference from within the codec_driver_channel_lock.
+    {
+        fbl::AutoLock lock(&codec_driver_channel_lock_);
+        ZX_DEBUG_ASSERT(channel == codec_driver_channel_.get());
+        codec_driver_channel_.reset();
+    }
+
+    // Return any DMA streams the codec driver had owned back to the controller.
+    IntelHDAStream::Tree tmp;
+    {
+        fbl::AutoLock lock(&active_streams_lock_);
+        tmp = fbl::move(active_streams_);
+    }
+
+    while (!tmp.is_empty()) {
+        auto stream = tmp.pop_front();
+        stream->Deactivate();
+        controller_.ReturnStream(fbl::move(stream));
+    }
+}
+
+zx_status_t IntelHDACodec::ProcessGetIDs(dispatcher::Channel* channel,
                                          const ihda_proto::GetIDsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -362,7 +406,7 @@ zx_status_t IntelHDACodec::ProcessGetIDs(DispatcherChannel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
+zx_status_t IntelHDACodec::ProcessSendCORBCmd(dispatcher::Channel* channel,
                                               const ihda_proto::SendCORBCmdReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
 
@@ -375,14 +419,7 @@ zx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // Only the dedicated driver channel is permitted to execute set verbs.
-    if (verb.is_set() && (channel->owner_ctx() != DRIVER_CHANNEL_ID)) {
-        DEBUG_LOG("SET verbs not allowed from unprivledged connections! [%u, %hu, 0x%05x]\n",
-                id(), req.nid, verb.val);
-        return ZX_ERR_ACCESS_DENIED;
-    }
-
-    fbl::RefPtr<DispatcherChannel> chan_ref = (req.hdr.cmd & IHDA_NOACK_FLAG)
+    fbl::RefPtr<dispatcher::Channel> chan_ref = (req.hdr.cmd & IHDA_NOACK_FLAG)
                                              ? nullptr
                                              : fbl::WrapRefPtr(channel);
 
@@ -402,15 +439,9 @@ zx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
     return res;
 }
 
-zx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
+zx_status_t IntelHDACodec::ProcessRequestStream(dispatcher::Channel* channel,
                                                 const ihda_proto::RequestStreamReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-
-    // Only the dedicated driver channel is permitted to request DMA streams.
-    if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
-        DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
-        return ZX_ERR_ACCESS_DENIED;
-    }
 
     ihda_proto::RequestStreamResp resp;
     resp.hdr = req.hdr;
@@ -440,15 +471,9 @@ zx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
+zx_status_t IntelHDACodec::ProcessReleaseStream(dispatcher::Channel* channel,
                                                 const ihda_proto::ReleaseStreamReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-
-    // Only the dedicated driver channel is permitted to release DMA streams.
-    if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
-        DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
-        return ZX_ERR_ACCESS_DENIED;
-    }
 
     // Remove the stream from the active set.
     fbl::RefPtr<IntelHDAStream> stream;
@@ -475,15 +500,9 @@ zx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
+zx_status_t IntelHDACodec::ProcessSetStreamFmt(dispatcher::Channel* channel,
                                                const ihda_proto::SetStreamFmtReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-
-    // Only the dedicated driver channel is permitted to release DMA streams.
-    if (channel->owner_ctx() != DRIVER_CHANNEL_ID) {
-        DEBUG_LOG("RequestStream not allowed from unprivledged connections!\n");
-        return ZX_ERR_ACCESS_DENIED;
-    }
 
     // Sanity check the requested format.
     if (!StreamFormat(req.format).SanityCheck()) {
@@ -505,32 +524,16 @@ zx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     if (stream == nullptr)
         return ZX_ERR_BAD_STATE;
 
-    // Create a channel which will be used to configure the stream DMA buffers,
-    // start/stop the channel, and send status reports.  Set the owner_ctx of
-    // the stream to the stream's ID so we can look up requests which come in.
-    ZX_DEBUG_ASSERT(req.stream_id == stream->id());
-    auto stream_channel = DispatcherChannelAllocator::New(stream->id());
-    if (stream_channel == nullptr)
-        return ZX_ERR_NO_MEMORY;
-
     // Set the stream format and assign the client channel to the stream.  If
     // this stream is already bound to a client, this will cause that connection
     // to be closed.
-    zx_status_t res = stream->SetStreamFormat(req.format, stream_channel);
+    zx::channel client_channel;
+    zx_status_t res = stream->SetStreamFormat(default_domain_,
+                                              req.format,
+                                              &client_channel);
     if (res != ZX_OK) {
         DEBUG_LOG("Failed to set stream format 0x%04hx for stream %hu (res %d)\n",
                   req.format, req.stream_id, res);
-        return res;
-    }
-
-    // Activate the channel, binding it to (the codec) in the process.  This
-    // has the effect of serializing all of the requests targeted at this codec,
-    // or any of the DMA streams it is managing.
-    zx::channel client_channel;
-    res = stream_channel->Activate(fbl::WrapRefPtr(this), &client_channel);
-    if (res != ZX_OK) {
-        DEBUG_LOG("Failed to activate stream channel (res %d)\n", res);
-        stream->Deactivate();
         return res;
     }
 
@@ -546,109 +549,45 @@ zx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     return res;
 }
 
-void IntelHDACodec::NotifyChannelDeactivated(const DispatcherChannel& channel) {
-    // If this was the driver's channel to us, release the internal channel
-    // reference from within the codec_driver_channel_lock.
-    if (channel.owner_ctx() == DRIVER_CHANNEL_ID) {
-        {
-            fbl::AutoLock lock(&codec_driver_channel_lock_);
-            ZX_DEBUG_ASSERT(&channel == codec_driver_channel_.get());
-            codec_driver_channel_.reset();
-        }
-
-        // Return any DMA streams the codec driver had owned back to the controller.
-        IntelHDAStream::Tree tmp;
-        {
-            fbl::AutoLock lock(&active_streams_lock_);
-            tmp = fbl::move(active_streams_);
-        }
-
-        while (!tmp.is_empty()) {
-            auto stream = tmp.pop_front();
-            stream->Deactivate();
-            controller_.ReturnStream(fbl::move(stream));
-        }
-
-        return;
-    }
-
-    // If this was the currently active channel for one of our active streams,
-    // deactivate the stream.
-    auto stream = GetStreamForChannel(channel);
-    if (stream != nullptr) {
-        stream->OnChannelClosed(channel);
-        return;
-    }
-}
-
-zx_status_t IntelHDACodec::CodecGetDispatcherChannel(zx_handle_t* channel_out) {
-    if (!channel_out)
+zx_status_t IntelHDACodec::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out) {
+    if (!remote_endpoint_out)
         return ZX_ERR_INVALID_ARGS;
 
-    *channel_out = ZX_HANDLE_INVALID;
+    dispatcher::Channel::ProcessHandler phandler(
+    [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+        return codec->ProcessClientRequest(channel, true);
+    });
+
+    dispatcher::Channel::ChannelClosedHandler chandler(
+    [codec = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+        codec->ProcessClientDeactivate(channel);
+    });
 
     // Enter the driver channel lock.  If we have already connected to a codec
     // driver, simply fail the request.  Otherwise, attempt to build a driver channel
     // and activate it.
-    fbl::RefPtr<DispatcherChannel> activate_me;
-    {
-        fbl::AutoLock lock(&codec_driver_channel_lock_);
+    fbl::AutoLock lock(&codec_driver_channel_lock_);
 
-        if (codec_driver_channel_ != nullptr)
-            return ZX_ERR_BAD_STATE;
+    if (codec_driver_channel_ != nullptr)
+        return ZX_ERR_BAD_STATE;
 
-        // Allocate a new channel.  Use the owner_ctx() to indicate that this is
-        // the singleton driver channel, and therefor allowed to perform
-        // privledged operations (such as allocate stream dma contexts)
-        codec_driver_channel_ = DispatcherChannelAllocator::New(DRIVER_CHANNEL_ID);
-        if (codec_driver_channel_ == nullptr)
-            return ZX_ERR_NO_MEMORY;
-
-        // Now that we have successfully allocated a channel, we can take a
-        // local reference to it, leave the codec driver channel lock, and
-        // attempt to activate the channel.  Any attempts to create a new driver
-        // channel on another thread while we activate this channel will fail
-        // with ZX_ERR_BAD_STATE because codec_driver_channel_ is non-null.
-        activate_me = codec_driver_channel_;
-    }
-
-    ZX_DEBUG_ASSERT(activate_me != nullptr);
     zx::channel client_channel;
-    zx_status_t activate_result = activate_me->Activate(fbl::WrapRefPtr(this), &client_channel);
-
-    // If we failed to activate the channel, release the internal reference we
-    // were holding from inside of the codec_driver_channel_lock.
-    if (activate_result != ZX_OK) {
-        fbl::AutoLock lock(&codec_driver_channel_lock_);
-        codec_driver_channel_ = nullptr;
-    } else {
-        *channel_out = client_channel.release();
+    zx_status_t res;
+    res = CreateAndActivateChannel(default_domain_,
+                                   fbl::move(phandler),
+                                   fbl::move(chandler),
+                                   &codec_driver_channel_,
+                                   &client_channel);
+    if (res == ZX_OK) {
+        // If things went well, release the reference to the remote endpoint
+        // from the zx::channel instance into the unmanaged world of DDK
+        // protocols.
+        *remote_endpoint_out = client_channel.release();
     }
 
-    return activate_result;
-}
-
-// Get a reference to the active stream (if any) associated with the specified channel.
-fbl::RefPtr<IntelHDAStream> IntelHDACodec::GetStreamForChannel(const DispatcherChannel& channel,
-                                                                bool* is_stream_channel_out) {
-    bool stream_chan = ((channel.owner_ctx() > 0) &&
-                        (channel.owner_ctx() <= fbl::numeric_limits<uint16_t>::max()));
-
-    if (is_stream_channel_out != nullptr)
-        *is_stream_channel_out = stream_chan;
-
-    if (stream_chan) {
-        auto stream_id = static_cast<uint16_t>(channel.owner_ctx());
-
-        {
-            fbl::AutoLock lock(&active_streams_lock_);
-            auto iter = active_streams_.find(stream_id);
-            if (iter.IsValid())
-                return iter.CopyPointer();
-        }
-    }
-
-    return nullptr;
+    return res;
 }
 
 }  // namespace intel_hda

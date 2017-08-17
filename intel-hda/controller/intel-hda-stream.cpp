@@ -10,6 +10,7 @@
 #include "drivers/audio/intel-hda/utils/utils.h"
 
 #include "debug-logging.h"
+#include "intel-hda-codec.h"
 #include "intel-hda-stream.h"
 #include "utils.h"
 
@@ -130,17 +131,45 @@ void IntelHDAStream::Configure(Type type, uint8_t tag) {
     tag_ = tag;
 }
 
-zx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
-                                            const fbl::RefPtr<DispatcherChannel>& channel) {
-    if (channel == nullptr)
+zx_status_t IntelHDAStream::SetStreamFormat(const fbl::RefPtr<dispatcher::ExecutionDomain>& domain,
+                                            uint16_t encoded_fmt,
+                                            zx::channel* client_endpoint_out) {
+    if ((domain == nullptr) || (client_endpoint_out == nullptr))
         return ZX_ERR_INVALID_ARGS;
 
     // We are being given a new format.  Reset any client connection we may have
     // and stop the hardware.
     Deactivate();
 
-    // Record and program the stream format, then record the fifo depth we get based on this format
-    // selection.
+    // Attempt to create a channel and activate it, binding it to our Codec
+    // owner in the process, but dispatching requests to us.  Binding the
+    // channel to our Codec will cause it to exist in the same serialization
+    // domain as all of the other channels being serviced by this codec owner.
+    dispatcher::Channel::ProcessHandler phandler(
+    [stream = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+        return stream->ProcessClientRequest(channel);
+    });
+
+    dispatcher::Channel::ChannelClosedHandler chandler(
+    [stream = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+        stream->ProcessClientDeactivate(channel);
+    });
+
+    zx_status_t res;
+    fbl::RefPtr<dispatcher::Channel> local_endpoint;
+    res = CreateAndActivateChannel(domain,
+                                   fbl::move(phandler),
+                                   fbl::move(chandler),
+                                   &local_endpoint,
+                                   client_endpoint_out);
+    if (res != ZX_OK) {
+        DEBUG_LOG("Failed to create and activate ring buffer channel during SetStreamFormat "
+                  "(res %d)\n", res);
+        return res;
+    }
+
+    // Record and program the stream format, then record the fifo depth we get
+    // based on this format selection.
     encoded_fmt_ = encoded_fmt;
     REG_WR(&regs_->fmt, encoded_fmt_);
     hw_mb();
@@ -150,7 +179,7 @@ zx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
 
     // Record our new client channel
     fbl::AutoLock channel_lock(&channel_lock_);
-    channel_ = channel;
+    channel_ = fbl::move(local_endpoint);
     bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
 
     return ZX_OK;
@@ -161,44 +190,47 @@ void IntelHDAStream::Deactivate() {
     DeactivateLocked();
 }
 
-void IntelHDAStream::OnChannelClosed(const DispatcherChannel& channel) {
-    // Is the channel being closed our currently active channel?  If so, go
-    // ahead and deactivate this DMA stream.  Otherwise, just ignore this
-    // request.
-    fbl::AutoLock channel_lock(&channel_lock_);
-
-    if (&channel == channel_.get()) {
-        DEBUG_LOG("Client closed channel to stream\n");
-        DeactivateLocked();
-    }
-}
-
 #define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)    \
 case _ioctl:                                                    \
     if (req_size != sizeof(req._payload)) {                     \
         DEBUG_LOG("Bad " #_ioctl                                \
                   " response length (%u != %zu)\n",             \
                   req_size, sizeof(req._payload));              \
-        return ZX_ERR_INVALID_ARGS;                                \
+        return ZX_ERR_INVALID_ARGS;                             \
     }                                                           \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {  \
+    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {   \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
-        return ZX_ERR_INVALID_ARGS;                                \
+        return ZX_ERR_INVALID_ARGS;                             \
     }                                                           \
     return _handler(req._payload);
-zx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
-                                                 const RequestBufferType& req,
-                                                 uint32_t req_size,
-                                                 zx::handle&& rxed_handle) {
-    ZX_DEBUG_ASSERT(channel != nullptr);
+zx_status_t IntelHDAStream::ProcessClientRequest(dispatcher::Channel* channel) {
+    zx_status_t res;
+    uint32_t req_size;
+    zx::handle rxed_handle;
+    union {
+        audio_proto::CmdHdr                 hdr;
+        audio_proto::RingBufGetFifoDepthReq get_fifo_depth;
+        audio_proto::RingBufGetBufferReq    get_buffer;
+        audio_proto::RingBufStartReq        start;
+        audio_proto::RingBufStopReq         stop;
+    } req;
+    // TODO(johngro) : How large is too large?
+    static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
 
     // Is this request from our currently active channel?  If not, make sure the
     // channel has been de-activated and ignore the request.
     fbl::AutoLock channel_lock(&channel_lock_);
-
     if (channel_.get() != channel) {
-        channel->Deactivate(false);
+        channel->Deactivate();
         return ZX_OK;
+    }
+
+    // Read the client request.
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    res = channel->Read(&req, sizeof(req), &req_size);
+    if (res != ZX_OK) {
+        DEBUG_LOG("Failed to read client request (res %d)\n", res);
+        return res;
     }
 
     // Sanity check the request, then dispatch it to the appropriate handler.
@@ -230,8 +262,19 @@ zx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
 }
 #undef HANDLE_REQ
 
+void IntelHDAStream::ProcessClientDeactivate(const dispatcher::Channel* channel) {
+    // Is the channel being closed our currently active channel?  If so, go
+    // ahead and deactivate this DMA stream.  Otherwise, just ignore this
+    // request.
+    fbl::AutoLock channel_lock(&channel_lock_);
+    if (channel == channel_.get()) {
+        DEBUG_LOG("Client closed channel to stream\n");
+        DeactivateLocked();
+    }
+}
+
 void IntelHDAStream::ProcessStreamIRQ() {
-    // Regarless of whether we are currently active or not, make sure we ack any
+    // Regardless of whether we are currently active or not, make sure we ack any
     // pending IRQs so we don't accidentally spin out of control.
     uint8_t sts = REG_RD(&regs_->ctl_sts.b.sts);
     REG_WR(&regs_->ctl_sts.b.sts, sts);
@@ -273,7 +316,7 @@ void IntelHDAStream::DeactivateLocked() {
 
     // If we have a connection to a client, close it.
     if (channel_ != nullptr) {
-        channel_->Deactivate(false);
+        channel_->Deactivate();
         channel_ = nullptr;
     }
 

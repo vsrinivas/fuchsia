@@ -12,7 +12,7 @@
 #include <string.h>
 #include <threads.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
@@ -49,8 +49,7 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
                        void*        out_buf,
                        size_t       out_len,
                        size_t*      out_actual) -> zx_status_t {
-                        return DEV(ctx)->DeviceIoctl(op, in_buf, in_len, out_buf, out_len,
-                                                     out_actual);
+                        return DEV(ctx)->DeviceIoctl(op, out_buf, out_len, out_actual);
                    },
     .suspend      = nullptr,
     .resume       = nullptr,
@@ -191,9 +190,10 @@ void IntelHDAController::ShutdownIRQThread() {
 }
 
 void IntelHDAController::DeviceShutdown() {
-    // Make sure we have closed all of the channels clients are using to talk to
-    // us, and that we have synchronized with any callbacks in flight.
-    IntelHDADevice::Shutdown();
+    // Make sure we have closed all of the event sources (eg. channels clients
+    // are using to talk to us) and that we have synchronized with any dispatch
+    // callbacks in flight.
+    default_domain_->Deactivate();
 
     // If the IRQ thread is running, make sure we shut it down too.
     ShutdownIRQThread();
@@ -211,25 +211,51 @@ zx_status_t IntelHDAController::DeviceRelease() {
     return ZX_OK;
 }
 
-zx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
-                                                     const RequestBufferType& req,
-                                                     uint32_t req_size,
-                                                     zx::handle&& rxed_handle) {
-    ZX_DEBUG_ASSERT(channel != nullptr);
+zx_status_t IntelHDAController::DeviceIoctl(uint32_t op,
+                                            void*    out_buf,
+                                            size_t   out_len,
+                                            size_t*  out_actual) {
+    dispatcher::Channel::ProcessHandler phandler(
+    [controller = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, controller->default_domain_);
+        return controller->ProcessClientRequest(channel);
+    });
 
+    return HandleDeviceIoctl(op, out_buf, out_len, out_actual,
+                             default_domain_,
+                             fbl::move(phandler),
+                             nullptr);
+}
+
+zx_status_t IntelHDAController::ProcessClientRequest(dispatcher::Channel* channel) {
+    zx_status_t res;
+    uint32_t req_size;
+    union RequestBuffer {
+        ihda_cmd_hdr_t                      hdr;
+        ihda_get_ids_req_t                  get_ids;
+        ihda_controller_snapshot_regs_req_t snapshot_regs;
+    } req;
+
+    // TODO(johngro) : How large is too large?
+    static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
+
+    // Read the client request.
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    res = channel->Read(&req, sizeof(req), &req_size);
+    if (res != ZX_OK) {
+        DEBUG_LOG("Failed to read client request (res %d)\n", res);
+        return res;
+    }
+
+    // Sanity checks
     if (req_size < sizeof(req.hdr)) {
         DEBUG_LOG("Client request too small to contain header (%u < %zu)\n",
                 req_size, sizeof(req.hdr));
         return ZX_ERR_INVALID_ARGS;
     }
 
+    // Dispatch
     VERBOSE_LOG("Client Request 0x%04x len %u\n", req.hdr.cmd, req_size);
-
-    if (rxed_handle.is_valid()) {
-        DEBUG_LOG("Unexpected handle in client request 0x%04x\n", req.hdr.cmd);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
     switch (req.hdr.cmd) {
     case IHDA_CMD_GET_IDS: {
         if (req_size != sizeof(req.get_ids)) {
@@ -260,7 +286,7 @@ zx_status_t IntelHDAController::ProcessClientRequest(DispatcherChannel* channel,
             return ZX_ERR_INVALID_ARGS;
         }
 
-        return SnapshotRegs(*channel, req.snapshot_regs);
+        return SnapshotRegs(channel, req.snapshot_regs);
 
     default:
         return ZX_ERR_INVALID_ARGS;
@@ -306,7 +332,7 @@ void IntelHDAController::DriverUnbind(void* ctx,
 
 void IntelHDAController::DriverRelease(void* ctx) {
     // If we are the last one out the door, turn off the lights in the thread pool.
-    audio::DispatcherThread::ShutdownThreadPool();
+    audio::dispatcher::ThreadPool::ShutdownAll();
 }
 
 }  // namespace intel_hda

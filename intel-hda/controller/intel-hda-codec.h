@@ -16,12 +16,12 @@
 #include <string.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
 
 #include "codec-cmd-job.h"
-#include "intel-hda-device.h"
 #include "intel-hda-stream.h"
 #include "thread-annotations.h"
 
@@ -31,22 +31,8 @@ namespace intel_hda {
 class IntelHDAController;
 struct CodecResponse;
 
-class IntelHDACodec : public IntelHDADevice<IntelHDACodec> {
+class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
 public:
-    // Definition of the client request buffer, exported for IntelHDADevice<>
-    union RequestBufferType {
-        union {
-            ihda_proto::CmdHdr           hdr;
-            ihda_proto::GetIDsReq        get_ids;
-            ihda_proto::SendCORBCmdReq   corb_cmd;
-            ihda_proto::RequestStreamReq request_stream;
-            ihda_proto::ReleaseStreamReq release_stream;
-            ihda_proto::SetStreamFmtReq  set_stream_fmt;
-        } codec;
-
-        IntelHDAStream::RequestBufferType stream_requests;
-    };
-
     enum class State {
         PROBING,
         FINDING_DRIVER,
@@ -77,10 +63,6 @@ public:
     // Debug/Diags
     void DumpState();
 
-protected:
-    // DispatcherChannel::Owner notification
-    void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
-
 private:
     friend class fbl::RefPtr<IntelHDACodec>;
 
@@ -107,7 +89,7 @@ private:
 
     zx_status_t PublishDevice();
 
-    void SendCORBResponse(const fbl::RefPtr<DispatcherChannel>& channel,
+    void SendCORBResponse(const fbl::RefPtr<dispatcher::Channel>& channel,
                           const CodecResponse& resp,
                           uint32_t transaction_id = IHDA_INVALID_TRANSACTION_ID);
 
@@ -118,34 +100,19 @@ private:
     // ZX_PROTOCOL_IHDA_CODEC Interface
     zx_status_t CodecGetDispatcherChannel(zx_handle_t* channel_out);
 
-    // Get a reference to the active stream (if any) associated with the specified channel.
-    fbl::RefPtr<IntelHDAStream> GetStreamForChannel(const DispatcherChannel& channel,
-                                                     bool* is_stream_channel_out = nullptr);
-
-    // Implementation of IntelHDADevice<> callback and codec specific request
-    // processors.
-    friend class IntelHDADevice<IntelHDACodec>;
-    zx_status_t ProcessClientRequest(DispatcherChannel* channel,
-                                     const RequestBufferType& req,
-                                     uint32_t req_size,
-                                     zx::handle&& rxed_handle)
-        TA_REQ(process_lock());
-
-    zx_status_t ProcessGetIDs(DispatcherChannel* channel,
-                              const ihda_proto::GetIDsReq& req)
-        TA_REQ(process_lock());
-    zx_status_t ProcessSendCORBCmd(DispatcherChannel* channel,
-                                   const ihda_proto::SendCORBCmdReq& req)
-        TA_REQ(process_lock());
-    zx_status_t ProcessRequestStream(DispatcherChannel* channel,
-                                     const ihda_proto::RequestStreamReq& req)
-        TA_REQ(process_lock());
-    zx_status_t ProcessReleaseStream(DispatcherChannel* channel,
-                                     const ihda_proto::ReleaseStreamReq& req)
-        TA_REQ(process_lock());
-    zx_status_t ProcessSetStreamFmt(DispatcherChannel* channel,
-                                    const ihda_proto::SetStreamFmtReq& req)
-        TA_REQ(process_lock());
+    // Thunks for interacting with clients and codec drivers.
+    zx_status_t DeviceIoctl(uint32_t op, void* out_buf, size_t out_len, size_t* out_actual);
+    zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool is_driver_channel);
+    void ProcessClientDeactivate(const dispatcher::Channel* channel);
+    zx_status_t ProcessGetIDs(dispatcher::Channel* channel, const ihda_proto::GetIDsReq& req);
+    zx_status_t ProcessSendCORBCmd(dispatcher::Channel* channel,
+                                   const ihda_proto::SendCORBCmdReq& req);
+    zx_status_t ProcessRequestStream(dispatcher::Channel* channel,
+                                     const ihda_proto::RequestStreamReq& req);
+    zx_status_t ProcessReleaseStream(dispatcher::Channel* channel,
+                                     const ihda_proto::ReleaseStreamReq& req);
+    zx_status_t ProcessSetStreamFmt(dispatcher::Channel* channel,
+                                    const ihda_proto::SetStreamFmtReq& req);
 
     // Reference to our owner.
     IntelHDAController& controller_;
@@ -156,7 +123,7 @@ private:
 
     // Driver connection state
     fbl::Mutex codec_driver_channel_lock_;
-    fbl::RefPtr<DispatcherChannel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
+    fbl::RefPtr<dispatcher::Channel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
 
     // Device properties.
     const uint8_t codec_id_;
@@ -170,6 +137,9 @@ private:
         uint8_t  rev_id;
         uint8_t  step_id;
     } props_;
+
+    // Dispatcher framework state.
+    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // Active DMA streams
     fbl::Mutex          active_streams_lock_;
