@@ -25,7 +25,13 @@ ActiveMultistreamSourceStage::ActiveMultistreamSourceStage(
     FTL_DCHECK(output_index < outputs_.size());
     FTL_DCHECK(outputs_.size() == packets_per_output_.size());
     FTL_DCHECK(packet);
-    FTL_DCHECK(packet_request_outstanding_);
+
+    if (!packet_request_outstanding_) {
+      // We requested a packet, then changed our minds due to a flush. Discard
+      // the packet.
+      mutex_.Unlock();
+      return;
+    }
 
     packet_request_outstanding_ = false;
 
