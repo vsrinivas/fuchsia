@@ -31,6 +31,7 @@
 #include <platform/pc.h>
 #include <platform/pc/acpi.h>
 #include <platform/pc/hpet.h>
+#include <platform/pc/timer.h>
 #include <platform/timer.h>
 #include "platform_p.h"
 
@@ -69,6 +70,7 @@ static_assert(mxtl::count_of(clock_name) == CLOCK_COUNT, "");
 static struct fp_32_64 us_per_pit;
 static volatile uint64_t pit_ticks;
 static uint16_t pit_divisor;
+static uint32_t ns_per_pit_rounded_up;
 
 // Whether or not we have an Invariant TSC (controls whether we use the PIT or
 // not after initialization).  The Invariant TSC is rate-invariant under P-, C-,
@@ -92,9 +94,11 @@ static uint8_t apic_divisor = 0;
 static uint64_t tsc_ticks_per_ms;
 static struct fp_32_64 ns_per_tsc;
 static struct fp_32_64 tsc_per_ns;
+static uint32_t ns_per_tsc_rounded_up;
 
 // HPET calibration values
 static struct fp_32_64 ns_per_hpet;
+static uint32_t ns_per_hpet_rounded_up;
 
 #define INTERNAL_FREQ 1193182U
 #define INTERNAL_FREQ_3X 3579546U
@@ -114,7 +118,7 @@ lk_time_t current_time(void)
     switch (wall_clock) {
         case CLOCK_TSC: {
             uint64_t tsc = rdtsc();
-            time = u64_mul_u64_fp32_64(tsc, ns_per_tsc);
+            time = ticks_to_nanos(tsc);
             break;
         }
         case CLOCK_HPET: {
@@ -138,16 +142,13 @@ lk_time_t current_time(void)
 static lk_time_t discrete_time_roundup(lk_time_t t) {
     switch (wall_clock) {
         case CLOCK_TSC: {
-            // Add 1ns to conservatively deal with rounding
-            return t + u64_mul_u64_fp32_64(1, ns_per_tsc) + 1;
+            return t + ns_per_tsc_rounded_up;
         }
         case CLOCK_HPET: {
-            // Add 1ns to conservatively deal with rounding
-            return t + u64_mul_u64_fp32_64(1, ns_per_hpet) + 1;
+            return t + ns_per_hpet_rounded_up;
         }
         case CLOCK_PIT: {
-            // Add 1us to the PIT tick rate to dea lwith rounding
-            return t + (u64_mul_u64_fp32_64(1, us_per_pit) + 1) * 1000;
+            return t + ns_per_pit_rounded_up;
         }
         default:
             panic("Invalid wall clock source\n");
@@ -207,6 +208,9 @@ static void set_pit_frequency(uint32_t frequency)
      * point representation of the configured timer delta.
      */
     fp_32_64_div_32_32(&us_per_pit, 1000 * 1000 * 3 * count, INTERNAL_FREQ_3X);
+
+    // Add 1us to the PIT tick rate to deal with rounding
+    ns_per_pit_rounded_up = (u32_mul_u64_fp32_64(1, us_per_pit) + 1) * 1000;
 
     //dprintf(DEBUG, "set_pit_frequency: pit_divisor=%04x\n", pit_divisor);
 
@@ -424,6 +428,9 @@ static void calibrate_tsc(void)
     ASSERT(tsc_ticks_per_ms <= UINT32_MAX);
     fp_32_64_div_32_32(&ns_per_tsc, 1000 * 1000, static_cast<uint32_t>(tsc_ticks_per_ms));
     fp_32_64_div_32_32(&tsc_per_ns, static_cast<uint32_t>(tsc_ticks_per_ms), 1000 * 1000);
+    // Add 1ns to conservatively deal with rounding
+    ns_per_tsc_rounded_up = u32_mul_u64_fp32_64(1, ns_per_tsc) + 1;
+
     LTRACEF("ns_per_tsc: %08x.%08x%08x\n", ns_per_tsc.l0, ns_per_tsc.l32, ns_per_tsc.l64);
 }
 
@@ -450,6 +457,8 @@ static void platform_init_timer(uint level)
         const uint64_t hpet_ms_rate = hpet_ticks_per_ms();
         ASSERT(hpet_ms_rate <= UINT32_MAX);
         fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000, static_cast<uint32_t>(hpet_ms_rate));
+        // Add 1ns to conservatively deal with rounding
+        ns_per_hpet_rounded_up = u32_mul_u64_fp32_64(1, ns_per_hpet) + 1;
     } else {
         calibration_clock = CLOCK_PIT;
     }
