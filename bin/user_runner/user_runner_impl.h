@@ -145,13 +145,9 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   std::unique_ptr<LinkStorage> link_storage_;
   std::unique_ptr<LinkImpl> user_shell_link_;
 
-  AgentControllerPtr home_work_agent_controller_;
-
-  app::ServiceProviderPtr home_work_agent_services_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_USER_RUNNER_USER_RUNENR_IMPL_H_
+#endif  // APPS_MODULAR_SRC_USER_RUNNER_USER_RUNNER_IMPL_H_
