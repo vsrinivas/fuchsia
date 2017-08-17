@@ -2,9 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
+import("//packages/package.gni")
+
+package("bluetooth_examples") {
+  app = true
+
   deps = [
     "//apps/bluetooth/examples/ble_scanner",
     "//apps/bluetooth/examples/settings",
+  ]
+
+  binaries = [
+    {
+        source = "gen/apps/bluetooth/examples/ble_scanner/ble_scanner.flx"
+        name = "bluetooth_le_scanner"
+    },
+    {
+        source = "gen/apps/bluetooth/examples/settings/settings.flx"
+        name = "bluetooth_settings_example"
+    }
   ]
 }
