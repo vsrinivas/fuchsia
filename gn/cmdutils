@@ -2,25 +2,7 @@
     "languages": [
         "cpp"
     ],
-    "labels": [
-        "//bin/cmdutils"
-    ],
-    "binaries": [
-        {
-            "binary": "cowsay",
-            "bootfs_path": "bin/cowsay"
-        },
-        {
-            "binary": "sysinfo",
-            "bootfs_path": "bin/sysinfo"
-        },
-        {
-            "binary": "time",
-            "bootfs_path": "bin/time"
-        },
-        {
-            "binary": "uname",
-            "bootfs_path": "bin/uname"
-        }
-    ]
+    "packages": {
+        "cmdutils": "//bin/cmdutils"
+    }
 }
