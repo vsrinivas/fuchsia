@@ -51,7 +51,8 @@ public:
     virtual void WaitRendering(uint64_t buffer_id) = 0;
 
     virtual void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
-                          uint32_t signal_semaphore_count, const uint64_t* semaphore_ids) = 0;
+                          uint32_t signal_semaphore_count, const uint64_t* semaphore_ids,
+                          uint32_t buffer_presented_handle) = 0;
 
     static PlatformIpcConnection* cast(magma_connection_t* connection)
     {
@@ -85,9 +86,10 @@ public:
                                                    uint32_t context_id) = 0;
         virtual magma::Status WaitRendering(uint64_t buffer_id) = 0;
 
-        virtual magma::Status PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
-                                       uint32_t signal_semaphore_count,
-                                       uint64_t* semaphore_ids) = 0;
+        virtual magma::Status
+        PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+                 uint64_t* semaphore_ids,
+                 std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) = 0;
     };
 
     PlatformConnection(std::unique_ptr<magma::PlatformEvent> shutdown_event)

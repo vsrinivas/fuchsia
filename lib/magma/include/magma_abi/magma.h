@@ -78,11 +78,13 @@ magma_status_t magma_display_get_size(int fd, struct magma_display_size* size_ou
 // |wait_semaphores| will be waited upon prior to scanning out the buffer.
 // |signal_semaphores| will be signaled when |buf| is no longer being displayed and is safe to be
 // reused.
-void magma_display_page_flip(struct magma_connection_t* connection, magma_buffer_t buffer,
-                             uint32_t wait_semaphore_count,
-                             const magma_semaphore_t* wait_semaphores,
-                             uint32_t signal_semaphore_count,
-                             const magma_semaphore_t* signal_semaphores);
+// |buffer_presented_semaphore| will be signaled when the vblank fires making the buffer visible.
+magma_status_t magma_display_page_flip(struct magma_connection_t* connection, magma_buffer_t buffer,
+                                       uint32_t wait_semaphore_count,
+                                       const magma_semaphore_t* wait_semaphores,
+                                       uint32_t signal_semaphore_count,
+                                       const magma_semaphore_t* signal_semaphores,
+                                       magma_semaphore_t buffer_presented_semaphore);
 
 // Creates a semaphore on the given connection.  If successful |semaphore_out| will be set.
 magma_status_t magma_create_semaphore(struct magma_connection_t* connection,

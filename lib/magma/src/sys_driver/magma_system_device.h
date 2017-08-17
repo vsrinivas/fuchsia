@@ -57,7 +57,8 @@ public:
     void PageFlip(MagmaSystemConnection* connection, std::shared_ptr<MagmaSystemBuffer> buf,
                   magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
                   uint32_t signal_semaphore_count,
-                  std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores);
+                  std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
+                  std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore);
 
     // Returns the last flipped buffer.
     std::shared_ptr<MagmaSystemBuffer> PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,

@@ -74,12 +74,24 @@ MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
     return last_buffer_copy;
 }
 
+static void page_flip_callback(magma_status_t status, uint64_t vblank_time_ns, void* data)
+{
+    if (status != MAGMA_STATUS_OK) {
+        DLOG("page_flip_callback: error status %d", status);
+        return;
+    }
+
+    auto semaphore = reinterpret_cast<magma::PlatformSemaphore*>(data);
+    semaphore->Signal();
+    delete semaphore;
+}
+
 // Called by display connection threads
-void MagmaSystemDevice::PageFlip(MagmaSystemConnection* connection,
-                                 std::shared_ptr<MagmaSystemBuffer> buf,
-                                 magma_system_image_descriptor* image_desc,
-                                 uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-                                 std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores)
+void MagmaSystemDevice::PageFlip(
+    MagmaSystemConnection* connection, std::shared_ptr<MagmaSystemBuffer> buf,
+    magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
+    uint32_t signal_semaphore_count, std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
+    std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore)
 {
     std::unique_lock<std::mutex> lock(page_flip_mutex_);
 
@@ -124,7 +136,8 @@ void MagmaSystemDevice::PageFlip(MagmaSystemConnection* connection,
 
     msd_connection_present_buffer(connection->msd_connection(), buf->msd_buf(), image_desc,
                                   wait_semaphore_count, signal_semaphore_count,
-                                  msd_semaphores.data(), nullptr, nullptr);
+                                  msd_semaphores.data(), page_flip_callback,
+                                  buffer_presented_semaphore.release());
 
     last_flipped_buffer_ = buf;
 }

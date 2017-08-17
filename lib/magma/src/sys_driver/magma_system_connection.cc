@@ -224,9 +224,9 @@ std::shared_ptr<MagmaSystemSemaphore> MagmaSystemConnection::LookupSemaphore(uin
     return iter->second;
 }
 
-magma::Status MagmaSystemConnection::PageFlip(uint64_t id, uint32_t wait_semaphore_count,
-                                              uint32_t signal_semaphore_count,
-                                              uint64_t* semaphore_ids)
+magma::Status MagmaSystemConnection::PageFlip(
+    uint64_t id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+    uint64_t* semaphore_ids, std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore)
 {
     if (!has_display_capability_)
         return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
@@ -254,6 +254,7 @@ magma::Status MagmaSystemConnection::PageFlip(uint64_t id, uint32_t wait_semapho
     magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
 
     device->PageFlip(this, buf, &image_desc, wait_semaphore_count, signal_semaphore_count,
-                     std::move(semaphores));
+                     std::move(semaphores), std::move(buffer_presented_semaphore));
+
     return MAGMA_STATUS_OK;
 }

@@ -93,7 +93,10 @@ public:
     void TestPageFlip()
     {
         uint64_t semaphore_ids[]{0, 1, 2};
-        ipc_connection_->PageFlip(test_buffer_id, 2, 1, semaphore_ids);
+        test_semaphore = magma::PlatformSemaphore::Create();
+        uint32_t buffer_presented_handle;
+        EXPECT_TRUE(test_semaphore->duplicate_handle(&buffer_presented_handle));
+        ipc_connection_->PageFlip(test_buffer_id, 2, 1, semaphore_ids, buffer_presented_handle);
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
 
@@ -108,6 +111,7 @@ public:
     static uint64_t test_semaphore_id;
     static magma_status_t test_error;
     static bool test_complete;
+    static std::unique_ptr<magma::PlatformSemaphore> test_semaphore;
 
 private:
     static void IpcThreadFunc(std::shared_ptr<magma::PlatformConnection> connection)
@@ -125,6 +129,7 @@ uint64_t TestPlatformConnection::test_semaphore_id;
 uint32_t TestPlatformConnection::test_context_id;
 magma_status_t TestPlatformConnection::test_error;
 bool TestPlatformConnection::test_complete;
+std::unique_ptr<magma::PlatformSemaphore> TestPlatformConnection::test_semaphore;
 
 class TestDelegate : public magma::PlatformConnection::Delegate {
 public:
@@ -184,8 +189,10 @@ public:
         return MAGMA_STATUS_OK;
     }
 
-    magma::Status PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
-                           uint32_t signal_semaphore_count, uint64_t* semaphore_ids) override
+    magma::Status
+    PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+             uint64_t* semaphore_ids,
+             std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) override
     {
         EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
         EXPECT_EQ(2u, wait_semaphore_count);
@@ -193,6 +200,7 @@ public:
         for (uint32_t i = 0; i < wait_semaphore_count + signal_semaphore_count; i++) {
             EXPECT_EQ(i, semaphore_ids[i]);
         }
+        EXPECT_EQ(buffer_presented_semaphore->id(), TestPlatformConnection::test_semaphore->id());
         TestPlatformConnection::test_complete = true;
         return MAGMA_STATUS_OK;
     }

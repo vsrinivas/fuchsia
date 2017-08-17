@@ -77,7 +77,7 @@ struct WaitRenderingOp {
 // for the number of semaphores.
 struct PageFlipOp {
     const OpCode opcode = PageFlip;
-    static constexpr uint32_t kNumHandles = 0;
+    static constexpr uint32_t kNumHandles = 1;
     uint64_t buffer_id;
     uint64_t signal_semaphore_count;
     uint32_t wait_semaphore_count;
@@ -215,8 +215,8 @@ public:
                         OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
                     break;
                 case OpCode::PageFlip:
-                    success =
-                        PageFlip(OpCast<PageFlipOp>(bytes, actual_bytes, handles, actual_handles));
+                    success = PageFlip(
+                        OpCast<PageFlipOp>(bytes, actual_bytes, handles, actual_handles), handles);
                     break;
                 case OpCode::GetError:
                     success =
@@ -333,14 +333,20 @@ private:
         return true;
     }
 
-    bool PageFlip(PageFlipOp* op)
+    bool PageFlip(PageFlipOp* op, mx_handle_t* handles)
     {
         DLOG("Operation: PageFlip");
         if (!op)
             return DRETF(false, "malformed message");
 
-        magma::Status status = delegate_->PageFlip(op->buffer_id, op->wait_semaphore_count,
-                                                   op->signal_semaphore_count, op->semaphore_ids);
+        auto buffer_presented_semaphore = magma::PlatformSemaphore::Import(handles[0]);
+        if (!buffer_presented_semaphore)
+            return DRETF(false, "couldn't import buffer_presented_semaphore from handle 0x%x",
+                         handles[0]);
+
+        magma::Status status =
+            delegate_->PageFlip(op->buffer_id, op->wait_semaphore_count, op->signal_semaphore_count,
+                                op->semaphore_ids, std::move(buffer_presented_semaphore));
         if (!status)
             SetError(status);
         return true;
@@ -501,7 +507,8 @@ public:
     }
 
     void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
-                  uint32_t signal_semaphore_count, const uint64_t* semaphore_ids) override
+                  uint32_t signal_semaphore_count, const uint64_t* semaphore_ids,
+                  uint32_t buffer_presented_handle) override
     {
         const uint32_t payload_size =
             PageFlipOp::size(wait_semaphore_count + signal_semaphore_count);
@@ -516,7 +523,9 @@ public:
             op->semaphore_ids[i] = semaphore_ids[i];
         }
 
-        magma_status_t result = channel_write(payload.get(), payload_size, nullptr, 0);
+        mx_handle_t mx_buffer_presented_handle = buffer_presented_handle;
+        magma_status_t result =
+            channel_write(payload.get(), payload_size, &mx_buffer_presented_handle, 1);
         if (result != 0)
             SetError(result);
     }

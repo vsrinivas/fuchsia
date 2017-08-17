@@ -26,12 +26,12 @@ class MagmaConnection {
   void SignalSemaphore(magma_semaphore_t sem);
   void ResetSemaphore(magma_semaphore_t sem);
 
-  void DisplayPageFlip(magma_buffer_t buffer,
-                       uint32_t wait_semaphore_count,
-                       const magma_semaphore_t* wait_semaphores,
-                       uint32_t signal_semaphore_count,
-                       const magma_semaphore_t* signal_semaphores);
-private:
+  void DisplayPageFlip(magma_buffer_t buffer, uint32_t wait_semaphore_count,
+                       const magma_semaphore_t* wait_semaphores, uint32_t signal_semaphore_count,
+                       const magma_semaphore_t* signal_semaphores,
+                       magma_semaphore_t buffer_presented_semaphore);
+
+  private:
   int fd_;
   magma_connection_t *conn_;
 };

@@ -268,11 +268,12 @@ magma_status_t magma_display_get_size(int fd, magma_display_size* size_out)
     return MAGMA_STATUS_OK;
 }
 
-void magma_display_page_flip(magma_connection_t* connection, magma_buffer_t buffer,
-                             uint32_t wait_semaphore_count,
-                             const magma_semaphore_t* wait_semaphores,
-                             uint32_t signal_semaphore_count,
-                             const magma_semaphore_t* signal_semaphores)
+magma_status_t magma_display_page_flip(magma_connection_t* connection, magma_buffer_t buffer,
+                                       uint32_t wait_semaphore_count,
+                                       const magma_semaphore_t* wait_semaphores,
+                                       uint32_t signal_semaphore_count,
+                                       const magma_semaphore_t* signal_semaphores,
+                                       magma_semaphore_t buffer_presented_semaphore)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
@@ -285,9 +286,16 @@ void magma_display_page_flip(magma_connection_t* connection, magma_buffer_t buff
         semaphore_ids[index++] = magma_get_semaphore_id(signal_semaphores[i]);
     }
 
+    uint32_t buffer_presented_handle;
+    if (!reinterpret_cast<magma::PlatformSemaphore*>(buffer_presented_semaphore)
+             ->duplicate_handle(&buffer_presented_handle))
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
+
     magma::PlatformIpcConnection::cast(connection)
         ->PageFlip(platform_buffer->id(), wait_semaphore_count, signal_semaphore_count,
-                   semaphore_ids.data());
+                   semaphore_ids.data(), buffer_presented_handle);
+
+    return MAGMA_STATUS_OK;
 }
 
 magma_status_t magma_create_semaphore(magma_connection_t* connection,

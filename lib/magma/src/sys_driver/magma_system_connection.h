@@ -63,8 +63,10 @@ public:
 
     msd_connection_t* msd_connection() { return msd_connection_.get(); }
 
-    magma::Status PageFlip(uint64_t id, uint32_t wait_semaphore_count,
-                           uint32_t signal_semaphore_count, uint64_t* semaphore_ids) override;
+    magma::Status
+    PageFlip(uint64_t id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
+             uint64_t* semaphore_ids,
+             std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) override;
 
 private:
     // MagmaSystemContext::Owner

@@ -236,19 +236,24 @@ TEST(MagmaSystemConnection, PageFlip)
     std::vector<uint64_t> semaphore_ids{semaphore->id()};
     std::vector<uint64_t> bogus_semaphore_ids{UINT64_MAX};
 
+    auto buffer_presented_semaphore = magma::PlatformSemaphore::Create();
+
     // scanout the buffer
-    connection.PageFlip(buf->id(), 0, 1, semaphore_ids.data());
+    EXPECT_TRUE(connection.PageFlip(buf->id(), 0, 1, semaphore_ids.data(),
+                                    buffer_presented_semaphore->Clone()));
+    EXPECT_TRUE(buffer_presented_semaphore->Wait(100));
 
     // should be unable to pageflip totally bogus handle
-    connection.PageFlip(0, 0, 0, nullptr);
-    EXPECT_FALSE(semaphore->Wait(100));
+    EXPECT_FALSE(connection.PageFlip(0, 0, 0, nullptr, buffer_presented_semaphore->Clone()));
 
     // should be unable to pageflip unknown semaphore
-    connection.PageFlip(buf->id(), 0, 1, bogus_semaphore_ids.data());
-    EXPECT_FALSE(semaphore->Wait(100));
+    EXPECT_FALSE(connection.PageFlip(buf->id(), 0, 1, bogus_semaphore_ids.data(),
+                                     buffer_presented_semaphore->Clone()));
 
     // should be ok to page flip now
-    connection.PageFlip(buf->id(), 0, 1, semaphore_ids.data());
+    EXPECT_TRUE(connection.PageFlip(buf->id(), 0, 1, semaphore_ids.data(),
+                                    buffer_presented_semaphore->Clone()));
+    EXPECT_TRUE(buffer_presented_semaphore->Wait(100));
     EXPECT_TRUE(semaphore->Wait(100));
 
     msd_driver_destroy(msd_drv);

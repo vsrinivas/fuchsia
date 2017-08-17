@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "magma_util/macros.h"
 #include "platform_object.h"
 
 namespace magma {
@@ -37,6 +38,14 @@ public:
     static std::unique_ptr<PlatformSemaphore> Import(uint32_t handle);
 
     virtual ~PlatformSemaphore() {}
+
+    std::unique_ptr<PlatformSemaphore> Clone()
+    {
+        uint32_t handle;
+        if (!duplicate_handle(&handle))
+            return DRETP(nullptr, "failed to duplicate handle");
+        return Import(handle);
+    }
 
     // Signal the semaphore.  State must be unsignalled.
     // Called only by the driver device thread.
