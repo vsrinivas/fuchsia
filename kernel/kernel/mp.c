@@ -5,22 +5,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 #include <kernel/mp.h>
 
+#include <arch/mp.h>
+#include <arch/ops.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <stdlib.h>
-#include <trace.h>
-#include <arch/mp.h>
-#include <arch/ops.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/stats.h>
 #include <kernel/timer.h>
+#include <stdlib.h>
+#include <trace.h>
 
 #define LOCAL_TRACE 0
 
@@ -32,18 +31,16 @@ struct mp_state mp __CPU_ALIGN = {
 
 /* Helpers used for implementing mp_sync */
 struct mp_sync_context;
-static void mp_sync_task(void *context);
+static void mp_sync_task(void* context);
 
-void mp_init(void)
-{
+void mp_init(void) {
     mp.ipi_task_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < countof(mp.ipi_task_list); ++i) {
         list_initialize(&mp.ipi_task_list[i]);
     }
 }
 
-void mp_reschedule(mp_cpu_mask_t target, uint flags)
-{
+void mp_reschedule(mp_cpu_mask_t target, uint flags) {
     if (target == 0)
         return;
 
@@ -71,18 +68,17 @@ void mp_reschedule(mp_cpu_mask_t target, uint flags)
 
 struct mp_sync_context {
     mp_sync_task_t task;
-    void *task_context;
+    void* task_context;
     /* Mask of which CPUs need to finish the task */
     volatile mp_cpu_mask_t outstanding_cpus;
 };
 
-static void mp_sync_task(void *raw_context)
-{
-    struct mp_sync_context *context = raw_context;
+static void mp_sync_task(void* raw_context) {
+    struct mp_sync_context* context = raw_context;
     context->task(context->task_context);
     /* use seq-cst atomic to ensure this update is not seen before the
      * side-effects of context->task */
-    atomic_and((int *)&context->outstanding_cpus, ~(1U << arch_curr_cpu_num()));
+    atomic_and((int*)&context->outstanding_cpus, ~(1U << arch_curr_cpu_num()));
     arch_spinloop_signal();
 }
 
@@ -94,8 +90,7 @@ static void mp_sync_task(void *raw_context)
  *
  * Interrupts must be disabled if calling with MP_CPU_ALL_BUT_LOCAL as target
  */
-void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
-{
+void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void* context) {
     uint num_cpus = arch_max_num_cpus();
 
     if (target == MP_CPU_ALL) {
@@ -166,7 +161,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void *context)
         /* See comment in mp_unplug_trampoline about related CPU hotplug
          * guarantees. */
         mp_cpu_mask_t outstanding = atomic_load_relaxed(
-                (int *)&sync_context.outstanding_cpus);
+            (int*)&sync_context.outstanding_cpus);
         mp_cpu_mask_t online = mp_get_online_mask();
         if ((outstanding & online) == 0) {
             break;
@@ -207,8 +202,8 @@ static void mp_unplug_trampoline(void) {
     /* do *not* enable interrupts, we want this CPU to never receive another
      * interrupt */
 
-    thread_t *ct = get_current_thread();
-    event_t *unplug_done = ct->arg;
+    thread_t* ct = get_current_thread();
+    event_t* unplug_done = ct->arg;
 
     mp_set_curr_cpu_active(false);
 
@@ -254,7 +249,7 @@ cleanup_mutex:
 status_t mp_unplug_cpu(uint cpu_id) {
     DEBUG_ASSERT(!arch_ints_disabled());
 
-    thread_t *t = NULL;
+    thread_t* t = NULL;
     status_t status = MX_ERR_INTERNAL;
 
     mutex_acquire(&mp.hotplug_lock);
@@ -277,13 +272,13 @@ status_t mp_unplug_cpu(uint cpu_id) {
      */
     event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
     t = thread_create_etc(
-            NULL,
-            "unplug_thread",
-            NULL,
-            &unplug_done,
-            HIGHEST_PRIORITY,
-            NULL, NULL, 4096,
-            mp_unplug_trampoline);
+        NULL,
+        "unplug_thread",
+        NULL,
+        &unplug_done,
+        HIGHEST_PRIORITY,
+        NULL, NULL, 4096,
+        mp_unplug_trampoline);
     if (t == NULL) {
         status = MX_ERR_NO_MEMORY;
         goto cleanup_mutex;
@@ -320,7 +315,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
         goto cleanup_mutex;
     }
 
-    /* Fall through.  Since the thread is scheduled, it should not be in any
+/* Fall through.  Since the thread is scheduled, it should not be in any
      * queues.  Since the CPU running this thread is now shutdown, we can just
      * erase the thread's existence. */
 cleanup_thread:
@@ -330,34 +325,30 @@ cleanup_mutex:
     return status;
 }
 
-void mp_set_curr_cpu_online(bool online)
-{
+void mp_set_curr_cpu_online(bool online) {
     if (online) {
-        atomic_or((volatile int *)&mp.online_cpus, 1U << arch_curr_cpu_num());
+        atomic_or((volatile int*)&mp.online_cpus, 1U << arch_curr_cpu_num());
     } else {
-        atomic_and((volatile int *)&mp.online_cpus, ~(1U << arch_curr_cpu_num()));
+        atomic_and((volatile int*)&mp.online_cpus, ~(1U << arch_curr_cpu_num()));
     }
-
 }
 
-void mp_set_curr_cpu_active(bool active)
-{
+void mp_set_curr_cpu_active(bool active) {
     if (active) {
-        atomic_or((volatile int *)&mp.active_cpus, 1U << arch_curr_cpu_num());
+        atomic_or((volatile int*)&mp.active_cpus, 1U << arch_curr_cpu_num());
     } else {
-        atomic_and((volatile int *)&mp.active_cpus, ~(1U << arch_curr_cpu_num()));
+        atomic_and((volatile int*)&mp.active_cpus, ~(1U << arch_curr_cpu_num()));
     }
 }
 
-enum handler_return mp_mbx_generic_irq(void)
-{
+enum handler_return mp_mbx_generic_irq(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     uint local_cpu = arch_curr_cpu_num();
 
     CPU_STATS_INC(generic_ipis);
 
     while (1) {
-        struct mp_ipi_task *task;
+        struct mp_ipi_task* task;
         spin_lock(&mp.ipi_task_lock);
         task = list_remove_head_type(&mp.ipi_task_list[local_cpu], struct mp_ipi_task, node);
         spin_unlock(&mp.ipi_task_lock);
@@ -370,8 +361,7 @@ enum handler_return mp_mbx_generic_irq(void)
     return INT_NO_RESCHEDULE;
 }
 
-enum handler_return mp_mbx_reschedule_irq(void)
-{
+enum handler_return mp_mbx_reschedule_irq(void) {
     uint cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);
@@ -381,9 +371,21 @@ enum handler_return mp_mbx_reschedule_irq(void)
     return (mp.active_cpus & (1U << cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
-__WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) { return MX_ERR_NOT_SUPPORTED; }
-__WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) { return MX_ERR_NOT_SUPPORTED; }
-__WEAK status_t arch_mp_cpu_unplug(uint cpu_id) { return MX_ERR_NOT_SUPPORTED; }
-__WEAK status_t platform_mp_cpu_hotplug(uint cpu_id) { return arch_mp_cpu_hotplug(cpu_id); }
-__WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) { return arch_mp_prep_cpu_unplug(cpu_id); }
-__WEAK status_t platform_mp_cpu_unplug(uint cpu_id) { return arch_mp_cpu_unplug(cpu_id); }
+__WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+__WEAK status_t arch_mp_prep_cpu_unplug(uint cpu_id) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+__WEAK status_t arch_mp_cpu_unplug(uint cpu_id) {
+    return MX_ERR_NOT_SUPPORTED;
+}
+__WEAK status_t platform_mp_cpu_hotplug(uint cpu_id) {
+    return arch_mp_cpu_hotplug(cpu_id);
+}
+__WEAK status_t platform_mp_prep_cpu_unplug(uint cpu_id) {
+    return arch_mp_prep_cpu_unplug(cpu_id);
+}
+__WEAK status_t platform_mp_cpu_unplug(uint cpu_id) {
+    return arch_mp_cpu_unplug(cpu_id);
+}

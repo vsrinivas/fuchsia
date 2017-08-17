@@ -8,15 +8,15 @@
 #pragma once
 
 #include <err.h>
+#include <kernel/thread.h>
 #include <magenta/compiler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <kernel/thread.h>
 
 __BEGIN_CDECLS
 
-#define EVENT_MAGIC (0x65766E74)  // "evnt"
+#define EVENT_MAGIC (0x65766E74) // "evnt"
 
 typedef struct event {
     int magic;
@@ -27,13 +27,13 @@ typedef struct event {
 
 #define EVENT_FLAG_AUTOUNSIGNAL 1
 
-#define EVENT_INITIAL_VALUE(e, initial, _flags) \
-{ \
-    .magic = EVENT_MAGIC, \
-    .signaled = initial, \
-    .flags = _flags, \
-    .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait), \
-}
+#define EVENT_INITIAL_VALUE(e, initial, _flags)     \
+    {                                               \
+        .magic = EVENT_MAGIC,                       \
+        .signaled = initial,                        \
+        .flags = _flags,                            \
+        .wait = WAIT_QUEUE_INITIAL_VALUE((e).wait), \
+    }
 
 /* Rules for Events:
  * - Events may be signaled from interrupt context *but* the reschedule
@@ -51,26 +51,32 @@ typedef struct event {
  *     event_unsignal() is called.
 */
 
-void event_init(event_t *, bool initial, uint flags);
-void event_destroy(event_t *);
+void event_init(event_t*, bool initial, uint flags);
+void event_destroy(event_t*);
 
 /* Wait until deadline
  * Interruptable arg allows it to return early with MX_ERR_INTERNAL_INTR_KILLED if thread
  * is signaled for kill.
  */
-status_t event_wait_deadline(event_t *, lk_time_t, bool interruptable);
+status_t event_wait_deadline(event_t*, lk_time_t, bool interruptable);
 
 /* no deadline, non interruptable version of the above. */
-static inline status_t event_wait(event_t *e) { return event_wait_deadline(e, INFINITE_TIME, false); }
+static inline status_t event_wait(event_t* e) {
+    return event_wait_deadline(e, INFINITE_TIME, false);
+}
 
-int event_signal_etc(event_t *, bool reschedule, status_t result);
-int event_signal(event_t *, bool reschedule);
-int event_signal_thread_locked(event_t *);
-status_t event_unsignal(event_t *);
+int event_signal_etc(event_t*, bool reschedule, status_t result);
+int event_signal(event_t*, bool reschedule);
+int event_signal_thread_locked(event_t*);
+status_t event_unsignal(event_t*);
 
-static inline bool event_initialized(const event_t *e) { return e->magic == EVENT_MAGIC; }
+static inline bool event_initialized(const event_t* e) {
+    return e->magic == EVENT_MAGIC;
+}
 
-static inline bool event_signaled(const event_t *e) { return e->signaled; }
+static inline bool event_signaled(const event_t* e) {
+    return e->signaled;
+}
 
 __END_CDECLS
 

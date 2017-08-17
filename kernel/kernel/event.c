@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 /**
  * @file
  * @brief  Event wait and signal functions for threads.
@@ -25,10 +24,10 @@
  * @{
  */
 
-#include <kernel/event.h>
-#include <debug.h>
 #include <assert.h>
+#include <debug.h>
 #include <err.h>
+#include <kernel/event.h>
 #include <kernel/thread.h>
 
 /**
@@ -38,8 +37,7 @@
  * @param initial  Initial value for "signaled" state
  * @param flags    0 or EVENT_FLAG_AUTOUNSIGNAL
  */
-void event_init(event_t *e, bool initial, uint flags)
-{
+void event_init(event_t* e, bool initial, uint flags) {
     *e = (event_t)EVENT_INITIAL_VALUE(*e, initial, flags);
 }
 
@@ -52,8 +50,7 @@ void event_init(event_t *e, bool initial, uint flags)
  *
  * @param e        Event object to initialize
  */
-void event_destroy(event_t *e)
-{
+void event_destroy(event_t* e) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
     THREAD_LOCK(state);
@@ -83,9 +80,8 @@ void event_destroy(event_t *e)
  *          other values depending on wait_result value
  *          when event_signal_etc is used.
  */
-status_t event_wait_deadline(event_t *e, lk_time_t deadline, bool interruptable)
-{
-    thread_t *current_thread = get_current_thread();
+status_t event_wait_deadline(event_t* e, lk_time_t deadline, bool interruptable) {
+    thread_t* current_thread = get_current_thread();
     status_t ret = MX_OK;
 
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
@@ -114,8 +110,7 @@ out:
     return ret;
 }
 
-static int event_signal_internal(event_t *e, bool reschedule, status_t wait_result, bool thread_lock_held)
-{
+static int event_signal_internal(event_t* e, bool reschedule, status_t wait_result, bool thread_lock_held) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
     DEBUG_ASSERT(!reschedule || !arch_in_int_handler());
 
@@ -172,8 +167,7 @@ static int event_signal_internal(event_t *e, bool reschedule, status_t wait_resu
  *
  * @return  Returns the number of threads that have been unblocked.
  */
-int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
-{
+int event_signal_etc(event_t* e, bool reschedule, status_t wait_result) {
     return event_signal_internal(e, reschedule, wait_result, false);
 }
 
@@ -194,14 +188,12 @@ int event_signal_etc(event_t *e, bool reschedule, status_t wait_result)
  *
  * @return  Returns the number of threads that have been unblocked.
  */
-int event_signal(event_t *e, bool reschedule)
-{
+int event_signal(event_t* e, bool reschedule) {
     return event_signal_internal(e, reschedule, MX_OK, false);
 }
 
 /* same as above, but the thread lock must already be held */
-int event_signal_thread_locked(event_t *e)
-{
+int event_signal_thread_locked(event_t* e) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
@@ -220,12 +212,10 @@ int event_signal_thread_locked(event_t *e)
  *
  * @return  Returns MX_OK on success.
  */
-status_t event_unsignal(event_t *e)
-{
+status_t event_unsignal(event_t* e) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
     e->signaled = false;
 
     return MX_OK;
 }
-

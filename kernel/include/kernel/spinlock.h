@@ -7,44 +7,38 @@
 
 #pragma once
 
+#include <arch/spinlock.h>
 #include <magenta/compiler.h>
 #include <magenta/thread_annotations.h>
-#include <arch/spinlock.h>
 
 __BEGIN_CDECLS
 
 /* interrupts should already be disabled */
-static inline void spin_lock(spin_lock_t *lock)
-{
+static inline void spin_lock(spin_lock_t* lock) {
     arch_spin_lock(lock);
 }
 
 /* Returns 0 on success, non-0 on failure */
-static inline int spin_trylock(spin_lock_t *lock)
-{
+static inline int spin_trylock(spin_lock_t* lock) {
     return arch_spin_trylock(lock);
 }
 
 /* interrupts should already be disabled */
-static inline void spin_unlock(spin_lock_t *lock)
-{
+static inline void spin_unlock(spin_lock_t* lock) {
     arch_spin_unlock(lock);
 }
 
-static inline void spin_lock_init(spin_lock_t *lock)
-{
+static inline void spin_lock_init(spin_lock_t* lock) {
     arch_spin_lock_init(lock);
 }
 
-static inline bool spin_lock_held(spin_lock_t *lock)
-{
+static inline bool spin_lock_held(spin_lock_t* lock) {
     return arch_spin_lock_held(lock);
 }
 
 /* which cpu currently holds the spin lock */
 /* returns UINT_MAX if not held */
-static inline uint spin_lock_holder_cpu(spin_lock_t *lock)
-{
+static inline uint spin_lock_holder_cpu(spin_lock_t* lock) {
     return arch_spin_lock_holder_cpu(lock);
 }
 
@@ -61,20 +55,18 @@ static inline uint spin_lock_holder_cpu(spin_lock_t *lock)
 
 /* same as spin lock, but save disable and save interrupt state first */
 static inline void spin_lock_save(
-    spin_lock_t *lock,
-    spin_lock_saved_state_t *statep,
-    spin_lock_save_flags_t flags)
-{
+    spin_lock_t* lock,
+    spin_lock_saved_state_t* statep,
+    spin_lock_save_flags_t flags) {
     arch_interrupt_save(statep, flags);
     spin_lock(lock);
 }
 
 /* restore interrupt state before unlocking */
 static inline void spin_unlock_restore(
-    spin_lock_t *lock,
+    spin_lock_t* lock,
     spin_lock_saved_state_t old_state,
-    spin_lock_save_flags_t flags)
-{
+    spin_lock_save_flags_t flags) {
     spin_unlock(lock);
     arch_interrupt_restore(old_state, flags);
 }
@@ -88,11 +80,11 @@ __END_CDECLS
 #ifdef __cplusplus
 class TA_CAP("mutex") SpinLock {
 public:
-    SpinLock()              { spin_lock_init(&spinlock_); }
+    SpinLock() { spin_lock_init(&spinlock_); }
     void Acquire() TA_ACQ() { spin_lock(&spinlock_); }
-    void TryAcquire()       { spin_trylock(&spinlock_); }
+    void TryAcquire() { spin_trylock(&spinlock_); }
     void Release() TA_REL() { spin_unlock(&spinlock_); }
-    bool IsHeld()           { return spin_lock_held(&spinlock_); }
+    bool IsHeld() { return spin_lock_held(&spinlock_); }
 
     void AcquireIrqSave(spin_lock_saved_state_t& state,
                         spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) {
@@ -115,4 +107,4 @@ public:
 private:
     spin_lock_t spinlock_;
 };
-#endif  // ifdef __cplusplus
+#endif // ifdef __cplusplus

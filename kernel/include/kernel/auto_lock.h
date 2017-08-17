@@ -16,11 +16,13 @@
 
 class TA_SCOPED_CAP AutoSpinLock {
 public:
-    explicit AutoSpinLock(spin_lock_t* lock) : spinlock_(lock) {
+    explicit AutoSpinLock(spin_lock_t* lock)
+        : spinlock_(lock) {
         DEBUG_ASSERT(lock);
         acquire();
     }
-    explicit AutoSpinLock(SpinLock* lock) : spinlock_(lock->GetInternal()) {
+    explicit AutoSpinLock(SpinLock* lock)
+        : spinlock_(lock->GetInternal()) {
         DEBUG_ASSERT(lock);
         acquire();
     }
@@ -43,11 +45,13 @@ private:
 
 class AutoSpinLockIrqSave {
 public:
-    explicit AutoSpinLockIrqSave(spin_lock_t* lock) : spinlock_(lock) {
+    explicit AutoSpinLockIrqSave(spin_lock_t* lock)
+        : spinlock_(lock) {
         DEBUG_ASSERT(lock);
         acquire();
     }
-    explicit AutoSpinLockIrqSave(SpinLock* lock) : spinlock_(lock->GetInternal()) {
+    explicit AutoSpinLockIrqSave(SpinLock* lock)
+        : spinlock_(lock->GetInternal()) {
         DEBUG_ASSERT(lock);
         acquire();
     }

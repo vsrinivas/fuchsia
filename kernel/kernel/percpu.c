@@ -9,4 +9,3 @@
 #include <arch/ops.h>
 
 struct percpu percpu[SMP_MAX_CPUS];
-

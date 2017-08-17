@@ -6,7 +6,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 /**
  * @file
  * @brief  Mutex functions
@@ -17,12 +16,12 @@
 
 #include <kernel/mutex.h>
 
-#include <debug.h>
 #include <assert.h>
+#include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
 #include <kernel/sched.h>
+#include <kernel/thread.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0
@@ -30,8 +29,7 @@
 /**
  * @brief  Initialize a mutex_t
  */
-void mutex_init(mutex_t *m)
-{
+void mutex_init(mutex_t* m) {
     *m = (mutex_t)MUTEX_INITIAL_VALUE(*m);
 }
 
@@ -41,15 +39,14 @@ void mutex_init(mutex_t *m)
  * This function frees any resources that were allocated
  * in mutex_init().  The mutex_t object itself is not freed.
  */
-void mutex_destroy(mutex_t *m)
-{
+void mutex_destroy(mutex_t* m) {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
 
     THREAD_LOCK(state);
 #if LK_DEBUGLEVEL > 0
     if (unlikely(mutex_val(m) != 0)) {
-        thread_t *holder = mutex_holder(m);
+        thread_t* holder = mutex_holder(m);
         panic("mutex_destroy: thread %p (%s) tried to destroy locked mutex %p,"
               " locked by %p (%s)\n",
               get_current_thread(), get_current_thread()->name, m,
@@ -65,12 +62,11 @@ void mutex_destroy(mutex_t *m)
 /**
  * @brief  Acquire the mutex
  */
-void mutex_acquire(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
-{
+void mutex_acquire(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    thread_t *ct = get_current_thread();
+    thread_t* ct = get_current_thread();
     uintptr_t oldval;
 
 retry:
@@ -110,7 +106,7 @@ retry:
         // mutexes are not interruptable and cannot time out, so it
         // is illegal to return with any error state.
         panic("mutex_acquire: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
-               ret, m, ct, __GET_FRAME());
+              ret, m, ct, __GET_FRAME());
     }
 
     // someone must have woken us up, we should own the mutex now
@@ -120,10 +116,9 @@ retry:
 }
 
 // shared implementation of release
-static inline void mutex_release_internal(mutex_t *m, bool reschedule, bool thread_lock_held)
-    TA_NO_THREAD_SAFETY_ANALYSIS
-{
-    thread_t *ct = get_current_thread();
+static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thread_lock_held)
+    TA_NO_THREAD_SAFETY_ANALYSIS {
+    thread_t* ct = get_current_thread();
     uintptr_t oldval;
 
     // in case there's no contention, try the fast path
@@ -133,11 +128,11 @@ static inline void mutex_release_internal(mutex_t *m, bool reschedule, bool thre
         return;
     }
 
-    // must have been some contention, try the slow release
+// must have been some contention, try the slow release
 
 #if LK_DEBUGLEVEL > 0
     if (unlikely(ct != mutex_holder(m))) {
-        thread_t *holder = mutex_holder(m);
+        thread_t* holder = mutex_holder(m);
         panic("mutex_release: thread %p (%s) tried to release mutex %p it doesn't own. owned by %p (%s)\n",
               ct, ct->name, m, holder, holder ? holder->name : "none");
     }
@@ -151,7 +146,7 @@ static inline void mutex_release_internal(mutex_t *m, bool reschedule, bool thre
         spin_lock_irqsave(&thread_lock, state);
 
     // release a thread in the wait queue
-    thread_t *t = wait_queue_dequeue_one(&m->wait, MX_OK);
+    thread_t* t = wait_queue_dequeue_one(&m->wait, MX_OK);
     DEBUG_ASSERT_MSG(t, "mutex_release: wait queue didn't have anything, but m->val = %#" PRIxPTR "\n", mutex_val(m));
 
     // we woke up a thread, mark the mutex owned by that thread
@@ -172,8 +167,7 @@ static inline void mutex_release_internal(mutex_t *m, bool reschedule, bool thre
         spin_unlock_irqrestore(&thread_lock, state);
 }
 
-void mutex_release(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
-{
+void mutex_release(mutex_t* m) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
 
@@ -181,8 +175,7 @@ void mutex_release(mutex_t *m) TA_NO_THREAD_SAFETY_ANALYSIS
     mutex_release_internal(m, true, false);
 }
 
-void mutex_release_thread_locked(mutex_t *m, bool reschedule) TA_NO_THREAD_SAFETY_ANALYSIS
-{
+void mutex_release_thread_locked(mutex_t* m, bool reschedule) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
     DEBUG_ASSERT(arch_ints_disabled());

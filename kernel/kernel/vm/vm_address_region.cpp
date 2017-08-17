@@ -120,8 +120,8 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
             // something in the kernel maps into their aspace incorrectly.
             if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0) {
                 TRACEF("warning: mapping %s has conflicting cache policies: vmo %02x "
-                        "arch_mmu_flags %02x.\n",
-                        name, cache_policy, arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
+                       "arch_mmu_flags %02x.\n",
+                       name, cache_policy, arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
             }
             arch_mmu_flags |= cache_policy;
         } else if (status != MX_ERR_NOT_SUPPORTED) {
@@ -162,8 +162,8 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         }
     }
 
-    // Notice if this is an executable mapping from the vDSO VMO
-    // before we lose the VMO reference via mxtl::move(vmo).
+// Notice if this is an executable mapping from the vDSO VMO
+// before we lose the VMO reference via mxtl::move(vmo).
 #if WITH_LIB_VDSO
     const bool is_vdso_code = (vmo &&
                                (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) &&
@@ -491,7 +491,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
                               : ARCH_MMU_FLAG_INVALID;
 
     *pva = aspace_->arch_aspace().PickSpot(real_gap_beg, prev_arch_mmu_flags, real_gap_end,
-                           next_arch_mmu_flags, align, region_size, arch_mmu_flags);
+                                           next_arch_mmu_flags, align, region_size, arch_mmu_flags);
     if (*pva < real_gap_beg)
         goto not_found; // address wrapped around
 
@@ -755,7 +755,7 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
 }
 
 status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                     uint arch_mmu_flags, vaddr_t* spot) {
+                                                      uint arch_mmu_flags, vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     const vaddr_t base = 0;
@@ -826,8 +826,8 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 // allocator works by choosing uniformly at random from the set of positions
 // that could satisfy the allocation.
 status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                   uint arch_mmu_flags,
-                                                                   vaddr_t* spot) {
+                                                                    uint arch_mmu_flags,
+                                                                    vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(spot);
 
@@ -886,7 +886,8 @@ status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size,
     ASSERT(before_iter == subregions_.end() || before_iter.IsValid());
 
     if (CheckGapLocked(before_iter, after_iter, spot, alloc_spot, align, size, 0,
-                       arch_mmu_flags) && *spot != static_cast<vaddr_t>(-1)) {
+                       arch_mmu_flags) &&
+        *spot != static_cast<vaddr_t>(-1)) {
         return MX_OK;
     }
     panic("Unexpected allocation failure\n");
@@ -896,8 +897,8 @@ status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size,
 // start allocations at, and then places new allocations to the left and right
 // of the original region with small random-length gaps between.
 status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                uint arch_mmu_flags,
-                                                                vaddr_t* spot) {
+                                                                 uint arch_mmu_flags,
+                                                                 vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
@@ -953,7 +954,8 @@ status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, ui
             }
 
             if (CheckGapLocked(before_iter, after_iter, spot, chosen_base, align, size, 0,
-                               arch_mmu_flags) && *spot != static_cast<vaddr_t>(-1)) {
+                               arch_mmu_flags) &&
+                *spot != static_cast<vaddr_t>(-1)) {
                 return MX_OK;
             }
         }

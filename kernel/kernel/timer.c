@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 /**
  * @file
  * @brief  Kernel timer subsystem
@@ -39,18 +38,18 @@
 
 static spin_lock_t timer_lock;
 
-void timer_init(timer_t *timer) {
+void timer_init(timer_t* timer) {
     *timer = (timer_t)TIMER_INITIAL_VALUE(*timer);
 }
 
-static void insert_timer_in_queue(uint cpu, timer_t *timer,
-    uint64_t early_slack, uint64_t late_slack) {
+static void insert_timer_in_queue(uint cpu, timer_t* timer,
+                                  uint64_t early_slack, uint64_t late_slack) {
 
     DEBUG_ASSERT(arch_ints_disabled());
     LTRACEF("timer %p, cpu %u, scheduled %" PRIu64 "\n", timer, cpu, timer->scheduled_time);
 
     lk_time_t earliest_deadline = timer->scheduled_time - early_slack;
-    lk_time_t latest_deadline   = timer->scheduled_time + late_slack;
+    lk_time_t latest_deadline = timer->scheduled_time + late_slack;
 
     // For inserting the timer we consider several cases. In general we
     // want to coalesce with the current timer unless we can prove that
@@ -65,9 +64,9 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer,
     // - Let |x| be the end of the list (not a timer)
     // - Let |(| and |)| the earliest_deadline and latest_deadline.
     //
-    timer_t *entry;
+    timer_t* entry;
 
-    list_for_every_entry(&percpu[cpu].timer_queue, entry, timer_t, node) {
+    list_for_every_entry (&percpu[cpu].timer_queue, entry, timer_t, node) {
         if (entry->scheduled_time > latest_deadline) {
             // New timer latest is earlier than the current timer.
             // Just add upfront as is, without slack.
@@ -85,7 +84,7 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer,
             //
             //  --------(----t---e-)----------------------------> time
             //
-            timer->slack =  entry->scheduled_time - timer->scheduled_time;
+            timer->slack = entry->scheduled_time - timer->scheduled_time;
             timer->scheduled_time = entry->scheduled_time;
             list_add_after(&entry->node, &timer->node);
             return;
@@ -127,13 +126,12 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer,
                 //  --------------(-e---t---n-)-----------------------> time
                 //
                 lk_time_t delta_entry = timer->scheduled_time - entry->scheduled_time;
-                lk_time_t delta_next  = next->scheduled_time - timer->scheduled_time;
+                lk_time_t delta_next = next->scheduled_time - timer->scheduled_time;
                 if (delta_next < delta_entry) {
                     // New timer is closer to the next timer, handle it in the
                     // next iteration.
                     continue;
                 }
-
             }
         }
 
@@ -158,10 +156,9 @@ static void insert_timer_in_queue(uint cpu, timer_t *timer,
     list_add_tail(&percpu[cpu].timer_queue, &timer->node);
 }
 
-
-void timer_set(timer_t *timer, lk_time_t deadline,
+void timer_set(timer_t* timer, lk_time_t deadline,
                enum slack_mode mode, uint64_t slack,
-               timer_callback callback, void *arg) {
+               timer_callback callback, void* arg) {
     LTRACEF("timer %p deadline %" PRIu64 " slack %" PRIu64 " callback %p arg %p\n",
             timer, deadline, slack, callback, arg);
 
@@ -238,8 +235,7 @@ out:
  * - must be running on the cpu that the timer is set to fire on (if currently set)
  * - cannot be called from the timer itself
  */
-void timer_reset_oneshot_local(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg)
-{
+void timer_reset_oneshot_local(timer_t* timer, lk_time_t deadline, timer_callback callback, void* arg) {
     LTRACEF("timer %p, deadline %" PRIu64 ", callback %p, arg %p\n", timer, deadline, callback, arg);
 
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
@@ -279,8 +275,7 @@ void timer_reset_oneshot_local(timer_t *timer, lk_time_t deadline, timer_callbac
     spin_unlock(&timer_lock);
 }
 
-bool timer_cancel(timer_t *timer)
-{
+bool timer_cancel(timer_t* timer) {
     DEBUG_ASSERT(timer->magic == TIMER_MAGIC);
 
     spin_lock_saved_state_t state;
@@ -313,7 +308,7 @@ bool timer_cancel(timer_t *timer)
         callback_not_running = true;
 
         /* save a copy of the old head of the queue */
-        timer_t *oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
+        timer_t* oldhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
 
         /* remove our timer from the queue */
         list_delete(&timer->node);
@@ -325,7 +320,7 @@ bool timer_cancel(timer_t *timer)
         /* see if we've just modified the head of this cpu's timer queue */
         /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
         if (unlikely(oldhead == timer)) {
-            timer_t *newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
+            timer_t* newhead = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
             if (newhead) {
                 LTRACEF("setting new timer to %" PRIu64 "\n", newhead->scheduled_time);
                 platform_set_oneshot_timer(newhead->scheduled_time);
@@ -353,9 +348,8 @@ bool timer_cancel(timer_t *timer)
 }
 
 /* called at interrupt time to process any pending timers */
-enum handler_return timer_tick(lk_time_t now)
-{
-    timer_t *timer;
+enum handler_return timer_tick(lk_time_t now) {
+    timer_t* timer;
     enum handler_return ret = INT_NO_RESCHEDULE;
 
     DEBUG_ASSERT(arch_ints_disabled());
@@ -374,15 +368,15 @@ enum handler_return timer_tick(lk_time_t now)
         if (likely(timer == 0))
             break;
         LTRACEF("next item on timer queue %p at %" PRIu64 " now %" PRIu64 " (%p, arg %p)\n",
-            timer, timer->scheduled_time, now, timer->callback, timer->arg);
+                timer, timer->scheduled_time, now, timer->callback, timer->arg);
         if (likely(now < timer->scheduled_time))
             break;
 
         /* process it */
         LTRACEF("timer %p\n", timer);
         DEBUG_ASSERT_MSG(timer && timer->magic == TIMER_MAGIC,
-                "ASSERT: timer failed magic check: timer %p, magic 0x%x\n",
-                timer, (uint)timer->magic);
+                         "ASSERT: timer failed magic check: timer %p, magic 0x%x\n",
+                         timer, (uint)timer->magic);
         list_delete(&timer->node);
 
         /* mark the timer busy */
@@ -429,8 +423,7 @@ enum handler_return timer_tick(lk_time_t now)
     return ret;
 }
 
-status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock)
-{
+status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock) {
     /* spin trylocking on the passed in spinlock either waiting for it
      * to grab or the passed in timer to be canceled.
      */
@@ -447,17 +440,16 @@ status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock)
     return MX_OK;
 }
 
-void timer_transition_off_cpu(uint old_cpu)
-{
+void timer_transition_off_cpu(uint old_cpu) {
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&timer_lock, state);
     uint cpu = arch_curr_cpu_num();
 
-    timer_t *old_head = list_peek_head_type(&percpu[old_cpu].timer_queue, timer_t, node);
+    timer_t* old_head = list_peek_head_type(&percpu[old_cpu].timer_queue, timer_t, node);
 
     timer_t *entry = NULL, *tmp_entry = NULL;
     /* Move all timers from old_cpu to this cpu */
-    list_for_every_entry_safe(&percpu[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
+    list_for_every_entry_safe (&percpu[old_cpu].timer_queue, entry, tmp_entry, timer_t, node) {
         list_delete(&entry->node);
         // We lost the original asymmetric slack information so when we combine them
         // with the other timer queue they are not coalesced again.
@@ -465,7 +457,7 @@ void timer_transition_off_cpu(uint old_cpu)
         insert_timer_in_queue(cpu, entry, 0u, 0u);
     }
 
-    timer_t *new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
+    timer_t* new_head = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (new_head != NULL && new_head != old_head) {
         /* we just modified the head of the timer queue */
         LTRACEF("setting new timer for %" PRIu64 " nsecs\n", new_head->scheduled_time);
@@ -475,14 +467,13 @@ void timer_transition_off_cpu(uint old_cpu)
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
-void timer_thaw_percpu(void)
-{
+void timer_thaw_percpu(void) {
     DEBUG_ASSERT(arch_ints_disabled());
     spin_lock(&timer_lock);
 
     uint cpu = arch_curr_cpu_num();
 
-    timer_t *t = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
+    timer_t* t = list_peek_head_type(&percpu[cpu].timer_queue, timer_t, node);
     if (t) {
         LTRACEF("rescheduling timer for %" PRIu64 " nsecs\n", t->scheduled_time);
         platform_set_oneshot_timer(t->scheduled_time);
@@ -491,8 +482,7 @@ void timer_thaw_percpu(void)
     spin_unlock(&timer_lock);
 }
 
-void timer_queue_init(void)
-{
+void timer_queue_init(void) {
     timer_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         list_initialize(&percpu[i].timer_queue);
@@ -500,8 +490,7 @@ void timer_queue_init(void)
 }
 
 // print a timer queue dump into the passed in buffer
-static void dump_timer_queues(char *buf, size_t len)
-{
+static void dump_timer_queues(char* buf, size_t len) {
     size_t ptr = 0;
     lk_time_t now = current_time();
 
@@ -512,14 +501,14 @@ static void dump_timer_queues(char *buf, size_t len)
         if (mp_is_cpu_online(i)) {
             ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);
 
-            timer_t *t;
+            timer_t* t;
             lk_time_t last = now;
-            list_for_every_entry(&percpu[i].timer_queue, t, timer_t, node) {
+            list_for_every_entry (&percpu[i].timer_queue, t, timer_t, node) {
                 lk_time_t delta_now = (t->scheduled_time > now) ? (t->scheduled_time - now) : 0;
                 lk_time_t delta_last = (t->scheduled_time > last) ? (t->scheduled_time - last) : 0;
                 ptr += snprintf(buf + ptr, len - ptr,
-                        "\ttime %" PRIu64 " delta_now %" PRIu64 " delta_last %" PRIu64 " func %p arg %p\n",
-                        t->scheduled_time, delta_now, delta_last, t->callback, t->arg);
+                                "\ttime %" PRIu64 " delta_now %" PRIu64 " delta_last %" PRIu64 " func %p arg %p\n",
+                                t->scheduled_time, delta_now, delta_last, t->callback, t->arg);
                 last = t->scheduled_time;
             }
         }
@@ -531,13 +520,12 @@ static void dump_timer_queues(char *buf, size_t len)
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
-static int cmd_timers(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
     const size_t timer_buffer_size = PAGE_SIZE;
 
     // allocate a buffer to dump the timer queue into to avoid reentrancy issues with the
     // timer spinlock
-    char *buf = malloc(timer_buffer_size);
+    char* buf = malloc(timer_buffer_size);
     if (!buf)
         return MX_ERR_NO_MEMORY;
 

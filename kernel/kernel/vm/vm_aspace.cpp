@@ -140,10 +140,10 @@ status_t VmAspace::Init() {
 
     // initialize the architecturally specific part
     bool is_high_kernel = (flags_ & TYPE_MASK) == TYPE_KERNEL;
-    bool is_guest       = (flags_ & TYPE_MASK) == TYPE_GUEST_PHYS;
+    bool is_guest = (flags_ & TYPE_MASK) == TYPE_GUEST_PHYS;
     uint arch_aspace_flags =
-        (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL        : 0u) |
-        (is_guest       ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
+        (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) |
+        (is_guest ? ARCH_ASPACE_FLAG_GUEST_PASPACE : 0u);
     status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
     if (status != MX_OK) {
         return status;
@@ -408,7 +408,7 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
 
     arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
     return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
-                     arch_mmu_flags);
+                             arch_mmu_flags);
 }
 
 status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, uint8_t align_pow2,
@@ -443,7 +443,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
     }
 
     return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
-                     arch_mmu_flags);
+                             arch_mmu_flags);
 }
 
 status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
@@ -478,7 +478,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
 
     // map it, creating a new region
     return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
-                     arch_mmu_flags);
+                             arch_mmu_flags);
 }
 
 status_t VmAspace::FreeRegion(vaddr_t va) {

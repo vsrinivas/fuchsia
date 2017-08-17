@@ -421,7 +421,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
             printf("pmm free: issue the same command to stop.\n");
             timer_init(&timer);
             timer_set(&timer, current_time() + LK_SEC(1), TIMER_SLACK_CENTER, LK_MSEC(20),
-                &pmm_dump_timer, nullptr);
+                      &pmm_dump_timer, nullptr);
             show_mem = true;
         } else {
             timer_cancel(&timer);

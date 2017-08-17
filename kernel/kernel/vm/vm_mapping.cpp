@@ -375,7 +375,7 @@ status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
             unmap_base.ValueOrDie(), len_new, aspace_.get());
 
     status_t status = aspace_->arch_aspace().Unmap(unmap_base.ValueOrDie(),
-                                     static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
+                                                   static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
     if (status < 0)
         return status;
 

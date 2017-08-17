@@ -258,7 +258,7 @@ void vm_init_postheap(uint level) {
     size_t entropy;
     crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
 
-    size_t random_size = PAGE_ALIGN(entropy % (64ULL*GB));
+    size_t random_size = PAGE_ALIGN(entropy % (64ULL * GB));
     const struct mmu_initial_mapping* first_mapping = mmu_initial_mappings;
     vaddr_t end_first_mapping = first_mapping->virt + first_mapping->size;
 

@@ -62,13 +62,13 @@ VmObjectPaged::~VmObjectPaged() {
     LTRACEF("%p\n", this);
 
     page_list_.ForEveryPage(
-            [](const auto p, uint64_t off) {
-                if (p->object.contiguous_pin) {
-                    p->object.pin_count--;
-                }
-                ASSERT(p->object.pin_count == 0);
-                return MX_ERR_NEXT;
-            });
+        [](const auto p, uint64_t off) {
+            if (p->object.contiguous_pin) {
+                p->object.pin_count--;
+            }
+            ASSERT(p->object.pin_count == 0);
+            return MX_ERR_NEXT;
+        });
 
     // free all of the pages attached to us
     page_list_.FreeAllPages();
@@ -437,12 +437,13 @@ status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* com
     size_t count = 0;
     uint64_t expected_next_off = offset;
     page_list_.ForEveryPageInRange(
-            [&count, &expected_next_off](const auto p, uint64_t off) {
+        [&count, &expected_next_off](const auto p, uint64_t off) {
 
-                count += (off - expected_next_off) / PAGE_SIZE;
-                expected_next_off = off + PAGE_SIZE;
-                return MX_ERR_NEXT;
-            }, expected_next_off, end);
+            count += (off - expected_next_off) / PAGE_SIZE;
+            expected_next_off = off + PAGE_SIZE;
+            return MX_ERR_NEXT;
+        },
+        expected_next_off, end);
 
     // If expected_next_off isn't at the end of the range, there was a gap at
     // the end.  Add it back in
@@ -649,20 +650,21 @@ status_t VmObjectPaged::PinLocked(uint64_t offset, uint64_t len) {
 
     uint64_t expected_next_off = start_page_offset;
     status_t status = page_list_.ForEveryPageInRange(
-            [&expected_next_off](const auto p, uint64_t off) {
-                if (off != expected_next_off) {
-                    return MX_ERR_NOT_FOUND;
-                }
+        [&expected_next_off](const auto p, uint64_t off) {
+            if (off != expected_next_off) {
+                return MX_ERR_NOT_FOUND;
+            }
 
-                DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
-                if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
-                    return MX_ERR_UNAVAILABLE;
-                }
+            DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
+            if (p->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
+                return MX_ERR_UNAVAILABLE;
+            }
 
-                p->object.pin_count++;
-                expected_next_off = off + PAGE_SIZE;
-                return MX_ERR_NEXT;
-            }, start_page_offset, end_page_offset);
+            p->object.pin_count++;
+            expected_next_off = off + PAGE_SIZE;
+            return MX_ERR_NEXT;
+        },
+        start_page_offset, end_page_offset);
 
     if (status == MX_OK && expected_next_off != end_page_offset) {
         status = MX_ERR_NOT_FOUND;
@@ -695,17 +697,18 @@ void VmObjectPaged::UnpinLocked(uint64_t offset, uint64_t len) {
 
     uint64_t expected_next_off = start_page_offset;
     status_t status = page_list_.ForEveryPageInRange(
-            [&expected_next_off](const auto p, uint64_t off) {
-                if (off != expected_next_off) {
-                    return MX_ERR_NOT_FOUND;
-                }
+        [&expected_next_off](const auto p, uint64_t off) {
+            if (off != expected_next_off) {
+                return MX_ERR_NOT_FOUND;
+            }
 
-                DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
-                ASSERT(p->object.pin_count > 0);
-                p->object.pin_count--;
-                expected_next_off = off + PAGE_SIZE;
-                return MX_ERR_NEXT;
-            }, start_page_offset, end_page_offset);
+            DEBUG_ASSERT(p->state == VM_PAGE_STATE_OBJECT);
+            ASSERT(p->object.pin_count > 0);
+            p->object.pin_count--;
+            expected_next_off = off + PAGE_SIZE;
+            return MX_ERR_NEXT;
+        },
+        start_page_offset, end_page_offset);
     ASSERT_MSG(status == MX_OK && expected_next_off == end_page_offset,
                "Tried to unpin an uncommitted page");
     return;
@@ -722,14 +725,15 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
 
     bool found_pinned = false;
     page_list_.ForEveryPageInRange(
-            [&found_pinned, start_page_offset, end_page_offset](const auto p, uint64_t off) {
-                DEBUG_ASSERT(off >= start_page_offset && off < end_page_offset);
-                if (p->object.pin_count > 0) {
-                    found_pinned = true;
-                    return MX_ERR_STOP;
-                }
-                return MX_ERR_NEXT;
-            }, start_page_offset, end_page_offset);
+        [&found_pinned, start_page_offset, end_page_offset](const auto p, uint64_t off) {
+            DEBUG_ASSERT(off >= start_page_offset && off < end_page_offset);
+            if (p->object.pin_count > 0) {
+                found_pinned = true;
+                return MX_ERR_STOP;
+            }
+            return MX_ERR_NEXT;
+        },
+        start_page_offset, end_page_offset);
 
     return found_pinned;
 }
@@ -918,43 +922,44 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
 
     uint64_t expected_next_off = start_page_offset;
     status_t status = page_list_.ForEveryPageInRange(
-            [&expected_next_off, this, pf_flags, lookup_fn, context,
-            start_page_offset](const auto p, uint64_t off) {
+        [&expected_next_off, this, pf_flags, lookup_fn, context,
+         start_page_offset](const auto p, uint64_t off) {
 
-                // If some page was missing from our list, run the more expensive
-                // GetPageLocked to see if our parent has it.
-                for (uint64_t missing_off = expected_next_off; missing_off < off;
-                     missing_off += PAGE_SIZE) {
+            // If some page was missing from our list, run the more expensive
+            // GetPageLocked to see if our parent has it.
+            for (uint64_t missing_off = expected_next_off; missing_off < off;
+                 missing_off += PAGE_SIZE) {
 
-                    paddr_t pa;
-                    status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
-                                                          nullptr, &pa);
-                    if (status != MX_OK) {
-                        return MX_ERR_NO_MEMORY;
-                    }
-                    const size_t index = (off - start_page_offset) / PAGE_SIZE;
-                    status = lookup_fn(context, missing_off, index, pa);
-                    if (status != MX_OK) {
-                        if (unlikely(status == MX_ERR_NEXT || status == MX_ERR_STOP)) {
-                            status = MX_ERR_INTERNAL;
-                        }
-                        return status;
-                    }
+                paddr_t pa;
+                status_t status = this->GetPageLocked(missing_off, pf_flags, nullptr,
+                                                      nullptr, &pa);
+                if (status != MX_OK) {
+                    return MX_ERR_NO_MEMORY;
                 }
-
                 const size_t index = (off - start_page_offset) / PAGE_SIZE;
-                paddr_t pa = vm_page_to_paddr(p);
-                status_t status = lookup_fn(context, off, index, pa);
+                status = lookup_fn(context, missing_off, index, pa);
                 if (status != MX_OK) {
                     if (unlikely(status == MX_ERR_NEXT || status == MX_ERR_STOP)) {
                         status = MX_ERR_INTERNAL;
                     }
                     return status;
                 }
+            }
 
-                expected_next_off = off + PAGE_SIZE;
-                return MX_ERR_NEXT;
-            }, start_page_offset, end_page_offset);
+            const size_t index = (off - start_page_offset) / PAGE_SIZE;
+            paddr_t pa = vm_page_to_paddr(p);
+            status_t status = lookup_fn(context, off, index, pa);
+            if (status != MX_OK) {
+                if (unlikely(status == MX_ERR_NEXT || status == MX_ERR_STOP)) {
+                    status = MX_ERR_INTERNAL;
+                }
+                return status;
+            }
+
+            expected_next_off = off + PAGE_SIZE;
+            return MX_ERR_NEXT;
+        },
+        start_page_offset, end_page_offset);
     if (status != MX_OK) {
         return status;
     }

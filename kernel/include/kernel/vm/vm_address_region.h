@@ -314,9 +314,9 @@ private:
     status_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
                                          vaddr_t* spot);
     status_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                      uint arch_mmu_flags, vaddr_t* spot);
+                                                       uint arch_mmu_flags, vaddr_t* spot);
     status_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                   uint arch_mmu_flags, vaddr_t* spot);
+                                                    uint arch_mmu_flags, vaddr_t* spot);
 
     // Utility for allocators for iterating over gaps between allocations
     // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).

@@ -32,7 +32,8 @@ extern mutex_t vmm_lock;
 // utility function to test that offset + len is entirely within a range
 // returns false if out of range
 // NOTE: only use unsigned lengths
-template <typename O, typename L> static inline bool InRange(O offset, L len, O trim_to_len) {
+template <typename O, typename L>
+static inline bool InRange(O offset, L len, O trim_to_len) {
     static_assert(mxtl::numeric_limits<O>::is_signed == false, "InRange requires unsigned type O");
     static_assert(mxtl::numeric_limits<L>::is_signed == false, "InRange requires unsigned type L");
 
@@ -56,7 +57,8 @@ template <typename O, typename L> static inline bool InRange(O offset, L len, O 
 // returns false if out of range
 // may return length 0 if it precisely trims
 // NOTE: only use unsigned lengths
-template <typename O, typename L> static inline bool TrimRange(O offset, L len, O trim_to_len, L* len_out) {
+template <typename O, typename L>
+static inline bool TrimRange(O offset, L len, O trim_to_len, L* len_out) {
     static_assert(mxtl::numeric_limits<O>::is_signed == false, "TrimRange requires unsigned type O");
     static_assert(mxtl::numeric_limits<L>::is_signed == false, "TrimRange requires unsigned type L");
 
@@ -79,7 +81,8 @@ template <typename O, typename L> static inline bool TrimRange(O offset, L len, 
 }
 
 // given two offset/length pairs, determine if they overlap at all
-template <typename O, typename L> static inline bool Intersects(O offset1, L len1, O offset2, L len2) {
+template <typename O, typename L>
+static inline bool Intersects(O offset1, L len1, O offset2, L len2) {
     static_assert(mxtl::numeric_limits<O>::is_signed == false, "Intersects requires unsigned type O");
     static_assert(mxtl::numeric_limits<L>::is_signed == false, "Intersects requires unsigned type L");
 
@@ -138,4 +141,3 @@ static inline paddr_t vm_get_zero_page_paddr(void) {
 
     return zero_page_paddr;
 }
-

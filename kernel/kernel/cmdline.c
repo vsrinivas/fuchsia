@@ -4,10 +4,10 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <kernel/cmdline.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <kernel/cmdline.h>
 
 char __kernel_cmdline[CMDLINE_MAX];
 unsigned __kernel_cmdline_size;
@@ -25,7 +25,7 @@ void cmdline_append(const char* data) {
     while (i < max) {
         unsigned c = *data++;
         if (c == 0) {
-            if (found_equal) {              //last option was null delimited
+            if (found_equal) { //last option was null delimited
                 ++__kernel_cmdline_count;
             }
             break;
@@ -42,7 +42,7 @@ void cmdline_append(const char* data) {
         }
         if (c == ' ') {
             // spaces become \0's, but do not double up
-            if ((i == 0) || (__kernel_cmdline[i-1] == 0)) {
+            if ((i == 0) || (__kernel_cmdline[i - 1] == 0)) {
                 continue;
             } else {
                 if (!found_equal && i < max) {
@@ -55,7 +55,7 @@ void cmdline_append(const char* data) {
         }
         __kernel_cmdline[i++] = c;
     }
-    if (!found_equal && i > 0 && __kernel_cmdline[i-1] != '\0' && i < max) {
+    if (!found_equal && i > 0 && __kernel_cmdline[i - 1] != '\0' && i < max) {
         __kernel_cmdline[i++] = '=';
         ++__kernel_cmdline_count;
     }
@@ -67,7 +67,8 @@ void cmdline_append(const char* data) {
 }
 
 const char* cmdline_get(const char* key) {
-    if (!key) return __kernel_cmdline;
+    if (!key)
+        return __kernel_cmdline;
     unsigned sz = strlen(key);
     const char* ptr = __kernel_cmdline;
     for (;;) {

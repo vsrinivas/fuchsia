@@ -71,7 +71,7 @@ VmObject::~VmObject() {
     }
 }
 
-void VmObject::get_name(char *out_name, size_t len) const {
+void VmObject::get_name(char* out_name, size_t len) const {
     canary_.Assert();
     name_.get(len, out_name);
 }

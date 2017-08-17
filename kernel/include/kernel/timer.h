@@ -7,24 +7,24 @@
 
 #pragma once
 
-#include <magenta/compiler.h>
-#include <list.h>
-#include <sys/types.h>
 #include <kernel/spinlock.h>
+#include <list.h>
+#include <magenta/compiler.h>
+#include <sys/types.h>
 
 __BEGIN_CDECLS
 
 void timer_queue_init(void);
 
 struct timer;
-typedef enum handler_return (*timer_callback)(struct timer *, lk_time_t now, void *arg);
+typedef enum handler_return (*timer_callback)(struct timer*, lk_time_t now, void* arg);
 
-#define TIMER_MAGIC (0x74696D72)  //'timr'
+#define TIMER_MAGIC (0x74696D72) //'timr'
 
 enum slack_mode {
-    TIMER_SLACK_CENTER,         // slack is centered arround dealine
-    TIMER_SLACK_LATE,           // slack interval is [deadline, dealine + slack)
-    TIMER_SLACK_EARLY,          // slack interval is (deadline - slack, dealine]
+    TIMER_SLACK_CENTER, // slack is centered arround dealine
+    TIMER_SLACK_LATE,   // slack interval is [deadline, dealine + slack)
+    TIMER_SLACK_EARLY,  // slack interval is (deadline - slack, dealine]
 };
 
 typedef struct timer {
@@ -32,26 +32,26 @@ typedef struct timer {
     struct list_node node;
 
     lk_time_t scheduled_time;
-    int64_t slack;              // Stores the applied slack adjustment from
-                                // the ideal scheduled_time.
+    int64_t slack; // Stores the applied slack adjustment from
+                   // the ideal scheduled_time.
     timer_callback callback;
-    void *arg;
+    void* arg;
 
     volatile int active_cpu; // <0 if inactive
     volatile bool cancel;    // true if cancel is pending
 } timer_t;
 
-#define TIMER_INITIAL_VALUE(t) \
-{ \
-    .magic = TIMER_MAGIC, \
-    .node = LIST_INITIAL_CLEARED_VALUE, \
-    .scheduled_time = 0, \
-    .slack = 0, \
-    .callback = NULL, \
-    .arg = NULL, \
-    .active_cpu = -1, \
-    .cancel = false, \
-}
+#define TIMER_INITIAL_VALUE(t)              \
+    {                                       \
+        .magic = TIMER_MAGIC,               \
+        .node = LIST_INITIAL_CLEARED_VALUE, \
+        .scheduled_time = 0,                \
+        .slack = 0,                         \
+        .callback = NULL,                   \
+        .arg = NULL,                        \
+        .active_cpu = -1,                   \
+        .cancel = false,                    \
+    }
 
 /* Rules for Timers:
  * - Timer callbacks occur from interrupt context
@@ -61,11 +61,10 @@ typedef struct timer {
  * - timer_cancel() may spin waiting for a pending timer to complete on another cpu
  */
 
-
 /**
  * Initialize a timer object
  */
-void timer_init(timer_t *);
+void timer_init(timer_t*);
 
 /**
  * Set up a timer that executes once
@@ -92,8 +91,8 @@ void timer_init(timer_t *);
  * - TIMER_SLACK_EARLY: |deadline - slack| to |deadline|
  *
  */
-void timer_set(timer_t *timer, lk_time_t deadline,
-    enum slack_mode mode, uint64_t slack, timer_callback callback, void *arg);
+void timer_set(timer_t* timer, lk_time_t deadline,
+               enum slack_mode mode, uint64_t slack, timer_callback callback, void* arg);
 
 /**
  * Cancel a pending timer
@@ -103,11 +102,11 @@ void timer_set(timer_t *timer, lk_time_t deadline,
  * was not scheduled at all.
  *
  */
-bool timer_cancel(timer_t *);
+bool timer_cancel(timer_t*);
 
 /* Equivalent to timer_set with a slack of 0 */
 static inline void timer_set_oneshot(
-    timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg) {
+    timer_t* timer, lk_time_t deadline, timer_callback callback, void* arg) {
     return timer_set(timer, deadline, TIMER_SLACK_CENTER, 0ull, callback, arg);
 }
 
@@ -118,7 +117,7 @@ static inline void timer_set_oneshot(
  * - Cannot be called from the timer itself
  */
 /* NOTE: internal api that is needed probably only by the scheduler */
-void timer_reset_oneshot_local(timer_t *timer, lk_time_t deadline, timer_callback callback, void *arg);
+void timer_reset_oneshot_local(timer_t* timer, lk_time_t deadline, timer_callback callback, void* arg);
 
 /* Internal routines used when bringing cpus online/offline */
 
@@ -135,7 +134,6 @@ void timer_thaw_percpu(void);
  * timer cancel, which is needed in a few special cases.
  * returns MX_OK if spinlock was acquired, MX_ERR_TIMED_OUT if timer was canceled.
  */
-status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock);
+status_t timer_trylock_or_cancel(timer_t* t, spin_lock_t* lock);
 
 __END_CDECLS
-

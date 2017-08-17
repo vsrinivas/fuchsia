@@ -5,13 +5,13 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 
-#include <list.h>
 #include <arch/ops.h>
+#include <kernel/stats.h>
+#include <kernel/thread.h>
+#include <kernel/timer.h>
+#include <list.h>
 #include <magenta/compiler.h>
 #include <sys/types.h>
-#include <kernel/thread.h>
-#include <kernel/stats.h>
-#include <kernel/timer.h>
 
 __BEGIN_CDECLS
 
@@ -32,7 +32,7 @@ struct percpu {
 /* the kernel per-cpu structure */
 extern struct percpu percpu[SMP_MAX_CPUS];
 
-static inline struct percpu *get_local_percpu(void) {
+static inline struct percpu* get_local_percpu(void) {
     return &percpu[arch_curr_cpu_num()];
 }
 

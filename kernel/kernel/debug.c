@@ -5,7 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-
 /**
  * @defgroup debug  Debug
  * @{
@@ -17,23 +16,23 @@
  */
 
 #include <debug.h>
+#include <err.h>
 #include <inttypes.h>
-#include <stdio.h>
-#include <string.h>
+#include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <kernel/mp.h>
-#include <err.h>
 #include <platform.h>
+#include <stdio.h>
+#include <string.h>
 
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
 
-static int cmd_thread(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags);
-static int cmd_kill(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
@@ -45,11 +44,10 @@ STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
 
 #if LK_DEBUGLEVEL > 1
-static int cmd_thread(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
         printf("not enough arguments\n");
-usage:
+    usage:
         printf("%s list\n", argv[0].str);
         printf("%s list_full\n", argv[0].str);
         return -1;
@@ -78,8 +76,7 @@ usage:
 }
 #endif
 
-static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         if (!mp_is_cpu_active(i))
             continue;
@@ -101,19 +98,17 @@ static int cmd_threadstats(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
-static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
-{
+static enum handler_return threadload(struct timer* t, lk_time_t now, void* arg) {
     static struct cpu_stats old_stats[SMP_MAX_CPUS];
     static lk_time_t last_idle_time[SMP_MAX_CPUS];
 
     printf("cpu    load"
-            " sched (cs ylds pmpts irq_pmpts)"
-            " excep"
-            "    pf"
-            "  sysc"
-            " ints (hw  tmr tmr_cb)"
-            " ipi (rs  gen)\n"
-            );
+           " sched (cs ylds pmpts irq_pmpts)"
+           " excep"
+           "    pf"
+           "  sysc"
+           " ints (hw  tmr tmr_cb)"
+           " ipi (rs  gen)\n");
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
         /* dont display time for inactive cpus */
         if (!mp_is_cpu_active(i))
@@ -153,8 +148,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
                percpu[i].stats.timer_ints - old_stats[i].timer_ints,
                percpu[i].stats.timers - old_stats[i].timers,
                percpu[i].stats.reschedule_ipis - old_stats[i].reschedule_ipis,
-               percpu[i].stats.generic_ipis - old_stats[i].generic_ipis
-               );
+               percpu[i].stats.generic_ipis - old_stats[i].generic_ipis);
 
         old_stats[i] = percpu[i].stats;
         last_idle_time[i] = idle_time;
@@ -166,8 +160,7 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
     return INT_RESCHEDULE;
 }
 
-static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
     static bool showthreadload = false;
     static timer_t tltimer;
 
@@ -175,7 +168,7 @@ static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
         // start the display
         timer_init(&tltimer);
         timer_set(&tltimer, current_time() + LK_SEC(1),
-            TIMER_SLACK_CENTER, LK_MSEC(10), &threadload, NULL);
+                  TIMER_SLACK_CENTER, LK_MSEC(10), &threadload, NULL);
         showthreadload = true;
     } else {
         timer_cancel(&tltimer);
@@ -185,8 +178,7 @@ static int cmd_threadload(int argc, const cmd_args *argv, uint32_t flags)
     return 0;
 }
 
-static int cmd_kill(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
         printf("not enough arguments\n");
         return -1;

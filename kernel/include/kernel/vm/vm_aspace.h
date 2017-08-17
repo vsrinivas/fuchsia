@@ -11,8 +11,8 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_address_region.h>
 #include <kernel/vm/arch_vm_aspace.h>
+#include <kernel/vm/vm_address_region.h>
 #include <lib/crypto/prng.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -35,14 +35,14 @@ public:
     void Rename(const char* name);
 
     // flags
-    static const uint32_t TYPE_USER       = (0 << 0);
-    static const uint32_t TYPE_KERNEL     = (1 << 0);
+    static const uint32_t TYPE_USER = (0 << 0);
+    static const uint32_t TYPE_KERNEL = (1 << 0);
     // You probably do not want to use LOW_KERNEL.  It is primarily
     // used for SMP bootstrap to allow mappings of very low memory using
     // the standard VMM subsystem.
     static const uint32_t TYPE_LOW_KERNEL = (2 << 0);
     static const uint32_t TYPE_GUEST_PHYS = (3 << 0);
-    static const uint32_t TYPE_MASK       = (3 << 0);
+    static const uint32_t TYPE_MASK = (3 << 0);
 
     // simple accessors
     vaddr_t base() const { return base_; }
@@ -222,4 +222,3 @@ static VmAspace* vmm_aspace_to_obj(vmm_aspace_t* aspace) {
 static const VmAspace* vmm_aspace_to_obj(const vmm_aspace_t* aspace) {
     return reinterpret_cast<const VmAspace*>(aspace);
 }
-

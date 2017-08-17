@@ -20,11 +20,11 @@ struct cpu_stats {
     ulong yields;
 
     /* cpu level interrupts and exceptions */
-    ulong interrupts; /* hardware interrupts, minus timer interrupts or inter-processor interrupts */
-    ulong timer_ints; /* timer interrupts */
-    ulong timers; /* timer callbacks */
+    ulong interrupts;  /* hardware interrupts, minus timer interrupts or inter-processor interrupts */
+    ulong timer_ints;  /* timer interrupts */
+    ulong timers;      /* timer callbacks */
     ulong page_faults; /* page faults */
-    ulong exceptions; /* exceptions such as undefined opcode */
+    ulong exceptions;  /* exceptions such as undefined opcode */
     ulong syscalls;
 
     /* inter-processor interrupts */
@@ -37,5 +37,7 @@ __END_CDECLS
 /* include after the cpu_stats definition above, since it is part of the percpu structure */
 #include <kernel/percpu.h>
 
-#define CPU_STATS_INC(name) do { __atomic_fetch_add(&get_local_percpu()->stats.name, 1u, __ATOMIC_RELAXED); } while(0)
-
+#define CPU_STATS_INC(name)                                                        \
+    do {                                                                           \
+        __atomic_fetch_add(&get_local_percpu()->stats.name, 1u, __ATOMIC_RELAXED); \
+    } while (0)

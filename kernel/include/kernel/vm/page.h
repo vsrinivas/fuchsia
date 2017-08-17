@@ -33,7 +33,7 @@ typedef struct vm_page {
         struct {
             // attached to a vm object
             uint64_t offset; // unused currently
-            VmObject* obj; // unused currently
+            VmObject* obj;   // unused currently
 
             uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
             // If true, one pin slot is used by the VmObject to keep a run
