@@ -14,7 +14,7 @@ namespace escher {
 template <typename FuncT>
 static FuncT GetDeviceProcAddr(vk::Device device, const char* func_name) {
   FuncT func = reinterpret_cast<FuncT>(device.getProcAddr(func_name));
-  FTL_CHECK(func);
+  FTL_CHECK(func) << "failed to find function address for: " << func_name;
   return func;
 }
 
@@ -35,8 +35,17 @@ VulkanDeviceQueues::ProcAddrs::ProcAddrs(
   GET_DEVICE_PROC_ADDR(QueuePresentKHR);
   if (extension_names.find(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME) !=
       extension_names.end()) {
+// TODO: Used during transition to SDK 1.0.57.  Remove once Magma Vulkan SDK
+// is also updated to >= 1.0.57.
+#ifdef VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
+    ImportSemaphoreFdKHR = GetDeviceProcAddr<PFN_vkImportSemaphoreFdKHX>(
+        device, "vkImportSemaphoreFdKHX");
+    GetSemaphoreFdKHR = GetDeviceProcAddr<PFN_vkGetSemaphoreFdKHX>(
+        device, "vkGetSemaphoreFdKHX");
+#else
     GET_DEVICE_PROC_ADDR(ImportSemaphoreFdKHR);
     GET_DEVICE_PROC_ADDR(GetSemaphoreFdKHR);
+#endif
   }
 }
 
