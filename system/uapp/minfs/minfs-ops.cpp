@@ -110,7 +110,7 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
         uint32_t* entry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * indirect);
 #else
         uint8_t idata[kMinfsBlockSize];
-        fs_->bc_->Readblk(inode_.inum[indirect], idata);
+        fs_->bc_->Readblk(inode_.inum[indirect] + fs_->info_.dat_block, idata);
         uint32_t* entry = reinterpret_cast<uint32_t*>(idata);
 #endif
         bool dirty = false;
@@ -139,9 +139,9 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
         if (dirty) {
             doSync = true;
 #ifdef __Fuchsia__
-            txn->Enqueue(vmoid_indirect_, indirect, inode_.inum[indirect], 1);
+            txn->Enqueue(vmoid_indirect_, indirect, inode_.inum[indirect] + fs_->info_.dat_block, 1);
 #else
-            fs_->bc_->Writeblk(inode_.inum[indirect], entry);
+            fs_->bc_->Writeblk(inode_.inum[indirect] + fs_->info_.dat_block, entry);
 #endif
         }
 
@@ -183,7 +183,7 @@ mx_status_t VnodeMinfs::InitIndirectVmo() {
         uint32_t ibno;
         if ((ibno = inode_.inum[i]) != 0) {
             fs_->ValidateBno(ibno);
-            txn.Enqueue(vmoid_indirect_, i, ibno, 1);
+            txn.Enqueue(vmoid_indirect_, i, ibno + fs_->info_.dat_block, 1);
         }
     }
     return txn.Flush();
@@ -221,7 +221,7 @@ mx_status_t VnodeMinfs::InitVmo() {
     for (uint32_t d = 0; d < kMinfsDirect; d++) {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
-            txn.Enqueue(vmoid_, d, bno, 1);
+            txn.Enqueue(vmoid_, d, bno + fs_->info_.dat_block, 1);
         }
     }
 
@@ -246,7 +246,7 @@ mx_status_t VnodeMinfs::InitVmo() {
                 if ((bno = ientry[j]) != 0) {
                     fs_->ValidateBno(bno);
                     uint32_t n = kMinfsDirect + i * direct_per_indirect + j;
-                    txn.Enqueue(vmoid_, n, bno, 1);
+                    txn.Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
                 }
             }
         }
@@ -314,7 +314,7 @@ mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
         memset(reinterpret_cast<void*>(iaddr + kMinfsBlockSize * i), 0, kMinfsBlockSize);
 #else
         memset(idata, 0, kMinfsBlockSize);
-        fs_->bc_->Writeblk(ibno, idata);
+        fs_->bc_->Writeblk(ibno + fs_->info_.dat_block, idata);
 #endif
 
         // record new indirect block in inode, note that we need to update
@@ -327,7 +327,7 @@ mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
     uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect_->GetData());
     uint32_t* ientry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * i);
 #else
-    fs_->bc_->Readblk(ibno, idata);
+    fs_->bc_->Readblk(ibno + fs_->info_.dat_block, idata);
     uint32_t* ientry = reinterpret_cast<uint32_t*>(idata);
 #endif
 
@@ -345,9 +345,9 @@ mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
     if (dirty) {
         // Write back the indirect block if requested
 #ifdef __Fuchsia__
-        txn->Enqueue(vmoid_indirect_, i, ibno, 1);
+        txn->Enqueue(vmoid_indirect_, i, ibno + fs_->info_.dat_block, 1);
 #else
-        fs_->bc_->Writeblk(ibno, ientry);
+        fs_->bc_->Writeblk(ibno + fs_->info_.dat_block, ientry);
 #endif
         InodeSync(txn, kMxFsSyncDefault);
     }
@@ -831,7 +831,7 @@ mx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
         }
         if (bno != 0) {
             char bdata[kMinfsBlockSize];
-            if (fs_->bc_->Readblk(bno, bdata)) {
+            if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, bdata)) {
                 return MX_ERR_IO;
             }
             memcpy(data, bdata + adjust, xfer);
@@ -914,7 +914,7 @@ mx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
             return status;
         }
         MX_DEBUG_ASSERT(bno != 0);
-        txn->Enqueue(vmoid_, n, bno, 1);
+        txn->Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
 #else
         uint32_t bno;
         if ((status = GetBno(txn, n, &bno)) != MX_OK) {
@@ -922,11 +922,11 @@ mx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         }
         MX_DEBUG_ASSERT(bno != 0);
         char wdata[kMinfsBlockSize];
-        if (fs_->bc_->Readblk(bno, wdata)) {
+        if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, wdata)) {
             return MX_ERR_IO;
         }
         memcpy(wdata + adjust, data, xfer);
-        if (fs_->bc_->Writeblk(bno, wdata)) {
+        if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, wdata)) {
             return MX_ERR_IO;
         }
 #endif
@@ -1203,7 +1203,7 @@ ssize_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* 
             }
 
             vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
-            info->total_bytes = (fs_->info_.block_count - fs_->info_.dat_block) * fs_->info_.block_size;
+            info->total_bytes = fs_->info_.block_count * fs_->info_.block_size;
             info->used_bytes = fs_->info_.alloc_block_count * fs_->info_.block_size;
             info->total_nodes = fs_->info_.inode_count;
             info->used_nodes = fs_->info_.alloc_inode_count;
@@ -1314,13 +1314,13 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
                     return MX_ERR_IO;
                 }
 #else
-                if (fs_->bc_->Readblk(bno, bdata)) {
+                if (fs_->bc_->Readblk(bno + fs_->info_.dat_block, bdata)) {
                     return MX_ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 #endif
 
-                if (fs_->bc_->Writeblk(bno, bdata)) {
+                if (fs_->bc_->Writeblk(bno + fs_->info_.dat_block, bdata)) {
                     return MX_ERR_IO;
                 }
             }

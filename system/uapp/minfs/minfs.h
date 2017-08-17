@@ -36,7 +36,7 @@ namespace minfs {
 
 constexpr uint64_t kMinfsMagic0 = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1 = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsVersion = 0x00000003;
+constexpr uint32_t kMinfsVersion = 0x00000004;
 
 constexpr uint32_t kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 1;
@@ -68,7 +68,7 @@ typedef struct {
     uint32_t flags;
     uint32_t block_size;    // 8K typical
     uint32_t inode_size;    // 256
-    uint32_t block_count;   // total number of blocks
+    uint32_t block_count;   // total number of data blocks
     uint32_t inode_count;   // total number of inodes
     uint32_t alloc_block_count; // total number of allocated data blocks
     uint32_t alloc_inode_count; // total number of allocated inodes

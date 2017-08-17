@@ -54,7 +54,7 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
     }
     char data[kMinfsBlockSize];
     mx_status_t status;
-    if ((status = fs_->bc_->Readblk(ibno, data)) != MX_OK) {
+    if ((status = fs_->bc_->Readblk(ibno + fs_->info_.dat_block, data)) != MX_OK) {
         return status;
     }
     uint32_t* ientry = reinterpret_cast<uint32_t*>(data);
@@ -198,8 +198,8 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
 }
 
 const char* MinfsChecker::CheckDataBlock(uint32_t bno) {
-    if (bno < fs_->info_.dat_block) {
-        return "in metadata area";
+    if (bno == 0) {
+        return "reserved bno";
     }
     if (bno >= fs_->info_.block_count) {
         return "out of range";

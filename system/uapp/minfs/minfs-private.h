@@ -91,7 +91,7 @@ public:
     }
 #endif
     void ValidateBno(uint32_t bno) const {
-        MX_DEBUG_ASSERT(info_.dat_block <= bno);
+        MX_DEBUG_ASSERT(bno != 0);
         MX_DEBUG_ASSERT(bno < info_.block_count);
     }
 

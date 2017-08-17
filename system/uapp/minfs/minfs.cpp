@@ -26,7 +26,7 @@ namespace minfs {
 fs::Vfs vfs;
 
 void minfs_dump_info(const minfs_info_t* info) {
-    FS_TRACE(MINFS, "minfs: blocks:  %10u (size %u)\n", info->block_count, info->block_size);
+    FS_TRACE(MINFS, "minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
     FS_TRACE(MINFS, "minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
     FS_TRACE(MINFS, "minfs: allocated blocks  @ %10u\n", info->alloc_block_count);
     FS_TRACE(MINFS, "minfs: allocated inodes  @ %10u\n", info->alloc_inode_count);
@@ -61,7 +61,7 @@ mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
         FS_TRACE_ERROR("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
         return MX_ERR_INVALID_ARGS;
     }
-    if (info->block_count > max) {
+    if (info->dat_block + info->block_count > max) {
         FS_TRACE_ERROR("minfs: too large for device\n");
         return MX_ERR_INVALID_ARGS;
     }
@@ -499,7 +499,6 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
     uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-    uint32_t abmblks = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
     uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
     minfs_info_t info;
@@ -510,8 +509,6 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     info.flags = kMinfsFlagClean;
     info.block_size = kMinfsBlockSize;
     info.inode_size = kMinfsInodeSize;
-    info.block_count = blocks;
-    info.inode_count = inodes;
     info.alloc_block_count = 0;
     info.alloc_inode_count = 0;
     // For now, we are aligning the
@@ -519,6 +516,10 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     //  - Block bitmap
     //  - Inode table
     // To an 8-block boundary on disk, allowing for future expansion.
+    uint32_t dat_block_count = blocks - (8 + mxtl::roundup(ibmblks, 8u) + inoblks);
+    uint32_t abmblks = (dat_block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    info.block_count = dat_block_count - mxtl::roundup(abmblks, 8u);
+    info.inode_count = inodes;
     info.ibm_block = 8;
     info.abm_block = info.ibm_block + mxtl::roundup(ibmblks, 8u);
     info.ino_block = info.abm_block + mxtl::roundup(abmblks, 8u);
@@ -558,7 +559,7 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     uint8_t blk[kMinfsBlockSize];
     memset(blk, 0, sizeof(blk));
     minfs_dir_init(blk, kMinfsRootIno, kMinfsRootIno);
-    bc->Writeblk(info.dat_block, blk);
+    bc->Writeblk(info.dat_block + 1, blk);
 
     // update inode bitmap
     ibm.Set(0, 1);
@@ -566,9 +567,9 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     info.alloc_inode_count++;
 
     // update block bitmap:
-    // reserve all blocks before the data storage area
-    // reserve the first data block (for root directory)
-    abm.Set(0, info.dat_block + 1);
+    // Reserve the 0th data block (as a 'null' value)
+    // Reserve the 1st data block (for root directory)
+    abm.Set(0, 2);
     info.alloc_block_count++;
 
     // write allocation bitmap
@@ -598,7 +599,7 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     ino[kMinfsRootIno].block_count = 1;
     ino[kMinfsRootIno].link_count = 2;
     ino[kMinfsRootIno].dirent_count = 2;
-    ino[kMinfsRootIno].dnum[0] = info.dat_block;
+    ino[kMinfsRootIno].dnum[0] = 1;
     bc->Writeblk(info.ino_block, blk);
 
     memset(blk, 0, sizeof(blk));
