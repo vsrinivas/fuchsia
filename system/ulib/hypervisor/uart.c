@@ -81,10 +81,14 @@ mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) 
     return MX_OK;
 }
 
-static mx_status_t raise_thr_empty(mx_handle_t vcpu, const io_apic_t* io_apic) {
-    static uint32_t vector = 0;
+static mx_status_t raise_thr_empty(const io_apic_t* io_apic) {
+    static uint8_t vector = 0;
+    static mx_handle_t vcpu;
     if (vector == 0) {
-        vector = io_apic_redirect(io_apic, X86_INT_UART);
+        mx_status_t status = io_apic_redirect(io_apic, X86_INT_UART, &vector, &vcpu);
+        if (status != MX_OK)
+            return status;
+
         // UART IRQs overlap with CPU exception handlers, so they need to be
         // remapped. If that hasn't happened yet, don't fire the interrupt - it
         // would be bad.
@@ -110,7 +114,7 @@ mx_status_t uart_write(uart_t* uart, mx_handle_t vcpu, const mx_guest_io_t* io) 
             }
         }
         if (thr_empty)
-            return raise_thr_empty(vcpu, uart->io_apic);
+            return raise_thr_empty(uart->io_apic);
         return MX_OK;
     case UART_INTERRUPT_ENABLE_PORT:
         if (io->access_size != 1)
@@ -121,7 +125,7 @@ mx_status_t uart_write(uart_t* uart, mx_handle_t vcpu, const mx_guest_io_t* io) 
         uart->interrupt_id = thr_empty ? UART_INTERRUPT_ID_THR_EMPTY : UART_INTERRUPT_ID_NONE;
         mtx_unlock(&uart->mutex);
         if (thr_empty)
-            return raise_thr_empty(vcpu, uart->io_apic);
+            return raise_thr_empty(uart->io_apic);
         return MX_OK;
     case UART_LINE_CONTROL_PORT:
         if (io->access_size != 1)

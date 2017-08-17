@@ -140,7 +140,7 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t
             fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
             return status;
         }
-        return pci_interrupt(&device->pci_device, vcpu);
+        return pci_interrupt(&device->pci_device);
     }
     }
 

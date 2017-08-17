@@ -448,11 +448,10 @@ mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t
     return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, pci_handler, device);
 }
 
-mx_status_t pci_interrupt(pci_device_t* pci_device, mx_handle_t vcpu) {
+mx_status_t pci_interrupt(pci_device_t* pci_device) {
     pci_bus_t* bus = pci_device->bus;
     if (!bus)
         return MX_ERR_BAD_STATE;
 
-    uint32_t interrupt = io_apic_redirect(bus->io_apic, pci_device->global_irq);
-    return mx_vcpu_interrupt(vcpu, interrupt);
+    return io_apic_interrupt(bus->io_apic, pci_device->global_irq);
 }

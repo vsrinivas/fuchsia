@@ -5,8 +5,12 @@
 #include <string.h>
 
 #include <hypervisor/address.h>
+#include <hypervisor/bits.h>
 #include <hypervisor/io_apic.h>
+#include <hypervisor/vcpu.h>
 #include <magenta/assert.h>
+#include <magenta/syscalls.h>
+#include <magenta/syscalls/hypervisor.h>
 
 // clang-format off
 
@@ -24,17 +28,99 @@
 #define FIRST_REDIRECT_OFFSET           0x10
 #define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
 
+/* DESTMOD register. */
+#define IO_APIC_DESTMOD_PHYSICAL        0x00
+#define IO_APIC_DESTMOD_LOGICAL         0x01
+
+#define LOCAL_APIC_DFR_FLAT_MODEL       0xf
+
 // clang-format on
 
 void io_apic_init(io_apic_t* io_apic) {
     memset(io_apic, 0, sizeof(*io_apic));
 }
 
-uint8_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq) {
+mx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
+                                        local_apic_t* local_apic) {
+    if (local_apic_id >= IO_APIC_MAX_LOCAL_APICS)
+        return MX_ERR_OUT_OF_RANGE;
+    if (io_apic->local_apic[local_apic_id] != NULL)
+        return MX_ERR_ALREADY_EXISTS;
+
+    local_apic->regs->id.u32 = local_apic_id;
+    io_apic->local_apic[local_apic_id] = local_apic;
+    return MX_OK;
+}
+
+mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq, uint8_t* out_vector,
+                             mx_handle_t* out_vcpu) {
     mtx_lock((mtx_t*)&io_apic->mutex);
-    uint8_t vector = io_apic->redirect[global_irq * 2] & UINT8_MAX;
+    uint32_t lower = io_apic->redirect[global_irq * 2];
+    uint32_t upper = io_apic->redirect[global_irq * 2 + 1];
     mtx_unlock((mtx_t*)&io_apic->mutex);
-    return vector;
+
+    uint8_t vector = BITS_SHIFT(lower, 7, 0);
+
+    // The "destination mode" (DESTMOD) determines how the dest field in the
+    // redirection entry should be interpreted.
+    //
+    // With a 'physical' mode, the destination is interpreted as the APIC ID
+    // of the target APIC to receive the interrupt.
+    //
+    // With a 'logical' mode, the target depends on the 'logical destination
+    // register' and the 'destination format register' in the connected local
+    // APICs.
+    //
+    // See 82093AA (IOAPIC) Section 2.3.4.
+    // See Intel Volume 3, Section 10.6.2.
+    uint8_t destmod = BIT_SHIFT(lower, 11);
+    if (destmod == IO_APIC_DESTMOD_PHYSICAL) {
+        uint8_t dest = BITS_SHIFT(upper, 27, 24);
+        local_apic_t* apic = dest < IO_APIC_MAX_LOCAL_APICS ? io_apic->local_apic[dest] : NULL;
+        if (apic == NULL)
+            return MX_ERR_NOT_FOUND;
+        *out_vector = vector;
+        *out_vcpu = apic->vcpu;
+        return MX_OK;
+    }
+
+    // Logical DESTMOD.
+    uint8_t dest = BITS_SHIFT(upper, 31, 24);
+    for (uint8_t local_apic_id = 0; local_apic_id < IO_APIC_MAX_LOCAL_APICS; ++local_apic_id) {
+        local_apic_t* local_apic = io_apic->local_apic[local_apic_id];
+        if (local_apic == NULL)
+            continue;
+
+        // Intel Volume 3, Section 10.6.2.2: Each local APIC performs a
+        // bit-wise AND of the MDA and its logical APIC ID.
+        uint8_t logical_apic_id = BITS_SHIFT(local_apic->regs->ldr.u32, 31, 24);
+        if (!(logical_apic_id & dest))
+            continue;
+
+        // There also exists a 'cluster' model that is not implemented.
+        uint8_t model = BITS_SHIFT(local_apic->regs->dfr.u32, 31, 28);
+        if (model != LOCAL_APIC_DFR_FLAT_MODEL) {
+            fprintf(stderr, "APIC only supports the flat model.\n");
+            return MX_ERR_NOT_SUPPORTED;
+        }
+
+        // Note we're not currently respecting the DELMODE field and
+        // instead are only delivering to the fist local APIC that is
+        // targeted.
+        *out_vector = vector;
+        *out_vcpu = local_apic->vcpu;
+        return MX_OK;
+    }
+    return MX_ERR_NOT_FOUND;
+}
+
+mx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint8_t global_irq) {
+    uint8_t vector;
+    mx_handle_t vcpu;
+    mx_status_t status = io_apic_redirect(io_apic, global_irq, &vector, &vcpu);
+    if (status != MX_OK)
+        return status;
+    return mx_vcpu_interrupt(vcpu, vector);
 }
 
 static mx_status_t io_apic_register_handler(io_apic_t* io_apic, const instruction_t* inst) {

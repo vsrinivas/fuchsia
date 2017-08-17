@@ -228,6 +228,13 @@ int main(int argc, char** argv) {
     vcpu_ctx.local_apic.apic_addr = (void*)apic_addr;
 #endif // __x86_64__
     vcpu_ctx.guest_ctx = &guest_ctx;
+    // Setup Local APIC.
+    vcpu_ctx.local_apic.vcpu = vcpu;
+    status = io_apic_register_local_apic(&io_apic, 0, &vcpu_ctx.local_apic);
+    if (status != MX_OK) {
+        fprintf(stderr, "Failed to register Local APIC with IO APIC.\n");
+        return status;
+    }
 
     mx_vcpu_state_t vcpu_state;
     memset(&vcpu_state, 0, sizeof(vcpu_state));

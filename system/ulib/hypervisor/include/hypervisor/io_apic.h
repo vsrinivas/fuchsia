@@ -9,7 +9,10 @@
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/hypervisor.h>
 
-#define IO_APIC_REDIRECT_OFFSETS 128u
+#define IO_APIC_REDIRECT_OFFSETS 96u
+#define IO_APIC_MAX_LOCAL_APICS 16u
+
+typedef struct local_apic local_apic_t;
 
 /* Stores the IO APIC state. */
 typedef struct io_apic {
@@ -20,13 +23,25 @@ typedef struct io_apic {
     uint32_t id;
     // IO redirection table offsets.
     uint32_t redirect[IO_APIC_REDIRECT_OFFSETS];
+    // Connected local APICs.
+    local_apic_t* local_apic[IO_APIC_MAX_LOCAL_APICS];
 } io_apic_t;
 
 void io_apic_init(io_apic_t* io_apic);
+
+/* Associate a local APIC with an IO APIC. */
+mx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_id,
+                                        local_apic_t* local_apic);
 
 /* Handle memory access to the IO APIC. */
 mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_guest_memory_t* memory,
                             const instruction_t* inst);
 
-/* Returns the redirected interrupt vector for the given global one. */
-uint8_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq);
+/* Returns the redirected interrupt vector and target VCPU for the given
+ * global IRQ.
+ */
+mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq, uint8_t* vector,
+                             mx_handle_t* vcpu);
+
+/* Signals the given global IRQ. */
+mx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint8_t global_irq);

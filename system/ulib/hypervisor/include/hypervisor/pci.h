@@ -137,4 +137,4 @@ uint16_t pci_bar_size(pci_device_t* device);
 mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t guest);
 
 /* Raise the configured interrupt for the given PCI device. */
-mx_status_t pci_interrupt(pci_device_t* device, mx_handle_t vcpu);
+mx_status_t pci_interrupt(pci_device_t* device);

@@ -82,9 +82,15 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_me
     case LOCAL_APIC_REGISTER_TMR_31_0 ... LOCAL_APIC_REGISTER_TMR_255_224:
     case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
         return inst_read32(inst, 0);
+    case LOCAL_APIC_REGISTER_ID:
+        // The IO APIC implementation currently assumes these won't change.
+        if (inst->type == INST_MOV_WRITE && inst_val32(inst) != local_apic->regs->id.u32) {
+            fprintf(stderr, "Changing APIC IDs is not supported.\n");
+            return MX_ERR_NOT_SUPPORTED;
+        }
+        return inst_rw32(inst, local_apic->apic_addr + offset);
     case LOCAL_APIC_REGISTER_DFR:
     case LOCAL_APIC_REGISTER_ICR_31_0 ... LOCAL_APIC_REGISTER_ICR_63_32:
-    case LOCAL_APIC_REGISTER_ID:
     case LOCAL_APIC_REGISTER_LDR:
     case LOCAL_APIC_REGISTER_LVT_ERROR:
     case LOCAL_APIC_REGISTER_LVT_LINT0:
