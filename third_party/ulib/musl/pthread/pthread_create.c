@@ -65,26 +65,37 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->start = entry;
     new->start_arg = arg;
 
-    new->sanitizer_hook = __sanitizer_before_thread_create_hook(
+    void* sanitizer_hook = __sanitizer_before_thread_create_hook(
         (thrd_t)new, attr._a_detach, name,
         new->safe_stack.iov_base, new->safe_stack.iov_len);
+    new->sanitizer_hook = sanitizer_hook;
+
+    // We have to publish the pointer now, and make sure it is
+    // visible, as in C11 the end of thrd_create synchronizes with the
+    // entry point of the new thread.
+    *res = new;
+    atomic_thread_fence(memory_order_release);
 
     atomic_fetch_add(&libc.thread_count, 1);
+
+    // This will (hopefully) start the new thread. It could instantly
+    // run to completion and deallocate it self. As such, we can't
+    // access new->anything after this point.
     status = mxr_thread_start(&new->mxr_thread,
                               (uintptr_t)new->safe_stack.iov_base,
                               new->safe_stack.iov_len, start, new);
 
     if (status == MX_OK) {
-        __sanitizer_thread_create_hook(new->sanitizer_hook,
+        __sanitizer_thread_create_hook(sanitizer_hook,
                                        (thrd_t)new, thrd_success);
-        *res = new;
         return 0;
     }
 
+    *res = NULL;
     atomic_fetch_sub(&libc.thread_count, 1);
 
     __sanitizer_thread_create_hook(
-        new->sanitizer_hook, (thrd_t)new,
+        sanitizer_hook, (thrd_t)new,
         status == MX_ERR_ACCESS_DENIED ? thrd_error : thrd_nomem);
 
 fail_after_alloc:
