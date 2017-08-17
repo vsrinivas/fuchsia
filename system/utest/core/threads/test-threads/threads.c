@@ -42,7 +42,7 @@ void threads_test_busy_fn(void* arg) {
 }
 
 void threads_test_infinite_sleep_fn(void* arg) {
-    mx_nanosleep(MX_TIME_INFINITE);
+    mx_nanosleep(UINT64_MAX);
     __builtin_trap();
 }
 

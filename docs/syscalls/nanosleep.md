@@ -15,9 +15,7 @@ mx_status_t mx_nanosleep(mx_time_t deadline);
 ## DESCRIPTION
 
 **nanosleep**() suspends the calling thread execution until *deadline* passes on
-**MX_CLOCK_MONOTONIC**. The special value **MX_TIME_INFINITE** suspends the
-calling thread execution indefinitely. The value **0** immediately yields the
-thread.
+**MX_CLOCK_MONOTONIC**. The value **0** immediately yields the thread.
 
 To sleep for a duration, use [**mx_deadline_after**](deadline_after.md) and the
 **MX_\<time-unit\>** helpers:

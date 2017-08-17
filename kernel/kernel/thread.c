@@ -854,11 +854,10 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable) {
         goto out;
     }
 
-    if (deadline != INFINITE_TIME) {
-        /* set a one shot timer to wake us up and reschedule */
-        uint64_t slack = sleep_slack(deadline, now);
-        timer_set(&timer, deadline, TIMER_SLACK_LATE, slack, thread_sleep_handler, current_thread);
-    }
+    /* set a one shot timer to wake us up and reschedule */
+    uint64_t slack = sleep_slack(deadline, now);
+    timer_set(&timer, deadline, TIMER_SLACK_LATE, slack, thread_sleep_handler, current_thread);
+
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = MX_OK;
 
@@ -868,10 +867,8 @@ status_t thread_sleep_etc(lk_time_t deadline, bool interruptable) {
 
     blocked_status = current_thread->blocked_status;
 
-    if (deadline != INFINITE_TIME) {
-        /* always cancel the timer, since we may be racing with the timer tick on other cpus */
-        timer_cancel(&timer);
-    }
+    /* always cancel the timer, since we may be racing with the timer tick on other cpus */
+    timer_cancel(&timer);
 
 out:
     THREAD_UNLOCK(state);
