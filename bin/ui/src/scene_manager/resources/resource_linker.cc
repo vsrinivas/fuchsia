@@ -167,6 +167,16 @@ void ResourceLinker::SetOnExpiredCallback(OnExpiredCallback callback) {
   expiration_callback_ = callback;
 }
 
+size_t ResourceLinker::GetExportedResourceCountForSession(Session* session) {
+  size_t count = 0;
+  for (auto& pair : exported_resources_by_import_koid_) {
+    if (session == pair.second.resource->session()) {
+      ++count;
+    }
+  }
+  return count;
+}
+
 void ResourceLinker::PerformLinkingNow(mx_koid_t import_koid) {
   // Find the unresolved import entry if present.
   auto found = unresolved_imports_by_import_koid_.find(import_koid);

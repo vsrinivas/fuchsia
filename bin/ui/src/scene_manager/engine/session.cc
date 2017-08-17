@@ -835,6 +835,15 @@ void Session::TearDown() {
   // not handle session shutdown. Fix that bug and turn this log into an
   // assertion.
   if (resource_count_ != 0) {
+    auto exported_count =
+        engine()->GetResourceLinker().GetExportedResourceCountForSession(this);
+    FTL_CHECK(resource_count_ == exported_count)
+        << "Session::TearDown(): Not all resources have been "
+           "collected (excluding exported resources, which is tracked by "
+           "MZ-134).  See MZ-261.  Exported resources: "
+        << exported_count
+        << ", total outstanding resources: " << resource_count_;
+
     error_reporter()->ERROR()
         << "Session::TearDown(): Not all resources have been "
            "collected. See MZ-134.";

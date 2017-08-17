@@ -52,6 +52,8 @@ class ResourceLinker : private mtl::MessageLoopHandler {
   using OnExpiredCallback = std::function<void(ResourcePtr, ExpirationCause)>;
   void SetOnExpiredCallback(OnExpiredCallback callback);
 
+  size_t GetExportedResourceCountForSession(Session* session);
+
  private:
   struct ExportedResourceEntry {
     mx::eventpair export_handle;
