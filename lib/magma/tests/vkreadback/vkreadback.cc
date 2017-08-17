@@ -7,6 +7,7 @@
 #else
 #include <vulkan/vulkan.h>
 #endif
+#include <magenta/syscalls.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "mxio/io.h"
 
 class VkReadbackTest {
 public:
@@ -221,17 +223,34 @@ bool VkReadbackTest::InitImage()
 
 #if defined(MAGMA_TEST_IMPORT_EXPORT)
     if (device_memory_handle_) {
-        DASSERT(vkImportDeviceMemoryMAGMA);
-        if ((result = vkImportDeviceMemoryMAGMA(vk_device_, device_memory_handle_, nullptr,
-                                                &vk_imported_device_memory_)) != VK_SUCCESS)
-            return DRETF(false, "vkImportDeviceMemoryMAGMA failed");
-        printf("imported from handle 0x%x\n", device_memory_handle_);
+        size_t vmo_size;
+        mx_vmo_get_size(device_memory_handle_, &vmo_size);
+        VkImportMemoryFdInfoKHR magma_info = {VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR, nullptr,
+                                              VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR,
+                                              mxio_vmo_fd(device_memory_handle_, 0, vmo_size)};
+
+        VkMemoryAllocateInfo info;
+        info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        info.pNext = &magma_info;
+        info.allocationSize = vmo_size;
+        info.memoryTypeIndex = 0;
+
+        if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
+            VK_SUCCESS)
+            return DRETF(false, "vkAllocateMemory failed");
     } else {
-        DASSERT(vkExportDeviceMemoryMAGMA);
-        if ((result = vkExportDeviceMemoryMAGMA(vk_device_, vk_device_memory_,
-                                                &device_memory_handle_)) != VK_SUCCESS)
-            return DRETF(false, "vkExportDeviceMemoryMAGMA failed");
-        printf("exported handle 0x%x\n", device_memory_handle_);
+        DASSERT(vkGetMemoryFdKHR);
+        mx_handle_t vmo_handle = 0;
+        int fd = 0;
+        VkMemoryGetFdInfoKHR get_fd_info = {VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR, nullptr,
+                                            vk_device_memory_,
+                                            VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR};
+        if ((result = vkGetMemoryFdKHR(vk_device_, &get_fd_info, &fd)) != VK_SUCCESS)
+            return DRETF(false, "vkGetMemoryFdKHR failed");
+        mx_status_t status = mxio_get_exact_vmo(fd, &vmo_handle);
+        if (status != MX_OK)
+            return DRETF(false, "mxio_get_exact_vmo failed");
+        device_memory_handle_ = vmo_handle;
     }
 #endif
 

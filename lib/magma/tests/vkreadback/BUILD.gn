@@ -63,4 +63,5 @@ executable("vk_import_export_readback") {
       "$mesa_build_root:magma_vulkan",
     ]
   }
+  libs = [ "magenta" ]
 }
