@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("network") {
   # if you don't need HTTPS, comment out NETWORK_SERVICE_USE_HTTPS in |defines| below.
-  defines = [
-    "NETWORK_SERVICE_USE_HTTPS",
-  ]
+  defines = [ "NETWORK_SERVICE_USE_HTTPS" ]
 
   sources = [
     "http_client.h",
@@ -35,5 +35,32 @@ executable("network") {
     "//magenta/system/ulib/mx",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
+  ]
+}
+
+# TODO: This should really be called just 'network' but the executable target 'network' is also
+# being used as a dependency elsewhere in the tree to get access to net_errors.h. This is wrong -
+# targets shouldn't declare a dependency on an executable just to get access to their header files.
+# The right fix is to define an API target with the errors, preferably in a fidl file, and have
+# other targets depend on that so the name of the executable target can be a detail internal to the
+# package target.
+package("network_pkg") {
+  package_name = "network"
+
+  app = true
+
+  deps = [
+    ":network",
+    "//apps/network/application_loader",
+  ]
+
+  binaries = [
+    {
+      name = "network"
+    },
+
+    {
+      name = "network_application_loader"
+    },
   ]
 }
