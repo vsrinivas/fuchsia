@@ -31,3 +31,15 @@ kernel = {
     }
     qemu-pcie = {}
 }
+
+platform = {
+    vid = 0x1234
+    pid = 1
+
+    device = {
+        name = "pci"
+        vid = PDEV_VID_GENERIC
+        pid = PDEV_PID_GENERIC
+        did = PDEV_DID_KPCI
+    }
+}

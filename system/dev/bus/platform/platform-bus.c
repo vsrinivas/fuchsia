@@ -174,7 +174,10 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     // count resources for bus device
     uint32_t mmio_count = 0;
     uint32_t irq_count = 0;
+    bool has_platform_bus_node = false;
     if (mdi_find_node(&platform_node, MDI_PLATFORM_BUS, &bus_node) == MX_OK) {
+        has_platform_bus_node = true;
+
         if (mdi_find_node(&bus_node, MDI_PLATFORM_MMIOS, &node) == MX_OK) {
             mmio_count = mdi_child_count(&node);
         }
@@ -228,6 +231,11 @@ static mx_status_t platform_bus_bind(void* ctx, mx_device_t* parent, void** cook
     status = device_add(parent, &add_args, &bus->mxdev);
     if (status != MX_OK) {
         goto fail;
+    }
+
+    if (!has_platform_bus_node) {
+        // there is no platform bus driver to wait for, so publish our devices immediately
+        platform_bus_publish_devices(bus);
     }
 
     return MX_OK;

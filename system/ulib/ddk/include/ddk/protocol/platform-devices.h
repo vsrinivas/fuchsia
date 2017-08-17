@@ -15,5 +15,6 @@ __BEGIN_CDECLS;
 // Platform device IDs for generic platform devices
 #define PDEV_DID_USB_DWC3   1
 #define PDEV_DID_USB_XHCI   2
+#define PDEV_DID_KPCI       3
 
 __END_CDECLS;

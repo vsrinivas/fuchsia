@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <ddk/protocol/platform-devices.h>
 
 #include <hw/pci.h>
 #include <magenta/syscalls.h>
@@ -165,16 +166,16 @@ static mx_driver_ops_t kpci_driver_ops = {
 #define ACPI_PCIROOT_HID_0_3 0x504e5030  // "PNP0"
 #define ACPI_PCIROOT_HID_4_7  0x41303300 // "A03"
 #define ACPI_PCIEROOT_HID_4_7 0x41303800 // "A08"
+#define LABEL_PDEV 1
 
-#if ACPI_BUS_DRV
-MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_ACPI),
+MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 9)
+    BI_GOTO_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_ACPI, LABEL_PDEV),
     BI_ABORT_IF(NE, BIND_ACPI_HID_0_3, ACPI_PCIROOT_HID_0_3),
     BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, ACPI_PCIROOT_HID_4_7),
     BI_MATCH_IF(EQ, BIND_ACPI_HID_4_7, ACPI_PCIEROOT_HID_4_7),
+    BI_LABEL(LABEL_PDEV),
+    BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PLATFORM_DEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_KPCI),
 MAGENTA_DRIVER_END(pci)
-#else
-MAGENTA_DRIVER_BEGIN(pci, kpci_driver_ops, "magenta", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_ROOT),
-MAGENTA_DRIVER_END(pci)
-#endif
