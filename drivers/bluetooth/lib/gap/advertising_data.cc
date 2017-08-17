@@ -9,10 +9,14 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "lib/fidl/cpp/bindings/type_converter.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_printf.h"
+#include "lib/fxl/strings/utf_codecs.h"
+
 
 // A |TypeConverter| that will create a |fidl::Array<unsigned char>| containing a copy of
 // of the contents of an |ByteBuffer|, copying the memory directly. If the input array is empty,
 // the array will be empty.
+// Used by Array<uint8_t>::From() in AsLEAdvertisingData()
 template <>
 struct fidl::TypeConverter<fidl::Array<unsigned char>, bluetooth::common::ByteBuffer> {
    static fidl::Array<unsigned char> Convert(const bluetooth::common::ByteBuffer& input) {
@@ -31,6 +35,9 @@ using UuidFunction = std::function<void(const common::UUID&)>;
 
 bool ParseUuids(const ::bluetooth::common::BufferView& data, size_t uuid_size, UuidFunction func) {
   FXL_DCHECK(func);
+  FXL_DCHECK((uuid_size == ::bluetooth::gap::k16BitUuidElemSize) ||
+             (uuid_size == ::bluetooth::gap::k32BitUuidElemSize) ||
+             (uuid_size == ::bluetooth::gap::k128BitUuidElemSize));
 
   if (data.size() % uuid_size) {
     FXL_LOG(WARNING) << "Malformed service UUIDs list";
@@ -41,7 +48,7 @@ bool ParseUuids(const ::bluetooth::common::BufferView& data, size_t uuid_size, U
   for (size_t i = 0; i < uuid_count; i++) {
     const ::bluetooth::common::BufferView uuid_bytes(data.data() + (i * uuid_size), uuid_size);
     ::bluetooth::common::UUID uuid;
-    ::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid);
+    if (!::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid)) return false;
 
     func(uuid);
   }
@@ -53,30 +60,21 @@ size_t SizeForType(::bluetooth::gap::DataType type) {
   switch (type) {
     case ::bluetooth::gap::DataType::kIncomplete16BitServiceUuids:
     case ::bluetooth::gap::DataType::kComplete16BitServiceUuids:
+    case ::bluetooth::gap::DataType::kServiceData16Bit:
       return ::bluetooth::gap::k16BitUuidElemSize;
     case ::bluetooth::gap::DataType::kIncomplete32BitServiceUuids:
     case ::bluetooth::gap::DataType::kComplete32BitServiceUuids:
+    case ::bluetooth::gap::DataType::kServiceData32Bit:
       return ::bluetooth::gap::k32BitUuidElemSize;
     case ::bluetooth::gap::DataType::kIncomplete128BitServiceUuids:
     case ::bluetooth::gap::DataType::kComplete128BitServiceUuids:
+    case ::bluetooth::gap::DataType::kServiceData128Bit:
       return ::bluetooth::gap::k128BitUuidElemSize;
     default:
       break;
   };
 
   return 0;
-}
-
-// TODO(jamuraa): do real actual unicode conversion since this is way simple
-std::string CodePointToUtf8String(int i) {
-  char utf[3] = {0};
-  if (i < 127) {
-    utf[0] = i;
-    return std::string(utf);
-  }
-  utf[0] = 0xC0 | (i >> 6);             // Top 5 bits
-  utf[1] = 0x80 | ((uint8_t)i & 0x3F);  // Bottom 6 bits
-  return std::string(utf);
 }
 
 // clang-format off
@@ -109,15 +107,34 @@ const char* kUriSchemes[] = {"aaa:", "aaas:", "about:", "acap:", "acct:", "cap:"
 const size_t kUriSchemesSize = std::extent<decltype(kUriSchemes)>::value;
 
 std::string EncodeUri(const std::string& uri) {
-  // First codepoint (U+0001) is for uncompressed schemes.
+  std::string encoded_scheme;
   for (size_t i = 0; i < kUriSchemesSize; i++) {
     const char *scheme = kUriSchemes[i];
     size_t scheme_len = strlen(scheme);
     if (std::equal(scheme, scheme + scheme_len, uri.begin())) {
-      return CodePointToUtf8String(i + 2) + uri.substr(scheme_len);
+      fxl::WriteUnicodeCharacter(i + 2, &encoded_scheme);
+      return encoded_scheme + uri.substr(scheme_len);
     }
   }
-  return CodePointToUtf8String(1) + uri;
+  // First codepoint (U+0001) is for uncompressed schemes.
+  fxl::WriteUnicodeCharacter(1, &encoded_scheme);
+  return encoded_scheme + uri;
+}
+
+const char kUndefinedScheme = 0x01;
+
+std::string DecodeUri(const std::string& uri) {
+  if (uri[0] == kUndefinedScheme) {
+    return uri.substr(1);
+  }
+  uint32_t cp = 0;
+  size_t index = 0;
+  if (!fxl::ReadUnicodeCharacter(uri.c_str(), uri.size(), &index, &cp)) {
+    // Malformed UTF-8
+    return "";
+  }
+  FXL_DCHECK(cp >= 2);
+  return kUriSchemes[cp - 2] + uri.substr(index + 1);
 }
 
 template <typename T>
@@ -181,6 +198,17 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
         out_ad->SetManufacturerData(id, manuf_data);
         break;
       }
+      case ::bluetooth::gap::DataType::kServiceData16Bit:
+      case ::bluetooth::gap::DataType::kServiceData32Bit:
+      case ::bluetooth::gap::DataType::kServiceData128Bit: {
+        ::bluetooth::common::UUID uuid;
+        size_t uuid_size = SizeForType(type);
+        const common::BufferView uuid_bytes(field.data(), uuid_size);
+        if (!::bluetooth::common::UUID::FromBytes(uuid_bytes, &uuid)) return false;
+        const common::BufferView service_data(field.data() + uuid_size, field.size() - uuid_size);
+        out_ad->SetServiceData(uuid, service_data);
+        break;
+      }
       case ::bluetooth::gap::DataType::kAppearance: {
         // TODO(armansito): RemoteDevice should have a function to return the
         // device appearance, as it can be obtained either from advertising data
@@ -193,7 +221,16 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
         out_ad->SetAppearance(*reinterpret_cast<const uint16_t*>(field.data()));
         break;
       }
+      case ::bluetooth::gap::DataType::kURI: {
+        out_ad->AddURI(DecodeUri(field.ToString()));
+        break;
+      }
+      case ::bluetooth::gap::DataType::kFlags: {
+        // TODO(jamuraa): is there anything to do here?
+        break;
+      }
       default:
+        FXL_VLOG(1) << fxl::StringPrintf("Ignored Advertising Field (Type 0x%02hhx)", type);
         break;
     }
   }
@@ -229,6 +266,10 @@ bool AdvertisingData::FromBytes(const common::ByteBuffer& data, AdvertisingData*
     fidl_data->service_uuids.push_back(uuid.ToString());
   }
 
+  for (const auto& uri : uris_) {
+    fidl_data->uris.push_back(uri);
+  }
+
   if (local_name_) {
     fidl_data->name = *local_name_;
   }
@@ -251,6 +292,17 @@ void AdvertisingData::FromFidl(::btfidl::low_energy::AdvertisingDataPtr& fidl_ad
     fidl::Array<uint8_t>& data = it.GetValue();
     common::BufferView manuf_view(data.data(), data.size());
     out_ad->SetManufacturerData(it.GetKey(), manuf_view);
+  }
+
+  for (const auto& it : fidl_ad->service_data) {
+    fidl::Array<uint8_t>& data = it.GetValue();
+    common::BufferView servdata_view(data.data(), data.size());
+    common::UUID servdata_uuid;
+    if (StringToUuid(it.GetKey().get(), &servdata_uuid)) {
+      out_ad->SetServiceData(servdata_uuid, servdata_view);
+    } else {
+      FXL_LOG(WARNING) << "FIDL Service Data has malformed UUID";
+    }
   }
 
   if (fidl_ad->appearance) {
@@ -282,7 +334,7 @@ void AdvertisingData::SetServiceData(const common::UUID& uuid, const common::Byt
 
 const std::unordered_set<common::UUID> AdvertisingData::service_data_uuids() const {
   std::unordered_set<common::UUID> uuids;
-  for (const auto& it : manufacturer_data_) {
+  for (const auto& it : service_data_) {
     uuids.emplace(it.first);
   }
   return uuids;
@@ -331,7 +383,7 @@ common::Optional<std::string> AdvertisingData::local_name() const {
 }
 
 void AdvertisingData::AddURI(const std::string& uri) {
-  uris_.push_back(uri);
+  if (!uri.empty()) uris_.push_back(uri);
 }
 
 const std::vector<std::string>& AdvertisingData::uris() const {

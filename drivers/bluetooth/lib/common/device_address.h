@@ -122,4 +122,8 @@ struct hash<::bluetooth::common::DeviceAddress> {
   result_type operator()(argument_type const& value) const;
 };
 
+// Stream operators for easy logging
+ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddressBytes& db);
+ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddress& d);
+
 }  // namespace std

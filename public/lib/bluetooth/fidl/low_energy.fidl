@@ -32,7 +32,8 @@ struct AdvertisingData {
   array<string>? solicited_service_uuids;
 
   // URIs included in the advertising packet.
-  array<array<uint8>>? uris;
+  // These are full URIs (they are encoded/decoded automatically)
+  array<string>? uris;
 };
 
 // Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,

@@ -104,12 +104,24 @@ TEST(AdvertisingDataTest, ParseFIDL) {
   fidl_ad->service_uuids.push_back(kId1AsString);
   fidl_ad->service_uuids.push_back(kId3AsString);
 
+  auto array = fidl::Array<uint8_t>::New(4);
+  for (size_t i = 0; i < array.size(); i++) {
+    array[i] = static_cast<uint8_t>(i * 3);
+  }
+
+  fidl_ad->service_data.insert(kId1AsString, std::move(array));
+
   AdvertisingData data;
 
   AdvertisingData::FromFidl(fidl_ad, &data);
 
   EXPECT_EQ(2u, data.service_uuids().size());
   EXPECT_EQ("Test💖", *(data.local_name()));
+
+  common::UUID uuid1(kId1As16);
+  EXPECT_EQ(1u, data.service_data_uuids().size());
+  EXPECT_EQ(4u, data.service_data(uuid1).size());
+
   EXPECT_FALSE(data.tx_power());
 }
 
@@ -128,6 +140,48 @@ TEST(AdvertisingDataTest, ManufacturerZeroLength) {
 
   EXPECT_EQ(1u, data.manufacturer_data_ids().count(0x1234));
   EXPECT_EQ(0u, data.manufacturer_data(0x1234).size());
+}
+
+TEST(AdvertisingDataTest, ServiceData) {
+  // A typical Eddystone-URL beacon advertisement
+  // to "https://fuchsia.cl"
+  auto bytes = common::CreateStaticByteBuffer(
+      // Complete 16-bit UUIDs, 0xFEAA
+      0x03, 0x03, 0xAA, 0xFE,
+      // Eddystone Service (0xFEAA) Data:
+      0x10, 0x16, 0xAA, 0xFE,
+      0x10, // Eddystone-Uri type
+      0xEE, // TX Power level -18dBm
+      0x03, // "https://"
+      'f', 'u', 'c', 'h', 's', 'i', 'a', '.', 'c', 'l');
+
+  AdvertisingData data;
+  common::UUID eddystone((uint16_t)0xFEAA);
+
+  EXPECT_EQ(0u, data.service_data_uuids().size());
+
+  EXPECT_TRUE(AdvertisingData::FromBytes(bytes, &data));
+
+  EXPECT_EQ(1u, data.service_data_uuids().size());
+  EXPECT_EQ(13u, data.service_data(eddystone).size());
+
+  EXPECT_TRUE(ContainersEqual(bytes.view(8), data.service_data(eddystone)));
+}
+
+TEST(AdvertisingDataTest, Uris) {
+  auto bytes = common::CreateStaticByteBuffer(
+      // Uri: "https://abc.xyz"
+      0x0B, 0x24, 0x17, '/', '/', 'a', 'b', 'c', '.', 'x', 'y', 'z',
+      // Uri: "flubs:abc"
+      0x0B, 0x24, 0x01, 'f', 'l', 'u', 'b', 's', ':', 'a', 'b', 'c');
+
+  AdvertisingData data;
+  EXPECT_TRUE(AdvertisingData::FromBytes(bytes, &data));
+
+  auto uris = data.uris();
+  EXPECT_EQ(2u, uris.size());
+  EXPECT_TRUE(std::find(uris.begin(), uris.end(), "https://abc.xyz") != uris.end());
+  EXPECT_TRUE(std::find(uris.begin(), uris.end(), "flubs:abc") != uris.end());
 }
 
 TEST(AdvertisingDataTest, ReaderMalformedData) {

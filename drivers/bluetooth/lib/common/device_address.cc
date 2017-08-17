@@ -111,4 +111,15 @@ operator()(argument_type const& value) const {
   return value.Hash();
 }
 
+// Stream operators for easy logging
+ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddressBytes& db) {
+  os << db.ToString();
+  return os;
+};
+
+ostream& operator<<(ostream& os, const ::bluetooth::common::DeviceAddress& d) {
+  os << d.ToString();
+  return os;
+};
+
 }  // namespace std

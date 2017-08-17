@@ -48,6 +48,12 @@ class ScanResultsState extends State<ScanResultsWidget> {
     ]);
   }
 
+  String toHexString(final List<int> data) {
+    return data
+        .map((int byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join(' ');
+  }
+
   Widget _buildAdvertisingDataWidget(ble.RemoteDevice device) {
     List<_AdvertisingDataEntry> entries = <_AdvertisingDataEntry>[];
 
@@ -79,21 +85,33 @@ class ScanResultsState extends State<ScanResultsWidget> {
                   .toList())));
     }
 
-    if (device.advertisingData.manufacturerSpecificData != null) {
-      device.advertisingData.manufacturerSpecificData
-          .forEach((final int manufacturerId, final List<int> data) {
-        String title =
-            'Manufacturer Data (${getManufacturerName(manufacturerId)})';
-        currentMaxTitleLength = max(currentMaxTitleLength, title.length);
-        entries.add(new _AdvertisingDataEntry(
-            title,
-            (BuildContext context) => new Text(
-                data
-                    .map((int byte) => byte.toRadixString(16).padLeft(2, '0'))
-                    .join(' '),
-                style: textStyle)));
-      });
-    }
+    device.advertisingData.serviceData
+        ?.forEach((final String uuid, final List<int> data) {
+      String title = 'Service Data ($uuid)';
+      currentMaxTitleLength = max(currentMaxTitleLength, title.length);
+      entries.add(new _AdvertisingDataEntry(
+          title,
+          (BuildContext context) =>
+              new Text(toHexString(data), style: textStyle)));
+    });
+
+    device.advertisingData.manufacturerSpecificData
+        ?.forEach((final int manufacturerId, final List<int> data) {
+      String title =
+          'Manufacturer Data (${getManufacturerName(manufacturerId)})';
+      currentMaxTitleLength = max(currentMaxTitleLength, title.length);
+      entries.add(new _AdvertisingDataEntry(
+          title,
+          (BuildContext context) =>
+              new Text(toHexString(data), style: textStyle)));
+    });
+
+    device.advertisingData.uris?.forEach((var uri) {
+      const String title = 'URI';
+      currentMaxTitleLength = max(currentMaxTitleLength, title.length);
+      entries.add(new _AdvertisingDataEntry(
+          title, (BuildContext context) => new Text(uri)));
+    });
 
     if (entries.isEmpty) {
       return new Text('No data', style: textStyle);

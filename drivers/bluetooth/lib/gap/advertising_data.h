@@ -98,7 +98,8 @@ class AdvertisingData {
   // Gets the local name
   common::Optional<std::string> local_name() const;
 
-  // Adds a URI to the set of URIs advertised
+  // Adds a URI to the set of URIs advertised.
+  // Does nothing if |uri| is empty.
   void AddURI(const std::string& uri);
 
   // Get the URIs in this advertisement
