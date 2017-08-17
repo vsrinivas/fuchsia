@@ -2,11 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cmdutils") {
+import("//packages/package.gni")
+
+package("cmdutils") {
   deps = [
-    "cowsay",
-    "sysinfo",
-    "time",
-    "uname",
+    "//bin/cmdutils/cowsay",
+    "//bin/cmdutils/sysinfo",
+    "//bin/cmdutils/time",
+    "//bin/cmdutils/uname",
+  ]
+
+  binaries = [
+    {
+      name = "cowsay"
+    },
+
+    {
+      name = "sysinfo"
+    },
+
+    {
+      name = "time"
+    },
+
+    {
+      name = "uname"
+    },
   ]
 }
