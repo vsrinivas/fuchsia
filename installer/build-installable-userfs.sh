@@ -57,7 +57,7 @@ boot_manifest=""
 enable_thread_exp=1
 extras=("")
 
-while (( "$#")); do
+while (( "$#" )); do
   case $1 in
     "-u")
       shift

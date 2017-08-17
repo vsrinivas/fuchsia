@@ -969,60 +969,115 @@ function fclock() {
   fcmd "clock --set ${device_date}"
 }
 
+function fpublish-usage() {
+  cat >&2 <<END
+fpublish [--far-key <key file>] [--far-dir <DIR>] [--update-repo <DIR>] [pkg]
+Publish packages. If no package name is supplied, all packages from the current
+build output will be published.
+  --far-key
+    Key used to sign the package's meta FAR
+  --far-dir
+    Directory to be used to build the meta FAR
+  --update-repo
+    Directory to be used to publish the meta FAR and associated content blobs
+END
+}
+
 # Create a package manager package and then create update files which are
 # published to the local file system. If no package name is supplied, all
 # built packages are processed.
 function fpublish() {
-  if [[ "${1}" == "" ]]; then
-    pkgs_dir="${FUCHSIA_BUILD_DIR}/package"
-    for e in "${pkgs_dir}"/*
-    do
-      echo "Publishing $(basename "$e")"
-      fpublish_one $(basename "$e")
+  # if an even number of args, assume no pkg name provided
+  if [[ "$# % 2" -eq 0 ]]; then
+    local pkgs_file="${FUCHSIA_BUILD_DIR}/gen/packages/gn/packages"
+    local pkg_count=0
+    local pkgs=()
+    while IFS= read -r e || [[ -n "$e" ]]; do
+      pkg_count=$(($pkg_count + 1))
+      pkgs+=($e)
+    done < "$pkgs_file"
+
+    local i=1
+    for e in "${pkgs[@]}"; do
+      echo "Publishing ${i}/${pkg_count}: ${e}"
+      fpublish-one "${@:1}" "$e"
       if [[ "$?" -ne 0 ]]; then
         fpublish-usage
         return $?
       fi
+      i=$(($i + 1))
     done
   else
-    fpublish_one "${1}"
+    fpublish-one "${@:1}"
+      if [[ "$?" -ne 0 ]]; then
+        fpublish-usage
+        return $?
+      fi
   fi
 }
 
 # See comments for fpublish, this does the same thing, but for an individual
 # package.
-function fpublish_one() {
+function fpublish-one() {
   fcheck || return 1
+  local pkg_name
+  for pkg_name; do : ; done;
+  local stg_dir="${FUCHSIA_BUILD_DIR}/fars/${pkg_name}"
+  local update_repo="${FUCHSIA_BUILD_DIR}/amber-files"
+  local key_path
+  local gen_key=1
+  while (( "$#" )); do
+    case $1 in
+      "--update-repo")
+        shift
+        update_repo=$1
+        ;;
+      "--far-dir")
+        shift
+        stg_dir=$1
+        ;;
+      "--far-key")
+        shift
+        key_path=$1
+        gen_key=0
+        ;;
+    esac
+    shift
+  done
 
-  local stg_dir="${FUCHSIA_BUILD_DIR}/fars/${1}"
   local arch_dir="${stg_dir}/archive"
-  local key_path="${stg_dir}/key"
+  if [[ "$key_path" == "" ]]; then
+    key_path="${stg_dir}/key"
+  fi
+
   rm -r "${stg_dir}"/*  >/dev/null 2>&1
   mkdir -p "${arch_dir}"
 
   local pm_cmd="${FUCHSIA_BUILD_DIR}/host_x64/pm"
   local amber_cmd="${FUCHSIA_BUILD_DIR}/host_x64/amber-publish"
-  "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "genkey" || return $?
-
-  "${pm_cmd}" "-o" "${arch_dir}" "-n" "${1}" "init" || return $?
-
   local mani_path=""
-  for try_path in ${FUCHSIA_BUILD_DIR}/package/${1}/{boot,system}_manifest; do
+  for try_path in ${FUCHSIA_BUILD_DIR}/package/${pkg_name}/{boot,system}_manifest; do
     if [[ -s  "$try_path" ]]; then
       mani_path="$try_path"
     fi
   done
 
   if [[ "$mani_path" == "" ]]; then
-    echo "Error: manifest not found"
-    return -1
+    echo "WARNING: manifest not found for ${pkg_name}, no package published."
+    return 0
   fi
+
+  if [[ "$gen_key" -eq 1 ]]; then
+    "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "genkey" || return $?
+  fi
+
+  "${pm_cmd}" "-o" "${arch_dir}" "-n" "${pkg_name}" "init" || return $?
 
   "${pm_cmd}" "-o" "${arch_dir}" "-k" "${key_path}" "-m" "$mani_path" "build" || return $?
 
-  "${amber_cmd}" "-p" "-f" "${arch_dir}/meta.far" "-n" "${1}.far" || return $?
+  "${amber_cmd}" "-r" "${update_repo}" "-p" "-f" "${arch_dir}/meta.far" "-n" "${pkg_name}.far" || return $?
 
-  "${amber_cmd}" "-m" "-f" "${mani_path}" >/dev/null || return $?
+  "${amber_cmd}" "-r" "${update_repo}" "-m" "-f" "${mani_path}" >/dev/null || return $?
 }
 
 if [[ -n "${ZSH_VERSION}" ]]; then
