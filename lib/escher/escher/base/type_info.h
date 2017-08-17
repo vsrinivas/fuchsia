@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <utility>
+#include "ftl/logging.h"
+
 namespace escher {
 
 // TypeInfo is intended to be used in collaboration with TypedReffable.  It
