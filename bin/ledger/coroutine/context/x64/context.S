@@ -46,12 +46,12 @@ FUNCTION(_ZN7context10SetContextEPNS_15InternalContextE)
     // The sanitizer runtime wants to be informed of non-local exits.
     // Call __asan_handle_no_return() before doing the actual longjmp.
 #if __has_feature(address_sanitizer)
-    // Save our incoming argument registers on the stack around calling
+    // Save our incoming argument register on the stack around calling
     // __asan_handle_no_return.  The incoming stack is misaligned by one
     // word, so we need to move the stack by an odd number of words.
-    push_reg %rdi
+    push %rdi
     call __asan_handle_no_return@PLT
-    pop_reg %rdi
+    pop %rdi
 #endif
 
     movq RBX_O(%rdi), %rbx
