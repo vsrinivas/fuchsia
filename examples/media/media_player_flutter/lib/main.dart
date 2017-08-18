@@ -53,6 +53,7 @@ class ModuleImpl extends Module {
   void stop(void callback()) {
     _log('ModuleImpl::stop call');
     callback();
+    _binding.close();
   }
 }
 
