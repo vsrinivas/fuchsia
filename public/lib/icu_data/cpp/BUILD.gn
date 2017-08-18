@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 
 action("generate_icu_constants") {
+  visibility = [ ":lib" ]
+
   script = "generate_icu_constants.py"
 
   inputs = [
-    "$root_build_dir/icudtl.dat",
+    "$root_out_dir/icudtl.dat",
   ]
 
   outputs = [
