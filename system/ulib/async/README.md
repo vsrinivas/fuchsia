@@ -1,15 +1,32 @@
-# libasync
+# libasync and friends
 
-This library defines a C language interface for dispatching the results of
-asynchronous operations and tasks.  This library decouples libraries
-which require use of an asynchronous dispatch interface (such as FIDL bindings)
-from the dispatcher's implementation.
+This set of libraries defines a C and C++ language interface for initiating
+asynchronous operations and dispatching their results to callback functions.
 
-This library also provides a simple thread-safe message loop implementation
-which can be used out of the box.
+The purpose of these libraries is to decouple clients which want to perform
+asynchronous operations from the message loop implementations which dispatch
+the results of those operations.  This makes it an important building block
+for other abstractions such as the FIDL bindings.
 
-Clients can also provide their own asynchronous dispatcher implementations
-tied to their own task runner, message loop, thread pool, etc.
+## Libraries
+
+The async package consists of three libraries:
+
+- `libasync.a` provides the client API which includes all of the functions
+declared in [async/async.h](include/async/async.h) and
+[async/timeouts.h](include/async/timeouts.h).  This library must be statically
+linked into all clients.
+
+- `libasync-loop.a` provides a general-purpose thread-safe message loop
+implementation declared in [async/loop.h](include/async/loop.h).  This library
+must be statically linked into clients that want to use this particular message
+loop implementation.  Note that clients can implement their own asynchronous
+dispatchers tied if they have more specialized needs.
+
+- `libasync-default.so` provides functions for getting or setting a thread-local
+default asynchronous dispatcher as declared in [async/default.h](include/async/default.h).
+This library must be dynamically linked into clients that use `libasync-loop.a`
+or that want access to the default asynchronous dispatcher.
 
 ## Using the asynchronous dispatcher
 
@@ -27,6 +44,8 @@ on a thread of the dispatcher's choosing depending on its implementation.
 The client is responsible for ensuring that the wait structure remains in
 memory until the wait's handler runs or the wait is successfully canceled using
 `async_cancel_wait()`.
+
+See [async/async.h](include/async/async.h) for details.
 
 ```c
 #include <async/async.h>
@@ -60,6 +79,8 @@ on a thread of the dispatcher's choosing depending on its implementation.
 The client is responsible for ensuring that the task structure remains in
 memory until the task's handler runs or the task is successfully canceled using
 `async_cancel_task()`.
+
+See [async/async.h](include/async/async.h) for details.
 
 ```c
 #include <async/async.h>
@@ -99,6 +120,8 @@ on a thread of the dispatcher's choosing depending on its implementation.
 The client is responsible for ensuring that the receiver structure remains in
 memory until all queued packets have been delivered.
 
+See [async/async.h](include/async/async.h) for details.
+
 ```c
 #include <async/async.h>
 
@@ -118,9 +141,11 @@ mx_status_t send(const mx_packet_user_t* data) {
 
 ## Using the message loop
 
-This library includes a thread-safe message loop implementation of an
-asynchronous dispatcher which you can use out of box instead of writing
-your own.
+`libasync-loop.a` provides a general-purpose thread-safe message loop
+implementation of an asynchronous dispatcher which you can use out of box
+unless you need something more specialized.
+
+See [async/loop.h](include/async/loop.h) for details.
 
 ```c
 #include <async/loop.h>
@@ -155,19 +180,45 @@ mx_status_t do_stuff() {
 }
 ```
 
+## The default async dispatcher
+
+As a client of the async dispatcher, where should you get your `async_t*` from?
+
+The ideal answer is for the `async_t*` to be passed into your code when it is
+initialized.  However sometimes this becomes burdensome or isn't practical.
+
+For this reason, the `libasync-default.so` shared library provides functions
+for getting or setting a thread-local default `async_t*` using
+`async_get_default()` or `async_set_default()`.
+
+You can set the default yourself, or have `async_loop_create()` do it
+for you automatically by setting the `make_default_for_current_thread`
+configuration option.
+
+See [async/default.h](include/async/default.h) for details.
+
 ## Using the C++ helpers
 
-This library includes a few helper classes for writing handlers in C++ in
-[async/async.h](include/async/async.h).  To use them, subclass `Wait`, `Task`,
-or `Receiver` and implement the `Handle` function.
+`libasync.a` includes a few helper classes for writing handlers in C++.
+They just wrap the C API with a more convenient interface.
 
-There is also a special `WaitWithTimeout` helper in
-[async/timeouts.h](include/async/timeouts.h) which combines a wait operation
-with a pending task which invokes the handler when the specified deadline has been
-exceeded.  To use it, subclass `WaitWithTimeout` and implement the `Handle` function.
+To use them, subclass `Wait`, `Task`, or `Receiver` and implement the
+`Handle` function to implement the callback.
+
+There is also a special `WaitWithTimeout` helper which combines a wait operation
+together with a pending task which invokes the handler when the specified deadline
+has been exceeded.
+
+See [async/async.h](include/async/async.h) and [async/timeouts.h](include/async/timeouts.h)
+for details.
 
 ## Implementing a dispatcher
 
 The `async_ops_t` interface is a low-level abstraction for asynchronous
 dispatchers.  You can make custom implementations of this interface to
 integrate clients of this library with your own dispatcher.
+
+It is possible to implement only some of the operations but this may cause
+incompatibilities with certain clients.
+
+See [async/async.h](include/async/async.h) for details.

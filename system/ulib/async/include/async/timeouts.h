@@ -18,6 +18,9 @@ namespace async {
 // Use |MX_TIME_INFINITE| as the deadline to wait indefinitely.
 //
 // Warning: This helper will only work correctly with non-concurrent dispatchers.
+//
+// Implementation note: The task's flags are managed internally by this object
+// so they are not exposed to the client unlike the wait flags.
 class WaitWithTimeout : private async_wait_t, private async_task_t {
 public:
     WaitWithTimeout();
@@ -26,25 +29,36 @@ public:
                              uint32_t flags = 0u);
     virtual ~WaitWithTimeout();
 
+    // The object to wait for signals on.
     mx_handle_t object() const { return async_wait_t::object; }
     void set_object(mx_handle_t object) { async_wait_t::object = object; }
 
+    // The set of signals to wait for.
     mx_signals_t trigger() const { return async_wait_t::trigger; }
     void set_trigger(mx_signals_t trigger) { async_wait_t::trigger = trigger; }
 
+    // The time when the timeout should occur.
     mx_time_t deadline() const { return async_task_t::deadline; }
     void set_deadline(mx_time_t deadline) { async_task_t::deadline = deadline; }
 
+    // Valid flags: |ASYNC_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_wait_t::flags; }
     void set_flags(uint32_t flags) { async_wait_t::flags = flags; }
 
+    // Begins asynchronously waiting for the object to receive one or more of
+    // the trigger signals or for the timeout deadline to elapse.
+    //
+    // See |async_begin_wait()| for details.
     mx_status_t Begin(async_t* async);
+
+    // Cancels the wait.
+    //
+    // See |async_cancel_wait()| for details.
     mx_status_t Cancel(async_t* async);
 
-    // Note: The task's flags are managed internally by this object so they are not
-    // exposed to the client.
-
-    // Override this method to handle the wait or timeout results.
+    // Override this method to handle completion of the asynchronous wait operation
+    // or a timeout.
+    //
     // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
     // describes the signal which was received, otherwise |signal| is null.
     //

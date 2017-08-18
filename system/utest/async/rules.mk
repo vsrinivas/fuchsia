@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/async_stub.cpp \
     $(LOCAL_DIR)/async_tests.cpp \
     $(LOCAL_DIR)/async_wrapper_tests.cpp \
+    $(LOCAL_DIR)/default_tests.cpp \
     $(LOCAL_DIR)/loop_tests.cpp \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/timeout_tests.cpp
@@ -19,12 +20,14 @@ MODULE_SRCS += \
 MODULE_NAME := async-test
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
+    system/ulib/async.loop \
     system/ulib/mx \
     system/ulib/mxcpp \
     system/ulib/mxtl
 
 MODULE_LIBS := \
-    system/ulib/async \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/magenta \
     system/ulib/mxio \

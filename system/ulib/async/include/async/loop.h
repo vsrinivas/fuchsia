@@ -21,6 +21,7 @@
 #include <magenta/compiler.h>
 
 #include <async/async.h>
+#include <async/default.h>
 
 __BEGIN_CDECLS
 

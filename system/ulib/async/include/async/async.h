@@ -48,11 +48,12 @@ typedef enum {
 } async_wait_result_t;
 
 // Handles completion of asynchronous wait operations.
+//
 // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
 // describes the signal which was received, otherwise |signal| is null.
 //
 // The result indicates whether the wait should be repeated; it may
-// modify the wait's properties before returning.
+// modify the wait's properties (such as the trigger) before returning.
 //
 // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
 typedef struct async_wait async_wait_t;
@@ -94,11 +95,12 @@ typedef enum {
 } async_task_result_t;
 
 // Handles execution of a posted task.
-// Reports the |status| of the wait.  If the status is |MX_OK| then the
+//
+// Reports the |status| of the task.  If the status is |MX_OK| then the
 // task ran, otherwise the task did not run.
 //
 // The result indicates whether the task should be repeated; it may
-// modify the task's properties before returning.
+// modify the task's properties (such as the deadline) before returning.
 //
 // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
 typedef struct async_task async_task_t;
@@ -116,7 +118,7 @@ struct async_task {
     async_state_t state;
     // The handler to invoke to perform the task.
     async_task_handler_t* handler;
-    // The task's deadline.
+    // The time when the task should run.
     mx_time_t deadline;
     // Valid flags: |ASYNC_HANDLE_SHUTDOWN|.
     uint32_t flags;
@@ -125,6 +127,7 @@ struct async_task {
 };
 
 // Receives packets containing user supplied data.
+//
 // Reports the |status| of the receiver.  If the status is |MX_OK| then |data|
 // describes the contents of the packet which was received, otherwise |data|
 // is null.
@@ -186,16 +189,8 @@ struct async_dispatcher {
     const async_ops_t* ops;
 };
 
-// Gets the current thread's default asynchronous dispatcher interface.
-// Returns |NULL| if none.
-async_t* async_get_default(void);
-
-// Sets the current thread's default asynchronous dispatcher interface.
-void async_set_default(async_t* async);
-
-// Begins waiting for an |object| to receive one or more signals indicated
-// by |trigger|.  Invokes the handler specified by |wait| when the wait
-// completes to report status and observed signals.
+// Begins asynchronously waiting for an object to receive one or more signals
+// specified in |wait|.  Invokes the handler when the wait completes.
 //
 // The client is responsible for allocating and retaining the wait context
 // until the handler runs or the wait is successfully canceled using
@@ -272,7 +267,7 @@ inline mx_status_t async_cancel_task(async_t* async, async_task_t* task) {
     return async->ops->cancel_task(async, task);
 }
 
-// Enqueues a packet of data for delivery to a packet receiver.
+// Enqueues a packet of data for delivery to a receiver.
 //
 // The client is responsible for allocating and retaining the packet context
 // until all packets have been delivered.
@@ -315,24 +310,37 @@ public:
     explicit Wait(mx_handle_t object, mx_signals_t trigger, uint32_t flags = 0u);
     virtual ~Wait();
 
+    // The object to wait for signals on.
     mx_handle_t object() const { return async_wait_t::object; }
     void set_object(mx_handle_t object) { async_wait_t::object = object; }
 
+    // The set of signals to wait for.
     mx_signals_t trigger() const { return async_wait_t::trigger; }
     void set_trigger(mx_signals_t trigger) { async_wait_t::trigger = trigger; }
 
+    // Valid flags: |ASYNC_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_wait_t::flags; }
     void set_flags(uint32_t flags) { async_wait_t::flags = flags; }
 
+    // Begins asynchronously waiting for the object to receive one or more of
+    // the trigger signals.
+    //
+    // See |async_begin_wait()| for details.
     mx_status_t Begin(async_t* async);
+
+    // Cancels the wait.
+    //
+    // See |async_cancel_wait()| for details.
     mx_status_t Cancel(async_t* async);
 
 protected:
-    // Override this method to handle the wait results.
-    // Reports the |status| and |observed| signals resulting from the wait.
+    // Override this method to handle completion of the asynchronous wait operation.
+    //
+    // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
+    // describes the signal which was received, otherwise |signal| is null.
     //
     // The result indicates whether the wait should be repeated; it may
-    // modify the wait's properties before returning.
+    // modify the wait's properties (such as the trigger) before returning.
     //
     // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
     virtual async_wait_result_t Handle(async_t* async,
@@ -355,20 +363,33 @@ public:
     explicit Task(mx_time_t deadline, uint32_t flags = 0u);
     virtual ~Task();
 
+    // The time when the task should run.
     mx_time_t deadline() const { return async_task_t::deadline; }
     void set_deadline(mx_time_t deadline) { async_task_t::deadline = deadline; }
 
+    // Valid flags: |ASYNC_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_task_t::flags; }
     void set_flags(uint32_t flags) { async_task_t::flags = flags; }
 
+    // Posts a task to run on or after its deadline following all posted
+    // tasks with lesser or equal deadlines.
+    //
+    // See |async_post_task()| for details.
     mx_status_t Post(async_t* async);
+
+    // Cancels the task.
+    //
+    // See |async_cancel_task()| for details.
     mx_status_t Cancel(async_t* async);
 
 protected:
-    // Override this method to handle the task.
+    // Override this method to handle execution of the posted task.
+    //
+    // Reports the |status| of the task.  If the status is |MX_OK| then the
+    // task ran, otherwise the task did not run.
     //
     // The result indicates whether the task should be repeated; it may
-    // modify the task's properties before returning.
+    // modify the task's properties (such as the deadline) before returning.
     //
     // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
     virtual async_task_result_t Handle(async_t* async, mx_status_t status) = 0;
@@ -389,13 +410,21 @@ public:
     explicit Receiver(uint32_t flags = 0u);
     virtual ~Receiver();
 
+    // Valid flags: None, set to zero.
     uint32_t flags() const { return async_receiver_t::flags; }
     void set_flags(uint32_t flags) { async_receiver_t::flags = flags; }
 
+    // Enqueues a packet of data for delivery to the receiver.
+    //
+    // See |async_queue_packet()| for details.
     mx_status_t Queue(async_t* async, const mx_packet_user_t* data = nullptr);
 
 protected:
     // Override this method to handle received packets.
+    //
+    // Reports the |status| of the receiver.  If the status is |MX_OK| then |data|
+    // describes the contents of the packet which was received, otherwise |data|
+    // is null.
     //
     // The handler may destroy or reuse this object for another purpose
     // as long as there are no more packets pending delivery to it.
