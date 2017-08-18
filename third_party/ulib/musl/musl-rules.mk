@@ -30,7 +30,6 @@ LOCAL_CFLAGS := \
     -D_XOPEN_SOURCE=700 \
     -U_ALL_SOURCE \
     -Wno-sign-compare \
-    -Wno-parentheses \
     -Wno-missing-braces \
     -Werror=incompatible-pointer-types \
 

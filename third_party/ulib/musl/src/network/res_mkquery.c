@@ -34,7 +34,7 @@ int __res_mkquery(int op, const char* dname, int class, int type, const unsigned
 
     /* Make a reasonably unpredictable id */
     clock_gettime(CLOCK_REALTIME, &ts);
-    id = ts.tv_nsec + ts.tv_nsec / 65536UL & 0xffff;
+    id = (ts.tv_nsec + ts.tv_nsec / 65536UL) & 0xffff;
     q[0] = id / 256;
     q[1] = id;
 

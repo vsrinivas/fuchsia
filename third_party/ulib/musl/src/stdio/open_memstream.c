@@ -36,7 +36,7 @@ static size_t ms_write(FILE* f, const unsigned char* buf, size_t len) {
             return 0;
     }
     if (len + c->pos >= c->space) {
-        len2 = 2 * c->space + 1 | c->pos + len + 1;
+        len2 = (2 * c->space + 1) | (c->pos + len + 1);
         newbuf = realloc(c->buf, len2);
         if (!newbuf)
             return 0;

@@ -20,7 +20,7 @@ int getservbyname_r(const char* name, const char* prots, struct servent* se, cha
     int cnt, proto, align;
 
     /* Align buffer */
-    align = -(uintptr_t)buf & ALIGN - 1;
+    align = -(uintptr_t)buf & (ALIGN - 1);
     if (buflen < 2 * sizeof(char*) + align)
         return ERANGE;
     buf += align;

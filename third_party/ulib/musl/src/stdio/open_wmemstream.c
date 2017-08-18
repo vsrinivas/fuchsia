@@ -34,7 +34,7 @@ static size_t wms_write(FILE* f, const unsigned char* buf, size_t len) {
     size_t len2;
     wchar_t* newbuf;
     if (len + c->pos >= c->space) {
-        len2 = 2 * c->space + 1 | c->pos + len + 1;
+        len2 = (2 * c->space + 1) | (c->pos + len + 1);
         if (len2 > SSIZE_MAX / 4)
             return 0;
         newbuf = realloc(c->buf, len2 * 4);

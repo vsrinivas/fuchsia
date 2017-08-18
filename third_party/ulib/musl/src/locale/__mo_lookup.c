@@ -2,7 +2,7 @@
 #include <string.h>
 
 static inline uint32_t swapc(uint32_t x, int c) {
-    return c ? x >> 24 | x >> 8 & 0xff00 | x << 8 & 0xff0000 | x << 24 : x;
+    return c ? x >> 24 | (x >> 8 & 0xff00) | (x << 8 & 0xff0000) | x << 24 : x;
 }
 
 const char* __mo_lookup(const void* p, size_t size, const char* s) {

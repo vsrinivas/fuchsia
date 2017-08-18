@@ -11,7 +11,7 @@ void __shlim(FILE* f, off_t lim) {
 
 int __shgetc(FILE* f) {
     int c;
-    if (f->shlim && f->shcnt >= f->shlim || (c = __uflow(f)) < 0) {
+    if ((f->shlim && f->shcnt >= f->shlim) || (c = __uflow(f)) < 0) {
         f->shend = 0;
         return EOF;
     }

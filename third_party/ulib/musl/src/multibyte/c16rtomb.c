@@ -16,7 +16,7 @@ size_t c16rtomb(char* restrict s, char16_t c16, mbstate_t* restrict ps) {
     }
 
     if (!*x && c16 - 0xd800u < 0x400) {
-        *x = c16 - 0xd7c0 << 10;
+        *x = (c16 - 0xd7c0) << 10;
         return 0;
     }
 

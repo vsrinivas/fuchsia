@@ -28,8 +28,8 @@ const struct __locale_map* __get_locale(int cat, const char* val) {
     size_t l, n;
 
     if (!*val) {
-        (val = getenv("LC_ALL")) && *val || (val = getenv(envvars[cat])) && *val ||
-            (val = getenv("LANG")) && *val || (val = "C.UTF-8");
+        ((val = getenv("LC_ALL")) && *val) || ((val = getenv(envvars[cat])) && *val) ||
+            ((val = getenv("LANG")) && *val) || (val = "C.UTF-8");
     }
 
     /* Limit name length and forbid leading dot or any slashes. */

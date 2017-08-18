@@ -29,7 +29,7 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
     }
 
     while (!(rv = __getgrent_a(f, gr, buf, size, mem, nmem, res)) && *res) {
-        if (name && !strcmp(name, (*res)->gr_name) || !name && (*res)->gr_gid == gid) {
+        if ((name && !strcmp(name, (*res)->gr_name)) || (!name && (*res)->gr_gid == gid)) {
             break;
         }
     }
@@ -149,7 +149,7 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
             goto cleanup_f;
         }
 
-        if (name && strcmp(name, gr->gr_name) || !name && gid != gr->gr_gid) {
+        if ((name && strcmp(name, gr->gr_name)) || (!name && gid != gr->gr_gid)) {
             rv = EIO;
             goto cleanup_f;
         }

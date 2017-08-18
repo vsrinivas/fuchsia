@@ -31,7 +31,7 @@ int mbtowc(wchar_t* restrict wc, const char* restrict src, size_t n) {
 
     if (OOB(c, *s))
         goto ilseq;
-    c = c << 6 | *s++ - 0x80;
+    c = c << 6 | (*s++ - 0x80);
     if (!(c & (1U << 31))) {
         *wc = c;
         return 2;
@@ -39,7 +39,7 @@ int mbtowc(wchar_t* restrict wc, const char* restrict src, size_t n) {
 
     if (*s - 0x80u >= 0x40)
         goto ilseq;
-    c = c << 6 | *s++ - 0x80;
+    c = c << 6 | (*s++ - 0x80);
     if (!(c & (1U << 31))) {
         *wc = c;
         return 3;
@@ -47,7 +47,7 @@ int mbtowc(wchar_t* restrict wc, const char* restrict src, size_t n) {
 
     if (*s - 0x80u >= 0x40)
         goto ilseq;
-    *wc = c << 6 | *s++ - 0x80;
+    *wc = c << 6 | (*s++ - 0x80);
     return 4;
 
 ilseq:

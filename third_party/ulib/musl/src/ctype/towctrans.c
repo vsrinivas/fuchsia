@@ -224,16 +224,18 @@ static wchar_t __towcase(wchar_t wc, int lower) {
         (unsigned)wc - 0x2e00 <= 0xa63f - 0x2e00 || (unsigned)wc - 0xa800 <= 0xfeff - 0xa800)
         return wc;
     /* special case because the diff between upper/lower is too big */
-    if (lower && (unsigned)wc - 0x10a0 < 0x2e)
+    if (lower && (unsigned)wc - 0x10a0 < 0x2e) {
         if (wc > 0x10c5 && wc != 0x10c7 && wc != 0x10cd)
             return wc;
         else
             return wc + 0x2d00 - 0x10a0;
-    if (!lower && (unsigned)wc - 0x2d00 < 0x26)
+    }
+    if (!lower && (unsigned)wc - 0x2d00 < 0x26) {
         if (wc > 0x2d25 && wc != 0x2d27 && wc != 0x2d2d)
             return wc;
         else
             return wc + 0x10a0 - 0x2d00;
+    }
     for (i = 0; casemaps[i].len; i++) {
         int base = casemaps[i].upper + (lmask & casemaps[i].lower);
         if ((unsigned)wc - base < casemaps[i].len) {

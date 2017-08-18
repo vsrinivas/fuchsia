@@ -44,7 +44,7 @@ static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
 static void loader_svc_config(const char* config);
 
 #define MAXP2(a, b) (-(-(a) & -(b)))
-#define ALIGN(x, y) ((x) + (y)-1 & -(y))
+#define ALIGN(x, y) (((x) + (y)-1) & -(y))
 
 #define VMO_NAME_DL_ALLOC "ld.so.1-internal-heap"
 #define VMO_NAME_UNKNOWN "<unknown ELF file>"
@@ -793,7 +793,7 @@ __NO_SAFESTACK NO_ASAN static mx_status_t map_library(mx_handle_t vmo,
             dso->phentsize = eh->e_phentsize;
         }
         this_min = ph->p_vaddr & -PAGE_SIZE;
-        this_max = ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE;
+        this_max = (ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
         size_t off_start = ph->p_offset & -PAGE_SIZE;
         uint32_t mx_flags = MX_VM_FLAG_SPECIFIC;
         mx_flags |= (ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;

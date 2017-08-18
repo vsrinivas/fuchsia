@@ -41,7 +41,7 @@ size_t mbsrtowcs(wchar_t* restrict ws, const char** restrict src, size_t wn, mbs
     if (!ws)
         for (;;) {
             if (*s - 1u < 0x7f && (uintptr_t)s % 4 == 0) {
-                while (!((*(uint32_t*)s | *(uint32_t*)s - 0x01010101) & 0x80808080)) {
+                while (!((*(uint32_t*)s | (*(uint32_t*)s - 0x01010101)) & 0x80808080)) {
                     s += 4;
                     wn -= 4;
                 }
@@ -84,7 +84,7 @@ size_t mbsrtowcs(wchar_t* restrict ws, const char** restrict src, size_t wn, mbs
                 return wn0;
             }
             if (*s - 1u < 0x7f && (uintptr_t)s % 4 == 0) {
-                while (wn >= 5 && !((*(uint32_t*)s | *(uint32_t*)s - 0x01010101) & 0x80808080)) {
+                while (wn >= 5 && !((*(uint32_t*)s | (*(uint32_t*)s - 0x01010101)) & 0x80808080)) {
                     *ws++ = *s++;
                     *ws++ = *s++;
                     *ws++ = *s++;
@@ -105,19 +105,19 @@ size_t mbsrtowcs(wchar_t* restrict ws, const char** restrict src, size_t wn, mbs
                 s--;
                 break;
             }
-            c = (c << 6) | *s++ - 0x80;
+            c = (c << 6) | (*s++ - 0x80);
             if (c & (1U << 31)) {
                 if (*s - 0x80u >= 0x40) {
                     s -= 2;
                     break;
                 }
-                c = (c << 6) | *s++ - 0x80;
+                c = (c << 6) | (*s++ - 0x80);
                 if (c & (1U << 31)) {
                     if (*s - 0x80u >= 0x40) {
                         s -= 3;
                         break;
                     }
-                    c = (c << 6) | *s++ - 0x80;
+                    c = (c << 6) | (*s++ - 0x80);
                 }
             }
             *ws++ = c;

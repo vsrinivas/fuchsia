@@ -38,7 +38,7 @@ size_t mbrtowc(wchar_t* restrict wc, const char* restrict src, size_t n, mbstate
         if (OOB(c, *s))
             goto ilseq;
     loop:
-        c = c << 6 | *s++ - 0x80;
+        c = c << 6 | (*s++ - 0x80);
         n--;
         if (!(c & (1U << 31))) {
             *(unsigned*)st = 0;
