@@ -18,6 +18,8 @@ source_set("tasks") {
   libs = [
     "magenta",
     "async",
+    "async-default",
+    "async-loop",
   ]
   public_deps = [
     "//lib/ftl",
