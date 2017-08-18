@@ -18,12 +18,12 @@
 #include <virtio/virtio_ids.h>
 
 // PCI BAR register addresses.
-#define PCI_REGISTER_BAR_0                      0x10
-#define PCI_REGISTER_BAR_1                      0x14
-#define PCI_REGISTER_BAR_2                      0x18
-#define PCI_REGISTER_BAR_3                      0x1c
-#define PCI_REGISTER_BAR_4                      0x20
-#define PCI_REGISTER_BAR_5                      0x24
+#define PCI_REGISTER_BAR_0 0x10
+#define PCI_REGISTER_BAR_1 0x14
+#define PCI_REGISTER_BAR_2 0x18
+#define PCI_REGISTER_BAR_3 0x1c
+#define PCI_REGISTER_BAR_4 0x20
+#define PCI_REGISTER_BAR_5 0x24
 
 static const uint32_t kPioBase = 0x8000;
 static const uint32_t kMaxBarSize = 1 << 8;
@@ -33,13 +33,12 @@ static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
  *
  * These are provided to the guest via the _SB section in the DSDT ACPI table.
  */
-static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = { 32, 33 };
+static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33};
 
 static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t port,
                                             mx_vcpu_io_t* vcpu_io) {
     return MX_ERR_NOT_SUPPORTED;
 }
-
 
 static mx_status_t pci_bar_write_unsupported(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
                                              const mx_guest_io_t* io) {
@@ -103,7 +102,7 @@ static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
     // it is adequate for the host bus to PCI bridge to return a value of all
     // 1's on read accesses to Configuration Space registers of non-existent
     // devices.
-    *value = (uint32_t) BIT_MASK(len * 8);
+    *value = (uint32_t)BIT_MASK(len * 8);
 }
 
 mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
@@ -155,7 +154,7 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
             return MX_ERR_OUT_OF_RANGE;
         switch (inst->mem) {
         case 2:
-            status = inst_write16(inst, (uint16_t*) &value);
+            status = inst_write16(inst, (uint16_t*)&value);
             break;
         case 4:
             status = inst_write32(inst, &value);
@@ -174,20 +173,20 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
 mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_size,
                          mx_vcpu_io_t* vcpu_io) {
     switch (port) {
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
+    case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP: {
         uint32_t bit_offset = (port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
-        uint32_t bit_mask = (uint32_t) BIT_MASK(access_size * 8);
-        mtx_lock((mtx_t*) &bus->mutex);
+        uint32_t bit_mask = (uint32_t)BIT_MASK(access_size * 8);
+        mtx_lock((mtx_t*)&bus->mutex);
         uint32_t addr = bus->config_addr >> bit_offset;
-        mtx_unlock((mtx_t*) &bus->mutex);
+        mtx_unlock((mtx_t*)&bus->mutex);
         vcpu_io->access_size = access_size;
         vcpu_io->u32 = (vcpu_io->u32 & ~bit_mask) | (addr & bit_mask);
         return MX_OK;
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
-        mtx_lock((mtx_t*) &bus->mutex);
+    case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP: {
+        mtx_lock((mtx_t*)&bus->mutex);
         uint32_t addr = bus->config_addr;
-        mtx_unlock((mtx_t*) &bus->mutex);
+        mtx_unlock((mtx_t*)&bus->mutex);
         vcpu_io->access_size = access_size;
         if (!pci_addr_valid(bus, PCI_TYPE1_BUS(addr), PCI_TYPE1_DEVICE(addr),
                             PCI_TYPE1_FUNCTION(addr))) {
@@ -206,13 +205,13 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
 
 mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io) {
     switch (io->port) {
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP: {
+    case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP: {
         // Software can (and Linux does) perform partial word accesses to the
         // PCI address register. This means we need to take care to read/write
         // portions of the 32bit register without trampling the other bits.
         uint32_t bit_offset = (io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
         uint32_t bit_size = io->access_size * 8;
-        uint32_t bit_mask = (uint32_t) BIT_MASK(bit_size);
+        uint32_t bit_mask = (uint32_t)BIT_MASK(bit_size);
 
         mtx_lock(&bus->mutex);
         // Clear out the bits we'll be modifying.
@@ -222,7 +221,7 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io) {
         mtx_unlock(&bus->mutex);
         return MX_OK;
     }
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP: {
+    case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP: {
         mtx_lock(&bus->mutex);
         uint32_t addr = bus->config_addr;
         mtx_unlock(&bus->mutex);
@@ -254,9 +253,9 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |   status    |    command   |
     //  ----------------------------
     case PCI_CONFIG_COMMAND:
-        mtx_lock((mtx_t*) &device->mutex);
+        mtx_lock((mtx_t*)&device->mutex);
         *value = device->command;
-        mtx_unlock((mtx_t*) &device->mutex);
+        mtx_unlock((mtx_t*)&device->mutex);
         *value |= PCI_STATUS_INTERRUPT << 16;
         return MX_OK;
     //  -------------------------------------------------
@@ -274,9 +273,9 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
         *value = PCI_HEADER_TYPE_STANDARD << 16;
         return MX_OK;
     case PCI_REGISTER_BAR_0: {
-        mtx_lock((mtx_t*) &device->mutex);
+        mtx_lock((mtx_t*)&device->mutex);
         *value = device->bar[0] | PCI_BAR_IO_TYPE_PIO;
-        mtx_unlock((mtx_t*) &device->mutex);
+        mtx_unlock((mtx_t*)&device->mutex);
         return MX_OK;
     }
     //  -------------------------------------------------------------

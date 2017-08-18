@@ -10,5 +10,5 @@
 #endif // __x86_64__
 
 /* PM register addresses. */
-#define PM1A_REGISTER_STATUS    0
-#define PM1A_REGISTER_ENABLE    (ACPI_PM1_REGISTER_WIDTH / 8)
+#define PM1A_REGISTER_STATUS 0
+#define PM1A_REGISTER_ENABLE (ACPI_PM1_REGISTER_WIDTH / 8)

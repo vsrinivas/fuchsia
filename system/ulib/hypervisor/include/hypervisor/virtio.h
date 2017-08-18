@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <magenta/types.h>
 #include <hypervisor/pci.h>
+#include <magenta/types.h>
+
+// clang-format off
 
 /* Accesses to this range are common accross device types. */
 #define VIRTIO_PCI_COMMON_CFG_BASE      0
@@ -13,8 +15,9 @@
 
 /* Accesses to this range are device specific. */
 #define VIRTIO_PCI_DEVICE_CFG_BASE      VIRTIO_PCI_CONFIG_OFFSET_NOMSI
-#define VIRTIO_PCI_DEVICE_CFG_TOP(size) \
-    (VIRTIO_PCI_DEVICE_CFG_BASE + size - 1)
+#define VIRTIO_PCI_DEVICE_CFG_TOP(size) (VIRTIO_PCI_DEVICE_CFG_BASE + size - 1)
+
+// clang-format on
 
 struct vring_desc;
 struct vring_avail;
@@ -95,13 +98,13 @@ typedef struct virtio_queue {
     // Pointer to the owning device.
     virtio_device_t* virtio_device;
 
-    volatile struct vring_desc* desc;   // guest-controlled
+    volatile struct vring_desc* desc; // guest-controlled
 
     volatile struct vring_avail* avail; // guest-controlled
-    volatile uint16_t* used_event;      // guest-controlled
+    volatile uint16_t* used_event; // guest-controlled
 
-    volatile struct vring_used* used;   // guest-controlled
-    volatile uint16_t* avail_event;     // guest-controlled
+    volatile struct vring_used* used; // guest-controlled
+    volatile uint16_t* avail_event; // guest-controlled
 } virtio_queue_t;
 
 /* Callback function for virtio_queue_handler.
@@ -115,9 +118,8 @@ typedef struct virtio_queue {
  * used     - To be incremented by the number of bytes used from addr.
  * ctx      - The same pointer passed to virtio_queue_handler.
  */
-typedef mx_status_t (* virtio_queue_fn_t)(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
-                                          void* ctx);
-
+typedef mx_status_t (*virtio_queue_fn_t)(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
+                                         void* ctx);
 
 /* Handles the next available descriptor in a Virtio queue, calling handler to
  * process individual payload buffers.

@@ -10,6 +10,8 @@
 
 #include "acpi_priv.h"
 
+// clang-format off
+
 /* PIC configuration constants. */
 #define PIC_INVALID                     UINT8_MAX
 
@@ -34,6 +36,8 @@
 /* I8042 test constants. */
 #define I8042_COMMAND_TEST              0xaa
 #define I8042_DATA_TEST_RESPONSE        0x55
+
+// clang-format on
 
 void io_port_init(io_port_t* io_port) {
     memset(io_port, 0, sizeof(*io_port));
@@ -68,7 +72,7 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
         // RTC expects the number of years since 2000.
         *value = to_bcd(tm.tm_year - 100);
         break;
-     case RTC_REGISTER_A:
+    case RTC_REGISTER_A:
         // Ensure that UIP is 0. Other values (clock frequency) are obsolete.
         *value = 0;
         break;
@@ -88,16 +92,16 @@ mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* 
     switch (port) {
     case RTC_DATA_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*) &io_port->mutex);
+        mtx_lock((mtx_t*)&io_port->mutex);
         uint8_t rtc_index = io_port->rtc_index;
-        mtx_unlock((mtx_t*) &io_port->mutex);
+        mtx_unlock((mtx_t*)&io_port->mutex);
         return handle_rtc(rtc_index, &vcpu_io->u8);
     }
     case I8042_DATA_PORT:
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*) &io_port->mutex);
+        mtx_lock((mtx_t*)&io_port->mutex);
         vcpu_io->u8 = io_port->i8042_command == I8042_COMMAND_TEST ? I8042_DATA_TEST_RESPONSE : 0;
-        mtx_unlock((mtx_t*) &io_port->mutex);
+        mtx_unlock((mtx_t*)&io_port->mutex);
         break;
     case I8042_COMMAND_PORT:
         vcpu_io->access_size = 1;
@@ -109,9 +113,9 @@ mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* 
         break;
     case PM1_EVENT_PORT + PM1A_REGISTER_ENABLE:
         vcpu_io->access_size = 2;
-        mtx_lock((mtx_t*) &io_port->mutex);
+        mtx_lock((mtx_t*)&io_port->mutex);
         vcpu_io->u16 = io_port->pm1_enable;
-        mtx_unlock((mtx_t*) &io_port->mutex);
+        mtx_unlock((mtx_t*)&io_port->mutex);
         break;
     case PIC1_DATA_PORT:
         vcpu_io->access_size = 1;

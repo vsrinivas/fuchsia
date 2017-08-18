@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <hw/pci.h>
 #include <hypervisor/address.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/block.h>
@@ -14,12 +15,13 @@
 #include <hypervisor/pci.h>
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
-#include <hw/pci.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
 #include "acpi_priv.h"
+
+// clang-format off
 
 /* Local APIC register addresses. */
 #define LOCAL_APIC_REGISTER_ID              0x0020
@@ -46,6 +48,8 @@
 
 /* Interrupt vectors. */
 #define X86_INT_GP_FAULT                    13u
+
+// clang-format on
 
 static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_memory_t* memory,
                                      instruction_t* inst) {
@@ -96,7 +100,8 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_me
         if (status != MX_OK)
             return status;
         return initial_count > 0 ? MX_ERR_NOT_SUPPORTED : MX_OK;
-    }}
+    }
+    }
 
     fprintf(stderr, "Unhandled local APIC address %#lx\n", offset);
     return MX_ERR_NOT_SUPPORTED;
@@ -112,7 +117,7 @@ static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, const instr
 static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* memory) {
     mx_vcpu_state_t vcpu_state;
     mx_status_t status = vcpu_ctx->read_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
-                                                  sizeof(vcpu_state));
+                                              sizeof(vcpu_state));
     if (status != MX_OK)
         return status;
 
@@ -156,7 +161,7 @@ static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* 
     } else if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
         // If there was an attempt to read or test memory, update the GPRs.
         return vcpu_ctx->write_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
-                                         sizeof(vcpu_state));
+                                     sizeof(vcpu_state));
     }
     return status;
 }
@@ -178,8 +183,8 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
     case UART_RECEIVE_PORT ... UART_SCR_SCRATCH_PORT:
         status = uart_read(vcpu_ctx->guest_ctx->uart, io->port, &vcpu_io);
         break;
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP:
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
+    case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
+    case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         status = pci_bus_read(vcpu_ctx->guest_ctx->bus, io->port, io->access_size, &vcpu_io);
         break;
     default: {
@@ -191,8 +196,9 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
             status = pci_device->ops->read_bar(pci_device, port_off, &vcpu_io);
             break;
         }
-       status = MX_ERR_NOT_SUPPORTED;
-    }}
+        status = MX_ERR_NOT_SUPPORTED;
+    }
+    }
     if (status != MX_OK) {
         fprintf(stderr, "Unhandled port in %#x: %d\n", io->port, status);
         return status;
@@ -221,8 +227,8 @@ static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) 
     case PM1_EVENT_PORT + PM1A_REGISTER_STATUS:
     case RTC_INDEX_PORT:
         return io_port_write(vcpu_ctx->guest_ctx->io_port, io);
-    case PCI_CONFIG_ADDRESS_PORT_BASE... PCI_CONFIG_ADDRESS_PORT_TOP:
-    case PCI_CONFIG_DATA_PORT_BASE... PCI_CONFIG_DATA_PORT_TOP:
+    case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
+    case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return pci_bus_write(vcpu_ctx->guest_ctx->bus, io);
     }
     fprintf(stderr, "Unhandled port out %#x\n", io->port);

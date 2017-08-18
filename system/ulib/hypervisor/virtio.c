@@ -11,14 +11,18 @@
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
-/* PCI macros. */
-#define PCI_ALIGN(n)    ((((uintptr_t)n) + 4095) & ~4095)
+// clang-format off
 
-#define PCI_VENDOR_ID_VIRTIO                0x1af4u
-#define PCI_DEVICE_ID_VIRTIO_LEGACY(id)     (0xfff + (id))
+/* PCI macros. */
+#define PCI_ALIGN(n)                    ((((uintptr_t)n) + 4095) & ~4095)
+
+#define PCI_VENDOR_ID_VIRTIO            0x1af4u
+#define PCI_DEVICE_ID_VIRTIO_LEGACY(id) (0xfff + (id))
+
+// clang-format on
 
 static virtio_device_t* pci_device_to_virtio(const pci_device_t* device) {
-    return (virtio_device_t*) device->impl;
+    return (virtio_device_t*)device->impl;
 }
 
 static virtio_queue_t* selected_queue(const virtio_device_t* device) {
@@ -137,7 +141,8 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t
             return status;
         }
         return pci_interrupt(&device->pci_device, vcpu);
-    }}
+    }
+    }
 
     // Handle device-specific accesses.
     if (port >= VIRTIO_PCI_DEVICE_CFG_BASE) {
@@ -187,7 +192,6 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
     volatile struct vring_used_elem* used =
         &queue->used->ring[ring_index(queue, queue->used->idx)];
     used->id = desc_index;
-
 
     uint32_t used_len = 0;
     struct vring_desc desc = queue->desc[desc_index];

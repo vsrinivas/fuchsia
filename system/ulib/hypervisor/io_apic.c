@@ -8,6 +8,8 @@
 #include <hypervisor/io_apic.h>
 #include <magenta/assert.h>
 
+// clang-format off
+
 /* IO APIC register addresses. */
 #define IO_APIC_IOREGSEL                0x00
 #define IO_APIC_IOWIN                   0x10
@@ -22,14 +24,16 @@
 #define FIRST_REDIRECT_OFFSET           0x10
 #define LAST_REDIRECT_OFFSET            (FIRST_REDIRECT_OFFSET + IO_APIC_REDIRECT_OFFSETS - 1)
 
+// clang-format on
+
 void io_apic_init(io_apic_t* io_apic) {
     memset(io_apic, 0, sizeof(*io_apic));
 }
 
 uint8_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq) {
-    mtx_lock((mtx_t*) &io_apic->mutex);
+    mtx_lock((mtx_t*)&io_apic->mutex);
     uint8_t vector = io_apic->redirect[global_irq * 2] & UINT8_MAX;
-    mtx_unlock((mtx_t*) &io_apic->mutex);
+    mtx_unlock((mtx_t*)&io_apic->mutex);
     return vector;
 }
 
@@ -68,15 +72,15 @@ mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_guest_memory_t* memory,
         mx_status_t status = inst_write32(inst, &select);
         if (status != MX_OK)
             return status;
-        mtx_lock((mtx_t*) &io_apic->mutex);
+        mtx_lock((mtx_t*)&io_apic->mutex);
         io_apic->select = select;
-        mtx_unlock((mtx_t*) &io_apic->mutex);
+        mtx_unlock((mtx_t*)&io_apic->mutex);
         return select > UINT8_MAX ? MX_ERR_INVALID_ARGS : MX_OK;
     }
     case IO_APIC_IOWIN: {
-        mtx_lock((mtx_t*) &io_apic->mutex);
+        mtx_lock((mtx_t*)&io_apic->mutex);
         mx_status_t status = io_apic_register_handler(io_apic, inst);
-        mtx_unlock((mtx_t*) &io_apic->mutex);
+        mtx_unlock((mtx_t*)&io_apic->mutex);
         return status;
     }
     default:

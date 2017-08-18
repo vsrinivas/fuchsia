@@ -9,33 +9,37 @@
 #include <magenta/types.h>
 #include <sys/types.h>
 
-#define PCI_DEVICE_ROOT_COMPLEX             0u
-#define PCI_DEVICE_VIRTIO_BLOCK             1u
-#define PCI_DEVICE_INVALID                  UINT16_MAX
-#define PCI_MAX_DEVICES                     2u
-#define PCI_MAX_BARS                        1u
+// clang-format off
+
+#define PCI_DEVICE_ROOT_COMPLEX     0u
+#define PCI_DEVICE_VIRTIO_BLOCK     1u
+#define PCI_DEVICE_INVALID          UINT16_MAX
+#define PCI_MAX_DEVICES             2u
+#define PCI_MAX_BARS                1u
 
 // PCI configuration constants.
-#define PCI_BAR_IO_TYPE_MASK                0x0001u
-#define PCI_BAR_IO_TYPE_PIO                 0x0001u
-#define PCI_BAR_IO_TYPE_MMIO                0x0000u
-#define PCI_VENDOR_ID_INTEL                 0x8086u
-#define PCI_DEVICE_ID_INTEL_Q35             0x29c0u
-#define PCI_CLASS_BRIDGE_HOST               0x0600u
-#define PCI_CLASS_MASS_STORAGE              0x0100u
+#define PCI_BAR_IO_TYPE_MASK        0x0001u
+#define PCI_BAR_IO_TYPE_PIO         0x0001u
+#define PCI_BAR_IO_TYPE_MMIO        0x0000u
+#define PCI_VENDOR_ID_INTEL         0x8086u
+#define PCI_DEVICE_ID_INTEL_Q35     0x29c0u
+#define PCI_CLASS_BRIDGE_HOST       0x0600u
+#define PCI_CLASS_MASS_STORAGE      0x0100u
 
 // PCI type 1 address manipulation.
-#define PCI_TYPE1_BUS(addr)                 (((addr) >> 16) & 0xff)
-#define PCI_TYPE1_DEVICE(addr)              (((addr) >> 11) & 0x1f)
-#define PCI_TYPE1_FUNCTION(addr)            (((addr) >> 8) & 0x7)
-#define PCI_TYPE1_REGISTER_MASK             0xfc
-#define PCI_TYPE1_REGISTER(addr)            ((addr) & PCI_TYPE1_REGISTER_MASK)
+#define PCI_TYPE1_BUS(addr)         (((addr) >> 16) & 0xff)
+#define PCI_TYPE1_DEVICE(addr)      (((addr) >> 11) & 0x1f)
+#define PCI_TYPE1_FUNCTION(addr)    (((addr) >> 8) & 0x7)
+#define PCI_TYPE1_REGISTER_MASK     0xfc
+#define PCI_TYPE1_REGISTER(addr)    ((addr)&PCI_TYPE1_REGISTER_MASK)
 
 // PCI ECAM address manipulation.
-#define PCI_ECAM_BUS(addr)                  (((addr) >> 20) & 0xff)
-#define PCI_ECAM_DEVICE(addr)               (((addr) >> 15) & 0x1f)
-#define PCI_ECAM_FUNCTION(addr)             (((addr) >> 12) & 0x7)
-#define PCI_ECAM_REGISTER(addr)             ((addr) & 0xfff)
+#define PCI_ECAM_BUS(addr)          (((addr) >> 20) & 0xff)
+#define PCI_ECAM_DEVICE(addr)       (((addr) >> 15) & 0x1f)
+#define PCI_ECAM_FUNCTION(addr)     (((addr) >> 12) & 0x7)
+#define PCI_ECAM_REGISTER(addr)     ((addr)&0xfff)
+
+// clang-format on
 
 typedef struct instruction instruction_t;
 typedef struct io_apic io_apic_t;

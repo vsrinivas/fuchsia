@@ -13,6 +13,8 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
+// clang-format off
+
 /* UART configuration constants. */
 #define UART_BUFFER_SIZE                512u
 
@@ -28,6 +30,8 @@
 
 /* Interrupt vectors. */
 #define X86_INT_UART                    4u
+
+// clang-format on
 
 void uart_init(uart_t* uart, const io_apic_t* io_apic) {
     memset(uart, 0, sizeof(*uart));
@@ -45,15 +49,15 @@ mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) 
         break;
     case UART_INTERRUPT_ENABLE_PORT:
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*) &uart->mutex);
+        mtx_lock((mtx_t*)&uart->mutex);
         vcpu_io->u8 = uart->interrupt_enable;
-        mtx_unlock((mtx_t*) &uart->mutex);
+        mtx_unlock((mtx_t*)&uart->mutex);
         break;
     case UART_INTERRUPT_ID_PORT:
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*) &uart->mutex);
+        mtx_lock((mtx_t*)&uart->mutex);
         vcpu_io->u8 = UART_INTERRUPT_ID_NO_FIFO_MASK & uart->interrupt_id;
-        mtx_unlock((mtx_t*) &uart->mutex);
+        mtx_unlock((mtx_t*)&uart->mutex);
         // Technically, we should always reset the interrupt id register to UART_INTERRUPT_ID_NONE
         // after a read, but this requires us to take a lock on every THR output (to set
         // interrupt_id to UART_INTERRUPT_ID_THR_EMPTY before we fire the interrupt).
@@ -62,9 +66,9 @@ mx_status_t uart_read(const uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) 
         break;
     case UART_LINE_CONTROL_PORT:
         vcpu_io->access_size = 1;
-        mtx_lock((mtx_t*) &uart->mutex);
+        mtx_lock((mtx_t*)&uart->mutex);
         vcpu_io->u8 = uart->line_control;
-        mtx_unlock((mtx_t*) &uart->mutex);
+        mtx_unlock((mtx_t*)&uart->mutex);
         break;
     case UART_LINE_STATUS_PORT:
         vcpu_io->access_size = 1;

@@ -9,8 +9,15 @@
 #include <hypervisor/guest.h>
 #include <magenta/device/sysinfo.h>
 
+static const char kResourcePath[] = "/dev/misc/sysinfo";
+
 static const uint32_t kE820Ram = 1;
 static const uint32_t kE820Reserved = 2;
+
+static const size_t kMaxSize = 512ull << 30;
+static const size_t kMinSize = 4 * (4 << 10);
+
+// clang-format off
 
 static const uint64_t kAddr32kb     = 0x0000000000008000;
 static const uint64_t kAddr64kb     = 0x0000000000010000;
@@ -18,23 +25,20 @@ static const uint64_t kAddr1mb      = 0x0000000000100000;
 static const uint64_t kAddr3500mb   = 0x00000000e0000000;
 static const uint64_t kAddr4000mb   = 0x0000000100000000;
 
-static const size_t kMaxSize = 512ull << 30;
-static const size_t kMinSize = 4 * (4 << 10);
-
-static const char kResourcePath[] = "/dev/misc/sysinfo";
-
 #if __x86_64__
+enum {
+    X86_PTE_P   = 0x01, /* P    Valid           */
+    X86_PTE_RW  = 0x02, /* R/W  Read/Write      */
+    X86_PTE_PS  = 0x80, /* PS   Page size       */
+};
+
+// clang-format on
+
 static const size_t kPml4PageSize = 512ull << 30;
 static const size_t kPdpPageSize = 1 << 30;
 static const size_t kPdPageSize = 2 << 20;
 static const size_t kPtPageSize = 4 << 10;
 static const size_t kPtesPerPage = PAGE_SIZE / sizeof(uint64_t);
-
-enum {
-    X86_PTE_P    = 0x01,    /* P    Valid           */
-    X86_PTE_RW   = 0x02,    /* R/W  Read/Write      */
-    X86_PTE_PS   = 0x80,    /* PS   Page size       */
-};
 
 /**
  * Create all page tables for a given page size.

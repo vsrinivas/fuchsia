@@ -9,7 +9,7 @@
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/hypervisor.h>
 
-#define IO_APIC_REDIRECT_OFFSETS    128u
+#define IO_APIC_REDIRECT_OFFSETS 128u
 
 /* Stores the IO APIC state. */
 typedef struct io_apic {

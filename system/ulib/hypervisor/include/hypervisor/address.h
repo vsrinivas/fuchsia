@@ -16,6 +16,8 @@
 #define PCI_ECAM_SIZE(start_bus, end_bus) \
     (((end_bus) - (start_bus)) << 20)
 
+// clang-format off
+
 /* Local APIC memory range. */
 #define LOCAL_APIC_PHYS_BASE            0xfee00000
 #define LOCAL_APIC_PHYS_TOP             (LOCAL_APIC_PHYS_BASE + PAGE_SIZE - 1)
@@ -65,3 +67,5 @@
 #define PCI_CONFIG_ADDRESS_PORT_TOP     (PCI_CONFIG_ADDRESS_PORT_BASE + 3)
 #define PCI_CONFIG_DATA_PORT_BASE       0xcfc
 #define PCI_CONFIG_DATA_PORT_TOP        (PCI_CONFIG_DATA_PORT_BASE + 3)
+
+// clang-format on

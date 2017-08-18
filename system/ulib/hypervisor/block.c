@@ -20,11 +20,11 @@
 #include <virtio/virtio_ring.h>
 
 /* Block configuration constants. */
-#define QUEUE_SIZE      128u
+#define QUEUE_SIZE 128u
 
 /* Get a pointer to a block_t from the underlying virtio device. */
 static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
-    return (block_t*) virtio_device->impl;
+    return (block_t*)virtio_device->impl;
 }
 
 static mx_status_t block_read(const virtio_device_t* device, uint16_t port,
@@ -73,7 +73,8 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
             return MX_ERR_IO;
         }
         fprintf(stderr, "Unable to open block file \"%s\" read-write. "
-                        "Block device will be read-only.\n", path);
+                        "Block device will be read-only.\n",
+                path);
         block->virtio_device.features |= VIRTIO_BLK_F_RO;
     }
     // Read file size.
@@ -169,7 +170,7 @@ static uint8_t to_virtio_status(mx_status_t status) {
 
 static mx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
                                        void* context) {
-    file_state_t* file_state = (file_state_t*) context;
+    file_state_t* file_state = (file_state_t*)context;
 
     // Header.
     if (file_state->blk_req == NULL) {
