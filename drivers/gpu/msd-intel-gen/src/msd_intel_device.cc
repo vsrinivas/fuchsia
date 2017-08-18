@@ -282,10 +282,11 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     registers::MasterInterruptControl::write(register_io_.get(), true);
 
+#if MSD_INTEL_ENABLE_MODESETTING
     // The modesetting code is only tested on gen 9 (Skylake).
-    if (DeviceId::is_gen9(device_id_)) {
+    if (DeviceId::is_gen9(device_id_))
         DisplayPort::PartiallyBringUpDisplays(register_io_.get());
-    }
+#endif
 
     return true;
 }
