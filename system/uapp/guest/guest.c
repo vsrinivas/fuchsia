@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -21,12 +22,16 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <virtio/balloon.h>
 
 #include "linux.h"
 #include "magenta.h"
 
 static const uint64_t kVmoSize = 1u << 30;
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
+
+/* Unused memory above this threshold may be reclaimed by the balloon. */
+static uint32_t balloon_threshold_pages = 1024;
 
 static mx_status_t usage(const char* cmd) {
     fprintf(stderr, "usage: %s [OPTIONS] kernel.bin\n", cmd);
@@ -35,6 +40,12 @@ static mx_status_t usage(const char* cmd) {
     fprintf(stderr, "\t-b [block.bin]     Use file 'block.bin' as a virtio-block device.\n");
     fprintf(stderr, "\t-r [ramdisk.bin]   Use file 'ramdisk.bin' as a ramdisk.\n");
     fprintf(stderr, "\t-c [cmdline]       Use string 'cmdline' as the kernel command line.\n");
+    fprintf(stderr, "\t-m [seconds]       Poll the virtio-balloon device every 'seconds' seconds\n"
+                    "\t                   and adjust the balloon size based on the amount of\n"
+                    "\t                   unused guest memory.\n");
+    fprintf(stderr, "\t-p [pages]         Number of unused pages to allow the guest to\n"
+                    "\t                   retain. Has no effect unless -m is also used.\n");
+    fprintf(stderr, "\t-d                 Demand-page balloon deflate requests.\n");
     fprintf(stderr, "\n");
     return MX_ERR_INVALID_ARGS;
 }
@@ -46,13 +57,77 @@ static mx_status_t create_vmo(uint64_t size, uintptr_t* addr, mx_handle_t* vmo) 
     return mx_vmar_map(mx_vmar_root_self(), 0, *vmo, 0, size, kMapFlags, addr);
 }
 
+static void balloon_stats_handler(const virtio_balloon_stat_t* stats, size_t len, void* ctx) {
+    balloon_t* balloon = ctx;
+    for (size_t i = 0; i < len; ++i) {
+        if (stats[i].tag != VIRTIO_BALLOON_S_AVAIL)
+            continue;
+
+        mtx_lock(&balloon->mutex);
+        uint32_t current_pages = balloon->config.num_pages;
+        mtx_unlock(&balloon->mutex);
+
+        uint64_t available_pages = stats[i].val / VIRTIO_BALLOON_PAGE_SIZE;
+        uint32_t target_pages = current_pages + (available_pages - balloon_threshold_pages);
+        if (current_pages == target_pages)
+            return;
+
+        printf("virtio-balloon: adjusting target pages %#x -> %#x.\n",
+               current_pages, target_pages);
+        mx_status_t status = balloon_update_num_pages(balloon, target_pages);
+        if (status != MX_OK)
+            fprintf(stderr, "Error %d updating balloon size.\n", status);
+        return;
+    }
+}
+
+typedef struct balloon_task_args {
+    balloon_t* balloon;
+    int interval;
+} balloon_task_args_t;
+
+static int balloon_stats_task(void* ctx) {
+    balloon_task_args_t* args = ctx;
+    balloon_t* balloon = args->balloon;
+    while (true) {
+        mx_nanosleep(mx_deadline_after(MX_SEC(args->interval)));
+        balloon_request_stats(balloon, &balloon_stats_handler, balloon);
+    }
+    free(args);
+    return MX_OK;
+}
+
+static mx_status_t poll_balloon_stats(balloon_t* balloon, int interval) {
+    thrd_t thread;
+    balloon_task_args_t* args = calloc(1, sizeof(balloon_task_args_t));
+    args->balloon = balloon;
+    args->interval = interval;
+
+    int ret = thrd_create(&thread, balloon_stats_task, args);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to create balloon thread %d\n", ret);
+        free(args);
+        return MX_ERR_INTERNAL;
+    }
+
+    ret = thrd_detach(thread);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to detach balloon thread %d\n", ret);
+        return MX_ERR_INTERNAL;
+    }
+
+    return MX_OK;
+}
+
 int main(int argc, char** argv) {
     const char* cmd = basename(argv[0]);
     const char* block_path = NULL;
     const char* ramdisk_path = NULL;
     const char* cmdline = NULL;
+    const char* balloon_poll_interval = NULL;
+    bool balloon_deflate_on_demand = false;
     int opt;
-    while ((opt = getopt(argc, argv, "b:r:c:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:r:c:m:dp:")) != -1) {
         switch (opt) {
         case 'b':
             block_path = optarg;
@@ -62,6 +137,15 @@ int main(int argc, char** argv) {
             break;
         case 'c':
             cmdline = optarg;
+            break;
+        case 'm':
+            balloon_poll_interval = optarg;
+            break;
+        case 'd':
+            balloon_deflate_on_demand = true;
+            break;
+        case 'p':
+            balloon_threshold_pages = strtoul(optarg, NULL, 10);
             break;
         default:
             return usage(cmd);
@@ -213,6 +297,7 @@ int main(int argc, char** argv) {
     // Setup memory balloon.
     balloon_t balloon;
     balloon_init(&balloon, (void*)addr, kVmoSize, physmem_vmo);
+    balloon.deflate_on_demand = balloon_deflate_on_demand;
     status = pci_bus_connect(&bus, &balloon.virtio_device.pci_device,
                              PCI_DEVICE_VIRTIO_BALLOON);
     if (status != MX_OK)
@@ -220,6 +305,15 @@ int main(int argc, char** argv) {
     status = pci_device_async(&balloon.virtio_device.pci_device, vcpu, guest);
     if (status != MX_OK)
         return status;
+    if (balloon_poll_interval != NULL) {
+        int interval = strtoul(balloon_poll_interval, NULL, 10);
+        if (interval == 0) {
+            fprintf(stderr, "Invalid balloon interval '%s'. Must be an integer greater than 0.\n",
+                    balloon_poll_interval);
+            return MX_ERR_INVALID_ARGS;
+        }
+        poll_balloon_stats(&balloon, interval);
+    }
 
     vcpu_ctx_t vcpu_ctx;
     vcpu_init(&vcpu_ctx);

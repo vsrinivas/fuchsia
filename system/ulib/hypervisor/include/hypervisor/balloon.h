@@ -16,11 +16,19 @@
 #define VIRTIO_BALLOON_Q_STATSQ 2
 #define VIRTIO_BALLOON_Q_COUNT 3
 
+/* Per Virtio 1.0 Section 5.5.6, This value is historical, and independent of
+ * the guest page size.
+ */
+#define VIRTIO_BALLOON_PAGE_SIZE 4096
+
 /* Virtio memory balloon device. */
 typedef struct balloon {
     mtx_t mutex;
     // Handle to the guest phsycial memory VMO for memory management.
     mx_handle_t vmo;
+    // With on-demand deflation we won't commit memory up-front for balloon
+    // deflate requests.
+    bool deflate_on_demand;
 
     struct {
         // The index in the available ring of the stats descriptor.
@@ -56,3 +64,6 @@ typedef void (*balloon_stats_fn_t)(const virtio_balloon_stat_t* stats, size_t le
  * callback returns.
  */
 mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler, void* ctx);
+
+/* Update the 'num_pages' configuration field in the balloon. */
+mx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages);

@@ -18,9 +18,6 @@
 
 #define QUEUE_SIZE 128u
 
-/* PFNs into and out of the balloon are always 4k aligned. */
-#define BALLOON_PAGE_SIZE 4096
-
 static balloon_t* virtio_device_to_balloon(const virtio_device_t* device) {
     return (balloon_t*)device->impl;
 }
@@ -30,6 +27,8 @@ static mx_status_t decommit_pages(balloon_t* balloon, uint64_t addr, uint64_t le
 }
 
 static mx_status_t commit_pages(balloon_t* balloon, uint64_t addr, uint64_t len) {
+    if (balloon->deflate_on_demand)
+        return MX_OK;
     return mx_vmo_op_range(balloon->vmo, MX_VMO_OP_COMMIT, addr, len, NULL, 0);
 }
 
@@ -78,8 +77,9 @@ static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint
 
         // If we have an existing region; invoke the inflate/deflate op.
         if (region_length > 0) {
-            mx_status_t status = balloon_op_ctx->op(balloon, region_base * BALLOON_PAGE_SIZE,
-                                                    region_length * BALLOON_PAGE_SIZE);
+            mx_status_t status = balloon_op_ctx->op(balloon,
+                                                    region_base * VIRTIO_BALLOON_PAGE_SIZE,
+                                                    region_length * VIRTIO_BALLOON_PAGE_SIZE);
             if (status != MX_OK)
                 return status;
         }
@@ -91,8 +91,8 @@ static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint
 
     // Handle the last region.
     if (region_length > 0) {
-        mx_status_t status = balloon_op_ctx->op(balloon, region_base * BALLOON_PAGE_SIZE,
-                                                region_length * BALLOON_PAGE_SIZE);
+        mx_status_t status = balloon_op_ctx->op(balloon, region_base * VIRTIO_BALLOON_PAGE_SIZE,
+                                                region_length * VIRTIO_BALLOON_PAGE_SIZE);
         if (status != MX_OK)
             return status;
     }
@@ -130,9 +130,11 @@ static mx_status_t balloon_queue_notify(virtio_device_t* device, uint16_t queue_
 static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port,
                                 mx_vcpu_io_t* vcpu_io) {
     balloon_t* balloon = virtio_device_to_balloon(device);
-    uint8_t* buf = (uint8_t*)&balloon->config;
     vcpu_io->access_size = 1;
+    mtx_lock(&balloon->mutex);
+    uint8_t* buf = (uint8_t*)&balloon->config;
     vcpu_io->u8 = buf[port];
+    mtx_unlock(&balloon->mutex);
     return MX_OK;
 }
 
@@ -142,8 +144,10 @@ static mx_status_t balloon_write(virtio_device_t* device, mx_handle_t vcpu,
         return MX_ERR_NOT_SUPPORTED;
 
     balloon_t* balloon = virtio_device_to_balloon(device);
+    mtx_lock(&balloon->mutex);
     uint8_t* buf = (uint8_t*)&balloon->config;
     buf[port] = io->u8;
+    mtx_unlock(&balloon->mutex);
     return MX_OK;
 }
 
@@ -173,7 +177,7 @@ void balloon_init(balloon_t* balloon, void* guest_physmem_addr, size_t guest_phy
     balloon->virtio_device.ops = &kBalloonVirtioDeviceOps;
     balloon->virtio_device.guest_physmem_addr = guest_physmem_addr;
     balloon->virtio_device.guest_physmem_size = guest_physmem_size;
-    balloon->virtio_device.features |= VIRTIO_BALLOON_F_STATS_VQ;
+    balloon->virtio_device.features = VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM;
 
     // Device configuration values.
     balloon->vmo = guest_physmem_vmo;
@@ -237,4 +241,17 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
     // Note we deliberately do not return the buffer here. This will be done to
     // initiate the next stats request.
     return MX_OK;
+}
+
+mx_status_t balloon_update_num_pages(balloon_t* balloon, uint32_t num_pages) {
+    mtx_lock(&balloon->mutex);
+    balloon->config.num_pages = num_pages;
+    mtx_unlock(&balloon->mutex);
+
+    // Send a config change interrupt to the guest.
+    virtio_device_t* virtio_device = &balloon->virtio_device;
+    mtx_lock(&virtio_device->mutex);
+    virtio_device->isr_status |= VIRTIO_ISR_DEVICE;
+    mtx_unlock(&virtio_device->mutex);
+    return virtio_device_notify(virtio_device);
 }
