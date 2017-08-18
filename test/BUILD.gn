@@ -23,13 +23,15 @@ package("test") {
     "//apps/bluetooth/tools/hci_acl_test",
   ]
 
+  binaries = [
+    {
+      name = "bluetooth_hci_acl_test"
+    },
+  ]
+
   tests = [
     {
       name = "bluetooth_unittests"
-    },
-
-    {
-      name = "bluetooth_hci_acl_test"
     },
   ]
 }
