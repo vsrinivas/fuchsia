@@ -351,11 +351,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
   agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
-void AgentRunner::UpdateWatchers() {
-  if (*terminating_) {
-    return;
-  }
-
+fidl::Array<fidl::String> AgentRunner::GetAllAgents() {
   // A set of all agents that are either running or scheduled to be run.
   std::unordered_set<std::string> agents;
   for (auto const& it : running_agents_) {
@@ -373,15 +369,28 @@ void AgentRunner::UpdateWatchers() {
     agent_urls.push_back(it);
   }
 
-  agent_provider_watchers_.ForAllPtrs([agent_urls = std::move(agent_urls)](
+  return agent_urls;
+}
+
+void AgentRunner::UpdateWatchers() {
+  if (*terminating_) {
+    return;
+  }
+
+  agent_provider_watchers_.ForAllPtrs([agent_urls = GetAllAgents()](
       AgentProviderWatcher * watcher) {
     watcher->OnUpdate(agent_urls.Clone());
   });
 }
 
 void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
-  agent_provider_watchers_.AddInterfacePtr(
-      AgentProviderWatcherPtr::Create(std::move(watcher)));
+  auto ptr = AgentProviderWatcherPtr::Create(std::move(watcher));
+  // 1. Send this watcher the current list of agents.
+  ptr->OnUpdate(GetAllAgents());
+
+  // 2. Add this watcher to a set that is updated when a new list of agents is
+  // available.
+  agent_provider_watchers_.AddInterfacePtr(std::move(ptr));
 }
 
 }  // namespace modular

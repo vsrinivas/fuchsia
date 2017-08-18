@@ -103,6 +103,9 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);
 
+  // A set of all agents that are either running or scheduled to be run.
+  fidl::Array<fidl::String> GetAllAgents();
+
   // |UpdateWatchers| will not notify watchers if we are tearing down.
   void UpdateWatchers();
 
