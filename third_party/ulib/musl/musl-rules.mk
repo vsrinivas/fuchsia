@@ -851,6 +851,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/thread/mtx_unlock.c \
     $(LOCAL_DIR)/src/thread/safestack.c \
     $(LOCAL_DIR)/src/thread/thrd_create.c \
+    $(LOCAL_DIR)/src/thread/thrd_detach.c \
     $(LOCAL_DIR)/src/thread/thrd_exit.c \
     $(LOCAL_DIR)/src/thread/thrd_join.c \
     $(LOCAL_DIR)/src/thread/thrd_sleep.c \

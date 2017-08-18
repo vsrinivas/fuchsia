@@ -3,7 +3,7 @@
 #include <magenta/process.h>
 #include <threads.h>
 
-static int __pthread_detach(pthread_t t) {
+int __pthread_detach(pthread_t t) {
     switch (mxr_thread_detach(&t->mxr_thread)) {
     case MX_OK:
         return 0;
@@ -19,4 +19,3 @@ static int __pthread_detach(pthread_t t) {
 }
 
 weak_alias(__pthread_detach, pthread_detach);
-weak_alias(__pthread_detach, thrd_detach);
