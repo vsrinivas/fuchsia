@@ -59,8 +59,11 @@ _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
                 $(MODULE_HOST_LIBS)
 
 # Catch the depends on nonexistant module error case
-# here where we can tell you what module has the bad deps
-$(foreach mod,$(_MODULE_DEPS) $(MODULE_HEADER_DEPS),$(if $(wildcard $(mod)),,\
+# here where we can tell you what module has the bad deps.
+# Strip any .postfixes, as these refer to "sub-modules" defined in the
+# rules.mk file of the base module name.
+$(foreach mod,$(_MODULE_DEPS) $(MODULE_HEADER_DEPS),\
+$(if $(wildcard $(firstword $(subst .,$(SPACE),$(mod)))),,\
 $(error Module '$(MODULE)' depends on '$(mod)' which does not exist)))
 
 # all regular deps contribute to header deps list
