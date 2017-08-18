@@ -40,30 +40,34 @@ void mp_init(void) {
     }
 }
 
-void mp_reschedule(mp_cpu_mask_t target, uint flags) {
-    if (target == 0)
-        return;
-
+void mp_reschedule(mp_ipi_target_t target, mp_cpu_mask_t mask, uint flags) {
     uint local_cpu = arch_curr_cpu_num();
 
-    LTRACEF("local %u, target 0x%x\n", local_cpu, target);
+    LTRACEF("local %u, target %u, mask %#x\n", local_cpu, target, mask);
 
-    if (target == MP_CPU_ALL) {
-        target = mp.active_cpus;
+    switch (target) {
+        case MP_IPI_TARGET_ALL:
+        case MP_IPI_TARGET_ALL_BUT_LOCAL:
+            arch_mp_send_ipi(target, 0, MP_IPI_RESCHEDULE);
+            break;
+        case MP_IPI_TARGET_MASK:
+            if (mask == 0)
+                return;
+
+            /* mask out cpus that are not active and the local cpu */
+            mask &= mp.active_cpus;
+            mask &= ~(1U << local_cpu);
+
+            /* mask out cpus that are currently running realtime code */
+            if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
+                mask &= ~mp.realtime_cpus;
+            }
+
+            LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
+
+            arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_RESCHEDULE);
+            break;
     }
-
-    /* mask out cpus that are not active and the local cpu */
-    target &= mp.active_cpus;
-
-    /* mask out cpus that are currently running realtime code */
-    if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
-        target &= ~mp.realtime_cpus;
-    }
-    target &= ~(1U << local_cpu);
-
-    LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, target);
-
-    arch_mp_send_ipi(target, MP_IPI_RESCHEDULE);
 }
 
 struct mp_sync_context {
@@ -85,25 +89,25 @@ static void mp_sync_task(void* raw_context) {
 /* @brief Execute a task on the specified CPUs, and block on the calling
  *        CPU until all CPUs have finished the task.
  *
- *  If MP_CPU_ALL or MP_CPU_ALL_BUT_LOCAL is the target, the online CPU
+ *  If MP_IPI_TARGET_ALL or MP_IPI_TARGET_ALL_BUT_LOCAL is the target, the online CPU
  *  mask will be used to determine actual targets.
  *
- * Interrupts must be disabled if calling with MP_CPU_ALL_BUT_LOCAL as target
+ * Interrupts must be disabled if calling with MP_IPI_TARGET_ALL_BUT_LOCAL as target
  */
-void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void* context) {
+void mp_sync_exec(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_sync_task_t task, void* context) {
     uint num_cpus = arch_max_num_cpus();
 
-    if (target == MP_CPU_ALL) {
-        target = mp_get_online_mask();
-    } else if (target == MP_CPU_ALL_BUT_LOCAL) {
+    if (target == MP_IPI_TARGET_ALL) {
+        mask = mp_get_online_mask();
+    } else if (target == MP_IPI_TARGET_ALL_BUT_LOCAL) {
         /* targeting all other CPUs but the current one is hazardous
          * if the local CPU may be changed underneath us */
         DEBUG_ASSERT(arch_ints_disabled());
-        target = mp_get_online_mask() & ~(1U << arch_curr_cpu_num());
+        mask = mp_get_online_mask() & ~(1U << arch_curr_cpu_num());
     }
 
     /* Mask any offline CPUs from target list */
-    target &= mp_get_online_mask();
+    mask &= mp_get_online_mask();
 
     /* disable interrupts so our current CPU doesn't change */
     spin_lock_saved_state_t irqstate;
@@ -113,15 +117,15 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void* context) {
     uint local_cpu = arch_curr_cpu_num();
 
     /* remove self from target lists, since no need to IPI ourselves */
-    bool targetting_self = !!(target & (1U << local_cpu));
-    target &= ~(1U << local_cpu);
+    bool targetting_self = !!(mask & (1U << local_cpu));
+    mask &= ~(1U << local_cpu);
 
     /* create tasks to enqueue (we need one per target due to each containing
      * a linked list node */
     struct mp_sync_context sync_context = {
         .task = task,
         .task_context = context,
-        .outstanding_cpus = target,
+        .outstanding_cpus = mask,
     };
 
     struct mp_ipi_task sync_tasks[SMP_MAX_CPUS] = {};
@@ -132,7 +136,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void* context) {
 
     /* enqueue tasks */
     spin_lock(&mp.ipi_task_lock);
-    mp_cpu_mask_t remaining = target;
+    mp_cpu_mask_t remaining = mask;
     uint cpu_id = 0;
     while (remaining && cpu_id < num_cpus) {
         if (remaining & 1) {
@@ -144,7 +148,7 @@ void mp_sync_exec(mp_cpu_mask_t target, mp_sync_task_t task, void* context) {
     spin_unlock(&mp.ipi_task_lock);
 
     /* let CPUs know to begin executing */
-    __UNUSED status_t status = arch_mp_send_ipi(target, MP_IPI_GENERIC);
+    __UNUSED status_t status = arch_mp_send_ipi(MP_IPI_TARGET_MASK, mask, MP_IPI_GENERIC);
     DEBUG_ASSERT(status == MX_OK);
 
     if (targetting_self) {

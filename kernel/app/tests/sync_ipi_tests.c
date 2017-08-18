@@ -42,7 +42,7 @@ static int deadlock_test_thread(void *arg) {
 
     int counter = 0;
     arch_disable_ints();
-    mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, counter_task, &counter);
+    mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
     arch_enable_ints();
     return 0;
 }
@@ -92,7 +92,7 @@ int sync_ipi_tests(int argc, const cmd_args *argv)
         LTRACEF("Sequential test\n");
         int inorder_counter = 0;
         for (uint i = 0; i < num_cpus; ++i) {
-            mp_sync_exec(1 << i, inorder_count_task, &inorder_counter);
+            mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, inorder_count_task, &inorder_counter);
             LTRACEF("  Finished signaling CPU %u\n", i);
         }
     }
@@ -105,7 +105,7 @@ int sync_ipi_tests(int argc, const cmd_args *argv)
         spin_lock_saved_state_t irqstate;
         arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
 
-        mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, counter_task, &counter);
+        mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, counter_task, &counter);
 
         arch_interrupt_restore(irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
 

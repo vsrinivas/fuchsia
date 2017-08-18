@@ -64,10 +64,18 @@ static uint arch_curr_cpu_num_slow() {
     return arm64_cpu_map[cluster][cpu];
 }
 
-status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
-    LTRACEF("target 0x%x, ipi %u\n", target, (uint)ipi);
+status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi) {
+    LTRACEF("target %d mask %#x, ipi %d\n", target, mask, ipi);
 
-    return interrupt_send_ipi(target, ipi);
+    // translate the high level target + mask mechanism into just a mask
+    if (target == MP_IPI_TARGET_ALL) {
+        mask = (1ul << SMP_MAX_CPUS) - 1;
+    } else if (target == MP_IPI_TARGET_ALL) {
+        mask = (1ul << SMP_MAX_CPUS) - 1;
+        mask &= ~(1u << arch_curr_cpu_num());
+    }
+
+    return interrupt_send_ipi(mask, ipi);
 }
 
 void arm64_init_percpu_early(void) {

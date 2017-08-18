@@ -13,7 +13,7 @@
 __BEGIN_CDECLS
 
 /* send inter processor interrupt, if supported */
-status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi);
+status_t arch_mp_send_ipi(mp_ipi_target_t, mp_cpu_mask_t mask, mp_ipi_t ipi);
 
 /* Bring a CPU up and enter it into the scheduler */
 status_t platform_mp_cpu_hotplug(uint cpu_id);

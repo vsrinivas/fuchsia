@@ -171,14 +171,16 @@ static void x86_tlb_invalidate_page(X86ArchVmAspace* aspace, vaddr_t vaddr,
      * just before this load.  In the former case, it is becoming active after
      * the write to the page table, so it will see the change.  In the latter
      * case, it will get a spurious request to flush. */
-    mp_cpu_mask_t targets;
+    mp_ipi_target_t target;
+    mp_cpu_mask_t target_mask = 0;
     if (global_page || aspace == nullptr) {
-        targets = MP_CPU_ALL;
+        target = MP_IPI_TARGET_ALL;
     } else {
-        targets = aspace->active_cpus();
+        target = MP_IPI_TARGET_MASK;
+        target_mask = aspace->active_cpus();
     }
 
-    mp_sync_exec(targets, tlb_invalidate_page_task, &task_context);
+    mp_sync_exec(target, target_mask, tlb_invalidate_page_task, &task_context);
 }
 
 template <int Level>

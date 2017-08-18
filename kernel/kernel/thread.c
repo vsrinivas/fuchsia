@@ -318,7 +318,7 @@ status_t thread_suspend(thread_t* t) {
         /* The following call is not essential.  It just makes the
              * thread suspension happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(1u << thread_last_cpu(t), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, 1u << thread_last_cpu(t), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended already */
@@ -561,7 +561,7 @@ void thread_kill(thread_t* t, bool block) {
         /* The following call is not essential.  It just makes the
              * thread termination happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(1u << thread_last_cpu(t), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, 1u << thread_last_cpu(t), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended, resume it so it can get the kill signal */
@@ -599,7 +599,7 @@ void thread_migrate_cpu(const uint target_cpuid) {
     thread_t* self = get_current_thread();
     thread_set_pinned_cpu(self, target_cpuid);
 
-    mp_reschedule(1 << target_cpuid, 0);
+    mp_reschedule(MP_IPI_TARGET_MASK, 1u << target_cpuid, 0);
 
     // When we return from this call, we should have migrated to the target cpu
     thread_yield();

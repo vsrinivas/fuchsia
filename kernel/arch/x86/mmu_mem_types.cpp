@@ -128,7 +128,7 @@ void x86_pat_sync(mp_cpu_mask_t targets)
         .barrier2 = (int)targets,
     };
     /* Step 1: Broadcast to all processors to execute the sequence */
-    mp_sync_exec(targets, x86_pat_sync_task, &context);
+    mp_sync_exec(MP_IPI_TARGET_MASK, targets, x86_pat_sync_task, &context);
 }
 
 static void x86_pat_sync_task(void *raw_context)
@@ -300,7 +300,7 @@ usage:
         uint num_cpus = arch_max_num_cpus();
         for (uint i = 0; i < num_cpus; ++i) {
             printf("CPU %u Page Attribute Table types:\n", i);
-            mp_sync_exec(1 << i, print_pat_entries, NULL);
+            mp_sync_exec(MP_IPI_TARGET_MASK, 1u << i, print_pat_entries, NULL);
         }
     } else {
         printf("unknown command\n");

@@ -163,7 +163,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     // Let all other CPUs know about the update
     if (status == MX_OK) {
         struct ioport_update_context task_context = {.io_bitmap = this};
-        mp_sync_exec(MP_CPU_ALL_BUT_LOCAL, IoBitmap::UpdateTask, &task_context);
+        mp_sync_exec(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, IoBitmap::UpdateTask, &task_context);
     }
 
     arch_interrupt_restore(state, 0);

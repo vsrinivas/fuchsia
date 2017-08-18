@@ -231,10 +231,10 @@ status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
     // Enable VMX for all online CPUs.
     vmxon_context vmxon_ctx(&vmxon_pages);
     mp_cpu_mask_t online_mask = mp_get_online_mask();
-    mp_sync_exec(online_mask, vmxon_task, &vmxon_ctx);
+    mp_sync_exec(MP_IPI_TARGET_MASK, online_mask, vmxon_task, &vmxon_ctx);
     mp_cpu_mask_t cpu_mask = vmxon_ctx.cpu_mask.load();
     if (cpu_mask != online_mask) {
-        mp_sync_exec(cpu_mask, vmxoff_task, nullptr);
+        mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -253,7 +253,7 @@ VmxCpuState::VmxCpuState(mxtl::Array<VmxPage> vmxon_pages)
     : vmxon_pages_(mxtl::move(vmxon_pages)) {}
 
 VmxCpuState::~VmxCpuState() {
-    mp_sync_exec(MP_CPU_ALL, vmxoff_task, nullptr);
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
 }
 
 status_t VmxCpuState::AllocVpid(uint16_t* vpid) {

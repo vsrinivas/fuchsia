@@ -43,7 +43,7 @@ static void hwp_enable(void)
         return;
     }
 
-    mp_sync_exec(MP_CPU_ALL, hwp_enable_sync_task, NULL);
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, hwp_enable_sync_task, NULL);
 
     hwp_enabled = true;
 }
@@ -68,7 +68,7 @@ static void hwp_set_hint(unsigned long hint) {
         printf("HWP hint not supported\n");
         return;
     }
-    mp_sync_exec(MP_CPU_ALL, hwp_set_hint_sync_task, (void*)hint);
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, hwp_set_hint_sync_task, (void*)hint);
 }
 
 static int cmd_hwp(int argc, const cmd_args *argv, uint32_t flags)

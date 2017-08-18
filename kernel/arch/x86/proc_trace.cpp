@@ -185,7 +185,7 @@ status_t x86_ipt_set_mode(ipt_trace_mode_t mode) {
     if (trace_mode == IPT_TRACE_THREADS && mode == IPT_TRACE_CPUS)
         return MX_ERR_NOT_SUPPORTED;
 
-    mp_sync_exec(MP_CPU_ALL, x86_ipt_set_mode_task,
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_set_mode_task,
                  reinterpret_cast<void*>(static_cast<uintptr_t>(mode)));
     trace_mode = mode;
 
@@ -289,7 +289,7 @@ status_t x86_ipt_cpu_mode_start() {
            model_info->display_family, model_info->display_model,
            model_info->stepping);
 
-    mp_sync_exec(MP_CPU_ALL, x86_ipt_start_cpu_task, ipt_cpu_state);
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_start_cpu_task, ipt_cpu_state);
     return MX_OK;
 }
 
@@ -340,7 +340,7 @@ status_t x86_ipt_cpu_mode_stop() {
 
     TRACEF("Disabling processor trace\n");
 
-    mp_sync_exec(MP_CPU_ALL, x86_ipt_stop_cpu_task, ipt_cpu_state);
+    mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_ipt_stop_cpu_task, ipt_cpu_state);
     ktrace(TAG_IPT_STOP, 0, 0, 0, 0);
     active = false;
     return MX_OK;

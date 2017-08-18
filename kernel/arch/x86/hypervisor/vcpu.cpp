@@ -694,7 +694,7 @@ status_t Vcpu::Interrupt(uint32_t vector) {
     if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
         // If we did not signal the VCPU, it means it is currently running,
         // therefore we should issue an IPI to force a VM exit.
-        mp_reschedule(1u << cpu_of(vpid_), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, 1u << cpu_of(vpid_), 0);
     }
     return MX_OK;
 }

@@ -217,7 +217,7 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id)
     return -1;
 }
 
-status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
+status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi)
 {
     uint8_t vector = 0;
     switch (ipi) {
@@ -234,17 +234,17 @@ status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
             panic("Unexpected MP IPI value: %u", (uint)ipi);
     }
 
-    if (target == MP_CPU_ALL_BUT_LOCAL) {
+    if (target == MP_IPI_TARGET_ALL_BUT_LOCAL) {
         apic_send_broadcast_ipi(vector, DELIVERY_MODE_FIXED);
         return MX_OK;
-    } else if (target == MP_CPU_ALL) {
+    } else if (target == MP_IPI_TARGET_ALL) {
         apic_send_broadcast_self_ipi(vector, DELIVERY_MODE_FIXED);
         return MX_OK;
     }
 
-    ASSERT(x86_num_cpus <= sizeof(target) * 8);
+    ASSERT(x86_num_cpus <= sizeof(mask) * CHAR_BIT);
 
-    mp_cpu_mask_t remaining = target;
+    mp_cpu_mask_t remaining = mask;
     uint cpu_id = 0;
     while (remaining && cpu_id < x86_num_cpus) {
         if (remaining & 1) {

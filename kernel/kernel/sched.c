@@ -22,9 +22,6 @@
 #include <string.h>
 #include <target.h>
 
-/* legacy implementation that just broadcast ipis for every reschedule */
-#define BROADCAST_RESCHEDULE 0
-
 /* disable priority boosting */
 #define NO_BOOST 0
 
@@ -141,9 +138,6 @@ static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask) {
 
 /* find a cpu to wake up */
 static mp_cpu_mask_t find_cpu(thread_t* t) {
-    if (BROADCAST_RESCHEDULE)
-        return MP_CPU_ALL_BUT_LOCAL;
-
     /* get the last cpu the thread ran on */
     mp_cpu_mask_t last_ran_cpu_mask = (1u << thread_last_cpu(t));
 
@@ -252,7 +246,7 @@ void sched_unblock(thread_t* t) {
     t->state = THREAD_READY;
     insert_in_run_queue_head(t);
 
-    mp_reschedule(find_cpu(t), 0);
+    mp_reschedule(MP_IPI_TARGET_MASK, find_cpu(t), 0);
 }
 
 void sched_unblock_list(struct list_node* list) {
@@ -274,7 +268,7 @@ void sched_unblock_list(struct list_node* list) {
         t->state = THREAD_READY;
         insert_in_run_queue_head(t);
 
-        mp_reschedule(find_cpu(t), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, find_cpu(t), 0);
     }
 }
 

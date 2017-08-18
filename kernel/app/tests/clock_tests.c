@@ -62,7 +62,7 @@ void clock_tests(void)
         printf("measuring cpu clock against current_time() on cpu %u\n", cpu);
 
         thread_set_pinned_cpu(get_current_thread(), cpu);
-        mp_reschedule(1 << cpu, 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, 1u << cpu, 0);
         thread_yield();
 
         for (int i = 0; i < 3; i++) {
@@ -76,6 +76,6 @@ void clock_tests(void)
     }
 
     thread_set_pinned_cpu(get_current_thread(), old_affinity);
-    mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
+    mp_reschedule(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, 0);
     thread_yield();
 }
