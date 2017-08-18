@@ -231,7 +231,7 @@ mx_status_t PortDispatcher::DeQueue(mx_time_t deadline, mx_port_packet_t* packet
 
         if (observer)
             delete observer;
-        else if (port_packet && (port_packet->type() & PKT_FLAG_EPHEMERAL))
+        else if (packet && (packet->type & PKT_FLAG_EPHEMERAL))
             PortPacket::Delete(port_packet);
 
         return MX_OK;
