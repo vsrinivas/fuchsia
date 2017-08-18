@@ -140,6 +140,8 @@ class ModuleImpl extends Module {
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
+
+    _binding.close();
   }
 
   void publishText(String text) {
