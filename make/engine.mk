@@ -39,6 +39,7 @@ USE_GOLD ?= true
 USE_THINLTO := false
 USE_LTO := false
 endif
+THINLTO_CACHE_DIR ?= $(BUILDDIR)/thinlto-cache
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
@@ -199,7 +200,7 @@ ifeq ($(call TOBOOL,$(USE_LTO)),true)
 KERNEL_LDFLAGS += -mllvm -code-model=kernel
 ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
 USER_COMPILEFLAGS += -flto=thin
-USER_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(BUILDDIR)/thinlto-cache
+USER_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(THINLTO_CACHE_DIR)
 else
 KERNEL_COMPILEFLAGS += -flto -fwhole-program-vtables
 USER_COMPILEFLAGS += -flto -fwhole-program-vtables
