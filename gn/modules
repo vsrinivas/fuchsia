@@ -9,21 +9,11 @@
         "drive",
         "email",
         "music",
+        "prototypes",
         "video"
     ],
     "packages": {
         "modules_tests": "//apps/modules/common:modules_tests",
         "modules": "//apps/modules/common:modules"
-    },
-    "components": [
-        "apps/modules/common/modules/interactive_receipt/interactive_receipt_component.json",
-        "apps/modules/common/modules/map/map_component.json",
-        "apps/modules/common/modules/usps/usps_component.json",
-        "apps/modules/common/modules/youtube_related_videos/youtube_related_videos_component.json",
-        "apps/modules/common/modules/youtube_story/youtube_story_component.json",
-        "apps/modules/common/modules/youtube_thumbnail/youtube_thumbnail_component.json",
-        "apps/modules/common/modules/youtube_video/youtube_video_component.json",
-        "apps/modules/music/modules/music_album/music_album_component.json",
-        "apps/modules/music/modules/music_artist/music_artist_component.json"
-    ]
+    }
 }

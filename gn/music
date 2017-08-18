@@ -51,5 +51,9 @@
             "binary": "music_playback_agent.dartx",
             "bootfs_path": "apps/music_playback_agent"
         }
+    ],
+    "components": [
+        "apps/modules/music/modules/music_album/music_album_component.json",
+        "apps/modules/music/modules/music_artist/music_artist_component.json"
     ]
 }
