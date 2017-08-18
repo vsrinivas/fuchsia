@@ -37,6 +37,14 @@ MODULE_COMPILEFLAGS += -Ithird_party/ulib/musl/src/internal
 # Make sure there are never any PLT entries generated.
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
+ifeq ($(call TOBOOL,$(USE_LTO)),true)
+# Make sure that compiler doesn't replace calls to libc functions with builtins.
+# While inlining these builtins is desirable, it causes LTO to optimize away
+# our own versions of these functions which later causes a link failure.
+# TODO(phosek): https://bugs.llvm.org/show_bug.cgi?id=34169
+MODULE_COMPILEFLAGS += -ffreestanding
+endif
+
 # We don't have normal setup, so safe-stack is a non-starter.
 MODULE_COMPILEFLAGS += $(NO_SAFESTACK) $(NO_SANITIZERS)
 
