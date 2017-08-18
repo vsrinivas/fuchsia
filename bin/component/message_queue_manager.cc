@@ -555,10 +555,10 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
                       MessageQueueManager* const /*message_queue_manager*/,
                       ledger::Page* const page,
                       const std::string& component_namespace,
-                      ftl::Closure done_callback)
+                      std::function<void()> done)
       : Operation("MessageQueueManager::DeleteNamespaceCall",
                   container,
-                  done_callback,
+                  std::move(done),
                   component_namespace),
         page_(page),
         message_queues_key_prefix_(
@@ -694,7 +694,7 @@ MessageQueueStorage* MessageQueueManager::GetMessageQueueStorage(
     message_queue_tokens_[info.component_namespace][info.component_instance_id]
                          [info.queue_name] = info.queue_token;
 
-    const ftl::Closure* watcher =
+    const std::function<void()>* const watcher =
         FindQueueName(pending_watcher_callbacks_, info);
     if (watcher) {
       it->second->RegisterWatcher(*watcher);
@@ -728,9 +728,9 @@ void MessageQueueManager::DeleteMessageQueue(
 
 void MessageQueueManager::DeleteNamespace(
     const std::string& component_namespace,
-    ftl::Closure done_callback) {
+    std::function<void()> done) {
   new DeleteNamespaceCall(&operation_collection_, this, page_.get(),
-                          component_namespace, done_callback);
+                          component_namespace, std::move(done));
 }
 
 void MessageQueueManager::GetMessageSender(

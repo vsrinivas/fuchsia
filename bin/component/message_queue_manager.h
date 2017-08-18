@@ -45,7 +45,7 @@ class MessageQueueManager {
                           const std::string& queue_name);
 
   void DeleteNamespace(const std::string& component_namespace,
-                       ftl::Closure done_callback);
+                       std::function<void()> done_callback);
 
   void GetMessageSender(const std::string& queue_token,
                         fidl::InterfaceRequest<MessageSender> request);
@@ -112,7 +112,7 @@ class MessageQueueManager {
   // callbacks. If a watcher is registered before a
   // |MessageQueueStorage| exists then it is stashed here until a
   // |MessageQueueStorage| is available.
-  ComponentQueueNameMap<ftl::Closure> pending_watcher_callbacks_;
+  ComponentQueueNameMap<std::function<void()>> pending_watcher_callbacks_;
 
   OperationCollection operation_collection_;
 

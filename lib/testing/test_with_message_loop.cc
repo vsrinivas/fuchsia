@@ -68,7 +68,7 @@ bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
   return RunGivenLoopUntil(&message_loop_, std::move(condition), timeout);
 }
 
-ftl::Closure TestWithMessageLoop::MakeQuitTask() {
+std::function<void()> TestWithMessageLoop::MakeQuitTask() {
   return [this] { message_loop_.PostQuitTask(); };
 }
 

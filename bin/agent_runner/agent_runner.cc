@@ -73,7 +73,7 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
 }
 
 void AgentRunner::MaybeRunAgent(const std::string& agent_url,
-                                const ftl::Closure& done) {
+                                const std::function<void()>& done) {
   auto agent_it = running_agents_.find(agent_url);
   if (agent_it != running_agents_.end()) {
     if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {

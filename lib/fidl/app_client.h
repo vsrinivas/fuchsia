@@ -58,7 +58,7 @@ class AppClientBase {
   // connection encounters an error. This typically happens when this
   // application stops or crashes. |error_handler| will be deregistered when
   // attempting graceful termination via |AppTerminate|.
-  void SetAppErrorHandler(const ftl::Closure& error_handler);
+  void SetAppErrorHandler(const std::function<void()>& error_handler);
 
  private:
   // Service specific parts of the termination sequence.

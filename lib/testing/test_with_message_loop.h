@@ -66,7 +66,7 @@ class TestWithMessageLoop : public ::testing::Test {
                     ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
 
   // Creates a closure that quits the test message loop when executed.
-  ftl::Closure MakeQuitTask();
+  std::function<void()> MakeQuitTask();
 
   mtl::MessageLoop message_loop_;
 

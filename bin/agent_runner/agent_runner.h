@@ -81,7 +81,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Starts up an agent, or waits until the agent can start up if it is already
   // in a terminating state. Calls |done| once the agent has started.
   // Note that the agent could be in an INITIALIZING state.
-  void MaybeRunAgent(const std::string& agent_url, const ftl::Closure& done);
+  void MaybeRunAgent(const std::string& agent_url, const std::function<void()>& done);
 
   // Actually starts up an agent (used by |MaybeRunAgent()| above).
   void RunAgent(const std::string& agent_url);
@@ -142,7 +142,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a
   // terminating state, we pend those requests here until the agent terminates.
-  std::unordered_map<std::string, std::vector<ftl::Closure>>
+  std::unordered_map<std::string, std::vector<std::function<void()>>>
       run_agent_callbacks_;
 
   // agent URL -> modular.AgentContext
