@@ -28,9 +28,9 @@ static mx_status_t load_magenta(const int fd, const uintptr_t addr, const size_t
                                 const uintptr_t first_page, uintptr_t* guest_ip,
                                 uintptr_t* end_off) {
     // Move the first page to where magenta would like it to be
-    uintptr_t header_addr = (uintptr_t) memmove((void*)(addr + kKernelOffset),
-                                                (void*)first_page,
-                                                PAGE_SIZE);
+    uintptr_t header_addr = (uintptr_t)memmove((void*)(addr + kKernelOffset),
+                                               (void*)first_page,
+                                               PAGE_SIZE);
 
     magenta_kernel_t* header = (magenta_kernel_t*)header_addr;
     if (!container_is_valid(&header->hdr_file)) {

@@ -157,7 +157,8 @@ int main(int argc, char** argv) {
     mx_vcpu_create_args_t args = {
         guest_ip,
 #if __x86_64__
-        0 /* cr3 */, apic_vmo,
+        0 /* cr3 */,
+        apic_vmo,
 #endif // __x86_64__
     };
     mx_handle_t vcpu;

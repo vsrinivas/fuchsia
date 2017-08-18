@@ -7,61 +7,65 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <hypervisor/block.h>
 #include <hypervisor/guest.h>
 
 #include "linux.h"
 
-#define ALIGN(x, alignment)    (((x) + (alignment - 1)) & ~(alignment - 1))
+// clang-format off
+
+#define ALIGN(x, alignment)     (((x) + (alignment - 1)) & ~(alignment - 1))
+
+#define ZP8(p, off)             (*((uint8_t*)((p) + (off))))
+#define ZP16(p, off)            (*((uint16_t*)((p) + (off))))
+#define ZP32(p, off)            (*((uint32_t*)((p) + (off))))
+#define ZP64(p, off)            (*((uint64_t*)((p) + (off))))
 
 // See https://www.kernel.org/doc/Documentation/x86/boot.txt
 // and https://www.kernel.org/doc/Documentation/x86/zero-page.txt
 // for an explanation of the zero page, setup header and boot params.
 
 // Screen info offsets
-#define ZP_SI_8_VIDEO_MODE      0x0006     // Original video mode
-#define ZP_SI_8_VIDEO_COLS      0x0007     // Original video cols
-#define ZP_SI_8_VIDEO_LINES     0x000e     // Original video lines
+#define ZP_SI_8_VIDEO_MODE      0x0006 // Original video mode
+#define ZP_SI_8_VIDEO_COLS      0x0007 // Original video cols
+#define ZP_SI_8_VIDEO_LINES     0x000e // Original video lines
 
 // Setup header offsets
-#define ZP_SH_8_E820_COUNT      0x01e8     // Number of entries in e820 map
-#define ZP_SH_8_SETUP_SECTS     0x01f1     // Size of real mode kernel in sectors
-#define ZP_SH_8_LOADER_TYPE     0x0210     // Type of bootloader
-#define ZP_SH_8_LOAD_FLAGS      0x0211     // Boot protocol flags
-#define ZP_SH_8_RELOCATABLE     0x0234     // Is the kernel relocatable?
-#define ZP_SH_16_BOOTFLAG       0x01fe     // Bootflag, should match BOOT_FLAG_MAGIC
-#define ZP_SH_16_VERSION        0x0206     // Boot protocol version
-#define ZP_SH_16_XLOADFLAGS     0x0236     // 64-bit and EFI load flags
-#define ZP_SH_32_SYSSIZE        0x01f4     // Size of protected-mode code + payload in 16-bytes
-#define ZP_SH_32_HEADER         0x0202     // Header, should match HEADER_MAGIC
-#define ZP_SH_32_RAMDISK_IMAGE  0x0218     // Ramdisk image address
-#define ZP_SH_32_RAMDISK_SIZE   0x021c     // Ramdisk image size
-#define ZP_SH_32_COMMAND_LINE   0x0228     // Pointer to command line args string
-#define ZP_SH_32_KERNEL_ALIGN   0x0230     // Kernel alignment
-#define ZP_SH_64_PREF_ADDRESS   0x0258     // Preferred address for kernel to be loaded at
-#define ZP_SH_XX_E820_MAP       0x02d0     // The e820 memory map
+#define ZP_SH_8_E820_COUNT      0x01e8 // Number of entries in e820 map
+#define ZP_SH_8_SETUP_SECTS     0x01f1 // Size of real mode kernel in sectors
+#define ZP_SH_8_LOADER_TYPE     0x0210 // Type of bootloader
+#define ZP_SH_8_LOAD_FLAGS      0x0211 // Boot protocol flags
+#define ZP_SH_8_RELOCATABLE     0x0234 // Is the kernel relocatable?
+#define ZP_SH_16_BOOTFLAG       0x01fe // Bootflag, should match BOOT_FLAG_MAGIC
+#define ZP_SH_16_VERSION        0x0206 // Boot protocol version
+#define ZP_SH_16_XLOADFLAGS     0x0236 // 64-bit and EFI load flags
+#define ZP_SH_32_SYSSIZE        0x01f4 // Size of protected-mode code + payload in 16-bytes
+#define ZP_SH_32_HEADER         0x0202 // Header, should match HEADER_MAGIC
+#define ZP_SH_32_RAMDISK_IMAGE  0x0218 // Ramdisk image address
+#define ZP_SH_32_RAMDISK_SIZE   0x021c // Ramdisk image size
+#define ZP_SH_32_COMMAND_LINE   0x0228 // Pointer to command line args string
+#define ZP_SH_32_KERNEL_ALIGN   0x0230 // Kernel alignment
+#define ZP_SH_64_PREF_ADDRESS   0x0258 // Preferred address for kernel to be loaded at
+#define ZP_SH_XX_E820_MAP       0x02d0 // The e820 memory map
 
-#define ZP8(p, off) (*((uint8_t*)((p) + (off))))
-#define ZP16(p, off) (*((uint16_t*)((p) + (off))))
-#define ZP32(p, off) (*((uint32_t*)((p) + (off))))
-#define ZP64(p, off) (*((uint64_t*)((p) + (off))))
+#define LF_LOAD_HIGH            (1u << 0) // The protected mode code defaults to 0x100000
+#define XLF_KERNEL_64           (1u << 0) // Kernel has legacy 64-bit entry point at 0x200
 
-#define LF_LOAD_HIGH            1 << 0     // The protected mode code defaults to 0x100000
-#define XLF_KERNEL_64           1 << 0     // Kernel has legacy 64-bit entry point at 0x200
-
-#define BOOT_FLAG_MAGIC         0xaa55     // Boot flag value to match for Linux
+#define BOOT_FLAG_MAGIC         0xaa55 // Boot flag value to match for Linux
 #define HEADER_MAGIC            0x53726448 // Header value to match for Linux
-#define LEGACY_64_ENTRY_OFFSET  0x200      // Offset for the legacy 64-bit entry point
-#define LOADER_TYPE_UNSPECIFIED 0xff       // We are bootloader that Linux knows nothing about
-#define MIN_BOOT_PROTOCOL       0x0200     // The minimum boot protocol we support (bzImage)
-#define MAX_E820_ENTRIES        128        // The space reserved for e820, in entries
+#define LEGACY_64_ENTRY_OFFSET  0x200 // Offset for the legacy 64-bit entry point
+#define LOADER_TYPE_UNSPECIFIED 0xff // We are bootloader that Linux knows nothing about
+#define MIN_BOOT_PROTOCOL       0x0200 // The minimum boot protocol we support (bzImage)
+#define MAX_E820_ENTRIES        128 // The space reserved for e820, in entries
+
+// clang-format off
 
 // Default address to load bzImage at
 static const uintptr_t kDefaultKernelOffset = 0x100000;
-static const uintptr_t kInitrdOffset        = 0x800000;
+static const uintptr_t kInitrdOffset = 0x800000;
 
 static bool is_linux(const uintptr_t zero_page) {
     return ZP16(zero_page, ZP_SH_16_BOOTFLAG) == BOOT_FLAG_MAGIC &&
