@@ -150,6 +150,16 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
  */
 mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
 
+/* Reads a single descriptor from the queue.
+ *
+ * This method should only be called using descriptor indicies acquired with
+ * virtio_queue_next_avail (including any chained decriptors) and before
+ * they've been released with virtio_queue_return.
+ */
+mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, void** addr,
+                                   uint32_t* len, uint16_t* flags);
+
+
 /* Return a descriptor to the used ring.
  *
  * |index| must be a value received from a call to virtio_queue_next_avail. Any

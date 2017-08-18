@@ -208,6 +208,22 @@ mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index) {
     return MX_OK;
 }
 
+mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index, void** addr,
+                                   uint32_t* len, uint16_t* flags) {
+    struct vring_desc desc = queue->desc[desc_index];
+    void* mem_addr = queue->virtio_device->guest_physmem_addr;
+    size_t mem_size = queue->virtio_device->guest_physmem_size;
+
+    const uint64_t end = desc.addr + desc.len;
+    if (end < desc.addr || end > mem_size)
+        return MX_ERR_OUT_OF_RANGE;
+
+    *addr = mem_addr + desc.addr;
+    *len = desc.len;
+    *flags = desc.flags;
+    return MX_OK;
+}
+
 void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
     mtx_lock(&queue->mutex);
 
