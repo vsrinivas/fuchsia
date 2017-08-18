@@ -28,7 +28,11 @@
 // This string needs 2 bytes to print each byte in hex, plus a NUL terminator.
 static char elf_build_id_string[65];
 
-const lk_version_t version = {
+// The attribute shouldn't be needed here, but without it LTO optimizes away
+// this symbol as unused becuase it doesn't know it's referenced from a linker
+// script.
+// TODO(phosek): https://bugs.llvm.org/show_bug.cgi?id=34238
+__USED const lk_version_t version = {
     .struct_version = VERSION_STRUCT_VERSION,
     .arch = ARCH,
     .platform = PLATFORM,
