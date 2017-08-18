@@ -13,6 +13,8 @@ source_set("story_runner") {
   sources = [
     "context_handler.cc",
     "context_handler.h",
+    "key_generator.cc",
+    "key_generator.h",
     "link_impl.cc",
     "link_impl.h",
     "module_context_impl.cc",
@@ -72,5 +74,20 @@ executable("dev_story_shell") {
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "key_generator_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//apps/modular/src/agent_runner",
+    "//lib/ftl",
+    "//third_party/gtest",
   ]
 }
