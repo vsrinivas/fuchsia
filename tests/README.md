@@ -68,7 +68,13 @@ since the fuchsia was started to be updated before the tests are executed.
 based on the [Test Runner][test_runner] framework, but runs the tests
 directly. So no `test_runner` is required to be running under fuchsia.
 
-It can be run directly from the fuchsia shell:
+First, ensure that device runner is not already running:
+
+```
+$ killall device_runner
+```
+
+Then it can be run directly from the fuchsia shell:
 
 ```
 $ /system/test/run_modular_tests.sh
