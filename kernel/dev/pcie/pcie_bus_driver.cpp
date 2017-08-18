@@ -645,3 +645,21 @@ void PcieBusDriver::RunQuirks(const mxtl::RefPtr<PcieDevice>& dev) {
     if (dev != nullptr)
         dev->SetQuirksDone();
 }
+
+// Workaround to disable all devices on the bus for mexec. This should not be
+// used for any other reason due to it intentionally leaving drivers in a bad
+// state (some may crash).
+void PcieBusDriver::DisableBus() {
+    mxtl::AutoLock lock(&driver_lock_);
+    ForeachDevice(
+        [](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+            TRACEF("Disabling device %#02x:%#02x.%01x - VID %#04x DID %#04x\n",
+                    dev->dev_id(), dev->bus_id(), dev->func_id(), dev->vendor_id(),
+                    dev->device_id());
+            dev->EnableBusMaster(false);
+            dev->EnablePio(false);
+            dev->EnableMmio(false);
+            dev->Disable();
+            return true;
+        }, nullptr);
+}

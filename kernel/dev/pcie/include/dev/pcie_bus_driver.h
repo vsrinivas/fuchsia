@@ -176,6 +176,7 @@ public:
         return driver_;
     }
 
+    void DisableBus();
     static status_t InitializeDriver(PciePlatformInterface& platform);
     static void     ShutdownDriver();
 
