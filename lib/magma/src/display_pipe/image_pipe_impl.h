@@ -23,8 +23,9 @@ class ImagePipeImpl : public mozart2::ImagePipe {
                 mx::vmo memory, mozart2::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
-  void PresentImage(uint32_t image_id, mx::event acquire_fence,
-                    mx::event release_fence) override;
+  void PresentImage(uint32_t image_id, uint64_t presetation_time,
+                    mx::event acquire_fence, mx::event release_fence,
+                    const PresentImageCallback& callback) override;
 
   void AddBinding(fidl::InterfaceRequest<ImagePipe> request);
 

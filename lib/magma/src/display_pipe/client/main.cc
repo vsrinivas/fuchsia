@@ -5,7 +5,7 @@
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/log_settings.h"
+#include "lib/ftl/log_settings_command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "magenta/status.h"
@@ -84,13 +84,16 @@ class BufferHandler : public mtl::MessageLoopHandler {
 
   ~BufferHandler() override = default;
 
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override {
+  void OnHandleReady(mx_handle_t handle,
+                     mx_signals_t pending,
+                     uint64_t count) override {
       buffer_->Reset();
       mx::event acq, rel;
       buffer_->dupAcquireFence(&acq);
       buffer_->dupReleaseFence(&rel);
 
-      image_pipe->PresentImage(index_, std::move(acq), std::move(rel));
+      image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
+                               [](mozart2::PresentationInfoPtr info) {});
 
       uint8_t r, g, b;
       hsv_color(hsv_index, &r, &g, &b);

@@ -35,8 +35,10 @@ void ImagePipeImpl::RemoveImage(uint32_t image_id) {
     images_.erase(i);
 }
 
-void ImagePipeImpl::PresentImage(uint32_t image_id, mx::event acquire_fence,
-                                 mx::event release_fence) {
+void ImagePipeImpl::PresentImage(uint32_t image_id, uint64_t presentation_time,
+                                 mx::event acquire_fence,
+                                 mx::event release_fence,
+                                 const PresentImageCallback& callback) {
     auto i = images_.find(image_id);
     if (i == images_.end()) {
         FTL_LOG(ERROR) << "Can't present unknown image id " << image_id << ".";
@@ -54,6 +56,10 @@ void ImagePipeImpl::PresentImage(uint32_t image_id, mx::event acquire_fence,
 
     conn_->ReleaseSemaphore(wait_semaphore);
     conn_->ReleaseSemaphore(signal_semaphore);
+    auto info = mozart2::PresentationInfo::New();
+    info->presentation_time = presentation_time;
+    info->presentation_interval = 0;
+    callback(std::move(info));
 }
 
 void ImagePipeImpl::AddBinding(
