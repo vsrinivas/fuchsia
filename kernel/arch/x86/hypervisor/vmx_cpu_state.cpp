@@ -25,9 +25,8 @@ static mxtl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
 static status_t vmxon(paddr_t pa) {
     uint8_t err;
 
-    __asm__ volatile (
-        "vmxon %[pa];"
-        VMX_ERR_CHECK(err)
+    __asm__ volatile(
+        "vmxon %[pa];" VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [pa] "m"(pa)
         : "cc", "memory");
@@ -38,9 +37,8 @@ static status_t vmxon(paddr_t pa) {
 static status_t vmxoff() {
     uint8_t err;
 
-    __asm__ volatile (
-        "vmxoff;"
-        VMX_ERR_CHECK(err)
+    __asm__ volatile(
+        "vmxoff;" VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         :
         : "cc");
@@ -124,7 +122,8 @@ struct vmxon_context {
     mxtl::Array<VmxPage>* vmxon_pages;
     mxtl::atomic<mp_cpu_mask_t> cpu_mask;
 
-    vmxon_context(mxtl::Array<VmxPage>* vp) : vmxon_pages(vp), cpu_mask(0) {}
+    vmxon_context(mxtl::Array<VmxPage>* vp)
+        : vmxon_pages(vp), cpu_mask(0) {}
 };
 
 static void vmxon_task(void* arg) {

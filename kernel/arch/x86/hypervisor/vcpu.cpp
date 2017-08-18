@@ -30,9 +30,8 @@ static const uint32_t kInterruptTypeHardwareException = 3u << 8;
 static status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
-    __asm__ volatile (
-        "vmptrld %[pa];"
-        VMX_ERR_CHECK(err)
+    __asm__ volatile(
+        "vmptrld %[pa];" VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [pa] "m"(pa)
         : "cc", "memory");
@@ -43,9 +42,8 @@ static status_t vmptrld(paddr_t pa) {
 static status_t vmclear(paddr_t pa) {
     uint8_t err;
 
-    __asm__ volatile (
-        "vmclear %[pa];"
-        VMX_ERR_CHECK(err)
+    __asm__ volatile(
+        "vmclear %[pa];" VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [pa] "m"(pa)
         : "cc", "memory");
@@ -58,8 +56,7 @@ static uint64_t vmread(uint64_t field) {
     uint64_t val;
 
     __asm__ volatile(
-        "vmread %[field], %[val];"
-        VMX_ERR_CHECK(err)
+        "vmread %[field], %[val];" VMX_ERR_CHECK(err)
         : [err] "=r"(err), [val] "=m"(val)
         : [field] "r"(field)
         : "cc");
@@ -71,9 +68,8 @@ static uint64_t vmread(uint64_t field) {
 static void vmwrite(uint64_t field, uint64_t val) {
     uint8_t err;
 
-    __asm__ volatile (
-        "vmwrite %[val], %[field];"
-        VMX_ERR_CHECK(err)
+    __asm__ volatile(
+        "vmwrite %[val], %[field];" VMX_ERR_CHECK(err)
         : [err] "=r"(err)
         : [val] "r"(val), [field] "r"(field)
         : "cc");
@@ -221,8 +217,8 @@ static void pin_thread(thread_t* thread, uint16_t vpid) {
 static bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid) {
     uint cpu = cpu_of(vpid);
     return thread == get_current_thread() &&
-        thread_pinned_cpu(thread) == static_cast<int>(cpu) &&
-        arch_curr_cpu_num() == cpu;
+           thread_pinned_cpu(thread) == static_cast<int>(cpu) &&
+           arch_curr_cpu_num() == cpu;
 }
 
 AutoPin::AutoPin(const Vcpu* vcpu)
@@ -285,15 +281,15 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
                              0,
                              // Enable APIC access virtualization.
                              PROCBASED_CTLS2_APIC_ACCESS |
-                             // Enable use of extended page tables.
-                             PROCBASED_CTLS2_EPT |
-                             // Enable use of RDTSCP instruction.
-                             PROCBASED_CTLS2_RDTSCP |
-                             // Associate cached translations of linear
-                             // addresses with a virtual processor ID.
-                             PROCBASED_CTLS2_VPID |
-                             // Enable use of INVPCID instruction.
-                             PROCBASED_CTLS2_INVPCID,
+                                 // Enable use of extended page tables.
+                                 PROCBASED_CTLS2_EPT |
+                                 // Enable use of RDTSCP instruction.
+                                 PROCBASED_CTLS2_RDTSCP |
+                                 // Associate cached translations of linear
+                                 // addresses with a virtual processor ID.
+                                 PROCBASED_CTLS2_VPID |
+                                 // Enable use of INVPCID instruction.
+                                 PROCBASED_CTLS2_INVPCID,
                              0);
     if (status != MX_OK)
         return status;
@@ -304,8 +300,8 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
                              read_msr(X86_MSR_IA32_VMX_PINBASED_CTLS),
                              // External interrupts cause a VM exit.
                              PINBASED_CTLS_EXT_INT_EXITING |
-                             // Non-maskable interrupts cause a VM exit.
-                             PINBASED_CTLS_NMI_EXITING,
+                                 // Non-maskable interrupts cause a VM exit.
+                                 PINBASED_CTLS_NMI_EXITING,
                              0);
     if (status != MX_OK)
         return status;
@@ -316,24 +312,24 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
                              read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS),
                              // Enable VM exit when interrupts are enabled.
                              PROCBASED_CTLS_INT_WINDOW_EXITING |
-                             // Enable VM exit on HLT instruction.
-                             PROCBASED_CTLS_HLT_EXITING |
-                             // Enable TPR virtualization.
-                             PROCBASED_CTLS_TPR_SHADOW |
-                             // Enable VM exit on IO instructions.
-                             PROCBASED_CTLS_IO_EXITING |
-                             // Enable use of MSR bitmaps.
-                             PROCBASED_CTLS_MSR_BITMAPS |
-                             // Enable secondary processor-based controls.
-                             PROCBASED_CTLS_PROCBASED_CTLS2,
+                                 // Enable VM exit on HLT instruction.
+                                 PROCBASED_CTLS_HLT_EXITING |
+                                 // Enable TPR virtualization.
+                                 PROCBASED_CTLS_TPR_SHADOW |
+                                 // Enable VM exit on IO instructions.
+                                 PROCBASED_CTLS_IO_EXITING |
+                                 // Enable use of MSR bitmaps.
+                                 PROCBASED_CTLS_MSR_BITMAPS |
+                                 // Enable secondary processor-based controls.
+                                 PROCBASED_CTLS_PROCBASED_CTLS2,
                              // Disable VM exit on CR3 load.
                              PROCBASED_CTLS_CR3_LOAD_EXITING |
-                             // Disable VM exit on CR3 store.
-                             PROCBASED_CTLS_CR3_STORE_EXITING |
-                             // Disable VM exit on CR8 load.
-                             PROCBASED_CTLS_CR8_LOAD_EXITING |
-                             // Disable VM exit on CR8 store.
-                             PROCBASED_CTLS_CR8_STORE_EXITING);
+                                 // Disable VM exit on CR3 store.
+                                 PROCBASED_CTLS_CR3_STORE_EXITING |
+                                 // Disable VM exit on CR8 load.
+                                 PROCBASED_CTLS_CR8_LOAD_EXITING |
+                                 // Disable VM exit on CR8 store.
+                                 PROCBASED_CTLS_CR8_STORE_EXITING);
     if (status != MX_OK)
         return status;
 
@@ -349,14 +345,14 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
                              // exit. On VM exit CS.L, IA32_EFER.LME, and
                              // IA32_EFER.LMA is set to true.
                              EXIT_CTLS_64BIT_MODE |
-                             // Save the guest IA32_PAT MSR on exit.
-                             EXIT_CTLS_SAVE_IA32_PAT |
-                             // Load the host IA32_PAT MSR on exit.
-                             EXIT_CTLS_LOAD_IA32_PAT |
-                             // Save the guest IA32_EFER MSR on exit.
-                             EXIT_CTLS_SAVE_IA32_EFER |
-                             // Load the host IA32_EFER MSR on exit.
-                             EXIT_CTLS_LOAD_IA32_EFER,
+                                 // Save the guest IA32_PAT MSR on exit.
+                                 EXIT_CTLS_SAVE_IA32_PAT |
+                                 // Load the host IA32_PAT MSR on exit.
+                                 EXIT_CTLS_LOAD_IA32_PAT |
+                                 // Save the guest IA32_EFER MSR on exit.
+                                 EXIT_CTLS_SAVE_IA32_EFER |
+                                 // Load the host IA32_EFER MSR on exit.
+                                 EXIT_CTLS_LOAD_IA32_EFER,
                              0);
     if (status != MX_OK)
         return status;
@@ -368,10 +364,10 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
                              // After VM entry, logical processor is in IA-32e
                              // mode and IA32_EFER.LMA is set to true.
                              ENTRY_CTLS_IA32E_MODE |
-                             // Load the guest IA32_PAT MSR on entry.
-                             ENTRY_CTLS_LOAD_IA32_PAT |
-                             // Load the guest IA32_EFER MSR on entry.
-                             ENTRY_CTLS_LOAD_IA32_EFER,
+                                 // Load the guest IA32_PAT MSR on entry.
+                                 ENTRY_CTLS_LOAD_IA32_PAT |
+                                 // Load the guest IA32_EFER MSR on entry.
+                                 ENTRY_CTLS_LOAD_IA32_EFER,
                              0);
     if (status != MX_OK)
         return status;
@@ -484,14 +480,14 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
     // Setup VMCS guest state.
     uint64_t cr0 = X86_CR0_PE | // Enable protected mode
                    X86_CR0_PG | // Enable paging
-                   X86_CR0_NE;  // Enable internal x87 exception handling
+                   X86_CR0_NE; // Enable internal x87 exception handling
     if (cr_is_invalid(cr0, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1)) {
         return MX_ERR_BAD_STATE;
     }
     vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
 
-    uint64_t cr4 = X86_CR4_PAE |  // Enable PAE paging
-                   X86_CR4_VMXE;  // Enable VMX
+    uint64_t cr4 = X86_CR4_PAE | // Enable PAE paging
+                   X86_CR4_VMXE; // Enable VMX
     if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
         return MX_ERR_BAD_STATE;
     }
@@ -507,16 +503,16 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
 
     vmcs.Write(VmcsField32::GUEST_CS_ACCESS_RIGHTS,
                GUEST_XX_ACCESS_RIGHTS_TYPE_A |
-               GUEST_XX_ACCESS_RIGHTS_TYPE_W |
-               GUEST_XX_ACCESS_RIGHTS_TYPE_E |
-               GUEST_XX_ACCESS_RIGHTS_TYPE_CODE |
-               GUEST_XX_ACCESS_RIGHTS_S |
-               GUEST_XX_ACCESS_RIGHTS_P |
-               GUEST_XX_ACCESS_RIGHTS_L);
+                   GUEST_XX_ACCESS_RIGHTS_TYPE_W |
+                   GUEST_XX_ACCESS_RIGHTS_TYPE_E |
+                   GUEST_XX_ACCESS_RIGHTS_TYPE_CODE |
+                   GUEST_XX_ACCESS_RIGHTS_S |
+                   GUEST_XX_ACCESS_RIGHTS_P |
+                   GUEST_XX_ACCESS_RIGHTS_L);
 
     vmcs.Write(VmcsField32::GUEST_TR_ACCESS_RIGHTS,
                GUEST_TR_ACCESS_RIGHTS_TSS_BUSY |
-               GUEST_XX_ACCESS_RIGHTS_P);
+                   GUEST_XX_ACCESS_RIGHTS_P);
 
     // Disable all other segment selectors until we have a guest that uses them.
     vmcs.Write(VmcsField32::GUEST_SS_ACCESS_RIGHTS, GUEST_XX_ACCESS_RIGHTS_UNUSABLE);
@@ -572,7 +568,7 @@ status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic
     status_t status = alloc_vpid(&vpid);
     if (status != MX_OK)
         return status;
-    auto auto_call = mxtl::MakeAutoCall([=](){ release_vpid(vpid); });
+    auto auto_call = mxtl::MakeAutoCall([=]() { release_vpid(vpid); });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
     // on the VPID. The VCPU must always be run on the current thread and the
@@ -634,7 +630,7 @@ status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic
 Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
            GuestPhysicalAddressSpace* gpas, const PacketMux& mux)
     : thread_(thread), vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), mux_(mux),
-    vmx_state_(/* zero-init */) {}
+      vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
     if (!vmcs_page_.IsAllocated())
@@ -702,7 +698,7 @@ status_t Vcpu::Interrupt(uint32_t vector) {
     return MX_OK;
 }
 
-template<typename Out, typename In>
+template <typename Out, typename In>
 static void register_copy(Out* out, const In& in) {
     out->rax = in.rax;
     out->rcx = in.rcx;
@@ -734,7 +730,8 @@ status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
         state->rsp = vmcs.Read(VmcsFieldXX::GUEST_RSP);
         state->flags = vmcs.Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_USER;
         return MX_OK;
-    }}
+    }
+    }
     return MX_ERR_INVALID_ARGS;
 }
 
@@ -763,7 +760,8 @@ status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
         auto io = static_cast<const mx_vcpu_io_t*>(buffer);
         memcpy(&vmx_state_.guest_state.rax, io->data, io->access_size);
         return MX_OK;
-    }}
+    }
+    }
     return MX_ERR_INVALID_ARGS;
 }
 

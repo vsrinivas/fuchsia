@@ -8,14 +8,7 @@
 
 #include <stdint.h>
 
-class AutoVmcs;
-class FifoDispatcher;
-class GuestPhysicalAddressSpace;
-struct GuestState;
-struct IoApicState;
-struct LocalApicState;
-class PacketMux;
-struct VmxState;
+// clang-format off
 
 /* VM exit reasons. */
 enum class ExitReason : uint32_t {
@@ -33,6 +26,27 @@ enum class ExitReason : uint32_t {
     EPT_VIOLATION               = 48u,
     XSETBV                      = 55u,
 };
+
+/* APIC access types. */
+enum class ApicAccessType : uint8_t {
+    LINEAR_ACCESS_READ          = 0u,
+    LINEAR_ACCESS_WRITE         = 1u,
+    LINEAR_ACCESS_EXECUTE       = 2u,
+    LINEAR_ACCESS_EVENT         = 3u,
+    GUEST_PHYSICAL_EVENT        = 10u,
+    GUEST_PHYSICAL_RWX          = 15u,
+};
+
+// clang-format on
+
+class AutoVmcs;
+class FifoDispatcher;
+class GuestPhysicalAddressSpace;
+struct GuestState;
+struct IoApicState;
+struct LocalApicState;
+class PacketMux;
+struct VmxState;
 
 /* Stores VM exit info from VMCS fields. */
 struct ExitInfo {
@@ -64,16 +78,6 @@ struct IoInfo {
     uint16_t port;
 
     IoInfo(uint64_t qualification);
-};
-
-/* APIC access types. */
-enum class ApicAccessType : uint8_t {
-    LINEAR_ACCESS_READ      = 0u,
-    LINEAR_ACCESS_WRITE     = 1u,
-    LINEAR_ACCESS_EXECUTE   = 2u,
-    LINEAR_ACCESS_EVENT     = 3u,
-    GUEST_PHYSICAL_EVENT    = 10u,
-    GUEST_PHYSICAL_RWX      = 15u,
 };
 
 /* Stores local APIC access info from the VMCS exit qualification field. */

@@ -57,7 +57,7 @@ ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
     LTRACEF("guest linear address: %#" PRIx64 "\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
     LTRACEF("guest activity state: %#" PRIx32 "\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
     LTRACEF("guest interruptibility state: %#" PRIx32 "\n",
-        vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
+            vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
     LTRACEF("guest rip: %#" PRIx64 "\n", guest_rip);
 }
 
@@ -500,7 +500,7 @@ static status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
             next_rip(exit_info, vmcs);
             return MX_OK;
         }
-        /* fallthrough */
+    /* fallthrough */
     case ApicAccessType::LINEAR_ACCESS_READ:
         vaddr_t guest_paddr = APIC_PHYS_BASE + apic_access_info.offset;
         return handle_memory(exit_info, vmcs, guest_paddr, gpas, packet);

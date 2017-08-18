@@ -8,24 +8,27 @@
 
 #include <arch/hypervisor.h>
 
-#define X86_MSR_IA32_FEATURE_CONTROL        0x003a  /* Feature control */
-#define X86_MSR_IA32_VMX_BASIC              0x0480  /* Basic info */
-#define X86_MSR_IA32_VMX_CR0_FIXED0         0x0486  /* CR0 bits that must be 0 to enter VMX */
-#define X86_MSR_IA32_VMX_CR0_FIXED1         0x0487  /* CR0 bits that must be 1 to enter VMX */
-#define X86_MSR_IA32_VMX_CR4_FIXED0         0x0488  /* CR4 bits that must be 0 to enter VMX */
-#define X86_MSR_IA32_VMX_CR4_FIXED1         0x0489  /* CR4 bits that must be 1 to enter VMX */
-#define X86_MSR_IA32_VMX_EPT_VPID_CAP       0x048c  /* VPID and EPT Capabilities */
-#define X86_MSR_IA32_VMX_MISC               0x0485  /* Miscellaneous info */
+// clang-format off
+
+#define X86_MSR_IA32_FEATURE_CONTROL        0x003a // Feature control
+#define X86_MSR_IA32_VMX_BASIC              0x0480 // Basic info
+#define X86_MSR_IA32_VMX_CR0_FIXED0         0x0486 // CR0 bits that must be 0 to enter VMX
+#define X86_MSR_IA32_VMX_CR0_FIXED1         0x0487 // CR0 bits that must be 1 to enter VMX
+#define X86_MSR_IA32_VMX_CR4_FIXED0         0x0488 // CR4 bits that must be 0 to enter VMX
+#define X86_MSR_IA32_VMX_CR4_FIXED1         0x0489 // CR4 bits that must be 1 to enter VMX
+#define X86_MSR_IA32_VMX_EPT_VPID_CAP       0x048c // VPID and EPT Capabilities
+#define X86_MSR_IA32_VMX_MISC               0x0485 // Miscellaneous info
 
 /* X86_MSR_IA32_VMX_BASIC flags */
-#define VMX_MEMORY_TYPE_WRITE_BACK          0x06    /* Write back */
+#define VMX_MEMORY_TYPE_WRITE_BACK          0x06 // Write back
 
 /* X86_MSR_IA32_FEATURE_CONTROL flags */
-#define X86_MSR_IA32_FEATURE_CONTROL_LOCK   (1u << 0)   /* Locked */
-#define X86_MSR_IA32_FEATURE_CONTROL_VMXON  (1u << 2)   /* Enable VMXON */
+#define X86_MSR_IA32_FEATURE_CONTROL_LOCK   (1u << 0) // Locked
+#define X86_MSR_IA32_FEATURE_CONTROL_VMXON  (1u << 2) // Enable VMXON
 
-#define VMX_ERR_CHECK(var) \
-    "setna %[" #var "];"     // Check CF and ZF for error.
+#define VMX_ERR_CHECK(var)                  "setna %[" #var "];" // Check CF and ZF for error.
+
+// clang-format on
 
 static const uint16_t kNumVpids = 64;
 
