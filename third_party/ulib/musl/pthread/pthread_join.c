@@ -1,7 +1,7 @@
 #include "pthread_impl.h"
 #include <magenta/process.h>
 
-int pthread_join(pthread_t t, void** res) {
+int __pthread_join(pthread_t t, void** res) {
     switch (mxr_thread_join(&t->mxr_thread)) {
     case MX_OK:
         if (res)
@@ -14,3 +14,5 @@ int pthread_join(pthread_t t, void** res) {
         return EINVAL;
     }
 }
+
+weak_alias(__pthread_join, pthread_join);

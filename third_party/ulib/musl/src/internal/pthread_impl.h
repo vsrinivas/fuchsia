@@ -148,7 +148,11 @@ static inline pid_t __thread_get_tid(void) {
     return id;
 }
 
+int __pthread_create(pthread_t* __restrict, const pthread_attr_t* __restrict,
+                     void* (*)(void*), void* __restrict) ATTR_LIBC_VISIBILITY;
 int __pthread_detach(pthread_t t) ATTR_LIBC_VISIBILITY;
+_Noreturn void __pthread_exit(void* result) ATTR_LIBC_VISIBILITY;
+int __pthread_join(pthread_t t, void** result) ATTR_LIBC_VISIBILITY;
 
 // Signal n (or all, for -1) threads on a pthread_cond_t or cnd_t.
 void __private_cond_signal(void* condvar, int n);

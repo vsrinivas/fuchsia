@@ -24,13 +24,13 @@ static inline pthread_t prestart(void* arg) {
 
 static void start_pthread(void* arg) {
     pthread_t self = prestart(arg);
-    pthread_exit(self->start(self->start_arg));
+    __pthread_exit(self->start(self->start_arg));
 }
 
 static void start_c11(void* arg) {
     pthread_t self = prestart(arg);
     int (*start)(void*) = (int (*)(void*))self->start;
-    pthread_exit((void*)(intptr_t)start(self->start_arg));
+    __pthread_exit((void*)(intptr_t)start(self->start_arg));
 }
 
 static void deallocate_region(const struct iovec* region) {
@@ -38,7 +38,8 @@ static void deallocate_region(const struct iovec* region) {
                    (uintptr_t)region->iov_base, region->iov_len);
 }
 
-int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp, void* (*entry)(void*), void* restrict arg) {
+int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp,
+                     void* (*entry)(void*), void* restrict arg) {
     pthread_attr_t attr = attrp == NULL ? DEFAULT_PTHREAD_ATTR : *attrp;
 
     // We do not support providing a stack via pthread attributes.
@@ -161,7 +162,7 @@ static NO_ASAN _Noreturn void finish_exit(pthread_t self) {
     __builtin_unreachable();
 }
 
-_Noreturn void pthread_exit(void* result) {
+_Noreturn void __pthread_exit(void* result) {
     pthread_t self = __pthread_self();
 
     self->result = result;
@@ -176,3 +177,6 @@ _Noreturn void pthread_exit(void* result) {
     // so we cannot run any more sanitized code.
     finish_exit(self);
 }
+
+weak_alias(__pthread_create, pthread_create);
+weak_alias(__pthread_exit, pthread_exit);

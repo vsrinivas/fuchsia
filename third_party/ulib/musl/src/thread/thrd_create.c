@@ -8,7 +8,7 @@ static int thrd_create_internal(thrd_t* thr, thrd_start_t func, void* arg, const
     attrs.__name = name;
     attrs.__c11 = 1;
     // Technically this could introduce a restrict violation if thr and arg alias.
-    int ret = pthread_create(thr, &attrs, (void* (*)(void*))func, arg);
+    int ret = __pthread_create(thr, &attrs, (void* (*)(void*))func, arg);
     switch (ret) {
     case 0:
         return thrd_success;
