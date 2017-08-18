@@ -385,10 +385,10 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   }
 
   link_storage_ = std::make_unique<StoryStorageImpl>(root_page_.get());
-  auto link_path = LinkPath::New();
+  LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = kUserShellLinkName;
-  user_shell_link_ = std::make_unique<LinkImpl>(link_storage_.get(), link_path);
+  user_shell_link_ = std::make_unique<LinkImpl>(link_storage_.get(), std::move(link_path));
   user_shell_link_->Connect(std::move(request));
 }
 

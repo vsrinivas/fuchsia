@@ -131,8 +131,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
     if (!settings_.root_link.empty()) {
       modular::LinkPtr root;
-      story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                                 root.NewRequest());
+      story_controller_->GetLink(nullptr, "root", root.NewRequest());
       root->UpdateObject(nullptr, settings_.root_link);
     }
   }

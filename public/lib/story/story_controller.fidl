@@ -51,7 +51,7 @@ interface StoryController {
   // component message queues and links throughout subsequent runs of the story.
   //
   // |parent_module_path| specifies the module instance to make this module a
-  // child of. If empty the module is added as a root module.
+  // child of. If empty or null the module is added as a root module.
   //
   // The link to be used for the module is identified by the
   // |parent_module_path| and |link_name| as used in calls to GetLink(). Using
@@ -60,7 +60,7 @@ interface StoryController {
   //
   // A ModuleController for the newly added module can be obtained through
   // GetModuleController().
-  AddModule(array<string> parent_module_path, string module_name,
+  AddModule(array<string>? parent_module_path, string module_name,
             string module_url, string link_name,
             SurfaceRelation? surface_relation);
 
@@ -115,8 +115,8 @@ interface StoryController {
   // it's first accessed by a module.
   //
   // For the links leading to top level modules (specifically for the "root"
-  // link to the root module), the |module_path| is empty.
-  GetLink(array<string> module_path, string link_name, Link& link);
+  // link to the root module), the |module_path| is empty or null.
+  GetLink(array<string>? module_path, string link_name, Link& link);
 };
 
 // Implemented by the client calling StoryController.Watch().

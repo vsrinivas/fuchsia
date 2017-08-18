@@ -122,8 +122,8 @@ class StoryControllerImpl : StoryController, StoryContext {
   void RequestStoryFocus();
 
   // Called by ModuleContextImpl.
-  void GetLinkPath(const LinkPathPtr& link_path,
-                   fidl::InterfaceRequest<Link> request);
+  void ConnectLinkPath(LinkPathPtr link_path,
+                       fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl.
   void StartModule(

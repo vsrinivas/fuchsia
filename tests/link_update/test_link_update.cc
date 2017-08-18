@@ -93,8 +93,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   void GetController(const fidl::String& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
-    story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                               root_link_.NewRequest());
+    story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
     story_provider_->GetLinkPeer(story_id, nullptr, "root",
                                  root_peer_.NewRequest());
 

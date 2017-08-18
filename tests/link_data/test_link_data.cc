@@ -228,8 +228,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   // Totally tentative use of the root module link: Tell the root module under
   // what user shell it's running.
   void TestStory1_SetRootLink() {
-    story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                               root_link_.NewRequest());
+    story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
 
     std::vector<std::string> segments{kUserShell};
     root_link_->Set(fidl::Array<fidl::String>::From(segments),
@@ -244,8 +243,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
     if (!story_controller_) {
       story_provider_->GetController(story_info_->id,
                                      story_controller_.NewRequest());
-      story_controller_->GetLink(fidl::Array<fidl::String>::New(0), "root",
-                                 root_link_.NewRequest());
+      story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
     }
 
     link_change_count_watcher_.Continue(

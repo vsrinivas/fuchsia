@@ -207,10 +207,10 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
     if (!link_json_.is_null()) {
       // There is no module path; this link exists outside the scope of a
       // module.
-      auto link_path = LinkPath::New();
+      LinkPathPtr link_path = LinkPath::New();
       link_path->module_path = fidl::Array<fidl::String>::New(0);
       link_path->link_name = link_name_;
-      story_controller_impl_->GetLinkPath(link_path, link_.NewRequest());
+      story_controller_impl_->ConnectLinkPath(std::move(link_path), link_.NewRequest());
       link_->UpdateObject(nullptr, link_json_);
       link_->Sync([flow] {});
     }
@@ -921,8 +921,8 @@ void StoryControllerImpl::RequestStoryFocus() {
 
 // TODO(vardhan): Should this operation be queued here, or in |LinkImpl|?
 // Currently it is neither.
-void StoryControllerImpl::GetLinkPath(const LinkPathPtr& link_path,
-                                      fidl::InterfaceRequest<Link> request) {
+void StoryControllerImpl::ConnectLinkPath(LinkPathPtr link_path,
+                                          fidl::InterfaceRequest<Link> request) {
   auto i = std::find_if(links_.begin(), links_.end(),
                         [&link_path](const std::unique_ptr<LinkImpl>& l) {
                           return l->link_path().Equals(link_path);
@@ -932,14 +932,14 @@ void StoryControllerImpl::GetLinkPath(const LinkPathPtr& link_path,
     return;
   }
 
-  auto* const link_impl = new LinkImpl(story_storage_impl_.get(), link_path);
+  LinkImpl* const link_impl = new LinkImpl(story_storage_impl_.get(), std::move(link_path));
   link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
 
-  links_watchers_.ForAllPtrs([&link_path](StoryLinksWatcher* const watcher) {
-    watcher->OnNewLink(link_path.Clone());
+  links_watchers_.ForAllPtrs([link_impl](StoryLinksWatcher* const watcher) {
+      watcher->OnNewLink(link_impl->link_path().Clone());
   });
 }
 
@@ -1077,6 +1077,12 @@ void StoryControllerImpl::AddModule(fidl::Array<fidl::String> module_path,
                                     const fidl::String& module_url,
                                     const fidl::String& link_name,
                                     SurfaceRelationPtr surface_relation) {
+  // In the API, a null module path is allowed to represent the empty module
+  // path.
+  if (module_path.is_null()) {
+    module_path.resize(0);
+  }
+
   new AddModuleCall(&operation_queue_, this, std::move(module_path),
                     module_name, module_url, link_name,
                     std::move(surface_relation), [] {});
@@ -1159,10 +1165,17 @@ void StoryControllerImpl::GetActiveLinks(
 void StoryControllerImpl::GetLink(fidl::Array<fidl::String> module_path,
                                   const fidl::String& name,
                                   fidl::InterfaceRequest<Link> request) {
-  auto link_path = LinkPath::New();
+  // In the API, a null module path is allowed to represent the empty module
+  // path.
+  if (module_path.is_null()) {
+    module_path.resize(0);
+  }
+
+  LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = std::move(module_path);
   link_path->link_name = name;
-  GetLinkPath(link_path, std::move(request));
+
+  ConnectLinkPath(std::move(link_path), std::move(request));
 }
 
 void StoryControllerImpl::StartStoryShell(

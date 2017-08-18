@@ -388,8 +388,8 @@ class LinkImpl::ChangeCall : Operation<> {
 };
 
 LinkImpl::LinkImpl(LinkStorage* const link_storage,
-                   const LinkPathPtr& link_path)
-    : link_path_(link_path.Clone()), link_storage_(link_storage) {
+                   LinkPathPtr link_path)
+    : link_path_(std::move(link_path)), link_storage_(link_storage) {
   new ReadCall(&operation_queue_, this, [this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
@@ -399,7 +399,7 @@ LinkImpl::LinkImpl(LinkStorage* const link_storage,
   });
 
   link_storage_->WatchLink(
-      link_path, this, [this](const fidl::String& json) { OnChange(json); });
+      link_path_, this, [this](const fidl::String& json) { OnChange(json); });
 }
 
 LinkImpl::~LinkImpl() {

@@ -12,4 +12,3 @@ struct LinkPath {
   // Name of the link itself.
   string link_name;
 };
-
