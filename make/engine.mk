@@ -32,12 +32,12 @@ USE_CLANG ?= $(USE_ASAN)
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USE_GOLD := false
-USE_LTO ?= false
 USE_THINLTO ?= false
+USE_LTO ?= $(USE_THINLTO)
 else
 USE_GOLD ?= true
-USE_LTO := false
 USE_THINLTO := false
+USE_LTO := false
 endif
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
@@ -61,6 +61,14 @@ ifeq ($(call TOBOOL,$(USE_ASAN)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-asan
 else ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
+endif
+
+ifeq ($(call TOBOOL,$(USE_LTO)),true)
+ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-thinlto
+else
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-lto
+endif
 endif
 
 ifeq ($(call TOBOOL,$(DEBUG)),false)

@@ -13,6 +13,8 @@ function HELP {
     echo "-c <text>            : add item to kernel commandline"
     echo "-C                   : use Clang build"
     echo "-A                   : use ASan build"
+    echo "-L                   : use LTO build"
+    echo "-l                   : use ThinLTO build"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme), default is ahci"
@@ -52,6 +54,8 @@ DISKTYPE=
 BUILDDIR=
 GRAPHICS=0
 DO_KVM=0
+LTO=0
+THINLTO=0
 MEMSIZE_DEFAULT=2048
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
@@ -70,7 +74,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts "Aa:bc:CdD:gI:km:nNo:q:rs:u:Vx:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gI:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
     case $FLAG in
         A) ASAN=1;;
         a) ARCH=$OPTARG;;
@@ -82,6 +86,8 @@ while getopts "Aa:bc:CdD:gI:km:nNo:q:rs:u:Vx:h-:" FLAG; do
         g) GRAPHICS=1;;
         I) IFNAME=$OPTARG;;
         k) DO_KVM=1;;
+        L) LTO=1;;
+        l) THINLTO=1;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
         N) NET=2;;
@@ -135,6 +141,14 @@ if (( $ASAN )); then
 elif (( $CLANG )); then
     BUILDDIR_SUFFIX+=-clang
     BUILD_ARGS+=' USE_CLANG=true'
+fi
+
+if (( $LTO )); then
+    BUILDDIR_SUFFIX+=-lto
+    BUILD_ARGS+=' USE_LTO=true'
+elif (( $THINLTO )); then
+    BUILDDIR_SUFFIX+=-thinlto
+    BUILD_ARGS+=' USE_THINLTO=true'
 fi
 
 if (( $RELEASE )); then
