@@ -43,6 +43,9 @@ struct TestObject {
   TestObject() = default;
   explicit TestObject(int value) : value(value) {}
 
+  TestObject(const TestObject&) = default;
+  TestObject& operator=(const TestObject&) = default;
+
   TestObject(TestObject&& other) {
     value = other.value;
     other.value = 0;
@@ -123,6 +126,17 @@ TEST(OptionalTest, Vector) {
 
   optional_vector.Reset();
   EXPECT_FALSE(optional_vector);
+}
+
+TEST(OptionalTest, CopyAssignFromConst) {
+  const TestObject value(5);
+  Optional<TestObject> obj;
+
+  obj = value;
+
+  EXPECT_TRUE(obj);
+  EXPECT_EQ(5, obj->value);
+  EXPECT_EQ(5, value.value);
 }
 
 }  // namespace

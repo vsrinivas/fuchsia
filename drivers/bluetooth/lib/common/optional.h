@@ -62,7 +62,7 @@ class Optional final {
   // http://en.cppreference.com/w/cpp/utility/optional/operator%3D.
   template <typename U = T,
             typename = typename std::enable_if<
-                std::is_same<typename std::remove_reference<U>::type, T>::value &&
+                std::is_same<typename std::decay<U>::type, T>::value &&
                 std::is_constructible<T, U>::value && std::is_assignable<T&, U>::value>::type>
   Optional& operator=(U&& value) {
     value_ = std::forward<U>(value);
