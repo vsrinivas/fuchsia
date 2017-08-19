@@ -106,7 +106,8 @@ private:
 // callbacks.
 class PortObserver final : public StateObserver {
 public:
-    PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcher> port,
+    PortObserver(uint32_t type, const Handle* handle,
+                 mxtl::RefPtr<PortDispatcher> port,
                  uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
 

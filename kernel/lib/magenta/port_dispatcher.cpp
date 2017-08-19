@@ -53,7 +53,8 @@ PortPacket::PortPacket(const void* handle) : packet{}, handle(handle), observer(
     // Note that packet is initialized to zeros.
 }
 
-PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispatcher> port,
+PortObserver::PortObserver(uint32_t type, const Handle* handle,
+                           mxtl::RefPtr<PortDispatcher> port,
                            uint64_t key, mx_signals_t signals)
     : type_(type),
       key_(key),
@@ -61,6 +62,8 @@ PortObserver::PortObserver(uint32_t type, Handle* handle, mxtl::RefPtr<PortDispa
       handle_(handle),
       port_(mxtl::move(port)),
       packet_(handle) {
+
+    DEBUG_ASSERT(handle != nullptr);
 
     auto& packet = packet_.packet;
     packet.status = MX_OK;
