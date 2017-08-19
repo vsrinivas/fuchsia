@@ -8,7 +8,9 @@
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/device_address.h"
+#include "apps/bluetooth/lib/common/optional.h"
 #include "apps/bluetooth/lib/gap/gap.h"
+#include "apps/bluetooth/lib/hci/connection.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {
@@ -45,6 +47,15 @@ class RemoteDevice final {
   // the value is unknown.
   int8_t rssi() const { return rssi_; }
 
+  // Returns the most recently used connection parameters for this device. Returns nullptr if these
+  // values are unknown.
+  const hci::Connection::LowEnergyParameters* le_connection_params() const {
+    return le_conn_params_.value();
+  }
+
+  // Returns true if this device has not been connected to.
+  bool temporary() const { return temporary_; }
+
   // Returns a string representation of this device.
   std::string ToString() const;
 
@@ -54,19 +65,36 @@ class RemoteDevice final {
   // TODO(armansito): Add a constructor for classic devices.
   // TODO(armansito): Add constructor from persistent storage format.
 
-  RemoteDevice(const std::string& identifier, const common::DeviceAddress& device_address);
+  RemoteDevice(const std::string& identifier, TechnologyType technology,
+               const common::DeviceAddress& address, bool connectable, bool temporary);
 
-  // Called by RemoteDeviceCache to update the contents of Low Energy device.
-  void SetLowEnergyData(bool connectable, int8_t rssi, const common::ByteBuffer& advertising_data);
+  // Called by RemoteDeviceCache to update the contents of a LE device.
+  void SetLowEnergyData(int8_t rssi, const common::ByteBuffer& advertising_data);
+
+  // Called by RemoteDeviceCache to update the contents of a LE device after a connection is
+  // established.
+  void SetLowEnergyConnectionData(const hci::Connection::LowEnergyParameters& params);
+
+  // Called by RemoteDeviceCache
+  void set_connectable(bool value) { connectable_ = value; }
+  void set_temporary(bool value) { temporary_ = value; }
 
   std::string identifier_;
   TechnologyType technology_;
   common::DeviceAddress address_;
   bool connectable_;
+  bool temporary_;
   int8_t rssi_;
 
+  // TODO(armansito): Store device name and remote features.
+  // TODO(armansito): Store discovered service UUIDs.
+  // TODO(armansito): Store an AdvertisingData structure rather than the raw payload.
   size_t advertising_data_length_;
   common::DynamicByteBuffer advertising_data_buffer_;
+
+  // Most recently used LE connection parameters. Has no value if this device has never been
+  // connected.
+  common::Optional<hci::Connection::LowEnergyParameters> le_conn_params_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDevice);
 };

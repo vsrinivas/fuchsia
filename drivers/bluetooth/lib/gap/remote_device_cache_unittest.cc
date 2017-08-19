@@ -27,21 +27,27 @@ TEST(RemoteDeviceCacheTest, StoreLowEnergyScanResult) {
 
   RemoteDeviceCache cache;
 
+  EXPECT_FALSE(cache.FindDeviceByAddress(kAddress0));
+  EXPECT_FALSE(cache.FindDeviceById("foo"));
+
   auto device = cache.StoreLowEnergyScanResult(kScanResult0, kAdvData0);
 
   ASSERT_TRUE(device);
   EXPECT_EQ(TechnologyType::kLowEnergy, device->technology());
   EXPECT_TRUE(device->connectable());
+  EXPECT_TRUE(device->temporary());
   EXPECT_EQ(kAddress0, device->address());
   EXPECT_TRUE(common::ContainersEqual(kAdvData0, device->advertising_data()));
 
   // A look up should return the same instance.
   EXPECT_EQ(device, cache.FindDeviceById(device->identifier()));
+  EXPECT_EQ(device, cache.FindDeviceByAddress(device->address()));
 
   // Adding a device with the same address should return the same instance.
   EXPECT_EQ(device, cache.StoreLowEnergyScanResult(kScanResult0, kAdvData1));
   EXPECT_EQ(TechnologyType::kLowEnergy, device->technology());
   EXPECT_TRUE(device->connectable());
+  EXPECT_TRUE(device->temporary());
   EXPECT_EQ(kAddress0, device->address());
   EXPECT_TRUE(common::ContainersEqual(kAdvData1, device->advertising_data()));
 
@@ -54,10 +60,41 @@ TEST(RemoteDeviceCacheTest, StoreLowEnergyScanResult) {
   EXPECT_NE(device1, device);
   EXPECT_EQ(TechnologyType::kLowEnergy, device1->technology());
   EXPECT_FALSE(device1->connectable());
+  EXPECT_TRUE(device->temporary());
   EXPECT_EQ(kAddress1, device1->address());
   EXPECT_TRUE(common::ContainersEqual(kAdvData1, device1->advertising_data()));
 
   EXPECT_EQ(device1, cache.FindDeviceById(device1->identifier()));
+}
+
+TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionNewDevice) {
+  const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic, "01:02:03:04:05:06");
+  hci::Connection::LowEnergyParameters params;
+
+  RemoteDeviceCache cache;
+
+  auto device = cache.StoreLowEnergyConnection(kAddress, hci::Connection::LinkType::kLE, params);
+  ASSERT_TRUE(device);
+
+  EXPECT_EQ(kAddress, device->address());
+  EXPECT_TRUE(device->connectable());
+  EXPECT_FALSE(device->temporary());
+}
+
+TEST(RemoteDeviceCacheTest, StoreLowEnergyConnectionExisting) {
+  const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic, "01:02:03:04:05:06");
+  hci::Connection::LowEnergyParameters params;
+
+  RemoteDeviceCache cache;
+
+  auto device = cache.NewDevice(kAddress, TechnologyType::kLowEnergy, true, true);
+  ASSERT_TRUE(device);
+  ASSERT_TRUE(device->temporary());
+
+  auto updated = cache.StoreLowEnergyConnection(kAddress, hci::Connection::LinkType::kLE, params);
+  ASSERT_TRUE(updated);
+  EXPECT_EQ(device, updated);
+  EXPECT_FALSE(device->temporary());
 }
 
 }  // namespace

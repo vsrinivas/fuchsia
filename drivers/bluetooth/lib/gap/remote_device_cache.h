@@ -7,6 +7,8 @@
 #include <unordered_map>
 
 #include "apps/bluetooth/lib/common/device_address.h"
+#include "apps/bluetooth/lib/gap/gap.h"
+#include "apps/bluetooth/lib/hci/connection.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {
@@ -24,34 +26,46 @@ namespace gap {
 class RemoteDevice;
 
 // A RemoteDeviceCache provides access to remote Bluetooth devices that are known to the system.
-// TODO(armansito): The current implementation of this is very simply but this class will grow to
-// support more complex features, such as LE private address resolution.
+// TODO(armansito): The current implementation is very simple but it will grow to support more
+// complex features such as LE private address resolution.
 class RemoteDeviceCache final {
  public:
+  // TODO(armansito): Add an Observer interface to notify higher layers of device property changes
+  // (e.g. temporary, connected, etc).
+
   RemoteDeviceCache() = default;
 
-  // Stores a new temporary Low Energy scan result in the cache. Returns a pointer to the newly
-  // created device.
+  // Creates or updates a Remote Device based on LE scan results. Creates a new RemoteDevice entry
+  // if the device does not exist.
   RemoteDevice* StoreLowEnergyScanResult(const hci::LowEnergyScanResult& scan_result,
                                          const common::ByteBuffer& advertising_data);
+
+  // Creates or updates a RemoteDevice entry based on a new connection.
+  RemoteDevice* StoreLowEnergyConnection(const common::DeviceAddress& peer_address,
+                                         hci::Connection::LinkType ll_type,
+                                         const hci::Connection::LowEnergyParameters& le_params);
+
+  // Creates a new device entry using the given parameters.
+  RemoteDevice* NewDevice(const common::DeviceAddress& address, TechnologyType technology,
+                          bool connectable, bool temporary);
 
   // Returns the remote device with identifier |identifier|. Returns nullptr if |identifier| is not
   // recognized.
   RemoteDevice* FindDeviceById(const std::string& identifier) const;
 
- private:
-  // Finds and returns a RemoteDevice with address |address|, if it exists.
+  // Finds and returns a RemoteDevice with address |address| if it exists, returns nullptr
+  // otherwise.
   // TODO(armansito): This should perform address resolution for devices using LE privacy.
   RemoteDevice* FindDeviceByAddress(const common::DeviceAddress& address) const;
 
+ private:
   // Maps unique device IDs to the corresponding RemoteDevice entry.
   using RemoteDeviceMap = std::unordered_map<std::string, std::unique_ptr<RemoteDevice>>;
 
-  // Stores all non-connectable LE scan results. These are never persisted.
-  RemoteDeviceMap non_conn_devices_;
+  // TODO(armansito): Periodically clear temporary devices.
 
-  // Stores all connectable temporary scan/inquiry results.
-  RemoteDeviceMap tmp_devices_;
+  // Stores all known remote devices.
+  RemoteDeviceMap devices_;
 
   // Mapping from device addresses to unique device identifiers for all known devices. This is used
   // to look-up and update existing cached data for a particular scan result so as to avoid creating

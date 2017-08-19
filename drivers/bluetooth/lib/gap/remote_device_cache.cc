@@ -4,6 +4,7 @@
 
 #include "remote_device_cache.h"
 
+#include "apps/bluetooth/lib/hci/connection.h"
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/fxl/random/uuid.h"
 
@@ -12,38 +13,58 @@
 namespace bluetooth {
 namespace gap {
 
+RemoteDevice* RemoteDeviceCache::NewDevice(const common::DeviceAddress& address,
+                                           TechnologyType technology, bool connectable,
+                                           bool temporary) {
+  auto* device = new RemoteDevice(fxl::GenerateUUID(), technology, address, connectable, temporary);
+  devices_[device->identifier()] = std::unique_ptr<RemoteDevice>(device);
+  address_map_[device->address()] = device->identifier();
+  return device;
+}
+
 RemoteDevice* RemoteDeviceCache::StoreLowEnergyScanResult(
     const hci::LowEnergyScanResult& scan_result, const common::ByteBuffer& advertising_data) {
   // If the device already exists then update its contents.
   RemoteDevice* device = FindDeviceByAddress(scan_result.address);
   if (device) {
-    device->SetLowEnergyData(scan_result.connectable, scan_result.rssi, advertising_data);
+    if (device->connectable() != scan_result.connectable) {
+      FXL_VLOG(1) << "gap: RemoteDeviceCache: device (id: " << device->identifier() << ") now "
+                  << (scan_result.connectable ? "connectable" : "non-connectable");
+      device->set_connectable(scan_result.connectable);
+    }
+    device->SetLowEnergyData(scan_result.rssi, advertising_data);
     return device;
   }
 
-  device = new RemoteDevice(fxl::GenerateUUID(), scan_result.address);
-  FXL_DCHECK(device->technology() == TechnologyType::kLowEnergy);
-  device->SetLowEnergyData(scan_result.connectable, scan_result.rssi, advertising_data);
+  device = NewDevice(scan_result.address, TechnologyType::kLowEnergy, scan_result.connectable,
+                     true /* temporary */);
+  device->SetLowEnergyData(scan_result.rssi, advertising_data);
 
-  if (!device->connectable()) {
-    non_conn_devices_[device->identifier()] = std::unique_ptr<RemoteDevice>(device);
-  } else {
-    tmp_devices_[device->identifier()] = std::unique_ptr<RemoteDevice>(device);
+  return device;
+}
+
+RemoteDevice* RemoteDeviceCache::StoreLowEnergyConnection(
+    const common::DeviceAddress& peer_address, hci::Connection::LinkType ll_type,
+    const hci::Connection::LowEnergyParameters& le_params) {
+  FXL_DCHECK(ll_type == hci::Connection::LinkType::kLE);
+
+  RemoteDevice* device = FindDeviceByAddress(peer_address);
+  if (!device) {
+    device = NewDevice(peer_address, TechnologyType::kLowEnergy, true /* connectable */,
+                       false /* temporary */);
+    device->SetLowEnergyData(hci::kRSSIInvalid, common::BufferView());
   }
 
-  address_map_[device->address()] = device->identifier();
+  FXL_DCHECK(device->connectable());
+  device->SetLowEnergyConnectionData(le_params);
+  device->set_temporary(false);
 
   return device;
 }
 
 RemoteDevice* RemoteDeviceCache::FindDeviceById(const std::string& identifier) const {
-  auto iter = tmp_devices_.find(identifier);
-  if (iter != tmp_devices_.end()) return iter->second.get();
-
-  iter = non_conn_devices_.find(identifier);
-  if (iter != non_conn_devices_.end()) return iter->second.get();
-
-  return nullptr;
+  auto iter = devices_.find(identifier);
+  return iter != devices_.end() ? iter->second.get() : nullptr;
 }
 
 RemoteDevice* RemoteDeviceCache::FindDeviceByAddress(const common::DeviceAddress& address) const {

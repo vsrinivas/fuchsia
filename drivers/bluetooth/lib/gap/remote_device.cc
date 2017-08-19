@@ -11,21 +11,22 @@
 namespace bluetooth {
 namespace gap {
 
-RemoteDevice::RemoteDevice(const std::string& identifier, const common::DeviceAddress& address)
-    : identifier_(identifier), address_(address) {
+RemoteDevice::RemoteDevice(const std::string& identifier, TechnologyType technology,
+                           const common::DeviceAddress& address, bool connectable, bool temporary)
+    : identifier_(identifier),
+      technology_(technology),
+      address_(address),
+      connectable_(connectable),
+      temporary_(temporary) {
   FXL_DCHECK(!identifier_.empty());
-
-  technology_ = (address_.type() == common::DeviceAddress::Type::kBREDR)
-                    ? TechnologyType::kClassic
-                    : TechnologyType::kLowEnergy;
+  FXL_DCHECK((address_.type() == common::DeviceAddress::Type::kBREDR) ==
+             (technology_ == TechnologyType::kClassic));
 }
 
-void RemoteDevice::SetLowEnergyData(bool connectable, int8_t rssi,
-                                    const common::ByteBuffer& advertising_data) {
+void RemoteDevice::SetLowEnergyData(int8_t rssi, const common::ByteBuffer& advertising_data) {
   FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
   FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
 
-  connectable_ = connectable;
   rssi_ = rssi;
   advertising_data_length_ = advertising_data.size();
 
@@ -35,6 +36,14 @@ void RemoteDevice::SetLowEnergyData(bool connectable, int8_t rssi,
   }
 
   advertising_data.Copy(&advertising_data_buffer_);
+}
+
+void RemoteDevice::SetLowEnergyConnectionData(const hci::Connection::LowEnergyParameters& params) {
+  FXL_DCHECK(technology() == TechnologyType::kLowEnergy);
+  FXL_DCHECK(address_.type() != common::DeviceAddress::Type::kBREDR);
+  FXL_DCHECK(connectable());
+
+  le_conn_params_ = params;
 }
 
 std::string RemoteDevice::ToString() const {
