@@ -28,7 +28,7 @@ public:
     mx_koid_t get_related_koid() const final { return other_koid_; }
 
 private:
-    explicit EventPairDispatcher();
+    EventPairDispatcher();
     void Init(mxtl::RefPtr<EventPairDispatcher> other);
 
     CookieJar cookie_jar_;

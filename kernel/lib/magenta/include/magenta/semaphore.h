@@ -11,7 +11,7 @@
 
 class Semaphore {
 public:
-    Semaphore(int64_t initial_count = 0);
+    explicit Semaphore(int64_t initial_count = 0);
     ~Semaphore();
 
     Semaphore(const Semaphore&) = delete;

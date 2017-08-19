@@ -72,7 +72,7 @@ public:
     uint32_t QueryBasicPolicy(pol_cookie_t policy, uint32_t condition);
 
 private:
-    PolicyManager(uint32_t default_action);
+    explicit PolicyManager(uint32_t default_action);
     ~PolicyManager() = default;
 
     uint32_t GetEffectiveAction(uint64_t policy);

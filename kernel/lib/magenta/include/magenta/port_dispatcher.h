@@ -171,7 +171,7 @@ public:
 private:
     friend class ExceptionPort;
 
-    PortDispatcher(uint32_t options);
+    explicit PortDispatcher(uint32_t options);
     PortObserver* CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     // Adopts a RefPtr to |eport|, and adds it to |eports_|.

@@ -53,7 +53,7 @@ public:
     void OnPeerZeroHandles();
 
 private:
-    SocketDispatcher(uint32_t flags);
+    explicit SocketDispatcher(uint32_t flags);
     void Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     mx_status_t WriteControlSelf(user_ptr<const void> src, size_t len);
