@@ -46,11 +46,11 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
     test_device()->set_settings(settings);
 
     discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kLegacy, transport(), message_loop()->task_runner(),
-        &device_cache_);
+        LowEnergyDiscoveryManager::Mode::kLegacy, transport(), &device_cache_);
     test_device()->SetScanStateCallback(
         std::bind(&LowEnergyDiscoveryManagerTest::OnScanStateChanged, this, std::placeholders::_1),
         message_loop()->task_runner());
+
     test_device()->Start();
   }
 
@@ -164,8 +164,6 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
   }
 
  private:
-  std::unique_ptr<hci::DeviceWrapper> hci_dev_;
-
   RemoteDeviceCache device_cache_;
   std::unique_ptr<LowEnergyDiscoveryManager> discovery_manager_;
 

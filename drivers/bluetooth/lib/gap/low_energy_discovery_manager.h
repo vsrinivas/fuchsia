@@ -162,7 +162,6 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
 
   // |device_cache| MUST out-live this LowEnergyDiscoveryManager.
   LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci::Transport> hci,
-                            ftl::RefPtr<ftl::TaskRunner> task_runner,
                             RemoteDeviceCache* device_cache);
   virtual ~LowEnergyDiscoveryManager();
 

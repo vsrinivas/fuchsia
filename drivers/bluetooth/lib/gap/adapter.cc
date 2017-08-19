@@ -329,12 +329,12 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
           hci::LESupportedFeature::kLEExtendedAdvertising)) {
     FTL_LOG(INFO) << "gap: Adapter: Using extended LE scan procedures";
     le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kExtended, hci_, task_runner_, &device_cache_);
+        LowEnergyDiscoveryManager::Mode::kExtended, hci_, &device_cache_);
   } else if (state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanParameters) &&
              state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanEnable)) {
     FTL_LOG(INFO) << "gap: Adapter: Using legacy LE scan procedures";
     le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kLegacy, hci_, task_runner_, &device_cache_);
+        LowEnergyDiscoveryManager::Mode::kLegacy, hci_, &device_cache_);
   }
 
   if (!le_discovery_manager_) FTL_LOG(INFO) << "gap: Adapter: LE scan procedures not supported";

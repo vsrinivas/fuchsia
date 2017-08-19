@@ -60,9 +60,10 @@ void LowEnergyDiscoverySession::NotifyDiscoveryResult(const RemoteDevice& device
 }
 
 LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci::Transport> hci,
-                                                     ftl::RefPtr<ftl::TaskRunner> task_runner,
                                                      RemoteDeviceCache* device_cache)
-    : task_runner_(task_runner), device_cache_(device_cache), weak_ptr_factory_(this) {
+    : task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      device_cache_(device_cache),
+      weak_ptr_factory_(this) {
   FTL_DCHECK(hci);
   FTL_DCHECK(task_runner_);
   FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
@@ -71,7 +72,7 @@ LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(Mode mode, ftl::RefPtr<hci:
   // We currently do not support the Extended Advertising feature.
   FTL_DCHECK(mode == Mode::kLegacy);
 
-  scanner_ = std::make_unique<hci::LegacyLowEnergyScanner>(this, hci, task_runner);
+  scanner_ = std::make_unique<hci::LegacyLowEnergyScanner>(this, hci, task_runner_);
 }
 
 LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
