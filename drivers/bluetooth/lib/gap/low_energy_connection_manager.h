@@ -35,6 +35,8 @@ class ChannelManager;
 
 namespace gap {
 
+// TODO(armansito): Document the usage pattern.
+
 class LowEnergyConnectionManager;
 class RemoteDevice;
 class RemoteDeviceCache;
@@ -125,6 +127,14 @@ class LowEnergyConnectionManager final {
   ListenerId AddListener(const ConnectionCallback& callback);
   void RemoveListener(ListenerId id);
 
+  // Called when a link with the given handle gets disconnected. This event is guaranteed to be
+  // called before invalidating connection references. |callback| is run on the creation thread.
+  //
+  // NOTE: This is intended ONLY for unit tests. Clients should watch for disconnection events
+  // using LowEnergyConnectionRef::set_closed_callback() instead. DO NOT use outside of tests.
+  using DisconnectCallback = std::function<void(hci::ConnectionHandle)>;
+  void SetDisconnectCallbackForTesting(const DisconnectCallback& callback);
+
  private:
   friend class LowEnergyConnectionRef;
 
@@ -137,6 +147,9 @@ class LowEnergyConnectionManager final {
 
     std::unique_ptr<hci::Connection> conn;
     std::unordered_set<LowEnergyConnectionRef*> refs;
+
+    // Marks all references to this connection as closed.
+    void CloseRefs();
 
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(ConnectionState);
@@ -186,6 +199,12 @@ class LowEnergyConnectionManager final {
   // |device_identifier| and returns it. Returns nullptr if |device_identifier| is not recognized.
   LowEnergyConnectionRefPtr AddConnectionRef(const std::string& device_identifier);
 
+  // Cleans up a connection state. This result in a HCI_Disconnect command (if the connection is
+  // marked as open) and notifies any referenced LowEnergyConnectionRefs of the disconnection.
+  //
+  // This is also responsible for unregistering the link from managed subsystems (e.g. L2CAP).
+  void CleanUpConnectionState(ConnectionState* conn_state);
+
   // Called by |connector_| when a new LE connection has been created.
   void OnConnectionCreated(std::unique_ptr<hci::Connection> connection);
 
@@ -218,6 +237,11 @@ class LowEnergyConnectionManager final {
 
   // Event handler ID for the Disconnection Complete event.
   hci::CommandChannel::EventHandlerId event_handler_id_;
+
+  // Callback used by unit tests to observe disconnection events. This is needed to drive certain
+  // async scenarios that need to occur after a HCI Disconnection Complete is received but BEFORE
+  // connection references are invalidated.
+  DisconnectCallback test_disconn_cb_;
 
   std::vector<ConnectionCallback> listeners_;
 

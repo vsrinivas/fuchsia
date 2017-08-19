@@ -113,7 +113,15 @@ class FakeController : public FakeControllerBase {
   // Sends a LE Meta event with the given parameters.
   void SendLEMetaEvent(hci::EventCode subevent_code, const void* params, uint8_t params_size);
 
+  // Marks the FakeDevice with address |address| as disconnected and sends a HCI Disconnection
+  // Complete event for all of its links.
+  void Disconnect(const common::DeviceAddress& addr);
+
  private:
+  // Finds and returns the FakeDevice with the given parameters or nullptr if no such device exists.
+  FakeDevice* FindDeviceByAddress(const common::DeviceAddress& addr);
+  FakeDevice* FindDeviceByConnHandle(hci::ConnectionHandle handle);
+
   // Sends a HCI_Command_Complete event in response to the command with |opcode| and using the given
   // data as the parameter payload.
   void RespondWithCommandComplete(hci::OpCode opcode, const void* return_params,

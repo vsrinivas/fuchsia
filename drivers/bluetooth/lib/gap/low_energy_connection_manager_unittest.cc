@@ -212,6 +212,7 @@ TEST_F(LowEnergyConnectionManagerTest, ConnectSingleDevice) {
     EXPECT_TRUE(cb_conn_ref);
     status = cb_status;
     conn_ref = std::move(cb_conn_ref);
+    EXPECT_TRUE(conn_ref->active());
 
     fsl::MessageLoop::GetCurrent()->QuitNow();
   };
@@ -508,7 +509,13 @@ TEST_F(LowEnergyConnectionManagerTest, Destructor) {
   EXPECT_TRUE(conn_mgr()->Connect(dev1->identifier(), error_cb));
 
   // The message loop will be stopped by OnConnectionStateChanged().
-  message_loop()->task_runner()->PostTask([this] { DeleteConnMgr(); });
+  message_loop()->task_runner()->PostTask([this] {
+    // This will synchronously notify |conn_ref|'s closed callback so it is expected to execute
+    // before the test harness receives the connection callback. Thus it is OK to quit the message
+    // loop in the connection callback.
+    DeleteConnMgr();
+  });
+
   set_quit_message_loop_on_state_change(true);
   RunMessageLoop();
 
@@ -516,6 +523,156 @@ TEST_F(LowEnergyConnectionManagerTest, Destructor) {
   EXPECT_TRUE(conn_closed);
   EXPECT_EQ(1u, canceled_devices().size());
   EXPECT_EQ(1u, canceled_devices().count(kAddress1));
+}
+
+TEST_F(LowEnergyConnectionManagerTest, DisconnectError) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  // This should fail as |dev0| is not connected.
+  EXPECT_FALSE(conn_mgr()->Disconnect(dev0->identifier()));
+}
+
+TEST_F(LowEnergyConnectionManagerTest, Disconnect) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  int closed_count = 0;
+  auto closed_cb = [&closed_count] { closed_count++; };
+
+  std::vector<LowEnergyConnectionRefPtr> conn_refs;
+  auto success_cb = [&conn_refs, &closed_cb, this](auto status, auto conn_ref) {
+    EXPECT_EQ(hci::Status::kSuccess, status);
+    ASSERT_TRUE(conn_ref);
+    conn_ref->set_closed_callback(closed_cb);
+    conn_refs.push_back(std::move(conn_ref));
+    if (conn_refs.size() == 2) fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  // Issue two connection refs.
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
+  RunMessageLoop();
+
+  ASSERT_EQ(2u, conn_refs.size());
+
+  EXPECT_TRUE(conn_mgr()->Disconnect(dev0->identifier()));
+
+  set_quit_message_loop_on_state_change(true);
+  RunMessageLoop();
+
+  EXPECT_EQ(2, closed_count);
+  EXPECT_TRUE(connected_devices().empty());
+  EXPECT_TRUE(canceled_devices().empty());
+}
+
+// Tests when a link is lost without explicitly disconnecting
+TEST_F(LowEnergyConnectionManagerTest, DisconnectEvent) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  int closed_count = 0;
+  auto closed_cb = [&closed_count, this] {
+    closed_count++;
+    if (closed_count == 2) fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  std::vector<LowEnergyConnectionRefPtr> conn_refs;
+  auto success_cb = [&conn_refs, &closed_cb, this](auto status, auto conn_ref) {
+    EXPECT_EQ(hci::Status::kSuccess, status);
+    ASSERT_TRUE(conn_ref);
+    conn_ref->set_closed_callback(closed_cb);
+    conn_refs.push_back(std::move(conn_ref));
+    if (conn_refs.size() == 2) fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  // Issue two connection refs.
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
+  RunMessageLoop();
+
+  ASSERT_EQ(2u, conn_refs.size());
+
+  // This makes FakeController send us HCI Disconnection Complete events.
+  test_device()->Disconnect(kAddress0);
+
+  // The loop will run until |closed_cb| is called twice.
+  RunMessageLoop();
+
+  EXPECT_EQ(2, closed_count);
+}
+
+TEST_F(LowEnergyConnectionManagerTest, DisconnectWhileRefPending) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  LowEnergyConnectionRefPtr conn_ref;
+  auto success_cb = [&conn_ref, this](auto status, auto cb_conn_ref) {
+    EXPECT_EQ(hci::Status::kSuccess, status);
+    ASSERT_TRUE(cb_conn_ref);
+    EXPECT_TRUE(cb_conn_ref->active());
+
+    conn_ref = std::move(cb_conn_ref);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
+  RunMessageLoop();
+  ASSERT_TRUE(conn_ref);
+
+  auto ref_cb = [](auto status, auto conn_ref) {
+    ASSERT_FALSE(conn_ref);
+    ASSERT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), ref_cb));
+
+  // This should invalidate the ref that was bound to |ref_cb|.
+  EXPECT_TRUE(conn_mgr()->Disconnect(dev0->identifier()));
+
+  RunMessageLoop();
+}
+
+// This tests that a connection reference callback returns nullptr if a HCI Disconnection Complete
+// event is received for the corresponding ACL link BEFORE the callback gets run.
+TEST_F(LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  LowEnergyConnectionRefPtr conn_ref;
+  auto success_cb = [&conn_ref, this](auto status, auto cb_conn_ref) {
+    ASSERT_TRUE(cb_conn_ref);
+    ASSERT_EQ(hci::Status::kSuccess, status);
+    EXPECT_TRUE(cb_conn_ref->active());
+
+    conn_ref = std::move(cb_conn_ref);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), success_cb));
+  RunMessageLoop();
+  ASSERT_TRUE(conn_ref);
+
+  // Request a new reference. Disconnect the link before the reference is received.
+  auto ref_cb = [](auto status, auto conn_ref) {
+    EXPECT_FALSE(conn_ref);
+    EXPECT_EQ(hci::Status::kConnectionFailedToBeEstablished, status);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  auto disconn_cb = [this, ref_cb, dev0](auto) {
+    // The link is gone but conn_mgr() hasn't updated the connection state yet. The request to
+    // connect will attempt to add a new reference which will be invalidated before |ref_cb| gets
+    // called.
+    EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), ref_cb));
+  };
+  conn_mgr()->SetDisconnectCallbackForTesting(disconn_cb);
+
+  test_device()->Disconnect(kAddress0);
+  RunMessageLoop();
 }
 
 }  // namespace

@@ -136,6 +136,11 @@ bool FakeDevice::HasLink(hci::ConnectionHandle handle) const {
   return logical_links_.count(handle) != 0u;
 }
 
+FakeDevice::HandleSet FakeDevice::Disconnect() {
+  set_connected(false);
+  return std::move(logical_links_);
+}
+
 void FakeDevice::WriteScanResponseReport(hci::LEAdvertisingReportData* report) const {
   FXL_DCHECK(scannable_);
   report->event_type = hci::LEAdvertisingEventType::kScanRsp;

@@ -82,6 +82,11 @@ class FakeDevice {
   void RemoveLink(hci::ConnectionHandle handle);
   bool HasLink(hci::ConnectionHandle handle) const;
 
+  using HandleSet = std::unordered_set<hci::ConnectionHandle>;
+
+  // Marks this device as disconnected. Clears and returns all logical link handles.
+  HandleSet Disconnect();
+
  private:
   void WriteScanResponseReport(hci::LEAdvertisingReportData* report) const;
 
@@ -101,7 +106,7 @@ class FakeDevice {
   common::DynamicByteBuffer scan_rsp_;
 
   // Open connection handles.
-  std::unordered_set<hci::ConnectionHandle> logical_links_;
+  HandleSet logical_links_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeDevice);
 };

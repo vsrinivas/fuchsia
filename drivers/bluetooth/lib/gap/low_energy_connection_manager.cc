@@ -43,6 +43,10 @@ void LowEnergyConnectionRef::MarkClosed() {
   if (closed_cb_) closed_cb_();
 }
 
+void LowEnergyConnectionManager::ConnectionState::CloseRefs() {
+  for (auto* conn_ref : refs) conn_ref->MarkClosed();
+}
+
 LowEnergyConnectionManager::PendingRequestData::PendingRequestData(
     const common::DeviceAddress& address, const ConnectionResultCallback& first_callback)
     : address_(address), callbacks_{first_callback} {}
@@ -78,6 +82,9 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(Mode /* mode */,
     if (self) self->OnConnectionCreated(std::move(conn));
   });
 
+  // TODO(armansito): Setting this up here means that the ClassicConnectionManager won't be able to
+  // listen to the same event. So this event either needs to be handled elsewhere OR we make
+  // hci::CommandChannel support registering multiple handlers for the same event.
   event_handler_id_ =
       hci->command_channel()->AddEventHandler(hci::kDisconnectionCompleteEventCode,
                                               [self](const auto& event) {
@@ -107,12 +114,9 @@ LowEnergyConnectionManager::~LowEnergyConnectionManager() {
   // Clean up all connections.
   for (auto& iter : connections_) {
     auto& conn_state = iter.second;
-    l2cap_->Unregister(conn_state.conn->handle());
-    conn_state.conn->Close();
-    for (auto* conn_ref : conn_state.refs) {
-      conn_ref->MarkClosed();
-    }
+    CleanUpConnectionState(&conn_state);
   }
+
   connections_.clear();
 }
 
@@ -158,7 +162,16 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
   if (conn_ref) {
     task_runner_->PostTask(
         fxl::MakeCopyable([ conn_ref = std::move(conn_ref), callback ]() mutable {
-          callback(hci::Status::kSuccess, std::move(conn_ref));
+          // Do not report success if the link has been disconnected (e.g. via Disconnect() or
+          // other circumstances).
+          if (!conn_ref->active()) {
+            FXL_VLOG(1) << "gap: LowEnergyConnectionManager: Link disconnected, ref is inactive";
+
+            // TODO(armansito): Use a non-HCI error code for this.
+            callback(hci::Status::kConnectionFailedToBeEstablished, nullptr);
+          } else {
+            callback(hci::Status::kSuccess, std::move(conn_ref));
+          }
         }));
 
     return true;
@@ -172,8 +185,25 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
 }
 
 bool LowEnergyConnectionManager::Disconnect(const std::string& device_identifier) {
-  // TODO(armansito): implement
-  return false;
+  auto iter = connections_.find(device_identifier);
+  if (iter == connections_.end()) {
+    FXL_LOG(WARNING) << "gap: LowEnergyConnectionManager: device not connected (id: "
+                     << device_identifier << ")";
+    return false;
+  }
+
+  // Remove the connection state from the internal map right away.
+  auto conn_state = std::move(iter->second);
+  connections_.erase(iter);
+
+  FXL_DCHECK(conn_state.conn);
+  FXL_DCHECK(!conn_state.refs.empty());
+
+  FXL_LOG(INFO) << "gap: LowEnergyConnectionManager: disconnecting link: "
+                << conn_state.conn->ToString();
+
+  CleanUpConnectionState(&conn_state);
+  return true;
 }
 
 LowEnergyConnectionManager::ListenerId LowEnergyConnectionManager::AddListener(
@@ -184,6 +214,11 @@ LowEnergyConnectionManager::ListenerId LowEnergyConnectionManager::AddListener(
 
 void LowEnergyConnectionManager::RemoveListener(ListenerId id) {
   // TODO(armansito): implement
+}
+
+void LowEnergyConnectionManager::SetDisconnectCallbackForTesting(
+    const DisconnectCallback& callback) {
+  test_disconn_cb_ = callback;
 }
 
 void LowEnergyConnectionManager::ReleaseReference(LowEnergyConnectionRef* conn_ref) {
@@ -209,10 +244,10 @@ void LowEnergyConnectionManager::ReleaseReference(LowEnergyConnectionRef* conn_r
   FXL_LOG(INFO) << "gap: LowEnergyConnectionManager: all refs dropped on connection: "
                 << conn_state.conn->ToString();
 
-  // This will immediately notify all open channels to stop their data handling.
-  l2cap_->Unregister(conn_state.conn->handle());
-  conn_state.conn->Close();
+  auto conn_state_moved = std::move(conn_state);
   connections_.erase(iter);
+
+  CleanUpConnectionState(&conn_state_moved);
 }
 
 void LowEnergyConnectionManager::TryCreateNextConnection() {
@@ -316,6 +351,20 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::AddConnectionRef(
   return conn_ref;
 }
 
+void LowEnergyConnectionManager::CleanUpConnectionState(ConnectionState* conn_state) {
+  FXL_DCHECK(conn_state);
+  FXL_DCHECK(conn_state->conn);
+
+  // This will notify all open L2CAP channels about the severed link.
+  l2cap_->Unregister(conn_state->conn->handle());
+
+  // Close the link if it marked as open.
+  conn_state->conn->Close();
+
+  // Notify all active references that the link is gone. This will synchronously notify all refs.
+  conn_state->CloseRefs();
+}
+
 void LowEnergyConnectionManager::OnConnectionCreated(std::unique_ptr<hci::Connection> connection) {
   FXL_DCHECK(connection);
   FXL_DCHECK(connection->ll_type() == hci::Connection::LinkType::kLE);
@@ -395,7 +444,45 @@ void LowEnergyConnectionManager::OnConnectResult(const std::string& device_ident
 }
 
 void LowEnergyConnectionManager::OnDisconnectionComplete(const hci::EventPacket& event) {
-  // TODO(armansito): implement
+  FXL_DCHECK(event.event_code() == hci::kDisconnectionCompleteEventCode);
+  const auto& params = event.view().payload<hci::DisconnectionCompleteEventParams>();
+  hci::ConnectionHandle handle = le16toh(params.connection_handle);
+
+  if (params.status != hci::Status::kSuccess) {
+    FXL_LOG(WARNING) << fxl::StringPrintf(
+        "gap: LowEnergyConnectionManager: HCI disconnection event received with error "
+        "status: 0x%02x, handle: 0x%04x",
+        params.status, handle);
+    return;
+  }
+
+  FXL_LOG(INFO) << fxl::StringPrintf(
+      "gap: LowEnergyConnectionManager: Link disconnected - "
+      "status: 0x%02x, handle: 0x%04x, reason: 0x%02x",
+      params.status, handle, params.reason);
+
+  if (test_disconn_cb_) test_disconn_cb_(handle);
+
+  // See if we can find a connection with a matching handle by walking the connections list.
+  for (auto iter = connections_.begin(); iter != connections_.end(); ++iter) {
+    FXL_DCHECK(iter->second.conn);
+    if (iter->second.conn->handle() != handle) continue;
+
+    // Found the connection. At this point it is OK to invalidate |iter| as the loop will terminate.
+    auto conn_state = std::move(iter->second);
+    connections_.erase(iter);
+
+    FXL_DCHECK(!conn_state.refs.empty());
+
+    // Mark the connection as closed so that hci::Connection::Close() becomes a NOP.
+    conn_state.conn->set_closed();
+    CleanUpConnectionState(&conn_state);
+
+    return;
+  }
+
+  FXL_VLOG(1) << fxl::StringPrintf(
+      "gap: LowEnergyConnectionManager: unknown connection handle: 0x%04x", handle);
 }
 
 }  // namespace gap

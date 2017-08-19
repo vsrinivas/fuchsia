@@ -137,6 +137,20 @@ void FakeController::SetConnectionStateCallback(const ConnectionStateCallback& c
   conn_state_cb_runner_ = task_runner;
 }
 
+FakeDevice* FakeController::FindDeviceByAddress(const common::DeviceAddress& addr) {
+  for (auto& dev : le_devices_) {
+    if (dev->address() == addr) return dev.get();
+  }
+  return nullptr;
+}
+
+FakeDevice* FakeController::FindDeviceByConnHandle(hci::ConnectionHandle handle) {
+  for (auto& dev : le_devices_) {
+    if (dev->HasLink(handle)) return dev.get();
+  }
+  return nullptr;
+}
+
 void FakeController::RespondWithCommandComplete(hci::OpCode opcode, const void* return_params,
                                                 uint8_t return_params_size) {
   // Either both are zero or neither is.
@@ -193,6 +207,31 @@ void FakeController::SendLEMetaEvent(hci::EventCode subevent_code, const void* p
   buffer.Write(static_cast<const uint8_t*>(params), params_size, 1);
 
   SendEvent(hci::kLEMetaEventCode, buffer.data(), buffer.size());
+}
+
+void FakeController::Disconnect(const common::DeviceAddress& addr) {
+  task_runner()->PostTask([addr, this] {
+    FakeDevice* dev = FindDeviceByAddress(addr);
+    if (!dev || !dev->connected()) {
+      FXL_LOG(WARNING) << "FakeController: no connected device found with address: "
+                       << addr.ToString();
+      return;
+    }
+
+    auto links = dev->Disconnect();
+    FXL_DCHECK(!dev->connected());
+    FXL_DCHECK(!links.empty());
+
+    NotifyConnectionState(addr, false);
+
+    for (auto link : links) {
+      hci::DisconnectionCompleteEventParams params;
+      params.status = hci::Status::kSuccess;
+      params.connection_handle = htole16(link);
+      params.reason = hci::Status::kRemoteUserTerminatedConnection;
+      SendEvent(hci::kDisconnectionCompleteEventCode, &params, sizeof(params));
+    }
+  });
 }
 
 bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
@@ -253,18 +292,10 @@ void FakeController::OnLECreateConnectionCommandReceived(
   FXL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
 
   const common::DeviceAddress peer_address(addr_type, params.peer_address);
-
-  // Find the device that matches the requested address.
-  FakeDevice* device = nullptr;
-  for (const auto& dev : le_devices_) {
-    if (dev->address() == peer_address) {
-      device = dev.get();
-      break;
-    }
-  }
-
   hci::Status status = hci::Status::kSuccess;
 
+  // Find the device that matches the requested address.
+  FakeDevice* device = FindDeviceByAddress(peer_address);
   if (device) {
     if (device->connected())
       status = hci::Status::kConnectionAlreadyExists;
@@ -343,14 +374,7 @@ void FakeController::OnDisconnectCommandReceived(const hci::DisconnectCommandPar
   hci::ConnectionHandle handle = le16toh(params.connection_handle);
 
   // Find the device that matches the disconnected handle.
-  FakeDevice* device = nullptr;
-  for (const auto& dev : le_devices_) {
-    if (dev->HasLink(handle)) {
-      device = dev.get();
-      break;
-    }
-  }
-
+  FakeDevice* device = FindDeviceByConnHandle(handle);
   if (!device) {
     RespondWithCommandStatus(hci::kDisconnect, hci::Status::kUnknownConnectionId);
     return;
