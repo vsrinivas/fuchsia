@@ -220,6 +220,12 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // current pending command.
   void SetPendingCommand(PendingTransactionData* command);
 
+  // Creates a new event handler entry in the event handler map and returns its ID.
+  EventHandlerId NewEventHandler(EventCode event_code, bool is_le_meta,
+                                 const EventCallback& event_callback,
+                                 fxl::RefPtr<fxl::TaskRunner> task_runner)
+      __TA_REQUIRES(event_handler_mutex_);
+
   // Notifies a matching event handler for the given event.
   void NotifyEventHandler(std::unique_ptr<EventPacket> event);
 

@@ -128,7 +128,6 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
 CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
     EventCode event_code, const EventCallback& event_callback,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  FXL_DCHECK(event_code != 0);
   FXL_DCHECK(event_code != kCommandStatusEventCode);
   FXL_DCHECK(event_code != kCommandCompleteEventCode);
   FXL_DCHECK(event_code != kLEMetaEventCode);
@@ -141,27 +140,14 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
     return 0u;
   }
 
-  if (next_event_handler_id_ == 0u) next_event_handler_id_++;
-  auto id = next_event_handler_id_++;
-  EventHandlerData data;
-  data.id = id;
-  data.event_code = event_code;
-  data.event_callback = event_callback;
-  data.task_runner = task_runner;
-  data.is_le_meta_subevent = false;
-
-  FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
-  event_handler_id_map_[id] = data;
+  auto id = NewEventHandler(event_code, false /* is_le_meta */, event_callback, task_runner);
   event_code_handlers_[event_code] = id;
-
   return id;
 }
 
 CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
     EventCode subevent_code, const EventCallback& event_callback,
     fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  FXL_DCHECK(subevent_code != 0);
-
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
   if (subevent_code_handlers_.find(subevent_code) != subevent_code_handlers_.end()) {
@@ -170,18 +156,8 @@ CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
     return 0u;
   }
 
-  auto id = ++next_event_handler_id_;
-  EventHandlerData data;
-  data.id = id;
-  data.event_code = subevent_code;
-  data.event_callback = event_callback;
-  data.task_runner = task_runner;
-  data.is_le_meta_subevent = true;
-
-  FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
-  event_handler_id_map_[id] = data;
+  auto id = NewEventHandler(subevent_code, true /* is_le_meta */, event_callback, task_runner);
   subevent_code_handlers_[subevent_code] = id;
-
   return id;
 }
 
@@ -371,6 +347,27 @@ void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
 
   FXL_DCHECK(!pending_command_);
   pending_command_ = *command;
+}
+
+CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
+    EventCode event_code, bool is_le_meta, const EventCallback& event_callback,
+    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(event_code);
+  FXL_DCHECK(event_callback);
+  FXL_DCHECK(task_runner);
+
+  auto id = next_event_handler_id_++;
+  EventHandlerData data;
+  data.id = id;
+  data.event_code = event_code;
+  data.event_callback = event_callback;
+  data.task_runner = task_runner;
+  data.is_le_meta_subevent = is_le_meta;
+
+  FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
+  event_handler_id_map_[id] = data;
+
+  return id;
 }
 
 void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {

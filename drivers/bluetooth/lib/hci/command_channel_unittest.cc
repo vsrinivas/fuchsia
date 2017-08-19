@@ -581,6 +581,16 @@ TEST_F(CommandChannelTest, LEMetaEventHandler) {
   EXPECT_EQ(2, event_count1);
 }
 
+TEST_F(CommandChannelTest, EventHandlerIdsDontCollide) {
+  // Add a LE Meta event handler and a event handler and make sure that IDs are generated correctly
+  // across the two methods.
+  EXPECT_EQ(
+      1u, cmd_channel()->AddLEMetaEventHandler(hci::kLEConnectionCompleteSubeventCode,
+                                               [](const auto&) {}, message_loop()->task_runner()));
+  EXPECT_EQ(2u, cmd_channel()->AddEventHandler(hci::kDisconnectionCompleteEventCode,
+                                               [](const auto&) {}, message_loop()->task_runner()));
+}
+
 TEST_F(CommandChannelTest, TransportClosedCallback) {
   test_device()->Start();
 
