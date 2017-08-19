@@ -101,5 +101,18 @@ constexpr uint16_t kLEScanSlowInterval2Coded = 0x3000;  // 7.68 s
 constexpr uint16_t kLEScanSlowWindow2 = 0x0024;         // 22.5 ms
 constexpr uint16_t kLEScanSlowWindow2Coded = 0x006C;    // 67.5 ms
 
+// Timeout used for the LE Create Connection command.
+constexpr int64_t kLECreateConnectionTimeoutMs = 20000;  // 20 s
+
+// Connection Interval Timing Parameters (see v5.0, Vol 3, Part C, Section 9.3.12 and Appendix A)
+constexpr int64_t kLEConnectionParameterTimeoutMs = 30000;  // 30 s
+constexpr int64_t kLEConnectionPauseCentralMs = 1000;       // 1 s
+constexpr int64_t kLEConnectionPausePeripheralMs = 5000;    // 5 s
+
+constexpr uint16_t kLEInitialConnIntervalMin = 0x0018;       // 30 ms
+constexpr uint16_t kLEInitialConnIntervalMax = 0x0028;       // 50 ms
+constexpr uint16_t kLEInitialConnIntervalCodedMin = 0x0048;  // 90 ms
+constexpr uint16_t kLEInitialConnIntervalCodedMax = 0x0078;  // 150 ms
+
 }  // namespace gap
 }  // namespace bluetooth

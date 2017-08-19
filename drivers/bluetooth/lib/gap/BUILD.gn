@@ -13,6 +13,8 @@ static_library("gap") {
     "discovery_filter.cc",
     "discovery_filter.h",
     "gap.h",
+    "low_energy_connection_manager.cc",
+    "low_energy_connection_manager.h",
     "low_energy_discovery_manager.cc",
     "low_energy_discovery_manager.h",
     "low_energy_state.cc",
@@ -26,6 +28,7 @@ static_library("gap") {
   public_deps = [
     "//apps/bluetooth/lib/common",
     "//apps/bluetooth/lib/hci",
+    "//apps/bluetooth/lib/l2cap",
     "//apps/bluetooth/service/interfaces:interfaces_data_only",
     "//garnet/public/lib/fxl",
   ]
@@ -38,6 +41,7 @@ source_set("tests") {
     "adapter_unittest.cc",
     "advertising_data_unittest.cc",
     "discovery_filter_unittest.cc",
+    "low_energy_connection_manager_unittest.cc",
     "low_energy_discovery_manager_unittest.cc",
     "remote_device_cache_unittest.cc"
   ]

@@ -62,13 +62,29 @@ void FakeControllerBase::Stop() {
 void FakeControllerBase::SendCommandChannelPacket(const common::ByteBuffer& packet) {
   FXL_DCHECK(IsStarted());
   zx_status_t status = cmd_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
-  FXL_DCHECK(ZX_OK == status);
+  if (status == ZX_ERR_PEER_CLOSED) {
+    // Simply warn in this case. Tests should be able to handle this case if their logic depends on
+    // successful transmission of |packet|.
+    FXL_LOG(WARNING) << "Failed to send command channel packet over closed channel";
+    return;
+  }
+
+  FXL_DCHECK(ZX_OK == status) << "Failed to send cmd channel packet: "
+                              << zx_status_get_string(status);
 }
 
 void FakeControllerBase::SendACLDataChannelPacket(const common::ByteBuffer& packet) {
   FXL_DCHECK(IsStarted());
   zx_status_t status = acl_channel_.write(0, packet.data(), packet.size(), nullptr, 0);
-  FXL_DCHECK(ZX_OK == status);
+  if (status == ZX_ERR_PEER_CLOSED) {
+    // Simply warn in this case. Tests should be able to handle this case if their logic depends on
+    // successful transmission of |packet|.
+    FXL_LOG(WARNING) << "Failed to send command channel packet over closed channel";
+    return;
+  }
+
+  FXL_DCHECK(ZX_OK == status) << "Failed to send ACL channel packet: "
+                              << zx_status_get_string(status);
 }
 
 void FakeControllerBase::CloseCommandChannel() {
