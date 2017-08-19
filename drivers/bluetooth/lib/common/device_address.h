@@ -100,6 +100,9 @@ class DeviceAddress {
   // Returns a hash of the contents of this address.
   std::size_t Hash() const;
 
+  // Returns a string representation of this address.
+  std::string ToString() const;
+
  private:
   Type type_;
   DeviceAddressBytes value_;

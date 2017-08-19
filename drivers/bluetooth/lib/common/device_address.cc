@@ -11,6 +11,24 @@
 
 namespace bluetooth {
 namespace common {
+namespace {
+
+std::string TypeToString(DeviceAddress::Type type) {
+  switch (type) {
+    case DeviceAddress::Type::kBREDR:
+      return "(BD_ADDR) ";
+    case DeviceAddress::Type::kLEPublic:
+      return "(LE publ) ";
+    case DeviceAddress::Type::kLERandom:
+      return "(LE rand) ";
+    case DeviceAddress::Type::kLEAnonymous:
+      return "(LE anon) ";
+  }
+
+  return "(invalid) ";
+}
+
+}  // namespace
 
 DeviceAddressBytes::DeviceAddressBytes() {
   SetToZero();
@@ -77,6 +95,10 @@ std::size_t DeviceAddress::Hash() const {
   std::size_t h2 = value_.Hash();
 
   return h1 ^ (h2 << 1);
+}
+
+std::string DeviceAddress::ToString() const {
+  return TypeToString(type_) + value_.ToString();
 }
 
 }  // namespace common

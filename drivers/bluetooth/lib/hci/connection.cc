@@ -10,9 +10,29 @@
 #include "apps/bluetooth/lib/hci/defaults.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace hci {
+namespace {
+
+std::string LinkTypeToString(Connection::LinkType type) {
+  switch (type) {
+    case Connection::LinkType::kACL:
+      return "ACL";
+    case Connection::LinkType::kSCO:
+      return "SCO";
+    case Connection::LinkType::kESCO:
+      return "ESCO";
+    case Connection::LinkType::kLE:
+      return "LE";
+  }
+
+  FTL_NOTREACHED();
+  return "(invalid)";
+}
+
+}  // namespace
 
 Connection::LowEnergyParameters::LowEnergyParameters(uint16_t interval_min, uint16_t interval_max,
                                                      uint16_t interval, uint16_t latency,
@@ -123,6 +143,15 @@ void Connection::Close(Status reason, const ftl::Closure& callback) {
   hci_->command_channel()->SendCommand(std::move(disconn),
                                        mtl::MessageLoop::GetCurrent()->task_runner(), complete_cb,
                                        status_cb, kDisconnectionCompleteEventCode, matcher);
+}
+
+std::string Connection::ToString() const {
+  return ftl::StringPrintf(
+      "(%s link - handle: 0x%04x, role: %s, address: %s, "
+      "interval: %.2f ms, latency: %.2f ms, timeout: %u ms)",
+      LinkTypeToString(ll_type_).c_str(), handle_, role_ == Role::kMaster ? "master" : "slave",
+      peer_address_.ToString().c_str(), static_cast<float>(le_params_.interval()) * 1.25f,
+      static_cast<float>(le_params_.latency()) * 1.25f, le_params_.supervision_timeout() * 10u);
 }
 
 }  // namespace hci

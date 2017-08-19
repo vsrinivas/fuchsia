@@ -125,6 +125,8 @@ class Connection final {
   void Close(Status reason = Status::kRemoteUserTerminatedConnection,
              const ftl::Closure& callback = nullptr);
 
+  std::string ToString() const;
+
  private:
   // Clears and runs |close_cb| if it was set.
   inline void NotifyClosed() {

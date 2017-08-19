@@ -36,7 +36,7 @@ class RemoteDevice final {
   // Returns true if this is a connectable device.
   bool connectable() const { return connectable_; }
 
-  // Returns the advertising data for this device.
+  // Returns the advertising data for this device (including any scan response data).
   const common::BufferView advertising_data() const {
     return advertising_data_buffer_.view(0, advertising_data_length_);
   }
@@ -44,6 +44,9 @@ class RemoteDevice final {
   // Returns the most recently observed RSSI for this remote device. Returns hci::kRSSIInvalid if
   // the value is unknown.
   int8_t rssi() const { return rssi_; }
+
+  // Returns a string representation of this device.
+  std::string ToString() const;
 
  private:
   friend class RemoteDeviceCache;

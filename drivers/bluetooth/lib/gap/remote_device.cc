@@ -6,6 +6,7 @@
 
 #include "apps/bluetooth/lib/hci/low_energy_scanner.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace bluetooth {
 namespace gap {
@@ -34,6 +35,11 @@ void RemoteDevice::SetLowEnergyData(bool connectable, int8_t rssi,
   }
 
   advertising_data.Copy(&advertising_data_buffer_);
+}
+
+std::string RemoteDevice::ToString() const {
+  return ftl::StringPrintf("{remote-device id: %s, address: %s}", identifier_.c_str(),
+                           address_.ToString().c_str());
 }
 
 }  // namespace gap
