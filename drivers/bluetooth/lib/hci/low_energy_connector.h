@@ -47,6 +47,8 @@ class LowEnergyConnector {
   using ConnectionDelegate = std::function<void(std::unique_ptr<Connection> connection)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci, fxl::RefPtr<fxl::TaskRunner> task_runner,
                      const ConnectionDelegate& delegate);
+
+  // Deleting an instance cancels any pending connection request.
   ~LowEnergyConnector();
 
   // Creates a LE link layer connection to the remote device identified by |peer_address| with
@@ -89,17 +91,24 @@ class LowEnergyConnector {
                    uint16_t interval_max, const ResultCallback& result_callback);
 
     bool canceled;
+    bool timed_out;
     common::DeviceAddress peer_address;
     uint16_t interval_min;
     uint16_t interval_max;
     ResultCallback result_callback;
   };
 
+  // Called by Cancel() and by OnCreateConnectionTimeout().
+  void CancelInternal(bool timed_out = false);
+
   // Event handler for the HCI LE Connection Complete event.
   void OnConnectionCompleteEvent(const EventPacket& event);
 
   // Called when a LE Create Connection request has completed.
   void OnCreateConnectionComplete(Result result, Status hci_status);
+
+  // Called when a LE Create Connection request has timed out.
+  void OnCreateConnectionTimeout();
 
   // Task runner for all asynchronous tasks.
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

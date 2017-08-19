@@ -58,15 +58,18 @@ class TestBase : public ::testing::Test {
   }
 
   // Posts a delayed task to quit the message loop after |seconds| have elapsed.
-  void PostDelayedQuitTask(int64_t seconds) {
-    message_loop_.task_runner()->PostDelayedTask([this] { message_loop_.QuitNow(); },
-                                                 fxl::TimeDelta::FromSeconds(seconds));
+  void PostDelayedQuitTask(const fxl::TimeDelta time_delta) {
+    message_loop_.task_runner()->PostDelayedTask([this] { message_loop_.QuitNow(); }, time_delta);
   }
 
   // Runs the message loop for the specified amount of time. This is useful for callback-driven test
   // cases in which the message loop may run forever if the callback is not run.
   void RunMessageLoop(int64_t timeout_seconds = 10) {
-    PostDelayedQuitTask(timeout_seconds);
+    RunMessageLoop(fxl::TimeDelta::FromSeconds(timeout_seconds));
+  }
+
+  void RunMessageLoop(const fxl::TimeDelta& time_delta) {
+    PostDelayedQuitTask(time_delta);
     message_loop_.Run();
   }
 

@@ -20,6 +20,7 @@ LowEnergyConnector::PendingRequest::PendingRequest(const common::DeviceAddress& 
                                                    uint16_t interval_min, uint16_t interval_max,
                                                    const ResultCallback& result_callback)
     : canceled(false),
+      timed_out(false),
       peer_address(peer_address),
       interval_min(interval_min),
       interval_max(interval_max),
@@ -33,14 +34,19 @@ LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
   FXL_DCHECK(hci_);
   FXL_DCHECK(delegate_);
 
-  event_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
-      kLEConnectionCompleteSubeventCode,
-      std::bind(&LowEnergyConnector::OnConnectionCompleteEvent, this, std::placeholders::_1),
-      task_runner_);
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  event_handler_id_ =
+      hci_->command_channel()->AddLEMetaEventHandler(kLEConnectionCompleteSubeventCode,
+                                                     [self](const auto& event) {
+                                                       if (self)
+                                                         self->OnConnectionCompleteEvent(event);
+                                                     },
+                                                     task_runner_);
 }
 
 LowEnergyConnector::~LowEnergyConnector() {
   hci_->command_channel()->RemoveEventHandler(event_handler_id_);
+  if (request_pending()) Cancel();
 }
 
 bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type,
@@ -74,6 +80,7 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
                                   : hci::LEAddressType::kRandom;
 
   params->peer_address = peer_address.value();
+  params->own_address_type = own_address_type;
   params->conn_interval_min = htole16(initial_parameters.interval_min());
   params->conn_interval_max = htole16(initial_parameters.interval_max());
   params->conn_latency = htole16(initial_parameters.latency());
@@ -95,10 +102,13 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
     }
 
     // The request was started but has not completed; initiate the command timeout period.
-    // NOTE: The request will complete when The controller asynchronously notifies us of
+    // NOTE: The request will complete when the controller asynchronously notifies us of
     // with a LE Connection Complete event.
-    self->request_timeout_cb_.Reset(
-        [self] { self->OnCreateConnectionComplete(Result::kFailed, Status::kCommandTimeout); });
+    self->request_timeout_cb_.Reset([self] {
+      // If |self| was destroyed then this callback should have been canceled.
+      FXL_DCHECK(self);
+      self->OnCreateConnectionTimeout();
+    });
     self->task_runner_->PostDelayedTask(self->request_timeout_cb_.callback(),
                                         fxl::TimeDelta::FromMilliseconds(timeout_ms));
   };
@@ -110,6 +120,10 @@ bool LowEnergyConnector::CreateConnection(hci::LEOwnAddressType own_address_type
 }
 
 void LowEnergyConnector::Cancel() {
+  CancelInternal(false);
+}
+
+void LowEnergyConnector::CancelInternal(bool timed_out) {
   FXL_DCHECK(request_pending());
 
   if (pending_request_->canceled) {
@@ -122,6 +136,9 @@ void LowEnergyConnector::Cancel() {
   // corresponding LE Connection Complete event). Below we mark the request as canceled and tell the
   // controller to cancel its pending connection attempt.
   pending_request_->canceled = true;
+  pending_request_->timed_out = timed_out;
+
+  if (!request_timeout_cb_.IsCanceled()) request_timeout_cb_.Cancel();
 
   auto complete_cb = [](auto id, const EventPacket& event) {
     Status status = event.return_params<SimpleReturnParams>()->status;
@@ -154,7 +171,7 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
       // successful cancelation via the HCI_LE_Create_Connection_Cancel command (sent by Cancel()).
       OnCreateConnectionComplete(
           params->status == Status::kUnknownConnectionId ? Result::kCanceled : Result::kFailed,
-          params->status);
+          pending_request_->timed_out ? Status::kCommandTimeout : params->status);
     } else {
       FXL_LOG(WARNING) << "Unexpected LE Connection Complete event with error received: 0x"
                        << std::hex << params->status;
@@ -186,7 +203,9 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
 
   if (matches_pending_request) {
     bool canceled = pending_request_->canceled;
-    OnCreateConnectionComplete(canceled ? Result::kCanceled : Result::kSuccess, Status::kSuccess);
+    bool timed_out = pending_request_->timed_out;
+    OnCreateConnectionComplete(canceled ? Result::kCanceled : Result::kSuccess,
+                               timed_out ? Status::kCommandTimeout : Status::kSuccess);
 
     // If we were requested to cancel the connection after the link layer connection was created we
     // destroy the connection here.
@@ -202,8 +221,19 @@ void LowEnergyConnector::OnCreateConnectionComplete(Result result, Status hci_st
 
   if (!request_timeout_cb_.IsCanceled()) request_timeout_cb_.Cancel();
 
-  pending_request_->result_callback(result, hci_status);
+  auto result_cb = pending_request_->result_callback;
   pending_request_.Reset();
+
+  result_cb(result, hci_status);
+}
+
+void LowEnergyConnector::OnCreateConnectionTimeout() {
+  FXL_DCHECK(pending_request_);
+  FXL_LOG(INFO) << "LE Create Connection timed out: canceling request";
+
+  // TODO(armansito): This should cancel the connection attempt only if the connection attempt isn't
+  // using the white list.
+  CancelInternal(true);
 }
 
 }  // namespace hci

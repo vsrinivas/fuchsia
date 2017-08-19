@@ -44,6 +44,11 @@ class LowEnergyConnectorTest : public TestingBase {
         transport(), message_loop()->task_runner(),
         std::bind(&LowEnergyConnectorTest::OnConnectionCreated, this, std::placeholders::_1));
 
+    test_device()->SetConnectionStateCallback(
+        std::bind(&LowEnergyConnectorTest::OnConnectionStateChanged, this, std::placeholders::_1,
+                  std::placeholders::_2, std::placeholders::_3),
+        message_loop()->task_runner());
+
     test_device()->Start();
   }
 
@@ -53,7 +58,11 @@ class LowEnergyConnectorTest : public TestingBase {
     TestingBase::TearDown();
   }
 
-  bool quit_loop_on_new_connection;
+  void DeleteConnector() { connector_ = nullptr; }
+
+  bool request_canceled = false;
+  bool quit_loop_on_new_connection = false;
+  bool quit_loop_on_cancel = false;
 
   const std::vector<std::unique_ptr<Connection>>& connections() const { return connections_; }
   LowEnergyConnector* connector() const { return connector_.get(); }
@@ -63,6 +72,12 @@ class LowEnergyConnectorTest : public TestingBase {
     connections_.push_back(std::move(connection));
 
     if (quit_loop_on_new_connection) message_loop()->QuitNow();
+  }
+
+  void OnConnectionStateChanged(const common::DeviceAddress& address, bool connected,
+                                bool canceled) {
+    request_canceled = canceled;
+    if (request_canceled && quit_loop_on_cancel) message_loop()->QuitNow();
   }
 
   std::unique_ptr<LowEnergyConnector> connector_;
@@ -212,6 +227,7 @@ TEST_F(LowEnergyConnectorTest, Cancel) {
   EXPECT_TRUE(ret);
   EXPECT_TRUE(connector()->request_pending());
 
+  ASSERT_FALSE(request_canceled);
   connector()->Cancel();
   EXPECT_TRUE(connector()->request_pending());
 
@@ -219,6 +235,7 @@ TEST_F(LowEnergyConnectorTest, Cancel) {
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
+  EXPECT_TRUE(request_canceled);
   EXPECT_EQ(hci::LowEnergyConnector::Result::kCanceled, result);
   EXPECT_EQ(hci::Status::kUnknownConnectionId, hci_status);
   EXPECT_TRUE(connections().empty());
@@ -330,12 +347,59 @@ TEST_F(LowEnergyConnectorTest, CreateConnectionTimeout) {
                                 callback, kShortTimeoutMs);
   EXPECT_TRUE(connector()->request_pending());
 
+  EXPECT_FALSE(request_canceled);
+
   RunMessageLoop();
 
   EXPECT_FALSE(connector()->request_pending());
   EXPECT_TRUE(callback_called);
-  EXPECT_EQ(hci::LowEnergyConnector::Result::kFailed, result);
+  EXPECT_EQ(hci::LowEnergyConnector::Result::kCanceled, result);
+  EXPECT_TRUE(request_canceled);
   EXPECT_EQ(hci::Status::kCommandTimeout, hci_status);
+  EXPECT_TRUE(connections().empty());
+}
+
+TEST_F(LowEnergyConnectorTest, SendRequestAndDelete) {
+  auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
+  test_device()->AddLEDevice(std::move(fake_device));
+
+  hci::Connection::LowEnergyParameters params;
+  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
+                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
+                                           params, [](auto, auto) {}, kTestTimeoutMs);
+  EXPECT_TRUE(ret);
+  EXPECT_TRUE(connector()->request_pending());
+
+  DeleteConnector();
+
+  quit_loop_on_cancel = true;
+  RunMessageLoop();
+
+  EXPECT_TRUE(request_canceled);
+  EXPECT_TRUE(connections().empty());
+}
+
+// This test is identical to SendRequestAndDelete except that this waits for the connection request
+// timeout to finish.
+TEST_F(LowEnergyConnectorTest, SendRequestDeleteAndWaitForTimeout) {
+  constexpr int64_t kShortTimeoutMs = 100;
+  auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
+  test_device()->AddLEDevice(std::move(fake_device));
+
+  hci::Connection::LowEnergyParameters params;
+  bool ret = connector()->CreateConnection(hci::LEOwnAddressType::kPublic, false, kTestAddress,
+                                           defaults::kLEScanInterval, defaults::kLEScanWindow,
+                                           params, [](auto, auto) {}, kShortTimeoutMs);
+  EXPECT_TRUE(ret);
+  EXPECT_TRUE(connector()->request_pending());
+
+  DeleteConnector();
+
+  // Run the message loop long enough for the connection creation timeout to expire. The timeout
+  // handler should be canceled during destruction and no assertions should be hit.
+  RunMessageLoop(fxl::TimeDelta::FromMilliseconds(2 * kShortTimeoutMs));
+
+  EXPECT_TRUE(request_canceled);
   EXPECT_TRUE(connections().empty());
 }
 
