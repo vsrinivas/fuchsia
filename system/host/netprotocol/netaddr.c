@@ -83,6 +83,8 @@ int main(int argc, char** argv) {
 
     if (argc == 1) {
         hostname = argv[0];
+        if (!*hostname || (*hostname == ':' && hostname[1] == '\0'))
+            hostname = NULL;
     }
 
     if (netboot_discover(NB_SERVER_PORT, NULL, on_device, NULL) || !found) {
