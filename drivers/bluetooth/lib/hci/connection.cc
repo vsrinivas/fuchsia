@@ -78,13 +78,7 @@ Connection::~Connection() {
   Close();
 }
 
-void Connection::MarkClosed() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(is_open_);
-  is_open_ = false;
-}
-
-void Connection::Close(Status reason, const fxl::Closure& callback) {
+void Connection::Close(Status reason) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   if (!is_open()) return;
 
@@ -95,44 +89,17 @@ void Connection::Close(Status reason, const fxl::Closure& callback) {
   //
   // TODO(armansito): The procedure could also fail if "the command was not presently allowed".
   // Retry in that case?
-  is_open_ = false;
+  set_closed();
 
-  FXL_DCHECK(!close_cb_);
-  close_cb_ = callback;
+  // Here we send a HCI_Disconnect command without waiting for it to complete.
 
-  // Here we send a HCI_Disconnect command. We use a matcher so that this command completes when we
-  // receive a HCI Disconnection Complete event with the connection handle that belongs to this
-  // connection.
-
-  auto matcher = [handle = handle_](const EventPacket& event)->bool {
-    FXL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
-    return handle ==
-           le16toh(event.view().payload<DisconnectionCompleteEventParams>().connection_handle);
-  };
-
-  auto self = weak_ptr_factory_.GetWeakPtr();
-
-  auto status_cb = [self](auto id, Status status) {
-    if (status != Status::kSuccess) {
-      if (status == Status::kCommandTimeout && self) {
-        self->NotifyClosed();
-        return;
-      }
-
-      FXL_LOG(WARNING) << "Ignoring failed disconnect command status: 0x" << std::hex << status;
-    }
-  };
-
-  auto complete_cb = [ handle = handle_, self ](auto id, const EventPacket& event) {
-    FXL_DCHECK(event.event_code() == kDisconnectionCompleteEventCode);
-    const auto& params = event.view().payload<DisconnectionCompleteEventParams>();
-    FXL_DCHECK(handle == le16toh(params.connection_handle));
-
+  auto status_cb = [](auto id, const EventPacket& event) {
+    FXL_DCHECK(event.event_code() == kCommandStatusEventCode);
+    const auto& params = event.view().payload<CommandStatusEventParams>();
     if (params.status != Status::kSuccess) {
-      FXL_LOG(WARNING) << "Ignoring failed disconnection status: 0x" << std::hex << params.status;
+      FXL_LOG(WARNING) << fxl::StringPrintf("Ignoring failed disconnection status: 0x%02x",
+                                            params.status);
     }
-
-    if (self) self->NotifyClosed();
   };
 
   auto disconn = CommandPacket::New(kDisconnect, sizeof(DisconnectCommandParams));
@@ -141,8 +108,8 @@ void Connection::Close(Status reason, const fxl::Closure& callback) {
   params->reason = reason;
 
   hci_->command_channel()->SendCommand(std::move(disconn),
-                                       fsl::MessageLoop::GetCurrent()->task_runner(), complete_cb,
-                                       status_cb, kDisconnectionCompleteEventCode, matcher);
+                                       fsl::MessageLoop::GetCurrent()->task_runner(), status_cb, {},
+                                       kCommandStatusEventCode);
 }
 
 std::string Connection::ToString() const {

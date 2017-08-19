@@ -55,6 +55,17 @@ void TestController::SetDataCallback(const DataCallback& callback,
   data_task_runner_ = task_runner;
 }
 
+void TestController::SetTransactionCallback(const fxl::Closure& callback,
+                                            fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
+  FXL_DCHECK(!transaction_callback_);
+  FXL_DCHECK(!transaction_task_runner_);
+
+  transaction_callback_ = callback;
+  transaction_task_runner_ = task_runner;
+}
+
 void TestController::OnCommandPacketReceived(
     const common::PacketView<hci::CommandHeader>& command_packet) {
   ASSERT_FALSE(cmd_transactions_.empty()) << "Received unexpected command packet";
@@ -70,6 +81,7 @@ void TestController::OnCommandPacketReceived(
   }
 
   cmd_transactions_.pop();
+  if (transaction_callback_) transaction_task_runner_->PostTask(transaction_callback_);
 }
 
 void TestController::OnACLDataPacketReceived(const common::ByteBuffer& acl_data_packet) {

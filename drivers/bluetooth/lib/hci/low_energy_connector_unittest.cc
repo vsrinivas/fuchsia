@@ -128,7 +128,7 @@ TEST_F(LowEnergyConnectorTest, CreateConnection) {
   EXPECT_EQ(1u, conn->handle());
   EXPECT_EQ(kTestAddress, conn->peer_address());
   EXPECT_TRUE(conn->is_open());
-  conn->MarkClosed();
+  conn->set_closed();
 }
 
 // Controller reports error from HCI Command Status event.
@@ -265,7 +265,7 @@ TEST_F(LowEnergyConnectorTest, IncomingConnect) {
   EXPECT_EQ(1u, conn->handle());
   EXPECT_EQ(kTestAddress, conn->peer_address());
   EXPECT_TRUE(conn->is_open());
-  conn->MarkClosed();
+  conn->set_closed();
 }
 
 TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
@@ -319,7 +319,7 @@ TEST_F(LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
     EXPECT_TRUE(conn->handle() == 1u || conn->handle() == 2u);
     EXPECT_TRUE(conn->peer_address() == kTestAddress || conn->peer_address() == kIncomingAddress);
     EXPECT_TRUE(conn->is_open());
-    conn->MarkClosed();
+    conn->set_closed();
   }
 }
 

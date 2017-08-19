@@ -63,15 +63,17 @@ TEST_F(ConnectionTest, Close) {
   test_device()->Start();
 
   bool callback_called = false;
-  auto callback = [&callback_called, this] {
-    callback_called = true;
-    message_loop()->QuitNow();
-  };
+  test_device()->SetTransactionCallback(
+      [&callback_called, this] {
+        callback_called = true;
+        message_loop()->QuitNow();
+      },
+      message_loop()->task_runner());
 
   Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
   EXPECT_TRUE(connection.is_open());
 
-  connection.Close(Status::kRemoteUserTerminatedConnection, callback);
+  connection.Close(Status::kRemoteUserTerminatedConnection);
   EXPECT_FALSE(connection.is_open());
 
   RunMessageLoop();
@@ -101,60 +103,21 @@ TEST_F(ConnectionTest, CloseError) {
 
   // The callback should get called regardless of the procedure status.
   bool callback_called = false;
-  auto callback = [&callback_called, this] {
-    callback_called = true;
-    message_loop()->QuitNow();
-  };
+  test_device()->SetTransactionCallback(
+      [&callback_called, this] {
+        callback_called = true;
+        message_loop()->QuitNow();
+      },
+      message_loop()->task_runner());
 
   Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
   EXPECT_TRUE(connection.is_open());
 
-  connection.Close(Status::kRemoteUserTerminatedConnection, callback);
+  connection.Close(Status::kRemoteUserTerminatedConnection);
   EXPECT_FALSE(connection.is_open());
 
   RunMessageLoop();
   EXPECT_TRUE(callback_called);
-}
-
-TEST_F(ConnectionTest, CloseTimeout) {
-  // clang-format off
-
-  // HCI_Disconnect (handle: 0x0001, reason: RemoteUserTerminatedConnection)
-  auto req_bytes = common::CreateStaticByteBuffer(
-      0x06, 0x04, 0x03, 0x01, 0x00, Status::kRemoteUserTerminatedConnection);
-
-  // Respond with Command Status and Disconnection Complete.
-  auto cmd_status_bytes = common::CreateStaticByteBuffer(
-      kCommandStatusEventCode, 0x04, Status::kSuccess, 1, 0x06, 0x04);
-
-  // clang-format on
-
-  test_device()->QueueCommandTransaction(CommandTransaction({req_bytes, {&cmd_status_bytes}}));
-  test_device()->Start();
-
-  // The callback should get called at the end of the time out period.
-  bool callback_called = false;
-  auto callback = [&callback_called, this] {
-    callback_called = true;
-    message_loop()->QuitNow();
-  };
-
-  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
-  EXPECT_TRUE(connection.is_open());
-
-  connection.Close(Status::kRemoteUserTerminatedConnection, callback);
-  EXPECT_FALSE(connection.is_open());
-
-  RunMessageLoop();
-  EXPECT_TRUE(callback_called);
-}
-
-TEST_F(ConnectionTest, MarkClosed) {
-  Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams, transport());
-  EXPECT_TRUE(connection.is_open());
-
-  connection.MarkClosed();
-  EXPECT_FALSE(connection.is_open());
 }
 
 }  // namespace

@@ -111,32 +111,15 @@ class Connection final {
 
   // Returns true if this connection is currently open.
   bool is_open() const { return is_open_; }
+  void set_closed() { is_open_ = false; }
 
-  // Marks a previously active (open) connection as no longer active. This can happen when a
-  // connection is terminated without an explicit call to Close(), e.g. because the remote end
-  // terminated the connection.
-  //
-  // After a connection has been marked as closed, the Close() method will become a no-op.
-  void MarkClosed();
-
-  // Closes this connection by sending the HCI_Disconnect command to the controller. If this
-  // connection has been marked as closed, this method does nothing. If a |callback| is provided, it
-  // will be invoked when the procedure has been completed.
-  void Close(Status reason = Status::kRemoteUserTerminatedConnection,
-             const fxl::Closure& callback = nullptr);
+  // Closes this connection by sending the HCI_Disconnect command to the controller. This method is
+  // a NOP if the connecton is already closed.
+  void Close(Status reason = Status::kRemoteUserTerminatedConnection);
 
   std::string ToString() const;
 
  private:
-  // Clears and runs |close_cb| if it was set.
-  inline void NotifyClosed() {
-    if (close_cb_) {
-      auto callback = close_cb_;
-      close_cb_ = nullptr;
-      callback();
-    }
-  }
-
   LinkType ll_type_;
   ConnectionHandle handle_;
   Role role_;
@@ -149,9 +132,6 @@ class Connection final {
 
   // Connection parameters for a LE link. Not nullptr if the link type is LE.
   LowEnergyParameters le_params_;
-
-  // Callback used during Close().
-  fxl::Closure close_cb_;
 
   // The underlying HCI transport. We use this to terminate the connection by sending the
   // HCI_Disconnect command.

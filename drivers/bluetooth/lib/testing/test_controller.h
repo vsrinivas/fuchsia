@@ -10,6 +10,7 @@
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/testing/fake_controller_base.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {
@@ -57,6 +58,10 @@ class TestController : public FakeControllerBase {
   using DataCallback = std::function<void(const common::ByteBuffer& packet)>;
   void SetDataCallback(const DataCallback& callback, fxl::RefPtr<fxl::TaskRunner> task_runner);
 
+  // Callback invoked when a transaction completes.
+  void SetTransactionCallback(const fxl::Closure& callback,
+                              fxl::RefPtr<fxl::TaskRunner> task_runner);
+
  private:
   // FakeControllerBase overrides:
   void OnCommandPacketReceived(
@@ -66,6 +71,8 @@ class TestController : public FakeControllerBase {
   std::queue<CommandTransaction> cmd_transactions_;
   DataCallback data_callback_;
   fxl::RefPtr<fxl::TaskRunner> data_task_runner_;
+  fxl::Closure transaction_callback_;
+  fxl::RefPtr<fxl::TaskRunner> transaction_task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestController);
 };
