@@ -55,15 +55,6 @@
 FUNCTION(_x86_copy_from_user)
     begin_usercopy
 
-    # Check that userspace has access to the [src, src+len) buffer
-    mov %r13, %rdi
-    mov %r14, %rsi
-    call _x86_usercopy_can_read
-    cmp $0, %rax
-    jnz 0f
-    mov $MX_ERR_INVALID_ARGS, %rax
-    jmp .Lcleanup_copy_from
-0:
     # Setup page fault return
     movq $.Lfault_copy_from, (%r15)
 
@@ -96,15 +87,6 @@ END_FUNCTION(_x86_copy_from_user)
 FUNCTION(_x86_copy_to_user)
     begin_usercopy
 
-    # Check that userspace has access to the [dst, dst+len) buffer
-    mov %r12, %rdi
-    mov %r14, %rsi
-    call _x86_usercopy_can_write
-    cmp $0, %rax
-    jnz 0f
-    mov $MX_ERR_INVALID_ARGS, %rax
-    jmp .Lcleanup_copy_to
-0:
     # Setup page fault return
     movq $.Lfault_copy_to, (%r15)
 
