@@ -99,7 +99,8 @@ FakeController::LEScanState::LEScanState()
 
 FakeController::FakeController(mx::channel cmd_channel, mx::channel acl_data_channel)
     : FakeControllerBase(std::move(cmd_channel), std::move(acl_data_channel)),
-      next_conn_handle_(0u) {}
+      next_conn_handle_(0u),
+      le_connect_pending_(false) {}
 
 FakeController::~FakeController() {
   if (IsStarted()) Stop();
@@ -124,7 +125,16 @@ void FakeController::SetScanStateCallback(const ScanStateCallback& callback,
   FXL_DCHECK(task_runner);
 
   scan_state_cb_ = callback;
-  scan_state_cb_task_runner_ = task_runner;
+  scan_state_cb_runner_ = task_runner;
+}
+
+void FakeController::SetConnectionStateCallback(const ConnectionStateCallback& callback,
+                                                fxl::RefPtr<fxl::TaskRunner> task_runner) {
+  FXL_DCHECK(callback);
+  FXL_DCHECK(task_runner);
+
+  conn_state_cb_ = callback;
+  conn_state_cb_runner_ = task_runner;
 }
 
 void FakeController::RespondWithCommandComplete(hci::OpCode opcode, const void* return_params,
@@ -162,23 +172,27 @@ void FakeController::RespondWithCommandStatus(hci::OpCode opcode, hci::Status st
   SendCommandChannelPacket(buffer);
 }
 
+void FakeController::SendEvent(hci::EventCode event_code, const void* params, uint8_t params_size) {
+  FXL_DCHECK(!!params == !!params_size);
+
+  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + params_size);
+  common::MutablePacketView<hci::EventHeader> event(&buffer, params_size);
+
+  event.mutable_header()->event_code = event_code;
+  event.mutable_header()->parameter_total_size = params_size;
+  event.mutable_payload_data().Write(reinterpret_cast<const uint8_t*>(params), params_size);
+
+  SendCommandChannelPacket(buffer);
+}
+
 void FakeController::SendLEMetaEvent(hci::EventCode subevent_code, const void* params,
                                      uint8_t params_size) {
   FXL_DCHECK(!!params == !!params_size);
+  common::DynamicByteBuffer buffer(sizeof(hci::LEMetaEventParams) + params_size);
+  buffer[0] = subevent_code;
+  buffer.Write(static_cast<const uint8_t*>(params), params_size, 1);
 
-  common::DynamicByteBuffer buffer(sizeof(hci::EventHeader) + sizeof(hci::LEMetaEventParams) +
-                                   params_size);
-  common::MutablePacketView<hci::EventHeader> event(&buffer,
-                                                    buffer.size() - sizeof(hci::EventHeader));
-
-  event.mutable_header()->event_code = hci::kLEMetaEventCode;
-  event.mutable_header()->parameter_total_size = event.payload_size();
-
-  auto payload = event.mutable_payload<hci::LEMetaEventParams>();
-  payload->subevent_code = subevent_code;
-  std::memcpy(payload->subevent_parameters, params, params_size);
-
-  SendCommandChannelPacket(buffer);
+  SendEvent(hci::kLEMetaEventCode, buffer.data(), buffer.size());
 }
 
 bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
@@ -218,8 +232,23 @@ void FakeController::SendAdvertisingReports() {
   }
 }
 
+void FakeController::NotifyConnectionState(const common::DeviceAddress& addr, bool connected,
+                                           bool canceled) {
+  if (!conn_state_cb_) return;
+
+  FXL_DCHECK(conn_state_cb_runner_);
+  conn_state_cb_runner_->PostTask(
+      [ addr, connected, canceled, cb = conn_state_cb_ ] { cb(addr, connected, canceled); });
+}
+
 void FakeController::OnLECreateConnectionCommandReceived(
     const hci::LECreateConnectionCommandParams& params) {
+  // Cannot issue this command while a request is already pending.
+  if (le_connect_pending_) {
+    RespondWithCommandStatus(hci::kLECreateConnection, hci::Status::kCommandDisallowed);
+    return;
+  }
+
   common::DeviceAddress::Type addr_type = hci::AddressTypeFromHCI(params.peer_address_type);
   FXL_DCHECK(addr_type != common::DeviceAddress::Type::kBREDR);
 
@@ -248,6 +277,9 @@ void FakeController::OnLECreateConnectionCommandReceived(
 
   // If we just sent back an error status then the operation is complete.
   if (status != hci::Status::kSuccess) return;
+
+  le_connect_pending_ = true;
+  pending_le_connect_addr_ = peer_address;
 
   // The procedure was initiated successfully but the device cannot be connected because it either
   // doesn't exist or isn't connectable.
@@ -285,20 +317,58 @@ void FakeController::OnLECreateConnectionCommandReceived(
     response.supervision_timeout = params.supervision_timeout;
 
     response.role = hci::LEConnectionRole::kMaster;
-    response.connection_handle = htole16(++next_conn_handle_);
 
-    device->set_connected(true);
+    hci::ConnectionHandle handle = ++next_conn_handle_;
+    response.connection_handle = htole16(handle);
   }
 
-  pending_le_connect_addr_ = peer_address;
-  pending_le_connect_rsp_.Reset([response, this] {
+  pending_le_connect_rsp_.Reset([response, device, this] {
+    le_connect_pending_ = false;
+
+    if (response.status == hci::Status::kSuccess) {
+      bool notify = !device->connected();
+      device->AddLink(le16toh(response.connection_handle));
+      if (notify && device->connected()) NotifyConnectionState(device->address(), true);
+    }
+
     SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &response, sizeof(response));
   });
 
-  // Allow enough time for the request to be canceled.
-  // TODO(armansito): Make the period configurable?
-  task_runner()->PostDelayedTask(pending_le_connect_rsp_.callback(),
-                                 fxl::TimeDelta::FromMilliseconds(100));
+  task_runner()->PostDelayedTask(
+      [conn_cb = pending_le_connect_rsp_.callback()] { conn_cb(); },
+      fxl::TimeDelta::FromMilliseconds(device->connect_response_period_ms()));
+}
+
+void FakeController::OnDisconnectCommandReceived(const hci::DisconnectCommandParams& params) {
+  hci::ConnectionHandle handle = le16toh(params.connection_handle);
+
+  // Find the device that matches the disconnected handle.
+  FakeDevice* device = nullptr;
+  for (const auto& dev : le_devices_) {
+    if (dev->HasLink(handle)) {
+      device = dev.get();
+      break;
+    }
+  }
+
+  if (!device) {
+    RespondWithCommandStatus(hci::kDisconnect, hci::Status::kUnknownConnectionId);
+    return;
+  }
+
+  FXL_DCHECK(device->connected());
+
+  RespondWithCommandStatus(hci::kDisconnect, hci::Status::kSuccess);
+
+  bool notify = device->connected();
+  device->RemoveLink(handle);
+  if (notify && !device->connected()) NotifyConnectionState(device->address(), false);
+
+  hci::DisconnectionCompleteEventParams reply;
+  reply.status = hci::Status::kSuccess;
+  reply.connection_handle = params.connection_handle;
+  reply.reason = hci::Status::kConnectionTerminatedByLocalHost;
+  SendEvent(hci::kDisconnectionCompleteEventCode, &reply, sizeof(reply));
 }
 
 void FakeController::OnCommandPacketReceived(
@@ -344,6 +414,10 @@ void FakeController::OnCommandPacketReceived(
       RespondWithCommandComplete(hci::kReadBufferSize, &params, sizeof(params));
       break;
     }
+    case hci::kDisconnect: {
+      OnDisconnectCommandReceived(command_packet.payload<hci::DisconnectCommandParams>());
+      break;
+    }
     case hci::kLECreateConnection: {
       OnLECreateConnectionCommandReceived(
           command_packet.payload<hci::LECreateConnectionCommandParams>());
@@ -353,14 +427,17 @@ void FakeController::OnCommandPacketReceived(
       hci::SimpleReturnParams params;
       params.status = hci::Status::kSuccess;
 
-      if (pending_le_connect_rsp_.IsCanceled()) {
+      if (!le_connect_pending_) {
         // No request is currently pending.
         params.status = hci::Status::kCommandDisallowed;
         RespondWithCommandComplete(hci::kLECreateConnectionCancel, &params, sizeof(params));
         return;
       }
 
+      le_connect_pending_ = false;
       pending_le_connect_rsp_.Cancel();
+
+      NotifyConnectionState(pending_le_connect_addr_, false, true);
 
       hci::LEConnectionCompleteSubeventParams response;
       std::memset(&response, 0, sizeof(response));
@@ -469,8 +546,8 @@ void FakeController::OnCommandPacketReceived(
       // guarantees that single-threaded unit tests receive the scan state update BEFORE the HCI
       // command sequence terminates.
       if (scan_state_cb_) {
-        FXL_DCHECK(scan_state_cb_task_runner_);
-        scan_state_cb_task_runner_->PostTask(
+        FXL_DCHECK(scan_state_cb_runner_);
+        scan_state_cb_runner_->PostTask(
             [ cb = scan_state_cb_, enabled = le_scan_state_.enabled ] { cb(enabled); });
       }
 

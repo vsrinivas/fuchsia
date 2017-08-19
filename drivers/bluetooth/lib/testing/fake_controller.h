@@ -14,6 +14,7 @@
 #include "apps/bluetooth/lib/hci/hci_constants.h"
 #include "apps/bluetooth/lib/testing/fake_controller_base.h"
 #include "lib/fxl/functional/cancelable_callback.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
 namespace bluetooth {
@@ -95,10 +96,19 @@ class FakeController : public FakeControllerBase {
   // procedures.
   void AddLEDevice(std::unique_ptr<FakeDevice> le_device);
 
-  // Sets a callback to invoked when the scan state changes.
+  // Sets a callback to be invoked when the scan state changes.
   using ScanStateCallback = std::function<void(bool enabled)>;
   void SetScanStateCallback(const ScanStateCallback& callback,
                             fxl::RefPtr<fxl::TaskRunner> task_runner);
+
+  // Sets a callback to be invoked on connection events.
+  using ConnectionStateCallback =
+      std::function<void(const common::DeviceAddress&, bool connected, bool canceled)>;
+  void SetConnectionStateCallback(const ConnectionStateCallback& callback,
+                                  fxl::RefPtr<fxl::TaskRunner> task_runner);
+
+  // Sends a HCI event with the given parameters.
+  void SendEvent(hci::EventCode event_code, const void* params, uint8_t params_size);
 
   // Sends a LE Meta event with the given parameters.
   void SendLEMetaEvent(hci::EventCode subevent_code, const void* params, uint8_t params_size);
@@ -120,8 +130,15 @@ class FakeController : public FakeControllerBase {
   // Sends LE advertising reports for known LE devices, if a scan is currently enabled.
   void SendAdvertisingReports();
 
+  // Notifies |conn_state_cb_| with the given parameters.
+  void NotifyConnectionState(const common::DeviceAddress& addr, bool connected,
+                             bool canceled = false);
+
   // Called when a HCI_LE_Create_Connection command is received.
   void OnLECreateConnectionCommandReceived(const hci::LECreateConnectionCommandParams& params);
+
+  // Called when a HCI_Disconnect command is received.
+  void OnDisconnectCommandReceived(const hci::DisconnectCommandParams& params);
 
   // FakeControllerBase overrides:
   void OnCommandPacketReceived(
@@ -135,12 +152,16 @@ class FakeController : public FakeControllerBase {
   uint16_t next_conn_handle_;
   fxl::CancelableClosure pending_le_connect_rsp_;
   common::DeviceAddress pending_le_connect_addr_;
+  bool le_connect_pending_;
 
   std::unordered_map<hci::OpCode, hci::Status> default_status_map_;
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;
 
   ScanStateCallback scan_state_cb_;
-  fxl::RefPtr<fxl::TaskRunner> scan_state_cb_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> scan_state_cb_runner_;
+
+  ConnectionStateCallback conn_state_cb_;
+  fxl::RefPtr<fxl::TaskRunner> conn_state_cb_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };

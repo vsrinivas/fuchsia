@@ -32,6 +32,7 @@ FakeDevice::FakeDevice(const common::DeviceAddress& address, bool connectable, b
       scannable_(scannable),
       connect_status_(hci::Status::kSuccess),
       connect_response_(hci::Status::kSuccess),
+      connect_rsp_ms_(kDefaultConnectResponseTimeMs),
       should_batch_reports_(false) {}
 
 void FakeDevice::SetAdvertisingData(const common::ByteBuffer& data) {
@@ -116,6 +117,23 @@ common::DynamicByteBuffer FakeDevice::CreateScanResponseReportEvent() const {
   WriteScanResponseReport(report);
 
   return buffer;
+}
+
+void FakeDevice::AddLink(hci::ConnectionHandle handle) {
+  FXL_DCHECK(!HasLink(handle));
+  logical_links_.insert(handle);
+
+  if (logical_links_.size() == 1u) set_connected(true);
+}
+
+void FakeDevice::RemoveLink(hci::ConnectionHandle handle) {
+  FXL_DCHECK(HasLink(handle));
+  logical_links_.erase(handle);
+  if (logical_links_.empty()) set_connected(false);
+}
+
+bool FakeDevice::HasLink(hci::ConnectionHandle handle) const {
+  return logical_links_.count(handle) != 0u;
 }
 
 void FakeDevice::WriteScanResponseReport(hci::LEAdvertisingReportData* report) const {

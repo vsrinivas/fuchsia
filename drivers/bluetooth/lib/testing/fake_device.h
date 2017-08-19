@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <unordered_set>
+
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/device_address.h"
 #include "apps/bluetooth/lib/hci/connection.h"
@@ -16,11 +18,14 @@ namespace testing {
 // FakeDevice is used to emulate remote Bluetooth devices.
 class FakeDevice {
  public:
+  static constexpr int64_t kDefaultConnectResponseTimeMs = 100;
+
   // NOTE: Setting |connectable| to true will result in a "Connectable and Scannable Advertisement"
   // (i.e. ADV_IND) even if |scannable| is set to false. This is OK since we use |scannable| to
   // drive the receipt of Scan Response PDUs: we use this to test the condition in which the
   // advertisement is scannable but the host never receives a scan response.
-  FakeDevice(const common::DeviceAddress& address, bool connectable, bool scannable);
+  explicit FakeDevice(const common::DeviceAddress& address, bool connectable = true,
+                      bool scannable = true);
 
   void SetAdvertisingData(const common::ByteBuffer& data);
 
@@ -70,6 +75,13 @@ class FakeDevice {
   hci::Status connect_status() const { return connect_status_; }
   void set_connect_status(hci::Status status) { connect_status_ = status; }
 
+  int64_t connect_response_period_ms() const { return connect_rsp_ms_; }
+  void set_connect_response_period_ms(int64_t value) { connect_rsp_ms_ = value; }
+
+  void AddLink(hci::ConnectionHandle handle);
+  void RemoveLink(hci::ConnectionHandle handle);
+  bool HasLink(hci::ConnectionHandle handle) const;
+
  private:
   void WriteScanResponseReport(hci::LEAdvertisingReportData* report) const;
 
@@ -80,12 +92,16 @@ class FakeDevice {
 
   hci::Status connect_status_;
   hci::Status connect_response_;
+  int64_t connect_rsp_ms_;
 
   hci::Connection::LowEnergyParameters le_params_;
 
   bool should_batch_reports_;
   common::DynamicByteBuffer adv_data_;
   common::DynamicByteBuffer scan_rsp_;
+
+  // Open connection handles.
+  std::unordered_set<hci::ConnectionHandle> logical_links_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeDevice);
 };
