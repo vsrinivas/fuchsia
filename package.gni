@@ -130,38 +130,21 @@ declare_args() {
 #
 template("package") {
   if (current_toolchain == target_toolchain) {
-    binaries = []
-    drivers = []
-    libraries = []
-    meta = []
-    resources = []
-    tests = []
-    package_name = target_name
-    if (defined(invoker.package_name)) {
-      package_name = invoker.package_name
+    pkg = {
+      app = false
+      archive = false
+      binaries = []
+      drivers = []
+      libraries = []
+      meta = []
+      package_name = target_name
+      resources = []
+      tests = []
+      forward_variables_from(invoker, "*")
     }
-    if (defined(invoker.meta)) {
-      meta = invoker.meta
-    }
-    if (defined(invoker.binaries)) {
-      binaries = invoker.binaries
-    }
-    if (defined(invoker.tests)) {
-      tests = invoker.tests
-    }
-    if (defined(invoker.drivers)) {
-      drivers = invoker.drivers
-    }
-    if (defined(invoker.libraries)) {
-      libraries = invoker.libraries
-    }
-    if (defined(invoker.resources)) {
-      resources = invoker.resources
-    }
-    output_base = "$root_build_dir/package/$package_name/"
+    pkg_out_dir = "$root_build_dir/package/${pkg.package_name}"
 
-    assert(!defined(invoker.drivers) || !defined(invoker.archive) ||
-           !invoker.archive)
+    assert(pkg.drivers == [] || !pkg.archive)
 
     mkfs_target = target_name + "_mkfs"
     extract_buildids_target = target_name + "_extract_buildids"
@@ -180,25 +163,24 @@ template("package") {
 
       sources = []
 
-      foreach(entry, meta) {
-        assert(defined(invoker.archive) && invoker.archive,
-               "Metadata requires the package to be archived.")
+      foreach(entry, pkg.meta) {
+        assert(pkg.archive, "Metadata requires the package to be archived.")
         source = entry.path
         sources += [ entry.path ]
-        dest = "meta/" + entry.dest
+        dest = "meta/${entry.dest}"
         package_manifest_contents += [ "$dest=$source" ]
       }
-      foreach(binary, binaries) {
+      foreach(binary, pkg.binaries) {
         # Binary paths are relative to the root of the build dir.
         if (defined(binary.source)) {
-          source = rebase_path(root_build_dir + "/" + binary.source)
-          sources += [ root_build_dir + "/" + binary.source ]
+          source = rebase_path("$root_build_dir/${binary.source}")
+          sources += [ "$root_build_dir/${binary.source}" ]
         } else {
-          source = rebase_path(root_build_dir + "/" + binary.name)
-          sources += [ root_build_dir + "/" + binary.name ]
+          source = rebase_path("$root_build_dir/${binary.name}")
+          sources += [ "$root_build_dir/${binary.name}" ]
         }
         dirname = "bin"
-        if (defined(invoker.app) && invoker.app) {
+        if (pkg.app) {
           dirname = "apps"
         }
         basename = binary.name
@@ -207,13 +189,13 @@ template("package") {
         }
         package_manifest_contents += [ "$dirname/$basename=$source" ]
       }
-      foreach(test, tests) {
-        source = rebase_path(root_build_dir + "/" + test.name)
-        sources += [ root_build_dir + "/" + test.name ]
+      foreach(test, pkg.tests) {
+        source = rebase_path("$root_build_dir/${test.name}")
+        sources += [ "$root_build_dir/${test.name}" ]
         dest = "test/" + test.name
         package_manifest_contents += [ "$dest=$source" ]
       }
-      foreach(driver, drivers) {
+      foreach(driver, pkg.drivers) {
         # Driver paths are relative to the root of the build dir.
         source = rebase_path("$shared_toolchain_out_dir/${driver.name}")
         sources += [ "$shared_toolchain_out_dir/${driver.name}" ]
@@ -228,7 +210,7 @@ template("package") {
           package_manifest_contents += [ "$dest=$source" ]
         }
       }
-      foreach(library, libraries) {
+      foreach(library, pkg.libraries) {
         # Library paths are relative to the root of the build dir.
         if (defined(library.source)) {
           library_path = rebase_path(library.source)
@@ -249,30 +231,32 @@ template("package") {
           package_manifest_contents += [ "$dest=$source" ]
         }
       }
-      foreach(resource, resources) {
+      foreach(resource, pkg.resources) {
         # Resource path are absolute.
         source = resource.path
         sources += [ resource.path ]
         dest = "data/" + resource.dest
         package_manifest_contents += [ "$dest=$source" ]
       }
-      boot_manifest = output_base + "boot_manifest"
+      boot_manifest = "$pkg_out_dir/boot_manifest"
       write_file(boot_manifest, boot_manifest_contents)
 
-      system_manifest = output_base + "system_manifest"
-      archive_manifest = output_base + "archive_manifest"
+      system_manifest = "$pkg_out_dir/system_manifest"
+      archive_manifest = "$pkg_out_dir/archive_manifest"
 
-      if (defined(invoker.archive) && invoker.archive) {
+      if (pkg.archive) {
         assert(boot_manifest_contents == [])
         assert(package_manifest_contents != [])
 
         write_file(archive_manifest, package_manifest_contents)
 
-        deps += [ "//application/src/archiver($host_toolchain)" ]
+        archiver_label = "//application/src/archiver($host_toolchain)"
+        deps += [ archiver_label ]
 
-        far_path = "$root_build_dir/host_$host_cpu/far"
+        archiver_out_dir = get_label_info(archiver_label, "root_out_dir")
+        far_path = "$archiver_out_dir/far"
 
-        output = output_base + package_name + ".far"
+        output = "$pkg_out_dir/${pkg.package_name}.far"
 
         script = far_path
         outputs = [
@@ -285,14 +269,14 @@ template("package") {
         ]
 
         write_file(system_manifest,
-                   [ "pkgs/$package_name=" + rebase_path(output) ])
+                   [ "pkgs/${pkg.package_name}=" + rebase_path(output) ])
       } else {
         write_file(system_manifest, package_manifest_contents)
         write_file(archive_manifest, [])
 
         # We have to do something in our action
         script = "/usr/bin/touch"
-        output = output_base + ".stamp"
+        output = "$pkg_out_dir/.stamp"
         outputs = [
           output,
         ]
@@ -309,7 +293,7 @@ template("package") {
                                "testonly",
                              ])
 
-      id_file = output_base + "ids.txt"
+      id_file = "$pkg_out_dir/ids.txt"
 
       script = "//packages/gn/read_build_ids.py"
       outputs = [
@@ -318,10 +302,10 @@ template("package") {
 
       args = [ rebase_path(id_file) ]
       foreach(binary, binaries) {
-        args += [ rebase_path(root_build_dir + "/" + binary.name) ]
+        args += [ rebase_path("$root_build_dir/${binary.name}") ]
       }
       foreach(test, tests) {
-        args += [ rebase_path(root_build_dir + "/" + test.name) ]
+        args += [ rebase_path("$root_build_dir/${test.name}") ]
       }
       foreach(driver, drivers) {
         driver_path = rebase_path("$shared_toolchain_out_dir/${driver.name}")
@@ -350,15 +334,7 @@ template("package") {
                              ])
     }
 
-    # Suppress unused variable warnings
-    assert(!defined(invoker.app) || invoker.app != "")
-    assert(!defined(invoker.archive) || invoker.archive != "")
-    assert(!defined(invoker.binaries) || invoker.binaries != [])
-    assert(!defined(invoker.drivers) || invoker.drivers != [])
-    assert(!defined(invoker.libraries) || invoker.libraries != [])
-    assert(!defined(invoker.meta) || invoker.meta != [])
-    assert(!defined(invoker.package_name) || invoker.package_name != "")
-    assert(!defined(invoker.resources) || invoker.resources != [])
-    assert(!defined(invoker.tests) || invoker.tests != [])
+    # Suppress unused variable warnings.
+    not_needed(invoker, "*")
   }
 }
