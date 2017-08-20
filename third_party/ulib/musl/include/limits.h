@@ -60,7 +60,7 @@
 /* Implementation choices... */
 
 #define PTHREAD_KEYS_MAX 128
-#define PTHREAD_STACK_MIN 2048
+#define PTHREAD_STACK_MIN 3072
 #define PTHREAD_DESTRUCTOR_ITERATIONS 4
 #define SEM_VALUE_MAX 0x7fffffff
 #define SEM_NSEMS_MAX 256

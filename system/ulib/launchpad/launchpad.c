@@ -1082,6 +1082,11 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     if (sent_loader_message && !lp->set_stack_size) {
         // The initial stack will be used just for startup work and to
         // contain the bootstrap messages.  Make it only as big as needed.
+        // This constant is defined by the C library in <limits.h>.  It's
+        // tuned to be enough to cover the dynamic linker and C library
+        // startup code's stack usage (up until the point it switches to
+        // its own stack in __libc_start_main), but leave a little space so
+        // for small bootstrap message sizes the stack needs only one page.
         stack_size = size + PTHREAD_STACK_MIN;
         stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
         snprintf(stack_vmo_name, sizeof(stack_vmo_name),

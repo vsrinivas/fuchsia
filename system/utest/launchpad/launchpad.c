@@ -15,6 +15,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <limits.h>
 
 #include <mxio/util.h>
 
@@ -78,8 +79,55 @@ static bool launchpad_test(void)
     END_TEST;
 }
 
+static bool run_one_argument_size_test(size_t size) {
+    BEGIN_TEST;
+
+    launchpad_t* lp;
+    ASSERT_EQ(launchpad_create(MX_HANDLE_INVALID, "argument size test", &lp),
+              MX_OK, "");
+
+    char* big = malloc(size + 3);
+    big[0] = ':';
+    big[1] = ' ';
+    memset(&big[2], 'x', size);
+    big[2 + size] = '\0';
+    const char* const argv[] = { "/boot/bin/sh", "-c", big };
+    EXPECT_EQ(launchpad_set_args(lp, countof(argv), argv), MX_OK, "");
+    free(big);
+
+    EXPECT_EQ(launchpad_load_from_file(lp, argv[0]), MX_OK, "");
+
+    mx_handle_t proc = MX_HANDLE_INVALID;
+    const char* errmsg = "???";
+    EXPECT_EQ(launchpad_go(lp, &proc, &errmsg), MX_OK, errmsg);
+
+    EXPECT_EQ(mx_object_wait_one(proc, MX_PROCESS_TERMINATED,
+                                 MX_TIME_INFINITE, NULL), MX_OK, "");
+    mx_info_process_t info;
+    EXPECT_EQ(mx_object_get_info(proc, MX_INFO_PROCESS,
+                                 &info, sizeof(info), NULL, NULL), MX_OK, "");
+    EXPECT_EQ(mx_handle_close(proc), MX_OK, "");
+
+    EXPECT_EQ(info.return_code, 0, "shell exit status");
+
+    END_TEST;
+}
+
+static bool argument_size_test(void) {
+    bool ok = true;
+    for (size_t size = 0; size < 2 * PAGE_SIZE; size += 16) {
+        if (!run_one_argument_size_test(size)) {
+            ok = false;
+            unittest_printf_critical(
+                "    argument size test at %-29zu [FAILED]\n", size);
+        }
+    }
+    return ok;
+}
+
 BEGIN_TEST_CASE(launchpad_tests)
 RUN_TEST(launchpad_test);
+RUN_TEST(argument_size_test);
 END_TEST_CASE(launchpad_tests)
 
 int main(int argc, char **argv)
