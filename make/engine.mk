@@ -28,16 +28,14 @@ DISABLE_UTEST ?= false
 ENABLE_ULIB_ONLY ?= false
 USE_ASAN ?= false
 USE_SANCOV ?= false
-USE_CLANG ?= $(USE_ASAN)
+USE_LTO ?= false
+USE_THINLTO ?= $(USE_LTO)
+USE_CLANG ?= $(firstword $(filter true,$(call TOBOOL,$(USE_ASAN)) $(call TOBOOL,$(USE_LTO))) false)
 USE_LLD ?= $(USE_CLANG)
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USE_GOLD := false
-USE_THINLTO ?= false
-USE_LTO ?= $(USE_THINLTO)
 else
 USE_GOLD ?= true
-USE_THINLTO := false
-USE_LTO := false
 endif
 THINLTO_CACHE_DIR ?= $(BUILDDIR)/thinlto-cache
 LKNAME ?= magenta
@@ -190,8 +188,13 @@ ifeq ($(call TOBOOL,$(USE_LLD)),true)
 USER_LDFLAGS += -z rodynamic
 endif
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 ifeq ($(call TOBOOL,$(USE_LTO)),true)
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+$(error USE_LTO requires USE_CLANG)
+endif
+ifeq ($(call TOBOOL,$(USE_LLD)),false)
+$(error USE_LTO requires USE_LLD)
+endif
 # LTO doesn't store -mcmodel=kernel information in the bitcode files as it
 # does for many other codegen options so we have to set it explicitly. This
 # can be removed when https://bugs.llvm.org/show_bug.cgi?id=33306 is fixed.
@@ -203,7 +206,6 @@ else
 KERNEL_COMPILEFLAGS += -flto -fwhole-program-vtables
 USER_COMPILEFLAGS += -flto -fwhole-program-vtables
 # Full LTO doesn't require any special ld flags.
-endif
 endif
 endif
 
