@@ -22,7 +22,7 @@ def main():
                         default="default")
     parser.add_argument("--release", "-r", help="generate release mode build files",
         action="store_true")
-    parser.add_argument("--outdir", "-o", help="output directory", default="out/debug")
+    parser.add_argument("--outdir", "-o", help="output directory")
     parser.add_argument("--target_cpu", "-t", help="Target CPU", default="x86-64",
                         choices=['x86-64', 'aarch64'])
     parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
@@ -42,8 +42,9 @@ def main():
                         action="store_true", default=False)
     parser.add_argument("--autorun", help="path to autorun script")
     (args, passthrough) = parser.parse_known_args()
-    if args.release:
-        args.outdir = "out/release"
+
+    if not args.outdir:
+        args.outdir = "out/release" if args.release else "out/debug"
 
     # TODO: Do not clobber user specified output dir
     args.outdir += "-" + args.target_cpu
