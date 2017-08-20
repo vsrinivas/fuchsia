@@ -47,22 +47,16 @@ if (is_fuchsia) {
       ":crypto",
     ]
     libraries = [ {
-          name = "libcrypto.so"
-        } ]
+                  name = "libcrypto.so"
+                } ]
   }
-  fuchsia_shared_library("crypto") {
-    public_configs = [ ":boringssl_config" ]
-    deps = [
-      "crypto",
-    ]
-  }
-} else {
-  shared_library("crypto") {
-    public_configs = [ ":boringssl_config" ]
-    deps = [
-      "crypto",
-    ]
-  }
+}
+
+shared_library("crypto") {
+  public_configs = [ ":boringssl_config" ]
+  deps = [
+    "crypto",
+  ]
 }
 
 #############
@@ -81,20 +75,14 @@ if (is_fuchsia) {
           dest = "boringssl/cert.pem"
         } ]
   }
-  fuchsia_shared_library("ssl") {
-    public_configs = [ ":boringssl_config" ]
-    deps = [
-      "ssl",
-    ]
-  }
-} else {
-  shared_library("ssl") {
-    public_configs = [ ":boringssl_config" ]
-    deps = [
-      ":crypto",
-      "ssl",
-    ]
-  }
+}
+
+shared_library("ssl") {
+  public_configs = [ ":boringssl_config" ]
+  deps = [
+    ":crypto",
+    "ssl",
+  ]
 }
 
 ##############
