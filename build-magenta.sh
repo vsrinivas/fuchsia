@@ -46,9 +46,16 @@ build() {
       export QUIET=1
   fi
   # build magenta (including its portion of the sysroot) for the target architecture
-  make -j ${JOBS} ${magenta_build_type_flags:-} BUILDROOT=${magenta_buildroot} ${magenta_target} BUILDDIR_SUFFIX=
+  make -j ${JOBS} ${magenta_build_type_flags:-} \
+    BUILDROOT=${magenta_buildroot} ${magenta_target} \
+    BUILDDIR_SUFFIX=
   # build host tools
   make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
+  # Build Magenta ASan libraries.
+  make -j ${JOBS} ${magenta_build_type_flags:-} \
+    BUILDROOT=${magenta_buildroot} ${magenta_target} \
+    TOOLS=${outdir}/build-magenta/tools \
+    USE_ASAN=true ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false
   popd > /dev/null
 }
 
