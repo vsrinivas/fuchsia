@@ -16,7 +16,10 @@ typedef long word;
 #define lsize sizeof(word)
 #define lmask (lsize - 1)
 
-void *memcpy(void *dest, const void *src, size_t count)
+// The attribute shouldn't be needed here, but without it LTO optimizes away
+// this function which later causes a link failure.
+// TODO(phosek): https://bugs.llvm.org/show_bug.cgi?id=34169
+__USED void *memcpy(void *dest, const void *src, size_t count)
 {
     char *d = (char *)dest;
     const char *s = (const char *)src;
