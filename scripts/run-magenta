@@ -138,17 +138,15 @@ BUILD_ARGS=
 if (( $ASAN )); then
     BUILDDIR_SUFFIX+=-asan
     BUILD_ARGS+=' USE_ASAN=true'
-elif (( $CLANG )); then
-    BUILDDIR_SUFFIX+=-clang
-    BUILD_ARGS+=' USE_CLANG=true'
-fi
-
-if (( $LTO )); then
+elif (( $LTO )); then
     BUILDDIR_SUFFIX+=-lto
     BUILD_ARGS+=' USE_LTO=true'
 elif (( $THINLTO )); then
     BUILDDIR_SUFFIX+=-thinlto
     BUILD_ARGS+=' USE_THINLTO=true'
+elif (( $CLANG )); then
+    BUILDDIR_SUFFIX+=-clang
+    BUILD_ARGS+=' USE_CLANG=true'
 fi
 
 if (( $RELEASE )); then

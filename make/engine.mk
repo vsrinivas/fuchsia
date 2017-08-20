@@ -60,16 +60,14 @@ BUILDDIR_SUFFIX :=
 
 ifeq ($(call TOBOOL,$(USE_ASAN)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-asan
-else ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
-endif
-
-ifeq ($(call TOBOOL,$(USE_LTO)),true)
+else ifeq ($(call TOBOOL,$(USE_LTO)),true)
 ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-thinlto
 else
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-lto
 endif
+else ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
 endif
 
 ifeq ($(call TOBOOL,$(DEBUG)),false)
