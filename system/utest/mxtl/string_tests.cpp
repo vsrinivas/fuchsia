@@ -269,15 +269,15 @@ bool compare_test() {
     mxtl::String bc(data + 1, 2);
 
     EXPECT_EQ(0, empty.compare(empty));
-    EXPECT_EQ(-1, empty.compare(a));
-    EXPECT_EQ(1, a.compare(empty));
+    EXPECT_LT(empty.compare(a), 0);
+    EXPECT_GT(a.compare(empty), 0);
 
     EXPECT_EQ(0, a.compare(a));
     EXPECT_EQ(0, ab.compare(ab));
-    EXPECT_EQ(-1, a.compare(ab));
-    EXPECT_EQ(1, ab.compare(a));
-    EXPECT_EQ(-1, ab.compare(bc));
-    EXPECT_EQ(1, bc.compare(ab));
+    EXPECT_LT(a.compare(ab), 0);
+    EXPECT_GT(ab.compare(a), 0);
+    EXPECT_LT(ab.compare(bc), 0);
+    EXPECT_GT(bc.compare(ab), 0);
 
     EXPECT_TRUE(empty == empty);
     EXPECT_TRUE(empty <= empty);
