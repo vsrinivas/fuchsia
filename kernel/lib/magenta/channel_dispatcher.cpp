@@ -30,16 +30,15 @@ using mxtl::AutoLock;
 #define LOCAL_TRACE 0
 
 // static
-status_t ChannelDispatcher::Create(uint32_t flags,
-                                   mxtl::RefPtr<Dispatcher>* dispatcher0,
+status_t ChannelDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
                                    mxtl::RefPtr<Dispatcher>* dispatcher1,
                                    mx_rights_t* rights) {
     mxtl::AllocChecker ac;
-    auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
+    auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto ch1 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
+    auto ch1 = mxtl::AdoptRef(new (&ac) ChannelDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -52,9 +51,8 @@ status_t ChannelDispatcher::Create(uint32_t flags,
     return MX_OK;
 }
 
-ChannelDispatcher::ChannelDispatcher(uint32_t flags)
+ChannelDispatcher::ChannelDispatcher()
     : state_tracker_(MX_CHANNEL_WRITABLE) {
-    DEBUG_ASSERT(flags == 0);
 }
 
 // This is called before either ChannelDispatcher is accessible from threads other than the one

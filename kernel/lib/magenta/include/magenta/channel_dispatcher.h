@@ -25,7 +25,7 @@ class ChannelDispatcher final : public Dispatcher {
 public:
     class MessageWaiter;
 
-    static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
+    static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
                            mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
 
     ~ChannelDispatcher() final;
@@ -100,7 +100,7 @@ private:
 
     void RemoveWaiter(MessageWaiter* waiter);
 
-    ChannelDispatcher(uint32_t flags);
+    ChannelDispatcher();
     void Init(mxtl::RefPtr<ChannelDispatcher> other);
     int WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
