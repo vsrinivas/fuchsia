@@ -31,6 +31,7 @@ def main():
                         action="store_true")
     parser.add_argument("--lto", nargs='?', const='thin', choices=['full', 'thin'],
                         default=None, help="use link time optimization (LTO)")
+    parser.add_argument("--thinlto-cache-dir", help="ThinLTO cache directory")
     parser.add_argument("--omit-tests", help="omit tests from the output",
                         action="store_true")
     parser.add_argument("--fuchsia-disable-vulkan", help="Disable Vulkan in Mozart, Skia, and Flutter",
@@ -85,7 +86,9 @@ def main():
     if args.lto:
         gn_args += " use_lto = true"
         if args.lto == "full":
-          gn_args += " use_thinlto = false"
+            gn_args += " use_thinlto = false"
+        elif args.thinlto_cache_dir:
+            gn_args += " thinlto_cache_dir=\"%s\"" % args.thinlto_cache_dir
     if args.autorun:
         abs_autorun = os.path.abspath(args.autorun)
         if not os.path.exists(abs_autorun):
