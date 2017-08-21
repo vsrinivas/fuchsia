@@ -37,11 +37,16 @@ constexpr uint32_t kBlobstoreVersion = 0x00000003;
 
 constexpr uint32_t kBlobstoreFlagClean      = 1;
 constexpr uint32_t kBlobstoreFlagDirty      = 2;
+constexpr uint32_t kBlobstoreFlagFVM        = 4;
 constexpr uint32_t kBlobstoreBlockSize      = 8192;
 constexpr uint32_t kBlobstoreBlockBits      = (kBlobstoreBlockSize * 8);
 constexpr uint32_t kBlobstoreBlockMapStart  = 1;
 constexpr uint32_t kBlobstoreInodeSize      = 64;
 constexpr uint32_t kBlobstoreInodesPerBlock = (kBlobstoreBlockSize / kBlobstoreInodeSize);
+
+constexpr size_t kFVMBlockMapStart  = 0x10000;
+constexpr size_t kFVMNodeMapStart   = 0x20000;
+constexpr size_t kFVMDataStart      = 0x30000;
 
 // Notes:
 // - block 0 is always allocated
@@ -58,10 +63,20 @@ typedef struct {
     uint64_t alloc_block_count; // Total number of allocated blocks
     uint64_t alloc_inode_count; // Total number of allocated blobs
     uint64_t blob_header_next; // Block containing next blobstore, or zero if this is the last one
+    // The following flags are only valid with (flags & kBlobstoreFlagFVM):
+    uint64_t slice_size;    // Underlying slice size
+    uint64_t vslice_count;  // Number of underlying slices
+    uint32_t abm_slices;    // Slices allocated to block bitmap
+    uint32_t ino_slices;    // Slices allocated to node map
+    uint32_t dat_slices;    // Slices allocated to file data section
 } blobstore_info_t;
 
-constexpr uint64_t BlockMapStartBlock() {
-    return kBlobstoreBlockMapStart;
+constexpr uint64_t BlockMapStartBlock(const blobstore_info_t& info) {
+    if (info.flags & kBlobstoreFlagFVM) {
+        return kFVMBlockMapStart;
+    } else {
+        return kBlobstoreBlockMapStart;
+    }
 }
 
 constexpr uint64_t BlockMapBlocks(const blobstore_info_t& info) {
@@ -70,7 +85,11 @@ constexpr uint64_t BlockMapBlocks(const blobstore_info_t& info) {
 
 constexpr uint64_t NodeMapStartBlock(const blobstore_info_t& info) {
     // Node map immediately follows the block map
-    return BlockMapStartBlock() + BlockMapBlocks(info);
+    if (info.flags & kBlobstoreFlagFVM) {
+        return kFVMNodeMapStart;
+    } else {
+        return BlockMapStartBlock(info) + BlockMapBlocks(info);
+    }
 }
 
 constexpr uint64_t NodeMapBlocks(const blobstore_info_t& info) {
@@ -79,7 +98,11 @@ constexpr uint64_t NodeMapBlocks(const blobstore_info_t& info) {
 
 constexpr uint64_t DataStartBlock(const blobstore_info_t& info) {
     // Data immediately follows the node map
-    return NodeMapStartBlock(info) + NodeMapBlocks(info);
+    if (info.flags & kBlobstoreFlagFVM) {
+        return kFVMDataStart;
+    } else {
+        return NodeMapStartBlock(info) + NodeMapBlocks(info);
+    }
 }
 
 constexpr uint64_t DataBlocks(const blobstore_info_t& info) {
@@ -87,7 +110,7 @@ constexpr uint64_t DataBlocks(const blobstore_info_t& info) {
 }
 
 constexpr uint64_t TotalBlocks(const blobstore_info_t& info) {
-    return BlockMapStartBlock() + BlockMapBlocks(info) + NodeMapBlocks(info) + DataBlocks(info);
+    return BlockMapStartBlock(info) + BlockMapBlocks(info) + NodeMapBlocks(info) + DataBlocks(info);
 }
 
 // States of 'Blob' identified via start block.

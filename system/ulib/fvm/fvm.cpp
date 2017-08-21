@@ -15,10 +15,13 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <mxio/debug.h>
 #include <mxio/watcher.h>
 #include <mxtl/unique_ptr.h>
 
 #include "fvm/fvm.h"
+
+#define MXDEBUG 0
 
 namespace {
 
@@ -187,15 +190,15 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
         return MX_ERR_BAD_STATE;
     }
 
-    printf("fvm_init: Success\n");
-    printf("fvm_init: Slice Count: %zu, size: %zu\n", sb->pslice_count, sb->slice_size);
-    printf("fvm_init: Vpart offset: %zu, length: %zu\n",
+    xprintf("fvm_init: Success\n");
+    xprintf("fvm_init: Slice Count: %zu, size: %zu\n", sb->pslice_count, sb->slice_size);
+    xprintf("fvm_init: Vpart offset: %zu, length: %zu\n",
            fvm::kVPartTableOffset, fvm::kVPartTableLength);
-    printf("fvm_init: Atable offset: %zu, length: %zu\n",
+    xprintf("fvm_init: Atable offset: %zu, length: %zu\n",
            fvm::kAllocTableOffset, fvm::AllocTableLength(disk_size, slice_size));
-    printf("fvm_init: Backup meta starts at: %zu\n",
+    xprintf("fvm_init: Backup meta starts at: %zu\n",
            fvm::BackupStart(disk_size, slice_size));
-    printf("fvm_init: Slices start at %zu, there are %zu of them\n",
+    xprintf("fvm_init: Slices start at %zu, there are %zu of them\n",
            fvm::SlicesStart(disk_size, slice_size),
            fvm::UsableSlicesCount(disk_size, slice_size));
 

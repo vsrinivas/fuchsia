@@ -23,6 +23,8 @@
 #include <digest/merkle-tree.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <fvm/fvm.h>
+#include <magenta/device/device.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
@@ -37,6 +39,27 @@
 
 using digest::Digest;
 using digest::MerkleTree;
+
+typedef enum fs_test_type {
+    // The partition may appear as any generic block device
+    FS_TEST_NORMAL,
+    // The partition should appear on top of a resizable
+    // FVM device
+    FS_TEST_FVM,
+} fs_test_type_t;
+
+#define RUN_TEST_FOR_ALL_TYPES(test_size, test_name) \
+    RUN_TEST_##test_size(test_name<FS_TEST_NORMAL>) \
+    RUN_TEST_##test_size(test_name<FS_TEST_FVM>)
+
+#define FVM_DRIVER_LIB "/boot/driver/fvm.so"
+#define STRLEN(s) sizeof(s) / sizeof((s)[0])
+
+constexpr uint8_t kTestUniqueGUID[] = {
+    0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f
+};
+constexpr uint8_t kTestPartGUID[] = GUID_DATA_VALUE;
 
 const fsck_options_t test_fsck_options = {
     .verbose = false,
@@ -65,7 +88,8 @@ static bool CheckBlobstoreInfo(const char* mount_path) {
 }
 
 // Unmounts a blobstore and removes the backing ramdisk device.
-static int EndBlobstoreTest(const char* ramdisk_path) {
+template <fs_test_type_t TestType>
+static int EndBlobstoreTest(const char* ramdisk_path, const char* fvm_path) {
     mx_status_t status = MX_OK;
 
     ASSERT_TRUE(CheckBlobstoreInfo(MOUNT_PATH));
@@ -78,6 +102,10 @@ static int EndBlobstoreTest(const char* ramdisk_path) {
     if ((status = fsck(ramdisk_path, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync)) != MX_OK) {
         fprintf(stderr, "Filesystem fsck failed: %d\n", status);
         return -1;
+    }
+
+    if (TestType == FS_TEST_FVM) {
+        return destroy_ramdisk(fvm_path);
     }
 
     return destroy_ramdisk(ramdisk_path);
@@ -104,15 +132,72 @@ static int MountBlobstore(const char* ramdisk_path) {
 }
 
 // Creates a ramdisk, formats it, and mounts it at a mount point.
-static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdisk_path_out) {
-    if ((mkdir(MOUNT_PATH, 0755) < 0) && errno != EEXIST) {
+template <fs_test_type_t TestType>
+static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdisk_path_out,
+                              char* fvm_path_out) {
+    int dirfd = mkdir(MOUNT_PATH, 0755);
+    if ((dirfd < 0) && errno != EEXIST) {
         fprintf(stderr, "Could not create mount point for test filesystems\n");
         return -1;
+    } else if (dirfd > 0) {
+        close(dirfd);
     }
 
     if (create_ramdisk(blk_size, blk_count, ramdisk_path_out)) {
         fprintf(stderr, "Blobstore: Could not create ramdisk\n");
         return -1;
+    }
+
+    if (TestType == FS_TEST_FVM) {
+        size_t slice_size = blk_size * blk_count / 8;
+        ASSERT_EQ((blk_count * blk_size) % slice_size, 0);
+        int fd = open(ramdisk_path_out, O_RDWR);
+        if (fd < 0) {
+            fprintf(stderr, "[FAILED]: Could not open test disk\n");
+            return -1;
+        } else if (fvm_init(fd, slice_size) != MX_OK) {
+            fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
+            return -1;
+        } else if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not bind disk to FVM driver\n");
+            return -1;
+        } else if (wait_for_driver_bind(ramdisk_path_out, "fvm")) {
+            fprintf(stderr, "[FAILED]: FVM driver never appeared\n");
+            return -1;
+        }
+        close(fd);
+
+        // Open "fvm" driver
+        strcpy(fvm_path_out, ramdisk_path_out);
+        strcat(fvm_path_out, "/fvm");
+        int fvm_fd;
+        if ((fvm_fd = open(fvm_path_out, O_RDWR)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not open FVM driver\n");
+            return -1;
+        }
+
+        // Restore the "fvm_disk_path" to the ramdisk, so it can
+        // be destroyed when the test completes
+        fvm_path_out[strlen(fvm_path_out) - strlen("/fvm")] = 0;
+
+        alloc_req_t request;
+        request.slice_count = 1;
+        strcpy(request.name, "fs-test-partition");
+        memcpy(request.type, kTestPartGUID, sizeof(request.type));
+        memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
+
+        if ((fd = fvm_allocate_partition(fvm_fd, &request)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not allocate FVM partition\n");
+            return -1;
+        }
+        close(fvm_fd);
+        close(fd);
+
+        if ((fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUID, ramdisk_path_out)) < 0) {
+            fprintf(stderr, "[FAILED]: Could not locate FVM partition\n");
+            return -1;
+        }
+        close(fd);
     }
 
     mx_status_t status;
@@ -255,12 +340,12 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
 }
 
 // Actual tests:
-
+template <fs_test_type_t TestType>
 static bool TestBasic(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
-
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
     for (size_t i = 10; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateBlob(1 << i, &info));
@@ -278,14 +363,16 @@ static bool TestBasic(void) {
         ASSERT_EQ(unlink(info->path), 0);
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool TestMmap(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     for (size_t i = 10; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
@@ -306,14 +393,16 @@ static bool TestMmap(void) {
         ASSERT_EQ(close(fd), 0);
         ASSERT_EQ(unlink(info->path), 0);
     }
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool TestReaddir(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     constexpr size_t kMaxEntries = 50;
     constexpr size_t kBlobSize = 1 << 10;
@@ -373,14 +462,16 @@ static bool TestReaddir(void) {
     ASSERT_NULL(readdir(dir), "Expected blobstore to end empty");
 
     ASSERT_EQ(closedir(dir), 0);
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool UseAfterUnlink(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     for (size_t i = 0; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
@@ -401,14 +492,16 @@ static bool UseAfterUnlink(void) {
         ASSERT_LT(open(info->path, O_RDONLY), 0, "Expected blob to be deleted");
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool WriteAfterRead(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     for (size_t i = 0; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
@@ -434,14 +527,16 @@ static bool WriteAfterRead(void) {
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool ReadTooLarge(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     for (size_t i = 0; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
@@ -475,14 +570,16 @@ static bool ReadTooLarge(void) {
         ASSERT_EQ(unlink(info->path), 0, "Failed to unlink");
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool BadAllocation(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     ASSERT_LT(open(MOUNT_PATH "/00112233445566778899AABBCCDDEEFFGGHHIIJJKKLLMMNNOOPPQQRRSSTTUUVV",
                    O_CREAT | O_RDWR),
@@ -517,14 +614,16 @@ static bool BadAllocation(void) {
     ASSERT_EQ(close(fd), 0);
     ASSERT_LT(open(info->path, O_RDWR), 0, "Cannot access partial blob");
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool CorruptedBlob(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> info;
     for (size_t i = 1; i < 18; i++) {
@@ -550,14 +649,16 @@ static bool CorruptedBlob(void) {
                                         info->size_data));
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool CorruptedDigest(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> info;
     for (size_t i = 1; i < 18; i++) {
@@ -587,14 +688,16 @@ static bool CorruptedDigest(void) {
                                         info->size_data));
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool EdgeAllocation(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     // Powers of two...
     for (size_t i = 1; i < 16; i++) {
@@ -609,14 +712,16 @@ static bool EdgeAllocation(void) {
             ASSERT_EQ(close(fd), 0);
         }
     }
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool CreateUmountRemountSmall(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     for (size_t i = 10; i < 16; i++) {
         mxtl::unique_ptr<blob_info_t> info;
@@ -638,7 +743,7 @@ static bool CreateUmountRemountSmall(void) {
         ASSERT_EQ(unlink(info->path), 0);
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
@@ -759,10 +864,12 @@ auto blob_unlink_helper(blob_list_t* bl) {
     return true;
 }
 
+template <fs_test_type_t TestType>
 static bool CreateUmountRemountLarge(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     blob_list_t bl;
     // TODO(smklein): Here, and elsewhere in this file, remove this source
@@ -817,7 +924,7 @@ static bool CreateUmountRemountLarge(void) {
         }
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
@@ -851,10 +958,12 @@ int unmount_remount_thread(void* arg) {
     return 0;
 }
 
+template <fs_test_type_t TestType>
 static bool CreateUmountRemountLargeMultithreaded(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     blob_list_t bl;
 
@@ -900,14 +1009,16 @@ static bool CreateUmountRemountLargeMultithreaded(void) {
         }
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool NoSpace(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 16, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 16, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> last_info = nullptr;
 
@@ -941,7 +1052,7 @@ static bool NoSpace(void) {
         }
     }
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
@@ -980,11 +1091,13 @@ static bool check_readable(int fd) {
     return true;
 }
 
+template <fs_test_type_t TestType>
 static bool EarlyRead(void) {
     // Check that we cannot read from the Blob until it has been fully written
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> info;
 
@@ -1019,15 +1132,17 @@ static bool EarlyRead(void) {
     ASSERT_EQ(close(fd2), 0);
     ASSERT_EQ(unlink(info->path), 0);
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool WaitForRead(void) {
     // Check that we cannot read from the Blob until it has been fully written
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> info;
 
@@ -1070,15 +1185,17 @@ static bool WaitForRead(void) {
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(unlink(info->path), 0);
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool WriteSeekIgnored(void) {
     // Check that seeks during writing are ignored
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     mxtl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateBlob(1 << 17, &info));
@@ -1100,15 +1217,17 @@ static bool WriteSeekIgnored(void) {
     ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(unlink(info->path), 0);
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool UnlinkTiming(void) {
     // Try unlinking at a variety of times
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     // Unlink, close fd, re-open fd as new file
     auto full_unlink_reopen = [](int& fd, const char* path) {
@@ -1138,15 +1257,17 @@ static bool UnlinkTiming(void) {
     ASSERT_TRUE(full_unlink_reopen(fd, info->path));
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(close(fd), 0);
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool InvalidOps(void) {
     // Attempt using invalid operations
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     // First off, make a valid blob
     mxtl::unique_ptr<blob_info_t> info;
@@ -1169,15 +1290,17 @@ static bool InvalidOps(void) {
     ASSERT_EQ(unlink(info->path), 0);
     ASSERT_EQ(close(fd), 0);
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool RootDirectory(void) {
     // Attempt operations on the root directory
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     int dirfd = open(MOUNT_PATH "/.", O_RDONLY);
     ASSERT_GT(dirfd, 0, "Cannot open root directory");
@@ -1196,14 +1319,16 @@ static bool RootDirectory(void) {
     ASSERT_LT(write(dirfd, buf, 8), 0, "Should not write to directory");
     ASSERT_LT(read(dirfd, buf, 8), 0, "Should not read from directory");
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
+template <fs_test_type_t TestType>
 static bool QueryDevicePath(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(StartBlobstoreTest(512, 1 << 20, ramdisk_path), 0, "Mounting Blobstore");
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0, "Mounting Blobstore");
 
     int dirfd = open(MOUNT_PATH "/.", O_RDONLY | O_ADMIN);
     ASSERT_GT(dirfd, 0, "Cannot open root directory");
@@ -1211,7 +1336,39 @@ static bool QueryDevicePath(void) {
     char device_path[1024];
     ssize_t path_len = ioctl_vfs_get_device_path(dirfd, device_path, sizeof(device_path));
     ASSERT_GT(path_len, 0, "Device path not found");
-    ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
+    if (TestType == FS_TEST_FVM) {
+        char actual_path[PATH_MAX];
+        strcpy(actual_path, fvm_path);
+        strcat(actual_path, "/fvm");
+
+        while (true) {
+            DIR* dir = opendir(actual_path);
+            ASSERT_NONNULL(dir, "Unable to open FVM dir");
+
+            struct dirent* de;
+            bool updated = false;
+            while ((de = readdir(dir)) != NULL) {
+                if (strcmp(de->d_name, ".") == 0) {
+                    continue;
+                }
+
+                updated = true;
+                strcat(actual_path, "/");
+                strcat(actual_path, de->d_name);
+            }
+
+            closedir(dir);
+
+            if (!updated) {
+                break;
+            }
+        }
+
+        ASSERT_EQ(strncmp(actual_path, device_path, path_len), 0, "Unexpected device path");
+    } else {
+        ASSERT_EQ(strncmp(ramdisk_path, device_path, path_len), 0, "Unexpected device path");
+    }
+
     ASSERT_EQ(close(dirfd), 0);
 
     dirfd = open(MOUNT_PATH "/.", O_RDONLY);
@@ -1220,32 +1377,32 @@ static bool QueryDevicePath(void) {
     ASSERT_LT(path_len, 0);
     ASSERT_EQ(close(dirfd), 0);
 
-    ASSERT_EQ(EndBlobstoreTest(ramdisk_path), 0, "unmounting blobstore");
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
     END_TEST;
 }
 
 BEGIN_TEST_CASE(blobstore_tests)
-RUN_TEST_MEDIUM(TestBasic)
-RUN_TEST_MEDIUM(TestMmap)
-RUN_TEST_MEDIUM(TestReaddir)
-RUN_TEST_MEDIUM(UseAfterUnlink)
-RUN_TEST_MEDIUM(WriteAfterRead)
-RUN_TEST_MEDIUM(ReadTooLarge)
-RUN_TEST_MEDIUM(BadAllocation)
-RUN_TEST_MEDIUM(CorruptedBlob)
-RUN_TEST_MEDIUM(CorruptedDigest)
-RUN_TEST_MEDIUM(EdgeAllocation)
-RUN_TEST_MEDIUM(CreateUmountRemountSmall)
-RUN_TEST_MEDIUM(EarlyRead)
-RUN_TEST_MEDIUM(WaitForRead)
-RUN_TEST_MEDIUM(WriteSeekIgnored)
-RUN_TEST_MEDIUM(UnlinkTiming)
-RUN_TEST_MEDIUM(InvalidOps)
-RUN_TEST_MEDIUM(RootDirectory)
-RUN_TEST_LARGE(CreateUmountRemountLargeMultithreaded)
-RUN_TEST_LARGE(CreateUmountRemountLarge)
-RUN_TEST_LARGE(NoSpace)
-RUN_TEST_MEDIUM(QueryDevicePath)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestReaddir)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, UseAfterUnlink)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteAfterRead)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, ReadTooLarge)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, BadAllocation)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedBlob)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedDigest)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, EdgeAllocation)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, CreateUmountRemountSmall)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, EarlyRead)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, WaitForRead)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, WriteSeekIgnored)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, UnlinkTiming)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, InvalidOps)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, RootDirectory)
+RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLargeMultithreaded)
+RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLarge)
+RUN_TEST_FOR_ALL_TYPES(LARGE, NoSpace)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, QueryDevicePath)
 END_TEST_CASE(blobstore_tests)
 
 int main(int argc, char** argv) {

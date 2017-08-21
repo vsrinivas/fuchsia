@@ -15,6 +15,7 @@
 #include <fs/block-txn.h>
 #include <mxio/debug.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/limits.h>
 
 #define MXDEBUG 0
 
@@ -48,9 +49,44 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
         fprintf(stderr, "blobstore: bsz %u unsupported\n", info->block_size);
         return MX_ERR_INVALID_ARGS;
     }
-    if (info->block_count + DataStartBlock(*info) > max) {
-        fprintf(stderr, "blobstore: too large for device\n");
-        return MX_ERR_INVALID_ARGS;
+    if ((info->flags & kBlobstoreFlagFVM) == 0) {
+        if (info->block_count + DataStartBlock(*info) > max) {
+            fprintf(stderr, "blobstore: too large for device\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+    } else {
+        const size_t blocks_per_slice = info->slice_size / info->block_size;
+
+        size_t abm_blocks_needed = BlockMapBlocks(*info);
+        size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
+        if (abm_blocks_needed > abm_blocks_allocated) {
+            FS_TRACE_ERROR("blobstore: Not enough slices for block bitmap\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
+            FS_TRACE_ERROR("blobstore: Block bitmap collides into node map\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        size_t ino_blocks_needed = NodeMapBlocks(*info);
+        size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
+        if (ino_blocks_needed > ino_blocks_allocated) {
+            FS_TRACE_ERROR("blobstore: Not enough slices for node map\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
+            FS_TRACE_ERROR("blobstore: Node bitmap collides into data blocks\n");
+            return MX_ERR_INVALID_ARGS;
+        }
+
+        size_t dat_blocks_needed = DataBlocks(*info);
+        size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
+        if (dat_blocks_needed > dat_blocks_allocated) {
+            FS_TRACE_ERROR("blobstore: Not enough slices for data blocks\n");
+            return MX_ERR_INVALID_ARGS;
+        } else if (dat_blocks_allocated + DataStartBlock(*info) >
+                   mxtl::numeric_limits<uint32_t>::max()) {
+            FS_TRACE_ERROR("blobstore: Data blocks overflow uint32\n");
+            return MX_ERR_INVALID_ARGS;
+        }
     }
     if (info->blob_header_next != 0) {
         fprintf(stderr, "blobstore: linked blob headers not yet supported\n");
@@ -124,11 +160,58 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
     info.block_count -= DataStartBlock(info); // Set block_count to number of data blocks
 
 
+#ifdef __Fuchsia__
+    fvm_info_t fvm_info;
+
+    if (ioctl_block_fvm_query(fd, &fvm_info) >= 0) {
+        info.slice_size = fvm_info.slice_size;
+        info.flags |= kBlobstoreFlagFVM;
+
+        if (info.slice_size % kBlobstoreBlockSize) {
+            fprintf(stderr, "blobstore mkfs: Slice size not multiple of blobstore block\n");
+            return -1;
+        }
+
+        const size_t kBlocksPerSlice = info.slice_size / kBlobstoreBlockSize;
+
+        extend_request_t request;
+        request.length = 1;
+        request.offset = kFVMBlockMapStart / kBlocksPerSlice;
+        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+            fprintf(stderr, "blobstore mkfs: Failed to allocate block map\n");
+            return -1;
+        }
+        request.offset = kFVMNodeMapStart / kBlocksPerSlice;
+        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+            fprintf(stderr, "blobstore mkfs: Failed to allocate node map\n");
+            return -1;
+        }
+        request.offset = kFVMDataStart / kBlocksPerSlice;
+        if (ioctl_block_fvm_extend(fd, &request) < 0) {
+            fprintf(stderr, "blobstore mkfs: Failed to allocate data blocks\n");
+            return -1;
+        }
+
+        info.abm_slices = 1;
+        info.ino_slices = 1;
+        info.dat_slices = 1;
+        info.vslice_count = info.abm_slices + info.ino_slices + info.dat_slices + 1;
+
+        info.inode_count = static_cast<uint32_t>(info.ino_slices * info.slice_size
+                                                 / kBlobstoreInodeSize);
+        info.block_count = static_cast<uint32_t>(info.dat_slices * info.slice_size
+                                                 / kBlobstoreBlockSize);
+    } else {
+        info.block_count -= DataStartBlock(info);
+    }
+#endif
+
     xprintf("Blobstore Mkfs\n");
     xprintf("Disk size  : %" PRIu64 "\n", block_count * kBlobstoreBlockSize);
     xprintf("Block Size : %u\n", kBlobstoreBlockSize);
     xprintf("Block Count: %" PRIu64 "\n", TotalBlocks(info));
     xprintf("Inode Count: %" PRIu64 "\n", inodes);
+    xprintf("FVM-aware: %s\n", (info.flags & kBlobstoreFlagFVM) ? "YES" : "NO");
 
     // Determine the number of blocks necessary for the block map and node map.
     uint64_t bbm_blocks = BlockMapBlocks(info);
@@ -163,7 +246,7 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
     // write allocation bitmap to disk
     for (uint64_t n = 0; n < bbm_blocks; n++) {
         void* bmdata = get_raw_bitmap_data(abm, n);
-        if ((status = writeblk(fd, BlockMapStartBlock() + n, bmdata)) < 0) {
+        if ((status = writeblk(fd, BlockMapStartBlock(info) + n, bmdata)) < 0) {
             fprintf(stderr, "Failed to write blockmap block %" PRIu64 "\n", n);
             return status;
         }

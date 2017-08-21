@@ -430,7 +430,7 @@ mx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t sta
                                            kBlobstoreBlockBits) / kBlobstoreBlockBits;
 
     // Write back the block allocation bitmap
-    txn->Enqueue(block_map_vmoid_, bbm_start_block, BlockMapStartBlock() + bbm_start_block,
+    txn->Enqueue(block_map_vmoid_, bbm_start_block, BlockMapStartBlock(info_) + bbm_start_block,
                  bbm_end_block - bbm_start_block);
     return txn->Flush();
 }
@@ -681,7 +681,7 @@ mx_status_t Blobstore::GetRootBlob(mxtl::RefPtr<VnodeBlob>* out) {
 
 mx_status_t Blobstore::LoadBitmaps() {
     ReadTxn txn(this);
-    txn.Enqueue(block_map_vmoid_, 0, BlockMapStartBlock(), BlockMapBlocks(info_));
+    txn.Enqueue(block_map_vmoid_, 0, BlockMapStartBlock(info_), BlockMapBlocks(info_));
     txn.Enqueue(node_map_vmoid_, 0, NodeMapStartBlock(info_), NodeMapBlocks(info_));
     return txn.Flush();
 }
@@ -729,5 +729,4 @@ mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
 
     return MX_OK;
 }
-
 } // namespace blobstore
