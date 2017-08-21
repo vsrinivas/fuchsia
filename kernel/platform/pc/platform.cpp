@@ -38,12 +38,19 @@
 #include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_aspace.h>
 
+#include <lib/cksum.h>
+
 extern "C" {
 #include <efi/runtime-services.h>
 #include <efi/system-table.h>
 };
 
 #define LOCAL_TRACE 0
+
+// Set to 1 to do crc32 checks on boot data
+// KERNEL_LL_DEBUG and a uart or early gfxconsole are necessary
+// to see the output from this debug feature
+#define DEBUG_BOOT_DATA 0
 
 extern multiboot_info_t* _multiboot_info;
 extern bootdata_t* _bootdata_base;
@@ -128,7 +135,7 @@ static int process_bootitem(bootdata_t* bd, void* item) {
 extern "C" void *boot_alloc_mem(size_t len);
 extern "C" void boot_alloc_reserve(uintptr_t phys, size_t _len);
 
-static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
+static void process_bootdata(bootdata_t* hdr, uintptr_t phys, bool verify) {
     if ((hdr->type != BOOTDATA_CONTAINER) ||
         (hdr->extra != BOOTDATA_MAGIC) ||
         (hdr->flags != 0)) {
@@ -146,31 +153,82 @@ static void process_bootdata(bootdata_t* hdr, uintptr_t phys) {
     while (remain > sizeof(bootdata_t)) {
         remain -= sizeof(bootdata_t);
         uintptr_t item = reinterpret_cast<uintptr_t>(bd + 1);
-        size_t len = BOOTDATA_ALIGN(bd->length);
-        if (len > remain) {
+
+#if DEBUG_BOOT_DATA
+        char tag[5];
+        uint8_t* x = reinterpret_cast<uint8_t*>(&bd->type);
+        unsigned n;
+        for (n = 0; n < 4; n++) {
+            tag[n] = ((*x >= ' ') && (*x <= 127)) ? *x : '.';
+            x++;
+        }
+        tag[n] = 0;
+        printf("bootdata: @ %p typ=%08x (%s) len=%08x ext=%08x flg=%08x\n",
+               bd, bd->type, tag, bd->length, bd->extra, bd->flags);
+#endif
+
+        // check for extra header and process if it exists
+        if (bd->flags & BOOTDATA_FLAG_EXTRA) {
+            if (remain < sizeof(bootextra_t)) {
+                printf("bootdata: truncated header\n");
+                break;
+            }
+            bootextra_t* extra = reinterpret_cast<bootextra_t*>(item);
+            item += sizeof(bootextra_t);
+            remain -= sizeof(bootextra_t);
+            if (extra->magic != BOOTITEM_MAGIC) {
+                printf("bootdata: bad magic\n");
+                break;
+            }
+        }
+
+        size_t advance = BOOTDATA_ALIGN(bd->length);
+        if (advance > remain) {
             printf("bootdata: truncated\n");
             break;
         }
-        if (process_bootitem(bd, reinterpret_cast<void*>(item))) {
-            break;
+#if DEBUG_BOOT_DATA
+        if (verify && (bd->flags & BOOTDATA_FLAG_CRC32)) {
+            if (!(bd->flags & BOOTDATA_FLAG_EXTRA)) {
+                printf("bootdata: crc flag set but no extra data!\n");
+                break;
+            }
+            bootextra_t* extra = reinterpret_cast<bootextra_t*>(item - sizeof(bootextra_t));
+            uint32_t crc = 0;
+            uint32_t tmp = extra->crc32;
+            extra->crc32 = 0;
+            crc = crc32(crc, reinterpret_cast<uint8_t*>(bd), sizeof(bootdata_t));
+            crc = crc32(crc, reinterpret_cast<uint8_t*>(extra), sizeof(bootextra_t));
+            crc = crc32(crc, reinterpret_cast<uint8_t*>(item), bd->length);
+            extra->crc32 = tmp;
+            printf("bootdata: crc %08x, computed %08x: %s\n", tmp, crc,
+                   (tmp == crc) ? "OKAY" : "FAIL");
         }
-        bd = reinterpret_cast<bootdata_t*>(item + len);
-        remain -= len;
+#endif
+        if (!verify) {
+            if (process_bootitem(bd, reinterpret_cast<void*>(item))) {
+                break;
+            }
+        }
+        bd = reinterpret_cast<bootdata_t*>(item + advance);
+        remain -= advance;
     }
 
-    boot_alloc_reserve(phys, total_len);
-    bootloader.ramdisk_base = phys;
-    bootloader.ramdisk_size = total_len;
+    if (!verify) {
+        boot_alloc_reserve(phys, total_len);
+        bootloader.ramdisk_base = phys;
+        bootloader.ramdisk_size = total_len;
+    }
 }
 
 extern bool halt_on_panic;
 
-static void platform_save_bootloader_data(void) {
+static void platform_save_bootloader_data(bool verify) {
     if (_multiboot_info != NULL) {
         multiboot_info_t* mi = (multiboot_info_t*) X86_PHYS_TO_VIRT(_multiboot_info);
         printf("multiboot: info @ %p flags %#x\n", mi, mi->flags);
 
-        if ((mi->flags & MB_INFO_CMD_LINE) && mi->cmdline) {
+        if ((mi->flags & MB_INFO_CMD_LINE) && mi->cmdline && (!verify)) {
             const char* cmdline = (const char*) X86_PHYS_TO_VIRT(mi->cmdline);
             printf("multiboot: cmdline @ %p\n", cmdline);
             cmdline_append(cmdline);
@@ -180,13 +238,13 @@ static void platform_save_bootloader_data(void) {
             if (mi->mods_count > 0) {
                 printf("multiboot: ramdisk @ %08x..%08x\n", mod->mod_start, mod->mod_end);
                 process_bootdata(reinterpret_cast<bootdata_t*>(X86_PHYS_TO_VIRT(mod->mod_start)),
-                                 mod->mod_start);
+                                 mod->mod_start, verify);
             }
         }
     }
     if (_bootdata_base != NULL) {
         bootdata_t* bd = (bootdata_t*) X86_PHYS_TO_VIRT(_bootdata_base);
-        process_bootdata(bd, (uintptr_t) _bootdata_base);
+        process_bootdata(bd, (uintptr_t) _bootdata_base, verify);
     }
 
     halt_on_panic = cmdline_get_bool("kernel.halt_on_panic", false);
@@ -648,7 +706,7 @@ void platform_early_init(void)
 {
     /* extract bootloader data while still accessible */
     /* this includes debug uart config, etc. */
-    platform_save_bootloader_data();
+    platform_save_bootloader_data(false);
 
     /* get the debug output working */
     platform_init_debug_early();
@@ -660,6 +718,11 @@ void platform_early_init(void)
 
     /* if the bootloader has framebuffer info, use it for early console */
     platform_early_display_init();
+
+#if DEBUG_BOOT_DATA
+    // second pass to verify crc32s so we can see the results
+    platform_save_bootloader_data(true);
+#endif
 
     /* initialize physical memory arenas */
     platform_mem_init();
