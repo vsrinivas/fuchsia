@@ -26,6 +26,11 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
         if (actual != sizeof(bootdata))
             fail(log, MX_ERR_INVALID_ARGS, "short read on bootdata VMO\n");
 
+        size_t hdrsz = sizeof(bootdata);
+        if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
+            hdrsz += sizeof(bootextra_t);
+        }
+
         switch (bootdata.type) {
         case BOOTDATA_CONTAINER:
             if (off == 0) {
@@ -41,7 +46,7 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
             const char* errmsg;
             mx_handle_t bootfs_vmo;
             status = decompress_bootdata(vmar_self, bootdata_vmo, off,
-                                         bootdata.length + sizeof(bootdata),
+                                         bootdata.length + hdrsz,
                                          &bootfs_vmo, &errmsg);
             check(log, status, errmsg);
 
@@ -55,7 +60,7 @@ mx_handle_t bootdata_get_bootfs(mx_handle_t log, mx_handle_t vmar_self,
             return bootfs_vmo;
         }
 
-        off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
+        off += BOOTDATA_ALIGN(hdrsz + bootdata.length);
     }
 
     fail(log, MX_ERR_INVALID_ARGS, "no '/boot' bootfs in bootstrap message\n");

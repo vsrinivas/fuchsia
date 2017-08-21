@@ -54,6 +54,10 @@ void bootfs_parse(mx_handle_t vmo, size_t len,
     uint32_t header[3];
 
     off += sizeof(hdr);
+    if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
+        off += sizeof(bootextra_t);
+    }
+
     for (;;) {
         if ((end - data) < (int)sizeof(header)) {
             // read in another xxx headers

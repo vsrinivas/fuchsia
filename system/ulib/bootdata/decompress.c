@@ -93,6 +93,10 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     // Skip past the bootdata header
     data += sizeof(bootdata_t);
 
+    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
+        data += sizeof(bootextra_t);
+    }
+
     if (*(const uint32_t*)data != MX_LZ4_MAGIC) {
         *err = "bad magic number for compressed bootfs";
         return MX_ERR_INVALID_ARGS;
@@ -133,8 +137,19 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     *boothdr = *hdr;
     boothdr->length = hdr->extra;
     boothdr->flags &= ~BOOTDATA_BOOTFS_FLAG_COMPRESSED;
+    boothdr->flags &= ~BOOTDATA_FLAG_CRC32;
     dst += sizeof(bootdata_t);
     remaining -= sizeof(bootdata_t);
+
+    if (boothdr->flags & BOOTDATA_FLAG_EXTRA) {
+        bootextra_t* extra = (bootextra_t*)dst;
+        extra->reserved0 = 0;
+        extra->reserved1 = 0;
+        extra->magic = BOOTITEM_MAGIC;
+        extra->crc32 = BOOTITEM_NO_CRC32;
+        dst += sizeof(bootextra_t);
+        remaining -= sizeof(bootextra_t);
+    }
 
     // Read each LZ4 block and decompress it. Block sizes are 32 bits.
     uint32_t blocksize = *(const uint32_t*)data;

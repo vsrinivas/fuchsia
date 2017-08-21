@@ -262,7 +262,11 @@ static void setup_bootfs(void) {
             if ((status < 0) || (actual != sizeof(bootdata))) {
                 break;
             }
-            size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);
+            size_t hdrsz = sizeof(bootdata_t);
+            if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
+                hdrsz += sizeof(bootextra_t);
+            }
+            size_t itemlen = BOOTDATA_ALIGN(hdrsz + bootdata.length);
             if (itemlen > len) {
                 printf("devmgr: bootdata item too large (%zd > %zd)\n", itemlen, len);
                 break;
@@ -279,7 +283,7 @@ static void setup_bootfs(void) {
                 const char* errmsg;
                 mx_handle_t bootfs_vmo;
                 status = decompress_bootdata(mx_vmar_root_self(), vmo,
-                                             off, bootdata.length + sizeof(bootdata),
+                                             off, bootdata.length + hdrsz,
                                              &bootfs_vmo, &errmsg);
                 if (status < 0) {
                     printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
@@ -289,10 +293,10 @@ static void setup_bootfs(void) {
                 break;
             }
             case BOOTDATA_LAST_CRASHLOG:
-                setup_last_crashlog(vmo, off + sizeof(bootdata), bootdata.length);
+                setup_last_crashlog(vmo, off + hdrsz, bootdata.length);
                 break;
             case BOOTDATA_MDI:
-                devmgr_read_mdi(vmo, off, len);
+                devmgr_read_mdi(vmo, off, itemlen);
                 break;
             case BOOTDATA_CMDLINE:
             case BOOTDATA_ACPI_RSDP:
