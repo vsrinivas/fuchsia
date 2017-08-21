@@ -26,6 +26,9 @@ shared_library("mtl_lib") {
     "//lib/mtl/vmo",
     "//lib/mtl/waiter",
   ]
+  ldflags = [
+    "-l:libasync.a"
+  ]
 }
 
 executable("mtl_unittests") {
