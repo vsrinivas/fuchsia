@@ -27,6 +27,11 @@ config("common_include_dirs") {
   ]
 }
 
+config("common_config") {
+  # Specifically depend on libasync.a to avoid linking against stale libasync.so
+  ldflags = [ "-l:libasync.a" ]
+}
+
 source_set("common") {
   sources = [
     "acquire_fence.cc",
@@ -133,7 +138,6 @@ source_set("common") {
     "util/unwrap.h",
     "util/wrap.h",
   ]
-  libs = [ "async" ]
   public_deps = [
     "//application/lib/app",
     "//apps/mozart/services/geometry",
@@ -147,7 +151,10 @@ source_set("common") {
     "//lib/mtl",
   ]
 
-  public_configs = [ ":common_include_dirs" ]
+  public_configs = [
+    ":common_include_dirs",
+    ":common_config",
+  ]
 
   deps = [
     "//magma:vulkan",
