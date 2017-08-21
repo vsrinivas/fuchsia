@@ -18,8 +18,6 @@ struct args {
     char *const *argv, *const *envp;
 };
 
-void __get_handler_set(sigset_t*);
-
 static int child(void* args_vp) {
     int ret;
     struct args* args = args_vp;
