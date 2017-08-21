@@ -56,7 +56,15 @@ static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint16
         return MX_OK;
     case VIRTIO_PCI_ISR_STATUS:
         vcpu_io->access_size = 1;
-        vcpu_io->u8 = 1;
+        mtx_lock(&device->mutex);
+        vcpu_io->u8 = device->isr_status;
+
+        // From VIRTIO 1.0 Section 4.1.4.5:
+        //
+        // To avoid an extra access, simply reading this register resets it to
+        // 0 and causes the device to de-assert the interrupt.
+        device->isr_status = 0;
+        mtx_unlock(&device->mutex);
         return MX_OK;
     }
 
@@ -140,7 +148,12 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t
             fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
             return status;
         }
-        return pci_interrupt(&device->pci_device);
+        // Send an interrupt back to the guest if we've generated one while
+        // processing the queue.
+        if (device->isr_status > 0) {
+            return pci_interrupt(&device->pci_device);
+        }
+        return MX_OK;
     }
     }
 
@@ -168,6 +181,10 @@ void virtio_pci_init(virtio_device_t* device) {
     device->pci_device.bar_size = sizeof(virtio_pci_legacy_config_t) + device->config_size;
     device->pci_device.impl = device;
     device->pci_device.ops = &kVirtioPciLegacyDeviceOps;
+}
+
+mx_status_t virtio_device_notify(virtio_device_t* device) {
+    return pci_interrupt(&device->pci_device);
 }
 
 // Returns a circular index into a Virtio ring.
@@ -202,6 +219,13 @@ void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
     queue->used->idx++;
 
     mtx_unlock(&queue->mutex);
+
+    // Set the queue bit in the device ISR so that the driver knows to check
+    // the queues on the next interrupt.
+    virtio_device_t* device = queue->virtio_device;
+    mtx_lock(&device->mutex);
+    device->isr_status |= VIRTIO_ISR_QUEUE;
+    mtx_unlock(&device->mutex);
 }
 
 mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* context) {

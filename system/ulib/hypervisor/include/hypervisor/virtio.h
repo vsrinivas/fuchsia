@@ -17,6 +17,10 @@
 #define VIRTIO_PCI_DEVICE_CFG_BASE      VIRTIO_PCI_CONFIG_OFFSET_NOMSI
 #define VIRTIO_PCI_DEVICE_CFG_TOP(size) (VIRTIO_PCI_DEVICE_CFG_BASE + size - 1)
 
+// Interrupt status bits.
+#define VIRTIO_ISR_QUEUE                0x1
+#define VIRTIO_ISR_DEVICE               0x2
+
 // clang-format on
 
 struct vring_desc;
@@ -45,12 +49,15 @@ typedef struct virtio_device_ops {
 
 /* Common state shared by all virtio devices. */
 typedef struct virtio_device {
+    mtx_t mutex;
     // Virtio feature flags.
     uint32_t features;
     // Virtio device id.
     uint8_t device_id;
     // Virtio status register for the device.
     uint8_t status;
+    // Interrupt status register.
+    uint8_t isr_status;
     // Currently selected queue.
     uint16_t queue_sel;
     // Number of bytes used for this devices configuration space.
@@ -84,6 +91,9 @@ typedef struct virtio_device {
  * virtio device attributes.
  */
 void virtio_pci_init(virtio_device_t* device);
+
+/* Send an interrupt back to the guest for a device. */
+mx_status_t virtio_device_notify(virtio_device_t* device);
 
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
