@@ -33,7 +33,7 @@ Arena::~Arena() {
     }
 }
 
-status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
+mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     if ((ob_size == 0) || (ob_size > PAGE_SIZE))
         return MX_ERR_INVALID_ARGS;
     if (!count)
@@ -72,13 +72,13 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
     // Create the VMAR.
     mxtl::RefPtr<VmAddressRegion> vmar;
-    status_t st = root_vmar->CreateSubVmar(0, // offset (ignored)
-                                           vmar_sz,
-                                           false, // align_pow2
-                                           VMAR_FLAG_CAN_MAP_READ |
-                                               VMAR_FLAG_CAN_MAP_WRITE |
-                                               VMAR_FLAG_CAN_MAP_SPECIFIC,
-                                           vname, &vmar);
+    mx_status_t st = root_vmar->CreateSubVmar(0, // offset (ignored)
+                                              vmar_sz,
+                                              false, // align_pow2
+                                              VMAR_FLAG_CAN_MAP_READ |
+                                                  VMAR_FLAG_CAN_MAP_WRITE |
+                                                  VMAR_FLAG_CAN_MAP_SPECIFIC,
+                                              vname, &vmar);
     if (st != MX_OK || vmar == nullptr) {
         LTRACEF("Arena '%s': can't create %zu-byte VMAR (%d)\n",
                 name, vmar_sz, st);
@@ -175,7 +175,7 @@ void* Arena::Pool::Pop() {
         const size_t offset =
             reinterpret_cast<vaddr_t>(committed_) - mapping_->base();
         const size_t len = nc - committed_;
-        status_t st = mapping_->MapRange(offset, len, /* commit */ true);
+        mx_status_t st = mapping_->MapRange(offset, len, /* commit */ true);
         if (st != MX_OK) {
             LTRACEF("%s: can't map range 0x%p..0x%p: %d\n",
                     name_, committed_, nc, st);

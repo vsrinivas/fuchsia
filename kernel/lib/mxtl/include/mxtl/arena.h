@@ -31,7 +31,7 @@ public:
     Arena() = default;
     ~Arena();
 
-    status_t Init(const char* name, size_t ob_size, size_t max_count);
+    mx_status_t Init(const char* name, size_t ob_size, size_t max_count);
     void* Alloc();
     void Free(void* addr);
     bool in_range(void* addr) const {

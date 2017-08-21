@@ -448,7 +448,7 @@ static bool memory_cleanup(void* context) {
 static bool content_preservation(void* context) {
     BEGIN_TEST;
     Arena arena;
-    status_t s = arena.Init("arena_tests", sizeof(TestObj), 1000);
+    mx_status_t s = arena.Init("arena_tests", sizeof(TestObj), 1000);
     REQUIRE_EQ(MX_OK, s, "arena.Init()");
 
     const int count = 30;
