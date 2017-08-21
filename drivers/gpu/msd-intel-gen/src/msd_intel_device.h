@@ -179,7 +179,7 @@ private:
 
     std::thread device_thread_;
     std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
-    bool device_thread_quit_flag_ = false;
+    std::atomic_bool device_thread_quit_flag_{false};
     std::atomic_bool interrupt_thread_quit_flag_{false};
     std::unique_ptr<GpuProgress> progress_;
 
