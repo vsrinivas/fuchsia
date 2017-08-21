@@ -6,13 +6,24 @@
 #include "magma_util/macros.h"
 #include "platform_device.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 TEST(PlatformInterrupt, Register)
 {
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
-    // Map once
     auto interrupt = platform_device->RegisterInterrupt();
     ASSERT_NE(nullptr, interrupt);
+
+    std::thread thread([interrupt_raw = interrupt.get()] {
+        DLOG("waiting for interrupt");
+        interrupt_raw->Wait();
+        DLOG("returned from interrupt");
+    });
+
+    interrupt->Signal();
+
+    DLOG("waiting for thread");
+    thread.join();
 }

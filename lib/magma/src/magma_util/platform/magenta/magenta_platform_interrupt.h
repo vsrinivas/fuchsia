@@ -15,26 +15,22 @@ namespace magma {
 
 class MagentaPlatformInterrupt : public PlatformInterrupt {
 public:
-    MagentaPlatformInterrupt(mx::handle interrupt_handle) : handle_(std::move(interrupt_handle)) {}
+    MagentaPlatformInterrupt(mx::handle interrupt_handle) : handle_(std::move(interrupt_handle))
+    {
+        DASSERT(handle_.get() != MX_HANDLE_INVALID);
+    }
 
-    void Close() override { handle_.reset(); }
+    void Signal() override { mx_interrupt_signal(handle_.get()); }
 
     bool Wait() override
     {
-        if (!handle_)
-            return DRETF(false, "invalid handle");
-
         mx_status_t status = mx_interrupt_wait(handle_.get());
         if (status != MX_OK)
             return DRETF(false, "mx_interrupt_wait failed (%d)", status);
         return true;
     }
 
-    void Complete() override
-    {
-        if (handle_)
-            mx_interrupt_complete(handle_.get());
-    }
+    void Complete() override { mx_interrupt_complete(handle_.get()); }
 
 private:
     mx::handle handle_;

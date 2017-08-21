@@ -16,7 +16,7 @@ public:
 
     virtual ~PlatformInterrupt() {}
 
-    virtual void Close() = 0;
+    virtual void Signal() = 0;
     virtual bool Wait() = 0;
     virtual void Complete() = 0;
 
