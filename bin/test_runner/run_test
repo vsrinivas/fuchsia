@@ -116,7 +116,7 @@ def main(argv):
       break
     except socket.error:
       failed += 1
-      if failed == 3:
+      if failed == 10:
         print 'Failed to connect. Is test_runner running on Fuchsia?'
         return 1
       Log.line('connecting', "Couldn't connect, retrying in 3 seconds")
