@@ -8,14 +8,15 @@
 
 #include <arch/user_copy.h>
 #include <magenta/compiler.h>
+#include <magenta/types.h>
 #include <err.h>
 
 __BEGIN_CDECLS
 
-inline status_t copy_to_user_unsafe(void* dst, const void* src, size_t len) {
+inline mx_status_t copy_to_user_unsafe(void* dst, const void* src, size_t len) {
   return arch_copy_to_user(dst, src, len);
 }
-inline status_t copy_from_user_unsafe(void* dst, const void* src, size_t len) {
+inline mx_status_t copy_from_user_unsafe(void* dst, const void* src, size_t len) {
   return arch_copy_from_user(dst, src, len);
 }
 

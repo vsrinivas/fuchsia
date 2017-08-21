@@ -177,7 +177,7 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
             lk_time_t deadline = current_time() + 4 * oom_sleep_duration_ns;
 
             lock.release();
-            status_t s = thread_join(t, nullptr, deadline);
+            mx_status_t s = thread_join(t, nullptr, deadline);
             if (s == MX_OK) {
                 printf("OOM thread stopped.\n");
             } else {

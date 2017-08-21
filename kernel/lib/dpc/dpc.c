@@ -19,7 +19,7 @@ static spin_lock_t dpc_lock = SPIN_LOCK_INITIAL_VALUE;
 static struct list_node dpc_list = LIST_INITIAL_VALUE(dpc_list);
 static event_t dpc_event = EVENT_INITIAL_VALUE(dpc_event, false, 0);
 
-status_t dpc_queue(dpc_t *dpc, bool reschedule)
+mx_status_t dpc_queue(dpc_t *dpc, bool reschedule)
 {
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
@@ -43,7 +43,7 @@ status_t dpc_queue(dpc_t *dpc, bool reschedule)
     return MX_OK;
 }
 
-status_t dpc_queue_thread_locked(dpc_t *dpc)
+mx_status_t dpc_queue_thread_locked(dpc_t *dpc)
 {
     DEBUG_ASSERT(dpc);
     DEBUG_ASSERT(dpc->func);
@@ -85,7 +85,7 @@ static int dpc_thread(void *arg)
 {
     for (;;) {
         // wait for a dpc to fire
-        __UNUSED status_t err = event_wait(&dpc_event);
+        __UNUSED mx_status_t err = event_wait(&dpc_event);
         DEBUG_ASSERT(err == MX_OK);
 
         spin_lock_saved_state_t state;

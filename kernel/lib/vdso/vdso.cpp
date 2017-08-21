@@ -42,7 +42,7 @@ public:
 
         const size_t size = offset_in_page + sizeof(T);
         const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-        status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+        mx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
                 0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
                 mxtl::move(vmo), page_offset, arch_mmu_flags, name, &mapping_);
         ASSERT(status == MX_OK);
@@ -51,7 +51,7 @@ public:
 
     ~KernelVmoWindow() {
         if (mapping_) {
-            status_t status = mapping_->Destroy();
+            mx_status_t status = mapping_->Destroy();
             ASSERT(status == MX_OK);
         }
     }

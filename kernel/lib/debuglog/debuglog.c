@@ -66,7 +66,7 @@ static dlog_t DLOG = {
 
 #define ALIGN4(n) (((n) + 3) & (~3))
 
-status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
+mx_status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
     dlog_t* log = &DLOG;
 
     if (len > DLOG_MAX_DATA) {
@@ -145,14 +145,14 @@ status_t dlog_write(uint32_t flags, const void* ptr, size_t len) {
 
 // TODO: support reading multiple messages at a time
 // TODO: filter with flags
-status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* _actual) {
+mx_status_t dlog_read(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len, size_t* _actual) {
     // must be room for worst-case read
     if (len < DLOG_MAX_RECORD) {
         return MX_ERR_BUFFER_TOO_SMALL;
     }
 
     dlog_t* log = rdr->log;
-    status_t status = MX_ERR_SHOULD_WAIT;
+    mx_status_t status = MX_ERR_SHOULD_WAIT;
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&log->lock, state);

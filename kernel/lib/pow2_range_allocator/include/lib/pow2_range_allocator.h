@@ -11,6 +11,7 @@
 #include <err.h>
 #include <kernel/mutex.h>
 #include <list.h>
+#include <magenta/types.h>
 #include <sys/types.h>
 
 __BEGIN_CDECLS
@@ -46,7 +47,7 @@ typedef struct p2ra_state {
  *
  * @return A status code indicating the success or failure of the operation.
  */
-status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size);
+mx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size);
 
 /**
  * Free all of the state associated with a previously initialized pow2 range
@@ -72,7 +73,7 @@ void p2ra_free(p2ra_state_t* state);
  * ++ MX_ERR_NO_MEMORY Not enough memory to allocate the bookkeeping required for
  *    managing the range.
  */
-status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len);
+mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len);
 
 /**
  * Attempt to allocate a range of uints from the available sub-ranges.  The
@@ -96,7 +97,7 @@ status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len);
  * ++ MX_ERR_NO_MEMORY A region could be found, but memory required for bookkeeping
  *    could not be allocated.
  */
-status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start);
+mx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start);
 
 /**
  * Free a range previously allocated using p2ra_allocate_range.

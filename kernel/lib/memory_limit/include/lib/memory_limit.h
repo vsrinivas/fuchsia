@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 #include <iovec.h>
+#include <magenta/types.h>
 #include <sys/types.h>
 #include <kernel/vm/pmm.h>
 
@@ -50,8 +51,8 @@ typedef struct mem_limit_ctx {
 //
 // Returns MX_OK on completion, and MX_ERR_INVALID_ARGS if parameters are
 // invalid.
-status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
-                            iovec_t iovs[], size_t* used_cnt);
+mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
+                               iovec_t iovs[], size_t* used_cnt);
 
 // This is a higher level helper function for users of the library if they have
 // no special constraints around memory arenas needing special flags,
@@ -65,14 +66,14 @@ status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t r
 //
 // Returns MX_OK on completion, and MX_ERR_INVALID_ARGS if parameters are
 // invalid
-status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
-                                 size_t range_size, pmm_arena_info_t arena_template);
+mx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
+                                            size_t range_size, pmm_arena_info_t arena_template);
 
 // Checks if a memory limit exists and initializes the memory_limit member of ctx
 // if one is found.
 //
 // Returns MX_OK on success, or ERR_UNSUPPORTED if no memory limit was passed
 // via kernel.memory-limit-mb
-status_t mem_limit_init(mem_limit_ctx_t* ctx);
+mx_status_t mem_limit_init(mem_limit_ctx_t* ctx);
 
 __END_CDECLS

@@ -137,7 +137,7 @@ int ktrace_read_user(void* ptr, uint32_t off, uint32_t len) {
     return len;
 }
 
-status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
+mx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     ktrace_state_t* ks = &KTRACE_STATE;
     switch (action) {
     case KTRACE_ACTION_START:
@@ -202,7 +202,7 @@ void ktrace_init(unsigned level) {
 
     mb *= (1024*1024);
 
-    status_t status;
+    mx_status_t status;
     VmAspace* aspace = VmAspace::kernel_aspace();
     if ((status = aspace->Alloc("ktrace", mb, (void**)&ks->buffer, 0, VmAspace::VMM_FLAG_COMMIT,
                                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE)) < 0) {

@@ -124,7 +124,7 @@ static void p2ra_return_free_block(p2ra_state_t* state,
 }
 
 
-status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
+mx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     if (!state)
         return MX_ERR_INVALID_ARGS;
 
@@ -168,7 +168,7 @@ void p2ra_free(p2ra_state_t* state) {
     memset(state, 0, sizeof(*state));
 }
 
-status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {
+mx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {
     LTRACEF("Adding range [%u, %u]\n", range_start, range_start + range_len - 1);
 
     if (!state      ||
@@ -176,7 +176,7 @@ status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {
         ((range_start + range_len) < range_start))
         return MX_ERR_INVALID_ARGS;
 
-    status_t         ret       = MX_OK;
+    mx_status_t      ret       = MX_OK;
     p2ra_range_t*    new_range = NULL;
     struct list_node new_blocks;
     list_initialize(&new_blocks);
@@ -283,7 +283,7 @@ finished:
     return ret;
 }
 
-status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start) {
+mx_status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_start) {
     if (!state || !out_range_start)
         return MX_ERR_INVALID_ARGS;
 
@@ -302,7 +302,7 @@ status_t p2ra_allocate_range(p2ra_state_t* state, uint size, uint* out_range_sta
 
     /* Lock state during allocation */
     p2ra_block_t* block = NULL;
-    status_t      ret   = MX_OK;
+    mx_status_t   ret   = MX_OK;
     mutex_acquire(&state->lock);
 
     /* Find the smallest sized chunk which can hold the allocation and is

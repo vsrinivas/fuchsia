@@ -23,8 +23,8 @@
 
 #define LOCAL_TRACE 0
 
-status_t mtrace_ipt_control(uint32_t action, uint32_t options,
-                            user_ptr<void> arg, uint32_t size) {
+mx_status_t mtrace_ipt_control(uint32_t action, uint32_t options,
+                               user_ptr<void> arg, uint32_t size) {
     TRACEF("action %u, options 0x%x, arg %p, size 0x%x\n",
            action, options, arg.get(), size);
 

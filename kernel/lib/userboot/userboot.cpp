@@ -155,7 +155,7 @@ static mx_status_t make_bootstrap_channel(
     {
         mxtl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
-        status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
+        mx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
         if (status != MX_OK)
             return status;
         user_channel_handle.reset(MakeHandle(mxtl::move(mpd0), rights));

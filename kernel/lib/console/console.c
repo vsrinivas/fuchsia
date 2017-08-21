@@ -9,6 +9,7 @@
 #include <trace.h>
 #include <assert.h>
 #include <magenta/compiler.h>
+#include <magenta/types.h>
 #include <err.h>
 #include <string.h>
 #include <ctype.h>
@@ -556,7 +557,9 @@ static void convert_args(int argc, cmd_args *argv)
 }
 
 
-static status_t command_loop(int (*get_line)(const char **, void *), void *get_line_cookie, bool showprompt, bool locked) TA_NO_THREAD_SAFETY_ANALYSIS
+static mx_status_t command_loop(int (*get_line)(const char **, void *),
+                                void *get_line_cookie, bool showprompt,
+                                bool locked) TA_NO_THREAD_SAFETY_ANALYSIS
 {
     bool exit;
 #if WITH_LIB_ENV

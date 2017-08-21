@@ -56,7 +56,7 @@
  *
  * The init function might look something like...
  *
- * static status_t init_foo_test_env(void** context)
+ * static mx_status_t init_foo_test_env(void** context)
  * {
  *      *context = new FooTestEnvironment(...);
  *
@@ -86,6 +86,7 @@
 #include <string.h>
 
 #include <magenta/compiler.h>
+#include <magenta/types.h>
 #include <trace.h>
 
 __BEGIN_CDECLS
@@ -316,9 +317,9 @@ bool unittest_expect_bytes(const uint8_t* expected,
                            int line,
                            bool expect_eq);
 
-typedef bool     (*unitest_fn_t)(void* context);
-typedef status_t (*unitest_testcase_init_fn_t)(void** context);
-typedef void     (*unitest_testcase_cleanup_fn_t)(void* context);
+typedef bool        (*unitest_fn_t)(void* context);
+typedef mx_status_t (*unitest_testcase_init_fn_t)(void** context);
+typedef void        (*unitest_testcase_cleanup_fn_t)(void* context);
 
 typedef struct unitest_registration {
     const char*  name;

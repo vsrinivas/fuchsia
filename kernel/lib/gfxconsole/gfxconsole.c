@@ -229,7 +229,7 @@ static gfx_surface hw_surface;
 static gfx_surface sw_surface;
 static struct display_info dispinfo;
 
-status_t gfxconsole_display_get_info(struct display_info *info)
+mx_status_t gfxconsole_display_get_info(struct display_info *info)
 {
     if (gfxconsole.surface) {
         memcpy(info, &dispinfo, sizeof(*info));

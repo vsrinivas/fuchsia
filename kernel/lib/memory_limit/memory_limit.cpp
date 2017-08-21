@@ -20,7 +20,7 @@
 
 #define LOCAL_TRACE 0
 
-status_t mem_limit_init(mem_limit_ctx_t* ctx) {
+mx_status_t mem_limit_init(mem_limit_ctx_t* ctx) {
     if (!ctx) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -37,8 +37,8 @@ status_t mem_limit_init(mem_limit_ctx_t* ctx) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
-                         iovec_t iovs[], size_t* used_cnt) {
+mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t range_size,
+                               iovec_t iovs[], size_t* used_cnt) {
     DEBUG_ASSERT(ctx);
     DEBUG_ASSERT(iovs);
     DEBUG_ASSERT(used_cnt);
@@ -206,11 +206,11 @@ status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_t r
     return MX_OK;
 }
 
-status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
-                                 size_t range_size, pmm_arena_info_t arena_template) {
+mx_status_t mem_limit_add_arenas_from_range(mem_limit_ctx_t* ctx, uintptr_t range_base,
+                                            size_t range_size, pmm_arena_info_t arena_template) {
     size_t used;
     iovec_t vecs[2];
-    status_t status = mem_limit_get_iovs(ctx, range_base, range_size, vecs, &used);
+    mx_status_t status = mem_limit_get_iovs(ctx, range_base, range_size, vecs, &used);
 
     if (status != MX_OK) {
         return status;

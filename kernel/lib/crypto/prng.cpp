@@ -12,6 +12,7 @@
 #include <err.h>
 #include <lib/crypto/cryptolib.h>
 #include <magenta/compiler.h>
+#include <magenta/types.h>
 #include <mxtl/auto_lock.h>
 #include <openssl/chacha.h>
 #include <pow2.h>
@@ -68,7 +69,7 @@ void PRNG::Draw(void* out, size_t size) {
         mxtl::AutoLock guard(&lock_);
         if (unlikely(total_entropy_added_ < kMinEntropy)) {
             lock_.Release();
-            status_t status = event_wait(&ready_);
+            mx_status_t status = event_wait(&ready_);
             ASSERT(status == MX_OK);
             lock_.Acquire();
         }
