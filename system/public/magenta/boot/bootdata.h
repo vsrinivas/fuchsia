@@ -12,8 +12,29 @@
 // lsw of sha256("bootdata")
 #define BOOTDATA_MAGIC (0x868cf7e6)
 
+// lsw of sha256("bootitem")
+#define BOOTITEM_MAGIC (0xb5781729)
+
 // Round n up to the next 8 byte boundary
 #define BOOTDATA_ALIGN(n) (((n) + 7) & (~7))
+
+#define BOOTITEM_NO_CRC32 (~BOOTITEM_MAGIC)
+
+// Bootdata items with the EXTRA flag have a bootextra_t
+// between them and the payload, which must have BOOTITEM_MAGIC
+// in its magic field, otherwise the file is corrupt.
+//
+// The bootextra_t is not included in the length of the header.
+// Consider the EXTRA flag to indicate a larger v2 header.
+//
+// The crc32 field must be BOOTITEM_NO_CRC32, unless the CRC32
+// flag is present, in which case it must be a valid crc32 of
+// the bootitem, bootextra (with crc32 field set to 0), and the
+// payload.
+#define BOOTDATA_FLAG_EXTRA      (0x00010000)
+
+// Bootdata items with the CRC32 flag must have a valid crc32
+#define BOOTDATA_FLAG_CRC32      (0x00020000)
 
 // Containers are used to wrap a set of bootdata items
 // written to a file or partition.  The "length" is the
@@ -112,6 +133,13 @@ typedef struct {
     // Flags for the boot data. See flag descriptions for each type.
     uint32_t flags;
 } bootdata_t;
+
+typedef struct {
+    uint32_t reserved0;
+    uint32_t reserved1;
+    uint32_t magic;
+    uint32_t crc32;
+} bootextra_t;
 
 typedef struct {
     uint64_t base; // physical base addr

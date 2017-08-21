@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 
 #include <lz4frame.h>
+#include <lib/cksum.h>
 
 #include <magenta/boot/bootdata.h>
 
@@ -341,14 +342,30 @@ static int writex(int fd, const void* ptr, size_t len) {
     return total;
 }
 
+int readcrc32(int fd, size_t len, uint32_t* crc) {
+    uint8_t buf[MAXBUFFER];
+    while (len > 0) {
+        size_t xfer = (len > sizeof(buf)) ? sizeof(buf) : len;
+        if (readx(fd, buf, xfer) < 0) {
+            return -1;
+        }
+        *crc = crc32(*crc, buf, xfer);
+        len -= xfer;
+    }
+    return 0;
+}
+
 typedef struct {
-    ssize_t (*setup)(int fd, void** cookie);
-    ssize_t (*write)(int fd, const void* src, size_t len, void* cookie);
-    ssize_t (*write_file)(int fd, const char* fn, size_t len, void* cookie);
-    ssize_t (*finish)(int fd, void* cookie);
+    ssize_t (*setup)(int fd, void** cookie, uint32_t* crc);
+    ssize_t (*write)(int fd, const void* src, size_t len, void* cookie, uint32_t* crc);
+    ssize_t (*write_file)(int fd, const char* fn, size_t len, void* cookie, uint32_t* crc);
+    ssize_t (*finish)(int fd, void* cookie, uint32_t* crc);
 } io_ops;
 
-ssize_t copydata(int fd, const void* src, size_t len, void* cookie) {
+ssize_t copydata(int fd, const void* src, size_t len, void* cookie, uint32_t* crc) {
+    if (crc) {
+        *crc = crc32(*crc, src, len);
+    }
     if (writex(fd, src, len) < 0) {
         return -1;
     } else {
@@ -356,7 +373,7 @@ ssize_t copydata(int fd, const void* src, size_t len, void* cookie) {
     }
 }
 
-ssize_t copyfile(int fd, const char* fn, size_t len, void* cookie) {
+ssize_t copyfile(int fd, const char* fn, size_t len, void* cookie, uint32_t* crc) {
     char buf[MAXBUFFER];
     int r, fdi;
     if ((fdi = open(fn, O_RDONLY)) < 0) {
@@ -370,6 +387,9 @@ ssize_t copyfile(int fd, const char* fn, size_t len, void* cookie) {
         size_t xfer = (len > sizeof(buf)) ? sizeof(buf) : len;
         if ((r = readx(fdi, buf, xfer)) < 0) {
             break;
+        }
+        if (crc) {
+            *crc = crc32(*crc, (void*)buf, xfer);
         }
         if ((r = writex(fd, buf, xfer)) < 0) {
             break;
@@ -404,7 +424,7 @@ static bool check_and_log_lz4_error(LZ4F_errorCode_t code, const char* msg) {
     return false;
 }
 
-ssize_t compress_setup(int fd, void** cookie) {
+ssize_t compress_setup(int fd, void** cookie, uint32_t* crc) {
     LZ4F_compressionContext_t cctx;
     LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&cctx, LZ4F_VERSION);
     if (check_and_log_lz4_error(errc, "could not initialize compression context")) {
@@ -420,10 +440,13 @@ ssize_t compress_setup(int fd, void** cookie) {
     // "safe".
     *cookie = (void*)cctx;
 
+    if (crc && (r > 0)) {
+        *crc = crc32(*crc, buf, r);
+    }
     return writex(fd, buf, r);
 }
 
-ssize_t compress_data(int fd, const void* src, size_t len, void* cookie) {
+ssize_t compress_data(int fd, const void* src, size_t len, void* cookie, uint32_t* crc) {
     // max will be, worst case, a bit larger than MAXBUFFER
     size_t max = LZ4F_compressBound(len, &lz4_prefs);
     uint8_t buf[max];
@@ -431,10 +454,13 @@ ssize_t compress_data(int fd, const void* src, size_t len, void* cookie) {
     if (check_and_log_lz4_error(r, "could not compress data")) {
         return -1;
     }
+    if (crc) {
+        *crc = crc32(*crc, buf, r);
+    }
     return writex(fd, buf, r);
 }
 
-ssize_t compress_file(int fd, const char* fn, size_t len, void* cookie) {
+ssize_t compress_file(int fd, const char* fn, size_t len, void* cookie, uint32_t* crc) {
     if (len == 0) {
         // Don't bother trying to compress empty files
         return 0;
@@ -454,7 +480,7 @@ ssize_t compress_file(int fd, const char* fn, size_t len, void* cookie) {
         if ((r = readx(fdi, buf, xfer)) < 0) {
             break;
         }
-        if ((r = compress_data(fd, buf, xfer, cookie)) < 0) {
+        if ((r = compress_data(fd, buf, xfer, cookie, crc)) < 0) {
             break;
         }
         len -= xfer;
@@ -463,7 +489,7 @@ ssize_t compress_file(int fd, const char* fn, size_t len, void* cookie) {
     return (r < 0) ? -1 : total;
 }
 
-ssize_t compress_finish(int fd, void* cookie) {
+ssize_t compress_finish(int fd, void* cookie, uint32_t* crc) {
     // Max write is one block (64kB uncompressed) plus 8 bytes of footer.
     size_t max = LZ4F_compressBound(65536, &lz4_prefs) + 8;
     uint8_t buf[max];
@@ -471,6 +497,9 @@ ssize_t compress_finish(int fd, void* cookie) {
     if (check_and_log_lz4_error(r, "could not finish compression")) {
         r = -1;
     } else {
+        if (crc) {
+            *crc = crc32(*crc, buf, r);
+        }
         r = writex(fd, buf, r);
     }
 
@@ -540,9 +569,19 @@ char fill[4096];
 
 #define CHECK(w) do { if ((w) < 0) goto fail; } while (0)
 
-int write_bootfs(int fd, const io_ops* op, item_t* item, bool compressed) {
+int write_bootfs(int fd, const io_ops* op, item_t* item, bool compressed, bool extra) {
     uint32_t n;
     fsentry_t* e;
+
+    uint32_t crcval = 0;
+    uint32_t* crc = NULL;
+
+    size_t hdrsize = sizeof(bootdata_t);
+
+    if (extra) {
+        hdrsize += sizeof(bootextra_t);
+        crc = &crcval;
+    }
 
     // Make note of where we started
     off_t start = lseek(fd, 0, SEEK_CUR);
@@ -556,18 +595,18 @@ fail:
     if (compressed) {
         // Update the LZ4 content size to be original size without the bootdata
         // header which isn't being compressed.
-        lz4_prefs.frameInfo.contentSize = item->outsize - sizeof(bootdata_t);
+        lz4_prefs.frameInfo.contentSize = item->outsize - hdrsize;
     }
 
     // Increment past the bootdata header which will be filled out later.
-    if (lseek(fd, (start + sizeof(bootdata_t)), SEEK_SET) != (start + sizeof(bootdata_t))) {
+    if (lseek(fd, (start + hdrsize), SEEK_SET) != (start + hdrsize)) {
         fprintf(stderr, "error: cannot seek\n");
         return -1;
     }
 
     void* cookie = NULL;
     if (op->setup) {
-        CHECK(op->setup(fd, &cookie));
+        CHECK(op->setup(fd, &cookie, crc));
     }
 
     fsentry_t* last_entry = NULL;
@@ -576,38 +615,38 @@ fail:
         hdr[0] = e->namelen;
         hdr[1] = e->length;
         hdr[2] = e->offset;
-        CHECK(op->write(fd, hdr, sizeof(hdr), cookie));
-        CHECK(op->write(fd, e->name, e->namelen, cookie));
+        CHECK(op->write(fd, hdr, sizeof(hdr), cookie, crc));
+        CHECK(op->write(fd, e->name, e->namelen, cookie, crc));
         last_entry = e;
     }
     // Record length of last file
     uint32_t last_length = last_entry ? last_entry->length : 0;
 
     // null terminator record
-    CHECK(op->write(fd, fill, 12, cookie));
+    CHECK(op->write(fd, fill, 12, cookie, crc));
 
     if ((n = PAGEFILL(item->hdrsize))) {
-        CHECK(op->write(fd, fill, n, cookie));
+        CHECK(op->write(fd, fill, n, cookie, crc));
     }
 
     for (e = item->first; e != NULL; e = e->next) {
         if (verbose) {
             fprintf(stderr, "%08x %08x %s\n", e->offset, e->length, e->name);
         }
-        CHECK(op->write_file(fd, e->srcpath, e->length, cookie));
+        CHECK(op->write_file(fd, e->srcpath, e->length, cookie, crc));
         if ((n = PAGEFILL(e->length))) {
-            CHECK(op->write(fd, fill, n, cookie));
+            CHECK(op->write(fd, fill, n, cookie, crc));
         }
     }
     // If the last entry has length zero, add an extra zero page at the end.
     // This prevents the possibility of trying to read/map past the end of the
     // bootfs at runtime.
     if (last_length == 0) {
-        CHECK(op->write(fd, fill, sizeof(fill), cookie));
+        CHECK(op->write(fd, fill, sizeof(fill), cookie, crc));
     }
 
     if (op->finish) {
-        CHECK(op->finish(fd, cookie));
+        CHECK(op->finish(fd, cookie, crc));
     }
 
     off_t end = lseek(fd, 0, SEEK_CUR);
@@ -619,7 +658,9 @@ fail:
     // pad bootdata_t records to 8 byte boundary
     size_t pad = BOOTDATA_ALIGN(end) - end;
     if (pad) {
-        write(fd, fill, pad);
+        if (writex(fd, fill, pad) < 0) {
+            return -1;
+        }
     }
 
     // Write the bootheader
@@ -628,7 +669,7 @@ fail:
         return -1;
     }
 
-    size_t wrote = (end - start) - sizeof(bootdata_t);
+    size_t wrote = (end - start) - hdrsize;
 
     bootdata_t boothdr = {
         .type = (item->type == ITEM_BOOTFS_SYSTEM) ?
@@ -637,8 +678,25 @@ fail:
         .extra = compressed ? item->outsize : wrote,
         .flags = compressed ? BOOTDATA_BOOTFS_FLAG_COMPRESSED : 0
     };
+    if (extra) {
+        boothdr.flags |= BOOTDATA_FLAG_EXTRA | BOOTDATA_FLAG_CRC32;
+    }
     if (writex(fd, &boothdr, sizeof(boothdr)) < 0) {
         return -1;
+    }
+    if (extra) {
+        bootextra_t extra = {
+            .reserved0 = 0,
+            .reserved1 = 0,
+            .magic = BOOTITEM_MAGIC,
+            .crc32 = 0,
+        };
+        uint32_t hdrcrc = crc32(0, (void*) &boothdr, sizeof(boothdr));
+        hdrcrc = crc32(hdrcrc, (void*) &extra, sizeof(extra));
+        extra.crc32 = crc32_combine(hdrcrc, *crc, boothdr.length);
+        if (writex(fd, &extra, sizeof(extra)) < 0) {
+            return -1;
+        }
     }
 
     if (lseek(fd, end + pad, SEEK_SET) != (end + pad)) {
@@ -649,7 +707,72 @@ fail:
     return 0;
 }
 
-int write_bootdata(const char* fn, item_t* item) {
+int write_bootitem(int fd, item_t* item, uint32_t type, size_t nulls, bool extra) {
+    uint32_t* crc = NULL;
+
+    bootdata_t hdr = {
+        .type = type,
+        .length = item->first->length + nulls,
+        .extra = 0,
+        .flags = 0,
+    };
+    bootextra_t ehdr = {
+        .reserved0 = 0,
+        .reserved1 = 0,
+        .magic = BOOTITEM_MAGIC,
+        .crc32 = 0,
+    };
+    if (extra) {
+        hdr.flags |= BOOTDATA_FLAG_EXTRA | BOOTDATA_FLAG_CRC32;
+    }
+    if (writex(fd, &hdr, sizeof(hdr)) < 0) {
+        return -1;
+    }
+    off_t eoff = 0;
+    if (extra) {
+        if ((eoff = lseek(fd, 0, SEEK_CUR)) < 0) {
+            return -1;
+        }
+        // placeholder header
+        if (writex(fd, &ehdr, sizeof(ehdr)) < 0) {
+            return -1;
+        }
+        crc = &ehdr.crc32;
+        uint32_t tmp = crc32(0, (void*) &hdr, sizeof(hdr));
+        *crc = crc32(tmp, (void*) &ehdr, sizeof(ehdr));
+    }
+    if (copyfile(fd, item->first->srcpath, item->first->length, NULL, crc) < 0) {
+        return -1;
+    }
+    if (nulls && (copydata(fd, fill, nulls, NULL, crc) < 0)) {
+        return -1;
+    }
+    size_t pad = BOOTDATA_ALIGN(hdr.length) - hdr.length;
+    if (pad) {
+        if (writex(fd, fill, pad) < 0) {
+            return -1;
+        }
+    }
+    if (extra) {
+        // patch computed crc into extra header
+        off_t save;
+        if ((save = lseek(fd, 0, SEEK_CUR)) < 0) {
+            return -1;
+        }
+        if (lseek(fd, eoff, SEEK_SET) != eoff) {
+            return -1;
+        }
+        if (writex(fd, &ehdr, sizeof(ehdr)) < 0) {
+            return -1;
+        }
+        if (lseek(fd, save, SEEK_SET) != save) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int write_bootdata(const char* fn, item_t* item, bool extra) {
     //TODO: re-enable for debugging someday
     bool compressed = true;
 
@@ -673,48 +796,15 @@ int write_bootdata(const char* fn, item_t* item) {
         case ITEM_BOOTDATA:
             CHECK(copybootdatafile(fd, item->first->srcpath, item->first->length));
             break;
-
-        case ITEM_KERNEL: {
-            bootdata_t hdr = {
-                .type = BOOTDATA_KERNEL,
-                .length = item->first->length,
-                .extra = 0,
-                .flags = 0,
-            };
-            if (writex(fd, &hdr, sizeof(hdr)) < 0) {
-                goto fail;
-            }
-            CHECK(copyfile(fd, item->first->srcpath, item->first->length, NULL));
-
-            size_t pad = BOOTDATA_ALIGN(item->first->length) - item->first->length;
-            if (pad) {
-                write(fd, fill, pad);
-            }
+        case ITEM_KERNEL:
+            CHECK(write_bootitem(fd, item, BOOTDATA_KERNEL, 0, extra));
             break;
-        }
-        case ITEM_CMDLINE: {
-            // Make room for the null terminator
-            const size_t cmdline_len = item->first->length + 1;
-            bootdata_t cmdline_hdr = {
-                .type = BOOTDATA_CMDLINE,
-                .length = cmdline_len,
-                .extra = 0,
-                .flags = 0,
-            };
-            if (writex(fd, &cmdline_hdr, sizeof(cmdline_hdr)) < 0) {
-                goto fail;
-            }
-            CHECK(copyfile(fd, item->first->srcpath, item->first->length, NULL));
-
-            size_t pad = BOOTDATA_ALIGN(cmdline_len) - item->first->length;
-            if (pad) {
-                write(fd, fill, pad);
-            }
+        case ITEM_CMDLINE:
+            CHECK(write_bootitem(fd, item, BOOTDATA_CMDLINE, 1, extra));
             break;
-        }
         case ITEM_BOOTFS_BOOT:
         case ITEM_BOOTFS_SYSTEM:
-            CHECK(write_bootfs(fd, op, item, compressed));
+            CHECK(write_bootfs(fd, op, item, compressed, extra));
             break;
         default:
             fprintf(stderr, "error: internal: type %08x unknown\n", item->type);
@@ -805,12 +895,50 @@ int dump_bootdata(const char* fn) {
             printf("%08zx: %08x UNKNOWN (type=%08x)\n", off, hdr.length, hdr.type);
             break;
         }
-        size_t pad = BOOTDATA_ALIGN(hdr.length) - hdr.length;
-        if (lseek(fd, hdr.length + pad, SEEK_CUR) < 0) {
-            fprintf(stderr, "error: seeking\n");
-            goto fail;
+        off += sizeof(hdr);
+
+        bootextra_t ehdr;
+        uint32_t crc = 0;
+        if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
+            if (readx(fd, &ehdr, sizeof(ehdr)) < 0) {
+                fprintf(stderr, "error: cannot read extra header data\n");
+                goto fail;
+            }
+            printf("%08zx:          MAGIC=%08x CRC=%08x\n", off, ehdr.magic, ehdr.crc32);
+            if (ehdr.magic != BOOTITEM_MAGIC) {
+                fprintf(stderr, "error: bad bootitem magic\n");
+            }
+            uint32_t tmp = ehdr.crc32;
+            ehdr.crc32 = 0;
+            crc = crc32(crc, (void*) &hdr, sizeof(hdr));
+            crc = crc32(crc, (void*) &ehdr, sizeof(ehdr));
+            ehdr.crc32 = tmp;
+            off += sizeof(ehdr);
         }
-        off += sizeof(hdr) + hdr.length + pad;
+        size_t pad = BOOTDATA_ALIGN(hdr.length) - hdr.length;
+        if (hdr.flags & BOOTDATA_FLAG_CRC32) {
+            if (!(hdr.flags & BOOTDATA_FLAG_EXTRA)) {
+                fprintf(stderr, "error: crc32 indicated w/out extra data!\n");
+                goto fail;
+            }
+            if (readcrc32(fd, hdr.length, &crc) < 0) {
+                fprintf(stderr, "error: failed to read data for crc\n");
+                goto fail;
+            }
+            if (crc != ehdr.crc32) {
+                fprintf(stderr, "error: CRC %08x does not match header\n", crc);
+            }
+            if (pad && (lseek(fd, pad, SEEK_CUR) < 0)) {
+                fprintf(stderr, "error: seeking\n");
+                goto fail;
+            }
+        } else {
+            if (lseek(fd, hdr.length + pad, SEEK_CUR) < 0) {
+                fprintf(stderr, "error: seeking\n");
+                goto fail;
+            }
+        }
+        off += hdr.length + pad;
     }
     close(fd);
     return 0;
@@ -832,6 +960,7 @@ void usage(void) {
     "         -C <filename>    include kernel command line\n"
     "         -c               compress bootfs image (default)\n"
     "         -v               verbose output\n"
+    "         -x               enable bootextra data (crc32)\n"
     "         -t <filename>    dump bootdata contents\n"
     "         --uncompressed   don't compress bootfs image (debug only)\n"
     "         --target=system  bootfs to be unpacked at /system\n"
@@ -853,6 +982,7 @@ int main(int argc, char **argv) {
     bool compressed = true;
     bool have_kernel = false;
     bool have_cmdline = false;
+    bool extra = false;
     unsigned incount = 0;
 
     if (argc == 1) {
@@ -921,6 +1051,8 @@ int main(int argc, char **argv) {
         } else if (!strcmp(cmd,"-t")) {
             fprintf(stderr, "error: -t option must be used alone, with one filename.\n");
             return 0;
+        } else if (!strcmp(cmd,"-x")) {
+            extra = true;
         } else if (!strcmp(cmd,"-c")) {
             compressed = true;
         } else if (!strcmp(cmd,"--uncompressed")) {
@@ -967,7 +1099,9 @@ int main(int argc, char **argv) {
         case ITEM_BOOTFS_SYSTEM:
             // account for bootdata plus the end record
             item->hdrsize += sizeof(bootdata_t) + 12;
-
+            if (extra) {
+                item->hdrsize += sizeof(bootextra_t);
+            }
             size_t off = PAGEALIGN(item->hdrsize);
             fsentry_t* last_entry = NULL;
             for (fsentry_t* e = item->first; e != NULL; e = e->next) {
@@ -989,5 +1123,5 @@ int main(int argc, char **argv) {
         }
     }
 
-    return write_bootdata(output_file, first_item);
+    return write_bootdata(output_file, first_item, extra);
 }
