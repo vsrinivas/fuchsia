@@ -79,8 +79,6 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
         return MX_OK;
     }
 
-    // The timer is always a one shot timer which in the periodic case
-    // is re-issued in the timer callback.
     deadline_ = deadline;
     slack_ = slack;
 
