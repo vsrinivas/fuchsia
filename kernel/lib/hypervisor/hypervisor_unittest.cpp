@@ -15,14 +15,14 @@
 #include <kernel/vm/vm_object_paged.h>
 #include <unittest.h>
 
-static status_t get_paddr(void* context, size_t offset, size_t index, paddr_t pa) {
+static mx_status_t get_paddr(void* context, size_t offset, size_t index, paddr_t pa) {
     *static_cast<paddr_t*>(context) = pa;
     return MX_OK;
 }
 
-status_t setup_vmo(size_t vmo_size, mxtl::RefPtr<VmObject>* vmo_out) {
+mx_status_t setup_vmo(size_t vmo_size, mxtl::RefPtr<VmObject>* vmo_out) {
     mxtl::RefPtr<VmObject> vmo;
-    status_t status = VmObjectPaged::Create(0, vmo_size, &vmo);
+    mx_status_t status = VmObjectPaged::Create(0, vmo_size, &vmo);
     if (status != MX_OK)
         return status;
 
@@ -42,7 +42,7 @@ static bool guest_physical_address_space_unmap_range(void* context) {
 
     // Setup
     mxtl::RefPtr<VmObject> vmo;
-    status_t status = setup_vmo(PAGE_SIZE, &vmo);
+    mx_status_t status = setup_vmo(PAGE_SIZE, &vmo);
     EXPECT_EQ(MX_OK, status, "Failed to setup vmo.\n");
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas;
     status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
@@ -70,7 +70,7 @@ static bool guest_physical_address_space_get_page_not_present(void* context) {
 
     // Setup
     mxtl::RefPtr<VmObject> vmo;
-    status_t status = setup_vmo(PAGE_SIZE, &vmo);
+    mx_status_t status = setup_vmo(PAGE_SIZE, &vmo);
     EXPECT_EQ(MX_OK, status, "Failed to setup vmo.\n");
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas;
     status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
@@ -92,7 +92,7 @@ static bool guest_physical_address_space_get_page(void* context) {
 
     // Setup
     mxtl::RefPtr<VmObject> vmo;
-    status_t status = setup_vmo(PAGE_SIZE, &vmo);
+    mx_status_t status = setup_vmo(PAGE_SIZE, &vmo);
     EXPECT_EQ(MX_OK, status, "Failed to setup vmo.\n");
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas;
     status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
@@ -140,7 +140,7 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
 
     // Setup
     mxtl::RefPtr<VmObject> vmo;
-    status_t status = setup_vmo(ROOT_VMO_SIZE, &vmo);
+    mx_status_t status = setup_vmo(ROOT_VMO_SIZE, &vmo);
     EXPECT_EQ(MX_OK, status, "Failed to setup vmo.\n");
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas;
     status = GuestPhysicalAddressSpace::Create(vmo, &gpas);
@@ -194,7 +194,7 @@ static bool guest_physical_address_space_map_apic_page(void* context) {
 
     // Allocate VMO.
     mxtl::RefPtr<VmObject> vmo;
-    status_t status = VmObjectPaged::Create(0, PAGE_SIZE, &vmo);
+    mx_status_t status = VmObjectPaged::Create(0, PAGE_SIZE, &vmo);
     EXPECT_EQ(status, MX_OK, "vmobject creation\n");
     EXPECT_NONNULL(vmo, "Failed to allocate VMO.\n");
 

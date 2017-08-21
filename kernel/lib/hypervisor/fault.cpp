@@ -6,7 +6,7 @@
 
 #include "hypervisor/fault.h"
 
-status_t vmm_guest_page_fault_handler(vaddr_t guest_paddr, uint flags,
-                                      mxtl::RefPtr<VmAspace> paspace) {
+mx_status_t vmm_guest_page_fault_handler(vaddr_t guest_paddr, uint flags,
+                                         mxtl::RefPtr<VmAspace> paspace) {
     return paspace->PageFault(guest_paddr, flags);
 }

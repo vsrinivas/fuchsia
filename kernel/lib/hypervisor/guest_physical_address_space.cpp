@@ -43,8 +43,8 @@ struct AspaceVmoLocator final : public VmEnumerator {
 };
 } // namespace
 
-status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                                           mxtl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
+mx_status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
+                                              mxtl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas(
         new (&ac) GuestPhysicalAddressSpace(guest_phys_mem));
@@ -57,7 +57,7 @@ status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem
 
     // Initialize our VMAR with the provided VMO, mapped at address 0.
     mxtl::RefPtr<VmMapping> mapping;
-    status_t result = gpas->paspace_->RootVmar()->CreateVmMapping(
+    mx_status_t result = gpas->paspace_->RootVmar()->CreateVmMapping(
         0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ 0,
         VMAR_FLAG_SPECIFIC, guest_phys_mem, /* vmo_offset */ 0,
         kMmuFlags, "guest_phys_mem_vmo", &mapping);
@@ -80,9 +80,9 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
 }
 
 #if ARCH_X86_64
-status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
+mx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
     mxtl::RefPtr<VmObject> vmo;
-    status_t result = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
+    mx_status_t result = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
     if (result != MX_OK)
         return result;
 
@@ -110,11 +110,11 @@ status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t hos
 }
 #endif // ARCH_X86_64
 
-status_t GuestPhysicalAddressSpace::UnmapRange(vaddr_t guest_paddr, size_t size) {
+mx_status_t GuestPhysicalAddressSpace::UnmapRange(vaddr_t guest_paddr, size_t size) {
     return paspace_->RootVmar()->Unmap(guest_paddr, size);
 }
 
-status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* host_paddr) {
+mx_status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* host_paddr) {
     // Locate the VMO for the guest physical address (if present).
     AspaceVmoLocator vmo_locator(guest_paddr);
     paspace_->EnumerateChildren(&vmo_locator);

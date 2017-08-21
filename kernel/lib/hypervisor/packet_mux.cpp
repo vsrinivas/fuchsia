@@ -20,9 +20,9 @@ public:
         event_init(&event_, false, 0);
     }
 
-    status_t Wait(StateTracker* state_tracker) {
+    mx_status_t Wait(StateTracker* state_tracker) {
         state_tracker->AddObserver(this, nullptr);
-        status_t status = event_wait_deadline(&event_, INFINITE_TIME, true);
+        mx_status_t status = event_wait_deadline(&event_, INFINITE_TIME, true);
         state_tracker->RemoveObserver(this);
         return status != MX_OK ? MX_ERR_CANCELED : MX_OK;
     }
@@ -46,13 +46,13 @@ private:
     }
 };
 
-static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals,
-                            StateReloader* reloader) {
+static mx_status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals,
+                               StateReloader* reloader) {
     if (state_tracker->GetSignalsState() & signals)
         return MX_OK;
     // TODO(abdulla): Add stats to keep track of waits.
     FifoStateObserver state_observer(signals | MX_FIFO_PEER_CLOSED);
-    status_t status = state_observer.Wait(state_tracker);
+    mx_status_t status = state_observer.Wait(state_tracker);
     reloader->Reload();
     if (status != MX_OK)
         return status;
@@ -60,7 +60,7 @@ static status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals,
 }
 #endif // WITH_LIB_MAGENTA
 
-status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo) {
+mx_status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo) {
 #if WITH_LIB_MAGENTA
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<FifoRange> range(new (&ac) FifoRange(addr, len, fifo));
@@ -74,7 +74,7 @@ status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispat
 #endif // WITH_LIB_MAGENTA
 }
 
-status_t PacketMux::FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const {
+mx_status_t PacketMux::FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const {
     FifoTree::const_iterator iter;
     {
         mxtl::AutoLock lock(&mutex);
@@ -87,11 +87,11 @@ status_t PacketMux::FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo
     return MX_OK;
 }
 
-status_t PacketMux::Write(mx_vaddr_t addr, const mx_guest_packet_t& packet,
+mx_status_t PacketMux::Write(mx_vaddr_t addr, const mx_guest_packet_t& packet,
                           StateReloader* reloader) const {
 #if WITH_LIB_MAGENTA
     mxtl::RefPtr<FifoDispatcher> fifo;
-    status_t status = FindFifo(addr, &fifo);
+    mx_status_t status = FindFifo(addr, &fifo);
     if (status != MX_OK)
         return status;
     status = packet_wait(fifo->get_state_tracker(), MX_FIFO_WRITABLE, reloader);

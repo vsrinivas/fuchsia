@@ -29,8 +29,8 @@ struct StateReloader {
 /* Demultiplexes packets onto FIFOs. */
 class PacketMux {
 public:
-    status_t AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo);
-    status_t Write(mx_vaddr_t addr, const mx_guest_packet_t& packet, StateReloader* reloader) const;
+    mx_status_t AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo);
+    mx_status_t Write(mx_vaddr_t addr, const mx_guest_packet_t& packet, StateReloader* reloader) const;
 
 private:
     class FifoRange : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<FifoRange>> {
@@ -52,5 +52,5 @@ private:
     mutable mxtl::Mutex mutex;
     FifoTree fifos TA_GUARDED(mutex);
 
-    status_t FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const;
+    mx_status_t FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const;
 };
