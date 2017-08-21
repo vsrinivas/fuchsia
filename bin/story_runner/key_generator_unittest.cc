@@ -17,7 +17,7 @@ class MockTimeOfDay : public TimeOfDay {
  public:
   // This is just a seed random value from when the code was written
   // so that the mock will generate consistent results.
-  MockTimeOfDay(uint64_t value = 1503100825u*1000) : value_(value) {}
+  MockTimeOfDay(uint64_t value = 1503100825u * 1000) : value_(value) {}
 
   // Return number of milliseconds since the epoch
   uint64_t GetTimeOfDayMs() override { return value_; }
@@ -60,7 +60,8 @@ TEST(KeyGeneratorTest, NoMocks_Success) {
 
   WallClockTimeOfDay time_of_day;
   auto tick = time_of_day.GetTimeOfDayMs();
-  while (tick == time_of_day.GetTimeOfDayMs()) {}
+  while (tick == time_of_day.GetTimeOfDayMs()) {
+  }
 
   auto t3 = gen.Create();
   EXPECT_LT(t2, t3);

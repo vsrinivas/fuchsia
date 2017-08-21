@@ -40,7 +40,9 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
                  NotificationDelegate* const delegate,
                  std::shared_ptr<ledger::PageSnapshotPtr> const snapshot,
                  std::function<void()> done)
-      : Operation("AgentRunnerStorageImpl::InitializeCall", container, std::move(done)),
+      : Operation("AgentRunnerStorageImpl::InitializeCall",
+                  container,
+                  std::move(done)),
         delegate_(delegate),
         snapshot_(snapshot) {
     Ready();
@@ -94,8 +96,10 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
 class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
  public:
   WriteTaskCall(OperationContainer* const container,
-                AgentRunnerStorageImpl* storage, const std::string& agent_url,
-                TriggerInfo data, std::function<void(bool)> done)
+                AgentRunnerStorageImpl* storage,
+                const std::string& agent_url,
+                TriggerInfo data,
+                std::function<void(bool)> done)
       : Operation("AgentRunnerStorageImpl::WriteTaskCall", container, done),
         storage_(storage),
         agent_url_(agent_url),
@@ -134,8 +138,10 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
 class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
  public:
   DeleteTaskCall(OperationContainer* const container,
-                 AgentRunnerStorageImpl* storage, const std::string& agent_url,
-                 const std::string& task_id, std::function<void(bool)> done)
+                 AgentRunnerStorageImpl* storage,
+                 const std::string& agent_url,
+                 const std::string& task_id,
+                 std::function<void(bool)> done)
       : Operation("AgentRunnerStorageImpl::DeleteTaskCall", container, done),
         storage_(storage),
         agent_url_(agent_url),
@@ -178,7 +184,8 @@ void AgentRunnerStorageImpl::Initialize(NotificationDelegate* const delegate,
                                         std::function<void()> done) {
   FTL_DCHECK(!delegate_);
   delegate_ = delegate;
-  new InitializeCall(&operation_queue_, delegate_, page_snapshot(), std::move(done));
+  new InitializeCall(&operation_queue_, delegate_, page_snapshot(),
+                     std::move(done));
 }
 
 void AgentRunnerStorageImpl::WriteTask(const std::string& agent_url,
@@ -190,7 +197,8 @@ void AgentRunnerStorageImpl::WriteTask(const std::string& agent_url,
 void AgentRunnerStorageImpl::DeleteTask(const std::string& agent_url,
                                         const std::string& task_id,
                                         std::function<void(bool)> done) {
-  new DeleteTaskCall(&operation_queue_, this, agent_url, task_id, std::move(done));
+  new DeleteTaskCall(&operation_queue_, this, agent_url, task_id,
+                     std::move(done));
 }
 
 void AgentRunnerStorageImpl::OnPageChange(const std::string& key,

@@ -424,8 +424,8 @@ class TestUserShellApp
     story_controller_->Start(story_view.NewRequest());
 
     if (round == 0) {
-      story_controller_->AddModule(nullptr, "second",
-                                   settings_.second_module, "root2", nullptr);
+      story_controller_->AddModule(nullptr, "second", settings_.second_module,
+                                   "root2", nullptr);
     }
   }
 

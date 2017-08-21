@@ -168,8 +168,8 @@ class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
     FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate()";
     const auto& values = update->values;
     for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate() " << i.GetKey() << " "
-                  << i.GetValue();
+      FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate() " << i.GetKey()
+                  << " " << i.GetValue();
       handler_(i.GetKey(), i.GetValue());
     }
   }

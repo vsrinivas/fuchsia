@@ -4,8 +4,8 @@
 
 #include "apps/modular/src/story_runner/key_generator.h"
 
-#include <string>
 #include <sys/time.h>
+#include <string>
 #include <vector>
 
 #include "lib/ftl/logging.h"
@@ -16,7 +16,7 @@ namespace {
 constexpr char kEncodingDictionary[] =
     "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 
-}  // namespace modular
+}  // namespace
 
 namespace modular {
 
@@ -34,8 +34,7 @@ uint64_t FuchsiaRandomNumber::RandUint64() {
 
 KeyGenerator::KeyGenerator() = default;
 
-KeyGenerator::KeyGenerator(TimeOfDay* time_of_day,
-                           RandomNumber* random_number)
+KeyGenerator::KeyGenerator(TimeOfDay* time_of_day, RandomNumber* random_number)
     : time_of_day_(time_of_day), random_number_(random_number) {}
 
 KeyGenerator::~KeyGenerator() = default;

@@ -57,7 +57,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Connects to an agent (and starts it up if it doesn't exist). Called via
   // ComponentContext.
   void ConnectToAgent(
-      const std::string& requestor_url, const std::string& agent_url,
+      const std::string& requestor_url,
+      const std::string& agent_url,
       fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
       fidl::InterfaceRequest<AgentController> agent_controller_request);
 
@@ -81,7 +82,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // Starts up an agent, or waits until the agent can start up if it is already
   // in a terminating state. Calls |done| once the agent has started.
   // Note that the agent could be in an INITIALIZING state.
-  void MaybeRunAgent(const std::string& agent_url, const std::function<void()>& done);
+  void MaybeRunAgent(const std::string& agent_url,
+                     const std::function<void()>& done);
 
   // Actually starts up an agent (used by |MaybeRunAgent()| above).
   void RunAgent(const std::string& agent_url);
@@ -98,7 +100,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 
   // For triggers based on alarms.
   void ScheduleAlarmTask(const std::string& agent_url,
-                         const std::string& task_id, uint32_t alarm_in_seconds,
+                         const std::string& task_id,
+                         uint32_t alarm_in_seconds,
                          bool is_new_request);
   void DeleteAlarmTask(const std::string& agent_url,
                        const std::string& task_id);

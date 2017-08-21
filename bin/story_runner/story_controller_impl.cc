@@ -210,7 +210,8 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
       LinkPathPtr link_path = LinkPath::New();
       link_path->module_path = fidl::Array<fidl::String>::New(0);
       link_path->link_name = link_name_;
-      story_controller_impl_->ConnectLinkPath(std::move(link_path), link_.NewRequest());
+      story_controller_impl_->ConnectLinkPath(std::move(link_path),
+                                              link_.NewRequest());
       link_->UpdateObject(nullptr, link_json_);
       link_->Sync([flow] {});
     }
@@ -925,8 +926,9 @@ void StoryControllerImpl::RequestStoryFocus() {
 
 // TODO(vardhan): Should this operation be queued here, or in |LinkImpl|?
 // Currently it is neither.
-void StoryControllerImpl::ConnectLinkPath(LinkPathPtr link_path,
-                                          fidl::InterfaceRequest<Link> request) {
+void StoryControllerImpl::ConnectLinkPath(
+    LinkPathPtr link_path,
+    fidl::InterfaceRequest<Link> request) {
   auto i = std::find_if(links_.begin(), links_.end(),
                         [&link_path](const std::unique_ptr<LinkImpl>& l) {
                           return l->link_path().Equals(link_path);
@@ -936,14 +938,15 @@ void StoryControllerImpl::ConnectLinkPath(LinkPathPtr link_path,
     return;
   }
 
-  LinkImpl* const link_impl = new LinkImpl(story_storage_impl_.get(), std::move(link_path));
+  LinkImpl* const link_impl =
+      new LinkImpl(story_storage_impl_.get(), std::move(link_path));
   link_impl->Connect(std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
 
   links_watchers_.ForAllPtrs([link_impl](StoryLinksWatcher* const watcher) {
-      watcher->OnNewLink(link_impl->link_path().Clone());
+    watcher->OnNewLink(link_impl->link_path().Clone());
   });
 }
 

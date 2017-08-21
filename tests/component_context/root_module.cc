@@ -125,8 +125,9 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
     // MessageQueueManager shouldn't send us anything just yet.
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
-        msg_queue_.get(), [this, done_cb, kTestMessage](const fidl::String& msg,
-                                                        std::function<void()> ack) {
+        msg_queue_.get(),
+        [this, done_cb, kTestMessage](const fidl::String& msg,
+                                      std::function<void()> ack) {
           ack();
           // We only want one message.
           msg_receiver_.reset();

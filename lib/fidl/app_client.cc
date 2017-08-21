@@ -41,7 +41,8 @@ void AppClientBase::AppTerminate(const std::function<void()>& done,
   ServiceTerminate(cont);
 }
 
-void AppClientBase::SetAppErrorHandler(const std::function<void()>& error_handler) {
+void AppClientBase::SetAppErrorHandler(
+    const std::function<void()>& error_handler) {
   app_.set_connection_error_handler(error_handler);
 }
 

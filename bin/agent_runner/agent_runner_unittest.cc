@@ -33,13 +33,15 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
   }
 
   // |AgentRunnerStorage|
-  void WriteTask(const std::string& agent_url, TriggerInfo info,
+  void WriteTask(const std::string& agent_url,
+                 TriggerInfo info,
                  const std::function<void(bool)> done) override {
     done(true);
   }
 
   // |AgentRunnerStorage|
-  void DeleteTask(const std::string& agent_url, const std::string& task_id,
+  void DeleteTask(const std::string& agent_url,
+                  const std::string& task_id,
                   const std::function<void(bool)> done) override {
     done(true);
   }

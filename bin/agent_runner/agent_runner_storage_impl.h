@@ -25,11 +25,13 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
                   std::function<void()> done) override;
 
   // |AgentRunnerStorage|
-  void WriteTask(const std::string& agent_url, TriggerInfo info,
+  void WriteTask(const std::string& agent_url,
+                 TriggerInfo info,
                  std::function<void(bool)> done) override;
 
   // |AgentRunnerStorage|
-  void DeleteTask(const std::string& agent_url, const std::string& task_id,
+  void DeleteTask(const std::string& agent_url,
+                  const std::string& task_id,
                   std::function<void(bool)> done) override;
 
   // Operation subclasses:

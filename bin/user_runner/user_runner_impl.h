@@ -57,7 +57,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
  private:
   // |UserRunner|
   void Initialize(
-      auth::AccountPtr account, AppConfigPtr user_shell,
+      auth::AccountPtr account,
+      AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
@@ -78,7 +79,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
       fidl::InterfaceRequest<FocusController> request) override;
   void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
   void GetLink(fidl::InterfaceRequest<Link> request) override;
-  void GetProposalPublisher(fidl::InterfaceRequest<maxwell::ProposalPublisher> request) override;
+  void GetProposalPublisher(
+      fidl::InterfaceRequest<maxwell::ProposalPublisher> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
       fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;

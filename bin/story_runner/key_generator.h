@@ -55,8 +55,8 @@ class KeyGenerator {
   WallClockTimeOfDay wallclock_time_of_day_;
   FuchsiaRandomNumber fuchsia_random_number_;
 
-  TimeOfDay* const time_of_day_ = &wallclock_time_of_day_; // Not owned
-  RandomNumber* const random_number_ = &fuchsia_random_number_; // Not owned
+  TimeOfDay* const time_of_day_ = &wallclock_time_of_day_;       // Not owned
+  RandomNumber* const random_number_ = &fuchsia_random_number_;  // Not owned
 
   FTL_DISALLOW_COPY_AND_ASSIGN(KeyGenerator);
 };

@@ -33,7 +33,8 @@ class LedgerRepositoryForTesting {
 
  private:
   std::string repository_path_;
-  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>> ledger_app_client_;
+  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>>
+      ledger_app_client_;
   ledger::LedgerRepositoryPtr ledger_repo_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);

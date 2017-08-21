@@ -66,7 +66,8 @@ class Store : modular::LinkWatcher {
   bool terminating() { return terminating_; }
 
   static modular_example::Counter ParseCounterJson(
-      const std::string& json, const std::string& module_name);
+      const std::string& json,
+      const std::string& module_name);
 
   modular_example::Counter counter;
 

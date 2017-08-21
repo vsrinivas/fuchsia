@@ -21,7 +21,9 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
  public:
   StartAndInitializeCall(OperationContainer* const container,
                          AgentContextImpl* const agent_context_impl)
-      : Operation("AgentContextImpl::StartAndInitializeCall", container, [] {},
+      : Operation("AgentContextImpl::StartAndInitializeCall",
+                  container,
+                  [] {},
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl) {
     Ready();
@@ -77,10 +79,14 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
 // tasks).
 class AgentContextImpl::StopCall : Operation<bool> {
  public:
-  StopCall(OperationContainer* const container, const bool terminating,
-           AgentContextImpl* const agent_context_impl, ResultCall result_call)
-      : Operation("AgentContextImpl::StopCall", container,
-                  std::move(result_call), agent_context_impl->url_),
+  StopCall(OperationContainer* const container,
+           const bool terminating,
+           AgentContextImpl* const agent_context_impl,
+           ResultCall result_call)
+      : Operation("AgentContextImpl::StopCall",
+                  container,
+                  std::move(result_call),
+                  agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         terminating_(terminating) {
     Ready();
@@ -144,7 +150,9 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       agent_context_binding_(this),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
-                              kAgentComponentNamespace, url, url),
+                              kAgentComponentNamespace,
+                              url,
+                              url),
       token_provider_factory_(info.token_provider_factory),
       user_intelligence_provider_(info.user_intelligence_provider) {
   new StartAndInitializeCall(&operation_queue_, this);

@@ -77,9 +77,7 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
     }
   }
 
-  void Exit() {
-    mtl::MessageLoop::GetCurrent()->QuitNow();
-  }
+  void Exit() { mtl::MessageLoop::GetCurrent()->QuitNow(); }
 
   // |DeviceShell|
   void GetAuthenticationContext(

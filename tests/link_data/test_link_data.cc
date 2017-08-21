@@ -81,8 +81,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
   // |LinkWatcher|
   void Notify(const fidl::String& json) override {
     modular_example::Counter counter =
-        modular_example::Store::ParseCounterJson(json.get(),
-                                                      "test_link_data");
+        modular_example::Store::ParseCounterJson(json.get(), "test_link_data");
 
     if (counter.is_valid() && counter.counter > last_continue_count_) {
       if (counter.counter % 5 == 0) {
@@ -121,7 +120,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
   void Continue(modular::StoryState state, std::function<void()> at) {
     auto state_index = static_cast<unsigned int>(state);
     if (continue_.size() <= state_index) {
-      continue_.resize(state_index+1);
+      continue_.resize(state_index + 1);
     }
     continue_[state_index] = at;
   }
@@ -314,9 +313,7 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
       FTL_CHECK(!story_info.is_null());
       FTL_CHECK(IsRunning(state));
 
-      story_controller_->Stop([this, round] {
-        TeardownStoryController();
-      });
+      story_controller_->Stop([this, round] { TeardownStoryController(); });
     });
   }
 

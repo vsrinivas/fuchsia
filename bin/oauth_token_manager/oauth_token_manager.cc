@@ -1530,8 +1530,8 @@ void OAuthTokenManagerApp::RemoveAccount(
     bool revoke_all,
     const RemoveAccountCallback& callback) {
   FTL_VLOG(1) << "OAuthTokenManagerApp::RemoveAccount()";
-  new GoogleRevokeTokensCall(&operation_queue_, std::move(account),
-                             revoke_all, this, callback);
+  new GoogleRevokeTokensCall(&operation_queue_, std::move(account), revoke_all,
+                             this, callback);
 }
 
 void OAuthTokenManagerApp::GetTokenProviderFactory(

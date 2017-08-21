@@ -27,7 +27,8 @@ class LinkMockBase : public Link {
     ++counts["SetSchema"];
   }
 
-  void Get(fidl::Array<fidl::String> path, const GetCallback& callback) override {
+  void Get(fidl::Array<fidl::String> path,
+           const GetCallback& callback) override {
     ++counts["Get"];
   }
 
@@ -35,13 +36,12 @@ class LinkMockBase : public Link {
     ++counts["Set"];
   }
 
-  void UpdateObject(fidl::Array<fidl::String> path, const fidl::String& json) override {
+  void UpdateObject(fidl::Array<fidl::String> path,
+                    const fidl::String& json) override {
     ++counts["UpdateObject"];
   }
 
-  void Erase(fidl::Array<fidl::String> path) override {
-    ++counts["Erase"];
-  }
+  void Erase(fidl::Array<fidl::String> path) override { ++counts["Erase"]; }
 
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher_handle) override {
     ++counts["Watch"];
@@ -51,9 +51,7 @@ class LinkMockBase : public Link {
     ++counts["WatchAll"];
   }
 
-  void Sync(const SyncCallback& callback) override {
-    ++counts["Sync"];
-  }
+  void Sync(const SyncCallback& callback) override { ++counts["Sync"]; }
 
   void ExpectCalledOnce(const std::string& func) {
     EXPECT_EQ(1U, counts.count(func));
@@ -63,9 +61,7 @@ class LinkMockBase : public Link {
     }
   }
 
-  void ExpectNoOtherCalls()  {
-    EXPECT_TRUE(counts.empty());
-  }
+  void ExpectNoOtherCalls() { EXPECT_TRUE(counts.empty()); }
 
   std::map<std::string, unsigned int> counts;
 };
@@ -83,7 +79,8 @@ class LinkMock : public LinkMockBase {
     LinkMockBase::Watch(std::move(watcher_handle));
   }
 
-  void UpdateObject(fidl::Array<fidl::String> path, const fidl::String& json) override {
+  void UpdateObject(fidl::Array<fidl::String> path,
+                    const fidl::String& json) override {
     LinkMockBase::UpdateObject(std::move(path), json);
     mtl::MessageLoop::GetCurrent()->QuitNow();
   }
@@ -108,8 +105,10 @@ TEST(Counter, ToDocument_Success) {
 
   rapidjson::Document doc = counter.ToDocument(module_name);
   std::string json = JsonValueToString(doc);
-  EXPECT_EQ("{\"http://schema.domokit.org/counter\":3,"
-      "\"http://schema.org/sender\":\"store_unittest\"}", json);
+  EXPECT_EQ(
+      "{\"http://schema.domokit.org/counter\":3,"
+      "\"http://schema.org/sender\":\"store_unittest\"}",
+      json);
 }
 
 class StoreTest : public testing::TestWithMessageLoop {};

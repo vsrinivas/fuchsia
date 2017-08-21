@@ -17,7 +17,8 @@ void FakeApplicationLauncher::CreateApplication(
 }
 
 void FakeApplicationLauncher::RegisterApplication(
-    std::string url, ApplicationConnectorFn connector) {
+    std::string url,
+    ApplicationConnectorFn connector) {
   connectors_[url] = connector;
 }
 

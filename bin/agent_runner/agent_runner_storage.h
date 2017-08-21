@@ -57,7 +57,8 @@ class AgentRunnerStorage {
 
   // Writes a new task to storage. |NotificationDelegate| will be notified of
   // the new task.
-  virtual void WriteTask(const std::string& agent_url, TriggerInfo info,
+  virtual void WriteTask(const std::string& agent_url,
+                         TriggerInfo info,
                          std::function<void(bool)> done) = 0;
 
   // Deletes existing task on the storage. |NotificationDelegate| will be

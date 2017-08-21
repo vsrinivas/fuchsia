@@ -116,7 +116,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ConnectToAgent(
-    const std::string& requestor_url, const std::string& agent_url,
+    const std::string& requestor_url,
+    const std::string& agent_url,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.

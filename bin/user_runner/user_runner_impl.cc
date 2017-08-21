@@ -137,7 +137,9 @@ void UserRunnerImpl::Connect(fidl::InterfaceRequest<UserRunner> request) {
 }
 
 void UserRunnerImpl::Initialize(
-    auth::AccountPtr account, AppConfigPtr user_shell, AppConfigPtr story_shell,
+    auth::AccountPtr account,
+    AppConfigPtr user_shell,
+    AppConfigPtr story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
@@ -378,7 +380,8 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = kUserShellLinkName;
-  user_shell_link_ = std::make_unique<LinkImpl>(link_storage_.get(), std::move(link_path));
+  user_shell_link_ =
+      std::make_unique<LinkImpl>(link_storage_.get(), std::move(link_path));
   user_shell_link_->Connect(std::move(request));
 }
 
@@ -402,7 +405,9 @@ void UserRunnerImpl::GetVisibleStoriesController(
   visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
-void UserRunnerImpl::Logout() { user_context_->Logout(); }
+void UserRunnerImpl::Logout() {
+  user_context_->Logout();
+}
 
 void UserRunnerImpl::LogoutAndResetLedgerState() {
   fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider_for_erase;

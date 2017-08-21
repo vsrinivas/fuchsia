@@ -93,7 +93,8 @@ void Store::Notify(const fidl::String& json) {
 }
 
 modular_example::Counter Store::ParseCounterJson(
-    const std::string& json, const std::string& module_name) {
+    const std::string& json,
+    const std::string& module_name) {
   rapidjson::Document doc;
   doc.Parse(json);
   FTL_CHECK(!doc.HasParseError());
@@ -121,8 +122,7 @@ modular_example::Counter Store::ParseCounterJson(
 //   - it's missing the desired document.
 //   - the data in the update is stale (can happen on rehydrate).
 void Store::ApplyLinkData(const std::string& json) {
-  modular_example::Counter new_counter =
-      ParseCounterJson(json, module_name_);
+  modular_example::Counter new_counter = ParseCounterJson(json, module_name_);
 
   // Received an invalid update, which means we are starting a new story.
   // Don't do anything now, the recipe will gives us the initial data.

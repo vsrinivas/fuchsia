@@ -82,9 +82,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |UserShell|
-  void Terminate() override {
-    mtl::MessageLoop::GetCurrent()->QuitNow();
-  };
+  void Terminate() override { mtl::MessageLoop::GetCurrent()->QuitNow(); };
 
   void Connect() {
     if (!view_owner_request_ || !story_provider_) {

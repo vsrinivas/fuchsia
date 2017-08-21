@@ -116,7 +116,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     // TODO(jimbe) Remove the lambda parameter to Stop(), which is no
     // longer used. [FW-265] Expected to happen as part of implementing the
     // Lifecycle interface for namespaces.
-    module_->Stop([]{});
+    module_->Stop([] {});
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         cont, kStoryTeardownTimeout);
   }

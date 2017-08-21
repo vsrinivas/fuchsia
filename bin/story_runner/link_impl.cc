@@ -387,8 +387,7 @@ class LinkImpl::ChangeCall : Operation<> {
   FTL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
-LinkImpl::LinkImpl(LinkStorage* const link_storage,
-                   LinkPathPtr link_path)
+LinkImpl::LinkImpl(LinkStorage* const link_storage, LinkPathPtr link_path)
     : link_path_(std::move(link_path)), link_storage_(link_storage) {
   new ReadCall(&operation_queue_, this, [this] {
     for (auto& request : requests_) {
