@@ -12,11 +12,11 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 }
 
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<FifoDispatcher> fifo) {
+                             mxtl::RefPtr<PortDispatcher> port) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-status_t arch_vcpu_resume(Vcpu* vcpu, mx_guest_packet_t* packet) {
+status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet) {
     return MX_ERR_NOT_SUPPORTED;
 }
 

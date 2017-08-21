@@ -12,7 +12,6 @@
 #include <hypervisor/uart.h>
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 #include <unittest/unittest.h>
 
@@ -72,7 +71,7 @@ static bool handle_input_packet(void) {
     BEGIN_TEST;
 
     test_t test;
-    mx_guest_packet_t packet = {};
+    mx_port_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test");
 
     // Initialize the hosts register to an arbitrary non-zero value.
@@ -82,10 +81,10 @@ static bool handle_input_packet(void) {
     test.guest_ctx.uart = &uart;
 
     // Send a guest packet to to read the UART line control port.
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = true;
-    packet.io.port = UART_LINE_CONTROL_PORT;
-    packet.io.access_size = 1;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = true;
+    packet.guest_io.port = UART_LINE_CONTROL_PORT;
+    packet.guest_io.access_size = 1;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
 
@@ -103,7 +102,7 @@ static bool handle_output_packet(void) {
     BEGIN_TEST;
 
     test_t test;
-    mx_guest_io_t io = {};
+    mx_packet_guest_io_t io = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to initialize test");
 
     uart_t uart;
@@ -143,35 +142,35 @@ static bool write_pci_config_addr_port(void) {
     BEGIN_TEST;
 
     test_t test;
-    mx_guest_packet_t packet = {};
+    mx_port_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test");
 
     // 32 bit write.
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = false;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
-    packet.io.access_size = 4;
-    packet.io.u32 = 0x12345678;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = false;
+    packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
+    packet.guest_io.access_size = 4;
+    packet.guest_io.u32 = 0x12345678;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.bus.config_addr, 0x12345678u, "Incorrect address read from PCI address port");
 
     // 16 bit write to bits 31..16. Other bits remain unchanged.
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = false;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
-    packet.io.access_size = 2;
-    packet.io.u16 = 0xFACE;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = false;
+    packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
+    packet.guest_io.access_size = 2;
+    packet.guest_io.u16 = 0xFACE;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.bus.config_addr, 0xFACE5678u, "Incorrect address read from PCI address port");
 
     // 8 bit write to bits (15..8). Other bits remain unchanged.
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = false;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
-    packet.io.access_size = 1;
-    packet.io.u8 = 0x99;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = false;
+    packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
+    packet.guest_io.access_size = 1;
+    packet.guest_io.u8 = 0x99;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.bus.config_addr, 0xFACE9978u, "Incorrect address read from PCI address port");
@@ -187,15 +186,15 @@ static bool read_pci_config_addr_port(void) {
     BEGIN_TEST;
 
     test_t test;
-    mx_guest_packet_t packet = {};
+    mx_port_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test");
     test.bus.config_addr = 0x12345678;
 
     // 32 bit read (bits 31..0).
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = true;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
-    packet.io.access_size = 4;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = true;
+    packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE;
+    packet.guest_io.access_size = 4;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 4, "Incorrect IO access_size");
@@ -203,10 +202,10 @@ static bool read_pci_config_addr_port(void) {
 
     // 16 bit read (bits 31..16).
     test.vcpu_io.u16 = 0;
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = true;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
-    packet.io.access_size = 2;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = true;
+    packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 2;
+    packet.guest_io.access_size = 2;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 2, "Incorrect IO access_size");
@@ -214,10 +213,10 @@ static bool read_pci_config_addr_port(void) {
 
     // 8 bit read (bits 15..8).
     test.vcpu_io.u8 = 0;
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = true;
-    packet.io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
-    packet.io.access_size = 1;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = true;
+    packet.guest_io.port = PCI_CONFIG_ADDRESS_PORT_BASE + 1;
+    packet.guest_io.access_size = 1;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 1, "Incorrect IO access_size");
@@ -234,15 +233,15 @@ static bool read_pci_config_data_port(void) {
     BEGIN_TEST;
 
     test_t test;
-    mx_guest_packet_t packet = {};
+    mx_port_packet_t packet = {};
     ASSERT_EQ(setup(&test), MX_OK, "Failed to setup test");
 
     // 16-bit read.
     test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, 0);
-    packet.type = MX_GUEST_PKT_IO;
-    packet.io.input = true;
-    packet.io.port = PCI_CONFIG_DATA_PORT_BASE;
-    packet.io.access_size = 2;
+    packet.type = MX_PKT_TYPE_GUEST_IO;
+    packet.guest_io.input = true;
+    packet.guest_io.port = PCI_CONFIG_DATA_PORT_BASE;
+    packet.guest_io.access_size = 2;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 2, "Incorrect IO access_size");
@@ -250,7 +249,7 @@ static bool read_pci_config_data_port(void) {
 
     // 32-bit read from same address. Result should now contain the Device ID
     // in the upper 16 bits
-    packet.io.access_size = 4;
+    packet.guest_io.access_size = 4;
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 4, "Incorrect IO access_size");
@@ -263,12 +262,12 @@ static bool read_pci_config_data_port(void) {
     // a 4b aligned address. The offset into the word addressed by the PCI
     // address port is added to the data port address.
     test.vcpu_io.u32 = 0;
-    packet.io.access_size = 2;
+    packet.guest_io.access_size = 2;
     test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID);
     // Verify we're using a 4b aligned register address.
     EXPECT_EQ(test.bus.config_addr & BIT_MASK(2), 0u, "");
     // Add the register offset to the data port base address.
-    packet.io.port = PCI_CONFIG_DATA_PORT_BASE + (PCI_CONFIG_DEVICE_ID & BIT_MASK(2));
+    packet.guest_io.port = PCI_CONFIG_DATA_PORT_BASE + (PCI_CONFIG_DEVICE_ID & BIT_MASK(2));
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 2, "Incorrect IO access_size");

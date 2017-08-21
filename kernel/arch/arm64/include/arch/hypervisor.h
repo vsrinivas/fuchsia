@@ -6,14 +6,16 @@
 
 #pragma once
 
-#include <magenta/syscalls/hypervisor.h>
+#include <magenta/types.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
-class FifoDispatcher;
 class GuestPhysicalAddressSpace;
 class PacketMux;
+class PortDispatcher;
 class VmObject;
+
+typedef struct mx_port_packet mx_port_packet_t;
 
 class Guest {
 public:
@@ -28,10 +30,10 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 
 /* Set a trap within a guest. */
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<FifoDispatcher> fifo);
+                             mxtl::RefPtr<PortDispatcher> port);
 
 /* Resume execution of a VCPU. */
-status_t arch_vcpu_resume(Vcpu* vcpu, mx_guest_packet_t* packet);
+status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet);
 
 /* Issue an interrupt on a VCPU. */
 status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt);

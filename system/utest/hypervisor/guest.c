@@ -9,6 +9,7 @@
 #include <hypervisor/guest.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/port.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 #include <unittest/unittest.h>
@@ -111,21 +112,21 @@ static bool vcpu_resume(void) {
         return true;
     }
 
-    mx_guest_packet_t packet;
+    mx_port_packet_t packet = {};
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.type, MX_GUEST_PKT_IO, "");
-    EXPECT_EQ(packet.io.port, kUartPort, "");
-    EXPECT_EQ(packet.io.access_size, 1u, "");
-    EXPECT_EQ(packet.io.data[0], 'm', "");
+    EXPECT_EQ(packet.type, MX_PKT_TYPE_GUEST_IO, "");
+    EXPECT_EQ(packet.guest_io.port, kUartPort, "");
+    EXPECT_EQ(packet.guest_io.access_size, 1u, "");
+    EXPECT_EQ(packet.guest_io.data[0], 'm', "");
 
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.io.port, kUartPort, "");
-    EXPECT_EQ(packet.type, MX_GUEST_PKT_IO, "");
-    EXPECT_EQ(packet.io.access_size, 1u, "");
-    EXPECT_EQ(packet.io.data[0], 'x', "");
+    EXPECT_EQ(packet.guest_io.port, kUartPort, "");
+    EXPECT_EQ(packet.type, MX_PKT_TYPE_GUEST_IO, "");
+    EXPECT_EQ(packet.guest_io.access_size, 1u, "");
+    EXPECT_EQ(packet.guest_io.data[0], 'x', "");
 
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.io.port, kExitTestPort, "");
+    EXPECT_EQ(packet.guest_io.port, kExitTestPort, "");
 
     ASSERT_TRUE(teardown(&test), "");
 
@@ -167,9 +168,9 @@ static bool vcpu_read_write_state(void) {
     ASSERT_EQ(mx_vcpu_write_state(test.vcpu, MX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               MX_OK, "");
 
-    mx_guest_packet_t packet;
+    mx_port_packet_t packet = {};
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.io.port, kExitTestPort, "");
+    EXPECT_EQ(packet.guest_io.port, kExitTestPort, "");
 
     ASSERT_EQ(mx_vcpu_read_state(test.vcpu, MX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               MX_OK, "");
@@ -210,19 +211,19 @@ static bool guest_set_trap(void) {
     }
 
     // Unmap the last page from the EPT.
-    ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_MEMORY, kVmoSize - PAGE_SIZE, PAGE_SIZE,
+    ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_MEM, kVmoSize - PAGE_SIZE, PAGE_SIZE,
                                 MX_HANDLE_INVALID),
               MX_OK, "");
 
-    mx_guest_packet_t packet;
+    mx_port_packet_t packet = {};
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
 
 #if __x86_64__
     mx_vcpu_state_t vcpu_state;
     instruction_t inst;
-    ASSERT_EQ(inst_decode(packet.memory.inst_buf, packet.memory.inst_len, &vcpu_state, &inst),
+    ASSERT_EQ(inst_decode(packet.guest_mem.inst_buf, packet.guest_mem.inst_len, &vcpu_state, &inst),
               MX_OK, "");
-    ASSERT_EQ(packet.memory.addr, kVmoSize - PAGE_SIZE, "");
+    ASSERT_EQ(packet.guest_mem.addr, kVmoSize - PAGE_SIZE, "");
     ASSERT_EQ(inst.type, INST_MOV_READ, "");
     ASSERT_EQ(inst.mem, 8u, "");
     ASSERT_EQ(inst.imm, 0u, "");

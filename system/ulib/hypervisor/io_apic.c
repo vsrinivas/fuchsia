@@ -147,10 +147,10 @@ static mx_status_t io_apic_register_handler(io_apic_t* io_apic, const instructio
     }
 }
 
-mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_guest_memory_t* memory,
+mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_packet_guest_mem_t* mem,
                             const instruction_t* inst) {
-    MX_ASSERT(memory->addr >= IO_APIC_PHYS_BASE);
-    mx_vaddr_t offset = memory->addr - IO_APIC_PHYS_BASE;
+    MX_ASSERT(mem->addr >= IO_APIC_PHYS_BASE);
+    mx_vaddr_t offset = mem->addr - IO_APIC_PHYS_BASE;
 
     switch (offset) {
     case IO_APIC_IOREGSEL: {

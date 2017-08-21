@@ -7,7 +7,7 @@
 __BEGIN_CDECLS
 
 // forward declarations needed by syscalls.h
-typedef struct mx_guest_packet mx_guest_packet_t;
+typedef struct mx_port_packet mx_port_packet_t;
 typedef struct mx_pci_bar mx_pci_resource_t;
 typedef struct mx_pcie_device_info mx_pcie_device_info_t;
 typedef struct mx_pci_init_arg mx_pci_init_arg_t;

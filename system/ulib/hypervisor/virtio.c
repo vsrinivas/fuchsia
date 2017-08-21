@@ -8,6 +8,7 @@
 
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
+#include <magenta/syscalls/port.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
@@ -99,7 +100,7 @@ static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
 }
 
 static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t vcpu,
-                                           uint16_t port, const mx_guest_io_t* io) {
+                                           uint16_t port, const mx_packet_guest_io_t* io) {
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     virtio_queue_t* queue = selected_queue(device);
     switch (port) {

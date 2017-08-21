@@ -6,6 +6,7 @@
 
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <magenta/syscalls/port.h>
 
 static const uint8_t kRexRMask = 1u << 2;
 static const uint8_t kRexWMask = 1u << 3;

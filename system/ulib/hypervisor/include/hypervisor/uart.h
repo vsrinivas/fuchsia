@@ -27,7 +27,7 @@
 // clang-format on
 
 typedef struct io_apic io_apic_t;
-typedef struct mx_guest_io mx_guest_io_t;
+typedef struct mx_packet_guest_io mx_packet_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 
 /* Stores the state of a UART. */
@@ -50,7 +50,7 @@ typedef struct uart {
 
 void uart_init(uart_t* uart, const io_apic_t* io_apic);
 mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io);
-mx_status_t uart_write(uart_t* uart, const mx_guest_io_t* io);
+mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io);
 
 /* Start asynchronous handling of writes to the UART. */
 mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest);

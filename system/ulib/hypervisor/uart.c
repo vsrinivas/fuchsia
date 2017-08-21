@@ -99,7 +99,7 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     return MX_OK;
 }
 
-mx_status_t uart_write(uart_t* uart, const mx_guest_io_t* io) {
+mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     static uint8_t buffer[UART_BUFFER_SIZE] = {};
     static uint16_t offset = 0;
 
@@ -149,8 +149,8 @@ mx_status_t uart_write(uart_t* uart, const mx_guest_io_t* io) {
     }
 }
 
-static mx_status_t uart_handler(mx_handle_t vcpu, mx_guest_packet_t* packet, void* ctx) {
-    return uart_write(ctx, &packet->io);
+static mx_status_t uart_handler(mx_handle_t vcpu, mx_port_packet_t* packet, void* ctx) {
+    return uart_write(ctx, &packet->guest_io);
 }
 
 mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest) {

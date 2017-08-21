@@ -19,6 +19,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/vm/fault.h>
 #include <kernel/vm/pmm.h>
+#include <magenta/syscalls/hypervisor.h>
 #include <platform/pc/timer.h>
 
 #include "vcpu_priv.h"
@@ -257,18 +258,18 @@ static status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                      GuestState* guest_state, const PacketMux& mux,
-                                      mx_guest_packet_t* packet) {
+                                      GuestState* guest_state, PacketMux& mux,
+                                      mx_port_packet_t* packet) {
     IoInfo io_info(exit_info.exit_qualification);
     if (io_info.string || io_info.repeat)
         return MX_ERR_NOT_SUPPORTED;
     next_rip(exit_info, vmcs);
 
-    memset(packet, 0, sizeof(mx_guest_packet_t));
-    packet->type = MX_GUEST_PKT_IO;
-    packet->io.port = io_info.port;
-    packet->io.access_size = io_info.access_size;
-    packet->io.input = io_info.input;
+    memset(packet, 0, sizeof(*packet));
+    packet->type = MX_PKT_TYPE_GUEST_IO;
+    packet->guest_io.port = io_info.port;
+    packet->guest_io.access_size = io_info.access_size;
+    packet->guest_io.input = io_info.input;
     if (io_info.input) {
         // From Volume 1, Section 3.4.1.1: 32-bit operands generate a 32-bit
         // result, zero-extended to a 64-bit result in the destination general-
@@ -276,8 +277,8 @@ static status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
         if (io_info.access_size == 4)
             guest_state->rax = 0;
     } else {
-        memcpy(packet->io.data, &guest_state->rax, io_info.access_size);
-        status_t status = mux.Write(packet->io.port, *packet, vmcs);
+        memcpy(packet->guest_io.data, &guest_state->rax, io_info.access_size);
+        status_t status = mux.Queue(packet->guest_io.port, *packet, vmcs);
         // If there was no FIFO to handle the trap, then we should return to
         // user-space. Otherwise, return the status of the FIFO write.
         if (status != MX_ERR_NOT_FOUND)
@@ -468,16 +469,16 @@ static status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* gpas
 }
 
 static status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vaddr_t guest_paddr,
-                              GuestPhysicalAddressSpace* gpas, mx_guest_packet_t* packet) {
+                              GuestPhysicalAddressSpace* gpas, mx_port_packet_t* packet) {
     if (exit_info.instruction_length > X86_MAX_INST_LEN)
         return MX_ERR_INTERNAL;
 
-    memset(packet, 0, sizeof(mx_guest_packet_t));
-    packet->type = MX_GUEST_PKT_MEMORY;
-    packet->memory.addr = guest_paddr;
-    packet->memory.inst_len = exit_info.instruction_length & UINT8_MAX;
-    status_t status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->memory.inst_buf,
-                                 packet->memory.inst_len);
+    memset(packet, 0, sizeof(*packet));
+    packet->type = MX_PKT_TYPE_GUEST_MEM;
+    packet->guest_mem.addr = guest_paddr;
+    packet->guest_mem.inst_len = exit_info.instruction_length & UINT8_MAX;
+    status_t status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
+                                 packet->guest_mem.inst_len);
     if (status != MX_OK)
         return status;
 
@@ -487,7 +488,7 @@ static status_t handle_memory(const ExitInfo& exit_info, AutoVmcs* vmcs, vaddr_t
 
 static status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                    LocalApicState* local_apic_state,
-                                   GuestPhysicalAddressSpace* gpas, mx_guest_packet_t* packet) {
+                                   GuestPhysicalAddressSpace* gpas, mx_port_packet_t* packet) {
     ApicAccessInfo apic_access_info(exit_info.exit_qualification);
     switch (apic_access_info.access_type) {
     default:
@@ -508,7 +509,7 @@ static status_t handle_apic_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
 }
 
 static status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                     GuestPhysicalAddressSpace* gpas, mx_guest_packet_t* packet) {
+                                     GuestPhysicalAddressSpace* gpas, mx_port_packet_t* packet) {
     vaddr_t guest_paddr = exit_info.guest_physical_address;
     EptViolationInfo ept_violation_info(exit_info.exit_qualification);
 
@@ -559,8 +560,8 @@ static status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSt
 }
 
 status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state, LocalApicState* local_apic_state,
-                        GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
-                        mx_guest_packet_t* packet) {
+                        GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                        mx_port_packet_t* packet) {
     ExitInfo exit_info(*vmcs);
 
     switch (exit_info.exit_reason) {

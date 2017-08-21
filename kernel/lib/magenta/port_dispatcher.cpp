@@ -23,6 +23,15 @@
 
 using mxtl::AutoLock;
 
+static_assert(sizeof(mx_packet_signal_t) == sizeof(mx_packet_user_t),
+              "size of mx_packet_signal_t must match mx_packet_user_t");
+static_assert(sizeof(mx_packet_exception_t) == sizeof(mx_packet_user_t),
+              "size of mx_packet_exception_t must match mx_packet_user_t");
+static_assert(sizeof(mx_packet_guest_mem_t) == sizeof(mx_packet_user_t),
+              "size of mx_packet_guest_mem_t must match mx_packet_user_t");
+static_assert(sizeof(mx_packet_guest_io_t) == sizeof(mx_packet_user_t),
+              "size of mx_packet_guest_io_t must match mx_packet_user_t");
+
 class ArenaPortAllocator final : public PortAllocator {
 public:
     mx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;

@@ -7,6 +7,8 @@
 
 #include <hypervisor/address.h>
 #include <hypervisor/io_port.h>
+#include <magenta/syscalls/hypervisor.h>
+#include <magenta/syscalls/port.h>
 
 #include "acpi_priv.h"
 
@@ -130,7 +132,7 @@ mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* 
 #endif // __x86_64__
 }
 
-mx_status_t io_port_write(io_port_t* io_port, const mx_guest_io_t* io) {
+mx_status_t io_port_write(io_port_t* io_port, const mx_packet_guest_io_t* io) {
 #ifdef __x86_64__
     switch (io->port) {
     case I8042_DATA_PORT:

@@ -13,6 +13,7 @@
 #include <kernel/vm/fault.h>
 #include <kernel/vm/pmm.h>
 #include <kernel/vm/vm_object.h>
+#include <magenta/syscalls/hypervisor.h>
 #include <mxtl/auto_call.h>
 
 #include "vcpu_priv.h"
@@ -562,7 +563,7 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
 // static
 status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
                       paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                      GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
+                      GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                       mxtl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
     status_t status = alloc_vpid(&vpid);
@@ -628,7 +629,7 @@ status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic
 }
 
 Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
-           GuestPhysicalAddressSpace* gpas, const PacketMux& mux)
+           GuestPhysicalAddressSpace* gpas, PacketMux& mux)
     : thread_(thread), vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), mux_(mux),
       vmx_state_(/* zero-init */) {}
 
@@ -644,7 +645,7 @@ Vcpu::~Vcpu() {
     DEBUG_ASSERT(status == MX_OK);
 }
 
-status_t Vcpu::Resume(mx_guest_packet_t* packet) {
+status_t Vcpu::Resume(mx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return MX_ERR_BAD_STATE;
     status_t status;
@@ -767,13 +768,13 @@ status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
 
 status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                         GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
+                         GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                          mxtl::unique_ptr<Vcpu>* out) {
     return Vcpu::Create(ip, cr3, apic_vmo, apic_access_address, msr_bitmaps_address, gpas, mux,
                         out);
 }
 
-status_t arch_vcpu_resume(Vcpu* vcpu, mx_guest_packet_t* packet) {
+status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet) {
     return vcpu->Resume(packet);
 }
 

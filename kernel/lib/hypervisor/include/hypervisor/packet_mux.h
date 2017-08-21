@@ -6,51 +6,79 @@
 
 #pragma once
 
+#include <kernel/event.h>
+#include <mxtl/arena.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
 
 #if WITH_LIB_MAGENTA
-#include <magenta/fifo_dispatcher.h>
+#include <magenta/port_dispatcher.h>
 #else
-#include <magenta/types.h>
-#include <mxtl/auto_lock.h>
+#include <magenta/syscalls/port.h>
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
-class FifoDispatcher : public mxtl::RefCounted<FifoDispatcher> {};
+class PortDispatcher : public mxtl::RefCounted<PortDispatcher> {};
+struct PortPacket;
+struct PortAllocator {
+    virtual PortPacket* Alloc() { return nullptr; }
+    virtual void Free(PortPacket* port_packet) {}
+};
 #endif // WITH_LIB_MAGENTA
-
-typedef struct mx_guest_packet mx_guest_packet_t;
 
 /* Reloads the hypervisor state. */
 struct StateReloader {
     virtual void Reload() = 0;
 };
 
-/* Demultiplexes packets onto FIFOs. */
-class PacketMux {
+/* Blocks on allocation if the arena is empty. */
+class BlockingPortAllocator final : public PortAllocator {
 public:
-    mx_status_t AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo);
-    mx_status_t Write(mx_vaddr_t addr, const mx_guest_packet_t& packet, StateReloader* reloader) const;
+    BlockingPortAllocator();
+
+    mx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;
+    PortPacket* Alloc(StateReloader* reloader);
+    virtual void Free(PortPacket* port_packet) override;
 
 private:
-    class FifoRange : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<FifoRange>> {
-    public:
-        FifoRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo)
-            : addr_(addr), len_(len), fifo_(fifo) {}
+    Event event_;
+    mxtl::Mutex mutex_;
+    mxtl::Arena arena_ TA_GUARDED(mutex_);
+    bool is_full_ TA_GUARDED(mutex_);
 
-        mx_vaddr_t GetKey() const { return addr_; }
-        bool InRange(mx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
-        mxtl::RefPtr<FifoDispatcher> fifo() const { return fifo_; }
+    PortPacket* Alloc() override;
+};
 
-    private:
-        mx_vaddr_t addr_;
-        size_t len_;
-        mxtl::RefPtr<FifoDispatcher> fifo_;
-    };
-    using FifoTree = mxtl::WAVLTree<mx_vaddr_t, mxtl::unique_ptr<FifoRange>>;
+/* Specifies an address range to associate with a port. */
+class PortRange : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<PortRange>> {
+public:
+    PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port);
+    virtual ~PortRange() {};
 
-    mutable mxtl::Mutex mutex;
-    FifoTree fifos TA_GUARDED(mutex);
+    mx_status_t Init();
+    mx_status_t Queue(const mx_port_packet_t& packet, StateReloader* reloader);
 
-    mx_status_t FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const;
+    mx_vaddr_t GetKey() const { return addr_; }
+    bool InRange(mx_vaddr_t val) const { return val >= addr_ && val < addr_ + len_; }
+
+private:
+    const mx_vaddr_t addr_;
+    const size_t len_;
+    const mxtl::RefPtr<PortDispatcher> port_;
+    BlockingPortAllocator port_allocator_;
+};
+
+/* Demultiplexes packets onto ports. */
+class PacketMux {
+public:
+    mx_status_t AddPortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port);
+    mx_status_t Queue(mx_vaddr_t addr, const mx_port_packet_t& packet,
+                      StateReloader* reloader);
+
+private:
+    using PortTree = mxtl::WAVLTree<mx_vaddr_t, mxtl::unique_ptr<PortRange>>;
+
+    mxtl::Mutex mutex_;
+    PortTree ports_ TA_GUARDED(mutex_);
+
+    mx_status_t FindPortRange(mx_vaddr_t addr, PortRange** port_range);
 };

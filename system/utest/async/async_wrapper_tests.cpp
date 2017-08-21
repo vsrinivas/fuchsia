@@ -89,7 +89,9 @@ bool wait_test() {
     const mx_packet_signal_t dummy_signal{
         .trigger = dummy_trigger,
         .observed = MX_USER_SIGNAL_0 | MX_USER_SIGNAL_1,
-        .count = 0u};
+        .count = 0u,
+        .reserved0 = 0u,
+        .reserved1 = 0u};
     const uint32_t dummy_flags = ASYNC_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;

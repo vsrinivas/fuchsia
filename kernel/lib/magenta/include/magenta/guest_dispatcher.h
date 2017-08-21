@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <magenta/dispatcher.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
 
@@ -24,7 +24,7 @@ public:
     Guest* guest() const { return guest_.get(); }
 
     mx_status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                        mxtl::RefPtr<FifoDispatcher> fifo);
+                        mxtl::RefPtr<PortDispatcher> port);
 
 private:
     mxtl::Canary<mxtl::magic("GSTD")> canary_;

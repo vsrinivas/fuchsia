@@ -7,7 +7,7 @@
 #include <threads.h>
 
 #include <hypervisor/decode.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <magenta/syscalls/port.h>
 
 #define IO_APIC_REDIRECT_OFFSETS 96u
 #define IO_APIC_MAX_LOCAL_APICS 16u
@@ -34,7 +34,7 @@ mx_status_t io_apic_register_local_apic(io_apic_t* io_apic, uint8_t local_apic_i
                                         local_apic_t* local_apic);
 
 /* Handle memory access to the IO APIC. */
-mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_guest_memory_t* memory,
+mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_packet_guest_mem_t* mem,
                             const instruction_t* inst);
 
 /* Returns the redirected interrupt vector and target VCPU for the given

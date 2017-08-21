@@ -41,7 +41,7 @@ static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t
 }
 
 static mx_status_t pci_bar_write_unsupported(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
-                                             const mx_guest_io_t* io) {
+                                             const mx_packet_guest_io_t* io) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
@@ -105,9 +105,9 @@ static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
     *value = (uint32_t)BIT_MASK(len * 8);
 }
 
-mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
+mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
                             const instruction_t* inst) {
-    const mx_vaddr_t addr = memory->addr;
+    const mx_vaddr_t addr = mem->addr;
     const uint8_t device = PCI_ECAM_DEVICE(addr);
     const uint16_t reg = PCI_ECAM_REGISTER(addr);
     const bool valid = pci_addr_valid(bus, PCI_ECAM_BUS(addr), device, PCI_ECAM_FUNCTION(addr));
@@ -203,7 +203,7 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
     }
 }
 
-mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io) {
+mx_status_t pci_bus_write(pci_bus_t* bus, const mx_packet_guest_io_t* io) {
     switch (io->port) {
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP: {
         // Software can (and Linux does) perform partial word accesses to the
@@ -434,9 +434,9 @@ uint16_t pci_bar_size(pci_device_t* device) {
     return device->bar_size;
 }
 
-static mx_status_t pci_handler(mx_handle_t vcpu, mx_guest_packet_t* packet, void* ctx) {
+static mx_status_t pci_handler(mx_handle_t vcpu, mx_port_packet_t* packet, void* ctx) {
     pci_device_t* pci_device = ctx;
-    mx_guest_io_t* io = &packet->io;
+    mx_packet_guest_io_t* io = &packet->guest_io;
     uint32_t bar_base = pci_bar_base(pci_device);
 
     return pci_device->ops->write_bar(pci_device, vcpu, io->port - bar_base, io);

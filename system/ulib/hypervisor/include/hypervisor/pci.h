@@ -44,11 +44,11 @@
 
 typedef struct instruction instruction_t;
 typedef struct io_apic io_apic_t;
-typedef struct mx_guest_io mx_guest_io_t;
-typedef struct mx_guest_memory mx_guest_memory_t;
+typedef struct mx_packet_guest_io mx_packet_guest_io_t;
+typedef struct mx_packet_guest_mem mx_packet_guest_mem_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
-typedef struct pci_device pci_device_t;
 typedef struct pci_bus pci_bus_t;
+typedef struct pci_device pci_device_t;
 
 /* Device specific callbacks. */
 typedef struct pci_device_ops {
@@ -57,7 +57,7 @@ typedef struct pci_device_ops {
 
     // Write to a region mapped by a BAR register.
     mx_status_t (*write_bar)(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
-                             const mx_guest_io_t* io);
+                             const mx_packet_guest_io_t* io);
 } pci_device_ops_t;
 
 /* Stores the state of PCI devices. */
@@ -109,7 +109,7 @@ mx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
 mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot);
 
 /* Handle MMIO access to the PCI config space. */
-mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_guest_memory_t* memory,
+mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
                             const instruction_t* inst);
 
 /* Handle PIO reads to the PCI config space. */
@@ -117,7 +117,7 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
                          mx_vcpu_io_t* vcpu_io);
 
 /* Handle PIO writes to the PCI config space. */
-mx_status_t pci_bus_write(pci_bus_t* bus, const mx_guest_io_t* io);
+mx_status_t pci_bus_write(pci_bus_t* bus, const mx_packet_guest_io_t* io);
 
 mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t len, uint32_t* value);
 mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value);

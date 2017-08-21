@@ -68,7 +68,7 @@ static bool write_ier(void) {
         stub_io_apic(&io_apic);
         uart_init(&uart, &io_apic);
 
-        mx_guest_io_t guest_io = {
+        mx_packet_guest_io_t guest_io = {
             .port = UART_INTERRUPT_ENABLE_PORT,
             .access_size = 1,
             .u8 = UART_INTERRUPT_ENABLE_RDA
@@ -85,7 +85,7 @@ static bool write_ier(void) {
         stub_io_apic(&io_apic);
         uart_init(&uart, &io_apic);
 
-        mx_guest_io_t guest_io = {
+        mx_packet_guest_io_t guest_io = {
             .port = UART_INTERRUPT_ENABLE_PORT,
             .access_size = 1,
             // THR enable should trigger a THR interrupt
@@ -105,7 +105,7 @@ static bool write_ier(void) {
         uart_init(&uart, &io_apic);
         uart.raise_interrupt = dummy_raise_interrupt;
 
-        mx_guest_io_t guest_io = {
+        mx_packet_guest_io_t guest_io = {
             .port = UART_INTERRUPT_ENABLE_PORT,
             .access_size = 1,
             // THR enable should trigger a THR interrupt
@@ -132,7 +132,7 @@ static bool write_thr(void) {
         // If this was responding to a THR empty interrupt, IIR should be reset
         // on THR write.
         uart.interrupt_id = UART_INTERRUPT_ID_THR_EMPTY;
-        mx_guest_io_t guest_io = {
+        mx_packet_guest_io_t guest_io = {
             .port = UART_RECEIVE_PORT,
             .access_size = 3,
             .data = {0x75, 0x61, 0x0d},
@@ -152,7 +152,7 @@ static bool write_thr(void) {
         // If THR empty interrupts are enabled, an interrupt should be raised.
         uart.interrupt_enable = UART_INTERRUPT_ENABLE_THR_EMPTY;
         uart.interrupt_id = UART_INTERRUPT_ID_NONE;
-        mx_guest_io_t guest_io = {
+        mx_packet_guest_io_t guest_io = {
             .port = UART_RECEIVE_PORT,
             .access_size = 3,
             .data = {0x72, 0x74, 0x0d},

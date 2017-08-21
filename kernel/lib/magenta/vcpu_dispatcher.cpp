@@ -49,7 +49,7 @@ VcpuDispatcher::VcpuDispatcher(mxtl::RefPtr<GuestDispatcher> guest, mxtl::unique
 
 VcpuDispatcher::~VcpuDispatcher() {}
 
-mx_status_t VcpuDispatcher::Resume(mx_guest_packet_t* packet) {
+mx_status_t VcpuDispatcher::Resume(mx_port_packet_t* packet) {
     canary_.Assert();
 
     return arch_vcpu_resume(vcpu_.get(), packet);

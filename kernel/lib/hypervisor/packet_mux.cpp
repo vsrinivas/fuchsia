@@ -5,105 +5,121 @@
 // https://opensource.org/licenses/MIT
 
 #include <hypervisor/packet_mux.h>
-#include <kernel/event.h>
+
 #include <magenta/syscalls/hypervisor.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 
+__UNUSED static const size_t kMaxPacketsPerRange = 256;
+
+BlockingPortAllocator::BlockingPortAllocator()
+    : event_(EVENT_FLAG_AUTOUNSIGNAL), is_full_(false) {}
+
+mx_status_t BlockingPortAllocator::Init() {
 #if WITH_LIB_MAGENTA
-#include <magenta/state_observer.h>
-
-class FifoStateObserver : public StateObserver {
-public:
-    FifoStateObserver(mx_signals_t watched_signals)
-        : watched_signals_(watched_signals) {
-        event_init(&event_, false, 0);
-    }
-
-    mx_status_t Wait(StateTracker* state_tracker) {
-        state_tracker->AddObserver(this, nullptr);
-        mx_status_t status = event_wait_deadline(&event_, INFINITE_TIME, true);
-        state_tracker->RemoveObserver(this);
-        return status != MX_OK ? MX_ERR_CANCELED : MX_OK;
-    }
-
-private:
-    mx_signals_t watched_signals_;
-    event_t event_;
-
-    virtual Flags OnInitialize(mx_signals_t initial_state, const CountInfo* cinfo) {
-        return 0;
-    }
-
-    virtual Flags OnStateChange(mx_signals_t new_state) {
-        if (new_state & watched_signals_)
-            event_signal(&event_, false);
-        return 0;
-    }
-
-    virtual Flags OnCancel(Handle* handle) {
-        return 0;
-    }
-};
-
-static mx_status_t packet_wait(StateTracker* state_tracker, mx_signals_t signals,
-                               StateReloader* reloader) {
-    if (state_tracker->GetSignalsState() & signals)
-        return MX_OK;
-    // TODO(abdulla): Add stats to keep track of waits.
-    FifoStateObserver state_observer(signals | MX_FIFO_PEER_CLOSED);
-    mx_status_t status = state_observer.Wait(state_tracker);
-    reloader->Reload();
-    if (status != MX_OK)
-        return status;
-    return state_tracker->GetSignalsState() & MX_FIFO_PEER_CLOSED ? MX_ERR_PEER_CLOSED : MX_OK;
-}
-#endif // WITH_LIB_MAGENTA
-
-mx_status_t PacketMux::AddFifo(mx_vaddr_t addr, size_t len, mxtl::RefPtr<FifoDispatcher> fifo) {
-#if WITH_LIB_MAGENTA
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<FifoRange> range(new (&ac) FifoRange(addr, len, fifo));
-    if (!ac.check())
-        return MX_ERR_NO_MEMORY;
-    mxtl::AutoLock lock(&mutex);
-    fifos.insert(mxtl::move(range));
-    return MX_OK;
+    return arena_.Init("hypervisor-packets", sizeof(PortPacket), kMaxPacketsPerRange);
 #else
     return MX_ERR_NOT_SUPPORTED;
 #endif // WITH_LIB_MAGENTA
 }
 
-mx_status_t PacketMux::FindFifo(mx_vaddr_t addr, mxtl::RefPtr<FifoDispatcher>* fifo) const {
-    FifoTree::const_iterator iter;
+PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
+    PortPacket* port_packet;
+    while ((port_packet = Alloc()) == nullptr) {
+        mx_status_t status = event_.Wait(INFINITE_TIME);
+        reloader->Reload();
+        if (status != MX_OK)
+            return nullptr;
+    }
+    return port_packet;
+}
+
+PortPacket* BlockingPortAllocator::Alloc() {
+#if WITH_LIB_MAGENTA
+    void* addr;
     {
-        mxtl::AutoLock lock(&mutex);
-        iter = fifos.upper_bound(addr);
+        mxtl::AutoLock lock(&mutex_);
+        addr = arena_.Alloc();
+        if (addr == nullptr) {
+            is_full_ = true;
+            return nullptr;
+        }
+    }
+    return new (addr) PortPacket(nullptr, this);
+#else
+    return nullptr;
+#endif // WITH_LIB_MAGENTA
+}
+
+void BlockingPortAllocator::Free(PortPacket* port_packet) {
+    bool was_full;
+    {
+        mxtl::AutoLock lock(&mutex_);
+        was_full = is_full_;
+        arena_.Free(port_packet);
+        is_full_ = false;
+    }
+    if (was_full && event_.Signal() > 0)
+        thread_reschedule();
+}
+
+PortRange::PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port)
+    : addr_(addr), len_(len), port_(mxtl::move(port)) {}
+
+mx_status_t PortRange::Init() {
+    return port_allocator_.Init();
+}
+
+mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* reloader) {
+#if WITH_LIB_MAGENTA
+    PortPacket* port_packet = port_allocator_.Alloc(reloader);
+    if (port_packet == nullptr)
+        return MX_ERR_NO_MEMORY;
+    port_packet->packet = packet;
+    port_packet->packet.type |= PKT_FLAG_EPHEMERAL;
+    mx_status_t status = port_->Queue(port_packet, MX_SIGNAL_NONE, 0);
+    if (status != MX_OK)
+        port_allocator_.Free(port_packet);
+    return status;
+#else
+    return MX_ERR_NOT_SUPPORTED;
+#endif // WITH_LIB_MAGENTA
+}
+
+mx_status_t PacketMux::AddPortRange(mx_vaddr_t addr, size_t len,
+                                    mxtl::RefPtr<PortDispatcher> port) {
+    mxtl::AllocChecker ac;
+    mxtl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, mxtl::move(port)));
+    if (!ac.check())
+        return MX_ERR_NO_MEMORY;
+    mx_status_t status = range->Init();
+    if (status != MX_OK)
+        return status;
+    {
+        mxtl::AutoLock lock(&mutex_);
+        ports_.insert(mxtl::move(range));
+    }
+    return MX_OK;
+}
+
+mx_status_t PacketMux::FindPortRange(mx_vaddr_t addr, PortRange** port_range) {
+    PortTree::iterator iter;
+    {
+        mxtl::AutoLock lock(&mutex_);
+        iter = ports_.upper_bound(addr);
     }
     --iter;
     if (!iter.IsValid() || !iter->InRange(addr))
         return MX_ERR_NOT_FOUND;
-    *fifo = iter->fifo();
+    *port_range = const_cast<PortRange*>(&*iter);
     return MX_OK;
 }
 
-mx_status_t PacketMux::Write(mx_vaddr_t addr, const mx_guest_packet_t& packet,
-                          StateReloader* reloader) const {
-#if WITH_LIB_MAGENTA
-    mxtl::RefPtr<FifoDispatcher> fifo;
-    mx_status_t status = FindFifo(addr, &fifo);
+mx_status_t PacketMux::Queue(mx_vaddr_t addr, const mx_port_packet_t& packet,
+                             StateReloader* reloader) {
+    PortRange* port_range;
+    mx_status_t status = FindPortRange(addr, &port_range);
     if (status != MX_OK)
         return status;
-    status = packet_wait(fifo->get_state_tracker(), MX_FIFO_WRITABLE, reloader);
-    if (status != MX_OK)
-        return status;
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(&packet);
-    uint32_t actual;
-    status = fifo->Write(data, sizeof(mx_guest_packet_t), &actual);
-    if (status != MX_OK)
-        return status;
-    return actual != 1 ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
-#else
-    return MX_ERR_NOT_FOUND;
-#endif // WITH_LIB_MAGENTA
+    return port_range->Queue(packet, reloader);
 }

@@ -8,9 +8,9 @@ vcpu_resume - resume execution of a VCPU
 
 ```
 #include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <magenta/syscalls/port.h>
 
-mx_status_t mx_vcpu_resume(mx_handle_t vcpu, mx_guest_packet_t* packet);
+mx_status_t mx_vcpu_resume(mx_handle_t vcpu, mx_port_packet_t* packet);
 ```
 
 ## DESCRIPTION

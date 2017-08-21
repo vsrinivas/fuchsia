@@ -7,6 +7,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <magenta/syscalls/hypervisor.h>
 
 #include "vmx_cpu_state_priv.h"
 
@@ -84,18 +85,18 @@ Guest::~Guest() {
 }
 
 status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                        mxtl::RefPtr<FifoDispatcher> fifo) {
+                        mxtl::RefPtr<PortDispatcher> port) {
     if (SIZE_MAX - len < addr)
         return MX_ERR_OUT_OF_RANGE;
     switch (kind) {
-    case MX_GUEST_TRAP_MEMORY:
+    case MX_GUEST_TRAP_MEM:
         if (!IS_PAGE_ALIGNED(addr) || !IS_PAGE_ALIGNED(len))
             return MX_ERR_INVALID_ARGS;
         return gpas_->UnmapRange(addr, len);
     case MX_GUEST_TRAP_IO:
         if (addr + len > UINT16_MAX)
             return MX_ERR_OUT_OF_RANGE;
-        return mux_.AddFifo(addr, len, fifo);
+        return mux_.AddPortRange(addr, len, mxtl::move(port));
     default:
         return MX_ERR_INVALID_ARGS;
     }
@@ -110,6 +111,6 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 }
 
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<FifoDispatcher> fifo) {
-    return guest->SetTrap(kind, addr, len, fifo);
+                             mxtl::RefPtr<PortDispatcher> port) {
+    return guest->SetTrap(kind, addr, len, port);
 }

@@ -17,7 +17,6 @@
 #include <hypervisor/vcpu.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
 
 #include "acpi_priv.h"
 
@@ -51,10 +50,10 @@
 
 // clang-format on
 
-static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_memory_t* memory,
+static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_guest_mem_t* mem,
                                      instruction_t* inst) {
-    MX_ASSERT(memory->addr >= LOCAL_APIC_PHYS_BASE);
-    mx_vaddr_t offset = memory->addr - LOCAL_APIC_PHYS_BASE;
+    MX_ASSERT(mem->addr >= LOCAL_APIC_PHYS_BASE);
+    mx_vaddr_t offset = mem->addr - LOCAL_APIC_PHYS_BASE;
     // From Intel Volume 3, Section 10.4.1.: All 32-bit registers should be
     // accessed using 128-bit aligned 32-bit loads or stores. Some processors
     // may support loads and stores of less than 32 bits to some of the APIC
@@ -113,14 +112,14 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_guest_me
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t unhandled_memory(const mx_guest_memory_t* memory, const instruction_t* inst) {
-    fprintf(stderr, "Unhandled address %#lx\n", memory->addr);
+static mx_status_t unhandled_mem(const mx_packet_guest_mem_t* mem, const instruction_t* inst) {
+    fprintf(stderr, "Unhandled address %#lx\n", mem->addr);
     if (inst->type == INST_MOV_READ)
         *inst->reg = UINT64_MAX;
     return MX_OK;
 }
 
-static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* memory) {
+static mx_status_t handle_mem(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_mem_t* mem) {
     mx_vcpu_state_t vcpu_state;
     mx_status_t status = vcpu_ctx->read_state(vcpu_ctx, MX_VCPU_STATE, &vcpu_state,
                                               sizeof(vcpu_state));
@@ -131,7 +130,7 @@ static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* 
 #if __aarch64__
     status = MX_ERR_NOT_SUPPORTED;
 #elif __x86_64__
-    status = inst_decode(memory->inst_buf, memory->inst_len, &vcpu_state, &inst);
+    status = inst_decode(mem->inst_buf, mem->inst_len, &vcpu_state, &inst);
 #else
 #error Unsupported architecture
 #endif
@@ -139,25 +138,25 @@ static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* 
     if (status != MX_OK) {
         fprintf(stderr, "Unsupported instruction:");
 #if __x86_64__
-        for (uint8_t i = 0; i < memory->inst_len; i++)
-            fprintf(stderr, " %x", memory->inst_buf[i]);
+        for (uint8_t i = 0; i < mem->inst_len; i++)
+            fprintf(stderr, " %x", mem->inst_buf[i]);
 #endif // __x86_64__
         fprintf(stderr, "\n");
     } else {
         guest_ctx_t* guest_ctx = vcpu_ctx->guest_ctx;
-        switch (memory->addr) {
+        switch (mem->addr) {
         case LOCAL_APIC_PHYS_BASE ... LOCAL_APIC_PHYS_TOP:
-            status = handle_local_apic(&vcpu_ctx->local_apic, memory, &inst);
+            status = handle_local_apic(&vcpu_ctx->local_apic, mem, &inst);
             break;
         case IO_APIC_PHYS_BASE ... IO_APIC_PHYS_TOP:
-            status = io_apic_handler(guest_ctx->io_apic, memory, &inst);
+            status = io_apic_handler(guest_ctx->io_apic, mem, &inst);
             break;
         case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP: {
-            status = pci_bus_handler(vcpu_ctx->guest_ctx->bus, memory, &inst);
+            status = pci_bus_handler(vcpu_ctx->guest_ctx->bus, mem, &inst);
             break;
         }
         default:
-            status = unhandled_memory(memory, &inst);
+            status = unhandled_mem(mem, &inst);
             break;
         }
     }
@@ -172,7 +171,7 @@ static mx_status_t handle_memory(vcpu_ctx_t* vcpu_ctx, const mx_guest_memory_t* 
     return status;
 }
 
-static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
+static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t* io) {
 #if __x86_64__
     mx_status_t status = MX_OK;
     mx_vcpu_io_t vcpu_io;
@@ -220,7 +219,7 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
 #endif // __x86_64__
 }
 
-static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
+static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t* io) {
 #if __x86_64__
     switch (io->port) {
     case I8042_COMMAND_PORT:
@@ -244,7 +243,7 @@ static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) 
 #endif // __x86_64__
 }
 
-static mx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const mx_guest_io_t* io) {
+static mx_status_t handle_io(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t* io) {
     return io->input ? handle_input(vcpu_ctx, io) : handle_output(vcpu_ctx, io);
 }
 
@@ -266,7 +265,7 @@ void vcpu_init(vcpu_ctx_t* vcpu_ctx) {
 
 mx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
     while (true) {
-        mx_guest_packet_t packet;
+        mx_port_packet_t packet;
         mx_status_t status = mx_vcpu_resume(vcpu_ctx->vcpu, &packet);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to resume VCPU %d\n", status);
@@ -280,33 +279,20 @@ mx_status_t vcpu_loop(vcpu_ctx_t* vcpu_ctx) {
     }
 }
 
-mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_guest_packet_t* packet) {
+mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_port_packet_t* packet) {
     switch (packet->type) {
-    case MX_GUEST_PKT_MEMORY:
-        return handle_memory(vcpu_ctx, &packet->memory);
-    case MX_GUEST_PKT_IO:
-        return handle_io(vcpu_ctx, &packet->io);
+    case MX_PKT_TYPE_GUEST_MEM:
+        return handle_mem(vcpu_ctx, &packet->guest_mem);
+    case MX_PKT_TYPE_GUEST_IO:
+        return handle_io(vcpu_ctx, &packet->guest_io);
     default:
         fprintf(stderr, "Unhandled guest packet %d\n", packet->type);
         return MX_ERR_NOT_SUPPORTED;
     }
 }
 
-static mx_status_t fifo_wait(mx_handle_t fifo, mx_signals_t signals) {
-    mx_signals_t observed = 0;
-    while (!(observed & signals)) {
-        mx_status_t status = mx_object_wait_one(fifo, signals | MX_FIFO_PEER_CLOSED,
-                                                MX_TIME_INFINITE, &observed);
-        if (status != MX_OK)
-            return status;
-        if (observed & MX_FIFO_PEER_CLOSED)
-            return MX_ERR_PEER_CLOSED;
-    }
-    return MX_OK;
-}
-
 typedef struct device {
-    mx_handle_t fifo;
+    mx_handle_t port;
     mx_handle_t vcpu;
     device_handler_fn_t handler;
     void* ctx;
@@ -314,33 +300,24 @@ typedef struct device {
 
 static int device_loop(void* ctx) {
     device_t* device = ctx;
-    mx_guest_packet_t packets[PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE];
 
     while (true) {
-        mx_status_t status = fifo_wait(device->fifo, MX_FIFO_READABLE);
+        mx_port_packet_t packet;
+        mx_status_t status = mx_port_wait(device->port, MX_TIME_INFINITE, &packet, 0);
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to wait for device FIFO %d\n", status);
+            fprintf(stderr, "Failed to wait for device port %d\n", status);
             goto cleanup;
         }
 
-        uint32_t num_packets;
-        status = mx_fifo_read(device->fifo, packets, sizeof(packets), &num_packets);
+        status = device->handler(device->vcpu, &packet, device->ctx);
         if (status != MX_OK) {
-            fprintf(stderr, "Failed to read from device FIFO %d\n", status);
+            fprintf(stderr, "Unable to handle packet for device %d\n", status);
             goto cleanup;
-        }
-
-        for (uint32_t i = 0; i < num_packets; i++) {
-            status = device->handler(device->vcpu, &packets[i], device->ctx);
-            if (status != MX_OK) {
-                fprintf(stderr, "Unable to handle packet for device %d\n", status);
-                goto cleanup;
-            }
         }
     }
 
 cleanup:
-    mx_handle_close(device->fifo);
+    mx_handle_close(device->port);
     free(device);
     return MX_ERR_INTERNAL;
 }
@@ -356,18 +333,15 @@ mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_
     device->handler = handler;
     device->ctx = ctx;
 
-    const uint32_t count = PAGE_SIZE / MX_GUEST_MAX_PKT_SIZE;
-    const uint32_t size = sizeof(mx_guest_packet_t);
-    mx_handle_t kernel_fifo;
-    mx_status_t status = mx_fifo_create(count, size, 0, &device->fifo, &kernel_fifo);
+    mx_status_t status = mx_port_create(0, &device->port);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to create device FIFO %d\n", status);
+        fprintf(stderr, "Failed to create device port %d\n", status);
         goto mem_cleanup;
     }
 
-    status = mx_guest_set_trap(guest, kind, addr, len, kernel_fifo);
+    status = mx_guest_set_trap(guest, kind, addr, len, device->port);
     if (status != MX_OK) {
-        fprintf(stderr, "Failed to set trap for device FIFO %d\n", status);
+        fprintf(stderr, "Failed to set trap for device port %d\n", status);
         goto cleanup;
     }
 
@@ -386,7 +360,7 @@ mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_
 
     return MX_OK;
 cleanup:
-    mx_handle_close(device->fifo);
+    mx_handle_close(device->port);
 mem_cleanup:
     free(device);
     return MX_ERR_INTERNAL;

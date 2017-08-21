@@ -8,7 +8,6 @@
 
 #include <arch/hypervisor.h>
 #include <kernel/vm/vm_object.h>
-#include <magenta/fifo_dispatcher.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
 
@@ -37,8 +36,8 @@ GuestDispatcher::GuestDispatcher(mxtl::unique_ptr<Guest> guest)
 GuestDispatcher::~GuestDispatcher() {}
 
 mx_status_t GuestDispatcher::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                                     mxtl::RefPtr<FifoDispatcher> fifo) {
+                                     mxtl::RefPtr<PortDispatcher> port) {
     canary_.Assert();
 
-    return arch_guest_set_trap(guest_.get(), kind, addr, len, fifo);
+    return arch_guest_set_trap(guest_.get(), kind, addr, len, mxtl::move(port));
 }

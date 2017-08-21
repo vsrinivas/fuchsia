@@ -11,7 +11,7 @@
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls.h>
-#include <magenta/syscalls/hypervisor.h>
+#include <magenta/syscalls/port.h>
 #include <virtio/balloon.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
@@ -165,7 +165,7 @@ static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port,
 }
 
 static mx_status_t balloon_write(virtio_device_t* device, mx_handle_t vcpu,
-                                 uint16_t port, const mx_guest_io_t* io) {
+                                 uint16_t port, const mx_packet_guest_io_t* io) {
     if (io->access_size != 1)
         return MX_ERR_NOT_SUPPORTED;
 

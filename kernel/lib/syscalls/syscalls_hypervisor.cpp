@@ -4,9 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/fifo_dispatcher.h>
 #include <magenta/guest_dispatcher.h>
 #include <magenta/handle_owner.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <magenta/vcpu_dispatcher.h>
@@ -49,7 +49,7 @@ mx_status_t sys_guest_create(mx_handle_t resource, uint32_t options, mx_handle_t
 }
 
 mx_status_t sys_guest_set_trap(mx_handle_t guest_handle, uint32_t kind, mx_vaddr_t addr, size_t len,
-                               mx_handle_t fifo_handle) {
+                               mx_handle_t port_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
@@ -57,14 +57,14 @@ mx_status_t sys_guest_set_trap(mx_handle_t guest_handle, uint32_t kind, mx_vaddr
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<FifoDispatcher> fifo;
-    if (fifo_handle != MX_HANDLE_INVALID) {
-        status = up->GetDispatcherWithRights(fifo_handle, MX_RIGHT_WRITE, &fifo);
+    mxtl::RefPtr<PortDispatcher> port;
+    if (port_handle != MX_HANDLE_INVALID) {
+        status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
         if (status != MX_OK)
             return status;
     }
 
-    return guest->SetTrap(kind, addr, len, fifo);
+    return guest->SetTrap(kind, addr, len, mxtl::move(port));
 }
 
 mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
@@ -110,7 +110,7 @@ mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
 #endif
 }
 
-mx_status_t sys_vcpu_resume(mx_handle_t vcpu_handle, user_ptr<mx_guest_packet_t> _packet) {
+mx_status_t sys_vcpu_resume(mx_handle_t vcpu_handle, user_ptr<mx_port_packet_t> _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<VcpuDispatcher> vcpu;
@@ -118,7 +118,7 @@ mx_status_t sys_vcpu_resume(mx_handle_t vcpu_handle, user_ptr<mx_guest_packet_t>
     if (status != MX_OK)
         return status;
 
-    mx_guest_packet_t packet;
+    mx_port_packet packet;
     status = vcpu->Resume(&packet);
     if (status != MX_OK)
         return status;

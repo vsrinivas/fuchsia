@@ -91,5 +91,4 @@ struct ApicAccessInfo {
 bool local_apic_signal_interrupt(LocalApicState* local_apic_state, uint32_t vector,
                                  bool reschedule);
 status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state, LocalApicState* local_apic_state,
-                        GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
-                        mx_guest_packet_t* packet);
+                        GuestPhysicalAddressSpace* gpas, PacketMux& mux, mx_port_packet_t* packet);

@@ -15,7 +15,6 @@
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <magenta/types.h>
-#include <magenta/syscalls/hypervisor.h>
 #include <mxtl/array.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -24,7 +23,6 @@ static const uint16_t kNumInterrupts = X86_MAX_INT + 1;
 
 typedef struct vm_page vm_page_t;
 
-class FifoDispatcher;
 class GuestPhysicalAddressSpace;
 class VmObject;
 struct VmxInfo;
@@ -58,10 +56,10 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
     status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                     mxtl::RefPtr<FifoDispatcher> fifo);
+                     mxtl::RefPtr<PortDispatcher> port);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
-    const PacketMux& Mux() const { return mux_; }
+    PacketMux& Mux() { return mux_; }
     paddr_t ApicAccessAddress() const { return apic_access_page_.PhysicalAddress(); }
     paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
@@ -93,12 +91,12 @@ class Vcpu {
 public:
     static status_t Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
                            paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                           GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
+                           GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                            mxtl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
-    status_t Resume(mx_guest_packet_t* packet);
+    status_t Resume(mx_port_packet_t* packet);
     status_t Interrupt(uint32_t interrupt);
     status_t ReadState(uint32_t kind, void* buffer, uint32_t len) const;
     status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
@@ -111,14 +109,14 @@ private:
     mxtl::RefPtr<VmObject> apic_vmo_;
     LocalApicState local_apic_state_;
     GuestPhysicalAddressSpace* gpas_;
-    const PacketMux& mux_;
+    PacketMux& mux_;
     VmxState vmx_state_;
     VmxPage host_msr_page_;
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
 
     Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
-         GuestPhysicalAddressSpace* gpas, const PacketMux& mux);
+         GuestPhysicalAddressSpace* gpas, PacketMux& mux);
 };
 
 /* Create a guest. */
@@ -126,16 +124,16 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 
 /* Set a trap within a guest. */
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<FifoDispatcher> fifo);
+                             mxtl::RefPtr<PortDispatcher> port);
 
 /* Create a VCPU. */
 status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                         GuestPhysicalAddressSpace* gpas, const PacketMux& mux,
+                         GuestPhysicalAddressSpace* gpas, PacketMux& mux,
                          mxtl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */
-status_t arch_vcpu_resume(Vcpu* vcpu, mx_guest_packet_t* packet);
+status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet);
 
 /* Issue an interrupt on a VCPU. */
 status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t interrupt);
