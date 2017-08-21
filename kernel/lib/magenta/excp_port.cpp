@@ -30,7 +30,7 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
     if (!MX_PKT_IS_EXCEPTION(type))
         return nullptr;
 
-    auto port_packet = PortPacket::Make();
+    auto port_packet = PortDispatcher::DefaultPortAllocator()->Alloc();
     if (!port_packet)
         return nullptr;
 
@@ -261,7 +261,7 @@ mx_status_t ExceptionPort::SendPacketWorker(uint32_t type, mx_koid_t pid, mx_koi
 
     mx_status_t status = port_->Queue(iopk, 0, 0);
     if (status != MX_OK) {
-        PortPacket::Delete(iopk);
+        iopk->Free();
     }
     return status;
 }

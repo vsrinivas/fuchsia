@@ -23,45 +23,59 @@
 
 using mxtl::AutoLock;
 
+class ArenaPortAllocator final : public PortAllocator {
+public:
+    mx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;
+    virtual ~ArenaPortAllocator() = default;
+
+    virtual PortPacket* Alloc();
+    virtual void Free(PortPacket* port_packet);
+
+private:
+    mxtl::Mutex mutex_;
+    mxtl::Arena arena_ TA_GUARDED(mutex_);
+};
+
 namespace {
 constexpr size_t kMaxPendingPacketCount = 16 * 1024u;
-
-mxtl::Mutex arena_mutex;
-mxtl::Arena TA_GUARDED(arena_mutex) packet_arena;
-
+ArenaPortAllocator port_allocator;
 }  // namespace.
 
+mx_status_t ArenaPortAllocator::Init() {
+    return arena_.Init("packets", sizeof(PortPacket), kMaxPendingPacketCount);
+}
 
-PortPacket* PortPacket::Make() {
-    AutoLock lock(&arena_mutex);
-    void* addr = packet_arena.Alloc();
+PortPacket* ArenaPortAllocator::Alloc() {
+    void* addr;
+    {
+        AutoLock lock(&mutex_);
+        addr = arena_.Alloc();
+    }
     if (addr == nullptr) {
-        lock.release();
         printf("WARNING: Could not allocate new port packet\n");
         return nullptr;
     }
-    return new (addr) PortPacket(nullptr);
+    return new (addr) PortPacket(nullptr, this);
 }
 
-void PortPacket::Delete(PortPacket* packet) {
-    AutoLock lock(&arena_mutex);
-    packet_arena.Free(packet);
+void ArenaPortAllocator::Free(PortPacket* port_packet) {
+    AutoLock lock(&mutex_);
+    arena_.Free(port_packet);
 }
 
-
-PortPacket::PortPacket(const void* handle) : packet{}, handle(handle), observer(nullptr) {
+PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
+    : packet{}, handle(handle), observer(nullptr), allocator(allocator) {
     // Note that packet is initialized to zeros.
 }
 
-PortObserver::PortObserver(uint32_t type, const Handle* handle,
-                           mxtl::RefPtr<PortDispatcher> port,
+PortObserver::PortObserver(uint32_t type, const Handle* handle, mxtl::RefPtr<PortDispatcher> port,
                            uint64_t key, mx_signals_t signals)
     : type_(type),
       key_(key),
       trigger_(signals),
       handle_(handle),
       port_(mxtl::move(port)),
-      packet_(handle) {
+      packet_(handle, nullptr) {
 
     DEBUG_ASSERT(handle != nullptr);
 
@@ -126,12 +140,14 @@ StateObserver::Flags PortObserver::MaybeQueue(mx_signals_t new_state, uint64_t c
 /////////////////////////////////////////////////////////////////////////////////////////
 
 void PortDispatcher::Init() {
-    packet_arena.Init("packets", sizeof(PortPacket), kMaxPendingPacketCount);
+    port_allocator.Init();
 }
 
+PortAllocator* PortDispatcher::DefaultPortAllocator() {
+    return &port_allocator;
+}
 
-mx_status_t PortDispatcher::Create(uint32_t options,
-                                   mxtl::RefPtr<Dispatcher>* dispatcher,
+mx_status_t PortDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
                                    mx_rights_t* rights) {
     DEBUG_ASSERT(options == 0);
     mxtl::AllocChecker ac;
@@ -139,7 +155,7 @@ mx_status_t PortDispatcher::Create(uint32_t options,
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *rights = MX_DEFAULT_PORT_RIGHTS;;
+    *rights = MX_DEFAULT_PORT_RIGHTS;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
@@ -175,7 +191,7 @@ void PortDispatcher::on_zero_handles() {
 mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
     canary_.Assert();
 
-    auto port_packet = PortPacket::Make();
+    auto port_packet = port_allocator.Alloc();
     if (!port_packet)
         return MX_ERR_NO_MEMORY;
 
@@ -184,13 +200,11 @@ mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
 
     auto status = Queue(port_packet, 0u, 0u);
     if (status < 0)
-        PortPacket::Delete(port_packet);
+        port_packet->Free();
     return status;
 }
 
-mx_status_t PortDispatcher::Queue(PortPacket* port_packet,
-                                  mx_signals_t observed,
-                                  uint64_t count) {
+mx_status_t PortDispatcher::Queue(PortPacket* port_packet, mx_signals_t observed, uint64_t count) {
     canary_.Assert();
 
     int wake_count = 0;
@@ -235,7 +249,7 @@ mx_status_t PortDispatcher::DeQueue(mx_time_t deadline, mx_port_packet_t* packet
         if (observer)
             delete observer;
         else if (packet && (packet->type & PKT_FLAG_EPHEMERAL))
-            PortPacket::Delete(port_packet);
+            port_packet->Free();
 
         return MX_OK;
 
@@ -265,8 +279,8 @@ bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
     return false;
 }
 
-mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle,
-                                          uint64_t key, mx_signals_t signals) {
+mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle, uint64_t key,
+                                          mx_signals_t signals) {
     canary_.Assert();
 
     // Called under the handle table lock.
@@ -279,8 +293,8 @@ mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle,
     auto type = (options == MX_WAIT_ASYNC_ONCE) ?
         MX_PKT_TYPE_SIGNAL_ONE : MX_PKT_TYPE_SIGNAL_REP;
 
-    auto observer = new (&ac) PortObserver(type,
-            handle, mxtl::RefPtr<PortDispatcher>(this), key, signals);
+    auto observer = new (&ac) PortObserver(type, handle, mxtl::RefPtr<PortDispatcher>(this), key,
+                                           signals);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 

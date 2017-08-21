@@ -64,50 +64,52 @@
 //                +-----|  Packet   | <-----------+
 //                      +-----------+
 //
-//   Note that the objet no longer has a |w| to the observer
+//   Note that the object no longer has a |w| to the observer
 //   but the observer still owns the port via |rc|.
 //
 //   For repeating ports |w| is always valid until the wait is
 //   canceled.
 //
 //   The |o1| pointer is used to destroy the port observer only
-//   when cancelation happens and the port still owns the packet.
+//   when cancellation happens and the port still owns the packet.
 //
 
 class PortDispatcher;
 class PortObserver;
+struct PortPacket;
 
 #define PKT_FLAG_EPHEMERAL  0x10000000u
 #define PKT_FLAG_MASK       0x0FFFFFFFu
 
-class PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
-public:
-    static PortPacket* Make();
-    static void Delete(PortPacket* packet);
+struct PortAllocator {
+    virtual ~PortAllocator() = default;
 
+    virtual PortPacket* Alloc() = 0;
+    virtual void Free(PortPacket* port_packet) = 0;
+};
+
+struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
     mx_port_packet_t packet;
     const void* const handle;
     PortObserver* observer;
+    PortAllocator* const allocator;
 
-    explicit PortPacket(const void* handle);
+    PortPacket(const void* handle, PortAllocator* allocator);
     PortPacket(const PortPacket&) = delete;
     void operator=(PortPacket) = delete;
 
     uint32_t type() const { return packet.type; }
     uint64_t key() const { return packet.key; }
 
-private:
-    friend class PortObserver;
-    ~PortPacket() = default;
+    void Free() { allocator->Free(this); }
 };
 
 // Observers are weakly contained in state trackers until |remove_| member
-// is false at the end of one of OnInitialize() OnStateChange() or  OnCancel()
+// is false at the end of one of OnInitialize(), OnStateChange() or OnCancel()
 // callbacks.
 class PortObserver final : public StateObserver {
 public:
-    PortObserver(uint32_t type, const Handle* handle,
-                 mxtl::RefPtr<PortDispatcher> port,
+    PortObserver(uint32_t type, const Handle* handle, mxtl::RefPtr<PortDispatcher> port,
                  uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
 
@@ -142,9 +144,9 @@ private:
 
 class PortDispatcher final : public Dispatcher {
 public:
-    static void Init() TA_NO_THREAD_SAFETY_ANALYSIS;
-    static mx_status_t Create(uint32_t options,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
+    static void Init();
+    static PortAllocator* DefaultPortAllocator();
+    static mx_status_t Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~PortDispatcher() final;
@@ -161,8 +163,7 @@ public:
     bool CanReap(PortObserver* observer, PortPacket* port_packet);
 
     // Called under the handle table lock.
-    mx_status_t MakeObservers(uint32_t options, Handle* handle,
-                              uint64_t key, mx_signals_t signals);
+    mx_status_t MakeObservers(uint32_t options, Handle* handle, uint64_t key, mx_signals_t signals);
 
     // Called under the handle table lock. Returns true if at least one packet was
     // removed from the queue.
