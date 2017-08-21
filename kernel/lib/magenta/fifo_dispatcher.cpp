@@ -17,10 +17,10 @@
 using mxtl::AutoLock;
 
 // static
-status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t options,
-                                mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                mxtl::RefPtr<Dispatcher>* dispatcher1,
-                                mx_rights_t* rights) {
+mx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t options,
+                                   mxtl::RefPtr<Dispatcher>* dispatcher0,
+                                   mxtl::RefPtr<Dispatcher>* dispatcher1,
+                                   mx_rights_t* rights) {
     // count and elemsize must be nonzero
     // count must be a power of two
     // total size must be <= kMaxSizeBytes

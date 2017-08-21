@@ -30,7 +30,7 @@ FutexContext::~FutexContext() {
     DEBUG_ASSERT(futex_table_.is_empty());
 }
 
-status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t deadline) {
+mx_status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t deadline) {
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
@@ -48,7 +48,7 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     lock_.Acquire();
 
     int value;
-    status_t result = value_ptr.copy_from_user(&value);
+    mx_status_t result = value_ptr.copy_from_user(&value);
     if (result != MX_OK) {
         lock_.Release();
         return result;
@@ -105,8 +105,8 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     return MX_OK;
 }
 
-status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
-                                 uint32_t count) {
+mx_status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
+                                    uint32_t count) {
     LTRACE_ENTRY;
 
     if (count == 0) return MX_OK;
@@ -141,8 +141,8 @@ status_t FutexContext::FutexWake(user_ptr<const int> value_ptr,
     return MX_OK;
 }
 
-status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count, int current_value,
-                                    user_ptr<int> requeue_ptr, uint32_t requeue_count) {
+mx_status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count, int current_value,
+                                       user_ptr<int> requeue_ptr, uint32_t requeue_count) {
     LTRACE_ENTRY;
 
     if ((requeue_ptr.get() == nullptr) && requeue_count)
@@ -151,7 +151,7 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
     AutoLock lock(&lock_);
 
     int value;
-    status_t result = wake_ptr.copy_from_user(&value);
+    mx_status_t result = wake_ptr.copy_from_user(&value);
     if (result != MX_OK) return result;
     if (value != current_value) return MX_ERR_BAD_STATE;
 

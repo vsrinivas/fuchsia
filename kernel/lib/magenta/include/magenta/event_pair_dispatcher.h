@@ -8,6 +8,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/mutex.h>
 #include <mxtl/ref_ptr.h>
@@ -15,15 +16,15 @@
 
 class EventPairDispatcher final : public Dispatcher {
 public:
-    static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
-                           mxtl::RefPtr<Dispatcher>* dispatcher1,
-                           mx_rights_t* rights);
+    static mx_status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
+                              mxtl::RefPtr<Dispatcher>* dispatcher1,
+                              mx_rights_t* rights);
 
     ~EventPairDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_EVENT_PAIR; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     CookieJar* get_cookie_jar() final { return &cookie_jar_; }
-    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
+    mx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     void on_zero_handles() final;
     mx_koid_t get_related_koid() const final { return other_koid_; }
 

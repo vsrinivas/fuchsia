@@ -33,7 +33,7 @@ Dispatcher::~Dispatcher() {
 #endif
 }
 
-status_t Dispatcher::add_observer(StateObserver* observer) {
+mx_status_t Dispatcher::add_observer(StateObserver* observer) {
     auto state_tracker = get_state_tracker();
     if (!state_tracker)
         return MX_ERR_NOT_SUPPORTED;
@@ -41,7 +41,7 @@ status_t Dispatcher::add_observer(StateObserver* observer) {
     return MX_OK;
 }
 
-status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+mx_status_t Dispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     if (peer)
         return MX_ERR_NOT_SUPPORTED;
 

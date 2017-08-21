@@ -42,7 +42,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
 
     Event event;
 
-    status_t result;
+    mx_status_t result;
     WaitStateObserver wait_state_observer;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -118,7 +118,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
     Event event;
 
     // We may need to unwind (which can be done outside the lock).
-    status_t result = MX_OK;
+    mx_status_t result = MX_OK;
     size_t num_added = 0;
     {
         auto up = ProcessDispatcher::GetCurrent();

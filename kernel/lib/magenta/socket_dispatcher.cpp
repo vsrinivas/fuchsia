@@ -29,10 +29,10 @@ using mxtl::AutoLock;
 #define LOCAL_TRACE 0
 
 // static
-status_t SocketDispatcher::Create(uint32_t flags,
-                                  mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                  mxtl::RefPtr<Dispatcher>* dispatcher1,
-                                  mx_rights_t* rights) {
+mx_status_t SocketDispatcher::Create(uint32_t flags,
+                                     mxtl::RefPtr<Dispatcher>* dispatcher0,
+                                     mxtl::RefPtr<Dispatcher>* dispatcher1,
+                                     mx_rights_t* rights) {
     LTRACE_ENTRY;
 
     if (flags & ~MX_SOCKET_CREATE_MASK)
@@ -114,7 +114,7 @@ void SocketDispatcher::OnPeerZeroHandles() {
     state_tracker_.UpdateState(MX_SOCKET_WRITABLE, MX_SOCKET_PEER_CLOSED);
 }
 
-status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+mx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     canary_.Assert();
 
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
@@ -136,13 +136,13 @@ status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, b
     return other->UserSignalSelf(clear_mask, set_mask);
 }
 
-status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+mx_status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
     state_tracker_.UpdateState(clear_mask, set_mask);
     return MX_OK;
 }
 
-status_t SocketDispatcher::Shutdown(uint32_t how) {
+mx_status_t SocketDispatcher::Shutdown(uint32_t how) {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -185,7 +185,7 @@ status_t SocketDispatcher::Shutdown(uint32_t how) {
     }
 }
 
-status_t SocketDispatcher::ShutdownOther(uint32_t how) {
+mx_status_t SocketDispatcher::ShutdownOther(uint32_t how) {
     canary_.Assert();
 
     const bool shutdown_read = how & MX_SOCKET_SHUTDOWN_READ;

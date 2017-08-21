@@ -423,7 +423,7 @@ public:
 };
 } // namespace
 
-status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
+mx_status_t VmAspace::GetMemoryUsage(vm_usage_t* usage) {
     VmCounter vc;
     if (!EnumerateChildren(&vc)) {
         *usage = {};
@@ -515,9 +515,9 @@ private:
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
-                         user_ptr<mx_info_maps_t> maps, size_t max,
-                         size_t* actual, size_t* available) {
+mx_status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
+                            user_ptr<mx_info_maps_t> maps, size_t max,
+                            size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
     *actual = 0;
     *available = 0;
@@ -611,9 +611,9 @@ private:
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
-                         user_ptr<mx_info_vmo_t> vmos, size_t max,
-                         size_t* actual, size_t* available) {
+mx_status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
+                            user_ptr<mx_info_vmo_t> vmos, size_t max,
+                            size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
     DEBUG_ASSERT(actual != nullptr);
     DEBUG_ASSERT(available != nullptr);
@@ -636,9 +636,9 @@ status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
-                                  user_ptr<mx_info_vmo_t> vmos, size_t max,
-                                  size_t* actual_out, size_t* available_out) {
+mx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
+                                     user_ptr<mx_info_vmo_t> vmos, size_t max,
+                                     size_t* actual_out, size_t* available_out) {
     DEBUG_ASSERT(process != nullptr);
     DEBUG_ASSERT(actual_out != nullptr);
     DEBUG_ASSERT(available_out != nullptr);

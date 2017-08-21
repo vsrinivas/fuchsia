@@ -31,10 +31,10 @@ mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     return job;
 }
 
-status_t JobDispatcher::Create(uint32_t flags,
-                               mxtl::RefPtr<JobDispatcher> parent,
-                               mxtl::RefPtr<Dispatcher>* dispatcher,
-                               mx_rights_t* rights) {
+mx_status_t JobDispatcher::Create(uint32_t flags,
+                                  mxtl::RefPtr<JobDispatcher> parent,
+                                  mxtl::RefPtr<Dispatcher>* dispatcher,
+                                  mx_rights_t* rights) {
     if (parent != nullptr && parent->max_height() == 0) {
         // The parent job cannot have children.
         return MX_ERR_OUT_OF_RANGE;
@@ -273,7 +273,7 @@ void JobDispatcher::Kill() {
     }
 }
 
-status_t JobDispatcher::SetPolicy(
+mx_status_t JobDispatcher::SetPolicy(
     uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count) {
     // Can't set policy when there are active processes or jobs.
     AutoLock lock(&lock_);
@@ -346,13 +346,13 @@ void JobDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
     name_.get(MX_MAX_NAME_LEN, out_name);
 }
 
-status_t JobDispatcher::set_name(const char* name, size_t len) {
+mx_status_t JobDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
 
     return name_.set(name, len);
 }
 
-status_t JobDispatcher::get_importance(mx_job_importance_t* out) const {
+mx_status_t JobDispatcher::get_importance(mx_job_importance_t* out) const {
     canary_.Assert();
     DEBUG_ASSERT(out != nullptr);
 
@@ -382,7 +382,7 @@ mx_job_importance_t JobDispatcher::GetRawImportance() const {
     return importance_;
 }
 
-status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
+mx_status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
     canary_.Assert();
 
     if ((importance < MX_JOB_IMPORTANCE_MIN ||
@@ -408,7 +408,7 @@ status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
 mxtl::Mutex JobDispatcher::importance_lock_;
 JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
 
-status_t JobDispatcher::MakeMoreImportantThan(
+mx_status_t JobDispatcher::MakeMoreImportantThan(
     mxtl::RefPtr<JobDispatcher> other) {
 
     canary_.Assert();

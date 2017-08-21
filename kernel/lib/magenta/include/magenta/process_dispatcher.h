@@ -79,7 +79,7 @@ public:
 
     // Performs initialization on a newly constructed ProcessDispatcher
     // If this fails, then the object is invalid and should be deleted
-    status_t Initialize();
+    mx_status_t Initialize();
 
     // Maps a |handle| to an integer which can be given to usermode as a
     // handle value. Uses Handle->base_value() plus additional mixing.
@@ -165,7 +165,7 @@ public:
     // on every handle owned by the process. Stops if |func| returns an error,
     // returning the error value.
     template <typename T>
-    status_t ForEachHandle(T func) const {
+    mx_status_t ForEachHandle(T func) const {
         mxtl::AutoLock lock(&handle_table_lock_);
         for (const auto& handle : handles_) {
             // It would be nice to only pass a const Dispatcher* to the
@@ -188,25 +188,25 @@ public:
     mxtl::RefPtr<JobDispatcher> job();
 
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
-    status_t set_name(const char* name, size_t len) final;
+    mx_status_t set_name(const char* name, size_t len) final;
 
     void Exit(int retcode) __NO_RETURN;
     void Kill();
 
     // Syscall helpers
-    status_t GetInfo(mx_info_process_t* info);
-    status_t GetStats(mx_info_task_stats_t* stats);
+    mx_status_t GetInfo(mx_info_process_t* info);
+    mx_status_t GetStats(mx_info_task_stats_t* stats);
     // NOTE: Code outside of the syscall layer should not typically know about
     // user_ptrs; do not use this pattern as an example.
-    status_t GetAspaceMaps(user_ptr<mx_info_maps_t> maps, size_t max,
+    mx_status_t GetAspaceMaps(user_ptr<mx_info_maps_t> maps, size_t max,
                            size_t* actual, size_t* available);
-    status_t GetVmos(user_ptr<mx_info_vmo_t> vmos, size_t max,
+    mx_status_t GetVmos(user_ptr<mx_info_vmo_t> vmos, size_t max,
                      size_t* actual, size_t* available);
 
-    status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
+    mx_status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
 
     // exception handling support
-    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
+    mx_status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool debugger, bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();
@@ -281,7 +281,7 @@ private:
 
     // Thread lifecycle support
     friend class ThreadDispatcher;
-    status_t AddThread(ThreadDispatcher* t, bool initial_thread);
+    mx_status_t AddThread(ThreadDispatcher* t, bool initial_thread);
     void RemoveThread(ThreadDispatcher* t);
 
     void SetStateLocked(State) TA_REQ(state_lock_);

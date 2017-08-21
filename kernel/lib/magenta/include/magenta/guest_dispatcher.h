@@ -8,6 +8,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <magenta/types.h>
 
 class Guest;
 class VmObject;

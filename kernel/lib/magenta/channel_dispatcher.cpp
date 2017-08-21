@@ -30,9 +30,9 @@ using mxtl::AutoLock;
 #define LOCAL_TRACE 0
 
 // static
-status_t ChannelDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                   mxtl::RefPtr<Dispatcher>* dispatcher1,
-                                   mx_rights_t* rights) {
+mx_status_t ChannelDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
+                                      mxtl::RefPtr<Dispatcher>* dispatcher1,
+                                      mx_rights_t* rights) {
     mxtl::AllocChecker ac;
     auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher());
     if (!ac.check())
@@ -130,10 +130,10 @@ void ChannelDispatcher::OnPeerZeroHandles() {
     }
 }
 
-status_t ChannelDispatcher::Read(uint32_t* msg_size,
-                                 uint32_t* msg_handle_count,
-                                 mxtl::unique_ptr<MessagePacket>* msg,
-                                 bool may_discard) {
+mx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
+                                    uint32_t* msg_handle_count,
+                                    mxtl::unique_ptr<MessagePacket>* msg,
+                                    bool may_discard) {
     canary_.Assert();
 
     auto max_size = *msg_size;
@@ -146,7 +146,7 @@ status_t ChannelDispatcher::Read(uint32_t* msg_size,
 
     *msg_size = messages_.front().data_size();
     *msg_handle_count = messages_.front().num_handles();
-    status_t rv = MX_OK;
+    mx_status_t rv = MX_OK;
     if (*msg_size > max_size || *msg_handle_count > max_handle_count) {
         if (!may_discard)
             return MX_ERR_BUFFER_TOO_SMALL;
@@ -161,7 +161,7 @@ status_t ChannelDispatcher::Read(uint32_t* msg_size,
     return rv;
 }
 
-status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
+mx_status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     mxtl::RefPtr<ChannelDispatcher> other;
@@ -182,9 +182,9 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
     return MX_OK;
 }
 
-status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
-                                 mx_time_t deadline, bool* return_handles,
-                                 mxtl::unique_ptr<MessagePacket>* reply) {
+mx_status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
+                                    mx_time_t deadline, bool* return_handles,
+                                    mxtl::unique_ptr<MessagePacket>* reply) {
 
     canary_.Assert();
 
@@ -222,9 +222,9 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
     return ResumeInterruptedCall(waiter, deadline, reply);
 }
 
-status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
-                                                  mx_time_t deadline,
-                                                  mxtl::unique_ptr<MessagePacket>* reply) {
+mx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
+                                                     mx_time_t deadline,
+                                                     mxtl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
 
     // (2) Wait for notification via waiter's event or for the
@@ -283,7 +283,7 @@ int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
     return 0;
 }
 
-status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+mx_status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     canary_.Assert();
 
     if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
@@ -305,7 +305,7 @@ status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
     return other->UserSignalSelf(clear_mask, set_mask);
 }
 
-status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+mx_status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
     canary_.Assert();
     state_tracker_.UpdateState(clear_mask, set_mask);
     return MX_OK;
@@ -340,7 +340,7 @@ int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> ms
     return event_.Signal(MX_OK);
 }
 
-int ChannelDispatcher::MessageWaiter::Cancel(status_t status) {
+int ChannelDispatcher::MessageWaiter::Cancel(mx_status_t status) {
     DEBUG_ASSERT(!InContainer());
     DEBUG_ASSERT(channel_);
     status_ = status;

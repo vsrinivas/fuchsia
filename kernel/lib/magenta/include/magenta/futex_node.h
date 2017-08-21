@@ -42,7 +42,7 @@ public:
                                      uintptr_t new_hash_key);
 
     // This must be called with |mutex| held and returns without |mutex| held.
-    status_t BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
+    mx_status_t BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;

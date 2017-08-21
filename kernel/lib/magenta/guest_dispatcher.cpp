@@ -17,7 +17,7 @@ mx_status_t GuestDispatcher::Create(mxtl::RefPtr<VmObject> physmem,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     mxtl::unique_ptr<Guest> guest;
-    status_t status = arch_guest_create(physmem, &guest);
+    mx_status_t status = arch_guest_create(physmem, &guest);
     if (status != MX_OK)
         return status;
 

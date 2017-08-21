@@ -71,7 +71,7 @@ mx_status_t ProcessDispatcher::Create(
     if (!job->AddChildProcess(process.get()))
         return MX_ERR_BAD_STATE;
 
-    status_t result = process->Initialize();
+    mx_status_t result = process->Initialize();
     if (result != MX_OK)
         return result;
 
@@ -130,11 +130,11 @@ void ProcessDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
     name_.get(MX_MAX_NAME_LEN, out_name);
 }
 
-status_t ProcessDispatcher::set_name(const char* name, size_t len) {
+mx_status_t ProcessDispatcher::set_name(const char* name, size_t len) {
     return name_.set(name, len);
 }
 
-status_t ProcessDispatcher::Initialize() {
+mx_status_t ProcessDispatcher::Initialize() {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -225,7 +225,7 @@ void ProcessDispatcher::KillAllThreadsLocked() {
     }
 }
 
-status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_thread) {
+mx_status_t ProcessDispatcher::AddThread(ThreadDispatcher* t, bool initial_thread) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock state_lock(&state_lock_);
@@ -481,7 +481,7 @@ mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handl
     return MX_OK;
 }
 
-status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
+mx_status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
     // retcode_ depends on the state: make sure they're consistent.
     state_lock_.Acquire();
     int retcode = retcode_;
@@ -511,14 +511,14 @@ status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
     return MX_OK;
 }
 
-status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
+mx_status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
     DEBUG_ASSERT(stats != nullptr);
     AutoLock lock(&state_lock_);
     if (state_ != State::RUNNING) {
         return MX_ERR_BAD_STATE;
     }
     VmAspace::vm_usage_t usage;
-    status_t s = aspace_->GetMemoryUsage(&usage);
+    mx_status_t s = aspace_->GetMemoryUsage(&usage);
     if (s != MX_OK) {
         return s;
     }
@@ -529,7 +529,7 @@ status_t ProcessDispatcher::GetStats(mx_info_task_stats_t* stats) {
     return MX_OK;
 }
 
-status_t ProcessDispatcher::GetAspaceMaps(
+mx_status_t ProcessDispatcher::GetAspaceMaps(
     user_ptr<mx_info_maps_t> maps, size_t max,
     size_t* actual, size_t* available) {
     AutoLock lock(&state_lock_);
@@ -539,7 +539,7 @@ status_t ProcessDispatcher::GetAspaceMaps(
     return GetVmAspaceMaps(aspace_, maps, max, actual, available);
 }
 
-status_t ProcessDispatcher::GetVmos(
+mx_status_t ProcessDispatcher::GetVmos(
     user_ptr<mx_info_vmo_t> vmos, size_t max,
     size_t* actual_out, size_t* available_out) {
     AutoLock lock(&state_lock_);
@@ -548,7 +548,7 @@ status_t ProcessDispatcher::GetVmos(
     }
     size_t actual = 0;
     size_t available = 0;
-    status_t s = GetProcessVmosViaHandles(this, vmos, max, &actual, &available);
+    mx_status_t s = GetProcessVmosViaHandles(this, vmos, max, &actual, &available);
     if (s != MX_OK) {
         return s;
     }
@@ -565,7 +565,7 @@ status_t ProcessDispatcher::GetVmos(
     return MX_OK;
 }
 
-status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
+mx_status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
     AutoLock lock(&state_lock_);
     size_t n = thread_list_.size_slow();
     mxtl::Array<mx_koid_t> threads;
@@ -583,7 +583,7 @@ status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
     return MX_OK;
 }
 
-status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+mx_status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     LTRACE_ENTRY_OBJ;
     bool debugger = false;
     switch (eport->type()) {

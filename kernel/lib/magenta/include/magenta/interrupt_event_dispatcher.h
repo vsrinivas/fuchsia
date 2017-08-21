@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/interrupt_dispatcher.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/mutex.h>
@@ -14,17 +15,17 @@
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
 public:
-    static status_t Create(uint32_t vector,
-                           uint32_t flags,
-                           mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
+    static mx_status_t Create(uint32_t vector,
+                              uint32_t flags,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
 
     InterruptEventDispatcher(const InterruptDispatcher &) = delete;
     InterruptEventDispatcher& operator=(const InterruptDispatcher &) = delete;
 
     ~InterruptEventDispatcher() final;
-    status_t InterruptComplete() final;
-    status_t UserSignal() final;
+    mx_status_t InterruptComplete() final;
+    mx_status_t UserSignal() final;
 
     // requred to exist in our collection of allocated vectors.
     uint32_t GetKey() const { return vector_; }

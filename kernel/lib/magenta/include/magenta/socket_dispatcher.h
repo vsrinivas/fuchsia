@@ -24,8 +24,8 @@ constexpr int kControlMsgSize = 1024;
 
 class SocketDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
-                           mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
+    static mx_status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
+                              mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
 
     ~SocketDispatcher() final;
 
@@ -34,7 +34,7 @@ public:
     mx_koid_t get_related_koid() const final { return peer_koid_; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
+    mx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
     // Socket methods.
     mx_status_t Write(user_ptr<const void> src, size_t len, size_t* written);
@@ -42,9 +42,9 @@ public:
     mx_status_t WriteControl(user_ptr<const void> src, size_t len);
 
     // Shut this endpoint of the socket down for reading, writing, or both.
-    status_t Shutdown(uint32_t how);
+    mx_status_t Shutdown(uint32_t how);
 
-    status_t HalfClose();
+    mx_status_t HalfClose();
 
     mx_status_t Read(user_ptr<void> dst, size_t len, size_t* nread);
 
@@ -57,8 +57,8 @@ private:
     void Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     mx_status_t WriteControlSelf(user_ptr<const void> src, size_t len);
-    status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
-    status_t ShutdownOther(uint32_t how);
+    mx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
+    mx_status_t ShutdownOther(uint32_t how);
 
     bool is_full() const TA_REQ(lock_) { return data_.is_full(); }
     bool is_empty() const TA_REQ(lock_) { return data_.is_empty(); }

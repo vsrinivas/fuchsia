@@ -131,8 +131,8 @@ void PortDispatcher::Init() {
 
 
 mx_status_t PortDispatcher::Create(uint32_t options,
-                                     mxtl::RefPtr<Dispatcher>* dispatcher,
-                                     mx_rights_t* rights) {
+                                   mxtl::RefPtr<Dispatcher>* dispatcher,
+                                   mx_rights_t* rights) {
     DEBUG_ASSERT(options == 0);
     mxtl::AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
@@ -189,8 +189,8 @@ mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
 }
 
 mx_status_t PortDispatcher::Queue(PortPacket* port_packet,
-                                    mx_signals_t observed,
-                                    uint64_t count) {
+                                  mx_signals_t observed,
+                                  uint64_t count) {
     canary_.Assert();
 
     int wake_count = 0;
@@ -240,7 +240,7 @@ mx_status_t PortDispatcher::DeQueue(mx_time_t deadline, mx_port_packet_t* packet
         return MX_OK;
 
 wait:
-        status_t st = sema_.Wait(deadline);
+        mx_status_t st = sema_.Wait(deadline);
         if (st != MX_OK)
             return st;
     }
@@ -266,7 +266,7 @@ bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
 }
 
 mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle,
-                                            uint64_t key, mx_signals_t signals) {
+                                          uint64_t key, mx_signals_t signals) {
     canary_.Assert();
 
     // Called under the handle table lock.

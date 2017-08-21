@@ -143,9 +143,9 @@ private:
 class PortDispatcher final : public Dispatcher {
 public:
     static void Init() TA_NO_THREAD_SAFETY_ANALYSIS;
-    static status_t Create(uint32_t options,
-                           mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
+    static mx_status_t Create(uint32_t options,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
 
     ~PortDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PORT; }

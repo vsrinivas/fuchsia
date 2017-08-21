@@ -37,7 +37,7 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
 
     mxtl::RefPtr<Dispatcher> socket0, socket1;
     mx_rights_t rights;
-    status_t result = SocketDispatcher::Create(options, &socket0, &socket1, &rights);
+    mx_status_t result = SocketDispatcher::Create(options, &socket0, &socket1, &rights);
     if (result != MX_OK)
         return result;
 

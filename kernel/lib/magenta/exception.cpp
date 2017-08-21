@@ -118,11 +118,11 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(ExceptionPortIterator);
 };
 
-static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
-                                      ThreadDispatcher* thread,
-                                      const mx_exception_report_t* report,
-                                      const arch_exception_context_t* arch_context,
-                                      ThreadDispatcher::ExceptionStatus* estatus) {
+static mx_status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
+                                         ThreadDispatcher* thread,
+                                         const mx_exception_report_t* report,
+                                         const arch_exception_context_t* arch_context,
+                                         ThreadDispatcher::ExceptionStatus* estatus) {
     LTRACEF("Trying exception port type %d\n", static_cast<int>(eport->type()));
     auto status = thread->ExceptionHandlerExchange(eport, report, arch_context, estatus);
     LTRACEF("ExceptionHandlerExchange returned status %d, estatus %d\n", status, static_cast<int>(*estatus));
@@ -200,8 +200,8 @@ static handler_status_t exception_handler_worker(uint exception_type,
 // TODO(dje): Support unwinding from this exception and introducing a
 // different exception?
 
-status_t magenta_exception_handler(uint exception_type,
-                                   arch_exception_context_t* context) {
+mx_status_t magenta_exception_handler(uint exception_type,
+                                      arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
     ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();

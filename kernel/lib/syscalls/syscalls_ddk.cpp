@@ -57,7 +57,7 @@ mx_status_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status_t result = InterruptEventDispatcher::Create(vector, options, &dispatcher, &rights);
+    mx_status_t result = InterruptEventDispatcher::Create(vector, options, &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 

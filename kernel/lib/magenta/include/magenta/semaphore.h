@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <kernel/thread.h>
+#include <magenta/types.h>
 
 class Semaphore {
 public:
@@ -18,7 +19,7 @@ public:
     Semaphore& operator=(const Semaphore&) = delete;
 
     int Post();
-    status_t Wait(lk_time_t deadline);
+    mx_status_t Wait(lk_time_t deadline);
 
 private:
     int64_t count_;

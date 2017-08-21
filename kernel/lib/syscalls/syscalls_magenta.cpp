@@ -105,7 +105,7 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
-    status_t result = EventDispatcher::Create(options, &dispatcher, &rights);
+    mx_status_t result = EventDispatcher::Create(options, &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
@@ -134,7 +134,7 @@ mx_status_t sys_eventpair_create(uint32_t options,
 
     mxtl::RefPtr<Dispatcher> epd0, epd1;
     mx_rights_t rights;
-    status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
+    mx_status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
     if (result != MX_OK)
         return result;
 

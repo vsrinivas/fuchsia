@@ -14,8 +14,8 @@
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
-status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
-                                 mx_rights_t* rights) {
+mx_status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
+                                    mx_rights_t* rights) {
     mxtl::AllocChecker ac;
     auto disp = new (&ac) EventDispatcher(options);
     if (!ac.check())
@@ -31,7 +31,7 @@ EventDispatcher::EventDispatcher(uint32_t options)
 
 EventDispatcher::~EventDispatcher() {}
 
-status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+mx_status_t EventDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
     canary_.Assert();
 
     if (peer)

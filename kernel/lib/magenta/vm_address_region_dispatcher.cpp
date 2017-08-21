@@ -26,7 +26,7 @@ namespace {
 // Split out the syscall flags into vmar flags and mmu flags.  Note that this
 // does not validate that the requested protections in *flags* are valid.  For
 // that use is_valid_mapping_protection()
-status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mmu_flags) {
+mx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mmu_flags) {
     // Figure out arch_mmu_flags
     uint mmu_flags = ARCH_MMU_FLAG_PERM_USER;
     switch (flags & (MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE)) {
@@ -86,9 +86,9 @@ status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mm
 
 } // namespace
 
-status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar,
-                                    mxtl::RefPtr<Dispatcher>* dispatcher,
-                                    mx_rights_t* rights) {
+mx_status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar,
+                                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                                              mx_rights_t* rights) {
 
     // The initial rights should match the VMAR's creation permissions
     mx_rights_t vmar_rights = MX_DEFAULT_VMAR_RIGHTS;

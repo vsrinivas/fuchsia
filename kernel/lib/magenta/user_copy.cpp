@@ -10,20 +10,20 @@
 
 #include <lib/user_copy.h>
 
-status_t magenta_copy_from_user(const void* src, void* dest, size_t len) {
+mx_status_t magenta_copy_from_user(const void* src, void* dest, size_t len) {
     if (src == nullptr) return MX_ERR_INVALID_ARGS;
-    status_t status = copy_from_user_unsafe(dest, src, len);
+    mx_status_t status = copy_from_user_unsafe(dest, src, len);
     if (status != MX_OK) {
         return MX_ERR_INVALID_ARGS;
     }
     return MX_OK;
 }
 
-status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, size_t buf_len,
-                                  mxtl::StringPiece* sp) {
+mx_status_t magenta_copy_user_string(const char* src, size_t src_len, char* buf, size_t buf_len,
+                                     mxtl::StringPiece* sp) {
     if (src_len > buf_len) return MX_ERR_INVALID_ARGS;
 
-    status_t result = magenta_copy_from_user(src, buf, src_len);
+    mx_status_t result = magenta_copy_from_user(src, buf, src_len);
     if (result != MX_OK) return result;
 
     // ensure zero termination

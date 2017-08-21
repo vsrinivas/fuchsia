@@ -57,10 +57,10 @@ public:
     };
 
     static mxtl::RefPtr<JobDispatcher> CreateRootJob();
-    static status_t Create(uint32_t flags,
-                           mxtl::RefPtr<JobDispatcher> parent,
-                           mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
+    static mx_status_t Create(uint32_t flags,
+                              mxtl::RefPtr<JobDispatcher> parent,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
 
     ~JobDispatcher() final;
 
@@ -73,7 +73,7 @@ public:
 
     // Job methods.
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
-    status_t set_name(const char* name, size_t len) final;
+    mx_status_t set_name(const char* name, size_t len) final;
     uint32_t max_height() const { return max_height_; }
 
     // "Importance" is a userspace-settable hint that is used to rank jobs for
@@ -81,8 +81,8 @@ public:
     // Note: if the importance is set to MX_JOB_IMPORTANCE_INHERITED (which is
     // the default for all jobs except the root job), get_importance() will
     // return the inherited value.
-    status_t get_importance(mx_job_importance_t* out) const;
-    status_t set_importance(mx_job_importance_t importance);
+    mx_status_t get_importance(mx_job_importance_t* out) const;
+    mx_status_t set_importance(mx_job_importance_t importance);
 
     // TODO(dbort): Consider adding a get_capped_importance() so that userspace
     // doesn't need to check all ancestor jobs to find the value (which is the
@@ -96,20 +96,20 @@ public:
 
     // Set policy. |mode| is is either MX_JOB_POL_RELATIVE or MX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
-    status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
+    mx_status_t SetPolicy(uint32_t mode, const mx_policy_basic* in_policy, size_t policy_count);
     pol_cookie_t GetPolicy();
 
     // Updates a partial ordering between jobs so that this job will be killed
     // after |other| in low-resource situations. If |other| is null, then this
     // job becomes the least-important job in the system.
-    status_t MakeMoreImportantThan(mxtl::RefPtr<JobDispatcher> other);
+    mx_status_t MakeMoreImportantThan(mxtl::RefPtr<JobDispatcher> other);
 
     // Calls the provided |mx_status_t func(JobDispatcher*)| on every
     // JobDispatcher in the system, from least important to most important,
     // using the order determined by MakeMoreImportantThan(). Stops if |func|
     // returns an error, returning the error value.
     template <typename T>
-    static status_t ForEachJobByImportance(T func) {
+    static mx_status_t ForEachJobByImportance(T func) {
         mxtl::AutoLock lock(&importance_lock_);
         for (auto &job : importance_list_) {
             mx_status_t s = func(&job);

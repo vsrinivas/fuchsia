@@ -20,10 +20,10 @@ mxtl::Mutex InterruptEventDispatcher::vectors_lock_;
 InterruptEventDispatcher::VectorCollection InterruptEventDispatcher::vectors_;
 
 // static
-status_t InterruptEventDispatcher::Create(uint32_t vector,
-                                          uint32_t flags,
-                                          mxtl::RefPtr<Dispatcher>* dispatcher,
-                                          mx_rights_t* rights) {
+mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
+                                             uint32_t flags,
+                                             mxtl::RefPtr<Dispatcher>* dispatcher,
+                                             mx_rights_t* rights) {
     // Remap the vector if we have been asked to do so.
     if (flags & MX_FLAG_REMAP_IRQ)
         vector = remap_interrupt(vector);
@@ -77,7 +77,7 @@ InterruptEventDispatcher::~InterruptEventDispatcher() {
     }
 }
 
-status_t InterruptEventDispatcher::InterruptComplete() {
+mx_status_t InterruptEventDispatcher::InterruptComplete() {
     canary_.Assert();
 
     unsignal();
@@ -85,7 +85,7 @@ status_t InterruptEventDispatcher::InterruptComplete() {
     return MX_OK;
 }
 
-status_t InterruptEventDispatcher::UserSignal() {
+mx_status_t InterruptEventDispatcher::UserSignal() {
     canary_.Assert();
 
     mask_interrupt(vector_);

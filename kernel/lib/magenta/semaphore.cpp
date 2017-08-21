@@ -30,12 +30,12 @@ int Semaphore::Post() {
     return ret;
 }
 
-status_t Semaphore::Wait(lk_time_t deadline) {
+mx_status_t Semaphore::Wait(lk_time_t deadline) {
     thread_t *current_thread = get_current_thread();
 
      // If there are no resources available then we need to
      // sit in the wait queue until sem_post adds some.
-    status_t ret = MX_OK;
+    mx_status_t ret = MX_OK;
     THREAD_LOCK(state);
     current_thread->interruptable = true;
 

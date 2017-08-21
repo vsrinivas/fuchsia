@@ -20,9 +20,9 @@
 
 #define LOCAL_TRACE 0
 
-status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
-                                    mxtl::RefPtr<Dispatcher>* dispatcher,
-                                    mx_rights_t* rights) {
+mx_status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
+                                       mxtl::RefPtr<Dispatcher>* dispatcher,
+                                       mx_rights_t* rights) {
     mxtl::AllocChecker ac;
     auto disp = new (&ac) VmObjectDispatcher(mxtl::move(vmo));
     if (!ac.check())
@@ -48,7 +48,7 @@ void VmObjectDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
     vmo_->get_name(out_name, MX_MAX_NAME_LEN);
 }
 
-status_t VmObjectDispatcher::set_name(const char* name, size_t len) {
+mx_status_t VmObjectDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
     return vmo_->set_name(name, len);
 }

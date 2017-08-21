@@ -43,7 +43,7 @@ mx_status_t sys_channel_create(
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
-    status_t result = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
+    mx_status_t result = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
     if (result != MX_OK)
         return result;
 

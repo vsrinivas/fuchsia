@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/dispatcher.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 
 #include <sys/types.h>
@@ -17,9 +18,9 @@ class VmObject;
 
 class VmAddressRegionDispatcher final : public Dispatcher {
 public:
-    static status_t Create(mxtl::RefPtr<VmAddressRegion> vmar,
-                           mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
+    static mx_status_t Create(mxtl::RefPtr<VmAddressRegion> vmar,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
 
     ~VmAddressRegionDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMAR; }

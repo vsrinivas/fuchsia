@@ -9,6 +9,7 @@
 #include <kernel/event.h>
 
 #include <magenta/dispatcher.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <sys/types.h>
 
@@ -31,12 +32,12 @@ public:
 
     // Notify the system that the caller has finished processing the interrupt.
     // Required before the handle can be waited upon again.
-    virtual status_t InterruptComplete() = 0;
+    virtual mx_status_t InterruptComplete() = 0;
 
     // Signal the IRQ from non-IRQ state in response to a user-land request.
-    virtual status_t UserSignal() = 0;
+    virtual mx_status_t UserSignal() = 0;
 
-    status_t WaitForInterrupt() {
+    mx_status_t WaitForInterrupt() {
         return event_wait_deadline(&event_, INFINITE_TIME, true);
     }
 

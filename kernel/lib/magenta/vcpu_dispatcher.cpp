@@ -14,9 +14,9 @@
 #include <magenta/types.h>
 #include <mxtl/alloc_checker.h>
 
-status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
-                                mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
-                                mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
+mx_status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
+                                   mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+                                   mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
     GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
     if (ip >= gpas->size())
@@ -26,10 +26,10 @@ status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, 
 
     mxtl::unique_ptr<Vcpu> vcpu;
 #if ARCH_X86_64
-    status_t status = x86_vcpu_create(ip, cr3, apic_vmo, guest->ApicAccessAddress(),
+    mx_status_t status = x86_vcpu_create(ip, cr3, apic_vmo, guest->ApicAccessAddress(),
                                       guest->MsrBitmapsAddress(), gpas, guest->Mux(), &vcpu);
 #else // ARCH_X86_64
-    status_t status = MX_ERR_NOT_SUPPORTED;
+    mx_status_t status = MX_ERR_NOT_SUPPORTED;
 #endif
     if (status != MX_OK)
         return status;

@@ -88,7 +88,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
     // TODO(andymutton): Change to use a user_ptr copy method.
-    status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
+    mx_status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != MX_OK)
         return result;
     LTRACEF("name %s\n", buf);
@@ -269,7 +269,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
     // TODO(andymutton): Change to use user_ptr copy methods
-    status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
+    mx_status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != MX_OK)
         return result;
     LTRACEF("name %s\n", buf);
@@ -287,9 +287,9 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     mxtl::RefPtr<Dispatcher> proc_dispatcher;
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
     mx_rights_t proc_rights, vmar_rights;
-    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, options,
-                                             &proc_dispatcher, &proc_rights,
-                                             &vmar_dispatcher, &vmar_rights);
+    mx_status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, options,
+                                                &proc_dispatcher, &proc_rights,
+                                                &vmar_dispatcher, &vmar_rights);
     if (res != MX_OK)
         return res;
 
@@ -447,7 +447,7 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
         }
     }
 
-    status_t st = vmo->ReadUser(_buffer, offset, len, &read);
+    mx_status_t st = vmo->ReadUser(_buffer, offset, len, &read);
 
     if (st == MX_OK) {
         if (_actual.copy_to_user(static_cast<size_t>(read)) != MX_OK)
@@ -512,7 +512,7 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t written = 0;
 
-    status_t st = vmo->WriteUser(_buffer, offset, len, &written);
+    mx_status_t st = vmo->WriteUser(_buffer, offset, len, &written);
 
     if (st == MX_OK) {
         if (_actual.copy_to_user(static_cast<size_t>(written)) != MX_OK)

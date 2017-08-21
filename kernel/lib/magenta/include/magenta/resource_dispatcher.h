@@ -12,6 +12,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/resource.h>
 #include <magenta/thread_annotations.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/name.h>

@@ -14,6 +14,7 @@
 #include <magenta/exception.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>
+#include <magenta/types.h>
 
 #include <mxtl/auto_lock.h>
 #include <mxtl/canary.h>

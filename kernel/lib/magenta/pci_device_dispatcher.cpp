@@ -23,10 +23,10 @@
 
 using mxtl::AutoLock;
 
-status_t PciDeviceDispatcher::Create(uint32_t                  index,
-                                     mx_pcie_device_info_t*    out_info,
-                                     mxtl::RefPtr<Dispatcher>*  out_dispatcher,
-                                     mx_rights_t*              out_rights) {
+mx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
+                                        mx_pcie_device_info_t*    out_info,
+                                        mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                                        mx_rights_t*              out_rights) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return MX_ERR_BAD_STATE;
@@ -65,7 +65,7 @@ PciDeviceDispatcher::~PciDeviceDispatcher() {
     // disabled when the driver using them has been unloaded.
     DEBUG_ASSERT(device_);
 
-    status_t s = EnableBusMaster(false);
+    mx_status_t s = EnableBusMaster(false);
     if (s != MX_OK) {
         printf("Failed to disable bus mastering on %02x:%02x:%1x\n",
                device_->bus_id(), device_->dev_id(), device_->func_id());
@@ -87,7 +87,7 @@ PciDeviceDispatcher::~PciDeviceDispatcher() {
     device_ = nullptr;
 }
 
-status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
+mx_status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -98,7 +98,7 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     return MX_OK;
 }
 
-status_t PciDeviceDispatcher::EnablePio(bool enable) {
+mx_status_t PciDeviceDispatcher::EnablePio(bool enable) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -109,7 +109,7 @@ status_t PciDeviceDispatcher::EnablePio(bool enable) {
     return MX_OK;
 }
 
-status_t PciDeviceDispatcher::EnableMmio(bool enable) {
+mx_status_t PciDeviceDispatcher::EnableMmio(bool enable) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -127,7 +127,7 @@ const pcie_bar_info_t* PciDeviceDispatcher::GetBar(uint32_t bar_num) {
     return device_->GetBarInfo(bar_num);
 }
 
-status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
+mx_status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
@@ -143,7 +143,7 @@ status_t PciDeviceDispatcher::GetConfig(pci_config_info_t* out) {
     return MX_OK;
 }
 
-status_t PciDeviceDispatcher::ResetDevice() {
+mx_status_t PciDeviceDispatcher::ResetDevice() {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -152,9 +152,9 @@ status_t PciDeviceDispatcher::ResetDevice() {
     return device_->DoFunctionLevelReset();
 }
 
-status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
-                                           mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
-                                           mx_rights_t* rights) {
+mx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
+                                              mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
+                                              mx_rights_t* rights) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -185,19 +185,19 @@ static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_MSI) ==
 static_assert(static_cast<uint>(MX_PCIE_IRQ_MODE_MSI_X) ==
               static_cast<uint>(PCIE_IRQ_MODE_MSI_X),
               "Mode mismatch, MX_PCIE_IRQ_MODE_MSI_X != PCIE_IRQ_MODE_MSI_X");
-status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
+mx_status_t PciDeviceDispatcher::QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs) {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_);
 
     pcie_irq_mode_caps_t caps;
-    status_t ret = device_->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
-                                                               &caps);
+    mx_status_t ret = device_->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
+                                                        &caps);
 
     *out_max_irqs = (ret == MX_OK) ? caps.max_irqs : 0;
     return ret;
 }
 
-status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
+mx_status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -206,7 +206,7 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
     if (mode == MX_PCIE_IRQ_MODE_DISABLED)
         requested_irq_count = 0;
 
-    status_t ret;
+    mx_status_t ret;
     ret = device_->SetIrqMode(static_cast<pcie_irq_mode_t>(mode), requested_irq_count);
     if (ret == MX_OK) {
         pcie_irq_mode_caps_t caps;

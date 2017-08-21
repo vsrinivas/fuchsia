@@ -10,19 +10,21 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/mutex.h>
 
 class LogDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
+    static mx_status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
 
     ~LogDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_LOG; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
 
-    status_t Write(uint32_t flags, const void* ptr, size_t len);
-    status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
+    mx_status_t Write(uint32_t flags, const void* ptr, size_t len);
+    mx_status_t Read(uint32_t flags, void* ptr, size_t len, size_t* actual);
 
 private:
     explicit LogDispatcher(uint32_t flags);

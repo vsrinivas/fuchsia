@@ -42,10 +42,10 @@ using mxtl::AutoLock;
 #define LOCAL_TRACE 0
 
 // static
-status_t ThreadDispatcher::Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
-                                  mxtl::StringPiece name,
-                                  mxtl::RefPtr<Dispatcher>* out_dispatcher,
-                                  mx_rights_t* out_rights) {
+mx_status_t ThreadDispatcher::Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+                                     mxtl::StringPiece name,
+                                     mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                                     mx_rights_t* out_rights) {
     mxtl::AllocChecker ac;
     auto disp = mxtl::AdoptRef(new (&ac) ThreadDispatcher(mxtl::move(process), flags));
     if (!ac.check())
@@ -114,9 +114,9 @@ void ThreadDispatcher::on_zero_handles() {
 
 namespace {
 
-status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
-                        mxtl::RefPtr<VmMapping>* out_kstack_mapping,
-                        mxtl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
+mx_status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
+                           mxtl::RefPtr<VmMapping>* out_kstack_mapping,
+                           mxtl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
     LTRACEF("allocating %s stack\n", unsafe ? "unsafe" : "safe");
 
     // Create a VMO for our stack
@@ -182,7 +182,7 @@ status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
 } // namespace
 
 // complete initialization of the thread object outside of the constructor
-status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
+mx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(&state_lock_);
@@ -247,7 +247,7 @@ status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     return MX_OK;
 }
 
-status_t ThreadDispatcher::set_name(const char* name, size_t len) {
+mx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     canary_.Assert();
 
     if (len >= MX_MAX_NAME_LEN)
@@ -267,9 +267,9 @@ void ThreadDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
 }
 
 // start a thread
-status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
-                           uintptr_t arg1, uintptr_t arg2,
-                           bool initial_thread) {
+mx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
+                                    uintptr_t arg1, uintptr_t arg2,
+                                    bool initial_thread) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -361,7 +361,7 @@ void ThreadDispatcher::Kill() {
     }
 }
 
-status_t ThreadDispatcher::Suspend() {
+mx_status_t ThreadDispatcher::Suspend() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -376,7 +376,7 @@ status_t ThreadDispatcher::Suspend() {
     return thread_suspend(&thread_);
 }
 
-status_t ThreadDispatcher::Resume() {
+mx_status_t ThreadDispatcher::Resume() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -574,7 +574,7 @@ void ThreadDispatcher::SetStateLocked(State state) {
     state_ = state;
 }
 
-status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+mx_status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
@@ -640,7 +640,7 @@ mxtl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     return exception_port_;
 }
 
-status_t ThreadDispatcher::ExceptionHandlerExchange(
+mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         mxtl::RefPtr<ExceptionPort> eport,
         const mx_exception_report_t* report,
         const arch_exception_context_t* arch_context,
@@ -659,7 +659,7 @@ status_t ThreadDispatcher::ExceptionHandlerExchange(
         // locking state_lock_ in places where the handler can see/modify
         // thread state.
 
-        status_t status = eport->SendPacket(this, report->header.type);
+        mx_status_t status = eport->SendPacket(this, report->header.type);
         if (status != MX_OK) {
             LTRACEF("SendPacket returned %d\n", status);
             // Treat the exception as unhandled.
@@ -685,7 +685,7 @@ status_t ThreadDispatcher::ExceptionHandlerExchange(
     // exception response is received (requiring a second resume).
     // Exceptions and suspensions are essentially treated orthogonally.
 
-    status_t status;
+    mx_status_t status;
     do {
         status = event_wait_deadline(&exception_event_, INFINITE_TIME, true);
     } while (status == MX_ERR_INTERNAL_INTR_RETRY);
@@ -725,7 +725,7 @@ status_t ThreadDispatcher::ExceptionHandlerExchange(
     return status;
 }
 
-status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
+mx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     canary_.Assert();
 
     LTRACEF("obj %p, estatus %d\n", this, static_cast<int>(estatus));
@@ -890,7 +890,7 @@ mx_status_t ThreadDispatcher::GetStatsForUserspace(mx_info_thread_stats_t* info)
     return MX_OK;
 }
 
-status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
+mx_status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -908,7 +908,7 @@ uint32_t ThreadDispatcher::get_num_state_kinds() const {
 
 // Note: buffer must be sufficiently aligned
 
-status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
+mx_status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -931,7 +931,7 @@ status_t ThreadDispatcher::ReadState(uint32_t state_kind, void* buffer, uint32_t
 
 // Note: buffer must be sufficiently aligned
 
-status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len) {
+mx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;

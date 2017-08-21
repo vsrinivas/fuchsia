@@ -25,15 +25,15 @@ class ChannelDispatcher final : public Dispatcher {
 public:
     class MessageWaiter;
 
-    static status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
-                           mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
+    static mx_status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
+                              mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
 
     ~ChannelDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_CHANNEL; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     mx_status_t add_observer(StateObserver* observer) final;
     mx_koid_t get_related_koid() const final TA_REQ(lock_) { return other_koid_; }
-    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
+    mx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
     void on_zero_handles() final;
 
@@ -42,21 +42,21 @@ public:
     // size and handle count, respectively. On MX_OK or MX_ERR_BUFFER_TOO_SMALL, they specify the
     // actual size and handle count of the next message. The next message is returned in |*msg| on
     // MX_OK and also on MX_ERR_BUFFER_TOO_SMALL when |may_discard| is set.
-    status_t Read(uint32_t* msg_size,
-                  uint32_t* msg_handle_count,
-                  mxtl::unique_ptr<MessagePacket>* msg,
-                  bool may_disard);
+    mx_status_t Read(uint32_t* msg_size,
+                     uint32_t* msg_handle_count,
+                     mxtl::unique_ptr<MessagePacket>* msg,
+                     bool may_disard);
 
     // Write to the opposing endpoint's message queue.
-    status_t Write(mxtl::unique_ptr<MessagePacket> msg);
-    status_t Call(mxtl::unique_ptr<MessagePacket> msg,
-                  mx_time_t deadline, bool* return_handles,
-                  mxtl::unique_ptr<MessagePacket>* reply);
+    mx_status_t Write(mxtl::unique_ptr<MessagePacket> msg);
+    mx_status_t Call(mxtl::unique_ptr<MessagePacket> msg,
+                     mx_time_t deadline, bool* return_handles,
+                     mxtl::unique_ptr<MessagePacket>* reply);
 
     // Performs the wait-then-read half of Call.  This is meant for retrying
     // after an interruption caused by suspending.
-    status_t ResumeInterruptedCall(MessageWaiter* waiter, mx_time_t deadline,
-                                   mxtl::unique_ptr<MessagePacket>* reply);
+    mx_status_t ResumeInterruptedCall(MessageWaiter* waiter, mx_time_t deadline,
+                                      mxtl::unique_ptr<MessagePacket>* reply);
 
     // MessageWaiter's state is guarded by the lock of the
     // owning ChannelDispatcher, and Deliver(), Signal(), Cancel(),
@@ -77,7 +77,7 @@ public:
 
         mx_status_t BeginWait(mxtl::RefPtr<ChannelDispatcher> channel, mx_txid_t txid);
         int Deliver(mxtl::unique_ptr<MessagePacket> msg);
-        int Cancel(status_t status);
+        int Cancel(mx_status_t status);
         mxtl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         mx_txid_t get_txid() const { return txid_; }
         mx_status_t Wait(lk_time_t deadline);
@@ -103,7 +103,7 @@ private:
     ChannelDispatcher();
     void Init(mxtl::RefPtr<ChannelDispatcher> other);
     int WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
-    status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
+    mx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     void OnPeerZeroHandles();
 
     mxtl::Canary<mxtl::magic("CHAN")> canary_;

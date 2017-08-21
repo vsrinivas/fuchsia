@@ -73,7 +73,7 @@ public:
         return root;
     }
 
-    status_t Swizzle(uint dev_id, uint func_id, uint pin, uint* irq) override {
+    mx_status_t Swizzle(uint dev_id, uint func_id, uint pin, uint* irq) override {
         if ((irq == nullptr) ||
             (dev_id >= mxtl::count_of(lut_)) ||
             (func_id >= mxtl::count_of(lut_[dev_id])) ||
@@ -184,7 +184,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
             pol = IRQ_POLARITY_ACTIVE_HIGH;
         }
 
-        status_t status = configure_interrupt(irq, tm, pol);
+        mx_status_t status = configure_interrupt(irq, tm, pol);
         if (status != MX_OK) {
             return status;
         }
@@ -307,7 +307,7 @@ mx_status_t sys_pci_get_nth_device(mx_handle_t hrsrc,
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_pcie_device_info_t info;
-    status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
+    mx_status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
     if (result != MX_OK) {
         return result;
     }
@@ -635,7 +635,7 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
 
     mxtl::RefPtr<Dispatcher> interrupt_dispatcher;
     mx_rights_t rights;
-    status_t result = pci_device->MapInterrupt(which_irq, &interrupt_dispatcher, &rights);
+    mx_status_t result = pci_device->MapInterrupt(which_irq, &interrupt_dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
@@ -671,7 +671,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
         return status;
 
     uint32_t max_irqs;
-    status_t result = pci_device->QueryIrqModeCaps((mx_pci_irq_mode_t)mode, &max_irqs);
+    mx_status_t result = pci_device->QueryIrqModeCaps((mx_pci_irq_mode_t)mode, &max_irqs);
     if (result != MX_OK)
         return result;
 

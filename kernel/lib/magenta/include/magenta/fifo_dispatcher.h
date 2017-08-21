@@ -21,10 +21,10 @@ typedef mx_status_t (*fifo_copy_to_fn_t)(uint8_t* ptr, const uint8_t* data, size
 
 class FifoDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t elem_count, uint32_t elem_size, uint32_t options,
-                           mxtl::RefPtr<Dispatcher>* dispatcher0,
-                           mxtl::RefPtr<Dispatcher>* dispatcher1,
-                           mx_rights_t* rights);
+    static mx_status_t Create(uint32_t elem_count, uint32_t elem_size, uint32_t options,
+                              mxtl::RefPtr<Dispatcher>* dispatcher0,
+                              mxtl::RefPtr<Dispatcher>* dispatcher1,
+                              mx_rights_t* rights);
 
     ~FifoDispatcher() final;
 
@@ -32,7 +32,7 @@ public:
     mx_koid_t get_related_koid() const final { return peer_koid_; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
+    mx_status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
 
     mx_status_t Write(const uint8_t* src, size_t len, uint32_t* actual);
     mx_status_t Read(uint8_t* dst, size_t len, uint32_t* actual);

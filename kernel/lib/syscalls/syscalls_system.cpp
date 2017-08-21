@@ -39,7 +39,7 @@ __END_CDECLS
 /* Allocates a page of memory that has the same physical and virtual addressresses.
  */
 static mx_status_t identity_page_allocate(void** result_addr) {
-    status_t result;
+    mx_status_t result;
 
     // Start by obtaining an unused physical page. This address will eventually
     // be the physical/virtual address of our identity mapped page.
@@ -161,9 +161,9 @@ static inline bool intervals_intersect(const void* start1, const size_t len1,
 
 /* Takes a buffer to a bootimage and appends a section to the end of it */
 mx_status_t bootdata_append_section(uint8_t* bootdata_buf, const size_t buflen,
-                                       const uint8_t* section, const uint32_t section_length,
-                                       const uint32_t type, const uint32_t extra,
-                                       const uint32_t flags) {
+                                    const uint8_t* section, const uint32_t section_length,
+                                    const uint32_t type, const uint32_t extra,
+                                    const uint32_t flags) {
     bootdata_t* hdr = (bootdata_t*)bootdata_buf;
 
     if ((hdr->type != BOOTDATA_CONTAINER) ||

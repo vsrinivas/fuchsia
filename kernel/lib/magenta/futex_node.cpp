@@ -151,7 +151,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // This blocks the current thread.  This releases the given mutex (which
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
-status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
+mx_status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
     THREAD_LOCK(state);
 
     // We specifically want reschedule=false here, otherwise the
@@ -163,7 +163,7 @@ status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO_TH
     // check+wait must be done atomically (with respect to THREAD_LOCK),
     // otherwise we could miss a thread termination.
     thread_t* current_thread = get_current_thread();
-    status_t result;
+    mx_status_t result;
     current_thread->interruptable = true;
     result = wait_queue_block(&wait_queue_, deadline);
     current_thread->interruptable = false;

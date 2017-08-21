@@ -12,6 +12,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/mutex.h>
 
@@ -19,9 +20,9 @@
 
 class TimerDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t options,
-                           mxtl::RefPtr<Dispatcher>* dispatcher,
-                           mx_rights_t* rights);
+    static mx_status_t Create(uint32_t options,
+                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              mx_rights_t* rights);
 
     ~TimerDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_TIMER; }

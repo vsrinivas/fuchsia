@@ -14,8 +14,8 @@
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 
-status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
-                               mx_rights_t* rights) {
+mx_status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
+                                  mx_rights_t* rights) {
     mxtl::AllocChecker ac;
     auto disp = new (&ac) LogDispatcher(flags);
     if (!ac.check()) return MX_ERR_NO_MEMORY;
@@ -52,13 +52,13 @@ void LogDispatcher::Notify(void* cookie) {
     log->Signal();
 }
 
-status_t LogDispatcher::Write(uint32_t flags, const void* ptr, size_t len) {
+mx_status_t LogDispatcher::Write(uint32_t flags, const void* ptr, size_t len) {
     canary_.Assert();
 
     return dlog_write(flags_, ptr, len);
 }
 
-status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actual) {
+mx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actual) {
     canary_.Assert();
 
     if (!(flags_ & MX_LOG_FLAG_READABLE))

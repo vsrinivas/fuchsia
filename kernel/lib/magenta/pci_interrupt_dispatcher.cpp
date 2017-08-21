@@ -16,7 +16,7 @@
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     if (device_) {
         // Unregister our handler.
-        __UNUSED status_t ret;
+        __UNUSED mx_status_t ret;
         ret = device_->RegisterIrqHandler(irq_id_, nullptr, nullptr);
         DEBUG_ASSERT(ret == MX_OK);  // This should never fail.
 
@@ -40,7 +40,7 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
     }
 }
 
-status_t PciInterruptDispatcher::Create(
+mx_status_t PciInterruptDispatcher::Create(
         const mxtl::RefPtr<PcieDevice>& device,
         uint32_t irq_id,
         bool maskable,
@@ -62,7 +62,7 @@ status_t PciInterruptDispatcher::Create(
     // created, then attempt to register our dispatcher with the bus driver.
     DEBUG_ASSERT(device);
     interrupt_dispatcher->device_ = device;
-    status_t result = device->RegisterIrqHandler(irq_id,
+    mx_status_t result = device->RegisterIrqHandler(irq_id,
                                                            IrqThunk,
                                                            interrupt_dispatcher);
     if (result != MX_OK) {
@@ -81,7 +81,7 @@ status_t PciInterruptDispatcher::Create(
     return MX_OK;
 }
 
-status_t PciInterruptDispatcher::InterruptComplete() {
+mx_status_t PciInterruptDispatcher::InterruptComplete() {
     DEBUG_ASSERT(device_ != nullptr);
     unsignal();
 
@@ -91,7 +91,7 @@ status_t PciInterruptDispatcher::InterruptComplete() {
     return MX_OK;
 }
 
-status_t PciInterruptDispatcher::UserSignal() {
+mx_status_t PciInterruptDispatcher::UserSignal() {
     DEBUG_ASSERT(device_ != nullptr);
 
     if (maskable_)

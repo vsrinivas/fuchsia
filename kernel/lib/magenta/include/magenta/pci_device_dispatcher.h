@@ -13,6 +13,7 @@
 #include <kernel/vm/vm_aspace.h>
 #include <magenta/dispatcher.h>
 #include <magenta/syscalls/pci.h>
+#include <magenta/types.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/mutex.h>
@@ -24,10 +25,10 @@ class PciInterruptDispatcher;
 
 class PciDeviceDispatcher final : public Dispatcher {
 public:
-    static status_t Create(uint32_t index,
-                           mx_pcie_device_info_t*    out_info,
-                           mxtl::RefPtr<Dispatcher>* out_dispatcher,
-                           mx_rights_t* out_rights);
+    static mx_status_t Create(uint32_t index,
+                              mx_pcie_device_info_t*    out_info,
+                              mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                              mx_rights_t* out_rights);
 
     ~PciDeviceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PCI_DEVICE; }
@@ -37,17 +38,17 @@ public:
 
     // TODO(cja): revisit Enable____ methods to be automatic when vmos are handed
     // out so there is less of a dispatcher surface to worry about.
-    status_t EnableBusMaster(bool enable);
-    status_t EnableMmio(bool enable);
-    status_t EnablePio(bool enable);
+    mx_status_t EnableBusMaster(bool enable);
+    mx_status_t EnableMmio(bool enable);
+    mx_status_t EnablePio(bool enable);
     const pcie_bar_info_t* GetBar(uint32_t bar_num);
-    status_t GetConfig(pci_config_info_t* out);
-    status_t ResetDevice();
-    status_t MapInterrupt(int32_t which_irq,
-                          mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
-                          mx_rights_t* rights);
-    status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
-    status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
+    mx_status_t GetConfig(pci_config_info_t* out);
+    mx_status_t ResetDevice();
+    mx_status_t MapInterrupt(int32_t which_irq,
+                             mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
+                             mx_rights_t* rights);
+    mx_status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
+    mx_status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
 
     bool irqs_maskable() const TA_REQ(lock_) { return irqs_maskable_; }
 

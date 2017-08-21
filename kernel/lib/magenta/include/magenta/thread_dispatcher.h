@@ -21,6 +21,7 @@
 #include <magenta/futex_node.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/exception.h>
+#include <magenta/types.h>
 
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -80,10 +81,10 @@ public:
         RESUME,
     };
 
-    static status_t Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
-                           mxtl::StringPiece name,
-                           mxtl::RefPtr<Dispatcher>* out_dispatcher,
-                           mx_rights_t* out_rights);
+    static mx_status_t Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+                              mxtl::StringPiece name,
+                              mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                              mx_rights_t* out_rights);
     ~ThreadDispatcher();
 
     static ThreadDispatcher* GetCurrent() {
@@ -98,24 +99,24 @@ public:
 
     // Performs initialization on a newly constructed ThreadDispatcher
     // If this fails, then the object is invalid and should be deleted
-    status_t Initialize(const char* name, size_t len);
-    status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
-                   bool initial_thread);
+    mx_status_t Initialize(const char* name, size_t len);
+    mx_status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
+                      bool initial_thread);
     void Exit() __NO_RETURN;
     void Kill();
 
-    status_t Suspend();
-    status_t Resume();
+    mx_status_t Suspend();
+    mx_status_t Resume();
 
     // accessors
     ProcessDispatcher* process() { return process_.get(); }
 
     FutexNode* futex_node() { return &futex_node_; }
-    status_t set_name(const char* name, size_t len) final;
+    mx_status_t set_name(const char* name, size_t len) final;
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
 
-    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
+    mx_status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();
@@ -129,12 +130,12 @@ public:
     // MX_OK: the exception was handled in some way, and |*out_estatus|
     // specifies how.
     // MX_ERR_INTERNAL_INTR_KILLED: the thread was killed (probably via mx_task_kill)
-    status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
-                                      const mx_exception_report_t* report,
-                                      const arch_exception_context_t* arch_context,
-                                      ExceptionStatus* out_estatus);
+    mx_status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
+                                         const mx_exception_report_t* report,
+                                         const arch_exception_context_t* arch_context,
+                                         ExceptionStatus* out_estatus);
     // Called when an exception handler is finished processing the exception.
-    status_t MarkExceptionHandled(ExceptionStatus estatus);
+    mx_status_t MarkExceptionHandled(ExceptionStatus estatus);
     // Called when exception port |eport| is removed.
     // If the thread is waiting for the associated exception handler, continue
     // exception processing as if the exception port had not been installed.
@@ -145,7 +146,7 @@ public:
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns MX_ERR_BAD_STATE if not in an exception.
-    status_t GetExceptionReport(mx_exception_report_t* report);
+    mx_status_t GetExceptionReport(mx_exception_report_t* report);
 
     // Fetch the state of the thread for userspace tools.
     mx_status_t GetInfoForUserspace(mx_info_thread_t* info);
@@ -157,8 +158,8 @@ public:
     // TODO(dje): The term "state" here conflicts with "state tracker".
     uint32_t get_num_state_kinds() const;
     // TODO(dje): Consider passing an Array<uint8_t> here and in WriteState.
-    status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
-    status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len);
+    mx_status_t ReadState(uint32_t state_kind, void* buffer, uint32_t* buffer_len);
+    mx_status_t WriteState(uint32_t state_kind, const void* buffer, uint32_t buffer_len);
 
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
