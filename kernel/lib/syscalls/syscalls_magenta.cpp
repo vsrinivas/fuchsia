@@ -206,8 +206,7 @@ mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const v
         return status;
 
     char buf[DLOG_MAX_RECORD];
-    // TODO(andymutton): Change to use a user_ptr copy.
-    if (magenta_copy_from_user(_ptr.get(), buf, len) != MX_OK)
+    if (_ptr.reinterpret<const char>().copy_array_from_user(buf, len) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
     return log->Write(options, buf, len);
