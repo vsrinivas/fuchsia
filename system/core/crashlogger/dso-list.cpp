@@ -66,7 +66,12 @@ dsoinfo_t* dso_fetch_list(mx_handle_t h, const char* name) {
         return nullptr;
     }
     dsoinfo_t* dsolist = nullptr;
+    int iter = 0;
     while (lmap != 0) {
+        if (iter++ > 50) {
+            print_error("dso_fetch_list detected too many entries, possible infinite loop");
+            return nullptr;
+        }
         char dsoname[64];
         mx_vaddr_t base;
         uintptr_t next;
