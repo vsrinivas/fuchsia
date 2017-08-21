@@ -157,7 +157,7 @@ void MsdIntelDevice::Destroy()
     interrupt_thread_quit_flag_ = true;
 
     if (interrupt_)
-        interrupt_->Close();
+        interrupt_->Signal();
 
     if (interrupt_thread_.joinable()) {
         DLOG("joining interrupt thread");
@@ -345,7 +345,7 @@ int MsdIntelDevice::InterruptThreadLoop()
     magma::PlatformThreadHelper::SetCurrentThreadName("InterruptThread");
     DLOG("Interrupt thread started");
 
-    while (true) {
+    while (!interrupt_thread_quit_flag_) {
         DLOG("waiting for interrupt");
         interrupt_->Wait();
         DLOG("Returned from interrupt wait!");
