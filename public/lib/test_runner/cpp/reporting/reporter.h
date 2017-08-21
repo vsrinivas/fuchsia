@@ -62,7 +62,8 @@ class Reporter : public mtl::MessageLoopHandler {
   ResultsQueue* queue_;
   TestRunnerPtr test_runner_;
   NullTestRunner null_test_runner_;
-  bool connected_{};
+  bool connected_ = false;
+  bool stopped_ = false;
 };
 
 }  // namespace test_runner

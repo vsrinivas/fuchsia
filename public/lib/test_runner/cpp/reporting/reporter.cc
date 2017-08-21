@@ -57,6 +57,8 @@ void Reporter::Start(app::ApplicationContext* context) {
     test_runner_ = context
         ->ConnectToEnvironmentService<test_runner::TestRunner>();
     test_runner_.set_connection_error_handler([this]() {
+      if (stopped_)
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
       test_runner_ = nullptr;
     });
   }
@@ -68,6 +70,7 @@ void Reporter::Start(app::ApplicationContext* context) {
 }
 
 void Reporter::Stop() {
+  stopped_ = true;
   test_runner()->Teardown([] {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   });
