@@ -51,12 +51,12 @@
     pop_reg %r12
 .endm
 
-# status_t _x86_copy_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
-FUNCTION(_x86_copy_from_user)
+# status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
+FUNCTION(_x86_copy_to_or_from_user)
     begin_usercopy
 
     # Setup page fault return
-    movq $.Lfault_copy_from, (%r15)
+    movq $.Lfault_copy, (%r15)
 
     # Between now and the reset of the fault return, we cannot make a function
     # call or manipulate the stack.  We need to be able to restore all callee
@@ -71,46 +71,14 @@ FUNCTION(_x86_copy_from_user)
     rep movsb
 
     mov $MX_OK, %rax
-    jmp .Lcleanup_copy_from
+    jmp .Lcleanup_copy
 
-.Lfault_copy_from:
+.Lfault_copy:
     mov $MX_ERR_INVALID_ARGS, %rax
-.Lcleanup_copy_from:
+.Lcleanup_copy:
     # Reset fault return
     movq $0, (%r15)
 
     end_usercopy
     ret
-END_FUNCTION(_x86_copy_from_user)
-
-# status_t _x86_copy_to_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
-FUNCTION(_x86_copy_to_user)
-    begin_usercopy
-
-    # Setup page fault return
-    movq $.Lfault_copy_to, (%r15)
-
-    # Between now and the reset of the fault return, we cannot make a function
-    # call or manipulate the stack.  We need to be able to restore all callee
-    # registers, without any knowledge of where between these two points we
-    # faulted.
-
-    # Perform the actual copy
-    cld
-    mov %r12, %rdi
-    mov %r13, %rsi
-    mov %r14, %rcx
-    rep movsb
-
-    mov $MX_OK, %rax
-    jmp .Lcleanup_copy_to
-
-.Lfault_copy_to:
-    mov $MX_ERR_INVALID_ARGS, %rax
-.Lcleanup_copy_to:
-    # Reset fault return
-    movq $0, (%r15)
-
-    end_usercopy
-    ret
-END_FUNCTION(_x86_copy_to_user)
+END_FUNCTION(_x86_copy_to_or_from_user)
