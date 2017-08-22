@@ -15,6 +15,7 @@ usage() {
     echo ""
     echo "    -m magenta.bin            Magenta kernel."
     echo "    -b bootdata.bin           Magenta bootdata."
+    echo "    -g magenta.gpt            Magenta GPT disk image."
     echo "    -l bzImage                Linux kernel."
     echo "    -i initrd                 Linux initrd."
     echo "    -r rootfs.ext2            Linux EXT2 root filesystem image."
@@ -24,14 +25,16 @@ usage() {
 
 declare MAGENTA="$BUILDDIR/magenta.bin"
 declare BOOTDATA="$BUILDDIR/bootdata.bin"
+declare MAGENTA_DISK="$BUILDDIR/magenta.gpt"
 declare BZIMAGE="/tmp/linux/arch/x86/boot/bzImage"
 declare INITRD="/tmp/toybox/initrd.gz"
 declare ROOTFS="/tmp/toybox/rootfs.ext2"
 
-while getopts "m:b:l:i:r:" opt; do
+while getopts "m:b:l:i:r:g:" opt; do
   case "${opt}" in
     m) MAGENTA="${OPTARG}" ;;
     b) BOOTDATA="${OPTARG}" ;;
+    g) MAGENTA_DISK="${OPTARG}" ;;
     l) BZIMAGE="${OPTARG}" ;;
     i) INITRD="${OPTARG}" ;;
     r) ROOTFS="${OPTARG}" ;;
@@ -39,7 +42,7 @@ while getopts "m:b:l:i:r:" opt; do
   esac
 done
 
-readonly MAGENTA BOOTDATA BZIMAGE INITRD ROOTFS
+readonly MAGENTA BOOTDATA MAGENTA_DISK BZIMAGE INITRD ROOTFS
 
 echo "
 data/dsdt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/dsdt.aml
@@ -47,6 +50,10 @@ data/madt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/madt.aml
 data/mcfg.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/mcfg.aml
 data/magenta.bin=$MAGENTA
 data/bootdata.bin=$BOOTDATA" > /tmp/guest.manifest
+
+if [ -f "$MAGENTA_DISK" ]; then
+    echo "data/magenta.gpt=$MAGENTA_DISK" >> /tmp/guest.manifest
+fi
 
 if [ -f "$BZIMAGE" ]; then
     echo "data/bzImage=$BZIMAGE" >> /tmp/guest.manifest

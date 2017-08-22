@@ -19,6 +19,9 @@ scripts/build-magenta-x86-64
 system/uapp/guest/scripts/mklinux.sh
 system/uapp/guest/scripts/mktoybox.sh -ri
 
+# Build a GPT disk image for Magenta guests.
+system/uapp/guest/scripts/mkgpt.sh
+
 system/uapp/guest/scripts/mkbootfs.sh
 build-magenta-pc-x86-64/tools/bootserver \
     build-magenta-pc-x86-64/magenta.bin \
@@ -29,6 +32,14 @@ After netbooting the target device, to run Magenta:
 
 ```
 /boot/bin/guest -r /boot/data/bootdata.bin /boot/data/magenta.bin
+```
+To run Magenta using a system partition image:
+
+```
+/boot/bin/guest -b /boot/data/magenta.gpt \
+                -c 'magenta.autorun.system=/system/bin/guest-autorun' \
+                -r /boot/data/bootdata.bin \
+                /boot/data/magenta.bin
 ```
 
 To run Linux using an initrd:
