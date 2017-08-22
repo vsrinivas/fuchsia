@@ -232,8 +232,8 @@ static mx_status_t mmc_decode_csd(sdmmc_t* sdmmc, const uint8_t* raw_csd) {
 
     // Only support high capacity (> 2GB) cards
     uint16_t c_size = ((raw_csd[6] >> 6) & 0x3) |
-                      (raw_csd[7] << 6) |
-                      (raw_csd[8] & 0x3);
+                      (raw_csd[7] << 2) |
+                      ((raw_csd[8] & 0x3) << 10);
     if (c_size != 0xfff) {
         xprintf("sdmmc: unsupported C_SIZE 0x%04x\n", c_size);
         return MX_ERR_NOT_SUPPORTED;
