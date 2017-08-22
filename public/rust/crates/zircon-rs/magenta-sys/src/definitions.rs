@@ -482,6 +482,8 @@ extern {
         prot_flags: u32
         ) -> mx_status_t;
 
+    pub fn mx_vmar_root_self() -> mx_handle_t;
+
     pub fn mx_cprng_draw(
         buffer: *mut u8,
         len: usize,

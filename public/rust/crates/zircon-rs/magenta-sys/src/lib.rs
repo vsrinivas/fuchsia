@@ -205,6 +205,24 @@ pub const MX_VMO_OP_CACHE_CLEAN_INVALIDATE: u32 = 9;
 // VM Object clone flags
 pub const MX_VMO_CLONE_COPY_ON_WRITE: u32 = 1;
 
+// Mapping flags to vmar routines
+bitflags! {
+    #[repr(C)]
+    pub flags mx_vmar_flags_t: u32 {
+    // flags to vmar routines
+        const MX_VM_FLAG_PERM_READ          = 1  << 0,
+        const MX_VM_FLAG_PERM_WRITE         = 1  << 1,
+        const MX_VM_FLAG_PERM_EXECUTE       = 1  << 2,
+        const MX_VM_FLAG_COMPACT            = 1  << 3,
+        const MX_VM_FLAG_SPECIFIC           = 1  << 4,
+        const MX_VM_FLAG_SPECIFIC_OVERWRITE = 1  << 5,
+        const MX_VM_FLAG_CAN_MAP_SPECIFIC   = 1  << 6,
+        const MX_VM_FLAG_CAN_MAP_READ       = 1  << 7,
+        const MX_VM_FLAG_CAN_MAP_WRITE      = 1  << 8,
+        const MX_VM_FLAG_CAN_MAP_EXECUTE    = 1  << 9,
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum mx_cache_policy_t {
