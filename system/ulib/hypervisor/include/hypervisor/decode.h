@@ -87,15 +87,16 @@ DEFINE_INST_RW(16);
 // Returns the flags that are assigned to the x86 flags register by an
 // 8-bit TEST instruction for the given two operand values.
 static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
-    uint16_t flags;
+    // TEST cannot set the overflow flag (bit 11).
+    uint16_t ax_reg;
     __asm__ volatile(
         "testb %[i1], %[i2];"
-        "pushfw;"
-        "popw %[flags];"
-        : [flags] "=r"(flags)
+        "lahf" // Copies flags into the %ah register
+        : "=a"(ax_reg)
         : [i1] "r"(value1), [i2] "r"(value2)
         : "cc");
-    return flags & X86_FLAGS_STATUS;
+    // Extract the value of the %ah register from the %ax register.
+    return ax_reg >> 8;
 }
 #endif
 
