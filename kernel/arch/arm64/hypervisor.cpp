@@ -12,7 +12,7 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 }
 
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<PortDispatcher> port) {
+                             mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
     return MX_ERR_NOT_SUPPORTED;
 }
 

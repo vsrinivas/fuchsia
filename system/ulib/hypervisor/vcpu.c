@@ -339,7 +339,7 @@ mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_
         goto mem_cleanup;
     }
 
-    status = mx_guest_set_trap(guest, kind, addr, len, device->port);
+    status = mx_guest_set_trap(guest, kind, addr, len, device->port, 0);
     if (status != MX_OK) {
         fprintf(stderr, "Failed to set trap for device port %d\n", status);
         goto cleanup;

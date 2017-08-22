@@ -51,7 +51,7 @@ private:
 /* Specifies an address range to associate with a port. */
 class PortRange : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<PortRange>> {
 public:
-    PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port);
+    PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port, uint64_t key);
     virtual ~PortRange() {};
 
     mx_status_t Init();
@@ -64,13 +64,15 @@ private:
     const mx_vaddr_t addr_;
     const size_t len_;
     const mxtl::RefPtr<PortDispatcher> port_;
+    const uint64_t key_; // Key for packets in this port range.
     BlockingPortAllocator port_allocator_;
 };
 
 /* Demultiplexes packets onto ports. */
 class PacketMux {
 public:
-    mx_status_t AddPortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port);
+    mx_status_t AddPortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port,
+                             uint64_t key);
     mx_status_t Queue(mx_vaddr_t addr, const mx_port_packet_t& packet,
                       StateReloader* reloader);
 

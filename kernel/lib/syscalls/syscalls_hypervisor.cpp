@@ -49,7 +49,7 @@ mx_status_t sys_guest_create(mx_handle_t resource, uint32_t options, mx_handle_t
 }
 
 mx_status_t sys_guest_set_trap(mx_handle_t guest_handle, uint32_t kind, mx_vaddr_t addr, size_t len,
-                               mx_handle_t port_handle) {
+                               mx_handle_t port_handle, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<GuestDispatcher> guest;
@@ -64,7 +64,7 @@ mx_status_t sys_guest_set_trap(mx_handle_t guest_handle, uint32_t kind, mx_vaddr
             return status;
     }
 
-    return guest->SetTrap(kind, addr, len, mxtl::move(port));
+    return guest->SetTrap(kind, addr, len, mxtl::move(port), key);
 }
 
 mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,

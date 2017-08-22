@@ -85,7 +85,7 @@ Guest::~Guest() {
 }
 
 status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                        mxtl::RefPtr<PortDispatcher> port) {
+                        mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
     if (SIZE_MAX - len < addr)
         return MX_ERR_OUT_OF_RANGE;
     switch (kind) {
@@ -96,7 +96,7 @@ status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
     case MX_GUEST_TRAP_IO:
         if (addr + len > UINT16_MAX)
             return MX_ERR_OUT_OF_RANGE;
-        return mux_.AddPortRange(addr, len, mxtl::move(port));
+        return mux_.AddPortRange(addr, len, mxtl::move(port), key);
     default:
         return MX_ERR_INVALID_ARGS;
     }
@@ -111,6 +111,6 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 }
 
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<PortDispatcher> port) {
-    return guest->SetTrap(kind, addr, len, port);
+                             mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
+    return guest->SetTrap(kind, addr, len, port, key);
 }

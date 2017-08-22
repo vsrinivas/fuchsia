@@ -63,8 +63,10 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
         thread_reschedule();
 }
 
-PortRange::PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port)
-    : addr_(addr), len_(len), port_(mxtl::move(port)) {}
+PortRange::PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port, uint64_t key)
+    : addr_(addr), len_(len), port_(mxtl::move(port)), key_(key) {
+    (void) key_;
+}
 
 mx_status_t PortRange::Init() {
     return port_allocator_.Init();
@@ -76,6 +78,7 @@ mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* relo
     if (port_packet == nullptr)
         return MX_ERR_NO_MEMORY;
     port_packet->packet = packet;
+    port_packet->packet.key = key_;
     port_packet->packet.type |= PKT_FLAG_EPHEMERAL;
     mx_status_t status = port_->Queue(port_packet, MX_SIGNAL_NONE, 0);
     if (status != MX_OK)
@@ -87,9 +90,9 @@ mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* relo
 }
 
 mx_status_t PacketMux::AddPortRange(mx_vaddr_t addr, size_t len,
-                                    mxtl::RefPtr<PortDispatcher> port) {
+                                    mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
     mxtl::AllocChecker ac;
-    mxtl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, mxtl::move(port)));
+    mxtl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, mxtl::move(port), key));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
     mx_status_t status = range->Init();

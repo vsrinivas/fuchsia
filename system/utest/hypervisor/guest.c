@@ -212,7 +212,7 @@ static bool guest_set_trap(void) {
 
     // Unmap the last page from the EPT.
     ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_MEM, kVmoSize - PAGE_SIZE, PAGE_SIZE,
-                                MX_HANDLE_INVALID),
+                                MX_HANDLE_INVALID, 0),
               MX_OK, "");
 
     mx_port_packet_t packet = {};

@@ -24,7 +24,7 @@ public:
     Guest* guest() const { return guest_.get(); }
 
     mx_status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                        mxtl::RefPtr<PortDispatcher> port);
+                        mxtl::RefPtr<PortDispatcher> port, uint64_t key);
 
 private:
     mxtl::Canary<mxtl::magic("GSTD")> canary_;

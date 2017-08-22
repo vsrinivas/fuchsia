@@ -56,7 +56,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
     status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                     mxtl::RefPtr<PortDispatcher> port);
+                     mxtl::RefPtr<PortDispatcher> port, uint64_t key);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
     PacketMux& Mux() { return mux_; }
@@ -124,7 +124,7 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
 
 /* Set a trap within a guest. */
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<PortDispatcher> port);
+                             mxtl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Create a VCPU. */
 status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
