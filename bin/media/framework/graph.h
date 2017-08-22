@@ -211,11 +211,6 @@ class Graph {
   // Updates nodes from the update backlog until the backlog is empty.
   void UpdateUntilDone();
 
-  // Executes |function| after having acquired |nodes|. No update or other
-  // task will touch any of the nodes while |function| is executing.
-  void PostTask(const ftl::Closure& function,
-                std::initializer_list<NodeRef> nodes);
-
  private:
   // Adds a stage to the graph.
   NodeRef Add(Stage* stage);

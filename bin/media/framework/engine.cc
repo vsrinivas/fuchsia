@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "apps/media/src/framework/engine.h"
-#include "apps/media/src/framework/task.h"
 
 namespace media {
 
@@ -82,32 +81,6 @@ void Engine::UpdateUntilDone() {
   }
 
   // suppress_update_callbacks_ is set to false when |UpdateOne| returns false.
-}
-
-void Engine::PostTask(const ftl::Closure& function,
-                      std::vector<Stage*> stages) {
-  Task* task;
-
-  {
-    ftl::MutexLocker locker(&tasks_mutex_);
-    // We create the task and add it to |tasks_| with the mutex taken. This
-    // synchronizes access to |tasks_| and ensures that all the
-    // |Stage::AcquireForTask| calls are made exclusive of any other |PostTask|
-    // call. This is required to prevent deadlocks.
-    task = new Task(this, function, std::move(stages));
-    tasks_.emplace(task, std::unique_ptr<Task>(task));
-  }
-
-  // The task is created in 'blocked' state to prevent it from executing with
-  // the |tasks_mutex_| taken. Now that we've released the mutex, we allow the
-  // task to run if it has all its stages.
-  task->Unblock();
-}
-
-void Engine::DeleteTask(Task* task) {
-  ftl::MutexLocker locker(&tasks_mutex_);
-  size_t erased = tasks_.erase(task);
-  FTL_DCHECK(erased == 1);
 }
 
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {

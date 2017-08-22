@@ -5,7 +5,6 @@
 #include "apps/media/src/framework/stages/stage.h"
 
 #include "apps/media/src/framework/engine.h"
-#include "apps/media/src/framework/task.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -22,13 +21,8 @@ void Stage::NeedsUpdate() {
   FTL_DCHECK(engine_);
 
   if (++update_counter_ == 1) {
-    // This stage is not in the update backlog and is not running tasks.
-    Task* task = PeekTask();
-    if (task) {
-      task->StageAcquired();
-    } else {
-      engine_->StageNeedsUpdate(this);
-    }
+    // This stage is not in the update backlog.
+    engine_->StageNeedsUpdate(this);
   } else {
     // This stage was already in the update backlog. Set the counter to 2 so
     // it will never go out of range. We don't set it to 1, because, if we're
@@ -47,56 +41,12 @@ void Stage::UpdateUntilDone() {
 
     Update();
 
-    // If there are pending tasks requiring this stage, allow the first task
-    // to acquire this stage. When this stage has been released for the last
-    // task, it will be updated again.
-    Task* task = PeekTask();
-    if (task) {
-      task->StageAcquired();
-      return;
-    }
-
     // Quit if the counter is still at 1, otherwise update again.
     uint32_t expected = 1;
     if (update_counter_.compare_exchange_strong(expected, 0)) {
       break;
     }
   }
-}
-
-void Stage::AcquireForTask(Task* task) {
-  PushTask(task);
-  NeedsUpdate();
-}
-
-void Stage::ReleaseForTask(Task* task) {
-  FTL_DCHECK(PeekTask() == task);
-
-  PopTask();
-  task = PeekTask();
-
-  if (task) {
-    // We're acquired for the first task in the queue.
-    task->StageAcquired();
-  } else {
-    // No more tasks. Update the stage.
-    NeedsUpdate();
-  }
-}
-
-void Stage::PushTask(Task* task) {
-  ftl::MutexLocker locker(&tasks_mutex_);
-  tasks_.push(task);
-}
-
-void Stage::PopTask() {
-  ftl::MutexLocker locker(&tasks_mutex_);
-  tasks_.pop();
-}
-
-Task* Stage::PeekTask() {
-  ftl::MutexLocker locker(&tasks_mutex_);
-  return tasks_.empty() ? nullptr : tasks_.front();
 }
 
 }  // namespace media

@@ -17,7 +17,6 @@
 namespace media {
 
 class Engine;
-class Task;
 
 // Host for a source, sink or transform.
 class Stage {
@@ -81,13 +80,6 @@ class Stage {
   // backlog.
   void UpdateUntilDone();
 
-  // Acquires the stage for the specified task. When the stage is ready for the
-  // task to executed, it calls the task's |StageAcquired| method.
-  void AcquireForTask(Task* task);
-
-  // Releases the stage for the specified task.
-  void ReleaseForTask(Task* task);
-
  protected:
   Engine* engine() { return engine_; }
 
@@ -95,16 +87,6 @@ class Stage {
   virtual void Update() = 0;
 
  private:
-  // Pushes |task| to the pending task queue.
-  void PushTask(Task* task) FTL_LOCKS_EXCLUDED(tasks_mutex_);
-
-  // Pops a task from the pending task queue.
-  void PopTask() FTL_LOCKS_EXCLUDED(tasks_mutex_);
-
-  // Returns the front of the pending task queue or null if the task queue is
-  // empty.
-  Task* PeekTask() FTL_LOCKS_EXCLUDED(tasks_mutex_);
-
   Engine* const engine_;
 
   // Used for ensuring the stage is properly updated. This value is zero
@@ -115,15 +97,6 @@ class Stage {
   // updated again. When an update completes and the counter is still 1, the
   // counter is reset to 0.
   std::atomic_uint32_t update_counter_;
-
-  mutable ftl::Mutex tasks_mutex_;
-  // Pending tasks that want to acquire this stage. Only the task at the front
-  // of this queue can acquire this stage. The task is left on the queue until
-  // the task completes and releases the stage. Although the engine
-  // synchronizes all task registration (calls to |AcquireForTask|), we
-  // otherwise manipulate this collection on arbitrary threads with no other
-  // synchronziation, so the mutex is required.
-  std::queue<Task*> tasks_ FTL_GUARDED_BY(tasks_mutex_);
 
   friend class Engine;
 };

@@ -67,8 +67,6 @@ namespace media {
 // safe so that packets may be cleaned up on any thread.
 //
 
-class Task;
-
 // Manages operation of a Graph.
 class Engine {
  public:
@@ -102,13 +100,6 @@ class Engine {
   // Updates stages from the update backlog until the backlog is empty.
   void UpdateUntilDone();
 
-  // Executes |function| after having acquired |stages|. No update or other
-  // task will touch any of the stages while |function| is executing.
-  void PostTask(const ftl::Closure& function, std::vector<Stage*> stages);
-
-  // Deletes the specified task.
-  void DeleteTask(Task* task);
-
  private:
   using UpstreamVisitor =
       std::function<void(Input* input,
@@ -138,10 +129,6 @@ class Engine {
   mutable ftl::Mutex backlog_mutex_;
   std::queue<Stage*> update_backlog_ FTL_GUARDED_BY(backlog_mutex_);
   bool suppress_update_callbacks_ FTL_GUARDED_BY(backlog_mutex_) = false;
-
-  mutable ftl::Mutex tasks_mutex_;
-  std::unordered_map<Task*, std::unique_ptr<Task>> tasks_
-      FTL_GUARDED_BY(tasks_mutex_);
 };
 
 }  // namespace media

@@ -46,8 +46,6 @@ source_set("framework") {
     "stages/transform_stage.h",
     "stages/util.cc",
     "stages/util.h",
-    "task.cc",
-    "task.h",
     "types/audio_stream_type.cc",
     "types/audio_stream_type.h",
     "types/bytes.cc",
