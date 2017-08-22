@@ -7,13 +7,13 @@
 #include <driver/usb.h>
 #include <magenta/assert.h>
 #include <magenta/hw/usb.h>
+#include <magenta/hw/usb-mass-storage.h>
 
 #include <endian.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "usb-mass-storage.h"
-#include "ums-hw.h"
 
 // comment the next line if you don't want debug messages
 #define DEBUG 0

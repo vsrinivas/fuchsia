@@ -1,4 +1,4 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,8 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/block.c \
-    $(LOCAL_DIR)/usb-mass-storage.c \
+    $(LOCAL_DIR)/ums-function.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 

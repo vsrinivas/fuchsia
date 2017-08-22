@@ -16,8 +16,7 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/device/usb-device.h>
-
-#include "ums-hw.h"
+#include <magenta/hw/usb-mass-storage.h>
 
 #define TRACE 0
 
