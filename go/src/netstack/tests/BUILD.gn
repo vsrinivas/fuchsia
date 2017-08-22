@@ -1,0 +1,73 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+package("netstack_tests") {
+  testonly = true
+
+  deps = [
+    "//apps/netstack/tests/automated:netstack_loopback_test",
+  ]
+
+  tests = [
+    {
+      name = "netstack_loopback_test"
+    },
+  ]
+}
+
+package("netstack_manual_tests") {
+  testonly = true
+
+  deps = [
+    "//apps/netstack/tests/manual:sockettest",
+    "//apps/netstack/tests/manual:closetest",
+    "//apps/netstack/tests/manual:mctest",
+    "//apps/netstack/tests/manual:nbiotest",
+    "//apps/netstack/tests/manual:passfdtest",
+    "//apps/netstack/tests/manual:polltest",
+    "//apps/netstack/tests/manual:selecttest",
+    "//apps/netstack/tests/manual:sockopttest",
+    "//apps/netstack/tests/manual:udptest",
+  ]
+
+  binaries = [
+    {
+      name = "closetest"
+    },
+
+    {
+      name = "mctest"
+    },
+
+    {
+      name = "nbiotest"
+    },
+
+    {
+      name = "passfdtest"
+    },
+
+    {
+      name = "polltest"
+    },
+
+    {
+      name = "selecttest"
+    },
+
+    {
+      name = "sockettest"
+    },
+
+    {
+      name = "sockopttest"
+    },
+
+    {
+      name = "udptest"
+    },
+  ]
+}

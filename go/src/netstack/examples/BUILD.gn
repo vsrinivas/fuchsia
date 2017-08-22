@@ -8,16 +8,6 @@ group("examples") {
   testonly = true
 
   public_deps = [
-    "//apps/netstack/examples/sockettest",
-    "//apps/netstack/examples/sockettest:closetest",
-    "//apps/netstack/examples/sockettest:netstack_loopback_test",
-    "//apps/netstack/examples/sockettest:mctest",
-    "//apps/netstack/examples/sockettest:nbiotest",
-    "//apps/netstack/examples/sockettest:passfdtest",
-    "//apps/netstack/examples/sockettest:polltest",
-    "//apps/netstack/examples/sockettest:selecttest",
-    "//apps/netstack/examples/sockettest:sockopttest",
-    "//apps/netstack/examples/sockettest:udptest",
     "//apps/netstack/examples/third_party/asio:async_client",
     "//apps/netstack/examples/third_party/asio:async_https",
   ]
@@ -33,52 +23,3 @@ package("netstack_examples") {
       } ]
 }
 
-package("netstack_tests") {
-  testonly = true
-
-  deps = [
-    ":examples",
-  ]
-
-  binaries = [
-    {
-      name = "closetest"
-    },
-
-    {
-      name = "netstack_loopback_test"
-    },
-
-    {
-      name = "mctest"
-    },
-
-    {
-      name = "nbiotest"
-    },
-
-    {
-      name = "passfdtest"
-    },
-
-    {
-      name = "polltest"
-    },
-
-    {
-      name = "selecttest"
-    },
-
-    {
-      name = "sockettest"
-    },
-
-    {
-      name = "sockopttest"
-    },
-
-    {
-      name = "udptest"
-    },
-  ]
-}

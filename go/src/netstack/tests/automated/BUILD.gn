@@ -1,0 +1,18 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("netstack_loopback_test") {
+  testonly = true
+
+  sources = [
+    "loopbacktest.cc",
+  ]
+
+  deps = [
+    "//apps/test_runner/src:gtest_main",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}

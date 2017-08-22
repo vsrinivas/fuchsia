@@ -120,18 +120,3 @@ executable("passfdtest") {
     "launchpad",
   ]
 }
-
-executable("netstack_loopback_test") {
-  testonly = true
-
-  sources = [
-    "loopbacktest.cc",
-  ]
-
-  deps = [
-    "//apps/test_runner/src:gtest_main",
-    "//lib/ftl",
-    "//lib/mtl",
-    "//third_party/gtest",
-  ]
-}
