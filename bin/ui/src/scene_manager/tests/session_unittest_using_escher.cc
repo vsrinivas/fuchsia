@@ -8,10 +8,8 @@
 #include "apps/mozart/src/scene_manager/tests/session_test.h"
 #include "apps/test_runner/lib/reporting/gtest_listener.h"
 #include "apps/test_runner/lib/reporting/reporter.h"
-#include "apps/test_runner/lib/reporting/results_queue.h"
 #include "escher/examples/common/demo_harness.h"
 #include "gtest/gtest.h"
-#include "lib/mtl/threading/thread.h"
 
 std::unique_ptr<scene_manager::test::EscherTestEnvironment> g_escher_env;
 
@@ -22,24 +20,17 @@ int main(int argc, char** argv) {
   g_escher_env->SetUp(argv[0]);
 
   // TestRunner setup. Copied from //apps/test_runner/src/gtest_main.cc.
-  mtl::Thread reporting_thread;
+  test_runner::Reporter reporter(argv[0]);
+  test_runner::GTestListener listener(argv[0], &reporter);
 
-  test_runner::ResultsQueue queue;
-  test_runner::Reporter reporter(argv[0], &queue);
-  test_runner::GTestListener listener(argv[0], &queue);
-
-  reporting_thread.Run();
-  reporting_thread.TaskRunner()->PostTask([&reporter] {
-    auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
-    reporter.Start(context.get());
-  });
+  auto context = app::ApplicationContext::CreateFromStartupInfoNotChecked();
+  reporter.Start(context.get());
 
   testing::InitGoogleTest(&argc, argv);
   testing::UnitTest::GetInstance()->listeners().Append(&listener);
   int status = RUN_ALL_TESTS();
   testing::UnitTest::GetInstance()->listeners().Release(&listener);
 
-  reporting_thread.Join();
   g_escher_env->TearDown();
   return status;
 }
