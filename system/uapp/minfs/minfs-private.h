@@ -79,11 +79,7 @@ public:
     mx_status_t BlockFree(WriteTxn* txn, uint32_t bno);
 
     // free ino in inode bitmap, release all blocks held by inode
-    mx_status_t InoFree(
-#ifdef __Fuchsia__
-        const MappedVmo* vmo_indirect,
-#endif
-        const minfs_inode_t& inode, uint32_t ino);
+    mx_status_t InoFree(VnodeMinfs* vn);
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
@@ -198,6 +194,7 @@ public:
 private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
+    friend mx_status_t Minfs::InoFree(VnodeMinfs* vn);
     VnodeMinfs(Minfs* fs);
 
     // Implementing methods from the fs::Vnode, so MinFS vnodes may be utilized

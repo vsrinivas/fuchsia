@@ -99,11 +99,7 @@ Minfs::~Minfs() {
     vnode_hash_.clear();
 }
 
-mx_status_t Minfs::InoFree(
-#ifdef __Fuchsia__
-    const MappedVmo* vmo_indirect,
-#endif
-    const minfs_inode_t& inode, uint32_t ino) {
+mx_status_t Minfs::InoFree(VnodeMinfs* vn) {
     // We're going to be updating block bitmaps repeatedly.
     WriteTxn txn(bc_.get());
 #ifdef __Fuchsia__
@@ -113,34 +109,41 @@ mx_status_t Minfs::InoFree(
 #endif
 
     // Free the inode bit itself
-    inode_map_.Clear(ino, ino + 1);
+    inode_map_.Clear(vn->ino_, vn->ino_ + 1);
     info_.alloc_inode_count--;
 
-    uint32_t bitblock = ino / kMinfsBlockBits;
+    uint32_t bitblock = vn->ino_ / kMinfsBlockBits;
     txn.Enqueue(ibm_id, bitblock, info_.ibm_block + bitblock, 1);
-    uint32_t block_count = inode.block_count;
+    uint32_t block_count = vn->inode_.block_count;
 
     // release all direct blocks
     for (unsigned n = 0; n < kMinfsDirect; n++) {
-        if (inode.dnum[n] == 0) {
+        if (vn->inode_.dnum[n] == 0) {
             continue;
         }
-        ValidateBno(inode.dnum[n]);
+        ValidateBno(vn->inode_.dnum[n]);
         block_count--;
-        BlockFree(&txn, inode.dnum[n]);
+        BlockFree(&txn, vn->inode_.dnum[n]);
     }
+
 
     // release all indirect blocks
     for (unsigned n = 0; n < kMinfsIndirect; n++) {
-        if (inode.inum[n] == 0) {
+        if (vn->inode_.inum[n] == 0) {
             continue;
         }
+
 #ifdef __Fuchsia__
-        uintptr_t iaddr = reinterpret_cast<uintptr_t>(vmo_indirect->GetData());
+        mx_status_t status;
+        if ((status = vn->InitIndirectVmo()) != MX_OK) {
+            return status;
+        }
+
+        uintptr_t iaddr = reinterpret_cast<uintptr_t>(vn->vmo_indirect_->GetData());
         uint32_t* entry = reinterpret_cast<uint32_t*>(iaddr + kMinfsBlockSize * n);
 #else
         uint8_t idata[kMinfsBlockSize];
-        bc_->Readblk(inode.inum[n], idata);
+        bc_->Readblk(vn->inode_.inum[n], idata);
         uint32_t* entry = reinterpret_cast<uint32_t*>(idata);
 #endif
         // release the blocks pointed at by the entries in the indirect block
@@ -153,7 +156,7 @@ mx_status_t Minfs::InoFree(
         }
         // release the direct block itself
         block_count--;
-        BlockFree(&txn, inode.inum[n]);
+        BlockFree(&txn, vn->inode_.inum[n]);
     }
 
     CountUpdate(&txn);

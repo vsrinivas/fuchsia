@@ -737,13 +737,7 @@ mx_status_t VnodeMinfs::ForEachDirent(DirArgs* args, const DirentCallback func) 
 
 VnodeMinfs::~VnodeMinfs() {
     if (inode_.link_count == 0) {
-#ifdef __Fuchsia__
-        if (InitIndirectVmo() == MX_OK) {
-            fs_->InoFree(vmo_indirect_.get(), inode_, ino_);
-        }
-#else
-        fs_->InoFree(inode_, ino_);
-#endif
+        fs_->InoFree(this);
     }
 
     fs_->VnodeRelease(this);
