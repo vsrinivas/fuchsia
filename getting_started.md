@@ -220,4 +220,4 @@ box and typing "moterm"
 * Build [Fuchsia's toolchain](building_toolchain.md)
 * More about the [build commands](build_system.md) called under-the-hood by `fbuild`
 * More information on the system bootstrap application is
-[here](https://fuchsia.googlesource.com/modular/+/HEAD/src/bootstrap/).
+[here](https://fuchsia.googlesource.com/application/+/HEAD/src/bootstrap/).
