@@ -13,6 +13,7 @@ pub type watchdir_func_t = unsafe extern "C" fn(
     cookie: *const ::std::os::raw::c_void,
 ) -> sys::mx_status_t;
 
+#[link(name = "mxio")]
 extern "C" {
     pub fn mxio_watch_directory(
         dirfd: raw::c_int,
@@ -20,6 +21,15 @@ extern "C" {
         deadline: sys::mx_time_t,
         cookie: *const raw::c_void,
     ) -> sys::mx_status_t;
+
+    pub fn mxio_ioctl(
+        fd: i32,
+        op: i32,
+        in_buf: *const u8,
+        in_len: usize,
+        out_buf: *mut u8,
+        out_len: usize,
+    ) -> isize;
 }
 
 pub const WATCH_EVENT_ADD_FILE: raw::c_int = 1;

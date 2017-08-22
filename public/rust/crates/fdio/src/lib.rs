@@ -19,6 +19,8 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
+pub use mxio_sys::mxio_ioctl as ioctl;
+
 /// Events that can occur while watching a directory, including files that already exist prior to
 /// running a Watcher.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -107,3 +109,16 @@ where
         ))
     }
 }
+
+/// Calculates an IOCTL value from kind, family and number.
+pub fn make_ioctl(kind: i32, family: i32, number: i32) -> i32 {
+    ((((kind) & 0xF) << 20) | (((family) & 0xFF) << 8) | ((number) & 0xFF))
+}
+
+pub const IOCTL_KIND_DEFAULT: i32 = 0;
+pub const IOCTL_KIND_GET_HANDLE: i32 = 0x1;
+
+pub const IOCTL_FAMILY_DEVICE: i32 = 0x01;
+pub const IOCTL_FAMILY_CONSOLE: i32 = 0x10;
+pub const IOCTL_FAMILY_INPUT: i32 = 0x11;
+pub const IOCTL_FAMILY_DISPLAY: i32 = 0x12;
