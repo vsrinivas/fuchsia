@@ -34,6 +34,10 @@ class MockRandomNumber : public RandomNumber {
     return values_[call_count_++];
   }
 
+  void SetVector(std::vector<uint64_t> values) {
+    values_ = std::move(values);
+  }
+
   int call_count() { return call_count_; }
 
  private:
@@ -48,7 +52,7 @@ TEST(KeyGeneratorTest, Simple_Success) {
   MockRandomNumber rng;
   KeyGenerator gen(&tod, &rng);
 
-  EXPECT_EQ("--2rmaqcJLuTni6eBG", gen.Create());
+  EXPECT_EQ("--2rmaqcGBe6inTuLJ", gen.Create());
 }
 
 TEST(KeyGeneratorTest, NoMocks_Success) {
@@ -65,6 +69,18 @@ TEST(KeyGeneratorTest, NoMocks_Success) {
 
   auto t3 = gen.Create();
   EXPECT_LT(t2, t3);
+}
+
+TEST(KeyGeneratorTest, RngOverflow_Success) {
+  MockTimeOfDay tod;
+  MockRandomNumber rng;
+  rng.SetVector(std::vector<uint64_t>({0x32742b5492aa2bff}));
+  KeyGenerator gen(&tod, &rng);
+  auto t1 = gen.Create();
+  EXPECT_EQ(1, rng.call_count());
+  auto t2 = gen.Create();
+  EXPECT_EQ(1, rng.call_count());
+  EXPECT_LT(t1, t2);
 }
 
 // If we ask for a key but the clock hasn't changed, then the keys should

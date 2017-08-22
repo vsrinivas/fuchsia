@@ -59,9 +59,11 @@ std::string KeyGenerator::Create() {
 
   auto last_random = last_random_;
 
+  // The random number must be encoded with lowest bits at the end because
+  // we increment the rng above and that must be ordered properly.
   // TODO(jimbe) We are only using 60 bits of randomness. Not enough for
   // production, but enough for the moment.
-  for (int i = 8; i < 18; ++i) {
+  for (int i = 17; i >= 8; --i) {
     id[i] = kEncodingDictionary[last_random % 64];
     last_random /= 64;
   }
