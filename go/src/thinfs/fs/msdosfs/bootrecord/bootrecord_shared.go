@@ -12,9 +12,10 @@ import (
 )
 
 const (
-	bootSig         = 0xAA55
-	bootSigExtended = 0x29
-	driveNumber     = 0x80
+	bootSig           = 0xAA55
+	bootSigExtended   = 0x29
+	driveNumberDisk   = 0x80
+	driveNumberFloppy = 0x00
 )
 
 // FATType describes the type of underlying filesystem described by the boot record.
@@ -201,7 +202,7 @@ func (b *bpbShared) validate(large bool) error {
 
 // Shared bootsector fields between FAT12/16 and FAT32, but at different offsets.
 type bootsectorSuffix struct {
-	driveNumber uint8     // Drive Number: 0x80
+	driveNumber uint8     // Drive Number: 0x80 or 0x00
 	reserved1   uint8     // Zero
 	extBootSig  uint8     // bootSigExtended
 	volumeID    [4]uint8  // Volume Serial Number (usually related to creation time)
@@ -210,8 +211,8 @@ type bootsectorSuffix struct {
 }
 
 func (b *bootsectorSuffix) validate() error {
-	if b.driveNumber != driveNumber {
-		return fmt.Errorf("Expected drive number %x, found: %x", driveNumber, b.driveNumber)
+	if b.driveNumber != driveNumberDisk && b.driveNumber != driveNumberFloppy {
+		return fmt.Errorf("Expected drive number %x, found: %x", driveNumberDisk, b.driveNumber)
 	}
 	if b.extBootSig != bootSigExtended {
 		return fmt.Errorf("Expected boot signature: %x, found %x", bootSigExtended, b.extBootSig)
