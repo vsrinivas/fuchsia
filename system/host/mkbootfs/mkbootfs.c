@@ -74,6 +74,31 @@ struct item {
     size_t outsize;
 };
 
+typedef struct filter filter_t;
+struct filter {
+    filter_t* next;
+    char text[];
+};
+
+filter_t* group_filter = NULL;
+
+int add_filter(filter_t** flist, const char* text) {
+    size_t len = strlen(text) + 1;
+    if (len == 1) {
+        fprintf(stderr, "error: empty filter string\n");
+        return -1;
+    }
+    filter_t* filter = malloc(sizeof(filter_t) + len);
+    if (filter == NULL) {
+        fprintf(stderr, "error: out of memory (filter string)\n");
+        return -1;
+    }
+    memcpy(filter->text, text, len);
+    filter->next = *flist;
+    *flist = filter;
+    return 0;
+}
+
 char* trim(char* str) {
     char* end;
     while (isspace(*str)) {
@@ -185,6 +210,32 @@ int import_manifest(FILE* fp, const char* fn, item_t* fs) {
         *eq++ = 0;
         char* dstfn = trim(line);
         char* srcfn = trim(eq);
+        char* group = "default";
+
+        if (dstfn[0] == '{') {
+            char* end = strchr(dstfn + 1, '}');
+            if (end) {
+                *end = 0;
+                group = dstfn + 1;
+                dstfn = end + 1;
+            } else {
+                fprintf(stderr, "%s:%d: unterminated group designator\n", fn, lineno);
+                return -1;
+            }
+        }
+        if (group_filter) {
+            filter_t* filter;
+            for (filter = group_filter; filter != NULL; filter = filter->next) {
+                if (!strcmp(filter->text, group)) {
+                    goto okay;
+                }
+            }
+            if (verbose) {
+                fprintf(stderr, "excluding: %s (group '%s')\n", dstfn, group);
+            }
+            continue;
+        }
+okay:
         if ((e = import_manifest_entry(fn, lineno, dstfn, srcfn)) == NULL) {
             return -1;
         }
@@ -962,6 +1013,9 @@ void usage(void) {
     "         -v               verbose output\n"
     "         -x               enable bootextra data (crc32)\n"
     "         -t <filename>    dump bootdata contents\n"
+    "         -g <group>       select allowed groups for manifest items\n"
+    "                          (multiple groups may be comma separated)\n"
+    "                          (the value 'all' resets to include all groups)\n"
     "         --uncompressed   don't compress bootfs image (debug only)\n"
     "         --target=system  bootfs to be unpacked at /system\n"
     "         --target=boot    bootfs to be unpacked at /boot\n"
@@ -1041,6 +1095,27 @@ int main(int argc, char **argv) {
 
             if (import_file_as(argv[1], ITEM_CMDLINE, 0) < 0) {
                 return -1;
+            }
+            argc--;
+            argv++;
+        } else if (!strcmp(cmd,"-g")) {
+            if (argc < 2) {
+                fprintf(stderr, "error: no group specified\n");
+                return -1;
+            }
+            group_filter = NULL;
+            if (strcmp(argv[1], "all")) {
+                char* group = argv[1];
+                while (group) {
+                    char* next = strchr(group, ',');
+                    if (next) {
+                        *next++ = 0;
+                    }
+                    if (add_filter(&group_filter, group) < 0) {
+                        return -1;
+                    }
+                    group = next;
+                }
             }
             argc--;
             argv++;
