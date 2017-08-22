@@ -60,7 +60,7 @@ constexpr char kAppId[] = "modular_user_runner";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
-constexpr char kMessageQueuePath[] = "/data/framework/message-queues/v1/";
+constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellLinkName[] = "user-shell-link";
 
 std::string LedgerStatusToString(ledger::Status status) {
@@ -95,23 +95,6 @@ ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
   firebase_config->server_id = kFirebaseServerId;
   firebase_config->api_key = kFirebaseApiKey;
   return firebase_config;
-}
-
-std::string GetLedgerPath(const auth::AccountPtr& account) {
-  if (!account.is_null()) {
-    return kLedgerDataBaseDir + std::string(account->id);
-  }
-
-  // Generate a random number to be used in this case.
-  uint32_t random_number;
-  size_t random_size;
-  mx_status_t status =
-      mx_cprng_draw(&random_number, sizeof random_number, &random_size);
-  FTL_CHECK(status == MX_OK);
-  FTL_CHECK(sizeof random_number == random_size);
-
-  return kLedgerDataBaseDir + std::string("GUEST/") +
-         std::to_string(random_number);
 }
 
 std::string GetAccountId(const auth::AccountPtr& account) {
@@ -415,7 +398,7 @@ void UserRunnerImpl::LogoutAndResetLedgerState() {
       kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
   auto firebase_config = GetLedgerFirebaseConfig();
   ledger_app_client_->primary_service()->EraseRepository(
-      GetLedgerPath(account_), std::move(firebase_config),
+      "/data", std::move(firebase_config),
       std::move(ledger_token_provider_for_erase),
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
@@ -434,7 +417,7 @@ void UserRunnerImpl::SetupLedger() {
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
   ledger_app_client_ =
       std::make_unique<AppClient<ledger::LedgerRepositoryFactory>>(
-          user_scope_->GetLauncher(), std::move(ledger_config));
+          user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
   ledger_app_client_->SetAppErrorHandler([this] {
     FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
                    << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
@@ -452,9 +435,8 @@ void UserRunnerImpl::SetupLedger() {
   }
 
   ledger_app_client_->primary_service()->GetRepository(
-      GetLedgerPath(account_), std::move(firebase_config),
-      std::move(ledger_token_provider), ledger_repository_.NewRequest(),
-      [this](ledger::Status status) {
+      "/data", std::move(firebase_config), std::move(ledger_token_provider),
+      ledger_repository_.NewRequest(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR)
               << "LedgerRepositoryFactory.GetRepository() failed: "

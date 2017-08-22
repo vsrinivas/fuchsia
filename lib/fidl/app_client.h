@@ -29,11 +29,17 @@ constexpr int kAppClientTimeoutSeconds = 1;
 // it's gone already anyway. If the service connection doesn't close after a
 // timeout, we close it and kill the application anyway.
 //
+// When starting an application instance, the directory pointed to by
+// |data_origin| will be mapped into /data for the newly started application.
+// If left empty, it'll be mapped to the root /data.
+//
 // AppClientBase are the non-template parts factored out so they don't need to
 // be inline. It can be used on its own too.
 class AppClientBase {
  public:
-  AppClientBase(app::ApplicationLauncher* launcher, AppConfigPtr config);
+  AppClientBase(app::ApplicationLauncher* launcher,
+                AppConfigPtr config,
+                std::string data_origin = "");
   virtual ~AppClientBase();
 
   // Gives access to the service provider of the started application. Services
@@ -81,8 +87,10 @@ class AppClientBase {
 template <class Service>
 class AppClient : public AppClientBase {
  public:
-  AppClient(app::ApplicationLauncher* const launcher, AppConfigPtr config)
-      : AppClientBase(launcher, std::move(config)) {
+  AppClient(app::ApplicationLauncher* const launcher,
+            AppConfigPtr config,
+            std::string data_origin = "")
+      : AppClientBase(launcher, std::move(config), std::move(data_origin)) {
     ConnectToService(services(), service_.NewRequest());
   }
 

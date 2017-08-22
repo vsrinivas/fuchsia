@@ -25,9 +25,27 @@ UserControllerImpl::UserControllerImpl(
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
       done_(std::move(done)) {
+  // 0. Generate the path to map '/data' for the user runner we are starting.
+  std::string data_origin;
+  if (account.is_null()) {
+    // Guest user.
+    // Generate a random number to be used in this case.
+    uint32_t random_number;
+    size_t random_size;
+    mx_status_t status =
+        mx_cprng_draw(&random_number, sizeof random_number, &random_size);
+    FTL_CHECK(status == MX_OK);
+    FTL_CHECK(sizeof random_number == random_size);
+    data_origin = std::string("/tmp/modular/GUEST_USER_") +
+                  std::to_string(random_number);
+  } else {
+    // Non-guest user.
+    data_origin = std::string("/data/modular/USER_") + std::string(account->id);
+  }
+
   // 1. Launch UserRunner in the current environment.
   user_runner_ = std::make_unique<AppClient<UserRunner>>(
-      application_launcher, std::move(user_runner));
+      application_launcher, std::move(user_runner), data_origin);
 
   // 2. Initialize the UserRunner service.
   user_runner_->primary_service()->Initialize(

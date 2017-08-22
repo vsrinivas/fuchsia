@@ -68,7 +68,7 @@ constexpr char kFirebaseAuthEndpoint[] =
     "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
     "verifyAssertion";
 constexpr char kRedirectUri[] = "com.google.fuchsia.auth:/oauth2redirect";
-constexpr char kCredentialsFile[] = "/data/modular/device/v2/creds.db";
+constexpr char kCredentialsFile[] = "/data/v2/creds.db";
 constexpr char kWebViewUrl[] = "web_view";
 
 constexpr auto kScopes = {"openid",

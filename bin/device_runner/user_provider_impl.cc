@@ -17,7 +17,7 @@ namespace modular {
 
 namespace {
 
-constexpr char kUsersConfigurationFile[] = "/data/modular/device/users-v5.db";
+constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
 auth::AccountPtr Convert(const UserStorage* user) {
   FTL_DCHECK(user);
@@ -115,7 +115,6 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
 
 void UserProviderImpl::Login(UserLoginParamsPtr params) {
   // If requested, run in incognito mode.
-  // TODO(alhaad): Revisit clean-up of local state for incognito mode.
   if (params->account_id.is_null() || params->account_id == "") {
     FTL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     LoginInternal(nullptr /* account */, std::move(params));
