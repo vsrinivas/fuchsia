@@ -20,7 +20,7 @@ executable("test_story_importance") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/fidl:array_to_string",
-    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",

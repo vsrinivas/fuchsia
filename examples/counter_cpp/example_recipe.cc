@@ -10,7 +10,7 @@
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
@@ -146,17 +146,12 @@ class AdderImpl : public modular::examples::Adder {
 // Module implementation that acts as a recipe. There is one instance
 // per application; the story runner creates new application instances
 // to run more module instances.
-class RecipeApp : modular::SingleServiceViewApp<modular::Module> {
+class RecipeApp : modular::SingleServiceApp<modular::Module> {
  public:
   RecipeApp() = default;
   ~RecipeApp() override = default;
 
  private:
-  // |SingleServiceViewApp|
-  void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
-
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,

@@ -7,7 +7,7 @@
 
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
@@ -259,7 +259,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 // steps, rather than to expose a UI to be driven by user interaction, as a user
 // shell normally would.
 class TestUserShellApp
-    : modular::testing::ComponentViewBase<modular::UserShell> {
+    : modular::testing::ComponentBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to
@@ -280,7 +280,7 @@ class TestUserShellApp
 
   TestPoint create_view_{"CreateView()"};
 
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {

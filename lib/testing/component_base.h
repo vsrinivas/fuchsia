@@ -7,7 +7,7 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -94,54 +94,6 @@ class ComponentBase : protected SingleServiceApp<Component> {
   ftl::WeakPtrFactory<ComponentBase> weak_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentBase);
-};
-
-// Same as ComponentBase, but for components that derive from from
-// SingleServiceViewApp. TODO(mesch): Reconcile better.
-template <typename Component>
-class ComponentViewBase : protected SingleServiceViewApp<Component> {
- protected:
-  using Base = modular::SingleServiceViewApp<Component>;
-
-  ComponentViewBase() : weak_factory_(this) {}
-  ~ComponentViewBase() override = default;
-
-  void TestInit(const char* const file) {
-    modular::testing::Init(Base::application_context(), file);
-  }
-
-  std::function<void()> Protect(std::function<void()> callback) {
-    return
-        [ ptr = weak_factory_.GetWeakPtr(), callback = std::move(callback) ] {
-      if (ptr) {
-        callback();
-      }
-    };
-  }
-
-  void Delete(const std::function<void()>& done) {
-    modular::testing::Done([this, done] {
-      auto binding =
-          Base::PassBinding();  // To invoke done() after delete this.
-      delete this;
-      done();
-    });
-  }
-
-  void DeleteAndQuit(const std::function<void()>& done = [] {}) {
-    modular::testing::Done([this, done] {
-      auto binding =
-          Base::PassBinding();  // To invoke done() after delete this.
-      delete this;
-      done();
-      mtl::MessageLoop::GetCurrent()->QuitNow();
-    });
-  }
-
- private:
-  ftl::WeakPtrFactory<ComponentViewBase> weak_factory_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(ComponentViewBase);
 };
 
 }  // namespace testing

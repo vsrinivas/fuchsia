@@ -17,7 +17,7 @@ executable("test_link_update") {
     "test_link_update.cc",
   ]
   deps = [
-    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",

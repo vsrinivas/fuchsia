@@ -5,7 +5,7 @@
 #ifndef APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
 #define APPS_MODULAR_EXAMPLES_SWAP_CPP_MODULE_H_
 
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 
@@ -27,7 +27,7 @@ class ModuleView : public mozart::BaseView {
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };
 
-class ModuleApp : public modular::SingleServiceViewApp<modular::Module> {
+class ModuleApp : public modular::SingleServiceApp<modular::Module> {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
       mozart::ViewManagerPtr,
@@ -36,7 +36,7 @@ class ModuleApp : public modular::SingleServiceViewApp<modular::Module> {
   explicit ModuleApp(CreateViewCallback create);
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> services) override;

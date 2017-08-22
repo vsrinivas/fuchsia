@@ -36,7 +36,7 @@ namespace modular {
 // they need to hold on to the same snapshot they started with, lest
 // the methods called on that snapshot never return.
 //
-// The same behavior was with a shared_ptr could be accomplished with
+// The same behavior as with a shared_ptr could be accomplished with
 // a duplicate PageSnapshotPtr for each Operation instance that needs
 // one, but PageSnapshot doesn't have a duplicate method.
 class PageClient : ledger::PageWatcher {
@@ -57,7 +57,7 @@ class PageClient : ledger::PageWatcher {
   // it's no longer used in the modular code base). If the client implements
   // page write operations and page read operations, an invariant normally
   // maintained is that a read operation returns a value from *after* a
-  // preceding write (which might be a differnet value than the one written when
+  // preceding write (which might be a different value than the one written when
   // there were merges from network sync), but never from *before* the preceding
   // write. This invariant is maintained when the read operation uses a fresh
   // snapshot, but not when the read operation uses the latest watcher snapshot

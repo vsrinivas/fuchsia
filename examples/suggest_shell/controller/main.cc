@@ -7,7 +7,7 @@
 #include "application/lib/app/connect.h"
 #include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/module/module.fidl.h"
@@ -26,14 +26,14 @@ constexpr char kProposalId[] =
 
 // A Module that serves as the view controller in the suggest shell
 // story, i.e. that creates the module that shows the UI.
-class ControllerApp : public modular::SingleServiceViewApp<modular::Module>,
+class ControllerApp : public modular::SingleServiceApp<modular::Module>,
                       modular::LinkWatcher {
  public:
   ControllerApp() : link_watcher_binding_(this) {}
   ~ControllerApp() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {

@@ -7,7 +7,7 @@
 #include "application/lib/app/connect.h"
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/examples/counter_cpp/store.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -105,7 +105,7 @@ class MultiplierImpl : public modular::examples::Multiplier {
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
-class Module1App : modular::SingleServiceViewApp<modular::Module> {
+class Module1App : modular::SingleServiceApp<modular::Module> {
  public:
   explicit Module1App() : store_(kModuleName), weak_ptr_factory_(this) {
     // TODO(mesch): The callbacks seem to have a sequential relationship.
@@ -125,7 +125,7 @@ class Module1App : modular::SingleServiceViewApp<modular::Module> {
   ~Module1App() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {

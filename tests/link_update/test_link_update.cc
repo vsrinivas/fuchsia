@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "application/lib/app/connect.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
@@ -53,7 +53,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
 };
 
 // Tests how data are updated in a Link.
-class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
+class TestApp : modular::testing::ComponentBase<modular::UserShell> {
  public:
   static void New() {
     new TestApp;  // will delete itself in Terminate().
@@ -65,11 +65,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   ~TestApp() override = default;
 
   using TestPoint = modular::testing::TestPoint;
-
-  // |SingleServiceViewApp|
-  void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {}
 
   TestPoint initialize_{"Initialize()"};
   TestPoint story_create_{"Story Create"};

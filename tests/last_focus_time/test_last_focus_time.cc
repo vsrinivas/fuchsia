@@ -7,7 +7,7 @@
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/user/focus.fidl.h"
@@ -156,7 +156,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
 };
 
 // Tests the last_focus_time entry in StoryInfo.
-class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
+class TestApp : modular::testing::ComponentBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to
@@ -171,15 +171,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   ~TestApp() override = default;
 
   using TestPoint = modular::testing::TestPoint;
-
-  TestPoint create_view_{"CreateView()"};
-
-  // |SingleServiceViewApp|
-  void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
-    create_view_.Pass();
-  }
 
   TestPoint initialize_{"Initialize()"};
 

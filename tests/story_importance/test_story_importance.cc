@@ -10,7 +10,7 @@
 #include "apps/maxwell/services/context/context_publisher.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/component_base.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
@@ -183,7 +183,7 @@ class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
 // story, then set context to work, start another story. The we compute story
 // importance and verify that the importance of the first story is lower than
 // the importance of the second story.
-class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
+class TestApp : modular::testing::ComponentBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to
@@ -198,15 +198,6 @@ class TestApp : modular::testing::ComponentViewBase<modular::UserShell> {
   ~TestApp() override = default;
 
   using TestPoint = modular::testing::TestPoint;
-
-  TestPoint create_view_{"CreateView()"};
-
-  // |SingleServiceViewApp|
-  void CreateView(
-      fidl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
-      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
-    create_view_.Pass();
-  }
 
   TestPoint initialize_{"Initialize()"};
 

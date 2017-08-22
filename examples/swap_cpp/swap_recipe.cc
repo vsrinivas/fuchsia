@@ -5,7 +5,7 @@
 #include <array>
 #include <memory>
 
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -59,13 +59,13 @@ class RecipeView : public mozart::BaseView {
   std::unique_ptr<mozart::client::EntityNode> host_node_;
 };
 
-class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
+class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  public:
   RecipeApp() = default;
   ~RecipeApp() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {

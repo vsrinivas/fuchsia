@@ -113,20 +113,6 @@ source_set("single_service_app") {
   public_deps = [
     "//application/lib/app",
     "//application/services",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-  ]
-}
-
-source_set("single_service_view_app") {
-  sources = [
-    "single_service_view_app.h",
-  ]
-
-  public_deps = [
-    ":single_service_app",
-    "//application/lib/app",
-    "//application/services",
     "//apps/mozart/services/views",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

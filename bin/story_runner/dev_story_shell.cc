@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/services/story/story_shell.fidl.h"
 #include "lib/ftl/command_line.h"
@@ -18,14 +18,14 @@
 namespace {
 
 class DevStoryShellApp
-    : modular::SingleServiceViewApp<modular::StoryShellFactory>,
+    : modular::SingleServiceApp<modular::StoryShellFactory>,
       modular::StoryShell {
  public:
   DevStoryShellApp() : story_shell_binding_(this) {}
   ~DevStoryShellApp() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services_request*/)

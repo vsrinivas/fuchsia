@@ -13,7 +13,7 @@
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/fidl/view_host.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
@@ -45,14 +45,14 @@ class Settings {
 
 class DevUserShellApp : modular::StoryWatcher,
                         maxwell::SuggestionListener,
-                        modular::SingleServiceViewApp<modular::UserShell> {
+                        modular::SingleServiceApp<modular::UserShell> {
  public:
   explicit DevUserShellApp(Settings settings)
       : settings_(std::move(settings)), story_watcher_binding_(this) {}
   ~DevUserShellApp() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {

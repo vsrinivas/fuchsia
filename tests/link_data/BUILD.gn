@@ -18,7 +18,7 @@ executable("test_link_data") {
   ]
   deps = [
     "//apps/modular/examples/counter_cpp:store",
-    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/fidl:single_service_app",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/testing",
     "//apps/modular/lib/testing:component_base",

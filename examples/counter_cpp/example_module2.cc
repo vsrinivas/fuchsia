@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "apps/modular/examples/counter_cpp/store.h"
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -88,7 +88,7 @@ class Module2View : public mozart::BaseView {
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
-class Module2App : public modular::SingleServiceViewApp<modular::Module> {
+class Module2App : public modular::SingleServiceApp<modular::Module> {
  public:
   explicit Module2App() : store_(kModuleName), weak_ptr_factory_(this) {
     store_.AddCallback([this] {
@@ -102,7 +102,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   ~Module2App() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {

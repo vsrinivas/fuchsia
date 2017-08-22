@@ -35,7 +35,7 @@ namespace modular {
 //       FTL_LOG(INFO) << "new message: " << msg;
 //     });
 //
-class MessageReceiverClient : private modular::MessageReader {
+class MessageReceiverClient : modular::MessageReader {
  public:
   using MessageReceiverClientCallback =
       std::function<void(fidl::String, const OnReceiveCallback& ack)>;

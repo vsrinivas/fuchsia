@@ -9,7 +9,7 @@
 #include <memory>
 #include <utility>
 
-#include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
@@ -39,7 +39,7 @@ class Settings {
   bool test{};
 };
 
-class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
+class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
                           modular::UserWatcher {
  public:
   explicit DevDeviceShellApp(Settings settings)
@@ -51,7 +51,7 @@ class DevDeviceShellApp : modular::SingleServiceViewApp<modular::DeviceShell>,
   ~DevDeviceShellApp() override = default;
 
  private:
-  // |SingleServiceViewApp|
+  // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
