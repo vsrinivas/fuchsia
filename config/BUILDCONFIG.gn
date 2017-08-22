@@ -230,7 +230,15 @@ if (is_fuchsia) {
     # the dependency from the main toolchain is still allowed.
     template("shared_library") {
       shared_library(target_name) {
-        forward_variables_from(invoker, "*")
+        # Explicitly forward visibility, implicitly forward everything else.
+        # Forwarding "*" doesn't recurse into nested scopes (to avoid copying all
+        # globals into each template invocation), so won't pick up file-scoped
+        # variables. Normally this isn't too bad, but visibility is commonly
+        # defined at the file scope. Explicitly forwarding visibility and then
+        # excluding it from the "*" set works around this problem.
+        # See http://crbug.com/594610
+        forward_variables_from(invoker, [ "visibility" ])
+        forward_variables_from(invoker, "*", [ "visibility" ])
         if (defined(visibility)) {
           visibility += [ ":$target_name" ]
         }
@@ -373,7 +381,17 @@ template("executable") {
     # This is the toolchain selected to actually build this target.
     executable(target_name) {
       deps = []
-      forward_variables_from(invoker, "*")
+
+      # Explicitly forward visibility, implicitly forward everything else.
+      # Forwarding "*" doesn't recurse into nested scopes (to avoid copying all
+      # globals into each template invocation), so won't pick up file-scoped
+      # variables. Normally this isn't too bad, but visibility is commonly
+      # defined at the file scope. Explicitly forwarding visibility and then
+      # excluding it from the "*" set works around this problem.
+      # See http://crbug.com/594610
+      forward_variables_from(invoker, [ "visibility" ])
+      forward_variables_from(invoker, "*", [ "visibility" ])
+
       foreach(variant, toolchain_variant) {
         deps += [ "${variant}_deps" ]
       }
