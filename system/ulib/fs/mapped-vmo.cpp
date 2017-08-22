@@ -10,6 +10,7 @@
 #include <fs/mapped-vmo.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/unique_ptr.h>
 
@@ -69,11 +70,51 @@ mx_status_t MappedVmo::Shrink(size_t off, size_t len) {
     return MX_OK;
 }
 
+mx_status_t MappedVmo::Grow(size_t len) {
+    if (len < len_) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    len = mxtl::roundup(len, static_cast<size_t>(PAGE_SIZE));
+    mx_status_t status;
+    uintptr_t addr;
+
+    if ((status = mx_vmo_set_size(vmo_, len)) != MX_OK) {
+        return status;
+    }
+
+    mx_info_vmar_t vmar_info;
+    if ((status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR, &vmar_info, sizeof(vmar_info), NULL, NULL)) != MX_OK) {
+        return status;
+    }
+
+    // Try to extend mapping
+    if ((status = mx_vmar_map(mx_vmar_root_self(), addr_ + len_ - vmar_info.base, vmo_, len_, len - len_, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC, &addr)) != MX_OK) {
+        // If extension fails, create entirely new mapping and unmap the old one
+        if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_, 0, len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &addr)) != MX_OK) {
+            return status;
+        }
+
+        if ((status = mx_vmar_unmap(mx_vmar_root_self(), addr_, len_)) != MX_OK) {
+            return status;
+        }
+
+        addr_ = addr;
+    }
+
+    len_ = len;
+    return MX_OK;
+}
+
 mx_handle_t MappedVmo::GetVmo(void) const {
     return vmo_;
 }
 void* MappedVmo::GetData(void) const {
     return (void*)addr_;
+}
+
+size_t MappedVmo::GetSize(void) const {
+    return len_;
 }
 
 MappedVmo::MappedVmo(mx_handle_t vmo, uintptr_t addr, size_t len)

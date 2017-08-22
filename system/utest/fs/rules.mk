@@ -37,6 +37,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-sync.c \
     $(LOCAL_DIR)/test-truncate.cpp \
     $(LOCAL_DIR)/test-unlink.cpp \
+    $(LOCAL_DIR)/test-utils.cpp \
     $(LOCAL_DIR)/test-vmo.cpp \
     $(LOCAL_DIR)/test-watcher.cpp \
 
@@ -46,6 +47,7 @@ MODULE_LDFLAGS += --wrap utimes --wrap link --wrap symlink --wrap rmdir
 MODULE_LDFLAGS += --wrap chdir --wrap renameat --wrap realpath --wrap remove
 
 MODULE_STATIC_LIBS := \
+    system/ulib/fs \
     system/ulib/mxcpp \
     system/ulib/mxtl \
 

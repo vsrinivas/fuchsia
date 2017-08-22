@@ -4,12 +4,14 @@
 
 #pragma once
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <magenta/types.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 
 class MappedVmo {
@@ -30,7 +32,18 @@ public:
     // On failure, the Mapping may be partially removed, and should not be used.
     mx_status_t Shrink(size_t off, size_t len);
 
+    // Attempts to increase both VMO size and VMAR mapping:
+    // From [addr_, addr_ + len_]
+    // To   [addr_, addr_ + len]
+    //
+    // Attempting to grow the mapping to a length smaller than the
+    // current size will return an error.
+    //
+    // On failure, the Mapping will be safe to use, but will remain at its original size.
+    mx_status_t Grow(size_t len);
+
     mx_handle_t GetVmo(void) const;
+    size_t GetSize(void) const;
     void* GetData(void) const;
 
 private:
