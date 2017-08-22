@@ -17,7 +17,8 @@
  * %r8 = argument 5, void** fault_return
  */
 
-.macro begin_usercopy
+# status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
+FUNCTION(_x86_copy_to_or_from_user)
     # Copy smap_avail out of %rcx, because %rcx is used by "rep movsb" later.
     movl %ecx, %r10d
 
@@ -27,19 +28,6 @@
     jz 0f
     stac
 0:
-.endm
-
-.macro end_usercopy
-    # Re-enable SMAP protection
-    cmpl $0, %r10d
-    jz 0f
-    clac
-0:
-.endm
-
-# status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
-FUNCTION(_x86_copy_to_or_from_user)
-    begin_usercopy
 
     # Setup page fault return
     movq $.Lfault_copy, (%r8)
@@ -64,6 +52,10 @@ FUNCTION(_x86_copy_to_or_from_user)
     # Reset fault return
     movq $0, (%r8)
 
-    end_usercopy
+    # Re-enable SMAP protection
+    cmpl $0, %r10d
+    jz 0f
+    clac
+0:
     ret
 END_FUNCTION(_x86_copy_to_or_from_user)
