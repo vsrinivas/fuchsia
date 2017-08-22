@@ -53,6 +53,8 @@ private:
 
     struct rand_data ec_;
     mxtl::Mutex lock_;
+    uint32_t mem_loops_, lfsr_loops_;
+    bool use_raw_samples_;
 };
 
 } // namespace entropy

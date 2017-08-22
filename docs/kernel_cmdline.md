@@ -72,7 +72,42 @@ only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
 Provides entropy to be mixed into the kernel's CPRNG.
 
-## kernel.entropy_test.len=\<len>
+## kernel.entropy.jitterentropy.bs=\<num>
+
+Sets the "memory block size" parameter for jitterentropy (the default is 64).
+When jitterentropy is performing memory operations (to increase variation in CPU
+timing), the memory will be accessed in blocks of this size.
+
+## kernel.entropy.jitterentropy.bc=\<num>
+
+Sets the "memory block count" parameter for jitterentropy (the default is 1024).
+When jitterentropy is performing memory operations (to increase variation in CPU
+timing), this controls how many blocks (of size
+`kernel.entropy.jitterentropy.bs`) are accessed.
+
+## kernel.entropy.jitterentropy.ml=\<num>
+
+Sets the "memory loops" parameter for jitterentropy (the default is 128). When
+jitterentropy is performing memory operations (to increase variation in CPU
+timing), this controls how many times the memory access routine is repeated.
+This parameter is only used when `kernel.entropy.jitterentropy.raw` is true
+(otherwise, jitterentropy chooses the number of loops is a random-ish way).
+
+## kernel.entropy.jitterentropy.ll=\<num>
+
+Sets the "LFSR loops" parameter for jitterentropy (the default is 16). When
+jitterentropy is performing CPU-intensive LFSR operations (to increase variation
+in CPU timing), this controls how many times the LFSR routine is repeated.  This
+parameter is only used when `kernel.entropy.jitterentropy.raw` is true
+(otherwise, jitterentropy chooses the number of loops is a random-ish way).
+
+## kernel.entropy.jitterentropy.raw=\<bool>
+
+When true, the jitterentropy entropy collector will return raw, unprocessed
+samples. When false (the default), the raw samples will be processed by
+jitterentropy, producing output data that looks closer to uniformly random.
+
+## kernel.entropy\_test.len=\<len>
 
 When running an entropy collector quality test, collect the provided number of
 bytes. Defaults to the maximum value `ENTROPY_COLLECTOR_TEST_MAXLEN`.
@@ -80,10 +115,10 @@ bytes. Defaults to the maximum value `ENTROPY_COLLECTOR_TEST_MAXLEN`.
 The default value for the compile-time constant `ENTROPY_COLLECTOR_TEST_MAXLEN`
 is 128 KiB.
 
-## kernel.entropy_test.src=\<source>
+## kernel.entropy\_test.src=\<source>
 
 When running an entropy collector quality test, use the provided entropy source.
-Currently recognized sources: `hw_rng`.
+Currently recognized sources: `hw_rng`, `jitterentropy`.
 
 ## kernel.halt_on_panic=\<bool>
 If this option is set (disabled by default), the system will halt on

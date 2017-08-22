@@ -63,14 +63,18 @@ mx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
 }
 
 JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
-    : Collector("jitterentropy", /* entropy_per_1000_bytes */ 8000), lock_() {
-    // TODO(MG-1022): optimize default jitterentropy parameters
-    uint32_t block_size = cmdline_get_uint32("kernel.entropy.jitter.bs", 64);
-    uint32_t block_count = cmdline_get_uint32("kernel.entropy.jitter.bc", 1024);
-    uint32_t mem_loops = cmdline_get_uint32("kernel.entropy.jitter.ml", 128);
+    : Collector("jitterentropy", /* entropy_per_1000_bytes */ 8000) {
+    // TODO(MG-1022): optimize default jitterentropy parameters, then update
+    // values here and in docs/kernel_cmdline.md.
+    uint32_t bs = cmdline_get_uint32("kernel.entropy.jitterentropy.bs", 64);
+    uint32_t bc = cmdline_get_uint32("kernel.entropy.jitterentropy.bc", 1024);
+    mem_loops_ = cmdline_get_uint32("kernel.entropy.jitterentropy.ml", 128);
+    lfsr_loops_ = cmdline_get_uint32("kernel.entropy.jitterentropy.ll", 16);
+    use_raw_samples_ = cmdline_get_bool("kernel.entropy.jitterentropy.raw",
+                                        false);
 
-    jent_entropy_collector_init(&ec_, mem, len, block_size, block_count,
-                                mem_loops, /* stir */ true);
+    jent_entropy_collector_init(&ec_, mem, len, bs, bc, mem_loops_,
+                                /* stir */ true);
 }
 
 size_t JitterentropyCollector::DrawEntropy(uint8_t* buf, size_t len) {
@@ -79,8 +83,17 @@ size_t JitterentropyCollector::DrawEntropy(uint8_t* buf, size_t len) {
     // multi-threaded systems.
     mxtl::AutoLock guard(&lock_);
 
-    ssize_t result = jent_read_entropy(&ec_, reinterpret_cast<char*>(buf), len);
-    return (result < 0) ? 0 : static_cast<size_t>(result);
+    if (use_raw_samples_) {
+        for (size_t i = 0; i < len; i++) {
+            buf[i] = static_cast<uint8_t>(jent_lfsr_var_stat(&ec_, lfsr_loops_,
+                                                             mem_loops_));
+        }
+        return len;
+    } else {
+        ssize_t err =jent_read_entropy(&ec_, reinterpret_cast<char*>(buf),
+                                       len);
+        return (err < 0) ? 0 : static_cast<size_t>(err);
+    }
 }
 
 } // namespace entropy

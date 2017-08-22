@@ -46,6 +46,7 @@
  * - Add #include lines for required system libraries.
  * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
  * - Add jent_entropy_collector_init declaration.
+ * - Moved comment for jent_lfsr_var_stat from jitterentropy-base.c to here.
  */
 
 #ifndef _JITTERENTROPY_H
@@ -148,8 +149,16 @@ unsigned int jent_version(void);
 
 /* -- BEGIN statistical test functions only complied with CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT -- */
 
+/*
+ * Statistical test: return the time duration for the folding operation. If
+ * lfsr_loops_override/mem_loops_override is non-zero, perform the given number
+ * of LFSR/memaccess ops. Otherwise, allow the loop count shuffling to define
+ * the number of LFSR/memaccess ops.
+ */
 JENT_PRIVATE_STATIC
-uint64_t jent_lfsr_var_stat(struct rand_data *ec, unsigned int min);
+uint64_t jent_lfsr_var_stat(struct rand_data *ec,
+                            unsigned int lfsr_loops_override,
+                            unsigned int mem_loops_override);
 
 /* -- END of statistical test function -- */
 

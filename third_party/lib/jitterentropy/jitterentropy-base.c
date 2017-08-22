@@ -57,6 +57,9 @@
  * - Remove CONFIG_CRYPTO_CPU_JITTERENTROPY_STAT flag.
  * - Add jent_entropy_collector_init definition.
  * - Remove '#pragma GCC optimize ("O0")' (not recognized by clang)
+ * - Replace 'min' parameter by 'lfsr_loops_override' and 'mem_loops_override'
+ *   in jent_lfsr_var_stat, and moved comment for jent_lfsr_var_stat to
+ *   jitterentropy.h.
  */
 
 #undef _FORTIFY_SOURCE
@@ -779,20 +782,17 @@ int jent_entropy_init(void)
  * Statistical test logic not compiled for regular operation
  ***************************************************************************/
 
-/*
- * Statistical test: return the time duration for the folding operation. If min
- * is set, perform the given number of LFSR ops. Otherwise, allow the
- * loop count shuffling to define the number of LFSR ops.
- */
 JENT_PRIVATE_STATIC
-uint64_t jent_lfsr_var_stat(struct rand_data *ec, unsigned int min)
+uint64_t jent_lfsr_var_stat(struct rand_data *ec,
+                            unsigned int lfsr_loops_override,
+                            unsigned int mem_loops_override)
 {
 	uint64_t time = 0;
 	uint64_t time2 = 0;
 
 	jent_get_nstime(&time);
-	jent_memaccess(ec, min);
-	jent_lfsr_time(ec, time, min);
+	jent_memaccess(ec, mem_loops_override);
+	jent_lfsr_time(ec, time, lfsr_loops_override);
 	jent_get_nstime(&time2);
 	return ((time2 - time));
 }
