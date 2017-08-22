@@ -79,7 +79,8 @@ template("dart_package") {
     source_dir = invoker.source_dir
   }
 
-  with_analysis = !defined(invoker.disable_analysis) || !invoker.disable_analysis
+  with_analysis =
+      !defined(invoker.disable_analysis) || !invoker.disable_analysis
   if (with_analysis) {
     dot_packages_target_name = "${target_name}_dot_packages"
   } else {
@@ -112,7 +113,6 @@ template("dart_package") {
       rebase_path(depfile),
     ]
 
-
     if (defined(package_name)) {
       args += [
         "--package-name",
@@ -125,9 +125,7 @@ template("dart_package") {
       ]
     }
 
-    args += [
-      "--deps",
-    ] + dart_deps
+    args += [ "--deps" ] + dart_deps
   }
 
   if (with_analysis) {
@@ -150,9 +148,7 @@ template("dart_package") {
     action(invocation_target_name) {
       script = "//build/dart/gen_analyzer_invocation.py"
 
-      deps = dart_deps + [
-        ":$dot_packages_target_name",
-      ]
+      deps = dart_deps + [ ":$dot_packages_target_name" ]
 
       # Technically this is not strictly needed as even if the contents of the
       # options file change the analysis script should remain unchanged.

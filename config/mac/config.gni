@@ -12,7 +12,10 @@ declare_args() {
   mac_sdk_path = ""
 }
 
-find_sdk_args = [ "--print-sdk-path", mac_sdk_min ]
+find_sdk_args = [
+  "--print-sdk-path",
+  mac_sdk_min,
+]
 find_sdk_lines =
     exec_script("//build/mac/find_sdk.py", find_sdk_args, "list lines")
 mac_sdk_version = find_sdk_lines[1]

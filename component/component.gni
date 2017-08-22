@@ -14,12 +14,14 @@ template("fuchsia_component") {
   # and rename this to "component"
 
   assert(defined(invoker.manifest), "manifest must be defined for $target_name")
+
   # TODO(ianloic): support non-program components
   assert(defined(invoker.program) || defined(invoker.flutter_program),
          "program or flutter_program must be defined for $target_name")
 
   if (defined(invoker.program)) {
     program = invoker.program
+
     # TODO(ianloic): handle output_name being set in program
     program_name = get_label_info(program, "name")
     program_out_path = "${root_out_dir}/${program_name}"
@@ -32,13 +34,9 @@ template("fuchsia_component") {
   }
 
   manifest_scope = exec_script("//build/component/component_rules.py",
-                               [
-                                 rebase_path(invoker.manifest),
-                               ],
+                               [ rebase_path(invoker.manifest) ],
                                "scope",
-                               [
-                                 invoker.manifest,
-                               ])
+                               [ invoker.manifest ])
   copy_labels = []
 
   program_scope = manifest_scope.program
@@ -48,12 +46,20 @@ template("fuchsia_component") {
     i = i + 1
     copy(copy_label) {
       if (file.url == program_scope.url) {
-        sources = [program_out_path]
-        deps = [program]
+        sources = [
+          program_out_path,
+        ]
+        deps = [
+          program,
+        ]
       } else {
-        sources = [file.src_path]
+        sources = [
+          file.src_path,
+        ]
       }
-      outputs = ["${root_out_dir}/components/${file.url_as_path}"]
+      outputs = [
+        "${root_out_dir}/components/${file.url_as_path}",
+      ]
     }
     copy_labels += [ ":${copy_label}" ]
   }

@@ -20,7 +20,6 @@
 #   native_lib (optional)
 #     Name of the native library this crate links against.
 template("rust_info") {
-
   if (!defined(invoker.name)) {
     assert(false, "Must specify a crate name")
   }
@@ -39,9 +38,7 @@ template("rust_info") {
     rust_deps = []
     if (defined(invoker.deps)) {
       foreach(dep, invoker.deps) {
-        rust_deps += [
-          get_label_info(dep, "label_no_toolchain")
-        ]
+        rust_deps += [ get_label_info(dep, "label_no_toolchain") ]
       }
     }
 
@@ -51,16 +48,16 @@ template("rust_info") {
     }
 
     args = [
-      "--name",
-      invoker.name,
-      "--label",
-      target_label,
-      "--gen-dir",
-      rebase_path(base_gen_dir),
-      "--root-gen-dir",
-      rebase_path(root_gen_dir),
-      "--deps",
-    ] + rust_deps
+             "--name",
+             invoker.name,
+             "--label",
+             target_label,
+             "--gen-dir",
+             rebase_path(base_gen_dir),
+             "--root-gen-dir",
+             rebase_path(root_gen_dir),
+             "--deps",
+           ] + rust_deps
 
     if (defined(invoker.native_lib)) {
       args += [

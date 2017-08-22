@@ -32,12 +32,10 @@ package("cpp") {
                       "trim list lines")
   libraries = []
   foreach(file, files) {
-    libraries += [
-      {
-        name = get_path_info(file, "file")
-        source = file
-        used_by_early_boot_drivers = true
-      }
-    ]
+    libraries += [ {
+          name = get_path_info(file, "file")
+          source = file
+          used_by_early_boot_drivers = true
+        } ]
   }
 }

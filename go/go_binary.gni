@@ -4,7 +4,6 @@
 
 # A template for an action that creates a Fuchsia Go binary.
 
-
 import("//build/go/go_build.gni")
 
 template("go_binary") {

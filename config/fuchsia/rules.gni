@@ -34,6 +34,7 @@ template("driver_module") {
     loadable_module(_target_module) {
       output_name = _output_name
       output_extension = _output_extension
+
       # Any new variables accepted by driver_module in its invoker that aren't
       # things accepted by loadable_module will need to be added to the list.
       forward_variables_from(invoker,

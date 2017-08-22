@@ -46,7 +46,9 @@ template("go_build") {
     }
 
     output_path = "${root_out_dir}/${output_name}"
-    outputs = [ output_path ]
+    outputs = [
+      output_path,
+    ]
 
     script = rebase_path("//build/go/build.py")
     depfile = "${output_path}.d"
@@ -76,11 +78,11 @@ template("go_build") {
       "--binname",
       output_name,
       "--toolchain-prefix",
-      rebase_path(clang_prefix)
+      rebase_path(clang_prefix),
     ]
 
     if (defined(invoker.test) && invoker.test) {
-      args += ["--is-test=true"]
+      args += [ "--is-test=true" ]
     }
 
     foreach(dep, go_dependencies) {
@@ -88,8 +90,8 @@ template("go_build") {
         dep.source = "."
       }
       args += [
-      "--go-dependency",
-      dep.package + "=" + rebase_path(dep.source)
+        "--go-dependency",
+        dep.package + "=" + rebase_path(dep.source),
       ]
     }
 

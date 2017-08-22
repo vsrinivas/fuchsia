@@ -3,27 +3,25 @@
 # found in the LICENSE file.
 
 static_library("Fuzzer") {
-  cflags = [
-    "-fno-omit-frame-pointer",
-  ]
+  cflags = [ "-fno-omit-frame-pointer" ]
   sources = [
     "FuzzerCorpus.h",
     "FuzzerCrossOver.cpp",
     "FuzzerDefs.h",
     "FuzzerDictionary.h",
     "FuzzerDriver.cpp",
+    "FuzzerExtFunctions.h",
     "FuzzerExtFunctionsDlsym.cpp",
     "FuzzerExtFunctionsDlsymWin.cpp",
-    "FuzzerExtFunctions.h",
-    "FuzzerExtFunctionsWeakAlias.cpp",
     "FuzzerExtFunctionsWeak.cpp",
+    "FuzzerExtFunctionsWeakAlias.cpp",
     "FuzzerExtraCounters.cpp",
-    "FuzzerInterface.h",
-    "FuzzerInternal.h",
     "FuzzerIO.cpp",
     "FuzzerIO.h",
     "FuzzerIOPosix.cpp",
     "FuzzerIOWindows.cpp",
+    "FuzzerInterface.h",
+    "FuzzerInternal.h",
     "FuzzerLoop.cpp",
     "FuzzerMain.cpp",
     "FuzzerMerge.cpp",
@@ -40,8 +38,8 @@ static_library("Fuzzer") {
     "FuzzerTracePC.cpp",
     "FuzzerTracePC.h",
     "FuzzerUtil.cpp",
-    "FuzzerUtilDarwin.cpp",
     "FuzzerUtil.h",
+    "FuzzerUtilDarwin.cpp",
     "FuzzerUtilLinux.cpp",
     "FuzzerUtilPosix.cpp",
     "FuzzerUtilWindows.cpp",

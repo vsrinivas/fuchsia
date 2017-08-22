@@ -33,10 +33,14 @@ variant("sancov") {
 # ASAN_OPTIONS=detect_leaks=0 were in the environment at runtime.
 variant("asan_no_detect_leaks") {
   configs = [ ":asan" ]
-  deps = [ ":no_detect_leaks" ]
+  deps = [
+    ":no_detect_leaks",
+  ]
 }
 
 source_set("no_detect_leaks") {
   visibility = [ ":*" ]
-  sources = [ "asan_no_detect_leaks.c" ]
+  sources = [
+    "asan_no_detect_leaks.c",
+  ]
 }

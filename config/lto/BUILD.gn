@@ -18,7 +18,7 @@ config("lto") {
                 # object files for ThinLTO incremental builds. This directory
                 # is not managed by Ninja and has to be cleaned manually, but
                 # it is periodically garbage collected by ThinLTO driver.
-                "-Wl,--thinlto-cache-dir=$thinlto_cache_dir"
+                "-Wl,--thinlto-cache-dir=$thinlto_cache_dir",
               ]
   } else {
     cflags = [

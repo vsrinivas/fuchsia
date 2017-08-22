@@ -6,7 +6,6 @@
 #
 # Only for internal use, supporting rust_library and rust_binary.
 template("rust_artifact") {
-
   if (defined(invoker.type)) {
     type = invoker.type
     assert(type == "bin" || type == "lib")
@@ -29,9 +28,7 @@ template("rust_artifact") {
   rust_deps = []
   if (defined(invoker.deps)) {
     foreach(dep, invoker.deps) {
-      rust_deps += [
-        get_label_info(dep, "label_no_toolchain"),
-      ]
+      rust_deps += [ get_label_info(dep, "label_no_toolchain") ]
     }
   }
 
@@ -42,7 +39,8 @@ template("rust_artifact") {
 
   target_label = get_label_info(":$target_name", "label_no_toolchain")
 
-  assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia")
+  assert(
+      current_os == "mac" || current_os == "linux" || current_os == "fuchsia")
   if (current_os == "mac") {
     target_triple = "x86_64-apple-darwin"
     assert(current_cpu == "x64")
@@ -69,11 +67,13 @@ template("rust_artifact") {
   group_deps = []
 
   if (type == "bin") {
-    output_file = "$target_out_dir/$target_name.rust/$target_triple/$build_type/$name"
+    output_file =
+        "$target_out_dir/$target_name.rust/$target_triple/$build_type/$name"
     output_depfile = "$output_file.d"
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
-    output_base = "$target_out_dir/$target_name.rust/$target_triple/$build_type/lib$name"
+    output_base =
+        "$target_out_dir/$target_name.rust/$target_triple/$build_type/lib$name"
     output_file = "$output_base.rmeta"
     output_depfile = "$output_base.d"
     build_target_name = "${target_name}_lib"
@@ -85,7 +85,7 @@ template("rust_artifact") {
   if (type == "bin") {
     copy("${target_name}_bin") {
       sources = [
-        output_file
+        output_file,
       ]
 
       outputs = [
@@ -130,6 +130,7 @@ template("rust_artifact") {
     inputs = [
       "${source_dir}/Cargo.toml",
       "//build/rust/local_crates.py",
+
       # This will trigger rebuilds whenever third-party crates are updated.
       "//third_party/rust-crates/.vendor-update.stamp",
     ]
@@ -138,9 +139,7 @@ template("rust_artifact") {
       output_file,
     ]
     if (type == "lib") {
-      outputs += [
-        "$base_gen_dir/$main_target_name.info.toml",
-      ]
+      outputs += [ "$base_gen_dir/$main_target_name.info.toml" ]
     }
 
     deps = rust_deps
@@ -148,61 +147,55 @@ template("rust_artifact") {
       deps += invoker.non_rust_deps
     }
     if (is_fuchsia) {
-      clang_wrapper_target = "//rust/magenta-rs/tools:clang_wrapper($host_toolchain)"
-      deps += [
-        clang_wrapper_target,
-      ]
+      clang_wrapper_target =
+          "//rust/magenta-rs/tools:clang_wrapper($host_toolchain)"
+      deps += [ clang_wrapper_target ]
     }
 
     args = [
-      "--type",
-      type,
-      "--name",
-      name,
-      "--out-dir",
-      rebase_path(base_out_dir),
-      "--gen-dir",
-      rebase_path(base_gen_dir),
-      "--root-out-dir",
-      rebase_path(root_build_dir),
-      "--root-gen-dir",
-      rebase_path(root_gen_dir),
-      "--crate-root",
-      rebase_path(source_dir),
-      "--cargo",
-      rebase_path("$rust_base/bin/cargo"),
-      "--rustc",
-      rebase_path("$rust_base/bin/rustc"),
-      "--target-triple",
-      target_triple,
-      "--label",
-      target_label,
-      "--cmake-dir",
-      rebase_path("//buildtools/cmake/bin"),
-      "--vendor-directory",
-      rebase_path("//third_party/rust-crates/vendor"),
-      "--deps",
-    ] + rust_deps
+             "--type",
+             type,
+             "--name",
+             name,
+             "--out-dir",
+             rebase_path(base_out_dir),
+             "--gen-dir",
+             rebase_path(base_gen_dir),
+             "--root-out-dir",
+             rebase_path(root_build_dir),
+             "--root-gen-dir",
+             rebase_path(root_gen_dir),
+             "--crate-root",
+             rebase_path(source_dir),
+             "--cargo",
+             rebase_path("$rust_base/bin/cargo"),
+             "--rustc",
+             rebase_path("$rust_base/bin/rustc"),
+             "--target-triple",
+             target_triple,
+             "--label",
+             target_label,
+             "--cmake-dir",
+             rebase_path("//buildtools/cmake/bin"),
+             "--vendor-directory",
+             rebase_path("//third_party/rust-crates/vendor"),
+             "--deps",
+           ] + rust_deps
 
     args += [
       "--shared-libs-root",
-      rebase_path(get_label_info("//default($shlib_toolchain)", "root_out_dir")),
+      rebase_path(
+          get_label_info("//default($shlib_toolchain)", "root_out_dir")),
     ]
 
     if (defined(invoker.with_tests) && invoker.with_tests) {
-      args += [
-        "--with-tests",
-      ]
+      args += [ "--with-tests" ]
 
-      outputs += [
-        "$base_out_dir/$name-$type-test",
-      ]
+      outputs += [ "$base_out_dir/$name-$type-test" ]
     }
 
     if (!is_debug) {
-      args += [
-        "--release",
-      ]
+      args += [ "--release" ]
     }
 
     if (is_fuchsia) {

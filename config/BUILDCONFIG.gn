@@ -155,9 +155,8 @@ if (use_lto) {
 # Add configs set by the toolchain definition.
 default_common_binary_configs += toolchain_configs + toolchain_variant
 
-default_shared_library_configs = default_common_binary_configs + [
-                                   "//build/config:shared_library_config",
-                                 ]
+default_shared_library_configs =
+    default_common_binary_configs + [ "//build/config:shared_library_config" ]
 
 # On most systems, the sanitizer runtimes are normally linked statically
 # and so -shared links do not include them.  Using -shared --no-undefined
@@ -297,9 +296,9 @@ template("executable") {
   # These are not actually used in all possible if branches below,
   # so defang GN's extremely sensitive "unused variable" errors.
   not_needed([
-              "output_name",
-              "target_label",
-            ])
+               "output_name",
+               "target_label",
+             ])
 
   target_variant = false
   if (select_variant != []) {
@@ -309,10 +308,10 @@ template("executable") {
       # The first match wins.
       # GN's loops don't have "break", so do nothing on later iterations.
       if (!selected) {
-
         # Expand the selector so we don't have to do a lot of defined(...)
         # tests below.
-        select = {}
+        select = {
+        }
         select = {
           output_name = []
           label = []
@@ -413,7 +412,7 @@ template("executable") {
                              [
                                "testonly",
                                "visibility",
-                            ])
+                             ])
       if (defined(visibility)) {
         visibility += [ ":${target_name}" ]
       }

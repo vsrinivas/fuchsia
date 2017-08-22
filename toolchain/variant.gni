@@ -29,8 +29,14 @@ declare_args() {
     [ "//build/config/sanitizers:asan" ],
     [ "//build/config/sanitizers:asan_no_detect_leaks" ],
     [ "//build/config/sanitizers:ubsan" ],
-    [ "//build/config/sanitizers:asan", "//build/config/sanitizers:sancov" ],
-    [ "//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov" ],
+    [
+      "//build/config/sanitizers:asan",
+      "//build/config/sanitizers:sancov",
+    ],
+    [
+      "//build/config/sanitizers:ubsan",
+      "//build/config/sanitizers:sancov",
+    ],
   ]
 
   # Additional variant toolchain configs to support.
@@ -58,7 +64,12 @@ template("variant") {
     asmflags = []
     cflags = []
     ldflags = []
-    forward_variables_from(invoker, "*", [ "common_flags", "deps" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "common_flags",
+                             "deps",
+                           ])
     if (defined(invoker.common_flags)) {
       asmflags += invoker.common_flags
       cflags += invoker.common_flags

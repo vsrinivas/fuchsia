@@ -47,8 +47,8 @@ if (is_fuchsia) {
       ":crypto",
     ]
     libraries = [ {
-                  name = "libcrypto.so"
-                } ]
+          name = "libcrypto.so"
+        } ]
   }
 }
 

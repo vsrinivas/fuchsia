@@ -37,12 +37,13 @@ template("dart_tool") {
   dart_package_target_name = target_name + "_dart_package"
 
   dart_package(dart_package_target_name) {
-    forward_variables_from(invoker, [
-      "analysis_options",
-      "deps",
-      "disable_analysis",
-      "source_dir"
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "analysis_options",
+                             "deps",
+                             "disable_analysis",
+                             "source_dir",
+                           ])
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
     } else {

@@ -22,8 +22,7 @@ config("compiler") {
     "-Wl,-rpath=\$ORIGIN/",
   ]
   libs = [ "pthread" ]  # libc++ depends on pthreads
-  lib_dirs =
-      [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
+  lib_dirs = [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
   configs = [ ":sysroot" ]
 }
 
