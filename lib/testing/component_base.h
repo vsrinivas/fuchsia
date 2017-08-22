@@ -69,9 +69,6 @@ class ComponentBase : protected SingleServiceApp<Component> {
   // Delete alone is used to simulate the "unstoppable agent"
   void Delete(const std::function<void()>& done) {
     modular::testing::Done([this, done] {
-      // It is safe to call "delete this" after "Base::PassBinding()" because
-      // the Framwork will never make a follow on call after calling
-      // Terminate().
       auto binding =
           Base::PassBinding();  // To invoke done() after delete this.
       delete this;
