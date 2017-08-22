@@ -44,10 +44,7 @@ FUNCTION(_x86_copy_to_or_from_user)
     rep movsb  # while (rcx-- > 0) *rdi++ = *rsi++;
 
     mov $MX_OK, %rax
-    jmp .Lcleanup_copy
 
-.Lfault_copy:
-    mov $MX_ERR_INVALID_ARGS, %rax
 .Lcleanup_copy:
     # Reset fault return
     movq $0, (%r8)
@@ -58,4 +55,8 @@ FUNCTION(_x86_copy_to_or_from_user)
     clac
 0:
     ret
+
+.Lfault_copy:
+    mov $MX_ERR_INVALID_ARGS, %rax
+    jmp .Lcleanup_copy
 END_FUNCTION(_x86_copy_to_or_from_user)
