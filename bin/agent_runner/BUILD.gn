@@ -48,8 +48,6 @@ source_set("unittests") {
     ":public",
     "//application/lib/app",
     "//application/services",
-    "//apps/ledger/src/app:lib",
-    "//apps/ledger/src/environment",
     "//apps/maxwell/services/user",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/testing:fake_application_launcher",
