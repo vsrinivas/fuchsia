@@ -45,5 +45,5 @@ binary, that by default can be executed on Fuchsia by running `/system/test/ledg
 [Google Test]: https://github.com/google/googletest
 [TestWithMessageLoop]: https://fuchsia.googlesource.com/ledger/+/master/src/test/test_with_message_loop.h
 [IntegrationTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/integration/integration_test.h
-[LedgerAppTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_local/e2e_local.cc
+[LedgerAppTest]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_local/ledger_apptest.cc
 [Synchronization end-to-end tests]: https://fuchsia.googlesource.com/ledger/+/master/src/test/e2e_sync/README.md

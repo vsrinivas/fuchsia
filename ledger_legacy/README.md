@@ -41,7 +41,7 @@ See [docs](docs/README.md) for documentation.
 
 ## Repository contents
 
- - [benchmark](benchmark) - benchmarks
+ - [cloud_dashboard](cloud_dashboard) - a web dashboard for Ledger inspection 
  - [docs](docs) - documentation
  - [services](services) - FIDL API
  - [src](src) - implementation

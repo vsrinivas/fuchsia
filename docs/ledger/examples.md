@@ -6,7 +6,7 @@ and [modules].
 
 ## C++
 
- * [Ledger benchmarks] - excercise Ledger APIs and capture performance traces
+ * [Ledger benchmarks] - exercise Ledger APIs and capture performance traces
  * [moterm] - a graphical terminal, stores the command history in Ledger
  * [story runner] - stores the state of user stories in Ledger
 
@@ -18,7 +18,7 @@ and [modules].
 
 [Modular examples]: https://fuchsia.googlesource.com/modular/+/master/examples
 [modules]: https://fuchsia.googlesource.com/modules
-[Ledger benchmarks]: https://fuchsia.googlesource.com/ledger/+/master/benchmark
+[Ledger benchmarks]: https://fuchsia.googlesource.com/ledger/+/master/src/test/benchmark
 [moterm]: https://fuchsia.googlesource.com/moterm
 [story runner]: https://fuchsia.googlesource.com/modular/+/master/src/story_runner
 [todo (Ledger)]: https://fuchsia.googlesource.com/modular/+/master/examples/todo_ledger
