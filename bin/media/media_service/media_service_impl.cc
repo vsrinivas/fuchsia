@@ -19,14 +19,18 @@
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
 #include "apps/media/src/media_service/network_reader_impl.h"
 #include "apps/media/src/media_service/video_renderer_impl.h"
+#include "apps/media/src/util/multiproc_task_runner.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace media {
 
-MediaServiceImpl::MediaServiceImpl() : dispatcher_(mx_system_get_num_cpus()) {
+MediaServiceImpl::MediaServiceImpl() {
   tracing::InitializeTracer(application_context(), {"motown"});
   FLOG_INITIALIZE(application_context(), "media_service");
+
+  multiproc_task_runner_ =
+      AdoptRef(new MultiprocTaskRunner(mx_system_get_num_cpus()));
 
   application_context()->outgoing_services()->AddService<MediaService>(
       [this](fidl::InterfaceRequest<MediaService> request) {

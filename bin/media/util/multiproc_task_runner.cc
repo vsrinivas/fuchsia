@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/media_service/dispatcher.h"
+#include "apps/media/src/util/multiproc_task_runner.h"
 
 #include <magenta/syscalls/port.h>
 
@@ -14,10 +14,8 @@ static const uint64_t kUpdateKey = 0;
 static const uint64_t kQuitKey = 1;
 }  // namespace
 
-Dispatcher::Dispatcher(uint32_t thread_count) {
+MultiprocTaskRunner::MultiprocTaskRunner(uint32_t thread_count) {
   FTL_DCHECK(thread_count > 0);
-
-  FTL_LOG(INFO) << "thread_count " << thread_count;
 
   mx_status_t status = mx::port::create(0u, &port_);
   if (status != MX_OK) {
@@ -30,7 +28,7 @@ Dispatcher::Dispatcher(uint32_t thread_count) {
   }
 }
 
-Dispatcher::~Dispatcher() {
+MultiprocTaskRunner::~MultiprocTaskRunner() {
   for (size_t i = 0; i < threads_.size(); ++i) {
     QueuePacket(kQuitKey);
   }
@@ -42,17 +40,29 @@ Dispatcher::~Dispatcher() {
   }
 }
 
-void Dispatcher::PostUpdate(Graph* graph) {
-  // FTL_LOG(INFO) << "Dispatcher::PostUpdate";
-  QueuePacket(kUpdateKey, graph);
+void MultiprocTaskRunner::PostTask(ftl::Closure task) {
+  ftl::Closure* task_copy = new ftl::Closure(task);
+  QueuePacket(kUpdateKey, task_copy);
 }
 
-void Dispatcher::Worker(uint32_t thread_number) {
+void MultiprocTaskRunner::PostTaskForTime(ftl::Closure task,
+                                          ftl::TimePoint target_time) {
+  FTL_CHECK(false) << "MultiprocTaskRunner::PostTaskForTime not implemented";
+}
+
+void MultiprocTaskRunner::PostDelayedTask(ftl::Closure task,
+                                          ftl::TimeDelta delay) {
+  FTL_CHECK(false) << "MultiprocTaskRunner::PostDelayedTask not implemented";
+}
+
+bool MultiprocTaskRunner::RunsTasksOnCurrentThread() {
+  return false;
+}
+
+void MultiprocTaskRunner::Worker(uint32_t thread_number) {
   while (true) {
     mx_port_packet_t packet;
-    // FTL_LOG(INFO) << "Dispatcher::Worker#" << thread_number << ": waiting";
     mx_status_t status = port_.wait(MX_TIME_INFINITE, &packet, 0u);
-    // FTL_LOG(INFO) << "Dispatcher::Worker#" << thread_number << ": waking";
     if (status != MX_OK) {
       FTL_LOG(ERROR) << "mx::port::wait failed, status " << status;
       break;
@@ -62,17 +72,19 @@ void Dispatcher::Worker(uint32_t thread_number) {
     FTL_DCHECK(packet.key == kUpdateKey || packet.key == kQuitKey);
 
     if (packet.key == kQuitKey) {
-      FTL_LOG(INFO) << "Dispatcher::Worker#" << thread_number << ": quitting";
+      FTL_LOG(INFO) << "MultiprocTaskRunner::Worker#" << thread_number
+                    << ": quitting";
       break;
     }
 
-    // FTL_LOG(INFO) << "Dispatcher::Worker#" << thread_number
-    //              << ": calling UpdateOne";
-    reinterpret_cast<Graph*>(packet.user.u64[0])->UpdateOne();
+    ftl::Closure* task = reinterpret_cast<ftl::Closure*>(packet.user.u64[0]);
+    FTL_DCHECK(task);
+    (*task)();
+    delete task;
   }
 }
 
-void Dispatcher::QueuePacket(uint64_t key, void* payload) {
+void MultiprocTaskRunner::QueuePacket(uint64_t key, void* payload) {
   mx_port_packet_t packet;
   packet.type = MX_PKT_TYPE_USER;
   packet.key = key;

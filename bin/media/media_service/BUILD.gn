@@ -8,8 +8,6 @@ executable("media_service") {
     "audio_capturer_impl.h",
     "conversion_pipeline_builder.cc",
     "conversion_pipeline_builder.h",
-    "dispatcher.cc",
-    "dispatcher.h",
     "file_reader_impl.cc",
     "file_reader_impl.h",
     "lpcm_reformatter_impl.cc",

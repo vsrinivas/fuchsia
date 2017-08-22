@@ -35,8 +35,6 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   source_ = AudioInput::Create(audio_enum.input_device_paths().front());
 
-  // graph_.SetUpdateCallback(
-  //    [this]() { this->owner()->dispatcher().PostUpdate(&graph_); });
   graph_.ConnectNodes(graph_.Add(source_), graph_.Add(producer_));
   graph_.Prepare();
 }

@@ -6,7 +6,6 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/media/services/media_service.fidl.h"
-#include "apps/media/src/media_service/dispatcher.h"
 #include "apps/media/src/util/factory_service_base.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -41,7 +40,9 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
 
   ~MediaServiceImpl() override;
 
-  Dispatcher& dispatcher() { return dispatcher_; }
+  ftl::RefPtr<ftl::TaskRunner> multiproc_task_runner() {
+    return multiproc_task_runner_;
+  }
 
   // MediaService implementation.
   void CreatePlayer(fidl::InterfaceHandle<SeekingReader> reader,
@@ -91,7 +92,7 @@ class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
 
  private:
   fidl::BindingSet<MediaService> bindings_;
-  Dispatcher dispatcher_;
+  ftl::RefPtr<ftl::TaskRunner> multiproc_task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);
 };
