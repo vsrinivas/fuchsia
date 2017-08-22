@@ -141,9 +141,9 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);
 
-  PacketPtr packet =
-      DecoderPacket::Create(av_frame.reordered_opaque, pts_rate(),
-                            av_frame.key_frame, av_buffer_ref(av_frame.buf[0]));
+  PacketPtr packet = DecoderPacket::Create(
+      av_frame.reordered_opaque, pts_rate(), av_frame.key_frame,
+      av_buffer_ref(av_frame.buf[0]), this);
 
   if (revised_stream_type_) {
     packet->SetRevisedStreamType(std::move(revised_stream_type_));

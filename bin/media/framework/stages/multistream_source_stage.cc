@@ -9,9 +9,8 @@
 namespace media {
 
 MultistreamSourceStageImpl::MultistreamSourceStageImpl(
-    Engine* engine,
     std::shared_ptr<MultistreamSource> source)
-    : StageImpl(engine), source_(source), ended_streams_(0) {
+    : source_(source), ended_streams_(0) {
   FTL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
@@ -65,6 +64,10 @@ void MultistreamSourceStageImpl::UnprepareOutput(
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
+ftl::RefPtr<ftl::TaskRunner> MultistreamSourceStageImpl::GetNodeTaskRunner() {
+  return source_->GetTaskRunner();
+}
+
 void MultistreamSourceStageImpl::Update() {
   while (true) {
     if (cached_packet_ && HasPositiveDemand(outputs_)) {
@@ -112,6 +115,16 @@ void MultistreamSourceStageImpl::FlushOutput(size_t index) {
   cached_packet_.reset();
   cached_packet_output_index_ = 0;
   ended_streams_ = 0;
+}
+
+void MultistreamSourceStageImpl::SetTaskRunner(
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  ftl::RefPtr<ftl::TaskRunner> node_task_runner = source_->GetTaskRunner();
+  StageImpl::SetTaskRunner(node_task_runner ? node_task_runner : task_runner);
+}
+
+void MultistreamSourceStageImpl::PostTask(const ftl::Closure& task) {
+  StageImpl::PostTask(task);
 }
 
 }  // namespace media

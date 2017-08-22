@@ -150,7 +150,7 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
     // We don't need to interleave. The interleaved frames are in a buffer that
     // was allocated from the correct allocator.
     return DecoderPacket::Create(pts, pts_rate(), false,
-                                 av_buffer_ref(av_frame.buf[0]));
+                                 av_buffer_ref(av_frame.buf[0]), this);
   }
 }
 

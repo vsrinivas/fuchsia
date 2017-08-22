@@ -16,7 +16,7 @@ namespace media {
 // A stage that hosts an ActiveSource.
 class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
  public:
-  ActiveSourceStageImpl(Engine* engine, std::shared_ptr<ActiveSource> source);
+  ActiveSourceStageImpl(std::shared_ptr<ActiveSource> source);
 
   ~ActiveSourceStageImpl() override;
 
@@ -44,10 +44,17 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
   void FlushOutput(size_t index) override;
 
  protected:
+  // StageImpl implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+
   void Update() override;
 
  private:
   // ActiveSourceStage implementation.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+
+  void PostTask(const ftl::Closure& task) override;
+
   void SupplyPacket(PacketPtr packet) override;
 
   Output output_;

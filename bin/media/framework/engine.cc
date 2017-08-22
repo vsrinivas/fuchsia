@@ -52,40 +52,8 @@ void Engine::FlushOutput(Output* output, bool hold_frame) {
       });
 }
 
-void Engine::StageNeedsUpdate(StageImpl* stage) {
-  FTL_DCHECK(stage);
-  if (PushToUpdateBacklog(stage) && update_callback_) {
-    update_callback_();
-  }
-}
-
-bool Engine::UpdateOne() {
-  StageImpl* stage = PopFromUpdateBacklog();
-  if (!stage) {
-    return false;
-  }
-
-  stage->UpdateUntilDone();
-  return true;
-}
-
-void Engine::UpdateUntilDone() {
-  {
-    ftl::MutexLocker locker(&backlog_mutex_);
-    FTL_DCHECK(!suppress_update_callbacks_) << "re-entered UpdateUntilDone.";
-    suppress_update_callbacks_ = true;
-  }
-
-  while (UpdateOne()) {
-    // Do nothing.
-  }
-
-  // suppress_update_callbacks_ is set to false when |UpdateOne| returns false.
-}
-
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
   FTL_DCHECK(input);
-  ftl::MutexLocker locker(&backlog_mutex_);
 
   std::queue<Input*> backlog;
   backlog.push(input);
@@ -107,7 +75,6 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
 
 void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
   FTL_DCHECK(output);
-  ftl::MutexLocker locker(&backlog_mutex_);
 
   std::queue<Output*> backlog;
   backlog.push(output);
@@ -125,27 +92,6 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
       backlog.push(&input_stage->output(output_index));
     });
   }
-}
-
-bool Engine::PushToUpdateBacklog(StageImpl* stage) {
-  FTL_DCHECK(stage);
-  ftl::MutexLocker locker(&backlog_mutex_);
-  update_backlog_.push(stage);
-  return !suppress_update_callbacks_;
-}
-
-StageImpl* Engine::PopFromUpdateBacklog() {
-  ftl::MutexLocker locker(&backlog_mutex_);
-
-  if (update_backlog_.empty()) {
-    suppress_update_callbacks_ = false;
-    return nullptr;
-  }
-
-  StageImpl* stage = update_backlog_.front();
-  update_backlog_.pop();
-
-  return stage;
 }
 
 }  // namespace media

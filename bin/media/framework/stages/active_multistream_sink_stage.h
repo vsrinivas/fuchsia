@@ -19,8 +19,7 @@ namespace media {
 class ActiveMultistreamSinkStageImpl : public StageImpl,
                                        public ActiveMultistreamSinkStage {
  public:
-  ActiveMultistreamSinkStageImpl(Engine* engine,
-                                 std::shared_ptr<ActiveMultistreamSink> sink);
+  ActiveMultistreamSinkStageImpl(std::shared_ptr<ActiveMultistreamSink> sink);
 
   ~ActiveMultistreamSinkStageImpl() override;
 
@@ -46,10 +45,17 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
   void FlushOutput(size_t index) override;
 
  protected:
+  // StageImpl implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+
   void Update() override;
 
  private:
   // ActiveMultistreamSinkStage implementation.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+
+  void PostTask(const ftl::Closure& task) override;
+
   size_t AllocateInput() override;
 
   size_t ReleaseInput(size_t index) override;

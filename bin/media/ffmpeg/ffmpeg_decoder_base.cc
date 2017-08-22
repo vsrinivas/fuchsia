@@ -7,6 +7,8 @@
 #include "apps/media/src/ffmpeg/av_codec_context.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/threading/create_thread.h"
 
 namespace media {
 
@@ -15,15 +17,28 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
   FTL_DCHECK(av_codec_context_);
 
+  // Ffmpeg decoders need to run on a single thread, so we create one here.
+  // The task runner for the thread is returned by |GetTaskRunner|, so all
+  // |PostTask| calls relating to this node go to this thread.
+  std::thread thread = mtl::CreateThread(&task_runner_, "ffmpeg decoder");
+  thread.detach();
+
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
   av_codec_context_->refcounted_frames = 1;
 }
 
-FfmpegDecoderBase::~FfmpegDecoderBase() {}
+FfmpegDecoderBase::~FfmpegDecoderBase() {
+  // Quit the thread we created in the constructor.
+  PostTask([]() { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
+}
 
 std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
   return AvCodecContext::GetStreamType(*av_codec_context_);
+}
+
+ftl::RefPtr<ftl::TaskRunner> FfmpegDecoderBase::GetTaskRunner() {
+  return task_runner_;
 }
 
 void FfmpegDecoderBase::Flush() {
@@ -164,7 +179,10 @@ void FfmpegDecoderBase::ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer) {
 }
 
 FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
-  av_buffer_unref(&av_buffer_ref_);
+  FTL_DCHECK(owner_);
+  owner_->PostTask([av_buffer_ref = av_buffer_ref_]() mutable {
+    av_buffer_unref(&av_buffer_ref);
+  });
 }
 
 }  // namespace media

@@ -18,15 +18,13 @@
 
 namespace media {
 
-class Engine;
-
 // Host for a source, sink or transform.
 class StageImpl {
  public:
   using UpstreamCallback = std::function<void(size_t input_index)>;
   using DownstreamCallback = std::function<void(size_t output_index)>;
 
-  StageImpl(Engine* engine);
+  StageImpl();
 
   virtual ~StageImpl();
 
@@ -80,12 +78,29 @@ class StageImpl {
   // Calls |Update| until no more updates are required.
   void UpdateUntilDone();
 
+  // Sets a |TaskRunner| for running tasks relating to this stage and the node
+  // it hosts. The stage ensures that only one task related to this stage runs
+  // at any given time. Before using the provided |TaskRunner|, the stage
+  // calls the node's |GetTaskRunner| method to determine if the node has a
+  // |TaskRunner| it would prefer to use. If so, it uses that one instead of
+  // |task_runner|.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner);
+
+  void PostTask(const ftl::Closure& task);
+
  protected:
+  // Gets the task runner specified by the node, if any.
+  virtual ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() = 0;
+
   // Updates packet supply and demand.
   virtual void Update() = 0;
 
  private:
-  Engine* const engine_;
+  // Runs tasks in the task queue. This method is always called from
+  // |task_runner_|.
+  void RunTasks();
+
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   // Used for ensuring the stage is properly updated. This value is zero
   // initially, indicating that there's no need to update the stage. When the
@@ -96,7 +111,9 @@ class StageImpl {
   // counter is reset to 0.
   std::atomic_uint32_t update_counter_;
 
-  friend class Engine;
+  mutable ftl::Mutex tasks_mutex_;
+  // Pending tasks. Only |RunTasks| may pop from this queue.
+  std::queue<ftl::Closure> tasks_ FTL_GUARDED_BY(tasks_mutex_);
 };
 
 }  // namespace media

@@ -36,6 +36,13 @@ class Node {
     return *stage_;
   }
 
+  // Posts a task to run as soon as possible. A task posted with this method is
+  // run exclusive of any other such tasks.
+  void PostTask(const ftl::Closure& task) {
+    FTL_DCHECK(stage_);
+    stage_->PostTask(task);
+  }
+
  private:
   TStage* stage_ = nullptr;
 

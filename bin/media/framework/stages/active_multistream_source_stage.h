@@ -18,8 +18,8 @@ namespace media {
 class ActiveMultistreamSourceStageImpl : public StageImpl,
                                          public ActiveMultistreamSourceStage {
  public:
-  ActiveMultistreamSourceStageImpl(Engine* engine,
-                                   std::shared_ptr<ActiveMultistreamSource> source);
+  ActiveMultistreamSourceStageImpl(
+      std::shared_ptr<ActiveMultistreamSource> source);
 
   ~ActiveMultistreamSourceStageImpl() override;
 
@@ -47,10 +47,17 @@ class ActiveMultistreamSourceStageImpl : public StageImpl,
   void FlushOutput(size_t index) override;
 
  protected:
+  // StageImpl implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+
   void Update() override;
 
  private:
   // ActiveMultistreamSourceStage implementation.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+
+  void PostTask(const ftl::Closure& task) override;
+
   void SupplyPacket(size_t output_index, PacketPtr packet) override;
 
   std::vector<Output> outputs_;

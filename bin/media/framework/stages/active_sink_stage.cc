@@ -6,9 +6,8 @@
 
 namespace media {
 
-ActiveSinkStageImpl::ActiveSinkStageImpl(Engine* engine,
-                                         std::shared_ptr<ActiveSink> sink)
-    : StageImpl(engine), input_(this, 0), sink_(sink) {
+ActiveSinkStageImpl::ActiveSinkStageImpl(std::shared_ptr<ActiveSink> sink)
+    : input_(this, 0), sink_(sink) {
   FTL_DCHECK(sink_);
 }
 
@@ -41,6 +40,10 @@ void ActiveSinkStageImpl::PrepareOutput(size_t index,
                                         PayloadAllocator* allocator,
                                         const UpstreamCallback& callback) {
   FTL_CHECK(false) << "PrepareOutput called on sink";
+}
+
+ftl::RefPtr<ftl::TaskRunner> ActiveSinkStageImpl::GetNodeTaskRunner() {
+  return sink_->GetTaskRunner();
 }
 
 void ActiveSinkStageImpl::Update() {
@@ -76,6 +79,15 @@ void ActiveSinkStageImpl::FlushInput(size_t index,
 
 void ActiveSinkStageImpl::FlushOutput(size_t index) {
   FTL_CHECK(false) << "FlushOutput called on sink";
+}
+
+void ActiveSinkStageImpl::SetTaskRunner(
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  StageImpl::SetTaskRunner(task_runner);
+}
+
+void ActiveSinkStageImpl::PostTask(const ftl::Closure& task) {
+  StageImpl::PostTask(task);
 }
 
 void ActiveSinkStageImpl::SetDemand(Demand demand) {

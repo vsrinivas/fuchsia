@@ -16,6 +16,7 @@
 #include "apps/media/src/framework/stages/transform_stage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace media {
 
@@ -32,9 +33,8 @@ class StageCreator;
   class StageCreator<                                                        \
       T, typename std::enable_if<std::is_base_of<TModel, T>::value>::type> { \
    public:                                                                   \
-    static inline StageImpl* Create(Engine* engine,                          \
-                                    std::shared_ptr<T> t_ptr) {              \
-      TStage* stage = new TStage(engine, std::shared_ptr<TModel>(t_ptr));    \
+    static inline StageImpl* Create(std::shared_ptr<T> t_ptr) {              \
+      TStage* stage = new TStage(std::shared_ptr<TModel>(t_ptr));            \
       t_ptr->SetStage(stage);                                                \
       return stage;                                                          \
     }                                                                        \
@@ -110,33 +110,19 @@ DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStageImpl);
 // Host for a source, sink or transform.
 class Graph {
  public:
-  Graph();
+  // Constructs a graph. If |default_task_runner| is null, every call to |Add|
+  // or |AddAndConnectAll| must supply a task runner.
+  Graph(ftl::RefPtr<ftl::TaskRunner> default_task_runner);
 
   ~Graph();
 
-  // Sets the update callback. The update callback signals the need to update
-  // stages. |update_callback| is called on an arbitrary thread. If this method
-  // is never called, updates will run on the threads that the nodes use to
-  // signal external events (typically via a call to a demand or supply callback
-  // or in a call to the node's 'host'). A mutex is taken while updates are
-  // running, so this results in single-threaded execution. If this method *is*
-  // called, |update_callback| will be called on those threads instead. To
-  // enable multi-threaded operation, the callback should dispatch a thread to
-  // call |UpdateOne|. |update_callback| can be re-entered, so care should be
-  // taken to synchronize properly. To run single-threaded, the callback should
-  // call |UpdateUntilDone| or dispatch a thread to do so, keeping in mind that
-  // |UpdateUntilDone| cannot be re-entered. Calling |UpdateUntilDone| from the
-  // callback thread essentially replicates the behavior produced by never
-  // calling |SetUpdateCallback| in the first place.
-  void SetUpdateCallback(ftl::Closure update_callback) {
-    engine_.SetUpdateCallback(update_callback);
-  }
-
-  // Adds a node to the graph.
+  // Adds a node to the graph. |task_runner| is required if no default task
+  // runner was provided in the graph constructor.
   template <typename T>
-  NodeRef Add(std::shared_ptr<T> t_ptr) {
+  NodeRef Add(std::shared_ptr<T> t_ptr,
+              ftl::RefPtr<ftl::TaskRunner> task_runner = nullptr) {
     FTL_DCHECK(t_ptr);
-    return Add(internal::StageCreator<T>::Create(&engine_, t_ptr));
+    return Add(internal::StageCreator<T>::Create(t_ptr), task_runner);
   }
 
   // Removes a node from the graph after disconnecting it from other nodes.
@@ -178,10 +164,16 @@ class Graph {
   // Adds all the nodes in t (which must all have one input and one output) and
   // connects them in sequence to the output connector. Returns the output
   // connector of the last node or the output parameter if it is empty.
+  // |task_runner| is required if no default task runner was provided in the
+  // graph constructor.
   template <typename T>
-  OutputRef AddAndConnectAll(OutputRef output, const T& t) {
+  OutputRef AddAndConnectAll(
+      OutputRef output,
+      const T& t,
+      ftl::RefPtr<ftl::TaskRunner> task_runner = nullptr) {
     for (const auto& element : t) {
-      NodeRef node = Add(internal::StageCreator<T>::Create(element));
+      NodeRef node =
+          Add(internal::StageCreator<T>::Create(element), task_runner);
       Connect(output, node.input());
       output = node.output();
     }
@@ -208,22 +200,17 @@ class Graph {
   // frame.
   void FlushAllOutputs(NodeRef node, bool hold_frame);
 
-  // Updates one node from the update backlog.
-  void UpdateOne();
-
-  // Updates nodes from the update backlog until the backlog is empty.
-  void UpdateUntilDone();
-
  private:
   // Adds a stage to the graph.
-  NodeRef Add(StageImpl* stage);
+  NodeRef Add(StageImpl* stage, ftl::RefPtr<ftl::TaskRunner> task_runner);
+
+  ftl::RefPtr<ftl::TaskRunner> default_task_runner_;
 
   std::list<StageImpl*> stages_;
   std::list<StageImpl*> sources_;
   std::list<StageImpl*> sinks_;
 
   Engine engine_;
-  mutable ftl::Mutex update_mutex_;
 };
 
 }  // namespace media

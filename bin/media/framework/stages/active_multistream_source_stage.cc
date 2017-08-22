@@ -9,11 +9,8 @@
 namespace media {
 
 ActiveMultistreamSourceStageImpl::ActiveMultistreamSourceStageImpl(
-    Engine* engine,
     std::shared_ptr<ActiveMultistreamSource> source)
-    : StageImpl(engine),
-      packets_per_output_(source->stream_count()),
-      source_(source) {
+    : packets_per_output_(source->stream_count()), source_(source) {
   FTL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
@@ -67,6 +64,11 @@ void ActiveMultistreamSourceStageImpl::UnprepareOutput(
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
+ftl::RefPtr<ftl::TaskRunner>
+ActiveMultistreamSourceStageImpl::GetNodeTaskRunner() {
+  return source_->GetTaskRunner();
+}
+
 void ActiveMultistreamSourceStageImpl::Update() {
   ftl::MutexLocker locker(&mutex_);
 
@@ -112,6 +114,15 @@ void ActiveMultistreamSourceStageImpl::FlushOutput(size_t index) {
   packets_per_output_[index].clear();
   ended_streams_ = 0;
   packet_request_outstanding_ = false;
+}
+
+void ActiveMultistreamSourceStageImpl::SetTaskRunner(
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  StageImpl::SetTaskRunner(task_runner);
+}
+
+void ActiveMultistreamSourceStageImpl::PostTask(const ftl::Closure& task) {
+  StageImpl::PostTask(task);
 }
 
 void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,

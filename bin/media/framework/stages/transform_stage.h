@@ -12,7 +12,7 @@ namespace media {
 // A stage that hosts a Transform.
 class TransformStageImpl : public TransformStage, public StageImpl {
  public:
-  TransformStageImpl(Engine* engine, std::shared_ptr<Transform> transform);
+  TransformStageImpl(std::shared_ptr<Transform> transform);
 
   ~TransformStageImpl() override;
 
@@ -40,9 +40,17 @@ class TransformStageImpl : public TransformStage, public StageImpl {
   void FlushOutput(size_t index) override;
 
  protected:
+  // StageImpl implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+
   void Update() override;
 
  private:
+  // TransformStage implementation.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+
+  void PostTask(const ftl::Closure& task) override;
+
   Input input_;
   Output output_;
   std::shared_ptr<Transform> transform_;

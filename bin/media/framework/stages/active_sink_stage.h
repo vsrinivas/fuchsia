@@ -16,7 +16,7 @@ namespace media {
 // A stage that hosts an ActiveSink.
 class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
  public:
-  ActiveSinkStageImpl(Engine* engine, std::shared_ptr<ActiveSink> sink);
+  ActiveSinkStageImpl(std::shared_ptr<ActiveSink> sink);
 
   ~ActiveSinkStageImpl() override;
 
@@ -42,10 +42,17 @@ class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
   void FlushOutput(size_t index) override;
 
  protected:
+  // StageImpl implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+
   void Update() override;
 
  private:
   // ActiveSinkStage implementation.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+
+  void PostTask(const ftl::Closure& task) override;
+
   void SetDemand(Demand demand) override;
 
   Input input_;

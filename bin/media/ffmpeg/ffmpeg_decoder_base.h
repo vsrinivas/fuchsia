@@ -27,6 +27,8 @@ class FfmpegDecoderBase : public Decoder {
   std::unique_ptr<StreamType> output_stream_type() override;
 
   // Transform implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetTaskRunner() override;
+
   void Flush() override;
 
   bool TransformPacket(const PacketPtr& input,
@@ -40,9 +42,10 @@ class FfmpegDecoderBase : public Decoder {
     static PacketPtr Create(int64_t pts,
                             TimelineRate pts_rate,
                             bool keyframe,
-                            AVBufferRef* av_buffer_ref) {
+                            AVBufferRef* av_buffer_ref,
+                            FfmpegDecoderBase* owner) {
       return std::make_shared<DecoderPacket>(pts, pts_rate, keyframe,
-                                             av_buffer_ref);
+                                             av_buffer_ref, owner);
     }
 
     ~DecoderPacket() override;
@@ -50,19 +53,22 @@ class FfmpegDecoderBase : public Decoder {
     DecoderPacket(int64_t pts,
                   TimelineRate pts_rate,
                   bool keyframe,
-                  AVBufferRef* av_buffer_ref)
+                  AVBufferRef* av_buffer_ref,
+                  FfmpegDecoderBase* owner)
         : Packet(pts,
                  pts_rate,
                  keyframe,
                  false,
                  static_cast<size_t>(av_buffer_ref->size),
                  av_buffer_ref->data),
-          av_buffer_ref_(av_buffer_ref) {
+          av_buffer_ref_(av_buffer_ref),
+          owner_(owner) {
       FTL_DCHECK(av_buffer_ref->size >= 0);
     }
 
    private:
     AVBufferRef* av_buffer_ref_;
+    FfmpegDecoderBase* owner_;
   };
 
   // Called when a new input packet is about to be processed. The default
@@ -120,6 +126,10 @@ class FfmpegDecoderBase : public Decoder {
   ffmpeg::AvFramePtr av_frame_ptr_;
   int64_t next_pts_ = Packet::kUnknownPts;
   TimelineRate pts_rate_;
+
+  // The task runner to be used for running this node and its stage. We need
+  // a single-threaded task runner, because ffmpeg decoders are thread-hostile.
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to
   // provide context for AllocateBufferForAvFrame. This is set only during

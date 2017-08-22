@@ -6,9 +6,9 @@
 
 namespace media {
 
-ActiveSourceStageImpl::ActiveSourceStageImpl(Engine* engine,
-                                             std::shared_ptr<ActiveSource> source)
-    : StageImpl(engine), output_(this, 0), source_(source), prepared_(false) {
+ActiveSourceStageImpl::ActiveSourceStageImpl(
+    std::shared_ptr<ActiveSource> source)
+    : output_(this, 0), source_(source), prepared_(false) {
   FTL_DCHECK(source_);
 }
 
@@ -66,6 +66,10 @@ void ActiveSourceStageImpl::UnprepareOutput(size_t index,
   output_.SetCopyAllocator(nullptr);
 }
 
+ftl::RefPtr<ftl::TaskRunner> ActiveSourceStageImpl::GetNodeTaskRunner() {
+  return source_->GetTaskRunner();
+}
+
 void ActiveSourceStageImpl::Update() {
   Demand demand = output_.demand();
 
@@ -92,6 +96,15 @@ void ActiveSourceStageImpl::FlushOutput(size_t index) {
   source_->Flush();
   ftl::MutexLocker locker(&mutex_);
   packets_.clear();
+}
+
+void ActiveSourceStageImpl::SetTaskRunner(
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  StageImpl::SetTaskRunner(task_runner);
+}
+
+void ActiveSourceStageImpl::PostTask(const ftl::Closure& task) {
+  StageImpl::PostTask(task);
 }
 
 void ActiveSourceStageImpl::SupplyPacket(PacketPtr packet) {

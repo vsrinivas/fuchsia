@@ -25,12 +25,13 @@ std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
 MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
                                fidl::InterfaceRequest<MediaSource> request,
                                MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner) {
+    : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner),
+      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      graph_(owner->multiproc_task_runner()) {
   FTL_DCHECK(reader);
 
   FLOG(log_channel_, BoundAs(FLOG_BINDING_KOID(binding())));
 
-  task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
   FTL_DCHECK(task_runner_);
 
   status_publisher_.SetCallbackRunner(

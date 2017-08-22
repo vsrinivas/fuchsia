@@ -6,10 +6,8 @@
 
 namespace media {
 
-TransformStageImpl::TransformStageImpl(Engine* engine,
-                                       std::shared_ptr<Transform> transform)
-    : StageImpl(engine),
-      input_(this, 0),
+TransformStageImpl::TransformStageImpl(std::shared_ptr<Transform> transform)
+    : input_(this, 0),
       output_(this, 0),
       transform_(transform),
       allocator_(nullptr),
@@ -59,6 +57,10 @@ void TransformStageImpl::UnprepareOutput(size_t index,
   callback(0);
 }
 
+ftl::RefPtr<ftl::TaskRunner> TransformStageImpl::GetNodeTaskRunner() {
+  return transform_->GetTaskRunner();
+}
+
 void TransformStageImpl::Update() {
   FTL_DCHECK(allocator_);
 
@@ -91,8 +93,17 @@ void TransformStageImpl::FlushInput(size_t index,
 void TransformStageImpl::FlushOutput(size_t index) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(transform_);
-  transform_->Flush();
+  PostTask([this]() { transform_->Flush(); });
   input_packet_is_new_ = true;
+}
+
+void TransformStageImpl::SetTaskRunner(
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  StageImpl::SetTaskRunner(task_runner);
+}
+
+void TransformStageImpl::PostTask(const ftl::Closure& task) {
+  StageImpl::PostTask(task);
 }
 
 }  // namespace media

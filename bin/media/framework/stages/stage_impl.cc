@@ -4,12 +4,11 @@
 
 #include "apps/media/src/framework/stages/stage_impl.h"
 
-#include "apps/media/src/framework/engine.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
 
-StageImpl::StageImpl(Engine* engine) : engine_(engine), update_counter_(0) {}
+StageImpl::StageImpl() : update_counter_(0) {}
 
 StageImpl::~StageImpl() {}
 
@@ -21,7 +20,7 @@ void StageImpl::UnprepareOutput(size_t index,
 void StageImpl::NeedsUpdate() {
   if (++update_counter_ == 1) {
     // This stage has no update pending in the task queue or running.
-    engine_->StageNeedsUpdate(this);
+    PostTask([this]() { UpdateUntilDone(); });
   } else {
     // This stage already has an update either pending in the task queue or
     // running. Set the counter to 2 so it will never go out of range. We don't
@@ -45,6 +44,43 @@ void StageImpl::UpdateUntilDone() {
       break;
     }
   }
+}
+
+void StageImpl::SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  FTL_DCHECK(task_runner);
+  ftl::RefPtr<ftl::TaskRunner> node_task_runner = GetNodeTaskRunner();
+  task_runner_ = node_task_runner ? node_task_runner : task_runner;
+}
+
+void StageImpl::PostTask(const ftl::Closure& task) {
+  FTL_DCHECK(task);
+
+  {
+    ftl::MutexLocker locker(&tasks_mutex_);
+    tasks_.push(task);
+    if (tasks_.size() != 1) {
+      // Don't need to run tasks, because there were already tasks in
+      // the queue.
+      return;
+    }
+  }
+
+  FTL_DCHECK(task_runner_);
+  task_runner_->PostTask([this]() { RunTasks(); });
+}
+
+void StageImpl::RunTasks() {
+  tasks_mutex_.Lock();
+
+  while (!tasks_.empty()) {
+    ftl::Closure& task = tasks_.front();
+    tasks_mutex_.Unlock();
+    task();
+    tasks_mutex_.Lock();
+    tasks_.pop();
+  }
+
+  tasks_mutex_.Unlock();
 }
 
 }  // namespace media

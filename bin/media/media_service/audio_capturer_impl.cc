@@ -24,6 +24,7 @@ AudioCapturerImpl::AudioCapturerImpl(
     fidl::InterfaceRequest<MediaCapturer> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaCapturer>(this, std::move(request), owner),
+      graph_(owner->multiproc_task_runner()),
       producer_(FidlPacketProducer::Create()) {
   AudioInputEnum audio_enum;
 

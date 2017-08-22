@@ -16,8 +16,7 @@ namespace media {
 class MultistreamSourceStageImpl : public StageImpl,
                                    public MultistreamSourceStage {
  public:
-  MultistreamSourceStageImpl(Engine* engine,
-                         std::shared_ptr<MultistreamSource> source);
+  MultistreamSourceStageImpl(std::shared_ptr<MultistreamSource> source);
 
   ~MultistreamSourceStageImpl() override;
 
@@ -45,9 +44,17 @@ class MultistreamSourceStageImpl : public StageImpl,
   void FlushOutput(size_t index) override;
 
  protected:
+  // StageImpl implementation.
+  ftl::RefPtr<ftl::TaskRunner> GetNodeTaskRunner() override;
+
   void Update() override;
 
  private:
+  // MultistreamSourceStage implementation.
+  void SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) override;
+
+  void PostTask(const ftl::Closure& task) override;
+
   std::vector<Output> outputs_;
   std::shared_ptr<MultistreamSource> source_;
   PacketPtr cached_packet_;

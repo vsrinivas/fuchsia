@@ -6,13 +6,8 @@
 
 namespace media {
 
-Graph::Graph() {
-  // TODO(dalesat): Replace with proper dispatching model.
-  engine_.SetUpdateCallback([this]() {
-    ftl::MutexLocker locker(&update_mutex_);
-    engine_.UpdateUntilDone();
-  });
-}
+Graph::Graph(ftl::RefPtr<ftl::TaskRunner> default_task_runner)
+    : default_task_runner_(default_task_runner) {}
 
 Graph::~Graph() {
   Reset();
@@ -209,16 +204,11 @@ void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
   }
 }
 
-void Graph::UpdateOne() {
-  engine_.UpdateOne();
-}
-
-void Graph::UpdateUntilDone() {
-  engine_.UpdateUntilDone();
-}
-
-NodeRef Graph::Add(StageImpl* stage) {
+NodeRef Graph::Add(StageImpl* stage, ftl::RefPtr<ftl::TaskRunner> task_runner) {
   FTL_DCHECK(stage);
+  FTL_DCHECK(task_runner || default_task_runner_);
+
+  stage->SetTaskRunner(task_runner ? task_runner : default_task_runner_);
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {

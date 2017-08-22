@@ -7,9 +7,8 @@
 namespace media {
 
 ActiveMultistreamSinkStageImpl::ActiveMultistreamSinkStageImpl(
-    Engine* engine,
     std::shared_ptr<ActiveMultistreamSink> sink)
-    : StageImpl(engine), sink_(sink) {
+    : sink_(sink) {
   FTL_DCHECK(sink_);
   // Add one unallocated input so this stage isn't misidentified as a source.
   ReleaseInput(AllocateInput());
@@ -48,6 +47,11 @@ void ActiveMultistreamSinkStageImpl::PrepareOutput(
     PayloadAllocator* allocator,
     const UpstreamCallback& callback) {
   FTL_CHECK(false) << "PrepareOutput called on sink";
+}
+
+ftl::RefPtr<ftl::TaskRunner>
+ActiveMultistreamSinkStageImpl::GetNodeTaskRunner() {
+  return sink_->GetTaskRunner();
 }
 
 void ActiveMultistreamSinkStageImpl::Update() {
@@ -91,6 +95,15 @@ void ActiveMultistreamSinkStageImpl::FlushInput(
 
 void ActiveMultistreamSinkStageImpl::FlushOutput(size_t index) {
   FTL_CHECK(false) << "FlushOutput called on sink";
+}
+
+void ActiveMultistreamSinkStageImpl::SetTaskRunner(
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  StageImpl::SetTaskRunner(task_runner);
+}
+
+void ActiveMultistreamSinkStageImpl::PostTask(const ftl::Closure& task) {
+  StageImpl::PostTask(task);
 }
 
 size_t ActiveMultistreamSinkStageImpl::AllocateInput() {
