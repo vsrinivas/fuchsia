@@ -66,12 +66,12 @@
             "bootfs_path": "test/maxwell/integration"
         },
         {
-            "binary": "context_repository_unittest",
-            "bootfs_path": "test/maxwell/context_repository_unittest"
+            "binary": "context_index_unittest",
+            "bootfs_path": "test/maxwell/context_index_unittest"
         },
         {
-            "binary": "context_coprocessors_unittest",
-            "bootfs_path": "test/maxwell/context_coprocessors_unittest"
+            "binary": "context_repository_unittest",
+            "bootfs_path": "test/maxwell/context_repository_unittest"
         }
     ]
 }
