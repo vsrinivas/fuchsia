@@ -748,12 +748,24 @@ VnodeMinfs::~VnodeMinfs() {
 
     fs_->VnodeRelease(this);
 #ifdef __Fuchsia__
+    // Detach the vmoids from the underlying block device,
+    // so the underlying VMO may be released.
+    size_t request_count = 0;
+    block_fifo_request_t request[2];
     if (vmo_.is_valid()) {
-        block_fifo_request_t request;
-        request.txnid = fs_->bc_->TxnId();
-        request.vmoid = vmoid_;
-        request.opcode = BLOCKIO_CLOSE_VMO;
-        fs_->bc_->Txn(&request, 1);
+        request[request_count].txnid = fs_->bc_->TxnId();
+        request[request_count].vmoid = vmoid_;
+        request[request_count].opcode = BLOCKIO_CLOSE_VMO;
+        request_count++;
+    }
+    if (vmo_indirect_ != nullptr) {
+        request[request_count].txnid = fs_->bc_->TxnId();
+        request[request_count].vmoid = vmoid_indirect_;
+        request[request_count].opcode = BLOCKIO_CLOSE_VMO;
+        request_count++;
+    }
+    if (request_count) {
+        fs_->bc_->Txn(&request[0], request_count);
     }
 #endif
 }
