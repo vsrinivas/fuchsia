@@ -12,6 +12,9 @@ while setting **DEBUG=0** will disable more debugging code.
 
 * **GLOBAL_DEBUGFLAGS**: See [debugging tips](debugging/tips.md).
 
+* **GOMACC**: Path to the Goma compiler wrapper, **gomacc**, for use within
+Google for distributed builds.  The default is not to use Goma.
+
 * **USE_ASAN**: Set **USE_ASAN=1** to enable using ASan (the address
 sanitizer).
 
