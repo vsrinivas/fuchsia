@@ -18,14 +18,14 @@ import sys
 import git_utils
 import paths
 
-platform = '%s-%s' % (
+clang_platform = '%s-%s' % (
     platform.system().lower().replace('darwin', 'mac'),
     {
         'x86_64': 'x64',
         'aarch64': 'arm64',
     }[platform.machine()],
 )
-CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, platform, "clang", "bin", "clang-format")
+CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, clang_platform, "clang", "bin", "clang-format")
 DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 gotoolos = "linux64"
