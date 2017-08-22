@@ -14,7 +14,8 @@
 namespace vk {
 using ExternalSemaphoreHandleTypeFlagBitsKHR =
     ExternalSemaphoreHandleTypeFlagBitsKHX;
-}
+using ImportSemaphoreFdInfoKHR = ImportSemphoreFdInfoKHX;
+}  // namespace vk
 #endif
 #endif
 
@@ -38,10 +39,14 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
   auto device = escher->device();
   auto sema = escher::Semaphore::New(device->vk_device());
 
-  vk::ImportSemaphoreFdInfoKHX info;
+  vk::ImportSemaphoreFdInfoKHR info;
   info.semaphore = sema->vk_semaphore();
   info.fd = event_copy.release();
+#if VK_KHR_external_semaphore_fd
+  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eSyncFd;
+#else
   info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFenceFd;
+#endif
 
   if (VK_SUCCESS != device->proc_addrs().ImportSemaphoreFdKHR(
                         device->vk_device(),
