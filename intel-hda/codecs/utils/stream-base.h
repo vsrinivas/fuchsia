@@ -16,6 +16,7 @@
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
@@ -25,14 +26,14 @@ namespace codecs {
 
 class IntelHDACodecDriverBase;
 
-class IntelHDAStreamBase : public DispatcherChannel::Owner,
+class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>> {
 public:
     zx_status_t Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
-                         const fbl::RefPtr<DispatcherChannel>& codec_channel)
+                         const fbl::RefPtr<dispatcher::Channel>& codec_channel)
         __TA_EXCLUDES(obj_lock_);
 
-    void Deactivate() __TA_EXCLUDES(obj_lock_);
+    void Deactivate() __TA_EXCLUDES(obj_lock_, default_domain_->token());
 
     zx_status_t ProcessResponse(const CodecResponse& resp) __TA_EXCLUDES(obj_lock_);
     zx_status_t ProcessRequestStream(const ihda_proto::RequestStreamResp& resp)
@@ -78,7 +79,7 @@ protected:
     // Overloads to control stream behavior.
     virtual zx_status_t OnActivateLocked()    __TA_REQUIRES(obj_lock_);
     virtual void        OnDeactivateLocked()  __TA_REQUIRES(obj_lock_);
-    virtual void        OnChannelDeactivateLocked(const DispatcherChannel& channel)
+    virtual void        OnChannelDeactivateLocked(const dispatcher::Channel& channel)
         __TA_REQUIRES(obj_lock_);
     virtual zx_status_t OnDMAAssignedLocked() __TA_REQUIRES(obj_lock_);
     virtual zx_status_t OnSolicitedResponseLocked(const CodecResponse& resp)
@@ -92,7 +93,7 @@ protected:
     virtual void OnGetGainLocked(audio_proto::GetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
     virtual void OnSetGainLocked(const audio_proto::SetGainReq& req,
                                  audio_proto::SetGainResp* out_resp) __TA_REQUIRES(obj_lock_);
-    virtual void OnPlugDetectLocked(DispatcherChannel* response_channel,
+    virtual void OnPlugDetectLocked(dispatcher::Channel* response_channel,
                                     const audio_proto::PlugDetectReq& req,
                                     audio_proto::PlugDetectResp* out_resp)
         __TA_REQUIRES(obj_lock_);
@@ -112,29 +113,37 @@ protected:
     // Exposed to derived class for thread annotations.
     const fbl::Mutex& obj_lock() const __TA_RETURN_CAPABILITY(obj_lock_) { return obj_lock_; }
 
-    // DispatcherChannel::Owner implementation
-    zx_status_t ProcessChannel(DispatcherChannel* channel) final;
-    void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
-
     // Unsolicited tag allocation for streams.
     zx_status_t AllocateUnsolTagLocked(uint8_t* out_tag) __TA_REQUIRES(obj_lock_);
     void ReleaseUnsolTagLocked(uint8_t tag) __TA_REQUIRES(obj_lock_);
 
 private:
-    zx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
-    zx_status_t DoGetStreamFormatsLocked(DispatcherChannel* channel,
+    // Thunks for dispatching channel events.
+    zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool privileged);
+    void ProcessClientDeactivate(const dispatcher::Channel* channel, bool privileged);
+
+    zx_status_t DoGetStreamFormatsLocked(dispatcher::Channel* channel,
+                                         bool privileged,
                                          const audio_proto::StreamGetFmtsReq& req)
         __TA_REQUIRES(obj_lock_);
-    zx_status_t DoSetStreamFormatLocked(DispatcherChannel* channel,
+    zx_status_t DoSetStreamFormatLocked(dispatcher::Channel* channel,
+                                        bool privileged,
                                         const audio_proto::StreamSetFmtReq& fmt)
         __TA_REQUIRES(obj_lock_);
-    zx_status_t DoGetGainLocked(DispatcherChannel* channel, const audio_proto::GetGainReq& req)
+    zx_status_t DoGetGainLocked(dispatcher::Channel* channel,
+                                bool privileged,
+                                const audio_proto::GetGainReq& req)
         __TA_REQUIRES(obj_lock_);
-    zx_status_t DoSetGainLocked(DispatcherChannel* channel, const audio_proto::SetGainReq& req)
+    zx_status_t DoSetGainLocked(dispatcher::Channel* channel,
+                                bool privileged,
+                                const audio_proto::SetGainReq& req)
         __TA_REQUIRES(obj_lock_);
-    zx_status_t DoPlugDetectLocked(DispatcherChannel* channel,
-                                   const audio_proto::PlugDetectReq& req) __TA_REQUIRES(obj_lock_);
+    zx_status_t DoPlugDetectLocked(dispatcher::Channel* channel,
+                                   bool privileged,
+                                   const audio_proto::PlugDetectReq& req)
+        __TA_REQUIRES(obj_lock_);
 
+    zx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
     zx_status_t DeviceIoctl(uint32_t op,
                             const void* in_buf,
                             size_t in_len,
@@ -148,8 +157,9 @@ private:
 
     fbl::Mutex obj_lock_;
 
-    fbl::RefPtr<IntelHDACodecDriverBase> parent_codec_  __TA_GUARDED(obj_lock_);
-    fbl::RefPtr<DispatcherChannel>       codec_channel_ __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<IntelHDACodecDriverBase>     parent_codec_  __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<dispatcher::Channel>         codec_channel_ __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     uint16_t dma_stream_id_  __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_ID;
     uint8_t  dma_stream_tag_ __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_TAG;
@@ -157,7 +167,7 @@ private:
     zx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
     zx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
-    fbl::RefPtr<DispatcherChannel>         stream_channel_    __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<dispatcher::Channel>         stream_channel_    __TA_GUARDED(obj_lock_);
     fbl::Vector<audio_proto::FormatRange>  supported_formats_ __TA_GUARDED(obj_lock_);
 
     uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;

@@ -20,8 +20,6 @@ namespace audio {
 namespace intel_hda {
 namespace codecs {
 
-static constexpr uintptr_t PRIVILEGED_CONNECTION_CTX = 0x1;
-
 zx_protocol_device_t IntelHDAStreamBase::STREAM_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
     .get_protocol = nullptr,
@@ -48,6 +46,7 @@ IntelHDAStreamBase::IntelHDAStreamBase(uint32_t id, bool is_input)
     : id_(id),
       is_input_(is_input) {
     snprintf(dev_name_, sizeof(dev_name_), "%s-stream-%03u", is_input_ ? "input" : "output", id_);
+    default_domain_ = dispatcher::ExecutionDomain::Create();
 }
 
 IntelHDAStreamBase::~IntelHDAStreamBase() {
@@ -58,11 +57,11 @@ void IntelHDAStreamBase::PrintDebugPrefix() const {
 }
 
 zx_status_t IntelHDAStreamBase::Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
-                                         const fbl::RefPtr<DispatcherChannel>& codec_channel) {
+                                         const fbl::RefPtr<dispatcher::Channel>& codec_channel) {
     ZX_DEBUG_ASSERT(codec_channel != nullptr);
 
     fbl::AutoLock obj_lock(&obj_lock_);
-    if (is_active() || (codec_channel_ != nullptr))
+    if (is_active() || (codec_channel_ != nullptr) || (default_domain_ == nullptr))
         return ZX_ERR_BAD_STATE;
 
     ZX_DEBUG_ASSERT(parent_codec_ == nullptr);
@@ -123,9 +122,7 @@ void IntelHDAStreamBase::Deactivate() {
         ZX_DEBUG_ASSERT(!this->InContainer());
     }
 
-
-    // Disconnect from all of our clients.
-    ShutdownDispatcherChannels();
+    default_domain_->Deactivate();
 
     {
         fbl::AutoLock obj_lock(&obj_lock_);
@@ -265,7 +262,7 @@ finished:
     // caller.  Close the stream channel.
     if ((res != ZX_OK) && (stream_channel_ != nullptr)) {
         OnChannelDeactivateLocked(*stream_channel_);
-        stream_channel_->Deactivate(false);
+        stream_channel_->Deactivate();
         stream_channel_ = nullptr;
     }
 
@@ -349,22 +346,37 @@ zx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     // filter responses.  One option might be to split the transaction ID so
     // that a portion of the TID is used for stream routing, while another
     // portion is used for requests like this.
-    uintptr_t ctx = (stream_channel_ == nullptr) ? PRIVILEGED_CONNECTION_CTX : 0;
-    if (ctx && (set_format_tid_ != AUDIO_INVALID_TRANSACTION_ID))
+    bool privileged = (stream_channel_ == nullptr);
+    if (privileged && (set_format_tid_ != AUDIO_INVALID_TRANSACTION_ID))
         return ZX_ERR_SHOULD_WAIT;
 
     // Attempt to allocate a new driver channel and bind it to us.  If we don't
     // already have a stream_channel_, flag this channel is the privileged
     // connection (The connection which is allowed to do things like change
     // formats).
-    auto channel = DispatcherChannelAllocator::New(ctx);
+    auto channel = dispatcher::Channel::Create();
     if (channel == nullptr)
         return ZX_ERR_NO_MEMORY;
 
+    dispatcher::Channel::ProcessHandler phandler(
+    [stream = fbl::WrapRefPtr(this), privileged](dispatcher::Channel* channel) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+        return stream->ProcessClientRequest(channel, privileged);
+    });
+
+    dispatcher::Channel::ChannelClosedHandler chandler(
+    [stream = fbl::WrapRefPtr(this), privileged](const dispatcher::Channel* channel) -> void {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, stream->default_domain_);
+        stream->ProcessClientDeactivate(channel, privileged);
+    });
+
     zx::channel client_endpoint;
-    zx_status_t res = channel->Activate(fbl::WrapRefPtr(this), &client_endpoint);
+    zx_status_t res = channel->Activate(&client_endpoint,
+                                        default_domain_,
+                                        fbl::move(phandler),
+                                        fbl::move(chandler));
     if (res == ZX_OK) {
-        if (ctx) {
+        if (privileged) {
             ZX_DEBUG_ASSERT(stream_channel_ == nullptr);
             stream_channel_ = channel;
         }
@@ -376,7 +388,8 @@ zx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
     return res;
 }
 
-zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(DispatcherChannel* channel,
+zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* channel,
+                                                         bool privileged,
                                                          const audio_proto::StreamGetFmtsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     size_t formats_sent = 0;
@@ -415,7 +428,8 @@ zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(DispatcherChannel* chan
     return ZX_OK;
 }
 
-zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* channel,
+zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(dispatcher::Channel* channel,
+                                                        bool privileged,
                                                         const audio_proto::StreamSetFmtReq& fmt) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     ihda_proto::SetStreamFmtReq req;
@@ -424,7 +438,7 @@ zx_status_t IntelHDAStreamBase::DoSetStreamFormatLocked(DispatcherChannel* chann
     zx_status_t res;
 
     // Check to make sure that this channel is permitted to change formats.
-    if (!channel->owner_ctx()) {
+    if (!privileged) {
         res = ZX_ERR_ACCESS_DENIED;
         goto send_fail_response;
     }
@@ -516,7 +530,8 @@ send_fail_response:
     return res;
 }
 
-zx_status_t IntelHDAStreamBase::DoGetGainLocked(DispatcherChannel* channel,
+zx_status_t IntelHDAStreamBase::DoGetGainLocked(dispatcher::Channel* channel,
+                                                bool privileged,
                                                 const audio_proto::GetGainReq& req) {
     // Fill out the response header, then let the stream implementation fill out
     // the payload.
@@ -528,7 +543,8 @@ zx_status_t IntelHDAStreamBase::DoGetGainLocked(DispatcherChannel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelHDAStreamBase::DoSetGainLocked(DispatcherChannel* channel,
+zx_status_t IntelHDAStreamBase::DoSetGainLocked(dispatcher::Channel* channel,
+                                                bool privileged,
                                                 const audio_proto::SetGainReq& req) {
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK) {
         OnSetGainLocked(req, nullptr);
@@ -545,7 +561,8 @@ zx_status_t IntelHDAStreamBase::DoSetGainLocked(DispatcherChannel* channel,
     return channel->Write(&resp, sizeof(resp));
 }
 
-zx_status_t IntelHDAStreamBase::DoPlugDetectLocked(DispatcherChannel* channel,
+zx_status_t IntelHDAStreamBase::DoPlugDetectLocked(dispatcher::Channel* channel,
+                                                   bool privileged,
                                                    const audio_proto::PlugDetectReq& req) {
     if (req.hdr.cmd & AUDIO_FLAG_NO_ACK) {
         OnPlugDetectLocked(channel, req, nullptr);
@@ -574,8 +591,8 @@ case _ioctl:                                                    \
         DEBUG_LOG("NO_ACK flag not allowed for " #_ioctl "\n"); \
         return ZX_ERR_INVALID_ARGS;                                \
     }                                                           \
-    return _handler(channel, req._payload);
-zx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
+    return _handler(channel, privileged, req._payload);
+zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channel, bool privileged) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock obj_lock(&obj_lock_);
 
@@ -622,15 +639,17 @@ zx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
 }
 #undef HANDLE_REQ
 
-void IntelHDAStreamBase::NotifyChannelDeactivated(const DispatcherChannel& channel) {
+void IntelHDAStreamBase::ProcessClientDeactivate(const dispatcher::Channel* channel,
+                                                 bool privileged) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
     fbl::AutoLock obj_lock(&obj_lock_);
 
     // Let our subclass know that this channel is going away.
-    OnChannelDeactivateLocked(channel);
+    OnChannelDeactivateLocked(*channel);
 
     // Is this the privileged stream channel?
-    if (channel.owner_ctx()) {
-        ZX_DEBUG_ASSERT(&channel == stream_channel_.get());
+    if (privileged) {
+        ZX_DEBUG_ASSERT(channel == stream_channel_.get());
         stream_channel_.reset();
     }
 }
@@ -725,7 +744,7 @@ zx_status_t IntelHDAStreamBase::OnActivateLocked() {
 }
 
 void IntelHDAStreamBase::OnDeactivateLocked() { }
-void IntelHDAStreamBase::OnChannelDeactivateLocked(const DispatcherChannel& channel) { }
+void IntelHDAStreamBase::OnChannelDeactivateLocked(const dispatcher::Channel& channel) { }
 
 zx_status_t IntelHDAStreamBase::OnDMAAssignedLocked() {
     return PublishDeviceLocked();
@@ -779,7 +798,7 @@ void IntelHDAStreamBase::OnSetGainLocked(const audio_proto::SetGainReq& req,
                        : ZX_OK;
 }
 
-void IntelHDAStreamBase::OnPlugDetectLocked(DispatcherChannel* response_channel,
+void IntelHDAStreamBase::OnPlugDetectLocked(dispatcher::Channel* response_channel,
                                             const audio_proto::PlugDetectReq& req,
                                             audio_proto::PlugDetectResp* out_resp) {
     // Nothing to do if no response is expected.

@@ -12,7 +12,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
 
@@ -22,7 +22,7 @@ namespace codecs {
 
 class IntelHDAStreamBase;
 
-class IntelHDACodecDriverBase : public DispatcherChannel::Owner {
+class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> {
 public:
     virtual void Shutdown();
 
@@ -38,6 +38,7 @@ public:
 protected:
     static constexpr uint32_t CODEC_TID = 0xFFFFFFFF;
 
+    IntelHDACodecDriverBase();
     virtual ~IntelHDACodecDriverBase() { }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -57,10 +58,6 @@ protected:
     virtual zx_status_t Start() { return ZX_OK; }
     virtual zx_status_t ProcessUnsolicitedResponse(const CodecResponse& resp) { return ZX_OK; }
     virtual zx_status_t ProcessSolicitedResponse  (const CodecResponse& resp) { return ZX_OK; }
-
-    // DispatcherChannel::Owner implementation
-    zx_status_t ProcessChannel(DispatcherChannel* channel) final;
-    void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
 
     // Unsolicited tag allocation for codecs.
     zx_status_t AllocateUnsolTag(uint8_t* out_tag) { return AllocateUnsolTag(CODEC_TID, out_tag); }
@@ -86,6 +83,10 @@ private:
         ihda_proto::SetStreamFmtResp  set_stream_fmt;
     };
 
+    // Thunks for dispatching channel events.
+    zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
+    void ProcessClientDeactivate(const dispatcher::Channel* channel);
+
     // Unsolicited response tag to stream ID bookkeeping.
     zx_status_t AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag);
     void        ReleaseUnsolTag (uint32_t stream_id, uint8_t  tag);
@@ -109,7 +110,7 @@ private:
     zx_time_t    create_time_  = zx_time_get(ZX_CLOCK_MONOTONIC);
 
     fbl::Mutex device_channel_lock_;
-    fbl::RefPtr<DispatcherChannel> device_channel_ __TA_GUARDED(device_channel_lock_);
+    fbl::RefPtr<dispatcher::Channel> device_channel_ __TA_GUARDED(device_channel_lock_);
 
     using ActiveStreams = fbl::WAVLTree<uint32_t, fbl::RefPtr<IntelHDAStreamBase>>;
     fbl::Mutex   active_streams_lock_;
@@ -117,6 +118,9 @@ private:
 
     fbl::Mutex shutdown_lock_ __TA_ACQUIRED_BEFORE(device_channel_lock_, active_streams_lock_);
     bool        shutting_down_ __TA_GUARDED(shutdown_lock_) = false;
+
+    // Dispatcher framework state
+    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // State for tracking unsolicited response tag allocations.
     //
