@@ -8,30 +8,21 @@
 #include <err.h>
 
 /* Register use in this code:
- * Callee save:
- * %rbx = smap_avail
- * %r12 = dst
- * %r13 = src
- * %r14 = len
- * %r15 = fault_return
+ * %rdi = argument 1, void* dst
+ * %rsi = argument 2, const void* src
+ * %rdx = argument 3, size_t len
+ *   - moved to %rcx
+ * %rcx = argument 4, bool smap_avail
+ *   - moved to %r10
+ * %r8 = argument 5, void** fault_return
  */
 
 .macro begin_usercopy
-    push_reg %r12
-    push_reg %r13
-    push_reg %r14
-    push_reg %r15
-    push_reg %rbx
-
-    # shift all of the arguments into callee save registers
-    mov %rdi, %r12
-    mov %rsi, %r13
-    mov %rdx, %r14
-    mov %r8, %r15
-    mov %rcx, %rbx
+    # Copy smap_avail out of %rcx, because %rcx is used by "rep movsb" later.
+    movl %ecx, %r10d
 
     # Check if SMAP is enabled
-    cmp $0, %rbx
+    cmpl $0, %r10d
     # Disable SMAP protection if SMAP is enabled
     jz 0f
     stac
@@ -40,15 +31,10 @@
 
 .macro end_usercopy
     # Re-enable SMAP protection
-    cmp $0, %rbx
+    cmpl $0, %r10d
     jz 0f
     clac
 0:
-    pop_reg %rbx
-    pop_reg %r15
-    pop_reg %r14
-    pop_reg %r13
-    pop_reg %r12
 .endm
 
 # status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
@@ -56,7 +42,7 @@ FUNCTION(_x86_copy_to_or_from_user)
     begin_usercopy
 
     # Setup page fault return
-    movq $.Lfault_copy, (%r15)
+    movq $.Lfault_copy, (%r8)
 
     # Between now and the reset of the fault return, we cannot make a function
     # call or manipulate the stack.  We need to be able to restore all callee
@@ -65,10 +51,9 @@ FUNCTION(_x86_copy_to_or_from_user)
 
     # Perform the actual copy
     cld
-    mov %r12, %rdi
-    mov %r13, %rsi
-    mov %r14, %rcx
-    rep movsb
+    # %rdi and %rsi already contain the destination and source addresses.
+    movq %rdx, %rcx
+    rep movsb  # while (rcx-- > 0) *rdi++ = *rsi++;
 
     mov $MX_OK, %rax
     jmp .Lcleanup_copy
@@ -77,7 +62,7 @@ FUNCTION(_x86_copy_to_or_from_user)
     mov $MX_ERR_INVALID_ARGS, %rax
 .Lcleanup_copy:
     # Reset fault return
-    movq $0, (%r15)
+    movq $0, (%r8)
 
     end_usercopy
     ret
