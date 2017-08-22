@@ -890,7 +890,7 @@ static mx_status_t dc_bind_device(device_t* dev, const char* drvlibname) {
         if (autobind || !strcmp(drv->libname, drvlibname)) {
             if (dc_is_bindable(drv, dev->protocol_id,
                                dev->props, dev->prop_count, autobind)) {
-                log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
+                log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv->name, dev->name);
                 dc_attempt_bind(drv, dev);
                 break;
@@ -1277,7 +1277,7 @@ static void dc_handle_new_device(device_t* dev) {
     list_for_every_entry(&list_drivers, drv, driver_t, node) {
         if (dc_is_bindable(drv, dev->protocol_id,
                            dev->props, dev->prop_count, true)) {
-            log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
+            log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                 drv->name, dev->name);
 
             dc_attempt_bind(drv, dev);
