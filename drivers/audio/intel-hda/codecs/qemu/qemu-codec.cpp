@@ -4,7 +4,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
 #include "debug-logging.h"
 #include "qemu-codec.h"
@@ -103,7 +103,7 @@ extern "C" void qemu_ihda_codec_unbind_hook(void* ctx,
     codec.reset();
 
     // Signal the thread pool so it can completely shut down if we were the last client.
-    DispatcherThread::ShutdownThreadPool();
+    dispatcher::ThreadPool::ShutdownAll();
 }
 
 }  // namespace codecs
