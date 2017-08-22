@@ -11,5 +11,6 @@ executable("server") {
 
   deps = [
     "//apps/test_runner/lib",
+    "//apps/test_runner/services:test_runner",
   ]
 }

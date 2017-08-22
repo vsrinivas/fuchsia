@@ -5,17 +5,18 @@
 #ifndef APPS_TEST_RUNNER_LIB_GTEST_LISTENER_H_
 #define APPS_TEST_RUNNER_LIB_GTEST_LISTENER_H_
 
-#include "apps/test_runner/lib/reporting/results_queue.h"
 #include "apps/test_runner/services/test_runner.fidl.h"
 #include "gtest/gtest.h"
 
 namespace test_runner {
 
-// Handles events from the GoogleTest framework, builds TestResult objects, and
-// puts them on a queue.
+class Reporter;
+
+// Handles events from the GoogleTest framework and publishes them to a
+// Reporter.
 class GTestListener : public ::testing::EmptyTestEventListener {
  public:
-  GTestListener(const std::string& executable, ResultsQueue* queue);
+  GTestListener(const std::string& executable, Reporter* reporter);
 
   ~GTestListener() override;
 
@@ -29,7 +30,7 @@ class GTestListener : public ::testing::EmptyTestEventListener {
 
  private:
   std::string executable_;
-  ResultsQueue* queue_;
+  Reporter* reporter_;
 };
 
 }  // namespace test_runner

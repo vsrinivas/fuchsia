@@ -11,6 +11,7 @@ executable("report_result") {
 
   deps = [
     "//apps/test_runner/lib",
+    "//apps/test_runner/services:test_runner",
   ]
 
   libs = [ "launchpad" ]

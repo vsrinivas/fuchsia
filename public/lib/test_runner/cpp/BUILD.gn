@@ -14,7 +14,7 @@ source_set("lib") {
 
   public_deps = [
     "//application/lib/app",
-    "//apps/test_runner/services:test_runner",
+    "//apps/test_runner/services:test_runner_sync",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/rapidjson",
