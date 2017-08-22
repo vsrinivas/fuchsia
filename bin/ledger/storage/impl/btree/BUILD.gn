@@ -4,6 +4,8 @@
 
 import("//third_party/flatbuffers/flatbuffer.gni")
 
+visibility = [ "//apps/ledger/src/*" ]
+
 group("btree") {
   deps = [
     ":lib",
