@@ -4,18 +4,23 @@
 
 #pragma once
 
+#include "apps/media/src/framework/models/node.h"
+#include "apps/media/src/framework/models/stage.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
+// Stage for |Transform|.
+class TransformStage : public Stage {};
+
 // Synchronous packet transform.
-class Transform {
+class Transform : public Node<TransformStage> {
  public:
   virtual ~Transform() {}
 
   // Flushes media state.
-  virtual void Flush() {};
+  virtual void Flush(){};
 
   // Processes a packet. Returns true to indicate the transform is done
   // processing the input packet. Returns false to indicate the input

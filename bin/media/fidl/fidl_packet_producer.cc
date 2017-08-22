@@ -32,7 +32,8 @@ void FidlPacketProducer::SetConnectionStateChangedCallback(
 }
 
 void FidlPacketProducer::FlushConnection(
-    bool hold_frame, const FlushConnectionCallback& callback) {
+    bool hold_frame,
+    const FlushConnectionCallback& callback) {
   if (is_connected()) {
     FlushConsumer(hold_frame, callback);
   } else {
@@ -42,11 +43,6 @@ void FidlPacketProducer::FlushConnection(
 
 PayloadAllocator* FidlPacketProducer::allocator() {
   return this;
-}
-
-void FidlPacketProducer::SetDemandCallback(
-    const DemandCallback& demand_callback) {
-  demand_callback_ = demand_callback;
 }
 
 Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
@@ -85,9 +81,7 @@ void FidlPacketProducer::Connect(
 }
 
 void FidlPacketProducer::Disconnect() {
-  if (demand_callback_) {
-    demand_callback_(Demand::kNegative);
-  }
+  stage().SetDemand(Demand::kNegative);
 
   MediaPacketProducerBase::Disconnect();
 
@@ -106,8 +100,7 @@ void FidlPacketProducer::ReleasePayloadBuffer(void* buffer) {
 
 void FidlPacketProducer::OnDemandUpdated(uint32_t min_packets_outstanding,
                                          int64_t min_pts) {
-  FTL_DCHECK(demand_callback_);
-  demand_callback_(CurrentDemand());
+  stage().SetDemand(CurrentDemand());
 }
 
 void FidlPacketProducer::OnFailure() {
@@ -123,8 +116,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
                 MediaType::From(packet->revised_stream_type()),
                 ftl::MakeCopyable([ this, packet = std::move(packet) ]() {
-                  FTL_DCHECK(demand_callback_);
-                  demand_callback_(CurrentDemand());
+                  stage().SetDemand(CurrentDemand());
                 }));
 }
 

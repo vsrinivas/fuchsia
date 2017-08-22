@@ -6,9 +6,9 @@
 
 namespace media {
 
-TransformStage::TransformStage(Engine* engine,
-                               std::shared_ptr<Transform> transform)
-    : Stage(engine),
+TransformStageImpl::TransformStageImpl(Engine* engine,
+                                       std::shared_ptr<Transform> transform)
+    : StageImpl(engine),
       input_(this, 0),
       output_(this, 0),
       transform_(transform),
@@ -17,34 +17,34 @@ TransformStage::TransformStage(Engine* engine,
   FTL_DCHECK(transform_);
 }
 
-TransformStage::~TransformStage() {}
+TransformStageImpl::~TransformStageImpl() {}
 
-size_t TransformStage::input_count() const {
+size_t TransformStageImpl::input_count() const {
   return 1;
 };
 
-Input& TransformStage::input(size_t index) {
+Input& TransformStageImpl::input(size_t index) {
   FTL_DCHECK(index == 0u);
   return input_;
 }
 
-size_t TransformStage::output_count() const {
+size_t TransformStageImpl::output_count() const {
   return 1;
 }
 
-Output& TransformStage::output(size_t index) {
+Output& TransformStageImpl::output(size_t index) {
   FTL_DCHECK(index == 0u);
   return output_;
 }
 
-PayloadAllocator* TransformStage::PrepareInput(size_t index) {
+PayloadAllocator* TransformStageImpl::PrepareInput(size_t index) {
   FTL_DCHECK(index == 0u);
   return nullptr;
 }
 
-void TransformStage::PrepareOutput(size_t index,
-                                   PayloadAllocator* allocator,
-                                   const UpstreamCallback& callback) {
+void TransformStageImpl::PrepareOutput(size_t index,
+                                       PayloadAllocator* allocator,
+                                       const UpstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
 
   allocator_ =
@@ -53,13 +53,13 @@ void TransformStage::PrepareOutput(size_t index,
   callback(0);
 }
 
-void TransformStage::UnprepareOutput(size_t index,
-                                     const UpstreamCallback& callback) {
+void TransformStageImpl::UnprepareOutput(size_t index,
+                                         const UpstreamCallback& callback) {
   allocator_ = nullptr;
   callback(0);
 }
 
-void TransformStage::Update() {
+void TransformStageImpl::Update() {
   FTL_DCHECK(allocator_);
 
   while (input_.packet() && output_.demand() != Demand::kNegative) {
@@ -80,15 +80,15 @@ void TransformStage::Update() {
   input_.SetDemand(output_.demand());
 }
 
-void TransformStage::FlushInput(size_t index,
-                                bool hold_frame,
-                                const DownstreamCallback& callback) {
+void TransformStageImpl::FlushInput(size_t index,
+                                    bool hold_frame,
+                                    const DownstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
   input_.Flush();
   callback(0);
 }
 
-void TransformStage::FlushOutput(size_t index) {
+void TransformStageImpl::FlushOutput(size_t index) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(transform_);
   transform_->Flush();

@@ -21,7 +21,7 @@ Graph::~Graph() {
 void Graph::RemoveNode(NodeRef node) {
   FTL_DCHECK(node);
 
-  Stage* stage = node.stage_;
+  StageImpl* stage = node.stage_;
 
   size_t input_count = stage->input_count();
   for (size_t input_index = 0; input_index < input_count; input_index++) {
@@ -177,14 +177,14 @@ void Graph::Reset() {
   sources_.clear();
   sinks_.clear();
   while (!stages_.empty()) {
-    Stage* stage = stages_.front();
+    StageImpl* stage = stages_.front();
     stages_.pop_front();
     delete stage;
   }
 }
 
 void Graph::Prepare() {
-  for (Stage* sink : sinks_) {
+  for (StageImpl* sink : sinks_) {
     for (size_t i = 0; i < sink->input_count(); ++i) {
       engine_.PrepareInput(&sink->input(i));
     }
@@ -217,7 +217,8 @@ void Graph::UpdateUntilDone() {
   engine_.UpdateUntilDone();
 }
 
-NodeRef Graph::Add(Stage* stage) {
+NodeRef Graph::Add(StageImpl* stage) {
+  FTL_DCHECK(stage);
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {

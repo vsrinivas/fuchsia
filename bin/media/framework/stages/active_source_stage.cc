@@ -6,59 +6,40 @@
 
 namespace media {
 
-ActiveSourceStage::ActiveSourceStage(Engine* engine,
-                                     std::shared_ptr<ActiveSource> source)
-    : Stage(engine), output_(this, 0), source_(source), prepared_(false) {
+ActiveSourceStageImpl::ActiveSourceStageImpl(Engine* engine,
+                                             std::shared_ptr<ActiveSource> source)
+    : StageImpl(engine), output_(this, 0), source_(source), prepared_(false) {
   FTL_DCHECK(source_);
-
-  supply_function_ = [this](PacketPtr packet) {
-    bool needs_update = false;
-
-    {
-      ftl::MutexLocker locker(&mutex_);
-      bool packets_was_empty_ = packets_.empty();
-      packets_.push_back(std::move(packet));
-      if (packets_was_empty_ && prepared_) {
-        needs_update = true;
-      }
-    }
-
-    if (needs_update) {
-      NeedsUpdate();
-    }
-  };
-
-  source_->SetSupplyCallback(supply_function_);
 }
 
-ActiveSourceStage::~ActiveSourceStage() {}
+ActiveSourceStageImpl::~ActiveSourceStageImpl() {}
 
-size_t ActiveSourceStage::input_count() const {
+size_t ActiveSourceStageImpl::input_count() const {
   return 0;
 };
 
-Input& ActiveSourceStage::input(size_t index) {
+Input& ActiveSourceStageImpl::input(size_t index) {
   FTL_CHECK(false) << "input requested from source";
   abort();
 }
 
-size_t ActiveSourceStage::output_count() const {
+size_t ActiveSourceStageImpl::output_count() const {
   return 1;
 }
 
-Output& ActiveSourceStage::output(size_t index) {
+Output& ActiveSourceStageImpl::output(size_t index) {
   FTL_DCHECK(index == 0u);
   return output_;
 }
 
-PayloadAllocator* ActiveSourceStage::PrepareInput(size_t index) {
+PayloadAllocator* ActiveSourceStageImpl::PrepareInput(size_t index) {
   FTL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
-void ActiveSourceStage::PrepareOutput(size_t index,
-                                      PayloadAllocator* allocator,
-                                      const UpstreamCallback& callback) {
+void ActiveSourceStageImpl::PrepareOutput(size_t index,
+                                          PayloadAllocator* allocator,
+                                          const UpstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(source_);
 
@@ -76,8 +57,8 @@ void ActiveSourceStage::PrepareOutput(size_t index,
   prepared_ = true;
 }
 
-void ActiveSourceStage::UnprepareOutput(size_t index,
-                                        const UpstreamCallback& callback) {
+void ActiveSourceStageImpl::UnprepareOutput(size_t index,
+                                            const UpstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(source_);
 
@@ -85,7 +66,7 @@ void ActiveSourceStage::UnprepareOutput(size_t index,
   output_.SetCopyAllocator(nullptr);
 }
 
-void ActiveSourceStage::Update() {
+void ActiveSourceStageImpl::Update() {
   Demand demand = output_.demand();
 
   {
@@ -100,17 +81,34 @@ void ActiveSourceStage::Update() {
   source_->SetDownstreamDemand(demand);
 }
 
-void ActiveSourceStage::FlushInput(size_t index,
-                                   bool hold_frame,
-                                   const DownstreamCallback& callback) {
+void ActiveSourceStageImpl::FlushInput(size_t index,
+                                       bool hold_frame,
+                                       const DownstreamCallback& callback) {
   FTL_CHECK(false) << "FlushInput called on source";
 }
 
-void ActiveSourceStage::FlushOutput(size_t index) {
+void ActiveSourceStageImpl::FlushOutput(size_t index) {
   FTL_DCHECK(source_);
   source_->Flush();
   ftl::MutexLocker locker(&mutex_);
   packets_.clear();
+}
+
+void ActiveSourceStageImpl::SupplyPacket(PacketPtr packet) {
+  bool needs_update = false;
+
+  {
+    ftl::MutexLocker locker(&mutex_);
+    bool packets_was_empty_ = packets_.empty();
+    packets_.push_back(std::move(packet));
+    if (packets_was_empty_ && prepared_) {
+      needs_update = true;
+    }
+  }
+
+  if (needs_update) {
+    NeedsUpdate();
+  }
 }
 
 }  // namespace media

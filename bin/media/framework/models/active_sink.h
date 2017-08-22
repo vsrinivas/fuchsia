@@ -5,16 +5,22 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
+#include "apps/media/src/framework/models/node.h"
+#include "apps/media/src/framework/models/stage.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 
 namespace media {
 
-// Sink that consumes packets asynchronously.
-class ActiveSink {
+// Stage for |ActiveSink|.
+class ActiveSinkStage : public Stage {
  public:
-  using DemandCallback = std::function<void(Demand demand)>;
+  virtual void SetDemand(Demand demand) = 0;
+};
 
+// Sink that consumes packets asynchronously.
+class ActiveSink : public Node<ActiveSinkStage> {
+ public:
   virtual ~ActiveSink() {}
 
   // Flushes media state. |hold_frame| indicates whether a video renderer
@@ -24,9 +30,6 @@ class ActiveSink {
   // An allocator that must be used for supplied packets or nullptr if there's
   // no such requirement.
   virtual PayloadAllocator* allocator() = 0;
-
-  // Sets the callback that signals demand asynchronously.
-  virtual void SetDemandCallback(const DemandCallback& demand_callback) = 0;
 
   // Supplies a packet to the sink, returning the new demand for the input.
   virtual Demand SupplyPacket(PacketPtr packet) = 0;

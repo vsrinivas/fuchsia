@@ -43,8 +43,6 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   // ActiveMultistreamSource implementation.
   size_t stream_count() const override;
 
-  void SetSupplyCallback(const SupplyCallback& supply_callback) override;
-
   void RequestPacket() override;
 
  private:
@@ -141,7 +139,6 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   int64_t next_pts_;
   int next_stream_to_end_ = -1;  // -1: don't end, streams_.size(): stop.
 
-  SupplyCallback supply_callback_;
   StatusCallback status_callback_;
 };
 
@@ -190,10 +187,6 @@ void FfmpegDemuxImpl::Seek(int64_t position, const SeekCallback& callback) {
 
 size_t FfmpegDemuxImpl::stream_count() const {
   return streams_.size();
-}
-
-void FfmpegDemuxImpl::SetSupplyCallback(const SupplyCallback& supply_callback) {
-  supply_callback_ = supply_callback;
 }
 
 void FfmpegDemuxImpl::RequestPacket() {
@@ -305,11 +298,9 @@ void FfmpegDemuxImpl::Worker() {
       FTL_DCHECK(packet);
 
       // TODO(dalesat): Resolve the race that makes this necessary.
-      task_runner_->PostTask(ftl::MakeCopyable(
-          [ this, stream_index, packet = std::move(packet) ]() mutable {
-            FTL_DCHECK(supply_callback_);
-            supply_callback_(stream_index, std::move(packet));
-          }));
+      task_runner_->PostTask(ftl::MakeCopyable([
+        this, stream_index, packet = std::move(packet)
+      ]() mutable { stage().SupplyPacket(stream_index, std::move(packet)); }));
     }
   }
 }

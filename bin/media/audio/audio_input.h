@@ -22,7 +22,8 @@ class AudioInput;
 }  // namespace audio
 
 namespace media {
-// audio input as an ActiveSource.
+
+// Audio input as an ActiveSource.
 class AudioInput : public ActiveSource {
  public:
   // Creates a usb audio input.
@@ -42,8 +43,6 @@ class AudioInput : public ActiveSource {
   bool can_accept_allocator() const override;
 
   void set_allocator(PayloadAllocator* allocator) override;
-
-  void SetSupplyCallback(const SupplyCallback& supply_callback) override;
 
   void SetDownstreamDemand(Demand demand) override;
 
@@ -74,7 +73,6 @@ class AudioInput : public ActiveSource {
   uint16_t configured_channels_;
   audio_sample_format_t configured_sample_format_;
   uint32_t configured_bytes_per_frame_;
-  SupplyCallback supply_callback_;
   PayloadAllocator* allocator_;
   TimelineRate pts_rate_;
   // The fields above need to be stable while the worker thread is operating.

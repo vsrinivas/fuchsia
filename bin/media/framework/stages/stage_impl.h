@@ -7,10 +7,12 @@
 #include <atomic>
 #include <queue>
 
+#include "apps/media/src/framework/models/stage.h"
 #include "apps/media/src/framework/packet.h"
 #include "apps/media/src/framework/payload_allocator.h"
 #include "apps/media/src/framework/stages/input.h"
 #include "apps/media/src/framework/stages/output.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
@@ -19,14 +21,14 @@ namespace media {
 class Engine;
 
 // Host for a source, sink or transform.
-class Stage {
+class StageImpl {
  public:
   using UpstreamCallback = std::function<void(size_t input_index)>;
   using DownstreamCallback = std::function<void(size_t output_index)>;
 
-  Stage(Engine* engine);
+  StageImpl(Engine* engine);
 
-  virtual ~Stage();
+  virtual ~StageImpl();
 
   // Returns the number of input connections.
   virtual size_t input_count() const = 0;
@@ -75,14 +77,10 @@ class Stage {
   // be called on any thread.
   void NeedsUpdate();
 
-  // Calls |Update| until no more updates are required. This method may be
-  // called by any thread that has obtained the stage from the engine's update
-  // backlog.
+  // Calls |Update| until no more updates are required.
   void UpdateUntilDone();
 
  protected:
-  Engine* engine() { return engine_; }
-
   // Updates packet supply and demand.
   virtual void Update() = 0;
 

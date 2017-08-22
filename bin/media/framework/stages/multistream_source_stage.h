@@ -7,20 +7,21 @@
 #include <vector>
 
 #include "apps/media/src/framework/models/multistream_source.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 
 namespace media {
 
 // A stage that hosts a MultistreamSource.
 // TODO(dalesat): May need to grow the list of outputs dynamically.
-class MultistreamSourceStage : public Stage {
+class MultistreamSourceStageImpl : public StageImpl,
+                                   public MultistreamSourceStage {
  public:
-  MultistreamSourceStage(Engine* engine,
+  MultistreamSourceStageImpl(Engine* engine,
                          std::shared_ptr<MultistreamSource> source);
 
-  ~MultistreamSourceStage() override;
+  ~MultistreamSourceStageImpl() override;
 
-  // Stage implementation.
+  // StageImpl implementation.
   size_t input_count() const override;
 
   Input& input(size_t index) override;

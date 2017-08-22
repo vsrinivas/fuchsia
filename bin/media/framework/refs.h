@@ -9,7 +9,7 @@
 namespace media {
 
 class Graph;
-class Stage;
+class StageImpl;
 class Input;
 class Output;
 class Engine;
@@ -50,9 +50,9 @@ class NodeRef {
   explicit operator bool() const { return stage_ != nullptr; }
 
  private:
-  explicit NodeRef(Stage* stage) : stage_(stage) {}
+  explicit NodeRef(StageImpl* stage) : stage_(stage) {}
 
-  Stage* stage_ = nullptr;
+  StageImpl* stage_ = nullptr;
 
   friend Graph;
   friend InputRef;

@@ -5,18 +5,18 @@
 #pragma once
 
 #include "apps/media/src/framework/models/transform.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 
 namespace media {
 
 // A stage that hosts a Transform.
-class TransformStage : public Stage {
+class TransformStageImpl : public TransformStage, public StageImpl {
  public:
-  TransformStage(Engine* engine, std::shared_ptr<Transform> transform);
+  TransformStageImpl(Engine* engine, std::shared_ptr<Transform> transform);
 
-  ~TransformStage() override;
+  ~TransformStageImpl() override;
 
-  // Stage implementation.
+  // StageImpl implementation.
   size_t input_count() const override;
 
   Input& input(size_t index) override;

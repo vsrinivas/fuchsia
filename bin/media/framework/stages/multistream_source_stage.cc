@@ -8,10 +8,10 @@
 
 namespace media {
 
-MultistreamSourceStage::MultistreamSourceStage(
+MultistreamSourceStageImpl::MultistreamSourceStageImpl(
     Engine* engine,
     std::shared_ptr<MultistreamSource> source)
-    : Stage(engine), source_(source), ended_streams_(0) {
+    : StageImpl(engine), source_(source), ended_streams_(0) {
   FTL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
@@ -19,34 +19,35 @@ MultistreamSourceStage::MultistreamSourceStage(
   }
 }
 
-MultistreamSourceStage::~MultistreamSourceStage() {}
+MultistreamSourceStageImpl::~MultistreamSourceStageImpl() {}
 
-size_t MultistreamSourceStage::input_count() const {
+size_t MultistreamSourceStageImpl::input_count() const {
   return 0;
 };
 
-Input& MultistreamSourceStage::input(size_t index) {
+Input& MultistreamSourceStageImpl::input(size_t index) {
   FTL_CHECK(false) << "input requested from source";
   abort();
 }
 
-size_t MultistreamSourceStage::output_count() const {
+size_t MultistreamSourceStageImpl::output_count() const {
   return outputs_.size();
 }
 
-Output& MultistreamSourceStage::output(size_t index) {
+Output& MultistreamSourceStageImpl::output(size_t index) {
   FTL_DCHECK(index < outputs_.size());
   return outputs_[index];
 }
 
-PayloadAllocator* MultistreamSourceStage::PrepareInput(size_t index) {
+PayloadAllocator* MultistreamSourceStageImpl::PrepareInput(size_t index) {
   FTL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
-void MultistreamSourceStage::PrepareOutput(size_t index,
-                                           PayloadAllocator* allocator,
-                                           const UpstreamCallback& callback) {
+void MultistreamSourceStageImpl::PrepareOutput(
+    size_t index,
+    PayloadAllocator* allocator,
+    const UpstreamCallback& callback) {
   FTL_DCHECK(index < outputs_.size());
 
   if (allocator != nullptr) {
@@ -57,13 +58,14 @@ void MultistreamSourceStage::PrepareOutput(size_t index,
   }
 }
 
-void MultistreamSourceStage::UnprepareOutput(size_t index,
-                                             const UpstreamCallback& callback) {
+void MultistreamSourceStageImpl::UnprepareOutput(
+    size_t index,
+    const UpstreamCallback& callback) {
   FTL_DCHECK(index < outputs_.size());
   outputs_[index].SetCopyAllocator(nullptr);
 }
 
-void MultistreamSourceStage::Update() {
+void MultistreamSourceStageImpl::Update() {
   while (true) {
     if (cached_packet_ && HasPositiveDemand(outputs_)) {
       FTL_DCHECK(cached_packet_output_index_ < outputs_.size());
@@ -96,13 +98,14 @@ void MultistreamSourceStage::Update() {
   }
 }
 
-void MultistreamSourceStage::FlushInput(size_t index,
-                                        bool hold_frame,
-                                        const DownstreamCallback& callback) {
+void MultistreamSourceStageImpl::FlushInput(
+    size_t index,
+    bool hold_frame,
+    const DownstreamCallback& callback) {
   FTL_CHECK(false) << "FlushInput called on source";
 }
 
-void MultistreamSourceStage::FlushOutput(size_t index) {
+void MultistreamSourceStageImpl::FlushOutput(size_t index) {
   FTL_DCHECK(index < outputs_.size());
   FTL_DCHECK(source_);
   source_->Flush();

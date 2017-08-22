@@ -4,12 +4,17 @@
 
 #pragma once
 
+#include "apps/media/src/framework/models/node.h"
+#include "apps/media/src/framework/models/stage.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
 
+// Stage for |MultistreamSource|.
+class MultistreamSourceStage : public Stage {};
+
 // Synchronous source of packets for multiple streams.
-class MultistreamSource {
+class MultistreamSource : public Node<MultistreamSourceStage> {
  public:
   virtual ~MultistreamSource() {}
 

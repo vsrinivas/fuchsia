@@ -11,19 +11,19 @@
 
 namespace media {
 
-class Stage;
+class StageImpl;
 class Engine;
 class Output;
 
 // Represents a stage's connector to an adjacent upstream stage.
 class Input {
  public:
-  Input(Stage* stage, size_t index);
+  Input(StageImpl* stage, size_t index);
 
   ~Input();
 
   // The stage of which this input is a part.
-  Stage* stage() const { return stage_; }
+  StageImpl* stage() const { return stage_; }
 
   // The index of this input with respect to the stage.
   size_t index() const { return index_; }
@@ -77,7 +77,7 @@ class Input {
     kHasPacket
   };
 
-  Stage* stage_;
+  StageImpl* stage_;
   size_t index_;
   Output* mate_ = nullptr;
   bool prepared_ = false;

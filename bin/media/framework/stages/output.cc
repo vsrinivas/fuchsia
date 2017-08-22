@@ -5,11 +5,11 @@
 #include "apps/media/src/framework/stages/output.h"
 
 #include "apps/media/src/framework/engine.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 
 namespace media {
 
-Output::Output(Stage* stage, size_t index) : stage_(stage), index_(index) {}
+Output::Output(StageImpl* stage, size_t index) : stage_(stage), index_(index) {}
 
 Output::~Output() {}
 

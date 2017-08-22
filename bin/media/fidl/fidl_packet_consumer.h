@@ -50,8 +50,6 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 
   void set_allocator(PayloadAllocator* allocator) override;
 
-  void SetSupplyCallback(const SupplyCallback& supply_callback) override;
-
   void SetDownstreamDemand(Demand demand) override;
 
   // Specialized packet implementation.
@@ -73,7 +71,6 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   Demand downstream_demand_ = Demand::kNegative;
   FlushRequestedCallback flush_requested_callback_;
-  SupplyCallback supply_callback_;
 };
 
 }  // namespace media

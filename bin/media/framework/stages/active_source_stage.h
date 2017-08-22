@@ -7,20 +7,20 @@
 #include <deque>
 
 #include "apps/media/src/framework/models/active_source.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace media {
 
 // A stage that hosts an ActiveSource.
-class ActiveSourceStage : public Stage {
+class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
  public:
-  ActiveSourceStage(Engine* engine, std::shared_ptr<ActiveSource> source);
+  ActiveSourceStageImpl(Engine* engine, std::shared_ptr<ActiveSource> source);
 
-  ~ActiveSourceStage() override;
+  ~ActiveSourceStageImpl() override;
 
-  // Stage implementation.
+  // StageImpl implementation.
   size_t input_count() const override;
 
   Input& input(size_t index) override;
@@ -47,10 +47,12 @@ class ActiveSourceStage : public Stage {
   void Update() override;
 
  private:
+  // ActiveSourceStage implementation.
+  void SupplyPacket(PacketPtr packet) override;
+
   Output output_;
   std::shared_ptr<ActiveSource> source_;
   bool prepared_;
-  ActiveSource::SupplyCallback supply_function_;
 
   mutable ftl::Mutex mutex_;
   std::deque<PacketPtr> packets_ FTL_GUARDED_BY(mutex_);

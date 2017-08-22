@@ -6,52 +6,51 @@
 
 namespace media {
 
-ActiveMultistreamSinkStage::ActiveMultistreamSinkStage(
+ActiveMultistreamSinkStageImpl::ActiveMultistreamSinkStageImpl(
     Engine* engine,
     std::shared_ptr<ActiveMultistreamSink> sink)
-    : Stage(engine), sink_(sink) {
+    : StageImpl(engine), sink_(sink) {
   FTL_DCHECK(sink_);
-  sink_->SetHost(this);
   // Add one unallocated input so this stage isn't misidentified as a source.
   ReleaseInput(AllocateInput());
 }
 
-ActiveMultistreamSinkStage::~ActiveMultistreamSinkStage() {}
+ActiveMultistreamSinkStageImpl::~ActiveMultistreamSinkStageImpl() {}
 
-size_t ActiveMultistreamSinkStage::input_count() const {
+size_t ActiveMultistreamSinkStageImpl::input_count() const {
   // TODO(dalesat): Provide checks to make sure inputs_.size() is stable when
   // it needs to be.
   ftl::MutexLocker locker(&mutex_);
   return inputs_.size();
 };
 
-Input& ActiveMultistreamSinkStage::input(size_t index) {
+Input& ActiveMultistreamSinkStageImpl::input(size_t index) {
   ftl::MutexLocker locker(&mutex_);
   FTL_DCHECK(index < inputs_.size());
   return inputs_[index]->input_;
 }
 
-size_t ActiveMultistreamSinkStage::output_count() const {
+size_t ActiveMultistreamSinkStageImpl::output_count() const {
   return 0;
 }
 
-Output& ActiveMultistreamSinkStage::output(size_t index) {
+Output& ActiveMultistreamSinkStageImpl::output(size_t index) {
   FTL_CHECK(false) << "output requested from sink";
   abort();
 }
 
-PayloadAllocator* ActiveMultistreamSinkStage::PrepareInput(size_t index) {
+PayloadAllocator* ActiveMultistreamSinkStageImpl::PrepareInput(size_t index) {
   return nullptr;
 }
 
-void ActiveMultistreamSinkStage::PrepareOutput(
+void ActiveMultistreamSinkStageImpl::PrepareOutput(
     size_t index,
     PayloadAllocator* allocator,
     const UpstreamCallback& callback) {
   FTL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-void ActiveMultistreamSinkStage::Update() {
+void ActiveMultistreamSinkStageImpl::Update() {
   FTL_DCHECK(sink_);
 
   ftl::MutexLocker locker(&mutex_);
@@ -76,7 +75,7 @@ void ActiveMultistreamSinkStage::Update() {
   }
 }
 
-void ActiveMultistreamSinkStage::FlushInput(
+void ActiveMultistreamSinkStageImpl::FlushInput(
     size_t index,
     bool hold_frame,
     const DownstreamCallback& callback) {
@@ -90,11 +89,11 @@ void ActiveMultistreamSinkStage::FlushInput(
   pending_inputs_.remove(index);
 }
 
-void ActiveMultistreamSinkStage::FlushOutput(size_t index) {
+void ActiveMultistreamSinkStageImpl::FlushOutput(size_t index) {
   FTL_CHECK(false) << "FlushOutput called on sink";
 }
 
-size_t ActiveMultistreamSinkStage::AllocateInput() {
+size_t ActiveMultistreamSinkStageImpl::AllocateInput() {
   ftl::MutexLocker locker(&mutex_);
 
   StageInput* input;
@@ -114,7 +113,7 @@ size_t ActiveMultistreamSinkStage::AllocateInput() {
   return input->input_.index();
 }
 
-size_t ActiveMultistreamSinkStage::ReleaseInput(size_t index) {
+size_t ActiveMultistreamSinkStageImpl::ReleaseInput(size_t index) {
   ftl::MutexLocker locker(&mutex_);
   FTL_DCHECK(index < inputs_.size());
 
@@ -140,8 +139,8 @@ size_t ActiveMultistreamSinkStage::ReleaseInput(size_t index) {
   return inputs_.size();
 }
 
-void ActiveMultistreamSinkStage::UpdateDemand(size_t input_index,
-                                              Demand demand) {
+void ActiveMultistreamSinkStageImpl::UpdateDemand(size_t input_index,
+                                                  Demand demand) {
   {
     ftl::MutexLocker locker(&mutex_);
     FTL_DCHECK(input_index < inputs_.size());

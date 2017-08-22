@@ -7,11 +7,11 @@
 #include "apps/media/src/framework/stages/input.h"
 
 #include "apps/media/src/framework/engine.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 
 namespace media {
 
-Input::Input(Stage* stage, size_t index)
+Input::Input(StageImpl* stage, size_t index)
     : stage_(stage), index_(index), state_(State::kRefusesPacket) {
   FTL_DCHECK(stage_);
 }

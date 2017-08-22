@@ -9,22 +9,22 @@
 #include <vector>
 
 #include "apps/media/src/framework/models/active_multistream_sink.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace media {
 
-// A stage that hosts an ActiveSink.
-class ActiveMultistreamSinkStage : public Stage,
-                                   public ActiveMultistreamSinkHost {
+// A stage that hosts an ActiveMultistreamSink.
+class ActiveMultistreamSinkStageImpl : public StageImpl,
+                                       public ActiveMultistreamSinkStage {
  public:
-  ActiveMultistreamSinkStage(Engine* engine,
-                             std::shared_ptr<ActiveMultistreamSink> sink);
+  ActiveMultistreamSinkStageImpl(Engine* engine,
+                                 std::shared_ptr<ActiveMultistreamSink> sink);
 
-  ~ActiveMultistreamSinkStage() override;
+  ~ActiveMultistreamSinkStageImpl() override;
 
-  // Stage implementation.
+  // StageImpl implementation.
   size_t input_count() const override;
 
   Input& input(size_t index) override;
@@ -49,7 +49,7 @@ class ActiveMultistreamSinkStage : public Stage,
   void Update() override;
 
  private:
-  // ActiveMultistreamSinkHost implementation.
+  // ActiveMultistreamSinkStage implementation.
   size_t AllocateInput() override;
 
   size_t ReleaseInput(size_t index) override;
@@ -57,7 +57,7 @@ class ActiveMultistreamSinkStage : public Stage,
   void UpdateDemand(size_t input_index, Demand demand) override;
 
   struct StageInput {
-    StageInput(Stage* stage, size_t index)
+    StageInput(StageImpl* stage, size_t index)
         : input_(stage, index), allocated_(false), demand_(Demand::kNegative) {}
     Input input_;
     bool allocated_;

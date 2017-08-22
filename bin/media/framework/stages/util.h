@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 
 namespace media {
 

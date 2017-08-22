@@ -44,8 +44,6 @@ class FidlPacketProducer
   // ActiveSink implementation.
   PayloadAllocator* allocator() override;
 
-  void SetDemandCallback(const DemandCallback& demand_callback) override;
-
   Demand SupplyPacket(PacketPtr packet) override;
 
   // MediaPacketProducer implementation.
@@ -85,7 +83,6 @@ class FidlPacketProducer
 
   fidl::Binding<MediaPacketProducer> binding_;
 
-  DemandCallback demand_callback_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ConnectionStateChangedCallback connectionStateChangedCallback_;
 };

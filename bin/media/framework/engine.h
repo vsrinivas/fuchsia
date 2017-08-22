@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "apps/media/src/framework/refs.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
@@ -91,7 +91,7 @@ class Engine {
   void FlushOutput(Output* output, bool hold_frame);
 
   // Called to indicate that the specified stage needs to be updated.
-  void StageNeedsUpdate(Stage* stage);
+  void StageNeedsUpdate(StageImpl* stage);
 
   // Updates one stage from the update backlog and returns true if the backlog
   // isn't empty. If the backlog is empty, returns false.
@@ -104,11 +104,11 @@ class Engine {
   using UpstreamVisitor =
       std::function<void(Input* input,
                          Output* output,
-                         const Stage::UpstreamCallback& callback)>;
+                         const StageImpl::UpstreamCallback& callback)>;
   using DownstreamVisitor =
       std::function<void(Output* output,
                          Input* input,
-                         const Stage::DownstreamCallback& callback)>;
+                         const StageImpl::DownstreamCallback& callback)>;
 
   void VisitUpstream(Input* input, const UpstreamVisitor& visitor)
       FTL_LOCKS_EXCLUDED(backlog_mutex_);
@@ -118,16 +118,16 @@ class Engine {
 
   // Pushes the stage to the update backlog and returns an indication of whether
   // the update callback should be called.
-  bool PushToUpdateBacklog(Stage* stage) FTL_LOCKS_EXCLUDED(backlog_mutex_);
+  bool PushToUpdateBacklog(StageImpl* stage) FTL_LOCKS_EXCLUDED(backlog_mutex_);
 
   // Pops a stage from the update backlog and returns it or returns nullptr if
   // the update backlog is empty.
-  Stage* PopFromUpdateBacklog() FTL_LOCKS_EXCLUDED(backlog_mutex_);
+  StageImpl* PopFromUpdateBacklog() FTL_LOCKS_EXCLUDED(backlog_mutex_);
 
   ftl::Closure update_callback_;
 
   mutable ftl::Mutex backlog_mutex_;
-  std::queue<Stage*> update_backlog_ FTL_GUARDED_BY(backlog_mutex_);
+  std::queue<StageImpl*> update_backlog_ FTL_GUARDED_BY(backlog_mutex_);
   bool suppress_update_callbacks_ FTL_GUARDED_BY(backlog_mutex_) = false;
 };
 

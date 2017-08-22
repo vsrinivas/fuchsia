@@ -10,19 +10,19 @@
 
 namespace media {
 
-class Stage;
+class StageImpl;
 class Engine;
 class Input;
 
 // Represents a stage's connector to an adjacent downstream stage.
 class Output {
  public:
-  Output(Stage* stage, size_t index);
+  Output(StageImpl* stage, size_t index);
 
   ~Output();
 
   // The stage of which this output is a part.
-  Stage* stage() const { return stage_; }
+  StageImpl* stage() const { return stage_; }
 
   // The index of this output with respect to the stage.
   size_t index() const { return index_; }
@@ -48,11 +48,11 @@ class Output {
   // is currently holding a packet.
   Demand demand() const;
 
-  // Supplies a packet to mate. Called only by Stage::Update implementations.
+  // Supplies a packet to mate. Called only by StageImpl::Update implementations.
   void SupplyPacket(PacketPtr packet) const;
 
  private:
-  Stage* stage_;
+  StageImpl* stage_;
   size_t index_;
   Input* mate_ = nullptr;
   PayloadAllocator* copy_allocator_ = nullptr;

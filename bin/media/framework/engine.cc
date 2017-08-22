@@ -13,7 +13,7 @@ Engine::~Engine() {}
 void Engine::PrepareInput(Input* input) {
   FTL_DCHECK(input);
   VisitUpstream(input, [](Input* input, Output* output,
-                          const Stage::UpstreamCallback& callback) {
+                          const StageImpl::UpstreamCallback& callback) {
     FTL_DCHECK(input);
     FTL_DCHECK(output);
     FTL_DCHECK(!input->prepared());
@@ -26,7 +26,7 @@ void Engine::PrepareInput(Input* input) {
 void Engine::UnprepareInput(Input* input) {
   FTL_DCHECK(input);
   VisitUpstream(input, [](Input* input, Output* output,
-                          const Stage::UpstreamCallback& callback) {
+                          const StageImpl::UpstreamCallback& callback) {
     FTL_DCHECK(input);
     FTL_DCHECK(output);
     FTL_DCHECK(input->prepared());
@@ -43,7 +43,7 @@ void Engine::FlushOutput(Output* output, bool hold_frame) {
 
   VisitDownstream(
       output, [hold_frame](Output* output, Input* input,
-                           const Stage::DownstreamCallback& callback) {
+                           const StageImpl::DownstreamCallback& callback) {
         FTL_DCHECK(output);
         FTL_DCHECK(input);
         FTL_DCHECK(input->prepared());
@@ -52,7 +52,7 @@ void Engine::FlushOutput(Output* output, bool hold_frame) {
       });
 }
 
-void Engine::StageNeedsUpdate(Stage* stage) {
+void Engine::StageNeedsUpdate(StageImpl* stage) {
   FTL_DCHECK(stage);
   if (PushToUpdateBacklog(stage) && update_callback_) {
     update_callback_();
@@ -60,7 +60,7 @@ void Engine::StageNeedsUpdate(Stage* stage) {
 }
 
 bool Engine::UpdateOne() {
-  Stage* stage = PopFromUpdateBacklog();
+  StageImpl* stage = PopFromUpdateBacklog();
   if (!stage) {
     return false;
   }
@@ -97,7 +97,7 @@ void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
     FTL_DCHECK(input->connected());
 
     Output* output = input->mate();
-    Stage* output_stage = output->stage();
+    StageImpl* output_stage = output->stage();
 
     visitor(input, output, [output_stage, &backlog](size_t input_index) {
       backlog.push(&output_stage->input(input_index));
@@ -119,7 +119,7 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
     FTL_DCHECK(output->connected());
 
     Input* input = output->mate();
-    Stage* input_stage = input->stage();
+    StageImpl* input_stage = input->stage();
 
     visitor(output, input, [input_stage, &backlog](size_t output_index) {
       backlog.push(&input_stage->output(output_index));
@@ -127,14 +127,14 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
   }
 }
 
-bool Engine::PushToUpdateBacklog(Stage* stage) {
+bool Engine::PushToUpdateBacklog(StageImpl* stage) {
   FTL_DCHECK(stage);
   ftl::MutexLocker locker(&backlog_mutex_);
   update_backlog_.push(stage);
   return !suppress_update_callbacks_;
 }
 
-Stage* Engine::PopFromUpdateBacklog() {
+StageImpl* Engine::PopFromUpdateBacklog() {
   ftl::MutexLocker locker(&backlog_mutex_);
 
   if (update_backlog_.empty()) {
@@ -142,7 +142,7 @@ Stage* Engine::PopFromUpdateBacklog() {
     return nullptr;
   }
 
-  Stage* stage = update_backlog_.front();
+  StageImpl* stage = update_backlog_.front();
   update_backlog_.pop();
 
   return stage;

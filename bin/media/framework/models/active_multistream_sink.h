@@ -5,15 +5,15 @@
 #pragma once
 
 #include "apps/media/src/framework/models/demand.h"
+#include "apps/media/src/framework/models/node.h"
+#include "apps/media/src/framework/models/stage.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
 
-// Host for ActiveMultistreamSink.
-class ActiveMultistreamSinkHost {
+// Stage for |ActiveMultistreamSink|.
+class ActiveMultistreamSinkStage : public Stage {
  public:
-  virtual ~ActiveMultistreamSinkHost() {}
-
   // TODO(dalesat): Revisit allocation semantics.
 
   // Allocates an input and returns its index.
@@ -29,16 +29,13 @@ class ActiveMultistreamSinkHost {
 };
 
 // Synchronous sink of packets for multiple streams.
-class ActiveMultistreamSink {
+class ActiveMultistreamSink : public Node<ActiveMultistreamSinkStage> {
  public:
   virtual ~ActiveMultistreamSink() {}
 
   // Flushes media state. |hold_frame| indicates whether a video renderer
   // should hold (and display) the newest frame.
   virtual void Flush(bool hold_frame){};
-
-  // Sets the host callback interface.
-  virtual void SetHost(ActiveMultistreamSinkHost* host) = 0;
 
   // Supplies a packet to the sink, returning the new demand for the input.
   virtual Demand SupplyPacket(size_t input_index, PacketPtr packet) = 0;

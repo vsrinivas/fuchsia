@@ -11,9 +11,9 @@
 #include <mxtl/auto_call.h>
 #include <mxtl/vector.h>
 
-#include "apps/media/src/audio/driver_utils.h"
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
+#include "apps/media/src/audio/driver_utils.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
@@ -113,8 +113,7 @@ bool AudioInput::SetStreamType(std::unique_ptr<StreamType> stream_type) {
   // which the driver will understand.  This should really never fail.
   const auto& audio_stream_type = *stream_type->audio();
   if (!driver_utils::SampleFormatToDriverSampleFormat(
-        audio_stream_type.sample_format(),
-        &configured_sample_format_)) {
+          audio_stream_type.sample_format(), &configured_sample_format_)) {
     FTL_LOG(ERROR) << "Failed to convert SampleFormat ("
                    << static_cast<uint32_t>(audio_stream_type.sample_format())
                    << ") to audio_sample_format_t";
@@ -144,8 +143,6 @@ void AudioInput::Start() {
     return;
   }
 
-  FTL_DCHECK(supply_callback_);
-
   state_ = State::kStarted;
   worker_thread_ = std::thread([this]() { Worker(); });
 }
@@ -174,10 +171,6 @@ void AudioInput::set_allocator(PayloadAllocator* allocator) {
   allocator_ = allocator;
 }
 
-void AudioInput::SetSupplyCallback(const SupplyCallback& supply_callback) {
-  supply_callback_ = supply_callback;
-}
-
 void AudioInput::SetDownstreamDemand(Demand demand) {}
 
 void AudioInput::Worker() {
@@ -194,9 +187,9 @@ void AudioInput::Worker() {
   });
 
   // Configure the format.
-  res = audio_input_->SetFormat(configured_frames_per_second_,
-                                configured_channels_,
-                                configured_sample_format_);
+  res =
+      audio_input_->SetFormat(configured_frames_per_second_,
+                              configured_channels_, configured_sample_format_);
   if (res != MX_OK) {
     FTL_LOG(ERROR) << "Failed set device format to "
                    << configured_frames_per_second_ << " Hz "
@@ -312,8 +305,9 @@ void AudioInput::Worker() {
         }
         FTL_DCHECK(modulo_rd_ptr_bytes < audio_input_->ring_buffer_bytes());
 
-        supply_callback_(Packet::Create(frames_rxed, pts_rate_, false, false,
-                                        cached_packet_size, buf, allocator_));
+        stage().SupplyPacket(Packet::Create(frames_rxed, pts_rate_, false,
+                                            false, cached_packet_size, buf,
+                                            allocator_));
 
         // Update our bookkeeping.
         pending_packets--;

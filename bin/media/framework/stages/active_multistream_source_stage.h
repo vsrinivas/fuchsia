@@ -8,21 +8,22 @@
 #include <vector>
 
 #include "apps/media/src/framework/models/active_multistream_source.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace media {
 
 // A stage that hosts an ActiveMultistreamSource.
-class ActiveMultistreamSourceStage : public Stage {
+class ActiveMultistreamSourceStageImpl : public StageImpl,
+                                         public ActiveMultistreamSourceStage {
  public:
-  ActiveMultistreamSourceStage(Engine* engine,
-                               std::shared_ptr<ActiveMultistreamSource> source);
+  ActiveMultistreamSourceStageImpl(Engine* engine,
+                                   std::shared_ptr<ActiveMultistreamSource> source);
 
-  ~ActiveMultistreamSourceStage() override;
+  ~ActiveMultistreamSourceStageImpl() override;
 
-  // Stage implementation.
+  // StageImpl implementation.
   size_t input_count() const override;
 
   Input& input(size_t index) override;
@@ -49,10 +50,12 @@ class ActiveMultistreamSourceStage : public Stage {
   void Update() override;
 
  private:
+  // ActiveMultistreamSourceStage implementation.
+  void SupplyPacket(size_t output_index, PacketPtr packet) override;
+
   std::vector<Output> outputs_;
   std::vector<std::deque<PacketPtr>> packets_per_output_;
   std::shared_ptr<ActiveMultistreamSource> source_;
-  ActiveMultistreamSource::SupplyCallback supply_function_;
 
   mutable ftl::Mutex mutex_;
   size_t ended_streams_ FTL_GUARDED_BY(mutex_) = 0;

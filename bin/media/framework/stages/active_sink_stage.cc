@@ -6,62 +6,44 @@
 
 namespace media {
 
-ActiveSinkStage::ActiveSinkStage(Engine* engine,
-                                 std::shared_ptr<ActiveSink> sink)
-    : Stage(engine), input_(this, 0), sink_(sink) {
+ActiveSinkStageImpl::ActiveSinkStageImpl(Engine* engine,
+                                         std::shared_ptr<ActiveSink> sink)
+    : StageImpl(engine), input_(this, 0), sink_(sink) {
   FTL_DCHECK(sink_);
-
-  sink_->SetDemandCallback([this](Demand demand) {
-    bool needs_update = false;
-
-    {
-      ftl::MutexLocker locker(&mutex_);
-      if (sink_demand_ != demand) {
-        sink_demand_ = demand;
-        needs_update = true;
-      }
-    }
-
-    if (needs_update) {
-      // This can't be called with the mutex taken, because |Update| can be
-      // called from |NeedsUpdate|.
-      NeedsUpdate();
-    }
-  });
 }
 
-ActiveSinkStage::~ActiveSinkStage() {}
+ActiveSinkStageImpl::~ActiveSinkStageImpl() {}
 
-size_t ActiveSinkStage::input_count() const {
+size_t ActiveSinkStageImpl::input_count() const {
   return 1;
 };
 
-Input& ActiveSinkStage::input(size_t index) {
+Input& ActiveSinkStageImpl::input(size_t index) {
   FTL_DCHECK(index == 0u);
   return input_;
 }
 
-size_t ActiveSinkStage::output_count() const {
+size_t ActiveSinkStageImpl::output_count() const {
   return 0;
 }
 
-Output& ActiveSinkStage::output(size_t index) {
+Output& ActiveSinkStageImpl::output(size_t index) {
   FTL_CHECK(false) << "output requested from sink";
   abort();
 }
 
-PayloadAllocator* ActiveSinkStage::PrepareInput(size_t index) {
+PayloadAllocator* ActiveSinkStageImpl::PrepareInput(size_t index) {
   FTL_DCHECK(index == 0u);
   return sink_->allocator();
 }
 
-void ActiveSinkStage::PrepareOutput(size_t index,
-                                    PayloadAllocator* allocator,
-                                    const UpstreamCallback& callback) {
+void ActiveSinkStageImpl::PrepareOutput(size_t index,
+                                        PayloadAllocator* allocator,
+                                        const UpstreamCallback& callback) {
   FTL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-void ActiveSinkStage::Update() {
+void ActiveSinkStageImpl::Update() {
   FTL_DCHECK(sink_);
 
   Demand demand;
@@ -81,9 +63,9 @@ void ActiveSinkStage::Update() {
   }
 }
 
-void ActiveSinkStage::FlushInput(size_t index,
-                                 bool hold_frame,
-                                 const DownstreamCallback& callback) {
+void ActiveSinkStageImpl::FlushInput(size_t index,
+                                     bool hold_frame,
+                                     const DownstreamCallback& callback) {
   FTL_DCHECK(index == 0u);
   FTL_DCHECK(sink_);
   input_.Flush();
@@ -92,8 +74,26 @@ void ActiveSinkStage::FlushInput(size_t index,
   sink_demand_ = Demand::kNegative;
 }
 
-void ActiveSinkStage::FlushOutput(size_t index) {
+void ActiveSinkStageImpl::FlushOutput(size_t index) {
   FTL_CHECK(false) << "FlushOutput called on sink";
+}
+
+void ActiveSinkStageImpl::SetDemand(Demand demand) {
+  bool needs_update = false;
+
+  {
+    ftl::MutexLocker locker(&mutex_);
+    if (sink_demand_ != demand) {
+      sink_demand_ = demand;
+      needs_update = true;
+    }
+  }
+
+  if (needs_update) {
+    // This can't be called with the mutex taken, because |Update| can be
+    // called from |NeedsUpdate|.
+    NeedsUpdate();
+  }
 }
 
 }  // namespace media

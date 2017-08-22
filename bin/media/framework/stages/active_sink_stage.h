@@ -7,20 +7,20 @@
 #include <deque>
 
 #include "apps/media/src/framework/models/active_sink.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
 
 namespace media {
 
 // A stage that hosts an ActiveSink.
-class ActiveSinkStage : public Stage {
+class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
  public:
-  ActiveSinkStage(Engine* engine, std::shared_ptr<ActiveSink> sink);
+  ActiveSinkStageImpl(Engine* engine, std::shared_ptr<ActiveSink> sink);
 
-  ~ActiveSinkStage() override;
+  ~ActiveSinkStageImpl() override;
 
-  // Stage implementation.
+  // StageImpl implementation.
   size_t input_count() const override;
 
   Input& input(size_t index) override;
@@ -45,6 +45,9 @@ class ActiveSinkStage : public Stage {
   void Update() override;
 
  private:
+  // ActiveSinkStage implementation.
+  void SetDemand(Demand demand) override;
+
   Input input_;
   std::shared_ptr<ActiveSink> sink_;
 

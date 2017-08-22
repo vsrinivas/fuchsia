@@ -4,16 +4,22 @@
 
 #pragma once
 
+#include "apps/media/src/framework/models/node.h"
+#include "apps/media/src/framework/models/stage.h"
 #include "apps/media/src/framework/packet.h"
 
 namespace media {
 
-// Asynchronous source of packets for multiple streams.
-class ActiveMultistreamSource {
+// Stage for |ActiveMultistreamSource|.
+class ActiveMultistreamSourceStage : public Stage {
  public:
-  using SupplyCallback =
-      std::function<void(size_t output_index, PacketPtr packet)>;
+  // Supplies a packet for the indicated output.
+  virtual void SupplyPacket(size_t output_index, PacketPtr packet) = 0;
+};
 
+// Asynchronous source of packets for multiple streams.
+class ActiveMultistreamSource : public Node<ActiveMultistreamSourceStage> {
+ public:
   virtual ~ActiveMultistreamSource() {}
 
   // Flushes media state.
@@ -23,9 +29,6 @@ class ActiveMultistreamSource {
 
   // Returns the number of streams the source produces.
   virtual size_t stream_count() const = 0;
-
-  // Sets the callback that supplies a packet asynchronously.
-  virtual void SetSupplyCallback(const SupplyCallback& supply_callback) = 0;
 
   // Requests a packet from the source to be supplied asynchronously via
   // the supply callback.

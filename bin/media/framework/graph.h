@@ -12,7 +12,7 @@
 #include "apps/media/src/framework/stages/active_sink_stage.h"
 #include "apps/media/src/framework/stages/active_source_stage.h"
 #include "apps/media/src/framework/stages/multistream_source_stage.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "apps/media/src/framework/stages/transform_stage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/synchronization/mutex.h"
@@ -32,16 +32,19 @@ class StageCreator;
   class StageCreator<                                                        \
       T, typename std::enable_if<std::is_base_of<TModel, T>::value>::type> { \
    public:                                                                   \
-    static inline Stage* Create(Engine* engine, std::shared_ptr<T> t_ptr) {  \
-      return new TStage(engine, std::shared_ptr<TModel>(t_ptr));             \
+    static inline StageImpl* Create(Engine* engine,                          \
+                                    std::shared_ptr<T> t_ptr) {              \
+      TStage* stage = new TStage(engine, std::shared_ptr<TModel>(t_ptr));    \
+      t_ptr->SetStage(stage);                                                \
+      return stage;                                                          \
     }                                                                        \
   };
 
-DEFINE_STAGE_CREATOR(MultistreamSource, MultistreamSourceStage);
-DEFINE_STAGE_CREATOR(Transform, TransformStage);
-DEFINE_STAGE_CREATOR(ActiveSource, ActiveSourceStage);
-DEFINE_STAGE_CREATOR(ActiveSink, ActiveSinkStage);
-DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStage);
+DEFINE_STAGE_CREATOR(MultistreamSource, MultistreamSourceStageImpl);
+DEFINE_STAGE_CREATOR(Transform, TransformStageImpl);
+DEFINE_STAGE_CREATOR(ActiveSource, ActiveSourceStageImpl);
+DEFINE_STAGE_CREATOR(ActiveSink, ActiveSinkStageImpl);
+DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStageImpl);
 
 #undef DEFINE_STAGE_CREATOR
 
@@ -213,11 +216,11 @@ class Graph {
 
  private:
   // Adds a stage to the graph.
-  NodeRef Add(Stage* stage);
+  NodeRef Add(StageImpl* stage);
 
-  std::list<Stage*> stages_;
-  std::list<Stage*> sources_;
-  std::list<Stage*> sinks_;
+  std::list<StageImpl*> stages_;
+  std::list<StageImpl*> sources_;
+  std::list<StageImpl*> sinks_;
 
   Engine engine_;
   mutable ftl::Mutex update_mutex_;

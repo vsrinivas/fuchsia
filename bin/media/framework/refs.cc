@@ -6,7 +6,7 @@
 
 #include "apps/media/src/framework/stages/input.h"
 #include "apps/media/src/framework/stages/output.h"
-#include "apps/media/src/framework/stages/stage.h"
+#include "apps/media/src/framework/stages/stage_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
