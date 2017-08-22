@@ -18,5 +18,5 @@ flutter_app("media_player_flutter") {
     "//lib/flutter/packages/flutter",
   ]
 
-  analysis_options = "//apps/modules/common/.analysis_options"
+  analysis_options = "//apps/modules/common/analysis_options.yaml"
 }

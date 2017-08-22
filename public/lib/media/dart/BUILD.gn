@@ -15,5 +15,5 @@ dart_package("dart") {
     "//lib/fidl/dart",
   ]
 
-  analysis_options = "//apps/modules/common/.analysis_options"
+  analysis_options = "//apps/modules/common/analysis_options.yaml"
 }
