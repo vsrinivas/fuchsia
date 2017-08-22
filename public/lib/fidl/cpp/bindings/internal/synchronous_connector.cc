@@ -30,16 +30,7 @@ bool SynchronousConnector::Write(Message* msg_to_send) {
                 msg_to_send->mutable_handles()->data()),
       static_cast<uint32_t>(msg_to_send->mutable_handles()->size()));
 
-  switch (rv) {
-    case MX_OK:
-      break;
-
-    default:
-      FTL_LOG(WARNING) << "mx_channel_write unsuccessful. error = " << rv;
-      return false;
-  }
-
-  return true;
+  return rv == MX_OK;
 }
 
 bool SynchronousConnector::BlockingRead(Message* received_msg) {
@@ -51,14 +42,12 @@ bool SynchronousConnector::BlockingRead(Message* received_msg) {
                                     MX_TIME_INFINITE, &pending);
 
   if (rv != MX_OK) {
-    FTL_LOG(WARNING) << "Failed waiting for a response. error = " << rv;
     return false;
   }
 
   if (pending & MX_CHANNEL_READABLE) {
     rv = ReadMessage(handle_, received_msg);
     if (rv != MX_OK) {
-      FTL_LOG(WARNING) << "Failed reading the response message. error = " << rv;
       return false;
     }
     return true;
