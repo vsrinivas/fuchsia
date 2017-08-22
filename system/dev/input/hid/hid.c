@@ -593,11 +593,11 @@ done:
         // the device into boot protocol mode.
         if (dev->info.dev_class == HID_DEV_CLASS_POINTER) {
             if (dev->info.boot_device) {
-                printf("hid: Applying boot mouse hack to hid device \"%s\".  "
-                       "Altering report count (%zu -> 1),\n"
-                       "Altering input size (%d -> 24),\n"
-                       "Altering output size (%d -> 0),\n"
-                       "Altering feature size (%d -> 0)\n",
+                printf("hid: boot mouse hack for \"%s\":  "
+                       "report count (%zu->1), "
+                       "inp sz (%d->24), "
+                       "out sz (%d->0), "
+                       "feat sz (%d->0)\n",
                        dev->name, dev->num_reports, dev->sizes[0].in_size,
                        dev->sizes[0].out_size, dev->sizes[0].feat_size);
                 dev->num_reports = 1;
@@ -607,7 +607,7 @@ done:
                 dev->sizes[0].feat_size = 0;
             } else {
                 printf(
-                    "hid: Skipping boot mouse hack as device %s does not support boot protocol.\n",
+                    "hid: boot mouse hack skipped for \"%s\": does not support protocol.\n",
                     dev->name);
             }
         }
