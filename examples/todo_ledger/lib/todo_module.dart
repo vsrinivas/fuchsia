@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.ledger.services.public/ledger.fidl.dart';
@@ -36,17 +35,16 @@ String _vmoToString(Vmo vmo) {
     return "";
   }
 
-  var data = new Uint8List(sizeResult.size);
-  var readResult = vmo.read(new ByteData.view(data.buffer));
+  var readResult = vmo.read(sizeResult.size);
   if (readResult.status != NO_ERROR) {
     _log("Unable to read from vmo: ${readResult.status}");
     return "";
   }
-  if (readResult.bytesRead != sizeResult.size) {
+  if (readResult.numBytes != sizeResult.size) {
     _log("Unexpected count of bytes read.");
     return "";
   }
-  return UTF8.decode(data);
+  return readResult.bytesAsUTF8String();
 }
 
 /// An implementation of the [Module] interface.
