@@ -86,6 +86,16 @@ void netifc_recv(void* data, size_t len) {
     eth_recv(data, len);
 }
 
+static const char* mxboot_banner =
+"\n"
+"                                  _          _                 _   \n"
+" _ __ ___   __ _  __ _  ___ _ __ | |_ __ _  | |__   ___   ___ | |_ \n"
+"| '_ ` _ \\ / _` |/ _` |/ _ \\ '_ \\| __/ _` | | '_ \\ / _ \\ / _ \\| __|\n"
+"| | | | | | (_| | (_| |  __/ | | | || (_| | | |_) | (_) | (_) | |_ \n"
+"|_| |_| |_|\\__,_|\\__, |\\___|_| |_|\\__\\__,_| |_.__/ \\___/ \\___/ \\__|\n"
+"                 |___/                                             \n"
+"\n";
+
 int main(int argc, char** argv) {
     unsigned char mac[6];
     uint16_t mtu;
@@ -118,6 +128,10 @@ int main(int argc, char** argv) {
             netifc_get_info(mac, &mtu);
             device_id_get(mac, device_id);
             nodename = device_id;
+        }
+
+        if (netbootloader) {
+            puts(mxboot_banner);
         }
 
         printf("netsvc: nodename='%s'\n", nodename);
