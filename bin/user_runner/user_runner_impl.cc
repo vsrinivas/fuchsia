@@ -135,6 +135,11 @@ void UserRunnerImpl::Initialize(
       std::string(kUserScopeLabelPrefix) + GetAccountId(account));
   user_shell_ = std::make_unique<AppClient<UserShell>>(
       user_scope_->GetLauncher(), std::move(user_shell));
+  user_shell_->SetAppErrorHandler([this] {
+    FTL_LOG(ERROR) << "User Shell seems to have crashed unexpectedly."
+                   << "Logging out.";
+    Logout();
+  });
 
   SetupLedger();
 
