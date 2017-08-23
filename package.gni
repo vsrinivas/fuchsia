@@ -72,6 +72,11 @@ declare_args() {
 #       name (string, required)
 #         Name of the test
 #
+#       disabled (bool, optional)
+#         Whether to disable the test on continuous integration jobs. This can
+#         be used when a test is temporarily broken, or if it is too flaky or
+#         slow for CI. The test will also be skipped by the "runtests" command.
+#
 #   drivers (optional)
 #     List of scopes defining the drivers in the package. A driver is typically
 #     produced by the build system and is placed in the "driver" directory
@@ -194,7 +199,11 @@ template("package") {
       foreach(test, pkg.tests) {
         source = rebase_path("$root_build_dir/${test.name}")
         sources += [ "$root_build_dir/${test.name}" ]
-        dest = "test/" + test.name
+        if (defined(test.disabled) && test.disabled) {
+          dest = "test/disabled/" + test.name
+        } else {
+          dest = "test/" + test.name
+        }
         package_manifest_contents += [ "$dest=$source" ]
       }
       foreach(driver, pkg.drivers) {
