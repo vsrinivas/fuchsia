@@ -11,15 +11,24 @@ package("cobalt_client") {
   deps = [
     ":cobalt",
     ":cobalt_testapp",
+    ":cobalt_testapp_no_network",
   ]
 
-  binaries = [ {
-        name = "cobalt"
-      } ]
+  binaries = [
+    {
+      name = "cobalt"
+    },
 
-  tests = [ {
-        name = "cobalt_testapp"
-      } ]
+    {
+      name = "cobalt_testapp"
+    },
+  ]
+
+  tests = [
+    {
+      name = "cobalt_testapp_no_network"
+    },
+  ]
 }
 
 executable("cobalt") {
@@ -52,5 +61,15 @@ executable("cobalt_testapp") {
     "//apps/cobalt_client/services:cobalt_sync",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+copy("cobalt_testapp_no_network") {
+  sources = [
+    "cobalt_testapp_no_network"
+  ]
+
+  outputs = [
+    "$root_out_dir/cobalt_testapp_no_network"
   ]
 }
