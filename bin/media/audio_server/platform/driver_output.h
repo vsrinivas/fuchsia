@@ -8,8 +8,9 @@
 #include <zx/vmo.h>
 #include <string>
 
-#include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
+#include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
+#include "garnet/bin/media/audio_server/platform/generic/standard_output_base.h"
 
 namespace media {
 namespace audio {
@@ -27,9 +28,9 @@ class DriverOutput : public StandardOutputBase {
 
   // StandardOutputBase implementation
   bool StartMixJob(MixJob* job, fxl::TimePoint process_start)
-    FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) override;
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) override;
   bool FinishMixJob(const MixJob& job)
-    FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) override;
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) override;
 
  private:
   // TODO(johngro) : Remove the EventReflector class.
@@ -45,7 +46,7 @@ class DriverOutput : public StandardOutputBase {
   // directly, but there are some architectural issues which prevent this at the
   // moment.  In specific...
   //
-  // The lifecycle of a DispatcherChannel::Owner is controlled using fbl
+  // The lifecycle of a DispatcherEventSource::Owner is controlled using fbl
   // intrusive ref counting and fbl::RefPtrs.  Currently, audio server outputs
   // have their lifecycles managed using std:: weak and shared pointers.  These
   // two mechanisms are not compatible and should not be mixed.  Eventually, we
@@ -73,34 +74,35 @@ class DriverOutput : public StandardOutputBase {
   // 4) Convert all communications between the mixer output and the driver to be
   //    asynchronous, and move timing over to the new timing object.
   //
-  using DispatcherChannel = ::audio::DispatcherChannel;
-  class EventReflector : public DispatcherChannel::Owner {
+  class EventReflector : public fbl::RefCounted<EventReflector> {
    public:
-     static fbl::RefPtr<EventReflector> Create(AudioOutputManager* manager,
-                                                AudioOutputWeakPtr output) {
-       return fbl::AdoptRef(new EventReflector(manager, output));
-     }
-     zx_status_t Activate(zx::channel channel);
-
-   protected:
-    zx_status_t ProcessChannel(DispatcherChannel* channel) final;
-    void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
+    static fbl::RefPtr<EventReflector> Create(AudioOutputManager* manager,
+                                              AudioOutputWeakPtr output);
+    zx_status_t Activate(zx::channel channel);
 
    private:
-    EventReflector(AudioOutputManager* manager, AudioOutputWeakPtr output)
-      : manager_(manager),
-        output_(output) { }
+    using Channel = ::audio::dispatcher::Channel;
+    using ExecutionDomain = ::audio::dispatcher::ExecutionDomain;
+
+    EventReflector(AudioOutputManager* manager, AudioOutputWeakPtr output,
+                   fbl::RefPtr<ExecutionDomain>&& domain)
+        : manager_(manager),
+          output_(output),
+          default_domain_(fbl::move(domain)) {}
+
+    zx_status_t ProcessChannelMessage(Channel* channel);
+    void ProcessChannelDeactivate(const Channel* channel);
     void HandlePlugStateChange(bool plugged, zx_time_t plug_time);
 
     AudioOutputManager* manager_;
-    AudioOutputWeakPtr  output_;
+    AudioOutputWeakPtr output_;
+    fbl::RefPtr<ExecutionDomain> default_domain_;
   };
 
   DriverOutput(zx::channel channel, AudioOutputManager* manager);
 
   template <typename ReqType, typename RespType>
-  zx_status_t SyncDriverCall(const zx::channel& channel,
-                             const ReqType& req,
+  zx_status_t SyncDriverCall(const zx::channel& channel, const ReqType& req,
                              RespType* resp,
                              zx_handle_t* resp_handle_out = nullptr);
 

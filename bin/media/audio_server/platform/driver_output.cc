@@ -4,13 +4,13 @@
 
 #include "garnet/bin/media/audio_server/platform/driver_output.h"
 
+#include <fbl/atomic.h>
+#include <fbl/auto_call.h>
+#include <fbl/limits.h>
 #include <fcntl.h>
 #include <zircon/device/audio.h>
 #include <zircon/process.h>
 #include <fdio/io.h>
-#include <fbl/atomic.h>
-#include <fbl/auto_call.h>
-#include <fbl/limits.h>
 #include <iomanip>
 
 #include "garnet/bin/media/audio_server/audio_output_manager.h"
@@ -41,7 +41,7 @@ static fbl::atomic<zx_txid_t> TXID_GEN(1);
 static thread_local zx_txid_t TXID = TXID_GEN.fetch_add(1);
 
 AudioOutputPtr DriverOutput::Create(zx::channel channel,
-                                     AudioOutputManager* manager) {
+                                    AudioOutputManager* manager) {
   return AudioOutputPtr(new DriverOutput(std::move(channel), manager));
 }
 
@@ -52,9 +52,8 @@ DriverOutput::~DriverOutput() {}
 
 template <typename ReqType, typename RespType>
 zx_status_t DriverOutput::SyncDriverCall(const zx::channel& channel,
-                                          const ReqType& req,
-                                          RespType* resp,
-                                          zx_handle_t* resp_handle_out) {
+                                         const ReqType& req, RespType* resp,
+                                         zx_handle_t* resp_handle_out) {
   constexpr zx_time_t CALL_TIMEOUT = ZX_MSEC(500u);
   zx_channel_call_args_t args;
 
@@ -73,8 +72,8 @@ zx_status_t DriverOutput::SyncDriverCall(const zx::channel& channel,
   uint32_t bytes, handles;
   zx_status_t read_status, write_status;
 
-  write_status = channel.call(0, zx_deadline_after(CALL_TIMEOUT),
-                              &args, &bytes, &handles, &read_status);
+  write_status = channel.call(0, zx_deadline_after(CALL_TIMEOUT), &args, &bytes,
+                              &handles, &read_status);
 
   if (write_status != ZX_OK) {
     if (write_status == ZX_ERR_CALL_FAILED) {
@@ -122,9 +121,7 @@ MediaResult DriverOutput::Init() {
     req.channels = kDefaultChannelCount;
     req.sample_format = kDefaultAudioFmt;
 
-    res = SyncDriverCall(stream_channel_,
-                         req,
-                         &resp,
+    res = SyncDriverCall(stream_channel_, req, &resp,
                          rb_channel_.reset_and_get_address());
     if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to set format " << req.frames_per_second
@@ -145,8 +142,8 @@ MediaResult DriverOutput::Init() {
 
     res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to request initial plug state (res "
-                     << res << ")";
+      FXL_LOG(ERROR) << "Failed to request initial plug state (res " << res
+                     << ")";
       return MediaResult::INTERNAL_ERROR;
     }
 
@@ -156,8 +153,8 @@ MediaResult DriverOutput::Init() {
 
     res = reflector_->Activate(fbl::move(stream_channel_));
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to activate event reflector (res "
-                     << res << ")";
+      FXL_LOG(ERROR) << "Failed to activate event reflector (res " << res
+                     << ")";
       return MediaResult::INTERNAL_ERROR;
     }
   }
@@ -209,9 +206,7 @@ MediaResult DriverOutput::Init() {
     req.min_ring_buffer_frames = kDefaultRingBufferFrames;
     req.notifications_per_ring = 0;
 
-    res = SyncDriverCall(rb_channel_,
-                         req,
-                         &resp,
+    res = SyncDriverCall(rb_channel_, req, &resp,
                          rb_vmo_.reset_and_get_address());
 
     // TODO(johngro): Do a better job of translating errors.
@@ -298,8 +293,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
   // official way of meeting real-time latency requirements.
   if (!mix_job_prio_bumped_) {
-      zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-      mix_job_prio_bumped_ = true;
+    zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+    mix_job_prio_bumped_ = true;
   }
 
   if (!started_) {
@@ -339,14 +334,15 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     frames_sent_ = low_water_frames_;
 
     if (VERBOSE_TIMING_DEBUG) {
-      FXL_LOG(INFO)
-        << "Audio output: FIFO depth (" << fifo_frames_
-        << " frames " << std::fixed << std::setprecision(3)
-        << local_to_frames_.Inverse().Scale(fifo_frames_) / 1000000.0
-        << " mSec) Low Water (" << low_water_frames_ << " frames "
-        << std::fixed << std::setprecision(3)
-        << local_to_frames_.Inverse().Scale(low_water_frames_) / 1000000.0
-        << " mSec)";
+      FXL_LOG(INFO) << "Audio output: FIFO depth (" << fifo_frames_
+                    << " frames " << std::fixed << std::setprecision(3)
+                    << local_to_frames_.Inverse().Scale(fifo_frames_) /
+                           1000000.0
+                    << " mSec) Low Water (" << low_water_frames_ << " frames "
+                    << std::fixed << std::setprecision(3)
+                    << local_to_frames_.Inverse().Scale(low_water_frames_) /
+                           1000000.0
+                    << " mSec)";
     }
 
     started_ = true;
@@ -362,7 +358,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   // containing the largest contiguous buffer we can mix during this phase of
   // this cycle.
   if (!frames_to_mix_) {
-    int64_t rd_ptr_frames  = local_to_output_.Apply(now);
+    int64_t rd_ptr_frames = local_to_output_.Apply(now);
     int64_t fifo_threshold = rd_ptr_frames + fifo_frames_;
 
     if (fifo_threshold >= frames_sent_) {
@@ -370,21 +366,21 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         // If this was the first time we missed our limit, log a message, mark
         // the start time of the underflow event, and fill our entire ring
         // buffer with silence.
-        int64_t rd_limit_miss        = rd_ptr_frames - frames_sent_;
-        int64_t fifo_limit_miss      = rd_limit_miss + fifo_frames_;
+        int64_t rd_limit_miss = rd_ptr_frames - frames_sent_;
+        int64_t fifo_limit_miss = rd_limit_miss + fifo_frames_;
         int64_t low_water_limit_miss = rd_limit_miss + low_water_frames_;
 
         FXL_LOG(ERROR)
-          << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = ("
-          << std::fixed << std::setprecision(3)
-          << local_to_frames_.Inverse().Scale(rd_limit_miss) / 1000000.0
-          << ", "
-          << local_to_frames_.Inverse().Scale(fifo_limit_miss) / 1000000.0
-          << ", "
-          << local_to_frames_.Inverse().Scale(low_water_limit_miss) / 1000000.0
-          << ") mSec.  Cooling down for at least "
-          << kUnderflowCooldown / 1000000.0
-          << " mSec.";
+            << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = ("
+            << std::fixed << std::setprecision(3)
+            << local_to_frames_.Inverse().Scale(rd_limit_miss) / 1000000.0
+            << ", "
+            << local_to_frames_.Inverse().Scale(fifo_limit_miss) / 1000000.0
+            << ", "
+            << local_to_frames_.Inverse().Scale(low_water_limit_miss) /
+                   1000000.0
+            << ") mSec.  Cooling down for at least "
+            << kUnderflowCooldown / 1000000.0 << " mSec.";
 
         underflow_start_time_ = now;
         output_formatter_->FillWithSilence(rb_virt_, rb_frames_);
@@ -409,11 +405,9 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         return false;
       } else {
         // Looks like we recovered.  Log and go back to mixing.
-        FXL_LOG(INFO)
-          << "UNDERFLOW: Recovered after "
-          << std::fixed << std::setprecision(3)
-          << (now - underflow_start_time_) / 1000000.0
-          << " mSec.";
+        FXL_LOG(INFO) << "UNDERFLOW: Recovered after " << std::fixed
+                      << std::setprecision(3)
+                      << (now - underflow_start_time_) / 1000000.0 << " mSec.";
         underflow_start_time_ = 0;
         underflow_cooldown_deadline_ = 0;
       }
@@ -489,33 +483,57 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   // Schedule the next callback for when we are at the low water mark behind
   // the write pointer.
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
-  int64_t low_water_time   = local_to_output_.ApplyInverse(low_water_frames);
+  int64_t low_water_time = local_to_output_.ApplyInverse(low_water_frames);
   SetNextSchedTime(fxl::TimePoint::FromEpochDelta(
       fxl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
-zx_status_t DriverOutput::EventReflector::Activate(
-    zx::channel stream_channel) {
-  auto ch = ::audio::DispatcherChannelAllocator::New();
+// static
+fbl::RefPtr<DriverOutput::EventReflector> DriverOutput::EventReflector::Create(
+    AudioOutputManager* manager, AudioOutputWeakPtr output) {
+  auto domain = ExecutionDomain::Create();
+  if (domain == nullptr) {
+    return nullptr;
+  }
 
-  if (ch == nullptr)
-    return ZX_ERR_NO_MEMORY;
+  return fbl::AdoptRef(new EventReflector(manager, output, fbl::move(domain)));
+}
+
+zx_status_t DriverOutput::EventReflector::Activate(zx::channel stream_channel) {
+  auto ch = ::audio::dispatcher::Channel::Create();
+
+  if (ch == nullptr) return ZX_ERR_NO_MEMORY;
+
+  // Activate our device channel.  If something goes wrong, clear out the
+  // internal device_channel_ reference.
+  ::audio::dispatcher::Channel::ProcessHandler
+      phandler([reflector = fbl::WrapRefPtr(this)](
+                   ::audio::dispatcher::Channel * channel)
+                   ->zx_status_t {
+                     return reflector->ProcessChannelMessage(channel);
+                   });
+
+  ::audio::dispatcher::Channel::ChannelClosedHandler
+  chandler([reflector = fbl::WrapRefPtr(this)](
+               const ::audio::dispatcher::Channel* channel)
+               ->void { reflector->ProcessChannelDeactivate(channel); });
 
   // Simply activate the channel and get out.  The dispatcher pool will hold a
   // reference to it while it is active.  There is no (current) reason for us
   // to hold a reference to it as we are only using it to listen for events,
   // never to send commands.
-  return ch->Activate(fbl::WrapRefPtr(this), fbl::move(stream_channel));
+  return ch->Activate(fbl::move(stream_channel), default_domain_,
+                      fbl::move(phandler), fbl::move(chandler));
 }
 
-zx_status_t DriverOutput::EventReflector::ProcessChannel(
-    DispatcherChannel* channel) {
+zx_status_t DriverOutput::EventReflector::ProcessChannelMessage(
+    Channel* channel) {
   FXL_DCHECK(channel != nullptr);
 
   union {
     audio_cmd_hdr_t hdr;
     audio_stream_cmd_plug_detect_resp_t pd_resp;
-    audio_stream_plug_detect_notify_t   pd_notify;
+    audio_stream_plug_detect_notify_t pd_notify;
   } msg;
 
   uint32_t bytes;
@@ -531,8 +549,7 @@ zx_status_t DriverOutput::EventReflector::ProcessChannel(
     case AUDIO_STREAM_CMD_PLUG_DETECT: {
       if (bytes != sizeof(msg.pd_resp)) {
         FXL_LOG(ERROR) << "Bad message length.  Expected "
-                       << sizeof(msg.pd_resp)
-                       << " Got " << bytes;
+                       << sizeof(msg.pd_resp) << " Got " << bytes;
         return ZX_ERR_INVALID_ARGS;
       }
 
@@ -547,8 +564,7 @@ zx_status_t DriverOutput::EventReflector::ProcessChannel(
     case AUDIO_STREAM_PLUG_DETECT_NOTIFY: {
       if (bytes != sizeof(msg.pd_notify)) {
         FXL_LOG(ERROR) << "Bad message length.  Expected "
-                       << sizeof(msg.pd_notify) << " Got "
-                       << bytes;
+                       << sizeof(msg.pd_notify) << " Got " << bytes;
         return ZX_ERR_INVALID_ARGS;
       }
 
@@ -563,14 +579,14 @@ zx_status_t DriverOutput::EventReflector::ProcessChannel(
   }
 }
 
-void DriverOutput::EventReflector::NotifyChannelDeactivated(
-    const DispatcherChannel& channel) {
-  // If our stream channel has been unplugged out from under us, the deivce
+void DriverOutput::EventReflector::ProcessChannelDeactivate(
+    const Channel* channel) {
+  // If our stream channel has been unplugged out from under us, the device
   // which publishes our stream has been removed from the system (or the driver
   // has crashed).  We need to begin the process of shutting down this
   // AudioOutput.
   manager_->ScheduleMessageLoopTask(
-      [manager = manager_, weak_output = output_]() {
+      [ manager = manager_, weak_output = output_ ]() {
         auto output = weak_output.lock();
         if (output) {
           manager->ShutdownOutput(output);
@@ -579,7 +595,7 @@ void DriverOutput::EventReflector::NotifyChannelDeactivated(
 }
 
 void DriverOutput::EventReflector::HandlePlugStateChange(bool plugged,
-                                                          zx_time_t plug_time) {
+                                                         zx_time_t plug_time) {
   // If this was a hardwired output, just use the current time as the plug time.
   if (!plug_time) {
     plug_time = zx_time_get(ZX_CLOCK_MONOTONIC);
@@ -588,7 +604,7 @@ void DriverOutput::EventReflector::HandlePlugStateChange(bool plugged,
   // Reflect this message to the AudioOutputManager so it can deal with the plug
   // state change.
   manager_->ScheduleMessageLoopTask(
-      [manager = manager_, weak_output = output_, plugged, plug_time]() {
+      [ manager = manager_, weak_output = output_, plugged, plug_time ]() {
         auto output = weak_output.lock();
         if (output) {
           manager->HandlePlugStateChange(output, plugged, plug_time);
