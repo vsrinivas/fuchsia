@@ -37,10 +37,12 @@ public:
     void OnTimerFired();
 
 private:
-    explicit TimerDispatcher(uint32_t options);
+    explicit TimerDispatcher(slack_mode slack_mode);
+    void SetTimerLocked(bool cancel_first) TA_REQ(lock_);
     bool CancelTimerLocked() TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("TIMR")> canary_;
+    const slack_mode slack_mode_;
     dpc_t timer_dpc_;
     mxtl::Mutex lock_;
     mx_time_t deadline_ TA_GUARDED(lock_);

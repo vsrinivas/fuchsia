@@ -282,6 +282,12 @@ typedef enum {
 #define MX_CACHE_FLUSH_INSN         (1u << 0)
 #define MX_CACHE_FLUSH_DATA         (1u << 1)
 
+// Timer options.
+#define MX_TIMER_SLACK_CENTER       0u
+#define MX_TIMER_SLACK_EARLY        1u
+#define MX_TIMER_SLACK_LATE         2u
+
+
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by
 // C11 is not valid in C++11. There is not a single standard name that can

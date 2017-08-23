@@ -22,8 +22,6 @@
 #include "syscalls_priv.h"
 
 mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_handle_t> _out) {
-    if (options != 0u)
-        return MX_ERR_INVALID_ARGS;
     if (clock_id != MX_CLOCK_MONOTONIC)
         return MX_ERR_INVALID_ARGS;
 

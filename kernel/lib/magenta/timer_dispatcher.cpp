@@ -33,8 +33,24 @@ static void dpc_callback(dpc_t* d) {
 mx_status_t TimerDispatcher::Create(uint32_t options,
                                     mxtl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
+    if (options > MX_TIMER_SLACK_LATE)
+        return MX_ERR_INVALID_ARGS;
+
+    slack_mode slack_mode;
+
+    switch (options) {
+    case MX_TIMER_SLACK_CENTER: slack_mode = TIMER_SLACK_CENTER;
+        break;
+    case MX_TIMER_SLACK_EARLY: slack_mode = TIMER_SLACK_EARLY;
+        break;
+    case MX_TIMER_SLACK_LATE: slack_mode = TIMER_SLACK_LATE;
+        break;
+    default:
+        return MX_ERR_INVALID_ARGS;
+    };
+
     mxtl::AllocChecker ac;
-    auto disp = new (&ac) TimerDispatcher(options);
+    auto disp = new (&ac) TimerDispatcher(slack_mode);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -43,8 +59,9 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
     return MX_OK;
 }
 
-TimerDispatcher::TimerDispatcher(uint32_t /*options*/)
-    : timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
+TimerDispatcher::TimerDispatcher(slack_mode slack_mode)
+    : slack_mode_(slack_mode),
+      timer_dpc_({LIST_INITIAL_CLEARED_VALUE, &dpc_callback, this}),
       deadline_(0u), slack_(0u), cancel_pending_(false),
       timer_(TIMER_INITIAL_VALUE(timer_)) {
 }
@@ -96,10 +113,7 @@ mx_status_t TimerDispatcher::Set(mx_time_t deadline, mx_duration_t slack) {
     // We must ensure that the timer callback (running in interrupt context,
     // possibly on a different CPU) has completed before set try to set the
     // timer again.  So cancel the timer if we haven't already.
-    if (!did_cancel)
-        timer_cancel(&timer_);
-    timer_set(&timer_, deadline_, TIMER_SLACK_CENTER, slack_,
-        &timer_irq_callback, &timer_dpc_);
+    SetTimerLocked(!did_cancel);
 
     return MX_OK;
 }
@@ -109,6 +123,13 @@ mx_status_t TimerDispatcher::Cancel() {
     AutoLock al(&lock_);
     CancelTimerLocked();
     return MX_OK;
+}
+
+void TimerDispatcher::SetTimerLocked(bool cancel_first) {
+    if (cancel_first)
+        timer_cancel(&timer_);
+    timer_set(&timer_, deadline_, slack_mode_, slack_,
+        &timer_irq_callback, &timer_dpc_);
 }
 
 bool TimerDispatcher::CancelTimerLocked() {
@@ -156,9 +177,7 @@ void TimerDispatcher::OnTimerFired() {
                 // We must ensure that the timer callback (running in interrupt context,
                 // possibly on a different CPU) has completed before set try to set the
                 // timer again.
-                timer_cancel(&timer_);
-                timer_set(&timer_, deadline_, TIMER_SLACK_CENTER, slack_,
-                          &timer_irq_callback, &timer_dpc_);
+                SetTimerLocked(true  /* cancel first*/);
                 return;
             }
         } else {

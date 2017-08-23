@@ -25,7 +25,7 @@ The *deadline* parameter specifies a deadline with respect to
 **MX_CLOCK_MONOTONIC**. To wait for a relative interval,
 use **mx_deadline_after**() returned value in *deadline*.
 
-To fire the timer inmediately pass 0 to *deadline*.
+To fire the timer immediately pass 0 to *deadline*.
 
 When the timer fires it asserts *MX_TIMER_SIGNALED*. To de-assert this
 signal call **timer_cancel**() or **timer_set**() again.
@@ -33,6 +33,14 @@ signal call **timer_cancel**() or **timer_set**() again.
 The *slack* parameter specifies a range from *deadline* - *slack* to
 *deadline* + *slack* during which the timer is allowed to fire. The system
 uses this parameter as a hint to coalesce nearby timers.
+
+The precise coalescing behavior is controlled by the *options* parameter
+specified when the timer was created. **MX_TIMER_SLACK_EARLY** allows only
+firing in the *deadline* - *slack* interval and **MX_TIMER_SLACK_LATE**
+allows only firing in the *deadline* + *slack* interval. The default
+option value of 0 is **MX_TIMER_SLACK_CENTER** and allows both early and
+late firing with an effective interval of *deadline* - *slack* to
+*deadline* + *slack*
 
 ## RETURN VALUE
 

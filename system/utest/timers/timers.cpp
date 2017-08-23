@@ -57,9 +57,7 @@ static bool invalid_calls() {
 
     mx::timer timer;
     ASSERT_EQ(mx::timer::create(0, MX_CLOCK_UTC, &timer), MX_ERR_INVALID_ARGS);
-    ASSERT_EQ(mx::timer::create(1, MX_CLOCK_MONOTONIC, &timer), MX_ERR_INVALID_ARGS);
-
-    ASSERT_EQ(mx::timer::create(0, MX_CLOCK_MONOTONIC, &timer), MX_OK);
+    ASSERT_EQ(mx::timer::create(MX_TIMER_SLACK_LATE + 1, MX_CLOCK_UTC, &timer), MX_ERR_INVALID_ARGS);
 
     END_TEST;
 }
@@ -119,10 +117,55 @@ static bool signals_asserted_immediately() {
     END_TEST;
 }
 
+static bool coalesce_test(uint32_t mode) {
+    BEGIN_TEST;
+    // The second timer will coalesce to the first one for MX_TIMER_SLACK_LATE
+    // but not for  MX_TIMER_SLACK_EARLY. This test is not precise because the
+    // system might have other timers that interfere with it. Precise tests are
+    // avaliable as kernel tests.
+
+    mx::timer timer_1;
+    ASSERT_EQ(mx::timer::create(0, MX_CLOCK_MONOTONIC, &timer_1), MX_OK);
+    mx::timer timer_2;
+    ASSERT_EQ(mx::timer::create(mode, MX_CLOCK_MONOTONIC, &timer_2), MX_OK);
+
+    mx_time_t start = mx_time_get(MX_CLOCK_MONOTONIC);
+
+    const auto deadline_1 = start + MX_MSEC(350);
+    const auto deadline_2 = start + MX_MSEC(250);
+
+    ASSERT_EQ(timer_1.set(deadline_1, 0u), MX_OK);
+    ASSERT_EQ(timer_2.set(deadline_2, MX_MSEC(110)), MX_OK);
+
+    mx_signals_t pending;
+    EXPECT_EQ(timer_2.wait_one(MX_TIMER_SIGNALED, MX_TIME_INFINITE, &pending), MX_OK);
+    EXPECT_EQ(pending, MX_TIMER_SIGNALED | MX_SIGNAL_LAST_HANDLE);
+
+    auto duration = mx_time_get(MX_CLOCK_MONOTONIC) - start;
+
+    if (mode == MX_TIMER_SLACK_LATE) {
+        EXPECT_GE(duration, MX_MSEC(350));
+    } else if (mode == MX_TIMER_SLACK_EARLY) {
+        EXPECT_LE(duration, MX_MSEC(345));
+    } else {
+        assert(false);
+    }
+    END_TEST;
+}
+
+static bool coalesce_test_early() {
+    return coalesce_test(MX_TIMER_SLACK_EARLY);
+}
+
+static bool coalesce_test_late() {
+    return coalesce_test(MX_TIMER_SLACK_LATE);
+}
 
 BEGIN_TEST_CASE(timers_test)
 RUN_TEST(invalid_calls)
 RUN_TEST(basic_test)
+RUN_TEST(coalesce_test_late)
+RUN_TEST(coalesce_test_early)
 RUN_TEST(restart_test)
 RUN_TEST(edge_cases)
 RUN_TEST(restart_race)
