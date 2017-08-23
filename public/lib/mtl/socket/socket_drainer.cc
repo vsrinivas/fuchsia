@@ -4,11 +4,11 @@
 
 #include "lib/mtl/socket/socket_drainer.h"
 
+#include <mx/socket.h>
 #include <utility>
 #include <vector>
 
 #include "lib/ftl/logging.h"
-#include "mx/socket.h"
 
 namespace mtl {
 

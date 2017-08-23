@@ -5,6 +5,7 @@
 #include "lib/mtl/socket/files.h"
 
 #include <fcntl.h>
+#include <mx/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -13,7 +14,6 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mx/socket.h"
 
 namespace mtl {
 namespace {
@@ -58,8 +58,7 @@ TEST(SocketAndFile, CopyFromFileDescriptor) {
 
   bool success;
   CopyFromFileDescriptor(
-      std::move(source), std::move(socket1),
-      message_loop.task_runner(),
+      std::move(source), std::move(socket1), message_loop.task_runner(),
       [&message_loop, &success](bool success_value, ftl::UniqueFD fd) {
         success = success_value;
         message_loop.PostQuitTask();

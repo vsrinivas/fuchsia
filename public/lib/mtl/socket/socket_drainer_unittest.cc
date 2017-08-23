@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "mx/socket.h"
 
 namespace mtl {
 namespace {
