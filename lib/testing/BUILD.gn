@@ -112,3 +112,17 @@ source_set("ledger_repository_for_testing") {
     "//lib/mtl",
   ]
 }
+
+source_set("mock_base") {
+  testonly = true
+
+  sources = [
+    "mock_base.cc",
+    "mock_base.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+}

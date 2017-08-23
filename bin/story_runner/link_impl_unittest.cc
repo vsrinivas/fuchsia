@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/lib/testing/mock_base.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "gtest/gtest.h"
@@ -11,14 +13,8 @@
 namespace modular {
 namespace {
 
-std::string PrettyPrintPath(const fidl::Array<fidl::String>& path) {
-  return (path.is_null() || path.storage().empty())
-             ? std::string("/")
-             : modular::PrettyPrintPath(path.To<std::vector<std::string>>());
-}
-
 // LinkStorage is not a fidl interface.
-class LinkStorageMock : public LinkStorage {
+class LinkStorageMock : LinkStorage, public testing::MockBase {
  public:
   LinkStorageMock() = default;
   ~LinkStorageMock() override = default;
@@ -29,12 +25,14 @@ class LinkStorageMock : public LinkStorage {
 
   const std::string& read_link_path() const { return read_link_path_; }
 
+  LinkStorage* interface() { return this; }
+
+ private:
   // Sends back whatever we most recently wrote
   void ReadLinkData(const LinkPathPtr& link_path,
                     const DataCallback& callback) override {
     ++counts["ReadLinkData"];
-    read_link_path_ = PrettyPrintPath(link_path->module_path) + "|" +
-                       link_path->link_name.get();
+    read_link_path_ = EncodeLinkPath(link_path);
     callback(write_data_);
   }
 
@@ -42,8 +40,7 @@ class LinkStorageMock : public LinkStorage {
                      const SyncCallback& callback) override {
     ++counts["WriteLinkData"];
     write_data_ = data;
-    write_link_path_ = PrettyPrintPath(link_path->module_path) + "|" +
-                       link_path->link_name.get();
+    write_link_path_ = EncodeLinkPath(link_path);
     callback();
   }
 
@@ -61,26 +58,7 @@ class LinkStorageMock : public LinkStorage {
 
   void Sync(const SyncCallback& callback) override { ++counts["Sync"]; }
 
-  void ExpectCalledOnce(const std::string& func) {
-    EXPECT_EQ(1U, counts.count(func)) << "Expected 1 invocation of '" << func
-                                      << "' but got " << counts.count(func);
-    if (counts.count(func) > 0) {
-      EXPECT_EQ(1U, counts[func]);
-      counts.erase(func);
-    }
-  }
-
-  void ClearCalls() { counts.clear(); }
-
-  void ExpectNoOtherCalls() {
-    EXPECT_TRUE(counts.empty());
-    for (const auto& c : counts) {
-      FTL_LOG(INFO) << "    Unexpected call: " << c.first;
-    }
-  }
-
  private:
-  std::map<std::string, unsigned int> counts;
   std::string read_link_path_;
   std::string write_link_path_;
   std::string write_data_;
@@ -94,14 +72,14 @@ LinkPathPtr GetTestLinkPath() {
   return link_path;
 }
 
-constexpr char kPrettyTestLinkPath[] = "/root/photos|theLinkName";
+constexpr char kPrettyTestLinkPath[] = "root:photos/theLinkName";
 
 TEST(LinkImpl, Constructor_Success) {
   LinkPathPtr link_path = GetTestLinkPath();
   LinkStorageMock storage_mock;
 
   {
-    LinkImpl link_impl(&storage_mock, std::move(link_path));
+    LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
     EXPECT_EQ(kPrettyTestLinkPath, storage_mock.read_link_path());
     storage_mock.ExpectCalledOnce("ReadLinkData");
     storage_mock.ExpectCalledOnce("WatchLink");
@@ -114,7 +92,7 @@ TEST(LinkImpl, Constructor_Success) {
 TEST(LinkImpl, Set_Success) {
   LinkPathPtr link_path = GetTestLinkPath();
   LinkStorageMock storage_mock;
-  LinkImpl link_impl(&storage_mock, std::move(link_path));
+  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
   storage_mock.ClearCalls();
 
   link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
@@ -129,7 +107,7 @@ TEST(LinkImpl, Set_Success) {
 TEST(LinkImpl, Update_Success) {
   LinkPathPtr link_path = GetTestLinkPath();
   LinkStorageMock storage_mock;
-  LinkImpl link_impl(&storage_mock, std::move(link_path));
+  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
 
   link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
   storage_mock.ClearCalls();
@@ -146,7 +124,7 @@ TEST(LinkImpl, Update_Success) {
 TEST(LinkImpl, UpdateNewKey_Success) {
   LinkPathPtr link_path = GetTestLinkPath();
   LinkStorageMock storage_mock;
-  LinkImpl link_impl(&storage_mock, std::move(link_path));
+  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
 
   link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
   storage_mock.ClearCalls();
@@ -163,7 +141,7 @@ TEST(LinkImpl, UpdateNewKey_Success) {
 TEST(LinkImpl, Erase_Success) {
   LinkPathPtr link_path = GetTestLinkPath();
   LinkStorageMock storage_mock;
-  LinkImpl link_impl(&storage_mock, std::move(link_path));
+  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
 
   link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
   storage_mock.ClearCalls();

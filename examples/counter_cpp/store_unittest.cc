@@ -4,10 +4,10 @@
 
 #include "apps/modular/examples/counter_cpp/store.h"
 
-#include <map>
 #include <string>
 
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/lib/testing/mock_base.h"
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "gtest/gtest.h"
@@ -17,7 +17,7 @@
 namespace modular {
 namespace {
 
-class LinkMockBase : public Link {
+class LinkMockBase : protected Link, public testing::MockBase {
  public:
   LinkMockBase() = default;
 
@@ -52,18 +52,6 @@ class LinkMockBase : public Link {
   }
 
   void Sync(const SyncCallback& callback) override { ++counts["Sync"]; }
-
-  void ExpectCalledOnce(const std::string& func) {
-    EXPECT_EQ(1U, counts.count(func));
-    if (counts.count(func) > 0) {
-      EXPECT_EQ(1U, counts[func]);
-      counts.erase(func);
-    }
-  }
-
-  void ExpectNoOtherCalls() { EXPECT_TRUE(counts.empty()); }
-
-  std::map<std::string, unsigned int> counts;
 };
 
 class LinkMock : public LinkMockBase {

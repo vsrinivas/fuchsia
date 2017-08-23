@@ -29,7 +29,7 @@ source_set("story_runner") {
     "story_storage_impl.h",
   ]
 
-  deps = [
+  public_deps = [
     "//application/lib/app",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
@@ -87,10 +87,7 @@ source_set("unittests") {
 
   deps = [
     ":story_runner",
-    "//apps/modular/lib/rapidjson",
-    "//apps/modular/src/agent_runner",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//apps/modular/lib/testing:mock_base",
     "//third_party/gtest",
   ]
 }
