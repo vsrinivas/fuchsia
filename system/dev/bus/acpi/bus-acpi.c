@@ -22,7 +22,6 @@
 
 #include "init.h"
 #include "dev.h"
-#include "ec.h"
 #include "pci.h"
 #include "powerbtn.h"
 #include "processor.h"
@@ -203,6 +202,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         battery_init(parent, object);
     } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {
         pwrsrc_init(parent, object);
+    } else if (!memcmp(hid, EC_HID_STRING, HID_LENGTH)) {
+        ec_init(parent, object);
     }
 
 out:
@@ -243,8 +244,6 @@ static mx_status_t acpi_drv_bind(void* ctx, mx_device_t* parent, void** cookie) 
     }
 
     printf("acpi-bus: initialized\n");
-
-    ec_init();
 
     mx_status_t status = install_powerbtn_handlers();
     if (status != MX_OK) {
