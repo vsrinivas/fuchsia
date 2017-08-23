@@ -8,8 +8,6 @@ MODULE := $(LOCAL_DIR)
 
 ifeq ($(ARCH),x86)
 
-ifeq ($(ENABLE_ACPI_BUS),true)
-
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
@@ -42,37 +40,6 @@ MODULE_LIBS := \
     system/ulib/magenta \
     system/ulib/c \
     system/ulib/mxio \
-
-else # ENABLE_ACPI_BUS_DRV=0
-
-MODULE_NAME := acpisvc
-
-MODULE_TYPE := userapp
-
-MODULE_CFLAGS += -fno-strict-aliasing -Ithird_party/lib/acpica/source/include
-
-MODULE_SRCS += \
-    $(LOCAL_DIR)/debug.c \
-    $(LOCAL_DIR)/ec.c \
-    $(LOCAL_DIR)/init.c \
-    $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/pci.c \
-    $(LOCAL_DIR)/power.c \
-    $(LOCAL_DIR)/powerbtn.c \
-    $(LOCAL_DIR)/processor.c \
-    $(LOCAL_DIR)/resources.c \
-
-MODULE_STATIC_LIBS := \
-    system/ulib/acpisvc-client \
-    third_party/ulib/acpica \
-    system/ulib/ddk \
-
-MODULE_LIBS := \
-    system/ulib/magenta \
-    system/ulib/c \
-    system/ulib/mxio \
-
-endif # ENABLE_ACPI_BUS_DRV
 
 else # !ARCH=x86
 
