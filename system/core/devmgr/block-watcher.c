@@ -19,19 +19,19 @@ static mx_handle_t job;
 static mx_status_t launch_blobstore(int argc, const char** argv, mx_handle_t* hnd,
                                     uint32_t* ids, size_t len) {
     return devmgr_launch(job, "blobstore:/blobstore", argc, argv, NULL, -1,
-                         hnd, ids, len);
+                         hnd, ids, len, NULL);
 }
 
 static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
     return devmgr_launch(job, "minfs:/data", argc, argv, NULL, -1,
-                         hnd, ids, len);
+                         hnd, ids, len, NULL);
 }
 
 static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
     return devmgr_launch(job, "fatfs:/volume", argc, argv, NULL, -1,
-                         hnd, ids, len);
+                         hnd, ids, len, NULL);
 }
 
 static bool data_mounted = false;

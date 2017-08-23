@@ -16,6 +16,7 @@
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/status.h>
 #include <mxio/loader-service.h>
 #include <mxio/util.h>
@@ -82,7 +83,7 @@ void do_autorun(const char* name, const char* env) {
         printf("devmgr: %s: starting %s...\n", env, bin);
         devmgr_launch(svcs_job_handle, name,
                       1, (const char* const*) &bin,
-                      NULL, -1, NULL, NULL, 0);
+                      NULL, -1, NULL, NULL, 0, NULL);
     }
 }
 
@@ -112,7 +113,7 @@ int devmgr_start_appmgr(void* arg) {
         }
         devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
                       argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
-                      appmgr_hnd_count);
+                      appmgr_hnd_count, NULL);
         appmgr_started = true;
     }
     if (!autorun_started) {
@@ -138,6 +139,41 @@ int service_starter(void* arg) {
     // create a directory for sevice rendezvous
     mkdir("/svc", 0755);
 
+    char vcmd[64];
+    bool vruncmd = false;
+
+    if (!getenv_bool("netsvc.disable", false)) {
+        const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
+        int argc = 1;
+
+        if (getenv_bool("netsvc.netboot", false)) {
+            args[argc++] = "--netboot";
+            vruncmd = true;
+        }
+
+        const char* nodename = getenv("magenta.nodename");
+        if (nodename) {
+            args[argc++] = nodename;
+        }
+
+        mx_handle_t proc;
+        if (devmgr_launch(svcs_job_handle, "netsvc", argc, args,
+                          NULL, -1, NULL, NULL, 0, &proc) == MX_OK) {
+            if (vruncmd) {
+                mx_info_handle_basic_t info = {
+                    .koid = 0,
+                };
+                mx_object_get_info(proc, MX_INFO_HANDLE_BASIC,
+                                   &info, sizeof(info), NULL, NULL);
+                mx_handle_close(proc);
+                snprintf(vcmd, sizeof(vcmd), "dlog -f -t -p %zu", info.koid);
+                printf("VCMD: %s\n", vcmd);
+            }
+        } else {
+            vruncmd = false;
+        }
+    }
+
     if (!getenv_bool("virtcon.disable", false)) {
         // pass virtcon.* options along
         const char* envp[16];
@@ -154,27 +190,12 @@ int service_starter(void* arg) {
         uint32_t type = PA_HND(PA_USER0, 0);
         mx_handle_t h = MX_HANDLE_INVALID;
         mx_channel_create(0, &h, &virtcon_open);
-        const char* args[] = { "/boot/bin/virtual-console" };
-        devmgr_launch(svcs_job_handle, "virtual-console", 1, args, envp, -1,
-                      &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1);
+        const char* args[] = { "/boot/bin/virtual-console", "--run", vcmd };
+        devmgr_launch(svcs_job_handle, "virtual-console",
+                      vruncmd ? 3 : 1, args, envp, -1,
+                      &h, &type, (h == MX_HANDLE_INVALID) ? 0 : 1, NULL);
     }
 
-    if (!getenv_bool("netsvc.disable", false)) {
-        const char* args[] = { "/boot/bin/netsvc", NULL, NULL };
-        int argc = 1;
-
-        if (getenv_bool("netsvc.netboot", false)) {
-            args[argc++] = "--netboot";
-        }
-
-        const char* nodename = getenv("magenta.nodename");
-        if (nodename) {
-            args[argc++] = nodename;
-        }
-
-        devmgr_launch(svcs_job_handle, "netsvc", argc, args,
-                      NULL, -1, NULL, NULL, 0);
-    }
 
     do_autorun("autorun:boot", "magenta.autorun.boot");
     struct stat s;
@@ -182,7 +203,7 @@ int service_starter(void* arg) {
         printf("devmgr: starting /boot/autorun ...\n");
         devmgr_launch(svcs_job_handle, "sh:autorun0",
                       countof(argv_autorun0), argv_autorun0,
-                      NULL, -1, NULL, NULL, 0);
+                      NULL, -1, NULL, NULL, 0, NULL);
     }
 
     block_device_watcher(svcs_job_handle);
@@ -205,7 +226,7 @@ static int console_starter(void* arg) {
         int fd;
         if ((fd = open("/dev/misc/console", O_RDWR)) >= 0) {
             devmgr_launch(svcs_job_handle, "sh:console",
-                          countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0);
+                          countof(argv_sh), argv_sh, envp, fd, NULL, NULL, 0, NULL);
             break;
         }
         mx_nanosleep(mx_deadline_after(MX_MSEC(100)));
@@ -425,7 +446,8 @@ int main(int argc, char** argv) {
 
             devmgr_launch(svcs_job_handle, "crashlogger",
                           argc_crashlogger, argv_crashlogger,
-                          NULL, -1, handles, handle_types, countof(handles));
+                          NULL, -1, handles, handle_types,
+                          countof(handles), NULL);
         }
     }
 

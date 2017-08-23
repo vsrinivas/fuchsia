@@ -73,7 +73,8 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
 mx_status_t devmgr_launch(mx_handle_t job, const char* name,
                           int argc, const char* const* argv,
                           const char** _envp, int stdiofd,
-                          mx_handle_t* handles, uint32_t* types, size_t hcount) {
+                          mx_handle_t* handles, uint32_t* types, size_t hcount,
+                          mx_handle_t* proc) {
 
     const char* envp[MAX_ENVP + 1];
     unsigned envn = 0;
@@ -123,7 +124,7 @@ mx_status_t devmgr_launch(mx_handle_t job, const char* name,
     launchpad_add_handles(lp, hcount, handles, types);
 
     const char* errmsg;
-    mx_status_t status = launchpad_go(lp, NULL, &errmsg);
+    mx_status_t status = launchpad_go(lp, proc, &errmsg);
     if (status < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
                argv[0], name, errmsg, status);

@@ -220,10 +220,10 @@ ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off) {
 }
 
 // Create a new vc_t and add it to the console list.
-mx_status_t vc_create(vc_t** vc_out) {
+mx_status_t vc_create(vc_t** vc_out, bool special) {
     mx_status_t status;
     vc_t* vc;
-    if ((status = vc_alloc(&vc)) < 0) {
+    if ((status = vc_alloc(&vc, special)) < 0) {
         return status;
     }
 

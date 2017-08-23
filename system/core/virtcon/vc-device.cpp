@@ -40,6 +40,9 @@ static uint32_t default_palette[] = {
 #define DEFAULT_FRONT_COLOR 0x0 // black
 #define DEFAULT_BACK_COLOR 0xf  // white
 
+#define SPECIAL_FRONT_COLOR 0xf // white
+#define SPECIAL_BACK_COLOR 0x4  // blue
+
 #define SCROLLBACK_ROWS 1024 // TODO make configurable
 
 #define ABS(val) (((val) >= 0) ? (val) : -(val))
@@ -49,7 +52,7 @@ extern gfx_surface* vc_gfx;
 extern gfx_surface* vc_tb_gfx;
 extern const gfx_font* vc_font;
 
-static mx_status_t vc_setup(vc_t* vc) {
+static mx_status_t vc_setup(vc_t* vc, bool special) {
     // calculate how many rows/columns we have
     vc->rows = vc_gfx->height / vc->charh;
     vc->columns = vc_gfx->width / vc->charw;
@@ -73,8 +76,13 @@ static mx_status_t vc_setup(vc_t* vc) {
 
     // set up the default palette
     memcpy(&vc->palette, default_palette, sizeof(default_palette));
-    vc->front_color = DEFAULT_FRONT_COLOR;
-    vc->back_color = DEFAULT_BACK_COLOR;
+    if (special) {
+        vc->front_color = SPECIAL_FRONT_COLOR;
+        vc->back_color = SPECIAL_BACK_COLOR;
+    } else {
+        vc->front_color = DEFAULT_FRONT_COLOR;
+        vc->back_color = DEFAULT_BACK_COLOR;
+    }
 
     return MX_OK;
 }
@@ -429,7 +437,7 @@ const gfx_font* vc_get_font() {
     return &font9x16;
 }
 
-mx_status_t vc_alloc(vc_t** out) {
+mx_status_t vc_alloc(vc_t** out, bool special) {
     vc_t* vc =
         reinterpret_cast<vc_t*>(calloc(1, sizeof(vc_t)));
     if (!vc) {
@@ -453,7 +461,7 @@ mx_status_t vc_alloc(vc_t** out) {
     vc->charw = vc->font->width;
     vc->charh = vc->font->height;
 
-    vc_setup(vc);
+    vc_setup(vc, special);
     vc_reset(vc);
 
     *out = vc;

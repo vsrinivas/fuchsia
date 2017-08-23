@@ -105,7 +105,7 @@ typedef struct vc {
 #define VC_FLAG_FULLSCREEN  (1 << 1)
 
 const gfx_font* vc_get_font();
-mx_status_t vc_alloc(vc_t** out);
+mx_status_t vc_alloc(vc_t** out, bool special);
 void vc_free(vc_t* vc);
 
 // called to re-draw the status bar after
@@ -157,7 +157,7 @@ extern int g_status_width;
 void handle_key_press(uint8_t keycode, int modifiers);
 void vc_toggle_framebuffer();
 
-mx_status_t vc_create(vc_t** out);
+mx_status_t vc_create(vc_t** out, bool special);
 void vc_destroy(vc_t* vc);
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count, mx_off_t off);
 mx_status_t vc_set_active(int num, vc_t* vc);

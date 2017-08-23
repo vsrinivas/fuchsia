@@ -85,13 +85,13 @@ static mx_status_t log_reader_cb(port_handler_t* ph, mx_signals_t signals, uint3
     return status;
 }
 
-static mx_status_t launch_shell(vc_t* vc, int fd) {
-    const char* args[] = { "/boot/bin/sh" };
+static mx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
+    const char* args[] = { "/boot/bin/sh", "-c", cmd };
 
     launchpad_t* lp;
     launchpad_create(mx_job_default(), "vc:sh", &lp);
     launchpad_load_from_file(lp, args[0]);
-    launchpad_set_args(lp, 1, args);
+    launchpad_set_args(lp, cmd ? 3 : 1, args);
     launchpad_transfer_fd(lp, fd, MXIO_FLAG_USE_FOR_STDIO | 0);
     launchpad_clone(lp, LP_CLONE_MXIO_NAMESPACE | LP_CLONE_ENVIRON | LP_CLONE_DEFAULT_JOB);
 
@@ -137,7 +137,7 @@ static mx_status_t session_io_cb(port_fd_handler_t* fh, unsigned pollevt, uint32
                 goto fail;
             }
 
-            if(launch_shell(vc, fd) < 0) {
+            if(launch_shell(vc, fd, NULL) < 0) {
                 goto fail;
             }
             return MX_OK;
@@ -149,7 +149,7 @@ fail:
     return MX_ERR_STOP;
 }
 
-static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
+static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active, bool special) {
     int fd;
 
     // The ptmx device can start later than these threads
@@ -168,7 +168,7 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
     }
 
     vc_t* vc;
-    if (vc_create(&vc)) {
+    if (vc_create(&vc, special)) {
         close(fd);
         close(client_fd);
         return MX_ERR_INTERNAL;
@@ -199,17 +199,17 @@ static mx_status_t session_create(vc_t** out, int* out_fd, bool make_active) {
     return MX_OK;
 }
 
-static void start_shell(bool make_active) {
+static void start_shell(bool make_active, const char* cmd) {
     vc_t* vc;
     int fd;
 
-    if (session_create(&vc, &fd, make_active) < 0) {
+    if (session_create(&vc, &fd, make_active, cmd != NULL) < 0) {
         return;
     }
 
     vc->is_shell = true;
 
-    if (launch_shell(vc, fd) < 0) {
+    if (launch_shell(vc, fd, cmd) < 0) {
         session_destroy(vc);
     } else {
         port_wait(&port, &vc->fh.ph);
@@ -228,7 +228,7 @@ static mx_status_t new_vc_cb(port_handler_t* ph, mx_signals_t signals, uint32_t 
 
     vc_t* vc;
     int fd;
-    if (session_create(&vc, &fd, true) < 0) {
+    if (session_create(&vc, &fd, true, false) < 0) {
         mx_handle_close(h);
         return MX_OK;
     }
@@ -328,6 +328,20 @@ int main(int argc, char** argv) {
         keep_log = true;
     }
 
+    const char* cmd = NULL;
+    while (argc > 1) {
+        if (!strcmp(argv[1], "--run")) {
+            if (argc > 2) {
+                argc--;
+                argv++;
+                cmd = argv[1];
+                printf("CMD: %s\n", cmd);
+            }
+        }
+        argc--;
+        argv++;
+    }
+
     if (port_init(&port) < 0) {
         return -1;
     }
@@ -346,7 +360,7 @@ int main(int argc, char** argv) {
     g_fb_fd = fd;
 
     // create initial console for debug log
-    if (vc_create(&log_vc) != MX_OK) {
+    if (vc_create(&log_vc, false) != MX_OK) {
         return -1;
     }
     g_status_width = log_vc->columns;
@@ -397,9 +411,9 @@ int main(int argc, char** argv) {
 
     setenv("TERM", "xterm", 1);
 
-    start_shell(keep_log ? false : true);
-    start_shell(false);
-    start_shell(false);
+    start_shell(keep_log ? false : true, cmd);
+    start_shell(false, NULL);
+    start_shell(false, NULL);
 
     mx_handle_t e = MX_HANDLE_INVALID;
     ioctl_display_get_ownership_change_event(fd, &e);

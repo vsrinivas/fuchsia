@@ -18,7 +18,8 @@ void devmgr_vfs_init(void);
 mx_status_t devmgr_launch(mx_handle_t job, const char* name,
                           int argc, const char* const* argv,
                           const char** envp, int stdiofd,
-                          mx_handle_t* handles, uint32_t* types, size_t len);
+                          mx_handle_t* handles, uint32_t* types, size_t len,
+                          mx_handle_t* proc_out);
 void devmgr_launch_devhost(mx_handle_t job,
                            const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc);
