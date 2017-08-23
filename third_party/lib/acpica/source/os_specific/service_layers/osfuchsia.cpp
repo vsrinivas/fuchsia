@@ -71,17 +71,8 @@ mxtl::Mutex os_mapping_lock;
 
 AcpiOsMappingNode::HashTable os_mapping_tbl;
 
-static struct {
-    mx_handle_t vmo;
-    mx_vaddr_t ecam;
-    size_t ecam_size;
-    bool has_legacy;
-    bool pci_probed;
-} acpi_pci_tbl = { MX_HANDLE_INVALID, 0, 0, false, false };
-
 const size_t PCIE_MAX_DEVICES_PER_BUS = 32;
 const size_t PCIE_MAX_FUNCTIONS_PER_DEVICE = 8;
-const size_t PCIE_EXTENDED_CONFIG_SIZE = 4096;
 
 AcpiOsMappingNode::AcpiOsMappingNode(uintptr_t vaddr, uintptr_t vaddr_actual,
                                      size_t length, mx_handle_t vmo_handle)
@@ -92,75 +83,6 @@ AcpiOsMappingNode::AcpiOsMappingNode(uintptr_t vaddr, uintptr_t vaddr_actual,
 AcpiOsMappingNode::~AcpiOsMappingNode() {
     mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)vaddr_actual_, length_);
     mx_handle_close(vmo_handle_);
-}
-
-// Standard MMIO configuration
-static ACPI_STATUS acpi_pci_ecam_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
-                                UINT64* val, uint32_t width, bool write) {
-
-    size_t offset = PciId->Bus;
-    offset *= PCIE_MAX_DEVICES_PER_BUS;
-    offset += PciId->Device;
-    offset *= PCIE_MAX_FUNCTIONS_PER_DEVICE;
-    offset += PciId->Function;
-    offset *= PCIE_EXTENDED_CONFIG_SIZE;
-
-    if (offset >= acpi_pci_tbl.ecam_size) {
-        printf("ACPI read/write config out of range\n");
-        return AE_ERROR;
-    }
-
-    void *ptr = ((uint8_t *)acpi_pci_tbl.ecam) + offset + reg;
-    if (write) {
-        switch (width) {
-            case 8:
-                *((volatile uint8_t *)ptr) = (uint8_t)(*val);
-                break;
-            case 16:
-                *((volatile uint16_t *)ptr) = (uint16_t)(*val);
-                break;
-            case 32:
-                *((volatile uint32_t *)ptr) = (uint32_t)(*val);
-                break;
-            case 64:
-                *((volatile uint64_t *)ptr) = *val;
-                break;
-            default:
-                return AE_ERROR;
-        }
-
-    } else {
-        switch (width) {
-            case 8:
-                *val = *((volatile uint8_t *)ptr);
-                break;
-            case 16:
-                *val = *((volatile uint16_t *)ptr);
-                break;
-            case 32:
-                *val = *((volatile uint32_t *)ptr);
-                break;
-            case 64:
-                *val = *((volatile uint64_t *)ptr);
-                break;
-            default:
-                return AE_ERROR;
-        }
-    }
-
-    return AE_OK;
-}
-
-// x86 PIO configuration support
-static ACPI_STATUS acpi_pci_x86_pio_cfg_rw(ACPI_PCI_ID *PciId, uint32_t reg,
-                                uint32_t* val, uint32_t width, bool write) {
-    mx_status_t s = mx_pci_cfg_pio_rw(root_resource_handle,
-                                      (uint8_t)PciId->Bus,
-                                      (uint8_t)PciId->Device,
-                                      (uint8_t)PciId->Function,
-                                      (uint8_t)reg, val,
-                                      (uint8_t)width, write);
-    return (s == MX_OK) ? AE_OK : AE_NOT_FOUND;
 }
 
 static mx_status_t mmap_physical(mx_paddr_t phys, size_t size, uint32_t cache_policy,
@@ -187,89 +109,6 @@ static mx_status_t mmap_physical(mx_paddr_t phys, size_t size, uint32_t cache_po
         *out_vaddr = vaddr;
         return MX_OK;
     }
-}
-
-static mx_status_t acpi_probe_ecam(void) {
-    // Look for MCFG and set up the ECAM pointer if we find it for PCIe
-    // subsequent calls to this will use the existing ecam read
-    ACPI_TABLE_HEADER* raw_table = NULL;
-    ACPI_STATUS status = AcpiGetTable((char*)ACPI_SIG_MCFG, 1, &raw_table);
-    if (status != AE_OK) {
-        LTRACEF("ACPI: No MCFG table found.\n");
-        return MX_ERR_NOT_FOUND;
-    }
-
-    ACPI_TABLE_MCFG* mcfg = (ACPI_TABLE_MCFG*)raw_table;
-    ACPI_MCFG_ALLOCATION* table_start =
-        (ACPI_MCFG_ALLOCATION*)(((uintptr_t)mcfg) + sizeof(*mcfg));
-    ACPI_MCFG_ALLOCATION* table_end =
-        (ACPI_MCFG_ALLOCATION*)(((uintptr_t)mcfg) + mcfg->Header.Length);
-    uintptr_t table_bytes = (uintptr_t)table_end - (uintptr_t)table_start;
-    if (table_bytes % sizeof(*table_start) != 0) {
-        LTRACEF("PCIe error, MCFG has unexpected size.\n");
-        return MX_ERR_NOT_FOUND;
-    }
-
-    int num_entries = (int)(table_end - table_start);
-    if (num_entries == 0) {
-        LTRACEF("PCIe error, MCFG has no entries.\n");
-        return MX_ERR_NOT_FOUND;
-    }
-    if (num_entries > 1) {
-        LTRACEF("PCIe MCFG has more than one entry, using the first.\n");
-    }
-
-    const size_t size_per_bus = PCIE_EXTENDED_CONFIG_SIZE *
-        PCIE_MAX_DEVICES_PER_BUS * PCIE_MAX_FUNCTIONS_PER_DEVICE;
-    int num_buses = table_start->EndBusNumber - table_start->StartBusNumber + 1;
-
-    if (table_start->PciSegment != 0) {
-        LTRACEF("PCIe error, non-zero segment found.\n");
-        return MX_ERR_NOT_FOUND;
-    }
-
-    uint8_t bus_start = table_start->StartBusNumber;
-    if (bus_start != 0) {
-        LTRACEF("PCIe error, non-zero bus start found.");
-        return MX_ERR_NOT_FOUND;
-    }
-
-    // We need to adjust the physical address we received to align to the proper
-    // bus number.
-    //
-    // Citation from PCI Firmware Spec 3.0:
-    // For PCI-X and PCI Express platforms utilizing the enhanced
-    // configuration access method, the base address of the memory mapped
-    // configuration space always corresponds to bus number 0 (regardless
-    // of the start bus number decoded by the host bridge).
-    uint64_t base = table_start->Address + size_per_bus * bus_start;
-    // The size of this mapping is defined in the PCI Firmware v3 spec to be
-    // big enough for all of the buses in this config.
-    acpi_pci_tbl.ecam_size = size_per_bus * num_buses;
-    mx_status_t ret = mmap_physical(base, acpi_pci_tbl.ecam_size,
-                                    MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                    &acpi_pci_tbl.vmo,
-                                    &acpi_pci_tbl.ecam);
-    if (ret == MX_OK && LOCAL_TRACE) {
-        printf("ACPI: Found PCIe and mapped at %p.\n", (void*)acpi_pci_tbl.ecam);
-    }
-
-    return MX_OK;
-}
-
-static mx_status_t acpi_probe_legacy_pci(void) {
-    mx_status_t status = MX_ERR_NOT_FOUND;
-    // Check for a Legacy PCI root complex at 00:00:0. For now, this assumes we
-    // only care about segment 0. We'll cross that segmented bridge when we
-    // come to it.
-    uint16_t vendor_id;
-    status = mx_pci_cfg_pio_rw(root_resource_handle,0, 0, 0, 0, (uint32_t*)&vendor_id, 16, false);
-    if (status == MX_OK && vendor_id != 0xFFFF) {
-        acpi_pci_tbl.has_legacy = true;
-        printf("ACPI: Found legacy PCI.\n");
-    }
-
-    return status;
 }
 
 static ACPI_STATUS thrd_status_to_acpi_status(int status) {
@@ -1077,44 +916,27 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
         UINT32 Width,
         bool Write) {
 
-    // For the first call, probe the MCFG table and PIO space to attempt
-    // to find a root complex. Since PCIe still populates the first 256
-    // bytes of the PIO space, check for MCFG first, then PIO if we didn't
-    // find anything of note.
-    //
-    // None of this is ideal, but it can be improved once we have a better
-    // idea of the ACPI VM code's init process. For now the goal is simply
-    // to provide the engine what it needs to complete its initialization.
-    if (!acpi_pci_tbl.pci_probed) {
-        if (acpi_probe_ecam() != MX_OK) {
-            if (acpi_probe_legacy_pci() != MX_OK) {
-                printf("ACPI: failed to find PCI/PCIe.\n");
-            }
-        }
-
-        acpi_pci_tbl.pci_probed = true;
-    }
-
     if (LOCAL_TRACE) {
-        printf("ACPI %s PCI Config %x:%x:%x:%x register %#x width %u\n",
+        printf("ACPIOS: %s PCI Config %x:%x:%x:%x register %#x width %u\n",
             Write ? "write" : "read" ,PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Register, Width);
     }
 
     // Only segment 0 is supported for now
     if (PciId->Segment != 0) {
-        printf("ACPI: read/write config, segment != 0 not supported.\n");
+        printf("ACPIOS: read/write config, segment != 0 not supported.\n");
         return AE_ERROR;
     }
 
     // Check bounds of device and function offsets
     if (PciId->Device >= PCIE_MAX_DEVICES_PER_BUS
             || PciId->Function >= PCIE_MAX_FUNCTIONS_PER_DEVICE) {
+        printf("ACPIOS: device out of reasonable bounds.\n");
         return AE_ERROR;
     }
 
     // PCI config only supports up to 32 bit values
     if (Write && (*Value > UINT_MAX)) {
-        printf("ACPI: read/write config, Value passed does not fit confg registers.\n");
+        printf("ACPIOS: read/write config, Value passed does not fit confg registers.\n");
     }
 
     // Clear higher bits before a read
@@ -1122,18 +944,27 @@ static ACPI_STATUS AcpiOsReadWritePciConfiguration(
         *Value = 0;
     }
 
-    ACPI_STATUS status = AE_ERROR;
-    if (acpi_pci_tbl.ecam != 0) {
-        status = acpi_pci_ecam_cfg_rw(PciId, Register, Value, Width, Write);
-    } else if (acpi_pci_tbl.has_legacy) {
-        // TODO: ARM PIO?
 #if __x86_64__
-        // PIO config space doesn't have read/write cycles larger than 32 bits
-        status = acpi_pci_x86_pio_cfg_rw(PciId, Register, (uint32_t*)Value, Width, Write);
-#endif
-    }
+    uint8_t bus = static_cast<uint8_t>(PciId->Bus);
+    uint8_t dev = static_cast<uint8_t>(PciId->Device);
+    uint8_t func = static_cast<uint8_t>(PciId->Function);
+    uint8_t offset = static_cast<uint8_t>(Register);
+    uint8_t width = static_cast<uint8_t>(Width);
+    uint32_t val = *Value & 0xFFFFFFFF; // PIO access can only be 32 bits
+    mx_status_t status = mx_pci_cfg_pio_rw(root_resource_handle, bus, dev, func, offset,
+                                           &val, width, Write);
 
-    return status;
+    *Value = val;
+
+#ifdef ACPI_DEBUG_OUTPUT
+    if (status != MX_OK) {
+        printf("ACPIOS: pci rw error: %d\n", status);
+    }
+#endif // ACPI_DEBUG_OUTPUT
+    return (status == MX_OK) ? AE_OK : AE_ERROR;
+#endif // __x86_64__
+
+    return AE_NOT_IMPLEMENTED;
 }
 /**
  * @brief Read a value from a PCI configuration register.
