@@ -83,7 +83,7 @@ typedef struct {
     char* outbuf;         // required - buffer for assembling outgoing msgs
     size_t outbuf_sz;     // required
     tftp_mode* mode;
-    size_t* block_size;
+    uint16_t* block_size;
     uint16_t* window_size;
     uint8_t* timeout;
     char* err_msg;
@@ -210,13 +210,16 @@ void tftp_session_set_opcode_prefix_use(tftp_session* session,
                                         bool enable);
 
 // When acting as a server, the options that will be overridden when a
-// value is requested by the client that is outside the specified range.
-// Note that if the client does not specify a setting, the default will be
-// used regardless of server setting.
-tftp_status tftp_server_set_options(tftp_session* session,
-                                    uint16_t* min_block_size, uint16_t* max_block_size,
-                                    uint8_t* min_timeout, uint8_t* max_timeout,
-                                    uint16_t* min_window_size, uint16_t* max_window_size);
+// value is requested by the client. Note that if the client does not
+// specify a setting, the default will be used regardless of server
+// setting.
+// When acting as a client, the default options that will be used when
+// initiating a transfer. If any of the values are not set, it will not be
+// specified in the request packet, and so the tftp defaults will be used.
+tftp_status tftp_set_options(tftp_session* session,
+                             const uint16_t* block_size,
+                             const uint8_t* timeout,
+                             const uint16_t* window_size);
 
 // If no response from the peer is received before the most recent timeout_ms
 // value, this function should be called to take the next appropriate action

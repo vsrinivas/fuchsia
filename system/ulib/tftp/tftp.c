@@ -4,6 +4,7 @@
 
 #define _POSIX_C_SOURCE 200809L  // for strnlen
 #include <arpa/inet.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,17 +41,20 @@ static const size_t kMaxTsizeOpt = 17;  // strlen(TSIZE) + 1 + strlen(1000000000
 // BLKSIZE
 // Max size is 65535 (max IP datagram)
 static const char* kBlkSize = "BLKSIZE";
-static const size_t kMaxBlkSizeOpt = 14;  // strlen(BLKSIZE) + 1 + strlen(65535) + 1
+static const size_t kBlkSizeLen = 7; // strlen(kBlkSize)
+static const size_t kMaxBlkSizeOpt = 15; // kBlkSizeLen + strlen("!") + 1 + strlen(65535) + 1
 
 // TIMEOUT
 // Max is 255 (RFC 2349)
 static const char* kTimeout = "TIMEOUT";
-static const size_t kMaxTimeoutOpt = 12;  // strlen(TIMEOUT) + 1 + strlen(255) + 1
+static const size_t kTimeoutLen = 7; // strlen(kTimeout)
+static const size_t kMaxTimeoutOpt = 13; // kTimeoutLen + strlen("!") + 1 + strlen(255) + 1;
 
 // WINDOWSIZE
 // Max is 65535 (RFC 7440)
 static const char* kWindowSize = "WINDOWSIZE";
-static const size_t kMaxWindowSizeOpt = 17;  // strlen(WINDOWSIZE) + 1 + strlen(65535) + 1
+static const size_t kWindowSizeLen = 10; // strlen(kWindowSize);
+static const size_t kMaxWindowSizeOpt = 18; // kWindowSizeLen + strlen("!") + 1 + strlen(65535) + 1;
 
 // Since RRQ and WRQ come before option negotation, they are limited to max TFTP
 // blocksize of 512 (RFC 1350 and 2347).
@@ -87,13 +91,17 @@ static void append_option_name(char** body, size_t* left, const char* name) {
     *left -= offset;
 }
 
-static void __ATTR_PRINTF(4, 5) append_option(char** body, size_t* left, const char* name,
-        const char* fmt, ...) {
+static void __ATTR_PRINTF(5, 6) append_option(char** body, size_t* left, const char* name,
+        bool force, const char* fmt, ...) {
     char* bodyp = *body;
     size_t leftp = *left;
 
     size_t offset = strlen(name);
     memcpy(bodyp, name, offset);
+    if (force) {
+        bodyp[offset] = '!';
+        offset++;
+    }
     offset++;
     bodyp += offset;
     leftp -= offset;
@@ -231,55 +239,21 @@ bool tftp_session_has_pending(tftp_session* session) {
             session->file_size;
 }
 
-tftp_status tftp_server_set_options(tftp_session* session,
-                                    uint16_t* min_block_size, uint16_t* max_block_size,
-                                    uint8_t* min_timeout, uint8_t* max_timeout,
-                                    uint16_t* min_window_size, uint16_t* max_window_size) {
-    if ((min_block_size && max_block_size && *min_block_size > *max_block_size) ||
-        (min_timeout && max_timeout && *min_timeout > *max_timeout) ||
-        (min_window_size && max_window_size && *min_window_size > *max_window_size)) {
-        return TFTP_ERR_INVALID_ARGS;
+tftp_status tftp_set_options(tftp_session* session, const uint16_t* block_size,
+                             const uint8_t* timeout, const uint16_t* window_size) {
+    session->options.mask = 0;
+    if (block_size) {
+        session->options.block_size = *block_size;
+        session->options.mask |= BLOCKSIZE_OPTION;
     }
-
-    if (min_block_size) {
-        session->server_min_opts.block_size = *min_block_size;
-        session->server_min_opts.mask |= BLOCKSIZE_OPTION;
-    } else {
-        session->server_min_opts.mask &= ~BLOCKSIZE_OPTION;
+    if (timeout) {
+        session->options.timeout = *timeout;
+        session->options.mask |= TIMEOUT_OPTION;
     }
-    if (max_block_size) {
-        session->server_max_opts.block_size = *max_block_size;
-        session->server_max_opts.mask |= BLOCKSIZE_OPTION;
-    } else {
-        session->server_max_opts.mask &= ~BLOCKSIZE_OPTION;
+    if (window_size) {
+        session->options.window_size = *window_size;
+        session->options.mask |= WINDOWSIZE_OPTION;
     }
-
-    if (min_timeout) {
-        session->server_min_opts.timeout = *min_timeout;
-        session->server_min_opts.mask |= TIMEOUT_OPTION;
-    } else {
-        session->server_min_opts.mask &= ~TIMEOUT_OPTION;
-    }
-    if (max_timeout) {
-        session->server_max_opts.timeout = *max_timeout;
-        session->server_max_opts.mask |= TIMEOUT_OPTION;
-    } else {
-        session->server_max_opts.mask &= ~TIMEOUT_OPTION;
-    }
-
-    if (min_window_size) {
-        session->server_min_opts.window_size = *min_window_size;
-        session->server_min_opts.mask |= WINDOWSIZE_OPTION;
-    } else {
-        session->server_min_opts.mask &= ~WINDOWSIZE_OPTION;
-    }
-    if (max_window_size) {
-        session->server_max_opts.window_size = *max_window_size;
-        session->server_max_opts.mask |= WINDOWSIZE_OPTION;
-    } else {
-        session->server_max_opts.mask &= ~WINDOWSIZE_OPTION;
-    }
-
     return TFTP_NO_ERROR;
 }
 
@@ -287,9 +261,9 @@ tftp_status tftp_generate_write_request(tftp_session* session,
                                         const char* filename,
                                         tftp_mode mode,
                                         size_t datalen,
-                                        size_t block_size,
-                                        uint8_t timeout,
-                                        uint16_t window_size,
+                                        const uint16_t* block_size,
+                                        const uint8_t* timeout,
+                                        const uint16_t* window_size,
                                         void* outgoing,
                                         size_t* outlen,
                                         uint32_t* timeout_ms) {
@@ -335,34 +309,57 @@ tftp_status tftp_generate_write_request(tftp_session* session,
     if (left < kMaxTsizeOpt) {
         return TFTP_ERR_BUFFER_TOO_SMALL;
     }
-    append_option(&body, &left, kTsize, "%zu", datalen);
+    append_option(&body, &left, kTsize, false, "%zu", datalen);
     session->file_size = datalen;
+    tftp_options* sent_opts = &session->client_sent_opts;
+    sent_opts->mask = 0;
 
-    if (block_size > 0) {
+    if (block_size || session->options.mask & BLOCKSIZE_OPTION) {
         if (left < kMaxBlkSizeOpt) {
             return TFTP_ERR_BUFFER_TOO_SMALL;
         }
-        append_option(&body, &left, kBlkSize, "%zu", block_size);
-        session->client_opts.block_size = block_size;
-        session->client_opts.mask |= BLOCKSIZE_OPTION;
+        bool force_value;
+        if (block_size) {
+            force_value = true;
+            sent_opts->block_size = *block_size;
+        } else {
+            force_value = false;
+            sent_opts->block_size = session->options.block_size;
+        }
+        append_option(&body, &left, kBlkSize, force_value, "%"PRIu16, sent_opts->block_size);
+        sent_opts->mask |= BLOCKSIZE_OPTION;
     }
 
-    if (timeout > 0) {
+    if (timeout || session->options.mask & TIMEOUT_OPTION) {
         if (left < kMaxTimeoutOpt) {
             return TFTP_ERR_BUFFER_TOO_SMALL;
         }
-        append_option(&body, &left, kTimeout, "%d", timeout);
-        session->client_opts.timeout = timeout;
-        session->client_opts.mask |= TIMEOUT_OPTION;
+        bool force_value;
+        if (timeout) {
+            force_value = true;
+            sent_opts->timeout = *timeout;
+        } else {
+            force_value = false;
+            sent_opts->timeout = session->options.timeout;
+        }
+        append_option(&body, &left, kTimeout, force_value, "%"PRIu8, sent_opts->timeout);
+        sent_opts->mask |= TIMEOUT_OPTION;
     }
 
-    if (window_size > 1) {
+    if (window_size || session->options.mask & WINDOWSIZE_OPTION) {
         if (left < kMaxWindowSizeOpt) {
             return TFTP_ERR_BUFFER_TOO_SMALL;
         }
-        append_option(&body, &left, kWindowSize, "%d", window_size);
-        session->client_opts.window_size = window_size;
-        session->client_opts.mask |= WINDOWSIZE_OPTION;
+        bool force_value;
+        if (window_size) {
+            force_value = true;
+            sent_opts->window_size = *window_size;
+        } else {
+            force_value = false;
+            sent_opts->window_size = session->options.window_size;
+        }
+        append_option(&body, &left, kWindowSize, force_value, "%"PRIu16, sent_opts->window_size);
+        sent_opts->mask |= WINDOWSIZE_OPTION;
     }
 
     *outlen = *outlen - left;
@@ -445,8 +442,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
     cur += offset;
     bool file_size_seen = false;
     tftp_options requested_options = {.mask = 0};
-    tftp_options* min_opts = &session->server_min_opts;
-    tftp_options* max_opts = &session->server_max_opts;
+    tftp_options* override_opts = &session->options;
     while (offset > 0 && left > 0) {
         offset = next_option(cur, left, &option, &value);
         if (!offset) {
@@ -464,25 +460,25 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             }
             session->file_size = val;
             file_size_seen = true;
-        } else if (!strncmp(option, kBlkSize, strlen(kBlkSize))) { // RFC 2348
+        } else if (!strncmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
+            bool force_block_size = (option[kBlkSizeLen] == '!');
             // Valid values range between "8" and "65464" octets, inclusive
             long val = atol(value);
+            // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             if (val < 8 || val > 65464) {
                 xprintf("invalid block size\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
             }
-            // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             requested_options.block_size = val;
             requested_options.mask |= BLOCKSIZE_OPTION;
-            if ((min_opts->mask & BLOCKSIZE_OPTION) && (val < min_opts->block_size)) {
-                session->block_size = min_opts->block_size;
-            } else if ((max_opts->mask & BLOCKSIZE_OPTION) && (val > max_opts->block_size)) {
-                session->block_size = max_opts->block_size;
+            if (force_block_size || !(override_opts->mask & BLOCKSIZE_OPTION)) {
+                session->block_size = val;
             } else {
-                session->block_size = requested_options.block_size;
+                session->block_size = override_opts->block_size;
             }
-        } else if (!strncmp(option, kTimeout, strlen(kTimeout))) { // RFC 2349
+        } else if (!strncmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
+            bool force_timeout_val = (option[kTimeoutLen] == '!');
             // Valid values range between "1" and "255" seconds inclusive.
             long val = atol(value);
             if (val < 1 || val > 255) {
@@ -492,14 +488,13 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             }
             requested_options.timeout = val;
             requested_options.mask |= TIMEOUT_OPTION;
-            if ((min_opts->mask & TIMEOUT_OPTION) && (val < min_opts->timeout)) {
-                session->timeout = min_opts->timeout;
-            } else if ((max_opts->mask & TIMEOUT_OPTION) && (val > max_opts->timeout)) {
-                session->timeout = max_opts->timeout;
+            if (force_timeout_val || !(override_opts->mask & TIMEOUT_OPTION)) {
+                session->timeout = val;
             } else {
-                session->timeout = requested_options.timeout;
+                session->timeout = override_opts->timeout;
             }
-        } else if (!strncmp(option, kWindowSize, strlen(kWindowSize))) { // RFC 7440
+        } else if (!strncmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
+            bool force_window_size = (option[kWindowSizeLen] == '!');
             // The valid values range MUST be between 1 and 65535 blocks, inclusive.
             long val = atol(value);
             if (val < 1 || val > 65535) {
@@ -509,12 +504,10 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             }
             requested_options.window_size = val;
             requested_options.mask |= WINDOWSIZE_OPTION;
-            if ((min_opts->mask & WINDOWSIZE_OPTION) && (val < min_opts->window_size)) {
-                session->window_size = min_opts->window_size;
-            } else if ((max_opts->mask & WINDOWSIZE_OPTION) && (val > max_opts->window_size)) {
-                session->window_size = max_opts->window_size;
+            if (force_window_size || !(override_opts->mask & WINDOWSIZE_OPTION)) {
+                session->window_size = val;
             } else {
-                session->window_size = requested_options.window_size;
+                session->window_size = override_opts->window_size;
             }
         } else {
             // Options which the server does not support should be omitted from the
@@ -531,7 +524,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
 
     OPCODE(session, resp, OPCODE_OACK);
     if (file_size_seen) {
-        append_option(&body, &left, kTsize, "%zu", session->file_size);
+        append_option(&body, &left, kTsize, false, "%zu", session->file_size);
     } else {
         xprintf("No TSIZE option specified\n");
         set_error(session, OPCODE_ERROR, resp, resp_len);
@@ -540,16 +533,16 @@ tftp_status tftp_handle_wrq(tftp_session* session,
     if (requested_options.mask & BLOCKSIZE_OPTION) {
         // TODO(jpoichet) Make sure this block size is possible. Need API upwards to
         // request allocation of block size * window size memory
-        append_option(&body, &left, kBlkSize, "%d", session->block_size);
+        append_option(&body, &left, kBlkSize, false, "%d", session->block_size);
     }
     if (requested_options.mask & TIMEOUT_OPTION) {
         // TODO(jpoichet) Make sure this timeout is possible. Need API upwards to
         // request allocation of block size * window size memory
-        append_option(&body, &left, kTimeout, "%d", session->timeout);
+        append_option(&body, &left, kTimeout, false, "%d", session->timeout);
         *timeout_ms = 1000 * session->timeout;
     }
     if (requested_options.mask & WINDOWSIZE_OPTION) {
-        append_option(&body, &left, kWindowSize, "%d", session->window_size);
+        append_option(&body, &left, kWindowSize, false, "%d", session->window_size);
     }
     if (!session->file_interface.open_write ||
             session->file_interface.open_write(session->filename, session->file_size, cookie)) {
@@ -742,8 +735,8 @@ tftp_status tftp_handle_oack(tftp_session* session,
             return TFTP_ERR_INTERNAL;
         }
 
-        if (!strncmp(option, kBlkSize, strlen(kBlkSize))) { // RFC 2348
-            if (!(session->client_opts.mask & BLOCKSIZE_OPTION)) {
+        if (!strncmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
+            if (!(session->client_sent_opts.mask & BLOCKSIZE_OPTION)) {
                 xprintf("block size not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -757,8 +750,8 @@ tftp_status tftp_handle_oack(tftp_session* session,
             }
             // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             session->block_size = val;
-        } else if (!strncmp(option, kTimeout, strlen(kTimeout))) { // RFC 2349
-            if (!(session->client_opts.mask & TIMEOUT_OPTION)) {
+        } else if (!strncmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
+            if (!(session->client_sent_opts.mask & TIMEOUT_OPTION)) {
                 xprintf("timeout not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -771,8 +764,8 @@ tftp_status tftp_handle_oack(tftp_session* session,
                 return TFTP_ERR_INTERNAL;
             }
             session->timeout = val;
-        } else if (!strncmp(option, kWindowSize, strlen(kWindowSize))) { // RFC 7440
-            if (!(session->client_opts.mask & WINDOWSIZE_OPTION)) {
+        } else if (!strncmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
+            if (!(session->client_sent_opts.mask & WINDOWSIZE_OPTION)) {
                 xprintf("window size not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
                 return TFTP_ERR_INTERNAL;
@@ -953,10 +946,7 @@ tftp_status tftp_push_file(tftp_session* session,
     void* incoming = (void*)opts->inbuf;
     size_t out_buf_sz = opts->outbuf_sz;
     void* outgoing = (void*)opts->outbuf;
-    uint8_t timeout = opts->timeout ? *opts->timeout : TFTP_DEFAULT_CLIENT_TIMEOUT;
     tftp_mode mode = opts->mode ? *opts->mode : TFTP_DEFAULT_CLIENT_MODE;
-    uint16_t block_size = opts->block_size ? *opts->block_size : TFTP_DEFAULT_CLIENT_BLOCKSZ;
-    uint32_t window_size = opts->window_size ? *opts->window_size : TFTP_DEFAULT_CLIENT_WINSZ;
 
     size_t out_sz = out_buf_sz;
     uint32_t timeout_ms;
@@ -965,9 +955,9 @@ tftp_status tftp_push_file(tftp_session* session,
                                     remote_filename,
                                     mode,
                                     file_size,
-                                    block_size,
-                                    timeout,
-                                    window_size,
+                                    opts->block_size,
+                                    opts->timeout,
+                                    opts->window_size,
                                     outgoing,
                                     &out_sz,
                                     &timeout_ms);

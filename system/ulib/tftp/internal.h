@@ -88,12 +88,14 @@ typedef enum {
 } tftp_state;
 
 struct tftp_session_t {
-    // Hold our override settings, specified with tftp_server_set_options()
-    tftp_options server_min_opts;
-    tftp_options server_max_opts;
 
-    // Hold the settings that we sent to the server, and expect to see present in an OACK response
-    tftp_options client_opts;
+    // For a client, the options we will use on a new connection. For a server, the options we
+    // will override, if possible, when we receive a write request.
+    tftp_options options;
+
+    // Tracks the options we used on the last request, so we can compare them to the options
+    // we get back.
+    tftp_options client_sent_opts;
 
     // Maximum filename really is 505 including \0
     // max request size (512) - opcode (2) - shortest mode (4) - null (1)
@@ -136,19 +138,20 @@ bool tftp_session_has_pending(tftp_session* session);
 
 // Generates a write request to send to a tftp server. |filename| is the name
 // sent to the server. |datalen| is the size of the data to be sent.
-// |block_size|, |timeout|, and |window_size| negotiate tftp options with the
-// server. |outgoing| must point to a scratch buffer the library can
-// use to assemble the request. |outlen| is the size of the outgoing scratch
-// buffer, and will be set to the size of the request. |timeout_ms| is set to
-// the next timeout value the user of the library should use when waiting for a
-// response.
+// If |block_size|, |timeout|, or |window_size| are set, those will be passed
+// to the server in such a way that they cannot be negotiated (normal,
+// negotiable settings can be set using tftp_set_options()). |outgoing| must
+// point to a scratch buffer the library can use to assemble the request.
+// |outlen| is the size of the outgoing scratch buffer, and will be set to
+// the size of the request. |timeout_ms| is set to the next timeout value the
+// user of the library should use when waiting for a response.
 tftp_status tftp_generate_write_request(tftp_session* session,
                                         const char* filename,
                                         tftp_mode mode,
                                         size_t datalen,
-                                        size_t block_size,
-                                        uint8_t timeout,
-                                        uint16_t window_size,
+                                        const uint16_t* block_size,
+                                        const uint8_t* timeout,
+                                        const uint16_t* window_size,
                                         void* outgoing,
                                         size_t* outlen,
                                         uint32_t* timeout_ms);

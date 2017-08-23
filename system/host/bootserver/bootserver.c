@@ -206,11 +206,13 @@ int main(int argc, char** argv) {
                 return -1;
             }
             errno = 0;
-            tftp_block_size = strtoll(argv[2], NULL, 10);
-            if (errno != 0 || tftp_block_size <= 0) {
+            static uint16_t block_size;
+            block_size = strtoll(argv[2], NULL, 10);
+            if (errno != 0 || block_size <= 0) {
                 fprintf(stderr, "invalid arg for -b: %s\n", argv[2]);
                 return -1;
             }
+            tftp_block_size = &block_size;
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-w")) {
@@ -219,11 +221,13 @@ int main(int argc, char** argv) {
                 return -1;
             }
             errno = 0;
-            tftp_window_size = strtoll(argv[2], NULL, 10);
-            if (errno != 0 || tftp_window_size <= 0) {
+            static uint16_t window_size;
+            window_size = strtoll(argv[2], NULL, 10);
+            if (errno != 0 || window_size <= 0) {
                 fprintf(stderr, "invalid arg for -w: %s\n", argv[2]);
                 return -1;
             }
+            tftp_window_size = &window_size;
             argc--;
             argv++;
         } else if (!strcmp(argv[1], "-i")) {

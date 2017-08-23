@@ -217,6 +217,10 @@ void close_file(void* file_cookie) {
 int tftp_send_file_wrapper(tftp_session* session,
                            connection_t* connection,
                            const char* filename) {
+    uint16_t block_size = BLOCKSZ;
+    uint16_t window_size = WINSZ;
+    tftp_set_options(session, &block_size, NULL, &window_size);
+
     struct tftp_file file_cookie;
     char err_msg[128];
     tftp_request_opts options = { 0 };
@@ -226,10 +230,6 @@ int tftp_send_file_wrapper(tftp_session* session,
     options.outbuf_sz = sizeof(out_scratch);
     options.err_msg = err_msg;
     options.err_msg_sz = sizeof(err_msg);
-    size_t block_size = BLOCKSZ;
-    options.block_size = &block_size;
-    uint16_t window_size = WINSZ;
-    options.window_size = &window_size;
     tftp_status send_result =
         tftp_push_file(session, connection, &file_cookie, filename,
                        "magenta.bin", &options);

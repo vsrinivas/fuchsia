@@ -23,8 +23,9 @@
 
 #include "bootserver.h"
 
-size_t tftp_block_size = DEFAULT_TFTP_BLOCK_SZ;
-uint16_t tftp_window_size = DEFAULT_TFTP_WIN_SZ;
+// Point to user-selected values (or NULL if no values selected)
+uint16_t *tftp_block_size;
+uint16_t *tftp_window_size;
 
 typedef struct {
     int fd;
@@ -241,6 +242,10 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
                                               transport_timeout_set};
     tftp_session_set_transport_interface(session, &transport_ifc);
 
+    uint16_t default_block_size = DEFAULT_TFTP_BLOCK_SZ;
+    uint16_t default_window_size = DEFAULT_TFTP_WIN_SZ;
+    tftp_set_options(session, &default_block_size, NULL, &default_window_size);
+
     char err_msg[128];
     tftp_request_opts opts = {0};
     opts.inbuf_sz = TFTP_BUF_SZ;
@@ -249,8 +254,8 @@ int tftp_xfer(struct sockaddr_in6* addr, const char* fn, const char* name) {
     opts.outbuf = outbuf;
     opts.err_msg = err_msg;
     opts.err_msg_sz = sizeof(err_msg);
-    opts.window_size = &tftp_window_size;
-    opts.block_size = &tftp_block_size;
+    opts.block_size = tftp_block_size;
+    opts.window_size = tftp_window_size;
 
     tftp_status status = tftp_push_file(session, &ts, &xd, fn, name, &opts);
 

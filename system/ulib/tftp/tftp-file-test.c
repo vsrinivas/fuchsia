@@ -272,15 +272,14 @@ bool run_send_test(struct test_params* tp) {
     ASSERT_NE(msg_out_buf, NULL, "memory allocation failure");
 
     char err_msg_buf[128];
-    size_t block_sz = tp->blksz;
-    uint16_t window_sz = tp->winsz;
+
+    // Set our preferred transport options
+    tftp_set_options(session, &tp->blksz, NULL, &tp->winsz);
 
     tftp_request_opts opts = { .inbuf = msg_in_buf,
                                .inbuf_sz = buf_sz,
                                .outbuf = msg_out_buf,
                                .outbuf_sz = buf_sz,
-                               .block_size = &block_sz,
-                               .window_size = &window_sz,
                                .err_msg = err_msg_buf,
                                .err_msg_sz = sizeof(err_msg_buf) };
     status = tftp_push_file(session, &transport_info, &file_info, "abc.txt",

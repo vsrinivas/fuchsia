@@ -16,6 +16,6 @@ int netboot_xfer(struct sockaddr_in6* addr, const char* fn, const char* name);
 extern char* appname;
 extern int64_t us_between_packets;
 extern bool use_filename_prefix;
-extern size_t tftp_block_size;
-extern uint16_t tftp_window_size;
+extern uint16_t* tftp_block_size;
+extern uint16_t* tftp_window_size;
 

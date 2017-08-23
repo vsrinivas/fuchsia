@@ -267,10 +267,10 @@ void tftp_recv(void* data, size_t len, const ip6_addr* daddr, uint16_t dport,
             return;
         }
 
-        // Limit our window size on the Acer tablet
+        // Override our window size on the Acer tablet
         if (!strcmp8to16("INSYDE Corp.", gSys->FirmwareVendor)) {
-            uint16_t max_window_size = 8;
-            tftp_server_set_options(session, NULL, NULL, NULL, NULL, NULL, &max_window_size);
+            uint16_t window_size = 8;
+            tftp_set_options(session, NULL, NULL, &window_size);
         }
 
         // Initialize file interface

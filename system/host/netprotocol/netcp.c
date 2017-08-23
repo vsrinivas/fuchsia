@@ -293,6 +293,11 @@ static int push_file(int s, struct sockaddr_in6* addr, const char* dst,
                                               transport_timeout_set};
     tftp_session_set_transport_interface(session, &transport_ifc);
 
+    // Set our preferred transport options
+    uint16_t tftp_block_size = 1024;
+    uint16_t tftp_window_size = 1024;
+    tftp_set_options(session, &tftp_block_size, NULL, &tftp_window_size);
+
     // Prepare buffers
     char err_msg[128];
     tftp_request_opts opts = { 0 };
