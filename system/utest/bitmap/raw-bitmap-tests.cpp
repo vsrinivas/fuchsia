@@ -335,6 +335,112 @@ static bool SetOutOfOrder(void) {
     END_TEST;
 }
 
+template <typename RawBitmap>
+static bool GrowAcrossPage(void) {
+    BEGIN_TEST;
+
+    RawBitmap bitmap;
+    EXPECT_EQ(bitmap.Reset(128), MX_OK);
+    EXPECT_EQ(bitmap.size(), 128u);
+
+    EXPECT_FALSE(bitmap.GetOne(100));
+    EXPECT_EQ(bitmap.SetOne(100), MX_OK);
+    EXPECT_TRUE(bitmap.GetOne(100));
+
+    size_t bitoff_start;
+    EXPECT_EQ(bitmap.Find(true, 101, 128, 1, &bitoff_start), MX_ERR_NO_RESOURCES,
+              "Expected tail end of bitmap to be unset");
+
+    // We can't set bits out of range
+    EXPECT_NE(bitmap.SetOne(16 * PAGE_SIZE - 1), MX_OK);
+
+    EXPECT_EQ(bitmap.Grow(16 * PAGE_SIZE), MX_OK);
+    EXPECT_EQ(bitmap.Find(true, 101, 16 * PAGE_SIZE, 1, &bitoff_start),
+              MX_ERR_NO_RESOURCES, "Expected tail end of bitmap to be unset");
+
+    // Now we can set the previously inaccessible bits
+    EXPECT_FALSE(bitmap.GetOne(16 * PAGE_SIZE - 1));
+    EXPECT_EQ(bitmap.SetOne(16 * PAGE_SIZE - 1), MX_OK);
+    EXPECT_TRUE(bitmap.GetOne(16 * PAGE_SIZE - 1));
+
+    // But our orignal 'set bit' is still set
+    EXPECT_TRUE(bitmap.GetOne(100), "Growing should not unset bits");
+
+    // If we shrink and re-expand the bitmap, it should
+    // have cleared the underlying bits
+    EXPECT_EQ(bitmap.Shrink(99), MX_OK);
+    EXPECT_EQ(bitmap.Grow(16 * PAGE_SIZE), MX_OK);
+    EXPECT_FALSE(bitmap.GetOne(100));
+    EXPECT_FALSE(bitmap.GetOne(16 * PAGE_SIZE - 1));
+
+    END_TEST;
+}
+
+template <typename RawBitmap>
+static bool GrowShrink(void) {
+    BEGIN_TEST;
+
+    RawBitmap bitmap;
+    EXPECT_EQ(bitmap.Reset(128), MX_OK);
+    EXPECT_EQ(bitmap.size(), 128u);
+
+    EXPECT_FALSE(bitmap.GetOne(100));
+    EXPECT_EQ(bitmap.SetOne(100), MX_OK);
+    EXPECT_TRUE(bitmap.GetOne(100));
+
+    for (size_t i = 8; i < 16; i++) {
+        for (int j = -16; j <= 16; j++) {
+            size_t bitmap_size = (1 << i) + j;
+
+            for (size_t shrink_len = 1; shrink_len < 32; shrink_len++) {
+                EXPECT_EQ(bitmap.Reset(bitmap_size), MX_OK);
+                EXPECT_EQ(bitmap.size(), bitmap_size);
+
+                // This bit will be eliminated by shrink / grow
+                EXPECT_FALSE(bitmap.GetOne(bitmap_size - shrink_len));
+                EXPECT_EQ(bitmap.SetOne(bitmap_size - shrink_len), MX_OK);
+                EXPECT_TRUE(bitmap.GetOne(bitmap_size - shrink_len));
+
+                // This bit will stay
+                EXPECT_FALSE(bitmap.GetOne(bitmap_size - shrink_len - 1));
+                EXPECT_EQ(bitmap.SetOne(bitmap_size - shrink_len - 1), MX_OK);
+                EXPECT_TRUE(bitmap.GetOne(bitmap_size - shrink_len - 1));
+
+                EXPECT_EQ(bitmap.Shrink(bitmap_size - shrink_len), MX_OK);
+                EXPECT_EQ(bitmap.Grow(bitmap_size), MX_OK);
+
+                EXPECT_FALSE(bitmap.GetOne(bitmap_size - shrink_len),
+                             "Expected 'shrunk' bit to be unset");
+                EXPECT_TRUE(bitmap.GetOne(bitmap_size - shrink_len - 1),
+                            "Expected bit outside shrink range to be set");
+
+                size_t bitoff_start;
+                EXPECT_EQ(bitmap.Find(true, bitmap_size - shrink_len,
+                                      bitmap_size, 1, &bitoff_start),
+                          MX_ERR_NO_RESOURCES,
+                          "Expected tail end of bitmap to be unset");
+            }
+        }
+    }
+
+    END_TEST;
+}
+
+template <typename RawBitmap>
+static bool GrowFailure(void) {
+    BEGIN_TEST;
+
+    RawBitmap bitmap;
+    EXPECT_EQ(bitmap.Reset(128), MX_OK);
+    EXPECT_EQ(bitmap.size(), 128u);
+
+    EXPECT_EQ(bitmap.Grow(64), MX_ERR_NO_RESOURCES);
+    EXPECT_EQ(bitmap.Grow(128), MX_ERR_NO_RESOURCES);
+    EXPECT_EQ(bitmap.Grow(128 + 1), MX_ERR_NO_RESOURCES);
+    EXPECT_EQ(bitmap.Grow(8 * PAGE_SIZE), MX_ERR_NO_RESOURCES);
+    END_TEST;
+}
+
 #define RUN_TEMPLATIZED_TEST(test, specialization) RUN_TEST(test<specialization>)
 #define ALL_TESTS(specialization)                           \
     RUN_TEMPLATIZED_TEST(InitializedEmpty, specialization)  \
@@ -352,6 +458,9 @@ static bool SetOutOfOrder(void) {
 BEGIN_TEST_CASE(raw_bitmap_tests)
 ALL_TESTS(RawBitmapGeneric<DefaultStorage>)
 ALL_TESTS(RawBitmapGeneric<VmoStorage>)
+RUN_TEST(GrowAcrossPage<RawBitmapGeneric<VmoStorage>>)
+RUN_TEST(GrowShrink<RawBitmapGeneric<VmoStorage>>)
+RUN_TEST(GrowFailure<RawBitmapGeneric<DefaultStorage>>)
 END_TEST_CASE(raw_bitmap_tests);
 
 } // namespace tests

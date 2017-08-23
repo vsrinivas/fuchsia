@@ -9,11 +9,20 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
+#include <magenta/assert.h>
 #include <magenta/types.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
+#include <mxtl/type_support.h>
 
 namespace bitmap {
+namespace internal {
+
+DECLARE_HAS_MEMBER_FN(has_grow, Grow);
+
+} // namespace internal
 
 const size_t kBits = sizeof(size_t) * CHAR_BIT;
 
@@ -76,6 +85,8 @@ protected:
 //      To allocate |size| bytes of storage.
 //   - void* GetData()
 //      To access the underlying storage.
+//   - mx_status_t Grow(size_t size)
+//      (optional) To expand the underlying storage to fit at least |size| bytes.
 template <typename Storage>
 class RawBitmapGeneric final : public RawBitmapBase {
 public:
@@ -84,6 +95,44 @@ public:
     RawBitmapGeneric(RawBitmapGeneric&& rhs) = default;
     RawBitmapGeneric& operator=(RawBitmapGeneric&& rhs) = default;
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(RawBitmapGeneric);
+
+    // Increases the bitmap size
+    template <typename U = Storage>
+    typename mxtl::enable_if<internal::has_grow<U>::value, mx_status_t>::type
+    Grow(size_t size) {
+        if (size < size_) {
+            return MX_ERR_INVALID_ARGS;
+        } else if (size == size_) {
+            return MX_OK;
+        }
+
+        size_t old_len = LastIdx(size_) + 1;
+        size_t new_len = LastIdx(size) + 1;
+        size_t new_bitsize = sizeof(size_t) * new_len;
+        MX_ASSERT(new_bitsize >= new_len); // Overflow
+        mx_status_t status = bits_.Grow(new_bitsize);
+        if (status != MX_OK) {
+            return status;
+        }
+
+        // Clear all the "newly grown" bytes
+        uintptr_t addr = reinterpret_cast<uintptr_t>(bits_.GetData()) + old_len * sizeof(size_t);
+        memset(reinterpret_cast<void*>(addr), 0, (new_len - old_len) * sizeof(size_t));
+
+        size_t old_size = size_;
+        data_ = static_cast<size_t*>(bits_.GetData());
+        size_ = size;
+
+        // Clear the partial bits not included in the new "size_t"s.
+        Clear(old_size, mxtl::min(old_len * kBits, size_));
+        return MX_OK;
+    }
+
+    template <typename U = Storage>
+    typename mxtl::enable_if<!internal::has_grow<U>::value, mx_status_t>::type
+    Grow(size_t size) {
+        return MX_ERR_NO_RESOURCES;
+    }
 
     // Resets the bitmap; clearing and resizing it.
     // Allocates memory, and can fail.

@@ -86,6 +86,48 @@ public:
         return MX_OK;
     }
 
+    mx_status_t Grow(size_t size) {
+        if (size <= size_) {
+            return MX_OK;
+        }
+
+        size = mxtl::roundup(size, static_cast<size_t>(PAGE_SIZE));
+        mx_status_t status;
+        if ((status = vmo_.set_size(size)) != MX_OK) {
+            return status;
+        }
+
+
+        mx_info_vmar_t vmar_info;
+        if ((status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR,
+                                         &vmar_info, sizeof(vmar_info), NULL,
+                                         NULL)) != MX_OK) {
+            return status;
+        }
+
+        // Try to extend mapping
+        uintptr_t addr;
+        if ((status = mx_vmar_map(mx_vmar_root_self(), mapped_addr_ + size_ -
+                                  vmar_info.base, vmo_.get(), size_, size - size_,
+                                  MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
+                                  MX_VM_FLAG_SPECIFIC, &addr)) != MX_OK) {
+            // If extension fails, create entirely new mapping and unmap the old one
+            if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_.get(), 0, size,
+                                      MX_VM_FLAG_PERM_READ |
+                                      MX_VM_FLAG_PERM_WRITE, &addr)) != MX_OK) {
+                return status;
+            }
+
+            if ((status = mx_vmar_unmap(mx_vmar_root_self(), mapped_addr_, size_)) != MX_OK) {
+                return status;
+            }
+
+            mapped_addr_ = addr;
+        }
+
+        return MX_OK;
+    }
+
     void* GetData() { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
     const void* GetData() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return (void*) mapped_addr_; }
     mx_handle_t GetVmo() const { MX_DEBUG_ASSERT(mapped_addr_ != 0); return vmo_.get(); }
