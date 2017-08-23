@@ -46,6 +46,31 @@ void StageImpl::UpdateUntilDone() {
   }
 }
 
+void StageImpl::Acquire(const ftl::Closure& callback) {
+  PostTask([this, callback]() {
+    {
+      ftl::MutexLocker locker(&tasks_mutex_);
+      tasks_suspended_ = true;
+    }
+
+    callback();
+  });
+}
+
+void StageImpl::Release() {
+  {
+    ftl::MutexLocker locker(&tasks_mutex_);
+    tasks_suspended_ = false;
+    if (tasks_.empty()) {
+      // Don't need to run tasks.
+      return;
+    }
+  }
+
+  FTL_DCHECK(task_runner_);
+  task_runner_->PostTask([this]() { RunTasks(); });
+}
+
 void StageImpl::SetTaskRunner(ftl::RefPtr<ftl::TaskRunner> task_runner) {
   FTL_DCHECK(task_runner);
   ftl::RefPtr<ftl::TaskRunner> node_task_runner = GetNodeTaskRunner();
@@ -58,9 +83,9 @@ void StageImpl::PostTask(const ftl::Closure& task) {
   {
     ftl::MutexLocker locker(&tasks_mutex_);
     tasks_.push(task);
-    if (tasks_.size() != 1) {
-      // Don't need to run tasks, because there were already tasks in
-      // the queue.
+    if (tasks_.size() != 1 || tasks_suspended_) {
+      // Don't need to run tasks, either because there were already tasks in
+      // the queue or because task execution is suspended.
       return;
     }
   }
@@ -72,7 +97,7 @@ void StageImpl::PostTask(const ftl::Closure& task) {
 void StageImpl::RunTasks() {
   tasks_mutex_.Lock();
 
-  while (!tasks_.empty()) {
+  while (!tasks_.empty() && !tasks_suspended_) {
     ftl::Closure& task = tasks_.front();
     tasks_mutex_.Unlock();
     task();

@@ -78,6 +78,13 @@ class StageImpl {
   // Calls |Update| until no more updates are required.
   void UpdateUntilDone();
 
+  // Acquires the stage, preventing posted tasks from running until the stage
+  // is released. |callback| is called when the stage is acquired.
+  void Acquire(const ftl::Closure& callback);
+
+  // Releases the stage previously acquired via |Acquire|.
+  void Release();
+
   // Sets a |TaskRunner| for running tasks relating to this stage and the node
   // it hosts. The stage ensures that only one task related to this stage runs
   // at any given time. Before using the provided |TaskRunner|, the stage
@@ -114,6 +121,8 @@ class StageImpl {
   mutable ftl::Mutex tasks_mutex_;
   // Pending tasks. Only |RunTasks| may pop from this queue.
   std::queue<ftl::Closure> tasks_ FTL_GUARDED_BY(tasks_mutex_);
+  // Set to true to suspend task execution.
+  bool tasks_suspended_ FTL_GUARDED_BY(tasks_mutex_) = false;
 };
 
 }  // namespace media

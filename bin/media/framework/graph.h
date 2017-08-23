@@ -200,6 +200,10 @@ class Graph {
   // frame.
   void FlushAllOutputs(NodeRef node, bool hold_frame);
 
+  // Executes |task| after having acquired |nodes|. No update or other
+  // task will touch any of the nodes while |task| is executing.
+  void PostTask(const ftl::Closure& task, std::initializer_list<NodeRef> nodes);
+
  private:
   // Adds a stage to the graph.
   NodeRef Add(StageImpl* stage, ftl::RefPtr<ftl::TaskRunner> task_runner);

@@ -204,6 +204,42 @@ void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
   }
 }
 
+void Graph::PostTask(const ftl::Closure& task,
+                     std::initializer_list<NodeRef> nodes) {
+  std::vector<StageImpl*> stages;
+  for (NodeRef node : nodes) {
+    stages.push_back(node.stage_);
+  }
+
+  struct PostedTask {
+    PostedTask(const ftl::Closure& task, std::vector<StageImpl*> stages)
+        : task_(task), stages_(std::move(stages)) {
+      unacquired_stage_counter_ = stages_.size();
+    }
+
+    ftl::Closure task_;
+    std::vector<StageImpl*> stages_;
+    std::atomic_uint32_t unacquired_stage_counter_;
+  };
+
+  std::shared_ptr<PostedTask> posted_task =
+      std::make_shared<PostedTask>(task, std::move(stages));
+
+  for (StageImpl* stage : posted_task->stages_) {
+    stage->Acquire([posted_task]() {
+      if (--(posted_task->unacquired_stage_counter_) != 0) {
+        return;
+      }
+
+      posted_task->task_();
+
+      for (StageImpl* stage : posted_task->stages_) {
+        stage->Release();
+      }
+    });
+  }
+}
+
 NodeRef Graph::Add(StageImpl* stage, ftl::RefPtr<ftl::TaskRunner> task_runner) {
   FTL_DCHECK(stage);
   FTL_DCHECK(task_runner || default_task_runner_);
