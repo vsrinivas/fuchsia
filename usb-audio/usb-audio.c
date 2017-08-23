@@ -241,9 +241,12 @@ static zx_status_t usb_audio_bind(void* ctx, zx_device_t* device, void** cookie)
     return ZX_OK;
 }
 
+extern void usb_audio_driver_release(void*);
+
 static zx_driver_ops_t usb_audio_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind = usb_audio_bind,
+    .release = usb_audio_driver_release,
 };
 
 ZIRCON_DRIVER_BEGIN(usb_audio, usb_audio_driver_ops, "zircon", "0.1", 3)
