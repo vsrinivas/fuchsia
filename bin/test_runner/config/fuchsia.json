@@ -41,6 +41,10 @@
       "exec": "/system/test/media_util_tests"
     },
     {
+      "name": "netstack_loopback_test",
+      "exec": "/system/test/netstack_loopback_test"
+    },
+    {
       "name": "power_manager_tests",
       "exec": "/system/bin/report_result /system/test/power_manager_test"
     },
