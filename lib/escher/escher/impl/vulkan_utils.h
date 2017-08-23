@@ -8,7 +8,7 @@
 
 #include <vector>
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 #if defined(ESCHER_VK_UTILS)
 #error "vulkan_utils.h should not be included from header files"

@@ -7,7 +7,7 @@
 #include "escher/scene/viewing_volume.h"
 #include "escher/util/debug_print.h"
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 

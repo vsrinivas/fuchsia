@@ -9,7 +9,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/geometry/types.h"
 #include "escher/renderer/texture.h"
-#include "ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace escher {
 

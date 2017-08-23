@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "escher/scene/object.h"
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 

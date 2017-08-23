@@ -8,7 +8,7 @@
 #include <string>
 #include <vulkan/vulkan.hpp>
 
-#include "ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace escher {
 

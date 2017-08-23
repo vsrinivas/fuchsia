@@ -11,7 +11,7 @@
 #include "escher/impl/glsl_compiler.h"
 #include "escher/impl/model_pipeline_spec.h"
 #include "escher/util/hash.h"
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 namespace impl {

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "ftl/macros.h"
 #include "escher/gl/mesh.h"
 #include "escher/scene/model.h"
 #include "escher/scene/viewing_volume.h"
+#include "lib/ftl/macros.h"
 
 class AppTestScene {
  public:

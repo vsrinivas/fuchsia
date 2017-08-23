@@ -14,8 +14,8 @@
 #include "escher/resources/resource_manager.h"
 #include "escher/util/hash.h"
 #include "escher/vk/gpu_mem.h"
-#include "ftl/macros.h"
-#include "ftl/memory/ref_counted.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

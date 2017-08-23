@@ -11,7 +11,7 @@
 #include "escher/shape/mesh.h"
 #include "escher/util/trace_macros.h"
 
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 namespace impl {

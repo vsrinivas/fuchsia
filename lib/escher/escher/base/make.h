@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ftl/memory/ref_ptr.h"
+#include "lib/ftl/memory/ref_ptr.h"
 
 namespace escher {
 

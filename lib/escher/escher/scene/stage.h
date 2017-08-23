@@ -6,11 +6,11 @@
 
 #include <utility>
 
-#include "ftl/macros.h"
 #include "escher/geometry/types.h"
 #include "escher/scene/ambient_light.h"
 #include "escher/scene/directional_light.h"
 #include "escher/scene/viewing_volume.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 

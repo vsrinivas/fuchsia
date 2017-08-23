@@ -8,7 +8,7 @@
 
 #include "escher/impl/vk/pipeline_layout.h"
 #include "escher/impl/vk/pipeline_spec.h"
-#include "ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "ftl/macros.h"
 #include "escher/scene/model.h"
 #include "escher/scene/viewing_volume.h"
+#include "lib/ftl/macros.h"
 
 class ShadowTestScene {
  public:

@@ -14,7 +14,7 @@
 #include "spirv-tools/optimizer.hpp"
 
 #include "escher/util/trace_macros.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 namespace impl {

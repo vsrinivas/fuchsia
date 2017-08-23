@@ -4,7 +4,7 @@
 
 #include "sketchy/cubic_bezier.h"
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace sketchy {
 

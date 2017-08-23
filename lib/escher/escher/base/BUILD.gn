@@ -14,5 +14,7 @@ static_library("escher_base") {
   ]
 
   public_configs = [ "//lib/escher/escher:public_includes" ]
-  deps = [ "//lib/ftl" ]
+  public_deps = [
+    "//lib/ftl",
+  ]
 }

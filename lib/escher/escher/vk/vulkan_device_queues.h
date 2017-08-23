@@ -10,7 +10,7 @@
 
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_instance.h"
-#include "ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 // TODO: Used during transition to SDK 1.0.57.  Remove once Magma Vulkan SDK
 // is also updated to >= 1.0.57.
@@ -25,7 +25,7 @@ namespace vk {
 using ExternalSemaphoreHandleTypeFlagBitsKHR =
     ExternalSemaphoreHandleTypeFlagBitsKHX;
 using ImportSemaphoreFdInfoKHR = ImportSemaphoreFdInfoKHX;
-}
+}  // namespace vk
 #endif
 #endif
 

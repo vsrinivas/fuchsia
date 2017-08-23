@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "escher/impl/glsl_compiler.h"
-#include "ftl/logging.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 namespace impl {

@@ -7,7 +7,7 @@
 #include "escher/geometry/tessellation.h"
 #include "escher/gl/gles2/bindings.h"
 #include "escher/renderer.h"
-#include "ftl/arraysize.h"
+#include "lib/ftl/arraysize.h"
 
 using namespace escher;
 

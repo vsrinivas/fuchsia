@@ -9,7 +9,7 @@
 #include "escher/impl/model_data.h"
 #include "escher/scene/model.h"
 #include "escher/scene/object.h"
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 namespace impl {
@@ -25,8 +25,8 @@ class WobbleModifierAbsorber {
  private:
   std::unique_ptr<ComputeShader> NewKernel();
   BufferPtr NewUniformBuffer(vk::DeviceSize size);
-  void ApplyBarrierForUniformBuffer(CommandBuffer *command_buffer,
-                                    const BufferPtr &buffer_ptr);
+  void ApplyBarrierForUniformBuffer(CommandBuffer* command_buffer,
+                                    const BufferPtr& buffer_ptr);
 
   Escher* const escher_;
   const VulkanContext& vulkan_context_;

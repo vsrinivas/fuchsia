@@ -9,7 +9,7 @@
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/command_buffer_sequencer.h"
 #include "escher/vk/vulkan_context.h"
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 namespace impl {

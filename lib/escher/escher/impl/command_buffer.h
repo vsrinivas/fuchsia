@@ -11,7 +11,7 @@
 #include "escher/renderer/semaphore_wait.h"
 #include "escher/vk/vulkan_context.h"
 
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 typedef std::function<void()> CommandBufferFinishedCallback;

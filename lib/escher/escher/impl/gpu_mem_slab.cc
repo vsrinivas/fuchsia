@@ -6,7 +6,7 @@
 
 #include "escher/impl/vulkan_utils.h"
 #include "escher/vk/gpu_allocator.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 namespace impl {

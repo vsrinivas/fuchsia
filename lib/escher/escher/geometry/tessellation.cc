@@ -10,7 +10,7 @@
 #include "escher/impl/model_data.h"
 #include "escher/shape/mesh_builder.h"
 #include "escher/shape/mesh_builder_factory.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 

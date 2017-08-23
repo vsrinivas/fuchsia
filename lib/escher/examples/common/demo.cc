@@ -4,7 +4,7 @@
 
 #include "demo.h"
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 Demo::Demo(DemoHarness* harness)
     : harness_(harness),

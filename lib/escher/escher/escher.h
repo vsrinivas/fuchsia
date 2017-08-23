@@ -11,8 +11,8 @@
 #include "escher/status.h"
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_device_queues.h"
-#include "ftl/macros.h"
-#include "ftl/memory/ref_ptr.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_ptr.h"
 
 namespace escher {
 

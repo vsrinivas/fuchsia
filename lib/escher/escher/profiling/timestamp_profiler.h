@@ -8,7 +8,7 @@
 
 #include "escher/forward_declarations.h"
 #include "escher/vk/vulkan_context.h"
-#include "ftl/memory/ref_counted.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace escher {
 

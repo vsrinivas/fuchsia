@@ -5,11 +5,11 @@
 #pragma once
 
 #include "escher/geometry/types.h"
+#include "escher/scene/shape_modifier.h"
 #include "escher/shape/mesh.h"
 #include "escher/util/debug_print.h"
-#include "escher/scene/shape_modifier.h"
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 

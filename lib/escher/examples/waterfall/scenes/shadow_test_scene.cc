@@ -4,8 +4,8 @@
 
 #include "examples/waterfall/scenes/shadow_test_scene.h"
 
-#include "ftl/arraysize.h"
 #include "escher/renderer.h"
+#include "lib/ftl/arraysize.h"
 
 using namespace escher;
 
@@ -31,7 +31,8 @@ Model ShadowTestScene::GetModel(const ViewingVolume& volume) {
   float center = volume.width() / 2.0f;
 
   float left[] = {
-      kPadding, center + kPadding,
+      kPadding,
+      center + kPadding,
   };
 
   float top = kPadding;

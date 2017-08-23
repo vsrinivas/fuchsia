@@ -7,8 +7,8 @@
 #include <cstdint>
 
 #include "escher/base/make.h"
-#include "ftl/logging.h"
-#include "ftl/memory/ref_ptr.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/memory/ref_ptr.h"
 
 namespace escher {
 

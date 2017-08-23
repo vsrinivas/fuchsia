@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace {
 using namespace escher;

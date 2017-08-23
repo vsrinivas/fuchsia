@@ -12,7 +12,7 @@
 #include "escher/impl/descriptor_set_pool.h"
 #include "escher/impl/uniform_buffer_pool.h"
 #include "escher/shape/modifier_wobble.h"
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 namespace impl {

@@ -6,7 +6,7 @@
 
 #include "escher/geometry/types.h"
 #include "escher/shape/mesh_spec.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 

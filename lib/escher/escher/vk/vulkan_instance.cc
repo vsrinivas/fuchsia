@@ -7,7 +7,7 @@
 #include <set>
 
 #include "escher/impl/vulkan_utils.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 

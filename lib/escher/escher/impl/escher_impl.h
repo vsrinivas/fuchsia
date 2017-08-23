@@ -7,7 +7,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/status.h"
 #include "escher/vk/vulkan_context.h"
-#include "ftl/macros.h"
+#include "lib/ftl/macros.h"
 
 namespace escher {
 class Escher;

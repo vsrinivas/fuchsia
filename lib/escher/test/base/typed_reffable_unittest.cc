@@ -5,8 +5,8 @@
 #include "escher/base/typed_reffable.h"
 #include "escher/base/type_info.h"
 
-#include "ftl/memory/ref_ptr.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/memory/ref_ptr.h"
 
 namespace {
 

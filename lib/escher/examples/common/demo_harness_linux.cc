@@ -7,7 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include "escher/examples/common/demo.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 static DemoHarness* g_harness = nullptr;
 static GLFWwindow* g_window;

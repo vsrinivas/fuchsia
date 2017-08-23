@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 

@@ -8,8 +8,8 @@
 
 #include "escher/impl/vk/pipeline_cache.h"
 #include "escher/impl/vk/pipeline_factory.h"
-#include "ftl/logging.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 namespace impl {

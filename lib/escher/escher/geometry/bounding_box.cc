@@ -4,7 +4,7 @@
 
 #include "escher/geometry/bounding_box.h"
 
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 
 namespace escher {
 
