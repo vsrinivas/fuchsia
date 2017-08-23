@@ -34,11 +34,8 @@ source_set("mlme") {
     "wlan.h",
   ]
 
-  deps = [
-    "//apps/wlan/services:mlme_data_only",
-  ]
-
   public_deps = [
+    "//apps/wlan/services:mlme_data_only",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]
