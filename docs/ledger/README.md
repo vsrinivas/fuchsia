@@ -7,6 +7,7 @@ Documentation for using Ledger:
 Documentation for integrating with Ledger in client apps:
 
  - [API Guide](api_guide.md)
+ - [Data Organization](data_organization.md)
  - [Examples](examples.md)
 
 Documentation for setting up a remote Cloud sync provider:

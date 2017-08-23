@@ -55,22 +55,10 @@ so it can be immediately used to make requests, even before the callback is
 called.
 ***
 
-## Data organization
+## Working with pages
 
 Data stored in Ledger is grouped into separate independent key-value stores
 called *pages*.
-
-Deciding how to split data into pages has the following implications:
-
- - atomic changes across multiple values are possible only within one page, so
-   if there's data that has to be modified together, it must belong to the
-   same page
- - the current state of each page is either entirely present or entirely absent on
-   disk (modulo lazy values, see below), hence splitting data into multiple
-   pages allows granular optimization of which data to keep on disk on each
-   device
-
-There are no restrictions on how many pages a client application can use.
 
 Pages are identified by ids of 16 bytes each. When creating a page, the
 application can pick its id (for example, to create/access a page with a name
@@ -152,8 +140,16 @@ page can be obtained:
    associated with the notification
 
 Once the snapshot is obtained, data can be read using the `GetEntries()` method
-which supports prefix queries on keys, or the `Get()` method which retrieves the
+which retrieves multiple entries, or the `Get()` method which retrieves the
 value associated with the particular key.
+
+#### Range queries
+
+The `GetEntries()` method takes a `key_start` argument, allowing the app to
+perform a *range query*. In order to retrieve all entries between two keys, we
+need to call `GetEntries()` with the first key passed as `key_start`, and
+continue reading the paginated response as long as the returned values are in
+the desired range.
 
 ### Lazy values
 
@@ -259,6 +255,7 @@ automatically in the background, and clients do not have to manage them.
 
 ## See also
 
+ - [Data Organization](data_organization.md)
  - [examples of client apps](examples.md)
 
 [FIDL interface]: https://fuchsia.googlesource.com/ledger/+/HEAD/services/public/ledger.fidl
