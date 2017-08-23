@@ -32,10 +32,10 @@ private:
     bool InitImage();
 
     bool is_initialized_ = false;
-    PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX
-        vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_;
-    PFN_vkImportSemaphoreFdKHX vkImportSemaphoreFdKHX_;
-    PFN_vkGetSemaphoreFdKHX vkGetSemaphoreFdKHX_;
+    PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR
+        vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_;
+    PFN_vkImportSemaphoreFdKHR vkImportSemaphoreFdKHR_;
+    PFN_vkGetSemaphoreFdKHR vkGetSemaphoreFdKHR_;
 
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_device_;
@@ -78,9 +78,9 @@ bool VulkanTest::InitVulkan()
         return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
 
     std::vector<const char*> instance_extensions{
-        VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME};
-    std::vector<const char*> device_extensions{VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-                                               VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME};
+        VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME};
+    std::vector<const char*> device_extensions{VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+                                               VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME};
 
     uint32_t found_count = 0;
     for (auto& prop : extension_properties) {
@@ -216,46 +216,46 @@ bool VulkanTest::InitVulkan()
     vkGetDeviceQueue(vkdevice, queue_family_index, 0, &vk_queue_);
 
     // Get extension function pointers
-    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_ =
-        reinterpret_cast<PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHX>(
-            vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceExternalSemaphorePropertiesKHX"));
-    if (!vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_)
-        return DRETF(false, "couldn't find vkGetPhysicalDeviceExternalSemaphorePropertiesKHX");
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_ =
+        reinterpret_cast<PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR>(
+            vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR"));
+    if (!vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_)
+        return DRETF(false, "couldn't find vkGetPhysicalDeviceExternalSemaphorePropertiesKHR");
 
-    vkImportSemaphoreFdKHX_ = reinterpret_cast<PFN_vkImportSemaphoreFdKHX>(
-        vkGetDeviceProcAddr(vk_device_, "vkImportSemaphoreFdKHX"));
-    if (!vkImportSemaphoreFdKHX_)
-        return DRETF(false, "couldn't find vkImportSemaphoreFdKHX");
+    vkImportSemaphoreFdKHR_ = reinterpret_cast<PFN_vkImportSemaphoreFdKHR>(
+        vkGetDeviceProcAddr(vk_device_, "vkImportSemaphoreFdKHR"));
+    if (!vkImportSemaphoreFdKHR_)
+        return DRETF(false, "couldn't find vkImportSemaphoreFdKHR");
 
-    vkGetSemaphoreFdKHX_ = reinterpret_cast<PFN_vkGetSemaphoreFdKHX>(
-        vkGetDeviceProcAddr(vk_device_, "vkGetSemaphoreFdKHX"));
-    if (!vkGetSemaphoreFdKHX_)
-        return DRETF(false, "couldn't find vkGetSemaphoreFdKHX_");
+    vkGetSemaphoreFdKHR_ = reinterpret_cast<PFN_vkGetSemaphoreFdKHR>(
+        vkGetDeviceProcAddr(vk_device_, "vkGetSemaphoreFdKHR"));
+    if (!vkGetSemaphoreFdKHR_)
+        return DRETF(false, "couldn't find vkGetSemaphoreFdKHR_");
 
-    VkExternalSemaphorePropertiesKHX external_semaphore_properties = {
-        .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHX,
+    VkExternalSemaphorePropertiesKHR external_semaphore_properties = {
+        .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHR,
     };
-    VkPhysicalDeviceExternalSemaphoreInfoKHX external_semaphore_info = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHX,
+    VkPhysicalDeviceExternalSemaphoreInfoKHR external_semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_SEMAPHORE_INFO_KHR,
         .pNext = nullptr,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
+        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
     };
-    vkGetPhysicalDeviceExternalSemaphorePropertiesKHX_(
+    vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_(
         vk_physical_device_, &external_semaphore_info, &external_semaphore_properties);
 
     EXPECT_EQ(external_semaphore_properties.exportFromImportedHandleTypes,
-              VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX);
+              VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR);
     EXPECT_EQ(external_semaphore_properties.compatibleHandleTypes, 0u);
     EXPECT_EQ(external_semaphore_properties.externalSemaphoreFeatures,
-              0u | VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHX |
-                  VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHX);
+              0u | VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR |
+                  VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR);
 
     // Create semaphores for export
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        VkExportSemaphoreCreateInfoKHX export_create_info = {
-            .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHX,
+        VkExportSemaphoreCreateInfoKHR export_create_info = {
+            .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,
             .pNext = nullptr,
-            .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
+            .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
         };
 
         VkSemaphoreCreateInfo create_info = {
@@ -287,25 +287,29 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
 
     // Export semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        result =
-            t1->vkGetSemaphoreFdKHX_(t1->vk_device_, t1->vk_semaphore_[i],
-                                     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX, &fd[i]);
+        VkSemaphoreGetFdInfoKHR info {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
+            .pNext = nullptr,
+            .semaphore = t1->vk_semaphore_[i],
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
+        };
+        result = t1->vkGetSemaphoreFdKHR_(t1->vk_device_, &info, &fd[i]);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetSemaphoreFdKHX returned %d", result);
+            return DRETF(false, "vkGetSemaphoreFdKHR returned %d", result);
     }
 
     // Import semaphores
     for (uint32_t i = 0; i < kSemaphoreCount; i++) {
-        VkImportSemaphoreFdInfoKHX import_info = {
-            .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHX,
+        VkImportSemaphoreFdInfoKHR import_info = {
+            .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FD_INFO_KHR,
             .pNext = nullptr,
             .semaphore = t2->vk_semaphore_[i],
-            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX,
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
             .fd = fd[i]};
 
-        result = t1->vkImportSemaphoreFdKHX_(t2->vk_device_, &import_info);
+        result = t1->vkImportSemaphoreFdKHR_(t2->vk_device_, &import_info);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkImportSemaphoreFdKHX failed: %d", result);
+            return DRETF(false, "vkImportSemaphoreFdKHR failed: %d", result);
     }
 
     // Test semaphores
@@ -313,11 +317,15 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2)
         auto platform_semaphore_export = magma::PlatformSemaphore::Import(fd[i]);
 
         // Export the imported semaphores
-        result =
-            t1->vkGetSemaphoreFdKHX_(t2->vk_device_, t2->vk_semaphore_[i],
-                                     VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FENCE_FD_BIT_KHX, &fd[i]);
+        VkSemaphoreGetFdInfoKHR info {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
+            .pNext = nullptr,
+            .semaphore = t2->vk_semaphore_[i],
+            .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR,
+        };
+        result = t1->vkGetSemaphoreFdKHR_(t2->vk_device_, &info, &fd[i]);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetSemaphoreFdKHX returned %d", result);
+            return DRETF(false, "vkGetSemaphoreFdKHR returned %d", result);
 
         std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_import =
             magma::PlatformSemaphore::Import(fd[i]);
