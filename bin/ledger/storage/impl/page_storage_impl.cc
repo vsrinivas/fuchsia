@@ -277,14 +277,13 @@ Status PageStorageImpl::StartMergeCommit(const CommitId& left,
 
 void PageStorageImpl::CommitJournal(
     std::unique_ptr<Journal> journal,
-    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-        callback) {
+    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   JournalDBImpl* journal_ptr = static_cast<JournalDBImpl*>(journal.get());
   // |journal| will now be owned by the Commit callback, making sure that it is
   // not deleted before the end of the computation.
   journal_ptr->Commit(ftl::MakeCopyable([
     journal = std::move(journal), callback = std::move(callback)
-  ](Status status, std::unique_ptr<const storage::Commit> commit) mutable {
+  ](Status status, std::unique_ptr<const Commit> commit) mutable {
     if (status != Status::OK) {
       // Commit failed, roll the journal back.
       RollbackJournalInternal(std::move(journal));

@@ -191,8 +191,8 @@ StorageTest::~StorageTest(){};
     ObjectId* empty_node_id) {
   Status status;
   ObjectId id;
-  TreeNode::Empty(GetStorage(),
-                  callback::Capture(MakeQuitTask(), &status, &id));
+  btree::TreeNode::Empty(GetStorage(),
+                         callback::Capture(MakeQuitTask(), &status, &id));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty callback was not executed.";
@@ -207,11 +207,11 @@ StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::CreateNodeFromId(
     ObjectIdView id,
-    std::unique_ptr<const TreeNode>* node) {
+    std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
-  std::unique_ptr<const TreeNode> result;
-  TreeNode::FromId(GetStorage(), id,
-                   callback::Capture(MakeQuitTask(), &status, &result));
+  std::unique_ptr<const btree::TreeNode> result;
+  btree::TreeNode::FromId(GetStorage(), id,
+                          callback::Capture(MakeQuitTask(), &status, &result));
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromId callback was not executed.";
@@ -227,11 +227,11 @@ StorageTest::~StorageTest(){};
 ::testing::AssertionResult StorageTest::CreateNodeFromEntries(
     const std::vector<Entry>& entries,
     const std::vector<ObjectId>& children,
-    std::unique_ptr<const TreeNode>* node) {
+    std::unique_ptr<const btree::TreeNode>* node) {
   Status status;
   ObjectId id;
-  TreeNode::FromEntries(GetStorage(), 0u, entries, children,
-                        callback::Capture(MakeQuitTask(), &status, &id));
+  btree::TreeNode::FromEntries(GetStorage(), 0u, entries, children,
+                               callback::Capture(MakeQuitTask(), &status, &id));
 
   if (RunLoopWithTimeout()) {
     return ::testing::AssertionFailure()

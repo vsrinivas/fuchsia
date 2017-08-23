@@ -11,6 +11,7 @@
 #include "lib/ftl/logging.h"
 
 namespace storage {
+namespace btree {
 namespace {
 KeyPriority ToKeyPriority(KeyPriorityStorage priority_storage) {
   switch (priority_storage) {
@@ -148,4 +149,5 @@ bool DecodeNode(ftl::StringView data,
 
   return true;
 }
+}  // namespace btree
 }  // namespace storage

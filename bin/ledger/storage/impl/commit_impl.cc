@@ -150,7 +150,7 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
 void CommitImpl::Empty(
     PageStorage* page_storage,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  TreeNode::Empty(
+  btree::TreeNode::Empty(
       page_storage, [ page_storage, callback = std::move(callback) ](
                         Status s, ObjectId root_node_id) {
         if (s != Status::OK) {

@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/public/types.h"
 
 namespace storage {
+namespace btree {
 
 class EntryChangeIterator : public Iterator<const storage::EntryChange> {
  public:
@@ -40,6 +41,7 @@ class EntryChangeIterator : public Iterator<const storage::EntryChange> {
   FTL_DISALLOW_COPY_AND_ASSIGN(EntryChangeIterator);
 };
 
+}  // namespace btree
 }  // namespace storage
 
 #endif  // APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_ENTRY_CHANGE_ITERATOR_H_

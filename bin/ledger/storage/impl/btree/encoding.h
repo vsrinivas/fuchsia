@@ -11,6 +11,7 @@
 #include "lib/ftl/strings/string_view.h"
 
 namespace storage {
+namespace btree {
 
 bool CheckValidTreeNodeSerialization(ftl::StringView data);
 
@@ -23,6 +24,7 @@ bool DecodeNode(ftl::StringView data,
                 std::vector<Entry>* res_entries,
                 std::vector<ObjectId>* res_children);
 
+}  // namespace btree
 }  // namespace storage
 
 #endif  // APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_ENCODING_H_

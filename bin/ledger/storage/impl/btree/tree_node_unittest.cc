@@ -15,6 +15,7 @@
 #include "lib/ftl/logging.h"
 
 namespace storage {
+namespace btree {
 namespace {
 
 class TreeNodeTest : public StorageTest {
@@ -159,4 +160,5 @@ TEST_F(TreeNodeTest, Serialization) {
 }
 
 }  // namespace
+}  // namespace btree
 }  // namespace storage

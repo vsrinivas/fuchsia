@@ -115,14 +115,14 @@ class StorageTest : public ::test::TestWithMessageLoop {
   // Returns the tree node corresponding to the given id.
   ::testing::AssertionResult CreateNodeFromId(
       ObjectIdView id,
-      std::unique_ptr<const TreeNode>* node);
+      std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a new tree node from the given entries and children and updates
   // |node| with the result.
   ::testing::AssertionResult CreateNodeFromEntries(
       const std::vector<Entry>& entries,
       const std::vector<ObjectId>& children,
-      std::unique_ptr<const TreeNode>* node);
+      std::unique_ptr<const btree::TreeNode>* node);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(StorageTest);

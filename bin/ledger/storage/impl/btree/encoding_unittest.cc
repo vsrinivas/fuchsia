@@ -11,6 +11,7 @@
 #include "lib/ftl/strings/string_printf.h"
 
 namespace storage {
+namespace btree {
 namespace {
 
 // Allows to create correct std::strings with \0 bytes inside from C-style
@@ -168,4 +169,5 @@ TEST(EncodingTest, Errors) {
 }
 
 }  // namespace
+}  // namespace btree
 }  // namespace storage

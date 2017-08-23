@@ -18,6 +18,7 @@
 #include "lib/mtl/socket/strings.h"
 
 namespace storage {
+namespace btree {
 
 TreeNode::TreeNode(PageStorage* page_storage,
                    std::string id,
@@ -64,7 +65,7 @@ void TreeNode::FromEntries(PageStorage* page_storage,
                            const std::vector<ObjectId>& children,
                            std::function<void(Status, ObjectId)> callback) {
   FTL_DCHECK(entries.size() + 1 == children.size());
-  std::string encoding = storage::EncodeNode(level, entries, children);
+  std::string encoding = EncodeNode(level, entries, children);
   page_storage->AddObjectFromLocal(
       storage::DataSource::Create(std::move(encoding)), std::move(callback));
 }
@@ -142,4 +143,5 @@ Status TreeNode::FromObject(PageStorage* page_storage,
   return Status::OK;
 }
 
+}  // namespace btree
 }  // namespace storage

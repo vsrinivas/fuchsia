@@ -15,6 +15,7 @@
 #include "apps/ledger/src/storage/public/types.h"
 
 namespace storage {
+namespace btree {
 
 // A node of the B-Tree holding the commit contents.
 class TreeNode {
@@ -97,6 +98,7 @@ class TreeNode {
   const std::vector<ObjectId> children_;
 };
 
+}  // namespace btree
 }  // namespace storage
 
 #endif  // APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_TREE_NODE_H_

@@ -183,18 +183,18 @@ class PageStorageTest : public StorageTest {
  protected:
   PageStorage* GetStorage() override { return storage_.get(); }
 
-  std::vector<storage::CommitId> GetHeads() {
+  std::vector<CommitId> GetHeads() {
     Status status;
-    std::vector<storage::CommitId> ids;
+    std::vector<CommitId> ids;
     storage_->GetHeadCommitIds(
         callback::Capture(MakeQuitTask(), &status, &ids));
     EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(storage::Status::OK, status);
+    EXPECT_EQ(Status::OK, status);
     return ids;
   }
 
   std::unique_ptr<const Commit> GetFirstHead() {
-    std::vector<storage::CommitId> ids = GetHeads();
+    std::vector<CommitId> ids = GetHeads();
     EXPECT_FALSE(ids.empty());
     return GetCommit(ids[0]);
   }
@@ -432,7 +432,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
 }
 
 TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
-  std::unique_ptr<const TreeNode> node;
+  std::unique_ptr<const btree::TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries({}, std::vector<ObjectId>(1), &node));
   ObjectId root_id = node->GetId();
 
@@ -465,10 +465,10 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   ObjectData lazy_value("Some data", InlineBehavior::PREVENT);
   ObjectData eager_value("More data", InlineBehavior::PREVENT);
   std::vector<Entry> entries = {
-      Entry{"key0", lazy_value.object_id, storage::KeyPriority::LAZY},
-      Entry{"key1", eager_value.object_id, storage::KeyPriority::EAGER},
+      Entry{"key0", lazy_value.object_id, KeyPriority::LAZY},
+      Entry{"key1", eager_value.object_id, KeyPriority::EAGER},
   };
-  std::unique_ptr<const TreeNode> node;
+  std::unique_ptr<const btree::TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries(
       entries, std::vector<ObjectId>(entries.size() + 1), &node));
   ObjectId root_id = node->GetId();
@@ -529,7 +529,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
 
-  std::unique_ptr<const TreeNode> node;
+  std::unique_ptr<const btree::TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries({}, std::vector<ObjectId>(1), &node));
   ObjectId root_id = node->GetId();
 
@@ -596,7 +596,7 @@ TEST_F(PageStorageTest, SyncCommits) {
 
 TEST_F(PageStorageTest, HeadCommits) {
   // Every page should have one initial head commit.
-  std::vector<storage::CommitId> heads = GetHeads();
+  std::vector<CommitId> heads = GetHeads();
   EXPECT_EQ(1u, heads.size());
 
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -1133,10 +1133,9 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
   object_ids.resize(3);
   for (size_t i = 0; i < object_ids.size(); ++i) {
     ObjectData value("value" + std::to_string(i), InlineBehavior::PREVENT);
-    std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
-                                        value.object_id,
-                                        storage::KeyPriority::EAGER}};
-    std::unique_ptr<const TreeNode> node;
+    std::vector<Entry> entries = {
+        Entry{"key" + std::to_string(i), value.object_id, KeyPriority::EAGER}};
+    std::unique_ptr<const btree::TreeNode> node;
     ASSERT_TRUE(CreateNodeFromEntries(
         entries, std::vector<ObjectId>(entries.size() + 1), &node));
     object_ids[i] = node->GetId();
@@ -1276,7 +1275,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
 }
 
 TEST_F(PageStorageTest, NoOpCommit) {
-  std::vector<storage::CommitId> heads = GetHeads();
+  std::vector<CommitId> heads = GetHeads();
   ASSERT_FALSE(heads.empty());
 
   std::unique_ptr<Journal> journal;
@@ -1312,12 +1311,12 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // node is already there, so we create two (child, which is empty, and root,
   // which contains child).
   std::string child_data =
-      storage::EncodeNode(0u, std::vector<Entry>(), std::vector<ObjectId>(1));
+      btree::EncodeNode(0u, std::vector<Entry>(), std::vector<ObjectId>(1));
   ObjectId child_id = ComputeObjectId(ObjectType::VALUE, child_data);
   sync.AddObject(child_id, child_data);
 
-  std::string root_data = storage::EncodeNode(0u, std::vector<Entry>(),
-                                              std::vector<ObjectId>{child_id});
+  std::string root_data = btree::EncodeNode(0u, std::vector<Entry>(),
+                                            std::vector<ObjectId>{child_id});
   ObjectId root_id = ComputeObjectId(ObjectType::VALUE, root_data);
   sync.AddObject(root_id, root_data);
 

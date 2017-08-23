@@ -10,7 +10,7 @@
 namespace storage {
 namespace {
 
-class StringObject : public storage::Object {
+class StringObject : public Object {
  public:
   explicit StringObject(std::string value) : value_(std::move(value)) {}
   ~StringObject() override {}

@@ -46,7 +46,7 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   std::unique_ptr<PageStorage> page_storage;
-  storage::Status status;
+  Status status;
   storage_.CreatePageStorage(
       page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
