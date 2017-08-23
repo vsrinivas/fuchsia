@@ -83,6 +83,8 @@ func validateFlags(flags fs.OpenFlags, fileType fs.FileType) error {
 	} else if fileType == fs.FileTypeDirectory {
 		if flags.Append() || flags.Truncate() {
 			return fs.ErrNotAFile
+		} else if flags.Write() {
+			return fs.ErrNotAFile
 		} else if !flags.Read() { // Directories require read permission
 			return fs.ErrPermission
 		}

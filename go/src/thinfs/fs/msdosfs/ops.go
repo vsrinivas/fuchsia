@@ -178,7 +178,7 @@ func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst s
 	}
 	defer metadata.Dcache.Release(dstParent.ID()) // ... ensure it is RELEASED
 
-	srcFlags := fs.OpenFlagWrite | fs.OpenFlagRead
+	srcFlags := fs.OpenFlagRead
 	if srcMustBeDir || dstMustBeDir {
 		srcFlags |= fs.OpenFlagDirectory
 	}
@@ -248,7 +248,7 @@ func rename(srcStart node.DirectoryNode, dstStart node.DirectoryNode, src, dst s
 			return err
 		}
 	} else {
-		dstFlags := fs.OpenFlagWrite | fs.OpenFlagRead
+		dstFlags := fs.OpenFlagRead
 		if dstMustBeDir {
 			dstFlags |= fs.OpenFlagDirectory
 		}
@@ -312,7 +312,7 @@ func unlink(n node.DirectoryNode, target string) error {
 		return err
 	}
 	defer n.Metadata().Dcache.Release(parent.ID()) // ... ensure it is RELEASED
-	flags := fs.OpenFlagWrite | fs.OpenFlagRead
+	flags := fs.OpenFlagRead
 	if mustBeDir {
 		flags |= fs.OpenFlagDirectory
 	}
