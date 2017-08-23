@@ -62,7 +62,7 @@ static void SetupEntropyVmo(uint level) {
 
 // Run the entropy collector test.
 void EarlyBootTest() {
-    const char* src_name = cmdline_get("kernel.entropy_test.src");
+    const char* src_name = cmdline_get("kernel.entropy-test.src");
     if (!src_name) {
         src_name = "";
     }
@@ -94,7 +94,7 @@ void EarlyBootTest() {
         return;
     }
 
-    size_t len = cmdline_get_uint64("kernel.entropy_test.len",
+    size_t len = cmdline_get_uint64("kernel.entropy-test.len",
                                     sizeof(entropy_buf));
     if (len > sizeof(entropy_buf)) {
         len = sizeof(entropy_buf);

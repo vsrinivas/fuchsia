@@ -66,12 +66,11 @@ JitterentropyCollector::JitterentropyCollector(uint8_t* mem, size_t len)
     : Collector("jitterentropy", /* entropy_per_1000_bytes */ 8000) {
     // TODO(MG-1022): optimize default jitterentropy parameters, then update
     // values here and in docs/kernel_cmdline.md.
-    uint32_t bs = cmdline_get_uint32("kernel.entropy.jitterentropy.bs", 64);
-    uint32_t bc = cmdline_get_uint32("kernel.entropy.jitterentropy.bc", 1024);
-    mem_loops_ = cmdline_get_uint32("kernel.entropy.jitterentropy.ml", 128);
-    lfsr_loops_ = cmdline_get_uint32("kernel.entropy.jitterentropy.ll", 16);
-    use_raw_samples_ = cmdline_get_bool("kernel.entropy.jitterentropy.raw",
-                                        false);
+    uint32_t bs = cmdline_get_uint32("kernel.jitterentropy.bs", 64);
+    uint32_t bc = cmdline_get_uint32("kernel.jitterentropy.bc", 1024);
+    mem_loops_ = cmdline_get_uint32("kernel.jitterentropy.ml", 128);
+    lfsr_loops_ = cmdline_get_uint32("kernel.jitterentropy.ll", 16);
+    use_raw_samples_ = cmdline_get_bool("kernel.jitterentropy.raw", false);
 
     jent_entropy_collector_init(&ec_, mem, len, bs, bc, mem_loops_,
                                 /* stir */ true);

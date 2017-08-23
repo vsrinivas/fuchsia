@@ -40,7 +40,7 @@ PRNG* GetInstance() {
 // TODO(security): Remove this in favor of virtio-rng once it is available and
 // we decide we don't need it for getting entropy from elsewhere.
 static bool IntegrateCmdlineEntropy() {
-    const char* entropy = cmdline_get("kernel.entropy.cmdline");
+    const char* entropy = cmdline_get("kernel.entropy-mixin");
     if (!entropy) {
         return false;
     }
