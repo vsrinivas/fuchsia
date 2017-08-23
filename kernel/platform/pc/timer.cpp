@@ -473,7 +473,7 @@ static void platform_init_timer(uint level)
         calibration_clock = CLOCK_PIT;
     }
 
-    const char *force_wallclock = cmdline_get("timer.wallclock");
+    const char *force_wallclock = cmdline_get("kernel.wallclock");
     bool use_invariant_tsc = invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"));
 
     use_tsc_deadline = use_invariant_tsc &&
@@ -502,7 +502,7 @@ static void platform_init_timer(uint level)
             hpet_enable();
         } else {
             if (force_wallclock && strcmp(force_wallclock, "pit")) {
-                panic("Could not satisfy timer.wallclock choice\n");
+                panic("Could not satisfy kernel.wallclock choice\n");
             }
 
             wall_clock = CLOCK_PIT;

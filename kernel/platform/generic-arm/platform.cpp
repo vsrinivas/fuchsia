@@ -593,7 +593,7 @@ void platform_early_init(void)
     process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
 
     // Read cmdline after processing bootdata, which may contain cmdline data.
-    halt_on_panic = cmdline_get_bool("kernel.halt_on_panic", false);
+    halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
 
     /* add the main memory arena */
     if (arena_size) {

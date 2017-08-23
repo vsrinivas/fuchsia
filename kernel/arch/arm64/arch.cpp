@@ -282,9 +282,9 @@ void arch_init(void)
     print_cpu_info();
 
     uint32_t max_cpus = arch_max_num_cpus();
-    uint32_t cmdline_max_cpus = cmdline_get_uint32("smp.maxcpus", max_cpus);
+    uint32_t cmdline_max_cpus = cmdline_get_uint32("kernel.smp.maxcpus", max_cpus);
     if (cmdline_max_cpus > max_cpus || cmdline_max_cpus <= 0) {
-        printf("invalid smp.maxcpus value, defaulting to %u\n", max_cpus);
+        printf("invalid kernel.smp.maxcpus value, defaulting to %u\n", max_cpus);
         cmdline_max_cpus = max_cpus;
     }
 

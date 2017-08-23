@@ -247,7 +247,7 @@ static void platform_save_bootloader_data(bool verify) {
         process_bootdata(bd, (uintptr_t) _bootdata_base, verify);
     }
 
-    halt_on_panic = cmdline_get_bool("kernel.halt_on_panic", false);
+    halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
 }
 
 static void* ramdisk_base;
@@ -760,7 +760,7 @@ static void platform_init_smp(void)
     }
 
     // Filter out hyperthreads if we've been told not to init them
-    bool use_ht = cmdline_get_bool("smp.ht", true);
+    bool use_ht = cmdline_get_bool("kernel.smp.ht", true);
 
     // we're implicitly running on the BSP
     uint32_t bsp_apic_id = apic_local_id();
@@ -791,9 +791,9 @@ static void platform_init_smp(void)
     num_cpus = using_count;
 
     // Find the CPU count limit
-    uint32_t max_cpus = cmdline_get_uint32("smp.maxcpus", SMP_MAX_CPUS);
+    uint32_t max_cpus = cmdline_get_uint32("kernel.smp.maxcpus", SMP_MAX_CPUS);
     if (max_cpus > SMP_MAX_CPUS || max_cpus <= 0) {
-        printf("invalid smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
+        printf("invalid kernel.smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
         max_cpus = SMP_MAX_CPUS;
     }
 

@@ -340,7 +340,7 @@ fi
 CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
 
 # Don't 'reboot' the emulator if the kernel crashes
-CMDLINE+="kernel.halt_on_panic=true "
+CMDLINE+="kernel.halt-on-panic=true "
 
 # run qemu
 set -x

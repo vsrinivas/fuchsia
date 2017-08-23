@@ -85,7 +85,7 @@ is 128 KiB.
 When running an entropy collector quality test, use the provided entropy source.
 Currently recognized sources: `hw_rng`, `jitterentropy`.
 
-## kernel.halt_on_panic=\<bool>
+## kernel.halt-on-panic=\<bool>
 If this option is set (disabled by default), the system will halt on
 a kernel panic instead of rebooting.
 
@@ -158,6 +158,21 @@ kernel thread should sleep between checks.
 The `k oom info` command will show the current value of this and other
 parameters.
 
+## kernel.smp.maxcpus=\<num>
+
+This option caps the number of CPUs to initialize.  It cannot be greater than
+*SMP\_MAX\_CPUS* for a specific architecture.
+
+## kernel.smp.ht=\<bool>
+
+This option can be used to disable the initialization of hyperthread logical
+CPUs.  Defaults to true.
+
+## kernel.wallclock=\<name>
+
+This option can be used to force the selection of a particular wall clock.  It
+only is used on pc builds.  Options are "tsc", "hpet", and "pit".
+
 ## ktrace.bufsize
 
 This option specifies the size of the buffer for ktrace records, in megabytes.
@@ -199,27 +214,6 @@ booting.
 More specifically, magenta will fetch a new magenta system from a bootserver on
 the local link and attempt to kexec into the new image, thereby replacing the
 currently running instance of magenta.
-
-## smp.maxcpus=\<num>
-
-This option caps the number of CPUs to initialize.  It cannot be greater than
-*SMP\_MAX\_CPUS* for a specific architecture.
-
-## smp.ht=\<bool>
-
-This option can be used to disable the initialization of hyperthread logical
-CPUs.  Defaults to true.
-
-## startup.keep-log-visible=\<bool>
-
-If this option is set, devmgr will not activate the first interactive
-console. It is useful for scenarios in which user input handling (and
-the ability to switch vcs) is not available. Defaults to false.
-
-## timer.wallclock=\<name>
-
-This option can be used to force the selection of a particular wall clock.  It
-only is used on pc builds.  Options are "tsc", "hpet", and "pit".
 
 ## userboot=\<path>
 
