@@ -74,14 +74,15 @@ class PageStorage {
       const CommitId& commit_id,
       JournalType journal_type,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) = 0;
-  // Starts a new |journal| for a merge commit, based on the given commits.
+  // Starts a new journal for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All
   // modifications to the journal consider the |left| as the base of the new
   // commit. Merge commits are always explicit, that is in case of a crash all
   // changes to the journal will be lost.
-  virtual Status StartMergeCommit(const CommitId& left,
-                                  const CommitId& right,
-                                  std::unique_ptr<Journal>* journal) = 0;
+  virtual void StartMergeCommit(
+      const CommitId& left,
+      const CommitId& right,
+      std::function<void(Status, std::unique_ptr<Journal>)> callback) = 0;
 
   // Commits the given |journal| and when finished, returns the success/failure
   // status and the created Commit object through the given |callback|.

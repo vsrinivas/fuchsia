@@ -90,6 +90,7 @@ Status PageDbEmptyImpl::CreateJournal(coroutine::CoroutineHandler* /*handler*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::CreateMergeJournal(
+    coroutine::CoroutineHandler* /*handler*/,
     const CommitId& /*base*/,
     const CommitId& /*other*/,
     std::unique_ptr<Journal>* /*journal*/) {

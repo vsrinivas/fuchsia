@@ -158,20 +158,24 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
     // Check if the 2 parents have the same content.
     if (commits[0]->GetRootId() == commits[1]->GetRootId()) {
       // In that case, the result must be a commit with the same content.
-      std::unique_ptr<storage::Journal> journal;
-      storage_->StartMergeCommit(commits[0]->GetId(), commits[1]->GetId(),
-                                 &journal);
-      storage_->CommitJournal(
-          std::move(journal),
-          ftl::MakeCopyable([cleanup = std::move(cleanup)](
-              storage::Status status, std::unique_ptr<const storage::Commit>) {
-            if (status != storage::Status::OK) {
-              FTL_LOG(ERROR) << "Unable to merge identical commits.";
-              return;
-            }
+      storage_->StartMergeCommit(
+          commits[0]->GetId(), commits[1]->GetId(),
+          ftl::MakeCopyable([ this, cleanup = std::move(cleanup) ](
+              storage::Status status,
+              std::unique_ptr<storage::Journal> journal) mutable {
+            storage_->CommitJournal(
+                std::move(journal),
+                ftl::MakeCopyable([cleanup = std::move(cleanup)](
+                    storage::Status status,
+                    std::unique_ptr<const storage::Commit>) {
+                  if (status != storage::Status::OK) {
+                    FTL_LOG(ERROR) << "Unable to merge identical commits.";
+                    return;
+                  }
 
-            // Report the merge.
-            ReportEvent(CobaltEvent::COMMITS_MERGED);
+                  // Report the merge.
+                  ReportEvent(CobaltEvent::COMMITS_MERGED);
+                }));
           }));
       return;
     }

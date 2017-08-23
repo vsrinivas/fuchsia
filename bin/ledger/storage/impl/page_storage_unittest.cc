@@ -139,7 +139,8 @@ class FakePageDbImpl : public PageDbEmptyImpl {
     return Status::OK;
   }
 
-  Status CreateMergeJournal(const CommitId& base,
+  Status CreateMergeJournal(coroutine::CoroutineHandler* /*handler*/,
+                            const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override {
     *journal = JournalDBImpl::Merge(coroutine_service_, storage_, this,
@@ -625,9 +626,11 @@ TEST_F(PageStorageTest, CreateJournals) {
   CommitId right_id = TryCommitFromLocal(JournalType::IMPLICIT, 10);
 
   // Journal for merge commit.
+  storage::Status status;
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK,
-            storage_->StartMergeCommit(left_id, right_id, &journal));
+  storage_->StartMergeCommit(
+      left_id, right_id, callback::Capture(MakeQuitTask(), &status, &journal));
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_NE(nullptr, journal);
   EXPECT_EQ(Status::OK, storage_->RollbackJournal(std::move(journal)));
 }
@@ -1217,9 +1220,12 @@ TEST_F(PageStorageTest, Generation) {
   std::unique_ptr<const Commit> commit2 = GetCommit(commit_id2);
   EXPECT_EQ(2u, commit2->GetGeneration());
 
+  storage::Status status;
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK,
-            storage_->StartMergeCommit(commit_id1, commit_id2, &journal));
+  storage_->StartMergeCommit(
+      commit_id1, commit_id2,
+      callback::Capture(MakeQuitTask(), &status, &journal));
+  EXPECT_EQ(Status::OK, status);
 
   std::unique_ptr<const Commit> commit3 =
       TryCommitJournal(std::move(journal), Status::OK);
@@ -1387,8 +1393,8 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
 //              (root)
 //             /   |   \
 //           (A)  (B)  (C)
-//             \   /
-//             (merge)
+//             \  /
+//           (merge)
 // C is the last commit to be created. The test verifies that the unsynced
 // commits are returned in the generation order, with the merge commit being the
 // last despite not being the most recent.
@@ -1421,9 +1427,11 @@ TEST_F(PageStorageTest, GetUnsyncedCommits) {
   EXPECT_EQ(1u, commit_b->GetGeneration());
 
   std::unique_ptr<Journal> journal_merge;
-  EXPECT_EQ(Status::OK,
-            storage_->StartMergeCommit(commit_a->GetId(), commit_b->GetId(),
-                                       &journal_merge));
+  storage_->StartMergeCommit(
+      commit_a->GetId(), commit_b->GetId(),
+      callback::Capture(MakeQuitTask(), &status, &journal_merge));
+  EXPECT_EQ(storage::Status::OK, status);
+
   std::unique_ptr<const Commit> commit_merge =
       TryCommitJournal(std::move(journal_merge), Status::OK);
   EXPECT_EQ(2u, commit_merge->GetGeneration());

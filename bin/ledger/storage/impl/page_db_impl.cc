@@ -279,11 +279,12 @@ Status PageDbImpl::CreateJournal(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::CreateMergeJournal(const CommitId& base,
+Status PageDbImpl::CreateMergeJournal(coroutine::CoroutineHandler* handler,
+                                      const CommitId& base,
                                       const CommitId& other,
                                       std::unique_ptr<Journal>* journal) {
   auto batch = StartBatch();
-  batch->CreateMergeJournal(base, other, journal);
+  batch->CreateMergeJournal(handler, base, other, journal);
   return batch->Execute();
 }
 

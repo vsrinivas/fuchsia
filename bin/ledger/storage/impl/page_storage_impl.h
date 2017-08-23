@@ -60,9 +60,10 @@ class PageStorageImpl : public PageStorage {
       const CommitId& commit_id,
       JournalType journal_type,
       std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
-  Status StartMergeCommit(const CommitId& left,
-                          const CommitId& right,
-                          std::unique_ptr<Journal>* journal) override;
+  void StartMergeCommit(
+      const CommitId& left,
+      const CommitId& right,
+      std::function<void(Status, std::unique_ptr<Journal>)> callback) override;
   void CommitJournal(std::unique_ptr<Journal> journal,
                      std::function<void(Status, std::unique_ptr<const Commit>)>
                          callback) override;

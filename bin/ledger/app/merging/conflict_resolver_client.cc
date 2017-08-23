@@ -50,31 +50,39 @@ ConflictResolverClient::~ConflictResolverClient() {
 
 void ConflictResolverClient::Start() {
   // Prepare the journal for the merge commit.
-  storage::Status status =
-      storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal_);
-  if (status != storage::Status::OK) {
-    FTL_LOG(ERROR) << "Unable to start merge commit: " << status;
-    Finalize(PageUtils::ConvertStatus(status));
-    return;
-  }
+  storage_->StartMergeCommit(
+      left_->GetId(), right_->GetId(),
+      [weak_this = weak_factory_.GetWeakPtr()](
+          storage::Status status, std::unique_ptr<storage::Journal> journal) {
+        if (!weak_this) {
+          return;
+        }
+        weak_this->journal_ = std::move(journal);
+        if (status != storage::Status::OK) {
+          FTL_LOG(ERROR) << "Unable to start merge commit: " << status;
+          weak_this->Finalize(PageUtils::ConvertStatus(status));
+          return;
+        }
 
-  PageSnapshotPtr page_snapshot_ancestor;
-  manager_->BindPageSnapshot(ancestor_->Clone(),
-                             page_snapshot_ancestor.NewRequest(), "");
+        PageSnapshotPtr page_snapshot_ancestor;
+        weak_this->manager_->BindPageSnapshot(
+            weak_this->ancestor_->Clone(), page_snapshot_ancestor.NewRequest(),
+            "");
 
-  PageSnapshotPtr page_snapshot_left;
-  manager_->BindPageSnapshot(left_->Clone(), page_snapshot_left.NewRequest(),
-                             "");
+        PageSnapshotPtr page_snapshot_left;
+        weak_this->manager_->BindPageSnapshot(
+            weak_this->left_->Clone(), page_snapshot_left.NewRequest(), "");
 
-  PageSnapshotPtr page_snapshot_right;
-  manager_->BindPageSnapshot(right_->Clone(), page_snapshot_right.NewRequest(),
-                             "");
+        PageSnapshotPtr page_snapshot_right;
+        weak_this->manager_->BindPageSnapshot(
+            weak_this->right_->Clone(), page_snapshot_right.NewRequest(), "");
 
-  in_client_request_ = true;
-  conflict_resolver_->Resolve(std::move(page_snapshot_left),
-                              std::move(page_snapshot_right),
-                              std::move(page_snapshot_ancestor),
-                              merge_result_provider_binding_.NewBinding());
+        weak_this->in_client_request_ = true;
+        weak_this->conflict_resolver_->Resolve(
+            std::move(page_snapshot_left), std::move(page_snapshot_right),
+            std::move(page_snapshot_ancestor),
+            weak_this->merge_result_provider_binding_.NewBinding());
+      });
 }
 
 void ConflictResolverClient::Cancel() {

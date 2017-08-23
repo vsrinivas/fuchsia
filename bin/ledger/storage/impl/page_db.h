@@ -70,7 +70,8 @@ class PageDbMutator {
 
   // Creates a new |Journal| for a merge commit with |base| and |other as
   // parents. The result is stored on the |journal| parameter.
-  virtual Status CreateMergeJournal(const CommitId& base,
+  virtual Status CreateMergeJournal(coroutine::CoroutineHandler* handler,
+                                    const CommitId& base,
                                     const CommitId& other,
                                     std::unique_ptr<Journal>* journal) = 0;
 

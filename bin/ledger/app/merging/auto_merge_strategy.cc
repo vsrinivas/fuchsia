@@ -215,33 +215,40 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
   // Here, we reuse the diff we computed before to create the merge commit. As
   // StartMergeCommit uses the left commit (first parameter) as its base, we
   // only have to apply the right diff to it and we are done.
-  std::unique_ptr<storage::Journal> journal;
-  storage::Status s =
-      storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal);
-  if (s != storage::Status::OK) {
-    FTL_LOG(ERROR) << "Unable to start merge commit: " << s;
-    Done(PageUtils::ConvertStatus(s));
-    return;
-  }
-  for (const storage::EntryChange& change : *right_changes) {
-    if (change.deleted) {
-      journal->Delete(change.entry.key);
-    } else {
-      journal->Put(change.entry.key, change.entry.object_id,
-                   change.entry.priority);
-    }
-  }
-  storage_->CommitJournal(
-      std::move(journal), [weak_this = weak_factory_.GetWeakPtr()](
-                              storage::Status status,
-                              std::unique_ptr<const storage::Commit>) {
-        if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+  storage_->StartMergeCommit(
+      left_->GetId(), right_->GetId(), ftl::MakeCopyable([
+        weak_this = weak_factory_.GetWeakPtr(),
+        right_changes = std::move(right_changes)
+      ](storage::Status s, std::unique_ptr<storage::Journal> journal) {
+        if (!weak_this) {
+          return;
         }
-        if (weak_this) {
-          weak_this->Done(PageUtils::ConvertStatus(status));
+        if (s != storage::Status::OK) {
+          FTL_LOG(ERROR) << "Unable to start merge commit: " << s;
+          weak_this->Done(PageUtils::ConvertStatus(s));
+          return;
         }
-      });
+        for (const storage::EntryChange& change : *right_changes) {
+          if (change.deleted) {
+            journal->Delete(change.entry.key);
+          } else {
+            journal->Put(change.entry.key, change.entry.object_id,
+                         change.entry.priority);
+          }
+        }
+        weak_this->storage_->CommitJournal(
+            std::move(journal), [weak_this = std::move(weak_this)](
+                                    storage::Status s,
+                                    std::unique_ptr<
+                                        const storage::Commit> /*commit*/) {
+              if (s != storage::Status::OK) {
+                FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+              }
+              if (weak_this) {
+                weak_this->Done(PageUtils::ConvertStatus(s));
+              }
+            });
+      }));
 }
 
 void AutoMergeStrategy::AutoMerger::Cancel() {

@@ -277,10 +277,17 @@ void PageStorageImpl::StartCommit(
   });
 }
 
-Status PageStorageImpl::StartMergeCommit(const CommitId& left,
-                                         const CommitId& right,
-                                         std::unique_ptr<Journal>* journal) {
-  return db_.CreateMergeJournal(left, right, journal);
+void PageStorageImpl::StartMergeCommit(
+    const CommitId& left,
+    const CommitId& right,
+    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, left, right, callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    std::unique_ptr<Journal> journal;
+    Status status = db_.CreateMergeJournal(handler, left, right, &journal);
+    callback(status, std::move(journal));
+  });
 }
 
 void PageStorageImpl::CommitJournal(

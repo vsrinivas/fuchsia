@@ -8,7 +8,6 @@
 #include <string>
 
 #include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/app/merging/test_utils.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/callback/capture.h"
@@ -59,10 +58,14 @@ class CommonAncestorTest : public test::TestWithPageStorage {
       storage::CommitIdView left,
       storage::CommitIdView right,
       std::function<void(storage::Journal*)> contents) {
+    storage::Status status;
     std::unique_ptr<storage::Journal> journal;
-    EXPECT_EQ(storage::Status::OK,
-              storage_->StartMergeCommit(left.ToString(), right.ToString(),
-                                         &journal));
+    storage_->StartMergeCommit(
+        left.ToString(), right.ToString(),
+        callback::Capture(MakeQuitTask(), &status, &journal));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
+
     contents(journal.get());
     storage::Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;

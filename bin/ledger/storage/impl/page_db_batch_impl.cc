@@ -58,9 +58,11 @@ Status PageDbBatchImpl::CreateJournal(coroutine::CoroutineHandler* /*handler*/,
   return Status::OK;
 }
 
-Status PageDbBatchImpl::CreateMergeJournal(const CommitId& base,
-                                           const CommitId& other,
-                                           std::unique_ptr<Journal>* journal) {
+Status PageDbBatchImpl::CreateMergeJournal(
+    coroutine::CoroutineHandler* /*handler*/,
+    const CommitId& base,
+    const CommitId& other,
+    std::unique_ptr<Journal>* journal) {
   *journal = JournalDBImpl::Merge(
       coroutine_service_, page_storage_, db_,
       JournalEntryRow::NewJournalId(JournalType::EXPLICIT), base, other);

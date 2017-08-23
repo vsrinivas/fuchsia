@@ -53,7 +53,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                        JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override;
-  Status CreateMergeJournal(const CommitId& base,
+  Status CreateMergeJournal(coroutine::CoroutineHandler* handler,
+                            const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override;
   Status RemoveExplicitJournals() override;

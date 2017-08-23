@@ -28,6 +28,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
 
  private:
   void Done(Status status);
+  void BuildAndCommitJournal();
 
   storage::PageStorage* const storage_;
 
@@ -66,10 +67,34 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
-  storage::Status s =
-      storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal_);
-  FTL_DCHECK(s == storage::Status::OK);
+  storage_->StartMergeCommit(
+      left_->GetId(), right_->GetId(),
+      [weak_this = weak_factory_.GetWeakPtr()](
+          storage::Status s, std::unique_ptr<storage::Journal> journal) {
+        if (!weak_this) {
+          return;
+        }
+        FTL_DCHECK(s == storage::Status::OK);
+        weak_this->journal_ = std::move(journal);
+        weak_this->BuildAndCommitJournal();
+      });
+}
 
+void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {
+  cancelled_ = true;
+  if (journal_) {
+    storage_->RollbackJournal(std::move(journal_));
+    journal_.reset();
+  }
+}
+
+void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
+  auto callback = std::move(callback_);
+  callback_ = nullptr;
+  callback(status);
+}
+
+void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
   auto on_next = [weak_this =
                       weak_factory_.GetWeakPtr()](storage::EntryChange change) {
     if (!weak_this || weak_this->cancelled_) {
@@ -116,22 +141,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
           }
         });
   };
-  storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next),
-                                  std::move(on_diff_done));
-}
-
-void LastOneWinsMergeStrategy::LastOneWinsMerger::Cancel() {
-  cancelled_ = true;
-  if (journal_) {
-    storage_->RollbackJournal(std::move(journal_));
-    journal_.reset();
-  }
-}
-
-void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
-  auto callback = std::move(callback_);
-  callback_ = nullptr;
-  callback(status);
+  storage_->GetCommitContentsDiff(*(ancestor_), *(right_), "",
+                                  std::move(on_next), std::move(on_diff_done));
 }
 
 LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() {}
