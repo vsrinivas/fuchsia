@@ -29,11 +29,14 @@ source_set("audio") {
     "resampler.h",
   ]
 
+  public_deps = [
+    "//lib/ftl",
+  ]
+
   deps = [
     "//apps/media/lib/timeline",
     "//apps/media/src/framework",
     "//apps/media/src/util",
-    "//lib/ftl",
     "//magenta/system/ulib/audio-proto-utils",
     "//magenta/system/ulib/audio-utils",
   ]
