@@ -52,6 +52,7 @@ source_set("unittests") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/testing:fake_application_launcher",
     "//apps/modular/lib/testing:ledger_repository_for_testing",
+    "//apps/modular/lib/testing:mock_base",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//apps/modular/services/agent",
     "//apps/modular/services/auth",

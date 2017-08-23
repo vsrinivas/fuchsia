@@ -9,6 +9,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/testing/fake_application_launcher.h"
 #include "apps/modular/lib/testing/ledger_repository_for_testing.h"
+#include "apps/modular/lib/testing/mock_base.h"
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
@@ -107,7 +108,9 @@ class AgentRunnerTest : public TestWithMessageLoop {
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };
 
-class MyDummyAgent : public Agent, public app::ApplicationController {
+class MyDummyAgent : Agent,
+                     public app::ApplicationController,
+                     public testing::MockBase {
  public:
   MyDummyAgent(fidl::InterfaceRequest<app::ServiceProvider> outgoing_services,
                fidl::InterfaceRequest<app::ApplicationController> ctrl)
@@ -121,39 +124,38 @@ class MyDummyAgent : public Agent, public app::ApplicationController {
 
   void KillApplication() { app_controller_.Close(); }
 
+  size_t GetCallCount(const std::string func) { return counts.count(func); }
+
  private:
   // |ApplicationController|
-  void Kill() override {}
+  void Kill() override { ++counts["Kill"]; }
   // |ApplicationController|
-  void Detach() override {}
+  void Detach() override { ++counts["Detach"]; }
 
   // |Agent|
   void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
                   const InitializeCallback& callback) override {
-    agent_initialized = true;
+    ++counts["Initialize"];
     callback();
   }
 
   // |Agent|
   void Connect(const fidl::String& requestor_url,
                fidl::InterfaceRequest<app::ServiceProvider> services) override {
-    agent_connected = true;
+    ++counts["Connect"];
   }
 
   // |Agent|
   void RunTask(const fidl::String& task_id,
-               const RunTaskCallback& callback) override {}
+               const RunTaskCallback& callback) override {
+    ++counts["RunTask"];
+  }
 
   // |Agent|
   void Stop(const StopCallback& callback) override {
-    agent_stopped = true;
+    ++counts["Stop"];
     callback();
   }
-
- public:
-  bool agent_initialized = false;
-  bool agent_connected = false;
-  bool agent_stopped = false;
 
  private:
   app::ServiceProviderImpl outgoing_services_;
@@ -167,18 +169,17 @@ class MyDummyAgent : public Agent, public app::ApplicationController {
 // Agent.Initialize(); once Initialize() responds, there should be an
 // Agent.Connect().
 TEST_F(AgentRunnerTest, ConnectToAgent) {
-  bool agent_launched = false;
-
+  int agent_launch_count = 0;
   std::unique_ptr<MyDummyAgent> dummy_agent;
   constexpr char kMyAgentUrl[] = "file:///my_agent";
   launcher()->RegisterApplication(
       kMyAgentUrl,
-      [&dummy_agent, &agent_launched](
+      [&dummy_agent, &agent_launch_count](
           app::ApplicationLaunchInfoPtr launch_info,
           fidl::InterfaceRequest<app::ApplicationController> ctrl) {
-        dummy_agent.reset(new MyDummyAgent(std::move(launch_info->services),
-                                           std::move(ctrl)));
-        agent_launched = true;
+        dummy_agent = std::make_unique<MyDummyAgent>(
+            std::move(launch_info->services), std::move(ctrl));
+        ++agent_launch_count;
       });
 
   app::ServiceProviderPtr incoming_services;
@@ -186,21 +187,17 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   agent_runner()->ConnectToAgent("requestor_url", kMyAgentUrl,
                                  incoming_services.NewRequest(),
                                  agent_controller.NewRequest());
+  EXPECT_EQ(1, agent_launch_count);
 
-  RunLoopUntil([&agent_launched] { return agent_launched; });
-  EXPECT_TRUE(agent_launched);
+  RunLoopUntil(
+      [&dummy_agent] { return dummy_agent->GetCallCount("Connect") > 0; });
+  dummy_agent->ExpectCalledOnce("Initialize");
+  dummy_agent->ExpectCalledOnce("Connect");
+  dummy_agent->ExpectNoOtherCalls();
 
-  RunLoopUntil([&dummy_agent] { return dummy_agent->agent_initialized; });
-  EXPECT_TRUE(dummy_agent->agent_initialized);
-
-  RunLoopUntil([&dummy_agent] { return dummy_agent->agent_connected; });
-  EXPECT_TRUE(dummy_agent->agent_connected);
-
-  // Connecting to the same agent again shouldn't initialize or launch a new
-  // instance of the agent application.
-  agent_launched = false;
-  dummy_agent->agent_initialized = false;
-  dummy_agent->agent_connected = true;
+  // Connecting to the same agent again shouldn't launch a new instance and
+  // shouldn't re-initialize the existing instance of the agent application,
+  // but should call |Connect()|.
 
   AgentControllerPtr agent_controller2;
   app::ServiceProviderPtr incoming_services2;
@@ -208,10 +205,10 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
                                  incoming_services2.NewRequest(),
                                  agent_controller2.NewRequest());
 
-  RunLoopUntil([&dummy_agent] { return dummy_agent->agent_connected; });
-  EXPECT_FALSE(agent_launched);
-  EXPECT_FALSE(dummy_agent->agent_initialized);
-  EXPECT_TRUE(dummy_agent->agent_connected);
+  RunLoopUntil([&dummy_agent] { return dummy_agent->GetCallCount("Connect"); });
+  EXPECT_EQ(1, agent_launch_count);
+  dummy_agent->ExpectCalledOnce("Connect");
+  dummy_agent->ExpectNoOtherCalls();
 }
 
 // Test that if an agent application dies, it is removed from agent runner

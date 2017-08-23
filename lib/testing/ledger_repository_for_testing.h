@@ -6,7 +6,6 @@
 #define APPS_MODULAR_LIB_TESTING_LEDGER_REPOSITORY_FOR_TESTING_H_
 
 #include <string>
-#include <unordered_map>
 
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"

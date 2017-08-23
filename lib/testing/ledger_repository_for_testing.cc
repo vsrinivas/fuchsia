@@ -43,7 +43,6 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
 LedgerRepositoryForTesting::LedgerRepositoryForTesting(
     const std::string& repository_path)
     : repository_path_(repository_path) {
-  FTL_LOG(INFO) << "New ledger repo instance";
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
