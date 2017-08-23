@@ -7,8 +7,8 @@
 #include <mx/time.h>
 #include <queue>
 
-#include "ftl/macros.h"
-#include "ftl/memory/ref_ptr.h"
+#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_ptr.h"
 
 namespace ftl {
 class TaskRunner;

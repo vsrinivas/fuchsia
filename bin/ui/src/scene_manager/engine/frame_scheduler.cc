@@ -9,7 +9,7 @@
 #include "apps/mozart/src/scene_manager/displays/display.h"
 #include "apps/mozart/src/scene_manager/engine/frame_timings.h"
 #include "apps/tracing/lib/trace/event.h"
-#include "ftl/logging.h"
+#include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace scene_manager {
