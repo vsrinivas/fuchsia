@@ -769,6 +769,15 @@ mx_status_t VnodeMinfs::Open(uint32_t flags) {
     if ((flags & O_DIRECTORY) && !IsDirectory()) {
         return MX_ERR_NOT_DIR;
     }
+
+    switch (flags & O_ACCMODE) {
+    case O_WRONLY:
+    case O_RDWR:
+        if (IsDirectory()) {
+            return MX_ERR_NOT_FILE;
+        }
+    }
+
     return MX_OK;
 }
 

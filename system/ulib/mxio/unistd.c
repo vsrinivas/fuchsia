@@ -735,6 +735,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case MX_ERR_BAD_STATE: return EPIPE;
     case MX_ERR_BAD_PATH: return ENAMETOOLONG;
     case MX_ERR_IO: return EIO;
+    case MX_ERR_NOT_FILE: return EISDIR;
     case MX_ERR_NOT_DIR: return ENOTDIR;
     case MX_ERR_NOT_SUPPORTED: return ENOTSUP;
     case MX_ERR_OUT_OF_RANGE: return EINVAL;

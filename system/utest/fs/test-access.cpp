@@ -107,8 +107,33 @@ bool test_access_badflags(void) {
     END_TEST;
 }
 
+bool test_access_directory(void) {
+    BEGIN_TEST;
+
+    const char* filename = "::foobar";
+
+    ASSERT_EQ(mkdir(filename, 0666), 0);
+
+    // Try opening as writable
+    int fd = open(filename, O_RDWR, 0644);
+    ASSERT_LT(fd, 0);
+    ASSERT_EQ(errno, EISDIR);
+    fd = open(filename, O_WRONLY, 0644);
+    ASSERT_LT(fd, 0);
+    ASSERT_EQ(errno, EISDIR);
+
+    // Directories should only be openable with O_RDONLY
+    fd = open(filename, O_RDONLY, 0644);
+    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(rmdir(filename), 0);
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(access_tests,
     RUN_TEST_MEDIUM(test_access_readable)
     RUN_TEST_MEDIUM(test_access_writable)
     RUN_TEST_MEDIUM(test_access_badflags)
+    RUN_TEST_MEDIUM(test_access_directory)
 )
