@@ -85,7 +85,7 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents) {
     .events = events,
   };
 
-  int n = poll(&fds, 1, 100); // timeout: 100ms
+  int n = poll(&fds, 1, 1000); // timeout: 1000ms
   ASSERT_GT(n, 0) << "poll failed: " << errno;
 
   EXPECT_EQ(0, close(connfd));
