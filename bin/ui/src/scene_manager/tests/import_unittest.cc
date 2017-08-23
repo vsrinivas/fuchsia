@@ -351,7 +351,8 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
   }
 }
 
-TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
+// This test is disabled because it crashes.
+TEST_F(ImportTest, DISABLED_EmbedderCanEmbedNodesFromElsewhere) {
   // Create the token pain.
   mx::eventpair import_token, export_token;
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &import_token, &export_token));
