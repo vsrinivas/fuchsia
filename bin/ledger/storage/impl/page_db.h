@@ -63,7 +63,8 @@ class PageDbMutator {
   // Journals.
   // Creates a new |Journal| with the given |base| commit id and stores it on
   // the |journal| parameter.
-  virtual Status CreateJournal(JournalType journal_type,
+  virtual Status CreateJournal(coroutine::CoroutineHandler* handler,
+                               JournalType journal_type,
                                const CommitId& base,
                                std::unique_ptr<Journal>* journal) = 0;
 

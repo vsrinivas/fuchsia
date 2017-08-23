@@ -59,7 +59,8 @@ class PageDbImpl : public PageDb {
                                ftl::StringView storage_bytes) override;
   Status RemoveCommit(coroutine::CoroutineHandler* handler,
                       const CommitId& commit_id) override;
-  Status CreateJournal(JournalType journal_type,
+  Status CreateJournal(coroutine::CoroutineHandler* handler,
+                       JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override;
   Status CreateMergeJournal(const CommitId& base,

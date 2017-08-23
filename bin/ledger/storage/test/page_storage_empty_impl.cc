@@ -38,12 +38,12 @@ void PageStorageEmptyImpl::AddCommitsFromSync(
   callback(Status::NOT_IMPLEMENTED);
 }
 
-Status PageStorageEmptyImpl::StartCommit(
+void PageStorageEmptyImpl::StartCommit(
     const CommitId& /*commit_id*/,
     JournalType /*journal_type*/,
-    std::unique_ptr<Journal>* /*journal*/) {
+    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
 Status PageStorageEmptyImpl::StartMergeCommit(

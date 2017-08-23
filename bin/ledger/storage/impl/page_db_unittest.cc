@@ -146,10 +146,10 @@ TEST_F(PageDbTest, Journals) {
 
   std::unique_ptr<Journal> implicit_journal;
   std::unique_ptr<Journal> explicit_journal;
-  EXPECT_EQ(Status::OK, page_db_.CreateJournal(JournalType::IMPLICIT, commit_id,
-                                               &implicit_journal));
-  EXPECT_EQ(Status::OK, page_db_.CreateJournal(JournalType::EXPLICIT, commit_id,
-                                               &explicit_journal));
+  EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler_, JournalType::IMPLICIT,
+                                               commit_id, &implicit_journal));
+  EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler_, JournalType::EXPLICIT,
+                                               commit_id, &explicit_journal));
 
   EXPECT_EQ(Status::OK, page_db_.RemoveExplicitJournals());
 
@@ -172,8 +172,8 @@ TEST_F(PageDbTest, JournalEntries) {
   CommitId commit_id = RandomCommitId();
 
   std::unique_ptr<Journal> implicit_journal;
-  EXPECT_EQ(Status::OK, page_db_.CreateJournal(JournalType::IMPLICIT, commit_id,
-                                               &implicit_journal));
+  EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler_, JournalType::IMPLICIT,
+                                               commit_id, &implicit_journal));
   EXPECT_EQ(Status::OK,
             implicit_journal->Put("add-key-1", "value1", KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,

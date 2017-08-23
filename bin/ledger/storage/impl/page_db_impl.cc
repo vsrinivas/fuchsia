@@ -270,11 +270,12 @@ Status PageDbImpl::RemoveCommit(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::CreateJournal(JournalType journal_type,
+Status PageDbImpl::CreateJournal(coroutine::CoroutineHandler* handler,
+                                 JournalType journal_type,
                                  const CommitId& base,
                                  std::unique_ptr<Journal>* journal) {
   auto batch = StartBatch();
-  batch->CreateJournal(journal_type, base, journal);
+  batch->CreateJournal(handler, journal_type, base, journal);
   return batch->Execute();
 }
 

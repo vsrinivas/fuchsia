@@ -45,7 +45,8 @@ Status PageDbBatchImpl::RemoveCommit(coroutine::CoroutineHandler* /*handler*/,
   return batch_->Delete(CommitRow::GetKeyFor(commit_id));
 }
 
-Status PageDbBatchImpl::CreateJournal(JournalType journal_type,
+Status PageDbBatchImpl::CreateJournal(coroutine::CoroutineHandler* /*handler*/,
+                                      JournalType journal_type,
                                       const CommitId& base,
                                       std::unique_ptr<Journal>* journal) {
   JournalId id = JournalEntryRow::NewJournalId(journal_type);

@@ -263,10 +263,18 @@ void PageStorageImpl::AddCommitsFromSync(
   }));
 }
 
-Status PageStorageImpl::StartCommit(const CommitId& commit_id,
-                                    JournalType journal_type,
-                                    std::unique_ptr<Journal>* journal) {
-  return db_.CreateJournal(journal_type, commit_id, journal);
+void PageStorageImpl::StartCommit(
+    const CommitId& commit_id,
+    JournalType journal_type,
+    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, commit_id, journal_type, callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    std::unique_ptr<Journal> journal;
+    Status status =
+        db_.CreateJournal(handler, journal_type, commit_id, &journal);
+    callback(status, std::move(journal));
+  });
 }
 
 Status PageStorageImpl::StartMergeCommit(const CommitId& left,

@@ -219,15 +219,17 @@ void PageDelegate::StartTransaction(
       return;
     }
     storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
-    storage::Status status = storage_->StartCommit(
-        commit_id, storage::JournalType::EXPLICIT, &journal_);
-    if (status != storage::Status::OK) {
-      callback(PageUtils::ConvertStatus(status));
-      return;
-    }
-    journal_parent_commit_ = commit_id;
-    branch_tracker_.StartTransaction([callback = std::move(callback)]() {
-      callback(Status::OK);
+    storage_->StartCommit(commit_id, storage::JournalType::EXPLICIT, [
+      this, commit_id, callback = std::move(callback)
+    ](storage::Status status, std::unique_ptr<storage::Journal> journal) {
+      journal_ = std::move(journal);
+      if (status != storage::Status::OK) {
+        callback(PageUtils::ConvertStatus(status));
+        return;
+      }
+      journal_parent_commit_ = commit_id;
+
+      branch_tracker_.StartTransaction([callback]() { callback(Status::OK); });
     });
   });
 }
@@ -309,28 +311,31 @@ void PageDelegate::RunInTransaction(
   branch_tracker_.StartTransaction([] {});
   storage::CommitId commit_id = branch_tracker_.GetBranchHeadId();
   std::unique_ptr<storage::Journal> journal;
-  storage::Status status = storage_->StartCommit(
-      commit_id, storage::JournalType::IMPLICIT, &journal);
-  if (status != storage::Status::OK) {
-    callback(PageUtils::ConvertStatus(status));
-    storage_->RollbackJournal(std::move(journal));
-    branch_tracker_.StopTransaction(nullptr);
-    return;
-  }
-  Status ledger_status = runnable(journal.get());
-  if (ledger_status != Status::OK) {
-    callback(ledger_status);
-    storage_->RollbackJournal(std::move(journal));
-    branch_tracker_.StopTransaction(nullptr);
-    return;
-  }
+  storage_->StartCommit(commit_id, storage::JournalType::IMPLICIT, [
+    this, runnable = std::move(runnable), callback = std::move(callback)
+  ](storage::Status status, std::unique_ptr<storage::Journal> journal) {
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status));
+      storage_->RollbackJournal(std::move(journal));
+      branch_tracker_.StopTransaction(nullptr);
+      return;
+    }
+    Status ledger_status = runnable(journal.get());
+    if (ledger_status != Status::OK) {
+      callback(ledger_status);
+      storage_->RollbackJournal(std::move(journal));
+      branch_tracker_.StopTransaction(nullptr);
+      return;
+    }
 
-  CommitJournal(std::move(journal), [
-    this, callback = std::move(callback)
-  ](Status status, std::unique_ptr<const storage::Commit> commit) {
-    branch_tracker_.StopTransaction(status == Status::OK ? std::move(commit)
-                                                         : nullptr);
-    callback(status);
+    CommitJournal(
+        std::move(journal),
+        [this, callback](Status status,
+                         std::unique_ptr<const storage::Commit> commit) {
+          branch_tracker_.StopTransaction(
+              status == Status::OK ? std::move(commit) : nullptr);
+          callback(status);
+        });
   });
 }
 

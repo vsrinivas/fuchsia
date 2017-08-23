@@ -38,19 +38,21 @@ class CommonAncestorTest : public test::TestWithPageStorage {
   std::unique_ptr<const storage::Commit> CreateCommit(
       storage::CommitIdView parent_id,
       std::function<void(storage::Journal*)> contents) {
+    storage::Status status;
     std::unique_ptr<storage::Journal> journal;
-    EXPECT_EQ(storage::Status::OK,
-              storage_->StartCommit(parent_id.ToString(),
-                                    storage::JournalType::IMPLICIT, &journal));
+    storage_->StartCommit(parent_id.ToString(), storage::JournalType::IMPLICIT,
+                          callback::Capture(MakeQuitTask(), &status, &journal));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
+
     contents(journal.get());
-    storage::Status actual_status;
-    std::unique_ptr<const storage::Commit> actual_commit;
+    std::unique_ptr<const storage::Commit> commit;
     storage_->CommitJournal(
         std::move(journal),
-        callback::Capture(MakeQuitTask(), &actual_status, &actual_commit));
+        callback::Capture(MakeQuitTask(), &status, &commit));
     EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(storage::Status::OK, actual_status);
-    return actual_commit;
+    EXPECT_EQ(storage::Status::OK, status);
+    return commit;
   }
 
   std::unique_ptr<const storage::Commit> CreateMergeCommit(

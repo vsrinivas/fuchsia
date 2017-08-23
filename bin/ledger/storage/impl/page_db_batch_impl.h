@@ -32,7 +32,8 @@ class PageDbBatchImpl : public PageDb::Batch {
                       const CommitId& commit_id) override;
 
   // Journals.
-  Status CreateJournal(JournalType journal_type,
+  Status CreateJournal(coroutine::CoroutineHandler* handler,
+                       JournalType journal_type,
                        const CommitId& base,
                        std::unique_ptr<Journal>* journal) override;
   Status CreateMergeJournal(const CommitId& base,

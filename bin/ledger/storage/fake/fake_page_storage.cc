@@ -87,13 +87,14 @@ void FakePageStorage::GetCommit(
       ftl::TimeDelta::FromMilliseconds(5));
 }
 
-Status FakePageStorage::StartCommit(const CommitId& commit_id,
-                                    JournalType /*journal_type*/,
-                                    std::unique_ptr<Journal>* journal) {
+void FakePageStorage::StartCommit(
+    const CommitId& commit_id,
+    JournalType /*journal_type*/,
+    std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   auto delegate = std::make_unique<FakeJournalDelegate>(commit_id, autocommit_);
-  *journal = std::make_unique<FakeJournal>(delegate.get());
+  auto journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
-  return Status::OK;
+  callback(Status::OK, std::move(journal));
 }
 
 void FakePageStorage::CommitJournal(

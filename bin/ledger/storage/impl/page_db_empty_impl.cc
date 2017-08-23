@@ -83,7 +83,8 @@ Status PageDbEmptyImpl::RemoveCommit(coroutine::CoroutineHandler* /*handler*/,
                                      const CommitId& /*commit_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::CreateJournal(JournalType /*journal_type*/,
+Status PageDbEmptyImpl::CreateJournal(coroutine::CoroutineHandler* /*handler*/,
+                                      JournalType /*journal_type*/,
                                       const CommitId& /*base*/,
                                       std::unique_ptr<Journal>* /*journal*/) {
   return Status::NOT_IMPLEMENTED;
