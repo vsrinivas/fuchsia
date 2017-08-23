@@ -24,6 +24,7 @@
 namespace vk {
 using ExternalSemaphoreHandleTypeFlagBitsKHR =
     ExternalSemaphoreHandleTypeFlagBitsKHX;
+using ImportSemaphoreFdInfoKHR = ImportSemaphoreFdInfoKHX;
 }
 #endif
 #endif
