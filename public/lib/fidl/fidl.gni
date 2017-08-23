@@ -532,6 +532,7 @@ template("fidl") {
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
         "//lib/fidl/compiler/interfaces:interfaces__generator",
+        "//lib/fidl/cpp/bindings",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -560,6 +561,7 @@ template("fidl") {
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
         "//lib/fidl/compiler/interfaces:interfaces__generator",
+        "//lib/fidl/cpp/bindings",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
