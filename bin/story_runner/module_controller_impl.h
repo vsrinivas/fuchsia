@@ -8,8 +8,10 @@
 #include <vector>
 
 #include "application/services/application_launcher.fidl.h"
+#include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
+#include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -27,10 +29,15 @@ class StoryControllerImpl;
 // ModuleContextImpl instance.
 class ModuleControllerImpl : ModuleController {
  public:
-  ModuleControllerImpl(StoryControllerImpl* story_controller_impl,
-                       app::ApplicationControllerPtr module_application,
-                       ModulePtr module,
-                       const fidl::Array<fidl::String>& module_path);
+  ModuleControllerImpl(
+      StoryControllerImpl* story_controller_impl,
+      app::ApplicationLauncher* application_launcher,
+      AppConfigPtr module_config,
+      const fidl::Array<fidl::String>& module_path,
+      fidl::InterfaceHandle<ModuleContext> module_context,
+      fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+      fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<app::ServiceProvider> incoming_services);
 
   ~ModuleControllerImpl() override;
 
@@ -59,11 +66,7 @@ class ModuleControllerImpl : ModuleController {
   // The story this Module instance runs in.
   StoryControllerImpl* const story_controller_impl_;
 
-  // The application which implements the Module instance.
-  app::ApplicationControllerPtr module_application_;
-
-  // The Module instance.
-  ModulePtr module_;
+  AppClient<Module> app_client_;
 
   // The Module path
   const fidl::Array<fidl::String> module_path_;

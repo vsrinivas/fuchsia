@@ -644,36 +644,25 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
   void Launch(FlowToken /*flow*/) {
-    auto launch_info = app::ApplicationLaunchInfo::New();
-
-    app::ServiceProviderPtr app_services;
-    launch_info->services = app_services.NewRequest();
-    launch_info->url = module_url_;
-
     FTL_LOG(INFO) << "StoryControllerImpl::StartModule() " << module_url_;
-
-    app::ApplicationControllerPtr application_controller;
-    story_controller_impl_->story_scope_.GetLauncher()->CreateApplication(
-        std::move(launch_info), application_controller.NewRequest());
+    auto module_config = AppConfig::New();
+    module_config->url = module_url_;
 
     mozart::ViewProviderPtr view_provider;
-    ConnectToService(app_services.get(), view_provider.NewRequest());
+    fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
+        view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
-
-    ModulePtr module;
-    ConnectToService(app_services.get(), module.NewRequest());
 
     fidl::InterfaceHandle<ModuleContext> self;
     fidl::InterfaceRequest<ModuleContext> self_request = self.NewRequest();
 
-    module->Initialize(std::move(self), std::move(outgoing_services_),
-                       std::move(incoming_services_));
-
     Connection connection;
-
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
-        story_controller_impl_, std::move(application_controller),
-        std::move(module), module_path_);
+        story_controller_impl_,
+        story_controller_impl_->story_scope_.GetLauncher(),
+        std::move(module_config), module_path_, std::move(self),
+        std::move(view_provider_request), std::move(outgoing_services_),
+        std::move(incoming_services_));
     connection.module_controller_impl->Connect(
         std::move(module_controller_request_));
 

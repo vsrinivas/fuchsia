@@ -17,18 +17,31 @@ namespace modular {
 
 constexpr ftl::TimeDelta kStoryTeardownTimeout = ftl::TimeDelta::FromSeconds(1);
 
+// Template specializations for fidl services that don't have a Terminate()
+template <>
+void AppClient<Module>::ServiceTerminate(const std::function<void()>& done) {
+  FTL_NOTREACHED();
+}
+
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
-    app::ApplicationControllerPtr module_application,
-    ModulePtr module,
-    const fidl::Array<fidl::String>& module_path)
+    app::ApplicationLauncher* const application_launcher,
+    AppConfigPtr module_config,
+    const fidl::Array<fidl::String>& module_path,
+    fidl::InterfaceHandle<ModuleContext> module_context,
+    fidl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+    fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<app::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
-      module_application_(std::move(module_application)),
-      module_(std::move(module)),
+      app_client_(application_launcher, std::move(module_config)),
       module_path_(module_path.Clone()) {
-  module_application_.set_connection_error_handler(
-      [this] { SetState(ModuleState::ERROR); });
-  module_.set_connection_error_handler([this] { OnConnectionError(); });
+  app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
+  app_client_.primary_service().set_connection_error_handler(
+      [this] { OnConnectionError(); });
+  app_client_.primary_service()->Initialize(std::move(module_context),
+                                            std::move(outgoing_services),
+                                            std::move(incoming_services));
+  ConnectToService(app_client_.services(), std::move(view_provider_request));
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}
@@ -76,7 +89,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     }
     *called = true;
 
-    module_.reset();
+    app_client_.primary_service().reset();
     SetState(ModuleState::STOPPED);
 
     // ReleaseModule() must be called before the callbacks, because
@@ -91,7 +104,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     // |this| must be deleted after the callbacks so that the |done()| calls
     // above can be dispatched while the bindings still exist in case they are
     // FIDL method callbacks.
-    // Destructing |this| will delete |module_application_|, which will kill the
+    // Destructing |this| will delete |app_client_|, which will kill the
     // related application if it's still running.
     // TODO(jimbe) This line needs review if (someday) we add support in
     // Modular for multi-tenancy of Modules in ELF executables.
@@ -100,23 +113,23 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
 
   // At this point, it's no longer an error if the module closes its
   // connection, or the application exits.
-  module_application_.set_connection_error_handler(nullptr);
+  app_client_.SetAppErrorHandler(nullptr);
 
   // If the module was UNLINKED, stop it without a delay. Otherwise
   // call Module.Stop(), but also schedule a timeout in case it
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
-    module_.set_connection_error_handler(nullptr);
+    app_client_.primary_service().set_connection_error_handler(nullptr);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
   } else {
     // The contract for Stop() is that the Application will be killed when
     // the Module's handle is closed.
-    module_.set_connection_error_handler(cont);
+    app_client_.primary_service().set_connection_error_handler(cont);
 
     // TODO(jimbe) Remove the lambda parameter to Stop(), which is no
     // longer used. [FW-265] Expected to happen as part of implementing the
     // Lifecycle interface for namespaces.
-    module_->Stop([] {});
+    app_client_.primary_service()->Stop([] {});
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         cont, kStoryTeardownTimeout);
   }
