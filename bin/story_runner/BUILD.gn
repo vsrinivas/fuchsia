@@ -82,11 +82,14 @@ source_set("unittests") {
 
   sources = [
     "key_generator_unittest.cc",
+    "link_impl_unittest.cc",
   ]
 
   deps = [
     ":story_runner",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/src/agent_runner",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//third_party/gtest",
   ]
