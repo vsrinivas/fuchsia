@@ -15,6 +15,8 @@ MODULE_EXPORT := a
 #MODULE_SO_NAME := tftp
 MODULE_LIBS := system/ulib/magenta system/ulib/c
 
+MODULE_COMPILEFLAGS := -DTFTP_USERLIB
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).test
@@ -39,7 +41,7 @@ MODULE_SRCS := $(LOCAL_DIR)/tftp.c $(LOCAL_DIR)/tftp-example.c
 
 MODULE_NAME := tftp-example
 
-MODULE_COMPILEFLAGS += -I$(LOCAL_DIR)/include -std=c11
+MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)/include -std=c11 -DTFTP_HOSTLIB
 
 include make/module.mk
 
@@ -51,6 +53,8 @@ MODULE_TYPE := hostlib
 
 MODULE_SRCS := $(LOCAL_DIR)/tftp.c
 
+MODULE_COMPILEFLAGS := -DTFTP_HOSTLIB
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).efilib
@@ -60,5 +64,7 @@ MODULE_NAME := tftp
 MODULE_TYPE := efilib
 
 MODULE_SRCS := $(LOCAL_DIR)/tftp.c
+
+MODULE_COMPILEFLAGS := -DTFTP_EFILIB
 
 include make/module.mk

@@ -56,7 +56,18 @@ static const size_t kMaxWindowSizeOpt = 17;  // strlen(WINDOWSIZE) + 1 + strlen(
 // blocksize of 512 (RFC 1350 and 2347).
 static const size_t kMaxRequestSize = 512;
 
+#if defined(TFTP_HOSTLIB)
+// Host (e.g., netcp, bootserver)
 #define DEBUG 0
+#elif defined(TFTP_USERLIB)
+// Fuchsia (e.g., netsvc)
+#define DEBUG 0
+#elif defined(TFTP_EFILIB)
+// Bootloader: use judiciously, since the console can easily become overwhelmed and hang
+#define DEBUG 0
+#else
+#error unable to identify target environment
+#endif
 
 #if DEBUG
 # define xprintf(args...) fprintf(stderr, args)
