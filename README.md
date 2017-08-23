@@ -1,5 +1,4 @@
-Fuchsia Open Source Template Repository
-=======================================
+Garnet
+======
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+This repository contains the Garnet layer of the Fuchsia stack.
