@@ -7,6 +7,7 @@
 #include <endian.h>
 
 #include "apps/bluetooth/lib/common/packet_view.h"
+#include "apps/bluetooth/lib/hci/defaults.h"
 #include "apps/bluetooth/lib/hci/hci.h"
 #include "apps/bluetooth/lib/hci/util.h"
 #include "apps/bluetooth/lib/testing/fake_device.h"
@@ -207,6 +208,51 @@ void FakeController::SendLEMetaEvent(hci::EventCode subevent_code, const void* p
   buffer.Write(static_cast<const uint8_t*>(params), params_size, 1);
 
   SendEvent(hci::kLEMetaEventCode, buffer.data(), buffer.size());
+}
+
+void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr) {
+  task_runner()->PostTask([addr, this] {
+    FakeDevice* dev = FindDeviceByAddress(addr);
+    if (!dev) {
+      FXL_LOG(WARNING) << "FakeController: no device found with address: " << addr.ToString();
+      return;
+    }
+
+    // TODO(armansito): Don't worry about managing multiple links per device until this supports
+    // Bluetooth classic.
+    if (dev->connected()) {
+      FXL_LOG(WARNING) << "FakeController: device already connected";
+      return;
+    }
+
+    dev->set_connected(true);
+    hci::ConnectionHandle handle = ++next_conn_handle_;
+    dev->AddLink(handle);
+
+    NotifyConnectionState(addr, true);
+
+    auto interval_min = hci::defaults::kLEConnectionIntervalMin;
+    auto interval_max = hci::defaults::kLEConnectionIntervalMax;
+
+    hci::Connection::LowEnergyParameters conn_params(
+        interval_min, interval_max, interval_min + ((interval_max - interval_min) / 2), 0,
+        hci::defaults::kLESupervisionTimeout);
+    dev->set_le_params(conn_params);
+
+    hci::LEConnectionCompleteSubeventParams params;
+    std::memset(&params, 0, sizeof(params));
+
+    params.status = hci::Status::kSuccess;
+    params.peer_address = addr.value();
+    params.peer_address_type = ToPeerAddrType(addr.type());
+    params.conn_latency = htole16(conn_params.latency());
+    params.conn_interval = htole16(conn_params.interval());
+    params.supervision_timeout = htole16(conn_params.supervision_timeout());
+    params.role = hci::LEConnectionRole::kSlave;
+    params.connection_handle = htole16(handle);
+
+    SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode, &params, sizeof(params));
+  });
 }
 
 void FakeController::Disconnect(const common::DeviceAddress& addr) {

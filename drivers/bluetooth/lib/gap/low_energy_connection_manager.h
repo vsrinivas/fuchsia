@@ -243,7 +243,8 @@ class LowEnergyConnectionManager final {
   // connection references are invalidated.
   DisconnectCallback test_disconn_cb_;
 
-  std::vector<ConnectionCallback> listeners_;
+  ListenerId next_listener_id_;
+  std::unordered_map<ListenerId, ConnectionCallback> listeners_;
 
   // Outstanding connection requests based on remote device ID.
   std::unordered_map<std::string, PendingRequestData> pending_requests_;

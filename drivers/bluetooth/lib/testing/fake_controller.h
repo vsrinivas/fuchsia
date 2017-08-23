@@ -113,6 +113,10 @@ class FakeController : public FakeControllerBase {
   // Sends a LE Meta event with the given parameters.
   void SendLEMetaEvent(hci::EventCode subevent_code, const void* params, uint8_t params_size);
 
+  // Used to simulate a remote-initiated connection request. FakeController will pretend to create
+  // a LE link in the slave role.
+  void ConnectLowEnergy(const common::DeviceAddress& addr);
+
   // Marks the FakeDevice with address |address| as disconnected and sends a HCI Disconnection
   // Complete event for all of its links.
   void Disconnect(const common::DeviceAddress& addr);

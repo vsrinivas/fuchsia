@@ -675,6 +675,146 @@ TEST_F(LowEnergyConnectionManagerTest, DisconnectEventWhileRefPending) {
   RunMessageLoop();
 }
 
+// Listener receives local initiated connection ref.
+TEST_F(LowEnergyConnectionManagerTest, Listener) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  LowEnergyConnectionRefPtr conn_ref;
+  auto listener = [&conn_ref](auto cb_conn_ref) {
+    ASSERT_TRUE(cb_conn_ref);
+    EXPECT_TRUE(cb_conn_ref->active());
+
+    conn_ref = std::move(cb_conn_ref);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  conn_mgr()->AddListener(listener);
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), [](auto, auto) {}));
+  RunMessageLoop();
+  ASSERT_TRUE(conn_ref);
+  EXPECT_EQ(dev0->identifier(), conn_ref->device_identifier());
+
+  conn_ref = nullptr;
+  set_quit_message_loop_on_state_change(true);
+  RunMessageLoop();
+  EXPECT_TRUE(connected_devices().empty());
+}
+
+// Listener receives local initiated connection ref but does not take its ownership.
+TEST_F(LowEnergyConnectionManagerTest, ListenerRefUnclaimed) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  bool listener_called = false;
+  auto listener = [&listener_called](auto conn_ref) {
+    ASSERT_TRUE(conn_ref);
+    EXPECT_TRUE(conn_ref->active());
+
+    listener_called = true;
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  conn_mgr()->AddListener(listener);
+  EXPECT_TRUE(conn_mgr()->Connect(dev0->identifier(), [](auto, auto) {}));
+
+  RunMessageLoop();
+  EXPECT_TRUE(listener_called);
+  EXPECT_EQ(1u, connected_devices().size());
+
+  set_quit_message_loop_on_state_change(true);
+  RunMessageLoop();
+  EXPECT_TRUE(connected_devices().empty());
+}
+
+// Listener receives remote initiated connection ref.
+TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiated) {
+  auto* dev0 = dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  LowEnergyConnectionRefPtr conn_ref;
+  auto listener = [&conn_ref](auto cb_conn_ref) {
+    ASSERT_TRUE(cb_conn_ref);
+    EXPECT_TRUE(cb_conn_ref->active());
+
+    conn_ref = std::move(cb_conn_ref);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  conn_mgr()->AddListener(listener);
+  test_device()->ConnectLowEnergy(kAddress0);
+
+  RunMessageLoop();
+  ASSERT_TRUE(conn_ref);
+  EXPECT_EQ(dev0->identifier(), conn_ref->device_identifier());
+
+  conn_ref = nullptr;
+  set_quit_message_loop_on_state_change(true);
+  RunMessageLoop();
+  EXPECT_TRUE(connected_devices().empty());
+}
+
+// Listener receives remote initiated connection ref but does not take its ownership.
+TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiatedRefUnclaimed) {
+  dev_cache()->NewDevice(kAddress0, TechnologyType::kLowEnergy, true, true);
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  bool listener_called = false;
+  auto listener = [&listener_called](auto conn_ref) {
+    ASSERT_TRUE(conn_ref);
+    EXPECT_TRUE(conn_ref->active());
+
+    listener_called = true;
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  // As |listener| does not claim the ref, we expect the test device to eventually disconnect on its
+  // own.
+  conn_mgr()->AddListener(listener);
+  test_device()->ConnectLowEnergy(kAddress0);
+
+  RunMessageLoop();
+  EXPECT_TRUE(listener_called);
+  EXPECT_EQ(1u, connected_devices().size());
+
+  set_quit_message_loop_on_state_change(true);
+  RunMessageLoop();
+  EXPECT_TRUE(connected_devices().empty());
+}
+
+// Listener receives remote initiated connection ref from a peer that was not seen before.
+TEST_F(LowEnergyConnectionManagerTest, ListenerRemoteInitiatedFromUnknownDevice) {
+  // Set up a fake device but don't add it to the device cache.
+  test_device()->AddLEDevice(std::make_unique<FakeDevice>(kAddress0));
+
+  LowEnergyConnectionRefPtr conn_ref;
+  auto listener = [&conn_ref](auto cb_conn_ref) {
+    ASSERT_TRUE(cb_conn_ref);
+    EXPECT_TRUE(cb_conn_ref->active());
+
+    conn_ref = std::move(cb_conn_ref);
+    fsl::MessageLoop::GetCurrent()->QuitNow();
+  };
+
+  conn_mgr()->AddListener(listener);
+  test_device()->ConnectLowEnergy(kAddress0);
+
+  RunMessageLoop();
+  ASSERT_TRUE(conn_ref);
+
+  // There should be a matching device in the cache now.
+  auto dev = dev_cache()->FindDeviceById(conn_ref->device_identifier());
+  ASSERT_TRUE(dev);
+  EXPECT_EQ(kAddress0, dev->address());
+  EXPECT_EQ(TechnologyType::kLowEnergy, dev->technology());
+  EXPECT_TRUE(dev->connectable());
+
+  conn_ref = nullptr;
+  set_quit_message_loop_on_state_change(true);
+  RunMessageLoop();
+  EXPECT_TRUE(connected_devices().empty());
+}
+
 }  // namespace
 }  // namespace gap
 }  // namespace bluetooth

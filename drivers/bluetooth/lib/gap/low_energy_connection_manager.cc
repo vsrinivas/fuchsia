@@ -69,6 +69,7 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(Mode /* mode */,
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
       device_cache_(device_cache),
       l2cap_(l2cap),
+      next_listener_id_(1),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(device_cache_);
@@ -208,12 +209,19 @@ bool LowEnergyConnectionManager::Disconnect(const std::string& device_identifier
 
 LowEnergyConnectionManager::ListenerId LowEnergyConnectionManager::AddListener(
     const ConnectionCallback& callback) {
-  // TODO(armansito): implement
-  return 0u;
+  FXL_DCHECK(callback);
+  FXL_DCHECK(listeners_.find(next_listener_id_) == listeners_.end());
+
+  auto id = next_listener_id_++;
+  FXL_DCHECK(next_listener_id_);
+  FXL_DCHECK(id);
+  listeners_[id] = callback;
+
+  return id;
 }
 
 void LowEnergyConnectionManager::RemoveListener(ListenerId id) {
-  // TODO(armansito): implement
+  listeners_.erase(id);
 }
 
 void LowEnergyConnectionManager::SetDisconnectCallbackForTesting(
@@ -370,13 +378,12 @@ void LowEnergyConnectionManager::OnConnectionCreated(std::unique_ptr<hci::Connec
   FXL_DCHECK(connection->ll_type() == hci::Connection::LinkType::kLE);
   FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: new connection: " << connection->ToString();
 
-  // Look up any pending requests right away so that we have a potential device ID to fallback to
-  // in case |device_cache_| has no entry for the peer address (this could happen if we are a
-  // peripheral and a new connection was created for the first time.
   RemoteDevice* peer = device_cache_->StoreLowEnergyConnection(
       connection->peer_address(), connection->ll_type(), connection->low_energy_parameters());
 
-  // Add the connection to the connection map and obtain the initial reference.
+  // Add the connection to the connection map and obtain the initial reference. This reference lasts
+  // until this method returns to prevent it from dropping to 0 due to an unclaimed reference while
+  // notifying pending callbacks and listeners below.
   auto conn_ptr = connection.get();
   auto conn_ref = InitializeConnection(peer->identifier(), std::move(connection));
 
@@ -408,7 +415,17 @@ void LowEnergyConnectionManager::OnConnectionCreated(std::unique_ptr<hci::Connec
     });
   }
 
-  // TODO(armansito): Notify listeners.
+  // Notify each listener with a unique reference.
+  for (const auto& iter : listeners_) {
+    auto conn_ref = AddConnectionRef(peer->identifier());
+    FXL_DCHECK(conn_ref);
+
+    iter.second(std::move(conn_ref));
+  }
+
+  // Release the extra reference before attempting the next connection. This will disconnect the
+  // link if no callback or listener retained its reference.
+  conn_ref = nullptr;
 
   FXL_DCHECK(!connector_->request_pending());
   TryCreateNextConnection();
