@@ -110,8 +110,8 @@ static gpt_device_t *init_gpt(const char *dev, bool warn, int *out_fd) {
   ({                                                                           \
     if (success) {                                                             \
       ASSERT_EQ(rc, MX_OK, "Disk not found when it was expected");          \
-      ASSERT_NEQ(dev, NULL, "Disk found, but gpt_device_t not set.");          \
-      ASSERT_NEQ(strcmp(path, ""), 0, "Disk found, but path not set");         \
+      ASSERT_NE(dev, NULL, "Disk found, but gpt_device_t not set.");           \
+      ASSERT_NE(strcmp(path, ""), 0, "Disk found, but path not set");          \
       uint8_t guid_actual[GPT_GUID_LEN];                                       \
       gpt_device_get_header_guid(dev, &guid_actual);                           \
       ASSERT_EQ(memcmp(guid_targ, guid_actual, GPT_GUID_LEN), 0,               \
@@ -149,7 +149,7 @@ bool test_find_disk_by_guid(void) {
   BEGIN_TEST;
   DIR *dir = opendir(DEV_DIR_PATH);
 
-  ASSERT_NEQ(dir, NULL, "Could not open block devices path");
+  ASSERT_NE(dir, NULL, "Could not open block devices path");
 
   char disk_path[PATH_MAX];
   strcpy(disk_path, "");
@@ -193,7 +193,7 @@ bool test_find_disk_by_guid(void) {
   // add a GPT to the single attached disk
   gpt_device_t *gpt1 = init_gpt(disk1, true, &fd1);
 
-  ASSERT_NEQ(gpt1, NULL, "GPT initialization failed");
+  ASSERT_NE(gpt1, NULL, "GPT initialization failed");
   ASSERT_GT(fd1, 0, "Invalid file descriptor returned from GPT init");
   ASSERT_EQ(gpt_device_sync(gpt1), 0, "Error writing out new GPT");
   ASSERT_EQ(ioctl_block_rr_part(fd1), 0, "Error rebinding device");
@@ -216,7 +216,7 @@ bool test_find_disk_by_guid(void) {
   ASSERT_GT(fd2, -1, "");
   close(fd2);
   gpt_device_t *gpt2 = init_gpt(disk2, true, &fd2);
-  ASSERT_NEQ(gpt2, NULL, "GPT initialization failed");
+  ASSERT_NE(gpt2, NULL, "GPT initialization failed");
   ASSERT_GT(fd2, 0, "Invalid file descriptor returned from GPT init");
   ASSERT_EQ(gpt_device_sync(gpt2), 0, "Error writing out new GPT");
   ASSERT_EQ(ioctl_block_rr_part(fd2), 0, "Error rebinding device");

@@ -41,7 +41,7 @@ int create_test_data_and_file(uint8_t **buf_out, int buf_sz, char* name_buf_out,
   ASSERT_GT(f, -1, "Failed to make temp file");
 
   uint8_t *data = malloc(buf_sz);
-  ASSERT_NEQ(data, NULL, "Memory allocation failed");
+  ASSERT_NE(data, NULL, "Memory allocation failed");
   *buf_out = data;
   return f;
 }
@@ -85,7 +85,7 @@ bool test_writen(void) {
   int fd = create_test_data_and_file(&file_data, DATA_SZ, name_buf, PATH_MAX);
 
   uint8_t *read_data = malloc(DATA_SZ);
-  ASSERT_NEQ(read_data, NULL, "Couldn't allocate memory for read data");
+  ASSERT_NE(read_data, NULL, "Couldn't allocate memory for read data");
 
   ASSERT_EQ(writen(fd, file_data, DATA_SZ), DATA_SZ,
             "File write output len not correct.");
@@ -117,9 +117,9 @@ bool test_copyn(void) {
   int fd = create_test_data_and_file(&file_data, DATA_SZ, name_src, PATH_MAX);
 
   uint8_t *read_data = malloc(DATA_SZ);
-  ASSERT_NEQ(read_data, NULL, "Couldn't allocate memory for read data");
+  ASSERT_NE(read_data, NULL, "Couldn't allocate memory for read data");
   uint8_t *copy_buffer = malloc(copy_buf_sz);
-  ASSERT_NEQ(copy_buffer, NULL, "Couldn't allocate memory for copy buffer.");
+  ASSERT_NE(copy_buffer, NULL, "Couldn't allocate memory for copy buffer.");
 
   int dst = make_tmp_file(name_dst, PATH_MAX);
   ASSERT_GT(dst, -1, "Couldn't create destination file.");
@@ -167,13 +167,13 @@ int make_src_dst_and_buffers(int *src_out, char *name_src_out, int *dst_out,
   *dst_out = fd;
 
   *data_buf_out = malloc(data_buf_sz);
-  ASSERT_NEQ(data_buf_out, NULL, "Couldn't allocate for buffer");
+  ASSERT_NE(data_buf_out, NULL, "Couldn't allocate for buffer");
 
   *read_buf_out = malloc(read_buf_sz);
-  ASSERT_NEQ(read_buf_out, NULL, "Couldn't allocate for buffer");
+  ASSERT_NE(read_buf_out, NULL, "Couldn't allocate for buffer");
 
   *cpy_buf_out = malloc(cpy_buf_sz);
-  ASSERT_NEQ(cpy_buf_out, NULL, "Couldn't allocate for buffer");
+  ASSERT_NE(cpy_buf_out, NULL, "Couldn't allocate for buffer");
 
   return 0;
 }
@@ -278,12 +278,12 @@ bool test_unsparse_holes(void) {
   build_sample_chunk_list(sects);
 
   file_data = malloc(DATA_SZ);
-  ASSERT_NEQ(file_data, NULL, "Memory allocation failed");
+  ASSERT_NE(file_data, NULL, "Memory allocation failed");
   memset(file_data, 0, DATA_SZ);
   copy_buffer = malloc(copy_buf_sz);
-  ASSERT_NEQ(copy_buffer, NULL, "Memory allocation failed");
+  ASSERT_NE(copy_buffer, NULL, "Memory allocation failed");
   read_data = malloc(DATA_SZ);
-  ASSERT_NEQ(read_data, NULL, "Memory allocation failed");
+  ASSERT_NE(read_data, NULL, "Memory allocation failed");
 
   // write chunk descriptors to file and create an in-memory copy of the
   // unsparsed data
@@ -366,9 +366,9 @@ bool test_unsparse_buf_no_holes(void) {
 
   uint32_t d_sz = DATA_SZ + sizeof(chunk_t) * 2;
   file_data = malloc(d_sz);
-  ASSERT_NEQ(file_data, NULL, "Memory allocation for source data failed.");
+  ASSERT_NE(file_data, NULL, "Memory allocation for source data failed.");
   read_data = malloc(DATA_SZ);
-  ASSERT_NEQ(read_data, NULL, "Memory allocation for destination data failed.");
+  ASSERT_NE(read_data, NULL, "Memory allocation for destination data failed.");
 
   chunk_t header;
   header.start = 0;
@@ -425,17 +425,17 @@ bool test_unsparse_buf_holes(void) {
   uint8_t *read_data;
 
   orig_data = malloc(DATA_SZ);
-  ASSERT_NEQ(orig_data, NULL, "Memory allocation failed.");
+  ASSERT_NE(orig_data, NULL, "Memory allocation failed.");
   read_data = malloc(DATA_SZ);
-  ASSERT_NEQ(read_data, NULL, "Memory allocation failed.");
+  ASSERT_NE(read_data, NULL, "Memory allocation failed.");
 
   unsparse_data = malloc(chunks[4].len);
-  ASSERT_NEQ(unsparse_data, NULL, "Memory allocation failed.");
+  ASSERT_NE(unsparse_data, NULL, "Memory allocation failed.");
   memset(unsparse_data, 0, chunks[4].len);
 
   uint32_t sparsed_sz = DATA_SZ + sizeof(chunk_t) * 5;
   sparse_data = malloc(sparsed_sz);
-  ASSERT_NEQ(sparse_data, NULL, "Memory allocation failed.");
+  ASSERT_NE(sparse_data, NULL, "Memory allocation failed.");
 
   // generate random data and punch holes in it
   make_rand_data(orig_data, DATA_SZ);
