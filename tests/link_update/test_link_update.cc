@@ -116,9 +116,8 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     root_link_->Set(nullptr, "2");
   }
 
-  // Only update 4 is guaranteed to be delivered. It may happen that 3 is
-  // stomped on by 4 in the ledger before the remote notification is
-  // delivered. If 3 is delivered at all, then it's before 4.
+  // Only update 4 is guaranteed to be delivered on link_watcher_, although
+  // if 3 is delivered at all, then it's before 4.
   TestPoint notify_4_{"Notify() 4"};
 
   void PeerSet() {
@@ -129,19 +128,20 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
       }
     });
 
-    // Watch the log to see what values actually arrive.
+    // Without this nanosleep() line, 3 and 4 can have keys BEFORE 1 and 2
+    // because the timestamp is at millisecond resolution with a random number
+    // to break ties, which means that 3 and 4 would not overwrite the 2.
+    mx_nanosleep(mx_deadline_after(MX_MSEC(2)));
+
+    // Watch the log to see what values are actually seen by the Watcher.
     root_peer_->Set(nullptr, "3");
     root_peer_->Set(nullptr, "4");
   }
 
-  // The local update 6 is the only one currently guaranteed to be seen
-  // locally. The remote update 5 may be ignored if it arrives while a local
-  // update is in progress.
-  //
-  // TODO(mesch): Concurrently arriving updates we want to properly reconcile,
-  // rather than just let them stomp on each other. (In the case of conflicting
-  // scalar data, the reconciliation will most of the time just be to pick one,
-  // as it is now, but it doesn't have to be.)
+  // The local update 6 is the only update guaranteed to be seen locally.
+  // However, if update 5 is processed by the Link after update 6, it will not
+  // affect the current value and so will not generate a second notification
+  // for update 6.
   //
   // NOTE(mesch): There is no ordering guarantee between the two updates. This
   // is as intended as far as production behavior is concerned. For testing, we
@@ -150,9 +150,14 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   TestPoint notify_6_{"Notify() 6"};
 
   void ConcurrentSet() {
-    link_watcher_.Continue([this](const fidl::String& json) {
+    std::shared_ptr<bool> called = std::make_shared<bool>();
+    link_watcher_.Continue([this, called](const fidl::String& json) {
       if (json == "6") {
         notify_6_.Pass();
+        if (!*called) {
+          Logout();
+          *called = true;
+        }
       }
     });
 
@@ -160,9 +165,19 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     root_peer_->Set(nullptr, "5");
     root_link_->Set(nullptr, "6");
 
-    // We log out after Link updates are written to ledger. The local one is
-    // guaranteed to be delivered locally by then.
-    root_peer_->Sync([this] { root_link_->Sync([this] { Logout(); }); });
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this, called] {
+          if (!*called) {
+            FTL_LOG(WARNING) << "Shutdown timed out";
+            Logout();
+            *called = true;
+          }
+        },
+        ftl::TimeDelta::FromSeconds(5u));
+
+    // The code below does not work because it does not wait for the Ledger
+    // to deliver all of its messages.
+    // root_link_->Sync([this] { root_peer_->Sync([this] { Logout(); }); });
   }
 
   void Logout() { user_shell_context_->Logout(); }

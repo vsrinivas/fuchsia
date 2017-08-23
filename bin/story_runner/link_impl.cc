@@ -6,29 +6,19 @@
 
 #include <functional>
 
+#include "apps/modular/lib/fidl/json_xdr.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/src/story_runner/incremental_link.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
+#include "apps/modular/lib/util/debug.h"
 
 namespace modular {
 
-namespace {
-
-template <typename Doc>
-rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromPath(
-    const Doc& doc,
-    const fidl::Array<fidl::String>& path) {
-  rapidjson::GenericPointer<typename Doc::ValueType> pointer;
-  for (const auto& it : path) {
-    pointer = pointer.Append(it.get(), nullptr);
-  }
-  return pointer;
-}
-
-}  // namespace
+constexpr bool kEnableIncrementalLinks{true};
 
 class LinkImpl::ReadCall : Operation<> {
  public:
@@ -73,22 +63,16 @@ class LinkImpl::WriteCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    FTL_CHECK(!impl_->pending_write_call_);
-    impl_->pending_write_call_ = true;
-
     impl_->link_storage_->WriteLinkData(impl_->link_path_,
                                         JsonValueToString(impl_->doc_),
                                         [this, flow] { Cont1(flow); });
   }
 
   void Cont1(FlowToken flow) {
-    FTL_CHECK(impl_->pending_write_call_);
     impl_->link_storage_->FlushWatchers([this, flow] { Cont2(flow); });
   }
 
   void Cont2(FlowToken /*flow*/) {
-    FTL_CHECK(impl_->pending_write_call_);
-    impl_->pending_write_call_ = false;
     impl_->NotifyWatchers(src_);
   }
 
@@ -149,7 +133,7 @@ class LinkImpl::GetCall : Operation<fidl::String> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    auto p = CreatePointerFromPath(impl_->doc_, path_).Get(impl_->doc_);
+    auto p = CreatePointer(impl_->doc_, path_).Get(impl_->doc_);
 
     if (p != nullptr) {
       result_ = fidl::String(JsonValueToString(*p));
@@ -157,7 +141,7 @@ class LinkImpl::GetCall : Operation<fidl::String> {
   }
 
   LinkImpl* const impl_;  // not owned
-  fidl::Array<fidl::String> path_;
+  const fidl::Array<fidl::String> path_;
   fidl::String result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(GetCall);
@@ -182,30 +166,14 @@ class LinkImpl::SetCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    CrtJsonDoc new_value;
-    new_value.Parse(json_);
-    if (new_value.HasParseError()) {
-      FTL_LOG(ERROR) << "LinkImpl::Set() " << EncodeLinkPath(impl_->link_path_)
-                     << " JSON parse failed error #"
-                     << new_value.GetParseError() << std::endl
-                     << json_;
-      return;
-    }
-
-    bool dirty = true;
-    bool alreadyExist = false;
-
-    CrtJsonPointer ptr = CreatePointerFromPath(impl_->doc_, path_);
-    CrtJsonValue& current_value =
-        ptr.Create(impl_->doc_, impl_->doc_.GetAllocator(), &alreadyExist);
-    if (alreadyExist) {
-      dirty = new_value != current_value;
-    }
-
-    if (dirty) {
-      ptr.Set(impl_->doc_, new_value);
-      impl_->ValidateSchema("LinkImpl::Set", ptr, json_.get());
+    CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
+    const bool success = impl_->ApplySetOp(ptr, json_);
+    if (success) {
+      impl_->ValidateSchema("LinkImpl::SetCall", ptr, json_);
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
+      impl_->NotifyWatchers(src_);
+    } else {
+      FTL_LOG(WARNING) << "LinkImpl::SetCall failed " << json_;
     }
   }
 
@@ -239,25 +207,14 @@ class LinkImpl::UpdateObjectCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    CrtJsonDoc new_value;
-    new_value.Parse(json_);
-    if (new_value.HasParseError()) {
-      FTL_LOG(ERROR) << "LinkImpl::UpdateObject() "
-                     << EncodeLinkPath(impl_->link_path_)
-                     << " JSON parse failed error #"
-                     << new_value.GetParseError() << std::endl
-                     << json_;
-      return;
-    }
-
-    auto ptr = CreatePointerFromPath(impl_->doc_, path_);
-    CrtJsonValue& current_value = ptr.Create(impl_->doc_);
-
-    const bool dirty = MergeObject(current_value, std::move(new_value),
-                                   impl_->doc_.GetAllocator());
-    if (dirty) {
-      impl_->ValidateSchema("LinkImpl::UpdateObject", ptr, json_.get());
+    CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
+    const bool success = impl_->ApplyUpdateOp(ptr, json_);
+    if (success) {
+      impl_->ValidateSchema("LinkImpl::UpdateObject", ptr, json_);
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
+      impl_->NotifyWatchers(src_);
+    } else {
+      FTL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed " << json_;
     }
   }
 
@@ -288,11 +245,15 @@ class LinkImpl::EraseCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    auto ptr = CreatePointerFromPath(impl_->doc_, path_);
-    auto value = ptr.Get(impl_->doc_);
-    if (value != nullptr && ptr.Erase(impl_->doc_)) {
-      impl_->ValidateSchema("LinkImpl::Erase", ptr, std::string());
+
+    CrtJsonPointer ptr = CreatePointer(impl_->doc_, path_);
+    const bool success = impl_->ApplyEraseOp(ptr);
+    if (success) {
+      impl_->ValidateSchema("LinkImpl::EraseCall", ptr, std::string());
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
+      impl_->NotifyWatchers(src_);
+    } else {
+      FTL_LOG(WARNING) << "LinkImpl::EraseCall failed ";
     }
   }
 
@@ -374,9 +335,6 @@ class LinkImpl::ChangeCall : Operation<> {
       return;
     }
 
-    // TODO(mesch): This caused FW-208 earlier, and is still not correct because
-    // it might cause local changes to get lost. The new value needs to be
-    // merged, but likely not here but in a conflict resolver.
     impl_->doc_.Parse(json_);
     impl_->NotifyWatchers(kOnChangeConnectionId);
   }
@@ -389,7 +347,7 @@ class LinkImpl::ChangeCall : Operation<> {
 
 LinkImpl::LinkImpl(LinkStorage* const link_storage, LinkPathPtr link_path)
     : link_path_(std::move(link_path)), link_storage_(link_storage) {
-  new ReadCall(&operation_queue_, this, [this] {
+  new ReloadCall(&operation_queue_, this, [this] {
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
     }
@@ -438,23 +396,89 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
                    const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status, otherwise clients
   // have no way to know they sent bogus data.
-  new SetCall(&operation_queue_, this, std::move(path), json, src);
+
+  if (kEnableIncrementalLinks) {
+    LinkChangePtr data = LinkChange::New();
+    // Leave data->key null to signify a new entry
+    data->op = LinkChangeOp::SET;
+    data->pointer = std::move(path);
+    data->json = json;
+    new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+  } else {
+    new SetCall(&operation_queue_, this, std::move(path), json, src);
+  }
 }
 
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
-                            const fidl::String& json,
-                            const uint32_t src) {
+                            const fidl::String& json, const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status,
   // otherwise clients have no way to know they sent bogus data.
-  new UpdateObjectCall(&operation_queue_, this, std::move(path), json, src);
+
+  if (kEnableIncrementalLinks) {
+    LinkChangePtr data = LinkChange::New();
+    // Leave data->key empty to signify a new entry
+    data->op = LinkChangeOp::UPDATE;
+    data->pointer = std::move(path);
+    data->json = json;
+    new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+  } else {
+    new UpdateObjectCall(&operation_queue_, this, std::move(path), json, src);
+  }
 }
 
 void LinkImpl::Erase(fidl::Array<fidl::String> path, const uint32_t src) {
-  new EraseCall(&operation_queue_, this, std::move(path), src);
+  if (kEnableIncrementalLinks) {
+    LinkChangePtr data = LinkChange::New();
+    // Leave data->key empty to signify a new entry
+    data->op = LinkChangeOp::ERASE;
+    data->pointer = std::move(path);
+    // Leave data->json null for ERASE.
+
+    new IncrementalChangeCall(&operation_queue_, this, std::move(data), src);
+  } else {
+    new EraseCall(&operation_queue_, this, std::move(path), src);
+  }
+
 }
 
 void LinkImpl::Sync(const std::function<void()>& callback) {
   new SyncCall(&operation_queue_, callback);
+}
+
+bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, const fidl::String& json) {
+  CrtJsonDoc new_value;
+  new_value.Parse(json);
+  if (new_value.HasParseError()) {
+    FTL_LOG(ERROR) << "LinkImpl::ApplySetOp() " << EncodeLinkPath(link_path_)
+                   << " JSON parse failed error #" << new_value.GetParseError()
+                   << std::endl
+                   << json;
+    return false;
+  }
+
+  ptr.Set(doc_, std::move(new_value));
+  return true;
+}
+
+bool LinkImpl::ApplyUpdateOp(const CrtJsonPointer& ptr,
+                             const fidl::String& json) {
+  CrtJsonDoc new_value;
+  new_value.Parse(json);
+  if (new_value.HasParseError()) {
+    FTL_LOG(ERROR) << "LinkImpl::ApplyUpdateOp() " << EncodeLinkPath(link_path_)
+                   << " JSON parse failed error #" << new_value.GetParseError()
+                   << std::endl
+                   << json;
+    return false;
+  }
+
+  CrtJsonValue& current_value = ptr.Create(doc_);
+  MergeObject(current_value, std::move(new_value), doc_.GetAllocator());
+  return true;
+}
+
+bool LinkImpl::ApplyEraseOp(const CrtJsonPointer& ptr) {
+  return ptr.Erase(doc_);
 }
 
 // Merges source into target. The values will be move()'d out of |source|.
@@ -463,7 +487,7 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
                            CrtJsonValue&& source,
                            CrtJsonValue::AllocatorType& allocator) {
   if (!source.IsObject()) {
-    FTL_LOG(INFO) << "LinkImpl::MergeObject() - source is not an object "
+    FTL_LOG(WARNING) << "LinkImpl::MergeObject() - source is not an object "
                   << JsonValueToPrettyString(source);
     return false;
   }
@@ -492,8 +516,8 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
 }
 
 void LinkImpl::ValidateSchema(const char* const entry_point,
-                              const CrtJsonPointer& pointer,
-                              const std::string& json) {
+                              const CrtJsonPointer& debug_pointer,
+                              const std::string& debug_json) {
   if (!schema_doc_) {
     return;
   }
@@ -507,7 +531,7 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
       rapidjson::StringBuffer sbdoc;
       validator.GetInvalidDocumentPointer().StringifyUriFragment(sbdoc);
       rapidjson::StringBuffer sbapipath;
-      pointer.StringifyUriFragment(sbapipath);
+      debug_pointer.StringifyUriFragment(sbapipath);
       FTL_LOG(ERROR) << "Schema constraint violation in "
                      << EncodeLinkPath(link_path_) << ":" << std::endl
                      << "  Constraint " << sbpath.GetString() << "/"
@@ -515,24 +539,27 @@ void LinkImpl::ValidateSchema(const char* const entry_point,
                      << "  Doc location: " << sbdoc.GetString() << std::endl
                      << "  API " << entry_point << std::endl
                      << "  API path " << sbapipath.GetString() << std::endl
-                     << "  API json " << json << std::endl;
+                     << "  API json " << debug_json << std::endl;
     }
   }
 }
 
 void LinkImpl::OnChange(const fidl::String& json) {
-  if (pending_write_call_) {
-    // During a pending write, all change notifications are ignored. These are
-    // the change notifications for the write, but potentially also the change
-    // notifications from network updates.
-    //
-    // TODO(mesch): The latter really need to be merged.
+  LinkChangePtr data;
+  if (!XdrRead(json, &data, XdrLinkChange)) {
+    FTL_LOG(ERROR) << EncodeLinkPath(link_path_)
+                   << "LinkImpl::OnChange() - XdrRead failed!";
     return;
   }
 
-  new ChangeCall(&operation_queue_, this, json);
+  new IncrementalChangeCall(&operation_queue_, this, std::move(data),
+                            kOnChangeConnectionId);
 }
 
+// To be called after:
+// - API call for Set/Update/Erase. Happens at Operation execution, not
+//   after PageChange event is received from the Ledger.
+// - Change is received from another device in OnChange().
 void LinkImpl::NotifyWatchers(const uint32_t src) {
   const fidl::String value = JsonValueToString(doc_);
   for (auto& dst : watchers_) {

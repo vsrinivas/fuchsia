@@ -13,6 +13,8 @@ source_set("story_runner") {
   sources = [
     "context_handler.cc",
     "context_handler.h",
+    "incremental_link.cc",
+    "incremental_link.h",
     "key_generator.cc",
     "key_generator.h",
     "link_impl.cc",
@@ -48,6 +50,7 @@ source_set("story_runner") {
     "//apps/modular/lib/ledger:types",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/util",
+    "//apps/modular/lib/util:debug",
     "//apps/modular/services/component",
     "//apps/modular/services/config",
     "//apps/modular/services/module",
@@ -90,6 +93,7 @@ source_set("unittests") {
   deps = [
     ":story_runner",
     "//apps/modular/lib/testing:mock_base",
+    "//apps/modular/lib/testing:test_with_message_loop",
     "//third_party/gtest",
   ]
 }

@@ -13,6 +13,7 @@
 #include "apps/modular/lib/ledger/page_client.h"
 #include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/module/module_data.fidl.h"
+#include "apps/modular/services/story/link_change.fidl.h"
 #include "apps/modular/services/story/per_device_story_info.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/surface/surface.fidl.h"
@@ -20,9 +21,13 @@
 namespace modular {
 
 class LinkImpl;
+class XdrContext;
+
+void XdrLinkChange(XdrContext* xdr, LinkChange* data);
 
 class LinkStorage {
  public:
+  using AllLinkChangeCallback = std::function<void(fidl::Array<LinkChangePtr>)>;
   using DataCallback = std::function<void(const fidl::String&)>;
   using SyncCallback = std::function<void()>;
 
@@ -30,9 +35,15 @@ class LinkStorage {
 
   virtual void ReadLinkData(const LinkPathPtr& link_path,
                             const DataCallback& callback) = 0;
+  virtual void ReadAllLinkData(const LinkPathPtr& link_path,
+                               const AllLinkChangeCallback& callback) = 0;
   virtual void WriteLinkData(const LinkPathPtr& link_path,
                              const fidl::String& data,
                              const SyncCallback& callback) = 0;
+  virtual void WriteIncrementalLinkData(const LinkPathPtr& link_path,
+                                        fidl::String key,
+                                        LinkChangePtr link_change,
+                                        const SyncCallback& callback) = 0;
 
   virtual void FlushWatchers(const SyncCallback& callback) = 0;
   virtual void WatchLink(const LinkPathPtr& link_path,
@@ -61,9 +72,18 @@ class StoryStorageImpl : PageClient, public LinkStorage {
   void ReadLinkData(const LinkPathPtr& link_path,
                     const DataCallback& callback) override;
   // |LinkStorage|
+  void ReadAllLinkData(const LinkPathPtr& link_path,
+                       const AllLinkChangeCallback& callback) override;
+
+  // |LinkStorage|
   void WriteLinkData(const LinkPathPtr& link_path,
                      const fidl::String& data,
                      const SyncCallback& callback) override;
+
+  // |LinkStorage|
+  void WriteIncrementalLinkData(const LinkPathPtr& link_path, fidl::String key,
+                                LinkChangePtr link_change,
+                                const SyncCallback& callback) override;
 
   void ReadModuleData(const fidl::Array<fidl::String>& module_path,
                       const ModuleDataCallback& callback);
@@ -121,6 +141,7 @@ class StoryStorageImpl : PageClient, public LinkStorage {
   // Operations implemented here.
   class ReadLinkDataCall;
   class WriteLinkDataCall;
+  class WriteIncrementalLinkDataCall;
   class FlushWatchersCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);

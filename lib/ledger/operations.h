@@ -113,7 +113,7 @@ class ReadAllDataCall : Operation<DataArray> {
 
   ReadAllDataCall(OperationContainer* const container,
                   ledger::Page* const page,
-                  const char* const prefix,
+                  std::string prefix,
                   DataFilter const filter,
                   ResultCall result_call)
       : Operation<DataArray>("ReadAllDataCall",
@@ -121,7 +121,7 @@ class ReadAllDataCall : Operation<DataArray> {
                              std::move(result_call),
                              prefix),
         page_(page),
-        prefix_(prefix),
+        prefix_(std::move(prefix)),
         filter_(filter) {
     data_.resize(0);
     this->Ready();
@@ -178,7 +178,7 @@ class ReadAllDataCall : Operation<DataArray> {
 
   ledger::Page* page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
-  const char* const prefix_;
+  const std::string prefix_;
   DataFilter const filter_;
   std::vector<ledger::EntryPtr> entries_;
   DataArray data_;

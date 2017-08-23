@@ -64,6 +64,16 @@ inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
   return pointer;
 }
 
+template <typename Doc, typename Collection>
+inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
+    const Doc& doc, const Collection& path) {
+  rapidjson::GenericPointer<typename Doc::ValueType> pointer;
+  for (const auto& it : path) {
+    pointer = pointer.Append(it.get(), nullptr);
+  }
+  return pointer;
+}
+
 }  // namespace modular
 
 #endif  // APPLICATION_LIB_RAPIDJSON_RAPIDJSON_H_

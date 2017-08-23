@@ -6,6 +6,8 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/mock_base.h"
+#include "apps/modular/lib/testing/test_with_message_loop.h"
+#include "apps/modular/services/story/link_change.fidl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -19,7 +21,9 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
   LinkStorageMock() = default;
   ~LinkStorageMock() override = default;
 
-  const std::string& write_data() const { return write_data_; }
+  const LinkChangePtr& write_link_change() const {
+    return changes_.rbegin()->second;
+  }
 
   const std::string& write_link_path() const { return write_link_path_; }
 
@@ -33,15 +37,36 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
                     const DataCallback& callback) override {
     ++counts["ReadLinkData"];
     read_link_path_ = EncodeLinkPath(link_path);
-    callback(write_data_);
+    callback(write_link_change()->json);
+  }
+
+  void ReadAllLinkData(const LinkPathPtr& link_path,
+                       const AllLinkChangeCallback& callback) override {
+    ++counts["ReadAllLinkData"];
+    read_link_path_ = EncodeLinkPath(link_path);
+    auto arr = fidl::Array<LinkChangePtr>::New(0);
+    for (auto& c : changes_) {
+      arr.push_back(c.second.Clone());
+    }
+
+    callback(std::move(arr));
   }
 
   void WriteLinkData(const LinkPathPtr& link_path,
                      const fidl::String& data,
                      const SyncCallback& callback) override {
     ++counts["WriteLinkData"];
-    write_data_ = data;
     write_link_path_ = EncodeLinkPath(link_path);
+    callback();
+  }
+
+  void WriteIncrementalLinkData(const LinkPathPtr& link_path, fidl::String key,
+                                LinkChangePtr link_change,
+                                const SyncCallback& callback) override {
+    ++counts["WriteIncrementalLinkData"];
+    write_link_path_ = EncodeLinkPath(link_path);
+    changes_[key] = std::move(link_change);
+
     callback();
   }
 
@@ -63,7 +88,7 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
  private:
   std::string read_link_path_;
   std::string write_link_path_;
-  std::string write_data_;
+  std::map<std::string, LinkChangePtr> changes_;
 };
 
 LinkPathPtr GetTestLinkPath() {
@@ -76,85 +101,168 @@ LinkPathPtr GetTestLinkPath() {
 
 constexpr char kPrettyTestLinkPath[] = "root:photos/theLinkName";
 
-TEST(LinkImpl, Constructor_Success) {
+class LinkImplTest : public testing::TestWithMessageLoop, modular::LinkWatcher {
+ public:
+  LinkImplTest() : binding_(this) {
+    link_impl_->Connect(std::move(request_));
+  }
+
+  ~LinkImplTest() {
+    if (binding_.is_bound()) {
+      binding_.Close(); // Disconnect from Watch()
+    }
+  }
+
+  virtual void Notify(const fidl::String& json) {
+    last_json_notify_ = json;
+    continue_();
+  };
+
+  int step_{};
+  std::string last_json_notify_;
+  std::function<void()> continue_;
   LinkPathPtr link_path = GetTestLinkPath();
   LinkStorageMock storage_mock;
+  LinkPtr link_ptr_;
+  fidl::InterfaceRequest<Link> request_ = link_ptr_.NewRequest();
+  std::unique_ptr<LinkImpl> link_impl_ = std::make_unique<LinkImpl>(
+      storage_mock.interface(), std::move(link_path));
+  fidl::Binding<modular::LinkWatcher> binding_;
+};
 
-  {
-    LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
+TEST_F(LinkImplTest, Constructor) {
+  bool finished{};
+  continue_ = [this, &finished] {
+    EXPECT_EQ("null", last_json_notify_);
     EXPECT_EQ(kPrettyTestLinkPath, storage_mock.read_link_path());
-    storage_mock.ExpectCalledOnce("ReadLinkData");
+    storage_mock.ExpectCalledOnce("ReadAllLinkData");
     storage_mock.ExpectCalledOnce("WatchLink");
     storage_mock.ExpectNoOtherCalls();
-  }
-  storage_mock.ExpectCalledOnce("DropWatcher");
-  storage_mock.ExpectNoOtherCalls();
+
+    binding_.Close(); // Disconnect from Watch()
+    link_impl_.reset();
+    storage_mock.ExpectCalledOnce("DropWatcher");
+    storage_mock.ExpectNoOtherCalls();
+    finished = true;
+  };
+
+  link_ptr_->WatchAll(binding_.NewBinding());
+
+  RunLoopUntil([&finished] { return finished; });
+  ASSERT_TRUE(finished);
+  ASSERT_FALSE(binding_.is_bound());
 }
 
-TEST(LinkImpl, Set_Success) {
-  LinkPathPtr link_path = GetTestLinkPath();
-  LinkStorageMock storage_mock;
-  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
-  storage_mock.ClearCalls();
+TEST_F(LinkImplTest, Set) {
+  continue_ = [this] {
+    switch (++step_) {
+      case 1:
+        storage_mock.ExpectCalledOnce("ReadAllLinkData");
+        storage_mock.ExpectCalledOnce("WatchLink");
+        storage_mock.ExpectNoOtherCalls();
+        break;
+      case 2:
+        storage_mock.ExpectCalledOnce("WriteIncrementalLinkData");
+        storage_mock.ExpectNoOtherCalls();
 
-  link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
+        EXPECT_NE(nullptr, storage_mock.write_link_change().get());
+        EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
+        EXPECT_EQ("{\"value\":7}", last_json_notify_);
+        break;
+      default:
+        EXPECT_TRUE(step_ <= 2);
+        break;
+    }
+  };
 
-  EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
-  EXPECT_EQ("{\"value\":7}", storage_mock.write_data());
-  storage_mock.ExpectCalledOnce("WriteLinkData");
-  storage_mock.ExpectCalledOnce("FlushWatchers");
-  storage_mock.ExpectNoOtherCalls();
+  link_ptr_->WatchAll(binding_.NewBinding());
+
+  link_ptr_->Set(nullptr, "{ \"value\": 7 }");
+
+  RunLoopUntil([this] { return step_ == 2; });
+  ASSERT_EQ(2, step_);
 }
 
-TEST(LinkImpl, Update_Success) {
-  LinkPathPtr link_path = GetTestLinkPath();
-  LinkStorageMock storage_mock;
-  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
+TEST_F(LinkImplTest, Update) {
+  continue_ = [this] {
+    switch (++step_) {
+      case 1:
+      case 2:
+        storage_mock.ClearCalls();
+        break;
+      case 3:
+        EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
+        EXPECT_EQ("{\"value\":50}", storage_mock.write_link_change()->json);
+        break;
+      default:
+        EXPECT_TRUE(step_ <= 3);
+        break;
+    }
+  };
 
-  link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
-  storage_mock.ClearCalls();
+  link_ptr_->WatchAll(binding_.NewBinding());
 
-  link_impl.UpdateObject(nullptr, "{ \"value\": 50 }", 2);
+  link_ptr_->Set(nullptr, "{ \"value\": 8 }");
 
-  EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
-  EXPECT_EQ("{\"value\":50}", storage_mock.write_data());
-  storage_mock.ExpectCalledOnce("WriteLinkData");
-  storage_mock.ExpectCalledOnce("FlushWatchers");
-  storage_mock.ExpectNoOtherCalls();
+  link_ptr_->UpdateObject(nullptr, "{ \"value\": 50 }");
+
+  RunLoopUntil([this] { return step_ == 3; });
+  ASSERT_EQ(3, step_);
 }
 
-TEST(LinkImpl, UpdateNewKey_Success) {
-  LinkPathPtr link_path = GetTestLinkPath();
-  LinkStorageMock storage_mock;
-  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
+TEST_F(LinkImplTest, UpdateNewKey) {
+  continue_ = [this] {
+    switch (++step_) {
+      case 1:
+      case 2:
+        storage_mock.ClearCalls();
+        break;
+      case 3:
+        EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
+        EXPECT_EQ("{\"value\":9,\"century\":100}", last_json_notify_);
+        break;
+      default:
+        EXPECT_TRUE(step_ <= 3);
+        break;
+    }
+  };
 
-  link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
-  storage_mock.ClearCalls();
+  link_ptr_->WatchAll(binding_.NewBinding());
 
-  link_impl.UpdateObject(nullptr, "{ \"century\": 100 }", 2);
+  link_ptr_->Set(nullptr, "{ \"value\": 9 }");
 
-  EXPECT_EQ(kPrettyTestLinkPath, storage_mock.write_link_path());
-  EXPECT_EQ("{\"value\":7,\"century\":100}", storage_mock.write_data());
-  storage_mock.ExpectCalledOnce("WriteLinkData");
-  storage_mock.ExpectCalledOnce("FlushWatchers");
-  storage_mock.ExpectNoOtherCalls();
+  link_ptr_->UpdateObject(nullptr, "{ \"century\": 100 }");
+
+  RunLoopUntil([this] { return step_ == 3; });
+  ASSERT_EQ(3, step_);
 }
 
-TEST(LinkImpl, Erase_Success) {
-  LinkPathPtr link_path = GetTestLinkPath();
-  LinkStorageMock storage_mock;
-  LinkImpl link_impl(storage_mock.interface(), std::move(link_path));
+TEST_F(LinkImplTest, Erase) {
+  continue_ = [this] {
+    switch (++step_) {
+      case 1:
+      case 2:
+        storage_mock.ClearCalls();
+        break;
+      case 3:
+        EXPECT_TRUE(storage_mock.write_link_change()->json.is_null());
+        EXPECT_EQ("{}", last_json_notify_);
+        break;
+      default:
+        EXPECT_TRUE(step_ <= 3);
+        break;
+    }
+  };
 
-  link_impl.Set(nullptr, "{ \"value\": 7 }", 2);
-  storage_mock.ClearCalls();
+  link_ptr_->WatchAll(binding_.NewBinding());
+
+  link_ptr_->Set(nullptr, "{ \"value\": 4 }");
 
   std::vector<std::string> segments{"value"};
-  link_impl.Erase(fidl::Array<fidl::String>::From(segments), 2);
+  link_ptr_->Erase(fidl::Array<fidl::String>::From(segments));
 
-  EXPECT_EQ("{}", storage_mock.write_data());
-  storage_mock.ExpectCalledOnce("WriteLinkData");
-  storage_mock.ExpectCalledOnce("FlushWatchers");
-  storage_mock.ExpectNoOtherCalls();
+  RunLoopUntil([this] { return step_ == 3; });
+  ASSERT_EQ(3, step_);
 }
 
 // TODO(jimbe) Still many tests to be written, including testing that setting

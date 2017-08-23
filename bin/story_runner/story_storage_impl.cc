@@ -62,6 +62,22 @@ void XdrStoryContextLog(XdrContext* const xdr, StoryContextLog* const data) {
 
 }  // namespace
 
+// TODO(jimbe) Remove this function when incremental links are deprecated.
+// This must be outside of the anonymous namespace.
+void XdrLinkChange(XdrContext* const xdr, LinkChange* const data) {
+  xdr->Field("key", &data->key);
+  xdr->Field("op", &data->op);
+  xdr->Field("path", &data->pointer);
+  xdr->Field("json", &data->json);
+}
+
+// TODO(jimbe) Remove this function when incremental links are deprecated.
+std::string MakeSequencedLinkKey(const LinkPathPtr& link_path,
+                                 const std::string& sequence_key) {
+  // |sequence_key| uses characters that never require escaping
+  return MakeLinkKey(link_path) + kSeparator + sequence_key;
+}
+
 class StoryStorageImpl::ReadLinkDataCall : Operation<fidl::String> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
@@ -283,6 +299,58 @@ void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
       XdrPerDeviceStoryInfo, std::move(data), callback);
 }
 
+void StoryStorageImpl::ReadAllLinkData(const LinkPathPtr& link_path,
+                                       const AllLinkChangeCallback& callback) {
+  new ReadAllDataCall<LinkChange>(&operation_queue_, page(),
+                                  MakeLinkKey(link_path), XdrLinkChange,
+                                  callback);
+}
+
+class StoryStorageImpl::WriteIncrementalLinkDataCall : Operation<> {
+ public:
+  WriteIncrementalLinkDataCall(
+      OperationContainer* const container, ledger::Page* const page,
+      LinkChangeOp op, const LinkPathPtr& link_path,
+      fidl::String key,   // KeyGenerator.Create()
+      fidl::String json,  // Must be null for Erase
+      ResultCall result_call)
+      : Operation("StoryStorageImpl::WriteIncrementalLinkDataCall", container,
+                  std::move(result_call)),
+        page_(page),
+        link_key_(MakeSequencedLinkKey(link_path, key)),
+        json_(json) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    page_->Put(to_array(link_key_), to_array(json_),
+               [this, flow](ledger::Status status) {
+                 if (status != ledger::Status::OK) {
+                   FTL_LOG(ERROR) << "WriteIncrementalLinkDataCall() link key ="
+                                  << link_key_ << ", Page.Put() " << status;
+                 }
+               });
+  }
+
+  ledger::Page* const page_;  // not owned
+  const std::string link_key_;
+  const fidl::String json_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(WriteIncrementalLinkDataCall);
+};
+
+void StoryStorageImpl::WriteIncrementalLinkData(const LinkPathPtr& link_path,
+                                                fidl::String key,
+                                                LinkChangePtr link_change,
+                                                const SyncCallback& callback) {
+  new WriteDataCall<LinkChange>(
+      &operation_queue_, page(), MakeSequencedLinkKey(link_path, key),
+      XdrLinkChange, std::move(link_change), callback);
+}
+
 void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
   new WriteDataCall<StoryContextLog>(
       &operation_queue_, page(),
@@ -307,7 +375,10 @@ void StoryStorageImpl::FlushWatchers(const SyncCallback& callback) {
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,
                                  LinkImpl* const impl,
                                  const DataCallback& watcher) {
-  watchers_.emplace_back(WatcherEntry{MakeLinkKey(link_path), impl, watcher});
+  // Add kSeparator to the Link key to create a prefix key so that
+  // OnPageChange() will see each separate Link operation.
+  watchers_.emplace_back(
+      WatcherEntry{MakeLinkKey(link_path) + kSeparator, impl, watcher});
 }
 
 void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
@@ -320,7 +391,12 @@ void StoryStorageImpl::DropWatcher(LinkImpl* const impl) {
 void StoryStorageImpl::OnPageChange(const std::string& key,
                                     const std::string& value) {
   for (auto& watcher_entry : watchers_) {
-    if (key == watcher_entry.key) {
+    const bool is_prefix =
+        !watcher_entry.key.empty() && watcher_entry.key.back() == *kSeparator;
+    if (is_prefix &&
+        key.compare(0, watcher_entry.key.size(), watcher_entry.key) == 0) {
+      watcher_entry.watcher(value);
+    } else if (key == watcher_entry.key) {
       watcher_entry.watcher(value);
     }
   }

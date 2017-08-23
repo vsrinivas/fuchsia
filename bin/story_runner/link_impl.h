@@ -5,10 +5,13 @@
 #ifndef APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 #define APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 
+#include <vector>
+
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/src/story_runner/key_generator.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -44,6 +47,28 @@ class LinkWatcherConnection;
 // make this possible, each connection is bound to a separate LinkConnection
 // instance rather than to LinkImpl directly, and LinkImpl owns all its
 // LinkConnection instances.
+//
+// Because changes across devices can interact, it's possible that a set of
+// changes yields a result that is not valid according to the current schema.
+// Therefore, for now, the schema is not validated after reconciliation.
+//
+// This implementation of LinkImpl works by storing the history of change
+// operations made by the callers. Each change operation is stored as a separate
+// key/value pair, which can be reconciled by the Ledger without conflicts. The
+// ordering is determined by KeyGenerator, which orders changes based on time
+// (as well as a random nonce that's a tie breaker in the case of changes made
+// at the same time on different devices.)
+//
+// New changes are placed on the pending_ops_ queue within the class and also
+// written to the Ledger. Because the state of the Snapshot can float, the
+// change operations are kept in the pending_ops_ queue until a notification is
+// received from the ledger that the op has been applied to the ledger, at which
+// point the change operation is removed from pending_ops_.
+//
+// To arrive at the latest value, the history from the ledger is merged with
+// the history in pending_ops_. Duplicates are removed. Then the changes are
+// applied in order.  This algorithm is not "correct" due to the lack of a
+// vector clock to form the partial orderings, but it's a useful step forward.
 class LinkImpl {
  public:
   // The |module_path| is the series of module names (where the last element is
@@ -84,6 +109,17 @@ class LinkImpl {
   }
 
  private:
+  // Apply the given |changes| to the current document. The current list of
+  // pending operations is merged into the change stream.
+  void Replay(fidl::Array<LinkChangePtr> changes);
+
+  // Apply a single LinkChange.
+  bool ApplyChange(LinkChange* change);
+
+  bool ApplySetOp(const CrtJsonPointer& ptr, const fidl::String& json);
+  bool ApplyUpdateOp(const CrtJsonPointer& ptr, const fidl::String& json);
+  bool ApplyEraseOp(const CrtJsonPointer& ptr);
+
   static bool MergeObject(CrtJsonValue& target,
                           CrtJsonValue&& source,
                           CrtJsonValue::AllocatorType& allocator);
@@ -91,8 +127,8 @@ class LinkImpl {
   void NotifyWatchers(uint32_t src);
   void OnChange(const fidl::String& json);
   void ValidateSchema(const char* entry_point,
-                      const CrtJsonPointer& pointer,
-                      const std::string& json);
+                      const CrtJsonPointer& debug_pointer,
+                      const std::string& debug_json);
 
   // Counter for LinkConnection IDs. ID 0 is never used so it can be used as
   // pseudo connection ID for WatchAll() watchers. ID 1 is used as the source ID
@@ -102,7 +138,7 @@ class LinkImpl {
   static constexpr uint32_t kOnChangeConnectionId{1};
 
   // We can only accept connection requests once the instance is fully
-  // initalized. So we queue them up initially.
+  // initialized. So we queue connections on |requests_| until |ready_| is true.
   bool ready_{};
   std::vector<fidl::InterfaceRequest<Link>> requests_;
 
@@ -140,6 +176,16 @@ class LinkImpl {
   // A JSON schema to be applied to the Link value.
   std::unique_ptr<rapidjson::SchemaDocument> schema_doc_;
 
+  // Ordered key generator for incremental link values
+  KeyGenerator key_generator_;
+
+  // Track changes that have been saved to the Ledger but not confirmed
+  std::vector<LinkChangePtr> pending_ops_;
+
+  // The latest key that's been applied to this link. If we receive an
+  // earlier key in OnChange, then replay the history.
+  std::string latest_key_;
+
   OperationQueue operation_queue_;
 
   // Operations implemented here.
@@ -152,13 +198,11 @@ class LinkImpl {
   class EraseCall;
   class WatchCall;
   class ChangeCall;
-
-  // While a write call is pending, all watcher notfications are ignored. This
-  // includes watcher nofitications from network updates.
-  //
-  // TODO(mesch): We really want to handle this using LE-278, and also merge
-  // network updates.
-  bool pending_write_call_{};
+  // Calls below are for incremental links, which can be found in
+  // incremental_link.{cc,h}
+  class ReloadCall;
+  class IncrementalWriteCall;
+  class IncrementalChangeCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
