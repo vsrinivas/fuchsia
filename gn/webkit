@@ -8,7 +8,7 @@
         "sqlite",
         "zlib"
     ],
-    "labels": [
-        "//third_party/webkit"
-    ]
+    "packages": {
+        "libwebkit": "//apps/web_view:libwebkit"
+    }
 }
