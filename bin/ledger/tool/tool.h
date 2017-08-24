@@ -36,11 +36,7 @@ class ToolApp {
   void Start();
 
   ftl::CommandLine command_line_;
-  cloud_sync::UserConfig user_config_;
-  // Path to disk directory storing the data of the current user.
-  std::string user_repository_path_;
   std::unique_ptr<app::ApplicationContext> context_;
-  std::unique_ptr<ledger::NetworkService> network_service_;
   std::unique_ptr<Command> command_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ToolApp);

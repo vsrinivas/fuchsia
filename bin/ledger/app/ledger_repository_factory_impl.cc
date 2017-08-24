@@ -46,20 +46,6 @@ cloud_sync::UserConfig GetUserConfig(Environment* environment,
   return user_config;
 }
 
-bool SaveConfigForDebugging(ftl::StringView user_id,
-                            ftl::StringView repository_path,
-                            const std::string& temp_dir) {
-  if (!files::WriteFileInTwoPhases(kLastUserIdPath.ToString(), user_id,
-                                   temp_dir)) {
-    return false;
-  }
-  if (!files::WriteFileInTwoPhases(kLastUserRepositoryPath.ToString(),
-                                   repository_path, temp_dir)) {
-    return false;
-  }
-  return true;
-}
-
 bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
   std::string name_path = repository_path.get() + "/name";
 
@@ -394,12 +380,6 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
       !CheckSyncConfig(user_config, repository_information)) {
     container->SetRepository(Status::CONFIGURATION_ERROR, nullptr);
     return;
-  }
-  // Save debugging data for `ledger_tool`.
-  if (config_persistence_ == ConfigPersistence::PERSIST &&
-      !SaveConfigForDebugging(user_config.user_id,
-                              repository_information.content_path, temp_dir)) {
-    FTL_LOG(WARNING) << "Failed to save the current configuration.";
   }
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   ftl::Closure on_version_mismatch = [this, repository_information]() mutable {

@@ -16,6 +16,7 @@
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/tool/convert.h"
+#include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/unique_fd.h"
@@ -71,21 +72,28 @@ class FileStreamWriter {
 
 }  // namespace
 
-InspectCommand::InspectCommand(std::vector<std::string> args,
-                               const cloud_sync::UserConfig& /*user_config*/,
-                               ftl::StringView user_repository_path)
-    : args_(std::move(args)),
-      app_id_(args_[1]),
-      user_repository_path_(user_repository_path.ToString()) {
-  FTL_DCHECK(!user_repository_path_.empty());
-}
+InspectCommand::InspectCommand(std::vector<std::string> args)
+    : args_(std::move(args)) {}
 
 void InspectCommand::Start(ftl::Closure on_done) {
-  if (args_.size() == 3 && args_[2] == "pages") {
+  if (args_.size() < 3) {
+    PrintHelp(std::move(on_done));
+    return;
+  }
+  user_repository_path_ = args_[1];
+  app_id_ = args_[2];
+
+  if (!files::IsDirectory(user_repository_path_)) {
+    std::cerr << user_repository_path_ << " is not a directory" << std::endl;
+    PrintHelp(std::move(on_done));
+    return;
+  }
+
+  if (args_.size() == 4 && args_[3] == "pages") {
     ListPages(std::move(on_done));
-  } else if (args_.size() == 5 && args_[2] == "commit") {
+  } else if (args_.size() == 6 && args_[3] == "commit") {
     DisplayCommit(std::move(on_done));
-  } else if (args_.size() == 4 && args_[2] == "commit_graph") {
+  } else if (args_.size() == 5 && args_[3] == "commit_graph") {
     DisplayCommitGraph(std::move(on_done));
   } else {
     PrintHelp(std::move(on_done));
@@ -101,7 +109,8 @@ void InspectCommand::ListPages(ftl::Closure on_done) {
   for (const storage::PageId& page_id : page_ids) {
     ledger_storage->GetPageStorage(
         page_id, ftl::MakeCopyable([
-          completer = ftl::MakeAutoCall(waiter->NewCallback()), page_id=page_id
+          completer = ftl::MakeAutoCall(waiter->NewCallback()),
+          page_id = page_id
         ](storage::Status status,
                  std::unique_ptr<storage::PageStorage> storage) mutable {
           if (status != storage::Status::OK) {
@@ -144,29 +153,32 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
     return;
   }
 
-  ledger_storage->GetPageStorage(page_id, [
-    this, commit_id, on_done = std::move(on_done)
-  ](storage::Status status, std::unique_ptr<storage::PageStorage> storage) mutable {
-    if (status != storage::Status::OK) {
-      FTL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
-      on_done();
-      return;
-    }
-    storage_ = std::move(storage);
-    storage_->GetCommit(commit_id, [
-      this, commit_id, on_done = std::move(on_done)
-    ](storage::Status status, std::unique_ptr<const storage::Commit> commit) mutable {
-      if (status != storage::Status::OK) {
-        FTL_LOG(ERROR) << "Unable to retrieve commit "
-                       << convert::ToHex(commit_id) << " on page "
-                       << convert::ToHex(storage_->GetId()) << " due to error "
-                       << status;
-        on_done();
-        return;
-      }
-      PrintCommit(std::move(commit), std::move(on_done));
-    });
-  });
+  ledger_storage->GetPageStorage(
+      page_id, [ this, commit_id, on_done = std::move(on_done) ](
+                   storage::Status status,
+                   std::unique_ptr<storage::PageStorage> storage) mutable {
+        if (status != storage::Status::OK) {
+          FTL_LOG(ERROR) << "Unable to retrieve page due to error " << status;
+          on_done();
+          return;
+        }
+        storage_ = std::move(storage);
+        storage_->GetCommit(
+            commit_id,
+            [ this, commit_id, on_done = std::move(on_done) ](
+                storage::Status status,
+                std::unique_ptr<const storage::Commit> commit) mutable {
+              if (status != storage::Status::OK) {
+                FTL_LOG(ERROR)
+                    << "Unable to retrieve commit " << convert::ToHex(commit_id)
+                    << " on page " << convert::ToHex(storage_->GetId())
+                    << " due to error " << status;
+                on_done();
+                return;
+              }
+              PrintCommit(std::move(commit), std::move(on_done));
+            });
+      });
 }
 
 void InspectCommand::PrintCommit(std::unique_ptr<const storage::Commit> commit,
@@ -271,9 +283,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
   std::vector<storage::CommitId> heads;
   if (coroutine::SyncCall(
           handler,
-          [this](
-              std::function<void(
-                  storage::Status, std::vector<storage::CommitId>)> callback) {
+          [this](std::function<void(storage::Status,
+                                    std::vector<storage::CommitId>)> callback) {
             storage_->GetHeadCommitIds(std::move(callback));
           },
           &status, &heads)) {
@@ -299,8 +310,8 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
     if (coroutine::SyncCall(
             handler,
             [this, &commit_id](
-                std::function<void(
-                    storage::Status, std::unique_ptr<const storage::Commit>)>
+                std::function<void(storage::Status,
+                                   std::unique_ptr<const storage::Commit>)>
                     callback) {
               storage_->GetCommit(commit_id, std::move(callback));
             },
@@ -339,8 +350,8 @@ void InspectCommand::PrintHelp(ftl::Closure on_done) {
   std::cout
       << "inspect command: inspects the contents of a ledger.\n"
       << "Note: you must stop Ledger before running this tool.\n\n"
-      << "Syntax: ledger_tool inspect <app_id> (pages|commit <page_id> "
-         "<commit_id>)\n\n"
+      << "Syntax: ledger_tool inspect <ledger repository path> "
+         "<app_id> (pages|commit <page_id> <commit_id>)\n\n"
       << "Parameters:\n"
       << " - app_id: ID of the application to inspect\n"
       << "           e.g.: modular_user_runner\n"
