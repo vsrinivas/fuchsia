@@ -7,6 +7,7 @@
 #include <magenta/compiler.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/atomic.h>
+#include <mxtl/initializer_list.h>
 #include <mxtl/string_piece.h>
 
 namespace mxtl {
@@ -221,8 +222,18 @@ public:
         return StringPiece(data(), length());
     }
 
+    // Concatenates the specified strings.
+    static String Concat(initializer_list<String> strings);
+
+    // Concatenates the specified strings.
+    // |ac| must not be null.
+    static String Concat(initializer_list<String> strings, AllocChecker* ac);
+
 private:
     friend struct mxtl::tests::StringTestHelper;
+
+    explicit String(char* data, decltype(nullptr) /*overload disambiguation*/)
+        : data_(data) {}
 
     // A string buffer consists of a length followed by a reference count
     // followed by a null-terminated string.  To make access faster, we offset

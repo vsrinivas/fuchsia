@@ -375,6 +375,66 @@ bool compare_test() {
     END_TEST;
 }
 
+bool concat_test() {
+    BEGIN_TEST;
+
+    {
+        mxtl::String empty = mxtl::String::Concat({});
+        EXPECT_CSTR_EQ("", empty.c_str());
+        EXPECT_EQ(0u, empty.length());
+    }
+
+    {
+        mxtl::String empty = mxtl::String::Concat({""});
+        EXPECT_CSTR_EQ("", empty.c_str());
+        EXPECT_EQ(0u, empty.length());
+    }
+
+    {
+        mxtl::String empty = mxtl::String::Concat({"", "", "", ""});
+        EXPECT_CSTR_EQ("", empty.c_str());
+        EXPECT_EQ(0u, empty.length());
+    }
+
+    {
+        mxtl::String str = mxtl::String::Concat({"abc"});
+        EXPECT_CSTR_EQ("abc", str.c_str());
+        EXPECT_EQ(3u, str.length());
+    }
+
+    {
+        mxtl::String str = mxtl::String::Concat({"abc", "def"});
+        EXPECT_CSTR_EQ("abcdef", str.c_str());
+        EXPECT_EQ(6u, str.length());
+    }
+
+    {
+        mxtl::String str = mxtl::String::Concat({"abc", "", "def"});
+        EXPECT_CSTR_EQ("abcdef", str.c_str());
+        EXPECT_EQ(6u, str.length());
+    }
+
+    {
+        mxtl::String str = mxtl::String::Concat({"abc", "def", ""});
+        EXPECT_CSTR_EQ("abcdef", str.c_str());
+        EXPECT_EQ(6u, str.length());
+    }
+
+    {
+        mxtl::String str = mxtl::String::Concat({"", "abc", "def"});
+        EXPECT_CSTR_EQ("abcdef", str.c_str());
+        EXPECT_EQ(6u, str.length());
+    }
+
+    {
+        mxtl::String str = mxtl::String::Concat({"abc", "def", "g", "hi", "jklmnop"});
+        EXPECT_CSTR_EQ("abcdefghijklmnop", str.c_str());
+        EXPECT_EQ(16u, str.length());
+    }
+
+    END_TEST;
+}
+
 bool alloc_checker_test() {
     BEGIN_TEST;
 
@@ -520,6 +580,24 @@ bool alloc_checker_test() {
         EXPECT_TRUE(ac.check());
         EXPECT_CSTR_EQ("abcde", str.data());
         EXPECT_EQ(5u, str.length());
+    }
+
+    // Concat
+
+    {
+        mxtl::AllocChecker ac;
+        mxtl::String empty = mxtl::String::Concat({}, &ac);
+        EXPECT_TRUE(ac.check());
+        EXPECT_CSTR_EQ("", empty.c_str());
+        EXPECT_EQ(0u, empty.length());
+    }
+
+    {
+        mxtl::AllocChecker ac;
+        mxtl::String str = mxtl::String::Concat({"abc", "def", "g", "hi", "jklmnop"}, &ac);
+        EXPECT_TRUE(ac.check());
+        EXPECT_CSTR_EQ("abcdefghijklmnop", str.c_str());
+        EXPECT_EQ(16u, str.length());
     }
 
     END_TEST;
@@ -688,6 +766,7 @@ RUN_TEST(non_empty_string_test)
 RUN_TEST(copy_move_and_assignment_test)
 RUN_TEST(set_clear_test)
 RUN_TEST(compare_test)
+RUN_TEST(concat_test)
 RUN_TEST(alloc_checker_test)
 RUN_TEST(to_string_piece_test)
 RUN_TEST(swap_test)

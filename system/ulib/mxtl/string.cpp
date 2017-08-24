@@ -13,6 +13,29 @@
 #include <mxtl/new.h>
 
 namespace mxtl {
+namespace {
+
+size_t SumLengths(const String* begin, const String* end,
+                  const String** last_non_empty_string) {
+    size_t total_length = 0u;
+    for (const String* it = begin; it != end; it++) {
+        if (!it->empty()) {
+            *last_non_empty_string = it;
+            total_length += it->length();
+        }
+    }
+    return total_length;
+}
+
+void Concat(char* data, const String* begin, const String* end) {
+    for (const String* it = begin; it != end; it++) {
+        memcpy(data, it->data(), it->length());
+        data += it->length();
+    }
+    *data = 0;
+}
+
+} // namespace
 
 String::EmptyBuffer String::gEmpty;
 
@@ -63,6 +86,45 @@ void String::Set(const char* data, size_t length, mxtl::AllocChecker* ac) {
     char* temp_data = data_;
     Init(data, length, ac);
     ReleaseRef(temp_data); // release after init in case data is within data_
+}
+
+String String::Concat(initializer_list<String> strings) {
+    const String* last_non_empty_string = nullptr;
+    size_t total_length = SumLengths(strings.begin(), strings.end(),
+                                     &last_non_empty_string);
+    if (last_non_empty_string == nullptr) {
+        return String();
+    }
+    if (total_length == last_non_empty_string->length()) {
+        return *last_non_empty_string;
+    }
+
+    char* data = AllocData(total_length);
+
+    mxtl::Concat(data, strings.begin(), last_non_empty_string + 1);
+    return String(data, nullptr);
+}
+
+String String::Concat(initializer_list<String> strings, AllocChecker* ac) {
+    const String* last_non_empty_string = nullptr;
+    size_t total_length = SumLengths(strings.begin(), strings.end(),
+                                     &last_non_empty_string);
+    if (last_non_empty_string == nullptr) {
+        ac->arm(0u, true);
+        return String();
+    }
+    if (total_length == last_non_empty_string->length()) {
+        ac->arm(0u, true);
+        return *last_non_empty_string;
+    }
+
+    char* data = AllocData(total_length, ac);
+    if (!data) {
+        return String();
+    }
+
+    mxtl::Concat(data, strings.begin(), last_non_empty_string + 1);
+    return String(data, nullptr);
 }
 
 void String::Init(const char* data, size_t length) {
