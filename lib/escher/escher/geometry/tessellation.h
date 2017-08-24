@@ -51,4 +51,32 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory,
 // coordinates.
 MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory);
 
+// Tessellate a sphere with the specified center and radius.  If subdivisions ==
+// 0, the result is a regular octahedron.  Increasing the number of subdivisions
+// by 1 subdivides each triangle into 3 by adding a vertex at the triangle
+// midpoint, and moving it outward to match the desired radius.
+//
+// If UV-coordinates are to be generated, the surface is parameterized as
+// follows.  Looking at the un-subdivided octahedron from the right (i.e. in the
+// direction of the negative X-axis), the 4 visible faces are mapped to the
+// rotated square with corners (0, .5), (.5, 0), (1, .5), (.5, 1), and the
+// vertex at (radius, 0, 0) is mapped to the center of the texture: (.5, .5).
+// The unmapped 4 corners of the texture are "folded over" to map to the 4
+// hidden faces of the octahedron.  During subdivision, the UV coordinates are
+// linearly interpolated for each new vertex.
+//
+// TODO(ES-32): the approach described above is wrong: the newly-inserted
+// vertices are correct positions, but the all of the initial octahedron edges
+// are left untouched.  The proper approach is to double the number of vertices
+// at each subdivision level (and quadruple the triangle count) by splitting
+// each edge at the mid-point.  However, doing this with an indexed mesh (i.e.
+// without inserting two vertices for every edge, one at each half-edge) is
+// non-trivial, especially without a traversal-friendly mesh representation such
+// as Rossignac's "corner table".
+MeshPtr NewSphereMesh(MeshBuilderFactory* factory,
+                      const MeshSpec& spec,
+                      int subdivisions,
+                      vec3 center,
+                      float radius);
+
 }  // namespace escher

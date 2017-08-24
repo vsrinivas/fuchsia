@@ -56,7 +56,7 @@ The wobbly outlines of a Sketchy stroke are computed each frame in the vertex
 shader (discussed below).  In addition to the vertex positions computed above,
 this shader requires other vertex attributes to be baked into the mesh.  To
 support this, the mesh has the following attributes:
-* `MeshAttribute::kPosition`
+* `MeshAttribute::kPosition2D`
 * `MeshAttribute::kPositionOffset`
 * `MeshAttribute::kPerimeterPos`
 

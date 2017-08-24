@@ -63,8 +63,11 @@ std::ostream& operator<<(std::ostream& str, const quat& q) {
 
 std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr) {
   switch (attr) {
-    case MeshAttribute::kPosition:
-      str << "kPosition";
+    case MeshAttribute::kPosition2D:
+      str << "kPosition2D";
+      break;
+    case MeshAttribute::kPosition3D:
+      str << "kPosition3D";
       break;
     case MeshAttribute::kPositionOffset:
       str << "kPositionOffset";
@@ -87,9 +90,10 @@ std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
   str << "MeshSpec[";
   // TODO: would be nice to guarantee that we don't miss any.  Too bad we can't
   // enumerate over the values in an enum class.
-  std::array<MeshAttribute, 4> all_flags = {
-      {MeshAttribute::kPosition, MeshAttribute::kPositionOffset,
-       MeshAttribute::kUV, MeshAttribute::kPerimeterPos}};
+  std::array<MeshAttribute, 5> all_flags = {
+      {MeshAttribute::kPosition2D, MeshAttribute::kPosition3D,
+       MeshAttribute::kPositionOffset, MeshAttribute::kUV,
+       MeshAttribute::kPerimeterPos}};
   for (auto flag : all_flags) {
     if (spec.flags & flag) {
       // Put a pipe after the previous flag, if there is one.

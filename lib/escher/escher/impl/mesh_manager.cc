@@ -61,10 +61,8 @@ MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
 
 MeshManager::MeshBuilder::~MeshBuilder() {}
 
-BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
-  FTL_DCHECK(vertex_count_ > 0);
-  // This method will need adjustments when we support 3D vertices.
-  FTL_DCHECK(spec_.flags & MeshAttribute::kPosition);
+BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox2D() const {
+  FTL_DCHECK(spec_.flags & MeshAttribute::kPosition2D);
   uint8_t* vertex_ptr = vertex_staging_buffer_;
 
   vec2* pos = reinterpret_cast<vec2*>(vertex_ptr);
@@ -79,6 +77,31 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
   }
 
   return BoundingBox(min, max);
+}
+
+BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
+  FTL_DCHECK(spec_.flags & MeshAttribute::kPosition3D);
+  uint8_t* vertex_ptr = vertex_staging_buffer_;
+
+  vec3* pos = reinterpret_cast<vec3*>(vertex_ptr);
+  vec3 min(*pos);
+  vec3 max(*pos);
+
+  for (size_t i = 1; i < vertex_count_; ++i) {
+    vertex_ptr += vertex_stride_;
+    pos = reinterpret_cast<vec3*>(vertex_ptr);
+    min = glm::min(min, *pos);
+    max = glm::max(max, *pos);
+  }
+
+  return BoundingBox(min, max);
+}
+
+BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
+  FTL_DCHECK(vertex_count_ > 0);
+  FTL_DCHECK(spec_.IsValid());
+  return spec_.flags & MeshAttribute::kPosition2D ? ComputeBoundingBox2D()
+                                                  : ComputeBoundingBox3D();
 }
 
 MeshPtr MeshManager::MeshBuilder::Build() {

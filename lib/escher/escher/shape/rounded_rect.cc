@@ -161,8 +161,8 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
   FTL_DCHECK(height >= spec.top_right_radius + spec.bottom_right_radius);
   FTL_DCHECK(max_bytes == kVertexCount * mesh_spec.GetStride());
   FTL_DCHECK(mesh_spec.flags ==
-             (MeshAttribute::kPosition | MeshAttribute::kUV));
-  FTL_DCHECK(0U == mesh_spec.GetAttributeOffset(MeshAttribute::kPosition));
+             (MeshAttribute::kPosition2D | MeshAttribute::kUV));
+  FTL_DCHECK(0U == mesh_spec.GetAttributeOffset(MeshAttribute::kPosition2D));
   FTL_DCHECK(sizeof(vec2) == mesh_spec.GetAttributeOffset(MeshAttribute::kUV));
   FTL_DCHECK(sizeof(PosUvVertex) == mesh_spec.GetStride());
 

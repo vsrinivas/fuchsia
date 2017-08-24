@@ -23,6 +23,12 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
   // GPU when Build() is called.
   MeshBuilder& AddIndex(uint32_t index);
 
+  MeshBuilder& AddTriangle(uint32_t index0, uint32_t index1, uint32_t index2) {
+    AddIndex(index0);
+    AddIndex(index1);
+    return AddIndex(index2);
+  }
+
   // Copy |size| bytes of data to the staging buffer; this data represents a
   // single vertex.
   MeshBuilder& AddVertexData(const void* ptr, size_t size);
@@ -33,6 +39,23 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
 
   // Return the size of a vertex for the given mesh-spec.
   size_t vertex_stride() const { return vertex_stride_; }
+
+  // Return the number of indices that have been added to the builder, so far.
+  size_t index_count() const { return index_count_; }
+
+  // Return the number of vertices that have been added to the builder, so far.
+  size_t vertex_count() const { return vertex_count_; }
+
+  // Return pointer to start of data for the vertex at the specified index.
+  uint8_t* GetVertex(size_t index) {
+    FTL_DCHECK(index < vertex_count_);
+    return vertex_staging_buffer_ + (index * vertex_stride_);
+  }
+  // Return pointer to the i-th index that was added.
+  uint32_t* GetIndex(size_t i) {
+    FTL_DCHECK(i < index_count_);
+    return index_staging_buffer_ + i;
+  }
 
  protected:
   MeshBuilder(size_t max_vertex_count,

@@ -47,7 +47,7 @@ void WobblyOceanScene::Init(escher::Stage* stage) {
       escher::SrgbToLinear(vec3(.164f, .254f, 0.278f)));
 
   // Create meshes for fancy wobble effect.
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+  MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                 MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
   ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 300.f,
                                     250.f, 18.f, -15.f);

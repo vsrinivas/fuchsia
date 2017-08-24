@@ -49,7 +49,7 @@ TEST(Hash, AllHashedTypes) {
   impl::ModelPipelineSpec model_pipeline_spec;
   MeshSpec mesh_spec;
 
-  mesh_spec.flags = MeshAttribute::kPosition | MeshAttribute::kUV;
+  mesh_spec.flags = MeshAttribute::kPosition2D | MeshAttribute::kUV;
 
   model_pipeline_spec.mesh_spec = mesh_spec;
   model_pipeline_spec.shape_modifiers = ShapeModifier::kWobble;

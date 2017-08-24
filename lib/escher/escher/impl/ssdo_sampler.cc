@@ -635,7 +635,7 @@ SsdoSampler::SsdoSampler(Escher* escher,
              noise_image->height() == kNoiseSize);
 
   FTL_DCHECK(full_screen_->spec() ==
-             MeshSpec{MeshAttribute::kPosition | MeshAttribute::kUV});
+             MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV});
 
   auto pipelines =
       CreatePipelines(device_, render_pass_,

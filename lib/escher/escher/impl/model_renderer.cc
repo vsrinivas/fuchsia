@@ -244,7 +244,7 @@ MeshPtr ModelRenderer::CreateRectangle() {
 }
 
 MeshPtr ModelRenderer::CreateCircle() {
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kUV};
+  MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
   return NewCircleMesh(mesh_manager_, spec, 4, vec2(0, 0), 1);
 }
 

@@ -86,11 +86,12 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
   if (ptr) {
     return *ptr;
   }
+  FTL_DCHECK(spec.IsValid());
 
   std::vector<vk::VertexInputAttributeDescription> attributes;
 
   vk::DeviceSize stride = 0;
-  if (spec.flags & MeshAttribute::kPosition) {
+  if (spec.flags & MeshAttribute::kPosition2D) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = kPositionAttributeLocation;
     attribute.binding = 0;
@@ -98,6 +99,16 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
     attribute.offset = stride;
 
     stride += sizeof(vec2);
+    attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttribute::kPosition3D) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = kPositionAttributeLocation;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32G32B32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(vec3);
     attributes.push_back(attribute);
   }
   if (spec.flags & MeshAttribute::kPositionOffset) {

@@ -33,7 +33,7 @@ void UberScene3::Init(escher::Stage* stage) {
   color1_->set_color(vec3(157.f / 255.f, 183.f / 255.f, 189.f / 255.f));
   color2_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
 
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+  MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                 MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
   ring_mesh_ = escher::NewRingMesh(escher(), spec, 5, vec2(0.f, 0.f), 75.f,
                                    55.f, 18.f, -15.f);

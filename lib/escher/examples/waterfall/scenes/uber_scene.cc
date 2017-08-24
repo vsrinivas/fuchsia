@@ -31,7 +31,7 @@ void UberScene::Init(escher::Stage* stage) {
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
 
   // Create meshes for fancy wobble effect.
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+  MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                 MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
   ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 300.f,
                                     250.f, 18.f, -15.f);

@@ -47,7 +47,7 @@ void Stroke::Tessellate() {
   vertex_count_ = total_vertex_count;
 
   auto builder = page_->escher_->NewMeshBuilder(
-      escher::MeshSpec{escher::MeshAttribute::kPosition |
+      escher::MeshSpec{escher::MeshAttribute::kPosition2D |
                        escher::MeshAttribute::kPositionOffset |
                        escher::MeshAttribute::kUV |
                        escher::MeshAttribute::kPerimeterPos},

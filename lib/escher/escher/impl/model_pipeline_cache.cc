@@ -16,12 +16,15 @@ namespace impl {
 
 namespace {
 
+// Note: this shader works with both 2D and 3D meshes.  In the former case,
+// Vulkan fills the Z-coordinate of |inPosition| with the default value of 0.
+// See section 20.2 of the Vulkan spec (as of Vulkan 1.0.57).
 constexpr char g_vertex_src[] = R"GLSL(
   #version 450
   #extension GL_ARB_separate_shader_objects : enable
 
   // Attribute locations must match constants in model_data.h
-  layout(location = 0) in vec2 inPosition;
+  layout(location = 0) in vec3 inPosition;
   layout(location = 2) in vec2 inUV;
 
   layout(location = 0) out vec2 fragUV;
@@ -36,8 +39,7 @@ constexpr char g_vertex_src[] = R"GLSL(
   };
 
   void main() {
-    // Halfway between min and max depth.
-    gl_Position = transform * vec4(inPosition, 0, 1);
+    gl_Position = transform * vec4(inPosition, 1);
     fragUV = inUV;
   }
   )GLSL";

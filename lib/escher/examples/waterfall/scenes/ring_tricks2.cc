@@ -15,13 +15,13 @@
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_context.h"
 
-using escher::vec2;
-using escher::vec3;
 using escher::MeshAttribute;
 using escher::MeshSpec;
 using escher::Object;
 using escher::RoundedRectSpec;
 using escher::ShapeModifier;
+using escher::vec2;
+using escher::vec3;
 
 RingTricks2::RingTricks2(Demo* demo) : Scene(demo), factory_(demo->escher()) {}
 
@@ -42,7 +42,7 @@ void RingTricks2::Init(escher::Stage* stage) {
 
   // Create meshes for fancy wobble effect.
   {
-    MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+    MeshSpec spec{MeshAttribute::kPosition2D | MeshAttribute::kPositionOffset |
                   MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
     ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 285.f,
                                       265.f, 18.f, -15.f);
@@ -50,9 +50,15 @@ void RingTricks2::Init(escher::Stage* stage) {
 
   // Create rounded rectangles.
   {
-    MeshSpec mesh_spec{MeshAttribute::kPosition | MeshAttribute::kUV};
+    MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
     rounded_rect1_ = factory_.NewRoundedRect(
         RoundedRectSpec(200, 400, 90, 20, 20, 50), mesh_spec);
+  }
+
+  // Create sphere.
+  {
+    MeshSpec spec{MeshAttribute::kPosition3D | MeshAttribute::kUV};
+    sphere_ = escher::NewSphereMesh(escher(), spec, 3, vec3(0, 0, 0), 100);
   }
 }
 
@@ -126,6 +132,10 @@ escher::Model* RingTricks2::Update(const escher::Stopwatch& stopwatch,
   // Rounded rect.
   Object round_rect1(vec3(300, 700, 30.f), rounded_rect1_, gradient_);
   objects.push_back(round_rect1);
+
+  // Sphere.
+  Object sphere(vec3(800, 300, 0.f), sphere_, color1_);
+  objects.push_back(sphere);
 
   // Create the Model
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));

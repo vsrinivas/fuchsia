@@ -57,6 +57,8 @@ class MeshManager : public MeshBuilderFactory {
 
    private:
     BoundingBox ComputeBoundingBox() const;
+    BoundingBox ComputeBoundingBox2D() const;
+    BoundingBox ComputeBoundingBox3D() const;
 
     MeshManager* manager_;
     MeshSpec spec_;
