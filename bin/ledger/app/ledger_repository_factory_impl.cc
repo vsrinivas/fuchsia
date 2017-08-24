@@ -32,7 +32,6 @@ cloud_sync::UserConfig GetUserConfig(Environment* environment,
                                      cloud_sync::AuthProvider* auth_provider) {
   FTL_DCHECK(firebase_config);
   cloud_sync::UserConfig user_config;
-  user_config.use_sync = true;
   user_config.server_id = firebase_config->server_id.get();
   user_config.user_id = user_id.ToString();
   user_config.user_directory = user_directory.ToString();
@@ -328,8 +327,6 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
 bool LedgerRepositoryFactoryImpl::CheckSyncConfig(
     const cloud_sync::UserConfig& user_config,
     const RepositoryInformation& repository_information) {
-  FTL_DCHECK(user_config.use_sync);
-
   std::string server_id_path = ftl::Concatenate(
       {repository_information.content_path, "/", kServerIdFilename});
   if (files::IsFile(server_id_path)) {

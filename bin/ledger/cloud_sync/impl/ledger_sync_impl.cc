@@ -28,7 +28,6 @@ LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
           app_firebase_path_)),
       user_watcher_(std::move(watcher)),
       aggregator_(user_watcher_.get()) {
-  FTL_DCHECK(user_config->use_sync);
   FTL_DCHECK(!user_config->server_id.empty());
 }
 

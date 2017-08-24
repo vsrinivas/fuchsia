@@ -44,10 +44,6 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     ftl::StringView app_id) {
   FTL_DCHECK(started_);
 
-  if (!user_config_.use_sync) {
-    return nullptr;
-  }
-
   auto result = std::make_unique<LedgerSyncImpl>(
       environment_, &user_config_, app_id, aggregator_.GetNewStateWatcher());
   result->set_on_delete([ this, ledger_sync = result.get() ]() {
@@ -67,9 +63,7 @@ std::string UserSyncImpl::GetFingerprintPath() {
 void UserSyncImpl::Start() {
   FTL_DCHECK(!started_);
 
-  if (user_config_.use_sync) {
-    CheckCloudNotErased();
-  }
+  CheckCloudNotErased();
 
   started_ = true;
 }

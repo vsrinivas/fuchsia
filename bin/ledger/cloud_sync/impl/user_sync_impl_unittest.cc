@@ -77,7 +77,6 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
         environment_(message_loop_.task_runner(), &network_service_),
         auth_provider_(message_loop_.task_runner()) {
     UserConfig user_config;
-    user_config.use_sync = true;
     user_config.server_id = "server-id";
     user_config.user_id = "user-id";
     user_config.user_directory = tmp_dir.path();
