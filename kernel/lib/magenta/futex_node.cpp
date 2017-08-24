@@ -159,9 +159,6 @@ mx_status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO
     // would not be atomic, which would mean that we could miss wakeups.
     mutex_release_thread_locked(mutex->GetInternal(), /* reschedule= */ false);
 
-    // Check whether a kill has been initiated, and block if not.  This
-    // check+wait must be done atomically (with respect to THREAD_LOCK),
-    // otherwise we could miss a thread termination.
     thread_t* current_thread = get_current_thread();
     mx_status_t result;
     current_thread->interruptable = true;
