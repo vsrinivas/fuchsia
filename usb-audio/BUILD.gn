@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-shared_library("usb-audio") {
+import("//build/config/fuchsia/rules.gni")
+
+driver_module("usb-audio") {
+  output_name = "libusb-audio"
+
   public = []
 
   sources = [
