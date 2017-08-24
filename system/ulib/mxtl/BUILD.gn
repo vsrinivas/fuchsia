@@ -19,6 +19,7 @@ source_set("mxtl") {
     "include/mxtl/canary.h",
     "include/mxtl/deleter.h",
     "include/mxtl/function.h",
+    "include/mxtl/initializer_list.h",
     "include/mxtl/intrusive_container_utils.h",
     "include/mxtl/intrusive_double_list.h",
     "include/mxtl/intrusive_hash_table.h",

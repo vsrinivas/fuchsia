@@ -311,10 +311,10 @@ GENERATED :=
 GLOBAL_DEFINES :=
 
 # anything added to KERNEL_DEFINES will be put into $(BUILDDIR)/config-kernel.h
-KERNEL_DEFINES := LK=1 _KERNEL=1
+KERNEL_DEFINES := LK=1 _KERNEL=1 MAGENTA_TOOLCHAIN=1
 
 # anything added to USER_DEFINES will be put into $(BUILDDIR)/config-user.h
-USER_DEFINES :=
+USER_DEFINES := MAGENTA_TOOLCHAIN=1
 
 # anything added to HOST_DEFINES will be put into $(BUILDDIR)/config-host.h
 HOST_DEFINES :=

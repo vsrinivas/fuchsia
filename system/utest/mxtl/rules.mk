@@ -11,6 +11,7 @@ mxtl_common_tests := \
     $(LOCAL_DIR)/auto_call_tests.cpp \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/function_tests.cpp \
+    $(LOCAL_DIR)/initializer_list_tests.cpp \
     $(LOCAL_DIR)/intrusive_container_tests.cpp \
     $(LOCAL_DIR)/intrusive_doubly_linked_list_tests.cpp \
     $(LOCAL_DIR)/intrusive_hash_table_dll_tests.cpp \
