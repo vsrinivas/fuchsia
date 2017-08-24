@@ -6,9 +6,11 @@
 
 #include <utility>
 
+#include "apps/ledger/src/cobalt/cobalt.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/path.h"
 
 namespace storage {
 
@@ -153,9 +155,27 @@ Status LevelDb::Init() {
   leveldb::Options options;
   options.create_if_missing = true;
   leveldb::Status status = leveldb::DB::Open(options, db_path_, &db);
-  if (!status.ok()) {
+  if (status.IsCorruption()) {
+    FTL_LOG(ERROR) << "Ledger state corrupted at " << db_path_
+                   << " with leveldb status: " << status.ToString();
+    FTL_LOG(WARNING) << "Trying to recover by erasing the local state.";
+    FTL_LOG(WARNING)
+        << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
+    ledger::ReportEvent(ledger::CobaltEvent::LEDGER_LEVELDB_STATE_CORRUPTED);
+
+    if (!files::DeletePath(db_path_, true)) {
+      FTL_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_;
+      return Status::INTERNAL_IO_ERROR;
+    }
+    leveldb::Status status = leveldb::DB::Open(options, db_path_, &db);
+    if (!status.ok()) {
+      FTL_LOG(ERROR) << "Failed to create a new LevelDB at " << db_path_
+                     << " with leveldb status: " << status.ToString();
+      return Status::INTERNAL_IO_ERROR;
+    }
+  } else if (!status.ok()) {
     FTL_LOG(ERROR) << "Failed to open ledger at " << db_path_
-                   << " with status: " << status.ToString();
+                   << " with leveldb status: " << status.ToString();
     return Status::INTERNAL_IO_ERROR;
   }
   db_.reset(db);
