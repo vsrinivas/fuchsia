@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <magenta/processargs.h>
+#include <magenta/syscalls.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/unique_ptr.h>
 #include <launchpad/launchpad.h>

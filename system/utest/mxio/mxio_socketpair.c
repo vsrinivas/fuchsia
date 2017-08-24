@@ -12,6 +12,8 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <magenta/syscalls.h>
+
 #include <unittest/unittest.h>
 
 bool socketpair_test(void) {

@@ -26,6 +26,7 @@
 #include <magenta/device/device.h>
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/vfs.h>
+#include <magenta/syscalls.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>

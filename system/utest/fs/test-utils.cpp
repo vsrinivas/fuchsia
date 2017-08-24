@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include <fs/mapped-vmo.h>
+
+#include <magenta/syscalls.h>
+
 #include <unittest/unittest.h>
 
 bool test_mapped_vmo() {

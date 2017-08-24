@@ -14,6 +14,7 @@
 #include <digest/merkle-tree.h>
 #include <magenta/device/vfs.h>
 #include <magenta/device/rtc.h>
+#include <magenta/syscalls.h>
 #include <mxtl/new.h>
 #include <mxtl/unique_ptr.h>
 #include <mxtl/vector.h>
