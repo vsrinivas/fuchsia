@@ -62,6 +62,16 @@ def parse_build_ids_from_manifest(manifest, buildids, readobj):
                         break
                 buildids.append('%s %s\n' % (buildid, path))
 
+def add_paths_to_map(path_map, manifest_path):
+  with open(manifest_path) as file:
+    for l in file:
+      parts = l.split("=")
+      if len(parts) != 2:
+        continue
+      if parts[0] in path_map:
+        path_map[parts[0]].append(manifest_path)
+      else:
+        path_map[parts[0]] = [manifest_path]
 
 def main():
     parser = argparse.ArgumentParser(
@@ -78,6 +88,8 @@ def main():
 
     readobj = readobj_path()
     buildids = []
+    out_targs = {}
+
     for manifest in [args.boot_manifest, args.system_manifest]:
         if os.path.exists(manifest):
             parse_build_ids_from_manifest(manifest, buildids, readobj)
@@ -88,8 +100,10 @@ def main():
         mkbootfs_cmd += [args.pre_binaries]
     if os.path.exists(args.boot_manifest) and os.path.getsize(args.boot_manifest) > 0:
         mkbootfs_cmd += ["--target=boot", args.boot_manifest]
+        add_paths_to_map(out_targs, args.boot_manifest)
     if os.path.exists(args.system_manifest) and os.path.getsize(args.system_manifest) > 0:
         mkbootfs_cmd += ["--target=system", args.system_manifest]
+        add_paths_to_map(out_targs, args.system_manifest)
     if args.post_binaries:
         mkbootfs_cmd += [args.post_binaries]
     for package in args.packages:
@@ -97,13 +111,28 @@ def main():
         boot_manifest = os.path.join(package_dir, "boot_manifest")
         if os.path.exists(boot_manifest) and os.path.getsize(boot_manifest) != 0:
             mkbootfs_cmd += [ "--target=boot", boot_manifest ]
+            add_paths_to_map(out_targs, boot_manifest)
         system_manifest = os.path.join(package_dir, "system_manifest")
         if os.path.exists(system_manifest) and os.path.getsize(system_manifest) != 0:
             mkbootfs_cmd += [ "--target=system", system_manifest ]
+            add_paths_to_map(out_targs, system_manifest)
         ids = os.path.join(package_dir, "ids.txt")
         if os.path.exists(ids):
             with open(ids) as ids_file:
                 buildids.append(ids_file.read())
+
+    error = False
+    for key, value in out_targs.items():
+      if len(value) > 1:
+        error = True
+        sys.stderr.write("%s is an output target of multiple manifests: \"%s\""
+                         % (key, value[0]))
+        for path in value[1:]:
+          sys.stderr.write(", \"%s\""  % path)
+        sys.stderr.write("\n")
+
+    if error:
+      return -1
 
     with open(args.build_id_map, 'w') as build_id_file:
         build_id_file.writelines(buildids)
