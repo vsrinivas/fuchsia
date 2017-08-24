@@ -43,18 +43,16 @@ def get_target(label):
     return path, name
 
 
-# Updates paths in a toml block
-def fix_paths(block, args):
+# Updates paths in a TOML block.
+def fix_paths(block, default_name, crate_root, new_base):
     if block is None:
         return
-    name = args.name
-    if "name" in block:
-        name = block["name"]
+    name = block["name"] if "name" in block else default_name
     if "path" not in block:
         raise Exception("Need to specify entry point for %s" % name)
     relative_path = block["path"]
-    new_path = os.path.join(args.crate_root, relative_path)
-    block["path"] = os.path.relpath(new_path, args.gen_dir)
+    new_path = os.path.join(crate_root, relative_path)
+    block["path"] = os.path.relpath(new_path, new_base)
 
 
 # Gathers build metadata from the given dependencies.
@@ -96,7 +94,7 @@ def extract_native_libs(dependency_infos):
 
 # Writes a cargo config file.
 def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
-                       native_libs, local_paths):
+                       native_libs):
     create_base_directory(path)
     config = {
         "source": {
@@ -108,7 +106,6 @@ def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
                 "directory": vendor_directory
             },
         },
-        "paths": local_paths,
     }
 
     if native_libs is not None:
@@ -125,6 +122,27 @@ def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
         pytoml.dump(config, config_file)
 
 
+# Generates the contents of the replace section for a Cargo.toml file based on
+# published and mirrored crates.
+def generate_replace_section(root_gen_dir, gen_dir):
+    deps = map(lambda (name, data): data["target"],
+               local_crates.RUST_CRATES["published"].iteritems())
+    infos = gather_dependency_infos(root_gen_dir, deps)
+    result = {}
+    def add_paths(crates, get_path):
+        for name in crates:
+            data = crates[name]
+            version = data["version"]
+            path = os.path.relpath(get_path(name, data), gen_dir)
+            result["%s:%s" % (name, version)] = {"path": path}
+    add_paths(local_crates.RUST_CRATES["published"],
+              lambda name, data: next(x["base_path"] for x in infos
+                                      if x["name"] == name))
+    add_paths(local_crates.RUST_CRATES["mirrors"],
+              lambda name, data: os.path.join(ROOT_PATH, data["path"]))
+    return result
+
+
 # Fixes the target path in the given depfile.
 def fix_depfile(depfile_path, base_path):
     with open(depfile_path, "r+") as depfile:
@@ -136,6 +154,14 @@ def fix_depfile(depfile_path, base_path):
         depfile.seek(0)
         depfile.write(new_content)
         depfile.truncate()
+
+
+# Runs the given command and returns its return code and output.
+def run_command(args, env, cwd):
+    job = subprocess.Popen(args, env=env, cwd=cwd, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+    stdout, stderr = job.communicate()
+    return (job.returncode, stdout, stderr)
 
 
 def main():
@@ -216,42 +242,53 @@ def main():
         package_name = config["package"]["name"]
         default_name = package_name.replace("-", "_")
 
-        # Update the path to the sources.
-        base = None
-        if args.type == "bin":
-            if "bin" not in config:
-                # Use the defaults.
-                config["bin"] = [{
-                    "name": package_name,
-                    "path": "src/main.rs"
-                }]
+        # Create an explicit bin section with standard defaults if it does not
+        # already exist.
+        if args.type == "bin" and "bin" not in config:
+            config["bin"] = [{
+                "name": package_name,
+                "path": "src/main.rs"
+            }]
+
+        # Update the various paths to the binary sources and locate the desired
+        # binary if applicable.
         if "bin" in config:
             for bin in config["bin"]:
                 if "name" in bin:
-                    fix_paths(bin, args)
+                    fix_paths(bin, args.name, args.crate_root, args.gen_dir)
                     if bin["name"] == args.name:
                         base = bin
         if args.type == "bin" and base is None:
-            raise Exception("Could not find binary named %s" % args.name)
+            print("Could not find binary named %s" % args.name)
+            return 1
 
-        if args.type == "lib":
-            if "lib" not in config:
-                # Use the defaults.
-                config["lib"] = {
-                    "name": default_name,
-                    "path": "src/lib.rs"
-                }
+        # Create an explicit lib section with standard defaults if it does not
+        # already exist.
+        if args.type == "lib" and "lib" not in config:
+            config["lib"] = {
+                "name": default_name,
+                "path": "src/lib.rs"
+            }
+
+        # Update the various paths to the library sources and locate the desired
+        # library if applicable.
         if "lib" in config:
             lib = config["lib"]
+            fix_paths(lib, args.name, args.crate_root, args.gen_dir)
             if args.type == "lib":
                 if "name" not in lib or lib["name"] != args.name:
-                    raise Exception("Could not find library named %s" % args.name)
-            fix_paths(lib, args)
+                    print("Could not find library %s" % args.name)
+                    return 1
 
         # Add or edit dependency sections for local deps.
         if "dependencies" not in config:
             config["dependencies"] = {}
         dependencies = config["dependencies"]
+        for dep in dependencies:
+            if "git" in dependencies[dep]:
+                print("Detected git dependency on %s" % dep)
+                print("These are not supported, use explicit versions instead")
+                return 1
         for info in dependency_infos:
             if not info["has_generated_code"]:
                 # This is a third-party dependency, cargo already knows how to
@@ -263,6 +300,12 @@ def main():
                 dependencies[artifact_name] = {}
             dependencies[artifact_name]["path"] = os.path.relpath(base_path,
                                                                   args.gen_dir)
+
+        # Create replace section with mirrors and local crates.
+        # This intentionally erases any existing replace section which could
+        # interfere with the build.
+        config["replace"] = generate_replace_section(args.root_gen_dir,
+                                                     args.gen_dir)
 
         # Write the complete manifest.
         with open(generated_manifest, "w") as generated_config:
@@ -278,9 +321,8 @@ def main():
 
     # Write a config file to allow cargo to find the vendored crates.
     config_path = os.path.join(args.gen_dir, ".cargo", "config")
-    local_paths = local_crates.get_all_paths(relative=False)
     write_cargo_config(config_path, args.vendor_directory, args.target_triple,
-                       args.shared_libs_root, native_libs, local_paths)
+                       args.shared_libs_root, native_libs)
 
     if args.type == "lib":
         # Since the generated .rlib artifact won't actually be used (for now),
@@ -304,7 +346,7 @@ def main():
         # be generated.
         # TODO(pylaligand): find a way to disable network access only or remove.
         # "--frozen",  # Prohibit network access.
-        "-q",  # Silence stdout.
+        "--verbose",
     ]
     if args.release:
         call_args.append("--release")
@@ -312,10 +354,10 @@ def main():
         call_args.append("--lib")
     if args.type == "bin":
         call_args.extend(["--bin", args.name])
-    retcode = subprocess.call(call_args, env=env, cwd=args.gen_dir)
+    retcode, stdout, stderr = run_command(call_args, env, args.gen_dir)
     if retcode != 0:
+        print(stdout + stderr)
         return retcode
-
 
     # Fix the depfile manually until a flag gets added to cargo to tweak the
     # base path for targets.
@@ -333,24 +375,23 @@ def main():
         test_args[1] = "test"
         test_args.append("--no-run")
         test_args.append("--message-format=json")
-        try:
-            messages = subprocess.check_output(test_args, env=env,
-                                               cwd=args.gen_dir)
-        except subprocess.CalledProcessError as e:
-            # The output is attached to the exception but not particularly
-            # useful as it is formatted in JSON.
+        retcode, stdout, _ = run_command(test_args, env, args.gen_dir)
+        if retcode != 0:
+            # The output is not particularly useful as it is formatted in JSON.
             # Re-run the command with a user-friendly format instead.
             del test_args[-1]
-            subprocess.call(test_args, env=env, cwd=args.gen_dir)
-            return e.returncode
+            _, stdout, stderr = run_command(test_args, env, args.gen_dir)
+            print(stdout + stderr)
+            return retcode
         generated_test_path = None
-        for line in messages.splitlines():
+        for line in stdout.splitlines():
             data = json.loads(line)
-            if (data["profile"]["test"]):
+            if data["profile"]["test"]:
               generated_test_path = data["filenames"][0]
               break
         if not generated_test_path:
-            raise Exception("Unable to locate resulting test file")
+            print("Unable to locate resulting test file")
+            return 1
         dest_test_path = os.path.join(args.out_dir,
                                       "%s-%s-test" % (args.name, args.type))
         if os.path.islink(dest_test_path):
