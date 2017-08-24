@@ -6,6 +6,8 @@
 
 #include <unittest/unittest.h>
 
+#include "crash-list.h"
+
 __BEGIN_CDECLS
 
 typedef enum {

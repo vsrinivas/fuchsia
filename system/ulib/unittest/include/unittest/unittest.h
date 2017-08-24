@@ -55,7 +55,10 @@
 
 #include <magenta/compiler.h>
 
-#include "../../crash-list.h"
+#ifdef __Fuchsia__
+#include <magenta/types.h>
+#define UNITTEST_CRASH_HANDLER_SUPPORTED
+#endif // __Fuchsia__
 
 #define PRINT_BUFFER_SIZE (512)
 
@@ -225,8 +228,11 @@ int unittest_set_verbosity_level(int new_level);
 
 // "RUN_TEST" implies the test is small
 #define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
-#define RUN_TEST_ENABLE_CRASH_HANDLER(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, true)
 #define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
+
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+
+#define RUN_TEST_ENABLE_CRASH_HANDLER(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, true)
 
 /**
  * Registers the process or thread as expected to crash. Tests utilizing this
@@ -256,7 +262,9 @@ int unittest_set_verbosity_level(int new_level);
  * }
  */
 #define REGISTER_CRASH(handle) \
-    crash_list_register(current_test_info->crash_list, handle)
+    unittest_register_crash(current_test_info, handle)
+
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
@@ -498,6 +506,8 @@ int unittest_set_verbosity_level(int new_level);
 /* For comparing uint64_t, like hw_id_t. */
 #define ASSERT_EQ_LL(expected, actual, msg) UT_EQ_LL(expected, actual, msg, RET_FALSE)
 
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+
 /**
  * Runs the given function in a separate thread, and fails if the function does not crash.
  * This is a blocking call.
@@ -519,6 +529,8 @@ int unittest_set_verbosity_level(int new_level);
  */
 #define ASSERT_DEATH(fn, arg, msg) ASSERT_TRUE(unittest_run_death_fn(fn, arg), msg)
 
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+
 /*
  * The list of test cases is made up of these elements.
  */
@@ -528,6 +540,9 @@ struct test_case_element {
     const char* name;
     bool (*test_case)(void);
 };
+
+/* List of processes or threads which are expected to crash. */
+typedef struct crash_list* crash_list_t;
 
 /*
  * Struct to store current test case info
@@ -572,6 +587,9 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                              struct test_info** current_test_info,
                              bool* all_success, bool enable_crash_handler);
 
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+void unittest_register_crash(struct test_info* current_test_info, mx_handle_t handle);
 bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
 __END_CDECLS

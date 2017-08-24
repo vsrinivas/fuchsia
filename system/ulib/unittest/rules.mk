@@ -22,3 +22,18 @@ MODULE_LIBS := system/ulib/c system/ulib/magenta
 MODULE_STATIC_LIBS := system/ulib/pretty
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_TYPE := hostlib
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/all-tests.c \
+    $(LOCAL_DIR)/unittest.c \
+
+MODULE_HOST_LIBS := system/ulib/pretty
+
+MODULE_COMPILEFLAGS := \
+    -Isystem/ulib/mxtl/include
+
+include make/module.mk

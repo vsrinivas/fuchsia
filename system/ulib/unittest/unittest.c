@@ -9,10 +9,28 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <pretty/hexdump.h>
 
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+#include "crash-list.h"
 #include "crash-handler.h"
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+
+typedef uint64_t nsecs_t;
+
+static nsecs_t now(void) {
+#ifdef __Fuchsia__
+    return mx_time_get(MX_CLOCK_MONOTONIC);
+#else
+    // clock_gettime(CLOCK_MONOTONIC) would be better but may not exist on the host
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) < 0)
+        return 0u;
+    return tv.tv_sec * 1000000000ull + tv.tv_usec * 1000ull;
+#endif
+}
 
 /**
  * \brief Default function to dump unit test results
@@ -92,11 +110,17 @@ int unittest_set_verbosity_level(int new_level) {
     return out;
 }
 
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+void unittest_register_crash(struct test_info* current_test_info, mx_handle_t handle) {
+    crash_list_register(current_test_info->crash_list, handle);
+}
+
 bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
     test_result_t test_result;
     mx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
     return status == MX_OK && test_result == TEST_CRASHED;
 }
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
 void unittest_run_named_test(const char* name, bool (*test)(void),
                              test_type_t test_type,
@@ -104,12 +128,13 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                              bool* all_success, bool enable_crash_handler) {
     if (utest_test_type & test_type) {
         unittest_printf_critical("    %-51s [RUNNING]", name);
-        mx_time_t start_time = mx_time_get(MX_CLOCK_MONOTONIC);
+        nsecs_t start_time = now();
         struct test_info test_info = { .all_ok = true, NULL };
         *current_test_info = &test_info;
         // The crash handler is disabled by default. To enable, the test should
         // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
         if (enable_crash_handler) {
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
             test_info.crash_list = crash_list_new();
 
             test_result_t test_result;
@@ -127,6 +152,10 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
                 UNITTEST_TRACEF("Expected crash did not occur\n");
                 test_info.all_ok = false;
             }
+#else // UNITTEST_CRASH_HANDLER_SUPPORTED
+            UNITTEST_TRACEF("Crash tests not supported\n");
+            test_info.all_ok = false;
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
         } else if (!test()) {
             test_info.all_ok = false;
         }
@@ -136,8 +165,8 @@ void unittest_run_named_test(const char* name, bool (*test)(void),
         if (!test_info.all_ok)
             *all_success = false;
 
-        mx_time_t end_time = mx_time_get(MX_CLOCK_MONOTONIC);
-        mx_time_t time_taken_ms = (end_time - start_time) / 1000000;
+        nsecs_t end_time = now();
+        uint64_t time_taken_ms = (end_time - start_time) / 1000000;
         unittest_printf_critical(" [%s] (%d ms)\n",
                                  test_info.all_ok ? "PASSED" : "FAILED",
                                  (int)time_taken_ms);

@@ -36,3 +36,13 @@ MODULE_STATIC_LIBS := \
     system/ulib/pretty
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).hostlib
+
+MODULE_TYPE := hostlib
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/hexdump.c \
+    $(LOCAL_DIR)/sizes.c
+
+include make/module.mk

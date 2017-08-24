@@ -6,9 +6,9 @@
 
 #include <magenta/syscalls.h>
 
-__BEGIN_CDECLS
+#include <unittest/unittest.h>
 
-typedef struct crash_list* crash_list_t;
+__BEGIN_CDECLS
 
 /** Returns a new list for registering processes and threads expected to crash. */
 crash_list_t crash_list_new(void);
