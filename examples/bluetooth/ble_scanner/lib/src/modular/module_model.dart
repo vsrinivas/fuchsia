@@ -109,4 +109,9 @@ class BLEScannerModuleModel extends ModuleModel implements ble.CentralDelegate {
     _discoveredDevices[device.identifier] = device;
     notifyListeners();
   }
+
+  @override
+  void onPeripheralDisconnected(String id) {
+    // TODO(armansito): Implement
+  }
 }

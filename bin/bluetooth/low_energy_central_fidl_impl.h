@@ -5,7 +5,9 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
+#include "apps/bluetooth/lib/gap/low_energy_connection_manager.h"
 #include "apps/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
 #include "apps/bluetooth/service/src/adapter_manager.h"
@@ -37,6 +39,10 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
   void StartScan(::bluetooth::low_energy::ScanFilterPtr filter,
                  const StartScanCallback& callback) override;
   void StopScan() override;
+  void ConnectPeripheral(const ::fidl::String& identifier,
+                         const ConnectPeripheralCallback& callback) override;
+  void DisconnectPeripheral(const ::fidl::String& identifier,
+                            const DisconnectPeripheralCallback& callback) override;
 
   // AdapterManager::Delegate overrides:
   void OnActiveAdapterChanged(bluetooth::gap::Adapter* adapter) override;
@@ -47,6 +53,9 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
   // Notifies the delegate that the scan state for this Central has changed.
   void NotifyScanStateChanged(bool scanning);
 
+  // Notifies the delegate that the device with the given identifier has been disconnected.
+  void NotifyPeripheralDisconnected(const std::string& identifier);
+
   // We keep a raw pointer as we expect this to outlive us.
   AdapterManager* adapter_manager_;  // weak
 
@@ -54,6 +63,12 @@ class LowEnergyCentralFidlImpl : public ::bluetooth::low_energy::Central,
   // perform a scan.
   bool requesting_scan_;
   std::unique_ptr<::bluetooth::gap::LowEnergyDiscoverySession> scan_session_;
+
+  // This client's connection references. A client can hold a connection to multiple peers.
+  // Each key is a remote device identifier. Each value is
+  //   a. nullptr, if a connect request to this device is currently pending.
+  //   b. a valid reference if this Central is holding a connection reference to this device.
+  std::unordered_map<std::string, ::bluetooth::gap::LowEnergyConnectionRefPtr> connections_;
 
   // The interface binding that represents the connection to the client application.
   ::fidl::Binding<::bluetooth::low_energy::Central> binding_;

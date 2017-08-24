@@ -94,6 +94,9 @@ interface CentralDelegate {
   // contains the received signal strength of the advertising packet that generated this event, if
   // available.
   OnDeviceDiscovered(RemoteDevice device);
+
+  // Called when this Central's connection to a peripheral with the given identifier is terminated.
+  OnPeripheralDisconnected(string identifier);
 };
 
 [ServiceName="bluetooth::low_energy::Central"]
@@ -125,4 +128,11 @@ interface Central {
 
   // Terminate a previously started scan session.
   StopScan();
+
+  // Creates a connection to the peripheral device with the given identifier.
+  // TODO(armansito): Return a gatt.Client handle here.
+  ConnectPeripheral(string identifier) => (Status status);
+
+  // Disconnects this Central's connection to the peripheral with the given identifier.
+  DisconnectPeripheral(string identifier) => (Status status);
 };

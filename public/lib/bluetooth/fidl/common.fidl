@@ -12,6 +12,7 @@ enum ErrorCode {
   IN_PROGRESS,
   INVALID_ARGUMENTS,
   NOT_FOUND,
+  ALREADY,
   PROTOCOL_ERROR,
 };
 
