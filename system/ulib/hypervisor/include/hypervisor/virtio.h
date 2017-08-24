@@ -101,6 +101,8 @@ mx_status_t virtio_device_notify(virtio_device_t* device);
  */
 typedef struct virtio_queue {
     mtx_t mutex;
+    // Allow threads to block on buffers in the avail ring.
+    cnd_t avail_ring_cnd;
 
     // Queue PFN used to locate this queue in guest physical address space.
     uint32_t pfn;
@@ -150,6 +152,9 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
  */
 mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
 
+/* Blocking variant of virtio_queue_next_avail. */
+void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index);
+
 /* Reads a single descriptor from the queue.
  *
  * This method should only be called using descriptor indicies acquired with
@@ -158,7 +163,6 @@ mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
  */
 mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, void** addr,
                                    uint32_t* len, uint16_t* flags);
-
 
 /* Return a descriptor to the used ring.
  *

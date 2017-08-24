@@ -22,6 +22,17 @@
 
 // clang-format on
 
+// Returns a circular index into a Virtio ring.
+static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
+    return index % queue->size;
+}
+
+static int ring_avail_count(virtio_queue_t* queue) {
+    if (queue->avail == NULL)
+        return 0;
+    return queue->avail->idx - queue->index;
+}
+
 static virtio_device_t* pci_device_to_virtio(const pci_device_t* device) {
     return (virtio_device_t*)device->impl;
 }
@@ -99,6 +110,13 @@ static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
     return MX_OK;
 }
 
+static void virtio_queue_signal(virtio_queue_t* queue) {
+    mtx_lock(&queue->mutex);
+    if (ring_avail_count(queue) > 0)
+        cnd_signal(&queue->avail_ring_cnd);
+    mtx_unlock(&queue->mutex);
+}
+
 static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t vcpu,
                                            uint16_t port, const mx_packet_guest_io_t* io) {
     virtio_device_t* device = pci_device_to_virtio(pci_device);
@@ -144,11 +162,16 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t
             fprintf(stderr, "Notify queue does not exist.\n");
             return MX_ERR_NOT_SUPPORTED;
         }
-        mx_status_t status = device->ops->queue_notify(device, io->u16);
+        uint16_t queue_sel = io->u16;
+        mx_status_t status = device->ops->queue_notify(device, queue_sel);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
             return status;
         }
+
+        // Notify threads waiting on a descriptor.
+        virtio_queue_signal(&device->queues[queue_sel]);
+
         // Send an interrupt back to the guest if we've generated one while
         // processing the queue.
         if (device->isr_status > 0) {
@@ -188,27 +211,27 @@ mx_status_t virtio_device_notify(virtio_device_t* device) {
     return pci_interrupt(&device->pci_device);
 }
 
-// Returns a circular index into a Virtio ring.
-static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
-    return index % queue->size;
-}
+// This must not return any errors besides MX_ERR_NOT_FOUND.
+static mx_status_t virtio_queue_next_avail_locked(virtio_queue_t* queue, uint16_t* index) {
+    if (ring_avail_count(queue) < 1)
+        return MX_ERR_NOT_FOUND;
 
-static int ring_avail_count(virtio_queue_t* queue) {
-    if (queue->avail == NULL)
-        return 0;
-    return queue->avail->idx - queue->index;
+    *index = queue->avail->ring[ring_index(queue, queue->index++)];
+    return MX_OK;
 }
 
 mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index) {
     mtx_lock(&queue->mutex);
-    if (ring_avail_count(queue) < 1) {
-        mtx_unlock(&queue->mutex);
-        return MX_ERR_NOT_FOUND;
-    }
-
-    *index = queue->avail->ring[ring_index(queue, queue->index++)];
+    mx_status_t status = virtio_queue_next_avail_locked(queue, index);
     mtx_unlock(&queue->mutex);
-    return MX_OK;
+    return status;
+}
+
+void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index) {
+    mtx_lock(&queue->mutex);
+    while (virtio_queue_next_avail_locked(queue, index) == MX_ERR_NOT_FOUND)
+        cnd_wait(&queue->avail_ring_cnd, &queue->mutex);
+    mtx_unlock(&queue->mutex);
 }
 
 mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index, void** addr,

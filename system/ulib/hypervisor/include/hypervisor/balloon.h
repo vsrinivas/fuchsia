@@ -22,15 +22,20 @@ typedef struct balloon {
     // Handle to the guest phsycial memory VMO for memory management.
     mx_handle_t vmo;
 
-    // Do we have a statsq buffer from the device?
-    bool has_stats_buffer;
-    // The index in the available ring of the stats descriptor.
-    uint16_t stats_index;
-    // Stats requests waiting for queue handlers return the descriptor.
-    cnd_t stats_cnd;
-    // Holds exclusive access to the stats queue. At most one stats request can
-    // be active at a time (by design).
-    mtx_t stats_mutex;
+    struct {
+        // The index in the available ring of the stats descriptor.
+        uint16_t desc_index;
+        // Indicates if desc_index valid.
+        bool has_buffer;
+        // Holds exclusive access to the stats queue. At most one stats request
+        // can be active at a time (by design). Specifically we need to hold
+        // exclusive access of the queue from the time a buffer is returned to
+        // the queue, initiating a stats request, until any logic processing
+        // the result has finished.
+        //
+        // Also guards access to other members of this structure.
+        mtx_t mutex;
+    } stats;
 
     virtio_device_t virtio_device;
     virtio_queue_t queues[VIRTIO_BALLOON_Q_COUNT];

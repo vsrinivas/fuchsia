@@ -100,45 +100,17 @@ static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint
     return MX_OK;
 }
 
-static mx_status_t balloon_stats_vq_handler(balloon_t* balloon) {
-    uint16_t desc_index;
-    virtio_queue_t* stats_queue = &balloon->queues[VIRTIO_BALLOON_Q_STATSQ];
-
-    // See if there are any available descriptors in the queue.
-    mx_status_t status = virtio_queue_next_avail(stats_queue, &desc_index);
-    if (status == MX_ERR_NOT_FOUND)
-        return MX_OK;
-    if (status != MX_OK)
-        return status;
-
-    // VIRTIO 1.0 Section 5.5.6.3.1: The driver MUST make at most one buffer
-    // available to the device in the statsq, at all times.
-    mtx_lock(&balloon->mutex);
-    if (balloon->has_stats_buffer) {
-        mtx_unlock(&balloon->mutex);
-        return MX_ERR_BAD_STATE;
-    }
-
-    // We found a new buffer. Record the index and notify any waiting threads.
-    balloon->has_stats_buffer = true;
-    balloon->stats_index = desc_index;
-    cnd_signal(&balloon->stats_cnd);
-    mtx_unlock(&balloon->mutex);
-
-    return MX_OK;
-}
-
 static mx_status_t handle_queue_notify(balloon_t* balloon, uint16_t queue_sel) {
     queue_ctx_t ctx;
     switch (queue_sel) {
+    case VIRTIO_BALLOON_Q_STATSQ:
+        return MX_OK;
     case VIRTIO_BALLOON_Q_INFLATEQ:
         ctx.op = &decommit_pages;
         break;
     case VIRTIO_BALLOON_Q_DEFLATEQ:
         ctx.op = &commit_pages;
         break;
-    case VIRTIO_BALLOON_Q_STATSQ:
-        return balloon_stats_vq_handler(balloon);
     default:
         return MX_ERR_INVALID_ARGS;
     }
@@ -212,9 +184,10 @@ void balloon_init(balloon_t* balloon, void* guest_physmem_addr, size_t guest_phy
     virtio_pci_init(&balloon->virtio_device);
 }
 
-static void wait_for_stats_buffer(balloon_t* balloon) {
-    while (!balloon->has_stats_buffer) {
-        cnd_wait(&balloon->stats_cnd, &balloon->mutex);
+static void wait_for_stats_buffer(balloon_t* balloon, virtio_queue_t* stats_queue) {
+    if (!balloon->stats.has_buffer) {
+        virtio_queue_wait(stats_queue, &balloon->stats.desc_index);
+        balloon->stats.has_buffer = true;
     }
 }
 
@@ -222,49 +195,38 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
     mx_status_t status;
     virtio_queue_t* stats_queue = &balloon->queues[VIRTIO_BALLOON_Q_STATSQ];
 
-    // stats_mutex needs to be held during the entire time the guest is
+    // stats.mutex needs to be held during the entire time the guest is
     // processing the buffer since we need to make sure no other threads
     // can grab the returned stats buffer before we process it.
-    //
-    // mutex is used to guard the balloon structure itself and can be left
-    // unlocked while the guest is populating the stats buffer.
-    mtx_lock(&balloon->stats_mutex);
-    mtx_lock(&balloon->mutex);
+    mtx_lock(&balloon->stats.mutex);
 
     // We need an initial buffer we can return to return to the device to
     // request stats from the device. This should be immediately available in
     // the common case but we can race the driver for the initial buffer.
-    wait_for_stats_buffer(balloon);
+    wait_for_stats_buffer(balloon, stats_queue);
 
     // We have a buffer. We need to return it to the driver. It'll populate
     // a new buffer with stats and then send it back to us.
-    balloon->has_stats_buffer = false;
-    virtio_queue_return(stats_queue, balloon->stats_index, 0);
+    balloon->stats.has_buffer = false;
+    virtio_queue_return(stats_queue, balloon->stats.desc_index, 0);
     status = virtio_device_notify(&balloon->virtio_device);
     if (status != MX_OK) {
-        mtx_unlock(&balloon->mutex);
-        mtx_unlock(&balloon->stats_mutex);
+        mtx_unlock(&balloon->stats.mutex);
         return status;
     }
-    wait_for_stats_buffer(balloon);
-
-    // We now have a buffer that is populated with the stats. We need to hold
-    // the stats_mutex until we've completed using the queue descriptor because
-    // another thread will be free to return it to the device once we unlock.
-    uint16_t stats_desc_index = balloon->stats_index;
-    mtx_unlock(&balloon->mutex);
+    wait_for_stats_buffer(balloon, stats_queue);
 
     uint32_t len;
     uint16_t flags;
     void* addr;
-    status = virtio_queue_read_desc(stats_queue, stats_desc_index, &addr, &len, &flags);
+    status = virtio_queue_read_desc(stats_queue, balloon->stats.desc_index, &addr, &len, &flags);
     if (status != MX_OK) {
-        mtx_unlock(&balloon->stats_mutex);
+        mtx_unlock(&balloon->stats.mutex);
         return status;
     }
 
     if ((len % sizeof(virtio_balloon_stat_t)) != 0) {
-        mtx_unlock(&balloon->stats_mutex);
+        mtx_unlock(&balloon->stats.mutex);
         return MX_ERR_IO_DATA_INTEGRITY;
     }
 
@@ -272,7 +234,7 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
     const virtio_balloon_stat_t* stats = addr;
     size_t stats_count = len / sizeof(virtio_balloon_stat_t);
     handler(stats, stats_count, ctx);
-    mtx_unlock(&balloon->stats_mutex);
+    mtx_unlock(&balloon->stats.mutex);
 
     // Note we deliberately do not return the buffer here. This will be done to
     // initiate the next stats request.
