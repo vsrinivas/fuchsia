@@ -316,7 +316,6 @@ static int loader_service_thread(void* arg) {
         }
     }
 
-done:
     mx_handle_close(h);
     return 0;
 }

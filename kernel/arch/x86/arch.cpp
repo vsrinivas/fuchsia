@@ -197,7 +197,6 @@ void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread)
 static int cmd_cpu(int argc, const cmd_args *argv, uint32_t flags)
 {
     if (argc < 2) {
-notenoughargs:
         printf("not enough arguments\n");
 usage:
         printf("usage:\n");

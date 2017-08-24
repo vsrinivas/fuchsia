@@ -131,7 +131,6 @@ devdone:
                de->d_name, info.sizestr, type ? type : "",
                info.label, flags, info.topo);
     }
-out:
     closedir(dir);
     return 0;
 }

@@ -286,7 +286,6 @@ bool run_send_test(struct test_params* tp) {
     status = tftp_push_file(session, &transport_info, &file_info, "abc.txt",
                             "xyz.txt", &opts);
     EXPECT_GE(status, 0, "failed to send file");
-done:
     free(session);
     END_HELPER;
 }
@@ -352,7 +351,6 @@ bool run_recv_test(struct test_params* tp) {
                                      &opts);
     } while (status == TFTP_NO_ERROR);
     EXPECT_EQ(status, TFTP_TRANSFER_COMPLETED, "failed to receive file");
-done:
     free(session);
     END_HELPER;
 }

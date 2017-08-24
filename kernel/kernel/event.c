@@ -104,7 +104,6 @@ status_t event_wait_deadline(event_t* e, lk_time_t deadline, bool interruptable)
 
     current_thread->interruptable = false;
 
-out:
     THREAD_UNLOCK(state);
 
     return ret;

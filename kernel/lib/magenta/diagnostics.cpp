@@ -750,7 +750,6 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
     int rc = 0;
 
     if (argc < 2) {
-    notenoughargs:
         printf("not enough arguments:\n");
     usage:
         printf("%s ps                : list processes\n", argv[0].str);

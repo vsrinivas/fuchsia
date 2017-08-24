@@ -1698,7 +1698,6 @@ static mx_status_t create_default_device(dwc_usb_t* dwc) {
         endpoint_request_scheduler_thread,
         (void*)ctx);
 
-finish:
     mtx_unlock(&default_device->devmtx);
     return retval;
 }

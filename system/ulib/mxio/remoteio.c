@@ -557,7 +557,6 @@ mx_status_t mxio_service_connect(const char* svcpath, mx_handle_t h) {
         return mxio_ns_connect(mxio_root_ns, svcpath, h);
     }
     // Otherwise we fail
-not_found:
     mx_handle_close(h);
     return MX_ERR_NOT_FOUND;
 }

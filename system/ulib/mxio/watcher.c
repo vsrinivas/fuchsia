@@ -133,7 +133,6 @@ mx_status_t mxio_watch_directory(int dirfd, watchdir_func_t cb, mx_time_t deadli
     watcher->fd = dirfd;
     status = mxio_watcher_loop(watcher, deadline);
 
-done:
     mxio_watcher_destroy(watcher);
     return status;
 }
