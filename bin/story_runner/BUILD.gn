@@ -45,6 +45,7 @@ source_set("story_runner") {
     "//apps/modular/lib/ledger:operations",
     "//apps/modular/lib/ledger:page_client",
     "//apps/modular/lib/ledger:storage",
+    "//apps/modular/lib/ledger:types",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/lib/util",
     "//apps/modular/services/component",

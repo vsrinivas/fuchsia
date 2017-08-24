@@ -9,7 +9,9 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "apps/modular/lib/ledger/page_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/module/module_data.fidl.h"
 #include "apps/modular/services/story/per_device_story_info.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
@@ -52,7 +54,7 @@ class StoryStorageImpl : PageClient, public LinkStorage {
       std::function<void(PerDeviceStoryInfoPtr per_device)>;
   using LogCallback = std::function<void(fidl::Array<StoryContextLogPtr>)>;
 
-  explicit StoryStorageImpl(ledger::Page* story_page);
+  explicit StoryStorageImpl(LedgerClient* ledger_client, LedgerPageId page_id);
   ~StoryStorageImpl() override;
 
   // |LinkStorage|
@@ -111,9 +113,6 @@ class StoryStorageImpl : PageClient, public LinkStorage {
     DataCallback watcher;
   };
   std::vector<WatcherEntry> watchers_;
-
-  // The ledger page the story data is stored in.
-  ledger::Page* const story_page_;
 
   // All asynchronous operations are sequenced by this operation
   // queue.

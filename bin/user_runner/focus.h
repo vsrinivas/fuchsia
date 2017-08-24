@@ -10,7 +10,9 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "apps/modular/lib/ledger/page_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -23,7 +25,8 @@ namespace modular {
 
 class FocusHandler : FocusProvider, FocusController, PageClient {
  public:
-  FocusHandler(const fidl::String& device_id, ledger::Page* page);
+  FocusHandler(const fidl::String& device_id,
+               LedgerClient* ledger_client, LedgerPageId page_id);
   ~FocusHandler() override;
 
   void AddProviderBinding(fidl::InterfaceRequest<FocusProvider> request);
@@ -44,7 +47,6 @@ class FocusHandler : FocusProvider, FocusController, PageClient {
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
 
-  ledger::Page* const page_;
   const fidl::String device_id_;
 
   fidl::BindingSet<FocusProvider> provider_bindings_;

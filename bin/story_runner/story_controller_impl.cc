@@ -792,12 +792,13 @@ class StoryControllerImpl::GetImportanceCall : Operation<float> {
 
 StoryControllerImpl::StoryControllerImpl(
     const fidl::String& story_id,
-    ledger::PagePtr story_page,
+    LedgerClient* const ledger_client,
+    LedgerPageId story_page_id,
     StoryProviderImpl* const story_provider_impl)
     : story_id_(story_id),
       story_provider_impl_(story_provider_impl),
-      story_page_(std::move(story_page)),
-      story_storage_impl_(new StoryStorageImpl(story_page_.get())),
+      story_storage_impl_(new StoryStorageImpl(
+          ledger_client, std::move(story_page_id))),
       story_scope_(story_provider_impl_->user_scope(),
                    kStoryScopeLabelPrefix + story_id_.get()),
       story_context_binding_(this),

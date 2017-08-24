@@ -8,11 +8,14 @@
 #include <string>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
+
+class LedgerClient;
 
 // A helper class that holds on to a page snapshot through a shared
 // pointer, hands out shared pointers to it, can replace the snapshot
@@ -41,9 +44,11 @@ namespace modular {
 // one, but PageSnapshot doesn't have a duplicate method.
 class PageClient : ledger::PageWatcher {
  public:
-  // Takes a context name as a label for the error messages it logs.
+  // Takes a context name as a label for the error messages it logs. The ledger
+  // client reference is to receive conflicts from the ledger.
   explicit PageClient(std::string context,
-                      ledger::Page* page,
+                      LedgerClient* ledger_client,
+                      LedgerPageId page_id,
                       const char* prefix);
   ~PageClient() override;
 
@@ -69,11 +74,57 @@ class PageClient : ledger::PageWatcher {
     return page_snapshot_;
   }
 
+  const LedgerPageId& page_id() const { return page_id_; }
+  const std::string& prefix() const { return prefix_; }
+  ledger::Page* page() { return page_; }
+
+  // Computed by implementations of OnPageConflict() in derived classes.
+  enum ConflictResolution {
+    LEFT,
+    RIGHT,
+    MERGE
+  };
+
+  // The argument to OnPageConflict(). It's mutated in place so it's easier to
+  // extend without having to alter clients.
+  struct Conflict {
+    std::string key;
+
+    bool has_left{};
+    std::string left;
+    bool left_is_deleted{};
+
+    bool has_right{};
+    std::string right;
+    bool right_is_deleted{};
+
+    ConflictResolution resolution{LEFT};
+    std::string merged;
+    bool merged_is_deleted{};
+  };
+
  private:
   // Derived classes implement these methods as needed. The default
   // implementation does nothing.
   virtual void OnPageChange(const std::string& key, const std::string& value);
   virtual void OnPageDelete(const std::string& key);
+
+  // Derived classes implement this method as needed. The default implementation
+  // selects left and logs an INFO about the unresolved conflict.
+  //
+  // For now, only per-key conflict resolution is supported by page client. If
+  // we need more coherency for conflict resolution, this can be changed.
+  //
+  // For now, conflict resolution is synchronous. Can be changed too, for
+  // example to go on an OperationQueue to wait for ongoing changes to reconcile
+  // with.
+  //
+  // If ConflictResolution is MERGE, the result is returned in merged*. It is
+  // possible that the merge of two undeleted values is to the delete the key.
+  //
+  // This is invoked from the conflict resolver in LedgerClient.
+  friend class LedgerClient;
+  virtual void OnPageConflict(Conflict* conflict);
 
   // Replaces the previous page snapshot with a newly requested one.
   fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
@@ -91,6 +142,12 @@ class PageClient : ledger::PageWatcher {
 
   fidl::Binding<ledger::PageWatcher> binding_;
   const std::string context_;
+
+  LedgerClient* const ledger_client_;
+  const LedgerPageId page_id_;
+  ledger::Page* const page_;
+  const std::string prefix_;
+
   std::shared_ptr<ledger::PageSnapshotPtr> page_snapshot_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClient);

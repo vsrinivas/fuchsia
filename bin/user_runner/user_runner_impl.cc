@@ -16,6 +16,8 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/ledger/constants.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
+#include "apps/modular/lib/ledger/status.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/services/agent/agent_provider.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -41,19 +43,6 @@
 
 namespace modular {
 
-// Template specializations for fidl services that don't have a Terminate()
-// method.
-template <>
-void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
-    const std::function<void()>& done) {
-  // The LedgerRepositoryFactory service is not the primary service in the
-  // Ledger's executable (LedgerController is primary) and so we shouldn't use
-  // this handle to control the lifetime of that executable. Related to FW-265.
-  DetachApplicationController();
-  ServiceReset();
-  done();
-}
-
 namespace {
 
 constexpr char kAppId[] = "modular_user_runner";
@@ -62,33 +51,6 @@ constexpr char kMaxwellUrl[] = "file:///system/apps/maxwell";
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 constexpr char kUserShellLinkName[] = "user-shell-link";
-
-std::string LedgerStatusToString(ledger::Status status) {
-  switch (status) {
-    case ledger::Status::OK:
-      return "OK";
-    case ledger::Status::AUTHENTICATION_ERROR:
-      return "AUTHENTICATION_ERROR";
-    case ledger::Status::PAGE_NOT_FOUND:
-      return "PAGE_NOT_FOUND";
-    case ledger::Status::KEY_NOT_FOUND:
-      return "KEY_NOT_FOUND";
-    case ledger::Status::REFERENCE_NOT_FOUND:
-      return "REFERENCE_NOT_FOUND";
-    case ledger::Status::IO_ERROR:
-      return "IO_ERROR";
-    case ledger::Status::TRANSACTION_ALREADY_IN_PROGRESS:
-      return "TRANSACTION_ALREADY_IN_PROGRESS";
-    case ledger::Status::NO_TRANSACTION_IN_PROGRESS:
-      return "NO_TRANSACTION_IN_PROGRESS";
-    case ledger::Status::INTERNAL_ERROR:
-      return "INTERNAL_ERROR";
-    case ledger::Status::UNKNOWN_ERROR:
-      return "UNKNOWN_ERROR";
-    default:
-      return "(unknown error)";
-  }
-};
 
 ledger::FirebaseConfigPtr GetLedgerFirebaseConfig() {
   auto firebase_config = ledger::FirebaseConfig::New();
@@ -149,12 +111,13 @@ void UserRunnerImpl::Initialize(
   view_provider->CreateView(std::move(view_owner_request), nullptr);
 
   // DeviceMap service
-  std::string device_id = LoadDeviceID(GetAccountId(account_));
+  const std::string device_id = LoadDeviceID(GetAccountId(account_));
   device_name_ = LoadDeviceName(GetAccountId(account_));
-  std::string device_profile = LoadDeviceProfile();
+  const std::string device_profile = LoadDeviceProfile();
 
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
-      device_name_, device_id, device_profile, root_page_.get());
+      device_name_, device_id, device_profile,
+      ledger_client_.get(), fidl::Array<uint8_t>::New(16));
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         device_map_impl_->Connect(std::move(request));
@@ -164,7 +127,7 @@ void UserRunnerImpl::Initialize(
 
   // TODO(planders) Do not create RemoteInvoker until service is actually
   // requested.
-  remote_invoker_impl_ = std::make_unique<RemoteInvokerImpl>(ledger_.get());
+  remote_invoker_impl_ = std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
   user_scope_->AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
         remote_invoker_impl_->Connect(std::move(request));
@@ -172,23 +135,15 @@ void UserRunnerImpl::Initialize(
 
   // Setup MessageQueueManager.
 
-  ledger::PagePtr message_queue_page;
-  ledger_->GetPage(to_array(kMessageQueuePageId),
-                   message_queue_page.NewRequest(), [](ledger::Status status) {
-                     if (status != ledger::Status::OK) {
-                       FTL_LOG(ERROR)
-                           << "Ledger.GetPage(kMessageQueuePageId) failed: "
-                           << LedgerStatusToString(status);
-                     }
-                   });
   std::string message_queue_path = kMessageQueuePath;
   message_queue_path.append(GetAccountId(account));
   if (!files::CreateDirectory(message_queue_path)) {
     FTL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
   }
+
   message_queue_manager_ = std::make_unique<MessageQueueManager>(
-      std::move(message_queue_page), message_queue_path);
+      ledger_client_.get(), to_array(kMessageQueuePageId), message_queue_path);
 
   // Begin init maxwell.
   //
@@ -223,18 +178,9 @@ void UserRunnerImpl::Initialize(
   fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
-  ledger::PagePtr agent_runner_page;
-  ledger_->GetPage(to_array(kAgentRunnerPageId), agent_runner_page.NewRequest(),
-                   [](ledger::Status status) {
-                     if (status != ledger::Status::OK) {
-                       FTL_LOG(ERROR)
-                           << "Ledger.GetPage(kAgentRunnerPageId) failed: "
-                           << LedgerStatusToString(status);
-                     }
-                   });
-
   agent_runner_storage_ =
-      std::make_unique<AgentRunnerStorageImpl>(std::move(agent_runner_page));
+      std::make_unique<AgentRunnerStorageImpl>(
+          ledger_client_.get(), to_array(kAgentRunnerPageId));
 
   agent_runner_ = std::make_unique<AgentRunner>(
       user_scope_->GetLauncher(), message_queue_manager_.get(),
@@ -287,13 +233,14 @@ void UserRunnerImpl::Initialize(
       focus_provider_story_provider.NewRequest();
 
   story_provider_impl_ = std::make_unique<StoryProviderImpl>(
-      user_scope_.get(), device_id, ledger_.get(), root_page_.get(),
+      user_scope_.get(), device_id, ledger_client_.get(), fidl::Array<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider), intelligence_services_.get(),
       user_intelligence_provider_.get());
   story_provider_impl_->Connect(std::move(story_provider_request));
 
-  focus_handler_ = std::make_unique<FocusHandler>(device_id, root_page_.get());
+  focus_handler_ = std::make_unique<FocusHandler>(
+      device_id, ledger_client_.get(), fidl::Array<uint8_t>::New(16));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -364,7 +311,8 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
     return;
   }
 
-  link_storage_ = std::make_unique<StoryStorageImpl>(root_page_.get());
+  link_storage_ = std::make_unique<StoryStorageImpl>(
+      ledger_client_.get(), fidl::Array<uint8_t>::New(16));
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = fidl::Array<fidl::String>::New(0);
   link_path->link_name = kUserShellLinkName;
@@ -402,7 +350,7 @@ void UserRunnerImpl::LogoutAndResetLedgerState() {
   token_provider_factory_->GetTokenProvider(
       kLedgerAppUrl, ledger_token_provider_for_erase.NewRequest());
   auto firebase_config = GetLedgerFirebaseConfig();
-  ledger_app_client_->primary_service()->EraseRepository(
+  ledger_repository_factory_->EraseRepository(
       "/data", std::move(firebase_config),
       std::move(ledger_token_provider_for_erase),
       [this](ledger::Status status) {
@@ -421,7 +369,7 @@ void UserRunnerImpl::SetupLedger() {
   ledger_config->args = fidl::Array<fidl::String>::New(1);
   ledger_config->args[0] = kLedgerNoMinfsWaitFlag;
   ledger_app_client_ =
-      std::make_unique<AppClient<ledger::LedgerRepositoryFactory>>(
+      std::make_unique<AppClient<ledger::LedgerController>>(
           user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER");
   ledger_app_client_->SetAppErrorHandler([this] {
     FTL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
@@ -439,7 +387,10 @@ void UserRunnerImpl::SetupLedger() {
     firebase_config = GetLedgerFirebaseConfig();
   }
 
-  ledger_app_client_->primary_service()->GetRepository(
+  ConnectToService(ledger_app_client_->services(),
+                   ledger_repository_factory_.NewRequest());
+
+  ledger_repository_factory_->GetRepository(
       "/data", std::move(firebase_config), std::move(ledger_token_provider),
       ledger_repository_.NewRequest(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
@@ -455,39 +406,12 @@ void UserRunnerImpl::SetupLedger() {
   // is cleared), ledger will close the connection to |ledger_repository_|.
   ledger_repository_.set_connection_error_handler([this] { Logout(); });
 
-  // Open Ledger.
-  ledger_repository_->GetLedger(
-      to_array(kAppId), ledger_.NewRequest(), [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-              << "LedgerRepository.GetLedger() failed: "
-              << LedgerStatusToString(status) << std::endl
-              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-          Logout();
-        }
-      });
-
-  // This must be the first call after GetLedger, otherwise the Ledger
-  // starts with one reconciliation strategy, then switches to another.
-  ledger_->SetConflictResolverFactory(
-      conflict_resolver_.AddBinding(), [this](ledger::Status status) {
-        if (status != ledger::Status::OK) {
-          FTL_LOG(ERROR)
-              << "Ledger.SetConflictResolverFactory() failed: "
-              << LedgerStatusToString(status) << std::endl
-              << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-          Logout();
-        }
-      });
-
-  ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "Ledger.GetRootPage() failed: "
-                     << LedgerStatusToString(status) << std::endl
-                     << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
-      Logout();
-    }
-  });
+  ledger_client_.reset(new LedgerClient(
+      ledger_repository_.get(), kAppId,
+      [this] {
+        FTL_LOG(ERROR) << "CALLING Logout() DUE TO UNRECOVERABLE LEDGER ERROR.";
+        Logout();
+      }));
 }
 
 }  // namespace modular

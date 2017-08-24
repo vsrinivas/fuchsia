@@ -52,7 +52,8 @@ namespace testing {
 // |TestWithMessageLoop| also provides methods to quit from the message loop.
 class TestWithMessageLoop : public ::testing::Test {
  protected:
-  TestWithMessageLoop() {}
+  TestWithMessageLoop();
+  ~TestWithMessageLoop() override;
 
   // Runs the loop for at most |timeout|. Returns |true| if the timeout has been
   // reached.
@@ -68,7 +69,11 @@ class TestWithMessageLoop : public ::testing::Test {
   // Creates a closure that quits the test message loop when executed.
   std::function<void()> MakeQuitTask();
 
-  mtl::MessageLoop message_loop_;
+  // TODO(mesch): Once we use FIDL on the message loop, we cannot replace the
+  // message loop instance. If we do, FIDL connections estabslished on the
+  // second instance get closed. It is unclear why, but if we keep a single
+  // message loop instance, FIDL connections work.
+  static mtl::MessageLoop* message_loop_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(TestWithMessageLoop);

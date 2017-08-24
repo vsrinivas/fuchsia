@@ -8,6 +8,10 @@
 
 namespace modular {
 namespace testing {
+
+// Must be a pointer so static initialization is safe.
+mtl::MessageLoop* TestWithMessageLoop::message_loop_{};
+
 namespace {
 
 bool RunGivenLoopWithTimeout(mtl::MessageLoop* message_loop,
@@ -59,17 +63,27 @@ bool RunGivenLoopUntil(mtl::MessageLoop* message_loop,
 
 }  // namespace
 
+TestWithMessageLoop::TestWithMessageLoop() {
+  if (message_loop_ == nullptr) {
+    message_loop_ = new mtl::MessageLoop;
+  } else {
+    FTL_CHECK(message_loop_ == mtl::MessageLoop::GetCurrent());
+  }
+}
+
+TestWithMessageLoop::~TestWithMessageLoop() = default;
+
 bool TestWithMessageLoop::RunLoopWithTimeout(ftl::TimeDelta timeout) {
-  return RunGivenLoopWithTimeout(&message_loop_, timeout);
+  return RunGivenLoopWithTimeout(message_loop_, timeout);
 }
 
 bool TestWithMessageLoop::RunLoopUntil(std::function<bool()> condition,
                                        ftl::TimeDelta timeout) {
-  return RunGivenLoopUntil(&message_loop_, std::move(condition), timeout);
+  return RunGivenLoopUntil(message_loop_, std::move(condition), timeout);
 }
 
 std::function<void()> TestWithMessageLoop::MakeQuitTask() {
-  return [this] { message_loop_.PostQuitTask(); };
+  return [] { message_loop_->PostQuitTask(); };
 }
 
 }  // namespace testing

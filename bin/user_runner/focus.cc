@@ -27,9 +27,9 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
 }  // namespace
 
 FocusHandler::FocusHandler(const fidl::String& device_id,
-                           ledger::Page* const page)
-    : PageClient("FocusHandler", page, kFocusKeyPrefix),
-      page_(page),
+                           LedgerClient* const ledger_client,
+                           LedgerPageId page_id)
+    : PageClient("FocusHandler", ledger_client, std::move(page_id), kFocusKeyPrefix),
       device_id_(device_id) {}
 
 FocusHandler::~FocusHandler() = default;
@@ -47,7 +47,7 @@ void FocusHandler::AddControllerBinding(
 // |FocusProvider|
 void FocusHandler::Query(const QueryCallback& callback) {
   new ReadAllDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
-      &operation_queue_, page_, kFocusKeyPrefix, XdrFocusInfo, callback);
+      &operation_queue_, page(), kFocusKeyPrefix, XdrFocusInfo, callback);
 }
 
 // |FocusProvider|
@@ -76,7 +76,7 @@ void FocusHandler::Set(const fidl::String& story_id) {
       ftl::TimePoint::Now().ToEpochDelta().ToSeconds();
 
   new WriteDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
-      &operation_queue_, page_, MakeFocusKey(device_id_), XdrFocusInfo,
+      &operation_queue_, page(), MakeFocusKey(device_id_), XdrFocusInfo,
       std::move(data), [] {});
 }
 

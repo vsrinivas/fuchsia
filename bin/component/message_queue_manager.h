@@ -14,6 +14,9 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
+#include "apps/modular/lib/ledger/page_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/component/message_queue.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -30,9 +33,11 @@ class XdrContext;
 // the message queues for all component instances. The
 // ComponentContext instance is responsible for deleting the message
 // queues it has created, otherwise they are persisted.
-class MessageQueueManager {
+class MessageQueueManager : PageClient {
  public:
-  MessageQueueManager(ledger::PagePtr page, std::string local_path);
+  MessageQueueManager(LedgerClient* ledger_client,
+                      LedgerPageId page_id,
+                      std::string local_path);
   ~MessageQueueManager();
 
   void ObtainMessageQueue(const std::string& component_namespace,
@@ -97,7 +102,6 @@ class MessageQueueManager {
   void EraseQueueName(ComponentQueueNameMap<ValueType>& queue_map,
                       const MessageQueueInfo& info);
 
-  ledger::PagePtr page_;
   const std::string local_path_;
 
   // A map of queue_token to |MessageStorageQueue|.

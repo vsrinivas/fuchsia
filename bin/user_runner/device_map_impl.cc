@@ -44,15 +44,16 @@ std::string LoadHostname() {
 DeviceMapImpl::DeviceMapImpl(const std::string& device_name,
                              const std::string& device_id,
                              const std::string& device_profile,
-                             ledger::Page* const page)
-    : PageClient("DeviceMapImpl", page, kDeviceKeyPrefix), page_(page) {
+                             LedgerClient* const ledger_client,
+                             LedgerPageId page_id)
+    : PageClient("DeviceMapImpl", ledger_client, std::move(page_id), kDeviceKeyPrefix) {
   current_device_.name = device_name;
   current_device_.device_id = device_id;
   current_device_.profile = device_profile;
   current_device_.hostname = LoadHostname();
 
   new WriteDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
-      &operation_queue_, page, MakeDeviceKey(device_id), XdrDeviceData,
+      &operation_queue_, page(), MakeDeviceKey(device_id), XdrDeviceData,
       current_device_.Clone(), [] {});
 }
 
@@ -64,7 +65,7 @@ void DeviceMapImpl::Connect(fidl::InterfaceRequest<DeviceMap> request) {
 
 void DeviceMapImpl::Query(const QueryCallback& callback) {
   new ReadAllDataCall<DeviceMapEntry, fidl::InlinedStructPtr<DeviceMapEntry>>(
-      &operation_queue_, page_, kDeviceKeyPrefix, XdrDeviceData, callback);
+      &operation_queue_, page(), kDeviceKeyPrefix, XdrDeviceData, callback);
 }
 
 void DeviceMapImpl::GetCurrentDevice(const GetCurrentDeviceCallback& callback) {

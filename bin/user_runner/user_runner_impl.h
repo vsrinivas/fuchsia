@@ -26,7 +26,6 @@
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
-#include "apps/modular/src/user_runner/conflict_resolver_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -38,6 +37,7 @@ class AgentRunner;
 class ComponentContextImpl;
 class DeviceMapImpl;
 class FocusHandler;
+class LedgerClient;
 class LinkImpl;
 class LinkStorage;
 class MessageQueueManager;
@@ -101,12 +101,11 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;
-  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>>
+  std::unique_ptr<AppClient<ledger::LedgerController>>
       ledger_app_client_;
+  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ledger::LedgerRepositoryPtr ledger_repository_;
-  ledger::LedgerPtr ledger_;
-  ledger::PagePtr root_page_;
-  ConflictResolverImpl conflict_resolver_;
+  std::unique_ptr<LedgerClient> ledger_client_;
 
   std::unique_ptr<Scope> user_scope_;
 

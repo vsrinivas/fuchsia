@@ -9,6 +9,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "apps/modular/lib/testing/fake_application_launcher.h"
 #include "apps/modular/lib/testing/ledger_repository_for_testing.h"
 #include "apps/modular/lib/testing/mock_base.h"
@@ -54,37 +55,44 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
 
 class AgentRunnerTest : public TestWithMessageLoop {
  public:
-  AgentRunnerTest()
-      : ledger_repo_for_testing_(
-            LedgerRepositoryForTesting::GetSingleton("/tmp/ledger_test_repo")) {
-  }
+  AgentRunnerTest() = default;
 
   void SetUp() override {
-    ledger_repo_for_testing_->ledger_repository()->GetLedger(
-        to_array("agent_ledger_test"), agent_ledger_.NewRequest(),
-        [](ledger::Status status) { ASSERT_EQ(ledger::Status::OK, status); });
+    ledger_repo_app_ =
+        std::make_unique<LedgerRepositoryForTesting>("agent_runner_unittest");
 
-    agent_ledger_->GetPage(to_array("0123456789123456"),
-                           message_queue_page_.NewRequest(),
-                           [](ledger::Status status) {
-                             ASSERT_TRUE(status == ledger::Status::OK);
-                           });
+    ledger_client_.reset(new LedgerClient(ledger_repo_app_->ledger_repository(),
+                                          __FILE__,
+                                          [] { ASSERT_TRUE(false); }));
 
-    mqm_ = std::make_unique<MessageQueueManager>(std::move(message_queue_page_),
-                                                 "/tmp/test_mq_data");
+    mqm_.reset(new MessageQueueManager(ledger_client_.get(),
+                                       to_array("0123456789123456"),
+                                       "/tmp/test_mq_data"));
 
-    agent_runner_ = std::make_unique<AgentRunner>(
-        &launcher_, mqm_.get(), ledger_repo_for_testing_->ledger_repository(),
+    agent_runner_.reset(new AgentRunner(
+        &launcher_, mqm_.get(), ledger_repo_app_->ledger_repository(),
         &agent_runner_storage_, token_provider_factory_.get(),
-        ui_provider_.get());
+        ui_provider_.get()));
   }
 
   void TearDown() override {
+    agent_runner_.reset();
+    mqm_.reset();
+    ledger_client_.reset();
+
     bool repo_deleted = false;
-    ledger_repo_for_testing_->Reset([&repo_deleted] { repo_deleted = true; });
+    ledger_repo_app_->Reset([&repo_deleted] { repo_deleted = true; });
     if (!repo_deleted) {
       RunLoopUntil([&repo_deleted] { return repo_deleted; });
     }
+
+    bool terminated = false;
+    ledger_repo_app_->Terminate([&terminated] { terminated = true; });
+    if (!terminated) {
+      RunLoopUntil([&terminated] { return terminated; });
+    }
+
+    ledger_repo_app_.reset();
   }
 
   MessageQueueManager* message_queue_manager() { return mqm_.get(); }
@@ -94,12 +102,11 @@ class AgentRunnerTest : public TestWithMessageLoop {
   FakeApplicationLauncher* launcher() { return &launcher_; }
 
  private:
-  FakeApplicationLauncher launcher_;
-  LedgerRepositoryForTesting* ledger_repo_for_testing_;
+  std::unique_ptr<LedgerRepositoryForTesting> ledger_repo_app_;
 
-  ledger::LedgerPtr agent_ledger_;
-  ledger::PagePtr agent_ledger_page_;
-  ledger::PagePtr message_queue_page_;
+  FakeApplicationLauncher launcher_;
+
+  std::unique_ptr<LedgerClient> ledger_client_;
   std::unique_ptr<MessageQueueManager> mqm_;
   FakeAgentRunnerStorage agent_runner_storage_;
   std::unique_ptr<AgentRunner> agent_runner_;

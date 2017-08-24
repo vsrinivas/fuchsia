@@ -7,7 +7,9 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "apps/modular/lib/ledger/page_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage.h"
 #include "lib/ftl/macros.h"
 
@@ -16,7 +18,7 @@ namespace modular {
 // An implementation of |AgentRunnerStorage| that persists data in the ledger.
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
-  explicit AgentRunnerStorageImpl(ledger::PagePtr page);
+  explicit AgentRunnerStorageImpl(LedgerClient* ledger_client, LedgerPageId page_id);
   ~AgentRunnerStorageImpl() override;
 
  private:
@@ -43,12 +45,6 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
   void OnPageChange(const std::string& key, const std::string& value) override;
   // |PageClient|
   void OnPageDelete(const std::string& key) override;
-
-  // Only valid before |Initialize()| is called.
-  // TODO(vardhan): Its possible that page notifications come through
-  // before a delegate is registered. This can be fixed if PageClient was
-  // also register-delegate-based and not inherited.
-  ledger::PagePtr page_;
 
   // Only valid after |Initialize()| is called.
   NotificationDelegate* delegate_;

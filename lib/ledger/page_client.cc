@@ -9,18 +9,24 @@
 #include <memory>
 
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace modular {
 
 PageClient::PageClient(std::string context,
-                       ledger::Page* const page,
+                       LedgerClient* ledger_client,
+                       LedgerPageId page_id,
                        const char* const prefix)
-    : binding_(this), context_(std::move(context)) {
-  FTL_DCHECK(page);
-  page->GetSnapshot(
-      NewRequest(), prefix == nullptr ? nullptr : to_array(prefix),
+    : binding_(this),
+      context_(std::move(context)),
+      ledger_client_(ledger_client),
+      page_id_(std::move(page_id)),
+      page_(ledger_client_->GetPage(this, context_, page_id_)),
+      prefix_(prefix == nullptr ? "" : prefix) {
+  page_->GetSnapshot(
+      NewRequest(), to_array(prefix_),
       binding_.NewBinding(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           FTL_LOG(ERROR) << context_ << " Page.GetSnapshot() " << status;
@@ -28,7 +34,10 @@ PageClient::PageClient(std::string context,
       });
 }
 
-PageClient::~PageClient() = default;
+PageClient::~PageClient() {
+  // We assume ledger client always outlives page client.
+  ledger_client_->DropPageClient(this);
+}
 
 fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
@@ -92,12 +101,19 @@ void PageClient::OnPageChange(const std::string& /*key*/,
 
 void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
+void PageClient::OnPageConflict(Conflict* const conflict) {
+  FTL_LOG(INFO) << "PageClient::OnPageConflict() " << context_
+                << " " << conflict->key
+                << " " << conflict->left
+                << " " << conflict->right;
+};
+
 namespace {
 
-void GetEntries_(ledger::PageSnapshot* const snapshot,
-                 std::vector<ledger::EntryPtr>* const entries,
-                 fidl::Array<uint8_t> next_token,
-                 std::function<void(ledger::Status)> callback) {
+void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
+                         std::vector<ledger::EntryPtr>* const entries,
+                         LedgerPageKey next_token,
+                         std::function<void(ledger::Status)> callback) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),
       ftl::MakeCopyable([ snapshot, entries, callback = std::move(callback) ](
@@ -114,8 +130,8 @@ void GetEntries_(ledger::PageSnapshot* const snapshot,
           callback(ledger::Status::OK);
           return;
         }
-        GetEntries_(snapshot, entries, std::move(next_token),
-                    std::move(callback));
+        GetEntriesRecursive(snapshot, entries, std::move(next_token),
+                            std::move(callback));
       }));
 }
 
@@ -124,7 +140,8 @@ void GetEntries_(ledger::PageSnapshot* const snapshot,
 void GetEntries(ledger::PageSnapshot* const snapshot,
                 std::vector<ledger::EntryPtr>* const entries,
                 std::function<void(ledger::Status)> callback) {
-  GetEntries_(snapshot, entries, nullptr /* next_token */, std::move(callback));
+  GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
+                      std::move(callback));
 }
 
 }  // namespace modular

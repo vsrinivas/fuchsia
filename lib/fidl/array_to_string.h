@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/bindings/string.h"
 
 namespace modular {
 

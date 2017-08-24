@@ -20,6 +20,8 @@
 #include "apps/modular/lib/fidl/context.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_controller.fidl.h"
@@ -61,7 +63,8 @@ constexpr char kStoryImportanceContext[] = "/location/home_work";
 class StoryControllerImpl : StoryController, StoryContext {
  public:
   StoryControllerImpl(const fidl::String& story_id,
-                      ledger::PagePtr story_page,
+                      LedgerClient* ledger_client,
+                      LedgerPageId story_page_id,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
 
@@ -199,7 +202,6 @@ class StoryControllerImpl : StoryController, StoryContext {
 
   StoryProviderImpl* const story_provider_impl_;
 
-  ledger::PagePtr story_page_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 
   // The scope in which the modules within this story run.

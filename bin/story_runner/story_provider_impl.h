@@ -14,7 +14,9 @@
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/proxy.h"
 #include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "apps/modular/lib/ledger/page_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/config/config.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
@@ -42,8 +44,8 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   StoryProviderImpl(
       Scope* user_scope,
       std::string device_id,
-      ledger::Ledger* ledger,
-      ledger::Page* root_page,
+      LedgerClient* ledger_client,
+      LedgerPageId page_id,
       AppConfigPtr story_shell,
       const ComponentContextInfo& component_context_info,
       FocusProviderPtr focus_provider,
@@ -176,8 +178,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   // Story provider writes story records to the root page, and creates
   // new pages for stories.
-  ledger::Ledger* const ledger_;
-  ledger::Page* const root_page_;
+  LedgerClient* const ledger_client_;
 
   // The bindings for this instance.
   fidl::BindingSet<StoryProvider> bindings_;

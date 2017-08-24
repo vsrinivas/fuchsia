@@ -173,7 +173,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
             story_info->url = url_;
             story_info->id = story_id_;
             story_info->last_focus_time = mx_time_get(MX_CLOCK_UTC);
-            ;
             story_info->extra = std::move(extra_info_);
             story_info->extra.mark_non_null();
 
@@ -186,7 +185,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::String> {
 
   void Cont1(FlowToken flow) {
     controller_ = std::make_unique<StoryControllerImpl>(
-        story_id_, std::move(story_page_), story_provider_impl_);
+        story_id_, story_provider_impl_->ledger_client_,
+        std::move(story_page_id_), story_provider_impl_);
     controller_->AddForCreate(kRootModuleName, url_, kRootLink, root_json_,
                               [this, flow] { Cont2(flow); });
   }
@@ -314,14 +314,12 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
       std::unordered_map<std::string, struct StoryControllerImplContainer>;
 
   GetControllerCall(OperationContainer* const container,
-                    ledger::Ledger* const ledger,
                     ledger::Page* const page,
                     StoryProviderImpl* const story_provider_impl,
                     StoryControllerImplMap* const story_controller_impls,
                     const fidl::String& story_id,
                     fidl::InterfaceRequest<StoryController> request)
       : Operation("StoryProviderImpl::GetControllerCall", container, [] {}),
-        ledger_(ledger),
         page_(page),
         story_provider_impl_(story_provider_impl),
         story_controller_impls_(story_controller_impls),
@@ -351,23 +349,15 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   }
 
   void Cont1(FlowToken flow) {
-    ledger_->GetPage(
-        story_data_->story_page_id.Clone(), story_page_.NewRequest(),
-        [this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "GetControllerCall() " << story_id_
-                           << " Ledger.GetPage() " << status;
-          }
-          struct StoryControllerImplContainer container;
-          container.impl = std::make_unique<StoryControllerImpl>(
-              story_id_, std::move(story_page_), story_provider_impl_);
-          container.impl->Connect(std::move(request_));
-          container.current_info = story_data_->story_info.Clone();
-          story_controller_impls_->emplace(story_id_, std::move(container));
-        });
+    struct StoryControllerImplContainer container;
+    container.impl = std::make_unique<StoryControllerImpl>(
+        story_id_, story_provider_impl_->ledger_client_,
+        story_data_->story_page_id.Clone(), story_provider_impl_);
+    container.impl->Connect(std::move(request_));
+    container.current_info = story_data_->story_info.Clone();
+    story_controller_impls_->emplace(story_id_, std::move(container));
   }
 
-  ledger::Ledger* const ledger_;                  // not owned
   ledger::Page* const page_;                      // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
   StoryControllerImplMap* const story_controller_impls_;
@@ -375,7 +365,6 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
   fidl::InterfaceRequest<StoryController> request_;
 
   StoryDataPtr story_data_;
-  ledger::PagePtr story_page_;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -453,7 +442,6 @@ class StoryProviderImpl::GetImportanceCall : Operation<ImportanceMap> {
 };
 
 struct StoryProviderImpl::LinkPeer {
-  ledger::PagePtr page;
   std::unique_ptr<StoryStorageImpl> storage;
   std::unique_ptr<LinkImpl> link;
 };
@@ -479,35 +467,20 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    MakeGetStoryDataCall(&operation_queue_, impl_->root_page_, story_id_,
+    MakeGetStoryDataCall(&operation_queue_, impl_->page(), story_id_,
                          [this, flow](StoryDataPtr story_data) {
                            if (story_data) {
                              story_data_ = std::move(story_data);
-                             Cont1(flow);
+                             Cont(flow);
                            }
                          });
   }
 
-  void Cont1(FlowToken flow) {
-    impl_->ledger_->GetPage(
-        story_data_->story_page_id.Clone(), page_.NewRequest(),
-        [this, flow](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "GetLinkPeerCall() " << story_id_
-                           << " Ledger.GetPage() " << status;
-            return;
-          }
-          Cont2(flow);
-        });
-  }
-
-  void Cont2(FlowToken /*flow*/) {
+  void Cont(FlowToken flow) {
     auto link_peer = std::make_unique<LinkPeer>();
 
-    link_peer->page = std::move(page_);
-    auto* const page = link_peer->page.get();
-
-    link_peer->storage = std::make_unique<StoryStorageImpl>(page);
+    link_peer->storage.reset(new StoryStorageImpl(impl_->ledger_client_,
+                                                  story_data_->story_page_id.Clone()));
     auto* const storage = link_peer->storage.get();
 
     auto link_path = LinkPath::New();
@@ -530,7 +503,6 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
   fidl::InterfaceRequest<Link> request_;
 
   StoryDataPtr story_data_;
-  ledger::PagePtr page_;
 
   // Sub operations run in this queue.
   OperationQueue operation_queue_;
@@ -541,18 +513,18 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
 StoryProviderImpl::StoryProviderImpl(
     Scope* const user_scope,
     std::string device_id,
-    ledger::Ledger* const ledger,
-    ledger::Page* const root_page,
+    LedgerClient* const ledger_client,
+    LedgerPageId root_page_id,
     AppConfigPtr story_shell,
     const ComponentContextInfo& component_context_info,
     FocusProviderPtr focus_provider,
     maxwell::IntelligenceServices* const intelligence_services,
     maxwell::UserIntelligenceProvider* const user_intelligence_provider)
-    : PageClient("StoryProviderImpl", root_page, kStoryKeyPrefix),
+    : PageClient("StoryProviderImpl", ledger_client,
+                 std::move(root_page_id), kStoryKeyPrefix),
       user_scope_(user_scope),
       device_id_(std::move(device_id)),
-      ledger_(ledger),
-      root_page_(root_page),
+      ledger_client_(ledger_client),
       story_shell_(std::move(story_shell)),
       component_context_info_(component_context_info),
       user_intelligence_provider_(user_intelligence_provider),
@@ -658,7 +630,7 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
     return true;
   };
 
-  new MutateStoryDataCall(&operation_queue_, root_page_, story_id, mutate,
+  new MutateStoryDataCall(&operation_queue_, page(), story_id, mutate,
                           done);
 };
 
@@ -666,7 +638,7 @@ void StoryProviderImpl::SetStoryInfoExtra(const fidl::String& story_id,
 void StoryProviderImpl::CreateStory(const fidl::String& module_url,
                                     const CreateStoryCallback& callback) {
   FTL_LOG(INFO) << "CreateStory() " << module_url;
-  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, module_url,
+  new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this, module_url,
                       FidlStringMap(), fidl::String(), callback);
 }
 
@@ -677,14 +649,14 @@ void StoryProviderImpl::CreateStoryWithInfo(
     const fidl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
-  new CreateStoryCall(&operation_queue_, ledger_, root_page_, this, module_url,
+  new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this, module_url,
                       std::move(extra_info), root_json, callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
-  new DeleteStoryCall(&operation_queue_, root_page_, story_id,
+  new DeleteStoryCall(&operation_queue_, page(), story_id,
                       &story_controller_impls_,
                       component_context_info_.message_queue_manager,
                       false /* already_deleted */, callback);
@@ -694,7 +666,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
                                      const GetStoryInfoCallback& callback) {
   MakeGetStoryDataCall(
-      &operation_queue_, root_page_, story_id,
+      &operation_queue_, page(), story_id,
       [callback](StoryDataPtr story_data) {
         callback(story_data ? std::move(story_data->story_info) : nullptr);
       });
@@ -724,7 +696,7 @@ void StoryProviderImpl::NotifyStoryStateChange(const fidl::String& story_id,
 void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> request) {
-  new GetControllerCall(&operation_queue_, ledger_, root_page_, this,
+  new GetControllerCall(&operation_queue_, page(), this,
                         &story_controller_impls_, story_id, std::move(request));
 }
 
@@ -732,7 +704,7 @@ void StoryProviderImpl::GetController(
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
   new ReadAllDataCall<StoryData>(
-      &operation_queue_, root_page_, kStoryKeyPrefix, XdrStoryData,
+      &operation_queue_, page(), kStoryKeyPrefix, XdrStoryData,
       [callback](fidl::Array<StoryDataPtr> data) {
         fidl::Array<fidl::String> result;
         result.resize(0);
@@ -807,7 +779,7 @@ void StoryProviderImpl::OnPageDelete(const std::string& key) {
     watcher->OnDelete(story_id);
   });
 
-  new DeleteStoryCall(&operation_queue_, root_page_, story_id,
+  new DeleteStoryCall(&operation_queue_, page(), story_id,
                       &story_controller_impls_,
                       component_context_info_.message_queue_manager,
                       true /* already_deleted */, [] {});
@@ -841,7 +813,7 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
     story_data->story_info->last_focus_time = time;
     return true;
   };
-  new MutateStoryDataCall(&operation_queue_, root_page_, info->focused_story_id,
+  new MutateStoryDataCall(&operation_queue_, page(), info->focused_story_id,
                           mutate, [] {});
 }
 

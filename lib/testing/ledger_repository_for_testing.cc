@@ -13,38 +13,10 @@
 
 namespace modular {
 
-// Template specializations for fidl services that don't have a Terminate()
-// method.
-template <>
-void AppClient<ledger::LedgerRepositoryFactory>::ServiceTerminate(
-    const std::function<void()>& done) {
-  service_.set_connection_error_handler(done);
-}
-
 namespace testing {
 
-// static
-LedgerRepositoryForTesting* LedgerRepositoryForTesting::GetSingleton(
-    const std::string& repository_path) {
-  static std::unique_ptr<LedgerRepositoryForTesting> instance;
-  if (!instance) {
-    instance = std::make_unique<LedgerRepositoryForTesting>(repository_path);
-  }
-  return instance.get();
-}
-
-ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
-  if (!ledger_repo_) {
-    ledger_app_client_->primary_service()->GetRepository(
-        repository_path_, nullptr, nullptr, ledger_repo_.NewRequest(),
-        [](ledger::Status status) { FTL_CHECK(status == ledger::Status::OK); });
-  }
-  return ledger_repo_.get();
-}
-
 LedgerRepositoryForTesting::LedgerRepositoryForTesting(
-    std::string repository_path)
-    : repository_path_(std::move(repository_path)) {
+    const std::string& repository_name) : repository_path_("/tmp/" + repository_name) {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);
@@ -52,21 +24,48 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting(
 
   auto& app_launcher = test_runner::GetApplicationContext()->launcher();
   ledger_app_client_ =
-      std::make_unique<AppClient<ledger::LedgerRepositoryFactory>>(
+      std::make_unique<AppClient<ledger::LedgerController>>(
           app_launcher.get(), std::move(ledger_config));
 
-  ledger_app_client_->primary_service()->GetRepository(
-      repository_path_, nullptr, nullptr, ledger_repo_.NewRequest(),
-      [](ledger::Status status) { FTL_CHECK(status == ledger::Status::OK); });
+  ConnectToService(ledger_app_client_->services(),
+                   ledger_repo_factory_.NewRequest());
 }
 
-void LedgerRepositoryForTesting::Reset(ftl::Closure done) {
+LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;
+
+ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
+  if (!ledger_repo_) {
+    ledger_repo_factory_->GetRepository(
+        repository_path_, nullptr, nullptr, ledger_repo_.NewRequest(),
+        [this](ledger::Status status) {
+          FTL_CHECK(status == ledger::Status::OK);
+        });
+  }
+
+  return ledger_repo_.get();
+}
+
+void LedgerRepositoryForTesting::Reset(std::function<void()> done) {
   if (ledger_repo_) {
-    // It seems to take an entire second to erase a repository so for now,
-    // we fire-and-forget the erase and report |done| right away.
-    ledger_app_client_->primary_service()->EraseRepository(
-        repository_path_, nullptr, nullptr, [](ledger::Status status) {});
-    ledger_repo_.reset();
+    ledger_repo_factory_->EraseRepository(
+        repository_path_, nullptr, nullptr, [this, done](ledger::Status status) {
+          ledger_repo_.reset();
+          done();
+        });
+  } else {
+    done();
+  }
+}
+
+void LedgerRepositoryForTesting::Terminate(std::function<void()> done) {
+  if (ledger_app_client_) {
+    ledger_app_client_->AppTerminate([this, done] {
+        ledger_repo_factory_.reset();
+        ledger_app_client_.reset();
+        done();
+      });
+
+  } else {
     done();
   }
 }

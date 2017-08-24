@@ -209,21 +209,22 @@ class StoryStorageImpl::FlushWatchersCall : Operation<> {
 
 LinkStorage::~LinkStorage() = default;
 
-StoryStorageImpl::StoryStorageImpl(ledger::Page* const story_page)
-    : PageClient("StoryStorageImpl", story_page, kLinkKeyPrefix),
-      story_page_(story_page) {}
+StoryStorageImpl::StoryStorageImpl(LedgerClient* const ledger_client,
+                                   LedgerPageId story_page_id)
+    : PageClient("StoryStorageImpl", ledger_client, std::move(story_page_id),
+                 kLinkKeyPrefix) {}
 
 StoryStorageImpl::~StoryStorageImpl() = default;
 
 void StoryStorageImpl::ReadLinkData(const LinkPathPtr& link_path,
                                     const DataCallback& callback) {
-  new ReadLinkDataCall(&operation_queue_, story_page_, link_path, callback);
+  new ReadLinkDataCall(&operation_queue_, page(), link_path, callback);
 }
 
 void StoryStorageImpl::WriteLinkData(const LinkPathPtr& link_path,
                                      const fidl::String& data,
                                      const SyncCallback& callback) {
-  new WriteLinkDataCall(&operation_queue_, story_page_, link_path, data,
+  new WriteLinkDataCall(&operation_queue_, page(), link_path, data,
                         callback);
 }
 
@@ -231,13 +232,13 @@ void StoryStorageImpl::ReadModuleData(
     const fidl::Array<fidl::String>& module_path,
     const ModuleDataCallback& callback) {
   new ReadDataCall<ModuleData>(
-      &operation_queue_, story_page_, MakeModuleKey(module_path),
+      &operation_queue_, page(), MakeModuleKey(module_path),
       false /* not_found_is_ok */, XdrModuleData, callback);
 }
 
 void StoryStorageImpl::ReadAllModuleData(
     const AllModuleDataCallback& callback) {
-  new ReadAllDataCall<ModuleData>(&operation_queue_, story_page_,
+  new ReadAllDataCall<ModuleData>(&operation_queue_, page(),
                                   kModuleKeyPrefix, XdrModuleData, callback);
 }
 
@@ -263,7 +264,7 @@ void StoryStorageImpl::WriteModuleData(
 void StoryStorageImpl::WriteModuleData(ModuleDataPtr data,
                                        const SyncCallback& callback) {
   const std::string key{MakeModuleKey(data->module_path)};
-  new WriteDataCall<ModuleData>(&operation_queue_, story_page_, key,
+  new WriteDataCall<ModuleData>(&operation_queue_, page(), key,
                                 XdrModuleData, std::move(data), callback);
 }
 
@@ -278,19 +279,19 @@ void StoryStorageImpl::WriteDeviceData(const std::string& story_id,
   data->state = state;
 
   new WriteDataCall<PerDeviceStoryInfo, PerDeviceStoryInfoPtr>(
-      &operation_queue_, story_page_, MakePerDeviceKey(device_id),
+      &operation_queue_, page(), MakePerDeviceKey(device_id),
       XdrPerDeviceStoryInfo, std::move(data), callback);
 }
 
 void StoryStorageImpl::Log(StoryContextLogPtr log_entry) {
   new WriteDataCall<StoryContextLog>(
-      &operation_queue_, story_page_,
+      &operation_queue_, page(),
       MakeStoryContextLogKey(log_entry->signal, log_entry->time),
       XdrStoryContextLog, std::move(log_entry), [] {});
 }
 
 void StoryStorageImpl::ReadLog(const LogCallback& callback) {
-  new ReadAllDataCall<StoryContextLog>(&operation_queue_, story_page_,
+  new ReadAllDataCall<StoryContextLog>(&operation_queue_, page(),
                                        kStoryContextLogKeyPrefix,
                                        XdrStoryContextLog, callback);
 }
@@ -300,7 +301,7 @@ void StoryStorageImpl::Sync(const SyncCallback& callback) {
 }
 
 void StoryStorageImpl::FlushWatchers(const SyncCallback& callback) {
-  new FlushWatchersCall(&operation_queue_, story_page_, callback);
+  new FlushWatchersCall(&operation_queue_, page(), callback);
 }
 
 void StoryStorageImpl::WatchLink(const LinkPathPtr& link_path,

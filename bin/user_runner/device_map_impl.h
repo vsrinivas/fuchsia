@@ -7,7 +7,9 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/lib/ledger/ledger_client.h"
 #include "apps/modular/lib/ledger/page_client.h"
+#include "apps/modular/lib/ledger/types.h"
 #include "apps/modular/services/user/device_map.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -23,7 +25,8 @@ class DeviceMapImpl : DeviceMap, PageClient {
   DeviceMapImpl(const std::string& device_name,
                 const std::string& device_id,
                 const std::string& device_profile,
-                ledger::Page* page);
+                LedgerClient* ledger_client,
+                LedgerPageId page_id);
   ~DeviceMapImpl() override;
 
   void Connect(fidl::InterfaceRequest<DeviceMap> request);
@@ -42,7 +45,6 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void OnPageDelete(const std::string& key) override;
 
   fidl::BindingSet<DeviceMap> bindings_;
-  ledger::Page* const page_;
 
   DeviceMapEntry current_device_;
 

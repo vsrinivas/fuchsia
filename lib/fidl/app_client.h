@@ -67,11 +67,6 @@ class AppClientBase {
   // attempting graceful termination via |AppTerminate|.
   void SetAppErrorHandler(const std::function<void()>& error_handler);
 
- protected:
-  // Some services' Ptr objects shouldn't control the lifetime of the
-  // executable.
-  void DetachApplicationController();
-
  private:
   // Service specific parts of the termination sequence.
   virtual void ServiceTerminate(const std::function<void()>& done);

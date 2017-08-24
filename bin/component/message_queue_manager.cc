@@ -623,14 +623,16 @@ class MessageQueueManager::DeleteNamespaceCall : Operation<> {
   ledger::PageSnapshotPtr snapshot_;
   const std::string message_queues_key_prefix_;
   std::vector<ledger::EntryPtr> component_entries_;
-  std::vector<fidl::Array<uint8_t>> keys_to_delete_;
+  std::vector<LedgerPageKey> keys_to_delete_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteNamespaceCall);
 };
 
-MessageQueueManager::MessageQueueManager(ledger::PagePtr page,
+MessageQueueManager::MessageQueueManager(LedgerClient* const ledger_client,
+                                         LedgerPageId page_id,
                                          std::string local_path)
-    : page_(std::move(page)), local_path_(std::move(local_path)) {}
+    : PageClient("MessageQueueManager", ledger_client, std::move(page_id), nullptr),
+      local_path_(std::move(local_path)) {}
 
 MessageQueueManager::~MessageQueueManager() = default;
 
@@ -639,7 +641,7 @@ void MessageQueueManager::ObtainMessageQueue(
     const std::string& component_instance_id,
     const std::string& queue_name,
     fidl::InterfaceRequest<MessageQueue> request) {
-  new ObtainMessageQueueCall(&operation_collection_, this, page_.get(),
+  new ObtainMessageQueueCall(&operation_collection_, this, page(),
                              component_namespace, component_instance_id,
                              queue_name, std::move(request));
 }
@@ -721,7 +723,7 @@ void MessageQueueManager::DeleteMessageQueue(
     const std::string& component_namespace,
     const std::string& component_instance_id,
     const std::string& queue_name) {
-  new DeleteMessageQueueCall(&operation_collection_, this, page_.get(),
+  new DeleteMessageQueueCall(&operation_collection_, this, page(),
                              component_namespace, component_instance_id,
                              queue_name);
 }
@@ -729,7 +731,7 @@ void MessageQueueManager::DeleteMessageQueue(
 void MessageQueueManager::DeleteNamespace(
     const std::string& component_namespace,
     std::function<void()> done) {
-  new DeleteNamespaceCall(&operation_collection_, this, page_.get(),
+  new DeleteNamespaceCall(&operation_collection_, this, page(),
                           component_namespace, std::move(done));
 }
 
@@ -743,7 +745,7 @@ void MessageQueueManager::GetMessageSender(
     return;
   }
 
-  new GetMessageSenderCall(&operation_collection_, this, page_.get(),
+  new GetMessageSenderCall(&operation_collection_, this, page(),
                            queue_token, std::move(request));
 }
 

@@ -107,10 +107,6 @@ void AppClientBase::SetAppErrorHandler(
   app_.set_connection_error_handler(error_handler);
 }
 
-void AppClientBase::DetachApplicationController() {
-  app_->Detach();
-}
-
 void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
 
 void AppClientBase::ServiceReset() {}

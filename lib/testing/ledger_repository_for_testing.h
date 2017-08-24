@@ -21,19 +21,24 @@ namespace testing {
 // repository meant to be used for testing, particularly in gtest unittests.
 class LedgerRepositoryForTesting {
  public:
-  explicit LedgerRepositoryForTesting(std::string repository_path);
-  ledger::LedgerRepository* ledger_repository();
-  void Reset(ftl::Closure done);
+  explicit LedgerRepositoryForTesting(const std::string& repository_name);
+  ~LedgerRepositoryForTesting();
 
-  // Calling this method a second time will return the same singleton instance
-  // regardless of whether a different |respository_path| was given.
-  static LedgerRepositoryForTesting* GetSingleton(
-      const std::string& repository_path);
+  ledger::LedgerRepository* ledger_repository();
+
+  // Erases the repository. Must be done before destroying the
+  // LedgerRepositoryForTesting instance, otherwise the repository stays there
+  // and may be reopened on a later run of the test.
+  void Reset(std::function<void()> done);
+
+  // Terminates the ledger repository app.
+  void Terminate(std::function<void()> done);
 
  private:
-  std::string repository_path_;
-  std::unique_ptr<AppClient<ledger::LedgerRepositoryFactory>>
+  const std::string repository_path_;
+  std::unique_ptr<AppClient<ledger::LedgerController>>
       ledger_app_client_;
+  ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   ledger::LedgerRepositoryPtr ledger_repo_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);

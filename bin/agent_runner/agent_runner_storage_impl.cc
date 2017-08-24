@@ -116,7 +116,7 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
     std::string value;
     XdrWrite(&value, &data_, XdrTriggerInfo);
 
-    storage_->page_->PutWithPriority(
+    storage_->page()->PutWithPriority(
         to_array(key), to_array(value), ledger::Priority::EAGER,
         [this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
@@ -155,7 +155,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
     FlowToken flow{this, &success_result_};
 
     std::string key = MakeTriggerKey(agent_url_, task_id_);
-    storage_->page_->Delete(to_array(key), [this, flow](ledger::Status status) {
+    storage_->page()->Delete(to_array(key), [this, flow](ledger::Status status) {
       // ledger::Status::INVALID_TOKEN is okay because we might have gotten a
       // request to delete a token which does not exist. This is okay.
       if (status != ledger::Status::OK &&
@@ -175,9 +175,9 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteTaskCall);
 };
 
-AgentRunnerStorageImpl::AgentRunnerStorageImpl(ledger::PagePtr page)
-    : PageClient("AgentRunnerStorageImpl", page.get(), nullptr),
-      page_(std::move(page)) {}
+AgentRunnerStorageImpl::AgentRunnerStorageImpl(
+    LedgerClient* ledger_client, LedgerPageId page_id)
+    : PageClient("AgentRunnerStorageImpl", ledger_client, std::move(page_id), nullptr) {}
 
 AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;
 
