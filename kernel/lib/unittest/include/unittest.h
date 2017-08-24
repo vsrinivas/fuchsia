@@ -140,7 +140,7 @@ int unittest_printf(const char* format, ...);
         }                                                                      \
     } while (0)
 
-#define UTCHECK_NEQ(expected, actual, msg, term)                               \
+#define UTCHECK_NE(expected, actual, msg, term)                                \
     do {                                                                       \
         const AUTO_TYPE_VAR(expected) _e = (expected);                         \
         if (_e == (actual)) {                                                  \
@@ -249,8 +249,7 @@ int unittest_printf(const char* format, ...);
  * if the condition fails.
  */
 #define EXPECT_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, false)
-#define EXPECT_NE(expected, actual, msg)               UTCHECK_NEQ(expected, actual, msg, false)
-#define EXPECT_NEQ(expected, actual, msg)              UTCHECK_NEQ(expected, actual, msg, false)
+#define EXPECT_NE(expected, actual, msg)               UTCHECK_NE(expected, actual, msg, false)
 #define EXPECT_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, false)
 #define EXPECT_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, false)
 #define EXPECT_GE(expected, actual, msg)               UTCHECK_GE(expected, actual, msg, false)
@@ -268,8 +267,7 @@ int unittest_printf(const char* format, ...);
  * abort a test with a filure status if the condition fails.
  */
 #define REQUIRE_EQ(expected, actual, msg)               UTCHECK_EQ(expected, actual, msg, true)
-#define REQUIRE_NE(expected, actual, msg)               UTCHECK_NEQ(expected, actual, msg, true)
-#define REQUIRE_NEQ(expected, actual, msg)              UTCHECK_NEQ(expected, actual, msg, true)
+#define REQUIRE_NE(expected, actual, msg)               UTCHECK_NE(expected, actual, msg, true)
 #define REQUIRE_LE(expected, actual, msg)               UTCHECK_LE(expected, actual, msg, true)
 #define REQUIRE_LT(expected, actual, msg)               UTCHECK_LT(expected, actual, msg, true)
 #define REQUIRE_GE(expected, actual, msg)               UTCHECK_GE(expected, actual, msg, true)

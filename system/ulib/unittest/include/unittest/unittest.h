@@ -452,7 +452,6 @@ int unittest_set_verbosity_level(int new_level);
  */
 #define EXPECT_EQ(lhs, rhs, ...) EXPECT_CMP(==, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_NE(lhs, rhs, ...) EXPECT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
-#define EXPECT_NEQ(lhs, rhs, ...) EXPECT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_LE(lhs, rhs, ...) EXPECT_CMP(<=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_GE(lhs, rhs, ...) EXPECT_CMP(>=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define EXPECT_LT(lhs, rhs, ...) EXPECT_CMP(<, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
@@ -488,7 +487,6 @@ int unittest_set_verbosity_level(int new_level);
 
 #define ASSERT_EQ(lhs, rhs, ...) ASSERT_CMP(==, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_NE(lhs, rhs, ...) ASSERT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
-#define ASSERT_NEQ(lhs, rhs, ...) ASSERT_CMP(!=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_LE(lhs, rhs, ...) ASSERT_CMP(<=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_GE(lhs, rhs, ...) ASSERT_CMP(>=, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
 #define ASSERT_LT(lhs, rhs, ...) ASSERT_CMP(<, lhs, rhs, #lhs, #rhs, ##__VA_ARGS__)
