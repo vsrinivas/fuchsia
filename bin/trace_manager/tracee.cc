@@ -76,7 +76,8 @@ bool Tracee::Start(size_t buffer_size,
   mx::vmo buffer_vmo;
   mx_status_t status = mx::vmo::create(buffer_size, 0u, &buffer_vmo);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to create trace buffer: status=" << status;
+    FTL_LOG(ERROR) << *bundle_
+                   << ": Failed to create trace buffer: status=" << status;
     return false;
   }
 
@@ -86,7 +87,8 @@ bool Tracee::Start(size_t buffer_size,
                                MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP,
                            &buffer_vmo_for_provider);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to duplicate trace buffer for provider: status="
+    FTL_LOG(ERROR) << *bundle_
+                   << ": Failed to duplicate trace buffer for provider: status="
                    << status;
     return false;
   }
@@ -94,7 +96,9 @@ bool Tracee::Start(size_t buffer_size,
   mx::eventpair fence, fence_for_provider;
   status = mx::eventpair::create(0u, &fence, &fence_for_provider);
   if (status != MX_OK) {
-    FTL_LOG(ERROR) << "Failed to create trace buffer fence: status=" << status;
+    FTL_LOG(ERROR) << *bundle_
+                   << ": Failed to create trace buffer fence: status="
+                   << status;
     return false;
   }
 
@@ -113,6 +117,7 @@ bool Tracee::Start(size_t buffer_size,
   stop_callback_ = std::move(stop_callback);
   fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), MX_EPAIR_PEER_CLOSED);
+  TransitionToState(State::kStartPending);
   return true;
 }
 
@@ -124,12 +129,12 @@ void Tracee::Stop() {
 }
 
 void Tracee::TransitionToState(State new_state) {
-  FTL_VLOG(2) << "Transitioning to state: " << new_state;
+  FTL_VLOG(2) << *bundle_ << ": Transitioning to state: " << new_state;
   state_ = new_state;
 }
 
 void Tracee::OnProviderStarted(bool success) {
-  if (state_ != State::kReady)
+  if (state_ != State::kStartPending)
     return;
 
   TransitionToState(success ? State::kStarted : State::kStartAcknowledged);
@@ -147,8 +152,8 @@ void Tracee::OnHandleReady(mx_handle_t handle,
                            mx_signals_t pending,
                            uint64_t count) {
   FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
-  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
-             state_ == State::kStopping);
+  FTL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
+             state_ == State::kStartAcknowledged || state_ == State::kStopping);
   FTL_DCHECK(stop_callback_);
 
   mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
@@ -161,8 +166,8 @@ void Tracee::OnHandleReady(mx_handle_t handle,
 
 void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FTL_DCHECK(error == MX_ERR_CANCELED);
-  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
-             state_ == State::kStopping);
+  FTL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
+             state_ == State::kStartAcknowledged || state_ == State::kStopping);
   TransitionToState(State::kStopped);
 }
 
@@ -174,7 +179,8 @@ Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
 
   if ((transfer_status = WriteProviderInfoRecord(socket)) !=
       TransferStatus::kComplete) {
-    FTL_LOG(ERROR) << "Failed to write provider info record to trace.";
+    FTL_LOG(ERROR) << *bundle_
+                   << ": Failed to write provider info record to trace.";
     return transfer_status;
   }
 
@@ -184,7 +190,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
   if ((buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_, &actual) !=
        MX_OK) ||
       (actual != buffer_vmo_size_)) {
-    FTL_LOG(WARNING) << "Failed to read data from buffer_vmo: "
+    FTL_LOG(WARNING) << *bundle_ << ": Failed to read data from buffer_vmo: "
                      << "actual size=" << actual
                      << ", expected size=" << buffer_vmo_size_;
   }
@@ -232,6 +238,9 @@ std::ostream& operator<<(std::ostream& out, Tracee::State state) {
   switch (state) {
     case Tracee::State::kReady:
       out << "ready";
+      break;
+    case Tracee::State::kStartPending:
+      out << "start pending";
       break;
     case Tracee::State::kStarted:
       out << "started";

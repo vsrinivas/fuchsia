@@ -143,6 +143,7 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
     tracees_.erase(it);
   }
 
+  NotifyProviderStarted();  // may have removed the last straggler
   FinishSessionIfEmpty();
 }
 

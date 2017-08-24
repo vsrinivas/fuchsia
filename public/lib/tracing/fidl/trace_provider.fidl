@@ -24,11 +24,16 @@ interface TraceProvider {
   //
   // At most one trace can be running at a time.  If the trace provider
   // receives a request to start tracing while already tracing, it must
-  // stop the previous trace then start the new one.
+  // return false.
+  //
+  // TODO(MG-1046): Previously this interface was expected to restart tracing
+  // if tracing was already running.  Some trace providers implement this more
+  // elaborate behavior.  Once we port them to Magenta we can modify that
+  // code to return false instead then delete this TODO.
   //
   // Returns the result of the operation in |success|, true indicates that
   // the provider is tracing now, false indicates that tracing could
-  // not be started. In the latter case, the trace provider remains in the stopped state.
+  // not be started.
   //
   // TODO(jeffbrown): Implement half-full signal and streaming protocol.
   Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories) => (bool success);

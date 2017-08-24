@@ -173,7 +173,7 @@ referenced using a Magenta koid such as a process, channel, or event)
 form of **Kernel Object Records**.  Trace providers typically generate such
 records when the object is created.
 
-Thereafter, any **Handle Arguments** which refer to the same koid will
+Thereafter, any **Kernel Object Id Arguments** which refer to the same koid will
 be associated with the referent's annotations.
 
 This makes it easy to associate human-readable labels and other information
@@ -577,7 +577,7 @@ Describes a kernel object, assigns it a label, and optionally associates
 key/value data with it as arguments.  Information about the object is added
 to a global kernel object table.
 
-When a trace consumer encounters an event with a **Kernel Object Id Argument**
+When a trace consumer encounters an event with a **Koid Argument**
 whose value matches an entry in the kernel object table, it can
 cross-reference the argument’s koid value with a prior **Kernel Object Record**
 to find a description of the referent.

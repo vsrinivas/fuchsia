@@ -29,8 +29,9 @@ class Tracee : private mtl::MessageLoopHandler {
   enum class State {
     // All systems go, provider hasn't been started, yet.
     kReady,
-    // The provider has acknowledged the start request,
-    // but is not tracing.
+    // The provider was asked to start.
+    kStartPending,
+    // The provider has acknowledged the start request, but is not tracing.
     kStartAcknowledged,
     // The provider is started and tracing.
     kStarted,

@@ -292,7 +292,7 @@ void Record::Run(const ftl::CommandLine& command_line) {
           events_.push_back(record.GetEvent());
         }
       },
-      [](std::string error) { err() << error; },
+      [](std::string error) { err() << error << std::endl; },
       [this] {
         if (!options_.app.empty())
           LaunchApp();
