@@ -187,10 +187,11 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
-  storage::Status SetSyncMetadata(ftl::StringView key,
-                                  ftl::StringView value) override {
+  void SetSyncMetadata(ftl::StringView key,
+                       ftl::StringView value,
+                       std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
-    return storage::Status::OK;
+    callback(storage::Status::OK);
   }
 
   storage::Status GetSyncMetadata(ftl::StringView key,

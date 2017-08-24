@@ -118,7 +118,8 @@ class PageDbMutator {
                                       uint64_t generation) = 0;
 
   // Sets the opaque sync metadata associated with this page for the given key.
-  virtual Status SetSyncMetadata(ftl::StringView key,
+  virtual Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
+                                 ftl::StringView key,
                                  ftl::StringView value) = 0;
 
  private:

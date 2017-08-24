@@ -76,7 +76,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                               uint64_t generation) override;
   Status SetObjectStatus(ObjectIdView object_id,
                          PageDbObjectStatus object_status) override;
-  Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
+  Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
+                         ftl::StringView key,
+                         ftl::StringView value) override;
 
   // PageDb::Batch:
   Status Execute() override;

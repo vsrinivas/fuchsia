@@ -1138,7 +1138,11 @@ TEST_F(PageStorageTest, SyncMetadata) {
     EXPECT_EQ(Status::NOT_FOUND,
               storage_->GetSyncMetadata(key, &returned_value));
 
-    EXPECT_EQ(Status::OK, storage_->SetSyncMetadata(key, value));
+    Status status;
+    storage_->SetSyncMetadata(key, value,
+                              callback::Capture(MakeQuitTask(), &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(Status::OK, storage_->GetSyncMetadata(key, &returned_value));
     EXPECT_EQ(value, returned_value);
   }

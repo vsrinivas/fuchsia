@@ -31,6 +31,8 @@ class BatchDownload {
   void Start();
 
  private:
+  void UpdateTimestampAndQuit();
+
   storage::PageStorage* const storage_;
   std::vector<cloud_provider::Record> records_;
   ftl::Closure on_done_;

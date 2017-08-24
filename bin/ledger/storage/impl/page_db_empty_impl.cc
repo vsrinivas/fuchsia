@@ -135,8 +135,10 @@ Status PageDbEmptyImpl::MarkCommitIdUnsynced(const CommitId& /*commit_id*/,
                                              uint64_t /*generation*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::SetSyncMetadata(ftl::StringView /*key*/,
-                                        ftl::StringView /*value*/) {
+Status PageDbEmptyImpl::SetSyncMetadata(
+    coroutine::CoroutineHandler* /*handler*/,
+    ftl::StringView /*key*/,
+    ftl::StringView /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
 

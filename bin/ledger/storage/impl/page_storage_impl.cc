@@ -508,9 +508,15 @@ void PageStorageImpl::GetPiece(
   callback(status, std::move(object));
 }
 
-Status PageStorageImpl::SetSyncMetadata(ftl::StringView key,
-                                        ftl::StringView value) {
-  return db_.SetSyncMetadata(key, value);
+void PageStorageImpl::SetSyncMetadata(ftl::StringView key,
+                                      ftl::StringView value,
+                                      std::function<void(Status)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, key = key.ToString(), value = value.ToString(),
+    callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    callback(db_.SetSyncMetadata(handler, key, value));
+  });
 }
 
 Status PageStorageImpl::GetSyncMetadata(ftl::StringView key,

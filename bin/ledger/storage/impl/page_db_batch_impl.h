@@ -67,7 +67,9 @@ class PageDbBatchImpl : public PageDb::Batch {
                               uint64_t generation) override;
 
   // Object sync metadata.
-  Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
+  Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
+                         ftl::StringView key,
+                         ftl::StringView value) override;
 
   Status Execute() override;
 

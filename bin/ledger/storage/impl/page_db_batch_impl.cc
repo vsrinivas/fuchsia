@@ -191,8 +191,10 @@ Status PageDbBatchImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
                      SerializeNumber(generation));
 }
 
-Status PageDbBatchImpl::SetSyncMetadata(ftl::StringView key,
-                                        ftl::StringView value) {
+Status PageDbBatchImpl::SetSyncMetadata(
+    coroutine::CoroutineHandler* /*handler*/,
+    ftl::StringView key,
+    ftl::StringView value) {
   return batch_->Put(SyncMetadataRow::GetKeyFor(key), value);
 }
 

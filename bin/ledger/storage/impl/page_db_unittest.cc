@@ -348,7 +348,7 @@ TEST_F(PageDbTest, SyncMetadata) {
     EXPECT_EQ(Status::NOT_FOUND,
               page_db_.GetSyncMetadata(key, &returned_value));
 
-    EXPECT_EQ(Status::OK, page_db_.SetSyncMetadata(key, value));
+    EXPECT_EQ(Status::OK, page_db_.SetSyncMetadata(handler_, key, value));
     EXPECT_EQ(Status::OK, page_db_.GetSyncMetadata(key, &returned_value));
     EXPECT_EQ(value, returned_value);
   }

@@ -44,10 +44,12 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
         }));
   }
 
-  storage::Status SetSyncMetadata(ftl::StringView key,
-                                  ftl::StringView value) override {
+  void SetSyncMetadata(ftl::StringView key,
+                       ftl::StringView value,
+                       std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
-    return storage::Status::OK;
+    message_loop_->task_runner()->PostTask(
+        [callback]() { callback(storage::Status::OK); });
   }
 
   bool should_fail_add_commit_from_sync = false;

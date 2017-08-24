@@ -84,7 +84,9 @@ class PageStorageEmptyImpl : public PageStorage {
                 std::function<void(Status, std::unique_ptr<const Object>)>
                     callback) override;
 
-  Status SetSyncMetadata(ftl::StringView key, ftl::StringView value) override;
+  void SetSyncMetadata(ftl::StringView key,
+                       ftl::StringView value,
+                       std::function<void(Status)> callback) override;
 
   Status GetSyncMetadata(ftl::StringView key, std::string* value) override;
 
