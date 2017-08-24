@@ -10,10 +10,6 @@ MODULE_TYPE := driver
 
 MODULE_NAME := bus-pci
 
-ifeq ($(ENABLE_ACPI_BUS),true)
-    MODULE_DEFINES += ACPI_BUS_DRV=1
-endif
-
 MODULE_SRCS := $(LOCAL_DIR)/kpci.c
 
 MODULE_STATIC_LIBS := system/ulib/ddk

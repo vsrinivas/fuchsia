@@ -707,26 +707,6 @@ mx_status_t intel_serialio_bind_i2c(mx_device_t* dev) {
     if (status < 0)
         goto fail;
 
-#if !ACPI_BUS_DRV
-    // This is a temporary workaround until we have full ACPI device
-    // enumeration. If this is the I2C1 bus, we run _PS0 so the controller is
-    // active.
-    if (pci_config->vendor_id == INTEL_VID &&
-        pci_config->device_id == ACER_I2C_TOUCH) {
-        int dmctlfd = open("/dev/misc/dmctl", O_RDWR);
-        if (dmctlfd < 0) {
-            printf("could not open dmctl: %d\n", errno);
-        } else {
-            const char* i2c1 = "acpi-ps0:\\_SB.PCI0.I2C1";
-            ssize_t wr = write(dmctlfd, i2c1, strlen(i2c1));
-            if (wr < 0) {
-                printf("could not run ps0 for %s: %zd\n", i2c1, wr);
-            }
-            close(dmctlfd);
-        }
-    }
-#endif
-
     // Configure the I2C controller. We don't need to hold the lock because
     // nobody else can see this controller yet.
     status = intel_serialio_i2c_reset_controller(device);
