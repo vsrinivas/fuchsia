@@ -8,7 +8,10 @@ import 'package:apps.bluetooth.service.interfaces/common.fidl.dart' as bt;
 import 'package:apps.bluetooth.service.interfaces/low_energy.fidl.dart' as ble;
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
+import 'package:lib.logging/logging.dart';
 import 'package:lib.widgets/modular.dart';
+
+enum ConnectionState { notConnected, connecting, connected }
 
 /// The [ModuleModel] for the BLE Scanner example.
 class BLEScannerModuleModel extends ModuleModel implements ble.CentralDelegate {
@@ -29,6 +32,10 @@ class BLEScannerModuleModel extends ModuleModel implements ble.CentralDelegate {
   // Devices found during discovery.
   final Map<String, ble.RemoteDevice> _discoveredDevices =
       <String, ble.RemoteDevice>{};
+
+  // Devices that are connected.
+  final Map<String, ConnectionState> _connectedDevices =
+      <String, ConnectionState>{};
 
   /// Constructor
   BLEScannerModuleModel(this.applicationContext) : super();
@@ -77,6 +84,47 @@ class BLEScannerModuleModel extends ModuleModel implements ble.CentralDelegate {
     });
   }
 
+  /// Returns the connection state for the peripheral with the given identifier.
+  ConnectionState getPeripheralState(String id) =>
+      _connectedDevices[id] ?? ConnectionState.notConnected;
+
+  /// Initiates a connection to the given device.
+  void connectPeripheral(String id) {
+    if (getPeripheralState(id) != ConnectionState.notConnected) {
+      log.info('Peripheral already connected or connecting (id: $id)');
+      return;
+    }
+
+    _connectedDevices[id] = ConnectionState.connecting;
+    notifyListeners();
+
+    _central.connectPeripheral(id, (bt.Status status) {
+      if (status.error != null) {
+        log.info(
+            'Failed to connect to device with (id: $id): ${status.error.description}');
+        _connectedDevices.remove(id);
+      } else {
+        _connectedDevices[id] = ConnectionState.connected;
+      }
+
+      notifyListeners();
+    });
+  }
+
+  /// Disconnects the requested peripheral.
+  void disconnectPeripheral(String id) {
+    if (getPeripheralState(id) != ConnectionState.connected) {
+      log.info('Peripheral not connected (id: $id)');
+      return;
+    }
+
+    _central.disconnectPeripheral(id, (bt.Status status) {
+      log.info('Disconnect (id: $id, status: $status)');
+
+      // The widgets will be notified by onPeripheralDisconnected.
+    });
+  }
+
   // ModuleModel overrides:
 
   @override
@@ -112,6 +160,7 @@ class BLEScannerModuleModel extends ModuleModel implements ble.CentralDelegate {
 
   @override
   void onPeripheralDisconnected(String id) {
-    // TODO(armansito): Implement
+    _connectedDevices.remove(id);
+    notifyListeners();
   }
 }

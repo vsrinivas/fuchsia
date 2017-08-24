@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:lib.widgets/model.dart';
 
 import '../manufacturer_names.dart';
-import '../modular/module_model.dart';
+import '../modular/module_model.dart' as model;
 
 /// A scrollable view that displays BLE scan results
 class ScanResultsWidget extends StatefulWidget {
@@ -29,23 +29,59 @@ class _AdvertisingDataEntry {
 class ScanResultsState extends State<ScanResultsWidget> {
   final Map<String, bool> _expandedStateMap = <String, bool>{};
 
+  String _connectionStateString(model.ConnectionState connState) {
+    switch (connState) {
+      case model.ConnectionState.notConnected:
+        return 'not connected';
+      case model.ConnectionState.connecting:
+        return 'connecting...';
+      case model.ConnectionState.connected:
+        return 'connected';
+    }
+    return '(unknown)';
+  }
+
+  Color _connectionStateColor(model.ConnectionState connState) {
+    switch (connState) {
+      case model.ConnectionState.notConnected:
+        return Colors.grey[400];
+      case model.ConnectionState.connecting:
+        return Colors.amber[400];
+      case model.ConnectionState.connected:
+        return Colors.green;
+    }
+    return Colors.black;
+  }
+
   Widget _buildHeader(ble.RemoteDevice device) {
-    return new Row(children: <Widget>[
-      new Expanded(
-          flex: 2,
-          child: new Container(
-              margin: const EdgeInsets.only(left: 24.0),
-              child: new FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: FractionalOffset.centerLeft,
-                  child:
-                      new Text(device.advertisingData.name ?? '(unknown)')))),
-      new Expanded(
-          flex: 3,
-          child: new Container(
-              margin: const EdgeInsets.only(left: 24.0),
-              child: new Text('RSSI: ${device.rssi?.value ?? 'unknown'} dBm')))
-    ]);
+    return new ScopedModelDescendant<model.BLEScannerModuleModel>(builder: (
+      BuildContext context,
+      Widget child,
+      model.BLEScannerModuleModel moduleModel,
+    ) {
+      var connState = moduleModel.getPeripheralState(device.identifier);
+      return new Row(children: <Widget>[
+        new Expanded(
+            flex: 2,
+            child: new Container(
+                margin: const EdgeInsets.only(left: 24.0),
+                child: new FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: FractionalOffset.centerLeft,
+                    child:
+                        new Text(device.advertisingData.name ?? '(unknown)')))),
+        new Container(
+            margin: const EdgeInsets.only(left: 24.0),
+            child: new Text(
+                device.connectable ? _connectionStateString(connState) : '',
+                style: new TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: _connectionStateColor(connState)))),
+        new Container(
+            margin: const EdgeInsets.only(left: 24.0),
+            child: new Text('RSSI: ${device.rssi?.value ?? 'unknown'} dBm'))
+      ]);
+    });
   }
 
   String toHexString(final List<int> data) {
@@ -138,13 +174,34 @@ class ScanResultsState extends State<ScanResultsWidget> {
                 .toList()));
   }
 
-  void _handleConnectButtonPressed(ble.RemoteDevice device) {
-    showDialog(
-        context: context,
-        child: new AlertDialog(
-            title: const Text('Not Implemented'),
-            content: const Text(
-                'Connecting to a device has not yet been implemented.')));
+  Widget _buildConnectionWidget(ble.RemoteDevice device) {
+    return new ScopedModelDescendant<model.BLEScannerModuleModel>(builder: (
+      BuildContext context,
+      Widget child,
+      model.BLEScannerModuleModel moduleModel,
+    ) {
+      if (!device.connectable) {
+        return const Text('Not connectable');
+      }
+
+      var connState = moduleModel.getPeripheralState(device.identifier);
+
+      if (connState == model.ConnectionState.connecting) {
+        return const Text('Connecting...');
+      }
+
+      if (connState == model.ConnectionState.notConnected) {
+        return new FlatButton(
+            onPressed: () => moduleModel.connectPeripheral(device.identifier),
+            child: const Text('Connect'),
+            textTheme: ButtonTextTheme.accent);
+      }
+
+      return new FlatButton(
+          onPressed: () => moduleModel.disconnectPeripheral(device.identifier),
+          child: const Text('Disconnect'),
+          textTheme: ButtonTextTheme.accent);
+    });
   }
 
   Widget _buildBody(ble.RemoteDevice device) {
@@ -157,21 +214,16 @@ class ScanResultsState extends State<ScanResultsWidget> {
           padding: const EdgeInsets.symmetric(vertical: 16.0),
           child: new Container(
               margin: const EdgeInsets.only(right: 8.0),
-              child: new FlatButton(
-                  onPressed: device.connectable
-                      ? () => _handleConnectButtonPressed(device)
-                      : null,
-                  child: const Text('Connect'),
-                  textTheme: ButtonTextTheme.accent)))
+              child: _buildConnectionWidget(device)))
     ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return new ScopedModelDescendant<BLEScannerModuleModel>(builder: (
+    return new ScopedModelDescendant<model.BLEScannerModuleModel>(builder: (
       BuildContext context,
       Widget child,
-      BLEScannerModuleModel moduleModel,
+      model.BLEScannerModuleModel moduleModel,
     ) {
       if (moduleModel.discoveredDevices.isEmpty) {
         return new Center(child: const Text('No devices found'));

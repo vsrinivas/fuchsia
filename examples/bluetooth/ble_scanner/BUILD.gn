@@ -10,11 +10,12 @@ flutter_app("ble_scanner") {
   main_dart = "lib/main.dart"
 
   deps = [
-    "//garnet/public/lib/app/dart",
     "//apps/bluetooth/service/interfaces:interfaces_dart",
     "//apps/modular/services/module:module_dart",
+    "//garnet/public/lib/app/dart",
     "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
+    "//topaz/lib/widgets/packages/logging:lib.logging",
     "//topaz/lib/widgets/packages/widgets:lib.widgets",
   ]
 
