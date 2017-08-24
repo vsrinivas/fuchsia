@@ -17,6 +17,10 @@ wlan_go_dependencies = [
     source = "wlan"
   },
   {
+    package = "apps/wlan/keywrap"
+    source = "keywrap"
+  },
+  {
     package = "fidl"
     source = "//garnet/public/lib/fidl/go/src/fidl"
   },
@@ -37,6 +41,12 @@ wlan_go_dependencies = [
     source = "//garnet/public/lib/svc/go/src/svc"
   },
 ]
+
+go_test("keywrap_test_bin") {
+  output_name = "keywrap_test"
+  gopackage = "apps/wlan/keywrap"
+  go_dependencies = wlan_go_dependencies
+}
 
 go_binary("wlanstack_bin") {
   output_name = "wlanstack"
@@ -111,9 +121,15 @@ package("wlantool") {
 package("wlanstack_test") {
   deps = [
     ":wlanstack_test_bin",
+    ":keywrap_test_bin",
   ]
 
-  tests = [ {
+  tests = [
+      {
         name = "wlanstack_test"
-      } ]
+      },
+      {
+        name = "keywrap_test"
+      }
+  ]
 }
