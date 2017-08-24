@@ -63,13 +63,19 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
                "context_link_test\"}}");
   }
 
-  TestPoint stopped_{"Child module stopped"};
-
   // |Module|
   void Stop(const StopCallback& done) override {
-    stopped_.Pass();
-    DeleteAndQuit(done);
+    FTL_NOTREACHED();
+    done();
   }
+
+  // |Lifecycle|
+  void Terminate() override {
+    stopped_.Pass();
+    DeleteAndQuitAndUnbind();
+  }
+
+  TestPoint stopped_{"Child module stopped"};
 
   modular::ModuleContextPtr module_context_;
   modular::LinkPtr link_;

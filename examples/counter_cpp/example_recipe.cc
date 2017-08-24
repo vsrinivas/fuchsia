@@ -317,13 +317,19 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Stop(const StopCallback& done) override {
+    FTL_NOTREACHED();
+    done();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     // TODO(mesch): This is tentative. Not sure what the right amount
     // of cleanup it is to ask from a module implementation, but this
     // disconnects all the watchers and thus prevents any further
     // state change of the module.
     connections_.clear();
     module_monitors_.clear();
-    done();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   modular::LinkPtr link_;

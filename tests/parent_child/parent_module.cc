@@ -59,7 +59,8 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
         kChildModuleName, kChildModule, kChildLink, nullptr, nullptr,
         child_module_.NewRequest(), nullptr, true);
 
-    child_module_.set_connection_error_handler([this] { OnChildModuleDown(); });
+    child_module_.set_connection_error_handler(
+        [this] { OnChildModuleStopped(); });
 
     // Start the same module again, but with a different link. This stops the
     // previous module instance and starts a new one.
@@ -70,18 +71,18 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
   TestPoint child_module_down_{"Child module killed for restart"};
 
-  void OnChildModuleDown() {
+  void OnChildModuleStopped() {
     child_module_down_.Pass();
 
     modular::testing::GetStore()->Get(
-        "child_module_init", [this](const fidl::String&) {
-          child_module2_->Stop([this] { OnChildStopped(); });
+        "child_module_stop", [this](const fidl::String&) {
+          child_module2_->Stop([this] { OnChildModule2Stopped(); });
         });
   }
 
   TestPoint child_module_stopped_{"Child module stopped"};
 
-  void OnChildStopped() {
+  void OnChildModule2Stopped() {
     child_module_stopped_.Pass();
     module_context_->Done();
   }
@@ -90,8 +91,14 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
   // |Module|
   void Stop(const StopCallback& done) override {
+    FTL_NOTREACHED();
+    done();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     stopped_.Pass();
-    DeleteAndQuit(done);
+    DeleteAndQuitAndUnbind();
   }
 
   modular::ModuleContextPtr module_context_;

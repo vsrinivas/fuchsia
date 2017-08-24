@@ -11,6 +11,7 @@
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
 #include "apps/modular/services/config/config.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
@@ -111,6 +112,10 @@ class AppClient : public AppClientBase {
   fidl::InterfacePtr<Service> service_;
   FTL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
+
+
+template <>
+void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done);
 
 }  // namespace modular
 

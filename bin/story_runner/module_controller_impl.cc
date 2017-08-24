@@ -57,11 +57,13 @@ ModuleControllerImpl::ModuleControllerImpl(
           std::string(kAppStoragePath) + HashModuleUrl(module_config->url)),
       module_path_(module_path.Clone()) {
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
-  app_client_.primary_service().set_connection_error_handler(
-      [this] { OnConnectionError(); });
-  app_client_.primary_service()->Initialize(std::move(module_context),
-                                            std::move(outgoing_services),
-                                            std::move(incoming_services));
+
+  ConnectToService(app_client_.services(), module_service_.NewRequest());
+  module_service_.set_connection_error_handler([this] { OnConnectionError(); });
+  module_service_->Initialize(std::move(module_context),
+                              std::move(outgoing_services),
+                              std::move(incoming_services));
+
   ConnectToService(app_client_.services(), std::move(view_provider_request));
 }
 
@@ -100,7 +102,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     return;
   }
 
-  // This function causes this to be deleted when called once, but may
+  // This function causes |this| to be deleted when called once, but may
   // be called twice, so the second call must be protected from fully
   // executing.
   auto called = std::make_shared<bool>(false);
@@ -110,7 +112,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     }
     *called = true;
 
-    app_client_.primary_service().reset();
+    module_service_.reset();
     SetState(ModuleState::STOPPED);
 
     // ReleaseModule() must be called before the callbacks, because
@@ -140,19 +142,18 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // call Module.Stop(), but also schedule a timeout in case it
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
-    app_client_.primary_service().set_connection_error_handler(nullptr);
+    module_service_.set_connection_error_handler(nullptr);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
   } else {
-    // The contract for Stop() is that the Application will be killed when
-    // the Module's handle is closed.
-    app_client_.primary_service().set_connection_error_handler(cont);
-
-    // TODO(jimbe) Remove the lambda parameter to Stop(), which is no
-    // longer used. [FW-265] Expected to happen as part of implementing the
-    // Lifecycle interface for namespaces.
-    app_client_.primary_service()->Stop([] {});
-    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        cont, kStoryTeardownTimeout);
+    // TODO(vardhan): Remove once modules apps have converted to using
+    // Lifecycle.
+    if (!app_client_.primary_service()) {
+      // The contract for Stop() is that the Application will be killed when
+      // the Module's handle is closed.
+      module_service_.set_connection_error_handler(cont);
+      module_service_->Stop(cont);
+    }
+    app_client_.AppTerminate(cont, kStoryTeardownTimeout);
   }
 }
 

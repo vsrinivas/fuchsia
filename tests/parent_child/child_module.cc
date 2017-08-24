@@ -30,20 +30,23 @@ class ChildApp : modular::testing::ComponentBase<modular::Module> {
       fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
-    initialized_.Pass();
-    modular::testing::GetStore()->Put("child_module_init", "", [] {});
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
+    FTL_NOTREACHED();
+    done();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     stopped_.Pass();
     modular::testing::GetStore()->Put("child_module_stop", "", [] {});
-    DeleteAndQuit(done);
+    DeleteAndQuitAndUnbind();
   }
 
   modular::ModuleContextPtr module_context_;
 
-  TestPoint initialized_{"Child module initialized"};
   TestPoint stopped_{"Child module stopped"};
 };
 

@@ -82,7 +82,13 @@ class ControllerApp : public modular::SingleServiceApp<modular::Module>,
   }
 
   // |Module|
-  void Stop(const StopCallback& done) override { done(); }
+  void Stop(const StopCallback& done) override {
+    FTL_NOTREACHED();
+    done();
+  }
+
+  // |Terminate|
+  void Terminate() override { mtl::MessageLoop::GetCurrent()->QuitNow(); }
 
   // |LinkWatcher|
   void Notify(const fidl::String& json) override {

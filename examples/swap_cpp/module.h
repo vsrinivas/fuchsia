@@ -50,6 +50,9 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
   // |Module|
   void Stop(const StopCallback& done) override;
 
+  // |Lifecycle|
+  void Terminate() override;
+
   CreateViewCallback create_;
   std::unique_ptr<mozart::BaseView> view_;
 

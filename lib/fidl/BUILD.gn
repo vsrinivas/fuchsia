@@ -16,6 +16,7 @@ source_set("app_client") {
 
   deps = [
     "//apps/modular/services/config",
+    "//apps/modular/services/lifecycle",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",

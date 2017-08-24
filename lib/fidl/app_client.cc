@@ -115,4 +115,12 @@ void AppClientBase::ServiceTerminate(const std::function<void()>& /* done */) {}
 
 void AppClientBase::ServiceReset() {}
 
+template <>
+void AppClient<Lifecycle>::ServiceTerminate(
+    const std::function<void()>& done) {
+  SetAppErrorHandler(done);
+  if (primary_service())
+    primary_service()->Terminate();
+}
+
 }  // namespace modular

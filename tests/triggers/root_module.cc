@@ -96,8 +96,14 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
   // |Module|
   void Stop(const StopCallback& done) override {
+    FTL_NOTREACHED();
+    done();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
     stopped_.Pass();
-    DeleteAndQuit(done);
+    DeleteAndQuitAndUnbind();
   }
 
   modular::ModuleContextPtr module_context_;

@@ -127,8 +127,14 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Stop(const StopCallback& done) override {
-    store_.Stop();
+    FTL_NOTREACHED();
     done();
+  }
+
+  // |Lifecycle|
+  void Terminate() override {
+    store_.Stop();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
   }
 
   void IncrementCounterAction() {

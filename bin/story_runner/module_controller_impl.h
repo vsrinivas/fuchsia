@@ -66,7 +66,8 @@ class ModuleControllerImpl : ModuleController {
   // The story this Module instance runs in.
   StoryControllerImpl* const story_controller_impl_;
 
-  AppClient<Module> app_client_;
+  AppClient<Lifecycle> app_client_;
+  ModulePtr module_service_;
 
   // The Module path
   const fidl::Array<fidl::String> module_path_;

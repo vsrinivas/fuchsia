@@ -49,7 +49,12 @@ void ModuleApp::Initialize(
     fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
 
 void ModuleApp::Stop(const StopCallback& done) {
+  FTL_NOTREACHED();
   done();
+}
+
+void ModuleApp::Terminate() {
+  mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 }  // namespace modular_example
