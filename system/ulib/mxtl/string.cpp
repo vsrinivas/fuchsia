@@ -71,38 +71,76 @@ void String::Init(const char* data, size_t length) {
         return;
     }
 
-    void* buffer = operator new(buffer_size(length));
-    InitWithBuffer(buffer, data, length);
+    data_ = AllocData(length);
+    memcpy(data_, data, length);
+    data_[length] = 0u;
 }
 
 void String::Init(const char* data, size_t length, AllocChecker* ac) {
     if (length == 0u) {
-        InitWithEmpty();
         ac->arm(0u, true);
-        return;
-    }
-
-    void* buffer = operator new(buffer_size(length), ac);
-    if (!buffer) {
-        // allocation failed!
         InitWithEmpty();
         return;
     }
 
-    InitWithBuffer(buffer, data, length);
+    data_ = AllocData(length, ac);
+    if (!data_) {
+        InitWithEmpty();
+        return;
+    }
+    memcpy(data_, data, length);
+    data_[length] = 0u;
 }
 
-void String::InitWithBuffer(void* buffer, const char* data, size_t length) {
-    data_ = static_cast<char*>(buffer) + kDataFieldOffset;
-    *length_field_of(data_) = length;
-    new (ref_count_field_of(data_)) atomic_uint(1u);
-    memcpy(data_, data, length);
-    data_[length] = 0;
+void String::Init(size_t count, char ch) {
+    if (count == 0u) {
+        InitWithEmpty();
+        return;
+    }
+
+    data_ = AllocData(count);
+    memset(data_, ch, count);
+    data_[count] = 0u;
+}
+
+void String::Init(size_t count, char ch, AllocChecker* ac) {
+    if (count == 0u) {
+        ac->arm(0u, true);
+        InitWithEmpty();
+        return;
+    }
+
+    data_ = AllocData(count, ac);
+    if (!data_) {
+        InitWithEmpty();
+        return;
+    }
+    memset(data_, ch, count);
+    data_[count] = 0u;
 }
 
 void String::InitWithEmpty() {
     gEmpty.ref_count.fetch_add(1u, memory_order_relaxed);
     data_ = &gEmpty.nul;
+}
+
+char* String::AllocData(size_t length) {
+    void* buffer = operator new(buffer_size(length));
+    return InitData(buffer, length);
+}
+
+char* String::AllocData(size_t length, AllocChecker* ac) {
+    void* buffer = operator new(buffer_size(length), ac);
+    if (!buffer)
+        return nullptr;
+    return InitData(buffer, length);
+}
+
+char* String::InitData(void* buffer, size_t length) {
+    char* data = static_cast<char*>(buffer) + kDataFieldOffset;
+    *length_field_of(data) = length;
+    new (ref_count_field_of(data)) atomic_uint(1u);
+    return data;
 }
 
 void String::AcquireRef(char* data) {

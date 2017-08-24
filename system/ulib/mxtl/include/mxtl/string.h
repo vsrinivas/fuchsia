@@ -76,6 +76,19 @@ public:
         Init(data, length, ac);
     }
 
+    // Creates a string with |count| copies of |ch|.
+    // Allocates heap memory only if |count| is non-zero.
+    String(size_t count, char ch) {
+        Init(count, ch);
+    }
+
+    // Creates a string with |count| copies of |ch|.
+    // Allocates heap memory only if |count| is non-zero.
+    // |ac| must not be null.
+    String(size_t count, char ch, AllocChecker* ac) {
+        Init(count, ch, ac);
+    }
+
     // Creates a string from the contents of a string piece.
     // Allocates heap memory only if |piece.length()| is non-zero.
     explicit String(const StringPiece& piece)
@@ -173,6 +186,21 @@ public:
     // |data| and |ac| must not be null.
     void Set(const char* data, size_t length, AllocChecker* ac);
 
+    // Assigns this string with |count| copies of |ch|.
+    // Allocates heap memory only if |count| is non-zero.
+    void Set(size_t count, char ch) {
+        ReleaseRef(data_);
+        Init(count, ch);
+    }
+
+    // Assigns this string with |count| copies of |ch|.
+    // Allocates heap memory only if |count| is non-zero.
+    // |ac| must not be null.
+    void Set(size_t count, char ch, AllocChecker* ac) {
+        ReleaseRef(data_);
+        Init(count, ch, ac);
+    }
+
     // Assigns this string from the contents of a string piece.
     // Allocates heap memory only if |piece.length()| is non-zero.
     void Set(const StringPiece& piece) {
@@ -233,9 +261,13 @@ private:
 
     void Init(const char* data, size_t length);
     void Init(const char* data, size_t length, AllocChecker* ac);
-    void InitWithBuffer(void* buffer, const char* data, size_t length);
+    void Init(size_t count, char ch);
+    void Init(size_t count, char ch, AllocChecker* ac);
     void InitWithEmpty();
 
+    static char* AllocData(size_t length);
+    static char* AllocData(size_t length, AllocChecker* ac);
+    static char* InitData(void* buffer, size_t length);
     static void AcquireRef(char* data);
     static void ReleaseRef(char* data);
 
