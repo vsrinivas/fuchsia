@@ -811,7 +811,7 @@ ResourcePtr Session::CreateRoundedRectangle(mozart::ResourceId id,
   escher::RoundedRectSpec rect_spec(width, height, top_left_radius,
                                     top_right_radius, bottom_right_radius,
                                     bottom_left_radius);
-  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition |
+  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D |
                              escher::MeshAttribute::kUV};
 
   return ftl::MakeRefCounted<RoundedRectangleShape>(
