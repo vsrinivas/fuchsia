@@ -19,11 +19,11 @@ JOBS=`getconf _NPROCESSORS_ONLN` || {
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-v] [-t target] [-o outdir]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-v] [-A] [-t target] [-o outdir]\n' "$0" && exit 1
 }
 
 build() {
-  local target="$1" outdir="$2" clean="$3" verbose="$4"
+  local target="$1" outdir="$2" clean="$3" verbose="$4" asan="$5"
   local magenta_buildroot="${outdir}/build-magenta"
 
   if [[ "${clean}" = "true" ]]; then
@@ -39,33 +39,45 @@ build() {
     *) echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
 
+  local asan_magenta asan_ulib
+  if [[ "${asan}" = "true" ]]; then
+      asan_magenta=true
+      asan_ulib=false
+  else
+      asan_magenta=false
+      asan_ulib=true
+  fi
+
   pushd "${ROOT_DIR}/magenta" > /dev/null
   if [[ "${verbose}" = "true" ]]; then
       export QUIET=0
   else
       export QUIET=1
   fi
+  # build host tools
+  make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
   # build magenta (including its portion of the sysroot) for the target architecture
   make -j ${JOBS} ${magenta_build_type_flags:-} \
     BUILDROOT=${magenta_buildroot} ${magenta_target} \
+    TOOLS=${outdir}/build-magenta/tools USE_ASAN=${asan_magenta} \
     BUILDDIR_SUFFIX=
-  # build host tools
-  make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
-  # Build Magenta ASan libraries.
+  # Build the alternate shared libraries (ASan).
   make -j ${JOBS} ${magenta_build_type_flags:-} \
     BUILDROOT=${magenta_buildroot} ${magenta_target} \
-    TOOLS=${outdir}/build-magenta/tools \
-    USE_ASAN=true ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false
+    TOOLS=${outdir}/build-magenta/tools USE_ASAN=${asan_ulib} \
+    ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
   popd > /dev/null
 }
 
+declare ASAN="${ASAN:-false}"
 declare CLEAN="${CLEAN:-false}"
 declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare VERBOSE="${VERBOSE:-false}"
 
-while getopts "cd:ht:o:v" opt; do
+while getopts "Acd:ht:o:v" opt; do
   case "${opt}" in
+    A) ASAN="true" ;;
     c) CLEAN="true" ;;
     o) OUTDIR="${OPTARG}" ;;
     t) TARGET="${OPTARG}" ;;
@@ -74,6 +86,6 @@ while getopts "cd:ht:o:v" opt; do
   esac
 done
 
-readonly CLEAN TARGET OUTDIR VERBOSE
+readonly ASAN CLEAN TARGET OUTDIR VERBOSE
 
-build "${TARGET}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}"
+build "${TARGET}" "${OUTDIR}" "${CLEAN}" "${VERBOSE}" "${ASAN}"
