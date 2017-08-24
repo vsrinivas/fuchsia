@@ -854,7 +854,7 @@ int unlinkat(int dirfd, const char* path, int flags) {
 }
 
 ssize_t read(int fd, void* buf, size_t count) {
-    if (buf == NULL) {
+    if (buf == NULL && count > 0) {
         return ERRNO(EINVAL);
     }
 
@@ -875,7 +875,7 @@ ssize_t read(int fd, void* buf, size_t count) {
 }
 
 ssize_t write(int fd, const void* buf, size_t count) {
-    if (buf == NULL) {
+    if (buf == NULL && count > 0) {
         return ERRNO(EINVAL);
     }
 
@@ -917,7 +917,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int count, off_t ofs) {
 }
 
 ssize_t pread(int fd, void* buf, size_t size, off_t ofs) {
-    if (buf == NULL) {
+    if (buf == NULL && size > 0) {
         return ERRNO(EINVAL);
     }
 
@@ -959,7 +959,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int count, off_t ofs) {
 }
 
 ssize_t pwrite(int fd, const void* buf, size_t size, off_t ofs) {
-    if (buf == NULL) {
+    if (buf == NULL && size > 0) {
         return ERRNO(EINVAL);
     }
 

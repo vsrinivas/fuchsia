@@ -24,9 +24,16 @@
 ssize_t mx_pipe_read_internal(mx_handle_t h, void* data, size_t len, int nonblock) {
     // TODO: let the generic read() to do this loop
     for (;;) {
-        ssize_t r = mx_socket_read(h, 0, data, len, &len);
+        size_t bytes_read;
+        ssize_t r = mx_socket_read(h, 0, data, len, &bytes_read);
         if (r == MX_OK) {
-            return (ssize_t) len;
+            // mx_socket_read() sets *actual to the number of bytes in the buffer when data is NULL
+            // and len is 0. read() should return 0 in that case.
+            if (len == 0) {
+                return 0;
+            } else {
+                return (ssize_t)bytes_read;
+            }
         } else if (r == MX_ERR_PEER_CLOSED || r == MX_ERR_BAD_STATE) {
             return 0;
         }

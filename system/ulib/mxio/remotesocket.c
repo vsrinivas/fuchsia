@@ -26,8 +26,15 @@ static ssize_t mxsio_read_stream(mxio_t* io, void* data, size_t len) {
     // TODO: let the generic read() to do this loop
     for (;;) {
         ssize_t r;
-        if ((r = mx_socket_read(rio->h2, 0, data, len, &len)) == MX_OK) {
-            return (ssize_t) len;
+        size_t bytes_read;
+        if ((r = mx_socket_read(rio->h2, 0, data, len, &bytes_read)) == MX_OK) {
+            // mx_socket_read() sets *actual to the number of bytes in the buffer when data is NULL
+            // and len is 0. read() should return 0 in that case.
+            if (len == 0) {
+                return 0;
+            } else {
+                return (ssize_t)bytes_read;
+            }
         }
         if (r == MX_ERR_PEER_CLOSED || r == MX_ERR_BAD_STATE) {
             return 0;
