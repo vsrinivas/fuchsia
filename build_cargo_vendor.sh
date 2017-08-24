@@ -13,11 +13,11 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
 if [[ "$(uname -s)" = "Darwin" ]]; then
-  readonly TRIPLE="x86_64-apple-darwin"
+  readonly PLATFORM="mac-x64"
 else
-  readonly TRIPLE="x86_64-unknown-linux-gnu"
+  readonly PLATFORM="linux-x64"
 fi
-readonly RUST_BASE="$ROOT_DIR/buildtools/rust/rust-$TRIPLE"
+readonly RUST_BASE="$ROOT_DIR/buildtools/$PLATFORM/rust"
 readonly CARGO="$RUST_BASE/bin/cargo"
 
 export PATH="$PATH:$ROOT_DIR/buildtools/cmake/bin"

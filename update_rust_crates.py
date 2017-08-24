@@ -28,6 +28,7 @@ CONFIGS = [
     "apps/xi/modules/xi-core",
     "lib/fidl/rust/fidl",
     "rust/rust_sample_module",
+    "rust/tokio-fuchsia",
     "third_party/xi-editor/rust/core-lib",
 ]
 
@@ -56,6 +57,10 @@ def parse_dependencies(lock_path):
         dep_matcher = re.compile("^([^\s]+)\s([^\s]+)")
         crates_source = "registry+https://github.com/rust-lang/crates.io-index"
         for package in content["package"]:
+            name = package["name"]
+            if "source" in package and package["source"].startswith("git"):
+                raise Exception("Found git dependency on %s, "
+                                "use an explicit version instead." % name)
             from_crates_io = ("source" in package and
                               package["source"] == crates_source)
             deps = []
@@ -66,7 +71,7 @@ def parse_dependencies(lock_path):
                         deps.append("%s-%s" % (match.group(1), match.group(2)))
             label = "%s-%s" % (package["name"], package["version"])
             result.append({
-                "name": package["name"],
+                "name": name,
                 "version": package["version"],
                 "label": label,
                 "deps": deps,
