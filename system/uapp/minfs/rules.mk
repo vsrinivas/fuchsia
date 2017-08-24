@@ -55,9 +55,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/minfs.cpp \
     $(LOCAL_DIR)/minfs-ops.cpp \
-		system/ulib/bitmap/raw-bitmap.cpp \
+    system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
-    system/ulib/mxtl/alloc_checker.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -67,6 +66,9 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/mxio/include \
     -Isystem/ulib/mxtl/include \
     -Isystem/ulib/fs/include \
+
+MODULE_HOST_LIBS := \
+    system/ulib/mxtl.hostlib
 
 ifeq ($(HOST_PLATFORM),darwin)
 MODULE_DEFINES := O_DIRECTORY=0200000

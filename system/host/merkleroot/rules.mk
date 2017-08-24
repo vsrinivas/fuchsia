@@ -21,8 +21,10 @@ MODULE_COMPILEFLAGS += \
 MODULE_SRCS += \
 	system/ulib/digest/digest.cpp \
 	system/ulib/digest/merkle-tree.cpp \
-	system/ulib/mxtl/alloc_checker.cpp \
 	$(LOCAL_DIR)/merkleroot.cpp
+
+MODULE_HOST_LIBS := \
+	system/ulib/mxtl.hostlib
 
 ifneq (,$(wildcard $(OPENSSL_DIR)/sha.h))
 MODULE_DEFINES += USE_LIBCRYPTO=1

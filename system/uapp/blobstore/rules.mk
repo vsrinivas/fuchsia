@@ -52,8 +52,10 @@ MODULE_SRCS := \
     system/ulib/digest/digest.cpp \
     system/ulib/digest/merkle-tree.cpp \
     system/ulib/fs/vfs.cpp \
-    system/ulib/mxtl/alloc_checker.cpp \
     third_party/ulib/cryptolib/cryptolib.c \
+
+MODULE_HOST_LIBS := \
+    system/ulib/mxtl.hostlib
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
