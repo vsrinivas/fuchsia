@@ -523,6 +523,11 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     info.abm_block = info.ibm_block + mxtl::roundup(ibmblks, 8u);
     info.ino_block = info.abm_block + mxtl::roundup(abmblks, 8u);
     info.dat_block = info.ino_block + inoblks;
+    if (info.dat_block >= info.block_count) {
+        fprintf(stderr, "mkfs: Partition size (%lu bytes) is too small\n",
+                static_cast<uint64_t>(blocks) * kMinfsBlockSize);
+        return MX_ERR_INVALID_ARGS;
+    }
     minfs_dump_info(&info);
 
     RawBitmap abm;
