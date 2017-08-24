@@ -11,10 +11,11 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
+#include <mxtl/mutex.h>
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
 public:
-    ArmArchVmAspace() {}
+    ArmArchVmAspace();
     virtual ~ArmArchVmAspace();
 
     status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
@@ -46,41 +47,43 @@ private:
 
     // Page table management.
     volatile pte_t* GetPageTable(vaddr_t index, uint page_size_shift,
-                                 volatile pte_t* page_table);
+                                 volatile pte_t* page_table) TA_REQ(lock_);
 
-    status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift);
+    status_t AllocPageTable(paddr_t* paddrp, uint page_size_shift) TA_REQ(lock_);
 
-    void FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift);
+    void FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift) TA_REQ(lock_);
 
     ssize_t MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                          paddr_t paddr_in, size_t size_in, pte_t attrs,
                          uint index_shift, uint page_size_shift,
-                         volatile pte_t* page_table, uint asid);
+                         volatile pte_t* page_table, uint asid) TA_REQ(lock_);
 
     ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                            uint index_shift, uint page_size_shift,
-                           volatile pte_t* page_table, uint asid);
+                           volatile pte_t* page_table, uint asid) TA_REQ(lock_);
 
     int ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
                          pte_t attrs, uint index_shift, uint page_size_shift,
-                         volatile pte_t* page_table, uint asid);
+                         volatile pte_t* page_table, uint asid) TA_REQ(lock_);
 
     ssize_t MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte_t attrs,
                      vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
                      uint page_size_shift, volatile pte_t* top_page_table,
-                     uint asid);
+                     uint asid) TA_REQ(lock_);
 
     ssize_t UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
                        uint top_size_shift, uint top_index_shift,
                        uint page_size_shift, volatile pte_t* top_page_table,
-                       uint asid);
+                       uint asid) TA_REQ(lock_);
 
     status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs,
                           vaddr_t vaddr_base, uint top_size_shift,
                           uint top_index_shift, uint page_size_shift,
-                          volatile pte_t* top_page_table, uint asid);
+                          volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("VAAS")> canary_;
+
+    mxtl::Mutex lock_;
 
     uint16_t asid_ = 0;
 

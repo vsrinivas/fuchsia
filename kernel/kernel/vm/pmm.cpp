@@ -304,7 +304,7 @@ size_t pmm_free(struct list_node* list) {
     while (!list_is_empty(list)) {
         vm_page_t* page = list_remove_head_type(list, vm_page_t, free.node);
 
-        DEBUG_ASSERT(!page_is_free(page));
+        DEBUG_ASSERT_MSG(!page_is_free(page), "page %p state %u\n", page, page->state);
 
         /* see which arena this page belongs to and add it */
         for (auto& a : arena_list) {

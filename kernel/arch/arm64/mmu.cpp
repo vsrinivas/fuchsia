@@ -18,6 +18,7 @@
 #include <kernel/vm/pmm.h>
 #include <lib/heap.h>
 #include <mxtl/atomic.h>
+#include <mxtl/auto_lock.h>
 #include <rand.h>
 #include <stdlib.h>
 #include <string.h>
@@ -686,18 +687,22 @@ status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
         return MX_OK;
 
     ssize_t ret;
-    if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
-        ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
-                       mmu_flags_to_pte_attr(mmu_flags),
-                       ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
-                       MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
-                       tt_virt_, MMU_ARM64_GLOBAL_ASID);
-    } else {
-        ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
-                       mmu_flags_to_pte_attr(mmu_flags),
-                       0, MMU_USER_SIZE_SHIFT,
-                       MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
-                       tt_virt_, asid_);
+    {
+        mxtl::AutoLock a(&lock_);
+
+        if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
+            ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
+                           mmu_flags_to_pte_attr(mmu_flags),
+                           ~0UL << MMU_KERNEL_SIZE_SHIFT, MMU_KERNEL_SIZE_SHIFT,
+                           MMU_KERNEL_TOP_SHIFT, MMU_KERNEL_PAGE_SIZE_SHIFT,
+                           tt_virt_, MMU_ARM64_GLOBAL_ASID);
+        } else {
+            ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
+                           mmu_flags_to_pte_attr(mmu_flags),
+                           0, MMU_USER_SIZE_SHIFT,
+                           MMU_USER_TOP_SHIFT, MMU_USER_PAGE_SIZE_SHIFT,
+                           tt_virt_, asid_);
+        }
     }
 
     if (mapped) {
@@ -722,6 +727,8 @@ status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
     if (!IS_PAGE_ALIGNED(vaddr))
         return MX_ERR_INVALID_ARGS;
+
+    mxtl::AutoLock a(&lock_);
 
     ssize_t ret;
     if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
@@ -758,6 +765,8 @@ status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
         return MX_ERR_INVALID_ARGS;
 
+    mxtl::AutoLock a(&lock_);
+
     int ret;
     if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
         ret = ProtectPages(vaddr, count * PAGE_SIZE,
@@ -780,6 +789,8 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
     canary_.Assert();
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
             this, base, size, flags);
+
+    mxtl::AutoLock a(&lock_);
 
     // Validate that the base + size is sane and doesn't wrap.
     DEBUG_ASSERT(size > PAGE_SIZE);
@@ -828,6 +839,8 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
 status_t ArmArchVmAspace::Destroy() {
     canary_.Assert();
     LTRACEF("aspace %p\n", this);
+
+    mxtl::AutoLock a(&lock_);
 
     DEBUG_ASSERT((flags_ & ARCH_ASPACE_FLAG_KERNEL) == 0);
 
@@ -883,6 +896,8 @@ void arch_zero_page(void* _ptr) {
         ptr += zva_size;
     } while (ptr != end_ptr);
 }
+
+ArmArchVmAspace::ArmArchVmAspace() {}
 
 ArmArchVmAspace::~ArmArchVmAspace() {
     // TODO: check that we've destroyed the aspace

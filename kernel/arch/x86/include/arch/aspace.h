@@ -13,6 +13,7 @@
 #include <kernel/vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
+#include <mxtl/mutex.h>
 
 struct MappingCursor;
 
@@ -21,7 +22,7 @@ public:
     template <typename PageTable>
     static void UnmapEntry(X86ArchVmAspace* aspace, vaddr_t vaddr, volatile pt_entry_t* pte);
 
-    X86ArchVmAspace() {}
+    X86ArchVmAspace();
     virtual ~X86ArchVmAspace();
 
     status_t Init(vaddr_t base, size_t size, uint mmu_flags) override;
@@ -61,71 +62,73 @@ private:
     }
 
     template <template <int> class PageTable>
-    status_t DestroyAspace();
+    status_t DestroyAspace() TA_REQ(lock_);
 
     template <template <int> class PageTable>
     status_t MapPages(vaddr_t vaddr, paddr_t paddr, const size_t count,
-                      uint mmu_flags, size_t* mapped);
+                      uint mmu_flags, size_t* mapped) TA_REQ(lock_);
 
     template <template <int> class PageTable>
-    status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
+    status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped) TA_REQ(lock_);
 
     template <template <int> class PageTable>
-    status_t ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags);
+    status_t ProtectPages(vaddr_t vaddr, size_t count, uint mmu_flags) TA_REQ(lock_);
 
     template <template <int> class PageTable, typename F>
     status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags,
-                        F arch_to_mmu);
+                        F arch_to_mmu) TA_REQ(lock_);
 
     template <typename PageTable>
     status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags,
                         const MappingCursor& start_cursor,
-                        MappingCursor* new_cursor);
+                        MappingCursor* new_cursor) TA_REQ(lock_);
 
     template <typename PageTable>
     status_t AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                           const MappingCursor& start_cursor,
-                          MappingCursor* new_cursor);
+                          MappingCursor* new_cursor) TA_REQ(lock_);
 
     template <typename PageTable>
     bool RemoveMapping(volatile pt_entry_t* table,
                        const MappingCursor& start_cursor,
-                       MappingCursor* new_cursor);
-
+                       MappingCursor* new_cursor) TA_REQ(lock_);
     template <typename PageTable>
     bool RemoveMappingL0(volatile pt_entry_t* table,
                          const MappingCursor& start_cursor,
-                         MappingCursor* new_cursor);
+                         MappingCursor* new_cursor) TA_REQ(lock_);
 
     template <typename PageTable>
     status_t UpdateMapping(volatile pt_entry_t* table, uint mmu_flags,
                            const MappingCursor& start_cursor,
-                           MappingCursor* new_cursor);
+                           MappingCursor* new_cursor) TA_REQ(lock_);
 
     template <typename PageTable>
     status_t UpdateMappingL0(volatile pt_entry_t* table, uint mmu_flags,
                              const MappingCursor& start_cursor,
-                             MappingCursor* new_cursor);
+                             MappingCursor* new_cursor) TA_REQ(lock_);
 
     template <typename PageTable>
     status_t GetMapping(volatile pt_entry_t* table, vaddr_t vaddr,
                         page_table_levels* ret_level,
-                        volatile pt_entry_t** mapping);
+                        volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     template <typename PageTable>
     status_t GetMappingL0(volatile pt_entry_t* table, vaddr_t vaddr,
                           enum page_table_levels* ret_level,
-                          volatile pt_entry_t** mapping);
+                          volatile pt_entry_t** mapping) TA_REQ(lock_);
 
     template <typename PageTable>
     void UpdateEntry(vaddr_t vaddr, volatile pt_entry_t* pte, paddr_t paddr,
-                     arch_flags_t flags);
+                     arch_flags_t flags) TA_REQ(lock_);
 
     template <typename PageTable>
-    status_t SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte);
+    status_t SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte) TA_REQ(lock_);
 
     mxtl::Canary<mxtl::magic("VAAS")> canary_;
     IoBitmap io_bitmap_;
+
+    // low lock to protect the mmu code
+    mxtl::Mutex lock_;
 
     // Pointer to the translation table.
     paddr_t pt_phys_ = 0;

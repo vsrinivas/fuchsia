@@ -20,6 +20,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm/arch_vm_aspace.h>
 #include <kernel/vm/pmm.h>
+#include <mxtl/auto_lock.h>
 
 #define LOCAL_TRACE 0
 
@@ -769,8 +770,19 @@ bool X86ArchVmAspace::RemoveMapping(volatile pt_entry_t* table,
             }
         }
         if (unmap_page_table) {
+            paddr_t ptable_phys = X86_VIRT_TO_PHYS(next_table);
+            LTRACEF("L: %d free pt v %#" PRIxPTR " phys %#" PRIxPTR "\n",
+                    PageTable::level, (uintptr_t)next_table, ptable_phys);
+
             UnmapEntry<PageTable>(this, new_cursor->vaddr, e);
-            pmm_free_page(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table)));
+            vm_page_t* page = paddr_to_vm_page(ptable_phys);
+
+            DEBUG_ASSERT(page);
+            DEBUG_ASSERT_MSG(page->state == VM_PAGE_STATE_MMU,
+                             "page %p state %u, paddr %#" PRIxPTR "\n", page, page->state,
+                             X86_VIRT_TO_PHYS(next_table));
+
+            pmm_free_page(page);
             pt_pages_--;
             unmapped = true;
         }
@@ -1132,6 +1144,8 @@ status_t X86ArchVmAspace::UnmapPages(vaddr_t vaddr, const size_t count,
 }
 
 status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+    mxtl::AutoLock a(&lock_);
+
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         return UnmapPages<ExtendedPageTable>(vaddr, count, unmapped);
     } else {
@@ -1182,6 +1196,8 @@ status_t X86ArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr,
 
 status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
                               uint mmu_flags, size_t* mapped) {
+    mxtl::AutoLock a(&lock_);
+
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         if (mmu_flags & ~kValidEptFlags)
             return MX_ERR_INVALID_ARGS;
@@ -1222,6 +1238,8 @@ status_t X86ArchVmAspace::ProtectPages(vaddr_t vaddr, size_t count, uint mmu_fla
 }
 
 status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
+    mxtl::AutoLock a(&lock_);
+
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         if (mmu_flags & ~kValidEptFlags)
             return MX_ERR_INVALID_ARGS;
@@ -1257,12 +1275,16 @@ void x86_mmu_early_init() {
 
 void x86_mmu_init(void) {}
 
+X86ArchVmAspace::X86ArchVmAspace() {}
+
 /*
  * Fill in the high level x86 arch aspace structure and allocating a top level page table.
  */
 status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags) {
     static_assert(sizeof(mp_cpu_mask_t) == sizeof(active_cpus_), "err");
     canary_.Assert();
+
+    mxtl::AutoLock a(&lock_);
 
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, mmu_flags 0x%x\n", this, base, size,
             mmu_flags);
@@ -1338,11 +1360,14 @@ status_t X86ArchVmAspace::DestroyAspace() {
 #endif
 
     pmm_free_page(paddr_to_vm_page(pt_phys_));
+    pt_phys_ = 0;
 
     return MX_OK;
 }
 
 status_t X86ArchVmAspace::Destroy() {
+    mxtl::AutoLock a(&lock_);
+
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE)
         return DestroyAspace<ExtendedPageTable>();
     else
@@ -1431,6 +1456,8 @@ status_t X86ArchVmAspace::QueryVaddr(vaddr_t vaddr, paddr_t* paddr,
 }
 
 status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
+    mxtl::AutoLock a(&lock_);
+
     if (flags_ & ARCH_ASPACE_FLAG_GUEST_PASPACE) {
         return QueryVaddr<ExtendedPageTable>(vaddr, paddr, mmu_flags,
                                              ept_mmu_flags);
