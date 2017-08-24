@@ -14,12 +14,15 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fvm.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/block-client \
     system/ulib/fvm \
     system/ulib/fs \
     system/ulib/gpt \
     system/ulib/digest \
+    system/ulib/mx \
     system/ulib/mxcpp \
     system/ulib/mxtl \
+    system/ulib/sync \
     third_party/ulib/cryptolib \
 
 MODULE_LIBS := \

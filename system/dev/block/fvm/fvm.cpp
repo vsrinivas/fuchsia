@@ -614,7 +614,7 @@ void VPartition::Txn(uint32_t opcode, mx_handle_t vmo, uint64_t length,
     txn->complete_cb = vpart_block_complete;
     txn->cookie = cookie;
     memcpy(txn->extra, &callbacks_, sizeof(void*));
-    DdkIotxnQueue(txn);
+    iotxn_queue(mxdev(), txn);
 }
 
 static mx_status_t RequestBoundCheck(const extend_request_t* request,
@@ -836,7 +836,7 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
         uint64_t vmo_offset;
         mx_off_t length;
         if (vslice == vslice_start) {
-            length = mxtl::roundup(txn->offset, slice_size) - txn->offset;
+            length = mxtl::roundup(txn->offset + 1, slice_size) - txn->offset;
             vmo_offset = 0;
         } else if (vslice == vslice_end) {
             length = length_remaining;

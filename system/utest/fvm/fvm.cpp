@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <utime.h>
 
+#include <block-client/client.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
@@ -27,10 +28,13 @@
 #include <magenta/device/ramdisk.h>
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
+#include <mx/vmo.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/limits.h>
 #include <mxtl/new.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 #include <mxtl/vector.h>
 #include <unittest/unittest.h>
@@ -173,87 +177,238 @@ constexpr uint8_t kTestPartGUIDBlob[] = GUID_BLOBFS_VALUE;
 constexpr char kTestPartName3[] = "system";
 constexpr uint8_t kTestPartGUIDSys[] = GUID_SYSTEM_VALUE;
 
-static bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
+class VmoBuf;
+
+class VmoClient : public mxtl::RefCounted<VmoClient> {
+public:
+    static bool Create(int fd, mxtl::RefPtr<VmoClient>* out);
+    bool CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
+    bool CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
+    bool Txn(block_fifo_request_t* requests, size_t count) {
+        BEGIN_HELPER;
+        ASSERT_EQ(block_fifo_txn(client_, &requests[0], count), MX_OK); END_HELPER;
+    }
+
+    int fd() const { return fd_; }
+    txnid_t txnid() { return txnid_; }
+    ~VmoClient() {
+        block_fifo_release_client(client_);
+    }
+private:
+    int fd_;
+    txnid_t txnid_;
+    fifo_client_t* client_;
+};
+
+class VmoBuf {
+public:
+    static bool Create(mxtl::RefPtr<VmoClient> client, size_t size,
+                       mxtl::unique_ptr<VmoBuf>* out) {
+        BEGIN_HELPER;
+
+        mxtl::AllocChecker ac;
+        mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[size]);
+        ASSERT_TRUE(ac.check());
+
+        mx::vmo vmo;
+        ASSERT_EQ(mx::vmo::create(size, 0, &vmo), MX_OK);
+
+        mx_handle_t xfer_vmo;
+        ASSERT_EQ(mx_handle_duplicate(vmo.get(), MX_RIGHT_SAME_RIGHTS,
+                                      &xfer_vmo), MX_OK);
+
+        vmoid_t vmoid;
+        ASSERT_GT(ioctl_block_attach_vmo(client->fd(), &xfer_vmo, &vmoid), 0);
+
+        mxtl::unique_ptr<VmoBuf> vb(new (&ac) VmoBuf(mxtl::move(client),
+                                                     mxtl::move(vmo),
+                                                     mxtl::move(buf),
+                                                     vmoid));
+        ASSERT_TRUE(ac.check());
+        *out = mxtl::move(vb);
+        END_HELPER;
+    }
+
+    ~VmoBuf() {
+        if (vmo_.is_valid()) {
+            block_fifo_request_t request;
+            request.txnid = client_->txnid();
+            request.vmoid = vmoid_;
+            request.opcode = BLOCKIO_CLOSE_VMO;
+            client_->Txn(&request, 1);
+        }
+    }
+
+private:
+    friend VmoClient;
+
+    VmoBuf(mxtl::RefPtr<VmoClient> client, mx::vmo vmo,
+           mxtl::unique_ptr<uint8_t[]> buf, vmoid_t vmoid) :
+        client_(mxtl::move(client)), vmo_(mxtl::move(vmo)),
+        buf_(mxtl::move(buf)), vmoid_(vmoid) {}
+
+    mxtl::RefPtr<VmoClient> client_;
+    mx::vmo vmo_;
+    mxtl::unique_ptr<uint8_t[]> buf_;
+    vmoid_t vmoid_;
+};
+
+bool VmoClient::Create(int fd, mxtl::RefPtr<VmoClient>* out) {
+    BEGIN_HELPER;
+    mxtl::AllocChecker ac;
+    mxtl::RefPtr<VmoClient> vc = mxtl::AdoptRef(new (&ac) VmoClient());
+    ASSERT_TRUE(ac.check());
+    mx_handle_t fifo;
+    ASSERT_GT(ioctl_block_get_fifos(fd, &fifo), 0, "Failed to get FIFO");
+    ASSERT_GT(ioctl_block_alloc_txn(fd, &vc->txnid_), 0, "Failed to alloc txn");
+    ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), MX_OK);
+    vc->fd_ = fd;
+    *out = mxtl::move(vc);
+    END_HELPER;
+}
+
+bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {
+    BEGIN_HELPER;
+    // Write to the client-side buffer
     for (size_t i = 0; i < len; i++)
+        vbuf->buf_[i + buf_off] = static_cast<uint8_t>(rand());
+
+    // Write to the registered VMO
+    size_t actual;
+    ASSERT_EQ(vbuf->vmo_.write(&vbuf->buf_[buf_off], buf_off, len, &actual), MX_OK);
+    ASSERT_EQ(len, actual);
+
+    // Write to the block device
+    block_fifo_request_t request;
+    request.txnid = txnid_;
+    request.vmoid = vbuf->vmoid_;
+    request.opcode = BLOCKIO_WRITE;
+    request.length = len;
+    request.vmo_offset = buf_off;
+    request.dev_offset = dev_off;
+    ASSERT_TRUE(Txn(&request, 1));
+    END_HELPER;
+}
+
+bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {
+    BEGIN_HELPER;
+
+    // Create a comparison buffer
+    mxtl::AllocChecker ac;
+    mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
+    ASSERT_TRUE(ac.check());
+    memset(out.get(), 0, len);
+
+    // Read from the block device
+    block_fifo_request_t request;
+    request.txnid = txnid_;
+    request.vmoid = vbuf->vmoid_;
+    request.opcode = BLOCKIO_READ;
+    request.length = len;
+    request.vmo_offset = buf_off;
+    request.dev_offset = dev_off;
+    ASSERT_TRUE(Txn(&request, 1));
+
+    // Read from the registered VMO
+    size_t actual;
+    ASSERT_EQ(vbuf->vmo_.read(out.get(), buf_off, len, &actual), MX_OK);
+    ASSERT_EQ(len, actual);
+
+    ASSERT_EQ(memcmp(&vbuf->buf_[buf_off], out.get(), len), 0);
+    END_HELPER;
+}
+
+static bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
+    BEGIN_HELPER;
+    for (size_t i = 0; i < len; i++) {
         buf[i] = static_cast<uint8_t>(rand());
-    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off), "");
-    ASSERT_EQ(write(fd, buf, len), static_cast<ssize_t>(len), "");
-    return true;
+    }
+    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
+    ASSERT_EQ(write(fd, buf, len), static_cast<ssize_t>(len));
+    END_HELPER;
 }
 
 static bool CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
+    BEGIN_HELPER;
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     memset(out.get(), 0, len);
-    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off), "");
-    ASSERT_EQ(read(fd, out.get(), len), static_cast<ssize_t>(len), "");
-    ASSERT_EQ(memcmp(in, out.get(), len), 0, "");
-    return true;
+    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
+    ASSERT_EQ(read(fd, out.get(), len), static_cast<ssize_t>(len));
+    ASSERT_EQ(memcmp(in, out.get(), len), 0);
+    END_HELPER;
 }
 
 static bool CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
+    BEGIN_HELPER;
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     memset(buf.get(), color, len);
-    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off), "");
-    ASSERT_EQ(write(fd, buf.get(), len), static_cast<ssize_t>(len), "");
-    return true;
+    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
+    ASSERT_EQ(write(fd, buf.get(), len), static_cast<ssize_t>(len));
+    END_HELPER;
 }
 
 static bool CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
+    BEGIN_HELPER;
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
-    ASSERT_TRUE(ac.check(), "");
-    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off), "");
-    ASSERT_EQ(read(fd, buf.get(), len), static_cast<ssize_t>(len), "");
+    ASSERT_TRUE(ac.check());
+    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
+    ASSERT_EQ(read(fd, buf.get(), len), static_cast<ssize_t>(len));
     for (size_t i = 0; i < len; i++) {
-        ASSERT_EQ(buf[i], color, "");
+        ASSERT_EQ(buf[i], color);
     }
-    return true;
+    END_HELPER;
 }
 
 static bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
+    BEGIN_HELPER;
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(fd, &info), 0);
+    size_t len = info.block_size * count;
+    size_t off = info.block_size * block;
     mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * count]);
-    ASSERT_TRUE(ac.check(), "");
-    ASSERT_TRUE(CheckWrite(fd, info.block_size * block, info.block_size * count, buf.get()), "");
-    ASSERT_TRUE(CheckRead(fd, info.block_size * block, info.block_size * count, buf.get()), "");
-    return true;
+    mxtl::unique_ptr<uint8_t[]> in(new (&ac) uint8_t[len]);
+    ASSERT_TRUE(ac.check());
+    ASSERT_TRUE(CheckWrite(fd, off, len, in.get()));
+    ASSERT_TRUE(CheckRead(fd, off, len, in.get()));
+    END_HELPER;
 }
 
 static bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
+    BEGIN_HELPER;
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(fd, &info), 0);
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * count]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
     size_t len = info.block_size * count;
     size_t off = info.block_size * block;
     for (size_t i = 0; i < len; i++)
         buf[i] = static_cast<uint8_t>(rand());
-    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off), "");
-    ASSERT_EQ(write(fd, buf.get(), len), -1, "");
-    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off), "");
-    ASSERT_EQ(read(fd, buf.get(), len), -1, "");
-    return true;
+    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
+    ASSERT_EQ(write(fd, buf.get(), len), -1);
+    ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
+    ASSERT_EQ(read(fd, buf.get(), len), -1);
+    END_HELPER;
 }
 
 static bool CheckDeadBlock(int fd) {
+    BEGIN_HELPER;
     block_info_t info;
-    ASSERT_LT(ioctl_block_get_info(fd, &info), 0, "");
+    ASSERT_LT(ioctl_block_get_info(fd, &info), 0);
     mxtl::AllocChecker ac;
     constexpr size_t kBlksize = 8192;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlksize]);
-    ASSERT_TRUE(ac.check(), "");
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(write(fd, buf.get(), kBlksize), -1, "");
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-    ASSERT_EQ(read(fd, buf.get(), kBlksize), -1, "");
-    return true;
+    ASSERT_TRUE(ac.check());
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(write(fd, buf.get(), kBlksize), -1);
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    ASSERT_EQ(read(fd, buf.get(), kBlksize), -1);
+    END_HELPER;
 }
 
 /////////////////////// Actual tests:
@@ -264,11 +419,11 @@ static bool TestTooSmall(void) {
     char ramdisk_path[PATH_MAX];
     uint64_t blk_size = 512;
     uint64_t blk_count = (1 << 15);
-    ASSERT_GE(create_ramdisk(blk_size, blk_count, ramdisk_path), 0, "");
+    ASSERT_GE(create_ramdisk(blk_size, blk_count, ramdisk_path), 0);
     int fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     size_t slice_size = blk_size * blk_count;
-    ASSERT_EQ(fvm_init(fd, slice_size), MX_ERR_NO_SPACE, "");
+    ASSERT_EQ(fvm_init(fd, slice_size), MX_ERR_NO_SPACE);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -291,7 +446,7 @@ static bool TestAllocateOne(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     // Allocate one VPart
     alloc_req_t request;
@@ -300,24 +455,24 @@ static bool TestAllocateOne(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
-    ASSERT_GE(ioctl_block_get_name(vp_fd, name, sizeof(name)), 0, "");
-    ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0, "");
+    ASSERT_GE(ioctl_block_get_name(vp_fd, name, sizeof(name)), 0);
+    ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0);
 
     // Check that we can read from / write to it.
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
 
     // Try accessing the block again after closing / re-opening it.
-    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
     vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -330,7 +485,7 @@ static bool TestAllocateMany(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     // Test allocation of multiple VPartitions
     alloc_req_t request;
@@ -339,27 +494,27 @@ static bool TestAllocateMany(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int data_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(data_fd, 0, "");
+    ASSERT_GT(data_fd, 0);
 
     strcpy(request.name, kTestPartName2);
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
     int blob_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(blob_fd, 0, "");
+    ASSERT_GT(blob_fd, 0);
 
     strcpy(request.name, kTestPartName3);
     memcpy(request.type, kTestPartGUIDSys, GUID_LEN);
     int sys_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(sys_fd, 0, "");
+    ASSERT_GT(sys_fd, 0);
 
-    ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1), "");
-    ASSERT_TRUE(CheckWriteReadBlock(blob_fd, 0, 1), "");
-    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1));
+    ASSERT_TRUE(CheckWriteReadBlock(blob_fd, 0, 1));
+    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
-    ASSERT_EQ(close(data_fd), 0, "");
-    ASSERT_EQ(close(blob_fd), 0, "");
-    ASSERT_EQ(close(sys_fd), 0, "");
+    ASSERT_EQ(close(data_fd), 0);
+    ASSERT_EQ(close(blob_fd), 0);
+    ASSERT_EQ(close(sys_fd), 0);
 
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -373,7 +528,7 @@ static bool TestCloseDuringAccess(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     alloc_req_t request;
     request.slice_count = 1;
@@ -381,7 +536,7 @@ static bool TestCloseDuringAccess(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     auto bg_thread = [](void* arg) {
         int vp_fd = *reinterpret_cast<int*>(arg);
@@ -406,7 +561,7 @@ static bool TestCloseDuringAccess(void) {
 
     // Launch a background thread to read from / write to the VPartition
     thrd_t thread;
-    ASSERT_EQ(thrd_create(&thread, bg_thread, &vp_fd), thrd_success, "");
+    ASSERT_EQ(thrd_create(&thread, bg_thread, &vp_fd), thrd_success);
     // Let the background thread warm up a little bit...
     usleep(10000);
     // ... and close the fd from underneath it!
@@ -414,13 +569,13 @@ static bool TestCloseDuringAccess(void) {
     // Yes, this is a little unsafe (we risk the bg thread accessing an
     // unallocated fd), but no one else in this test process should be adding
     // fds, so we won't risk anyone reusing "vp_fd" within this test case.
-    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
 
     int res;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success, "");
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
     ASSERT_EQ(res, 0, "Background thread failed");
 
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -434,7 +589,7 @@ static bool TestReleaseDuringAccess(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     alloc_req_t request;
     request.slice_count = 1;
@@ -442,7 +597,7 @@ static bool TestReleaseDuringAccess(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     auto bg_thread = [](void* arg) {
         int vp_fd = *reinterpret_cast<int*>(arg);
@@ -467,14 +622,14 @@ static bool TestReleaseDuringAccess(void) {
 
     // Launch a background thread to read from / write to the VPartition
     thrd_t thread;
-    ASSERT_EQ(thrd_create(&thread, bg_thread, &vp_fd), thrd_success, "");
+    ASSERT_EQ(thrd_create(&thread, bg_thread, &vp_fd), thrd_success);
     // Let the background thread warm up a little bit...
     usleep(10000);
     // ... and close the entire ramdisk from undearneath it!
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
 
     int res;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success, "");
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
     ASSERT_EQ(res, 0, "Background thread failed");
 
     close(vp_fd);
@@ -491,9 +646,9 @@ static bool TestVPartitionExtend(void) {
     const size_t kDiskSize = 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
     size_t slices_left = fvm::UsableSlicesCount(kDiskSize, slice_size);
 
@@ -505,13 +660,13 @@ static bool TestVPartitionExtend(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
     slices_left--;
 
     // Confirm that the disk reports the correct number of slices
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     extend_request_t erequest;
 
@@ -519,14 +674,14 @@ static bool TestVPartitionExtend(void) {
     erequest.offset = 0;
     erequest.length = 1;
     ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     // Try again with a portion of the request which is unallocated
     erequest.length = 2;
     ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     // Allocate OBSCENELY too many slices
     erequest.offset = slice_count;
@@ -546,12 +701,12 @@ static bool TestVPartitionExtend(void) {
     // Allocate exactly the remaining number of slices
     erequest.offset = slice_count;
     erequest.length = slices_left;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
     slice_count += slices_left;
     slices_left = 0;
 
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     // We can't allocate any more to this VPartition
     erequest.offset = slice_count;
@@ -563,8 +718,8 @@ static bool TestVPartitionExtend(void) {
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
     ASSERT_LT(ioctl_block_fvm_alloc(fd, &request), 0, "Couldn't allocate VPart");
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -583,7 +738,7 @@ static bool TestVPartitionExtendSparse(void) {
 
     size_t slices_left = fvm::UsableSlicesCount(blk_size * blk_count, slice_size);
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     alloc_req_t request;
     request.slice_count = 1;
@@ -592,8 +747,8 @@ static bool TestVPartitionExtendSparse(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
+    ASSERT_GT(vp_fd, 0);
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
 
     // Double check that we can access a block at this vslice address
     // (this isn't always possible; for certain slice sizes, blocks may be
@@ -612,23 +767,23 @@ static bool TestVPartitionExtendSparse(void) {
     // Try allocating at the largest offset
     erequest.offset = VSLICE_MAX - 1;
     erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, bno, 1), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, bno, 1));
 
     // Try freeing beyond largest offset
     erequest.offset = VSLICE_MAX;
     erequest.length = 1;
     ASSERT_LT(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "Expected request failure");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, bno, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, bno, 1));
 
     // Try freeing at the largest offset
     erequest.offset = VSLICE_MAX - 1;
     erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "");
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, bno, 1), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0);
+    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, bno, 1));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -642,9 +797,9 @@ static bool TestVPartitionShrink(void) {
     const size_t kDiskSize = 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
     size_t slices_left = fvm::UsableSlicesCount(kDiskSize, slice_size);
 
@@ -656,15 +811,15 @@ static bool TestVPartitionShrink(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
     slices_left--;
 
     // Confirm that the disk reports the correct number of slices
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, (slice_size / info.block_size) - 1, 1), "");
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, (slice_size / info.block_size) - 1, 2), "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, (slice_size / info.block_size) - 1, 1));
+    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, (slice_size / info.block_size) - 1, 2));
 
     extend_request_t erequest;
 
@@ -678,25 +833,25 @@ static bool TestVPartitionShrink(void) {
     erequest.length = 0;
     ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Zero Length request should be no-op");
     ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "Zero Length request should be no-op");
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     // Try again with a portion of the request which is unallocated
     erequest.length = 2;
     ASSERT_LT(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "Expected request failure");
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     // Allocate exactly the remaining number of slices
     erequest.offset = slice_count;
     erequest.length = slices_left;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
     slice_count += slices_left;
     slices_left = 0;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, (slice_size / info.block_size) - 1, 1), "");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, (slice_size / info.block_size) - 1, 2), "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, (slice_size / info.block_size) - 1, 1));
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, (slice_size / info.block_size) - 1, 2));
 
     // We can't allocate any more to this VPartition
     erequest.offset = slice_count;
@@ -706,7 +861,7 @@ static bool TestVPartitionShrink(void) {
     // Try to shrink off the end (okay, since SOME of the slices are allocated)
     erequest.offset = 1;
     erequest.length = slice_count + 3;
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0);
 
     // The same request to shrink should now fail (NONE of the slices are
     // allocated)
@@ -715,11 +870,11 @@ static bool TestVPartitionShrink(void) {
     ASSERT_LT(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "Expected request failure");
 
     // ... unless we re-allocate and try again.
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &erequest), 0);
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -733,9 +888,9 @@ static bool TestVPartitionSplit(void) {
     size_t disk_size = 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
     size_t slices_left = fvm::UsableSlicesCount(disk_size, slice_size);
 
@@ -747,13 +902,13 @@ static bool TestVPartitionSplit(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
     slices_left--;
 
     // Confirm that the disk reports the correct number of slices
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * slice_count);
 
     extend_request_t reset_erequest;
     reset_erequest.offset = 1;
@@ -771,87 +926,87 @@ static bool TestVPartitionSplit(void) {
 
     auto verifyExtents = [=](bool start, bool mid, bool end) {
         if (start) {
-            ASSERT_TRUE(CheckWriteReadBlock(vp_fd, start_erequest.offset  * (slice_size / info.block_size), 1), "");
+            ASSERT_TRUE(CheckWriteReadBlock(vp_fd, start_erequest.offset  * (slice_size / info.block_size), 1));
         } else {
-            ASSERT_TRUE(CheckNoAccessBlock(vp_fd, start_erequest.offset  * (slice_size / info.block_size), 1), "");
+            ASSERT_TRUE(CheckNoAccessBlock(vp_fd, start_erequest.offset  * (slice_size / info.block_size), 1));
         }
         if (mid) {
-            ASSERT_TRUE(CheckWriteReadBlock(vp_fd, mid_erequest.offset  * (slice_size / info.block_size), 1), "");
+            ASSERT_TRUE(CheckWriteReadBlock(vp_fd, mid_erequest.offset  * (slice_size / info.block_size), 1));
         } else {
-            ASSERT_TRUE(CheckNoAccessBlock(vp_fd, mid_erequest.offset  * (slice_size / info.block_size), 1), "");
+            ASSERT_TRUE(CheckNoAccessBlock(vp_fd, mid_erequest.offset  * (slice_size / info.block_size), 1));
         }
         if (end) {
-            ASSERT_TRUE(CheckWriteReadBlock(vp_fd, end_erequest.offset  * (slice_size / info.block_size), 1), "");
+            ASSERT_TRUE(CheckWriteReadBlock(vp_fd, end_erequest.offset  * (slice_size / info.block_size), 1));
         } else {
-            ASSERT_TRUE(CheckNoAccessBlock(vp_fd, end_erequest.offset  * (slice_size / info.block_size), 1), "");
+            ASSERT_TRUE(CheckNoAccessBlock(vp_fd, end_erequest.offset  * (slice_size / info.block_size), 1));
         }
         return true;
     };
 
     // We should be able to split the extent.
-    ASSERT_TRUE(verifyExtents(true, true, true), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, false, true), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, true), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, false), "");
+    ASSERT_TRUE(verifyExtents(true, true, true));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, false, true));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, true));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, false));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0);
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, true, true), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, true), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, true, true));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, true));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, false));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0);
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, true, false), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, false, false), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, true, false));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, false, false));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, false));
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &reset_erequest), 0);
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, true, false), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, true, false), "");
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, false), "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, true, false));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, true, false));
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, false));
 
     // We should also be able to combine extents
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, true, false), "");
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, true, false), "");
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, true, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, true, false));
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, true, false));
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, true, true));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &reset_erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &reset_erequest), 0);
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, true), "");
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, true, true), "");
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, true, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, true));
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, true, true));
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, true, true));
 
-    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &reset_erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_shrink(vp_fd, &reset_erequest), 0);
 
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(false, false, true), "");
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, false, true), "");
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0, "");
-    ASSERT_TRUE(verifyExtents(true, true, true), "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &end_erequest), 0);
+    ASSERT_TRUE(verifyExtents(false, false, true));
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &start_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, false, true));
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &mid_erequest), 0);
+    ASSERT_TRUE(verifyExtents(true, true, true));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -864,7 +1019,7 @@ static bool TestVPartitionDestroy(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     // Test allocation of multiple VPartitions
     alloc_req_t request;
@@ -873,52 +1028,52 @@ static bool TestVPartitionDestroy(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int data_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(data_fd, 0, "");
+    ASSERT_GT(data_fd, 0);
     strcpy(request.name, kTestPartName2);
     memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
     int blob_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(blob_fd, 0, "");
+    ASSERT_GT(blob_fd, 0);
     strcpy(request.name, kTestPartName3);
     memcpy(request.type, kTestPartGUIDSys, GUID_LEN);
     int sys_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(sys_fd, 0, "");
+    ASSERT_GT(sys_fd, 0);
 
     // We can access all three...
-    ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1), "");
-    ASSERT_TRUE(CheckWriteReadBlock(blob_fd, 0, 1), "");
-    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1));
+    ASSERT_TRUE(CheckWriteReadBlock(blob_fd, 0, 1));
+    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
     // But not after we destroy the blob partition.
-    ASSERT_EQ(ioctl_block_fvm_destroy(blob_fd), 0, "");
-    ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1), "");
-    ASSERT_TRUE(CheckDeadBlock(blob_fd), "");
-    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1), "");
+    ASSERT_EQ(ioctl_block_fvm_destroy(blob_fd), 0);
+    ASSERT_TRUE(CheckWriteReadBlock(data_fd, 0, 1));
+    ASSERT_TRUE(CheckDeadBlock(blob_fd));
+    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
     // We also can't re-destroy the blob partition.
-    ASSERT_LT(ioctl_block_fvm_destroy(blob_fd), 0, "");
+    ASSERT_LT(ioctl_block_fvm_destroy(blob_fd), 0);
 
     // We also can't allocate slices to the destroyed blob partition.
     extend_request_t erequest;
     erequest.offset = 1;
     erequest.length = 1;
-    ASSERT_LT(ioctl_block_fvm_extend(blob_fd, &erequest), 0, "");
+    ASSERT_LT(ioctl_block_fvm_extend(blob_fd, &erequest), 0);
 
     // Destroy the other two VPartitions.
-    ASSERT_EQ(ioctl_block_fvm_destroy(data_fd), 0, "");
-    ASSERT_TRUE(CheckDeadBlock(data_fd), "");
-    ASSERT_TRUE(CheckDeadBlock(blob_fd), "");
-    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1), "");
+    ASSERT_EQ(ioctl_block_fvm_destroy(data_fd), 0);
+    ASSERT_TRUE(CheckDeadBlock(data_fd));
+    ASSERT_TRUE(CheckDeadBlock(blob_fd));
+    ASSERT_TRUE(CheckWriteReadBlock(sys_fd, 0, 1));
 
-    ASSERT_EQ(ioctl_block_fvm_destroy(sys_fd), 0, "");
-    ASSERT_TRUE(CheckDeadBlock(data_fd), "");
-    ASSERT_TRUE(CheckDeadBlock(blob_fd), "");
-    ASSERT_TRUE(CheckDeadBlock(sys_fd), "");
+    ASSERT_EQ(ioctl_block_fvm_destroy(sys_fd), 0);
+    ASSERT_TRUE(CheckDeadBlock(data_fd));
+    ASSERT_TRUE(CheckDeadBlock(blob_fd));
+    ASSERT_TRUE(CheckDeadBlock(sys_fd));
 
-    ASSERT_EQ(close(data_fd), 0, "");
-    ASSERT_EQ(close(blob_fd), 0, "");
-    ASSERT_EQ(close(sys_fd), 0, "");
+    ASSERT_EQ(close(data_fd), 0);
+    ASSERT_EQ(close(blob_fd), 0);
+    ASSERT_EQ(close(sys_fd), 0);
 
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -931,9 +1086,9 @@ static bool TestSliceAccessContiguous(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     // Allocate one VPart
@@ -943,46 +1098,46 @@ static bool TestSliceAccessContiguous(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
 
     // This is the last 'accessible' block.
     size_t last_block = (slice_size / info.block_size) - 1;
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * 2]);
-    ASSERT_TRUE(ac.check(), "");
-    ASSERT_TRUE(CheckWrite(vp_fd, info.block_size * last_block, info.block_size, &buf[0]), "");
-    ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block, info.block_size, &buf[0]), "");
 
-    // Try writing out of bounds -- check that we don't have access.
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, (slice_size / info.block_size) - 1, 2), "");
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, slice_size / info.block_size, 1), "");
+    {
+        mxtl::RefPtr<VmoClient> vc;
+        ASSERT_TRUE(VmoClient::Create(vp_fd, &vc));
+        mxtl::unique_ptr<VmoBuf> vb;
+        ASSERT_TRUE(VmoBuf::Create(vc, info.block_size * 2, &vb));
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, info.block_size * last_block, info.block_size));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block, info.block_size));
 
-    // Attempt to access the next contiguous slice
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Couldn't extend VPartition");
+        // Try writing out of bounds -- check that we don't have access.
+        ASSERT_TRUE(CheckNoAccessBlock(vp_fd, (slice_size / info.block_size) - 1, 2));
+        ASSERT_TRUE(CheckNoAccessBlock(vp_fd, slice_size / info.block_size, 1));
 
-    // Now we can access the next slice...
-    ASSERT_TRUE(CheckWrite(vp_fd, info.block_size * (last_block + 1),
-                           info.block_size, &buf[info.block_size]),
-                "");
-    ASSERT_TRUE(CheckRead(vp_fd, info.block_size * (last_block + 1),
-                          info.block_size, &buf[info.block_size]),
-                "");
-    // ... We can still access the previous slice...
-    ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block,
-                          info.block_size, &buf[0]),
-                "");
-    // ... And we can cross slices
-    ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block,
-                          info.block_size * 2, &buf[0]),
-                "");
+        // Attempt to access the next contiguous slice
+        extend_request_t erequest;
+        erequest.offset = 1;
+        erequest.length = 1;
+        ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Couldn't extend VPartition");
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+        // Now we can access the next slice...
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), info.block_size,
+                                   info.block_size * (last_block + 1), info.block_size));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), info.block_size,
+                                  info.block_size * (last_block + 1), info.block_size));
+        // ... We can still access the previous slice...
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block,
+                                  info.block_size));
+        // ... And we can cross slices
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block,
+                                  info.block_size * 2));
+    }
+
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1001,9 +1156,9 @@ static bool TestSliceAccessMany(void) {
     ASSERT_EQ(StartFVMTest(kBlockSize, (1 << 20), kSliceSize, ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     ASSERT_EQ(fvm_info.slice_size, kSliceSize);
 
     // Allocate one VPart
@@ -1013,48 +1168,52 @@ static bool TestSliceAccessMany(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
     ASSERT_EQ(info.block_size, kBlockSize);
 
-    // Access the first slice
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kSliceSize * 3]);
-    ASSERT_TRUE(ac.check(), "");
-    ASSERT_TRUE(CheckWrite(vp_fd, 0, kSliceSize, &buf[0]), "");
-    ASSERT_TRUE(CheckRead(vp_fd, 0, kSliceSize, &buf[0]), "");
+    {
+        mxtl::RefPtr<VmoClient> vc;
+        ASSERT_TRUE(VmoClient::Create(vp_fd, &vc));
+        mxtl::unique_ptr<VmoBuf> vb;
+        ASSERT_TRUE(VmoBuf::Create(vc, kSliceSize * 3, &vb));
 
-    // Try writing out of bounds -- check that we don't have access.
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, kBlocksPerSlice - 1, 2), "");
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, kBlocksPerSlice, 1), "");
+        // Access the first slice
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, 0, kSliceSize));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, 0, kSliceSize));
 
-    // Attempt to access the next contiguous slices
-    extend_request_t erequest;
-    erequest.offset = 1;
-    erequest.length = 2;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Couldn't extend VPartition");
+        // Try writing out of bounds -- check that we don't have access.
+        ASSERT_TRUE(CheckNoAccessBlock(vp_fd, kBlocksPerSlice - 1, 2));
+        ASSERT_TRUE(CheckNoAccessBlock(vp_fd, kBlocksPerSlice, 1));
 
-    // Now we can access the next slices...
-    ASSERT_TRUE(CheckWrite(vp_fd, kSliceSize, 2 * kSliceSize, &buf[kSliceSize]), "");
-    ASSERT_TRUE(CheckRead(vp_fd, kSliceSize, 2 * kSliceSize, &buf[kSliceSize]), "");
-    // ... We can still access the previous slice...
-    ASSERT_TRUE(CheckRead(vp_fd, 0, kSliceSize, &buf[0]), "");
-    // ... And we can cross slices for reading.
-    ASSERT_TRUE(CheckRead(vp_fd, 0, 3 * kSliceSize, &buf[0]), "");
+        // Attempt to access the next contiguous slices
+        extend_request_t erequest;
+        erequest.offset = 1;
+        erequest.length = 2;
+        ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Couldn't extend VPartition");
 
-    // Also, we can cross slices for writing.
-    ASSERT_TRUE(CheckWrite(vp_fd, 0, 3 * kSliceSize, &buf[0]), "");
-    ASSERT_TRUE(CheckRead(vp_fd, 0, 3 * kSliceSize, &buf[0]), "");
+        // Now we can access the next slices...
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), kSliceSize, kSliceSize, 2 * kSliceSize));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), kSliceSize, kSliceSize, 2 * kSliceSize));
+        // ... We can still access the previous slice...
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, 0, kSliceSize));
+        // ... And we can cross slices for reading.
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, 0, 3 * kSliceSize));
 
-    // Additionally, we can access "parts" of slices in a multi-slice
-    // operation. Here, read one block into the first slice, and read
-    // up to the last block in the final slice.
-    ASSERT_TRUE(CheckWrite(vp_fd, kBlockSize, 3 * kSliceSize - 2 * kBlockSize, &buf[0]), "");
-    ASSERT_TRUE(CheckRead(vp_fd, kBlockSize, 3 * kSliceSize - 2 * kBlockSize, &buf[0]), "");
+        // Also, we can cross slices for writing.
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, 0, 3 * kSliceSize));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, 0, 3 * kSliceSize));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+        // Additionally, we can access "parts" of slices in a multi-slice
+        // operation. Here, read one block into the first slice, and read
+        // up to the last block in the final slice.
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, kBlockSize, 3 * kSliceSize - 2 * kBlockSize));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, kBlockSize, 3 * kSliceSize - 2 * kBlockSize));
+    }
+
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1066,13 +1225,13 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
     BEGIN_TEST;
     char ramdisk_path[PATH_MAX];
     char fvm_driver[PATH_MAX];
-    ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
+    ASSERT_EQ(StartFVMTest(512, 1 << 20, 8lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
     const size_t kDiskSize = 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     alloc_req_t request;
@@ -1097,11 +1256,11 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
         strcpy(request.name, vparts[i].name);
         memcpy(request.type, vparts[i].guid, GUID_LEN);
         vparts[i].fd = fvm_allocate_partition(fd, &request);
-        ASSERT_GT(vparts[i].fd, 0, "");
+        ASSERT_GT(vparts[i].fd, 0);
     }
 
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vparts[0].fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(vparts[0].fd, &info), 0);
 
     size_t usable_slices_per_vpart = fvm::UsableSlicesCount(kDiskSize, slice_size) / kNumVParts;
     size_t i = 0;
@@ -1109,15 +1268,17 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
         int vfd = vparts[i].fd;
         // This is the last 'accessible' block.
         size_t last_block = (vparts[i].slices_used * (slice_size / info.block_size)) - 1;
-        mxtl::AllocChecker ac;
-        mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * 2]);
-        ASSERT_TRUE(ac.check(), "");
-        ASSERT_TRUE(CheckWrite(vfd, info.block_size * last_block, info.block_size, &buf[0]), "");
-        ASSERT_TRUE(CheckRead(vfd, info.block_size * last_block, info.block_size, &buf[0]), "");
+        mxtl::RefPtr<VmoClient> vc;
+        ASSERT_TRUE(VmoClient::Create(vfd, &vc));
+        mxtl::unique_ptr<VmoBuf> vb;
+        ASSERT_TRUE(VmoBuf::Create(vc, info.block_size * 2, &vb));
+
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, info.block_size * last_block, info.block_size));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block, info.block_size));
 
         // Try writing out of bounds -- check that we don't have access.
-        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2), "");
-        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1), "");
+        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2));
+        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1));
 
         // Attempt to access the next contiguous slice
         extend_request_t erequest;
@@ -1126,29 +1287,52 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
         ASSERT_EQ(ioctl_block_fvm_extend(vfd, &erequest), 0, "Couldn't extend VPartition");
 
         // Now we can access the next slice...
-        ASSERT_TRUE(CheckWrite(vfd, info.block_size * (last_block + 1),
-                               info.block_size, &buf[info.block_size]),
-                    "");
-        ASSERT_TRUE(CheckRead(vfd, info.block_size * (last_block + 1),
-                              info.block_size, &buf[info.block_size]),
-                    "");
+        ASSERT_TRUE(vc->CheckWrite(vb.get(), info.block_size, info.block_size *
+                                   (last_block + 1), info.block_size));
+        ASSERT_TRUE(vc->CheckRead(vb.get(), info.block_size, info.block_size *
+                                  (last_block + 1), info.block_size));
         // ... We can still access the previous slice...
-        ASSERT_TRUE(CheckRead(vfd, info.block_size * last_block,
-                              info.block_size, &buf[0]),
-                    "");
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block,
+                                  info.block_size));
         // ... And we can cross slices
-        ASSERT_TRUE(CheckRead(vfd, info.block_size * last_block,
-                              info.block_size * 2, &buf[0]),
-                    "");
+        ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block,
+                                  info.block_size * 2));
+
         vparts[i].slices_used++;
         i = (i + 1) % kNumVParts;
     }
 
     for (size_t i = 0; i < kNumVParts; i++) {
-        ASSERT_EQ(close(vparts[i].fd), 0, "");
+        printf("Testing multi-slice operations on vslice %lu\n", i);
+
+        // We need at least five slices, so we can access three "middle"
+        // slices and jitter to test off-by-one errors.
+        ASSERT_GE(vparts[i].slices_used, 5, "");
+
+        {
+            mxtl::RefPtr<VmoClient> vc;
+            ASSERT_TRUE(VmoClient::Create(vparts[i].fd, &vc));
+            mxtl::unique_ptr<VmoBuf> vb;
+            ASSERT_TRUE(VmoBuf::Create(vc, slice_size * 4, &vb));
+
+            // Try accessing 3 noncontiguous slices at once, with the
+            // addition of "off by one block".
+            size_t dev_off_start = slice_size - info.block_size;
+            size_t dev_off_end = slice_size + info.block_size;
+            size_t len_start = slice_size * 3 - info.block_size;
+            size_t len_end = slice_size * 3 + info.block_size;
+
+            for (size_t dev_off = dev_off_start; dev_off <= dev_off_end; dev_off += info.block_size) {
+                for (size_t len = len_start; len <= len_end; len += info.block_size) {
+                    ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, dev_off, len));
+                    ASSERT_TRUE(vc->CheckRead(vb.get(), 0, dev_off, len));
+                }
+            }
+        }
+        ASSERT_EQ(close(vparts[i].fd), 0);
     }
 
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1163,9 +1347,9 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
     const size_t kDiskSize = 512 * (1 << 20);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     alloc_req_t request;
@@ -1191,11 +1375,11 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
         strcpy(request.name, vparts[i].name);
         memcpy(request.type, vparts[i].guid, GUID_LEN);
         vparts[i].fd = fvm_allocate_partition(fd, &request);
-        ASSERT_GT(vparts[i].fd, 0, "");
+        ASSERT_GT(vparts[i].fd, 0);
     }
 
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vparts[0].fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(vparts[0].fd, &info), 0);
 
     size_t usable_slices_per_vpart = fvm::UsableSlicesCount(kDiskSize, slice_size) / kNumVParts;
     size_t i = 0;
@@ -1203,11 +1387,11 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
         int vfd = vparts[i].fd;
         // This is the last 'accessible' block.
         size_t last_block = (vparts[i].last_slice * (slice_size / info.block_size)) - 1;
-        ASSERT_TRUE(CheckWriteReadBlock(vfd, last_block, 1), "");
+        ASSERT_TRUE(CheckWriteReadBlock(vfd, last_block, 1));
 
         // Try writing out of bounds -- check that we don't have access.
-        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2), "");
-        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1), "");
+        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2));
+        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1));
 
         // Attempt to access a non-contiguous slice
         extend_request_t erequest;
@@ -1216,12 +1400,12 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
         ASSERT_EQ(ioctl_block_fvm_extend(vfd, &erequest), 0, "Couldn't extend VPartition");
 
         // We still don't have access to the next slice...
-        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2), "");
-        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1), "");
+        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block, 2));
+        ASSERT_TRUE(CheckNoAccessBlock(vfd, last_block + 1, 1));
 
         // But we have access to the slice we asked for!
         size_t requested_block = (erequest.offset * slice_size) / info.block_size;
-        ASSERT_TRUE(CheckWriteReadBlock(vfd, requested_block, 1), "");
+        ASSERT_TRUE(CheckWriteReadBlock(vfd, requested_block, 1));
 
         vparts[i].slices_used++;
         vparts[i].last_slice = erequest.offset;
@@ -1229,10 +1413,10 @@ static bool TestSliceAccessNonContiguousVirtual(void) {
     }
 
     for (size_t i = 0; i < kNumVParts; i++) {
-        ASSERT_EQ(close(vparts[i].fd), 0, "");
+        ASSERT_EQ(close(vparts[i].fd), 0);
     }
 
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1245,9 +1429,9 @@ static bool TestPersistenceSimple(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     // Allocate one VPart
@@ -1257,22 +1441,22 @@ static bool TestPersistenceSimple(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Check that the name matches what we provided
     char name[FVM_NAME_LEN + 1];
-    ASSERT_GE(ioctl_block_get_name(vp_fd, name, sizeof(name)), 0, "");
-    ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0, "");
+    ASSERT_GE(ioctl_block_get_name(vp_fd, name, sizeof(name)), 0);
+    ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0);
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * 2]);
-    ASSERT_TRUE(ac.check(), "");
+    ASSERT_TRUE(ac.check());
 
     // Check that we can read from / write to it
-    ASSERT_TRUE(CheckWrite(vp_fd, 0, info.block_size, buf.get()), "");
-    ASSERT_TRUE(CheckRead(vp_fd, 0, info.block_size, buf.get()), "");
-    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_TRUE(CheckWrite(vp_fd, 0, info.block_size, buf.get()));
+    ASSERT_TRUE(CheckRead(vp_fd, 0, info.block_size, buf.get()));
+    ASSERT_EQ(close(vp_fd), 0);
 
     // Check that it still exists after rebinding the driver
     const partition_entry_t entries[] = {
@@ -1283,17 +1467,17 @@ static bool TestPersistenceSimple(void) {
 
     vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
-    ASSERT_TRUE(CheckRead(vp_fd, 0, info.block_size, buf.get()), "");
+    ASSERT_TRUE(CheckRead(vp_fd, 0, info.block_size, buf.get()));
 
     // Try extending the vpartition, and checking that the extension persists.
     // This is the last 'accessible' block.
     size_t last_block = (slice_size / info.block_size) - 1;
-    ASSERT_TRUE(CheckWrite(vp_fd, info.block_size * last_block, info.block_size, &buf[0]), "");
-    ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block, info.block_size, &buf[0]), "");
+    ASSERT_TRUE(CheckWrite(vp_fd, info.block_size * last_block, info.block_size, &buf[0]));
+    ASSERT_TRUE(CheckRead(vp_fd, info.block_size * last_block, info.block_size, &buf[0]));
 
     // Try writing out of bounds -- check that we don't have access.
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, (slice_size / info.block_size) - 1, 2), "");
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, slice_size / info.block_size, 1), "");
+    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, (slice_size / info.block_size) - 1, 2));
+    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, slice_size / info.block_size, 1));
     extend_request_t erequest;
     erequest.offset = 1;
     erequest.length = 1;
@@ -1319,8 +1503,8 @@ static bool TestPersistenceSimple(void) {
                           info.block_size * 2, &buf[0]),
                 "");
 
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1333,9 +1517,9 @@ static bool TestMounting(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     // Allocate one VPart
@@ -1345,7 +1529,7 @@ static bool TestMounting(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Format the VPart as minfs
     char partition_path[PATH_MAX];
@@ -1353,18 +1537,18 @@ static bool TestMounting(void) {
              fvm_driver, kTestPartName1);
     ASSERT_EQ(mkfs(partition_path, DISK_FORMAT_MINFS, launch_stdio_sync,
                    &default_mkfs_options),
-              MX_OK, "");
+              MX_OK);
 
     // Mount the VPart
     const char* mount_path = "/tmp/minfs_test_mountpath";
-    ASSERT_EQ(mkdir(mount_path, 0666), 0, "");
+    ASSERT_EQ(mkdir(mount_path, 0666), 0);
     ASSERT_EQ(mount(vp_fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options,
                     launch_stdio_async),
-              MX_OK, "");
+              MX_OK);
 
     // Verify that the mount was successful
     int rootfd = open(mount_path, O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(rootfd, 0, "");
+    ASSERT_GT(rootfd, 0);
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* out = reinterpret_cast<vfs_query_info_t*>(buf);
     ASSERT_EQ(ioctl_vfs_query_fs(rootfd, out, sizeof(buf) - 1),
@@ -1374,13 +1558,13 @@ static bool TestMounting(void) {
 
     // Verify that MinFS does not try to use more of the VPartition than
     // was originally allocated.
-    ASSERT_LE(out->total_bytes, slice_size * request.slice_count, "");
+    ASSERT_LE(out->total_bytes, slice_size * request.slice_count);
 
     // Clean up
-    ASSERT_EQ(close(rootfd), 0, "");
-    ASSERT_EQ(umount(mount_path), MX_OK, "");
-    ASSERT_EQ(rmdir(mount_path), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(rootfd), 0);
+    ASSERT_EQ(umount(mount_path), MX_OK);
+    ASSERT_EQ(rmdir(mount_path), 0);
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1394,12 +1578,12 @@ static bool TestCorruptionOk(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
     const size_t kDiskSize = 512 * (1 << 20);
     int ramdisk_fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(ramdisk_fd, 0, "");
+    ASSERT_GT(ramdisk_fd, 0);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     // Allocate one VPart (writes to backup)
@@ -1409,34 +1593,34 @@ static bool TestCorruptionOk(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Extend the vpart (writes to primary)
     extend_request_t erequest;
     erequest.offset = 1;
     erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * 2, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * 2);
 
     // Initial slice access
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
     // Extended slice access
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
 
     // Corrupt the (backup) metadata and rebind.
     // The 'primary' was the last one written, so it'll be used.
     off_t off = fvm::BackupStart(kDiskSize, slice_size);
     uint8_t buf[FVM_BLOCK_SIZE];
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
     // Modify an arbitrary byte (not the magic bits; we still want it to mount!)
     buf[128]++;
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
 
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
@@ -1447,13 +1631,13 @@ static bool TestCorruptionOk(void) {
     ASSERT_GT(vp_fd, 0, "Couldn't re-open Data VPart");
 
     // The slice extension is still accessible.
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1));
 
     // Clean up
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(close(ramdisk_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(ramdisk_fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1464,12 +1648,12 @@ static bool TestCorruptionRegression(void) {
     char fvm_driver[PATH_MAX];
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
     int ramdisk_fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(ramdisk_fd, 0, "");
+    ASSERT_GT(ramdisk_fd, 0);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     // Allocate one VPart (writes to backup)
@@ -1479,33 +1663,33 @@ static bool TestCorruptionRegression(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Extend the vpart (writes to primary)
     extend_request_t erequest;
     erequest.offset = 1;
     erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * 2, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * 2);
 
     // Initial slice access
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
     // Extended slice access
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
 
     // Corrupt the (primary) metadata and rebind.
     // The 'primary' was the last one written, so the backup will be used.
     off_t off = 0;
     uint8_t buf[FVM_BLOCK_SIZE];
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
     buf[128]++;
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
 
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
@@ -1513,16 +1697,16 @@ static bool TestCorruptionRegression(void) {
     fd = FVMRebind(fd, ramdisk_path, entries, 1);
     ASSERT_GT(fd, 0, "Failed to rebind FVM driver");
     vp_fd = fvm_open_partition(kTestUniqueGUID, kTestPartGUIDData, nullptr);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // The slice extension is no longer accessible
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
-    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, slice_size / info.block_size, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
+    ASSERT_TRUE(CheckNoAccessBlock(vp_fd, slice_size / info.block_size, 1));
 
     // Clean up
-    ASSERT_EQ(close(vp_fd), 0, "");
-    ASSERT_EQ(close(fd), 0, "");
-    ASSERT_EQ(close(ramdisk_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(ramdisk_fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1534,12 +1718,12 @@ static bool TestCorruptionUnrecoverable(void) {
     ASSERT_EQ(StartFVMTest(512, 1 << 20, 64lu * (1 << 20), ramdisk_path, fvm_driver), 0, "error mounting FVM");
     const size_t kDiskSize = 512 * (1 << 20);
     int ramdisk_fd = open(ramdisk_path, O_RDWR);
-    ASSERT_GT(ramdisk_fd, 0, "");
+    ASSERT_GT(ramdisk_fd, 0);
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
     fvm_info_t fvm_info;
-    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0, "");
+    ASSERT_GT(ioctl_block_fvm_query(fd, &fvm_info), 0);
     size_t slice_size = fvm_info.slice_size;
 
     // Allocate one VPart (writes to backup)
@@ -1549,39 +1733,39 @@ static bool TestCorruptionUnrecoverable(void) {
     strcpy(request.name, kTestPartName1);
     memcpy(request.type, kTestPartGUIDData, GUID_LEN);
     int vp_fd = fvm_allocate_partition(fd, &request);
-    ASSERT_GT(vp_fd, 0, "");
+    ASSERT_GT(vp_fd, 0);
 
     // Extend the vpart (writes to primary)
     extend_request_t erequest;
     erequest.offset = 1;
     erequest.length = 1;
-    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "");
+    ASSERT_EQ(ioctl_block_fvm_extend(vp_fd, &erequest), 0);
     block_info_t info;
-    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0, "");
-    ASSERT_EQ(info.block_count * info.block_size, slice_size * 2, "");
+    ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
+    ASSERT_EQ(info.block_count * info.block_size, slice_size * 2);
 
     // Initial slice access
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, 0, 1));
     // Extended slice access
-    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1), "");
+    ASSERT_TRUE(CheckWriteReadBlock(vp_fd, slice_size / info.block_size, 1));
 
-    ASSERT_EQ(close(vp_fd), 0, "");
+    ASSERT_EQ(close(vp_fd), 0);
 
     // Corrupt both copies of the metadata.
     // The 'primary' was the last one written, so the backup will be used.
     off_t off = 0;
     uint8_t buf[FVM_BLOCK_SIZE];
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
     buf[128]++;
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
     off = fvm::BackupStart(kDiskSize, slice_size);
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(read(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
     buf[128]++;
-    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off, "");
-    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf), "");
+    ASSERT_EQ(lseek(ramdisk_fd, off, SEEK_SET), off);
+    ASSERT_EQ(write(ramdisk_fd, buf, sizeof(buf)), sizeof(buf));
 
     const partition_entry_t entries[] = {
         {kTestPartName1, 1},
@@ -1589,7 +1773,7 @@ static bool TestCorruptionUnrecoverable(void) {
     ASSERT_LT(FVMRebind(fd, ramdisk_path, entries, 1), 0, "FVM Should have failed to rebind");
 
     // Clean up
-    ASSERT_EQ(close(ramdisk_fd), 0, "");
+    ASSERT_EQ(close(ramdisk_fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
@@ -1636,8 +1820,8 @@ int random_access_thread(void* arg) {
     // Before we begin, color our first slice.
     // We'll identify our own slices by the "color", which
     // is distinct between threads.
-    ASSERT_TRUE(CheckWriteColor(self->vp_fd, 0, st->slice_size, color), "");
-    ASSERT_TRUE(CheckReadColor(self->vp_fd, 0, st->slice_size, color), "");
+    ASSERT_TRUE(CheckWriteColor(self->vp_fd, 0, st->slice_size, color));
+    ASSERT_TRUE(CheckReadColor(self->vp_fd, 0, st->slice_size, color));
 
     size_t num_ops = 100;
     for (size_t i = 0; i < num_ops; ++i) {
@@ -1662,11 +1846,11 @@ int random_access_thread(void* arg) {
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
                                            len / st->block_size),
                         "");
-            ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0, "");
+            ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0);
             self->extents[extent_index].len += extension_length;
 
-            ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color), "");
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
+            ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color));
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             break;
         }
         case 1: {
@@ -1691,10 +1875,10 @@ int random_access_thread(void* arg) {
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
                                            len / st->block_size),
                         "");
-            ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0, "");
-            ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color), "");
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
-            ASSERT_TRUE(self->extents.push_back(mxtl::move(extent)), "");
+            ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0);
+            ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color));
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
+            ASSERT_TRUE(self->extents.push_back(mxtl::move(extent)));
             break;
         }
         case 2: {
@@ -1711,11 +1895,11 @@ int random_access_thread(void* arg) {
             erequest.length = shrink_length;
             size_t off = self->extents[extent_index].start * st->slice_size;
             size_t len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0, "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
+            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0);
             self->extents[extent_index].len -= shrink_length;
             len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             {
                 mxtl::AutoLock al(&st->lock);
                 st->slices_left += shrink_length;
@@ -1734,17 +1918,17 @@ int random_access_thread(void* arg) {
             erequest.length = shrink_length;
             size_t off = self->extents[extent_index].start * st->slice_size;
             size_t len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0, "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
+            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0);
 
             // We can read the slice before...
             off = self->extents[extent_index].start * st->slice_size;
             len = st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             // ... and the slices after...
             off = (self->extents[extent_index].start + 1 + shrink_length) * st->slice_size;
             len = (self->extents[extent_index].len - shrink_length - 1) * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             // ... but not in the middle.
             off = (self->extents[extent_index].start + 1) * st->slice_size;
             len = (shrink_length) * st->slice_size;
@@ -1756,12 +1940,12 @@ int random_access_thread(void* arg) {
             // trailing extent.
             erequest.offset = self->extents[extent_index].start + 1 + shrink_length;
             erequest.length = self->extents[extent_index].len - shrink_length - 1;
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0, "");
+            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0);
 
             self->extents[extent_index].len = 1;
             off = self->extents[extent_index].start * st->slice_size;
             len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             {
                 mxtl::AutoLock al(&st->lock);
                 st->slices_left += shrink_length;
@@ -1780,8 +1964,8 @@ int random_access_thread(void* arg) {
             erequest.length = self->extents[extent_index].len;
             size_t off = self->extents[extent_index].start * st->slice_size;
             size_t len = self->extents[extent_index].len * st->slice_size;
-            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color), "");
-            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0, "");
+            ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
+            ASSERT_EQ(ioctl_block_fvm_shrink(self->vp_fd, &erequest), 0);
             ASSERT_TRUE(CheckNoAccessBlock(self->vp_fd, off / st->block_size,
                                            len / st->block_size),
                         "");
@@ -1826,7 +2010,7 @@ static bool TestRandomOpMultithreaded(void) {
     s.slices_total = kSlicesCount;
 
     int fd = open(fvm_driver, O_RDWR);
-    ASSERT_GT(fd, 0, "");
+    ASSERT_GT(fd, 0);
 
     alloc_req_t request;
     size_t slice_count = 1;
@@ -1839,22 +2023,22 @@ static bool TestRandomOpMultithreaded(void) {
         // Change the GUID enough to be distinct for each thread
         request.guid[0] = static_cast<uint8_t>(i);
         s.thread_states[i].vp_fd = fvm_allocate_partition(fd, &request);
-        ASSERT_GT(s.thread_states[i].vp_fd, 0, "");
+        ASSERT_GT(s.thread_states[i].vp_fd, 0);
     }
 
     s.slices_left -= ThreadCount;
 
     // Initialize and launch all threads
     for (size_t i = 0; i < ThreadCount; i++) {
-        EXPECT_EQ(s.thread_states[i].extents.size(), 0, "");
+        EXPECT_EQ(s.thread_states[i].extents.size(), 0);
         fvm_extent_t extent;
         extent.start = 0;
         extent.len = 1;
-        EXPECT_TRUE(s.thread_states[i].extents.push_back(mxtl::move(extent)), "");
-        EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice), "");
+        EXPECT_TRUE(s.thread_states[i].extents.push_back(mxtl::move(extent)));
+        EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
         EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
                               random_access_thread<ThreadCount>, &s),
-                  thrd_success, "");
+                  thrd_success);
     }
 
     if (Persistence) {
@@ -1863,27 +2047,27 @@ static bool TestRandomOpMultithreaded(void) {
         // Join all threads
         for (size_t i = 0; i < ThreadCount; i++) {
             int r;
-            EXPECT_EQ(thrd_join(s.thread_states[i].thr, &r), thrd_success, "");
-            EXPECT_EQ(r, 0, "");
-            EXPECT_EQ(close(s.thread_states[i].vp_fd), 0, "");
+            EXPECT_EQ(thrd_join(s.thread_states[i].thr, &r), thrd_success);
+            EXPECT_EQ(r, 0);
+            EXPECT_EQ(close(s.thread_states[i].vp_fd), 0);
             entries[i].name = request.name;
             entries[i].number = i + 1;
         }
 
         // Rebind the FVM (simulating rebooting)
         fd = FVMRebind(fd, ramdisk_path, entries, mxtl::count_of(entries));
-        ASSERT_GT(fd, 0, "");
+        ASSERT_GT(fd, 0);
         s.thread_count = 0;
 
         // Re-open all partitions, re-launch the worker threads
         for (size_t i = 0; i < ThreadCount; i++) {
             request.guid[0] = static_cast<uint8_t>(i);
             int vp_fd = fvm_open_partition(request.guid, request.type, nullptr);
-            ASSERT_GT(vp_fd, 0, "");
+            ASSERT_GT(vp_fd, 0);
             s.thread_states[i].vp_fd = vp_fd;
             EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
                                   random_access_thread<ThreadCount>, &s),
-                      thrd_success, "");
+                      thrd_success);
         }
     }
 
@@ -1891,14 +2075,14 @@ static bool TestRandomOpMultithreaded(void) {
     // destroy them.
     for (size_t i = 0; i < ThreadCount; i++) {
         int r;
-        EXPECT_EQ(thrd_join(s.thread_states[i].thr, &r), thrd_success, "");
-        EXPECT_EQ(r, 0, "");
-        EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice), "");
-        EXPECT_EQ(ioctl_block_fvm_destroy(s.thread_states[i].vp_fd), 0, "");
-        EXPECT_EQ(close(s.thread_states[i].vp_fd), 0, "");
+        EXPECT_EQ(thrd_join(s.thread_states[i].thr, &r), thrd_success);
+        EXPECT_EQ(r, 0);
+        EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
+        EXPECT_EQ(ioctl_block_fvm_destroy(s.thread_states[i].vp_fd), 0);
+        EXPECT_EQ(close(s.thread_states[i].vp_fd), 0);
     }
 
-    ASSERT_EQ(close(fd), 0, "");
+    ASSERT_EQ(close(fd), 0);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }
