@@ -6,7 +6,6 @@ visibility = [ "//apps/ledger/src/*" ]
 
 source_set("callback") {
   sources = [
-    "asynchronous_callback.h",
     "auto_cleanable.h",
     "cancellable.cc",
     "cancellable.h",
@@ -37,7 +36,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "asynchronous_callback_unittest.cc",
     "auto_cleanable_unittest.cc",
     "cancellable_helper_unittest.cc",
     "cancellable_unittest.cc",

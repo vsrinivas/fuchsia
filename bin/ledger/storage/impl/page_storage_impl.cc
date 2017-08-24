@@ -16,7 +16,6 @@
 #include <map>
 #include <utility>
 
-#include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cobalt/cobalt.h"

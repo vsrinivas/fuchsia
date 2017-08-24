@@ -4,7 +4,6 @@
 
 #include "apps/ledger/src/storage/impl/btree/builder.h"
 
-#include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/impl/btree/internal_helper.h"
 #include "apps/ledger/src/storage/impl/btree/synchronous_storage.h"
