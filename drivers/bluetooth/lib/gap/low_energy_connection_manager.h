@@ -80,14 +80,6 @@ using LowEnergyConnectionRefPtr = std::unique_ptr<LowEnergyConnectionRef>;
 
 class LowEnergyConnectionManager final {
  public:
-  enum class Mode {
-    // Use the legacy HCI command set.
-    kLegacy,
-
-    // Use the extended HCI command set introduced in version 5.0
-    kExtended,
-  };
-
   LowEnergyConnectionManager(Mode mode, fxl::RefPtr<hci::Transport> hci,
                              RemoteDeviceCache* device_cache, l2cap::ChannelManager* l2cap,
                              int64_t request_timeout_ms = kLECreateConnectionTimeoutMs);

@@ -23,8 +23,13 @@ class SequentialCommandRunner;
 class Transport;
 }  // namespace hci
 
+namespace l2cap {
+class ChannelManager;
+}  // namespace l2cap
+
 namespace gap {
 
+class LowEnergyConnectionManager;
 class LowEnergyDiscoveryManager;
 
 // Represents the host-subsystem state for a Bluetooth controller. All asynchronous callbacks are
@@ -86,6 +91,12 @@ class Adapter final {
     return le_discovery_manager_.get();
   }
 
+  // Returns this Adapter's LE connection manager.
+  LowEnergyConnectionManager* le_connection_manager() const {
+    FXL_DCHECK(le_connection_manager_);
+    return le_connection_manager_.get();
+  }
+
  private:
   // Second step of the initialization sequence. Called by Initialize() when the first batch of HCI
   // commands have been sent.
@@ -140,9 +151,16 @@ class Adapter final {
   // Provides access to discovered, connected, and/or bonded remote Bluetooth devices.
   RemoteDeviceCache device_cache_;
 
+  // The L2CAP layer.
+  std::unique_ptr<l2cap::ChannelManager> l2cap_;
+
   // Interface for performing BLE scan procedures. This is initialized based on feature support.
   // Contains nullptr if the controller does not support scanning.
   std::unique_ptr<LowEnergyDiscoveryManager> le_discovery_manager_;
+
+  // Interface for BLE central-role connection procedures. This is initialized based on feature
+  // support. Contains nullptr if the controller does not support LE connections.
+  std::unique_ptr<LowEnergyConnectionManager> le_connection_manager_;
 
   // This must remain the last member to make sure that all weak pointers are invalidating before
   // other members are destroyed.

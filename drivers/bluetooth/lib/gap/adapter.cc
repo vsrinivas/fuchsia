@@ -12,9 +12,11 @@
 #include "apps/bluetooth/lib/hci/sequential_command_runner.h"
 #include "apps/bluetooth/lib/hci/transport.h"
 #include "apps/bluetooth/lib/hci/util.h"
-#include "lib/fxl/random/uuid.h"
+#include "apps/bluetooth/lib/l2cap/channel_manager.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/random/uuid.h"
 
+#include "low_energy_connection_manager.h"
 #include "low_energy_discovery_manager.h"
 
 namespace bluetooth {
@@ -328,16 +330,36 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
   if (state_.low_energy_state().IsFeatureSupported(
           hci::LESupportedFeature::kLEExtendedAdvertising)) {
     FXL_LOG(INFO) << "gap: Adapter: Using extended LE scan procedures";
-    le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kExtended, hci_, &device_cache_);
+    le_discovery_manager_ =
+        std::make_unique<LowEnergyDiscoveryManager>(Mode::kExtended, hci_, &device_cache_);
   } else if (state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanParameters) &&
              state_.IsCommandSupported(26, hci::SupportedCommand::kLESetScanEnable)) {
     FXL_LOG(INFO) << "gap: Adapter: Using legacy LE scan procedures";
-    le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kLegacy, hci_, &device_cache_);
+    le_discovery_manager_ =
+        std::make_unique<LowEnergyDiscoveryManager>(Mode::kLegacy, hci_, &device_cache_);
+  } else {
+    FXL_LOG(WARNING) << "gap: Adapter: controller does not support LE scanner role";
   }
 
-  if (!le_discovery_manager_) FXL_LOG(INFO) << "gap: Adapter: LE scan procedures not supported";
+  // Initialize L2CAP.
+  l2cap_ = std::make_unique<l2cap::ChannelManager>(hci_, task_runner_);
+
+  // Initialize LE connection manager based on current feature support.
+  if (state_.low_energy_state().IsFeatureSupported(
+          hci::LESupportedFeature::kLEExtendedAdvertising)) {
+    // TODO(armansito): Add extended feature version of this.
+    FXL_LOG(INFO) << "gap: Adapter: Controller supports extended LE connection procedures";
+    FXL_LOG(WARNING) << "gap: Adapter: extended LE connection procedures not implemented;"
+                     << " defaulting to legacy features";
+  }
+  if (state_.IsCommandSupported(26, hci::SupportedCommand::kLECreateConnection) &&
+      state_.IsCommandSupported(26, hci::SupportedCommand::kLECreateConnectionCancel)) {
+    FXL_LOG(INFO) << "gap: Adapter: Using legacy LE connection procedures";
+    le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
+        Mode::kLegacy, hci_, &device_cache_, l2cap_.get());
+  } else {
+    FXL_LOG(WARNING) << "gap: Adapter: controller does not support LE central role";
+  }
 
   // This completes the initialization sequence.
   init_state_ = State::kInitialized;
@@ -350,6 +372,7 @@ uint64_t Adapter::BuildEventMask() {
   uint64_t event_mask = 0;
 
   // Enable events that are needed for basic flow control.
+  event_mask |= static_cast<uint64_t>(hci::EventMask::kDisconnectionCompleteEvent);
   event_mask |= static_cast<uint64_t>(hci::EventMask::kHardwareErrorEvent);
   event_mask |= static_cast<uint64_t>(hci::EventMask::kLEMetaEvent);
 
@@ -359,6 +382,7 @@ uint64_t Adapter::BuildEventMask() {
 uint64_t Adapter::BuildLEEventMask() {
   uint64_t event_mask = 0;
 
+  event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEConnectionComplete);
   event_mask |= static_cast<uint64_t>(hci::LEEventMask::kLEAdvertisingReport);
 
   return event_mask;
@@ -373,6 +397,7 @@ void Adapter::CleanUp() {
 
   // TODO(armansito): This should notify all session clients that they are not scanning any more.
   le_discovery_manager_ = nullptr;
+  le_connection_manager_ = nullptr;
 
   if (hci_->IsInitialized()) hci_->ShutDown();
 }

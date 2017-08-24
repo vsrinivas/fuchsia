@@ -166,8 +166,8 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
   if (pp_iter != pending_pdus_.end()) {
     pp_iter->second.emplace_back(std::move(pdu));
 
-    FXL_VLOG(1) << fxl::StringPrintf("l2cap: PDU buffered (channel: 0x%04x, ll: 0x%04x", channel_id,
-                                     handle_);
+    FXL_VLOG(1) << fxl::StringPrintf("l2cap: PDU buffered (channel: 0x%04x, ll: 0x%04x)",
+                                     channel_id, handle_);
     return;
   }
 

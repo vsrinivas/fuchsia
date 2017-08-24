@@ -52,8 +52,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     dev_cache_ = std::make_unique<RemoteDeviceCache>();
     l2cap_ = std::make_unique<l2cap::ChannelManager>(transport(), message_loop()->task_runner());
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
-        LowEnergyConnectionManager::Mode::kLegacy, transport(), dev_cache_.get(), l2cap_.get(),
-        kTestRequestTimeoutMs);
+        Mode::kLegacy, transport(), dev_cache_.get(), l2cap_.get(), kTestRequestTimeoutMs);
 
     test_device()->SetConnectionStateCallback(
         std::bind(&LowEnergyConnectionManagerTest::OnConnectionStateChanged, this,

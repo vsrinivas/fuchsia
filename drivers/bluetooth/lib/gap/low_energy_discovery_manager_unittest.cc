@@ -45,8 +45,8 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
     settings.ApplyLegacyLEConfig();
     test_device()->set_settings(settings);
 
-    discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
-        LowEnergyDiscoveryManager::Mode::kLegacy, transport(), &device_cache_);
+    discovery_manager_ =
+        std::make_unique<LowEnergyDiscoveryManager>(Mode::kLegacy, transport(), &device_cache_);
     test_device()->SetScanStateCallback(
         std::bind(&LowEnergyDiscoveryManagerTest::OnScanStateChanged, this, std::placeholders::_1),
         message_loop()->task_runner());

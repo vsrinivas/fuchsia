@@ -151,15 +151,6 @@ class LowEnergyDiscoverySession final {
 // See comments above.
 class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
  public:
-  enum class Mode {
-    // Use the legacy LE scan procedure using the legacy HCI command set.
-    kLegacy,
-
-    // Use the extended LE scan procedure using the extended HCI command set introduced in version
-    // 5.0.
-    kExtended,
-  };
-
   // |device_cache| MUST out-live this LowEnergyDiscoveryManager.
   LowEnergyDiscoveryManager(Mode mode, fxl::RefPtr<hci::Transport> hci,
                             RemoteDeviceCache* device_cache);

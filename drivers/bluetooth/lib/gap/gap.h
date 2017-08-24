@@ -19,6 +19,14 @@ enum class TechnologyType {
   kDualMode,
 };
 
+enum class Mode {
+  // Use the legacy HCI command set.
+  kLegacy,
+
+  // Use the extended HCI command set introduced in version 5.0
+  kExtended,
+};
+
 // EIR Data Type, Advertising Data Type (AD Type), OOB Data Type definitions.
 // clang-format off
 enum class DataType : uint8_t {
