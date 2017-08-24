@@ -5,7 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/acpi.h>
+#include <ddk/protocol/pciroot.h>
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -18,6 +18,7 @@
 #include <magenta/process.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <mxio/debug.h>
 
 #include "init.h"
 #include "dev.h"
@@ -27,15 +28,7 @@
 #include "processor.h"
 #include "power.h"
 
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
+#define MXDEBUG 0
 
 #define MAX_NAMESPACE_DEPTH 100
 
@@ -68,7 +61,7 @@ static mx_protocol_device_t acpi_device_proto = {
     .release = acpi_device_release,
 };
 
-static acpi_protocol_ops_t acpi_proto = {
+static pciroot_protocol_ops_t pciroot_proto = {
 };
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
@@ -81,8 +74,12 @@ static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
     return hid;
 }
 
-static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI_DEVICE_INFO* info) {
-#if TRACE
+static mx_device_t* publish_device(mx_device_t* parent,
+                                   ACPI_HANDLE handle,
+                                   ACPI_DEVICE_INFO* info,
+                                   uint32_t protocol_id,
+                                   void* protocol_ops) {
+#if MXDEBUG
     if (!parent) {
         xprintf("acpi-bus: parent is NULL\n");
         return NULL;
@@ -115,7 +112,7 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
         props[propcount++].value = htobe32(*((uint32_t*)(cid + 4)));
     }
 
-#if TRACE
+#if MXDEBUG
     printf("acpi-bus: got device %s\n", name);
     if (info->Valid & ACPI_VALID_HID) {
         printf("     HID=%s\n", info->HardwareId.String);
@@ -155,8 +152,8 @@ static mx_device_t* publish_device(mx_device_t* parent, ACPI_HANDLE handle, ACPI
         .name = name,
         .ctx = dev,
         .ops = &acpi_device_proto,
-        .proto_id = MX_PROTOCOL_ACPI,
-        .proto_ops = &acpi_proto,
+        .proto_id = protocol_id,
+        .proto_ops = protocol_ops,
         .props = (propcount > 0) ? props : NULL,
         .prop_count = propcount,
     };
@@ -201,7 +198,7 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     }
     if (!memcmp(hid, PCI_EXPRESS_ROOT_HID_STRING, HID_LENGTH) ||
                 !memcmp(hid, PCI_ROOT_HID_STRING, HID_LENGTH)) {
-        publish_device(parent, object, info);
+        publish_device(parent, object, info, MX_PROTOCOL_PCIROOT, &pciroot_proto);
     } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
         battery_init(parent, object);
     } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {

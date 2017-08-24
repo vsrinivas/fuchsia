@@ -9,12 +9,12 @@
 
 __BEGIN_CDECLS;
 
-typedef struct acpi_protocol_ops {
-} acpi_protocol_ops_t;
+typedef struct pciroot_protocol_ops {
+} pciroot_protocol_ops_t;
 
-typedef struct acpi_protocol {
-    acpi_protocol_ops_t* ops;
+typedef struct pciroot_protocol {
+    pciroot_protocol_ops_t* ops;
     void* ctx;
-} acpi_protocol_t;
+} pciroot_protocol_t;
 
 __END_CDECLS;

@@ -5,7 +5,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
-#include <ddk/protocol/acpi.h>
 
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
