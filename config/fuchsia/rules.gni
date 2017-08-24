@@ -51,6 +51,7 @@ template("driver_module") {
   }
 
   copy(_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
     target = ":$_target_module(//build/toolchain/fuchsia:${target_cpu}-shared)"
     sources = [
       get_label_info(target, "root_out_dir") +
