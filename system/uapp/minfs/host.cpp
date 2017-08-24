@@ -292,10 +292,6 @@ DIR* emu_opendir(const char* name) {
 }
 
 struct dirent* emu_readdir(DIR* dirp) {
-    if (((uint64_t*)dirp)[0] != minfs::kMinfsMagic0) {
-        return readdir(dirp);
-    }
-
     MINDIR* dir = (MINDIR*)dirp;
     for (;;) {
         if (dir->size >= sizeof(vdirent_t)) {
@@ -310,7 +306,7 @@ struct dirent* emu_readdir(DIR* dirp) {
             dir->size = 0;
         }
         mx_status_t status = dir->vn->Readdir(&dir->cookie, &dir->data, DIR_BUFSIZE);
-        if (status < 0) {
+        if (status <= 0) {
             break;
         }
         dir->ptr = dir->data;
