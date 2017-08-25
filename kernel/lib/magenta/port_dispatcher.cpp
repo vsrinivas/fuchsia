@@ -194,7 +194,7 @@ void PortDispatcher::on_zero_handles() {
             lock_.Acquire();
         }
     }
-    while (DeQueue(0ull, nullptr) == MX_OK) {}
+    while (Dequeue(0ull, nullptr) == MX_OK) {}
 }
 
 mx_status_t PortDispatcher::QueueUser(const mx_port_packet_t& packet) {
@@ -239,7 +239,7 @@ mx_status_t PortDispatcher::Queue(PortPacket* port_packet, mx_signals_t observed
     return MX_OK;
 }
 
-mx_status_t PortDispatcher::DeQueue(mx_time_t deadline, mx_port_packet_t* packet) {
+mx_status_t PortDispatcher::Dequeue(mx_time_t deadline, mx_port_packet_t* packet) {
     canary_.Assert();
 
     PortPacket* port_packet = nullptr;

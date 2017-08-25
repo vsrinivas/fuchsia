@@ -98,7 +98,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
     ktrace(TAG_PORT_WAIT, (uint32_t)port->get_koid(), 0, 0, 0);
 
     mx_port_packet_t pp;
-    mx_status_t st = port->DeQueue(deadline, &pp);
+    mx_status_t st = port->Dequeue(deadline, &pp);
 
     ktrace(TAG_PORT_WAIT_DONE, (uint32_t)port->get_koid(), st, 0, 0);
 
