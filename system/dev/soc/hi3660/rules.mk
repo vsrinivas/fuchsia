@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/hi3660-bus.c \
+    $(LOCAL_DIR)/hi3660-usb.c \
     $(LOCAL_DIR)/pl061.c \
 
 MODULE_STATIC_LIBS := system/ulib/ddk

@@ -19,8 +19,16 @@
 #include <magenta/syscalls.h>
 #include <magenta/assert.h>
 
-#include "hi3660-bus.h"
 #include "pl061.h"
+#include "hi3660-bus.h"
+
+// MMIO indices
+enum {
+    // GPIO MMIOs precede these
+    MMIO_USB3OTG_BC = 5,
+    MMIO_PERI_CRG,
+    MMIO_PCTRL,
+};
 
 static pl061_gpios_t* find_gpio(hi3660_bus_t* bus, unsigned pin) {
     pl061_gpios_t* gpios;
@@ -147,6 +155,10 @@ static void hi3660_release(void* ctx) {
         free(gpios);
     }
 
+    pdev_mmio_buffer_release(&bus->usb3otg_bc);
+    pdev_mmio_buffer_release(&bus->peri_crg);
+    pdev_mmio_buffer_release(&bus->pctrl);
+
     free(bus);
 }
 
@@ -202,6 +214,16 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
     list_initialize(&bus->gpios);
     memcpy(&bus->pdev, &pdev, sizeof(bus->pdev));
 
+    mx_status_t status;
+    if ((status = pdev_map_mmio_buffer(&pdev, MMIO_USB3OTG_BC, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &bus->usb3otg_bc)) != MX_OK ||
+         (status = pdev_map_mmio_buffer(&pdev, MMIO_PERI_CRG, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &bus->peri_crg)) != MX_OK ||
+         (status = pdev_map_mmio_buffer(&pdev, MMIO_PCTRL, MX_CACHE_POLICY_UNCACHED_DEVICE,
+                                       &bus->pctrl)) != MX_OK) {
+        goto fail;
+    }
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "hi3660-bus",
@@ -211,7 +233,7 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    mx_status_t status = device_add(parent, &args, NULL);
+    status = device_add(parent, &args, NULL);
     if (status != MX_OK) {
         goto fail;
     }
@@ -225,6 +247,11 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
     thrd_t thrd;
     thrd_create_with_name(&thrd, led_test_thread, parent, "led_test_thread");
 #endif
+
+    // must be after pdev_set_interface
+    if ((status = hi3360_usb_init(bus)) != MX_OK) {
+        printf("hi3660_bind: hi3360_usb_init failed!\n");;
+    }
 
     return MX_OK;
 

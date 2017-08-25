@@ -10,4 +10,9 @@
 typedef struct {
     list_node_t gpios;
     platform_device_protocol_t pdev;
+    pdev_mmio_buffer_t usb3otg_bc;
+    pdev_mmio_buffer_t peri_crg;
+    pdev_mmio_buffer_t pctrl;
 } hi3660_bus_t;
+
+mx_status_t hi3360_usb_init(hi3660_bus_t* bus);
