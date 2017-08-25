@@ -1,0 +1,36 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+
+go_binary("ifconfig") {
+  gopackage = "apps/netstack/ifconfig"
+
+  go_dependencies = [
+    {
+      package = "apps/netstack"
+      source = "//apps/netstack"
+    },
+    {
+      package = "application/lib/app"
+      source = "//application/lib/app/go/src/app"
+    },
+    {
+      package = "application/lib/svc"
+      source = "//application/lib/svc/go/src/svc"
+    },
+    {
+      package = "fidl"
+      source = "//lib/fidl/go/src/fidl"
+    },
+    {
+      package = "github.com/google/netstack"
+      source = "//third_party/netstack"
+    },
+  ]
+
+  deps = [
+    "//apps/netstack/services",
+  ]
+}

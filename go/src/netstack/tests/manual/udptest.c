@@ -107,6 +107,18 @@ int client(const char* address, const char* service, const char* message,
 
   return 0;
 }
+bool IsConnected(int socket_fd) {
+  // Checks if connection is alive.
+  char c;
+  int rv = recv(socket_fd, &c, 1, MSG_PEEK);
+  fprintf(stderr, "IsConnected: %d %d\n", rv, errno);
+  if (rv == 0)
+    return false;
+  if (rv == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+    return false;
+
+  return true;
+}
 
 int server(const char* service) {
   int16_t port = atoi(service);
@@ -132,6 +144,7 @@ int server(const char* service) {
 
   for (int i = 0; i < NTIMES; i++) {
     printf("waiting for a connection on port %d...\n", port);
+    IsConnected(s);
 
     for (;;) {
       char buf[128];
@@ -156,6 +169,8 @@ int server(const char* service) {
       }
       printf("\n");
     }
+
+    IsConnected(s);
   }
   close(s);
 

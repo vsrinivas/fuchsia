@@ -14,6 +14,8 @@ type NIC struct {
 	Netmask    tcpip.AddressMask
 	Routes     []tcpip.Route
 	DNSServers []tcpip.Address
+	Ipv6addrs  []tcpip.Address
+	Mac        [6]byte
 }
 
 func isAny(a tcpip.Address) bool {

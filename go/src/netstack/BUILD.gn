@@ -10,14 +10,16 @@ package("netstack") {
   deps = [
     ":netstack_bin",
     "//apps/netstack/getaddrtest",
+    "//apps/netstack/ifconfig",
     "//apps/netstack/services",
   ]
 
   binaries = [
     {
       name = "netstack"
-    },
-    {
+    }, {
+      name = "ifconfig"
+    }, {
       name = "getaddrtest"
     },
   ]

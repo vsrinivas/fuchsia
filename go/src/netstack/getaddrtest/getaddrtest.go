@@ -15,12 +15,12 @@ import (
 	"apps/netstack/services/netstack"
 )
 
-type NetstackClientApp struct {
+type netstackClientApp struct {
 	ctx      *context.Context
 	netstack *netstack.Netstack_Proxy
 }
 
-func (a *NetstackClientApp) Start(name string) {
+func (a *netstackClientApp) start(name string) {
 	r, p := a.netstack.NewRequest(bindings.GetAsyncWaiter())
 	a.netstack = p
 	a.ctx.ConnectToEnvService(r)
@@ -41,7 +41,6 @@ func (a *NetstackClientApp) Start(name string) {
 		}
 	}
 	a.netstack.Close()
-
 }
 
 func main() {
@@ -50,6 +49,6 @@ func main() {
 		name = os.Args[1]
 	}
 
-	a := &NetstackClientApp{ctx: context.CreateFromStartupInfo()}
-	a.Start(name)
+	a := &netstackClientApp{ctx: context.CreateFromStartupInfo()}
+	a.start(name)
 }

@@ -21,6 +21,7 @@ struct NetInterface {
   NetAddress addr;
   NetAddress netmask;
   NetAddress broadaddr;
+  array<Subnet> ipv6addrs;
   array<uint8> hwaddr;
 };
 

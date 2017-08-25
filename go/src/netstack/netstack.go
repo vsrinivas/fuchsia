@@ -219,6 +219,9 @@ func (ns *netstack) addEth(path string) error {
 	lladdr := ipv6.LinkLocalAddr(tcpip.LinkAddress(ep.linkAddr))
 
 	ns.mu.Lock()
+	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
+	copy(ifs.nic.Mac[:], ep.linkAddr)
+
 	var nicid tcpip.NICID
 	for _, ifs := range ns.ifStates {
 		if ifs.nic.ID > nicid {
@@ -234,9 +237,7 @@ func (ns *netstack) addEth(path string) error {
 		// This is the first real ethernet device on this host.
 		// No nodename has been configured for the network stack,
 		// so derive it from the MAC address.
-		var mac [6]byte
-		copy(mac[:], ep.linkAddr)
-		ns.nodename = deviceid.DeviceID(mac)
+		ns.nodename = deviceid.DeviceID(ifs.nic.Mac)
 	}
 	ifs.nic.ID = nicid
 	ifs.nic.Routes = defaultRouteTable(nicid, "")
