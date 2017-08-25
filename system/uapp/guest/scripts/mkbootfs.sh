@@ -8,11 +8,13 @@
 
 GUEST_SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MAGENTADIR="${MAGENTA_DIR:-${GUEST_SCRIPTS_DIR}/../../../..}"
+FUCHSIADIR="${FUCHSIA_DIR:-${MAGENTADIR}/..}"
 BUILDDIR="${MAGENTA_BUILD_DIR:-$MAGENTADIR/build-magenta-pc-x86-64}"
 
 usage() {
     echo "usage: ${0} [options]"
     echo ""
+    echo "    -f                        Build a Fuchsia host image."
     echo "    -m magenta.bin            Magenta kernel."
     echo "    -b bootdata.bin           Magenta bootdata."
     echo "    -g magenta.gpt            Magenta GPT disk image."
@@ -29,8 +31,9 @@ declare MAGENTA_DISK="$BUILDDIR/magenta.gpt"
 declare BZIMAGE="/tmp/linux/arch/x86/boot/bzImage"
 declare INITRD="/tmp/toybox/initrd.gz"
 declare ROOTFS="/tmp/toybox/rootfs.ext2"
+declare HOST_BOOTFS="$BUILDDIR/bootdata.bin"
 
-while getopts "m:b:l:i:r:g:" opt; do
+while getopts "m:b:l:i:r:g:f" opt; do
   case "${opt}" in
     m) MAGENTA="${OPTARG}" ;;
     b) BOOTDATA="${OPTARG}" ;;
@@ -38,11 +41,12 @@ while getopts "m:b:l:i:r:g:" opt; do
     l) BZIMAGE="${OPTARG}" ;;
     i) INITRD="${OPTARG}" ;;
     r) ROOTFS="${OPTARG}" ;;
+    f) HOST_BOOTFS="${FUCHSIA_BUILD_DIR}/user.bootfs" ;;
     *) usage ;;
   esac
 done
 
-readonly MAGENTA BOOTDATA MAGENTA_DISK BZIMAGE INITRD ROOTFS
+readonly MAGENTA BOOTDATA MAGENTA_DISK BZIMAGE INITRD ROOTFS HOST_BOOTFS
 
 echo "
 data/dsdt.aml=$MAGENTADIR/system/ulib/hypervisor/acpi/dsdt.aml
@@ -70,5 +74,5 @@ fi
 $BUILDDIR/tools/mkbootfs \
     --target=boot \
     -o $BUILDDIR/bootdata-with-guest.bin \
-    $BUILDDIR/bootdata.bin \
+    "${HOST_BOOTFS}" \
     /tmp/guest.manifest
