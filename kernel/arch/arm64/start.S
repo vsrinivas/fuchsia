@@ -9,6 +9,7 @@
 #include <arch/arm64.h>
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
+#include <arch/efi.h>
 #include <kernel/vm/initial_map.h>
 #include <magenta/tls.h>
 
@@ -47,6 +48,44 @@ FUNCTION_LABEL(_start)
 #include "fastboot-header.S"
 #endif
 FUNCTION(arm_reset)
+    movlit  x9, EFI_BOOT_SIGNATURE
+    ldr     x10, [x1]
+    cmp     x9,x10
+    bne     .Lno_efi
+/* We were launched by EFI with x1 containing system table
+     mmu is on, dcache is on, icache is on
+*/
+    adr_global    x2, _start
+    push_regs     x29, x30
+    bl            efi_boot
+    mov           x20, x0
+    pop_regs      x29, x30
+
+        /* Turn off Dcache and MMU */
+    mrs    x0, CurrentEL
+    cmp    x0, #0x04
+    b.ne   1f
+    mrs    x0, sctlr_el2
+    bic    x0, x0, #1 << 0    // clear SCTLR.M
+    bic    x0, x0, #1 << 2    // clear SCTLR.C
+    msr    sctlr_el2, x0
+    isb
+    b      2f
+1:
+    mrs    x0, sctlr_el1
+    bic    x0, x0, #1 << 0    // clear SCTLR.M
+    bic    x0, x0, #1 << 2    // clear SCTLR.C
+    msr    sctlr_el1, x0
+    isb
+2:
+    mov     x0, x20
+    mov     x1, xzr
+    mov     x2, xzr
+    mov     x3, xzr
+    movlit  x20, (MEMBASE + KERNEL_LOAD_OFFSET)
+    br      x20
+.Lno_efi:
+
     adrp    tmp, boot_structure_paddr
     adrp    tmp2, arch_boot_el
     mrs     x2, CurrentEL

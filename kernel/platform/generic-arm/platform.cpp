@@ -29,6 +29,7 @@
 
 #include <target.h>
 
+#include <arch/efi.h>
 #include <arch/mp.h>
 #include <arch/arm64/mp.h>
 #include <arch/arm64.h>
@@ -174,6 +175,17 @@ static void read_device_tree(void** ramdisk_base, size_t* ramdisk_size, size_t* 
                 ramdisk_end_phys = fdt32_to_cpu(*(uint32_t *)ptr);
             } else if (length == 8) {
                 ramdisk_end_phys = fdt64_to_cpu(*(uint64_t *)ptr);
+            }
+        }
+        // Some bootloaders pass initrd via cmdline, lets look there
+        //  if we haven't found it yet.
+        if (!(ramdisk_start_phys && ramdisk_end_phys)) {
+            const char* value = cmdline_get("initrd");
+            if (value != NULL) {
+                char* endptr;
+                ramdisk_start_phys = strtoll(value,&endptr,16);
+                endptr++; //skip the comma
+                ramdisk_end_phys = strtoll(endptr,NULL,16) + ramdisk_start_phys;
             }
         }
 
@@ -425,7 +437,8 @@ static void platform_start_cpu(uint cluster, uint cpu) {
     arch_clean_cache_range(0xffff000000000000,256);     // clean out all the VC bootstrap area
     __asm__ __volatile__("sev");                        //  where the entry vectors live.
 #else
-    psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+      if (cluster==0)
+          printf("Trying to start cpu%u returned: %x\n",cpu, psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET));
 #endif
 }
 
@@ -450,6 +463,15 @@ static void platform_cpu_init(void) {
             }
         }
     }
+}
+
+static inline bool is_magenta_boot_header(void* addr) {
+    DEBUG_ASSERT(addr);
+
+    efi_magenta_hdr_t* header = (efi_magenta_hdr_t*)addr;
+
+
+    return header->magic == EFI_MAGENTA_MAGIC;
 }
 
 static inline bool is_bootdata_container(void* addr) {
@@ -537,6 +559,7 @@ static void process_bootdata(bootdata_t* root) {
     }
 
     while (offset < length) {
+
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
 
@@ -557,7 +580,6 @@ static void process_bootdata(bootdata_t* root) {
         panic("No MDI found in ramdisk\n");
     }
 }
-
 extern int _end;
 void platform_early_init(void)
 {
@@ -580,6 +602,13 @@ void platform_early_init(void)
         // We leave out arena size for now
         ramdisk_from_bootdata_container(boot_structure_kvaddr, &ramdisk_base,
                                         &ramdisk_size);
+    } else if (is_magenta_boot_header(boot_structure_kvaddr)) {
+            efi_magenta_hdr_t *hdr = (efi_magenta_hdr_t*)boot_structure_kvaddr;
+            cmdline_append(hdr->cmd_line);
+            ramdisk_start_phys = hdr->ramdisk_base_phys;
+            ramdisk_size = hdr->ramdisk_size;
+            ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
+            ramdisk_base =  paddr_to_kvaddr(ramdisk_start_phys);
     } else {
         // on qemu we read arena size from the device tree
         read_device_tree(&ramdisk_base, &ramdisk_size, &arena_size);
@@ -593,9 +622,7 @@ void platform_early_init(void)
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");
     }
-
     process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
-
     // Read cmdline after processing bootdata, which may contain cmdline data.
     halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
 

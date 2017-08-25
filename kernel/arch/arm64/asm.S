@@ -87,7 +87,6 @@ FUNCTION(arm64_elX_to_el1)
     cmp x9, #(0b10 << 2)
     beq .inEL2
 
-
     /* set EL2 to 64bit */
     mrs x9, scr_el3
     orr x9, x9, #(1<<10)
@@ -102,12 +101,21 @@ FUNCTION(arm64_elX_to_el1)
     b   .confEL1
 
 .inEL2:
+    /* Ensure EL1 timers are properly configured, disable EL2 trapping of
+        EL1 access to timer control registers.  Also clear virtual offset.
+    */
+    mrs x9, cnthctl_el2
+    orr x9, x9, #3
+    msr cnthctl_el2, x9
+    msr cntvoff_el2, xzr
+
+    /* clear out stage 2 translations */
+    msr vttbr_el2, xzr
+
     adr x9, .Ltarget
     msr elr_el2, x9
     mov x9, #((0b1111 << 6) | (0b0101)) /* EL1h runlevel */
     msr spsr_el2, x9
-
-
 
 .confEL1:
     /* disable EL2 coprocessor traps */

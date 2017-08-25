@@ -21,6 +21,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/asm.S \
 	$(LOCAL_DIR)/cache-ops.S \
 	$(LOCAL_DIR)/debugger.cpp \
+	$(LOCAL_DIR)/efi.cpp \
 	$(LOCAL_DIR)/exceptions.S \
 	$(LOCAL_DIR)/exceptions_c.cpp \
 	$(LOCAL_DIR)/fpu.cpp \

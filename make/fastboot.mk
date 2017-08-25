@@ -9,8 +9,10 @@
 # include fastboot header in start.S
 KERNEL_DEFINES += FASTBOOT_HEADER=1
 
+OUTLKIMAGE := $(BUILDDIR)/$(LKNAME).bin
 OUTLKZIMAGE := $(BUILDDIR)/z$(LKNAME).bin
 OUTLKZIMAGE_DTB := $(OUTLKZIMAGE)-dtb
+OUTLKIMAGE_DTB := $(OUTLKIMAGE)-dtb
 
 GENERATED += $(OUTLKZIMAGE) $(OUTLKZIMAGE_DTB)
 
@@ -24,5 +26,8 @@ $(OUTLKZIMAGE_DTB): $(OUTLKZIMAGE) $(DEVICE_TREE)
 	$(call BUILDECHO,concatenating device tree $@)
 	$(NOECHO)cat $< $(DEVICE_TREE) > $@
 
+$(OUTLKIMAGE_DTB): $(OUTLKIMAGE) $(DEVICE_TREE)
+	$(call BUILDECHO,concatenating device tree $@)
+	$(NOECHO)cat $< $(DEVICE_TREE) > $@
 # build gzipped kernel with concatenated device tree
-all:: $(OUTLKZIMAGE_DTB)
+all:: $(OUTLKZIMAGE_DTB) $(OUTLKIMAGE_DTB)
