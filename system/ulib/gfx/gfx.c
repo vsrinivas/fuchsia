@@ -718,17 +718,17 @@ void gfx_surface_destroy(struct gfx_surface* surface) {
     free(surface);
 }
 
-#include "font-1x.h"
-#include "font-2x.h"
+#include <magenta/font/font-9x16.h>
+#include <magenta/font/font-18x32.h>
 
 const gfx_font font9x16 = {
-    .data = FONT1X,
-    .width = FONT1X_WIDTH,
-    .height = FONT1X_HEIGHT,
+    .data = FONT9X16,
+    .width = FONT9X16_WIDTH,
+    .height = FONT9X16_HEIGHT,
 };
 
 const gfx_font font18x32 = {
-    .data = FONT2X,
-    .width = FONT2X_WIDTH,
-    .height = FONT2X_HEIGHT,
+    .data = FONT18X32,
+    .width = FONT18X32_WIDTH,
+    .height = FONT18X32_HEIGHT,
 };

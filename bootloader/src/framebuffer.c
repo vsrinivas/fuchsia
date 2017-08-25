@@ -183,8 +183,8 @@ void draw_logo() {
              logo_width, logo_height, 0);
 }
 
-#include "font-1x.h"
-#include "font-2x.h"
+#include <magenta/font/font-9x16.h>
+#include <magenta/font/font-18x32.h>
 
 static void putchar(efi_graphics_output_protocol* gop, fb_font* font, unsigned ch, unsigned x, unsigned y, unsigned scale_x, unsigned scale_y, efi_graphics_output_blt_pixel* fg, efi_graphics_output_blt_pixel* bg) {
     const uint16_t* cdata = font->data + ch * font->height;
@@ -225,9 +225,9 @@ void draw_nodename(const char* nodename) {
         return;
 
     fb_font font = {
-        .data = FONT2X,
-        .width = FONT2X_WIDTH,
-        .height = FONT2X_HEIGHT,
+        .data = FONT18X32,
+        .width = FONT18X32_WIDTH,
+        .height = FONT18X32_HEIGHT,
         .color = &font_white,
     };
 
@@ -247,9 +247,9 @@ void draw_version(const char* version) {
     size_t version_len = strlen(version);
 
     fb_font font = {
-        .data = FONT1X,
-        .width = FONT1X_WIDTH,
-        .height = FONT1X_HEIGHT,
+        .data = FONT9X16,
+        .width = FONT9X16_WIDTH,
+        .height = FONT9X16_HEIGHT,
         .color = &font_fuchsia,
     };
 

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define FONT2X_WIDTH 18
-#define FONT2X_HEIGHT 32
+#define FONT18X32_WIDTH 18
+#define FONT18X32_HEIGHT 32
 
-static const uint16_t FONT2X[] = {
+static const uint16_t FONT18X32[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
