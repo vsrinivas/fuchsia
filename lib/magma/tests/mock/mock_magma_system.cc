@@ -21,9 +21,12 @@ private:
     uint32_t next_context_id_;
 };
 
-magma_connection_t* magma_open(int32_t fd, uint32_t capabilities) { return new MockConnection(); }
+magma_connection_t* magma_create_connection(int32_t fd, uint32_t capabilities)
+{
+    return new MockConnection();
+}
 
-void magma_close(magma_connection_t* connection)
+void magma_release_connection(magma_connection_t* connection)
 {
     delete static_cast<MockConnection*>(connection);
 }
@@ -48,10 +51,10 @@ void magma_create_context(magma_connection_t* connection, uint32_t* context_id_o
     *context_id_out = static_cast<MockConnection*>(connection)->next_context_id();
 }
 
-void magma_destroy_context(magma_connection_t* connection, uint32_t context_id) {}
+void magma_release_context(magma_connection_t* connection, uint32_t context_id) {}
 
-magma_status_t magma_alloc(magma_connection_t* connection, uint64_t size, uint64_t* size_out,
-                           magma_buffer_t* buffer_out)
+magma_status_t magma_create_buffer(magma_connection_t* connection, uint64_t size,
+                                   uint64_t* size_out, magma_buffer_t* buffer_out)
 {
     auto buffer = magma::PlatformBuffer::Create(size, "magma-alloc");
     *buffer_out = reinterpret_cast<magma_buffer_t>(buffer.release());
@@ -59,7 +62,7 @@ magma_status_t magma_alloc(magma_connection_t* connection, uint64_t size, uint64
     return MAGMA_STATUS_OK;
 }
 
-void magma_free(magma_connection_t* connection, magma_buffer_t buffer)
+void magma_release_buffer(magma_connection_t* connection, magma_buffer_t buffer)
 {
     delete reinterpret_cast<magma::PlatformBuffer*>(buffer);
 }
@@ -88,17 +91,17 @@ magma_status_t magma_unmap(magma_connection_t* connection, magma_buffer_t buffer
     return MAGMA_STATUS_OK;
 }
 
-magma_status_t magma_alloc_command_buffer(magma_connection_t* connection, uint64_t size,
-                                          magma_buffer_t* buffer_out)
+magma_status_t magma_create_command_buffer(magma_connection_t* connection, uint64_t size,
+                                           magma_buffer_t* buffer_out)
 {
     uint64_t size_out;
-    return magma_alloc(connection, size, &size_out, buffer_out);
+    return magma_create_buffer(connection, size, &size_out, buffer_out);
 }
 
 void magma_release_command_buffer(struct magma_connection_t* connection,
                                   magma_buffer_t command_buffer)
 {
-    magma_free(connection, command_buffer);
+    magma_release_buffer(connection, command_buffer);
 }
 
 void magma_submit_command_buffer(struct magma_connection_t* connection, uint64_t command_buffer_id,
@@ -163,7 +166,7 @@ magma_status_t magma_create_semaphore(magma_connection_t* connection,
     return MAGMA_STATUS_OK;
 }
 
-void magma_destroy_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore)
+void magma_release_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore)
 {
     delete reinterpret_cast<magma::PlatformSemaphore*>(semaphore);
 }

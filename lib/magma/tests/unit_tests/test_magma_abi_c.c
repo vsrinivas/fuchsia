@@ -30,13 +30,13 @@ bool test_magma_abi_from_c(void)
         result = false;
     }
 
-    struct magma_connection_t* connection = magma_open(fd, MAGMA_CAPABILITY_RENDERING);
+    struct magma_connection_t* connection = magma_create_connection(fd, MAGMA_CAPABILITY_RENDERING);
     if (!connection) {
         printf("%s:%d magma_open returned null\n", __FILE__, __LINE__);
         result = false;
     }
 
-    magma_close(connection);
+    magma_release_connection(connection);
     close(fd);
 
     return result;

@@ -33,7 +33,7 @@ class TestConnection : public TestBase {
 public:
     TestConnection()
     {
-        connection_ = magma_open(fd(), MAGMA_CAPABILITY_RENDERING);
+        connection_ = magma_create_connection(fd(), MAGMA_CAPABILITY_RENDERING);
         DASSERT(connection_);
 
         magma_create_context(connection_, &context_id_);
@@ -41,10 +41,10 @@ public:
 
     ~TestConnection()
     {
-        magma_destroy_context(connection_, context_id_);
+        magma_release_context(connection_, context_id_);
 
         if (connection_)
-            magma_close(connection_);
+            magma_release_connection(connection_);
     }
 
     bool is_intel_gen()
@@ -66,14 +66,14 @@ public:
         uint64_t size;
         magma_buffer_t batch_buffer;
 
-        ASSERT_EQ(magma_alloc(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
+        ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
         void* vaddr;
         ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
 
         ASSERT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
 
         magma_buffer_t command_buffer;
-        ASSERT_EQ(magma_alloc_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
+        ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
         magma_submit_command_buffer(connection_, command_buffer, context_id_);
 
@@ -97,7 +97,7 @@ public:
 
         EXPECT_EQ(magma_unmap(connection_, batch_buffer), 0);
 
-        magma_free(connection_, batch_buffer);
+        magma_release_buffer(connection_, batch_buffer);
     }
 
     bool InitBatchBuffer(void* vaddr, uint64_t size, bool hang)

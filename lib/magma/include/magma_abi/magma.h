@@ -15,8 +15,8 @@ extern "C" {
 // Opens a device - triggered by a client action. returns null on failure
 // |capabilities| must be either MAGMA_SYSTEM_CAPABILITY_RENDERING, MAGMA_SYSTEM_CAPABILITY_DISPLAY,
 // or the bitwise or of both
-struct magma_connection_t* magma_open(int32_t file_descriptor, uint32_t capabilities);
-void magma_close(struct magma_connection_t* connection);
+struct magma_connection_t* magma_create_connection(int32_t file_descriptor, uint32_t capabilities);
+void magma_release_connection(struct magma_connection_t* connection);
 
 // Returns the first recorded error since the last time this function was called.
 // Clears the recorded error.
@@ -28,11 +28,11 @@ magma_status_t magma_get_error(struct magma_connection_t* connection);
 magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out);
 
 void magma_create_context(struct magma_connection_t* connection, uint32_t* context_id_out);
-void magma_destroy_context(struct magma_connection_t* connection, uint32_t context_id);
+void magma_release_context(struct magma_connection_t* connection, uint32_t context_id);
 
-magma_status_t magma_alloc(struct magma_connection_t* connection, uint64_t size, uint64_t* size_out,
-                           magma_buffer_t* buffer_out);
-void magma_free(struct magma_connection_t* connection, magma_buffer_t buffer);
+magma_status_t magma_create_buffer(struct magma_connection_t* connection, uint64_t size,
+                                   uint64_t* size_out, magma_buffer_t* buffer_out);
+void magma_release_buffer(struct magma_connection_t* connection, magma_buffer_t buffer);
 
 uint64_t magma_get_buffer_id(magma_buffer_t buffer);
 uint64_t magma_get_buffer_size(magma_buffer_t buffer);
@@ -41,8 +41,8 @@ magma_status_t magma_map(struct magma_connection_t* connection, magma_buffer_t b
                          void** addr_out);
 magma_status_t magma_unmap(struct magma_connection_t* connection, magma_buffer_t buffer);
 
-magma_status_t magma_alloc_command_buffer(struct magma_connection_t* connection, uint64_t size,
-                                          magma_buffer_t* buffer_out);
+magma_status_t magma_create_command_buffer(struct magma_connection_t* connection, uint64_t size,
+                                           magma_buffer_t* buffer_out);
 void magma_release_command_buffer(struct magma_connection_t* connection,
                                   magma_buffer_t command_buffer);
 
@@ -91,7 +91,7 @@ magma_status_t magma_create_semaphore(struct magma_connection_t* connection,
                                       magma_semaphore_t* semaphore_out);
 
 // Destroys |semaphore|.
-void magma_destroy_semaphore(struct magma_connection_t* connection, magma_semaphore_t semaphore);
+void magma_release_semaphore(struct magma_connection_t* connection, magma_semaphore_t semaphore);
 
 // Returns the object id for the given semaphore.
 uint64_t magma_get_semaphore_id(magma_semaphore_t semaphore);

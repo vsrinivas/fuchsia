@@ -38,12 +38,12 @@ class TestConnection : public TestBase {
 public:
     TestConnection() : TestConnection(MAGMA_CAPABILITY_RENDERING) {}
 
-    TestConnection(uint32_t capability) { connection_ = magma_open(fd(), capability); }
+    TestConnection(uint32_t capability) { connection_ = magma_create_connection(fd(), capability); }
 
     ~TestConnection()
     {
         if (connection_)
-            magma_close(connection_);
+            magma_release_connection(connection_);
     }
 
     magma_connection_t* connection() { return connection_; }
@@ -62,13 +62,13 @@ public:
         magma_create_context(connection_, &context_id[1]);
         EXPECT_EQ(magma_get_error(connection_), 0);
 
-        magma_destroy_context(connection_, context_id[0]);
+        magma_release_context(connection_, context_id[0]);
         EXPECT_EQ(magma_get_error(connection_), 0);
 
-        magma_destroy_context(connection_, context_id[1]);
+        magma_release_context(connection_, context_id[1]);
         EXPECT_EQ(magma_get_error(connection_), 0);
 
-        magma_destroy_context(connection_, context_id[1]);
+        magma_release_context(connection_, context_id[1]);
         EXPECT_NE(magma_get_error(connection_), 0);
     }
 
@@ -80,11 +80,11 @@ public:
         uint64_t actual_size;
         uint64_t id;
 
-        EXPECT_EQ(magma_alloc(connection_, size, &actual_size, &id), 0);
+        EXPECT_EQ(magma_create_buffer(connection_, size, &actual_size, &id), 0);
         EXPECT_GE(size, actual_size);
         EXPECT_NE(id, 0u);
 
-        magma_free(connection_, id);
+        magma_release_buffer(connection_, id);
     }
 
     void WaitRendering()
@@ -94,13 +94,13 @@ public:
         uint64_t size = PAGE_SIZE;
         uint64_t id;
 
-        EXPECT_EQ(magma_alloc(connection_, size, &size, &id), 0);
+        EXPECT_EQ(magma_create_buffer(connection_, size, &size, &id), 0);
         EXPECT_EQ(magma_get_error(connection_), 0);
 
         magma_wait_rendering(connection_, id);
         EXPECT_EQ(magma_get_error(connection_), 0);
 
-        magma_free(connection_, id);
+        magma_release_buffer(connection_, id);
         EXPECT_EQ(magma_get_error(connection_), 0);
     }
 
@@ -111,7 +111,7 @@ public:
         uint64_t size = PAGE_SIZE;
         magma_buffer_t buffer;
 
-        EXPECT_EQ(magma_alloc(connection_, size, &size, &buffer), 0);
+        EXPECT_EQ(magma_create_buffer(connection_, size, &size, &buffer), 0);
 
         *id_out = magma_get_buffer_id(buffer);
 
@@ -142,7 +142,7 @@ public:
         uint64_t size = PAGE_SIZE;
         magma_buffer_t buffer;
 
-        EXPECT_EQ(MAGMA_STATUS_OK, magma_alloc(connection_, size, &size, &buffer));
+        EXPECT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &size, &buffer));
 
         *id_out = magma_get_buffer_id(buffer);
 
@@ -194,7 +194,7 @@ public:
         });
         thread.join();
 
-        magma_destroy_semaphore(connection_, semaphore);
+        magma_release_semaphore(connection_, semaphore);
     }
 
     void SemaphoreExport(uint32_t* handle_out, uint64_t* id_out)
@@ -250,8 +250,8 @@ public:
             magma_buffer_t buffer;
             uint64_t actual_size;
 
-            status = magma_alloc(connection(), display_size.width * 4 * display_size.height,
-                                 &actual_size, &buffer);
+            status = magma_create_buffer(connection(), display_size.width * 4 * display_size.height,
+                                         &actual_size, &buffer);
             if (status != MAGMA_STATUS_OK)
                 return DRETF(false, "magma_alloc returned %d", status);
 

@@ -35,12 +35,12 @@ private:
 
 class TestConnection : public TestBase {
 public:
-    TestConnection() { connection_ = magma_open(fd(), MAGMA_CAPABILITY_RENDERING); }
+    TestConnection() { connection_ = magma_create_connection(fd(), MAGMA_CAPABILITY_RENDERING); }
 
     ~TestConnection()
     {
         if (connection_)
-            magma_close(connection_);
+            magma_release_connection(connection_);
     }
 
     int32_t Test()
@@ -57,11 +57,11 @@ public:
         uint64_t size;
         magma_buffer_t batch_buffer, command_buffer;
 
-        result = magma_alloc(connection_, PAGE_SIZE, &size, &batch_buffer);
+        result = magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer);
         if (result != 0)
             return DRET(result);
 
-        result = magma_alloc_command_buffer(connection_, PAGE_SIZE, &command_buffer);
+        result = magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer);
         if (result != 0)
             return DRET(result);
 
@@ -71,8 +71,8 @@ public:
         magma_submit_command_buffer(connection_, command_buffer, context_id);
         magma_wait_rendering(connection_, batch_buffer);
 
-        magma_destroy_context(connection_, context_id);
-        magma_free(connection_, batch_buffer);
+        magma_release_context(connection_, context_id);
+        magma_release_buffer(connection_, batch_buffer);
 
         result = magma_get_error(connection_);
         return DRET(result);
