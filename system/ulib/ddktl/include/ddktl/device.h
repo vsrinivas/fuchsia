@@ -80,12 +80,12 @@
 // class MyDevice : public DeviceType {
 //   public:
 //     MyDevice(mx_device_t* parent)
-//       : DeviceType(parent, "my-device-name") {}
+//       : DeviceType(parent) {}
 //
 //     mx_status_t Bind() {
 //         // Any other setup required by MyDevice. The device_add_args_t will be filled out by the
 //         // base class.
-//         return DdkAdd();
+//         return DdkAdd("my-device-name");
 //     }
 //
 //     // Methods required by the ddk mixins
