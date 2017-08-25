@@ -140,6 +140,7 @@ int service_starter(void* arg) {
     mkdir("/svc", 0755);
 
     char vcmd[64];
+    bool netboot = false;
     bool vruncmd = false;
 
     if (!getenv_bool("netsvc.disable", false)) {
@@ -148,6 +149,7 @@ int service_starter(void* arg) {
 
         if (getenv_bool("netsvc.netboot", false)) {
             args[argc++] = "--netboot";
+            netboot = true;
             vruncmd = true;
         }
 
@@ -167,7 +169,6 @@ int service_starter(void* arg) {
                                    &info, sizeof(info), NULL, NULL);
                 mx_handle_close(proc);
                 snprintf(vcmd, sizeof(vcmd), "dlog -f -t -p %zu", info.koid);
-                printf("VCMD: %s\n", vcmd);
             }
         } else {
             vruncmd = false;
@@ -206,7 +207,9 @@ int service_starter(void* arg) {
                       NULL, -1, NULL, NULL, 0, NULL);
     }
 
-    block_device_watcher(svcs_job_handle);
+    if (!netboot) {
+        block_device_watcher(svcs_job_handle);
+    }
     return 0;
 }
 
