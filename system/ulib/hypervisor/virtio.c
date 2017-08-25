@@ -162,21 +162,25 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t
             fprintf(stderr, "Notify queue does not exist.\n");
             return MX_ERR_NOT_SUPPORTED;
         }
+
+        // Invoke the device callback if one has been provided.
         uint16_t queue_sel = io->u16;
-        mx_status_t status = device->ops->queue_notify(device, queue_sel);
-        if (status != MX_OK) {
-            fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
-            return status;
+        if (device->ops->queue_notify != NULL) {
+            mx_status_t status = device->ops->queue_notify(device, queue_sel);
+            if (status != MX_OK) {
+                fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
+                return status;
+            }
+
+            // Send an interrupt back to the guest if we've generated one while
+            // processing the queue.
+            if (device->isr_status > 0) {
+                return pci_interrupt(&device->pci_device);
+            }
         }
 
         // Notify threads waiting on a descriptor.
         virtio_queue_signal(&device->queues[queue_sel]);
-
-        // Send an interrupt back to the guest if we've generated one while
-        // processing the queue.
-        if (device->isr_status > 0) {
-            return pci_interrupt(&device->pci_device);
-        }
         return MX_OK;
     }
     }
