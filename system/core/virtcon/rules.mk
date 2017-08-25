@@ -32,6 +32,7 @@ LOCAL_LIBS := \
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/main.cpp
 

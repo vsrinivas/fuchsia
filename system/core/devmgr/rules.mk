@@ -11,6 +11,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_NAME := devmgr
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.c \
@@ -68,6 +69,7 @@ MODULE := $(LOCAL_DIR).host
 MODULE_NAME := devhost
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/devhost-main.c

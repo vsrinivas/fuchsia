@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/util.c
 
 MODULE_NAME := userboot
+MODULE_GROUP := core
 
 # This is built as a shared library, but it gets embedded directly in the
 # kernel image and does not need to be installed in the filesystem at all.

@@ -5,6 +5,7 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
+MODULE_GROUP := misc
 
 MODULE_TYPE := userapp
 

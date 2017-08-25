@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_NAME := netsvc
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \

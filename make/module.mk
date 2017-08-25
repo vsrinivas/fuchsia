@@ -28,6 +28,7 @@
 # MODULE_SO_NAME : linkage name for the shared library
 # MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
+# MODULE_GROUP: tag for manifest file entry
 
 # the minimum module rules.mk file is as follows:
 #
@@ -53,6 +54,15 @@ ifneq ($(filter $(MODULE),$(DUPMODULES)),)
 $(error Module '$(MODULE)' defined in multiple rules.mk files)
 endif
 DUPMODULES += $(MODULE)
+
+# if there's a manifest group, remove whitespace and wrap it in {}s
+ifneq ($(strip $(MODULE_GROUP)),)
+MODULE_GROUP := {$(strip $(MODULE_GROUP))}
+else
+ifeq ($(strip $(MODULE_TYPE)),usertest)
+MODULE_GROUP := {test}
+endif
+endif
 
 # all library deps go on the deps list
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
@@ -249,6 +259,7 @@ MODULE_INSTALL_PATH :=
 MODULE_SO_INSTALL_NAME :=
 MODULE_HOST_LIBS :=
 MODULE_HOST_SYSLIBS :=
+MODULE_GROUP :=
 
 # Save these before the next module.
 SAVED_EXTRA_BUILDDEPS := $(EXTRA_BUILDDEPS)

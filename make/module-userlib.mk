@@ -123,7 +123,7 @@ endif
 MODULE_SO_INSTALL_NAME := lib/$(MODULE_SO_INSTALL_NAME)
 endif
 ifneq ($(MODULE_SO_INSTALL_NAME),-)
-USER_MANIFEST_LINES += $(MODULE_SO_INSTALL_NAME)=$(MODULE_LIBNAME).so.strip
+USER_MANIFEST_LINES += $(MODULE_GROUP)$(MODULE_SO_INSTALL_NAME)=$(MODULE_LIBNAME).so.strip
 # These debug info files go in the bootfs image.
 ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE)),yes),yes)
 USER_MANIFEST_DEBUG_INPUTS += $(MODULE_LIBNAME).so.debug

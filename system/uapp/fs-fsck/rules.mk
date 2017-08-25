@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 
 MODULE_NAME := fsck
+MODULE_GROUP := core
 
 # app main
 MODULE_SRCS := \

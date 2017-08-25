@@ -16,6 +16,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).app
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_NAME := driverinfo
 

@@ -7,6 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR).ps
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/ps.c
@@ -28,6 +29,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).top
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += $(LOCAL_DIR)/top.c
 
@@ -48,6 +50,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).kill
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += $(LOCAL_DIR)/kill.c
 
@@ -67,6 +70,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).killall
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += $(LOCAL_DIR)/killall.c
 
@@ -86,6 +90,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).vmaps
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += $(LOCAL_DIR)/vmaps.c
 
@@ -106,6 +111,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).vmos
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/vmos.cpp \
@@ -128,6 +134,7 @@ include make/module.mk
 MODULE := $(LOCAL_DIR).memgraph
 
 MODULE_TYPE := userapp
+MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/memgraph.cpp \
@@ -183,6 +190,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/resources.c
 
 MODULE_NAME := kstats
+MODULE_GROUP := core
 
 MODULE_LIBS := \
     system/ulib/mxio \
