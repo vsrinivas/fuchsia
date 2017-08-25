@@ -32,6 +32,12 @@ typedef enum {
 #define GFX_FLAG_FREE_ON_DESTROY (1<<0) // free the ptr at destroy
 #define GFX_FLAG_FLUSH_CPU_CACHE (1<<1) // do a cache flush during gfx_flush
 
+typedef struct gfx_font {
+    const uint16_t* data;
+    unsigned width;
+    unsigned height;
+} gfx_font;
+
 /**
  * @brief  Describe a graphics drawing surface
  *
@@ -57,8 +63,13 @@ typedef struct gfx_surface {
     void (*copyrect)(struct gfx_surface *, uint x, uint y, uint width, uint height, uint x2, uint y2);
     void (*fillrect)(struct gfx_surface *, uint x, uint y, uint width, uint height, uint color);
     void (*putpixel)(struct gfx_surface *, uint x, uint y, uint color);
+    void (*putchar)(struct gfx_surface*, const struct gfx_font*,
+                    uint ch, uint x, uint y, uint fg, uint bg);
     void (*flush)(uint starty, uint endy);
 } gfx_surface;
+
+extern const struct gfx_font font_9x16;
+extern const struct gfx_font font_18x32;
 
 // copy a rect from x,y with width x height to x2, y2
 void gfx_copyrect(gfx_surface *surface, uint x, uint y, uint width, uint height, uint x2, uint y2);
@@ -80,6 +91,9 @@ void gfx_flush(struct gfx_surface *surface);
 
 // flush a subset of the surface
 void gfx_flush_rows(struct gfx_surface *surface, uint start, uint end);
+
+void gfx_putchar(struct gfx_surface *surface, const struct gfx_font* font,
+                 uint ch, uint x, uint y, uint fg, uint bg);
 
 // clear the entire surface with a color
 static inline void gfx_clear(gfx_surface *surface, uint color)

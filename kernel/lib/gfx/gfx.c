@@ -28,6 +28,21 @@
 #include <lib/gfx.h>
 #include <dev/display.h>
 
+#include <magenta/font/font-9x16.h>
+#include <magenta/font/font-18x32.h>
+
+const struct gfx_font font_9x16 = {
+    .data = FONT9X16,
+    .width = FONT9X16_WIDTH,
+    .height = FONT9X16_HEIGHT,
+};
+
+const struct gfx_font font_18x32 = {
+    .data = FONT18X32,
+    .width = FONT18X32_WIDTH,
+    .height = FONT18X32_HEIGHT,
+};
+
 #define LOCAL_TRACE 0
 
 // Convert a 32bit ARGB image to its respective gamma corrected grayscale value.
@@ -525,6 +540,45 @@ void gfx_surface_blend(struct gfx_surface *target, struct gfx_surface *source, u
     }
 }
 
+#define MKPUTCHAR(FUNC,TYPE) \
+static void FUNC(gfx_surface* surface, const struct gfx_font* font, \
+                 uint ch, uint x, uint y, uint fg, uint bg) { \
+    TYPE* dest = &((TYPE*)surface->ptr)[x + y * surface->stride]; \
+    const uint16_t* cdata = font->data + ch * font->height; \
+    unsigned fw = font->width; \
+    for (unsigned i = font->height; i > 0; i--) { \
+        uint16_t xdata = *cdata++; \
+        for (unsigned j = fw; j > 0; j--) { \
+            *dest++ = (xdata & 1) ? fg : bg; \
+            xdata >>= 1; \
+        } \
+        dest += (surface->stride - fw); \
+    } \
+}
+
+MKPUTCHAR(putchar8, uint8_t)
+MKPUTCHAR(putchar16, uint16_t)
+MKPUTCHAR(putchar32, uint32_t)
+
+void gfx_putchar(gfx_surface* surface, const struct gfx_font* font,
+                 uint ch, uint x, uint y, uint fg, uint bg) {
+    if (unlikely(ch > 127)) {
+        return;
+    }
+    if (unlikely(x > (surface->width - font->width))) {
+        return;
+    }
+    if (unlikely(y > (surface->height - font->height))) {
+        return;
+    }
+    if (surface->translate_color) {
+        fg = surface->translate_color(fg);
+        bg = surface->translate_color(bg);
+    }
+    surface->putchar(surface, font, ch, x, y, fg, bg);
+}
+
+
 /**
  * @brief  Ensure all graphics rendering is sent to display
  */
@@ -597,6 +651,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->copyrect = &copyrect16;
             surface->fillrect = &fillrect16;
             surface->putpixel = &putpixel16;
+            surface->putchar = &putchar16;
             surface->pixelsize = 2;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
@@ -606,6 +661,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->copyrect = &copyrect32;
             surface->fillrect = &fillrect32;
             surface->putpixel = &putpixel32;
+            surface->putchar = &putchar32;
             surface->pixelsize = 4;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
@@ -614,6 +670,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->copyrect = &copyrect8;
             surface->fillrect = &fillrect8;
             surface->putpixel = &putpixel8;
+            surface->putchar = &putchar8;
             surface->pixelsize = 1;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
@@ -622,6 +679,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->copyrect = &copyrect8;
             surface->fillrect = &fillrect8;
             surface->putpixel = &putpixel8;
+            surface->putchar = &putchar8;
             surface->pixelsize = 1;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;
@@ -630,6 +688,7 @@ int gfx_init_surface(gfx_surface *surface, void *ptr, uint width, uint height, u
             surface->copyrect = &copyrect8;
             surface->fillrect = &fillrect8;
             surface->putpixel = &putpixel8;
+            surface->putchar = &putchar8;
             surface->pixelsize = 1;
             surface->len = (surface->height * surface->stride * surface->pixelsize);
             break;

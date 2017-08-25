@@ -19,10 +19,10 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <kernel/cmdline.h>
 #include <lib/io.h>
 #include <lib/gfx.h>
 #include <lib/gfxconsole.h>
-#include <lib/font.h>
 #include <dev/display.h>
 
 #define TEXT_COLOR 0xffffffff
@@ -57,15 +57,18 @@ static struct {
     uint32_t back_color;
 } gfxconsole;
 
-static void draw_char(char c)
+static void draw_char(char c, const struct gfx_font* font)
 {
-    font_draw_char(gfxconsole.surface, c, gfxconsole.x * FONT_X, gfxconsole.y * FONT_Y,
-                   gfxconsole.front_color, gfxconsole.back_color);
+    gfx_putchar(gfxconsole.surface, font, c,
+                gfxconsole.x * font->width, gfxconsole.y * font->height,
+                gfxconsole.front_color, gfxconsole.back_color);
 }
 
 void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color) {
     gfx_putpixel(gfxconsole.surface, x, y, color);
 }
+
+static const struct gfx_font* font = &font_9x16;
 
 static bool gfxconsole_putc(char c)
 {
@@ -96,7 +99,7 @@ static bool gfxconsole_putc(char c)
                 state = ESCAPE;
                 break;
             default:
-                draw_char(c);
+                draw_char(c, font);
                 gfxconsole.x++;
                 break;
         }
@@ -110,7 +113,7 @@ static bool gfxconsole_putc(char c)
         } else if (c == '[') {
             // eat this character
         } else {
-            draw_char(c);
+            draw_char(c, font);
             gfxconsole.x++;
             state = NORMAL;
         }
@@ -123,13 +126,13 @@ static bool gfxconsole_putc(char c)
     }
     if (gfxconsole.y >= gfxconsole.rows) {
         // scroll up
-        gfx_copyrect(gfxconsole.surface, 0, FONT_Y, gfxconsole.surface->width,
-                     gfxconsole.surface->height - FONT_Y - gfxconsole.extray, 0, 0);
+        gfx_copyrect(gfxconsole.surface, 0, font->height, gfxconsole.surface->width,
+                     gfxconsole.surface->height - font->height - gfxconsole.extray, 0, 0);
         gfxconsole.y--;
 
         // clear the bottom line
-        gfx_fillrect(gfxconsole.surface, 0, gfxconsole.surface->height - FONT_Y - gfxconsole.extray,
-                     gfxconsole.surface->width, FONT_Y, gfxconsole.back_color);
+        gfx_fillrect(gfxconsole.surface, 0, gfxconsole.surface->height - font->height - gfxconsole.extray,
+                     gfxconsole.surface->width, font->height, gfxconsole.back_color);
         gfx_flush(gfxconsole.surface);
         inval = 1;
     }
@@ -156,7 +159,7 @@ static void gfxconsole_print_callback(print_callback_t *cb, const char *str, siz
             gfxconsole.line.ptr = ((uint8_t*) gfxconsole.surface->ptr) +
                 (gfxconsole.y * gfxconsole.linestride);
             gfx_surface_blend(gfxconsole.hw_surface, &gfxconsole.line,
-                0, gfxconsole.y * FONT_Y);
+                0, gfxconsole.y * font->height);
         }
         gfx_flush(gfxconsole.hw_surface);
     }
@@ -170,19 +173,27 @@ static print_callback_t cb = {
 
 static void gfxconsole_setup(gfx_surface *surface, gfx_surface *hw_surface)
 {
+    const char* fname = cmdline_get("gfxconsole.font");
+    if (fname != NULL) {
+        if (!strcmp(fname, "18x32")) {
+            font = &font_18x32;
+        } else if (!strcmp(fname, "9x16")) {
+            font = &font_9x16;
+        }
+    }
     // set up the surface
     gfxconsole.surface = surface;
     gfxconsole.hw_surface = hw_surface;
 
     // set up line-height sub-surface, for line-only invalidation
     memcpy(&gfxconsole.line, surface, sizeof(*surface));
-    gfxconsole.line.height = FONT_Y;
-    gfxconsole.linestride = surface->stride * surface->pixelsize * FONT_Y;
+    gfxconsole.line.height = font->height;
+    gfxconsole.linestride = surface->stride * surface->pixelsize * font->height;
 
     // calculate how many rows/columns we have
-    gfxconsole.rows = surface->height / FONT_Y;
-    gfxconsole.columns = surface->width / FONT_X;
-    gfxconsole.extray = surface->height - (gfxconsole.rows * FONT_Y);
+    gfxconsole.rows = surface->height / font->height;
+    gfxconsole.columns = surface->width / font->width;
+    gfxconsole.extray = surface->height - (gfxconsole.rows * font->height);
 
     dprintf(SPEW, "gfxconsole: rows %u, columns %u, extray %u\n", gfxconsole.rows,
             gfxconsole.columns, gfxconsole.extray);
