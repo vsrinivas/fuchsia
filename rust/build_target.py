@@ -56,13 +56,19 @@ def fix_paths(block, default_name, crate_root, new_base):
 
 
 # Gathers build metadata from the given dependencies.
-def gather_dependency_infos(root_gen_dir, deps):
+def gather_dependency_infos(root_gen_dir, deps, fail_if_missing=True):
     result = []
     for dep in deps:
         path, name = get_target(dep)
         base_path = os.path.join(root_gen_dir, path, "%s.rust" % name)
         # Read the information attached to the target.
         info_path = os.path.join(base_path, "%s.info.toml" % name)
+        if not os.path.exists(info_path):
+            if fail_if_missing:
+                raise Exception("Could not locate dependency info %s at %s" %
+                                (name, info_path))
+            else:
+                continue
         with open(info_path, "r") as info_file:
             result.append(pytoml.load(info_file))
     return result
@@ -127,17 +133,23 @@ def write_cargo_config(path, vendor_directory, target_triple, shared_libs_root,
 def generate_replace_section(root_gen_dir, gen_dir):
     deps = map(lambda (name, data): data["target"],
                local_crates.RUST_CRATES["published"].iteritems())
-    infos = gather_dependency_infos(root_gen_dir, deps)
+    # Gather metadata about replaced crates. Some of these crates might not be
+    # needed to build the current artifact in which case the metadata will be
+    # missing. It's fine to skip those.
+    infos = gather_dependency_infos(root_gen_dir, deps, fail_if_missing=False)
     result = {}
     def add_paths(crates, get_path):
         for name in crates:
             data = crates[name]
             version = data["version"]
-            path = os.path.relpath(get_path(name, data), gen_dir)
+            full_path = get_path(name, data)
+            if not full_path:
+                continue
+            path = os.path.relpath(full_path, gen_dir)
             result["%s:%s" % (name, version)] = {"path": path}
     add_paths(local_crates.RUST_CRATES["published"],
-              lambda name, data: next(x["base_path"] for x in infos
-                                      if x["name"] == name))
+              lambda name, data: next((x["base_path"] for x in infos
+                                       if x["name"] == name), None))
     add_paths(local_crates.RUST_CRATES["mirrors"],
               lambda name, data: os.path.join(ROOT_PATH, data["path"]))
     return result
