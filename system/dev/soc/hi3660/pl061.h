@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/platform-device.h>
 #include <magenta/listnode.h>
 #include <magenta/types.h>
 #include <threads.h>
@@ -12,9 +13,7 @@
 typedef struct {
     list_node_t node;
     mtx_t lock;
-    uint8_t* mmio_base;
-    size_t mmio_size;
-    mx_handle_t mmio_handle;
+    pdev_mmio_buffer_t buffer;
     uint32_t gpio_start;
     uint32_t gpio_count;
     const uint32_t* irqs;

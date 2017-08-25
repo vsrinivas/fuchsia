@@ -116,9 +116,8 @@ static mx_status_t hi3660_add_gpios(void* ctx, uint32_t start, uint32_t count, u
         return MX_ERR_NO_MEMORY;
     }
 
-    mx_status_t status = pdev_map_mmio(&bus->pdev, mmio_index, MX_CACHE_POLICY_UNCACHED_DEVICE,
-                                       (void *)&gpios->mmio_base, &gpios->mmio_size,
-                                       &gpios->mmio_handle);
+    mx_status_t status = pdev_map_mmio_buffer(&bus->pdev, mmio_index,
+                                              MX_CACHE_POLICY_UNCACHED_DEVICE, &gpios->buffer);
     if (status != MX_OK) {
         free(gpios);
         return status;
@@ -144,8 +143,7 @@ static void hi3660_release(void* ctx) {
     pl061_gpios_t* gpios;
 
     while ((gpios = list_remove_head_type(&bus->gpios, pl061_gpios_t, node)) != NULL) {
-        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)gpios->mmio_base, gpios->mmio_size);
-        mx_handle_close(gpios->mmio_handle);
+        pdev_mmio_buffer_release(&gpios->buffer);
         free(gpios);
     }
 
@@ -215,8 +213,7 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     mx_status_t status = device_add(parent, &args, NULL);
     if (status != MX_OK) {
-        free(bus);
-        return status;
+        goto fail;
     }
 
     pbus_interface_t intf;
@@ -230,6 +227,11 @@ static mx_status_t hi3660_bind(void* ctx, mx_device_t* parent, void** cookie) {
 #endif
 
     return MX_OK;
+
+fail:
+    printf("hi3660_bind failed %d\n", status);
+    hi3660_release(bus);
+    return status;
 }
 
 static mx_driver_ops_t hi3660_driver_ops = {
