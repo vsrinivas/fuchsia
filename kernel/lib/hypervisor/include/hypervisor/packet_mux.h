@@ -6,14 +6,14 @@
 
 #pragma once
 
-#include <kernel/event.h>
 #include <mxtl/arena.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
 
 #if WITH_LIB_MAGENTA
 #include <magenta/port_dispatcher.h>
-#else
+#include <magenta/semaphore.h>
+#else // WITH_LIB_MAGENTA
 #include <magenta/syscalls/port.h>
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
@@ -22,6 +22,11 @@ struct PortPacket;
 struct PortAllocator {
     virtual PortPacket* Alloc() { return nullptr; }
     virtual void Free(PortPacket* port_packet) {}
+};
+struct Semaphore {
+    Semaphore(int64_t initial_count) {}
+    int Post() { return 0; }
+    mx_status_t Wait(lk_time_t deadline) { return MX_ERR_NOT_SUPPORTED; }
 };
 #endif // WITH_LIB_MAGENTA
 
@@ -40,10 +45,9 @@ public:
     virtual void Free(PortPacket* port_packet) override;
 
 private:
-    Event event_;
+    Semaphore semaphore_;
     mxtl::Mutex mutex_;
     mxtl::Arena arena_ TA_GUARDED(mutex_);
-    bool is_full_ TA_GUARDED(mutex_);
 
     PortPacket* Alloc() override;
 };

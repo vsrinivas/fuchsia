@@ -13,7 +13,7 @@
 __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
 BlockingPortAllocator::BlockingPortAllocator()
-    : event_(EVENT_FLAG_AUTOUNSIGNAL), is_full_(false) {}
+    : semaphore_(kMaxPacketsPerRange) {}
 
 mx_status_t BlockingPortAllocator::Init() {
 #if WITH_LIB_MAGENTA
@@ -24,12 +24,15 @@ mx_status_t BlockingPortAllocator::Init() {
 }
 
 PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
-    PortPacket* port_packet;
-    while ((port_packet = Alloc()) == nullptr) {
-        mx_status_t status = event_.Wait(INFINITE_TIME);
+    PortPacket* port_packet = Alloc();
+    mx_status_t status = semaphore_.Wait(INFINITE_TIME);
+    // If port_packet is NULL, then Wait would have blocked. So we need to:
+    // reload our state, check the status of Wait, and Alloc again.
+    if (port_packet == nullptr) {
         reloader->Reload();
         if (status != MX_OK)
             return nullptr;
+        port_packet = Alloc();
     }
     return port_packet;
 }
@@ -40,11 +43,9 @@ PortPacket* BlockingPortAllocator::Alloc() {
     {
         mxtl::AutoLock lock(&mutex_);
         addr = arena_.Alloc();
-        if (addr == nullptr) {
-            is_full_ = true;
-            return nullptr;
-        }
     }
+    if (addr == nullptr)
+        return nullptr;
     return new (addr) PortPacket(nullptr, this);
 #else
     return nullptr;
@@ -52,14 +53,11 @@ PortPacket* BlockingPortAllocator::Alloc() {
 }
 
 void BlockingPortAllocator::Free(PortPacket* port_packet) {
-    bool was_full;
     {
         mxtl::AutoLock lock(&mutex_);
-        was_full = is_full_;
         arena_.Free(port_packet);
-        is_full_ = false;
     }
-    if (was_full && event_.Signal() > 0)
+    if (semaphore_.Post() > 0)
         thread_reschedule();
 }
 
