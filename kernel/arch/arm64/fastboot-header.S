@@ -18,6 +18,7 @@ _fastboot_start:
     .quad   0
     .quad   0
     .quad   0
+
     .byte   'A'
     .byte   'R'
     .byte   'M'
@@ -26,51 +27,51 @@ _fastboot_start:
     .align 3
 
 pe_header:
-    .ascii  "PE"
-    .short  0
+    .ascii  "PE"                            //PE Magic
+    .short  0                               //  PE Magic
 
     // coff header
-    .short  0xaa64
-    .short  2       // number of sections
-    .long   0
-    .long   0
-    .long   1
-    .short  section_table - optional_header
-    .short  0x206
+    .short  0xaa64                          //Machine
+    .short  2                               //NumberOfSections
+    .long   0                               //TimeDateStamp
+    .long   0                               //PointerToSymbolTable
+    .long   1                               //NumberOfSymbols
+    .short  section_table - optional_header //SizeOfOptionalHeader
+    .short  0x206                           //Characteristics
 
 optional_header:
-    .short  0x20B
-    .byte   0x2
-    .byte   0x14
-    .long   _end - header_end
-    .long   0
-    .long   0
-    .long   0   // should be entry point
-    .long   header_end - _start
+    .short  0x20B                           //signature
+    .byte   0x2                             //MajorLinkerVersion
+    .byte   0x14                            //MinorLinkerVersion
+    .long   _end - header_end               //sizeOfCode
+    .long   0                               //SizeOfInitializedData
+    .long   0                               //SizeofUninitializedData
+    .long   header_end - _start             //AdressOfEntryPoint
+    .long   header_end - _start             //BaseOfCode
 
-    .quad   0
-    .long   0x1000
-    .long   0x200
-    .short  0
-    .short  0
-    .short  0
-    .short  0
-    .short  0
-    .short  0
-    .long   0
+    .quad   0                               //ImageBase
+    .long   0x1000                          //SectionAlignment
+    .long   0x200                           //FileAlignment
+    .short  0                               //MajorOSVersion
+    .short  0                               //MinorOSVersion
+    .short  0                               //MajorImageVersion
+    .short  0                               //MinorImageVersion
+    .short  0                               //MajorSubsystemVersion
+    .short  0                               //MinorSubsystemVersion
+    .long   0                               //Win32VersionValue
 
-    .long   _end - _start
-    .long   header_end - _start
-    .long   0
-    .short  0xA
-    .short  0
-    .quad   0
-    .quad   0
-    .quad   0
-    .quad   0
-    .long   0
-    .long   6
-    .quad   0
+    .long   _end - _start                   //SizeOfImage
+    .long   header_end - _start             //SizeOfHeaders
+    .long   0                               //Checksum
+    .short  0xA                             //Subsystem
+    .short  0                               //DLLCharacteristics
+    .quad   0                               //SizeOfStackReserve
+    .quad   0                               //SizeOfStackCommit
+    .quad   0                               //SizeOfHeapReserve
+    .quad   0                               //SizeOfHeapCommit
+    .long   0                               //LoaderFlags
+    .long   6                               //NumberOfRvaAndSizes
+    .quad   0                               //DataDirectory[6]
     .quad   0
     .quad   0
     .quad   0
@@ -91,19 +92,19 @@ section_table:
     .short  0
     .long   0x42100040
 
-    .ascii  ".text"
+    .ascii  ".text"                         //Name[6] (char)
     .byte   0
     .byte   0
     .byte   0
-    .long   _end - header_end
-    .long   header_end - _start
-    .long   0
-    .long   0
-    .long   0
-    .long   0
-    .short  0
-    .short  0
-    .long   0xE0500020
+    .long   0                               //PhysicalAddress/VirtualSize
+    .long   header_end - _start             //VirtualAddress
+    .long   __data_end - header_end         //SizeOfRawData
+    .long   header_end - _start             //PointerToRawData
+    .long   0                               //PointertoRelocations
+    .long   0                               //PointerToLinenumbers
+    .short  0                               //NumberOfRelocations
+    .short  0                               //NumberOfLinenumbers
+    .long   0xE0500020                      //Characteristics
     .align 12
 
 header_end:
