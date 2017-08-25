@@ -194,6 +194,8 @@ static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
 }
 
 static int ring_avail_count(virtio_queue_t* queue) {
+    if (queue->avail == NULL)
+        return 0;
     return queue->avail->idx - queue->index;
 }
 
