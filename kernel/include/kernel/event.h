@@ -105,8 +105,9 @@ public:
         return event_wait_deadline(&event_, deadline, true);
     }
 
-    // returns number of ready threads
-    int Signal(status_t status = MX_OK) {
+    // Returns number of ready threads. If it is bigger than 0
+    // the caller must call thread_reschedule().
+    __WARN_UNUSED_RESULT int Signal(status_t status = MX_OK) {
         return event_signal_etc(&event_, false, status);
     }
 

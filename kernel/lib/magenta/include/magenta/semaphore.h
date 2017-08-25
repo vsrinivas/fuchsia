@@ -10,6 +10,7 @@
 #include <kernel/thread.h>
 #include <magenta/types.h>
 
+// You probably don't want to use this class.
 class Semaphore {
 public:
     explicit Semaphore(int64_t initial_count = 0);
@@ -18,7 +19,9 @@ public:
     Semaphore(const Semaphore&) = delete;
     Semaphore& operator=(const Semaphore&) = delete;
 
-    int Post();
+    // Returns the number of ready threads. If it is bigger than 0
+    // the caller must call thread_reschedule().
+    __WARN_UNUSED_RESULT int Post();
     mx_status_t Wait(lk_time_t deadline);
 
 private:
