@@ -128,10 +128,6 @@ GLOBAL_COMPILEFLAGS += -Wno-unused-parameter -Wno-unused-function -Wno-unused-la
 GLOBAL_COMPILEFLAGS += -fno-common
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
-# TODO(mcgrathr): This avoids complaints about the 'leaf' attribute, which
-# GCC supports as an optimization hint but Clang does not grok.  This can
-# be removed when https://llvm.org/bugs/show_bug.cgi?id=30980 is fixed.
-GLOBAL_COMPILEFLAGS += -Wno-unknown-attributes
 GLOBAL_COMPILEFLAGS += -Wthread-safety
 else
 GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare

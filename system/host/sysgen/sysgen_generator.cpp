@@ -24,7 +24,7 @@ const map<string, string> user_attrs = {
     // All vDSO calls are "leaf" in the sense of the GCC attribute.
     // It just means they can't ever call back into their callers'
     // own translation unit.  No vDSO calls make callbacks at all.
-    {"*", "__attribute__((__leaf__))"},
+    {"*", "__LEAF_FN"},
 };
 
 const map<string, string> kernel_attrs = {

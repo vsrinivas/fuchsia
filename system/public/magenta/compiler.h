@@ -32,12 +32,14 @@
 #define __DESTRUCTOR __attribute__((__destructor__))
 
 #ifndef __clang__
+#define __LEAF_FN __attribute__((__leaf__))
 #define __OPTIMIZE(x) __attribute__((__optimize__(x)))
 #define __EXTERNALLY_VISIBLE __attribute__((__externally_visible__))
 #define __THREAD_ANNOTATION(x)
 #define __NO_SAFESTACK
 #define __has_feature(x) 0
 #else
+#define __LEAF_FN
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
 #ifndef DISABLE_THREAD_ANNOTATIONS
@@ -92,6 +94,7 @@
 #define __SCANFLIKE(__fmt,__varargs)
 #define __SECTION(x)
 #define __PURE
+#define __LEAF_FN
 #define __CONST
 #define __NO_RETURN
 #define __MALLOC
