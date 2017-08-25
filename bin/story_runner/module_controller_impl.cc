@@ -16,12 +16,29 @@
 namespace modular {
 
 constexpr ftl::TimeDelta kStoryTeardownTimeout = ftl::TimeDelta::FromSeconds(1);
+constexpr char kAppStoragePath[] = "/data/APP_DATA";
 
 // Template specializations for fidl services that don't have a Terminate()
 template <>
 void AppClient<Module>::ServiceTerminate(const std::function<void()>& done) {
   FTL_NOTREACHED();
 }
+
+namespace {
+
+// A stopgap solution to map a module's url to a directory name where the
+// module's /data is mapped. We need three properties here - (1) two module urls
+// that are the same get mapped to the same hash, (2) two modules urls that are
+// different don't get the same name (with very high probability) and (3) the
+// name is visually inspectable.
+std::string HashModuleUrl(const std::string& module_url) {
+  std::size_t found = module_url.find_last_of('/');
+  auto last_part =
+      found == module_url.length() - 1 ? "" : module_url.substr(found + 1);
+  return std::to_string(std::hash<std::string>{}(module_url)) + last_part;
+}
+
+};  // namespace
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
@@ -33,7 +50,10 @@ ModuleControllerImpl::ModuleControllerImpl(
     fidl::InterfaceHandle<app::ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<app::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
-      app_client_(application_launcher, std::move(module_config)),
+      app_client_(
+          application_launcher,
+          module_config.Clone(),
+          std::string(kAppStoragePath) + HashModuleUrl(module_config->url)),
       module_path_(module_path.Clone()) {
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
   app_client_.primary_service().set_connection_error_handler(
