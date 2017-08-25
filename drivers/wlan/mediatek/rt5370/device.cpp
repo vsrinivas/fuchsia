@@ -6,6 +6,7 @@
 #include "logging.h"
 #include "rt5370.h"
 
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlan.h>
 #include <magenta/assert.h>
 #include <magenta/hw/usb.h>
@@ -2129,11 +2130,10 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
 }
 
 void Device::HandleRxComplete(iotxn_t* request) {
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
-        return;
+    if (request->status == MX_ERR_IO_REFUSED) {
+        debugf("usb_reset_endpoint\n");
+        usb_reset_endpoint(&usb_, rx_endpt_);
     }
-
     std::lock_guard<std::mutex> guard(lock_);
     auto ac = mxtl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
 
@@ -2169,16 +2169,17 @@ void Device::HandleRxComplete(iotxn_t* request) {
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
     } else {
-        errorf("rx txn status %d\n", request->status);
+        if (request->status != MX_ERR_IO_REFUSED) {
+            errorf("rx txn status %d\n", request->status);
+        }
     }
 }
 
 void Device::HandleTxComplete(iotxn_t* request) {
-    if (request->status == MX_ERR_IO_NOT_PRESENT) {
-        iotxn_release(request);
-        return;
+    if (request->status == MX_ERR_IO_REFUSED) {
+        debugf("usb_reset_endpoint\n");
+        usb_reset_endpoint(&usb_, tx_endpts_.front());
     }
-
     std::lock_guard<std::mutex> guard(lock_);
 
     free_write_reqs_.push_back(request);
@@ -2411,11 +2412,21 @@ mx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
 }
 
 void Device::ReadIotxnComplete(iotxn_t* request, void* cookie) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+        iotxn_release(request);
+        return;
+    }
+
     auto dev = static_cast<Device*>(cookie);
     dev->HandleRxComplete(request);
 }
 
 void Device::WriteIotxnComplete(iotxn_t* request, void* cookie) {
+    if (request->status == MX_ERR_IO_NOT_PRESENT) {
+        iotxn_release(request);
+        return;
+    }
+
     auto dev = static_cast<Device*>(cookie);
     dev->HandleTxComplete(request);
 }
