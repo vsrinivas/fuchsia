@@ -155,6 +155,28 @@ mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
 /* Blocking variant of virtio_queue_next_avail. */
 void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index);
 
+/* Callback for virtio_queue_poll.
+ *
+ * queue    - The queue being polled.
+ * head     - Descriptor index of the buffer chain to process.
+ * used     - To be incremented by the number of bytes used from addr.
+ * ctx      - The same pointer passed to virtio_queue_poll.
+ *
+ * The queue will continue to be polled as long as this method returns MX_OK.
+ * The error MX_ERR_STOP will be treated as a special value to indicate queue
+ * polling should stop gracefully and terminate the thread.
+ *
+ * Any other error values will be treated as unexpected errors that will cause
+ * the polling thread to be terminated with a non-zero exit value.
+ */
+typedef mx_status_t (*virtio_queue_poll_fn_t)(virtio_queue_t* queue, uint16_t head,
+                                              uint32_t* used, void* ctx);
+
+/* Spawn a thread to wait for descriptors to be available and invoke the
+ * provided handler on each available buffer asyncronously.
+ */
+mx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx);
+
 /* A higher-level API for vring_desc. */
 typedef struct virtio_desc {
     // Pointer to the buffer in our address space.

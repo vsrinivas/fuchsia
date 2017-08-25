@@ -4,6 +4,7 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <hypervisor/vcpu.h>
@@ -240,6 +241,63 @@ void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index) {
     while (virtio_queue_next_avail_locked(queue, index) == MX_ERR_NOT_FOUND)
         cnd_wait(&queue->avail_ring_cnd, &queue->mutex);
     mtx_unlock(&queue->mutex);
+}
+
+typedef struct poll_task_args {
+    virtio_queue_t* queue;
+    virtio_queue_poll_fn_t handler;
+    void* ctx;
+} poll_task_args_t;
+
+static int virtio_queue_poll_task(void* ctx) {
+    mx_status_t result = MX_OK;
+    poll_task_args_t* args = ctx;
+    while (true) {
+        uint16_t descriptor;
+        virtio_queue_wait(args->queue, &descriptor);
+
+        uint32_t used = 0;
+        mx_status_t status = args->handler(args->queue, descriptor, &used, args->ctx);
+        virtio_queue_return(args->queue, descriptor, used);
+
+        if (status == MX_ERR_STOP)
+            break;
+        if (status != MX_OK) {
+            fprintf(stderr, "Error %d while handling queue buffer.\n", status);
+            result = status;
+            break;
+        }
+
+        result = virtio_device_notify(args->queue->virtio_device);
+        if (result != MX_OK)
+            break;
+    }
+
+    free(args);
+    return result;
+}
+
+mx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx) {
+    poll_task_args_t* args = calloc(1, sizeof(*args));
+    args->queue = queue;
+    args->handler = handler;
+    args->ctx = ctx;
+
+    thrd_t thread;
+    int ret = thrd_create(&thread, virtio_queue_poll_task, args);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to create queue thread %d\n", ret);
+        free(args);
+        return MX_ERR_INTERNAL;
+    }
+
+    ret = thrd_detach(thread);
+    if (ret != thrd_success) {
+        fprintf(stderr, "Failed to detach queue thread %d\n", ret);
+        return MX_ERR_INTERNAL;
+    }
+
+    return MX_OK;
 }
 
 mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index,
