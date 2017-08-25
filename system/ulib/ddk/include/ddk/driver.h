@@ -91,6 +91,7 @@ typedef struct device_add_args {
 struct mx_driver_rec {
     const mx_driver_ops_t* ops;
     mx_driver_t* driver;
+    uint32_t log_flags;
 };
 
 // This global symbol is initialized by the driver loader in devhost

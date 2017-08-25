@@ -4,9 +4,12 @@
 
 #include <magenta/compiler.h>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include "devhost.h"
 
+#include <stdarg.h>
+#include <stdio.h>
 
 // These are the API entry-points from drivers
 // They must take the devhost_api_lock before calling devhost_* internals
@@ -189,6 +192,12 @@ __EXPORT mx_status_t load_firmware(mx_device_t* dev, const char* path,
     return r;
 }
 
+__EXPORT void driver_printf(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+}
 
 // Interface Used by DevHost RPC Layer
 

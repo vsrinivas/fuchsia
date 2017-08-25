@@ -9,6 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -71,6 +72,42 @@ static const char* mkdevpath(mx_device_t* dev, char* path, size_t max) {
     return end;
 }
 
+static uint32_t logflagval(char* flag) {
+    if (!strcmp(flag, "error")) {
+        return DDK_LOG_ERROR;
+    }
+    if (!strcmp(flag, "info")) {
+        return DDK_LOG_INFO;
+    }
+    if (!strcmp(flag, "trace")) {
+        return DDK_LOG_TRACE;
+    }
+    if (!strcmp(flag, "spew")) {
+        return DDK_LOG_SPEW;
+    }
+    if (!strcmp(flag, "debug1")) {
+        return DDK_LOG_DEBUG1;
+    }
+    if (!strcmp(flag, "debug2")) {
+        return DDK_LOG_DEBUG2;
+    }
+    if (!strcmp(flag, "debug3")) {
+        return DDK_LOG_DEBUG3;
+    }
+    if (!strcmp(flag, "debug4")) {
+        return DDK_LOG_DEBUG4;
+    }
+    return strtoul(flag, NULL, 0);
+}
+
+static void logflag(char* flag, uint32_t* flags) {
+    if (*flag == '+') {
+        *flags |= logflagval(flag + 1);
+    } else if (*flag == '-') {
+        *flags &= ~logflagval(flag + 1);
+    }
+}
+
 static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_driver_t** out) {
     // check for already-loaded driver first
     mx_driver_t* drv;
@@ -128,6 +165,26 @@ static mx_status_t dh_find_driver(const char* libname, mx_handle_t vmo, mx_drive
     drv->name = dn->payload.name;
     drv->ops = dr->ops;
     dr->driver = drv;
+
+    // check for dprintf log level flags
+    char tmp[128];
+    snprintf(tmp, sizeof(tmp), "driver.%s.log", drv->name);
+    char* log = getenv(tmp);
+    if (log) {
+        while (log) {
+            char* sep = strchr(log, ',');
+            if (sep) {
+                *sep = 0;
+                logflag(log, &dr->log_flags);
+                *sep = ',';
+                log = sep + 1;
+            } else {
+                logflag(log, &dr->log_flags);
+                break;
+            }
+        }
+        log(INFO, "devhost: driver '%s': log flags set to: 0x%x\n", drv->name, dr->log_flags);
+    }
 
     if (drv->ops->init) {
         drv->status = drv->ops->init(&drv->ctx);

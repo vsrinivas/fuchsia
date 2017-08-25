@@ -217,6 +217,7 @@ static_assert(offsetof(magenta_driver_note_t, payload) ==
 mx_driver_rec_t __magenta_driver_rec__ __EXPORT = {\
     /* .ops = */ &(Ops),\
     /* .driver = */ NULL,\
+    /* .log_flags = */ 3, /* DDK_LOG_ERROR | DDK_LOG_INFO */\
 };\
 extern const struct magenta_driver_note __magenta_driver_note__ __EXPORT;\
 __SECTION(".note.magenta.driver." #Driver) MAGENTA_DRIVER_NOTE_ASAN \
