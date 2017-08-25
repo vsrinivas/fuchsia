@@ -14,15 +14,20 @@ typedef struct usb_virtual_host usb_virtual_host_t;
 typedef struct usb_virtual_device usb_virtual_device_t;
 
 typedef struct {
+    list_node_t host_txns;
+    list_node_t device_txns;
+    // offset into current host txn, for dealing with host txns that are bigger than
+    // their matching device txn
+    mx_off_t txn_offset;
+    bool stalled;
+} usb_virtual_ep_t;
+
+typedef struct {
     mx_device_t* mxdev;
     usb_virtual_host_t* host;
     usb_virtual_device_t* device;
 
-    list_node_t host_txns[USB_MAX_EPS];
-    list_node_t device_txns[USB_MAX_EPS];
-    // offset into host_txns[i], for dealing with host txns that are bigger than
-    // their matching device txn
-    mx_off_t txn_offsets[USB_MAX_EPS];
+    usb_virtual_ep_t eps[USB_MAX_EPS];
 
     mtx_t lock;
     completion_t completion;
@@ -31,6 +36,7 @@ typedef struct {
 } usb_virtual_bus_t;
 
 mx_status_t usb_virtual_bus_set_device_enabled(usb_virtual_bus_t* bus, bool enabled);
+mx_status_t usb_virtual_bus_set_stall(usb_virtual_bus_t* bus, uint8_t ep_address, bool stall);
 
 mx_status_t usb_virtual_host_add(usb_virtual_bus_t* bus, usb_virtual_host_t** out_host);
 void usb_virtual_host_release(usb_virtual_host_t* host);

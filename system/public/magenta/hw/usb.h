@@ -87,6 +87,11 @@ __BEGIN_CDECLS;
 #define USB_DEVICE_REMOTE_WAKEUP           0x01
 #define USB_DEVICE_TEST_MODE               0x02
 
+/* Configuration attributes (bmAttributes) */
+#define USB_CONFIGURATION_REMOTE_WAKEUP    0x20
+#define USB_CONFIGURATION_SELF_POWERED     0x40
+#define USB_CONFIGURATION_RESERVED_7       0x80 // This bit must be set
+
 /* Endpoint direction (bEndpointAddress) */
 #define USB_ENDPOINT_IN                    0x80
 #define USB_ENDPOINT_OUT                   0x00

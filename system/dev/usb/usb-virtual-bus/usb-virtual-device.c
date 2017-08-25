@@ -54,7 +54,12 @@ static mx_status_t device_set_interface(void* ctx, usb_dci_interface_t* dci_intf
     return MX_OK;
 }
 
-static mx_status_t device_config_ep(void* ctx, const usb_endpoint_descriptor_t* ep_desc) {
+static mx_status_t device_config_ep(void* ctx, usb_endpoint_descriptor_t* ep_desc,
+                                    usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
+    return MX_OK;
+}
+
+static mx_status_t device_disable_ep(void* ctx, uint8_t ep_addr) {
     return MX_OK;
 }
 
@@ -63,10 +68,23 @@ static mx_status_t device_set_enabled(void* ctx, bool enabled) {
     return usb_virtual_bus_set_device_enabled(device->bus, enabled);
 }
 
+static mx_status_t device_ep_set_stall(void* ctx, uint8_t ep_address) {
+    usb_virtual_device_t* device = ctx;
+    return usb_virtual_bus_set_stall(device->bus, ep_address, true);
+}
+
+static mx_status_t device_ep_clear_stall(void* ctx, uint8_t ep_address) {
+    usb_virtual_device_t* device = ctx;
+    return usb_virtual_bus_set_stall(device->bus, ep_address, false);
+}
+
 usb_dci_protocol_ops_t virtual_device_protocol = {
     .set_interface = device_set_interface,
     .config_ep = device_config_ep,
+    .disable_ep = device_disable_ep,
     .set_enabled = device_set_enabled,
+    .ep_set_stall = device_ep_set_stall,
+    .ep_clear_stall = device_ep_clear_stall,
 };
 
 static mx_status_t virt_device_open(void* ctx, mx_device_t** dev_out, uint32_t flags) {

@@ -34,19 +34,20 @@ static int usb_virtual_bus_thread(void* arg) {
         mtx_lock(&bus->lock);
 
         // special case endpoint zero
-        iotxn_t* txn = list_remove_head_type(&bus->host_txns[0], iotxn_t, node);
+        iotxn_t* txn = list_remove_head_type(&bus->eps[0].host_txns, iotxn_t, node);
         if (txn) {
             usb_virtual_device_control(bus->device, txn);
         }
 
         for (unsigned i = 1; i < USB_MAX_EPS; i++) {
+            usb_virtual_ep_t* ep = &bus->eps[i];
             bool out = (i < IN_EP_START);
 
-            while ((txn = list_peek_head_type(&bus->host_txns[i], iotxn_t, node)) != NULL) {
-                iotxn_t* device_txn = list_remove_head_type(&bus->device_txns[i], iotxn_t, node);
+            while ((txn = list_peek_head_type(&ep->host_txns, iotxn_t, node)) != NULL) {
+                iotxn_t* device_txn = list_remove_head_type(&ep->device_txns, iotxn_t, node);
 
                 if (device_txn) {
-                    mx_off_t offset = bus->txn_offsets[i];
+                    mx_off_t offset = ep->txn_offset;
                     size_t length = txn->length - offset;
                     if (length > device_txn->length) {
                         length = device_txn->length;
@@ -64,11 +65,11 @@ static int usb_virtual_bus_thread(void* arg) {
 
                     offset += length;
                     if (offset < txn->length) {
-                        bus->txn_offsets[i] = offset;
+                        ep->txn_offset = offset;
                     } else {
                         list_delete(&txn->node);
                         iotxn_complete(txn, MX_OK, length);
-                        bus->txn_offsets[i] = 0;
+                        ep->txn_offset = 0;
                     }
                 } else {
                     break;
@@ -95,6 +96,29 @@ mx_status_t usb_virtual_bus_set_device_enabled(usb_virtual_bus_t* bus, bool enab
     return MX_OK;
 }
 
+mx_status_t usb_virtual_bus_set_stall(usb_virtual_bus_t* bus, uint8_t ep_address, bool stall) {
+    uint8_t index = ep_address_to_index(ep_address);
+    if (index >= USB_MAX_EPS) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    mtx_lock(&bus->lock);
+    usb_virtual_ep_t* ep = &bus->eps[index];
+    ep->stalled = stall;
+
+    iotxn_t* txn = NULL;
+    if (stall) {
+        txn = list_remove_head_type(&ep->host_txns, iotxn_t, node);
+    }
+    mtx_unlock(&bus->lock);
+
+    if (txn) {
+        iotxn_complete(txn, MX_ERR_IO_REFUSED, 0);
+    }
+
+    return MX_OK;
+}
+
 static void usb_bus_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_virtual_bus_t* bus = ctx;
 
@@ -106,7 +130,13 @@ static void usb_bus_iotxn_queue(void* ctx, iotxn_t* txn) {
             iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
             return;
         }
-        list_add_tail(&bus->host_txns[index], &txn->node);
+        usb_virtual_ep_t* ep = &bus->eps[index];
+
+        if (ep->stalled) {
+            iotxn_complete(txn, MX_ERR_IO_REFUSED, 0);
+            return;
+        }
+        list_add_tail(&ep->host_txns, &txn->node);
         completion_signal(&bus->completion);
     } else if (txn->protocol == MX_PROTOCOL_USB_FUNCTION) {
         usb_function_protocol_data_t* data = iotxn_pdata(txn, usb_function_protocol_data_t);
@@ -116,8 +146,9 @@ static void usb_bus_iotxn_queue(void* ctx, iotxn_t* txn) {
             iotxn_complete(txn, MX_ERR_INVALID_ARGS, 0);
             return;
         }
+        usb_virtual_ep_t* ep = &bus->eps[index];
 
-        list_add_tail(&bus->device_txns[index], &txn->node);
+        list_add_tail(&ep->device_txns, &txn->node);
         completion_signal(&bus->completion);
     } else {
         printf("usb_bus_iotxn_queue bad protocol 0x%x\n", txn->protocol);
@@ -211,8 +242,9 @@ printf("usb_virtual_bus_bind\n");
     }
 
     for (unsigned i = 0; i < USB_MAX_EPS; i++) {
-        list_initialize(&bus->host_txns[i]);
-        list_initialize(&bus->device_txns[i]);
+        usb_virtual_ep_t* ep = &bus->eps[i];
+        list_initialize(&ep->host_txns);
+        list_initialize(&ep->device_txns);
     }
     mtx_init(&bus->lock, mtx_plain);
     completion_reset(&bus->completion);
