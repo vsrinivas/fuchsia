@@ -216,23 +216,21 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
     }
     wait_for_stats_buffer(balloon, stats_queue);
 
-    uint32_t len;
-    uint16_t flags;
-    void* addr;
-    status = virtio_queue_read_desc(stats_queue, balloon->stats.desc_index, &addr, &len, &flags);
+    virtio_desc_t desc;
+    status = virtio_queue_read_desc(stats_queue, balloon->stats.desc_index, &desc);
     if (status != MX_OK) {
         mtx_unlock(&balloon->stats.mutex);
         return status;
     }
 
-    if ((len % sizeof(virtio_balloon_stat_t)) != 0) {
+    if ((desc.len % sizeof(virtio_balloon_stat_t)) != 0) {
         mtx_unlock(&balloon->stats.mutex);
         return MX_ERR_IO_DATA_INTEGRITY;
     }
 
     // Invoke the handler on the stats.
-    const virtio_balloon_stat_t* stats = addr;
-    size_t stats_count = len / sizeof(virtio_balloon_stat_t);
+    const virtio_balloon_stat_t* stats = desc.addr;
+    size_t stats_count = desc.len / sizeof(virtio_balloon_stat_t);
     handler(stats, stats_count, ctx);
     mtx_unlock(&balloon->stats.mutex);
 

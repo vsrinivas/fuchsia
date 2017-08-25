@@ -155,14 +155,28 @@ mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
 /* Blocking variant of virtio_queue_next_avail. */
 void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index);
 
+/* A higher-level API for vring_desc. */
+typedef struct virtio_desc {
+    // Pointer to the buffer in our address space.
+    void* addr;
+    // Number of bytes at addr.
+    uint32_t len;
+    // Is there another buffer after this one?
+    bool has_next;
+    // Only valid if has_next is true.
+    uint16_t next;
+    // If true, this buffer must only be written to (no reads). Otherwise this
+    // buffer must only be read from (no writes).
+    bool writable;
+} virtio_desc_t;
+
 /* Reads a single descriptor from the queue.
  *
  * This method should only be called using descriptor indicies acquired with
  * virtio_queue_next_avail (including any chained decriptors) and before
  * they've been released with virtio_queue_return.
  */
-mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, void** addr,
-                                   uint32_t* len, uint16_t* flags);
+mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t index, virtio_desc_t* desc);
 
 /* Return a descriptor to the used ring.
  *
