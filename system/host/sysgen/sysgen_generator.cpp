@@ -17,9 +17,9 @@ using std::map;
 using std::vector;
 
 const map<string, string> user_attrs = {
-    {"noreturn", "__attribute__((__noreturn__))"},
-    {"const", "__attribute__((const))"},
-    {"deprecated", "__attribute__((deprecated))"},
+    {"noreturn", "__NO_RETURN"},
+    {"const", "__CONST"},
+    {"deprecated", "__DEPRECATED"},
 
     // All vDSO calls are "leaf" in the sense of the GCC attribute.
     // It just means they can't ever call back into their callers'
@@ -28,7 +28,7 @@ const map<string, string> user_attrs = {
 };
 
 const map<string, string> kernel_attrs = {
-    {"noreturn", "__attribute__((__noreturn__))"},
+    {"noreturn", "__NO_RETURN"},
 };
 
 static TestWrapper test_wrapper;
@@ -76,7 +76,7 @@ static HeaderGenerator user_header(
     user_attrs);
 
 static HeaderGenerator vdso_header(
-    "__attribute__((visibility(\"hidden\"))) extern ", // function prefix
+    "__LOCAL extern ", // function prefix
     {
         {"VDSO_mx_", skip_nothing},
         {"SYSCALL_mx_", skip_vdso},

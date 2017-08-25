@@ -46,12 +46,12 @@ bool HeaderGenerator::syscall(std::ofstream& os, const Syscall& sc) {
         if (!allow_pointer_wrapping_) {
             const vector<int> nonnull = collect_nonnull(sc);
             if (!nonnull.empty()) {
-                os << " __attribute__((nonnull(";
+                os << " __NONNULL((";
                 for (int idx : nonnull) {
                     os << idx << ", ";
                 }
                 os.seekp(-2, std::ios_base::end);
-                os << ")))";
+                os << "))";
             }
         }
 
