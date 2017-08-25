@@ -278,8 +278,11 @@ struct StructType   {
     static int static_member_variable;
 };
 
-void SomeGlobalFunc();  // note; "global" in air-quotes
-static void SomeStaticFunc();
+static void SomeStaticFunc() { }
+void SomeGlobalFunc() {
+    // Force an artifical use of SomeStaticFunc to avoid warnings.
+    SomeStaticFunc();
+}
 
 class  ClassType    { };
 enum   EnumType     { One, Two };
