@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+RECOVERY_PORT=/dev/ttyUSB1
+
+set -- `getopt "p:" "$@"`
+
+while [ ! -z "$1" ]
+do
+  case "$1" in
+  	--)
+		shift
+		break
+		;;
+    -p) RECOVERY_PORT=$2
+		shift;;
+     *) echo "$1"
+		break;;
+  esac
+
+  shift
+done
+
+if [ "$#" -ne 1 ]; then
+	echo "Usage: hikey-efi-build [-p <recovery tty path>] <uefi repo path>"
+	echo "   see /docs/targets/hikey960-uefi.md for more info"
+	exit 1
+fi
+
+export ARCH=aarch64
+export CROSS_COMPILE_64=aarch64-linux-gnu-
+export CROSS_COMPILE=aarch64-linux-gnu-
+
+#You need to set this to the location where you have all the hikey repositories
+
+BUILD_PATH=$1
+
+BUILD_OPTION=DEBUG
+
+export AARCH64_TOOLCHAIN=GCC5
+
+export UEFI_TOOLS_DIR=${BUILD_PATH}/uefi-tools
+
+export EDK2_DIR=${BUILD_PATH}/edk2
+
+export EDK2_OUTPUT_DIR=${EDK2_DIR}/Build/HiKey960/${BUILD_OPTION}_${AARCH64_TOOLCHAIN}
+
+cd ${EDK2_DIR}
+
+# Build UEFI & ARM Trust Firmware
+
+${UEFI_TOOLS_DIR}/uefi-build.sh -b ${BUILD_OPTION} -a ../arm-trusted-firmware hikey960
+
+if [ $? -ne 0 ]; then
+	echo " !!! UEFI edk2 failed to build !!! " >&2
+	exit 1
+fi
+
+
+# Generate l-loader.bin
+
+cd ${BUILD_PATH}/l-loader
+
+ln -sf ${EDK2_OUTPUT_DIR}/FV/bl1.bin
+
+ln -sf ${EDK2_OUTPUT_DIR}/FV/fip.bin
+
+ln -sf ${EDK2_OUTPUT_DIR}/FV/BL33_AP_UEFI.fd
+
+python gen_loader_hikey960.py -o l-loader.bin --img_bl1=bl1.bin --img_ns_bl1u=BL33_AP_UEFI.fd
+
+PTABLE=aosp-32g SECTOR_SIZE=4096 SGDISK=./sgdisk bash -x generate_ptable.sh
+
+cd ${BUILD_PATH}/tools-images-hikey960
+
+#This will load the images into ram and boot them... If you want to make it
+# permanent, then they will need to be flashed via fastboot after this step.
+
+ln -sf ../l-loader/l-loader.bin
+ln -sf ../l-loader/fip.bin
+
+./hikey_idt -c config -p $RECOVERY_PORT

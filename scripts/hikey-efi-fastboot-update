@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+#After the target is booted into recovery mode using the hikey-uefi-build
+# script, this script can be used to permanently update the bootloader flash
+# to the newly built uefi images
+
+if [ "$#" -ne 1 ]; then
+	echo "Usage: hikey-efi-fastboot-update <uefi repo path>"
+	echo "   see /docs/targets/hikey960-uefi.md for more info"
+	exit 1
+fi
+
+#where the hikey repos live
+BUILD_PATH=$1
+
+echo ${BUILD_PATH}
+
+fastboot flash ptable ${BUILD_PATH}/l-loader/prm_ptable.img
+fastboot flash xloader ${BUILD_PATH}/tools-images-hikey960/sec_xloader.img
+fastboot flash fastboot ${BUILD_PATH}/tools-images-hikey960/l-loader.bin
+fastboot flash fip ${BUILD_PATH}/tools-images-hikey960/fip.bin
+
