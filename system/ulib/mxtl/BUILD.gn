@@ -16,6 +16,7 @@ source_set("mxtl") {
     "include/mxtl/atomic.h",
     "include/mxtl/auto_call.h",
     "include/mxtl/auto_lock.h",
+    "include/mxtl/canary.h",
     "include/mxtl/deleter.h",
     "include/mxtl/function.h",
     "include/mxtl/intrusive_container_utils.h",
