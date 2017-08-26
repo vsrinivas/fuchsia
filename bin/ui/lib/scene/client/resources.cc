@@ -13,8 +13,18 @@ namespace client {
 Resource::Resource(Session* session)
     : session_(session), id_(session->AllocResourceId()) {}
 
+Resource::Resource(Resource&& moved)
+    : session_(moved.session_), id_(moved.id_) {
+  auto& moved_session = *const_cast<Session**>(&moved.session_);
+  auto& moved_id = *const_cast<uint32_t*>(&moved.id_);
+  moved_session = nullptr;
+  moved_id = 0;
+}
+
 Resource::~Resource() {
-  session_->ReleaseResource(id_);
+  // If this resource was moved, it is not responsible for releasing the ID.
+  if (session_)
+    session_->ReleaseResource(id_);
 }
 
 void Resource::Export(mx::eventpair export_token) {
@@ -36,11 +46,15 @@ void Resource::SetLabel(const std::string& label) {
 
 Shape::Shape(Session* session) : Resource(session) {}
 
+Shape::Shape(Shape&& moved) : Resource(std::move(moved)) {}
+
 Shape::~Shape() = default;
 
 Circle::Circle(Session* session, float radius) : Shape(session) {
   session->Enqueue(mozart::NewCreateCircleOp(id(), radius));
 }
+
+Circle::Circle(Circle&& moved) : Shape(std::move(moved)) {}
 
 Circle::~Circle() = default;
 
@@ -48,6 +62,8 @@ Rectangle::Rectangle(Session* session, float width, float height)
     : Shape(session) {
   session->Enqueue(mozart::NewCreateRectangleOp(id(), width, height));
 }
+
+Rectangle::Rectangle(Rectangle&& moved) : Shape(std::move(moved)) {}
 
 Rectangle::~Rectangle() = default;
 
@@ -64,6 +80,9 @@ RoundedRectangle::RoundedRectangle(Session* session,
       bottom_right_radius, bottom_left_radius));
 }
 
+RoundedRectangle::RoundedRectangle(RoundedRectangle&& moved)
+    : Shape(std::move(moved)) {}
+
 RoundedRectangle::~RoundedRectangle() = default;
 
 Image::Image(const Memory& memory,
@@ -79,6 +98,11 @@ Image::Image(Session* session,
   session->Enqueue(mozart::NewCreateImageOp(id(), memory_id, memory_offset_,
                                             std::move(info)));
 }
+
+Image::Image(Image&& moved)
+    : Resource(std::move(moved)),
+      memory_offset_(moved.memory_offset_),
+      info_(moved.info_) {}
 
 Image::~Image() = default;
 
@@ -99,11 +123,16 @@ Memory::Memory(Session* session, mx::vmo vmo, mozart2::MemoryType memory_type)
       mozart::NewCreateMemoryOp(id(), std::move(vmo), memory_type));
 }
 
+Memory::Memory(Memory&& moved)
+    : Resource(std::move(moved)), memory_type_(moved.memory_type_) {}
+
 Memory::~Memory() = default;
 
 Material::Material(Session* session) : Resource(session) {
   session->Enqueue(mozart::NewCreateMaterialOp(id()));
 }
+
+Material::Material(Material&& moved) : Resource(std::move(moved)) {}
 
 Material::~Material() = default;
 
@@ -119,6 +148,8 @@ void Material::SetColor(uint8_t red,
 }
 
 Node::Node(Session* session) : Resource(session) {}
+
+Node::Node(Node&& moved) : Resource(std::move(moved)) {}
 
 Node::~Node() = default;
 
@@ -154,6 +185,8 @@ ShapeNode::ShapeNode(Session* session) : Node(session) {
   session->Enqueue(mozart::NewCreateShapeNodeOp(id()));
 }
 
+ShapeNode::ShapeNode(ShapeNode&& moved) : Node(std::move(moved)) {}
+
 ShapeNode::~ShapeNode() = default;
 
 void ShapeNode::SetShape(uint32_t shape_id) {
@@ -165,6 +198,8 @@ void ShapeNode::SetMaterial(uint32_t material_id) {
 }
 
 ContainerNode::ContainerNode(Session* session) : Node(session) {}
+
+ContainerNode::ContainerNode(ContainerNode&& moved) : Node(std::move(moved)) {}
 
 ContainerNode::~ContainerNode() = default;
 
@@ -192,6 +227,8 @@ void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
 
 ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 
+ImportNode::ImportNode(ImportNode&& moved) : ContainerNode(std::move(moved)) {}
+
 ImportNode::~ImportNode() {
   FTL_DCHECK(is_bound_) << "Import was never bound.";
 }
@@ -214,6 +251,8 @@ ClipNode::ClipNode(Session* session) : ContainerNode(session) {
   session->Enqueue(mozart::NewCreateClipNodeOp(id()));
 }
 
+ClipNode::ClipNode(ClipNode&& moved) : ContainerNode(std::move(moved)) {}
+
 ClipNode::~ClipNode() = default;
 
 OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
@@ -221,6 +260,9 @@ OpacityNode::OpacityNode(Session* session) : ContainerNode(session) {
   // node for now.
   session->Enqueue(mozart::NewCreateEntityNodeOp(id()));
 }
+
+OpacityNode::OpacityNode(OpacityNode&& moved)
+    : ContainerNode(std::move(moved)) {}
 
 OpacityNode::~OpacityNode() = default;
 
@@ -237,6 +279,8 @@ Scene::Scene(Session* session) : ContainerNode(session) {
   session->Enqueue(mozart::NewCreateSceneOp(id()));
 }
 
+Scene::Scene(Scene&& moved) : ContainerNode(std::move(moved)) {}
+
 Scene::~Scene() = default;
 
 Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
@@ -244,6 +288,8 @@ Camera::Camera(const Scene& scene) : Camera(scene.session(), scene.id()) {}
 Camera::Camera(Session* session, uint32_t scene_id) : Resource(session) {
   session->Enqueue(mozart::NewCreateCameraOp(id(), scene_id));
 }
+
+Camera::Camera(Camera&& moved) : Resource(std::move(moved)) {}
 
 Camera::~Camera() = default;
 
@@ -259,6 +305,8 @@ Renderer::Renderer(Session* session) : Resource(session) {
   session->Enqueue(mozart::NewCreateRendererOp(id()));
 }
 
+Renderer::Renderer(Renderer&& moved) : Resource(std::move(moved)) {}
+
 Renderer::~Renderer() = default;
 
 void Renderer::SetCamera(uint32_t camera_id) {
@@ -268,6 +316,8 @@ void Renderer::SetCamera(uint32_t camera_id) {
 Layer::Layer(Session* session) : Resource(session) {
   session->Enqueue(mozart::NewCreateLayerOp(id()));
 }
+
+Layer::Layer(Layer&& moved) : Resource(std::move(moved)) {}
 
 Layer::~Layer() = default;
 
@@ -283,6 +333,8 @@ LayerStack::LayerStack(Session* session) : Resource(session) {
   session->Enqueue(mozart::NewCreateLayerStackOp(id()));
 }
 
+LayerStack::LayerStack(LayerStack&& moved) : Resource(std::move(moved)) {}
+
 LayerStack::~LayerStack() = default;
 
 void LayerStack::AddLayer(uint32_t layer_id) {
@@ -292,6 +344,9 @@ void LayerStack::AddLayer(uint32_t layer_id) {
 DisplayCompositor::DisplayCompositor(Session* session) : Resource(session) {
   session->Enqueue(mozart::NewCreateDisplayCompositorOp(id()));
 }
+
+DisplayCompositor::DisplayCompositor(DisplayCompositor&& moved)
+    : Resource(std::move(moved)) {}
 
 DisplayCompositor::~DisplayCompositor() = default;
 

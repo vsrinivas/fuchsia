@@ -64,6 +64,9 @@ HostMemory::HostMemory(Session* session,
     : Memory(session, std::move(init.first), mozart2::MemoryType::HOST_MEMORY),
       data_(std::move(init.second)) {}
 
+HostMemory::HostMemory(HostMemory&& moved)
+    : Memory(std::move(moved)), data_(std::move(moved.data_)) {}
+
 HostMemory::~HostMemory() = default;
 
 HostImage::HostImage(const HostMemory& memory,
@@ -82,6 +85,9 @@ HostImage::HostImage(Session* session,
                      mozart2::ImageInfoPtr info)
     : Image(session, memory_id, memory_offset, std::move(info)),
       data_(std::move(data)) {}
+
+HostImage::HostImage(HostImage&& moved)
+    : Image(std::move(moved)), data_(std::move(moved.data_)) {}
 
 HostImage::~HostImage() = default;
 

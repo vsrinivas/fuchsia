@@ -19,7 +19,10 @@ namespace client {
 class Resource {
  public:
   // Gets the session which owns this resource.
-  Session* session() const { return session_; }
+  Session* session() const {
+    FTL_DCHECK(session_);
+    return session_;
+  }
 
   // Gets the resource's id.
   uint32_t id() const { return id_; }
@@ -40,6 +43,8 @@ class Resource {
 
  protected:
   explicit Resource(Session* session);
+  Resource(Resource&& moved);
+
   ~Resource();
 
  private:
@@ -50,16 +55,18 @@ class Resource {
 };
 
 // Represents a memory resource in a session.
+// TODO(MZ-268): Make this class final, and add public move constructor.
 class Memory : public Resource {
  public:
-  explicit Memory(Session* session,
-                  mx::vmo vmo,
-                  mozart2::MemoryType memory_type);
+  Memory(Session* session, mx::vmo vmo, mozart2::MemoryType memory_type);
   ~Memory();
 
   // Gets the underlying VMO's memory type, indicating whether it represents
   // host or GPU memory.
   mozart2::MemoryType memory_type() const { return memory_type_; }
+
+ protected:
+  Memory(Memory&& moved);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Memory);
@@ -72,6 +79,7 @@ class Memory : public Resource {
 class Shape : public Resource {
  protected:
   explicit Shape(Session* session);
+  Shape(Shape&& moved);
   ~Shape();
 
  private:
@@ -79,9 +87,10 @@ class Shape : public Resource {
 };
 
 // Represents a circle shape resource in a session.
-class Circle : public Shape {
+class Circle final : public Shape {
  public:
-  explicit Circle(Session* session, float radius);
+  Circle(Session* session, float radius);
+  Circle(Circle&& moved);
   ~Circle();
 
  private:
@@ -89,9 +98,10 @@ class Circle : public Shape {
 };
 
 // Represents a rectangle shape resource in a session.
-class Rectangle : public Shape {
+class Rectangle final : public Shape {
  public:
-  explicit Rectangle(Session* session, float width, float height);
+  Rectangle(Session* session, float width, float height);
+  Rectangle(Rectangle&& moved);
   ~Rectangle();
 
  private:
@@ -99,15 +109,16 @@ class Rectangle : public Shape {
 };
 
 // Represents a rounded rectangle shape resource in a session.
-class RoundedRectangle : public Shape {
+class RoundedRectangle final : public Shape {
  public:
-  explicit RoundedRectangle(Session* session,
-                            float width,
-                            float height,
-                            float top_left_radius,
-                            float top_right_radius,
-                            float bottom_right_radius,
-                            float bottom_left_radius);
+  RoundedRectangle(Session* session,
+                   float width,
+                   float height,
+                   float top_left_radius,
+                   float top_right_radius,
+                   float bottom_right_radius,
+                   float bottom_left_radius);
+  RoundedRectangle(RoundedRectangle&& moved);
   ~RoundedRectangle();
 
  private:
@@ -115,16 +126,15 @@ class RoundedRectangle : public Shape {
 };
 
 // Represents an image resource in a session.
+// TODO(MZ-268): Make this class final, and add public move constructor.
 class Image : public Resource {
  public:
   // Creates an image resource bound to a session.
-  explicit Image(const Memory& memory,
-                 off_t memory_offset,
-                 mozart2::ImageInfoPtr info);
-  explicit Image(Session* session,
-                 uint32_t memory_id,
-                 off_t memory_offset,
-                 mozart2::ImageInfoPtr info);
+  Image(const Memory& memory, off_t memory_offset, mozart2::ImageInfoPtr info);
+  Image(Session* session,
+        uint32_t memory_id,
+        off_t memory_offset,
+        mozart2::ImageInfoPtr info);
   ~Image();
 
   // Returns the number of bytes needed to represent an image.
@@ -136,6 +146,9 @@ class Image : public Resource {
   // Gets information about the image's layout.
   const mozart2::ImageInfo& info() const { return info_; }
 
+ protected:
+  Image(Image&& moved);
+
  private:
   off_t const memory_offset_;
   mozart2::ImageInfo const info_;
@@ -144,9 +157,10 @@ class Image : public Resource {
 };
 
 // Represents a material resource in a session.
-class Material : public Resource {
+class Material final : public Resource {
  public:
   explicit Material(Session* session);
+  Material(Material&& moved);
   ~Material();
 
   // Sets the material's texture.
@@ -193,6 +207,7 @@ class Node : public Resource {
 
  protected:
   explicit Node(Session* session);
+  Node(Node&& moved);
   ~Node();
 
  private:
@@ -200,9 +215,10 @@ class Node : public Resource {
 };
 
 // Represents an shape node resource in a session.
-class ShapeNode : public Node {
+class ShapeNode final : public Node {
  public:
   explicit ShapeNode(Session* session);
+  ShapeNode(ShapeNode&& moved);
   ~ShapeNode();
 
   // Sets the shape that the shape node should draw.
@@ -233,12 +249,14 @@ class ContainerNode : public Node {
 
  protected:
   explicit ContainerNode(Session* session);
+  ContainerNode(ContainerNode&& moved);
   ~ContainerNode();
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContainerNode);
 };
 
 // Represents an entity node resource in a session.
+// TODO(MZ-268): Make this class final, and add public move constructor.
 class EntityNode : public ContainerNode {
  public:
   explicit EntityNode(Session* session);
@@ -253,9 +271,10 @@ class EntityNode : public ContainerNode {
 // Represents an imported node resource in a session.
 // The imported node is initially created in an unbound state and must
 // be bound immediately after creation, prior to use.
-class ImportNode : public ContainerNode {
+class ImportNode final : public ContainerNode {
  public:
   explicit ImportNode(Session* session);
+  ImportNode(ImportNode&& moved);
   ~ImportNode();
 
   // Imports the node associated with |import_token|.
@@ -276,9 +295,10 @@ class ImportNode : public ContainerNode {
 
 // Creates a node that clips the contents of its hierarchy to the specified clip
 // shape.
-class ClipNode : public ContainerNode {
+class ClipNode final : public ContainerNode {
  public:
   explicit ClipNode(Session* session);
+  ClipNode(ClipNode&& moved);
   ~ClipNode();
 
  private:
@@ -286,9 +306,10 @@ class ClipNode : public ContainerNode {
 };
 
 // Creates a node that renders its hierarchy with the specified opacity.
-class OpacityNode : public ContainerNode {
+class OpacityNode final : public ContainerNode {
  public:
   explicit OpacityNode(Session* session);
+  OpacityNode(OpacityNode&& moved);
   ~OpacityNode();
 
   // The opacity with which to render the contents of the hierarchy rooted at
@@ -300,9 +321,10 @@ class OpacityNode : public ContainerNode {
 };
 
 // Represents a scene resource in a session.
-class Scene : public ContainerNode {
+class Scene final : public ContainerNode {
  public:
   explicit Scene(Session* session);
+  Scene(Scene&& moved);
   ~Scene();
 
  private:
@@ -312,10 +334,11 @@ class Scene : public ContainerNode {
 };
 
 // Represents a camera resource in a session.
-class Camera : public Resource {
+class Camera final : public Resource {
  public:
   explicit Camera(const Scene& scene);
-  explicit Camera(Session* session, uint32_t scene_id);
+  Camera(Session* session, uint32_t scene_id);
+  Camera(Camera&& moved);
   ~Camera();
 
   // Sets the camera's projection parameters.
@@ -329,9 +352,10 @@ class Camera : public Resource {
 };
 
 // Represents a renderer resource in a session.
-class Renderer : public Resource {
+class Renderer final : public Resource {
  public:
   explicit Renderer(Session* session);
+  Renderer(Renderer&& moved);
   ~Renderer();
 
   // Sets the camera whose view will be rendered.
@@ -343,9 +367,10 @@ class Renderer : public Resource {
 };
 
 // Represents a layer resource in a session.
-class Layer : public Resource {
+class Layer final : public Resource {
  public:
   explicit Layer(Session* session);
+  Layer(Layer&& moved);
   ~Layer();
 
   // Sets the layer's XY translation and Z-order.
@@ -367,9 +392,10 @@ class Layer : public Resource {
 };
 
 // Represents a layer-stack resource in a session.
-class LayerStack : public Resource {
+class LayerStack final : public Resource {
  public:
   explicit LayerStack(Session* session);
+  LayerStack(LayerStack&& moved);
   ~LayerStack();
 
   void AddLayer(const Layer& layer) { AddLayer(layer.id()); }
@@ -380,9 +406,10 @@ class LayerStack : public Resource {
 };
 
 // Represents a display-compositor resource in a session.
-class DisplayCompositor : public Resource {
+class DisplayCompositor final : public Resource {
  public:
   explicit DisplayCompositor(Session* session);
+  DisplayCompositor(DisplayCompositor&& moved);
   ~DisplayCompositor();
 
   // Sets the layer-stack that is to be composited.

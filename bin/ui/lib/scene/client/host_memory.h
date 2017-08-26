@@ -47,9 +47,12 @@ class HostData : public ftl::RefCountedThreadSafe<HostData> {
 // session.  The memory is mapped read/write into this process and transferred
 // read-only to the scene manager.  The shared memory region is retained until
 // this object is destroyed.
-class HostMemory : public Memory {
+// TODO(MZ-268): Don't inherit from Memory, so that Memory can have a public
+// move constructor.
+class HostMemory final : public Memory {
  public:
-  explicit HostMemory(Session* session, size_t size);
+  HostMemory(Session* session, size_t size);
+  HostMemory(HostMemory&& moved);
   ~HostMemory();
 
   // Gets a reference to the underlying shared memory region.
@@ -73,16 +76,19 @@ class HostMemory : public Memory {
 // Represents an image resource backed by host-accessible shared memory bound to
 // a session.  The shared memory region is retained until this object is
 // destroyed.
-class HostImage : public Image {
+// TODO(MZ-268): Don't inherit from Image, so that Image can have a public move
+// constructor.
+class HostImage final : public Image {
  public:
-  explicit HostImage(const HostMemory& memory,
-                     off_t memory_offset,
-                     mozart2::ImageInfoPtr info);
-  explicit HostImage(Session* session,
-                     uint32_t memory_id,
-                     off_t memory_offset,
-                     ftl::RefPtr<HostData> data,
-                     mozart2::ImageInfoPtr info);
+  HostImage(const HostMemory& memory,
+            off_t memory_offset,
+            mozart2::ImageInfoPtr info);
+  HostImage(Session* session,
+            uint32_t memory_id,
+            off_t memory_offset,
+            ftl::RefPtr<HostData> data,
+            mozart2::ImageInfoPtr info);
+  HostImage(HostImage&& moved);
   ~HostImage();
 
   // Gets a reference to the underlying shared memory region.
