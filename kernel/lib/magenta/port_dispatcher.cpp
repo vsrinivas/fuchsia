@@ -34,15 +34,14 @@ static_assert(sizeof(mx_packet_guest_io_t) == sizeof(mx_packet_user_t),
 
 class ArenaPortAllocator final : public PortAllocator {
 public:
-    mx_status_t Init() TA_NO_THREAD_SAFETY_ANALYSIS;
+    mx_status_t Init();
     virtual ~ArenaPortAllocator() = default;
 
     virtual PortPacket* Alloc();
     virtual void Free(PortPacket* port_packet);
 
 private:
-    mxtl::Mutex mutex_;
-    mxtl::Arena arena_ TA_GUARDED(mutex_);
+    mxtl::TypedArena<PortPacket, mxtl::Mutex> arena_;
 };
 
 namespace {
@@ -51,25 +50,20 @@ ArenaPortAllocator port_allocator;
 }  // namespace.
 
 mx_status_t ArenaPortAllocator::Init() {
-    return arena_.Init("packets", sizeof(PortPacket), kMaxPendingPacketCount);
+    return arena_.Init("packets", kMaxPendingPacketCount);
 }
 
 PortPacket* ArenaPortAllocator::Alloc() {
-    void* addr;
-    {
-        AutoLock lock(&mutex_);
-        addr = arena_.Alloc();
-    }
-    if (addr == nullptr) {
+    PortPacket* packet = arena_.New(nullptr, this);
+    if (packet == nullptr) {
         printf("WARNING: Could not allocate new port packet\n");
         return nullptr;
     }
-    return new (addr) PortPacket(nullptr, this);
+    return packet;
 }
 
 void ArenaPortAllocator::Free(PortPacket* port_packet) {
-    AutoLock lock(&mutex_);
-    arena_.Free(port_packet);
+    arena_.Delete(port_packet);
 }
 
 PortPacket::PortPacket(const void* handle, PortAllocator* allocator)

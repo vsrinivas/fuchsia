@@ -114,4 +114,40 @@ private:
     friend class ArenaTestFriend;
 };
 
+// TypedArena Convenience wrapper that handles:
+// 1- C++ type enformcement
+// 2- Calls constructors and destructors
+// 3- Serializes access according to the Mtx type or
+//    use mxtl::NullMutex to use external serialization.
+//
+template <typename T, typename Mtx>
+class TypedArena {
+public:
+    status_t Init(const char* name, size_t max_count) TA_NO_THREAD_SAFETY_ANALYSIS {
+        return arena_.Init(name, sizeof(T), max_count);
+    }
+
+    template <typename... Args>
+    T* New(Args&&... args) {
+        mutex_.Acquire();
+        void* addr = arena_.Alloc();
+        mutex_.Release();
+        return addr ? new (addr) T(mxtl::forward<Args>(args)...) : nullptr;
+    };
+
+    void Delete(T* obj) {
+        obj->~T();
+        RawFree(obj);
+    }
+
+    void RawFree(void* mem) {
+        mutex_.Acquire();
+        arena_.Free(mem);
+        mutex_.Release();
+    }
+
+private:
+    Mtx mutex_;
+    Arena arena_ TA_GUARDED(mutex_);
+};
 } // namespace mxtl

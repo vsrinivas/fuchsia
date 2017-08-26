@@ -43,6 +43,15 @@ private:
     mutex_t mutex_;
 };
 
+class __TA_CAPABILITY("mutex") NullMutex {
+public:
+    constexpr NullMutex() = default;
+    void Acquire() __TA_ACQUIRE() { }
+    void Release() __TA_RELEASE() { }
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(NullMutex);
+};
+
 } // namespace mxtl
 
 #else   // if _KERNEL
