@@ -154,7 +154,9 @@ mx_status_t AudioDeviceStream::GetSupportedFormats(
         return MX_OK;
 
     out_formats->reset();
-    if (!out_formats->reserve(expected_formats)) {
+    mxtl::AllocChecker ac;
+    out_formats->reserve(expected_formats, &ac);
+    if (!ac.check()) {
         printf("Failed to allocated %u entries for format ranges\n", expected_formats);
         return MX_ERR_NO_MEMORY;
     }
@@ -191,9 +193,7 @@ mx_status_t AudioDeviceStream::GetSupportedFormats(
         }
 
         for (uint16_t i = 0; i < todo; ++i) {
-            bool __UNUSED good_push;
-            good_push = out_formats->push_back(resp.format_ranges[i]);
-            MX_DEBUG_ASSERT(good_push);
+            out_formats->push_back(resp.format_ranges[i]);
         }
 
         processed_formats += todo;

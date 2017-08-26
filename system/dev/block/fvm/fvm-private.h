@@ -66,7 +66,9 @@ public:
 
     bool push_back(uint32_t pslice) {
         MX_DEBUG_ASSERT(pslice != PSLICE_UNALLOCATED);
-        return pslices_.push_back(pslice);
+        mxtl::AllocChecker ac;
+        pslices_.push_back(pslice, &ac);
+        return ac.check();
     }
     void pop_back() { pslices_.pop_back(); }
     bool is_empty() const { return pslices_.size() == 0; }

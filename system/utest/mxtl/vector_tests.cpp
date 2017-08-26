@@ -152,10 +152,13 @@ bool vector_test_access_release() {
     // Create the vector, verify its contents
     {
         mxtl::Vector<ItemType, TestAllocatorTraits> vector;
-        ASSERT_TRUE(vector.reserve(size));
+        mxtl::AllocChecker ac;
+        vector.reserve(size, &ac);
+        ASSERT_TRUE(ac.check());
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vector.push_back(gen.NextItem()));
+            vector.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
 
@@ -206,12 +209,15 @@ bool vector_test_push_back_in_capacity() {
     {
         mxtl::Vector<ItemType, CountedAllocatorTraits> vector;
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 0);
-        ASSERT_TRUE(vector.reserve(size));
+        mxtl::AllocChecker ac;
+        vector.reserve(size, &ac);
+        ASSERT_TRUE(ac.check());
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1);
 
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vector.push_back(gen.NextItem()));
+            vector.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1);
 
@@ -241,13 +247,16 @@ bool vector_test_push_back_by_const_ref_in_capacity() {
     {
         mxtl::Vector<ItemType, CountedAllocatorTraits> vector;
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 0);
-        ASSERT_TRUE(vector.reserve(size));
+        mxtl::AllocChecker ac;
+        vector.reserve(size, &ac);
+        ASSERT_TRUE(ac.check());
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1);
 
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
             const ItemType item = gen.NextItem();
-            ASSERT_TRUE(vector.push_back(item));
+            vector.push_back(item, &ac);
+            ASSERT_TRUE(ac.check());
         }
         ASSERT_EQ(CountedAllocatorTraits::allocation_count, 1);
 
@@ -277,7 +286,9 @@ bool vector_test_push_back_beyond_capacity() {
         mxtl::Vector<ItemType, TestAllocatorTraits> vector;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vector.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vector.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -307,7 +318,9 @@ bool vector_test_push_back_by_const_ref_beyond_capacity() {
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
             const ItemType item = gen.NextItem();
-            ASSERT_TRUE(vector.push_back(item));
+            mxtl::AllocChecker ac;
+            vector.push_back(item, &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -336,7 +349,9 @@ bool vector_test_pop_back() {
         mxtl::Vector<ItemType, TestAllocatorTraits> vector;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vector.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vector.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -389,12 +404,17 @@ bool vector_test_allocation_failure() {
     // Test that a failing allocator cannot take on additional elements
     {
         mxtl::Vector<ItemType, FailingAllocatorTraits> vector;
-        ASSERT_TRUE(vector.reserve(0));
-        ASSERT_FALSE(vector.reserve(1));
-        ASSERT_FALSE(vector.reserve(size));
+        mxtl::AllocChecker ac;
+        vector.reserve(0, &ac);
+        ASSERT_TRUE(ac.check());
+        vector.reserve(1, &ac);
+        ASSERT_FALSE(ac.check());
+        vector.reserve(size, &ac);
+        ASSERT_FALSE(ac.check());
 
         ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
-        ASSERT_FALSE(vector.push_back(gen.NextItem()));
+        vector.push_back(gen.NextItem(), &ac);
+        ASSERT_FALSE(ac.check());
         ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
     }
     ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
@@ -404,18 +424,24 @@ bool vector_test_allocation_failure() {
     // elements
     {
         mxtl::Vector<ItemType, PartiallyFailingAllocatorTraits<ItemType, size>> vector;
-        ASSERT_TRUE(vector.reserve(0));
-        ASSERT_TRUE(vector.reserve(1));
-        ASSERT_TRUE(vector.reserve(size));
+        mxtl::AllocChecker ac;
+        vector.reserve(0, &ac);
+        ASSERT_TRUE(ac.check());
+        vector.reserve(1, &ac);
+        ASSERT_TRUE(ac.check());
+        vector.reserve(size, &ac);
+        ASSERT_TRUE(ac.check());
         ASSERT_EQ(vector.capacity(), size);
 
         ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
         gen.Reset();
         while (vector.size() < size) {
-            ASSERT_TRUE(vector.push_back(gen.NextItem()));
+            vector.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
             ASSERT_TRUE(ItemTraits::CheckLiveCount(vector.size()));
         }
-        ASSERT_FALSE(vector.push_back(gen.NextItem()));
+        vector.push_back(gen.NextItem(), &ac);
+        ASSERT_FALSE(ac.check());
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
         ASSERT_EQ(vector.size(), size);
         ASSERT_EQ(vector.capacity(), size);
@@ -448,7 +474,9 @@ bool vector_test_move() {
         ASSERT_TRUE(vectorA.is_empty());
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vectorA.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vectorA.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -473,7 +501,9 @@ bool vector_test_move() {
         mxtl::Vector<ItemType, TestAllocatorTraits> vectorA;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vectorA.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vectorA.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -507,12 +537,16 @@ bool vector_test_swap() {
         mxtl::Vector<ItemType, TestAllocatorTraits> vectorA;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vectorA.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vectorA.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
         mxtl::Vector<ItemType, TestAllocatorTraits> vectorB;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(size + i));
-            ASSERT_TRUE(vectorB.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vectorB.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -556,7 +590,9 @@ bool vector_test_iterator() {
         mxtl::Vector<ItemType, TestAllocatorTraits> vector;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vector.push_back(gen.NextItem()));
+            mxtl::AllocChecker ac;
+            vector.push_back(gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         gen.Reset();
@@ -593,16 +629,20 @@ bool vector_test_insert_delete() {
 
     {
         mxtl::Vector<ItemType, TestAllocatorTraits> vector;
+        mxtl::AllocChecker ac;
         for (size_t i = 0; i < size; i++) {
             ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
-            ASSERT_TRUE(vector.insert(i, gen.NextItem()));
+            vector.insert(i, gen.NextItem(), &ac);
+            ASSERT_TRUE(ac.check());
         }
 
         // Insert at position zero and one
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
-        ASSERT_TRUE(vector.insert(0, gen.NextItem()));
+        vector.insert(0, gen.NextItem(), &ac);
+        ASSERT_TRUE(ac.check());
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 1));
-        ASSERT_TRUE(vector.insert(1, gen.NextItem()));
+        vector.insert(1, gen.NextItem(), &ac);
+        ASSERT_TRUE(ac.check());
         ASSERT_TRUE(ItemTraits::CheckLiveCount(size + 2));
         gen.Reset();
 
@@ -647,6 +687,63 @@ bool vector_test_insert_delete() {
     END_TEST;
 }
 
+template <typename ItemTraits, size_t size>
+bool vector_test_no_alloc_check() {
+    using ItemType = typename ItemTraits::ItemType;
+
+    BEGIN_TEST;
+
+    ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
+
+    {
+        Generator<ItemTraits> gen;
+        mxtl::Vector<ItemType, TestAllocatorTraits> vector;
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
+            vector.push_back(gen.NextItem());
+        }
+        gen.Reset();
+        for (auto& e : vector) {
+            auto base = gen.NextValue();
+            ASSERT_EQ(ItemTraits::GetValue(e), base);
+        }
+    }
+
+    {
+        Generator<ItemTraits> gen;
+        mxtl::Vector<ItemType, TestAllocatorTraits> vector;
+        vector.reserve(size);
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
+            vector.push_back(gen.NextItem());
+        }
+        gen.Reset();
+        for (auto& e : vector) {
+            auto base = gen.NextValue();
+            ASSERT_EQ(ItemTraits::GetValue(e), base);
+        }
+    }
+
+    {
+        Generator<ItemTraits> gen;
+        mxtl::Vector<ItemType, TestAllocatorTraits> vector;
+        for (size_t i = 0; i < size; i++) {
+            ASSERT_TRUE(ItemTraits::CheckLiveCount(i));
+            vector.insert(i, gen.NextItem());
+        }
+        gen.Reset();
+        for (auto& e : vector) {
+            auto base = gen.NextValue();
+            ASSERT_EQ(ItemTraits::GetValue(e), base);
+        }
+    }
+
+    ASSERT_TRUE(ItemTraits::CheckLiveCount(0));
+    ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
+
+    END_TEST;
+}
+
 }  // namespace anonymous
 
 #define RUN_FOR_ALL_TRAITS(test_base, test_size)              \
@@ -673,6 +770,7 @@ RUN_FOR_ALL(vector_test_move)
 RUN_FOR_ALL(vector_test_swap)
 RUN_FOR_ALL(vector_test_iterator)
 RUN_FOR_ALL(vector_test_insert_delete)
+RUN_FOR_ALL(vector_test_no_alloc_check)
 RUN_TEST((vector_test_push_back_by_const_ref_in_capacity<ValueTypeTraits, 100>))
 RUN_TEST((vector_test_push_back_by_const_ref_beyond_capacity<ValueTypeTraits, 100>))
 END_TEST_CASE(vector_tests)

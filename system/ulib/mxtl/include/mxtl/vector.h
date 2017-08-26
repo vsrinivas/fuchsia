@@ -89,12 +89,19 @@ public:
     }
 
     // Reserve enough size to hold at least capacity elements.
-    // Returns true on success, false on allocation failure.
-    bool reserve(size_t capacity) __WARN_UNUSED_RESULT {
+    void reserve(size_t capacity, AllocChecker* ac) {
         if (capacity <= capacity_) {
-            return true;
+            ac->arm(0u, true);
+            return;
         }
-        return reallocate(capacity);
+        reallocate(capacity, ac);
+    }
+
+    void reserve(size_t capacity) {
+        if (capacity <= capacity_) {
+            return;
+        }
+        reallocate(capacity);
     }
 
     void reset() {
@@ -121,40 +128,40 @@ public:
     // 'mxtl::decay' call.
     template <typename U,
               typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
-    bool __WARN_UNUSED_RESULT push_back(U&& value) {
-        if (!grow_for_new_element()) {
-            return false;
+    void push_back(U&& value, AllocChecker* ac) {
+        if (!grow_for_new_element(ac)) {
+            return;
         }
         new (&ptr_[size_++]) T(mxtl::forward<U>(value));
-        return true;
+    }
+
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void push_back(U&& value) {
+        grow_for_new_element();
+        new (&ptr_[size_++]) T(mxtl::forward<U>(value));
     }
 
     // Insert an element into the |index| position in the vector, shifting
     // all subsequent elements back one position.
     //
-    // Returns a bool indicating success (true) or failure (due to lack
-    // of memory), like "push_back".
-    //
     // Index must be less than or equal to the size of the vector.
     template <typename U,
               typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
-    bool __WARN_UNUSED_RESULT insert(size_t index, U&& value) {
+    void insert(size_t index, U&& value, AllocChecker* ac) {
         MX_DEBUG_ASSERT(index <= size_);
-        if (!grow_for_new_element()) {
-            return false;
+        if (!grow_for_new_element(ac)) {
+            return;
         }
-        if (index == size_) {
-            // Inserting into the end of the vector; nothing to shift
-            size_++;
-            new (&ptr_[index]) T(mxtl::forward<U>(value));
-        } else {
-            // Avoid calling both a destructor and move constructor, preferring
-            // to simply call a move assignment operator if the index contains
-            // a valid (yet already moved-from) object.
-            shift_back(index);
-            ptr_[index] = mxtl::forward<U>(value);
-        }
-        return true;
+        insert_complete(index, mxtl::forward<U>(value));
+    }
+
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void insert(size_t index, U&& value) {
+        MX_DEBUG_ASSERT(index <= size_);
+        grow_for_new_element();
+        insert_complete(index, mxtl::forward<U>(value));
     }
 
     // Remove an element from the |index| position in the vector, shifting
@@ -198,6 +205,24 @@ public:
     }
 
 private:
+    // The second half of 'insert', which asumes that there is enough
+    // room for a new element.
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void insert_complete(size_t index, U&& value) {
+        if (index == size_) {
+            // Inserting into the end of the vector; nothing to shift
+            size_++;
+            new (&ptr_[index]) T(mxtl::forward<U>(value));
+        } else {
+            // Avoid calling both a destructor and move constructor, preferring
+            // to simply call a move assignment operator if the index contains
+            // a valid (yet already moved-from) object.
+            shift_back(index);
+            ptr_[index] = mxtl::forward<U>(value);
+        }
+    }
+
     // Moves all objects in the internal storage (at & after index) back by one,
     // leaving an 'empty' object at index.
     // Increases the size of the vector by one.
@@ -259,16 +284,27 @@ private:
 
     // Grows the vector's capacity to accommodate one more element.
     // Returns true on success, false on failure.
-    bool grow_for_new_element() {
+    bool grow_for_new_element(AllocChecker* ac) {
         MX_DEBUG_ASSERT(size_ <= capacity_);
         if (size_ == capacity_) {
             size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
                     capacity_ * kCapacityGrowthFactor;
-            if (!reallocate(newCapacity)) {
+            if (!reallocate(newCapacity, ac)) {
                 return false;
             }
+        } else {
+            ac->arm(0u, true);
         }
         return true;
+    }
+
+    void grow_for_new_element() {
+        MX_DEBUG_ASSERT(size_ <= capacity_);
+        if (size_ == capacity_) {
+            size_t newCapacity = capacity_ < kCapacityMinimum ? kCapacityMinimum :
+                    capacity_ * kCapacityGrowthFactor;
+            reallocate(newCapacity);
+        }
     }
 
     // Shrink the vector to fit a smaller number of elements, if we reach
@@ -287,18 +323,30 @@ private:
     // Forces capacity to become newCapcity.
     // Returns true on success, false on failure.
     // If reallocate fails, the old "ptr_" array is unmodified.
-    bool reallocate(size_t newCapacity) {
+    bool reallocate(size_t newCapacity, AllocChecker* ac) {
         MX_DEBUG_ASSERT(newCapacity > 0);
         MX_DEBUG_ASSERT(newCapacity >= size_);
         auto newPtr = reinterpret_cast<T*>(AllocatorTraits::Allocate(newCapacity * sizeof(T)));
         if (newPtr == nullptr) {
+            ac->arm(1u, false);
             return false;
         }
         transfer_to(newPtr, size_);
         AllocatorTraits::Deallocate(ptr_);
         capacity_ = newCapacity;
         ptr_ = newPtr;
+        ac->arm(0u, true);
         return true;
+    }
+
+    void reallocate(size_t newCapacity) {
+        MX_DEBUG_ASSERT(newCapacity > 0);
+        MX_DEBUG_ASSERT(newCapacity >= size_);
+        auto newPtr = reinterpret_cast<T*>(AllocatorTraits::Allocate(newCapacity * sizeof(T)));
+        transfer_to(newPtr, size_);
+        AllocatorTraits::Deallocate(ptr_);
+        capacity_ = newCapacity;
+        ptr_ = newPtr;
     }
 
     // Release returns the underlying storage of the vector,

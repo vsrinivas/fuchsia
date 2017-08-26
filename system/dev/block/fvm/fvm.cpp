@@ -28,7 +28,9 @@ mxtl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
     mxtl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice + 1));
     if (!ac.check()) {
         return nullptr;
-    } else if (!new_extent->pslices_.reserve(end() - vslice)) {
+    }
+    new_extent->pslices_.reserve(end() - vslice, &ac);
+    if (!ac.check()) {
         return nullptr;
     }
     for (size_t vs = vslice + 1; vs < end(); vs++) {
@@ -43,7 +45,9 @@ mxtl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
 
 bool SliceExtent::Merge(const SliceExtent& other) {
     MX_DEBUG_ASSERT(end() == other.start());
-    if (!pslices_.reserve(other.size())) {
+    mxtl::AllocChecker ac;
+    pslices_.reserve(other.size(), &ac);
+    if (!ac.check()) {
         return false;
     }
 

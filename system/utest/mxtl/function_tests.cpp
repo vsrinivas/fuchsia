@@ -556,7 +556,9 @@ int AlternatingSum(const mxtl::Vector<int>& in) {
 bool example_code() {
     mxtl::Vector<int> in;
     for (int i = 0; i < 10; i++) {
-        EXPECT_TRUE(in.push_back(i));
+        mxtl::AllocChecker ac;
+        in.push_back(i, &ac);
+        EXPECT_TRUE(ac.check());
     }
 
     EXPECT_EQ(45, example::Sum(in));

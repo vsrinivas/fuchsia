@@ -1878,7 +1878,9 @@ int random_access_thread(void* arg) {
             ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0);
             ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color));
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
-            ASSERT_TRUE(self->extents.push_back(mxtl::move(extent)));
+            mxtl::AllocChecker ac;
+            self->extents.push_back(mxtl::move(extent), &ac);
+            ASSERT_TRUE(ac.check());
             break;
         }
         case 2: {
@@ -2034,7 +2036,9 @@ static bool TestRandomOpMultithreaded(void) {
         fvm_extent_t extent;
         extent.start = 0;
         extent.len = 1;
-        EXPECT_TRUE(s.thread_states[i].extents.push_back(mxtl::move(extent)));
+        mxtl::AllocChecker ac;
+        s.thread_states[i].extents.push_back(mxtl::move(extent), &ac);
+        EXPECT_TRUE(ac.check());
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
         EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
                               random_access_thread<ThreadCount>, &s),
