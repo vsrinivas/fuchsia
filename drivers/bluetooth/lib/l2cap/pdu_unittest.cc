@@ -173,7 +173,7 @@ TEST(L2CAP_PduTest, ReadMultipleFragments) {
 
   // Partial initial fragment
   auto packet0 = PacketFromBytes(
-    // ACL data header (total size is 4, packet contains 1)
+    // ACL data header (PBF: initial fragment)
     0x01, 0x00, 0x0A, 0x00,
 
     // Basic L2CAP header
@@ -261,7 +261,7 @@ TEST(L2CAP_PduTest, ViewFirstFragment) {
 
   // Partial initial fragment
   auto packet0 = PacketFromBytes(
-    // ACL data header (total size is 4, packet contains 1)
+    // ACL data header (PBF: initial fragment)
     0x01, 0x00, 0x06, 0x00,
 
     // Basic L2CAP header
@@ -293,6 +293,77 @@ TEST(L2CAP_PduTest, ViewFirstFragment) {
   // first fragment.
   view = pdu.ViewFirstFragment(100);
   EXPECT_EQ("Te", view.AsString());
+}
+
+TEST(L2CAP_PduTest, Reader) {
+  Recombiner recombiner;
+
+  // clang-format off
+
+  // Partial initial fragment
+  auto packet0 = PacketFromBytes(
+    // ACL data header (PBF: initial fragment)
+    0x01, 0x00, 0x09, 0x00,
+
+    // Basic L2CAP header
+    0x0F, 0x00, 0xFF, 0xFF, 'R', 'e', 'a', 'd', 'i'
+  );
+
+  // Continuation fragment
+  auto packet1 = PacketFromBytes(
+    // ACL data header (PBF: continuing fragment)
+    0x01, 0x10, 0x06, 0x00,
+
+    // L2CAP PDU fragment
+    'n', 'g', ' ', 'p', 'a', 'c'
+  );
+
+  // Continuation fragment
+  auto packet2 = PacketFromBytes(
+    // ACL data header (PBF: continuing fragment)
+    0x01, 0x10, 0x04, 0x00,
+
+    // L2CAP PDU fragment
+    'k', 'e', 't', 's'
+  );
+
+  // clang-format on
+
+  EXPECT_TRUE(recombiner.AddFragment(std::move(packet0)));
+  EXPECT_TRUE(recombiner.AddFragment(std::move(packet1)));
+  EXPECT_TRUE(recombiner.AddFragment(std::move(packet2)));
+
+  PDU pdu;
+  EXPECT_TRUE(recombiner.Release(&pdu));
+  ASSERT_TRUE(pdu.is_valid());
+
+  PDU::Reader reader(&pdu);
+  EXPECT_FALSE(reader.ReadNext(16, [](const auto&) {}));
+  EXPECT_FALSE(reader.ReadNext(0, [](const auto&) {}));
+
+  // Read the entire PDU.
+  EXPECT_TRUE(reader.ReadNext(15, [](const auto& data) {
+    EXPECT_EQ("Reading packets", data.AsString());
+  }));
+
+  reader = PDU::Reader(&pdu);
+
+  // Read 4 bytes (no-copy).
+  EXPECT_TRUE(reader.ReadNext(
+      4, [](const auto& data) { EXPECT_EQ("Read", data.AsString()); }));
+
+  // Read across fragment boundaries which will make a copy.
+  EXPECT_TRUE(reader.ReadNext(
+      4, [](const auto& data) { EXPECT_EQ("ing ", data.AsString()); }));
+
+  // Read until the end of the current fragment (no-copy). The iterator should
+  // point to the next fragment.
+  EXPECT_TRUE(reader.ReadNext(
+      3, [](const auto& data) { EXPECT_EQ("pac", data.AsString()); }));
+
+  // Read all of the last fragment (no-copy).
+  EXPECT_TRUE(reader.ReadNext(
+      4, [](const auto& data) { EXPECT_EQ("kets", data.AsString()); }));
 }
 
 }  // namespace

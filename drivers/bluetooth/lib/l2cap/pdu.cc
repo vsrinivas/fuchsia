@@ -9,6 +9,77 @@
 namespace bluetooth {
 namespace l2cap {
 
+PDU::Reader::Reader(const PDU* pdu)
+    : offset_(sizeof(BasicHeader)),
+      frag_offset_(sizeof(BasicHeader)),
+      pdu_(pdu) {
+  FXL_DCHECK(pdu_);
+  FXL_DCHECK(pdu_->is_valid());
+
+  cur_fragment_ = pdu_->fragments_.cbegin();
+}
+
+bool PDU::Reader::ReadNext(size_t size, const ReadFunc& func) {
+  FXL_DCHECK(func);
+
+  if (!size)
+    return false;
+
+  if (cur_fragment_ == pdu_->fragments_.cend() ||
+      offset_ + size > pdu_->length() + sizeof(BasicHeader)) {
+    return false;
+  }
+
+  // Return a view to avoid copying if the fragment boundary is not being
+  // crossed.
+  size_t frag_size = cur_fragment_->view().payload_size();
+  if (frag_offset_ + size <= frag_size) {
+    func(cur_fragment_->view().payload_data().view(frag_offset_, size));
+
+    offset_ += size;
+    frag_offset_ += size;
+    if (frag_offset_ == frag_size) {
+      frag_offset_ = 0u;
+      ++cur_fragment_;
+    }
+    return true;
+  }
+
+  // TODO(armansito): This will work fine for small sizes but we'll need to
+  // dynamically allocate for packets that are large. Fix this once L2CAP slab
+  // allocators have been wired up.
+  if (size > 1024) {
+    FXL_LOG(WARNING) << "Need to dynamically allocate buffer (size: " << size
+                     << ")";
+    return false;
+  }
+
+  uint8_t buffer[size];
+  common::MutableBufferView out(buffer, size);
+
+  size_t remaining = size;
+  while (cur_fragment_ != pdu_->fragments_.cend() && remaining) {
+    // Calculate how much to copy from the current fragment.
+    auto payload = cur_fragment_->view().payload_data();
+    size_t copy_size = std::min(payload.size() - frag_offset_, remaining);
+    out.Write(payload.data() + frag_offset_, copy_size, size - remaining);
+
+    offset_ += copy_size;
+    frag_offset_ += copy_size;
+    remaining -= copy_size;
+
+    // Reset fragment offset if we processed an entire fragment.
+    FXL_DCHECK(frag_offset_ <= payload.size());
+    if (frag_offset_ == payload.size()) {
+      frag_offset_ = 0u;
+      ++cur_fragment_;
+    }
+  }
+
+  func(out);
+  return true;
+}
+
 PDU::PDU() : fragment_count_(0u) {}
 
 // NOTE: The order in which these are initialized matters, as

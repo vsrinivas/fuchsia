@@ -35,6 +35,31 @@ class PDU final {
  public:
   using FragmentList = fbl::DoublyLinkedList<hci::ACLDataPacketPtr>;
 
+  // Reader allows sequential access to the payload of a (B-frame) PDU using no
+  // dynamic allocations and as little copying as possible.
+  //
+  // A Reader is valid as long as the underlying PDU is valid. Deleting or
+  // invalidating a PDU (e.g. via ReleaseFragments()) while using a Reader will
+  // lead to undefined behavior.
+  class Reader final {
+   public:
+    explicit Reader(const PDU* pdu);
+
+    // Calls |func| with the next segment of data with the given |size|. Returns
+    // false if less than |size| bytes remain in the PDU or if |size| is 0.
+    //
+    // TODO(armansito): Allow jumping to an offset. With that we can remove
+    // PDU::Copy() and PDU::ViewFirstFragment().
+    using ReadFunc = std::function<void(const common::ByteBuffer& data)>;
+    bool ReadNext(size_t size, const ReadFunc& func);
+
+   private:
+    size_t offset_;
+    size_t frag_offset_;
+    const PDU* pdu_;
+    FragmentList::const_iterator cur_fragment_;
+  };
+
   PDU();
   ~PDU() = default;
 
@@ -94,6 +119,7 @@ class PDU final {
   FragmentList ReleaseFragments();
 
  private:
+  friend class Reader;
   friend class Fragmenter;
   friend class Recombiner;
 
