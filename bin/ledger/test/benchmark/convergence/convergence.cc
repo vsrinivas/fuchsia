@@ -6,12 +6,13 @@
 
 #include <iostream>
 
+#include <trace/event.h>
+#include <trace-provider/provider.h>
+
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 #include "apps/ledger/src/test/get_ledger.h"
-#include "apps/tracing/lib/trace/event.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -55,8 +56,6 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
       beta_tmp_dir_(kStoragePath) {
   FTL_DCHECK(entry_count > 0);
   FTL_DCHECK(value_size > 0);
-  tracing::InitializeTracer(application_context_.get(),
-                            {"benchmark_ledger_convergence"});
 }
 
 void ConvergenceBenchmark::Run() {
@@ -195,6 +194,7 @@ int main(int argc, const char** argv) {
   }
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
   test::benchmark::ConvergenceBenchmark app(entry_count, value_size, server_id);
   loop.task_runner()->PostTask([&app] { app.Run(); });
   loop.Run();

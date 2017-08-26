@@ -4,13 +4,14 @@
 
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"

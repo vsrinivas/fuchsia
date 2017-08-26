@@ -4,11 +4,11 @@
 
 #include "apps/ledger/src/test/benchmark/put/put.h"
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/test/benchmark/lib/logging.h"
 #include "apps/ledger/src/test/get_ledger.h"
-#include "apps/tracing/lib/trace/event.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -48,8 +48,6 @@ PutBenchmark::PutBenchmark(int entry_count,
   FTL_DCHECK(transaction_size > 0);
   FTL_DCHECK(key_size > 0);
   FTL_DCHECK(value_size > 0);
-  tracing::InitializeTracer(application_context_.get(),
-                            {"benchmark_ledger_put"});
   switch (reference_strategy) {
     case ReferenceStrategy::ON:
       should_put_as_reference_ = [](size_t value_size) { return true; };

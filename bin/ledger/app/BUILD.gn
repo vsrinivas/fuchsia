@@ -20,10 +20,10 @@ executable("app") {
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
     "//apps/network/services",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -98,10 +98,10 @@ source_set("lib") {
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
     "//apps/modular/services/auth",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

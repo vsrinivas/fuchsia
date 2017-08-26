@@ -16,6 +16,8 @@
 #include <map>
 #include <utility>
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cobalt/cobalt.h"
@@ -31,7 +33,6 @@
 #include "apps/ledger/src/storage/impl/object_impl.h"
 #include "apps/ledger/src/storage/impl/split.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"

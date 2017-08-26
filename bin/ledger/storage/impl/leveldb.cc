@@ -6,9 +6,10 @@
 
 #include <utility>
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/cobalt/cobalt.h"
 #include "apps/ledger/src/storage/impl/object_impl.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
 

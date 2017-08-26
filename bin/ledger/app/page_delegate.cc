@@ -8,13 +8,14 @@
 #include <utility>
 #include <vector>
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/app/page_utils.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/socket/strings.h"
 

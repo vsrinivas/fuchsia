@@ -31,8 +31,6 @@ executable("launch_benchmark") {
     "//apps/ledger/services/public",
     "//apps/ledger/src/test/benchmark/lib",
     "//apps/ledger/src/test/benchmark/put:lib",
-    "//apps/tracing/lib/trace",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

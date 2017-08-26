@@ -8,12 +8,13 @@
 #include <string>
 #include <utility>
 
+#include <trace/event.h>
+
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace ledger {

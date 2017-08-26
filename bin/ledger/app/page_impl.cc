@@ -4,9 +4,10 @@
 
 #include "apps/ledger/src/app/page_impl.h"
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/app/page_delegate.h"
 #include "apps/ledger/src/callback/trace_callback.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace ledger {

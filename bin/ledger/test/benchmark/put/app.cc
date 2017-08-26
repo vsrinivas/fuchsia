@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include <trace-provider/provider.h>
+
 #include "apps/ledger/src/test/benchmark/put/put.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/random/rand.h"
@@ -97,6 +99,7 @@ int main(int argc, const char** argv) {
   }
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
   test::benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
                                     value_size, update, ref_strategy, seed);
   // TODO(nellyv): A delayed task is necessary because of US-257.

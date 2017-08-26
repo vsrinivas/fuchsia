@@ -8,9 +8,10 @@
 #include <unordered_set>
 #include <utility>
 
+#include <trace/event.h>
+
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/vmo/strings.h"
 

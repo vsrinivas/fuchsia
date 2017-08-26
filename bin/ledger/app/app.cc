@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <magenta/device/vfs.h>
 #include <unistd.h>
 
 #include <memory>
 #include <utility>
+
+#include <magenta/device/vfs.h>
+#include <trace-provider/provider.h>
 
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
@@ -19,7 +21,6 @@
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/network/no_network_service.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/unique_fd.h"
@@ -74,13 +75,13 @@ class App : public LedgerController,
  public:
   explicit App(AppParams app_params)
       : app_params_(app_params),
+        trace_provider_(loop_.async()),
         application_context_(app::ApplicationContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
                                     loop_.task_runner(),
                                     application_context_.get())),
         config_persistence_(app_params_.config_persistence) {
     FTL_DCHECK(application_context_);
-    tracing::InitializeTracer(application_context_.get(), {"ledger"});
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
@@ -164,8 +165,9 @@ class App : public LedgerController,
   }
 
   bool shutdown_in_progress_ = false;
-  mtl::MessageLoop loop_;
   const AppParams app_params_;
+  mtl::MessageLoop loop_;
+  trace::TraceProvider trace_provider_;
   std::unique_ptr<app::ApplicationContext> application_context_;
   ftl::AutoCall<ftl::Closure> cobalt_cleaner_;
   const LedgerRepositoryFactoryImpl::ConfigPersistence config_persistence_;

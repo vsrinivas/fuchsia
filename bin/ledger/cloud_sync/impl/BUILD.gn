@@ -36,8 +36,8 @@ source_set("impl") {
   ]
 
   deps = [
-    "//apps/tracing/lib/trace",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

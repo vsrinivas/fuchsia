@@ -23,10 +23,10 @@ source_set("callback") {
     "waiter.h",
   ]
 
-  deps = [
-    "//apps/tracing/lib/trace:provider",
+  public_deps = [
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

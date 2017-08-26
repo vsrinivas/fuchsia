@@ -75,16 +75,15 @@ source_set("lib") {
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
-    "//apps/tracing/lib/trace",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
+    "//magenta/system/ulib/trace",
   ]
 
   public_deps = [
     "//apps/ledger/src/convert",
     "//apps/ledger/src/coroutine",
     "//apps/ledger/src/third_party/bup",
-    "//apps/tracing/lib/trace",
     "//third_party/leveldb",
   ]
 

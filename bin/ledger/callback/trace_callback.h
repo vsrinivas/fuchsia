@@ -8,7 +8,8 @@
 #include <functional>
 #include <utility>
 
-#include "apps/tracing/lib/trace/event.h"
+#include <trace/event.h>
+
 #include "lib/ftl/functional/auto_call.h"
 #include "lib/ftl/functional/make_copyable.h"
 
