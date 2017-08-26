@@ -16,19 +16,19 @@ import (
 	"lib/fidl/examples/services/echo"
 )
 
-type EchoImpl struct{}
+type echoImpl struct{}
 
-func (echo *EchoImpl) EchoString(inValue *string) (outValue *string, err error) {
+func (echo *echoImpl) EchoString(inValue *string) (outValue *string, err error) {
 	log.Printf("server: %s\n", *inValue)
 	return inValue, nil
 }
 
-type EchoDelegate struct {
+type echoDelegate struct {
 	stubs []*bindings.Stub
 }
 
-func (delegate *EchoDelegate) Bind(r echo.Echo_Request) {
-	s := r.NewStub(&EchoImpl{}, bindings.GetAsyncWaiter())
+func (delegate *echoDelegate) Bind(r echo.Echo_Request) {
+	s := r.NewStub(&echoImpl{}, bindings.GetAsyncWaiter())
 	delegate.stubs = append(delegate.stubs, s)
 	go func() {
 		for {
@@ -42,7 +42,7 @@ func (delegate *EchoDelegate) Bind(r echo.Echo_Request) {
 	}()
 }
 
-func (delegate *EchoDelegate) Quit() {
+func (delegate *echoDelegate) Quit() {
 	for _, s := range delegate.stubs {
 		s.Close()
 	}
@@ -50,7 +50,7 @@ func (delegate *EchoDelegate) Quit() {
 
 func main() {
 	c := context.CreateFromStartupInfo()
-	c.OutgoingService.AddService(&echo.Echo_ServiceBinder{&EchoDelegate{}})
+	c.OutgoingService.AddService(&echo.Echo_ServiceBinder{&echoDelegate{}})
 	c.Serve()
 
 	select {}

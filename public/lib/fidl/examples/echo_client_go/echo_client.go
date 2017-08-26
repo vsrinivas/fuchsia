@@ -13,12 +13,12 @@ import (
 	"lib/fidl/examples/services/echo"
 )
 
-type EchoClientApp struct {
+type echoClientApp struct {
 	ctx  *context.Context
 	echo *echo.Echo_Proxy
 }
 
-func (a *EchoClientApp) Start() {
+func (a *echoClientApp) start() {
 	r, p := a.echo.NewRequest(bindings.GetAsyncWaiter())
 	a.echo = p
 	a.ctx.ConnectToEnvService(r)
@@ -35,6 +35,6 @@ func (a *EchoClientApp) Start() {
 }
 
 func main() {
-	a := &EchoClientApp{ctx: context.CreateFromStartupInfo()}
-	a.Start()
+	a := &echoClientApp{ctx: context.CreateFromStartupInfo()}
+	a.start()
 }
