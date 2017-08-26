@@ -27,11 +27,6 @@ config("common_include_dirs") {
   ]
 }
 
-config("common_config") {
-  # Specifically depend on libasync.a to avoid linking against stale libasync.so
-  ldflags = [ "-l:libasync.a" ]
-}
-
 source_set("common") {
   sources = [
     "acquire_fence.cc",
@@ -153,7 +148,6 @@ source_set("common") {
 
   public_configs = [
     ":common_include_dirs",
-    ":common_config",
   ]
 
   deps = [
