@@ -74,8 +74,8 @@ $(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	$(NOECHO)$(STRIP) $< -o $@
 
 $(BUILDDIR)/%.debug: $(BUILDDIR)/%
-	$(call BUILDECHO,generating separate debug info file $@)
-	$(NOECHO)$(OBJCOPY) --only-keep-debug $< $@
+	$(call BUILDECHO,generating debug info file $@)
+	$(NOECHO)ln -f $< $@
 
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
 	$(call BUILDECHO,generating symbols $@)
