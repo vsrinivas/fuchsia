@@ -74,27 +74,31 @@ void BaseView::InvalidateScene() {
 
   invalidate_pending_ = true;
   if (!present_pending_)
-    PresentScene();
+    PresentScene(mx_time_get(MX_CLOCK_MONOTONIC));
 }
 
-void BaseView::PresentScene() {
+void BaseView::PresentScene(mx_time_t presentation_time) {
   FTL_DCHECK(!present_pending_);
 
   present_pending_ = true;
-  session()->Present(0, [this](mozart2::PresentationInfoPtr info) {
-    FTL_DCHECK(present_pending_);
+  session()->Present(
+      presentation_time, [this](mozart2::PresentationInfoPtr info) {
+        FTL_DCHECK(present_pending_);
 
-    bool present_needed = false;
-    if (invalidate_pending_) {
-      invalidate_pending_ = false;
-      OnSceneInvalidated(std::move(info));
-      present_needed = true;
-    }
+        mx_time_t next_presentation_time =
+            info->presentation_time + info->presentation_interval;
 
-    present_pending_ = false;
-    if (present_needed)
-      PresentScene();
-  });
+        bool present_needed = false;
+        if (invalidate_pending_) {
+          invalidate_pending_ = false;
+          OnSceneInvalidated(std::move(info));
+          present_needed = true;
+        }
+
+        present_pending_ = false;
+        if (present_needed)
+          PresentScene(next_presentation_time);
+      });
 }
 
 void BaseView::HandleSessionEvents(uint64_t presentation_time,
