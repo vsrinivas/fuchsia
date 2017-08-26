@@ -14,7 +14,7 @@ namespace test {
 
 void SessionTest::SetUp() {
   engine_ = std::unique_ptr<Engine>(CreateEngine());
-  session_ = ftl::MakeRefCounted<Session>(1, engine_.get(), nullptr, this);
+  session_ = ftl::MakeRefCounted<Session>(1, engine_.get(), this, this);
 }
 
 // ::testing::Test virtual method.
@@ -50,6 +50,12 @@ void SessionTest::ReportError(ftl::LogSeverity severity,
   }
 #endif
   reported_errors_.push_back(error_string);
+}
+
+void SessionTest::SendEvents(::fidl::Array<scenic::EventPtr> events) {
+  for (auto& event : events) {
+    events_.push_back(std::move(event));
+  }
 }
 
 ftl::RefPtr<ftl::TaskRunner> SessionThreadedTest::TaskRunner() const {

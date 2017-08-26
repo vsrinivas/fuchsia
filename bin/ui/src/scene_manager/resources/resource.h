@@ -15,8 +15,9 @@
 namespace scene_manager {
 
 class ErrorReporter;
-class Session;
 class Import;
+class ResourceLinker;
+class Session;
 
 // Resource is the base class for all client-created objects (i.e. those that
 // are created in response to a CreateResourceOp operation).
@@ -74,6 +75,10 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   /// resource.
   const std::vector<Import*>& imports() const { return imports_; }
 
+  // Returns whether this resource is currently exported or available for
+  // export.
+  bool is_exported() { return exported_; }
+
   /// Adds the import resource to the list of importers of this resource.
   virtual void AddImport(Import* import);
 
@@ -90,6 +95,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
            scenic::ResourceId id,
            const ResourceTypeInfo& type_info);
 
+  friend class ResourceLinker;
   friend class ResourceMap;
   friend class Import;
   /// For the given resource type info, returns the resource that will act as
@@ -98,6 +104,10 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   /// resources to act as the recipients of ops.
   virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
 
+  // Sets a ResourceLinker that must be called back before this resource is
+  // destroyed.
+  void SetExported(bool exported, ResourceLinker* resource_linker);
+
  private:
   Session* const session_;
   const scenic::ResourceId id_;
@@ -105,6 +115,9 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   std::string label_;
   uint32_t event_mask_ = 0u;
   std::vector<Import*> imports_;
+  // ResourceLinker that must be called back before this resource is destroyed.
+  bool exported_ = false;
+  ResourceLinker* resource_linker_ = nullptr;
 };
 
 using ResourcePtr = ftl::RefPtr<Resource>;

@@ -53,12 +53,12 @@ constexpr std::array<scenic::Value::Tag, 2> kVec3ValueTypes{
 
 Session::Session(SessionId id,
                  Engine* engine,
-                 SessionHandler* session_handler,
+                 EventReporter* event_reporter,
                  ErrorReporter* error_reporter)
     : id_(id),
       engine_(engine),
       error_reporter_(error_reporter),
-      session_handler_(session_handler),
+      event_reporter_(event_reporter),
       resources_(error_reporter),
       weak_factory_(this) {
   FTL_DCHECK(engine);
@@ -211,7 +211,8 @@ bool Session::ApplyExportResourceOp(const scenic::ExportResourceOpPtr& op) {
     return false;
   }
   if (auto resource = resources_.FindResource<Resource>(op->id)) {
-    return engine_->ExportResource(std::move(resource), std::move(op->token));
+    return engine_->resource_linker()->ExportResource(resource.get(),
+                                                      std::move(op->token));
   }
   return false;
 }
@@ -223,10 +224,11 @@ bool Session::ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op) {
            "no token provided.";
     return false;
   }
-  ImportPtr import =
-      ftl::MakeRefCounted<Import>(this, op->id, op->spec, std::move(op->token));
-  engine_->ImportResource(import, op->spec, import->import_token());
-  return resources_.AddResource(op->id, std::move(import));
+  ImportPtr import = ftl::MakeRefCounted<Import>(this, op->id, op->spec,
+                                                 engine_->resource_linker());
+  return engine_->resource_linker()->ImportResource(import.get(), op->spec,
+                                                    std::move(op->token)) &&
+         resources_.AddResource(op->id, std::move(import));
 }
 
 bool Session::ApplyAddChildOp(const scenic::AddChildOpPtr& op) {
@@ -898,24 +900,15 @@ void Session::TearDown() {
   }
   is_valid_ = false;
   resources_.Clear();
-  // TODO(MZ-134): Shutting down the session must eagerly collect any
-  // exported resources from the resource linker. Currently, the only way
-  // to evict an exported entry is to shut down its peer. But this does
-  // not handle session shutdown. Fix that bug and turn this log into an
-  // assertion.
+
   if (resource_count_ != 0) {
     auto exported_count =
-        engine()->GetResourceLinker().GetExportedResourceCountForSession(this);
-    FTL_CHECK(resource_count_ == exported_count)
-        << "Session::TearDown(): Not all resources have been "
-           "collected (excluding exported resources, which is tracked by "
-           "MZ-134).  See MZ-261.  Exported resources: "
+        engine()->resource_linker()->NumExportsForSession(this);
+    FTL_CHECK(resource_count_ == 0)
+        << "Session::TearDown(): Not all resources have been collected. "
+           "Exported resources: "
         << exported_count
         << ", total outstanding resources: " << resource_count_;
-
-    error_reporter()->ERROR()
-        << "Session::TearDown(): Not all resources have been "
-           "collected. See MZ-134.";
   }
   error_reporter_ = nullptr;
 }
@@ -1047,8 +1040,8 @@ void Session::EnqueueEvent(scenic::EventPtr event) {
 }
 
 void Session::FlushEvents() {
-  if (!buffered_events_.empty() && session_handler_) {
-    session_handler_->SendEvents(std::move(buffered_events_));
+  if (!buffered_events_.empty() && event_reporter_) {
+    event_reporter_->SendEvents(std::move(buffered_events_));
   }
 }
 

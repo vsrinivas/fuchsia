@@ -127,6 +127,8 @@ source_set("common") {
     "resources/shapes/rounded_rectangle_shape.h",
     "resources/shapes/shape.cc",
     "resources/shapes/shape.h",
+    "resources/unresolved_imports.cc",
+    "resources/unresolved_imports.h",
     "scene_manager_impl.cc",
     "scene_manager_impl.h",
     "util/error_reporter.cc",
@@ -144,11 +146,11 @@ source_set("common") {
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/scenic",
+    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher/examples/common",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
-    "//garnet/lib/escher/escher",
-    "//garnet/lib/escher/examples/common",
   ]
 
   public_configs = [ ":common_include_dirs" ]

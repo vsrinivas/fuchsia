@@ -40,7 +40,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
  public:
   Session(SessionId id,
           Engine* engine,
-          SessionHandler* session_handler = nullptr,
+          EventReporter* event_reporter = nullptr,
           ErrorReporter* error_reporter = ErrorReporter::Default());
   ~Session();
 
@@ -263,7 +263,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   const SessionId id_;
   Engine* const engine_;
   ErrorReporter* error_reporter_ = nullptr;
-  SessionHandler* session_handler_ = nullptr;
+  EventReporter* event_reporter_ = nullptr;
 
   ResourceMap resources_;
 

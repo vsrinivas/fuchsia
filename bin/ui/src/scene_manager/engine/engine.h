@@ -8,10 +8,10 @@
 #include <vector>
 
 #include "lib/escher/escher/escher.h"
-#include "lib/escher/escher/renderer/simple_image_factory.h"
-#include "lib/escher/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/escher/impl/gpu_uploader.h"
+#include "lib/escher/escher/renderer/simple_image_factory.h"
 #include "lib/escher/escher/resources/resource_recycler.h"
+#include "lib/escher/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/examples/common/demo_harness.h"
 
 #include "apps/mozart/src/scene_manager/displays/display_manager.h"
@@ -43,20 +43,6 @@ class Engine : private FrameSchedulerDelegate {
 
   ~Engine();
 
-  ResourceLinker& GetResourceLinker();
-
-  // Register a resource so that it can be imported into a different session
-  // via ImportResourceOp.  Return true if successful, and false if the params
-  // are invalid.
-  bool ExportResource(ResourcePtr resource, mx::eventpair endpoint);
-
-  // Return a new resource in the importing session that acts as a import for
-  // a resource that was exported by another session.  Return nullptr if the
-  // params are invalid.
-  void ImportResource(ImportPtr import,
-                      scenic::ImportSpec spec,
-                      const mx::eventpair& endpoint);
-
   DisplayManager* display_manager() const { return display_manager_; }
   escher::Escher* escher() const { return escher_; }
   escher::VulkanSwapchain GetVulkanSwapchain() const;
@@ -82,6 +68,8 @@ class Engine : private FrameSchedulerDelegate {
   ReleaseFenceSignaller* release_fence_signaller() {
     return release_fence_signaller_.get();
   }
+
+  ResourceLinker* resource_linker() { return &resource_linker_; }
 
   EventTimestamper* event_timestamper() { return &event_timestamper_; }
 
@@ -137,11 +125,6 @@ class Engine : private FrameSchedulerDelegate {
   // Returns true if rendering is needed.
   bool ApplyScheduledSessionUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval);
-
-  void OnImportResolvedForResource(
-      Import* import,
-      ResourcePtr actual,
-      ResourceLinker::ResolutionResult resolution_result);
 
   void InitializeFrameScheduler();
 

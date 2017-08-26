@@ -24,6 +24,13 @@ mx::event CopyEvent(const mx::event& event) {
   return event_copy;
 }
 
+mx::eventpair CopyEventPair(const mx::eventpair& eventpair) {
+  mx::eventpair eventpair_copy;
+  if (eventpair.duplicate(MX_RIGHT_SAME_RIGHTS, &eventpair_copy) != MX_OK)
+    FTL_LOG(ERROR) << "Copying mx::eventpair failed.";
+  return eventpair_copy;
+}
+
 mx::vmo CopyVmo(const mx::vmo& vmo) {
   mx::vmo vmo_copy;
   if (vmo.duplicate(MX_RIGHT_SAME_RIGHTS, &vmo_copy) != MX_OK)

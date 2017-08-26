@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/resources/import.h"
 
+#include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 
 namespace scene_manager {
@@ -25,20 +26,21 @@ constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
 Import::Import(Session* session,
                scenic::ResourceId id,
                scenic::ImportSpec spec,
-               mx::eventpair import_token)
+               ResourceLinker* resource_linker)
     : Resource(session, id, Import::kTypeInfo),
-      import_token_(std::move(import_token)),
       import_spec_(spec),
-      delegate_(CreateDelegate(session, id, spec)) {
+      delegate_(CreateDelegate(session, id, spec)),
+      resource_linker_(resource_linker) {
   FTL_DCHECK(delegate_);
   FTL_DCHECK(!delegate_->type_info().IsKindOf(Import::kTypeInfo));
+  FTL_DCHECK(resource_linker_);
 }
 
 Import::~Import() {
   if (imported_resource_ != nullptr) {
     imported_resource_->RemoveImport(this);
-    imported_resource_ = nullptr;
   }
+  resource_linker_->OnImportDestroyed(this);
 }
 
 Resource* Import::GetDelegate(const ResourceTypeInfo& type_info) {
@@ -54,6 +56,12 @@ void Import::BindImportedResource(Resource* resource) {
 
 void Import::UnbindImportedResource() {
   imported_resource_ = nullptr;
+
+  // Send a ImportUnboundEvent to the SessionListener.
+  auto event = scenic::Event::New();
+  event->set_import_unbound(scenic::ImportUnboundEvent::New());
+  event->get_import_unbound()->resource_id = id();
+  session()->EnqueueEvent(std::move(event));
 }
 
 }  // namespace scene_manager

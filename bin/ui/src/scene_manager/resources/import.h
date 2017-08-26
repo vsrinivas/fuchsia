@@ -13,6 +13,18 @@ namespace scene_manager {
 class Import;
 using ImportPtr = ftl::RefPtr<Import>;
 
+// Callback used by ResourceLinker and UnresolvedImports to indicate the result
+// of resolving a resource.
+enum class ImportResolutionResult {
+  kSuccess,                     // Import was bound successfully to a Resource.
+  kExportHandleDiedBeforeBind,  // The peer token of the import was destroyed
+                                // before binding could occur.
+  kImportDestroyedBeforeBind    // Import was destroyed before binding could
+                                // occur.
+};
+using OnImportResolvedCallback =
+    std::function<void(Resource*, ImportResolutionResult)>;
+
 /// Acts as a placeholder for resources imported from other sessions. Once a
 /// binding between the import and the resource has been established, the
 /// |imports()| collection of that resource will contain a reference to this
@@ -26,7 +38,7 @@ class Import final : public Resource {
   Import(Session* session,
          scenic::ResourceId id,
          scenic::ImportSpec spec,
-         mx::eventpair import_token);
+         ResourceLinker* resource_linker);
 
   ~Import() override;
 
@@ -44,11 +56,6 @@ class Import final : public Resource {
   /// being bound to the import.
   scenic::ImportSpec import_spec() const { return import_spec_; }
 
-  /// The import token that is currently used by the resource linker to bind to
-  /// exported resources. The import token must be a peer of the token used to
-  /// export the resource in the resource linker.
-  const mx::eventpair& import_token() const { return import_token_; }
-
   /// If an active binding exists between this import and an imported resource,
   // returns that resource. If no binding exists, returns nullptr.
   Resource* imported_resource() const { return imported_resource_; }
@@ -57,27 +64,28 @@ class Import final : public Resource {
   bool is_bound() const { return imported_resource_ != nullptr; }
 
  private:
-  // TODO(MZ-132): Don't hold onto the token for the the duration of the
-  // lifetime of the import resource. This bloats kernel handle tables.
-  mx::eventpair import_token_;
   const scenic::ImportSpec import_spec_;
   const ResourcePtr delegate_;
   Resource* imported_resource_ = nullptr;
+  ResourceLinker* resource_linker_ = nullptr;
 
   // |Resource|.
   Resource* GetDelegate(const ResourceTypeInfo& type_info) override;
 
   // Needed by |Resource::AddImport()| and |Resource::RemoveImport()|.
   friend class Resource;
+  // Needed by |ResourceLinker::OnImportResolvedForResource()|.
+  friend class ResourceLinker;
 
   /// Establish a binding between the resource and this import. The type of the
   /// resource being bound to is compatible with the import spec specified when
   /// creating the import resource.
   void BindImportedResource(Resource* resource);
 
-  /// Clear a previous binding to an imported resource. This usually happens
-  /// when the imported resource has been collected in the session that exported
-  /// that resource.
+  /// Clear a previous binding to an imported resource, or signal that a pending
+  /// binding has failed. The first case can happen when the resource being
+  /// imported is is released in its session. The second case can happen if
+  /// an export handle is destroyed before ExportResource() is called.
   void UnbindImportedResource();
 
   FRIEND_MAKE_REF_COUNTED(Import);

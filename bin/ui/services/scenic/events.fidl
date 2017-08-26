@@ -14,6 +14,7 @@ const uint32 kMetricsEventMask = 1;
 // Use |SetEventMaskOp| to enable event delivery for a resource.
 union Event {
   MetricsEvent metrics;
+  ImportUnboundEvent import_unbound;
 };
 
 // Provides rendering target metrics information about the specified node.
@@ -28,4 +29,11 @@ union Event {
 struct MetricsEvent {
   uint32 node_id;
   Metrics metrics;
+};
+
+// Reported when the imported resource with the given ID is no longer bound to
+// its host resource, or if the imported resource can not be bound because
+// the host resource is not available.
+struct ImportUnboundEvent {
+  uint32 resource_id;
 };

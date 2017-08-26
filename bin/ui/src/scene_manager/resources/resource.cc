@@ -8,6 +8,7 @@
 
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/resources/import.h"
+#include "apps/mozart/src/scene_manager/resources/resource_linker.h"
 
 namespace scene_manager {
 
@@ -25,6 +26,10 @@ Resource::Resource(Session* session,
 Resource::~Resource() {
   for (auto& import : imports_) {
     import->UnbindImportedResource();
+  }
+  if (exported_) {
+    FTL_DCHECK(resource_linker_);
+    resource_linker_->OnExportedResourceDestroyed(this);
   }
   session_->DecrementResourceCount();
 }
@@ -70,6 +75,12 @@ bool Resource::Detach() {
 
 Resource* Resource::GetDelegate(const ResourceTypeInfo& type_info) {
   return type_info_.IsKindOf(type_info) ? this : nullptr;
+}
+
+void Resource::SetExported(bool exported, ResourceLinker* resource_linker) {
+  FTL_DCHECK(exported == (resource_linker != nullptr));
+  exported_ = exported;
+  resource_linker_ = resource_linker;
 }
 
 }  // namespace scene_manager

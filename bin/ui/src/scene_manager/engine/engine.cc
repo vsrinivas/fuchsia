@@ -62,42 +62,6 @@ void Engine::InitializeFrameScheduler() {
   }
 }
 
-ResourceLinker& Engine::GetResourceLinker() {
-  return resource_linker_;
-}
-
-bool Engine::ExportResource(ResourcePtr resource, mx::eventpair endpoint) {
-  return resource_linker_.ExportResource(std::move(resource),
-                                         std::move(endpoint));
-}
-
-void Engine::ImportResource(ImportPtr import,
-                            scenic::ImportSpec spec,
-                            const mx::eventpair& endpoint) {
-  // The import is not captured in the OnImportResolvedCallback because we don't
-  // want the reference in the bind to prevent the import from being collected.
-  // However, when the import dies, its handle is collected which will cause the
-  // resource to expire within the resource linker. In that case, we will never
-  // receive the callback with |ResolutionResult::kSuccess|.
-  ResourceLinker::OnImportResolvedCallback import_resolved_callback =
-      std::bind(&Engine::OnImportResolvedForResource,  // method
-                this,                                  // target
-                import.get(),  // the import that will be resolved by the linker
-                std::placeholders::_1,  // the acutal object to link to import
-                std::placeholders::_2   // result of the linking
-      );
-  resource_linker_.ImportResource(spec, endpoint, import_resolved_callback);
-}
-
-void Engine::OnImportResolvedForResource(
-    Import* import,
-    ResourcePtr actual,
-    ResourceLinker::ResolutionResult resolution_result) {
-  if (resolution_result == ResourceLinker::ResolutionResult::kSuccess) {
-    actual->AddImport(import);
-  }
-}
-
 void Engine::ScheduleSessionUpdate(uint64_t presentation_time,
                                    ftl::RefPtr<Session> session) {
   if (session->is_valid()) {

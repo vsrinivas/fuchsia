@@ -14,7 +14,8 @@ namespace scene_manager {
 namespace test {
 
 class SessionTest : public ::testing::Test,
-                    public scene_manager::ErrorReporter {
+                    public scene_manager::ErrorReporter,
+                    public scene_manager::EventReporter {
  public:
   // ::testing::Test virtual method.
   void SetUp() override;
@@ -26,9 +27,12 @@ class SessionTest : public ::testing::Test,
   virtual std::unique_ptr<Engine> CreateEngine();
 
  protected:
-  // Implement ErrorReporter.
+  // |ErrorReporter|
   void ReportError(ftl::LogSeverity severity,
                    std::string error_string) override;
+
+  // |EventReporter|
+  void SendEvents(::fidl::Array<scenic::EventPtr> events) override;
 
   // Apply the specified Op, and verify that it succeeds.
   bool Apply(scenic::OpPtr op) { return session_->ApplyOp(std::move(op)); }
@@ -52,6 +56,7 @@ class SessionTest : public ::testing::Test,
   std::unique_ptr<Engine> engine_;
   SessionPtr session_;
   std::vector<std::string> reported_errors_;
+  std::vector<scenic::EventPtr> events_;
 };
 
 class SessionThreadedTest : public SessionTest {

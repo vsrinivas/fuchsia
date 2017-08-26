@@ -9,6 +9,8 @@
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/vmo/shared_vmo.h"
+#include "magenta/system/ulib/mx/include/mx/event.h"
+#include "magenta/system/ulib/mx/include/mx/eventpair.h"
 
 namespace scene_manager {
 namespace test {
@@ -16,7 +18,7 @@ namespace test {
 // How long to run the message loop when we want to allow a task in the
 // task queue to run.
 constexpr ftl::TimeDelta kPumpMessageLoopDuration =
-    ftl::TimeDelta::FromMilliseconds(100);
+    ftl::TimeDelta::FromMilliseconds(16);
 
 // Synchronously checks whether the event has signalled any of the bits in
 // |signal|.
@@ -24,6 +26,9 @@ bool IsEventSignalled(const mx::event& event, mx_signals_t signal);
 
 // Create a duplicate of the event.
 mx::event CopyEvent(const mx::event& event);
+
+// Create a duplicate of the eventpair.
+mx::eventpair CopyEventPair(const mx::eventpair& eventpair);
 
 // Create a duplicate of the VMO.
 mx::vmo CopyVmo(const mx::vmo& vmo);

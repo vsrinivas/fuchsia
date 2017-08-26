@@ -5,13 +5,14 @@
 #pragma once
 
 #include <unordered_map>
+#include <unordered_set>
+
+#include "lib/mtl/handles/object_info.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 #include "apps/mozart/services/scenic/ops.fidl-common.h"
 #include "apps/mozart/src/scene_manager/resources/resource.h"
-#include "lib/ftl/macros.h"
-#include "lib/mtl/handles/object_info.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include "third_party/gtest/include/gtest/gtest_prod.h"
+#include "apps/mozart/src/scene_manager/resources/unresolved_imports.h"
 
 namespace scene_manager {
 
@@ -29,23 +30,34 @@ namespace scene_manager {
 ///
 /// A resource can be exported multiple times; we refer to one of those
 /// times as an "export."
+///
+/// There are two ways an export can be removed: Either the resource is
+/// destroyed using |OnExportedResourceDestroyed|, or all the import tokens have
+/// been closed which results in a call to |RemoveExportEntryForExpiredHandle|.
+
 class ResourceLinker : private mtl::MessageLoopHandler {
  public:
   ResourceLinker();
 
   ~ResourceLinker();
 
-  // Returns false if there was an error with the inputs, true otherwise.
-  bool ExportResource(ResourcePtr resource, mx::eventpair export_token);
+  // Register a |resource| so that it can be imported into a different session
+  // via ImportResourceOp with the peer of |export_token|.
+  //
+  // Returns true if there are no errors.
+  bool ExportResource(Resource* resource, mx::eventpair export_token);
 
-  enum class ResolutionResult {
-    kSuccess,
-  };
-  using OnImportResolvedCallback =
-      std::function<void(ResourcePtr, ResolutionResult)>;
-  void ImportResource(scenic::ImportSpec spec,
-                      const mx::eventpair& import_token,
-                      OnImportResolvedCallback import_resolved_callback);
+  // Registers an |import| with a given |spec| and |import_token|. |import| is
+  // new resource in the importing session that acts as a import for a resource
+  // that was exported by another session.
+  //
+  // Since the other end (the resource being imported) might not be registered
+  // yet, the binding is not guaranteed to happen immediately.
+  //
+  // Returns true if there are no errors.
+  bool ImportResource(Import* import,
+                      scenic::ImportSpec spec,
+                      mx::eventpair import_token);
 
   size_t NumExports() const;
 
@@ -53,32 +65,58 @@ class ResourceLinker : private mtl::MessageLoopHandler {
 
   enum class ExpirationCause {
     kInternalError,
-    kImportHandleClosed,
+    kNoImportsBound,
+    kExportHandleClosed,
+    kResourceDestroyed,
   };
-  using OnExpiredCallback = std::function<void(ResourcePtr, ExpirationCause)>;
+  using OnExpiredCallback = std::function<void(Resource*, ExpirationCause)>;
   void SetOnExpiredCallback(OnExpiredCallback callback);
+  using OnImportResolvedCallback =
+      std::function<void(Import*, Resource*, ImportResolutionResult)>;
+  void SetOnImportResolvedCallback(OnImportResolvedCallback callback);
 
-  size_t GetExportedResourceCountForSession(Session* session);
+  size_t NumExportsForSession(Session* session);
 
  private:
-  struct ExportedResourceEntry {
+  friend class UnresolvedImports;
+  friend class Resource;
+  friend class Import;
+
+  struct ExportEntry {
     mx::eventpair export_token;
     mtl::MessageLoop::HandlerKey death_handler_key = 0;
-    ResourcePtr resource;
+    Resource* resource;
   };
-  struct UnresolvedImportEntry {
-    OnImportResolvedCallback resolution_callback;
-  };
+
   using ImportKoid = mx_koid_t;
   using HandleToKoidMap = std::unordered_map<mx_handle_t, ImportKoid>;
-  using KoidToExportMap = std::unordered_map<ImportKoid, ExportedResourceEntry>;
-  using KoidToUnresolvedImportsMap =
-      std::unordered_map<ImportKoid, std::vector<UnresolvedImportEntry>>;
+  using KoidsToExportsMap = std::unordered_map<ImportKoid, ExportEntry>;
+  using ResourcesToKoidsMap = std::multimap<Resource*, ImportKoid>;
 
   OnExpiredCallback expiration_callback_;
+  OnImportResolvedCallback import_resolved_callback_;
+
   HandleToKoidMap export_handles_to_import_koids_;
-  KoidToExportMap exports_;
-  KoidToUnresolvedImportsMap unresolved_imports_;
+  KoidsToExportsMap export_entries_;
+  ResourcesToKoidsMap exported_resources_to_import_koids_;
+
+  // |exported_resources_| can contain resources that are not included in the
+  // maps above. Even if all the import tokens for a given export are destroyed,
+  // the associated resource could still be exported because it's already been
+  // bound to an import.
+  std::unordered_set<Resource*> exported_resources_;
+  UnresolvedImports unresolved_imports_;
+
+  // Remove exports for this resource. Called when the resource is being
+  // destroyed.
+  void OnExportedResourceDestroyed(Resource* resource);
+
+  // A callback that informs us when an import has been destroyed.
+  void OnImportDestroyed(Import* import);
+
+  void OnImportResolvedForResource(Import* import,
+                                   Resource* actual,
+                                   ImportResolutionResult resolution_result);
 
   void OnHandleReady(mx_handle_t handle,
                      mx_signals_t pending,
@@ -86,9 +124,18 @@ class ResourceLinker : private mtl::MessageLoopHandler {
 
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
-  ResourcePtr RemoveExportForExpiredHandle(mx_handle_t handle);
+  void InvokeExpirationCallback(Resource* resource, ExpirationCause cause);
 
-  void PerformLinkingNow(mx_koid_t import_koid);
+  Resource* RemoveExportEntryForExpiredHandle(mx_handle_t handle);
+
+  void RemoveExportedResourceIfUnbound(Resource* exported_resource);
+
+  // Returns true if a link was made.
+  bool PerformLinkingNow(mx_koid_t import_koid);
+
+  // Helper method to remove |import_koid| from |resources_to_import_koids_|.
+  void RemoveFromExportedResourceToImportKoidsMap(Resource* resource,
+                                                  mx_koid_t import_koid);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ResourceLinker);
 };
