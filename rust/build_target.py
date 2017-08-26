@@ -398,7 +398,7 @@ def main():
         generated_test_path = None
         for line in stdout.splitlines():
             data = json.loads(line)
-            if data["profile"]["test"]:
+            if "profile" in data and data["profile"]["test"]:
               generated_test_path = data["filenames"][0]
               break
         if not generated_test_path:
