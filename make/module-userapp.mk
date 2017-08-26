@@ -25,7 +25,7 @@ USER_MANIFEST_LINES += $(MODULE_GROUP)$(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(ad
 
 # These debug info files go in the bootfs image.
 ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE)),yes),yes)
-USER_MANIFEST_DEBUG_INPUTS += $(addsuffix .debug,$(MODULE_USERAPP_OBJECT))
+USER_MANIFEST_DEBUG_INPUTS += $(MODULE_USERAPP_OBJECT)
 endif
 
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)

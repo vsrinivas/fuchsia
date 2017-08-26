@@ -73,10 +73,6 @@ $(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	$(call BUILDECHO,generating $@)
 	$(NOECHO)$(STRIP) $< -o $@
 
-$(BUILDDIR)/%.debug: $(BUILDDIR)/%
-	$(call BUILDECHO,generating debug info file $@)
-	$(NOECHO)ln -f $< $@
-
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
 	$(call BUILDECHO,generating symbols $@)
 	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) > $@
