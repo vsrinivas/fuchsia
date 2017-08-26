@@ -4,12 +4,15 @@
 
 #pragma once
 
-#include "apps/mozart/services/scene/session.fidl.h"
-#include "apps/mozart/src/scene_manager/engine/session.h"
-#include "apps/mozart/src/scene_manager/util/error_reporter.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/tasks/task_runner.h"
+
+#include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/src/scene_manager/engine/engine.h"
+#include "apps/mozart/src/scene_manager/engine/event_reporter.h"
+#include "apps/mozart/src/scene_manager/engine/session.h"
+#include "apps/mozart/src/scene_manager/util/error_reporter.h"
 
 namespace scene_manager {
 
@@ -19,7 +22,9 @@ class SceneManagerImpl;
 // operations from Enqueue() before passing them all to |session_| when Commit()
 // is called.  Eventually, this class may do more work if performance profiling
 // suggests to.
-class SessionHandler : public mozart2::Session, private ErrorReporter {
+class SessionHandler : public mozart2::Session,
+                       public EventReporter,
+                       private ErrorReporter {
  public:
   SessionHandler(Engine* engine,
                  SessionId session_id,
@@ -29,11 +34,9 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
 
   scene_manager::Session* session() const { return session_.get(); }
 
-  // Enqueues a session event for delivery.
-  void EnqueueEvent(mozart2::EventPtr event);
-
   // Flushes enqueued session events to the session listener as a batch.
-  void FlushEvents(uint64_t presentation_time);
+  void SendEvents(uint64_t presentation_time,
+                  ::fidl::Array<mozart2::EventPtr> events) override;
 
  protected:
   // mozart2::Session interface methods.
@@ -70,7 +73,6 @@ class SessionHandler : public mozart2::Session, private ErrorReporter {
   ::fidl::InterfacePtr<mozart2::SessionListener> listener_;
 
   ::fidl::Array<mozart2::OpPtr> buffered_ops_;
-  ::fidl::Array<mozart2::EventPtr> buffered_events_;
 };
 
 }  // namespace scene_manager

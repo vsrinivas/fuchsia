@@ -43,6 +43,7 @@ source_set("common") {
     "engine/display_swapchain.h",
     "engine/engine.cc",
     "engine/engine.h",
+    "engine/event_reporter.h",
     "engine/frame_scheduler.cc",
     "engine/frame_scheduler.h",
     "engine/frame_timings.cc",
@@ -146,9 +147,7 @@ source_set("common") {
     "//lib/mtl",
   ]
 
-  public_configs = [
-    ":common_include_dirs",
-  ]
+  public_configs = [ ":common_include_dirs" ]
 
   deps = [
     "//magma:vulkan",

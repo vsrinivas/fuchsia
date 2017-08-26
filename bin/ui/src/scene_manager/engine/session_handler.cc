@@ -18,6 +18,7 @@ SessionHandler::SessionHandler(
       session_(::ftl::MakeRefCounted<scene_manager::Session>(
           session_id,
           engine_,
+          this,
           static_cast<ErrorReporter*>(this))),
       listener_(::fidl::InterfacePtr<mozart2::SessionListener>::Create(
           std::move(listener))) {
@@ -29,18 +30,10 @@ SessionHandler::SessionHandler(
 
 SessionHandler::~SessionHandler() {}
 
-void SessionHandler::EnqueueEvent(mozart2::EventPtr event) {
-  FTL_DCHECK(event);
-  buffered_events_.push_back(std::move(event));
-}
-
-void SessionHandler::FlushEvents(uint64_t presentation_time) {
-  if (!buffered_events_.empty()) {
-    if (listener_) {
-      listener_->OnEvent(presentation_time, std::move(buffered_events_));
-    } else {
-      buffered_events_.reset();
-    }
+void SessionHandler::SendEvents(uint64_t presentation_time,
+                                ::fidl::Array<mozart2::EventPtr> events) {
+  if (listener_) {
+    listener_->OnEvent(presentation_time, std::move(events));
   }
 }
 

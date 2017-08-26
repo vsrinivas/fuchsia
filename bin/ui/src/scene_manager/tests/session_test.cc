@@ -14,7 +14,7 @@ namespace test {
 
 void SessionTest::SetUp() {
   engine_ = std::unique_ptr<Engine>(CreateEngine());
-  session_ = ftl::MakeRefCounted<Session>(1, engine_.get(), this);
+  session_ = ftl::MakeRefCounted<Session>(1, engine_.get(), nullptr, this);
 }
 
 // ::testing::Test virtual method.

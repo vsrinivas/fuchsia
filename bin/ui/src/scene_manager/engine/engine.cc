@@ -261,11 +261,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
       event->get_metrics()->node_id = node->id();
       event->get_metrics()->metrics = node->reported_metrics().Clone();
 
-      // We shouldn't be flushing every time here.
-      SessionHandler* handler = FindSession(node->session()->id());
-      FTL_DCHECK(handler);
-      handler->EnqueueEvent(std::move(event));
-      handler->FlushEvents(presentation_time);
+      node->session()->EnqueueEvent(std::move(event));
     }
   }
 }

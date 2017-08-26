@@ -9,6 +9,7 @@
 #include "apps/mozart/services/scene/session.fidl.h"
 #include "apps/mozart/src/scene_manager/acquire_fence_set.h"
 #include "apps/mozart/src/scene_manager/engine/engine.h"
+#include "apps/mozart/src/scene_manager/engine/event_reporter.h"
 #include "apps/mozart/src/scene_manager/resources/memory.h"
 #include "apps/mozart/src/scene_manager/resources/resource_map.h"
 #include "apps/mozart/src/scene_manager/util/error_reporter.h"
@@ -31,6 +32,7 @@ class Session;
 using SessionPtr = ::ftl::RefPtr<Session>;
 
 class Engine;
+class SessionHandler;
 
 // TODO: use unsafe ref-counting for better performance (our architecture
 // guarantees that this is safe).
@@ -38,6 +40,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
  public:
   Session(SessionId id,
           Engine* engine,
+          SessionHandler* session_handler = nullptr,
           ErrorReporter* error_reporter = ErrorReporter::Default());
   ~Session();
 
@@ -89,6 +92,10 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // true if any updates were applied, and false otherwise.
   bool ApplyScheduledUpdates(uint64_t presentation_time,
                              uint64_t presentation_interval);
+
+  // Add an event to our queue, which will be scheduled to be flushed and sent
+  // to the event reporter later.
+  void EnqueueEvent(mozart2::EventPtr event);
 
   // Called by SessionHandler::HitTest().
   void HitTest(uint32_t node_id,
@@ -220,6 +227,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
     return AssertValueIsOfType(value, tags.data(), N);
   }
 
+  void FlushEvents();
+
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
@@ -244,10 +253,17 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
     ImagePipePtr image_pipe;
   };
   std::queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
+  // Map of presentation time -> mozart2::Event. Must be sorted to ensure
+  // delivery of events is monotonically increasing in presentation time.
+  std::map<uint64_t, ::fidl::Array<mozart2::EventPtr>> buffered_events_;
+
+  // The last presentation time this session received.
+  uint64_t last_presentation_time_ = 0;
 
   const SessionId id_;
   Engine* const engine_;
   ErrorReporter* error_reporter_ = nullptr;
+  SessionHandler* session_handler_ = nullptr;
 
   ResourceMap resources_;
 

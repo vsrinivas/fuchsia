@@ -5,6 +5,7 @@
 #include "apps/mozart/src/scene_manager/engine/session.h"
 
 #include "apps/mozart/src/scene_manager/engine/hit_tester.h"
+#include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
@@ -47,10 +48,14 @@ constexpr std::array<mozart2::Value::Tag, 2> kVec3ValueTypes{
 
 }  // anonymous namespace
 
-Session::Session(SessionId id, Engine* engine, ErrorReporter* error_reporter)
+Session::Session(SessionId id,
+                 Engine* engine,
+                 SessionHandler* session_handler,
+                 ErrorReporter* error_reporter)
     : id_(id),
       engine_(engine),
       error_reporter_(error_reporter),
+      session_handler_(session_handler),
       resources_(error_reporter) {
   FTL_DCHECK(engine);
   FTL_DCHECK(error_reporter);
@@ -927,6 +932,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "id", id_, "time",
                  presentation_time, "interval", presentation_interval);
+  last_presentation_time_ = presentation_time;
   bool needs_render = false;
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= presentation_time &&
@@ -973,6 +979,28 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
   }
 
   return needs_render;
+}
+
+void Session::EnqueueEvent(mozart2::EventPtr event) {
+  if (is_valid()) {
+    FTL_DCHECK(event);
+    if (buffered_events_.empty()) {
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+          [this] { FlushEvents(); });
+    }
+    buffered_events_[last_presentation_time_].push_back(std::move(event));
+  }
+}
+
+void Session::FlushEvents() {
+  if (!buffered_events_.empty() && session_handler_) {
+    // |buffered_events_| is sorted, which ensures that delivery of events is
+    // monotonically increasing in presentation time.
+    for (auto& entry : buffered_events_) {
+      session_handler_->SendEvents(entry.first, std::move(entry.second));
+    }
+    buffered_events_.clear();
+  }
 }
 
 bool Session::ApplyUpdate(Session::Update* update) {
