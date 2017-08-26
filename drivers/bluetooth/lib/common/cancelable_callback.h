@@ -51,7 +51,7 @@ namespace common {
 //       // If |task_factory_| is destroyed before |my_other_thread_runner_|
 //       // runs the callback returned from MakeTask(), then the lambda below
 //       // will never run.
-//       my_other_thread_runner_->PostTask(task_factory_->MakeTask([this] {
+//       my_other_thread_runner_->PostTask(task_factory_.MakeTask([this] {
 //         // If this is run, then |*this| is guaranteed to exist until this
 //         // lambda returns (since |task_factory_| is its member). Note that
 //         // there is no guarantee that DoBar() itself is thread-safe.

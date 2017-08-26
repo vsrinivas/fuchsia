@@ -56,7 +56,7 @@ class Fragmenter final {
 
  private:
   hci::ConnectionHandle connection_handle_;
-  uint16_t max_acl_payload_size_;
+  size_t max_acl_payload_size_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Fragmenter);
 };

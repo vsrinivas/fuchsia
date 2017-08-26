@@ -128,8 +128,8 @@ BufferView::BufferView(const fxl::StringView& string) {
   bytes_ = reinterpret_cast<const uint8_t*>(string.data());
 }
 
-BufferView::BufferView(const uint8_t* bytes, size_t size)
-    : size_(size), bytes_(bytes) {
+BufferView::BufferView(const void* bytes, size_t size)
+    : size_(size), bytes_(static_cast<const uint8_t*>(bytes)) {
   // If |size| non-zero then |bytes| cannot be nullptr.
   FXL_CHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
 }
@@ -158,8 +158,8 @@ MutableBufferView::MutableBufferView(MutableByteBuffer* buffer) {
   bytes_ = buffer->mutable_data();
 }
 
-MutableBufferView::MutableBufferView(uint8_t* bytes, size_t size)
-    : size_(size), bytes_(bytes) {
+MutableBufferView::MutableBufferView(void* bytes, size_t size)
+    : size_(size), bytes_(static_cast<uint8_t*>(bytes)) {
   // If |size| non-zero then |bytes| cannot be nullptr.
   FXL_CHECK(!size_ || bytes_) << "|bytes_| cannot be nullptr if |size_| > 0";
 }

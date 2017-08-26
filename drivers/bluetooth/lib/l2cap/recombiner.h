@@ -66,8 +66,8 @@ class Recombiner final {
   bool ProcessFirstFragment(const hci::ACLDataPacket& fragment);
 
   bool ready_;
-  uint16_t frame_length_;
-  uint16_t cur_length_;
+  size_t frame_length_;
+  size_t cur_length_;
 
   // The PDU currently being constructed, if any.
   common::Optional<PDU> pdu_;

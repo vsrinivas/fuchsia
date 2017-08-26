@@ -18,6 +18,8 @@ static_library("l2cap") {
     "recombiner.cc",
     "recombiner.h",
     "sdu.h",
+    "signaling_channel.cc",
+    "signaling_channel.h",
   ]
 
   deps = [
@@ -52,6 +54,7 @@ source_set("tests") {
     "fragmenter_unittest.cc",
     "pdu_unittest.cc",
     "recombiner_unittest.cc",
+    "signaling_channel_unittest.cc",
   ]
 
   deps = [

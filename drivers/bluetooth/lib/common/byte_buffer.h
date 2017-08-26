@@ -218,7 +218,7 @@ class DynamicByteBuffer : public MutableByteBuffer {
 // provides an immutable view over it.
 class BufferView final : public ByteBuffer {
  public:
-  BufferView(const uint8_t* bytes, size_t size);
+  BufferView(const void* bytes, size_t size);
   ~BufferView() override = default;
 
   explicit BufferView(const ByteBuffer& buffer,
@@ -244,7 +244,7 @@ class BufferView final : public ByteBuffer {
 class MutableBufferView final : public MutableByteBuffer {
  public:
   explicit MutableBufferView(MutableByteBuffer* buffer);
-  MutableBufferView(uint8_t* bytes, size_t size);
+  MutableBufferView(void* bytes, size_t size);
   ~MutableBufferView() override = default;
 
   // The default constructor initializes this to an empty buffer.
