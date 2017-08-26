@@ -17,7 +17,7 @@ void BlobstoreChecker::TraverseInodeBitmap() {
 }
 
 void BlobstoreChecker::TraverseBlockBitmap() {
-    for (uint64_t n = DataStartBlock(blobstore_->info_); n < blobstore_->info_.block_count; n++) {
+    for (uint64_t n = 0; n < blobstore_->info_.block_count; n++) {
         if (blobstore_->block_map_.Get(n, n + 1)) {
             alloc_blocks_++;
         }

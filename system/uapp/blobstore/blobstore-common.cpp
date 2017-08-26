@@ -48,7 +48,7 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
         fprintf(stderr, "blobstore: bsz %u unsupported\n", info->block_size);
         return MX_ERR_INVALID_ARGS;
     }
-    if (info->block_count > max) {
+    if (info->block_count + DataStartBlock(*info) > max) {
         fprintf(stderr, "blobstore: too large for device\n");
         return MX_ERR_INVALID_ARGS;
     }
@@ -113,21 +113,27 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
     info.version = kBlobstoreVersion;
     info.flags = kBlobstoreFlagClean;
     info.block_size = kBlobstoreBlockSize;
+    // Set block_count to max blocks so we can calculate block map blocks
     info.block_count = block_count;
     info.inode_count = inodes;
     info.alloc_block_count = 0;
     info.alloc_inode_count = 0;
     info.blob_header_next = 0; // TODO(smklein): Allow chaining
+    // The result of DataStartBlock(info) is based on the current value of info.block_count. As a
+    // result, the block bitmap may have slightly more space allocated than is necessary.
+    info.block_count -= DataStartBlock(info); // Set block_count to number of data blocks
+
 
     xprintf("Blobstore Mkfs\n");
     xprintf("Disk size  : %" PRIu64 "\n", block_count * kBlobstoreBlockSize);
     xprintf("Block Size : %u\n", kBlobstoreBlockSize);
-    xprintf("Block Count: %" PRIu64 "\n", block_count);
+    xprintf("Block Count: %" PRIu64 "\n", TotalBlocks(info));
     xprintf("Inode Count: %" PRIu64 "\n", inodes);
 
     // Determine the number of blocks necessary for the block map and node map.
     uint64_t bbm_blocks = BlockMapBlocks(info);
     uint64_t nbm_blocks = NodeMapBlocks(info);
+
     RawBitmap abm;
     if (abm.Reset(bbm_blocks * kBlobstoreBlockBits)) {
         fprintf(stderr, "Couldn't allocate blobstore block map\n");
@@ -141,10 +147,6 @@ int blobstore_mkfs(int fd, uint64_t block_count) {
         fprintf(stderr, "For simplicity, inode table block must be entirely filled\n");
         return -1;
     }
-
-    // update block bitmap:
-    // reserve all blocks before the data storage area.
-    abm.Set(0, DataStartBlock(info));
 
     // All in-memory structures have been created successfully. Dump everything to disk.
     char block[kBlobstoreBlockSize];

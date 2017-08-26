@@ -33,7 +33,7 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 constexpr uint64_t kBlobstoreMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobstoreMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobstoreVersion = 0x00000002;
+constexpr uint32_t kBlobstoreVersion = 0x00000003;
 
 constexpr uint32_t kBlobstoreFlagClean      = 1;
 constexpr uint32_t kBlobstoreFlagDirty      = 2;
@@ -53,7 +53,7 @@ typedef struct {
     uint32_t version;
     uint32_t flags;
     uint32_t block_size;       // 8K typical
-    uint64_t block_count;      // Number of blocks in this area
+    uint64_t block_count;      // Number of data blocks in this area
     uint64_t inode_count;      // Number of blobs in this area
     uint64_t alloc_block_count; // Total number of allocated blocks
     uint64_t alloc_inode_count; // Total number of allocated blobs
@@ -80,6 +80,14 @@ constexpr uint64_t NodeMapBlocks(const blobstore_info_t& info) {
 constexpr uint64_t DataStartBlock(const blobstore_info_t& info) {
     // Data immediately follows the node map
     return NodeMapStartBlock(info) + NodeMapBlocks(info);
+}
+
+constexpr uint64_t DataBlocks(const blobstore_info_t& info) {
+    return info.block_count;
+}
+
+constexpr uint64_t TotalBlocks(const blobstore_info_t& info) {
+    return BlockMapStartBlock() + BlockMapBlocks(info) + NodeMapBlocks(info) + DataBlocks(info);
 }
 
 // States of 'Blob' identified via start block.

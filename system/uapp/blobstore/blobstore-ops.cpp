@@ -155,7 +155,7 @@ ssize_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* o
             return MX_ERR_INVALID_ARGS;
         }
         vfs_query_info_t* info = static_cast<vfs_query_info_t*>(out_buf);
-        info->total_bytes = (blobstore_->info_.block_count - DataStartBlock(blobstore_->info_)) * blobstore_->info_.block_size;
+        info->total_bytes = blobstore_->info_.block_count * blobstore_->info_.block_size;
         info->used_bytes = blobstore_->info_.alloc_block_count * blobstore_->info_.block_size;
         info->total_nodes = blobstore_->info_.inode_count;
         info->used_nodes = blobstore_->info_.alloc_inode_count;

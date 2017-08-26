@@ -384,17 +384,17 @@ mx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
     if ((status = block_map_.Find(false, 0, block_map_.size(), nblocks, blkno_out)) != MX_OK) {
         return MX_ERR_NO_SPACE;
     }
-    assert(DataStartBlock(info_) <= *blkno_out);
     status = block_map_.Set(*blkno_out, *blkno_out + nblocks);
     assert(status == MX_OK);
     info_.alloc_block_count += nblocks;
+    *blkno_out += DataStartBlock(info_);
     return MX_OK;
 }
 
 // Frees Blocks IN MEMORY
 void Blobstore::FreeBlocks(size_t nblocks, size_t blkno) {
-    assert(DataStartBlock(info_) <= blkno);
-    mx_status_t status = block_map_.Clear(blkno, blkno + nblocks);
+    mx_status_t status = block_map_.Clear(blkno - DataStartBlock(info_),
+                                          blkno - DataStartBlock(info_) + nblocks);
     info_.alloc_block_count -= nblocks;
     assert(status == MX_OK);
 }
@@ -425,9 +425,9 @@ mx_status_t Blobstore::Unmount() {
 }
 
 mx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
-    uint64_t bbm_start_block = (start_block) / kBlobstoreBlockBits;
-    uint64_t bbm_end_block = mxtl::roundup(start_block + nblocks, kBlobstoreBlockBits) /
-                             kBlobstoreBlockBits;
+    uint64_t bbm_start_block = (start_block - DataStartBlock(info_)) / kBlobstoreBlockBits;
+    uint64_t bbm_end_block = mxtl::roundup(start_block - DataStartBlock(info_) + nblocks,
+                                           kBlobstoreBlockBits) / kBlobstoreBlockBits;
 
     // Write back the block allocation bitmap
     txn->Enqueue(block_map_vmoid_, bbm_start_block, BlockMapStartBlock() + bbm_start_block,
@@ -603,9 +603,7 @@ Blobstore::~Blobstore() {
 }
 
 mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr<Blobstore>* out) {
-    uint64_t blocks = info->block_count;
-
-    mx_status_t status = blobstore_check_info(info, blocks);
+    mx_status_t status = blobstore_check_info(info, TotalBlocks(*info));
     if (status < 0) {
         fprintf(stderr, "blobstore: Check info failure\n");
         return status;
