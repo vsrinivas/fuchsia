@@ -6,7 +6,8 @@
 
 #include <utility>
 
-#include "apps/tracing/lib/trace/event.h"
+#include <trace/event.h>
+
 #include "lib/ftl/logging.h"
 
 namespace modular {

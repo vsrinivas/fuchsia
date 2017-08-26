@@ -11,7 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "apps/tracing/lib/trace/event.h"
+#include <trace/event.h>
+
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"

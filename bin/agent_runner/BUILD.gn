@@ -63,6 +63,7 @@ source_set("unittests") {
     "//apps/modular/src/component",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace",
     "//third_party/gtest",
   ]
 }

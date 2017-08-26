@@ -72,9 +72,9 @@ source_set("operation") {
     "operation.h",
   ]
 
-  deps = [
-    "//apps/tracing/lib/trace:provider",
+  public_deps = [
     "//garnet/public/lib/ftl",
+    "//magenta/system/ulib/trace",
   ]
 }
 

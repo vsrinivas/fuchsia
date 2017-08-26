@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+#include <trace-provider/provider.h>
+
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "application/services/application_launcher.fidl.h"
@@ -22,7 +24,6 @@
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -215,9 +216,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
  private:
   void Start() {
-    // 0. Initialize tracing
-    tracing::InitializeTracer(app_context_.get(), {"device_runner"});
-
+    // 0. Print test banner.
     if (settings_.test) {
       FTL_LOG(INFO)
           << std::endl
@@ -345,6 +344,8 @@ int main(int argc, const char** argv) {
   modular::Settings settings(command_line);
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
+
   modular::DeviceRunnerApp app(settings);
   loop.Run();
   return 0;

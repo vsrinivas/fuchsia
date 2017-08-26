@@ -28,10 +28,10 @@ executable("oauth_token_manager") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/auth",
     "//apps/network/services",
-    "//apps/tracing/lib/trace:provider",
     "//apps/web_runner/services",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 }

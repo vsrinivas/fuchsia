@@ -4,11 +4,13 @@
 
 #include <memory>
 
+#include <trace-provider/provider.h>
+
 #include "application/lib/app/application_context.h"
 #include "apps/modular/src/user_runner/user_runner_impl.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -25,7 +27,6 @@ class UserRunnerApp {
         [this](fidl::InterfaceRequest<UserRunner> request) {
           user_runner_impl_.Connect(std::move(request));
         });
-    tracing::InitializeTracer(application_context_.get(), {"user_runner"});
   }
 
  private:
@@ -40,6 +41,7 @@ int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   const bool test = command_line.HasOption("test");
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
   modular::UserRunnerApp app(test);
   loop.Run();
   return 0;

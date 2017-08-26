@@ -38,9 +38,9 @@ executable("device_runner") {
     "//apps/modular/services/user:private",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 }
 
@@ -66,9 +66,9 @@ source_set("lib") {
     "//apps/modular/services/user:private",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace",
   ]
 }
 

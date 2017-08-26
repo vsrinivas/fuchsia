@@ -56,10 +56,10 @@ executable("user_runner") {
     "//apps/modular/src/component",
     "//apps/modular/src/story_runner",
     "//apps/mozart/services/views",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 }
 

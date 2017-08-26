@@ -12,6 +12,8 @@
 #include <memory>
 #include <utility>
 
+#include <trace-provider/provider.h>
+
 #include "application/lib/app/application_context.h"
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/operation.h"
@@ -22,7 +24,6 @@
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "apps/web_runner/services/web_view.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
@@ -1458,9 +1459,6 @@ OAuthTokenManagerApp::OAuthTokenManagerApp()
       [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });
-  tracing::InitializeTracer(application_context_.get(),
-                            {"oauth_token_manager"});
-
   // Reserialize existing users.
   if (files::IsFile(kCredentialsFile)) {
     creds_ = ParseCredsFile();
@@ -1569,6 +1567,8 @@ int main(int argc, const char** argv) {
   }
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
+
   modular::auth::OAuthTokenManagerApp app;
   loop.Run();
   return 0;
