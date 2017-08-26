@@ -40,7 +40,6 @@ namespace l2cap {
 //
 //   * FakeChannel, which can be used for unit testing service-layer entities
 //     that operate on one or more L2CAP channel(s).
-//     TODO(armansito): Introduce FakeChannel later.
 //
 // THREAD-SAFETY:
 //
@@ -71,6 +70,7 @@ class Channel {
   // This callback is always run on this Channel's creation thread.
   using ClosedCallback = fxl::Closure;
   void set_channel_closed_callback(const ClosedCallback& callback) {
+    FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
     closed_cb_ = callback;
   }
 
@@ -141,8 +141,7 @@ class ChannelImpl : public Channel {
   uint16_t tx_mtu_;
   uint16_t rx_mtu_;
 
-  // TODO(armansito): Add MPS fields when we supported
-  // segmentation/flow-control.
+  // TODO(armansito): Add MPS fields when we support segmentation/flow-control.
 
   std::mutex mtx_;
 
