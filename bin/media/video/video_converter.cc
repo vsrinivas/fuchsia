@@ -4,8 +4,9 @@
 
 #include "apps/media/src/video/video_converter.h"
 
+#include <trace/event.h>
+
 #include "apps/media/src/fidl/fidl_type_conversions.h"
-#include "apps/tracing/lib/trace/event.h"
 
 namespace media {
 

@@ -4,7 +4,8 @@
 
 #include "apps/media/lib/flog/flog.h"
 
-#include "apps/tracing/lib/trace/event.h"
+#include <trace/event.h>
+
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
 

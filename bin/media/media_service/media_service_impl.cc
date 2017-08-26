@@ -20,13 +20,11 @@
 #include "apps/media/src/media_service/network_reader_impl.h"
 #include "apps/media/src/media_service/video_renderer_impl.h"
 #include "apps/media/src/util/multiproc_task_runner.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace media {
 
 MediaServiceImpl::MediaServiceImpl() {
-  tracing::InitializeTracer(application_context(), {"motown"});
   FLOG_INITIALIZE(application_context(), "media_service");
 
   multiproc_task_runner_ =

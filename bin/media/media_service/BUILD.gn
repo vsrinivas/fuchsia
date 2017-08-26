@@ -53,10 +53,9 @@ executable("media_service") {
     "//apps/mozart/services/views",
     "//apps/network",
     "//apps/network/services",
-    "//apps/tracing/lib/trace",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 }
 

@@ -4,8 +4,9 @@
 
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
 
+#include <trace/event.h>
+
 #include "apps/media/src/ffmpeg/av_codec_context.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"

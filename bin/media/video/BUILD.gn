@@ -22,8 +22,8 @@ source_set("video") {
     "//apps/media/src/util",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/geometry/cpp",
-    "//apps/tracing/lib/trace",
     "//garnet/public/lib/ftl",
+    "//magenta/system/ulib/trace",
   ]
 }
 
@@ -42,7 +42,7 @@ source_set("video_converter") {
     "//apps/media/src/fidl",
     "//apps/media/src/framework",
     "//apps/mozart/services/geometry/cpp",
-    "//apps/tracing/lib/trace",
+    "//magenta/system/ulib/trace",
   ]
 
   configs += [ ":optimize_video_converter" ]

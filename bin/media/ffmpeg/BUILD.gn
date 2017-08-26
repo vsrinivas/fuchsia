@@ -37,9 +37,9 @@ source_set("ffmpeg") {
     "//apps/media/src/demux",
     "//apps/media/src/framework",
     "//apps/media/src/util",
-    "//apps/tracing/lib/trace",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace",
     "//third_party/ffmpeg",
   ]
 

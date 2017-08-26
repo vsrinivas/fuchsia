@@ -4,8 +4,9 @@
 
 #include "apps/media/src/media_service/video_renderer_impl.h"
 
+#include <trace/event.h>
+
 #include "apps/media/lib/timeline/timeline.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
