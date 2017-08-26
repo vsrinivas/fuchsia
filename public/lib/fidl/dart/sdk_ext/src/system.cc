@@ -187,7 +187,7 @@ Dart_Handle System::ChannelQueryAndRead(ftl::RefPtr<Handle> channel) {
 
     // return a ReadResult object.
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
-                               ToDart(bytes.size()), MakeHandleList(handles));
+                               ToDart(actual_bytes), MakeHandleList(handles));
   } else {
     return ConstructDartObject(kReadResult, ToDart(status));
   }
@@ -221,12 +221,14 @@ Dart_Handle System::SocketWrite(ftl::RefPtr<Handle> socket,
                                 const tonic::DartByteData& data,
                                 int options) {
   if (!socket || !socket->is_valid()) {
+    data.Release();
     return ConstructDartObject(kWriteResult, ToDart(MX_ERR_BAD_HANDLE));
   }
 
   size_t actual;
   mx_status_t status = mx_socket_write(socket->handle(), options, data.data(),
                                        data.length_in_bytes(), &actual);
+  data.Release();
   return ConstructDartObject(kWriteResult, ToDart(status), ToDart(actual));
 }
 
@@ -241,7 +243,7 @@ Dart_Handle System::SocketRead(ftl::RefPtr<Handle> socket, size_t size) {
       mx_socket_read(socket->handle(), 0, bytes.data(), size, &actual);
   bytes.Release();
   if (status == MX_OK) {
-    FTL_DCHECK(size <= actual);
+    FTL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
                                ToDart(actual));
   }
@@ -306,7 +308,7 @@ Dart_Handle System::VmoRead(ftl::RefPtr<Handle> vmo,
       mx_vmo_read(vmo->handle(), bytes.data(), offset, size, &actual);
   bytes.Release();
   if (status == MX_OK) {
-    FTL_DCHECK(size <= actual);
+    FTL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
                                ToDart(bytes.size()));
   } else {
