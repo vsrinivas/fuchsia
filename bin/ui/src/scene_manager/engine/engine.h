@@ -175,8 +175,7 @@ class Engine : private FrameSchedulerDelegate {
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.
-  std::priority_queue<std::pair<uint64_t, ftl::RefPtr<Session>>>
-      updatable_sessions_;
+  std::set<std::pair<uint64_t, ftl::RefPtr<Session>>> updatable_sessions_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Engine);
 };

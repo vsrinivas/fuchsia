@@ -100,7 +100,7 @@ void Engine::OnImportResolvedForResource(
 void Engine::ScheduleSessionUpdate(uint64_t presentation_time,
                                    ftl::RefPtr<Session> session) {
   if (session->is_valid()) {
-    updatable_sessions_.push({presentation_time, std::move(session)});
+    updatable_sessions_.insert({presentation_time, std::move(session)});
     ScheduleUpdate(presentation_time);
   }
 }
@@ -189,10 +189,12 @@ bool Engine::ApplyScheduledSessionUpdates(uint64_t presentation_time,
                  presentation_time, "interval", presentation_interval);
 
   bool needs_render = false;
-  while (!updatable_sessions_.empty() &&
-         updatable_sessions_.top().first <= presentation_time) {
-    auto session = std::move(updatable_sessions_.top().second);
-    updatable_sessions_.pop();
+  while (!updatable_sessions_.empty()) {
+    auto top = updatable_sessions_.begin();
+    if (top->first > presentation_time)
+      break;
+    auto session = std::move(top->second);
+    updatable_sessions_.erase(top);
     if (session) {
       needs_render |= session->ApplyScheduledUpdates(presentation_time,
                                                      presentation_interval);
