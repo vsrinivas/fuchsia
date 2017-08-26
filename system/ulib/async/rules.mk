@@ -17,12 +17,6 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/async_wrapper.cpp \
     $(LOCAL_DIR)/timeouts.cpp
 
-MODULE_EXPORT := a
-
-MODULE_STATIC_LIBS := \
-    system/ulib/mx \
-    system/ulib/mxcpp
-
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/magenta
@@ -42,11 +36,8 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/loop.c \
     $(LOCAL_DIR)/loop_wrapper.cpp
 
-MODULE_EXPORT := a
-
 MODULE_STATIC_LIBS := \
-    system/ulib/async \
-    system/ulib/mx
+    system/ulib/async
 
 MODULE_LIBS := \
     system/ulib/async.default \

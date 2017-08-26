@@ -1,0 +1,45 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("async_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("async") {
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "async_wrapper.cpp",
+    "include/async/async.h",
+    "include/async/timeouts.h",
+    "timeouts.cpp",
+  ]
+
+  libs = [ "magenta" ]
+
+  public_configs = [ ":async_config" ]
+}
+
+source_set("default") {
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "include/async/default.h",
+  ]
+
+  libs = [ "async-default" ]
+
+  public_deps = [ ":async" ]
+}
+
+source_set("loop") {
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "include/async/loop.h",
+    "loop.c",
+    "loop_wrapper.cpp",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+
+  public_deps = [ ":default" ]
+}
