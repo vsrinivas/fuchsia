@@ -40,7 +40,30 @@ startup. The list of applications to run at startup is contained in the
 `/boot/bin/sh /system/autorun`, which is a useful development hook for the
 boot sequence, and `run-vc`, which creates virtual consoles.
 
-# Layer 3: ... to be continued
+# Layer 3: [device_runner](https://fuchsia.googlesource.com/modular/+/master/src/device_runner/)
+
+`device_runner`'s job is to setup interactive flow, user login and user
+management.
+
+It first gets access to the root view of the system, starts up Device Shell and
+draws the Device Shell UI in the root view starting the interative flow. It also
+manages a user database that is exposed to Device Shell via a FIDL API.
+
+This API allows the Device Shell to add a new user, delete an existing user,
+enumerate all existing users and login as an existing user or in incognito mode.
+
+Adding a new user is done using an Account Manager service that can talk to an
+identity provider to get an id token to access the user's
+[Ledger](https://fuchsia.googlesource.com/ledger/).
+
+Logging-in as an existing user starts an instance of `user_runner` with that
+user's id token and with a namespace that is mapped within and managed by
+`device_runner`'s namespace.
+
+Logging-in as a guest user (in incognito mode) starts an instance of
+`user_runner` but without an id token and a temporary namespace.
+
+# Layer 4: ... to be continued
 
 (In the future, the boot sequence will likely continue from this point into the
-device runner, user runner, user shell, etc.)
+user runner, user shell, etc.)
