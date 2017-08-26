@@ -12,8 +12,7 @@
 
 __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
-BlockingPortAllocator::BlockingPortAllocator()
-    : semaphore_(kMaxPacketsPerRange) {}
+BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
 mx_status_t BlockingPortAllocator::Init() {
 #if WITH_LIB_MAGENTA

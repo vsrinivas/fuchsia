@@ -23,11 +23,9 @@ static const uint kApicMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_W
 namespace {
 // Locate a VMO for a given vaddr.
 struct AspaceVmoLocator final : public VmEnumerator {
-    AspaceVmoLocator(vaddr_t vaddr_)
-        : vaddr(vaddr_) {}
+    AspaceVmoLocator(vaddr_t vaddr_) : vaddr(vaddr_) {}
 
-    bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar,
-                     uint depth) final {
+    bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) final {
         if (vaddr < map->base() || vaddr >= (map->base() + map->size())) {
             // Mapping does not cover 'vaddr', return true to keep going.
             return true;
@@ -46,8 +44,8 @@ struct AspaceVmoLocator final : public VmEnumerator {
 mx_status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
                                               mxtl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
     mxtl::AllocChecker ac;
-    mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas(
-        new (&ac) GuestPhysicalAddressSpace(guest_phys_mem));
+    mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas(new (&ac)
+                                                         GuestPhysicalAddressSpace(guest_phys_mem));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -58,9 +56,8 @@ mx_status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_
     // Initialize our VMAR with the provided VMO, mapped at address 0.
     mxtl::RefPtr<VmMapping> mapping;
     mx_status_t result = gpas->paspace_->RootVmar()->CreateVmMapping(
-        0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ 0,
-        VMAR_FLAG_SPECIFIC, guest_phys_mem, /* vmo_offset */ 0,
-        kMmuFlags, "guest_phys_mem_vmo", &mapping);
+        0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ 0, VMAR_FLAG_SPECIFIC,
+        guest_phys_mem, /* vmo_offset */ 0, kMmuFlags, "guest_phys_mem_vmo", &mapping);
     if (result != MX_OK)
         return result;
 
@@ -93,10 +90,9 @@ mx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t 
     // The root VMAR will maintain a reference to the VmMapping internally so
     // we don't need to maintain a long-lived reference to the mapping here.
     mxtl::RefPtr<VmMapping> mapping;
-    result = paspace_->RootVmar()->CreateVmMapping(
-        guest_paddr, vmo->size(), /* align_pow2*/ 0,
-        VMAR_FLAG_SPECIFIC, vmo, /* vmo_offset */ 0,
-        kApicMmuFlags, "guest_apic_vmo", &mapping);
+    result = paspace_->RootVmar()->CreateVmMapping(guest_paddr, vmo->size(), /* align_pow2*/ 0,
+                                                   VMAR_FLAG_SPECIFIC, vmo, /* vmo_offset */ 0,
+                                                   kApicMmuFlags, "guest_apic_vmo", &mapping);
     if (result != MX_OK)
         return result;
 

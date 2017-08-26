@@ -72,12 +72,12 @@ struct VmxRegion {
 /* Maintains the VMX state for each CPU. */
 class VmxCpuState {
 public:
-    static status_t Create(mxtl::unique_ptr<VmxCpuState>* out);
+    static mx_status_t Create(mxtl::unique_ptr<VmxCpuState>* out);
     ~VmxCpuState();
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmxCpuState);
 
-    status_t AllocVpid(uint16_t* vpid);
-    status_t ReleaseVpid(uint16_t vpid);
+    mx_status_t AllocVpid(uint16_t* vpid);
+    mx_status_t ReleaseVpid(uint16_t vpid);
 
 private:
     bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumVpids>> vpid_bitmap_;
@@ -86,6 +86,6 @@ private:
     explicit VmxCpuState(mxtl::Array<VmxPage> vmxon_pages);
 };
 
-status_t alloc_vpid(uint16_t* vpid);
-status_t release_vpid(uint16_t vpid);
+mx_status_t alloc_vpid(uint16_t* vpid);
+mx_status_t release_vpid(uint16_t vpid);
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);

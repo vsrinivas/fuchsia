@@ -32,13 +32,13 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
 }
 
 // static
-status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out) {
+mx_status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out) {
     mxtl::AllocChecker ac;
     mxtl::unique_ptr<Guest> guest(new (&ac) Guest);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    status_t status = GuestPhysicalAddressSpace::Create(physmem, &guest->gpas_);
+    mx_status_t status = GuestPhysicalAddressSpace::Create(physmem, &guest->gpas_);
     if (status != MX_OK)
         return status;
 
@@ -80,12 +80,12 @@ status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* 
 }
 
 Guest::~Guest() {
-    __UNUSED status_t status = gpas_->UnmapRange(APIC_PHYS_BASE, PAGE_SIZE);
+    __UNUSED mx_status_t status = gpas_->UnmapRange(APIC_PHYS_BASE, PAGE_SIZE);
     DEBUG_ASSERT(status == MX_OK);
 }
 
-status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                        mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
+mx_status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
+                           mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
     if (SIZE_MAX - len < addr)
         return MX_ERR_OUT_OF_RANGE;
     switch (kind) {
@@ -102,7 +102,7 @@ status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
     }
 }
 
-status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* guest) {
+mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* guest) {
     // Check that the CPU supports VMX.
     if (!x86_feature_test(X86_FEATURE_VMX))
         return MX_ERR_NOT_SUPPORTED;
@@ -110,7 +110,7 @@ status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Gues
     return Guest::Create(physmem, guest);
 }
 
-status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
+mx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
+                                mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
     return guest->SetTrap(kind, addr, len, port, key);
 }

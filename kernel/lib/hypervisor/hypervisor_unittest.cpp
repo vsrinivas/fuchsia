@@ -50,18 +50,13 @@ static bool guest_physical_address_space_unmap_range(void* context) {
 
     // Unmap page.
     status = gpas->UnmapRange(0, PAGE_SIZE);
-    EXPECT_EQ(
-        MX_OK,
-        status,
-        "Failed to unmap page from GuestPhysicalAddressSpace.\n");
+    EXPECT_EQ(MX_OK, status, "Failed to unmap page from GuestPhysicalAddressSpace.\n");
 
     // Verify GetPage for unmapped address fails.
     paddr_t gpas_paddr;
     status = gpas->GetPage(0, &gpas_paddr);
-    EXPECT_EQ(
-        MX_ERR_NOT_FOUND,
-        status,
-        "GetPage returning unexpected value for unmapped address.\n");
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status,
+              "GetPage returning unexpected value for unmapped address.\n");
     END_TEST;
 }
 
@@ -79,10 +74,8 @@ static bool guest_physical_address_space_get_page_not_present(void* context) {
     // Query unmapped address.
     paddr_t gpas_paddr = 0;
     status = gpas->GetPage(UINTPTR_MAX, &gpas_paddr);
-    EXPECT_EQ(
-        MX_ERR_NOT_FOUND,
-        status,
-        "GetPage returning unexpected value for unmapped address.\n");
+    EXPECT_EQ(MX_ERR_NOT_FOUND, status,
+              "GetPage returning unexpected value for unmapped address.\n");
 
     END_TEST;
 }
@@ -108,10 +101,8 @@ static bool guest_physical_address_space_get_page(void* context) {
     paddr_t gpas_paddr = 0;
     status = gpas->GetPage(0, &gpas_paddr);
     EXPECT_EQ(MX_OK, status, "Failed to read page from GuestPhysicalAddressSpace.\n");
-    EXPECT_EQ(
-        vmo_paddr,
-        gpas_paddr,
-        "Incorrect physical address returned from GuestPhysicalAddressSpace::GetPage.\n");
+    EXPECT_EQ(vmo_paddr, gpas_paddr,
+              "Incorrect physical address returned from GuestPhysicalAddressSpace::GetPage.\n");
 
     END_TEST;
 }
@@ -149,10 +140,9 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
     // Allocate second VMAR, offset one page into the root.
     mxtl::RefPtr<VmAddressRegion> root_vmar = gpas->aspace()->RootVmar();
     mxtl::RefPtr<VmAddressRegion> shadow_vmar;
-    status = root_vmar->CreateSubVmar(
-        ROOT_VMO_SIZE, root_vmar->size() - ROOT_VMO_SIZE, /* align_pow2 */ 0,
-        root_vmar->flags() | VMAR_FLAG_SPECIFIC, "test_vmar1",
-        &shadow_vmar);
+    status = root_vmar->CreateSubVmar(ROOT_VMO_SIZE, root_vmar->size() - ROOT_VMO_SIZE,
+                                      /* align_pow2 */ 0, root_vmar->flags() | VMAR_FLAG_SPECIFIC,
+                                      "test_vmar1", &shadow_vmar);
     EXPECT_EQ(MX_OK, status, "Failed to create shadow VMAR.\n");
 
     // Allocate second VMO; we'll map the original VMO on top of this one.
@@ -162,13 +152,11 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
 
     // Map second VMO into second VMAR.
     mxtl::RefPtr<VmMapping> mapping;
-    uint mmu_flags = ARCH_MMU_FLAG_PERM_READ |
-                     ARCH_MMU_FLAG_PERM_WRITE |
-                     ARCH_MMU_FLAG_PERM_EXECUTE;
+    uint mmu_flags =
+        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE;
     status = shadow_vmar->CreateVmMapping(
-        /* mapping_offset */ 0, vmo2->size(), /* align_pow2 */ 0,
-        VMAR_FLAG_SPECIFIC, vmo2, /* vmar_offset */ 0,
-        mmu_flags, "vmo2", &mapping);
+        /* mapping_offset */ 0, vmo2->size(), /* align_pow2 */ 0, VMAR_FLAG_SPECIFIC, vmo2,
+        /* vmar_offset */ 0, mmu_flags, "vmo2", &mapping);
     EXPECT_EQ(MX_OK, status, "Failed to map vmo into shadow vmar.");
 
     // Read expected physical address from the VMO.
@@ -181,10 +169,8 @@ static bool guest_physical_address_space_get_page_complex(void* context) {
     paddr_t gpas_paddr = 0;
     status = gpas->GetPage(ROOT_VMO_SIZE, &gpas_paddr);
     EXPECT_EQ(MX_OK, status, "Failed to read page from GuestPhysicalAddressSpace.\n");
-    EXPECT_EQ(
-        vmo_paddr,
-        gpas_paddr,
-        "Incorrect physical address returned from GuestPhysicalAddressSpace::GetPage.\n");
+    EXPECT_EQ(vmo_paddr, gpas_paddr,
+              "Incorrect physical address returned from GuestPhysicalAddressSpace::GetPage.\n");
     END_TEST;
 }
 
@@ -230,9 +216,5 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_get_page_not_present)
 #if ARCH_X86_64
 HYPERVISOR_UNITTEST(guest_physical_address_space_map_apic_page)
 #endif // ARCH_X86_64
-UNITTEST_END_TESTCASE(
-    hypervisor_tests,
-    "hypervisor_tests",
-    "Hypervisor unit tests.",
-    nullptr,
-    nullptr);
+UNITTEST_END_TESTCASE(hypervisor_tests, "hypervisor_tests", "Hypervisor unit tests.", nullptr,
+                      nullptr);

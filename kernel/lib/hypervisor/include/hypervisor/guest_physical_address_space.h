@@ -34,7 +34,8 @@ private:
     explicit GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> guest_phys_mem);
 };
 
-static inline mx_status_t guest_lookup_page(void* context, size_t offset, size_t index, paddr_t pa) {
+static inline mx_status_t guest_lookup_page(void* context, size_t offset, size_t index,
+                                            paddr_t pa) {
     *static_cast<paddr_t*>(context) = pa;
     return MX_OK;
 }

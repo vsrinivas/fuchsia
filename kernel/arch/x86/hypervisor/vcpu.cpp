@@ -28,7 +28,7 @@ static const uint32_t kInterruptInfoValid = 1u << 31;
 static const uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 static const uint32_t kInterruptTypeHardwareException = 3u << 8;
 
-static status_t vmptrld(paddr_t pa) {
+static mx_status_t vmptrld(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile(
@@ -40,7 +40,7 @@ static status_t vmptrld(paddr_t pa) {
     return err ? MX_ERR_INTERNAL : MX_OK;
 }
 
-static status_t vmclear(paddr_t pa) {
+static mx_status_t vmclear(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile(
@@ -82,7 +82,7 @@ AutoVmcs::AutoVmcs(const paddr_t vmcs_address)
     : vmcs_address_(vmcs_address) {
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
-    __UNUSED status_t status = vmptrld(vmcs_address_);
+    __UNUSED mx_status_t status = vmptrld(vmcs_address_);
     DEBUG_ASSERT(status == MX_OK);
 }
 
@@ -93,7 +93,7 @@ AutoVmcs::~AutoVmcs() {
 
 void AutoVmcs::Reload() {
     DEBUG_ASSERT(arch_ints_disabled());
-    __UNUSED status_t status = vmptrld(vmcs_address_);
+    __UNUSED mx_status_t status = vmptrld(vmcs_address_);
     DEBUG_ASSERT(status == MX_OK);
 }
 
@@ -175,8 +175,8 @@ void AutoVmcs::Write(VmcsFieldXX field, uint64_t val) {
     vmwrite(static_cast<uint64_t>(field), val);
 }
 
-status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
-                              uint32_t set, uint32_t clear) {
+mx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr,
+                                 uint32_t set, uint32_t clear) {
     uint32_t allowed_0 = static_cast<uint32_t>(BITS(true_msr, 31, 0));
     uint32_t allowed_1 = static_cast<uint32_t>(BITS_SHIFT(true_msr, 63, 32));
     if ((allowed_1 & set) != set) {
@@ -267,11 +267,11 @@ static void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, ui
     entry->value = value;
 }
 
-status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t cr3,
-                   paddr_t virtual_apic_address, paddr_t apic_access_address,
-                   paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
-                   VmxPage* host_msr_page, VmxPage* guest_msr_page) {
-    status_t status = vmclear(vmcs_address);
+mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t cr3,
+                      paddr_t virtual_apic_address, paddr_t apic_access_address,
+                      paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
+                      VmxPage* host_msr_page, VmxPage* guest_msr_page) {
+    mx_status_t status = vmclear(vmcs_address);
     if (status != MX_OK)
         return status;
 
@@ -561,12 +561,12 @@ status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr_t 
 }
 
 // static
-status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
-                      paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                      GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                      mxtl::unique_ptr<Vcpu>* out) {
+mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+                         paddr_t apic_access_address, paddr_t msr_bitmaps_address,
+                         GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                         mxtl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
-    status_t status = alloc_vpid(&vpid);
+    mx_status_t status = alloc_vpid(&vpid);
     if (status != MX_OK)
         return status;
     auto auto_call = mxtl::MakeAutoCall([=]() { release_vpid(vpid); });
@@ -641,14 +641,14 @@ Vcpu::~Vcpu() {
     // pin the current thread to the same CPU as the VCPU.
     AutoPin pin(this);
     vmclear(vmcs_page_.PhysicalAddress());
-    __UNUSED status_t status = release_vpid(vpid_);
+    __UNUSED mx_status_t status = release_vpid(vpid_);
     DEBUG_ASSERT(status == MX_OK);
 }
 
-status_t Vcpu::Resume(mx_port_packet_t* packet) {
+mx_status_t Vcpu::Resume(mx_port_packet_t* packet) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return MX_ERR_BAD_STATE;
-    status_t status;
+    mx_status_t status;
     do {
         AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
         if (x86_feature_test(X86_FEATURE_XSAVE)) {
@@ -688,7 +688,7 @@ void vmx_exit(VmxState* vmx_state) {
     idt_load(idt_get_readonly());
 }
 
-status_t Vcpu::Interrupt(uint32_t vector) {
+mx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (vector > X86_MAX_INT)
         return MX_ERR_OUT_OF_RANGE;
     if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
@@ -718,7 +718,7 @@ static void register_copy(Out* out, const In& in) {
     out->r15 = in.r15;
 }
 
-status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
+mx_status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return MX_ERR_BAD_STATE;
     switch (kind) {
@@ -736,7 +736,7 @@ status_t Vcpu::ReadState(uint32_t kind, void* buffer, uint32_t len) const {
     return MX_ERR_INVALID_ARGS;
 }
 
-status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
+mx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     if (!check_pinned_cpu_invariant(thread_, vpid_))
         return MX_ERR_BAD_STATE;
     switch (kind) {
@@ -766,26 +766,26 @@ status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return MX_ERR_INVALID_ARGS;
 }
 
-status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
-                         paddr_t apic_access_address, paddr_t msr_bitmaps_address,
-                         GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                         mxtl::unique_ptr<Vcpu>* out) {
+mx_status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+                            paddr_t apic_access_address, paddr_t msr_bitmaps_address,
+                            GuestPhysicalAddressSpace* gpas, PacketMux& mux,
+                            mxtl::unique_ptr<Vcpu>* out) {
     return Vcpu::Create(ip, cr3, apic_vmo, apic_access_address, msr_bitmaps_address, gpas, mux,
                         out);
 }
 
-status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet) {
+mx_status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet) {
     return vcpu->Resume(packet);
 }
 
-status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t vector) {
+mx_status_t arch_vcpu_interrupt(Vcpu* vcpu, uint32_t vector) {
     return vcpu->Interrupt(vector);
 }
 
-status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
+mx_status_t arch_vcpu_read_state(const Vcpu* vcpu, uint32_t kind, void* buffer, uint32_t len) {
     return vcpu->ReadState(kind, buffer, len);
 }
 
-status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
+mx_status_t arch_vcpu_write_state(Vcpu* vcpu, uint32_t kind, const void* buffer, uint32_t len) {
     return vcpu->WriteState(kind, buffer, len);
 }

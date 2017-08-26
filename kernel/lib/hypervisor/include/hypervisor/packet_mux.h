@@ -56,7 +56,7 @@ private:
 class PortRange : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<PortRange>> {
 public:
     PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port, uint64_t key);
-    virtual ~PortRange() {};
+    virtual ~PortRange(){};
 
     mx_status_t Init();
     mx_status_t Queue(const mx_port_packet_t& packet, StateReloader* reloader);
@@ -77,8 +77,7 @@ class PacketMux {
 public:
     mx_status_t AddPortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port,
                              uint64_t key);
-    mx_status_t Queue(mx_vaddr_t addr, const mx_port_packet_t& packet,
-                      StateReloader* reloader);
+    mx_status_t Queue(mx_vaddr_t addr, const mx_port_packet_t& packet, StateReloader* reloader);
 
 private:
     using PortTree = mxtl::WAVLTree<mx_vaddr_t, mxtl::unique_ptr<PortRange>>;

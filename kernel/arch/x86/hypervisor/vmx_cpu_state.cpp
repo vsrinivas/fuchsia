@@ -22,7 +22,7 @@ static mxtl::Mutex vmx_mutex;
 static size_t vcpus TA_GUARDED(vmx_mutex) = 0;
 static mxtl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
 
-static status_t vmxon(paddr_t pa) {
+static mx_status_t vmxon(paddr_t pa) {
     uint8_t err;
 
     __asm__ volatile(
@@ -34,7 +34,7 @@ static status_t vmxon(paddr_t pa) {
     return err ? MX_ERR_INTERNAL : MX_OK;
 }
 
-static status_t vmxoff() {
+static mx_status_t vmxoff() {
     uint8_t err;
 
     __asm__ volatile(
@@ -81,7 +81,7 @@ EptInfo::EptInfo() {
         BIT_SHIFT(ept_info, 26);
 }
 
-status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
+mx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
     // From Volume 3, Appendix A.1: Bits 44:32 report the number of bytes that
     // software should allocate for the VMXON region and any VMCS region. It is
     // a value greater than 0 and at most 4096 (bit 44 is set if and only if
@@ -191,7 +191,7 @@ static void vmxon_task(void* arg) {
     region->revision_id = vmx_info.revision_id;
 
     // Execute VMXON.
-    status_t status = vmxon(page.PhysicalAddress());
+    mx_status_t status = vmxon(page.PhysicalAddress());
     if (status != MX_OK) {
         dprintf(CRITICAL, "Failed to turn on VMX on CPU %u\n", cpu_num);
         return;
@@ -202,7 +202,7 @@ static void vmxon_task(void* arg) {
 
 static void vmxoff_task(void* arg) {
     // Execute VMXOFF.
-    status_t status = vmxoff();
+    mx_status_t status = vmxoff();
     if (status != MX_OK) {
         dprintf(CRITICAL, "Failed to turn off VMX on CPU %u\n", arch_curr_cpu_num());
         return;
@@ -213,7 +213,7 @@ static void vmxoff_task(void* arg) {
 }
 
 // static
-status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
+mx_status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
     // Allocate a VMXON page for each CPU.
     size_t num_cpus = arch_max_num_cpus();
     mxtl::AllocChecker ac;
@@ -223,7 +223,7 @@ status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
     mxtl::Array<VmxPage> vmxon_pages(pages, num_cpus);
     VmxInfo vmx_info;
     for (auto& page : vmxon_pages) {
-        status_t status = page.Alloc(vmx_info, 0);
+        mx_status_t status = page.Alloc(vmx_info, 0);
         if (status != MX_OK)
             return status;
     }
@@ -241,7 +241,7 @@ status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
     mxtl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState(mxtl::move(vmxon_pages)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
-    status_t status = vmx_cpu_state->vpid_bitmap_.Reset(kNumVpids);
+    mx_status_t status = vmx_cpu_state->vpid_bitmap_.Reset(kNumVpids);
     if (status != MX_OK)
         return status;
 
@@ -256,7 +256,7 @@ VmxCpuState::~VmxCpuState() {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);
 }
 
-status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
+mx_status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
     size_t first_unset;
     bool all_set = vpid_bitmap_.Get(0, kNumVpids, &first_unset);
     if (all_set)
@@ -267,16 +267,16 @@ status_t VmxCpuState::AllocVpid(uint16_t* vpid) {
     return vpid_bitmap_.SetOne(first_unset);
 }
 
-status_t VmxCpuState::ReleaseVpid(uint16_t vpid) {
+mx_status_t VmxCpuState::ReleaseVpid(uint16_t vpid) {
     if (vpid == 0 || !vpid_bitmap_.GetOne(vpid - 1))
         return MX_ERR_INVALID_ARGS;
     return vpid_bitmap_.ClearOne(vpid - 1);
 }
 
-status_t alloc_vpid(uint16_t* vpid) {
+mx_status_t alloc_vpid(uint16_t* vpid) {
     AutoLock lock(&vmx_mutex);
     if (vcpus == 0) {
-        status_t status = VmxCpuState::Create(&vmx_cpu_state);
+        mx_status_t status = VmxCpuState::Create(&vmx_cpu_state);
         if (status != MX_OK)
             return status;
     }
@@ -284,9 +284,9 @@ status_t alloc_vpid(uint16_t* vpid) {
     return vmx_cpu_state->AllocVpid(vpid);
 }
 
-status_t release_vpid(uint16_t vpid) {
+mx_status_t release_vpid(uint16_t vpid) {
     AutoLock lock(&vmx_mutex);
-    status_t status = vmx_cpu_state->ReleaseVpid(vpid);
+    mx_status_t status = vmx_cpu_state->ReleaseVpid(vpid);
     if (status != MX_OK)
         return status;
     vcpus--;
