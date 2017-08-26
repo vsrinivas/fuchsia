@@ -98,9 +98,8 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
     PortPacket(const PortPacket&) = delete;
     void operator=(PortPacket) = delete;
 
-    uint32_t type() const { return packet.type; }
     uint64_t key() const { return packet.key; }
-
+    bool is_ephemeral() const { return allocator != nullptr; }
     void Free() { allocator->Free(this); }
 };
 
@@ -112,11 +111,6 @@ public:
     PortObserver(uint32_t type, const Handle* handle, mxtl::RefPtr<PortDispatcher> port,
                  uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
-
-    // Returns void pointer because this method can only be used for comparing
-    // values. Calling a method on the handle will very likely cause a deadlock.
-    const void* handle() const { return handle_; }
-    uint64_t key() const { return key_; }
 
 private:
     PortObserver(const PortObserver&) = delete;
@@ -134,12 +128,10 @@ private:
     Flags MaybeQueue(mx_signals_t new_state, uint64_t count);
 
     const uint32_t type_;
-    const uint64_t key_;
     const mx_signals_t trigger_;
-    const Handle* const handle_;
-    mxtl::RefPtr<PortDispatcher> const port_;
-
     PortPacket packet_;
+
+    mxtl::RefPtr<PortDispatcher> const port_;
 };
 
 class PortDispatcher final : public Dispatcher {
@@ -173,7 +165,6 @@ private:
     friend class ExceptionPort;
 
     explicit PortDispatcher(uint32_t options);
-    PortObserver* CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) TA_REQ(lock_);
 
     // Adopts a RefPtr to |eport|, and adds it to |eports_|.
     // Called by ExceptionPort.
@@ -184,7 +175,7 @@ private:
     // Called by ExceptionPort.
     void UnlinkExceptionPort(ExceptionPort* eport);
 
-    mxtl::Canary<mxtl::magic("POR2")> canary_;
+    mxtl::Canary<mxtl::magic("PORT")> canary_;
     mxtl::Mutex lock_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(lock_);

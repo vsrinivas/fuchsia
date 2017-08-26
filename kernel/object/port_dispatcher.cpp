@@ -68,22 +68,25 @@ void ArenaPortAllocator::Free(PortPacket* port_packet) {
 PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
     : packet{}, handle(handle), observer(nullptr), allocator(allocator) {
     // Note that packet is initialized to zeros.
+    if (handle) {
+        // Currently |handle| is only valid if the packets are not ephemeral
+        // which means that PortObserver always uses the kernel heap.
+        DEBUG_ASSERT(allocator == nullptr);
+    }
 }
 
 PortObserver::PortObserver(uint32_t type, const Handle* handle, mxtl::RefPtr<PortDispatcher> port,
                            uint64_t key, mx_signals_t signals)
     : type_(type),
-      key_(key),
       trigger_(signals),
-      handle_(handle),
-      port_(mxtl::move(port)),
-      packet_(handle, nullptr) {
+      packet_(handle, nullptr),
+      port_(mxtl::move(port)) {
 
     DEBUG_ASSERT(handle != nullptr);
 
     auto& packet = packet_.packet;
     packet.status = MX_OK;
-    packet.key = key_;
+    packet.key = key;
     packet.type = type_;
     packet.signal.trigger = trigger_;
 }
@@ -108,7 +111,7 @@ StateObserver::Flags PortObserver::OnStateChange(mx_signals_t new_state) {
 }
 
 StateObserver::Flags PortObserver::OnCancel(Handle* handle) {
-    if (handle_ == handle) {
+    if (packet_.handle == handle) {
         return kHandled | kNeedRemoval;
     } else {
         return 0;
@@ -116,7 +119,7 @@ StateObserver::Flags PortObserver::OnCancel(Handle* handle) {
 }
 
 StateObserver::Flags PortObserver::OnCancelByKey(Handle* handle, const void* port, uint64_t key) {
-    if ((key_ != key) || (handle_ != handle) || (port_.get() != port))
+    if ((packet_.handle != handle) || (packet_.key() != key) || (port_.get() != port))
         return 0;
     return kHandled | kNeedRemoval;
 }
@@ -232,26 +235,32 @@ mx_status_t PortDispatcher::Queue(PortPacket* port_packet, mx_signals_t observed
     return MX_OK;
 }
 
-mx_status_t PortDispatcher::Dequeue(mx_time_t deadline, mx_port_packet_t* packet) {
+mx_status_t PortDispatcher::Dequeue(mx_time_t deadline, mx_port_packet_t* out_packet) {
     canary_.Assert();
-
-    PortPacket* port_packet = nullptr;
-    PortObserver* observer = nullptr;
 
     while (true) {
         {
             AutoLock al(&lock_);
-            if (packets_.is_empty())
+
+            PortPacket* port_packet = packets_.pop_front();
+            if (port_packet == nullptr)
                 goto wait;
 
-            port_packet = packets_.pop_front();
-            observer = CopyLocked(port_packet, packet);
-        }
+            if (out_packet != nullptr)
+                *out_packet = port_packet->packet;
 
-        if (observer)
-            delete observer;
-        else if (packet && (packet->type & PKT_FLAG_EPHEMERAL))
-            port_packet->Free();
+            PortObserver* observer = port_packet->observer;
+
+            if (observer) {
+                // Deleting the observer under the lock is fine because
+                // the reference that holds to this PortDispatcher is by
+                // construction not the last one. We need to do this under
+                // the lock because another thread can call CanReap().
+                delete observer;
+            } else if (port_packet->is_ephemeral()) {
+                port_packet->Free();
+            }
+        }
 
         return MX_OK;
 
@@ -260,13 +269,6 @@ wait:
         if (st != MX_OK)
             return st;
     }
-}
-
-PortObserver* PortDispatcher::CopyLocked(PortPacket* port_packet, mx_port_packet_t* packet) {
-    if (packet)
-        *packet = port_packet->packet;
-
-    return (port_packet->type() & PKT_FLAG_EPHEMERAL) ? nullptr : port_packet->observer;
 }
 
 bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
