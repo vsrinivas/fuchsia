@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
 
+#include <trace/event.h>
+
 #include "escher/impl/image_cache.h"
 #include "escher/renderer/image.h"
 #include "escher/renderer/paper_renderer.h"
@@ -18,7 +20,6 @@
 #include "apps/mozart/src/scene_manager/resources/compositor/layer_stack.h"
 #include "apps/mozart/src/scene_manager/resources/dump_visitor.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
-#include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
 

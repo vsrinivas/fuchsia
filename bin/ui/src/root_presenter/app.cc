@@ -10,7 +10,6 @@
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/src/root_presenter/presentation.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
 
 namespace root_presenter {
@@ -19,8 +18,6 @@ App::App(const ftl::CommandLine& command_line)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       input_reader_(this) {
   FTL_DCHECK(application_context_);
-
-  tracing::InitializeTracer(application_context_.get(), {"root_presenter"});
 
   input_reader_.Start();
 

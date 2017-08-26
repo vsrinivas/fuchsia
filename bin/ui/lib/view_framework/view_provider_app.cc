@@ -4,14 +4,11 @@
 
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 
-#include "apps/tracing/lib/trace/provider.h"
-
 namespace mozart {
 
 ViewProviderApp::ViewProviderApp(ViewFactory factory)
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       service_(application_context_.get(), std::move(factory)) {
-  tracing::InitializeTracer(application_context_.get(), {});
 }
 
 ViewProviderApp::~ViewProviderApp() {}

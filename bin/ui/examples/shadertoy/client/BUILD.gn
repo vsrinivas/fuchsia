@@ -23,6 +23,7 @@ executable("client") {
     "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
     "//garnet/public/lib/fidl/cpp/bindings",
+    "//magenta/system/ulib/trace-provider",
   ]
 
   include_dirs = [

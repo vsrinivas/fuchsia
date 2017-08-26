@@ -4,8 +4,9 @@
 
 #include "apps/mozart/lib/view_framework/base_view.h"
 
+#include <trace/event.h>
+
 #include "application/lib/app/connect.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 

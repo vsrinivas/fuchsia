@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene_manager/engine/session.h"
 
+#include <trace/event.h>
+
 #include "apps/mozart/src/scene_manager/engine/hit_tester.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
@@ -29,7 +31,6 @@
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/util/unwrap.h"
 #include "apps/mozart/src/scene_manager/util/wrap.h"
-#include "apps/tracing/lib/trace/event.h"
 
 #include "escher/renderer/paper_renderer.h"
 #include "escher/shape/mesh.h"

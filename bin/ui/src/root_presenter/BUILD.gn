@@ -22,11 +22,12 @@ executable("root_presenter") {
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/input_reader",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
+
   libs = [ "hid" ]
 
   include_dirs = [ "//third_party/glm" ]

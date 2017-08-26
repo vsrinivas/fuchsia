@@ -4,10 +4,11 @@
 
 #include "apps/mozart/src/scene_manager/engine/display_swapchain.h"
 
+#include <trace/event.h>
+
 #include "apps/mozart/src/scene_manager/displays/display.h"
 #include "apps/mozart/src/scene_manager/engine/frame_timings.h"
 #include "apps/mozart/src/scene_manager/util/escher_utils.h"
-#include "apps/tracing/lib/trace/event.h"
 
 #include "escher/escher.h"
 

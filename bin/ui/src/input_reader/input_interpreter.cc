@@ -16,9 +16,10 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
+#include <trace/event.h>
+
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/input/usages.fidl.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 

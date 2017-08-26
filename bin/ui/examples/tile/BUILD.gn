@@ -21,5 +21,6 @@ executable("tile") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 }

@@ -16,10 +16,11 @@ source_set("view_framework") {
     "//apps/mozart/services/input",
     "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
-    "//apps/tracing/lib/trace",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
   ]
+
+  deps = [ "//magenta/system/ulib/trace" ]
 }
 
 source_set("view_provider") {
@@ -32,7 +33,6 @@ source_set("view_provider") {
 
   public_deps = [
     ":view_framework",
-    "//apps/tracing/lib/trace:provider",
   ]
 }
 

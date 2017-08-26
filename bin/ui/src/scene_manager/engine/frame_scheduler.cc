@@ -5,10 +5,10 @@
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 
 #include <magenta/syscalls.h>
+#include <trace/event.h>
 
 #include "apps/mozart/src/scene_manager/displays/display.h"
 #include "apps/mozart/src/scene_manager/engine/frame_timings.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

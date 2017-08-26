@@ -4,6 +4,8 @@
 
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 
+#include <trace/event.h>
+
 #include "escher/impl/ssdo_sampler.h"
 #include "escher/renderer/renderer.h"
 #include "escher/scene/model.h"
@@ -20,7 +22,6 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
-#include "apps/tracing/lib/trace/event.h"
 
 namespace scene_manager {
 

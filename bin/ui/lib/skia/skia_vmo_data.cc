@@ -4,11 +4,11 @@
 
 #include "apps/mozart/lib/skia/skia_vmo_data.h"
 
-#include <mx/vmar.h>
-
 #include <atomic>
 
-#include "apps/tracing/lib/trace/event.h"
+#include <trace/event.h>
+#include <mx/vmar.h>
+
 #include "lib/ftl/logging.h"
 
 static_assert(sizeof(size_t) == sizeof(uint64_t),

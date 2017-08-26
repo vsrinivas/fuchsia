@@ -45,14 +45,12 @@ source_set("vmo") {
     "skia_vmo_data.h",
   ]
 
-  deps = [
-    "//apps/tracing/lib/trace",
-  ]
-
   public_deps = [
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",
   ]
+
+  deps = [ "//magenta/system/ulib/trace" ]
 }

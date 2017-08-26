@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <trace-provider/provider.h>
+
 #include "apps/mozart/src/view_manager/view_manager_app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"
@@ -16,6 +18,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
   view_manager::ViewManagerApp app;
 
   loop.Run();

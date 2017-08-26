@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <trace-provider/provider.h>
+
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/examples/shadertoy/service/app.h"
 #include "escher/escher.h"
@@ -30,6 +32,7 @@ int main(int argc, const char** argv) {
     escher::Escher escher(vulkan_device);
 
     mtl::MessageLoop loop;
+    trace::TraceProvider trace_provider(loop.async());
 
     std::unique_ptr<app::ApplicationContext> app_context(
         app::ApplicationContext::CreateFromStartupInfo());

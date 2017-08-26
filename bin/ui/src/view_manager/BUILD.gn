@@ -11,6 +11,7 @@ executable("view_manager") {
 
   deps = [
     ":lib",
+    "//magenta/system/ulib/trace-provider",
   ]
 }
 
@@ -48,7 +49,6 @@ source_set("lib") {
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/view_manager/input",
     "//apps/mozart/src/view_manager/internal",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",

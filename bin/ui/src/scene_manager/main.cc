@@ -4,6 +4,8 @@
 
 #include <memory>
 
+#include <trace-provider/provider.h>
+
 #include "lib/escher/examples/common/demo_harness_fuchsia.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings_command_line.h"
@@ -25,6 +27,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
 
   std::unique_ptr<SceneManagerApp> scene_manager_app;
 

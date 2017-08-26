@@ -4,7 +4,6 @@
 
 #include "apps/mozart/src/scene_manager/scene_manager_app.h"
 
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
 
 namespace scene_manager {
@@ -22,8 +21,6 @@ SceneManagerApp::SceneManagerApp(app::ApplicationContext* app_context,
                                    std::make_unique<escher::VulkanSwapchain>(
                                        demo_harness_->GetVulkanSwapchain())))) {
   FTL_DCHECK(application_context_);
-
-  tracing::InitializeTracer(application_context_, {"scene_manager"});
 
   application_context_->outgoing_services()->AddService<scenic::SceneManager>(
       [this](fidl::InterfaceRequest<scenic::SceneManager> request) {

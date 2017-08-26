@@ -5,7 +5,6 @@
 #include "apps/mozart/examples/shadertoy/service/app.h"
 
 #include "application/lib/app/application_context.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "escher/vk/vulkan_device_queues.h"
 #include "escher/vk/vulkan_instance.h"
 
@@ -18,8 +17,6 @@ App::App(app::ApplicationContext* app_context, escher::Escher* escher)
       compiler_(escher,
                 renderer_.render_pass(),
                 renderer_.descriptor_set_layout()) {
-  tracing::InitializeTracer(app_context, {"shadertoy"});
-
   app_context->outgoing_services()
       ->AddService<mozart::example::ShadertoyFactory>([this](
           fidl::InterfaceRequest<mozart::example::ShadertoyFactory> request) {

@@ -6,13 +6,14 @@
 
 #include <set>
 
+#include <trace/event.h>
+
 #include "apps/mozart/src/scene_manager/engine/frame_scheduler.h"
 #include "apps/mozart/src/scene_manager/engine/frame_timings.h"
 #include "apps/mozart/src/scene_manager/engine/session.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/traversal.h"
-#include "apps/tracing/lib/trace/event.h"
 #include "escher/renderer/paper_renderer.h"
 #include "lib/ftl/functional/make_copyable.h"
 

@@ -5,7 +5,6 @@
 #include "apps/mozart/src/view_manager/view_manager_app.h"
 
 #include "apps/mozart/src/view_manager/view_manager_impl.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
 
 namespace view_manager {
@@ -13,8 +12,6 @@ namespace view_manager {
 ViewManagerApp::ViewManagerApp()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
-
-  tracing::InitializeTracer(application_context_.get(), {"view_manager"});
 
   registry_.reset(new ViewRegistry(application_context_.get()));
 
