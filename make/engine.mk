@@ -122,11 +122,20 @@ HOST_CONFIG_HEADER := $(BUILDDIR)/config-host.h
 GLOBAL_INCLUDES := system/public system/private $(GENERATED_INCLUDES)
 GLOBAL_OPTFLAGS ?= $(ARCH_OPTFLAGS)
 GLOBAL_DEBUGFLAGS ?= -g
-GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS) -finline -include $(GLOBAL_CONFIG_HEADER)
+# When embedding source file locations in debugging information, by default
+# the compiler will record the absolute path of the current directory and
+# make everything relative to that.  Instead, we tell the compiler to map
+# the current directory to $(DEBUG_BUILDROOT), which is the "relative"
+# location of the magenta source tree (i.e. usually . in a standalone build).
+DEBUG_BUILDROOT ?= $(BUILDROOT)
+GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS)
+GLOBAL_COMPILEFLAGS += -fdebug-prefix-map=$(shell pwd)=$(DEBUG_BUILDROOT)
+GLOBAL_COMPILEFLAGS += -finline -include $(GLOBAL_CONFIG_HEADER)
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-error=deprecated-declarations
 GLOBAL_COMPILEFLAGS += -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
 GLOBAL_COMPILEFLAGS += -fno-common
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+GLOBAL_COMPILEFLAGS += -no-canonical-prefixes
 GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 GLOBAL_COMPILEFLAGS += -Wthread-safety
 else
