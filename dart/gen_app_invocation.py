@@ -11,7 +11,7 @@ import sys
 
 def main():
   parser = argparse.ArgumentParser(
-      'Generate a script that invokes a Dart application')
+      description='Generate a script that invokes a Dart application')
   parser.add_argument('--out',
                       help='Path to the invocation file to generate',
                       required=True)

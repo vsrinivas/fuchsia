@@ -46,6 +46,9 @@ declare_args() {
 #   disable_analysis (optional)
 #     Prevents the analysis script from being generated.
 #
+#   extra_analyzer_sources (optional)
+#     Additional source paths to pass to the analyzer.
+#
 # Example of usage:
 #
 #   dart_package("baz") {
@@ -187,6 +190,10 @@ template("dart_package") {
           "--package-label",
           target_label,
         ]
+      }
+
+      if (defined(invoker.extra_analyzer_sources)) {
+        args += invoker.extra_analyzer_sources
       }
     }
 

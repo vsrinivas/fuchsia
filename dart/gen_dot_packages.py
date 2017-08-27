@@ -36,7 +36,7 @@ def create_base_directory(file):
 
 def main():
   parser = argparse.ArgumentParser(
-      "Generate .packages file for dart package")
+      description="Generate .packages file for dart package")
   parser.add_argument("--out", help="Path to .packages file to generate",
                       required=True)
   parser.add_argument("--root-build-dir",

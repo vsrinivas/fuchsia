@@ -12,7 +12,7 @@ import sys
 
 def main():
   parser = argparse.ArgumentParser(
-      'Generate a script that invokes the Dart analyzer')
+      description='Generate a script that invokes the Dart tester')
   parser.add_argument('--out',
                       help='Path to the invocation file to generate',
                       required=True)
