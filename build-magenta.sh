@@ -55,15 +55,16 @@ build() {
       export QUIET=1
   fi
   # build host tools
-  make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
+  make -j ${JOBS} \
+    BUILDDIR=${outdir}/build-magenta DEBUG_BUILDROOT=../../magenta tools
   # build magenta (including its portion of the sysroot) for the target architecture
-  make -j ${JOBS} ${magenta_build_type_flags:-} \
-    BUILDROOT=${magenta_buildroot} ${magenta_target} \
+  make -j ${JOBS} ${magenta_build_type_flags:-} ${magenta_target} \
+    BUILDROOT=${magenta_buildroot} DEBUG_BUILDROOT=../../magenta \
     TOOLS=${outdir}/build-magenta/tools USE_ASAN=${asan_magenta} \
     BUILDDIR_SUFFIX=
   # Build the alternate shared libraries (ASan).
-  make -j ${JOBS} ${magenta_build_type_flags:-} \
-    BUILDROOT=${magenta_buildroot} ${magenta_target} \
+  make -j ${JOBS} ${magenta_build_type_flags:-} ${magenta_target} \
+    BUILDROOT=${magenta_buildroot} DEBUG_BUILDROOT=../../magenta \
     TOOLS=${outdir}/build-magenta/tools USE_ASAN=${asan_ulib} \
     ENABLE_ULIB_ONLY=true ENABLE_BUILD_SYSROOT=false BUILDDIR_SUFFIX=-ulib
   popd > /dev/null
