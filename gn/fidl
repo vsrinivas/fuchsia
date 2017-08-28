@@ -5,11 +5,11 @@
     ],
     "gopaths": [
         {
-            "lib/fidl/go/src/fidl": "fidl"
+            "garnet/public/lib/fidl/go/src/fidl": "fidl"
         }
     ],
     "labels": [
-        "//lib/fidl",
+        "//garnet/public/lib/fidl",
         "//magenta/system/host/fidl:fidl2(//build/toolchain:host_x64)"
     ],
     "binaries": [
