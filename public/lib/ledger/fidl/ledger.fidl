@@ -307,7 +307,8 @@ interface ConflictResolverFactory {
   // Returns the conflict resolution policy for the given page.
   GetPolicy(array<uint8> page_id) => (MergePolicy policy);
   // Returns a |ConflictResolver| to use for the given page. This will only be
-  // called if |GetPolicy| for the same page returned |CUSTOM|.
+  // called if |GetPolicy| for the same page returned |AUTOMATIC_WITH_FALLBACK|
+  // or |CUSTOM|.
   NewConflictResolver(array<uint8> page_id, ConflictResolver& resolver);
 };
 
