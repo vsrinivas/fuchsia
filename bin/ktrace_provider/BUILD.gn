@@ -19,8 +19,8 @@ executable("ktrace_provider") {
 
   deps = [
     "//application/lib/app",
-    "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
   ]
 }

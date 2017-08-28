@@ -5,11 +5,10 @@
 #ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
 #define APPS_TRACING_SRC_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
-#include <atomic>
-#include <limits>
-#include <thread>
+#include <async/wait.h>
+#include <mx/log.h>
+#include <trace-engine/types.h>
 
-#include "apps/tracing/lib/trace/ticks.h"
 #include "lib/ftl/macros.h"
 
 namespace ktrace_provider {
@@ -22,12 +21,15 @@ class LogImporter {
   void Start();
   void Stop();
 
-  bool is_running() const { return worker_.joinable(); }
-
  private:
-  std::atomic<tracing::Ticks> stop_timestamp_{
-      std::numeric_limits<tracing::Ticks>::max()};
-  std::thread worker_;
+  async_wait_result_t Handle(async_t* async,
+                             mx_status_t status,
+                             const mx_packet_signal_t* signal);
+
+  mx::log log_;
+  trace_ticks_t start_ticks_;
+  mx_time_t start_time_;
+  async::Wait wait_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LogImporter);
 };

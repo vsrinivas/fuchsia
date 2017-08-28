@@ -8,12 +8,14 @@
 #include "stddef.h"
 #include "stdint.h"
 
-#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/trace/writer.h"
+#include <mxtl/string.h>
+#include <mxtl/string_piece.h>
+#include <trace-engine/context.h>
+
 #include "apps/tracing/src/ktrace_provider/tags.h"
 #include "lib/ftl/macros.h"
 
@@ -23,20 +25,14 @@ class Reader;
 
 class Importer {
  public:
-  using TraceWriter = tracing::writer::TraceWriter;
-  using StringRef = tracing::writer::StringRef;
-  using ThreadRef = tracing::writer::ThreadRef;
-  using ThreadState = tracing::ThreadState;
-  using Ticks = tracing::Ticks;
-  using CpuNumber = tracing::CpuNumber;
-  using KernelThread = uint32_t;
-
-  Importer(TraceWriter& writer);
+  Importer(trace_context* context);
   ~Importer();
 
   bool Import(Reader& reader);
 
  private:
+  using KernelThread = uint32_t;
+
   bool ImportRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportBasicRecord(const ktrace_header_t* record,
                          const TagInfo& tag_info);
@@ -47,136 +43,152 @@ class Importer {
   bool ImportProbeRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
-  bool HandleKernelThreadName(KernelThread kernel_thread, std::string name);
-  bool HandleThreadName(mx_koid_t thread, mx_koid_t process, std::string name);
-  bool HandleProcessName(mx_koid_t process, std::string name);
-  bool HandleSyscallName(uint32_t syscall, std::string name);
-  bool HandleIRQName(uint32_t irq, std::string name);
-  bool HandleProbeName(uint32_t probe, std::string name);
+  bool HandleKernelThreadName(KernelThread kernel_thread,
+                              const mxtl::StringPiece& name);
+  bool HandleThreadName(mx_koid_t thread,
+                        mx_koid_t process,
+                        const mxtl::StringPiece& name);
+  bool HandleProcessName(mx_koid_t process, const mxtl::StringPiece& name);
+  bool HandleSyscallName(uint32_t syscall, const mxtl::StringPiece& name);
+  bool HandleIRQName(uint32_t irq, const mxtl::StringPiece& name);
+  bool HandleProbeName(uint32_t probe, const mxtl::StringPiece& name);
 
-  bool HandleIRQEnter(Ticks event_time, CpuNumber cpu_number, uint32_t irq);
-  bool HandleIRQExit(Ticks event_time, CpuNumber cpu_number, uint32_t irq);
-  bool HandleSyscallEnter(Ticks event_time,
-                          CpuNumber cpu_number,
+  bool HandleIRQEnter(trace_ticks_t event_time,
+                      trace_cpu_number_t cpu_number,
+                      uint32_t irq);
+  bool HandleIRQExit(trace_ticks_t event_time,
+                     trace_cpu_number_t cpu_number,
+                     uint32_t irq);
+  bool HandleSyscallEnter(trace_ticks_t event_time,
+                          trace_cpu_number_t cpu_number,
                           uint32_t syscall);
-  bool HandleSyscallExit(Ticks event_time,
-                         CpuNumber cpu_number,
+  bool HandleSyscallExit(trace_ticks_t event_time,
+                         trace_cpu_number_t cpu_number,
                          uint32_t syscall);
-  bool HandlePageFault(Ticks event_time,
-                       CpuNumber cpu_number,
+  bool HandlePageFault(trace_ticks_t event_time,
+                       trace_cpu_number_t cpu_number,
                        uint64_t virtual_address,
                        uint32_t flags);
-  bool HandleContextSwitch(Ticks event_time,
-                           CpuNumber cpu_number,
-                           ThreadState outgoing_thread_state,
+  bool HandleContextSwitch(trace_ticks_t event_time,
+                           trace_cpu_number_t cpu_number,
+                           trace_thread_state_t outgoing_thread_state,
                            mx_koid_t outgoing_thread,
                            KernelThread outgoing_kernel_thread,
                            mx_koid_t incoming_thread,
                            KernelThread incoming_kernel_thread);
-  bool HandleObjectDelete(Ticks event_time, mx_koid_t thread, mx_koid_t object);
-  bool HandleThreadCreate(Ticks event_time,
+  bool HandleObjectDelete(trace_ticks_t event_time,
+                          mx_koid_t thread,
+                          mx_koid_t object);
+  bool HandleThreadCreate(trace_ticks_t event_time,
                           mx_koid_t thread,
                           mx_koid_t affected_thread,
                           mx_koid_t affected_process);
-  bool HandleThreadStart(Ticks event_time,
+  bool HandleThreadStart(trace_ticks_t event_time,
                          mx_koid_t thread,
                          mx_koid_t affected_thread);
-  bool HandleThreadExit(Ticks event_time, mx_koid_t thread);
-  bool HandleProcessCreate(Ticks event_time,
+  bool HandleThreadExit(trace_ticks_t event_time, mx_koid_t thread);
+  bool HandleProcessCreate(trace_ticks_t event_time,
                            mx_koid_t thread,
                            mx_koid_t affected_process);
-  bool HandleProcessStart(Ticks event_time,
+  bool HandleProcessStart(trace_ticks_t event_time,
                           mx_koid_t thread,
                           mx_koid_t affected_thread,
                           mx_koid_t affected_process);
-  bool HandleProcessExit(Ticks event_time,
+  bool HandleProcessExit(trace_ticks_t event_time,
                          mx_koid_t thread,
                          mx_koid_t affected_process);
-  bool HandleChannelCreate(Ticks event_time,
+  bool HandleChannelCreate(trace_ticks_t event_time,
                            mx_koid_t thread,
                            mx_koid_t channel0,
                            mx_koid_t channel1,
                            uint32_t flags);
-  bool HandleChannelWrite(Ticks event_time,
+  bool HandleChannelWrite(trace_ticks_t event_time,
                           mx_koid_t thread,
                           mx_koid_t channel,
                           uint32_t num_bytes,
                           uint32_t num_handles);
-  bool HandleChannelRead(Ticks event_time,
+  bool HandleChannelRead(trace_ticks_t event_time,
                          mx_koid_t thread,
                          mx_koid_t channel,
                          uint32_t num_bytes,
                          uint32_t num_handles);
-  bool HandlePortWait(Ticks event_time, mx_koid_t thread, mx_koid_t port);
-  bool HandlePortWaitDone(Ticks event_time,
+  bool HandlePortWait(trace_ticks_t event_time,
+                      mx_koid_t thread,
+                      mx_koid_t port);
+  bool HandlePortWaitDone(trace_ticks_t event_time,
                           mx_koid_t thread,
                           mx_koid_t port,
                           uint32_t status);
-  bool HandlePortCreate(Ticks event_time, mx_koid_t thread, mx_koid_t port);
-  bool HandlePortQueue(Ticks event_time,
+  bool HandlePortCreate(trace_ticks_t event_time,
+                        mx_koid_t thread,
+                        mx_koid_t port);
+  bool HandlePortQueue(trace_ticks_t event_time,
                        mx_koid_t thread,
                        mx_koid_t port,
                        uint32_t num_bytes);
-  bool HandleWaitOne(Ticks event_time,
+  bool HandleWaitOne(trace_ticks_t event_time,
                      mx_koid_t thread,
                      mx_koid_t object,
                      uint32_t signals,
                      mx_time_t timeout);
-  bool HandleWaitOneDone(Ticks event_time,
+  bool HandleWaitOneDone(trace_ticks_t event_time,
                          mx_koid_t thread,
                          mx_koid_t object,
                          uint32_t status,
                          uint32_t pending);
-  bool HandleProbe(Ticks event_time, mx_koid_t thread, uint32_t probe);
-  bool HandleProbe(Ticks event_time,
+  bool HandleProbe(trace_ticks_t event_time, mx_koid_t thread, uint32_t probe);
+  bool HandleProbe(trace_ticks_t event_time,
                    mx_koid_t thread,
                    uint32_t probe,
                    uint32_t arg0,
                    uint32_t arg1);
 
   struct CpuInfo {
-    ThreadRef current_thread_ref = ThreadRef::MakeUnknown();
+    trace_thread_ref_t current_thread_ref = trace_make_unknown_thread_ref();
   };
 
-  ThreadRef GetCpuCurrentThread(CpuNumber cpu_number);
-  ThreadRef SwitchCpuToThread(CpuNumber cpu_number, mx_koid_t thread);
-  ThreadRef SwitchCpuToKernelThread(CpuNumber cpu_number,
-                                    KernelThread kernel_thread);
+  trace_thread_ref_t GetCpuCurrentThread(trace_cpu_number_t cpu_number);
+  trace_thread_ref_t SwitchCpuToThread(trace_cpu_number_t cpu_number,
+                                       mx_koid_t thread);
+  trace_thread_ref_t SwitchCpuToKernelThread(trace_cpu_number_t cpu_number,
+                                             KernelThread kernel_thread);
 
-  const StringRef& GetNameRef(std::unordered_map<uint32_t, StringRef>& table,
-                              const char* kind,
-                              uint32_t id);
-  const ThreadRef& GetThreadRef(mx_koid_t thread);
-  const ThreadRef& GetKernelThreadRef(KernelThread kernel_thread);
+  const trace_string_ref_t& GetNameRef(
+      std::unordered_map<uint32_t, trace_string_ref_t>& table,
+      const char* kind,
+      uint32_t id);
+  const trace_thread_ref_t& GetThreadRef(mx_koid_t thread);
+  const trace_thread_ref_t& GetKernelThreadRef(KernelThread kernel_thread);
 
-  TraceWriter& writer_;
+  trace_context_t* const context_;
   const TagMap& tags_;
 
-  StringRef const ipc_category_ref_;
-  StringRef const irq_category_ref_;
-  StringRef const probe_category_ref_;
-  StringRef const syscall_category_ref_;
-  StringRef const channel_category_ref_;
-  StringRef const channel_read_name_ref_;
-  StringRef const channel_write_name_ref_;
-  StringRef const num_bytes_name_ref_;
-  StringRef const num_handles_name_ref_;
-  StringRef const page_fault_name_ref_;
-  StringRef const vaddr_name_ref_;
-  StringRef const flags_name_ref_;
-  StringRef const arg0_name_ref_;
-  StringRef const arg1_name_ref_;
+  trace_string_ref_t const kernel_string_ref_;
+  trace_string_ref_t const ipc_category_ref_;
+  trace_string_ref_t const irq_category_ref_;
+  trace_string_ref_t const probe_category_ref_;
+  trace_string_ref_t const syscall_category_ref_;
+  trace_string_ref_t const channel_category_ref_;
+  trace_string_ref_t const channel_read_name_ref_;
+  trace_string_ref_t const channel_write_name_ref_;
+  trace_string_ref_t const num_bytes_name_ref_;
+  trace_string_ref_t const num_handles_name_ref_;
+  trace_string_ref_t const page_fault_name_ref_;
+  trace_string_ref_t const vaddr_name_ref_;
+  trace_string_ref_t const flags_name_ref_;
+  trace_string_ref_t const arg0_name_ref_;
+  trace_string_ref_t const arg1_name_ref_;
 
   uint32_t version_ = 0u;
 
   std::vector<CpuInfo> cpu_infos_;
 
-  std::unordered_map<KernelThread, ThreadRef> kernel_thread_refs_;
-  std::unordered_map<mx_koid_t, ThreadRef> thread_refs_;
+  std::unordered_map<KernelThread, trace_thread_ref_t> kernel_thread_refs_;
+  std::unordered_map<mx_koid_t, trace_thread_ref_t> thread_refs_;
 
-  std::unordered_map<uint32_t, StringRef> irq_names_;
-  std::unordered_map<uint32_t, StringRef> probe_names_;
-  std::unordered_map<uint32_t, StringRef> syscall_names_;
+  std::unordered_map<uint32_t, trace_string_ref_t> irq_names_;
+  std::unordered_map<uint32_t, trace_string_ref_t> probe_names_;
+  std::unordered_map<uint32_t, trace_string_ref_t> syscall_names_;
 
   struct Channels {
     using ChannelId = uint64_t;

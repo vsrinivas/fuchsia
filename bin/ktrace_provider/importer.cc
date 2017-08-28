@@ -4,13 +4,13 @@
 
 #include "apps/tracing/src/ktrace_provider/importer.h"
 
+#include <magenta/syscalls.h>
+#include <mxtl/algorithm.h>
+#include <mxtl/string_printf.h>
+
 #include "apps/tracing/src/ktrace_provider/reader.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_point.h"
-
-using namespace tracing;
-using namespace tracing::writer;
 
 namespace ktrace_provider {
 namespace {
@@ -23,33 +23,60 @@ constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
 }
 
+// The kernel reports different thread state values through ktrace.
+// These values must line up with those in "kernel/include/kernel/thread.h".
+constexpr trace_thread_state_t ToTraceThreadState(int value) {
+  switch (value) {
+    case 0:  // THREAD_INITIAL
+    case 1:  // THREAD_READY
+      return MX_THREAD_STATE_NEW;
+    case 2:  // THREAD_RUNNING
+      return MX_THREAD_STATE_RUNNING;
+    case 3:  // THREAD_BLOCKED
+    case 4:  // THREAD_SLEEPING
+      return MX_THREAD_STATE_BLOCKED;
+    case 5:  // THREAD_SUSPENDED
+      return MX_THREAD_STATE_SUSPENDED;
+    case 6:  // THREAD_DEATH
+      return MX_THREAD_STATE_DEAD;
+    default:  // ???
+      FTL_LOG(WARNING) << "Imported unknown thread state from ktrace: "
+                       << value;
+      return INT32_MAX;
+  }
+}
+
 }  // namespace
 
-Importer::Importer(TraceWriter& writer)
-    : writer_(writer),
+#define MAKE_STRING(literal) \
+  trace_context_make_registered_string_literal(context_, literal)
+
+Importer::Importer(trace_context_t* context)
+    : context_(context),
       tags_(GetTags()),
-      ipc_category_ref_(writer_.RegisterString("kernel:ipc")),
-      irq_category_ref_(writer_.RegisterString("kernel:irq")),
-      probe_category_ref_(writer_.RegisterString("kernel:probe")),
-      syscall_category_ref_(writer_.RegisterString("kernel:syscall")),
-      channel_category_ref_(writer_.RegisterString("kernel:channel")),
-      channel_read_name_ref_(writer_.RegisterString("read")),
-      channel_write_name_ref_(writer_.RegisterString("write")),
-      num_bytes_name_ref_(writer_.RegisterString("num_bytes")),
-      num_handles_name_ref_(writer_.RegisterString("num_handles")),
-      page_fault_name_ref_(writer_.RegisterString("page_fault")),
-      vaddr_name_ref_(writer_.RegisterString("vaddr")),
-      flags_name_ref_(writer_.RegisterString("flags")),
-      arg0_name_ref_(writer_.RegisterString("arg0")),
-      arg1_name_ref_(writer_.RegisterString("arg1")) {}
+      kernel_string_ref_(MAKE_STRING("kernel")),
+      ipc_category_ref_(MAKE_STRING("kernel:ipc")),
+      irq_category_ref_(MAKE_STRING("kernel:irq")),
+      probe_category_ref_(MAKE_STRING("kernel:probe")),
+      syscall_category_ref_(MAKE_STRING("kernel:syscall")),
+      channel_category_ref_(MAKE_STRING("kernel:channel")),
+      channel_read_name_ref_(MAKE_STRING("read")),
+      channel_write_name_ref_(MAKE_STRING("write")),
+      num_bytes_name_ref_(MAKE_STRING("num_bytes")),
+      num_handles_name_ref_(MAKE_STRING("num_handles")),
+      page_fault_name_ref_(MAKE_STRING("page_fault")),
+      vaddr_name_ref_(MAKE_STRING("vaddr")),
+      flags_name_ref_(MAKE_STRING("flags")),
+      arg0_name_ref_(MAKE_STRING("arg0")),
+      arg1_name_ref_(MAKE_STRING("arg1")) {}
+
+#undef MAKE_STRING
 
 Importer::~Importer() = default;
 
 bool Importer::Import(Reader& reader) {
-  if (!writer_)
-    return false;
-
-  writer_.WriteProcessDescription(kNoProcess, "kernel");
+  trace_context_write_process_info_record(context_, kNoProcess,
+                                          &kernel_string_ref_);
 
   auto start = ftl::TimePoint::Now();
 
@@ -130,14 +157,16 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
       version_ = record->a;
       return true;
     case KTRACE_EVENT(TAG_TICKS_PER_MS): {
-      Ticks kernel_ticks_per_second = ToUInt64(record->a, record->b) * 1000u;
-      Ticks user_ticks_per_second = GetTicksPerSecond();
+      trace_ticks_t kernel_ticks_per_second =
+          ToUInt64(record->a, record->b) * 1000u;
+      trace_ticks_t user_ticks_per_second = mx_ticks_per_second();
       if (kernel_ticks_per_second != user_ticks_per_second) {
-        FTL_LOG(WARNING)
-            << "Kernel and userspace are using different tracing timebases, "
-               "tracks may be misaligned: "
-            << "kernel_ticks_per_second=" << kernel_ticks_per_second
-            << "user_ticks_per_second=" << user_ticks_per_second;
+        FTL_LOG(WARNING) << "Kernel and userspace are using different tracing "
+                            "timebases, "
+                            "tracks may be misaligned: "
+                         << "kernel_ticks_per_second="
+                         << kernel_ticks_per_second
+                         << "user_ticks_per_second=" << user_ticks_per_second;
       }
       return true;
     }
@@ -146,7 +175,7 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
                              ToUInt64(record->a, record->b), record->c);
     case KTRACE_EVENT(TAG_CONTEXT_SWITCH):
       return HandleContextSwitch(record->ts, record->b & 0xffff,
-                                 static_cast<ThreadState>(record->b >> 16),
+                                 ToTraceThreadState(record->b >> 16),
                                  record->tid, record->c, record->a, record->d);
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
@@ -192,12 +221,10 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
 
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
                                 const TagInfo& tag_info) {
-  char name[KTRACE_NAMESIZE + 1];
-  memcpy(name, record->name, KTRACE_NAMESIZE);
-  name[KTRACE_NAMESIZE] = '\0';
+  mxtl::StringPiece name(record->name, strnlen(record->name, KTRACE_NAMESIZE));
   FTL_VLOG(2) << "NAME: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), id=0x" << record->id << ", arg=0x"
-              << record->arg << ", name='" << name << "'";
+              << record->arg << ", name='" << mxtl::String(name).c_str() << "'";
 
   switch (KTRACE_EVENT(record->tag)) {
     case KTRACE_EVENT(TAG_KTHREAD_NAME):
@@ -244,127 +271,149 @@ bool Importer::ImportUnknownRecord(const ktrace_header_t* record,
 }
 
 bool Importer::HandleKernelThreadName(KernelThread kernel_thread,
-                                      std::string name) {
-  writer_.WriteThreadDescription(kNoProcess, kKernelThreadFlag | kernel_thread,
-                                 std::move(name));
+                                      const mxtl::StringPiece& name) {
+  trace_string_ref name_ref =
+      trace_make_inline_string_ref(name.data(), name.length());
+  trace_context_write_thread_info_record(
+      context_, kNoProcess, kKernelThreadFlag | kernel_thread, &name_ref);
   kernel_thread_refs_.emplace(
       kernel_thread,
-      writer_.RegisterThread(kNoProcess, kKernelThreadFlag | kernel_thread));
+      trace_context_make_registered_thread(context_, kNoProcess,
+                                           kKernelThreadFlag | kernel_thread));
   return true;
 }
 
 bool Importer::HandleThreadName(mx_koid_t thread,
                                 mx_koid_t process,
-                                std::string name) {
-  writer_.WriteThreadDescription(process, thread, std::move(name));
-  thread_refs_.emplace(thread, writer_.RegisterThread(process, thread));
+                                const mxtl::StringPiece& name) {
+  trace_string_ref name_ref =
+      trace_make_inline_string_ref(name.data(), name.length());
+  trace_context_write_thread_info_record(context_, process, thread, &name_ref);
+  thread_refs_.emplace(
+      thread, trace_context_make_registered_thread(context_, process, thread));
   return true;
 }
 
-bool Importer::HandleProcessName(mx_koid_t process, std::string name) {
-  writer_.WriteProcessDescription(process, std::move(name));
+bool Importer::HandleProcessName(mx_koid_t process,
+                                 const mxtl::StringPiece& name) {
+  trace_string_ref name_ref =
+      trace_make_inline_string_ref(name.data(), name.length());
+  trace_context_write_process_info_record(context_, process, &name_ref);
   return true;
 }
 
-bool Importer::HandleSyscallName(uint32_t syscall, std::string name) {
-  syscall_names_.emplace(syscall, writer_.RegisterStringCopy(std::move(name)));
+bool Importer::HandleSyscallName(uint32_t syscall,
+                                 const mxtl::StringPiece& name) {
+  syscall_names_.emplace(syscall, trace_context_make_registered_string_copy(
+                                      context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleIRQName(uint32_t irq, std::string name) {
-  irq_names_.emplace(irq, writer_.RegisterStringCopy(std::move(name)));
+bool Importer::HandleIRQName(uint32_t irq, const mxtl::StringPiece& name) {
+  irq_names_.emplace(irq, trace_context_make_registered_string_copy(
+                              context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleProbeName(uint32_t probe, std::string name) {
-  probe_names_.emplace(probe, writer_.RegisterStringCopy(std::move(name)));
+bool Importer::HandleProbeName(uint32_t probe, const mxtl::StringPiece& name) {
+  probe_names_.emplace(probe, trace_context_make_registered_string_copy(
+                                  context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleIRQEnter(Ticks event_time,
-                              CpuNumber cpu_number,
+bool Importer::HandleIRQEnter(trace_ticks_t event_time,
+                              trace_cpu_number_t cpu_number,
                               uint32_t irq) {
-  ThreadRef thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!thread_ref.is_unknown()) {
-    writer_.WriteDurationBeginEventRecord(event_time, thread_ref,
-                                          irq_category_ref_,
-                                          GetNameRef(irq_names_, "irq", irq));
+  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
+    trace_context_write_duration_begin_event_record(
+        context_, event_time, &thread_ref, &irq_category_ref_, &name_ref,
+        nullptr, 0u);
   }
   return true;
 }
 
-bool Importer::HandleIRQExit(Ticks event_time,
-                             CpuNumber cpu_number,
+bool Importer::HandleIRQExit(trace_ticks_t event_time,
+                             trace_cpu_number_t cpu_number,
                              uint32_t irq) {
-  ThreadRef thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!thread_ref.is_unknown()) {
-    writer_.WriteDurationEndEventRecord(event_time, thread_ref,
-                                        irq_category_ref_,
-                                        GetNameRef(irq_names_, "irq", irq));
+  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
+    trace_context_write_duration_end_event_record(
+        context_, event_time, &thread_ref, &irq_category_ref_, &name_ref,
+        nullptr, 0u);
   }
   return true;
 }
 
-bool Importer::HandleSyscallEnter(Ticks event_time,
-                                  CpuNumber cpu_number,
+bool Importer::HandleSyscallEnter(trace_ticks_t event_time,
+                                  trace_cpu_number_t cpu_number,
                                   uint32_t syscall) {
-  ThreadRef thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!thread_ref.is_unknown()) {
-    writer_.WriteDurationBeginEventRecord(
-        event_time, thread_ref, syscall_category_ref_,
-        GetNameRef(syscall_names_, "syscall", syscall));
+  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_string_ref_t name_ref =
+        GetNameRef(syscall_names_, "syscall", syscall);
+    trace_context_write_duration_begin_event_record(
+        context_, event_time, &thread_ref, &syscall_category_ref_, &name_ref,
+        nullptr, 0u);
   }
   return true;
 }
 
-bool Importer::HandleSyscallExit(Ticks event_time,
-                                 CpuNumber cpu_number,
+bool Importer::HandleSyscallExit(trace_ticks_t event_time,
+                                 trace_cpu_number_t cpu_number,
                                  uint32_t syscall) {
-  ThreadRef thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!thread_ref.is_unknown()) {
-    writer_.WriteDurationEndEventRecord(
-        event_time, thread_ref, syscall_category_ref_,
-        GetNameRef(syscall_names_, "syscall", syscall));
+  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_string_ref_t name_ref =
+        GetNameRef(syscall_names_, "syscall", syscall);
+    trace_context_write_duration_end_event_record(
+        context_, event_time, &thread_ref, &syscall_category_ref_, &name_ref,
+        nullptr, 0u);
   }
   return true;
 }
 
-bool Importer::HandlePageFault(Ticks event_time,
-                               CpuNumber cpu_number,
+bool Importer::HandlePageFault(trace_ticks_t event_time,
+                               trace_cpu_number_t cpu_number,
                                uint64_t virtual_address,
                                uint32_t flags) {
-  ThreadRef thread_ref = GetCpuCurrentThread(cpu_number);
-  if (!thread_ref.is_unknown()) {
-    writer_.WriteInstantEventRecord(
-        event_time, thread_ref, irq_category_ref_, page_fault_name_ref_,
-        EventScope::kThread,
-        ToArgumentList(PointerArgument(vaddr_name_ref_, virtual_address),
-                       Uint32Argument(flags_name_ref_, flags)));
+  trace_thread_ref_t thread_ref = GetCpuCurrentThread(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_,
+                       trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_instant_event_record(
+        context_, event_time, &thread_ref, &irq_category_ref_,
+        &page_fault_name_ref_, TRACE_SCOPE_THREAD, args, mxtl::count_of(args));
   }
   return true;
 }
 
-bool Importer::HandleContextSwitch(Ticks event_time,
-                                   CpuNumber cpu_number,
-                                   ThreadState outgoing_thread_state,
+bool Importer::HandleContextSwitch(trace_ticks_t event_time,
+                                   trace_cpu_number_t cpu_number,
+                                   trace_thread_state_t outgoing_thread_state,
                                    mx_koid_t outgoing_thread,
                                    KernelThread outgoing_kernel_thread,
                                    mx_koid_t incoming_thread,
                                    KernelThread incoming_kernel_thread) {
-  ThreadRef outgoing_thread_ref = GetCpuCurrentThread(cpu_number);
-  ThreadRef incoming_thread_ref =
+  trace_thread_ref_t outgoing_thread_ref = GetCpuCurrentThread(cpu_number);
+  trace_thread_ref_t incoming_thread_ref =
       incoming_thread
           ? SwitchCpuToThread(cpu_number, incoming_thread)
           : SwitchCpuToKernelThread(cpu_number, incoming_kernel_thread);
-  if (!outgoing_thread_ref.is_unknown() || !incoming_thread_ref.is_unknown()) {
-    writer_.WriteContextSwitchRecord(event_time, cpu_number,
-                                     outgoing_thread_state, outgoing_thread_ref,
-                                     incoming_thread_ref);
+  if (!trace_is_unknown_thread_ref(&outgoing_thread_ref) ||
+      !trace_is_unknown_thread_ref(&incoming_thread_ref)) {
+    trace_context_write_context_switch_record(
+        context_, event_time, cpu_number, outgoing_thread_state,
+        &outgoing_thread_ref, &incoming_thread_ref);
   }
   return true;
 }
 
-bool Importer::HandleObjectDelete(Ticks event_time,
+bool Importer::HandleObjectDelete(trace_ticks_t event_time,
                                   mx_koid_t thread,
                                   mx_koid_t object) {
   auto it = channels_.ids_.find(object);
@@ -375,43 +424,43 @@ bool Importer::HandleObjectDelete(Ticks event_time,
   return true;
 }
 
-bool Importer::HandleThreadCreate(Ticks event_time,
+bool Importer::HandleThreadCreate(trace_ticks_t event_time,
                                   mx_koid_t thread,
                                   mx_koid_t affected_thread,
                                   mx_koid_t affected_process) {
   return false;
 }
 
-bool Importer::HandleThreadStart(Ticks event_time,
+bool Importer::HandleThreadStart(trace_ticks_t event_time,
                                  mx_koid_t thread,
                                  mx_koid_t affected_thread) {
   return false;
 }
 
-bool Importer::HandleThreadExit(Ticks event_time, mx_koid_t thread) {
+bool Importer::HandleThreadExit(trace_ticks_t event_time, mx_koid_t thread) {
   return false;
 }
 
-bool Importer::HandleProcessCreate(Ticks event_time,
+bool Importer::HandleProcessCreate(trace_ticks_t event_time,
                                    mx_koid_t thread,
                                    mx_koid_t affected_process) {
   return false;
 }
 
-bool Importer::HandleProcessStart(Ticks event_time,
+bool Importer::HandleProcessStart(trace_ticks_t event_time,
                                   mx_koid_t thread,
                                   mx_koid_t affected_thread,
                                   mx_koid_t affected_process) {
   return false;
 }
 
-bool Importer::HandleProcessExit(Ticks event_time,
+bool Importer::HandleProcessExit(trace_ticks_t event_time,
                                  mx_koid_t thread,
                                  mx_koid_t affected_process) {
   return false;
 }
 
-bool Importer::HandleChannelCreate(Ticks event_time,
+bool Importer::HandleChannelCreate(trace_ticks_t event_time,
                                    mx_koid_t thread,
                                    mx_koid_t channel0,
                                    mx_koid_t channel1,
@@ -428,7 +477,7 @@ bool Importer::HandleChannelCreate(Ticks event_time,
   return true;
 }
 
-bool Importer::HandleChannelWrite(Ticks event_time,
+bool Importer::HandleChannelWrite(trace_ticks_t event_time,
                                   mx_koid_t thread,
                                   mx_koid_t channel,
                                   uint32_t num_bytes,
@@ -439,16 +488,20 @@ bool Importer::HandleChannelWrite(Ticks event_time,
 
   auto counter = std::get<Channels::kWriteCounterIndex>(
       channels_.message_counters_[it->second])++;
-  writer_.WriteFlowBeginEventRecord(
-      event_time, GetThreadRef(thread), channel_category_ref_,
-      channel_write_name_ref_, counter,
-      ToArgumentList(Uint32Argument(num_bytes_name_ref_, num_bytes),
-                     Uint32Argument(num_handles_name_ref_, num_handles)));
 
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_arg_t args[2] = {
+      trace_make_arg(num_bytes_name_ref_,
+                     trace_make_uint32_arg_value(num_bytes)),
+      trace_make_arg(num_handles_name_ref_,
+                     trace_make_uint32_arg_value(num_handles))};
+  trace_context_write_flow_begin_event_record(
+      context_, event_time, &thread_ref, &channel_category_ref_,
+      &channel_write_name_ref_, counter, args, mxtl::count_of(args));
   return true;
 }
 
-bool Importer::HandleChannelRead(Ticks event_time,
+bool Importer::HandleChannelRead(trace_ticks_t event_time,
                                  mx_koid_t thread,
                                  mx_koid_t channel,
                                  uint32_t num_bytes,
@@ -460,43 +513,45 @@ bool Importer::HandleChannelRead(Ticks event_time,
   auto counter = std::get<Channels::kReadCounterIndex>(
       channels_.message_counters_[it->second])++;
 
-  writer_.WriteFlowEndEventRecord(
-      event_time, GetThreadRef(thread), channel_category_ref_,
-      channel_read_name_ref_, counter,
-      ToArgumentList(
-          writer::MakeArgument(writer_, "num_bytes", num_bytes),
-          writer::MakeArgument(writer_, "num_handles", num_handles)));
-
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_arg_t args[2] = {
+      trace_make_arg(num_bytes_name_ref_,
+                     trace_make_uint32_arg_value(num_bytes)),
+      trace_make_arg(num_handles_name_ref_,
+                     trace_make_uint32_arg_value(num_handles))};
+  trace_context_write_flow_end_event_record(
+      context_, event_time, &thread_ref, &channel_category_ref_,
+      &channel_read_name_ref_, counter, args, mxtl::count_of(args));
   return true;
 }
 
-bool Importer::HandlePortWait(Ticks event_time,
+bool Importer::HandlePortWait(trace_ticks_t event_time,
                               mx_koid_t thread,
                               mx_koid_t port) {
   return false;
 }
 
-bool Importer::HandlePortWaitDone(Ticks event_time,
+bool Importer::HandlePortWaitDone(trace_ticks_t event_time,
                                   mx_koid_t thread,
                                   mx_koid_t port,
                                   uint32_t status) {
   return false;
 }
 
-bool Importer::HandlePortCreate(Ticks event_time,
+bool Importer::HandlePortCreate(trace_ticks_t event_time,
                                 mx_koid_t thread,
                                 mx_koid_t port) {
   return false;
 }
 
-bool Importer::HandlePortQueue(Ticks event_time,
+bool Importer::HandlePortQueue(trace_ticks_t event_time,
                                mx_koid_t thread,
                                mx_koid_t port,
                                uint32_t num_bytes) {
   return false;
 }
 
-bool Importer::HandleWaitOne(Ticks event_time,
+bool Importer::HandleWaitOne(trace_ticks_t event_time,
                              mx_koid_t thread,
                              mx_koid_t object,
                              uint32_t signals,
@@ -504,7 +559,7 @@ bool Importer::HandleWaitOne(Ticks event_time,
   return false;
 }
 
-bool Importer::HandleWaitOneDone(Ticks event_time,
+bool Importer::HandleWaitOneDone(trace_ticks_t event_time,
                                  mx_koid_t thread,
                                  mx_koid_t object,
                                  uint32_t status,
@@ -512,74 +567,86 @@ bool Importer::HandleWaitOneDone(Ticks event_time,
   return false;
 }
 
-bool Importer::HandleProbe(Ticks event_time, mx_koid_t thread, uint32_t probe) {
-  writer_.WriteInstantEventRecord(
-      event_time, GetThreadRef(thread), probe_category_ref_,
-      GetNameRef(probe_names_, "probe", probe), EventScope::kThread);
+bool Importer::HandleProbe(trace_ticks_t event_time,
+                           mx_koid_t thread,
+                           uint32_t probe) {
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", probe);
+  trace_context_write_instant_event_record(context_, event_time, &thread_ref,
+                                           &probe_category_ref_, &name_ref,
+                                           TRACE_SCOPE_THREAD, nullptr, 0u);
   return true;
 }
 
-bool Importer::HandleProbe(Ticks event_time,
+bool Importer::HandleProbe(trace_ticks_t event_time,
                            mx_koid_t thread,
                            uint32_t probe,
                            uint32_t arg0,
                            uint32_t arg1) {
-  writer_.WriteInstantEventRecord(
-      event_time, GetThreadRef(thread), probe_category_ref_,
-      GetNameRef(probe_names_, "probe", probe), EventScope::kThread,
-      ToArgumentList(Uint32Argument(arg0_name_ref_, arg0),
-                     Uint32Argument(arg1_name_ref_, arg1)));
+  trace_thread_ref_t thread_ref = GetThreadRef(thread);
+  trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", probe);
+  trace_arg_t args[] = {
+      trace_make_arg(arg0_name_ref_, trace_make_uint32_arg_value(arg0)),
+      trace_make_arg(arg1_name_ref_, trace_make_uint32_arg_value(arg1))};
+  trace_context_write_instant_event_record(
+      context_, event_time, &thread_ref, &probe_category_ref_, &name_ref,
+      TRACE_SCOPE_THREAD, args, mxtl::count_of(args));
   return true;
 }
 
-Importer::ThreadRef Importer::GetCpuCurrentThread(CpuNumber cpu_number) {
+trace_thread_ref_t Importer::GetCpuCurrentThread(
+    trace_cpu_number_t cpu_number) {
   if (cpu_number >= cpu_infos_.size())
-    return ThreadRef::MakeUnknown();
+    return trace_make_unknown_thread_ref();
   return cpu_infos_[cpu_number].current_thread_ref;
 }
 
-ThreadRef Importer::SwitchCpuToThread(CpuNumber cpu_number, mx_koid_t thread) {
+trace_thread_ref_t Importer::SwitchCpuToThread(trace_cpu_number_t cpu_number,
+                                               mx_koid_t thread) {
   if (cpu_number >= cpu_infos_.size())
     cpu_infos_.resize(cpu_number + 1u);
   return cpu_infos_[cpu_number].current_thread_ref = GetThreadRef(thread);
 }
 
-ThreadRef Importer::SwitchCpuToKernelThread(CpuNumber cpu_number,
-                                            KernelThread kernel_thread) {
+trace_thread_ref_t Importer::SwitchCpuToKernelThread(
+    trace_cpu_number_t cpu_number,
+    KernelThread kernel_thread) {
   if (cpu_number >= cpu_infos_.size())
     cpu_infos_.resize(cpu_number + 1u);
   return cpu_infos_[cpu_number].current_thread_ref =
              GetKernelThreadRef(kernel_thread);
 }
 
-const Importer::StringRef& Importer::GetNameRef(
-    std::unordered_map<uint32_t, StringRef>& table,
+const trace_string_ref_t& Importer::GetNameRef(
+    std::unordered_map<uint32_t, trace_string_ref_t>& table,
     const char* kind,
     uint32_t id) {
   auto it = table.find(id);
   if (it == table.end()) {
-    std::tie(it, std::ignore) = table.emplace(
-        id, writer_.RegisterStringCopy(ftl::StringPrintf("%s 0x%d", kind, id)));
+    mxtl::String name = mxtl::StringPrintf("%s 0x%d", kind, id);
+    std::tie(it, std::ignore) =
+        table.emplace(id, trace_context_make_registered_string_copy(
+                              context_, name.data(), name.length()));
   }
   return it->second;
 }
 
-const Importer::ThreadRef& Importer::GetThreadRef(mx_koid_t thread) {
+const trace_thread_ref_t& Importer::GetThreadRef(mx_koid_t thread) {
   auto it = thread_refs_.find(thread);
   if (it == thread_refs_.end()) {
     std::tie(it, std::ignore) = thread_refs_.emplace(
-        thread, ThreadRef::MakeInlined(kNoProcess, thread));
+        thread, trace_make_inline_thread_ref(kNoProcess, thread));
   }
   return it->second;
 }
 
-const Importer::ThreadRef& Importer::GetKernelThreadRef(
+const trace_thread_ref_t& Importer::GetKernelThreadRef(
     KernelThread kernel_thread) {
   auto it = kernel_thread_refs_.find(kernel_thread);
   if (it == kernel_thread_refs_.end()) {
     std::tie(it, std::ignore) = kernel_thread_refs_.emplace(
-        kernel_thread,
-        ThreadRef::MakeInlined(kNoProcess, kKernelThreadFlag | kernel_thread));
+        kernel_thread, trace_make_inline_thread_ref(
+                           kNoProcess, kKernelThreadFlag | kernel_thread));
   }
   return it->second;
 }

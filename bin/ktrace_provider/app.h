@@ -5,13 +5,13 @@
 #ifndef APPS_TRACING_SRC_KTRACE_PROVIDER_APP_H_
 #define APPS_TRACING_SRC_KTRACE_PROVIDER_APP_H_
 
+#include <trace/observer.h>
+
 #include "application/lib/app/application_context.h"
-#include "apps/tracing/lib/trace/writer.h"
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/memory/weak_ptr.h"
 
 namespace ktrace_provider {
 
@@ -21,22 +21,16 @@ class App {
   ~App();
 
  private:
-  uint32_t GetGroupMask();
-  void UpdateState(tracing::writer::TraceState state);
+  void UpdateState();
 
-  ftl::UniqueFD OpenKTrace();
-  void RestartTracing(uint32_t group_mask);
-  void StopTracing();
-
-  bool SendDevMgrCommand(std::string command);
-  void CollectTraces();
+  void StartKTrace(uint32_t group_mask);
+  void StopKTrace();
 
   std::unique_ptr<app::ApplicationContext> application_context_;
+  trace::TraceObserver trace_observer_;
   LogImporter log_importer_;
-  tracing::writer::TraceHandlerKey trace_handler_key_;
-  bool trace_running_ = false;
-
-  ftl::WeakPtrFactory<App> weak_ptr_factory_;
+  uint32_t current_group_mask_ = 0u;
+  trace_context_t* context_ = nullptr;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(App);
 };

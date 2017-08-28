@@ -7,28 +7,29 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <magenta/syscalls/log.h>
 #include <magenta/device/ktrace.h>
+#include <magenta/syscalls/log.h>
+#include <trace-engine/instrumentation.h>
+#include <trace-provider/provider.h>
 
-#include "apps/tracing/lib/trace/provider.h"
 #include "apps/tracing/src/ktrace_provider/importer.h"
 #include "apps/tracing/src/ktrace_provider/reader.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace ktrace_provider {
 namespace {
 
-constexpr char kDefaultProviderLabel[] = "ktrace";
 constexpr char kKTraceDev[] = "/dev/misc/ktrace";
 
 struct KTraceCategory {
-    const char *name;
-    uint32_t group;
+  const char* name;
+  uint32_t group;
 };
 
-constexpr KTraceCategory kCategories[] = {
+constexpr KTraceCategory kGroupCategories[] = {
     {"kernel", KTRACE_GRP_ALL},
     {"kernel:meta", KTRACE_GRP_META},
     {"kernel:lifecycle", KTRACE_GRP_LIFECYCLE},
@@ -39,63 +40,10 @@ constexpr KTraceCategory kCategories[] = {
     {"kernel:probe", KTRACE_GRP_PROBE},
     {"kernel:arch", KTRACE_GRP_ARCH},
 };
-}  // namespace
 
-App::App(const ftl::CommandLine& command_line)
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
-      weak_ptr_factory_(this) {
-  if (!tracing::InitializeTracerFromCommandLine(
-          application_context_.get(), command_line, {kDefaultProviderLabel})) {
-    FTL_LOG(ERROR) << "Failed to initialize trace provider.";
-    exit(1);
-  }
+constexpr char kLogCategory[] = "log";
 
-  trace_handler_key_ =
-      tracing::writer::AddTraceHandler([weak = weak_ptr_factory_.GetWeakPtr()](
-          tracing::writer::TraceState state) {
-        if (weak)
-          weak->UpdateState(state);
-      });
-}
-
-App::~App() {
-  tracing::writer::RemoveTraceHandler(trace_handler_key_);
-  tracing::DestroyTracer();
-}
-
-uint32_t App::GetGroupMask() {
-    uint32_t group_mask = 0;
-    for (size_t i = 0; i < arraysize(kCategories); i++) {
-      auto &category = kCategories[i];
-      if (tracing::writer::IsTracingEnabledForCategory(category.name)) {
-          group_mask |= category.group;
-      }
-    }
-    return group_mask;
-}
-
-void App::UpdateState(tracing::writer::TraceState state) {
-  FTL_VLOG(1) << "UpdateState: state=" << static_cast<int>(state);
-  switch (state) {
-    case tracing::writer::TraceState::kStarted: {
-      uint32_t group_mask = GetGroupMask();
-      if (group_mask) {
-        RestartTracing(group_mask);
-      }
-      break;
-    } case tracing::writer::TraceState::kStopping:
-      if (trace_running_) {
-        StopTracing();
-        CollectTraces();
-      }
-      break;
-    default:
-      StopTracing();
-      break;
-  }
-}
-
-ftl::UniqueFD App::OpenKTrace() {
+ftl::UniqueFD OpenKTrace() {
   int result = open(kKTraceDev, O_WRONLY);
   if (result < 0) {
     FTL_LOG(ERROR) << "Failed to open " << kKTraceDev << ": errno=" << errno;
@@ -103,42 +51,101 @@ ftl::UniqueFD App::OpenKTrace() {
   return ftl::UniqueFD(result);  // take ownership here
 }
 
-void App::RestartTracing(uint32_t group_mask) {
-  auto fd = OpenKTrace();
-  if (!fd.is_valid()) {
-      return;
-  }
-
-  ioctl_ktrace_stop(fd.get());
-  ioctl_ktrace_start(fd.get(), &group_mask);
-  trace_running_ = true;
-  log_importer_.Start();
+void IoctlKtraceStop(int fd) {
+  mx_status_t status = ioctl_ktrace_stop(fd);
+  if (status != MX_OK)
+    FTL_LOG(ERROR) << "ioctl_ktrace_stop failed: status=" << status;
 }
 
-void App::StopTracing() {
-  if (trace_running_) {
-    trace_running_ = false;
-    auto fd = OpenKTrace();
-    if (fd.is_valid()) {
-        ioctl_ktrace_stop(fd.get());
+void IoctlKtraceStart(int fd, uint32_t group_mask) {
+  mx_status_t status = ioctl_ktrace_start(fd, &group_mask);
+  if (status != MX_OK)
+    FTL_LOG(ERROR) << "ioctl_ktrace_start failed: status=" << status;
+}
+
+}  // namespace
+
+App::App(const ftl::CommandLine& command_line)
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+  trace_observer_.Start(mtl::MessageLoop::GetCurrent()->async(),
+                        [this] { UpdateState(); });
+}
+
+App::~App() {}
+
+void App::UpdateState() {
+  uint32_t group_mask = 0;
+  bool capture_log = false;
+  if (trace_state() == TRACE_STARTED) {
+    for (size_t i = 0; i < arraysize(kGroupCategories); i++) {
+      auto& category = kGroupCategories[i];
+      if (trace_is_category_enabled(category.name)) {
+        group_mask |= category.group;
+      }
     }
+    capture_log = trace_is_category_enabled(kLogCategory);
+  }
+
+  if (current_group_mask_ != group_mask) {
+    StopKTrace();
+    StartKTrace(group_mask);
+  }
+
+  if (capture_log) {
+    log_importer_.Start();
+  } else {
     log_importer_.Stop();
   }
 }
 
-void App::CollectTraces() {
-  auto writer = tracing::writer::TraceWriter::Prepare();
-  if (!writer) {
-    FTL_LOG(ERROR) << "Failed to prepare writer.";
+void App::StartKTrace(uint32_t group_mask) {
+  FTL_DCHECK(!context_);
+  if (!group_mask) {
+    return;  // nothing to trace
+  }
+
+  FTL_LOG(INFO) << "Starting ktrace";
+
+  ftl::UniqueFD fd = OpenKTrace();
+  if (!fd.is_valid()) {
     return;
   }
 
-  Reader reader;
+  context_ = trace_acquire_context();
+  if (!context_) {
+    // Tracing was disabled in the meantime.
+    return;
+  }
+  current_group_mask_ = group_mask;
 
-  Importer importer(writer);
+  IoctlKtraceStop(fd.get());
+  IoctlKtraceStart(fd.get(), group_mask);
+
+  FTL_LOG(INFO) << "Started ktrace";
+}
+
+void App::StopKTrace() {
+  if (!context_) {
+    return;  // not currently tracing
+  }
+  FTL_DCHECK(current_group_mask_);
+
+  FTL_LOG(INFO) << "Stopping ktrace";
+
+  ftl::UniqueFD fd = OpenKTrace();
+  if (fd.is_valid()) {
+    IoctlKtraceStop(fd.get());
+  }
+
+  Reader reader;
+  Importer importer(context_);
   if (!importer.Import(reader)) {
     FTL_LOG(ERROR) << "Errors encountered while importing ktrace data";
   }
+
+  trace_release_context(context_);
+  context_ = nullptr;
+  current_group_mask_ = 0u;
 }
 
 }  // namespace ktrace_provider
