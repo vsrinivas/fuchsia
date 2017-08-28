@@ -33,6 +33,7 @@ PROJECT_DEPENDENCIES = [
     'apps/modules/common',
     'apps/modules/dashboard',
     'apps/xi',
+    'build/dart',
     'lib/widgets',
     'third_party/dart-pkg',
 ]
