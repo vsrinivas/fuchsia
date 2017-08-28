@@ -30,7 +30,7 @@ void WaitForMinfs() {
   auto delay = ftl::TimeDelta::FromMilliseconds(10);
   ftl::TimePoint now = ftl::TimePoint::Now();
   while (ftl::TimePoint::Now() - now < kMaxPollingDelay) {
-    ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
+    ftl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDONLY));
     if (fd.is_valid()) {
       char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
       auto* info = reinterpret_cast<vfs_query_info_t*>(buf);
