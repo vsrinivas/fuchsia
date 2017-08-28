@@ -75,9 +75,8 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
 
   // |Lifecycle|
   void Terminate() override {
-    modular::testing::GetStore()->Put("trigger_test_agent_stopped", "", [this] {
-      DeleteAndQuitAndUnbind();
-    });
+    modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",
+                                      [this] { DeleteAndQuitAndUnbind(); });
   }
 
   // |TriggerAgentInterface|

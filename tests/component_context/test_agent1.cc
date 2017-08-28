@@ -69,9 +69,8 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
           // Killing the agent controller should stop it.
           agent2_controller_.reset();
           agent2_connected_.Pass();
-          modular::testing::GetStore()->Put("test_agent1_stopped", "", [this] {
-            DeleteAndQuitAndUnbind();
-          });
+          modular::testing::GetStore()->Put(
+              "test_agent1_stopped", "", [this] { DeleteAndQuitAndUnbind(); });
         });
   }
 

@@ -81,9 +81,8 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
     // want our receiver to fire.
     msg_receiver_.reset();
 
-    modular::testing::GetStore()->Put(
-        "queue_persistence_test_agent_stopped", "",
-        [this] { DeleteAndQuitAndUnbind(); });
+    modular::testing::GetStore()->Put("queue_persistence_test_agent_stopped",
+                                      "", [this] { DeleteAndQuitAndUnbind(); });
   }
 
   // |QueuePersistenceAgentInterface|

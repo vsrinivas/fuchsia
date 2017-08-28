@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/mock_base.h"
-#include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -36,7 +36,8 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
     callback(write_data_);
   }
 
-  void WriteLinkData(const LinkPathPtr& link_path, const fidl::String& data,
+  void WriteLinkData(const LinkPathPtr& link_path,
+                     const fidl::String& data,
                      const SyncCallback& callback) override {
     ++counts["WriteLinkData"];
     write_data_ = data;
@@ -49,7 +50,8 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
     callback();
   }
 
-  void WatchLink(const LinkPathPtr& link_path, LinkImpl* impl,
+  void WatchLink(const LinkPathPtr& link_path,
+                 LinkImpl* impl,
                  const DataCallback& watcher) override {
     ++counts["WatchLink"];
   }

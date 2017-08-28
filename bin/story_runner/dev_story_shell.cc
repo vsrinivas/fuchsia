@@ -17,9 +17,8 @@
 
 namespace {
 
-class DevStoryShellApp
-    : modular::SingleServiceApp<modular::StoryShellFactory>,
-      modular::StoryShell {
+class DevStoryShellApp : modular::SingleServiceApp<modular::StoryShellFactory>,
+                         modular::StoryShell {
  public:
   DevStoryShellApp() : story_shell_binding_(this) {}
   ~DevStoryShellApp() override = default;

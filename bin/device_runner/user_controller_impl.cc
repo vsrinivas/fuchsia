@@ -36,8 +36,8 @@ UserControllerImpl::UserControllerImpl(
         mx_cprng_draw(&random_number, sizeof random_number, &random_size);
     FTL_CHECK(status == MX_OK);
     FTL_CHECK(sizeof random_number == random_size);
-    data_origin = std::string("/tmp/modular/GUEST_USER_") +
-                  std::to_string(random_number);
+    data_origin =
+        std::string("/tmp/modular/GUEST_USER_") + std::to_string(random_number);
   } else {
     // Non-guest user.
     data_origin = std::string("/data/modular/USER_") + std::string(account->id);

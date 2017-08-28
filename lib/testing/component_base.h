@@ -7,7 +7,6 @@
 
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
-#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "lib/ftl/memory/weak_ptr.h"

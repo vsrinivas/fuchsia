@@ -9,9 +9,9 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/service_provider.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
-#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 
@@ -20,7 +20,8 @@ namespace modular {
 // Base class for a simple application which provides a single instance of a
 // single service, the ViewProvider service, and the Lifecycle service.
 template <class Service>
-class SingleServiceApp : protected Service, private mozart::ViewProvider,
+class SingleServiceApp : protected Service,
+                         private mozart::ViewProvider,
                          private Lifecycle {
  public:
   SingleServiceApp()

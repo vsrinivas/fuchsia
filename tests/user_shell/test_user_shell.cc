@@ -258,8 +258,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
 // as a user shell from device runner and executes a predefined sequence of
 // steps, rather than to expose a UI to be driven by user interaction, as a user
 // shell normally would.
-class TestUserShellApp
-    : modular::testing::ComponentBase<modular::UserShell> {
+class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
  public:
   // The app instance must be dynamic, because it needs to do several things
   // after its own constructor is invoked. It accomplishes that by being able to

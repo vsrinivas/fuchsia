@@ -21,7 +21,9 @@ void MockBase::ExpectCalledOnce(const std::string& func) {
   }
 }
 
-void MockBase::ClearCalls() { counts.clear(); }
+void MockBase::ClearCalls() {
+  counts.clear();
+}
 
 void MockBase::ExpectNoOtherCalls() {
   EXPECT_TRUE(counts.empty());

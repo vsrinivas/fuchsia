@@ -7,8 +7,8 @@ import("//lib/fidl/fidl.gni")
 fidl("entity") {
   sources = [
     "entity.fidl",
-    "entity_store.fidl",
     "entity_reference.fidl",
     "entity_resolver.fidl",
+    "entity_store.fidl",
   ]
 }

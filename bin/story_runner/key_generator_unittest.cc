@@ -34,9 +34,7 @@ class MockRandomNumber : public RandomNumber {
     return values_[call_count_++];
   }
 
-  void SetVector(std::vector<uint64_t> values) {
-    values_ = std::move(values);
-  }
+  void SetVector(std::vector<uint64_t> values) { values_ = std::move(values); }
 
   int call_count() { return call_count_; }
 
