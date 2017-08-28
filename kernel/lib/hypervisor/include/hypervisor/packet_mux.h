@@ -18,7 +18,9 @@
 #include <mxtl/mutex.h>
 #include <mxtl/ref_counted.h>
 class PortDispatcher : public mxtl::RefCounted<PortDispatcher> {};
-struct PortPacket;
+struct PortPacket {
+    PortPacket(const void* handle, void* allocator) {}
+};
 struct PortAllocator {
     virtual PortPacket* Alloc() { return nullptr; }
     virtual void Free(PortPacket* port_packet) {}
@@ -46,8 +48,7 @@ public:
 
 private:
     Semaphore semaphore_;
-    mxtl::Mutex mutex_;
-    mxtl::Arena arena_ TA_GUARDED(mutex_);
+    mxtl::TypedArena<PortPacket, mxtl::Mutex> arena_;
 
     PortPacket* Alloc() override;
 };

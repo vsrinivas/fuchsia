@@ -15,11 +15,7 @@ __UNUSED static const size_t kMaxPacketsPerRange = 256;
 BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
 mx_status_t BlockingPortAllocator::Init() {
-#if WITH_LIB_MAGENTA
-    return arena_.Init("hypervisor-packets", sizeof(PortPacket), kMaxPacketsPerRange);
-#else
-    return MX_ERR_NOT_SUPPORTED;
-#endif // WITH_LIB_MAGENTA
+    return arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
 }
 
 PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
@@ -37,25 +33,11 @@ PortPacket* BlockingPortAllocator::Alloc(StateReloader* reloader) {
 }
 
 PortPacket* BlockingPortAllocator::Alloc() {
-#if WITH_LIB_MAGENTA
-    void* addr;
-    {
-        mxtl::AutoLock lock(&mutex_);
-        addr = arena_.Alloc();
-    }
-    if (addr == nullptr)
-        return nullptr;
-    return new (addr) PortPacket(nullptr, this);
-#else
-    return nullptr;
-#endif // WITH_LIB_MAGENTA
+    return arena_.New(nullptr, this);
 }
 
 void BlockingPortAllocator::Free(PortPacket* port_packet) {
-    {
-        mxtl::AutoLock lock(&mutex_);
-        arena_.Free(port_packet);
-    }
+    arena_.Delete(port_packet);
     if (semaphore_.Post() > 0)
         thread_reschedule();
 }
