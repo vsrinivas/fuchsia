@@ -5,16 +5,9 @@ Fuchsia uses the `jiri` tool to manage git repositories
 [https://fuchsia.googlesource.com/jiri](https://fuchsia.googlesource.com/jiri).
 This tool manages a set of repositories specified by a manifest.
 
-## Prerequisites
-
-On Ubuntu:
-
- * `sudo apt-get install golang git build-essential curl unzip`
-
-On Mac:
-
- * Install Xcode Command Line Tools
- * `brew install golang`
+For how to build, see Fuchsia's
+[Getting Started](https://fuchsia.googlesource.com/docs/+/master/getting_started.md)
+doc.
 
 ## Creating a new checkout
 

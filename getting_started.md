@@ -7,17 +7,47 @@ Welcome to Fuchsia! This is a top-level entry point for the project. From here
 we try to link to everything you need to get started, use, and develop for
 Fuchsia.
 
+*** note
+NOTE: The Fuchsia source includes
+[Magenta](https://fuchsia.googlesource.com/magenta/+/master/README.md),
+the core platform that underpins Fuchsia.
+The Fuchsia build process will build Magenta as a side-effect;
+to work on Magenta only, read and follow Magenta's
+[Getting Started](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)
+doc.
+***
+
 ## Prerequisites
 
-### Prepare your build environment
+### Prepare your build environment (Once per build environment)
 
-The Fuchsia source
-includes [Magenta](https://fuchsia.googlesource.com/magenta/+/HEAD/README.md),
-the core platform that underpins Fuchsia. Click the link below, follow the
-steps under *Preparing the build environment*, and then return to this document.
-(Do not continue to the *Install Toolchains* section.)
+### Ubuntu
 
-* [Preparing the Magenta build environment](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Preparing-the-build-environment).
+```
+sudo apt-get install texinfo libglib2.0-dev autoconf libtool libsdl-dev build-essential golang git build-essential curl unzip
+```
+
+### macOS
+Install the Xcode Command Line Tools:
+```
+xcode-select --install
+```
+
+Install the other pre-reqs:
+* Using Homebrew:
+```
+# Install Homebrew
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+# Install packages
+brew install wget pkg-config glib autoconf automake libtool golang
+```
+
+* Using MacPorts:
+```
+# Install MacPorts
+# See https://guide.macports.org/chunked/installing.macports.html
+port install autoconf automake libtool libpixman pkgconfig glib2
+```
 
 ### [Googlers only] Goma
 
