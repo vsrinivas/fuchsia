@@ -24,7 +24,6 @@ source_set("cloud_server") {
     "//apps/ledger/src/glue/socket",
     "//apps/netstack/services:net_address",
     "//apps/network/services",
-    "//lib/fidl",
     "//lib/ftl",
   ]
 
