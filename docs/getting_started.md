@@ -1,6 +1,12 @@
 # Quick Start Recipes
 
-## Checking out the source code
+## Checking out the Magenta source code
+
+*** note
+NOTE: The Fuchsia source includes Magenta. See Fuchsia's
+[Getting Started](https://fuchsia.googlesource.com/docs/+/master/getting_started.md)
+doc. Follow this doc to work on only Magenta.
+***
 
 The Magenta Git repository is located
 at: https://fuchsia.googlesource.com/magenta
@@ -8,7 +14,7 @@ at: https://fuchsia.googlesource.com/magenta
 To clone the repository, assuming you setup the $SRC variable
 in your environment:
 ```shell
-$ git clone https://fuchsia.googlesource.com/magenta $SRC/magenta
+git clone https://fuchsia.googlesource.com/magenta $SRC/magenta
 ```
 
 For the purpose of this document, we will assume that Magenta is checked
