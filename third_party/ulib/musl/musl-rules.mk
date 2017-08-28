@@ -1044,7 +1044,7 @@ LOCAL_SRCS += \
 
 else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
-    $(LOCAL_DIR)/src/fenv/x86_64/fenv.S \
+    $(LOCAL_DIR)/src/fenv/x86_64/fenv.c \
     $(LOCAL_DIR)/src/ldso/x86_64/tlsdesc.S \
     $(LOCAL_DIR)/src/math/x86_64/__invtrigl.S \
     $(LOCAL_DIR)/src/math/x86_64/acosl.S \
