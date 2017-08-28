@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"application/lib/app/context"
 	"fidl/bindings"
@@ -18,13 +19,12 @@ type echoClientApp struct {
 	echo *echo.Echo_Proxy
 }
 
-func (a *echoClientApp) start() {
+func (a *echoClientApp) start(msg string) {
 	r, p := a.echo.NewRequest(bindings.GetAsyncWaiter())
 	a.echo = p
 	a.ctx.ConnectToEnvService(r)
 
-	s := "Hello, Go World"
-	resp, err := a.echo.EchoString(&s)
+	resp, err := a.echo.EchoString(&msg)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -36,5 +36,9 @@ func (a *echoClientApp) start() {
 
 func main() {
 	a := &echoClientApp{ctx: context.CreateFromStartupInfo()}
-	a.start()
+	if len(os.Args) > 1 {
+		a.start(os.Args[1])
+	} else {
+		a.start("Hello, Go World")
+	}
 }

@@ -28,7 +28,7 @@ class EchoClientApp {
     FTL_DCHECK(context_);
   }
 
-  bool Start(std::string server_url) {
+  bool Start(std::string server_url, std::string msg) {
     auto launch_info = app::ApplicationLaunchInfo::New();
     launch_info->url = server_url;
     launch_info->services = echo_provider_.NewRequest();
@@ -39,7 +39,7 @@ class EchoClientApp {
     app::ConnectToService(echo_provider_.get(), echo_.NewRequest());
     FTL_DCHECK(echo_);
 
-    echo_->EchoString("hello world",
+    echo_->EchoString(msg,
                       [this](fidl::String value) {
                         ResponsePrinter printer;
                         printer.Run(std::move(value));
@@ -58,13 +58,19 @@ class EchoClientApp {
 
 int main(int argc, const char** argv) {
   std::string server_url = "file:///system/apps/echo_server_cpp";
-  if (argc == 2) {
-    server_url = argv[1];
+  std::string msg = "hello world";
+
+  for (int i = 1; i < argc - 1; ++i) {
+    if (!strcmp("-u", argv[i])) {
+      server_url = argv[++i];
+    } else if (!strcmp("-m", argv[i])) {
+      msg = argv[++i];
+    }
   }
   mtl::MessageLoop loop;
 
   echo::EchoClientApp app;
-  if (app.Start(server_url))
+if (app.Start(server_url, msg))
     loop.Run();
   return 0;
 }
