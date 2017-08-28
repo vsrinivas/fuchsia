@@ -84,7 +84,7 @@
 
 // Memory which will persist across warm boots
 // Content bootdata_lastlog_nvram_t
-#define BOOTDATA_LASTLOG_NVRAM    (0x4e4c5643) // NVLL
+#define BOOTDATA_LASTLOG_NVRAM    (0x4c4c564e) // NVLL
 
 // This reflects a typo we need to support for a while
 #define BOOTDATA_LASTLOG_NVRAM2   (0x4c4c5643) // CVLL
