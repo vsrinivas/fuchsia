@@ -1,0 +1,36 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+module amber;
+
+[ServiceName="update::Control"]
+interface Control {
+  // simple no-op that can be used to test the connection
+  DoTest(int32 value) => (string value);
+
+  // Add a source at the provided URL. The rate limit indicates the minimum
+  // interval between requests to the source expressed in seconds. A limit of
+  // zero means there is no limit. The pub key is a hex-encoded ED25519 public key.
+  // This key must match one of the trusted keys known to the system.
+  AddSrc(string url, int32 rateLimit, string pubKey) => (bool res);
+
+  // Remove a source previously provided to AddSrc. Sources that were bundled
+  // when the system was built can not be removed.
+  RemoveSrc(string url) => (bool res);
+
+  // Check for updates to any persistently registered packages
+  Check() => (bool res);
+
+  // Get the list of URLs of the current set of sources
+  ListSrcs() => (array<string> srcs);
+
+  // Get an update for the package identified by 'name' which has the provided
+  // version. If no version is supplied, the latest available version of that
+  // package will be retrieved. The package data is sent to PackageFS which then
+  // stores the package in BlobFS. This method returns the merkle root of the
+  // package and therefore a way to access the package once it arrives in
+  // BlobFS. If null is returned, no update was found.
+  GetUpdate(string name, string? version) => (string? merkle);
+  // TODO(jmatt) add a GetUpdate that takes a handle to write to
+};

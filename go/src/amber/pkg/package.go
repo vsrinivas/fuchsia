@@ -13,10 +13,12 @@ import (
 type Package struct {
 	Name    string
 	Version string
+	Merkle  string
 }
 
 func (p *Package) String() string {
-	return fmt.Sprintf("Package[name:'%s', version:'%s']", p.Name, p.Version)
+	return fmt.Sprintf("Package[name:%q, version:%q, merkle:%q]", p.Name,
+		p.Version, p.Merkle)
 }
 
 // ReadPkgUpdate will return the bytes for a Package from the Daemon's internal

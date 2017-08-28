@@ -5,6 +5,7 @@
 package source
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -23,6 +24,10 @@ var ErrTufSrcNoHash = errors.New("tufsource: hash missing or wrong type")
 type TUFSource struct {
 	Client   *client.Client
 	Interval time.Duration
+}
+
+type merkle struct {
+	Root string `json:"merkle"`
 }
 
 // AvailableUpdates takes a list of Packages and returns a map from those Packages
@@ -53,11 +58,20 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 			continue
 		}
 
+		m := merkle{}
+		if meta.Custom != nil {
+			json.Unmarshal(*meta.Custom, &m)
+		}
+
 		hashStr := hash.String()
 		if hashStr != p.Version {
 			lg.Log.Printf("tufsource: available update %s version %s\n",
 				p.Name, hashStr[:8])
-			updates[*p] = pkg.Package{Name: p.Name, Version: hashStr}
+			updates[*p] = pkg.Package{
+				Name:    p.Name,
+				Version: hashStr,
+				Merkle:  m.Root,
+			}
 		}
 	}
 

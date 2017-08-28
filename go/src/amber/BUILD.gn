@@ -10,11 +10,19 @@ go_binary("amber_bin") {
   output_name = "amber"
 
   gopackage = "amber/cmd/amber"
+  deps = [
+    "//garnet/public/lib/amber/fidl",
+    "//garnet/public/lib/app/fidl",
+  ]
 
   go_dependencies = [
     {
       package = "amber"
       source = "//garnet/go/src/amber"
+    },
+    {
+      package = "garnet/amber/api"
+      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
     },
     {
       package = "golang.org/x/crypto"
@@ -25,17 +33,33 @@ go_binary("amber_bin") {
       source = "//third_party/golibs/github.com/flynn/go-tuf"
     },
     {
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
       package = "github.com/syndtr/goleveldb/leveldb"
+      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
     },
     {
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
       package = "github.com/tent/canonical-json-go"
+      source = "//third_party/golibs/github.com/tent/canonical-json-go"
     },
     {
-      source = "//third_party/golibs/github.com/golang/snappy"
       package = "github.com/golang/snappy"
+      source = "//third_party/golibs/github.com/golang/snappy"
     },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    }
   ]
 }
 
@@ -44,16 +68,36 @@ package("amber") {
 
   deps = [
     ":amber_bin",
+    ":amber_ctl",
+    ":amber_init"
   ]
 
   binaries = [ {
         name = "amber"
-      } ]
+      },
+      {
+        name = "amber_ctl"
+      },
+      {
+        name = "amber_init"
+      }
+  ]
 
   resources = [ {
         path = rebase_path("keys/root_sig.json")
         dest = "amber/keys"
       } ]
+}
+
+go_binary("amber-srv") {
+  gopackage = "amber/cmd/amber-serve"
+
+  go_dependencies = [
+    {
+      package = "amber"
+      source = "//garnet/go/src/amber"
+    }
+  ]
 }
 
 go_binary("amber-publish") {
@@ -65,8 +109,8 @@ go_binary("amber-publish") {
       source = "//garnet/go/src/amber"
     },
     {
-      source = "//garnet/go/src/pm"
       package = "fuchsia.googlesource.com/pm"
+      source = "//garnet/go/src/pm"
     },
     {
       package = "github.com/flynn/go-tuf"
@@ -77,17 +121,86 @@ go_binary("amber-publish") {
       source = "//third_party/golang/crypto"
     },
     {
-      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
       package = "github.com/syndtr/goleveldb/leveldb"
+      source = "//third_party/golibs/github.com/syndtr/goleveldb/leveldb"
     },
     {
-      source = "//third_party/golibs/github.com/tent/canonical-json-go"
       package = "github.com/tent/canonical-json-go"
+      source = "//third_party/golibs/github.com/tent/canonical-json-go"
     },
     {
-      source = "//third_party/golibs/github.com/golang/snappy"
       package = "github.com/golang/snappy"
+      source = "//third_party/golibs/github.com/golang/snappy"
+    }
+  ]
+}
+
+go_binary("amber_init") {
+  gopackage = "amber/cmd/init"
+
+  deps = [
+    "//garnet/public/lib/amber/fidl",
+    "//garnet/public/lib/app/fidl",
+  ]
+
+  go_dependencies = [
+    {
+      package = "amber"
+      source = "//garnet/go/src/amber"
     },
+    {
+      package = "garnet/amber/api"
+      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    }
+  ]
+}
+
+go_binary("amber_ctl") {
+  gopackage = "amber/cmd/ctl"
+
+  deps = [ "//garnet/public/lib/amber/fidl" ]
+
+  go_dependencies = [
+    {
+      package = "amber"
+      source = "//garnet/go/src/amber"
+    },
+    {
+      package = "garnet/amber/api"
+      source = "$root_gen_dir/go/src/garnet/public/lib/amber/fidl"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//garnet/public/lib/app/go/src/app"
+    },
+    {
+      package = "garnet/public/lib/app/fidl"
+      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
+    },
+    {
+      package = "svc"
+      source = "//garnet/public/lib/svc/go/src/svc"
+    }
   ]
 }
 

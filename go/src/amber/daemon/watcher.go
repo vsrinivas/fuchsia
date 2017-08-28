@@ -6,7 +6,6 @@ package daemon
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -155,34 +154,8 @@ func (w *Watcher) getPackage(name string) error {
 		return r.Err
 	}
 
-	dstPath := filepath.Join(DstUpdate, r.Update.Name)
-	dst, e := os.Create(dstPath)
-	if e != nil {
-		return NewErrProcessPackage("couldn't open file to write update %v", e)
-	}
-	defer dst.Close()
-
-	err := r.Open()
-	if err != nil {
-		return NewErrProcessPackage("failed to open input file %v", e)
-	}
-
-	i, err := r.Stat()
-	if err != nil {
-		return NewErrProcessPackage("couldn't stat temp file", e)
-	}
-
-	err = dst.Truncate(i.Size())
-	if err != nil {
-		return NewErrProcessPackage("couldn't truncate file destination", e)
-	}
-	_, e = io.Copy(dst, r)
-	r.Close()
-	// TODO(jmatt) validate file on disk, size, hash, etc
-	if e != nil {
-		return NewErrProcessPackage("couldn't write update to file %v", e)
-	}
-	return nil
+	_, err := WriteUpdateToPkgFS(r)
+	return err
 }
 
 func (w *Watcher) getBlob(name string) {

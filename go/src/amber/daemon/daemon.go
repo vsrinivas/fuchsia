@@ -403,34 +403,44 @@ func ProcessPackage(data *GetResult, pkgs *pkg.PackageSet) error {
 		return NewErrProcessPackage("invalid path")
 	}
 
+	_, err := WriteUpdateToPkgFS(data)
+
+	if err != nil {
+		return err
+	}
+
+	pkgs.Replace(&data.Orig, &data.Update, false)
+	return nil
+}
+
+func WriteUpdateToPkgFS(data *GetResult) (string, error) {
 	e := data.Open()
 	if e != nil {
-		return e
+		return "", e
 	}
 	defer data.Close()
 
 	dstPath := filepath.Join(DstUpdate, data.Update.Name)
 	dst, e := os.Create(dstPath)
 	if e != nil {
-		return NewErrProcessPackage("couldn't open file to write update %v", e)
+		return "", NewErrProcessPackage("couldn't open file to write update %s", e)
 	}
 	defer dst.Close()
 
 	i, err := data.Stat()
 	if err != nil {
-		return NewErrProcessPackage("couldn't stat temp file", e)
+		return "", NewErrProcessPackage("couldn't stat temp file %s", e)
 	}
 
 	err = dst.Truncate(i.Size())
 	if err != nil {
-		return NewErrProcessPackage("couldn't truncate file destination", e)
+		return "", NewErrProcessPackage("couldn't truncate file destination %s", e)
 	}
 	_, e = io.Copy(dst, data)
 	// TODO(jmatt) validate file on disk, size, hash, etc
 	if e != nil {
-		return NewErrProcessPackage("couldn't write update to file %v", e)
+		return "", NewErrProcessPackage("couldn't write update to file %s", e)
 	}
 
-	pkgs.Replace(&data.Orig, &data.Update, false)
-	return nil
+	return dstPath, nil
 }

@@ -18,8 +18,12 @@ import (
 	"time"
 
 	"amber/daemon"
+	"amber/ipcserver"
 	"amber/pkg"
 	"amber/source"
+	"garnet/amber/api/amber"
+
+	"application/lib/app/context"
 
 	tuf "github.com/flynn/go-tuf/client"
 )
@@ -46,7 +50,6 @@ func main() {
 	flag.Parse()
 	log.SetPrefix("amber: ")
 	log.SetFlags(log.Ltime)
-
 	time.Sleep(*delay)
 
 	if *demo {
@@ -55,6 +58,7 @@ func main() {
 	}
 
 	keys, err := source.LoadKeys(*keys)
+
 	if err != nil {
 		log.Printf("loading root keys failed %s\n", err)
 		return
@@ -74,13 +78,21 @@ func main() {
 	log.Println("amber: monitoring for updates")
 	defer d.CancelAll()
 
+	startFIDLSvr(d)
 	//block forever
 	select {}
 }
 
+func startFIDLSvr(d *daemon.Daemon) {
+	cxt := context.CreateFromStartupInfo()
+	apiSrvr := ipcserver.NewControlSrvr(d)
+	cxt.OutgoingService.AddService(&amber.Control_ServiceBinder{apiSrvr})
+	cxt.Serve()
+}
+
 func doDemo() {
 	if err := os.MkdirAll(needsPath, os.ModePerm); err != nil {
-		fmt.Printf("Error making needs dir\n")
+		fmt.Printf("Error making needs dir %s\n", err)
 		return
 	}
 
@@ -98,7 +110,7 @@ func doDemo() {
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	files := []string{
-		"/system/apps/amber"}
+		"/system/bin/amber"}
 	reqSet := pkg.NewPackageSet()
 
 	d := sha512.New()

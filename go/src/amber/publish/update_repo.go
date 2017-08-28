@@ -110,10 +110,10 @@ func (u *UpdateRepo) RemoveContentBlob(merkle string) error {
 }
 
 func (u *UpdateRepo) CommitUpdates() error {
-	if err := u.repo.Snapshot(tuf.CompressionTypeNone); err != nil {
+	if err := u.repo.SnapshotWithExpires(tuf.CompressionTypeNone, time.Now().AddDate(0, 0, 30)); err != nil {
 		return NewAddErr("problem snapshotting repository", err)
 	}
-	if err := u.repo.TimestampWithExpires(time.Now().AddDate(0, 0, 7)); err != nil {
+	if err := u.repo.TimestampWithExpires(time.Now().AddDate(0, 0, 30)); err != nil {
 		return NewAddErr("problem timestamping repository", err)
 	}
 	if err := u.repo.Commit(); err != nil {
