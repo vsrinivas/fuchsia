@@ -6,9 +6,10 @@ This document explains how Ledger handles conflicts.
 
 ## Conflicts
 
-Ledger is an offline-first database - the change history forms a directed
-acyclic graph (DAG) and devices can naturally diverge when making concurrent
-changes. Whenever the local history DAG has more than one head, we call this
+Ledger is an offline-first database - devices can naturally diverge when making
+concurrent changes and thus, the change history forms a directed acyclic graph
+(DAG) of [commits](architecture.md#Storage). Whenever the local history DAG has
+more than one head commit, i.e. more than one leaf in the DAG, we call this
 state a **conflict**.
 
 *** aside
@@ -18,12 +19,13 @@ to the local state - this is usually not desirable, but certainly possible.
 ***
 
 Whenever a conflict arises, Ledger by default merges the local heads
-automatically, using an entry-by-entry last-one-wins policy using non-reliable
-timestamps of the two commits being merged.
+automatically, using an entry-by-entry last-one-wins policy based on
+non-reliable timestamps of the two commits being merged.
 
-Client apps that want to override this behavior can opt for a custom conflict
-resolution policy and handle the merges themselves, see [Conflict
-Resolution](api_guide.md#Conflict-resolution) in the API Guide.
+Client apps that want to override this behavior can opt for either one of the
+predefined merging policies or use a custom policy and handle the merges
+themselves, see [Conflict Resolution](api_guide.md#Conflict-resolution) in the
+API Guide.
 
 ## Convergence
 
@@ -39,7 +41,7 @@ Ledger employs a number of strategies in order to prevent merge storms:
    first resolves the conflicts and only later uploads the result.
  - identical merge of two commits made concurrently on multiple devices results
    in the exact same commit (as long as the conflict resolver makes the same
-   decisions, ie. is deterministic). This is ensured because commits are
+   decisions, i.e. is deterministic). This is ensured because commits are
    content-addressed based on the B-tree content and the commit metadata; and
    commit metadata of a merge commit, including the commit timestamp, depends
    only on the parent commits - the timestamp is selected as the biggest of two

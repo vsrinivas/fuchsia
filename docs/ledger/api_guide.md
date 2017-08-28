@@ -232,19 +232,28 @@ Available conflict resolution policies:
  - last-one-wins (the default): `LAST_ONE_WINS`
 
    For each entry modified on both sides, `LAST_ONE_WINS` takes the entry from
-   the most recent commit; for each entry modified only one one side (e.g.: a
-   new key, or an existing key with a new value), the modification is carried
-   over.
+   the most recent commit; for each entry modified only on one side (e.g.:
+   when adding a new key, or when modifying an existing one), the modification
+   is carried over. The most recent commit is determined using timestamps
+   assigned to the commits by the devices that created them. Note, however that
+   these timestamps are not guaranteed to be accurate.
  - custom, invoked only for conflicting (modified on both branches being
    merged) entries: `AUTOMATIC_WITH_FALLBACK`
 
-   If all entries are either unchanged, or modified only on one side,
-   `AUTOMATIC_WITH_FALLBACK` applies the change automatically. If any entry is
-   modified on both sides, the app gets a callback with all changed entries
-   from both sides (not just the conflicting ones).
+   For all modified keys, if either they are modified only on one side, or
+   changed in the same way (added/updated with the same value, or deleted) in
+   both sides, `AUTOMATIC_WITH_FALLBACK` applies the change automatically. If,
+   however any key is modified on both sides with a non identical change, the
+   app gets a callback with all changed entries from both sides (not just the
+   conflicting ones).
  - custom, invoked for all merges (even if the entries modified by each branch
-   are disjoint): `CUSTOM`
+   are non-conflicting): `CUSTOM`
  - disable merges: `NONE`
+
+   Conflicting changes are ignored and there are no merges performed.
+
+
+See also [Conflict Resolution](conflict_resolution.md).
 
 ## Synchronization
 
