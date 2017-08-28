@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 declare_args() {
+  # Use link time optimization (LTO).
+  use_lto = false
+
   # Use ThinLTO variant of LTO if use_lto = true.
   use_thinlto = true
 

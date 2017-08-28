@@ -59,9 +59,6 @@ declare_args() {
   # See //build/toolchain/clang_toolchain.gni for details.
   current_base_toolchain = target_toolchain
 
-  # Use link time optimization (LTO).
-  use_lto = false
-
   # magenta build project
   magenta_project = ""
 }
@@ -148,9 +145,7 @@ if (is_fuchsia) {
   ]
 }
 
-if (use_lto) {
-  default_common_binary_configs += [ "//build/config/lto" ]
-}
+default_common_binary_configs += [ "//build/config/lto:default" ]
 
 # Add configs set by the toolchain definition.
 default_common_binary_configs += toolchain_configs + toolchain_variant
@@ -392,6 +387,8 @@ template("executable") {
       forward_variables_from(invoker, "*", [ "visibility" ])
 
       foreach(variant, toolchain_variant) {
+        # Expand the label so it always has a :name part.
+        variant = get_label_info(variant, "label_no_toolchain")
         deps += [ "${variant}_deps" ]
       }
       if (defined(visibility)) {

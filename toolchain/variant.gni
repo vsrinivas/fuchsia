@@ -26,6 +26,9 @@ declare_args() {
   # config ${label}, there must also be a target ${label}_deps, which
   # each target built in the variant will automatically depend on.
   known_variants = [
+    [ "//build/config/lto" ],
+    [ "//build/config/lto:thinlto" ],
+
     [ "//build/config/sanitizers:asan" ],
     [ "//build/config/sanitizers:asan_no_detect_leaks" ],
     [ "//build/config/sanitizers:ubsan" ],

@@ -3,30 +3,44 @@
 # found in the LICENSE file.
 
 import("//build/config/lto/config.gni")
+import("//build/toolchain/variant.gni")
 
-config("lto") {
-  if (use_thinlto) {
-    cflags = [ "-flto=thin" ]
-    ldflags = cflags + [
-                # ThinLTO driver launches number of threads in parallel whose
-                # number is by default equivalent to the number of cores. We
-                # need to limit the parallelism to avoid aggressive competition
-                # between different linker jobs.
-                "-Wl,--thinlto-jobs=$thinlto_jobs",
-
-                # Set ThinLTO cache directory which is used to cache native
-                # object files for ThinLTO incremental builds. This directory
-                # is not managed by Ninja and has to be cleaned manually, but
-                # it is periodically garbage collected by ThinLTO driver.
-                "-Wl,--thinlto-cache-dir=$thinlto_cache_dir",
-              ]
-  } else {
-    cflags = [
-      "-flto",
-
-      # Enable whole-program devirtualization and virtual constant propagation.
-      "-fwhole-program-vtables",
-    ]
-    ldflags = cflags
+# This config is added unconditionally by BUILDCONFIG.gn to pick up the
+# global `use_lto` build argument.  For fine-grained control, leave
+# `use_lto=false` and use `select_variant` to choose the `lto` or `thinlto`
+# variant for some components.
+config("default") {
+  if (use_lto) {
+    if (use_thinlto) {
+      configs = [ ":thinlto" ]
+    } else {
+      configs = [ ":full" ]
+    }
   }
+}
+
+variant("lto") {
+  common_flags = [
+    "-flto",
+
+    # Enable whole-program devirtualization and virtual constant propagation.
+    "-fwhole-program-vtables",
+  ]
+}
+
+variant("thinlto") {
+  common_flags = [ "-flto=thin" ]
+  ldflags = [
+    # The ThinLTO driver launches a number of threads in parallel whose
+    # number is by default equivalent to the number of cores.  We need
+    # to limit the parallelism to avoid aggressive competition between
+    # different linker jobs.
+    "-Wl,--thinlto-jobs=$thinlto_jobs",
+
+    # Set the ThinLTO cache directory which is used to cache native
+    # object files for ThinLTO incremental builds.  This directory is
+    # not managed by Ninja and has to be cleaned manually, but it is
+    # periodically garbage-collected by the ThinLTO driver.
+    "-Wl,--thinlto-cache-dir=$thinlto_cache_dir",
+  ]
 }
