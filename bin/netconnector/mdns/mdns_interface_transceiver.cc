@@ -50,7 +50,7 @@ MdnsInterfaceTransceiver::MdnsInterfaceTransceiver(
 
 MdnsInterfaceTransceiver::~MdnsInterfaceTransceiver() {}
 
-void MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
+bool MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
                                      const InboundMessageCallback& callback) {
   FTL_DCHECK(callback);
   FTL_DCHECK(!socket_fd_.is_valid()) << "Start called when already started.";
@@ -64,7 +64,7 @@ void MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
 
   if (!socket_fd_.is_valid()) {
     FTL_LOG(ERROR) << "Failed to open socket, errno " << errno;
-    return;
+    return false;
   }
 
   // Set socket options and bind.
@@ -73,12 +73,13 @@ void MdnsInterfaceTransceiver::Start(const std::string& host_full_name,
       SetOptionMulticastTtl() != 0 || SetOptionFamilySpecific() != 0 ||
       Bind() != 0) {
     socket_fd_.reset();
-    return;
+    return false;
   }
 
   inbound_message_callback_ = callback;
 
   WaitForInbound();
+  return true;
 }
 
 void MdnsInterfaceTransceiver::SetAlternateAddress(

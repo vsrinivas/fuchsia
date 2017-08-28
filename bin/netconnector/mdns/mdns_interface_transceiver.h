@@ -50,7 +50,7 @@ class MdnsInterfaceTransceiver {
                            const IpAddress& alternate_address);
 
   // Starts the interface transceiver.
-  void Start(const std::string& host_full_name,
+  bool Start(const std::string& host_full_name,
              const InboundMessageCallback& callback);
 
   // Stops the interface transceiver.

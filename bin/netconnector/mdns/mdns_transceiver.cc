@@ -134,7 +134,9 @@ bool MdnsTransceiver::FindNewInterfaces() {
             std::unique_ptr<MdnsInterfaceTransceiver> interface =
                 MdnsInterfaceTransceiver::Create(if_info.get(), interfaces_.size());
 
-            interface->Start(host_full_name_, inbound_message_callback_);
+            if (!interface->Start(host_full_name_, inbound_message_callback_)) {
+              continue;
+            }
 
             for (auto& i : interfaces_) {
               if (i->name() == interface->name()) {
