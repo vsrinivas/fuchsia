@@ -286,6 +286,9 @@ fi
 
 if [[ $SMP != 1 ]]; then
     ARGS+=" -smp $SMP"
+    if [[ "$ARCH" == "x86-64" ]]; then
+        ARGS+=",threads=2"
+    fi
 fi
 
 # start a few extra harmless virtio devices that can be ignored
