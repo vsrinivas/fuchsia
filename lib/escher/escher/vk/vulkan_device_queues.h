@@ -12,23 +12,6 @@
 #include "escher/vk/vulkan_instance.h"
 #include "lib/ftl/memory/ref_counted.h"
 
-// TODO: Used during transition to SDK 1.0.57.  Remove once Magma Vulkan SDK
-// is also updated to >= 1.0.57.
-#ifndef VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
-#ifdef VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
-#define VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME \
-  VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
-#define PFN_vkImportSemaphoreFdKHR PFN_vkImportSemaphoreFdKHX
-#define PFN_vkGetSemaphoreFdKHR PFN_vkGetSemaphoreFdKHX
-#define VkImportSemaphoreFdInfoKHR VkImportSemaphoreFdInfoKHX
-namespace vk {
-using ExternalSemaphoreHandleTypeFlagBitsKHR =
-    ExternalSemaphoreHandleTypeFlagBitsKHX;
-using ImportSemaphoreFdInfoKHR = ImportSemaphoreFdInfoKHX;
-}  // namespace vk
-#endif
-#endif
-
 namespace escher {
 
 class VulkanDeviceQueues;
