@@ -40,3 +40,9 @@ template <typename T>
 static inline constexpr T bits_shift(T x, size_t high, size_t low) {
     return (x >> low) & bit_mask<T>(high - low + 1);
 }
+
+template <typename T>
+static inline constexpr T align(T x, size_t alignment) {
+    auto mask = static_cast<T>(alignment - 1);
+    return static_cast<T>(x + mask) & static_cast<T>(~mask);
+}

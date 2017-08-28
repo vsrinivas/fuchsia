@@ -78,8 +78,101 @@ static bool read_bar_size(void) {
     END_TEST;
 }
 
+/* Verify stats & cap registers correctly show present capabilities and that
+ * capability data is readable.
+ */
+static bool read_cap_basic(void) {
+    BEGIN_TEST;
+
+    pci_bus_t bus;
+    pci_bus_init(&bus, NULL);
+    pci_device_t* device = &bus.root_complex;
+
+    // Create and install a simple capability. First two bytes are ignored.
+    uint8_t cap_data[] = {0, 0, 0xf, 0xa};
+    pci_cap_t cap = {
+        .id = 0x9,
+        .data = cap_data,
+        .len = sizeof(cap_data),
+    };
+    device->capabilities = &cap;
+    device->num_capabilities = 1;
+
+    // PCI Local Bus Spec 3.0 Table 6-2: Status Register Bits
+    //
+    // This optional read-only bit indicates whether or not this device
+    // implements the pointer for a New Capabilities linked list at offset 34h.
+    // A value of zero indicates that no New Capabilities linked list is
+    // available. A value of one indicates that the value read at offset 34h is
+    // a pointer in Configuration Space to a linked list of new capabilities.
+    // Refer to Section 6.7 for details on New Capabilities.
+    uint32_t status = 0;
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_STATUS, 2, &status), MX_OK,
+              "Failed to read status register from PCI config space.\n");
+    EXPECT_TRUE(status & PCI_STATUS_NEW_CAPS,
+                "CAP bit not set in status register with a cap list present.\n");
+
+    // Read the cap pointer from config space. Here just verify it points to
+    // some location beyond the pre-defined header.
+    uint32_t cap_ptr = 0;
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_CAPABILITIES, 1, &cap_ptr), MX_OK,
+              "Failed to read CAP pointer from PCI config space.\n");
+    EXPECT_LT(0x40u, cap_ptr, "CAP pointer does not lie beyond the reserved region.\n");
+
+    // Read the capability. This will be the Cap ID, next pointer (0), followed
+    // by data bytes (starting at index 2).
+    uint32_t cap_value = 0;
+    EXPECT_EQ(pci_device_read(device, static_cast<uint16_t>(cap_ptr), 4, &cap_value), MX_OK,
+              "Failed to read CAP value from PCI config space.\n");
+    EXPECT_EQ(0x0a0f0009u, cap_value,
+              "Incorrect CAP value read from PCI config space.\n");
+
+    END_TEST;
+}
+
+/* Build a list of capabilities with no data (only the required ID/next
+ * fields). Verify the next pointers are correctly wired up to traverse
+ * the linked list.
+ */
+static bool read_cap_chained(void) {
+    BEGIN_TEST;
+
+    pci_bus_t bus;
+    pci_bus_init(&bus, NULL);
+    pci_device_t* device = &bus.root_complex;
+
+    // Build list of caps.
+    pci_cap_t caps[5];
+    size_t num_caps = sizeof(caps)/sizeof(caps[0]);
+    for (uint8_t i = 0; i < num_caps; ++i) {
+        caps[i].id = i;
+        caps[i].len = 2;
+    }
+    device->capabilities = caps;
+    device->num_capabilities = num_caps;
+
+    uint32_t cap_ptr = 0;
+    uint32_t cap_header;
+    EXPECT_EQ(pci_device_read(device, PCI_CONFIG_CAPABILITIES, 1, &cap_ptr), MX_OK,
+              "Failed to read CAP pointer from PCI config space.\n");
+    for (uint8_t i = 0; i < num_caps; ++i) {
+        // Read the current capability.
+        EXPECT_EQ(pci_device_read(device, static_cast<uint16_t>(cap_ptr), 4, &cap_header), MX_OK,
+                  "Failed to read CAP from PCI config space.\n");
+        // ID is the first byte.
+        EXPECT_EQ(i, cap_header & UINT8_MAX, "Incorrect CAP ID read.\n");
+        // Next pointer is the second byte.
+        cap_ptr = cap_header >> 8;
+    }
+    EXPECT_EQ(0u, cap_ptr, "Failed to read CAP pointer from PCI config space.\n");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(pci)
 RUN_TEST(read_config_register)
 RUN_TEST(read_config_register_bytewise)
 RUN_TEST(read_bar_size)
+RUN_TEST(read_cap_basic)
+RUN_TEST(read_cap_chained)
 END_TEST_CASE(pci)

@@ -25,10 +25,19 @@
 #define PCI_REGISTER_BAR_4 0x20
 #define PCI_REGISTER_BAR_5 0x24
 
+// PCI Capabilities registers.
+#define PCI_REGISTER_CAP_BASE 0xa4
+#define PCI_REGISTER_CAP_TOP UINT8_MAX
+
 static const uint32_t kPioBase = 0x8000;
 static const uint32_t kMaxBarSize = 1 << 8;
 static const uint32_t kPioAddressMask = ~bit_mask<uint32_t>(2);
 static const uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
+
+// PCI capabilities register layout.
+static const uint8_t kPciCapTypeOffset = 0;
+static const uint8_t kPciCapNextOffset = 1;
+
 /* Per-device IRQ assignments.
  *
  * These are provided to the guest via the _SB section in the DSDT ACPI table.
@@ -237,6 +246,73 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_packet_guest_io_t* io) {
     }
 }
 
+// PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.
+static inline uint8_t pci_cap_len(const pci_cap_t* cap) {
+    return align(cap->len, 4);
+}
+
+static const pci_cap_t* pci_find_cap(const pci_device_t* device, uint8_t addr, uint8_t* cap_index,
+                                     uint32_t* cap_base) {
+    uint32_t base = PCI_REGISTER_CAP_BASE;
+    for (uint8_t i = 0; i < device->num_capabilities; ++i) {
+        const pci_cap_t* cap = &device->capabilities[i];
+        uint8_t cap_len = pci_cap_len(cap);
+        if (addr >= base + cap_len) {
+            base += cap_len;
+            continue;
+        }
+        *cap_index = i;
+        *cap_base = base;
+        return cap;
+    }
+
+    // Given address doesn't lie within the range of addresses occupied by
+    // capabilities.
+    return nullptr;
+}
+
+static mx_status_t pci_read_cap(const pci_device_t* device, uint8_t addr, uint32_t* out) {
+    uint8_t cap_index;
+    uint32_t cap_base;
+    const pci_cap_t* cap = pci_find_cap(device, addr, &cap_index, &cap_base);
+    if (cap == nullptr)
+        return MX_ERR_NOT_FOUND;
+
+    uint32_t word = 0;
+    uint32_t cap_offset = addr - cap_base;
+    for (uint8_t byte = 0; byte < sizeof(word); ++byte, ++cap_offset) {
+
+        // In the case of padding bytes, return 0.
+        if (cap_offset >= cap->len)
+            break;
+
+        // PCI Local Bus Spec v3.0 Section 6.7:
+        // Each capability in the list consists of an 8-bit ID field assigned
+        // by the PCI SIG, an 8 bit pointer in configuration space to the next
+        // capability, and some number of additional registers immediately
+        // following the pointer to implement that capability.
+        uint32_t val = 0;
+        switch (cap_offset) {
+        case kPciCapTypeOffset:
+            val = cap->id;
+            break;
+        case kPciCapNextOffset:
+            // PCI Local Bus Spec v3.0 Section 6.7: A pointer value of 00h is
+            // used to indicate the last capability in the list.
+            if (cap_index + 1u < device->num_capabilities)
+                val = cap_base + pci_cap_len(cap);
+            break;
+        default:
+            val = cap->data[cap_offset];
+            break;
+        }
+        word |= val << (byte * 8);
+    }
+
+    *out = word;
+    return MX_OK;
+}
+
 /* Read a 4 byte aligned value from PCI config space. */
 static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg, uint32_t* value) {
     switch (reg) {
@@ -252,12 +328,17 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |   (31..16)  |   (15..0)    |
     // |   status    |    command   |
     //  ----------------------------
-    case PCI_CONFIG_COMMAND:
+    case PCI_CONFIG_COMMAND: {
         mtx_lock((mtx_t*)&device->mutex);
         *value = device->command;
         mtx_unlock((mtx_t*)&device->mutex);
-        *value |= PCI_STATUS_INTERRUPT << 16;
+
+        uint16_t status = PCI_STATUS_INTERRUPT;
+        if (device->capabilities != nullptr)
+            status |= PCI_STATUS_NEW_CAPS;
+        *value |= status << 16;
         return MX_OK;
+    }
     //  -------------------------------------------------
     // |    (31..16)    |    (15..8)   |      (7..0)     |
     // |   class_code   |    prog_if   |    revision_id  |
@@ -300,6 +381,14 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |     Reserved    |  capabilities_pointer  |
     //  ------------------------------------------
     case PCI_CONFIG_CAPABILITIES:
+        *value = 0;
+        if (device->capabilities != nullptr)
+            *value |= PCI_REGISTER_CAP_BASE;
+        return MX_OK;
+    case PCI_REGISTER_CAP_BASE... PCI_REGISTER_CAP_TOP:
+        if (pci_read_cap(device, reg, value) != MX_ERR_NOT_FOUND)
+            return MX_OK;
+        // Fall-through if the capability is not-implemented.
     // These are all 32-bit registers.
     case PCI_REGISTER_BAR_1:
     case PCI_REGISTER_BAR_2:

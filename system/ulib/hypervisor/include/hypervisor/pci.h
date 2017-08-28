@@ -61,6 +61,25 @@ typedef struct pci_device_ops {
     mx_status_t (*write_bar)(pci_device_t* device, uint16_t port, const mx_packet_guest_io_t* io);
 } pci_device_ops_t;
 
+/* PCI capability structure.
+ *
+ * The 1-byte next pointer will be computed dynamically while traversing the
+ * capabilities list.
+ */
+typedef struct pci_cap {
+    // PCI capability ID as defined in PCI LOCAL BUS SPECIFICATION, REV. 3.0
+    // Appendix H.
+    uint8_t id;
+    // Data for this capability. Must be at least |len| bytes. The first
+    // two bytes will be ignored (id and next) as these will be populated
+    // dynamically. They're skipped over in the data pointer to allow common
+    // structures to be used for read/write where the id/next pointers are
+    // embedded in the structure.
+    uint8_t* data;
+    // Size of |data|.
+    uint8_t len;
+} pci_cap_t;
+
 /* Stores the state of PCI devices. */
 typedef struct pci_device {
     mtx_t mutex;
@@ -79,6 +98,11 @@ typedef struct pci_device {
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
     uint16_t bar_size;
+
+    // Array of capabilities for this device.
+    const pci_cap_t* capabilities;
+    // Size of |capabilities|.
+    size_t num_capabilities;
 
     // Private pointer for use by the device implementation.
     void* impl;
