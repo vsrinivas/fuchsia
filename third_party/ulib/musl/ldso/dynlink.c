@@ -424,7 +424,7 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
     }
 
     for (; rel_size; rel += stride, rel_size -= stride * sizeof(size_t)) {
-        if (skip_relative && IS_RELATIVE(rel[1], dso->syms))
+        if (skip_relative && R_TYPE(rel[1]) == REL_RELATIVE)
             continue;
         type = R_TYPE(rel[1]);
         if (type == REL_NONE)
@@ -479,12 +479,6 @@ __NO_SAFESTACK NO_ASAN static void do_relocs(struct dso* dso, size_t* rel,
             break;
         case REL_RELATIVE:
             *reloc_addr = (size_t)base + addend;
-            break;
-        case REL_SYM_OR_REL:
-            if (sym)
-                *reloc_addr = sym_val + addend;
-            else
-                *reloc_addr = (size_t)base + addend;
             break;
         case REL_COPY:
             memcpy(reloc_addr, (void*)sym_val, sym->st_size);
@@ -1257,37 +1251,12 @@ __NO_SAFESTACK static void load_preload(char* s) {
     }
 }
 
-__NO_SAFESTACK NO_ASAN static void do_mips_relocs(struct dso* p, size_t* got) {
-    size_t i, j, rel[2];
-    unsigned char* base = p->base;
-    i = 0;
-    search_vec(p->dynv, &i, DT_MIPS_LOCAL_GOTNO);
-    if (p == &ldso) {
-        got += i;
-    } else {
-        while (i--)
-            *got++ += (size_t)base;
-    }
-    j = 0;
-    search_vec(p->dynv, &j, DT_MIPS_GOTSYM);
-    i = 0;
-    search_vec(p->dynv, &i, DT_MIPS_SYMTABNO);
-    Sym* sym = p->syms + j;
-    rel[0] = (unsigned char*)got - base;
-    for (i -= j; i; i--, sym++, rel[0] += sizeof(size_t)) {
-        rel[1] = R_INFO(sym - p->syms, R_MIPS_JUMP_SLOT);
-        do_relocs(p, rel, sizeof rel, 2);
-    }
-}
-
 __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
     size_t dyn[DYN_CNT];
     for (; p; p = p->next) {
         if (p->relocated)
             continue;
         decode_vec(p->dynv, dyn, DYN_CNT);
-        if (NEED_MIPS_GOT_RELOCS)
-            do_mips_relocs(p, laddr(p, dyn[DT_PLTGOT]));
         do_relocs(p, laddr(p, dyn[DT_JMPREL]), dyn[DT_PLTRELSZ], 2 + (dyn[DT_PLTREL] == DT_RELA));
         do_relocs(p, laddr(p, dyn[DT_REL]), dyn[DT_RELSZ], 2);
         do_relocs(p, laddr(p, dyn[DT_RELA]), dyn[DT_RELASZ], 3);
@@ -1543,7 +1512,7 @@ dl_start_return_t __dls2(
     size_t symbolic_rel_cnt = 0;
     apply_addends_to = rel;
     for (; rel_size; rel += 2, rel_size -= 2 * sizeof(size_t))
-        if (!IS_RELATIVE(rel[1], ldso.syms))
+        if (R_TYPE(rel[1]) != REL_RELATIVE)
             symbolic_rel_cnt++;
     if (symbolic_rel_cnt >= ADDEND_LIMIT)
         __builtin_trap();

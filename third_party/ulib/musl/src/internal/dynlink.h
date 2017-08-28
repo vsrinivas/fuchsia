@@ -33,7 +33,6 @@ enum {
     REL_OFFSET,
     REL_OFFSET32,
     REL_COPY,
-    REL_SYM_OR_REL,
     REL_DTPMOD,
     REL_DTPOFF,
     REL_TPOFF,
@@ -44,13 +43,6 @@ enum {
 };
 
 #include "reloc.h"
-
-#define IS_RELATIVE(x, s) \
-    ((R_TYPE(x) == REL_RELATIVE) || (R_TYPE(x) == REL_SYM_OR_REL && !R_SYM(x)))
-
-#ifndef NEED_MIPS_GOT_RELOCS
-#define NEED_MIPS_GOT_RELOCS 0
-#endif
 
 #ifndef DT_DEBUG_INDIRECT
 #define DT_DEBUG_INDIRECT 0

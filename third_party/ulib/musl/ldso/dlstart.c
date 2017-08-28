@@ -16,50 +16,44 @@ __asm__(".pushsection .text._dlstart_sancov_dummy,\"ax\",%progbits\n"
         ".popsection");
 #endif
 
-__NO_SAFESTACK NO_ASAN __attribute__((__visibility__("hidden")))
-dl_start_return_t _dl_start(
-    void* start_arg, void* vdso) {
-    size_t base = (size_t)__ehdr_start;
-    ElfW(Dyn)* dynv = _DYNAMIC;
+__LOCAL __NO_SAFESTACK NO_ASAN dl_start_return_t _dl_start(void* start_arg,
+                                                           void* vdso) {
+    ElfW(Addr) base = (uintptr_t)__ehdr_start;
+    const ElfW(Rel)* rel = NULL;
+    const ElfW(Rela)* rela = NULL;
+    size_t relcount = 0, relacount = 0;
 
-    size_t i, dyn[DYN_CNT];
-    size_t *rel, rel_size;
+    // We rely on having been linked with -z combreloc so we get
+    // the DT_REL(A)COUNT tag and relocs are sorted with all the
+    // R_*_RELATIVE cases first.
 
-    for (i = 0; i < DYN_CNT; i++)
-        dyn[i] = 0;
-    for (i = 0; dynv[i].d_tag; i++)
-        if (dynv[i].d_tag < DYN_CNT)
-            dyn[dynv[i].d_tag] = dynv[i].d_un.d_val;
-
-    /* MIPS uses an ugly packed form for GOT relocations. Since we
-     * can't make function calls yet and the code is tiny anyway,
-     * it's simply inlined here. */
-    if (NEED_MIPS_GOT_RELOCS) {
-        size_t local_cnt = 0;
-        size_t* got = (void*)(base + dyn[DT_PLTGOT]);
-        for (i = 0; dynv[i].d_tag; i++)
-            if (dynv[i].d_tag == DT_MIPS_LOCAL_GOTNO)
-                local_cnt = dynv[i].d_un.d_val;
-        for (i = 0; i < local_cnt; i++)
-            got[i] += base;
+    for (const ElfW(Dyn)* d = _DYNAMIC; d->d_tag != DT_NULL; ++d) {
+        switch (d->d_tag) {
+        case DT_REL:
+            rel = (const void*)(base + d->d_un.d_ptr);
+            break;
+        case DT_RELA:
+            rela = (const void*)(base + d->d_un.d_ptr);
+            break;
+        case DT_RELCOUNT:
+            relcount = d->d_un.d_val;
+            break;
+        case DT_RELACOUNT:
+            relacount = d->d_un.d_val;
+            break;
+        }
     }
 
-    rel = (void*)(base + dyn[DT_REL]);
-    rel_size = dyn[DT_RELSZ];
-    for (; rel_size; rel += 2, rel_size -= 2 * sizeof(size_t)) {
-        if (!IS_RELATIVE(rel[1], 0))
-            continue;
-        size_t* rel_addr = (void*)(base + rel[0]);
-        *rel_addr += base;
+    for (size_t i = 0; i < relcount; ++i) {
+        ElfW(Addr)* addr = (uintptr_t*)(base + rel[i].r_offset);
+        // Invariant (no asserts here): R_TYPE(rel[i].r_info) == REL_RELATIVE
+        *addr += base;
     }
 
-    rel = (void*)(base + dyn[DT_RELA]);
-    rel_size = dyn[DT_RELASZ];
-    for (; rel_size; rel += 3, rel_size -= 3 * sizeof(size_t)) {
-        if (!IS_RELATIVE(rel[1], 0))
-            continue;
-        size_t* rel_addr = (void*)(base + rel[0]);
-        *rel_addr = base + rel[2];
+    for (size_t i = 0; i < relacount; ++i) {
+        ElfW(Addr)* addr = (uintptr_t*)(base + rela[i].r_offset);
+        // Invariant (no asserts here): R_TYPE(rela[i].r_info) == REL_RELATIVE
+        *addr = base + rela[i].r_addend;
     }
 
     // Make sure all the relocations have landed before calling __dls2,
