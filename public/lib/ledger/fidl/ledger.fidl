@@ -359,22 +359,25 @@ struct MergedValue {
 };
 
 // A merge result provider, obtained from |ConflictResolver.Resolve()|. Can be
-// used to retrieve the conflicting key/value pairs (|GetLeftDiff()| and
-// |GetRightDiff()|) and to return the merge result (|Merge()|). When all
-// changes have been sent, |Done()| should be called to mark the end of incoming
-// merge changes.
+// used to retrieve data about the conflict, and provide the merge result. When
+// all changes have been sent, |Done()| should be called to mark the end of
+// incoming merge changes.
 interface MergeResultProvider {
-  // |GetLeftDiff| and |GetRightDiff| return the set of conflicting key/value
-  // pairs from the left and right branches respectively. If the |CUSTOM| policy
-  // was selected, all modified keys for each version are present. Values of
-  // |LAZY| keys may not be present on the device. In that case, |Entry| objects
-  // inside the PageChange objects will have a NULL |value| field. If needed,
-  // |left| and |right|, provided by the |ConflictResolver.Resolve()| method can
-  // be used by clients to Fetch these values. The first call to get the
-  // |PageChange|s should be done using a NULL token. If the result does not fit
-  // in a single fidl message, |status| will be |PARTIAL_RESULT| and next_token
-  // will have a non-NULL value, which can be used to retrieve the rest of the
-  // results by calling |GetLeftDiff()| (or |GetRightDiff()|) with that token.
+  // |GetLeftDiff| and |GetRightDiff| return the set of all key/value pairs that
+  // have been modified between the common ancestor (see
+  // |ConflictResolver.Resolve()|) and the left and right branches respectively.
+  //
+  // Values of |LAZY| keys may not be present on the device. In that case,
+  // |Entry| objects inside the PageChange objects will have a NULL |value|
+  // field. If needed, |left| and |right|, provided by the
+  // |ConflictResolver.Resolve()| method can be used by clients to Fetch these
+  // values.
+  //
+  // The first call to get the |PageChange|s should be done using a NULL
+  // token. If the result does not fit in a single fidl message, |status| will
+  // be |PARTIAL_RESULT| and |next_token| will have a non-NULL value, which can
+  // be used to retrieve the rest of the results by calling |GetLeftDiff()|
+  // (or |GetRightDiff()|) with that token.
   GetLeftDiff(array<uint8>? token)
       => (Status status, PageChange? change, array<uint8>? next_token);
 
