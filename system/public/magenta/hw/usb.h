@@ -167,6 +167,12 @@ typedef struct {
 
 typedef struct {
     uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_STRING
+    uint8_t bString[];
+} __attribute__ ((packed)) usb_string_descriptor_t;
+
+typedef struct {
+    uint8_t bLength;
     uint8_t bDescriptorType;    // USB_DT_INTERFACE
     uint8_t bInterfaceNumber;
     uint8_t bAlternateSetting;

@@ -8,6 +8,21 @@
 
 #include <magenta/compiler.h>
 
+/* CDC Subclasses for the Communications Interface Class */
+#define USB_CDC_SUBCLASS_DIRECT_LINE       0x01
+#define USB_CDC_SUBCLASS_ABSTRACT          0x02
+#define USB_CDC_SUBCLASS_TELEPHONE         0x03
+#define USB_CDC_SUBCLASS_MULTI_CHANNEL     0x04
+#define USB_CDC_SUBCLASS_CAPI              0x05
+#define USB_CDC_SUBCLASS_ETHERNET          0x06
+#define USB_CDC_SUBCLASS_ATM               0x07
+#define USB_CDC_SUBCLASS_WIRELESS_HANDSET  0x08
+#define USB_CDC_SUBCLASS_DEVICE_MGMT       0x09
+#define USB_CDC_SUBCLASS_MOBILE_DIRECT     0x0A
+#define USB_CDC_SUBCLASS_OBEX              0x0B
+#define USB_CDC_SUBCLASS_ETHERNET_EMU      0x0C
+#define USB_CDC_SUBCLASS_NETWORK_CTRL      0x0D
+
 /* CDC Descriptor SubTypes */
 #define USB_CDC_DST_HEADER                    0x00
 #define USB_CDC_DST_CALL_MGMT                 0x01
@@ -36,6 +51,10 @@
 #define USB_CDC_DST_TELEPHONE_CTRL            0x18
 #define USB_CDC_DST_OBEX_SERVICE_ID           0x19
 #define USB_CDC_DST_NCM                       0x1A
+
+/* CDC Class-Specific Notificaiton Codes */
+#define USB_CDC_NC_NETWORK_CONNECTION       0x00
+#define USB_CDC_NC_CONNECTION_SPEED_CHANGE  0x2A
 
 typedef struct {
     uint8_t bLength;
@@ -66,5 +85,24 @@ typedef struct {
     uint8_t bControlInterface;
     uint8_t bSubordinateInterface[];
 } __attribute__ ((packed)) usb_cs_union_interface_descriptor_t;
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_CS_INTERFACE
+    uint8_t bDescriptorSubType; // USB_CDC_DST_ETHERNET
+    uint8_t iMACAddress;
+    uint32_t bmEthernetStatistics;
+    uint16_t wMaxSegmentSize;
+    uint16_t wNumberMCFilters;
+    uint8_t bNumberPowerFilters;
+} __attribute__ ((packed)) usb_cs_ethernet_interface_descriptor_t;
+
+typedef struct {
+    uint8_t bmRequestType;
+    uint8_t bNotification;
+    uint16_t wValue;
+    uint16_t wIndex;
+    uint16_t wLength;
+} __attribute__ ((packed)) usb_cdc_notification_t;
 
 __BEGIN_CDECLS;
