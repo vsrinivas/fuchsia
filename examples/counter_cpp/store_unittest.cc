@@ -23,35 +23,36 @@ class LinkMockBase : protected Link, public testing::MockBase {
 
   ~LinkMockBase() override = default;
 
-  void SetSchema(const fidl::String& json_schema) override {
+  void SetSchema(const fidl::String& /*json_schema*/) override {
     ++counts["SetSchema"];
   }
 
-  void Get(fidl::Array<fidl::String> path,
-           const GetCallback& callback) override {
+  void Get(fidl::Array<fidl::String> /*path*/,
+           const GetCallback& /*callback*/) override {
     ++counts["Get"];
   }
 
-  void Set(fidl::Array<fidl::String> path, const fidl::String& json) override {
+  void Set(fidl::Array<fidl::String> /*path*/,
+           const fidl::String& /*json*/) override {
     ++counts["Set"];
   }
 
-  void UpdateObject(fidl::Array<fidl::String> path,
-                    const fidl::String& json) override {
+  void UpdateObject(fidl::Array<fidl::String> /*path*/,
+                    const fidl::String& /*json*/) override {
     ++counts["UpdateObject"];
   }
 
-  void Erase(fidl::Array<fidl::String> path) override { ++counts["Erase"]; }
+  void Erase(fidl::Array<fidl::String> /*path*/) override { ++counts["Erase"]; }
 
-  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher_handle) override {
+  void Watch(fidl::InterfaceHandle<LinkWatcher> /*watcher_handle*/) override {
     ++counts["Watch"];
   }
 
-  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override {
+  void WatchAll(fidl::InterfaceHandle<LinkWatcher> /*watcher*/) override {
     ++counts["WatchAll"];
   }
 
-  void Sync(const SyncCallback& callback) override { ++counts["Sync"]; }
+  void Sync(const SyncCallback& /*callback*/) override { ++counts["Sync"]; }
 };
 
 class LinkMock : public LinkMockBase {

@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/story_runner/story_provider_impl.h"
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -500,20 +501,20 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
         });
   }
 
-  void Cont2(FlowToken flow) {
+  void Cont2(FlowToken /*flow*/) {
     auto link_peer = std::make_unique<LinkPeer>();
 
     link_peer->page = std::move(page_);
     auto* const page = link_peer->page.get();
 
-    link_peer->storage.reset(new StoryStorageImpl(page));
+    link_peer->storage = std::make_unique<StoryStorageImpl>(page);
     auto* const storage = link_peer->storage.get();
 
     auto link_path = LinkPath::New();
     link_path->module_path = module_path_.Clone();
     link_path->link_name = link_name_;
 
-    link_peer->link.reset(new LinkImpl(storage, std::move(link_path)));
+    link_peer->link = std::make_unique<LinkImpl>(storage, std::move(link_path));
     link_peer->link->Connect(std::move(request_));
 
     impl_->link_peers_.emplace_back(std::move(link_peer));

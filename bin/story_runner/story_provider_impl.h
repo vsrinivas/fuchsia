@@ -40,7 +40,7 @@ class StoryControllerImpl;
 class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
   StoryProviderImpl(
-      Scope* const user_scope,
+      Scope* user_scope,
       std::string device_id,
       ledger::Ledger* ledger,
       ledger::Page* root_page,
@@ -88,7 +88,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void SetStoryInfoExtra(const fidl::String& story_id,
                          const fidl::String& name,
                          const fidl::String& value,
-                         const std::function<void()>& callback);
+                         const std::function<void()>& done);
 
   // |StoryProvider|, also used by StoryControllerImpl.
   void GetStoryInfo(const fidl::String& story_id,
@@ -106,12 +106,12 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   using ImportanceMap = fidl::Map<fidl::String, float>;
 
   // |StoryProvider|
-  void CreateStory(const fidl::String& url,
+  void CreateStory(const fidl::String& module_url,
                    const CreateStoryCallback& callback) override;
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const fidl::String& url,
+      const fidl::String& module_url,
       FidlStringMap extra_info,
       const fidl::String& root_json,
       const CreateStoryWithInfoCallback& callback) override;
@@ -146,7 +146,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // |StoryProvider|
   void GetLinkPeer(const fidl::String& story_id,
                    fidl::Array<fidl::String> module_path,
-                   const fidl::String& link_path,
+                   const fidl::String& link_name,
                    fidl::InterfaceRequest<Link> request) override;
 
   // |PageClient|

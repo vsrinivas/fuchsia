@@ -20,7 +20,8 @@ constexpr char kAppStoragePath[] = "/data/APP_DATA";
 
 // Template specializations for fidl services that don't have a Terminate()
 template <>
-void AppClient<Module>::ServiceTerminate(const std::function<void()>& done) {
+void AppClient<Module>::ServiceTerminate(
+    const std::function<void()>& /*done*/) {
   FTL_NOTREACHED();
 }
 

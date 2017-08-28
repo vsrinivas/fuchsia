@@ -16,7 +16,7 @@ namespace modular {
 // An implementation of |AgentRunnerStorage| that persists data in the ledger.
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
-  AgentRunnerStorageImpl(ledger::PagePtr page);
+  explicit AgentRunnerStorageImpl(ledger::PagePtr page);
   ~AgentRunnerStorageImpl() override;
 
  private:
@@ -26,7 +26,7 @@ class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
 
   // |AgentRunnerStorage|
   void WriteTask(const std::string& agent_url,
-                 TriggerInfo info,
+                 TriggerInfo data,
                  std::function<void(bool)> done) override;
 
   // |AgentRunnerStorage|

@@ -50,15 +50,15 @@ class LinkStorageMock : LinkStorage, public testing::MockBase {
     callback();
   }
 
-  void WatchLink(const LinkPathPtr& link_path,
-                 LinkImpl* impl,
-                 const DataCallback& watcher) override {
+  void WatchLink(const LinkPathPtr& /*link_path*/,
+                 LinkImpl* /*impl*/,
+                 const DataCallback& /*watcher*/) override {
     ++counts["WatchLink"];
   }
 
-  void DropWatcher(LinkImpl* impl) override { ++counts["DropWatcher"]; }
+  void DropWatcher(LinkImpl* /*impl*/) override { ++counts["DropWatcher"]; }
 
-  void Sync(const SyncCallback& callback) override { ++counts["Sync"]; }
+  void Sync(const SyncCallback& /*callback*/) override { ++counts["Sync"]; }
 
  private:
   std::string read_link_path_;

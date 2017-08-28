@@ -22,7 +22,7 @@ namespace modular {
 
 uint64_t WallClockTimeOfDay::GetTimeOfDayMs() {
   struct timeval te;
-  gettimeofday(&te, NULL);
+  gettimeofday(&te, nullptr);
   auto milliseconds =
       static_cast<uint64_t>(te.tv_sec) * 1000LL + te.tv_usec / 1000;
   return milliseconds;
@@ -52,7 +52,7 @@ std::string KeyGenerator::Create() {
 
   std::string id(18, '-');
   for (int i = 7; i >= 0; --i) {
-    id[i] = kEncodingDictionary[(size_t)(milliseconds % 64)];
+    id[i] = kEncodingDictionary[static_cast<size_t>(milliseconds % 64)];
     milliseconds /= 64;
   }
   FTL_DCHECK(milliseconds == 0);

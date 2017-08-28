@@ -94,7 +94,7 @@ void Store::Notify(const fidl::String& json) {
 
 modular_example::Counter Store::ParseCounterJson(
     const std::string& json,
-    const std::string& module_name) {
+    const std::string& /*module_name*/) {
   rapidjson::Document doc;
   doc.Parse(json);
   FTL_CHECK(!doc.HasParseError());

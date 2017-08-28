@@ -5,6 +5,7 @@
 #include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
 
 #include <functional>
+#include <utility>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
@@ -97,13 +98,13 @@ class AgentRunnerStorageImpl::WriteTaskCall : Operation<bool> {
  public:
   WriteTaskCall(OperationContainer* const container,
                 AgentRunnerStorageImpl* storage,
-                const std::string& agent_url,
+                std::string agent_url,
                 TriggerInfo data,
                 std::function<void(bool)> done)
       : Operation("AgentRunnerStorageImpl::WriteTaskCall", container, done),
         storage_(storage),
-        agent_url_(agent_url),
-        data_(data) {
+        agent_url_(std::move(agent_url)),
+        data_(std::move(data)) {
     Ready();
   }
 
@@ -139,13 +140,13 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
  public:
   DeleteTaskCall(OperationContainer* const container,
                  AgentRunnerStorageImpl* storage,
-                 const std::string& agent_url,
-                 const std::string& task_id,
+                 std::string agent_url,
+                 std::string task_id,
                  std::function<void(bool)> done)
       : Operation("AgentRunnerStorageImpl::DeleteTaskCall", container, done),
         storage_(storage),
-        agent_url_(agent_url),
-        task_id_(task_id) {
+        agent_url_(std::move(agent_url)),
+        task_id_(std::move(task_id)) {
     Ready();
   }
 

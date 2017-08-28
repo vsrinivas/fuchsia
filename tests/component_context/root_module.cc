@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include "application/lib/app/connect.h"
 #include "apps/modular/lib/fidl/message_receiver_client.h"
 #include "apps/modular/lib/testing/component_base.h"
@@ -35,7 +37,7 @@ constexpr int kTotalSimultaneousTests = 2;
 class CounterTrigger {
  public:
   CounterTrigger(int count, std::function<void()> trigger)
-      : count_(count), trigger_(trigger) {}
+      : count_(count), trigger_(std::move(trigger)) {}
   void Step() {
     if (!finished_) {
       // If this CHECK triggers, then you've called Step() more times than

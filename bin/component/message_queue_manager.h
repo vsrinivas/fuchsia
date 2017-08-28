@@ -45,7 +45,7 @@ class MessageQueueManager {
                           const std::string& queue_name);
 
   void DeleteNamespace(const std::string& component_namespace,
-                       std::function<void()> done_callback);
+                       std::function<void()> done);
 
   void GetMessageSender(const std::string& queue_token,
                         fidl::InterfaceRequest<MessageSender> request);

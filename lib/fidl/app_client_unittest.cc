@@ -33,9 +33,9 @@ class TestApplicationController : app::ApplicationController {
   bool killed() { return killed_; }
 
  private:
-  void Kill() { killed_ = true; }
+  void Kill() override { killed_ = true; }
 
-  void Detach() {}
+  void Detach() override {}
 
   fidl::Binding<app::ApplicationController> binding_;
 

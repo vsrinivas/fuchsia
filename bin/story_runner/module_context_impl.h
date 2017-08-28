@@ -61,7 +61,7 @@ class ModuleContextImpl : ModuleContext {
  private:
   // |ModuleContext|
   void GetLink(const fidl::String& name,
-               fidl::InterfaceRequest<Link> link) override;
+               fidl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void StartModule(
       const fidl::String& name,

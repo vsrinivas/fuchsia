@@ -4,6 +4,8 @@
 
 #include "apps/modular/lib/testing/ledger_repository_for_testing.h"
 
+#include <utility>
+
 #include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/ledger/constants.h"
 #include "apps/modular/services/config/config.fidl.h"
@@ -41,8 +43,8 @@ ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
 }
 
 LedgerRepositoryForTesting::LedgerRepositoryForTesting(
-    const std::string& repository_path)
-    : repository_path_(repository_path) {
+    std::string repository_path)
+    : repository_path_(std::move(repository_path)) {
   AppConfigPtr ledger_config = AppConfig::New();
   ledger_config->url = kLedgerAppUrl;
   ledger_config->args = fidl::Array<fidl::String>::New(1);

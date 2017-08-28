@@ -17,7 +17,7 @@ class MockTimeOfDay : public TimeOfDay {
  public:
   // This is just a seed random value from when the code was written
   // so that the mock will generate consistent results.
-  MockTimeOfDay(uint64_t value = 1503100825u * 1000) : value_(value) {}
+  explicit MockTimeOfDay(uint64_t value = 1503100825u * 1000) : value_(value) {}
 
   // Return number of milliseconds since the epoch
   uint64_t GetTimeOfDayMs() override { return value_; }

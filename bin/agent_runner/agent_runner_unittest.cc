@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <memory>
+
 #include "apps/modular/src/agent_runner/agent_runner.h"
 #include "application/lib/app/service_provider_impl.h"
 #include "application/services/service_provider.fidl.h"
@@ -28,21 +30,21 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
   FakeAgentRunnerStorage() = default;
 
   // |AgentRunnerStorage|
-  void Initialize(NotificationDelegate* delegate,
+  void Initialize(NotificationDelegate* /*delegate*/,
                   const ftl::Closure done) override {
     done();
   }
 
   // |AgentRunnerStorage|
-  void WriteTask(const std::string& agent_url,
-                 TriggerInfo info,
+  void WriteTask(const std::string& /*agent_url*/,
+                 TriggerInfo /*info*/,
                  const std::function<void(bool)> done) override {
     done(true);
   }
 
   // |AgentRunnerStorage|
-  void DeleteTask(const std::string& agent_url,
-                  const std::string& task_id,
+  void DeleteTask(const std::string& /*agent_url*/,
+                  const std::string& /*task_id*/,
                   const std::function<void(bool)> done) override {
     done(true);
   }
@@ -68,13 +70,13 @@ class AgentRunnerTest : public TestWithMessageLoop {
                              ASSERT_TRUE(status == ledger::Status::OK);
                            });
 
-    mqm_.reset(new MessageQueueManager(std::move(message_queue_page_),
-                                       "/tmp/test_mq_data"));
+    mqm_ = std::make_unique<MessageQueueManager>(std::move(message_queue_page_),
+                                                 "/tmp/test_mq_data");
 
-    agent_runner_.reset(new AgentRunner(
+    agent_runner_ = std::make_unique<AgentRunner>(
         &launcher_, mqm_.get(), ledger_repo_for_testing_->ledger_repository(),
         &agent_runner_storage_, token_provider_factory_.get(),
-        ui_provider_.get()));
+        ui_provider_.get());
   }
 
   void TearDown() override {
@@ -133,21 +135,23 @@ class MyDummyAgent : Agent,
   void Detach() override { ++counts["Detach"]; }
 
   // |Agent|
-  void Initialize(fidl::InterfaceHandle<modular::AgentContext> agent_context,
-                  const InitializeCallback& callback) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::AgentContext> /*agent_context*/,
+      const InitializeCallback& callback) override {
     ++counts["Initialize"];
     callback();
   }
 
   // |Agent|
-  void Connect(const fidl::String& requestor_url,
-               fidl::InterfaceRequest<app::ServiceProvider> services) override {
+  void Connect(
+      const fidl::String& /*requestor_url*/,
+      fidl::InterfaceRequest<app::ServiceProvider> /*services*/) override {
     ++counts["Connect"];
   }
 
   // |Agent|
-  void RunTask(const fidl::String& task_id,
-               const RunTaskCallback& callback) override {
+  void RunTask(const fidl::String& /*task_id*/,
+               const RunTaskCallback& /*callback*/) override {
     ++counts["RunTask"];
   }
 
@@ -220,8 +224,8 @@ TEST_F(AgentRunnerTest, AgentController) {
       kMyAgentUrl,
       [&dummy_agent](app::ApplicationLaunchInfoPtr launch_info,
                      fidl::InterfaceRequest<app::ApplicationController> ctrl) {
-        dummy_agent.reset(new MyDummyAgent(std::move(launch_info->services),
-                                           std::move(ctrl)));
+        dummy_agent = std::make_unique<MyDummyAgent>(
+            std::move(launch_info->services), std::move(ctrl));
       });
 
   app::ServiceProviderPtr incoming_services;
