@@ -63,6 +63,7 @@ static void xhci_process_transactions_locked(xhci_t* xhci, xhci_endpoint_t* ep,
 mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoint) {
     xhci_slot_t* slot = &xhci->slots[slot_id];
     xhci_endpoint_t* ep = &slot->eps[endpoint];
+    iotxn_t* txn;
 
     // Recover from Halted and Error conditions. See section 4.8.3 of the XHCI spec.
 
@@ -108,6 +109,14 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
         }
     }
 
+    // xhci_reset_dequeue_ptr_locked will skip past all pending transactions,
+    // so move them all to the queued list so they will be requeued
+    // Completed these with MX_ERR_CANCELED out of the lock.
+    // Remove from tail and add to head to preserve the ordering
+    while ((txn = list_remove_tail_type(&ep->pending_txns, iotxn_t, node)) != NULL) {
+        list_add_head(&ep->queued_txns, &txn->node);
+    }
+
     ep_ctx_state = xhci_get_ep_ctx_state(ep);
     mx_status_t status;
     switch (ep_ctx_state) {
@@ -140,7 +149,6 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
     mtx_unlock(&ep->lock);
 
     // call complete callbacks out of the lock
-    iotxn_t* txn;
     while ((txn = list_remove_head_type(&completed_txns, iotxn_t, node)) != NULL) {
         iotxn_complete(txn, txn->status, txn->actual);
     }
