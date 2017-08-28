@@ -17,6 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/acpi.cpp \
     $(LOCAL_DIR)/balloon.cpp \
     $(LOCAL_DIR)/block.cpp \
+    $(LOCAL_DIR)/gpu.cpp \
     $(LOCAL_DIR)/guest.cpp \
     $(LOCAL_DIR)/io_apic.cpp \
     $(LOCAL_DIR)/io_port.cpp \

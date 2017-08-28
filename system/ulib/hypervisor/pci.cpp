@@ -41,7 +41,7 @@ static const uint8_t kPciCapNextOffset = 1;
  *
  * These are provided to the guest via the _SB section in the DSDT ACPI table.
  */
-static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34};
+static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34, 35};
 
 static uint32_t pci_bar_base(pci_bar_t* bar) {
     switch (bar->aspace) {

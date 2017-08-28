@@ -16,6 +16,7 @@
 #include <hypervisor/address.h>
 #include <hypervisor/balloon.h>
 #include <hypervisor/block.h>
+#include <hypervisor/gpu.h>
 #include <hypervisor/guest.h>
 #include <hypervisor/io_apic.h>
 #include <hypervisor/io_port.h>
@@ -49,6 +50,7 @@ static zx_status_t usage(const char* cmd) {
     fprintf(stderr, "\t-p [pages]         Number of unused pages to allow the guest to\n"
                     "\t                   retain. Has no effect unless -m is also used\n");
     fprintf(stderr, "\t-d                 Demand-page balloon deflate requests\n");
+    fprintf(stderr, "\t-g                 Enable graphics output to the framebuffer.\n");
     fprintf(stderr, "\n");
     return ZX_ERR_INVALID_ARGS;
 }
@@ -125,8 +127,9 @@ int main(int argc, char** argv) {
     const char* cmdline = NULL;
     zx_duration_t balloon_poll_interval = 0;
     bool balloon_deflate_on_demand = false;
+    bool use_gpu = false;
     int opt;
-    while ((opt = getopt(argc, argv, "b:r:c:m:dp:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:r:c:m:dp:g")) != -1) {
         switch (opt) {
         case 'b':
             block_path = optarg;
@@ -155,6 +158,9 @@ int main(int argc, char** argv) {
                         optarg);
                 return ZX_ERR_INVALID_ARGS;
             }
+            break;
+        case 'g':
+            use_gpu = true;
             break;
         default:
             return usage(cmd);
@@ -319,6 +325,18 @@ int main(int argc, char** argv) {
         return status;
     if (balloon_poll_interval > 0)
         poll_balloon_stats(&balloon, balloon_poll_interval);
+
+    // Setup Virtio GPU.
+    VirtioGpu gpu(addr, kVmoSize);
+    if (use_gpu) {
+        status = gpu.Init("/dev/class/framebuffer/000");
+        if (status != ZX_OK)
+            return status;
+
+        status = bus.Connect(&gpu.pci_device(), PCI_DEVICE_VIRTIO_GPU);
+        if (status != ZX_OK)
+            return status;
+    }
 
     // TODO: Move APIC initialization into a Vcpu factory method. This
     // reduces the need for platform switches here.
