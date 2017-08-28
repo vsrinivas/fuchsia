@@ -7,7 +7,6 @@ package main
 import (
 	"crypto/sha512"
 	"encoding/hex"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"hash"
@@ -19,9 +18,9 @@ import (
 	"time"
 
 	"amber/daemon"
+	"amber/source"
 
 	tuf "github.com/flynn/go-tuf/client"
-	"github.com/flynn/go-tuf/data"
 )
 
 var (
@@ -54,32 +53,15 @@ func main() {
 		return
 	}
 
-	tufStore, err := tuf.FileLocalStore(*store)
+	keys, err := source.LoadKeys(*keys)
 	if err != nil {
-		fmt.Printf("amber: couldn't open datastore %v\n", err)
+		log.Printf("loading root keys failed %s\n", err)
 		return
 	}
 
-	server, err := tuf.HTTPRemoteStore(*addr, nil)
+	client, _, err := source.InitNewTUFClient(*addr, *store, keys)
 	if err != nil {
-		fmt.Printf("amber: couldn't understand server address %v\n", err)
-		return
-	}
-
-	client := tuf.NewClient(tufStore, server)
-
-	doInit, err := needsInit(tufStore)
-	if doInit {
-		rootKeys, err := loadKeys(*keys)
-		if err != nil {
-			log.Printf("amber: please provide keys for client %v\n", err)
-			return
-		}
-
-		err = initClient(client, rootKeys)
-		if err != nil {
-			log.Println("client initialization failed, exiting")
-		}
+		log.Printf("client initialization failed: %s\n", err)
 	}
 
 	if err != nil {
@@ -95,43 +77,15 @@ func main() {
 	select {}
 }
 
-func initClient(client *tuf.Client, keys []*data.Key) error {
-	log.Println("initializing client")
-	delay := 1 * time.Second
-	maxStep := 30 * time.Second
-	maxDelay := 5 * time.Minute
-
-	// TODO(jmatt) consider giving up?
-	for {
-		err := client.Init(keys, len(keys))
-		if err == nil {
-			break
-		}
-		log.Println("client failed to init with provided keys")
-		time.Sleep(delay)
-
-		if delay > maxStep {
-			delay += maxStep
-		} else {
-			delay += delay
-		}
-
-		if delay > maxDelay {
-			delay = maxDelay
-		}
-	}
-	return nil
-}
-
 func doDemo() {
 	if err := os.MkdirAll(needsPath, os.ModePerm); err != nil {
-		fmt.Printf("Error making needs dir %v\n")
+		fmt.Printf("Error making needs dir\n")
 		return
 	}
 
 	f, err := os.Create(filepath.Join(needsPath, demoNeed))
 	if err != nil {
-		fmt.Printf("Error making needs file %v\n", err)
+		fmt.Printf("Error making needs file %s\n", err)
 		return
 	}
 	f.Close()
@@ -139,32 +93,6 @@ func doDemo() {
 	// sleep a moment for the daemon to see the file
 	time.Sleep(1 * time.Second)
 	os.Remove(filepath.Join(needsPath, demoNeed))
-}
-
-func needsInit(store tuf.LocalStore) (bool, error) {
-	meta, err := store.GetMeta()
-	if err != nil {
-		return false, err
-	}
-
-	_, ok := meta["root.json"]
-	if !ok {
-		return true, nil
-	}
-
-	return false, nil
-}
-
-func loadKeys(path string) ([]*data.Key, error) {
-	f, err := os.Open(path)
-	defer f.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	var keys []*data.Key
-	err = json.NewDecoder(f).Decode(&keys)
-	return keys, err
 }
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
@@ -198,7 +126,7 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 		u.Path = filepath.Join(u.Path, "blobs")
 		checker.AddBlobRepo(daemon.BlobRepo{Address: u.String(), Interval: time.Second * 5})
 	} else {
-		log.Printf("amber: bad blob repo address %v\n", err)
+		log.Printf("amber: bad blob repo address %s\n", err)
 	}
 	pmMonitor(checker)
 	return checker
@@ -211,13 +139,13 @@ func pmMonitor(d *daemon.Daemon) {
 func digest(name string, hash hash.Hash) ([]byte, error) {
 	f, e := os.Open(name)
 	if e != nil {
-		fmt.Printf("amber: couldn't open file to fingerprint %v\n", e)
+		fmt.Printf("amber: couldn't open file to fingerprint %s\n", e)
 		return nil, e
 	}
 	defer f.Close()
 
 	if _, err := io.Copy(hash, f); err != nil {
-		fmt.Printf("amber: file digest failed %v\n", err)
+		fmt.Printf("amber: file digest failed %s\n", err)
 		return nil, e
 	}
 	return hash.Sum(nil), nil
