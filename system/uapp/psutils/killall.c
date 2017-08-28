@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fnmatch.h>
 #include <inttypes.h>
 #include <libgen.h>
 #include <stdio.h>
@@ -22,7 +23,9 @@ mx_status_t process_callback(void* unused_ctx, int depth, mx_handle_t process,
     if (status != MX_OK) {
         return status;
     }
-    if (!strcmp(name, kill_name) || !strcmp(basename(name), kill_name)) {
+    if (!strcmp(name, kill_name) ||
+        !fnmatch(kill_name, name, 0) ||
+        !strcmp(basename(name), kill_name)) {
         mx_task_kill(process);
         printf("Killed %" PRIu64 " %s\n", koid, name);
         killed++;
@@ -33,6 +36,8 @@ mx_status_t process_callback(void* unused_ctx, int depth, mx_handle_t process,
 int main(int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "usage: %s <process>\n", argv[0]);
+        fprintf(stderr, "  <process> can be the name of a process, the basename of a process\n");
+        fprintf(stderr, "  or glob pattern matching a process name.\n");
         return -1;
     }
 
