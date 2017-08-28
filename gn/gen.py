@@ -16,6 +16,9 @@ def main():
     parser = argparse.ArgumentParser(description="Generate Ninja files for Fuchsia")
     parser.add_argument("--args", dest="gn_args", help="additional args to pass to gn",
                         action="append")
+    parser.add_argument("--help-args", dest="gn_args_list", default=False,
+                        help="Show GN build arguments usable in --args",
+                        action="store_true")
     parser.add_argument("--magenta_project", "-p", help="magenta project",
                         default=os.environ.get("MAGENTA_PROJECT"))
     parser.add_argument("--modules", "-m", help="comma separted list of modules",
@@ -51,7 +54,10 @@ def main():
 
     outdir_path = os.path.join(paths.FUCHSIA_ROOT, args.outdir)
 
-    gn_command = ["gen", outdir_path, "--check"]
+    if args.gn_args_list:
+      gn_command = ["args", outdir_path, "--list"]
+    else:
+      gn_command = ["gen", outdir_path, "--check"]
 
     cpu_map = {"x86-64":"x64", "aarch64":"arm64"}
     gn_args = "--args=target_cpu=\"" + cpu_map[args.target_cpu]  + "\""
