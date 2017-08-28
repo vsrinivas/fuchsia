@@ -1009,7 +1009,7 @@ LOCAL_SRCS := \
 
 ifeq ($(ARCH),arm64)
 LOCAL_SRCS += \
-    $(LOCAL_DIR)/src/fenv/aarch64/fenv.S \
+    $(LOCAL_DIR)/src/fenv/aarch64/fenv.c \
     $(LOCAL_DIR)/src/ldso/aarch64/tlsdesc.S \
     $(LOCAL_DIR)/src/math/aarch64/fabs.S \
     $(LOCAL_DIR)/src/math/aarch64/fabsf.S \
