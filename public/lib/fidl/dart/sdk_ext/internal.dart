@@ -4,6 +4,7 @@
 
 library internal;
 
+import 'dart:convert' show UTF8;
 import 'dart:nativewrappers';
 import 'dart:typed_data';
 

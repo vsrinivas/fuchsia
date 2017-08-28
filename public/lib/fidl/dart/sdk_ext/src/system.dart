@@ -41,7 +41,7 @@ class ReadResult extends _Result {
   const ReadResult(final int status, [this.bytes, this.numBytes, this.handles])
       : super(status);
   Uint8List bytesAsUint8List() =>
-      bytes.buffer.asUint8List(bd.offsetInBytes, bd.lengthInBytes);
+      bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
   String bytesAsUTF8String() => UTF8.decode(bytesAsUint8List());
 }
 
