@@ -6,19 +6,6 @@
 
 #include "escher/vk/gpu_mem.h"
 
-// TODO: Used during transition to SDK 1.0.57.  Remove once Magma Vulkan SDK
-// is also updated to >= 1.0.57.
-#ifndef VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
-#ifdef VK_KHX_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME
-#define VkImportSemaphoreFdInfoKHR VkImportSemaphoreFdInfoKHX
-namespace vk {
-using ExternalSemaphoreHandleTypeFlagBitsKHR =
-    ExternalSemaphoreHandleTypeFlagBitsKHX;
-using ImportSemaphoreFdInfoKHR = ImportSemphoreFdInfoKHX;
-}  // namespace vk
-#endif
-#endif
-
 namespace scene_manager {
 
 std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
@@ -42,11 +29,7 @@ std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
   vk::ImportSemaphoreFdInfoKHR info;
   info.semaphore = sema->vk_semaphore();
   info.fd = event_copy.release();
-#if VK_KHR_external_semaphore_fd
   info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eSyncFd;
-#else
-  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBitsKHR::eFenceFd;
-#endif
 
   if (VK_SUCCESS != device->proc_addrs().ImportSemaphoreFdKHR(
                         device->vk_device(),

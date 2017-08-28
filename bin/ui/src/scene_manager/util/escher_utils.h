@@ -16,7 +16,7 @@
 namespace scene_manager {
 
 // Create a new escher::Semaphore and a corresponding mx::event using
-// the VK_KHX_EXTERNAL_SEMAPHORE_FD extension.  If it fails, both elements
+// the VK_KHR_EXTERNAL_SEMAPHORE_FD extension.  If it fails, both elements
 // of the pair will be null.
 std::pair<escher::SemaphorePtr, mx::event> NewSemaphoreEventPair(
     escher::Escher* escher);
