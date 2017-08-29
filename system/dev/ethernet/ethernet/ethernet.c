@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
@@ -21,16 +22,6 @@
 #define FIFO_DEPTH 256
 #define FIFO_ESIZE sizeof(eth_fifo_entry_t)
 #define DEVICE_NAME_LEN 16
-
-#define TRACE 0
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 // This is used for signaling that eth_tx_thread() should exit.
 static const mx_signals_t kSignalFifoTerminate = MX_USER_SIGNAL_0;
@@ -117,12 +108,12 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
     if ((status = mx_fifo_read(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
         if (status == MX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
-                printf("eth [%s]: no rx buffers available (%u times)\n",
+                dprintf(ERROR, "eth [%s]: no rx buffers available (%u times)\n",
                        edev->name, edev->fail_rx_read);
             }
         } else {
             // Fatal, should force teardown
-            printf("eth [%s]: rx fifo read failed %d\n", edev->name, status);
+            dprintf(ERROR, "eth [%s]: rx fifo read failed %d\n", edev->name, status);
         }
         return;
     }
@@ -144,19 +135,19 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
     if ((status = mx_fifo_write(edev->rx_fifo, &e, sizeof(e), &count)) < 0) {
         if (status == MX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
-                printf("eth [%s]: no rx_fifo space available (%u times)\n",
+                dprintf(ERROR, "eth [%s]: no rx_fifo space available (%u times)\n",
                        edev->name, edev->fail_rx_write);
             }
         } else {
             // Fatal, should force teardown
-            printf("eth [%s]: rx_fifo write failed %d\n", edev->name, status);
+            dprintf(ERROR, "eth [%s]: rx_fifo write failed %d\n", edev->name, status);
         }
         return;
     }
 }
 
 static void eth0_status(void* cookie, uint32_t status) {
-    xprintf("eth: status() %08x\n", status);
+    dprintf(TRACE, "eth: status() %08x\n", status);
 
     ethdev0_t* edev0 = cookie;
     mtx_lock(&edev0->lock);
@@ -245,14 +236,14 @@ static int eth_tx_thread(void* arg) {
                                                  kSignalFifoTerminate,
                                                  MX_TIME_INFINITE,
                                                  &observed)) < 0) {
-                    printf("eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
+                    dprintf(ERROR, "eth [%s]: tx_fifo: error waiting: %d\n", edev->name, status);
                     break;
                 }
                 if (observed & kSignalFifoTerminate)
                     break;
                 continue;
             } else {
-                printf("eth [%s]: tx_fifo: cannot read: %d\n", edev->name, status);
+                dprintf(ERROR, "eth [%s]: tx_fifo: cannot read: %d\n", edev->name, status);
                 break;
             }
         }
@@ -264,7 +255,7 @@ static int eth_tx_thread(void* arg) {
             } else {
                 uint32_t opt = count > 1 ? ETHMAC_TX_OPT_MORE : 0u;
                 if (opt) {
-                    xprintf("setting OPT_MORE (%u packets to go)\n", count);
+                    dprintf(SPEW, "setting OPT_MORE (%u packets to go)\n", count);
                 }
                 edev0->mac.ops->send(edev0->mac.ctx, opt, edev->io_buf + e->offset, e->length);
                 e->flags = ETH_FIFO_TX_OK;
@@ -278,20 +269,20 @@ static int eth_tx_thread(void* arg) {
         if ((status = mx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * n, &count)) < 0) {
             if (status == MX_ERR_SHOULD_WAIT) {
                 if ((edev->fail_tx_write++ % FAIL_REPORT_RATE) == 0) {
-                    printf("eth [%s]: no tx_fifo space available (%u times)\n",
+                    dprintf(ERROR, "eth [%s]: no tx_fifo space available (%u times)\n",
                            edev->name, edev->fail_tx_write);
                 }
             } else {
-                printf("eth [%s]: tx_fifo write failed %d\n", edev->name, status);
+                dprintf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
                 break;
             }
         }
         if (count != n) {
-            printf("eth [%s]: tx_fifo: only wrote %u of %u!\n", edev->name, count, n);
+            dprintf(ERROR, "eth [%s]: tx_fifo: only wrote %u of %u!\n", edev->name, count, n);
         }
     }
 
-    printf("eth [%s]: tx_thread: exit: %d\n", edev->name, status);
+    dprintf(INFO, "eth [%s]: tx_thread: exit: %d\n", edev->name, status);
     return 0;
 }
 
@@ -308,11 +299,11 @@ static mx_status_t eth_get_fifos_locked(ethdev_t* edev, void* out_buf, size_t ou
 
     mx_status_t status;
     if ((status = mx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->tx_fifo, &edev->tx_fifo)) < 0) {
-        fprintf(stderr, "eth_create  [%s]: failed to create tx fifo: %d\n", edev->name, status);
+        dprintf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d\n", edev->name, status);
         return status;
     }
     if ((status = mx_fifo_create(FIFO_DEPTH, FIFO_ESIZE, 0, &fifos->rx_fifo, &edev->rx_fifo)) < 0) {
-        fprintf(stderr, "eth_create  [%s]: failed to create rx fifo: %d\n", edev->name, status);
+        dprintf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d\n", edev->name, status);
         mx_handle_close(fifos->rx_fifo);
         mx_handle_close(edev->tx_fifo);
         edev->tx_fifo = MX_HANDLE_INVALID;
@@ -342,14 +333,14 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
     mx_status_t status;
 
     if ((status = mx_vmo_get_size(vmo, &size)) < 0) {
-        printf("eth [%s]: could not get io_buf size: %d\n", edev->name, status);
+        dprintf(ERROR, "eth [%s]: could not get io_buf size: %d\n", edev->name, status);
         goto fail;
     }
 
     if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                               (uintptr_t*)&edev->io_buf)) < 0) {
-        printf("eth [%s]: could not map io_buf: %d\n", edev->name, status);
+        dprintf(ERROR, "eth [%s]: could not map io_buf: %d\n", edev->name, status);
         goto fail;
     }
 
@@ -381,7 +372,7 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
         int r = thrd_create_with_name(&edev->tx_thr, eth_tx_thread,
                                       edev, "eth-tx-thread");
         if (r != thrd_success) {
-            printf("eth [%s]: failed to start tx thread: %d\n", edev->name, r);
+            dprintf(ERROR, "eth [%s]: failed to start tx thread: %d\n", edev->name, r);
             return MX_ERR_INTERNAL;
         }
         edev->state |= ETHDEV_TX_THREAD;
@@ -405,7 +396,7 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
         list_delete(&edev->node);
         list_add_tail(&edev0->list_active, &edev->node);
     } else {
-        printf("eth [%s]: failed to start mac: %d\n", edev->name, status);
+        dprintf(ERROR, "eth [%s]: failed to start mac: %d\n", edev->name, status);
     }
 
     return status;
@@ -469,7 +460,7 @@ static mx_status_t eth_ioctl(void* ctx, uint32_t op,
     mtx_lock(&edev->edev0->lock);
     mx_status_t status;
     if (edev->edev0->state & ETHDEV0_BUSY) {
-        printf("eth [%s]: cannot perform ioctl while device is busy. ioctl: %u\n",
+        dprintf(ERROR, "eth [%s]: cannot perform ioctl while device is busy. ioctl: %u\n",
                edev->name, IOCTL_NUMBER(op));
         status = MX_ERR_SHOULD_WAIT;
         goto done;
@@ -543,7 +534,7 @@ static void eth_kill_locked(ethdev_t* edev) {
         return;
     }
 
-    xprintf("eth [%s]: kill: tearing down%s\n",
+    dprintf(TRACE, "eth [%s]: kill: tearing down%s\n",
             edev->name, (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
 
     // make sure any future ioctls or other ops will fail
@@ -567,7 +558,7 @@ static void eth_kill_locked(ethdev_t* edev) {
         edev->state &= (~ETHDEV_TX_THREAD);
         int ret;
         thrd_join(edev->tx_thr, &ret);
-        xprintf("eth [%s]: kill: tx thread exited\n", edev->name);
+        dprintf(TRACE, "eth [%s]: kill: tx thread exited\n", edev->name);
     }
 
     if (edev->tx_fifo) {
@@ -579,7 +570,7 @@ static void eth_kill_locked(ethdev_t* edev) {
         mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)edev->io_buf, 0);
         edev->io_buf = NULL;
     }
-    xprintf("eth [%s]: all resources released\n", edev->name);
+    dprintf(TRACE, "eth [%s]: all resources released\n", edev->name);
 }
 
 static void eth_release(void* ctx) {
@@ -680,18 +671,18 @@ static mx_status_t eth_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     mx_status_t status;
     if (device_get_protocol(dev, MX_PROTOCOL_ETHERMAC, &edev0->mac)) {
-        printf("eth: bind: no ethermac protocol\n");
+        dprintf(ERROR, "eth: bind: no ethermac protocol\n");
         status = MX_ERR_INTERNAL;
         goto fail;
     }
 
     if ((status = edev0->mac.ops->query(edev0->mac.ctx, 0, &edev0->info)) < 0) {
-        printf("eth: bind: ethermac query failed: %d\n", status);
+        dprintf(ERROR, "eth: bind: ethermac query failed: %d\n", status);
         goto fail;
     }
 
     if (edev0->info.features & BAD_FEATURES) {
-        printf("eth: bind: ethermac requires unsupported features: %08x\n",
+        dprintf(ERROR, "eth: bind: ethermac requires unsupported features: %08x\n",
                edev0->info.features & BAD_FEATURES);
         status = MX_ERR_NOT_SUPPORTED;
         goto fail;
