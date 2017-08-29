@@ -7,6 +7,7 @@
 #include <threads.h>
 
 #include <hypervisor/virtio.h>
+#include <virtio/block.h>
 
 #define SECTOR_SIZE 512u
 
@@ -26,6 +27,8 @@ typedef struct block {
     virtio_device_t virtio_device;
     // Queue for handling block requests.
     virtio_queue_t queue;
+    // Device configuration fields.
+    virtio_blk_config_t config;
 } block_t;
 
 mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,

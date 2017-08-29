@@ -14,7 +14,6 @@
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <virtio/block.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
@@ -30,12 +29,8 @@ static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
 static mx_status_t block_read(const virtio_device_t* device, uint16_t port,
                               mx_vcpu_io_t* vcpu_io) {
     block_t* block = virtio_device_to_block(device);
-    virtio_blk_config_t config;
-    memset(&config, 0, sizeof(virtio_blk_config_t));
-    config.capacity = block->size / SECTOR_SIZE;
-    config.blk_size = SECTOR_SIZE;
 
-    uint8_t* buf = (uint8_t*)&config;
+    uint8_t* buf = (uint8_t*)&block->config;
     vcpu_io->access_size = 1;
     vcpu_io->u8 = buf[port];
     return MX_OK;
@@ -84,6 +79,7 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
         return MX_ERR_IO;
     }
     block->size = ret;
+    block->config.capacity = block->size / SECTOR_SIZE;
 
     // Setup Virtio device.
     block->virtio_device.device_id = VIRTIO_ID_BLOCK;
