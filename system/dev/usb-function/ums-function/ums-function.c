@@ -32,6 +32,7 @@
 #define STORAGE_SIZE    (10 * 1024 * 1024)
 #define BLOCK_COUNT     (STORAGE_SIZE / BLOCK_SIZE)
 #define DATA_TXN_SIZE   16384
+#define BULK_MAX_PACKET 512
 
 typedef enum {
     DATA_STATE_NONE,
@@ -60,7 +61,7 @@ typedef enum {
         .bDescriptorType = USB_DT_ENDPOINT,
 //      .bEndpointAddress set later
         .bmAttributes = USB_ENDPOINT_BULK,
-        .wMaxPacketSize = htole16(512),
+        .wMaxPacketSize = htole16(BULK_MAX_PACKET),
         .bInterval = 0,
     },
     .in_ep = {
@@ -68,7 +69,7 @@ typedef enum {
         .bDescriptorType = USB_DT_ENDPOINT,
 //      .bEndpointAddress set later
         .bmAttributes = USB_ENDPOINT_BULK,
-        .wMaxPacketSize = htole16(512),
+        .wMaxPacketSize = htole16(BULK_MAX_PACKET),
         .bInterval = 0,
     },
 };
@@ -86,6 +87,8 @@ typedef struct {
 
     // command we are currently handling
     ums_cbw_t current_cbw;
+    // data transferred for the current command
+    uint32_t data_length;
 
     // state for data transfers
     ums_data_state_t    data_state;
@@ -97,15 +100,25 @@ typedef struct {
     uint8_t bulk_in_addr;
 } usb_ums_t;
 
-static void ums_queue_cbw(usb_ums_t* ums) {
+static void ums_function_queue_data(usb_ums_t* ums, iotxn_t* txn) {
+    ums->data_length += txn->length;
+    usb_function_queue(&ums->function, txn,
+            (ums->current_cbw.bmCBWFlags & USB_DIR_IN ? ums->bulk_in_addr : ums->bulk_out_addr));
+}
+
+static void ums_queue_csw(usb_ums_t* ums, uint8_t status) {
+    // first queue next cbw so it is ready to go
+    usb_function_queue(&ums->function, ums->cbw_iotxn, ums->bulk_out_addr);
+
     iotxn_t* txn = ums->csw_iotxn;
     ums_csw_t* csw;
     iotxn_mmap(txn, (void **)&csw);
 
     csw->dCSWSignature = htole32(CSW_SIGNATURE);
     csw->dCSWTag = ums->current_cbw.dCBWTag;
-    csw->dCSWDataResidue = 0;   // TODO(voydanoff) use correct value here
-    csw->bmCSWStatus = CSW_SUCCESS;
+    csw->dCSWDataResidue = htole32(le32toh(ums->current_cbw.dCBWDataTransferLength)
+                                   - ums->data_length);
+    csw->bmCSWStatus = status;
 
     txn->length = sizeof(ums_csw_t);
     usb_function_queue(&ums->function, ums->csw_iotxn, ums->bulk_in_addr);
@@ -122,9 +135,9 @@ static void ums_continue_transfer(usb_ums_t* ums) {
 
     if (ums->data_state == DATA_STATE_READ) {
         iotxn_copyto(txn, ums->storage + ums->data_offset, length, 0);
-        usb_function_queue(&ums->function, txn, ums->bulk_in_addr);
+        ums_function_queue_data(ums, txn);
     } else if (ums->data_state == DATA_STATE_WRITE) {
-        usb_function_queue(&ums->function, txn, ums->bulk_out_addr);
+        ums_function_queue_data(ums, txn);
     } else {
         printf("ums_continue_transfer: bad data state %d\n", ums->data_state);
     }
@@ -156,21 +169,45 @@ static void ums_handle_inquiry(usb_ums_t* ums, ums_cbw_t* cbw) {
     uint8_t* buffer;
     iotxn_mmap(txn, (void **)&buffer);
     memset(buffer, 0, UMS_INQUIRY_TRANSFER_LENGTH);
-    // TODO(voydanoff) fill this in
     txn->length = UMS_INQUIRY_TRANSFER_LENGTH;
-    usb_function_queue(&ums->function, txn, ums->bulk_in_addr);
-    ums_queue_cbw(ums);
+
+    // fill in inquiry result
+    buffer[0] = 0;      // Peripheral Device Type: Direct access block device
+    buffer[1] = 0x80;    // Removable
+    buffer[2] = 6;       // Version SPC-4
+    buffer[3] = 0x12;    // Response Data Format
+    memcpy(buffer + 8, "Google  ", 8);
+    memcpy(buffer + 16, "Zircon UMS      ", 16);
+    memcpy(buffer + 32, "1.00", 4);
+
+    ums_function_queue_data(ums, txn);
+    ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_test_unit_ready(usb_ums_t* ums, ums_cbw_t* cbw) {
     xprintf("ums_handle_test_unit_ready\n");
 
     // no data phase here. Just return status OK
-    ums_queue_cbw(ums);
+    ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_request_sense(usb_ums_t* ums, ums_cbw_t* cbw) {
     xprintf("ums_handle_request_sense\n");
+
+    iotxn_t* txn = ums->data_iotxn;
+    uint8_t* buffer;
+    iotxn_mmap(txn, (void **)&buffer);
+    memset(buffer, 0, UMS_REQUEST_SENSE_TRANSFER_LENGTH);
+    txn->length = UMS_REQUEST_SENSE_TRANSFER_LENGTH;
+
+    // TODO(voydanoff) This is a hack. Figure out correct values to return here.
+    buffer[0] = 0x70;   // Response Code
+    buffer[2] = 5;      // Illegal Request
+    buffer[7] = 10;     // Additional Sense Length
+    buffer[12] = 0x20;  // Additional Sense Code
+
+    ums_function_queue_data(ums, txn);
+    ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_read_capacity10(usb_ums_t* ums, ums_cbw_t* cbw) {
@@ -189,8 +226,8 @@ static void ums_handle_read_capacity10(usb_ums_t* ums, ums_cbw_t* cbw) {
     data->block_length = htobe32(BLOCK_SIZE);
 
     txn->length = sizeof(*data);
-    usb_function_queue(&ums->function, txn, ums->bulk_in_addr);
-    ums_queue_cbw(ums);
+    ums_function_queue_data(ums, txn);
+    ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_read_capacity16(usb_ums_t* ums, ums_cbw_t* cbw) {
@@ -205,8 +242,8 @@ static void ums_handle_read_capacity16(usb_ums_t* ums, ums_cbw_t* cbw) {
     data->block_length = htobe32(BLOCK_SIZE);
 
     txn->length = sizeof(*data);
-    usb_function_queue(&ums->function, txn, ums->bulk_in_addr);
-    ums_queue_cbw(ums);
+    ums_function_queue_data(ums, txn);
+    ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_mode_sense6(usb_ums_t* ums, ums_cbw_t* cbw) {
@@ -220,8 +257,8 @@ static void ums_handle_mode_sense6(usb_ums_t* ums, ums_cbw_t* cbw) {
     // TODO(voydanoff) fill in data here
 
     txn->length = sizeof(*data);
-    usb_function_queue(&ums->function, txn, ums->bulk_in_addr);
-    ums_queue_cbw(ums);
+    ums_function_queue_data(ums, txn);
+    ums_queue_csw(ums, CSW_SUCCESS);
 }
 
 static void ums_handle_read10(usb_ums_t* ums, ums_cbw_t* cbw) {
@@ -284,6 +321,9 @@ static void ums_handle_cbw(usb_ums_t* ums, ums_cbw_t* cbw) {
         return;
     }
 
+    // reset data length for computing residue
+    ums->data_length = 0;
+
     // all SCSI commands have opcode in the same place, so using scsi_command6_t works here.
     scsi_command6_t* command = (scsi_command6_t *)cbw->CBWCB;
     switch (command->opcode) {
@@ -325,6 +365,13 @@ static void ums_handle_cbw(usb_ums_t* ums, ums_cbw_t* cbw) {
         break;
     default:
         xprintf("ums_handle_cbw: unsupported opcode %d\n", command->opcode);
+        if (cbw->dCBWDataTransferLength) {
+            // queue zero length packet to satisfy data phase
+            iotxn_t* txn = ums->data_iotxn;
+            txn->length = 0;
+            ums_function_queue_data(ums, txn);
+        }
+        ums_queue_csw(ums, CSW_FAILED);
         break;
     }
 }
@@ -363,15 +410,12 @@ static void ums_data_complete(iotxn_t* txn, void* cookie) {
         ums_continue_transfer(ums);
     } else {
         ums->data_state = DATA_STATE_NONE;
-        ums_queue_cbw(ums);
+        ums_queue_csw(ums, CSW_SUCCESS);
     } 
 }
 
 static void ums_csw_complete(iotxn_t* txn, void* cookie) {
-    usb_ums_t* ums = cookie;
     xprintf("ums_csw_complete %d %ld\n", txn->status, txn->actual);
-
-    usb_function_queue(&ums->function, ums->cbw_iotxn, ums->bulk_out_addr);
 }
 
 static const usb_descriptor_header_t* ums_get_descriptors(void* ctx, size_t* out_length) {
@@ -444,7 +488,7 @@ mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
         goto fail;
     }
 
-    status =  iotxn_alloc(&ums->cbw_iotxn, 0, sizeof(ums_cbw_t));
+    status =  iotxn_alloc(&ums->cbw_iotxn, 0, BULK_MAX_PACKET);
     if (status != MX_OK) {
         goto fail;
     }
@@ -452,7 +496,7 @@ mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
     if (status != MX_OK) {
         goto fail;
     }
-    status =  iotxn_alloc(&ums->csw_iotxn, 0, sizeof(ums_csw_t));
+    status =  iotxn_alloc(&ums->csw_iotxn, 0, BULK_MAX_PACKET);
     if (status != MX_OK) {
         goto fail;
     }
@@ -468,7 +512,7 @@ mx_status_t usb_ums_bind(void* ctx, mx_device_t* parent, void** cookie) {
         goto fail;
     }
 
-    ums->cbw_iotxn->length = sizeof(ums_cbw_t);
+    ums->cbw_iotxn->length = BULK_MAX_PACKET;
     ums->csw_iotxn->length = sizeof(ums_csw_t);
     ums->cbw_iotxn->complete_cb = ums_cbw_complete;
     ums->data_iotxn->complete_cb = ums_data_complete;
