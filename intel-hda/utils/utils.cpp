@@ -152,14 +152,18 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                 if (signed_formats) {
                     range.sample_formats = signed_formats;
 
-                    if (!ranges->push_back(range))
+                    mxtl::AllocChecker ac;
+                    ranges->push_back(range, &ac);
+                    if (!ac.check())
                         return MX_ERR_NO_MEMORY;
                 }
 
                 if (unsigned_8bit_supported) {
                     range.sample_formats = AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT;
 
-                    if (!ranges->push_back(range))
+                    mxtl::AllocChecker ac;
+                    ranges->push_back(range, &ac);
+                    if (!ac.check())
                         return MX_ERR_NO_MEMORY;
                 }
 
