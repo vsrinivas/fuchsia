@@ -105,7 +105,7 @@ Status PageDbBatchImpl::RemoveJournalEntry(const JournalId& journal_id,
 }
 
 Status PageDbBatchImpl::WriteObject(
-    coroutine::CoroutineHandler* /*handler*/,
+    coroutine::CoroutineHandler* handler,
     ObjectIdView object_id,
     std::unique_ptr<DataSource::DataChunk> content,
     PageDbObjectStatus object_status) {
@@ -118,7 +118,7 @@ Status PageDbBatchImpl::WriteObject(
     return status;
   }
   if (has_key && object_status > PageDbObjectStatus::TRANSIENT) {
-    return SetObjectStatus(object_id, object_status);
+    return SetObjectStatus(handler, object_id, object_status);
   }
 
   batch_->Put(object_key, content->Get());
@@ -147,8 +147,10 @@ Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* /*handler*/,
   return Status::OK;
 }
 
-Status PageDbBatchImpl::SetObjectStatus(ObjectIdView object_id,
-                                        PageDbObjectStatus object_status) {
+Status PageDbBatchImpl::SetObjectStatus(
+    coroutine::CoroutineHandler* /*handler*/,
+    ObjectIdView object_id,
+    PageDbObjectStatus object_status) {
   FTL_DCHECK(object_status >= PageDbObjectStatus::LOCAL);
   FTL_DCHECK(CheckHasObject(object_id))
       << "Unknown object: " << convert::ToHex(object_id);

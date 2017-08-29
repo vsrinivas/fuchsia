@@ -69,7 +69,8 @@ class PageStorageEmptyImpl : public PageStorage {
   void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
 
-  Status MarkPieceSynced(ObjectIdView object_id) override;
+  void MarkPieceSynced(ObjectIdView object_id,
+                       std::function<void(Status)> callback) override;
 
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,

@@ -335,10 +335,11 @@ Status PageDbImpl::DeleteObject(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::SetObjectStatus(ObjectIdView object_id,
+Status PageDbImpl::SetObjectStatus(coroutine::CoroutineHandler* handler,
+                                   ObjectIdView object_id,
                                    PageDbObjectStatus object_status) {
   auto batch = StartBatch();
-  batch->SetObjectStatus(object_id, object_status);
+  batch->SetObjectStatus(handler, object_id, object_status);
   return batch->Execute();
 }
 

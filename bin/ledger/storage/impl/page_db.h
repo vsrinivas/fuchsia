@@ -109,7 +109,8 @@ class PageDbMutator {
 
   // Object sync metadata.
   // Sets the status of the object with the given id.
-  virtual Status SetObjectStatus(ObjectIdView object_id,
+  virtual Status SetObjectStatus(coroutine::CoroutineHandler* handler,
+                                 ObjectIdView object_id,
                                  PageDbObjectStatus object_status) = 0;
 
   // Commit sync metadata.

@@ -127,7 +127,8 @@ Status PageDbEmptyImpl::DeleteObject(coroutine::CoroutineHandler* /*handler*/,
                                      ObjectIdView /*object_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::SetObjectStatus(ObjectIdView /*object_id*/,
+Status PageDbEmptyImpl::SetObjectStatus(coroutine::CoroutineHandler* /*handler*/,
+                                        ObjectIdView /*object_id*/,
                                         PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }

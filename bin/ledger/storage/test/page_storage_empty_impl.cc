@@ -103,9 +103,11 @@ void PageStorageEmptyImpl::GetUnsyncedPieces(
   callback(Status::NOT_IMPLEMENTED, std::vector<ObjectId>());
 }
 
-Status PageStorageEmptyImpl::MarkPieceSynced(ObjectIdView /*object_id*/) {
+void PageStorageEmptyImpl::MarkPieceSynced(
+    ObjectIdView /*object_id*/,
+    std::function<void(Status)> callback) {
   FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::AddObjectFromLocal(

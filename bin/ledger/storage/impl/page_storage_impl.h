@@ -78,7 +78,8 @@ class PageStorageImpl : public PageStorage {
                          std::vector<ObjectId>* objects) override;
   void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
-  Status MarkPieceSynced(ObjectIdView object_id) override;
+  void MarkPieceSynced(ObjectIdView object_id,
+                       std::function<void(Status)> callback) override;
   void AddObjectFromLocal(
       std::unique_ptr<DataSource> data_source,
       std::function<void(Status, ObjectId)> callback) override;
@@ -112,7 +113,8 @@ class PageStorageImpl : public PageStorage {
   friend class PageStorageImplAccessorForTest;
 
   // Marks all pieces needed for the given objects as local.
-  Status MarkAllPiecesLocal(PageDb::Batch* batch,
+  Status MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
+                            PageDb::Batch* batch,
                             std::vector<ObjectId> object_ids);
 
   void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,

@@ -978,7 +978,9 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
 
   // Mark the 2nd object as synced. We now expect to still find the 2 unsynced
   // values and the (also unsynced) root node.
-  EXPECT_EQ(Status::OK, storage_->MarkPieceSynced(data_array[1].object_id));
+  storage_->MarkPieceSynced(data_array[1].object_id,
+                            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_EQ(Status::OK, status);
   std::vector<ObjectId> objects;
   storage_->GetUnsyncedPieces(
       callback::Capture(MakeQuitTask(), &status, &objects));

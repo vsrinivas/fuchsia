@@ -76,7 +76,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(const CommitId& commit_id,
                               uint64_t generation) override;
-  Status SetObjectStatus(ObjectIdView object_id,
+  Status SetObjectStatus(coroutine::CoroutineHandler* handler,
+                         ObjectIdView object_id,
                          PageDbObjectStatus object_status) override;
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
                          ftl::StringView key,

@@ -60,7 +60,8 @@ class PageDbBatchImpl : public PageDb::Batch {
                      PageDbObjectStatus object_status) override;
   Status DeleteObject(coroutine::CoroutineHandler* handler,
                       ObjectIdView object_id) override;
-  Status SetObjectStatus(ObjectIdView object_id,
+  Status SetObjectStatus(coroutine::CoroutineHandler* handler,
+                         ObjectIdView object_id,
                          PageDbObjectStatus object_status) override;
 
   // Commit sync metadata.

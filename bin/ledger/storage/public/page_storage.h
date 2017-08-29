@@ -119,7 +119,8 @@ class PageStorage {
   virtual void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) = 0;
   // Marks the object with the given |object_id| as synced.
-  virtual Status MarkPieceSynced(ObjectIdView object_id) = 0;
+  virtual void MarkPieceSynced(ObjectIdView object_id,
+                               std::function<void(Status)> callback) = 0;
   // Adds the given local object and passes the new object's id to the callback.
   // If |size| is not negative, the content size must be equal to |size|,
   // otherwise the call will fail and return |IO_ERROR| in the callback. If

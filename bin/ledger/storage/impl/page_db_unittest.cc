@@ -269,8 +269,8 @@ TEST_F(PageDbTest, UnsyncedPieces) {
   EXPECT_EQ(Status::OK, page_db_.WriteObject(handler_, object_id,
                                              DataSource::DataChunk::Create(""),
                                              PageDbObjectStatus::LOCAL));
-  EXPECT_EQ(Status::OK,
-            page_db_.SetObjectStatus(object_id, PageDbObjectStatus::LOCAL));
+  EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler_, object_id,
+                                                 PageDbObjectStatus::LOCAL));
   EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_EQ(1u, object_ids.size());
   EXPECT_EQ(object_id, object_ids[0]);
@@ -278,8 +278,8 @@ TEST_F(PageDbTest, UnsyncedPieces) {
   EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
   EXPECT_EQ(PageDbObjectStatus::LOCAL, object_status);
 
-  EXPECT_EQ(Status::OK,
-            page_db_.SetObjectStatus(object_id, PageDbObjectStatus::SYNCED));
+  EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler_, object_id,
+                                                 PageDbObjectStatus::SYNCED));
   EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
   EXPECT_TRUE(object_ids.empty());
   EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
@@ -327,7 +327,8 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
       ASSERT_EQ(Status::OK,
                 page_db_.GetObjectStatus(object_id, &object_status));
       EXPECT_EQ(initial_status, object_status);
-      ASSERT_EQ(Status::OK, page_db_.SetObjectStatus(object_id, next_status));
+      ASSERT_EQ(Status::OK,
+                page_db_.SetObjectStatus(handler_, object_id, next_status));
 
       PageDbObjectStatus expected_status =
           std::max(initial_status, next_status);

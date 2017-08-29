@@ -371,8 +371,14 @@ void PageStorageImpl::GetUnsyncedPieces(
   callback(s, unsynced_object_ids);
 }
 
-Status PageStorageImpl::MarkPieceSynced(ObjectIdView object_id) {
-  return db_.SetObjectStatus(object_id, PageDbObjectStatus::SYNCED);
+void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
+                                      std::function<void(Status)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, object_id = object_id.ToString(), callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    callback(
+        db_.SetObjectStatus(handler, object_id, PageDbObjectStatus::SYNCED));
+  });
 }
 
 void PageStorageImpl::AddObjectFromLocal(
@@ -591,7 +597,8 @@ void PageStorageImpl::NotifyWatchers() {
   }
 }
 
-Status PageStorageImpl::MarkAllPiecesLocal(PageDb::Batch* batch,
+Status PageStorageImpl::MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
+                                           PageDb::Batch* batch,
                                            std::vector<ObjectId> object_ids) {
   std::unordered_set<ObjectId> seen_ids;
   while (!object_ids.empty()) {
@@ -599,7 +606,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(PageDb::Batch* batch,
     object_ids.pop_back();
     const ObjectId& object_id = *(it.first);
     FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
-    batch->SetObjectStatus(object_id, PageDbObjectStatus::LOCAL);
+    batch->SetObjectStatus(handler, object_id, PageDbObjectStatus::LOCAL);
     if (GetObjectIdType(object_id) == ObjectIdType::INDEX_HASH) {
       std::unique_ptr<const Object> object;
       Status status = db_.ReadObject(object_id, &object);
@@ -777,7 +784,8 @@ void PageStorageImpl::AddCommits(
     }
 
     // If adding local commits, mark all new pieces as local.
-    Status status = MarkAllPiecesLocal(batch.get(), std::move(new_objects));
+    Status status =
+        MarkAllPiecesLocal(handler, batch.get(), std::move(new_objects));
     if (status != Status::OK) {
       callback(status);
       return;

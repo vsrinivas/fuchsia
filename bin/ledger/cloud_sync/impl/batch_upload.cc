@@ -120,25 +120,26 @@ void BatchUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
         }
 
         // Uploading the object succeeded.
-        auto result = storage_->MarkPieceSynced(id);
-        FTL_DCHECK(result == storage::Status::OK);
+        storage_->MarkPieceSynced(id, [this](storage::Status status) {
+          FTL_DCHECK(status == storage::Status::OK);
 
-        // Notify the user about the error once all pending uploads of the
-        // recent retry complete.
-        if (errored_ && current_uploads_ == 0u) {
-          on_error_();
-          return;
-        }
+          // Notify the user about the error once all pending uploads of the
+          // recent retry complete.
+          if (errored_ && current_uploads_ == 0u) {
+            on_error_();
+            return;
+          }
 
-        if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
-          // All the referenced objects are uploaded, upload the commits.
-          FilterAndUploadCommits();
-          return;
-        }
+          if (current_uploads_ == 0 && remaining_object_ids_.empty()) {
+            // All the referenced objects are uploaded, upload the commits.
+            FilterAndUploadCommits();
+            return;
+          }
 
-        if (!errored_ && !remaining_object_ids_.empty()) {
-          UploadNextObject();
-        }
+          if (!errored_ && !remaining_object_ids_.empty()) {
+            UploadNextObject();
+          }
+        });
       });
 }
 

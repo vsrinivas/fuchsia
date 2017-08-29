@@ -112,9 +112,10 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
              std::move(unsynced_objects_to_return[object_id.ToString()]));
   }
 
-  storage::Status MarkPieceSynced(storage::ObjectIdView object_id) override {
+  void MarkPieceSynced(storage::ObjectIdView object_id,
+                       std::function<void(storage::Status)> callback) override {
     objects_marked_as_synced.insert(object_id.ToString());
-    return storage::Status::OK;
+    callback(storage::Status::OK);
   }
 
   storage::Status MarkCommitSynced(
