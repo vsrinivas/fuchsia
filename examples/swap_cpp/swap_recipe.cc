@@ -36,7 +36,7 @@ class RecipeView : public mozart::BaseView {
     }
 
     if (view_owner) {
-      host_node_ = std::make_unique<mozart::client::EntityNode>(session());
+      host_node_ = std::make_unique<scenic_lib::EntityNode>(session());
 
       mx::eventpair host_import_token;
       host_node_->ExportAsRequest(&host_import_token);
@@ -56,7 +56,7 @@ class RecipeView : public mozart::BaseView {
     }
   }
 
-  std::unique_ptr<mozart::client::EntityNode> host_node_;
+  std::unique_ptr<scenic_lib::EntityNode> host_node_;
 };
 
 class RecipeApp : public modular::SingleServiceApp<modular::Module> {

@@ -12,9 +12,9 @@
 namespace modular {
 
 struct ViewHost::ViewData {
-  explicit ViewData(mozart::client::Session* session) : host_node(session) {}
+  explicit ViewData(scenic_lib::Session* session) : host_node(session) {}
 
-  mozart::client::EntityNode host_node;
+  scenic_lib::EntityNode host_node;
 };
 
 ViewHost::ViewHost(mozart::ViewManagerPtr view_manager,
@@ -102,7 +102,7 @@ void ViewHost::UpdateScene() {
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
 
-  session()->Present(0, [](mozart2::PresentationInfoPtr info) {});
+  session()->Present(0, [](scenic::PresentationInfoPtr info) {});
 }
 
 }  // namespace modular

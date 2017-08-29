@@ -36,12 +36,12 @@ class Module2View : public mozart::BaseView {
         store_(store),
         background_node_(session()),
         square_node_(session()) {
-    mozart::client::Material background_material(session());
+    scenic_lib::Material background_material(session());
     background_material.SetColor(0x67, 0x3a, 0xb7, 0xff);  // Deep Purple 500
     background_node_.SetMaterial(background_material);
     parent_node().AddChild(background_node_);
 
-    mozart::client::Material square_material(session());
+    scenic_lib::Material square_material(session());
     square_material.SetColor(0x29, 0x79, 0xff, 0xff);  // Blue A400
     square_node_.SetMaterial(square_material);
     parent_node().AddChild(square_node_);
@@ -54,7 +54,7 @@ class Module2View : public mozart::BaseView {
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr /*presentation_info*/) override {
+      scenic::PresentationInfoPtr /*presentation_info*/) override {
     if (!has_logical_size()) {
       return;
     }
@@ -66,13 +66,13 @@ class Module2View : public mozart::BaseView {
     const float angle =
         kTickRotationDegrees * store_->counter.counter * M_PI * 2;
 
-    mozart::client::Rectangle background_shape(session(), logical_size().width,
+    scenic_lib::Rectangle background_shape(session(), logical_size().width,
                                                logical_size().height);
     background_node_.SetShape(background_shape);
     background_node_.SetTranslation(
         (float[]){center_x, center_y, kBackgroundElevation});
 
-    mozart::client::Rectangle square_shape(session(), square_size, square_size);
+    scenic_lib::Rectangle square_shape(session(), square_size, square_size);
     square_node_.SetShape(square_shape);
     square_node_.SetTranslation(
         (float[]){center_x, center_y, kSquareElevation});
@@ -81,8 +81,8 @@ class Module2View : public mozart::BaseView {
   }
 
   modular_example::Store* const store_;
-  mozart::client::ShapeNode background_node_;
-  mozart::client::ShapeNode square_node_;
+  scenic_lib::ShapeNode background_node_;
+  scenic_lib::ShapeNode square_node_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Module2View);
 };

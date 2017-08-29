@@ -22,7 +22,7 @@ class ModuleView : public mozart::BaseView {
   // |BaseView|:
   void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
 
-  mozart::client::ShapeNode background_node_;
+  scenic_lib::ShapeNode background_node_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModuleView);
 };
