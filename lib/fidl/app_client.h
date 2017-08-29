@@ -108,7 +108,6 @@ class AppClient : public AppClientBase {
   FTL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
 
-
 template <>
 void AppClient<Lifecycle>::ServiceTerminate(const std::function<void()>& done);
 

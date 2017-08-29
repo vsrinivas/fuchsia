@@ -12,6 +12,7 @@
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
+#include "apps/modular/lib/fidl/app_client.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/agent/agent_context.fidl.h"
@@ -44,7 +45,7 @@ struct AgentContextInfo {
 class AgentContextImpl : AgentContext, AgentController {
  public:
   explicit AgentContextImpl(const AgentContextInfo& info,
-                            const std::string& url);
+                            AppConfigPtr agent_config);
   ~AgentContextImpl() override;
 
   // Stops the running agent, irrespective of whether there are active
@@ -90,12 +91,9 @@ class AgentContextImpl : AgentContext, AgentController {
   void MaybeStopAgent();
 
   const std::string url_;
-  app::ApplicationLauncher* const application_launcher_;
 
-  app::ApplicationControllerPtr application_controller_;
-  app::ServiceProviderPtr application_services_;
+  AppClient<Lifecycle> app_client_;
   AgentPtr agent_;
-  LifecyclePtr lifecycle_;
   fidl::Binding<AgentContext> agent_context_binding_;
   fidl::BindingSet<AgentController> agent_controller_bindings_;
 
@@ -117,7 +115,7 @@ class AgentContextImpl : AgentContext, AgentController {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
-  class StartAndInitializeCall;
+  class InitializeCall;
   class StopCall;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AgentContextImpl);

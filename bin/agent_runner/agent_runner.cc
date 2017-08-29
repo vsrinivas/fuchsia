@@ -97,10 +97,12 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   AgentContextInfo info = {component_info, application_launcher_,
                            token_provider_factory_,
                            user_intelligence_provider_};
+  auto agent_config = AppConfig::New();
+  agent_config->url = agent_url;
 
   FTL_CHECK(running_agents_
                 .emplace(agent_url,
-                         std::make_unique<AgentContextImpl>(info, agent_url))
+                         std::make_unique<AgentContextImpl>(info, std::move(agent_config)))
                 .second);
 
   auto run_callbacks_it = run_agent_callbacks_.find(agent_url);

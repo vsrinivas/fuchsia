@@ -17,11 +17,11 @@ namespace {
 constexpr ftl::TimeDelta kKillTimeout = ftl::TimeDelta::FromSeconds(2);
 }
 
-class AgentContextImpl::StartAndInitializeCall : Operation<> {
+class AgentContextImpl::InitializeCall : Operation<> {
  public:
-  StartAndInitializeCall(OperationContainer* const container,
+  InitializeCall(OperationContainer* const container,
                          AgentContextImpl* const agent_context_impl)
-      : Operation("AgentContextImpl::StartAndInitializeCall",
+      : Operation("AgentContextImpl::InitializeCall",
                   container,
                   [] {},
                   agent_context_impl->url_),
@@ -35,30 +35,19 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
 
     FlowToken flow{this};
 
-    // Start up the agent process.
-    auto launch_info = app::ApplicationLaunchInfo::New();
-    launch_info->url = agent_context_impl_->url_;
-    launch_info->services =
-        agent_context_impl_->application_services_.NewRequest();
-    agent_context_impl_->application_launcher_->CreateApplication(
-        std::move(launch_info),
-        agent_context_impl_->application_controller_.NewRequest());
-
-    ConnectToService(agent_context_impl_->application_services_.get(),
-                     agent_context_impl_->lifecycle_.NewRequest());
-    ConnectToService(agent_context_impl_->application_services_.get(),
+    ConnectToService(agent_context_impl_->app_client_.services(),
                      agent_context_impl_->agent_.NewRequest());
 
     // We only want to use Lifecycle if it exists.
-    agent_context_impl_->lifecycle_.set_connection_error_handler(
+    agent_context_impl_->app_client_.primary_service().set_connection_error_handler(
         [agent_context_impl = agent_context_impl_] {
-          agent_context_impl->lifecycle_.reset();
+          agent_context_impl->app_client_.primary_service().reset();
         });
 
     // When the agent process dies, we remove it.
     // TODO(alhaad): In the future we would want to detect a crashing agent and
     // stop scheduling tasks for it.
-    agent_context_impl_->application_controller_.set_connection_error_handler(
+    agent_context_impl_->app_client_.SetAppErrorHandler(
         [agent_context_impl = agent_context_impl_] {
           agent_context_impl->agent_runner_->RemoveAgent(
               agent_context_impl->url_);
@@ -79,7 +68,7 @@ class AgentContextImpl::StartAndInitializeCall : Operation<> {
 
   AgentContextImpl* const agent_context_impl_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StartAndInitializeCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
 // If |is_terminating| is set to true, the agent will be torn down irrespective
@@ -130,48 +119,40 @@ class AgentContextImpl::StopCall : Operation<bool> {
       }
 
       stopped_ = true;
-      agent_context_impl_->application_controller_.reset();
-      agent_context_impl_->application_services_.reset();
       agent_context_impl_->agent_.reset();
       agent_context_impl_->agent_context_binding_.Close();
-      agent_context_impl_->lifecycle_.reset();
     };
 
     // Whichever of these signals triggers first:
     // TODO(vardhan): Once all agents convert to using |app.Lifecycle|, remove
     // Agent.Stop().
-    if (!agent_context_impl_->lifecycle_) {
+    if (!agent_context_impl_->app_client_.primary_service()) {
+      agent_context_impl_->agent_.set_connection_error_handler(kill_agent);
       agent_context_impl_->agent_->Stop(kill_agent);
-    } else {
-      agent_context_impl_->lifecycle_->Terminate();
     }
-    agent_context_impl_->application_controller_.set_connection_error_handler(
-        kill_agent);
-    kill_timer_.Start(mtl::MessageLoop::GetCurrent()->task_runner().get(),
-                      kill_agent, kKillTimeout);
+    agent_context_impl_->app_client_.AppTerminate(kill_agent, kKillTimeout);
   }
 
   bool stopped_ = false;
   AgentContextImpl* const agent_context_impl_;
   const bool terminating_;  // is the agent runner terminating?
-  ftl::OneShotTimer kill_timer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
-                                   const std::string& url)
-    : url_(url),
-      application_launcher_(info.app_launcher),
+                                   AppConfigPtr agent_config)
+    : url_(agent_config->url),
+      app_client_(info.app_launcher, std::move(agent_config)),
       agent_context_binding_(this),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
                               kAgentComponentNamespace,
-                              url,
-                              url),
+                              url_,
+                              url_),
       token_provider_factory_(info.token_provider_factory),
       user_intelligence_provider_(info.user_intelligence_provider) {
-  new StartAndInitializeCall(&operation_queue_, this);
+  new InitializeCall(&operation_queue_, this);
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
