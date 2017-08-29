@@ -627,17 +627,18 @@ static bool test_tftp_receive_force_wrq_have_overrides(void) {
     tftp_file_interface ifc = {NULL, dummy_open_write, NULL, NULL, NULL};
     tftp_session_set_file_interface(ts.session, &ifc);
 
+    // Option strings should be case insensitive
     uint8_t buf[] = {
         0x00, 0x02,                                                    // Opcode (WRQ)
         'f', 'i', 'l', 'e', 'n', 'a', 'm', 'e', 0x00,                  // Filename
-        'O', 'C', 'T', 'E', 'T', 0x00,                                 // Mode
-        'T', 'S', 'I', 'Z', 'E', 0x00,                                 // Option
+        'o', 'c', 't', 'e', 't', 0x00,                                 // Mode
+        't', 's', 'i', 'z', 'e', 0x00,                                 // Option
         '1', '0', '2', '4', 0x00,                                      // TSIZE value
-        'W', 'I', 'N', 'D', 'O', 'W', 'S', 'I', 'Z', 'E', '!', 0x00,   // Option
+        'W', 'i', 'n', 'd', 'o', 'w', 'S', 'i', 'z', 'e', '!', 0x00,   // Option
         '3', '2', 0x00,                                                // WINDOWSIZE value
-        'T', 'I', 'M', 'E', 'O', 'U', 'T', '!', 0x00,                  // Option
+        'T', 'i', 'm', 'e', 'o', 'u', 't', '!', 0x00,                  // Option
         '9', 0x00,                                                     // TIMEOUT value
-        'B', 'L', 'K', 'S', 'I', 'Z', 'E', '!', 0x00,                  // Option
+        'B', 'l', 'k', 'S', 'i', 'z', 'e', '!', 0x00,                  // Option
         '1', '4', '3', 0x00,                                           // BLKSIZE value
     };
     auto status = tftp_process_msg(ts.session, buf, sizeof(buf), ts.out, &ts.outlen, &ts.timeout, nullptr);

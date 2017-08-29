@@ -16,3 +16,11 @@ int isspace(int c) {
            (c == '\t') ||
            (c == '\v');
 }
+
+int tolower(int c) {
+    if (c >= 'A' && c <= 'Z') {
+        return c + ('a' - 'A');
+    }
+    return c;
+}
+

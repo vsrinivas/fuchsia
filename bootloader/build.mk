@@ -65,6 +65,7 @@ EFI_SOURCES += \
     $(LOCAL_DIR)/lib/printf.c \
     $(LOCAL_DIR)/lib/stdlib.c \
     $(LOCAL_DIR)/lib/string.c \
+    $(LOCAL_DIR)/lib/strings.c \
     $(LOCAL_DIR)/lib/inet.c \
 
 EFI_OBJS := $(patsubst $(LOCAL_DIR)/%.c,$(BUILDDIR)/bootloader/%.o,$(EFI_SOURCES))

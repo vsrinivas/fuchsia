@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "internal.h"
 
@@ -420,11 +421,11 @@ tftp_status tftp_handle_wrq(tftp_session* session,
 
     strncpy(session->filename, option, sizeof(session->filename));
     char* mode = value;
-    if (!strncmp(mode, kNetascii, strlen(kNetascii))) {
+    if (!strncasecmp(mode, kNetascii, strlen(kNetascii))) {
         session->mode = MODE_NETASCII;
-    } else if (!strncmp(mode, kOctet, strlen(kOctet))) {
+    } else if (!strncasecmp(mode, kOctet, strlen(kOctet))) {
         session->mode = MODE_OCTET;
-    } else if (!strncmp(mode, kMail, strlen(kMail))) {
+    } else if (!strncasecmp(mode, kMail, strlen(kMail))) {
         session->mode = MODE_MAIL;
     } else {
         xprintf("Unknown write request mode\n");
@@ -451,7 +452,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             return TFTP_ERR_INTERNAL;
         }
 
-        if (!strncmp(option, kTsize, strlen(kTsize))) { // RFC 2349
+        if (!strncasecmp(option, kTsize, strlen(kTsize))) { // RFC 2349
             long val = atol(value);
             if (val < 0) {
                 xprintf("invalid file size\n");
@@ -460,7 +461,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             }
             session->file_size = val;
             file_size_seen = true;
-        } else if (!strncmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
+        } else if (!strncasecmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
             bool force_block_size = (option[kBlkSizeLen] == '!');
             // Valid values range between "8" and "65464" octets, inclusive
             long val = atol(value);
@@ -477,7 +478,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             } else {
                 session->block_size = override_opts->block_size;
             }
-        } else if (!strncmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
+        } else if (!strncasecmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
             bool force_timeout_val = (option[kTimeoutLen] == '!');
             // Valid values range between "1" and "255" seconds inclusive.
             long val = atol(value);
@@ -493,7 +494,7 @@ tftp_status tftp_handle_wrq(tftp_session* session,
             } else {
                 session->timeout = override_opts->timeout;
             }
-        } else if (!strncmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
+        } else if (!strncasecmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
             bool force_window_size = (option[kWindowSizeLen] == '!');
             // The valid values range MUST be between 1 and 65535 blocks, inclusive.
             long val = atol(value);
@@ -735,7 +736,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
             return TFTP_ERR_INTERNAL;
         }
 
-        if (!strncmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
+        if (!strncasecmp(option, kBlkSize, kBlkSizeLen)) { // RFC 2348
             if (!(session->client_sent_opts.mask & BLOCKSIZE_OPTION)) {
                 xprintf("block size not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
@@ -750,7 +751,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
             }
             // TODO(tkilbourn): with an MTU of 1500, shouldn't be more than 1428
             session->block_size = val;
-        } else if (!strncmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
+        } else if (!strncasecmp(option, kTimeout, kTimeoutLen)) { // RFC 2349
             if (!(session->client_sent_opts.mask & TIMEOUT_OPTION)) {
                 xprintf("timeout not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
@@ -764,7 +765,7 @@ tftp_status tftp_handle_oack(tftp_session* session,
                 return TFTP_ERR_INTERNAL;
             }
             session->timeout = val;
-        } else if (!strncmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
+        } else if (!strncasecmp(option, kWindowSize, kWindowSizeLen)) { // RFC 7440
             if (!(session->client_sent_opts.mask & WINDOWSIZE_OPTION)) {
                 xprintf("window size not requested\n");
                 set_error(session, OPCODE_OERROR, resp, resp_len);
