@@ -105,10 +105,6 @@
             "bootfs_path": "apps/example_todo_headless"
         },
         {
-            "binary": "gen/apps/modular/examples/todo_ledger/example_todo_ledger.flx",
-            "bootfs_path": "apps/example_todo_ledger"
-        },
-        {
             "binary": "gen/apps/modular/examples/todo_story/example_todo_story.flx",
             "bootfs_path": "apps/example_todo_story"
         },
