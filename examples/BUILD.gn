@@ -16,7 +16,6 @@ group("examples") {
     "suggest_shell",
     "swap_cpp",
     "todo_cpp",
-    "todo_ledger",
     "todo_story",
   ]
 }
