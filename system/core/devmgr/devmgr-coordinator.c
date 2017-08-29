@@ -1422,7 +1422,11 @@ void coordinator(void) {
     if (getenv_bool("devmgr.verbose", false)) {
         log_flags |= LOG_DEVLC;
     }
+
+// TODO(MG-1074): Conditionally initialize ACPI if it is present.
+#if defined(__x86_64__)
     acpi_init();
+#endif
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &socket_device);
