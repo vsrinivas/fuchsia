@@ -71,6 +71,9 @@ typedef void (*thread_user_callback_t)(enum thread_user_state_change new_state,
 
 #define THREAD_LINEBUFFER_LENGTH 128
 
+// Number of kernel tls slots.
+#define THREAD_MAX_TLS_ENTRY 2
+
 struct vmm_aspace;
 
 typedef struct thread {
@@ -137,6 +140,9 @@ typedef struct thread {
     /* return code */
     int retcode;
     struct wait_queue retcode_wait_queue;
+
+    /* thread local storage, intialized to zero */
+    void* tls[THREAD_MAX_TLS_ENTRY];
 
     char name[THREAD_NAME_LENGTH];
 #if WITH_DEBUG_LINEBUFFER
@@ -285,5 +291,18 @@ extern spin_lock_t thread_lock;
 static inline bool thread_lock_held(void) {
     return spin_lock_held(&thread_lock);
 }
+
+/* thread local storage */
+static inline void* tls_get(uint entry) {
+    return get_current_thread()->tls[entry];
+}
+
+static inline void* tls_set(uint entry, void* val) {
+    thread_t* curr_thread = get_current_thread();
+    void* oldval = curr_thread->tls[entry];
+    curr_thread->tls[entry] = val;
+    return oldval;
+}
+
 
 __END_CDECLS
