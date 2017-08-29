@@ -92,10 +92,21 @@ mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_port_packet_t* packet);
 
 typedef mx_status_t (*device_handler_fn_t)(mx_port_packet_t* packet, void* ctx);
 
-/* Start asynchronous handling of device operations, based on a trap defined by
- * kind, addr, and len. See mx_guest_set_trap for more details on trap args.
+/* A set of arguments to specify a trap region.
+ *
+ * See mx_guest_set_trap for more details on trap args.
  */
-mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
-                         size_t len, device_handler_fn_t handler, void* ctx);
+typedef struct trap_args {
+    uint32_t kind;
+    mx_vaddr_t addr;
+    size_t len;
+    uint32_t key;
+} trap_args_t;
+
+/* Start asynchronous handling of device operations, based on a set of traps
+ * provided. A trap will be created for every trap in |traps|.
+ */
+mx_status_t device_async(mx_handle_t guest, const trap_args_t* traps, size_t num_traps,
+                         device_handler_fn_t handler, void* ctx);
 
 __END_CDECLS

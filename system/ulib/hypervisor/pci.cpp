@@ -44,14 +44,18 @@ static const uint8_t kPciCapNextOffset = 1;
  */
 static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34};
 
-static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t port,
+static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint8_t bar, uint16_t port,
                                             mx_vcpu_io_t* vcpu_io) {
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t pci_bar_write_unsupported(pci_device_t* device, uint16_t port,
+static mx_status_t pci_bar_write_unsupported(pci_device_t* device, uint8_t bar, uint16_t port,
                                              const mx_packet_guest_io_t* io) {
     return MX_ERR_NOT_SUPPORTED;
+}
+
+static inline bool pci_bar_implemented(pci_device_t* device, uint8_t bar) {
+    return bar < PCI_MAX_BARS && device->bar[bar].size > 0;
 }
 
 static pci_device_ops_t kRootComplexDeviceOps = {
@@ -65,13 +69,14 @@ static void pci_root_complex_init(pci_device_t* host_bridge) {
     host_bridge->subsystem_vendor_id = 0;
     host_bridge->subsystem_id = 0;
     host_bridge->class_code = PCI_CLASS_BRIDGE_HOST;
-    host_bridge->bar_size = 0x10;
+    host_bridge->bar[0].size = 0x10;
     host_bridge->ops = &kRootComplexDeviceOps;
 }
 
 mx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic) {
     memset(bus, 0, sizeof(*bus));
     bus->io_apic = io_apic;
+    bus->pio_base = kPioBase;
     pci_root_complex_init(&bus->root_complex);
     return pci_bus_connect(bus, &bus->root_complex, PCI_DEVICE_ROOT_COMPLEX);
 }
@@ -82,17 +87,26 @@ mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) 
     if (bus->device[slot])
         return MX_ERR_ALREADY_EXISTS;
 
-    // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
-    //
-    // This design implies that all address spaces used are a power of two in
-    // size and are naturally aligned.
-    uint32_t bar_size = round_up_pow2(device->bar_size);
-    if (bar_size > kMaxBarSize)
-        return MX_ERR_NOT_SUPPORTED;
+    // Initialize BAR registers.
+    for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
+        // Skip unimplemented bars.
+        if (!pci_bar_implemented(device, bar_num))
+            continue;
 
-    device->bus = bus;
-    device->bar_size = static_cast<uint16_t>(bar_size);
-    device->bar[0] = kPioBase + (slot * kMaxBarSize);
+        // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
+        //
+        // This design implies that all address spaces used are a power of two in
+        // size and are naturally aligned.
+        uint32_t bar_size = round_up_pow2(device->bar[bar_num].size);
+        if (bar_size > kMaxBarSize)
+            return MX_ERR_NOT_SUPPORTED;
+
+        device->bus = bus;
+        device->bar[bar_num].size = static_cast<uint16_t>(bar_size);
+        device->bar[bar_num].addr = bus->pio_base;
+        device->bar[bar_num].io_type = PCI_BAR_IO_TYPE_PIO;
+        bus->pio_base += kMaxBarSize;
+    }
     device->command = PCI_COMMAND_IO_EN;
     device->global_irq = kPciGlobalIrqAssigments[slot];
     bus->device[slot] = device;
@@ -313,6 +327,15 @@ static mx_status_t pci_read_cap(const pci_device_t* device, uint8_t addr, uint32
     return MX_OK;
 }
 
+// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
+//
+// Read accesses to reserved or unimplemented registers must be completed
+// normally and a data value of 0 returned.
+static mx_status_t pci_device_read_unimplemented(uint32_t* value) {
+    *value = 0;
+    return MX_OK;
+}
+
 /* Read a 4 byte aligned value from PCI config space. */
 static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg, uint32_t* value) {
     switch (reg) {
@@ -353,9 +376,19 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     case PCI_CONFIG_CACHE_LINE_SIZE:
         *value = PCI_HEADER_TYPE_STANDARD << 16;
         return MX_OK;
-    case PCI_REGISTER_BAR_0: {
+    case PCI_REGISTER_BAR_0:
+    case PCI_REGISTER_BAR_1:
+    case PCI_REGISTER_BAR_2:
+    case PCI_REGISTER_BAR_3:
+    case PCI_REGISTER_BAR_4:
+    case PCI_REGISTER_BAR_5: {
+        uint32_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
+        if (bar_num >= PCI_MAX_BARS)
+            return pci_device_read_unimplemented(value);
+
         mtx_lock((mtx_t*)&device->mutex);
-        *value = device->bar[0] | PCI_BAR_IO_TYPE_PIO;
+        const pci_bar_t* bar = &device->bar[bar_num];
+        *value = bar->addr | bar->io_type;
         mtx_unlock((mtx_t*)&device->mutex);
         return MX_OK;
     }
@@ -390,19 +423,9 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
             return MX_OK;
         // Fall-through if the capability is not-implemented.
     // These are all 32-bit registers.
-    case PCI_REGISTER_BAR_1:
-    case PCI_REGISTER_BAR_2:
-    case PCI_REGISTER_BAR_3:
-    case PCI_REGISTER_BAR_4:
-    case PCI_REGISTER_BAR_5:
     case PCI_CONFIG_CARDBUS_CIS_PTR:
     case PCI_CONFIG_EXP_ROM_ADDRESS:
-        // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
-        //
-        // Read accesses to reserved or unimplemented registers must be
-        // completed normally and a data value of 0 returned.
-        *value = 0;
-        return MX_OK;
+        return pci_device_read_unimplemented(value);
     }
 
     fprintf(stderr, "Unhandled PCI device read %#x\n", reg);
@@ -426,6 +449,15 @@ mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t le
     return MX_OK;
 }
 
+// PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
+//
+// All PCI devices must treat Configuration Space write operations to reserved
+// registers as no-ops; that is, the access must be completed  normally on the
+// bus and the data discarded.
+static inline mx_status_t pci_device_write_unimplemented() {
+    return MX_OK;
+}
+
 mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, uint32_t value) {
     switch (reg) {
     case PCI_CONFIG_VENDOR_ID:
@@ -444,25 +476,29 @@ mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, ui
         device->command = static_cast<uint16_t>(value);
         mtx_unlock(&device->mutex);
         return MX_OK;
-    case PCI_REGISTER_BAR_0: {
+    case PCI_REGISTER_BAR_0:
+    case PCI_REGISTER_BAR_1:
+    case PCI_REGISTER_BAR_2:
+    case PCI_REGISTER_BAR_3:
+    case PCI_REGISTER_BAR_4:
+    case PCI_REGISTER_BAR_5: {
         if (len != 4)
             return MX_ERR_NOT_SUPPORTED;
+
+        uint32_t bar_num = (reg - PCI_REGISTER_BAR_0) / 4;
+        if (bar_num >= PCI_MAX_BARS)
+            return pci_device_write_unimplemented();
+
         mtx_lock(&device->mutex);
-        uint32_t* bar = &device->bar[0];
-        *bar = value;
+        pci_bar_t* bar = &device->bar[bar_num];
+        bar->addr = value;
         // We zero bits in the BAR in order to set the size.
-        *bar &= ~(device->bar_size - 1);
-        *bar |= PCI_BAR_IO_TYPE_PIO;
+        bar->addr &= ~(bar->size - 1);
         mtx_unlock(&device->mutex);
         return MX_OK;
     }
     default:
-        // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1
-        //
-        // All PCI devices must treat Configuration Space write operations to
-        // reserved registers as no-ops; that is, the access must be completed
-        // normally on the bus and the data discarded.
-        return MX_OK;
+        return pci_device_write_unimplemented();
     }
 }
 
@@ -477,65 +513,84 @@ static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
     }
 }
 
-pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint16_t* off) {
+pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint8_t* bar_out,
+                                uint16_t* off) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_t* device = bus->device[i];
         if (!device)
             continue;
 
-        mtx_lock(&device->mutex);
-        uint16_t command = device->command;
-        uint32_t bar0 = device->bar[0];
-        uint32_t bar_base = pci_bar_base(device);
-        uint16_t bar_size = device->bar_size;
-        mtx_unlock(&device->mutex);
+        for (uint8_t bar_num = 0; bar_num < PCI_MAX_BARS; ++bar_num) {
+            mtx_lock(&device->mutex);
+            uint16_t command = device->command;
+            pci_bar_t* bar = &device->bar[bar_num];
+            uint32_t bar_base = pci_bar_base(bar);
+            uint16_t bar_size = pci_bar_size(bar);
+            mtx_unlock(&device->mutex);
 
-        // Ensure IO operations are enabled for this device.
-        if (!pci_device_io_enabled(io_type, command))
-            continue;
+            // Ensure IO operations are enabled for this device.
+            if (!pci_device_io_enabled(io_type, command))
+                continue;
 
-        // Check if the BAR is implemented and configured for the requested
-        // IO type.
-        if (!bar0 || (bar0 & PCI_BAR_IO_TYPE_MASK) != io_type)
-            continue;
+            // Check if the BAR is implemented and configured for the requested
+            // IO type.
+            if (!bar_size || bar->io_type != io_type)
+                continue;
 
-        if (addr >= bar_base && addr < bar_base + bar_size) {
-            *off = static_cast<uint16_t>(addr - bar_base);
-            return bus->device[i];
+            if (addr >= bar_base && addr < bar_base + bar_size) {
+                *bar_out = bar_num;
+                *off = static_cast<uint16_t>(addr - bar_base);
+                return bus->device[i];
+            }
         }
     }
     return NULL;
 }
 
-uint32_t pci_bar_base(pci_device_t* device) {
-    const uint32_t bar0 = device->bar[0];
-    switch (bar0 & PCI_BAR_IO_TYPE_MASK) {
+uint32_t pci_bar_base(pci_bar_t* bar) {
+    switch (bar->io_type) {
     case PCI_BAR_IO_TYPE_PIO:
-        return bar0 & kPioAddressMask;
+        return bar->addr & kPioAddressMask;
     case PCI_BAR_IO_TYPE_MMIO:
-        return bar0 & kMmioAddressMask;
+        return bar->addr & kMmioAddressMask;
     default:
         return 0;
     }
 }
 
-uint16_t pci_bar_size(pci_device_t* device) {
-    return device->bar_size;
+uint16_t pci_bar_size(pci_bar_t* bar) {
+    return static_cast<uint16_t>(bar->size);
 }
 
 static mx_status_t pci_handler(mx_port_packet_t* packet, void* ctx) {
     pci_device_t* pci_device = static_cast<pci_device_t*>(ctx);
     mx_packet_guest_io_t* io = &packet->guest_io;
-    uint32_t bar_base = pci_bar_base(pci_device);
-    uint16_t device_port = static_cast<uint16_t>(io->port - bar_base);
 
-    return pci_device->ops->write_bar(pci_device, device_port, io);
+    if (packet->key > UINT8_MAX)
+        return MX_ERR_OUT_OF_RANGE;
+
+    // We provide the bar number as the trap key.
+    uint8_t bar = static_cast<uint8_t>(packet->key);
+    uint32_t bar_base = pci_bar_base(&pci_device->bar[bar]);
+    uint16_t device_port = static_cast<uint16_t>(io->port - bar_base);
+    return pci_device->ops->write_bar(pci_device, bar, device_port, io);
 }
 
 mx_status_t pci_device_async(pci_device_t* device, mx_handle_t guest) {
-    uint32_t bar_base = pci_bar_base(device);
-    uint16_t bar_size = pci_bar_size(device);
-    return device_async(guest, MX_GUEST_TRAP_IO, bar_base, bar_size, pci_handler, device);
+    size_t num_traps = 0;
+    trap_args_t traps[PCI_MAX_BARS];
+    for (uint8_t i = 0; i < PCI_MAX_BARS; ++i) {
+        pci_bar_t* bar = &device->bar[i];
+        if (!pci_bar_implemented(device, i))
+            continue;
+
+        trap_args_t* trap = &traps[num_traps++];
+        trap->key = i;
+        trap->addr = pci_bar_base(bar);
+        trap->len = pci_bar_size(bar);
+        trap->kind = bar->io_type == PCI_BAR_IO_TYPE_PIO ? MX_GUEST_TRAP_IO : MX_GUEST_TRAP_MEM;
+    }
+    return device_async(guest, traps, num_traps, pci_handler, device);
 }
 
 mx_status_t pci_interrupt(pci_device_t* pci_device) {

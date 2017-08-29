@@ -199,7 +199,13 @@ static mx_status_t uart_handler(mx_port_packet_t* packet, void* ctx) {
 }
 
 mx_status_t uart_output_async(uart_t* uart, mx_handle_t guest) {
-    return device_async(guest, MX_GUEST_TRAP_IO, UART_RECEIVE_PORT, 1, uart_handler, uart);
+    const trap_args_t trap = {
+        .kind = MX_GUEST_TRAP_IO,
+        .addr = UART_RECEIVE_PORT,
+        .len = 1,
+        .key = 0,
+    };
+    return device_async(guest, &trap, 1, uart_handler, uart);
 }
 
 static int uart_input_loop(void* arg) {

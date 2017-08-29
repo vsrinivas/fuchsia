@@ -51,8 +51,11 @@ static virtio_queue_t* selected_queue(const virtio_device_t* device) {
     return device->queue_sel < device->num_queues ? &device->queues[device->queue_sel] : NULL;
 }
 
-static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint16_t port,
-                                          mx_vcpu_io_t* vcpu_io) {
+static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar,
+                                          uint16_t port, mx_vcpu_io_t* vcpu_io) {
+    if (bar != 0)
+        return MX_ERR_NOT_SUPPORTED;
+
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     const virtio_queue_t* queue = selected_queue(device);
     switch (port) {
@@ -154,8 +157,11 @@ static void virtio_queue_signal(virtio_queue_t* queue) {
     mtx_unlock(&queue->mutex);
 }
 
-static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint16_t port,
+static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
                                            const mx_packet_guest_io_t* io) {
+    if (bar != 0)
+        return MX_ERR_NOT_SUPPORTED;
+
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     virtio_queue_t* queue = selected_queue(device);
     switch (port) {
@@ -243,7 +249,7 @@ void virtio_pci_init(virtio_device_t* device) {
     device->pci_device.subsystem_vendor_id = 0;
     device->pci_device.subsystem_id = device->device_id;
     device->pci_device.class_code = 0;
-    device->pci_device.bar_size = static_cast<uint16_t>(
+    device->pci_device.bar[0].size = static_cast<uint16_t>(
         sizeof(virtio_pci_legacy_config_t) + device->config_size);
     device->pci_device.impl = device;
     device->pci_device.ops = &kVirtioPciLegacyDeviceOps;

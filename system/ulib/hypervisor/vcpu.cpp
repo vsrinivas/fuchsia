@@ -198,12 +198,13 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t
         status = pci_bus_read(vcpu_ctx->guest_ctx->bus, io->port, io->access_size, &vcpu_io);
         break;
     default: {
+        uint8_t bar;
         uint16_t port_off;
         pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
-        pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_PIO, io->port,
+        pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_PIO, io->port, &bar,
                                                      &port_off);
         if (pci_device) {
-            status = pci_device->ops->read_bar(pci_device, port_off, &vcpu_io);
+            status = pci_device->ops->read_bar(pci_device, bar, port_off, &vcpu_io);
             break;
         }
         status = MX_ERR_NOT_SUPPORTED;
@@ -326,8 +327,11 @@ static int device_loop(void* ctx) {
     return MX_ERR_INTERNAL;
 }
 
-mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
-                         size_t len, device_handler_fn_t handler, void* ctx) {
+mx_status_t device_async(mx_handle_t guest, const trap_args_t* traps, size_t num_traps,
+                         device_handler_fn_t handler, void* ctx) {
+    if (num_traps == 0)
+        return MX_ERR_INVALID_ARGS;
+
     int ret;
     auto device = new device_t{MX_HANDLE_INVALID, handler, ctx};
 
@@ -337,10 +341,15 @@ mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
         goto mem_cleanup;
     }
 
-    status = mx_guest_set_trap(guest, kind, addr, len, device->port, 0);
-    if (status != MX_OK) {
-        fprintf(stderr, "Failed to set trap for device port %d\n", status);
-        goto cleanup;
+    for (size_t i = 0; i < num_traps; ++i) {
+        const trap_args_t* trap = &traps[i];
+
+        status = mx_guest_set_trap(guest, trap->kind, trap->addr, trap->len, device->port,
+                                   trap->key);
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to set trap for device port %d\n", status);
+            goto cleanup;
+        }
     }
 
     thrd_t thread;
