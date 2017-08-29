@@ -41,6 +41,7 @@ typedef struct {
     uint8_t             direction;
     bool                needs_data_event;   // true if we still need to queue data event TRB
     bool                needs_status;       // true if we still need to queue status TRB
+    bool                needs_transfer_trb; // true if we still need to queue transfer TRB
 } xhci_transfer_state_t;
 
 typedef enum {

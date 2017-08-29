@@ -198,6 +198,10 @@ static mx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_endpoint_t* ep,
         state->direction = proto_data->ep_address & USB_ENDPOINT_DIR_MASK;
     }
     state->needs_data_event = true;
+    // Zero length bulk transfers are allowed. We should have at least one transfer TRB
+    // to avoid consecutive event data TRBs on a transfer ring.
+    // See XHCI spec, section 4.11.5.2
+    state->needs_transfer_trb = state->ep_type == USB_ENDPOINT_BULK;
 
     size_t length = txn->length;
     uint32_t interrupter_target = 0;
@@ -272,9 +276,10 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
 
     // Data Stage
     mx_paddr_t paddr;
-    size_t transfer_size;
+    size_t transfer_size = 0;
     bool first_packet = (state->phys_iter.offset == 0);
-    while (free_trbs > 0 && (transfer_size = iotxn_phys_iter_next(&state->phys_iter, &paddr)) > 0) {
+    while (free_trbs > 0 && (((transfer_size = iotxn_phys_iter_next(&state->phys_iter, &paddr)) > 0) ||
+                             state->needs_transfer_trb)) {
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
         XHCI_WRITE64(&trb->ptr, paddr);
@@ -313,6 +318,7 @@ static mx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_endpoint_t* 
         free_trbs--;
 
         first_packet = false;
+        state->needs_transfer_trb = false;
     }
 
     if (state->phys_iter.offset < txn->length) {
