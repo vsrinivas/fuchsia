@@ -224,13 +224,14 @@ if (is_fuchsia) {
     # the dependency from the main toolchain is still allowed.
     template("shared_library") {
       shared_library(target_name) {
-        # Explicitly forward visibility, implicitly forward everything else.
-        # Forwarding "*" doesn't recurse into nested scopes (to avoid copying all
-        # globals into each template invocation), so won't pick up file-scoped
-        # variables. Normally this isn't too bad, but visibility is commonly
-        # defined at the file scope. Explicitly forwarding visibility and then
-        # excluding it from the "*" set works around this problem.
-        # See http://crbug.com/594610
+        # Explicitly forward visibility, implicitly forward everything
+        # else.  Forwarding "*" doesn't recurse into nested scopes (to
+        # avoid copying all globals into each template invocation), so
+        # won't pick up file-scoped variables.  Normally this isn't too
+        # bad, but visibility is commonly defined at the file scope.
+        # Explicitly forwarding visibility and then excluding it from the
+        # "*" set works around this problem.  See http://crbug.com/594610
+        # for rationale on why this GN behavior is not considered a bug.
         forward_variables_from(invoker, [ "visibility" ])
         forward_variables_from(invoker, "*", [ "visibility" ])
         if (defined(visibility)) {
@@ -266,6 +267,9 @@ declare_args() {
   #     Boolean: If true, the selector matches in the host toolchain.
   #     If false, the selector matches in the target toolchain.
   #
+  #   target_type
+  #     Strings: Matches "executable", "loadable_module", or "driver_module"
+  #
   #   output_name
   #     Strings: Matches the target's `output_name` (default: its target name).
   #
@@ -280,19 +284,43 @@ declare_args() {
   select_variant = []
 }
 
-template("executable") {
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
-  } else {
-    output_name = target_name
+template("variant_target") {
+  target_type = target_name
+  target_name = invoker.target_name
+  target_invoker = {
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "_target_type",
+                             "target_name",
+                             "visibility",
+                           ])
+
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
   }
+
+  # target_type is the real GN target type that builds the thing.
+  # selector_target_type is the name matched against target_type selectors.
+  if (defined(invoker._target_type)) {
+    selector_target_type = invoker._target_type
+  } else {
+    selector_target_type = target_type
+  }
+
   target_label = get_label_info(":$target_name", "label_no_toolchain")
 
   # These are not actually used in all possible if branches below,
   # so defang GN's extremely sensitive "unused variable" errors.
   not_needed([
-               "output_name",
+               "selector_target_type",
+               "target_invoker",
                "target_label",
+               "target_type",
              ])
 
   target_variant = false
@@ -308,6 +336,7 @@ template("executable") {
         select = {
         }
         select = {
+          target_type = []
           output_name = []
           label = []
           name = []
@@ -320,9 +349,19 @@ template("executable") {
           selected = is_fuchsia_host == selector.host
         }
 
+        if (selected && select.target_type != []) {
+          selected = false
+          candidate = selector_target_type
+          foreach(try, select.target_type) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
         if (selected && select.output_name != []) {
           selected = false
-          candidate = output_name
+          candidate = target_invoker.output_name
           foreach(try, select.output_name) {
             if (try == candidate) {
               selected = true
@@ -370,22 +409,16 @@ template("executable") {
     target_variant = ""
   }
 
-  if (target_variant == current_toolchain_variant &&
-      current_toolchain == current_base_toolchain + current_toolchain_variant) {
+  builder_toolchain = current_base_toolchain + target_variant
+  if (invoker._variant_shared) {
+    builder_toolchain += "-shared"
+  }
+
+  if (current_toolchain == builder_toolchain) {
     # This is the toolchain selected to actually build this target.
-    executable(target_name) {
+    target(target_type, target_name) {
       deps = []
-
-      # Explicitly forward visibility, implicitly forward everything else.
-      # Forwarding "*" doesn't recurse into nested scopes (to avoid copying all
-      # globals into each template invocation), so won't pick up file-scoped
-      # variables. Normally this isn't too bad, but visibility is commonly
-      # defined at the file scope. Explicitly forwarding visibility and then
-      # excluding it from the "*" set works around this problem.
-      # See http://crbug.com/594610
-      forward_variables_from(invoker, [ "visibility" ])
-      forward_variables_from(invoker, "*", [ "visibility" ])
-
+      forward_variables_from(target_invoker, "*")
       foreach(variant, toolchain_variant) {
         # Expand the label so it always has a :name part.
         variant = get_label_info(variant, "label_no_toolchain")
@@ -405,7 +438,7 @@ template("executable") {
     # the selected variant toolchain, but then copied to its usual name in
     # $root_out_dir so that things can find it there.
     copy(target_name) {
-      forward_variables_from(invoker,
+      forward_variables_from(target_invoker,
                              [
                                "testonly",
                                "visibility",
@@ -413,19 +446,56 @@ template("executable") {
       if (defined(visibility)) {
         visibility += [ ":${target_name}" ]
       }
-      not_needed(invoker, "*")
 
       deps = [
-        ":$target_name(${current_base_toolchain}${target_variant})",
+        ":${target_name}(${builder_toolchain})",
       ]
       variant_out_dir = get_label_info(deps[0], "root_out_dir")
 
+      full_output_name = target_invoker.output_name
+      if (defined(target_invoker.output_extension) &&
+          target_invoker.output_extension != "") {
+        full_output_name += ".${target_invoker.output_extension}"
+      }
+
       sources = [
-        "$variant_out_dir/$output_name",
+        "$variant_out_dir/$full_output_name",
       ]
       outputs = [
-        "$root_out_dir/$output_name",
+        "$root_out_dir/$full_output_name",
       ]
+    }
+  }
+}
+
+template("executable") {
+  _executable_name = target_name
+  _variant_shared = false
+  variant_target("executable") {
+    target_name = _executable_name
+
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+  }
+}
+
+template("loadable_module") {
+  _module_name = target_name
+  _variant_shared = true
+  variant_target("loadable_module") {
+    target_name = _module_name
+    if (defined(invoker._target_type)) {
+      _target_type = invoker._target_type
+    }
+
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+    if (!defined(output_extension)) {
+      output_extension = "so"
     }
   }
 }
@@ -444,12 +514,7 @@ template("component") {
 
   target(_component_mode, target_name) {
     # Explicitly forward visibility, implicitly forward everything else.
-    # Forwarding "*" doesn't recurse into nested scopes (to avoid copying all
-    # globals into each template invocation), so won't pick up file-scoped
-    # variables. Normally this isn't too bad, but visibility is commonly
-    # defined at the file scope. Explicitly forwarding visibility and then
-    # excluding it from the "*" set works around this problem.
-    # See http://crbug.com/594610
+    # See comment in template("shared_library") above for details.
     forward_variables_from(invoker, [ "visibility" ])
     forward_variables_from(invoker, "*", [ "visibility" ])
   }
