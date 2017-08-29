@@ -31,11 +31,18 @@ group("examples") {
   ]
 }
 
+group("lib") {
+  public_deps = [
+    "//apps/media/lib/c",
+  ]
+}
+
 package("media") {
   app = true
 
   deps = [
     ":examples",
+    ":lib",
     ":services",
     ":tools",
   ]
@@ -91,11 +98,15 @@ package("media") {
     },
   ]
 
+  libraries = [ {
+      name = "libmedia_client.so"
+  } ]
+
   resources = [ {
-        path = rebase_path(
-                "examples/media_player_flutter/media_player_flutter.config")
-        dest = "media_player_flutter/media_player_flutter.config"
-      } ]
+      path = rebase_path(
+              "examples/media_player_flutter/media_player_flutter.config")
+      dest = "media_player_flutter/media_player_flutter.config"
+  } ]
 }
 
 package("tests") {
