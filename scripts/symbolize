@@ -258,7 +258,7 @@ def main():
                         message = "Overflowed stack"
                     else:
                         message = "Potentially overflowed stack"
-                    writeline("WARNING: %s (total usage: %d, stack size: %d)\n" % (warning, total_stack_size, args.stack_size))
+                    writeline("WARNING: %s (total usage: %d, stack size: %d)\n" % (message, total_stack_size, args.stack_size))
                     for frame, size in frame_sizes:
                         writeline("#%s: %d bytes\n" % (frame, size))
                 # Since we don't have the last stack frame, leave some leeway
