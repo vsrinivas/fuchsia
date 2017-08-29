@@ -22,6 +22,10 @@
 
 // clang-format on
 
+// Convert guest-physical addresses to usable virtual addresses.
+#define guest_paddr_to_host_vaddr(device, addr) \
+    ((device)->guest_physmem_addr + (addr))
+
 // Returns a circular index into a Virtio ring.
 static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
     return index % queue->size;
@@ -95,7 +99,7 @@ static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
     size_t mem_size = queue->virtio_device->guest_physmem_size;
 
     queue->pfn = pfn;
-    queue->desc = mem_addr + (queue->pfn * PAGE_SIZE);
+    queue->desc = guest_paddr_to_host_vaddr(queue->virtio_device, queue->pfn * PAGE_SIZE);
     queue->avail = (void*)&queue->desc[queue->size];
     queue->used_event = (void*)&queue->avail->ring[queue->size];
     queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
@@ -241,14 +245,13 @@ void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index) {
 mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index,
                                    virtio_desc_t* out) {
     struct vring_desc desc = queue->desc[desc_index];
-    void* mem_addr = queue->virtio_device->guest_physmem_addr;
     size_t mem_size = queue->virtio_device->guest_physmem_size;
 
     const uint64_t end = desc.addr + desc.len;
     if (end < desc.addr || end > mem_size)
         return MX_ERR_OUT_OF_RANGE;
 
-    out->addr = mem_addr + desc.addr;
+    out->addr = guest_paddr_to_host_vaddr(queue->virtio_device, desc.addr);
     out->len = desc.len;
     out->has_next = desc.flags & VRING_DESC_F_NEXT;
     out->writable = desc.flags & VRING_DESC_F_WRITE;
