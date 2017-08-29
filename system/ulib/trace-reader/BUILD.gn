@@ -1,0 +1,23 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("trace_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("trace-provider") {
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "include/trace-reader/reader.h",
+    "include/trace-reader/records.h",
+    "reader.cpp",
+    "records.cpp",
+  ]
+
+  public_deps = [
+    "//magenta/system/ulib/mxtl",
+  ]
+
+  public_configs = [ ":trace_config" ]
+}
