@@ -598,7 +598,7 @@ class Decoder {
   Message _message;
   final int _base;
 
-  Decoder(Message message, [this._base = 0, _Validator validator = null])
+  Decoder(Message message, [this._base = 0, _Validator validator])
       : _message = message,
         _validator = (validator == null)
             ? new _Validator(message.dataLength, message.handlesLength)

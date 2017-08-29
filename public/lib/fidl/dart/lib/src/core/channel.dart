@@ -9,7 +9,7 @@ class Channel {
 
   Channel(this.handle);
 
-  int write(ByteData data, [List<Handle> handles = null]) {
+  int write(ByteData data, [List<Handle> handles]) {
     if (handle == null) return ERR_INVALID_ARGS;
 
     return System.channelWrite(handle, data, handles);
