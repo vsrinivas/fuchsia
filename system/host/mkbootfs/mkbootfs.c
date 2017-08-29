@@ -245,7 +245,7 @@ okay:
     return 0;
 }
 
-int import_file_as(const char* fn, uint32_t type, uint32_t hdrlen) {
+int import_file_as(const char* fn, uint32_t type, uint32_t hdrlen, bootdata_t* hdr) {
     // bootdata file
     struct stat s;
     if (stat(fn, &s) != 0) {
@@ -254,7 +254,11 @@ int import_file_as(const char* fn, uint32_t type, uint32_t hdrlen) {
     }
 
     if (type == ITEM_BOOTDATA) {
-        if (s.st_size < sizeof(bootdata_t)) {
+        size_t hsz = sizeof(bootdata_t);
+        if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
+            hsz += sizeof(bootextra_t);
+        }
+        if (s.st_size < hsz) {
             fprintf(stderr, "error: bootdata file too small '%s'\n", fn);
             return -1;
         }
@@ -262,13 +266,10 @@ int import_file_as(const char* fn, uint32_t type, uint32_t hdrlen) {
             fprintf(stderr, "error: bootdata file misaligned '%s'\n", fn);
             return -1;
         }
-        if (s.st_size != (hdrlen + sizeof(bootdata_t))) {
+        if (s.st_size != (hdrlen + hsz)) {
             fprintf(stderr, "error: bootdata header size mismatch '%s'\n", fn);
             return -1;
         }
-
-        // The header itself is not copied
-        s.st_size -= sizeof(bootdata_t);
     }
 
     fsentry_t* e;
@@ -289,8 +290,7 @@ int import_file(const char* fn, bool system) {
     bootdata_t hdr;
     if ((fread(&hdr, sizeof(hdr), 1, fp) != 1) ||
         (hdr.type != BOOTDATA_CONTAINER) ||
-        (hdr.extra != BOOTDATA_MAGIC) ||
-        (hdr.flags != 0)) {
+        (hdr.extra != BOOTDATA_MAGIC)) {
         // not a bootdata file, must be a manifest...
         rewind(fp);
 
@@ -298,7 +298,7 @@ int import_file(const char* fn, bool system) {
         return import_manifest(fp, fn, item);
     } else {
         fclose(fp);
-        return import_file_as(fn, ITEM_BOOTDATA, hdr.length);
+        return import_file_as(fn, ITEM_BOOTDATA, hdr.length, &hdr);
     }
 }
 
@@ -583,10 +583,18 @@ ssize_t copybootdatafile(int fd, const char* fn, size_t len) {
         goto fail;
     }
     if ((hdr.type != BOOTDATA_CONTAINER) ||
-        (hdr.extra != BOOTDATA_MAGIC) ||
-        (hdr.flags != 0)) {
+        (hdr.extra != BOOTDATA_MAGIC)) {
         fprintf(stderr, "error: '%s' is not a bootdata file\n", fn);
         goto fail;
+    }
+    len -= sizeof(hdr);
+    if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
+        bootextra_t extra;
+        if ((r = readx(fdi, &extra, sizeof(extra))) < 0) {
+            fprintf(stderr, "error: '%s' cannot read extra header\n", fn);
+            goto fail;
+        }
+        len -= sizeof(extra);
     }
     if ((hdr.length != len)) {
         fprintf(stderr, "error: '%s' header length (%u) != %zd\n", fn, hdr.length, len);
@@ -836,8 +844,13 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
         return -1;
     }
 
+    size_t hdrsize = sizeof(bootdata_t);
+    if (extra) {
+        hdrsize += sizeof(bootextra_t);
+    }
+
     // Leave room for file header
-    if (lseek(fd, sizeof(bootdata_t), SEEK_SET) != sizeof(bootdata_t)) {
+    if (lseek(fd, hdrsize, SEEK_SET) != hdrsize) {
         fprintf(stderr, "error: cannot seek\n");
         goto fail;
     }
@@ -879,14 +892,24 @@ int write_bootdata(const char* fn, item_t* item, bool extra) {
 
     bootdata_t filehdr = {
         .type = BOOTDATA_CONTAINER,
-        .length = file_end - sizeof(bootdata_t),
+        .length = file_end - hdrsize,
         .extra = BOOTDATA_MAGIC,
-        .flags = 0,
+        .flags = extra ? BOOTDATA_FLAG_EXTRA : 0,
     };
     if (writex(fd, &filehdr, sizeof(filehdr)) < 0) {
         goto fail;
     }
-
+    if (extra) {
+        bootextra_t fileextra = {
+            .reserved0 = 0,
+            .reserved1 = 1,
+            .magic = BOOTITEM_MAGIC,
+            .crc32 = BOOTITEM_NO_CRC32,
+        };
+        if (writex(fd, &fileextra, sizeof(fileextra)) < 0) {
+            goto fail;
+        }
+    }
     close(fd);
     return 0;
 
@@ -911,14 +934,25 @@ int dump_bootdata(const char* fn) {
 
     if ((hdr.type != BOOTDATA_CONTAINER) ||
         (hdr.extra != BOOTDATA_MAGIC) ||
-        (hdr.flags != 0) ||
         (hdr.length < sizeof(hdr))) {
         fprintf(stderr, "error: invalid bootdata header\n");
         goto fail;
     }
-
     size_t off = sizeof(hdr);
+    if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
+        bootextra_t extra;
+        if (readx(fd, &extra, sizeof(extra)) < 0) {
+            fprintf(stderr, "error: cannot read extra header\n");
+            goto fail;
+        }
+        if (extra.magic != BOOTITEM_MAGIC) {
+            fprintf(stderr, "error: invalid extra header\n");
+            goto fail;
+        }
+        off += sizeof(bootextra_t);
+    }
     size_t end = off + hdr.length;
+
     while (off < end) {
         if (readx(fd, &hdr, sizeof(hdr)) < 0) {
             fprintf(stderr, "error: cannot read section header\n");
@@ -1077,7 +1111,7 @@ int main(int argc, char **argv) {
                 return -1;
             }
             have_kernel = 1;
-            if (import_file_as(argv[1], ITEM_KERNEL, 0) < 0) {
+            if (import_file_as(argv[1], ITEM_KERNEL, 0, NULL) < 0) {
                 return -1;
             }
             argc--;
@@ -1093,7 +1127,7 @@ int main(int argc, char **argv) {
             }
             have_cmdline = true;
 
-            if (import_file_as(argv[1], ITEM_CMDLINE, 0) < 0) {
+            if (import_file_as(argv[1], ITEM_CMDLINE, 0, NULL) < 0) {
                 return -1;
             }
             argc--;

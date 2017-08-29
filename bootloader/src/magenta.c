@@ -49,40 +49,93 @@ static void start_magenta(uint64_t entry, void* bootdata) {
         ;
 }
 
+static bool with_extra = false;
+static bootextra_t default_extra = {
+    .reserved0 = 0,
+    .reserved1 = 0,
+    .magic = BOOTITEM_MAGIC,
+    .crc32 = BOOTITEM_NO_CRC32,
+};
+
 static int add_bootdata(void** ptr, size_t* avail,
                         bootdata_t* bd, void* data) {
-    size_t len = BOOTDATA_ALIGN(bd->length);
-    if ((sizeof(bootdata_t) + len) > *avail) {
-        printf("boot: no room for bootdata type=%08x size=%08x\n",
-               bd->type, bd->length);
-        return -1;
+    if (with_extra) {
+        size_t len = BOOTDATA_ALIGN(bd->length);
+        if ((sizeof(bootdata_t) + sizeof(bootextra_t) + len) > *avail) {
+            printf("boot: no room for bootdata type=%08x size=%08x\n",
+                   bd->type, bd->length);
+            return -1;
+        }
+        bd->flags |= BOOTDATA_FLAG_EXTRA;
+        memcpy(*ptr, bd, sizeof(bootdata_t));
+        memcpy((*ptr) + sizeof(bootdata_t), &default_extra, sizeof(bootextra_t));
+        memcpy((*ptr) + sizeof(bootdata_t) + sizeof(bootextra_t), data, len);
+        len += sizeof(bootdata_t) + sizeof(bootextra_t);
+        (*ptr) += len;
+        (*avail) -= len;
+    } else {
+        size_t len = BOOTDATA_ALIGN(bd->length);
+        if ((sizeof(bootdata_t) + len) > *avail) {
+            printf("boot: no room for bootdata type=%08x size=%08x\n",
+                   bd->type, bd->length);
+            return -1;
+        }
+        memcpy(*ptr, bd, sizeof(bootdata_t));
+        memcpy((*ptr) + sizeof(bootdata_t), data, len);
+        len += sizeof(bootdata_t);
+        (*ptr) += len;
+        (*avail) -= len;
     }
-    memcpy(*ptr, bd, sizeof(bootdata_t));
-    memcpy((*ptr) + sizeof(bootdata_t), data, len);
-    len += sizeof(bootdata_t);
-    (*ptr) += len;
-    (*avail) -= len;
     return 0;
 }
 
-static int header_check(void* image, size_t sz) {
-    magenta_kernel_t* kernel = image;
-    if ((sz < sizeof(magenta_kernel_t)) ||
-        (kernel->hdr_kernel.type != BOOTDATA_KERNEL)) {
-        printf("boot: invalid magenta kernel header\n");
-        return -1;
+static int header_check(void* image, size_t sz, uint64_t* _entry,
+                        size_t* _hsz, size_t* _flen, size_t* _klen) {
+    bootdata_t* bd = image;
+    size_t hsz, flen, klen;
+    uint64_t entry;
+
+    if (bd->flags & BOOTDATA_FLAG_EXTRA) {
+        hsz = sizeof(bootdata_t) + sizeof(bootextra_t);
+        magenta_kernel2_t* kernel2 = image;
+        if ((sz < sizeof(magenta_kernel2_t)) ||
+            (kernel2->hdr_kernel.type != BOOTDATA_KERNEL) ||
+            ((kernel2->hdr_kernel.flags & BOOTDATA_FLAG_EXTRA) == 0)) {
+            printf("boot: invalid magenta kernel header\n");
+            return -1;
+        }
+        flen = BOOTDATA_ALIGN(kernel2->hdr_file.length);
+        klen = BOOTDATA_ALIGN(kernel2->hdr_kernel.length);
+        entry = kernel2->data_kernel.entry64;
+    } else {
+        hsz = sizeof(bootdata_t);
+        magenta_kernel_t* kernel = image;
+        if ((sz < sizeof(magenta_kernel_t)) ||
+            (kernel->hdr_kernel.type != BOOTDATA_KERNEL)) {
+            printf("boot: invalid magenta kernel header\n");
+            return -1;
+        }
+        flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
+        klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
+        entry = kernel->data_kernel.entry64;
     }
 
-    uint32_t flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
-    if (flen > (sz - sizeof(bootdata_t))) {
+    if (flen > (sz - hsz)) {
         printf("boot: invalid magenta kernel header (bad flen)\n");
         return -1;
     }
 
-    uint32_t klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
-    if (klen > (sz - (sizeof(bootdata_t) * 2))) {
+    if (klen > (sz - (hsz * 2))) {
         printf("boot: invalid magenta kernel header (bad klen)\n");
         return -1;
+    }
+    if (_entry) {
+        *_entry = entry;
+    }
+    if (_hsz) {
+        *_hsz = hsz;
+        *_flen = flen;
+        *_klen = klen;
     }
 
     return 0;
@@ -93,45 +146,54 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
                  void* cmdline, size_t csz) {
 
     efi_boot_services* bs = sys->BootServices;
+    uint64_t entry;
 
-    if (header_check(image, isz)) {
+    if (header_check(image, isz, &entry, NULL, NULL, NULL)) {
         return -1;
     }
-    if ((ramdisk == NULL) || (rsz < sizeof(bootdata_t))) {
+    if ((ramdisk == NULL) || (rsz < (sizeof(bootdata_t) + sizeof(bootextra_t)))) {
         printf("boot: ramdisk missing or too small\n");
         return -1;
     }
 
-    magenta_kernel_t* kernel = image;
     bootdata_t* hdr0 = ramdisk;
     if ((hdr0->type != BOOTDATA_CONTAINER) ||
-        (hdr0->extra != BOOTDATA_MAGIC) ||
-        (hdr0->flags != 0)) {
+        (hdr0->extra != BOOTDATA_MAGIC)) {
         printf("boot: ramdisk has invalid bootdata header\n");
         return -1;
     }
-    if ((hdr0->length > (rsz - sizeof(bootdata_t)))) {
+
+    // If the ramdisk container header is a new/large header,
+    // generate all our prepended headers in the same style...
+    size_t hsz = sizeof(bootdata_t);
+    if (hdr0->flags & BOOTDATA_FLAG_EXTRA) {
+        with_extra = true;
+        hsz += sizeof(bootextra_t);
+    }
+
+    if ((hdr0->length > (rsz - hsz))) {
         printf("boot: ramdisk has invalid bootdata length\n");
         return -1;
     }
 
     // osboot ensures we have FRONT_BYTES ahead of the
     // ramdisk to prepend our own bootdata items.
-    //
-    // We used sizeof(hdr) up front but will overwrite
-    // the header at the start of the ramdisk so it works
-    // out in the end.
-
     bootdata_t hdr;
     void* bptr = ramdisk - FRONT_BYTES;
     size_t blen = FRONT_BYTES;
 
+    // We create a new container header of the same size
+    // as the one at the start of the ramdisk
     hdr.type = BOOTDATA_CONTAINER;
     hdr.length = hdr0->length + FRONT_BYTES;
     hdr.extra = BOOTDATA_MAGIC;
-    hdr.flags = 0;
+    hdr.flags = with_extra ? BOOTDATA_FLAG_EXTRA : 0;
     memcpy(bptr, &hdr, sizeof(hdr));
     bptr += sizeof(hdr);
+    if (with_extra) {
+        memcpy(bptr, &default_extra, sizeof(default_extra));
+        bptr += sizeof(default_extra);
+    }
 
     // pass kernel commandline
     hdr.type = BOOTDATA_CMDLINE;
@@ -235,15 +297,18 @@ int boot_magenta(efi_handle img, efi_system_table* sys,
     }
 
     // fill the remaining gap between pre-data and ramdisk image
-    if ((blen < sizeof(bootdata_t)) || (blen & 7)) {
+    if ((blen < hsz) || (blen & 7)) {
         goto fail;
     }
     hdr.type = BOOTDATA_IGNORE;
-    hdr.length = blen - sizeof(bootdata_t);
+    hdr.length = blen - hsz;
     memcpy(bptr, &hdr, sizeof(hdr));
+    if (with_extra) {
+        memcpy(bptr + sizeof(hdr), &default_extra, sizeof(default_extra));
+    }
 
     // jump to the kernel
-    start_magenta(kernel->data_kernel.entry64, ramdisk - FRONT_BYTES);
+    start_magenta(entry, ramdisk - FRONT_BYTES);
 
 fail:
     bs->FreePages(mem, pages);
@@ -255,17 +320,14 @@ static char cmdline[CMDLINE_MAX];
 int mxboot(efi_handle img, efi_system_table* sys,
            void* image, size_t sz) {
 
-    if (header_check(image, sz)) {
+    size_t hsz, flen, klen;
+    if (header_check(image, sz, NULL, &hsz, &flen, &klen)) {
         return -1;
     }
 
-    magenta_kernel_t* kernel = image;
-    uint32_t flen = BOOTDATA_ALIGN(kernel->hdr_file.length);
-    uint32_t klen = BOOTDATA_ALIGN(kernel->hdr_kernel.length);
-
     // ramdisk portion is file - headers - kernel len
-    uint32_t rlen = flen - sizeof(bootdata_t) - klen;
-    uint32_t roff = (sizeof(bootdata_t) * 2) + klen;
+    uint32_t rlen = flen - hsz - klen;
+    uint32_t roff = (hsz * 2) + klen;
     if (rlen == 0) {
         printf("mxboot: no ramdisk?!\n");
         return -1;
@@ -273,7 +335,7 @@ int mxboot(efi_handle img, efi_system_table* sys,
 
     // allocate space for the ramdisk
     efi_boot_services* bs = sys->BootServices;
-    size_t rsz = rlen + sizeof(bootdata_t) + FRONT_BYTES;
+    size_t rsz = rlen + hsz + FRONT_BYTES;
     size_t pages = BYTES_TO_PAGES(rsz);
     void* ramdisk = NULL;
     efi_status r = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages,
@@ -289,15 +351,25 @@ int mxboot(efi_handle img, efi_system_table* sys,
     hdr->length = rlen;
     hdr->extra = BOOTDATA_MAGIC;
     hdr->flags = 0;
-    memcpy(ramdisk + sizeof(bootdata_t), image + roff, rlen);
-    rlen += sizeof(bootdata_t);
+    if (hsz != sizeof(bootdata_t)) {
+        hdr->flags |= BOOTDATA_FLAG_EXTRA;
+        memcpy(hdr + 1, &default_extra, sizeof(default_extra));
+    }
+    memcpy(ramdisk + hsz, image + roff, rlen);
+    rlen += hsz;
 
     printf("ramdisk @ %p\n", ramdisk);
 
     size_t csz = cmdline_to_string(cmdline, sizeof(cmdline));
 
     // shrink original image header to include only the kernel
-    kernel->hdr_file.length = sizeof(bootdata_t) + klen;
+    if (hsz == sizeof(bootdata_t)) {
+        magenta_kernel_t* kernel = image;
+        kernel->hdr_file.length = hsz + klen;
+    } else {
+        magenta_kernel2_t* kernel2 = image;
+        kernel2->hdr_file.length = hsz + klen;
+    }
 
     return boot_magenta(img, sys, image, roff, ramdisk, rlen, cmdline, csz);
 }
@@ -310,10 +382,9 @@ int boot_kernel(efi_handle img, efi_system_table* sys,
 
     bootdata_t* bd = image;
     if ((bd->type == BOOTDATA_CONTAINER) &&
-        (bd->extra == BOOTDATA_MAGIC) &&
-        (bd->flags == 0)) {
+        (bd->extra == BOOTDATA_MAGIC)) {
         return boot_magenta(img, sys, image, sz, ramdisk, rsz, cmdline, csz);
     } else {
-        return boot_deprecated(img, sys, image, sz, ramdisk, rsz, cmdline, csz);
+        return -1;
     }
 }

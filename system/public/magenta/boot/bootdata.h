@@ -161,6 +161,14 @@ typedef struct {
 } magenta_kernel_t;
 
 typedef struct {
+    bootdata_t hdr_file;
+    bootextra_t ext_file;
+    bootdata_t hdr_kernel;
+    bootextra_t ext_kernel;
+    bootdata_kernel_t data_kernel;
+} magenta_kernel2_t;
+
+typedef struct {
     uint64_t base;
     uint64_t length;
 } bootdata_nvram_t;

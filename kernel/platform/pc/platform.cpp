@@ -137,18 +137,23 @@ extern "C" void boot_alloc_reserve(uintptr_t phys, size_t _len);
 
 static void process_bootdata(bootdata_t* hdr, uintptr_t phys, bool verify) {
     if ((hdr->type != BOOTDATA_CONTAINER) ||
-        (hdr->extra != BOOTDATA_MAGIC) ||
-        (hdr->flags != 0)) {
+        (hdr->extra != BOOTDATA_MAGIC)) {
         printf("bootdata: invalid %08x %08x %08x %08x\n",
                hdr->type, hdr->length, hdr->extra, hdr->flags);
         return;
     }
 
-    size_t total_len = hdr->length + sizeof(*hdr);
+    size_t hsz = sizeof(bootdata_t);
+    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
+        hsz += sizeof(bootextra_t);
+    }
+
+    size_t total_len = hdr->length + hsz;
 
     printf("bootdata: @ %p (%zu bytes)\n", hdr, total_len);
 
-    bootdata_t* bd = hdr + 1;
+    bootdata_t* bd = reinterpret_cast<bootdata_t*>(reinterpret_cast<char*>(hdr) + hsz);
+
     size_t remain = hdr->length;
     while (remain > sizeof(bootdata_t)) {
         remain -= sizeof(bootdata_t);

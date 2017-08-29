@@ -46,7 +46,6 @@ EFI_SOURCES := \
     $(LOCAL_DIR)/src/osboot.c \
     $(LOCAL_DIR)/src/cmdline.c \
     $(LOCAL_DIR)/src/magenta.c \
-    $(LOCAL_DIR)/src/legacy.c \
     $(LOCAL_DIR)/src/misc.c \
     $(LOCAL_DIR)/src/netboot.c \
     $(LOCAL_DIR)/src/netifc.c \

@@ -257,6 +257,9 @@ static void setup_bootfs(void) {
 
         size_t len = bootdata.length;
         size_t off = sizeof(bootdata);
+        if (bootdata.flags & BOOTDATA_FLAG_EXTRA) {
+            off += sizeof(bootextra_t);
+        }
 
         while (len > sizeof(bootdata)) {
             mx_status_t status = mx_vmo_read(vmo, &bootdata, off, sizeof(bootdata), &actual);

@@ -532,6 +532,10 @@ static void process_bootdata(bootdata_t* root) {
     size_t offset = sizeof(bootdata_t);
     const size_t length = (root->length);
 
+    if (root->flags & BOOTDATA_FLAG_EXTRA) {
+        offset += sizeof(bootextra_t);
+    }
+
     while (offset < length) {
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
