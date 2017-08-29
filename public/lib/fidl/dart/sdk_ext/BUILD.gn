@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_package.gni")
+
 # NOTE: You must add any Dart files to sdk_ext.gni.
 
 source_set("sdk_ext") {
@@ -17,6 +19,7 @@ source_set("sdk_ext") {
   ]
 
   deps = [
+    ":package_for_analysis",
     "//dart/runtime:dart_api",
     "//lib/fidl/c/waiter",
     "//lib/fidl/cpp/waiter",
@@ -24,4 +27,10 @@ source_set("sdk_ext") {
     "//lib/tonic",
     "//magenta/system/ulib/mx",
   ]
+}
+
+# This is just so that we can run dart analysis on these files.
+dart_package("package_for_analysis") {
+  infer_package_name = true
+  source_dir = "."
 }

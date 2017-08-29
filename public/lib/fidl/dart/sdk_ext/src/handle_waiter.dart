@@ -4,6 +4,8 @@
 
 part of internal;
 
+// ignore_for_file: native_function_body_in_non_sdk_code
+
 typedef void AsyncWaitCallback(int status, int pending);
 
 class HandleWaiter extends NativeFieldWrapperClass2 {

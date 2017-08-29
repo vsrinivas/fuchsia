@@ -4,6 +4,8 @@
 
 part of internal;
 
+// ignore_for_file: native_function_body_in_non_sdk_code
+
 class MxTime {
   static int _get(int clockId) native "MxTime_Get";
 

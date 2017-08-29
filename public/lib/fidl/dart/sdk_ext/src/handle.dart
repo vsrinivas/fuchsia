@@ -4,6 +4,8 @@
 
 part of internal;
 
+// ignore_for_file: native_function_body_in_non_sdk_code
+
 class Handle extends NativeFieldWrapperClass2 {
   // No public constructor - this can only be created from native code.
   Handle._();
@@ -20,7 +22,8 @@ class Handle extends NativeFieldWrapperClass2 {
   String toString() => 'Handle($_handle)';
 
   @override
-  bool operator ==(other) => (other is Handle) && (_handle == other._handle);
+  bool operator ==(dynamic other) =>
+      (other is Handle) && (_handle == other._handle);
 
   @override
   int get hashCode => _handle.hashCode;

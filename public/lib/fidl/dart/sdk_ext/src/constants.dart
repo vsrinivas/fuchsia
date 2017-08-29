@@ -9,9 +9,8 @@ part of internal;
 //  * https://fuchsia.googlesource.com/magenta/+/master/system/public/magenta/errors.h
 //  * https://fuchsia.googlesource.com/magenta/+/master/system/public/magenta/types.h
 
-
 // System.socketCreate options
-final int MX_SOCKET_STREAM = 0;
-final int MX_SOCKET_DATAGRAM = 1;
+const int MX_SOCKET_STREAM = 0; // ignore: constant_identifier_names
+const int MX_SOCKET_DATAGRAM = 1; // ignore: constant_identifier_names
 
 // TODO(ianloic): move constants from core/types.dart
