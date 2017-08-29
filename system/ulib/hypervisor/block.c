@@ -123,13 +123,27 @@ static mx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
     block_t* block = state->block;
     virtio_blk_req_t* blk_req = state->blk_req;
 
+    // From VIRTIO Version 1.0: If the VIRTIO_BLK_F_RO feature is set by
+    // the device, any write requests will fail.
+    if (blk_req->type == VIRTIO_BLK_T_OUT && (block->virtio_device.features & VIRTIO_BLK_F_RO))
+        return MX_ERR_NOT_SUPPORTED;
+
+    // From VIRTIO Version 1.0: A driver MUST set sector to 0 for a
+    // VIRTIO_BLK_T_FLUSH request. A driver SHOULD NOT include any data in a
+    // VIRTIO_BLK_T_FLUSH request.
+    if (blk_req->type == VIRTIO_BLK_T_FLUSH && blk_req->sector != 0)
+        return MX_ERR_IO_DATA_INTEGRITY;
+
+    mtx_lock(&block->file_mutex);
     off_t ret;
     if (blk_req->type != VIRTIO_BLK_T_FLUSH) {
         off_t off = blk_req->sector * SECTOR_SIZE + state->off;
         state->off += len;
         ret = lseek(block->fd, off, SEEK_SET);
-        if (ret < 0)
+        if (ret < 0) {
+            mtx_unlock(&block->file_mutex);
             return MX_ERR_IO;
+        }
     }
 
     switch (blk_req->type) {
@@ -137,24 +151,17 @@ static mx_status_t file_req(file_state_t* state, void* addr, uint32_t len) {
         ret = read(block->fd, addr, len);
         break;
     case VIRTIO_BLK_T_OUT:
-        // From VIRTIO Version 1.0: If the VIRTIO_BLK_F_RO feature is set by
-        // the device, any write requests will fail.
-        if (block->virtio_device.features & VIRTIO_BLK_F_RO)
-            return MX_ERR_NOT_SUPPORTED;
         ret = write(block->fd, addr, len);
         break;
     case VIRTIO_BLK_T_FLUSH:
-        // From VIRTIO Version 1.0: A driver MUST set sector to 0 for a
-        // VIRTIO_BLK_T_FLUSH request. A driver SHOULD NOT include any data in a
-        // VIRTIO_BLK_T_FLUSH request.
-        if (blk_req->sector != 0)
-            return MX_ERR_IO_DATA_INTEGRITY;
         len = 0;
         ret = fsync(block->fd);
         break;
     default:
+        mtx_unlock(&block->file_mutex);
         return MX_ERR_INVALID_ARGS;
     }
+    mtx_unlock(&block->file_mutex);
     return ret != len ? MX_ERR_IO : MX_OK;
 }
 

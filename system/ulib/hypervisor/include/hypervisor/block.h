@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <threads.h>
+
 #include <hypervisor/virtio.h>
 
 #define SECTOR_SIZE 512u
@@ -16,6 +18,9 @@ typedef struct block {
     int fd;
     // Size of file backing the block device.
     uint64_t size;
+    // Guards access to |fd|, such as ensuring no other threads modify the
+    // file pointer while it is in use by another thread.
+    mtx_t file_mutex;
 
     // Common virtio device state.
     virtio_device_t virtio_device;
