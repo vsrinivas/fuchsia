@@ -50,7 +50,9 @@ mx_status_t QemuStream::OnActivateLocked() {
     range.min_frames_per_second = 96000;
     range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 
-    if (!supported_formats.push_back(range))
+    mxtl::AllocChecker ac;
+    supported_formats.push_back(range, &ac);
+    if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     SetSupportedFormatsLocked(mxtl::move(supported_formats));

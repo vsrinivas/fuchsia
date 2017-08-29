@@ -207,7 +207,9 @@ mx_status_t UsbAudioStream::AddFormats(
     // See Universal Serial Bus Device Class Definition for Audio Data Formats
     // Release 1.0 Tables 2-2 and 2-3.
     if (format_desc.bSamFreqType) {
-        if (!supported_formats->reserve(format_desc.bSamFreqType)) {
+        mxtl::AllocChecker ac;
+        supported_formats->reserve(format_desc.bSamFreqType, &ac);
+        if (!ac.check()) {
             LOG("Out of memory attempting to reserve %u format ranges\n",
                 format_desc.bSamFreqType);
             return MX_ERR_NO_MEMORY;
@@ -231,11 +233,12 @@ mx_status_t UsbAudioStream::AddFormats(
                 range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
             }
 
-            bool success __UNUSED = supported_formats->push_back(range);
-            MX_DEBUG_ASSERT(success);
+            supported_formats->push_back(range);
         }
     } else {
-        if (!supported_formats->reserve(1)) {
+        mxtl::AllocChecker ac;
+        supported_formats->reserve(1, &ac);
+        if (!ac.check()) {
             LOG("Out of memory attempting to reserve 1 format range\n");
             return MX_ERR_NO_MEMORY;
         }
@@ -244,8 +247,7 @@ mx_status_t UsbAudioStream::AddFormats(
         range.max_frames_per_second = ExtractSampleRate(format_desc.tSamFreq[1]);
         range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
 
-        bool success __UNUSED = supported_formats->push_back(range);
-        MX_DEBUG_ASSERT(success);
+        supported_formats->push_back(range);
     }
 
     return MX_OK;
