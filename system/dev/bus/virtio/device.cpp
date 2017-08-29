@@ -14,40 +14,10 @@
 #include <magenta/status.h>
 #include <mxtl/auto_lock.h>
 #include <pretty/hexdump.h>
-#include <virtio/virtio.h>
 
 #include "trace.h"
 
 #define LOCAL_TRACE 0
-
-// cfg_type:
-// Common configuration
-#define VIRTIO_PCI_CAP_COMMON_CFG   1
-// Notifications
-#define VIRTIO_PCI_CAP_NOTIFY_CFG   2
-// ISR Status
-#define VIRTIO_PCI_CAP_ISR_CFG      3
-// Device specific configuration
-#define VIRTIO_PCI_CAP_DEVICE_CFG   4
-// PCI configuration access
-#define VIRTIO_PCI_CAP_PCI_CFG      5
-
-// virtio pci capability
-struct virtio_pci_cap {
-    uint8_t type;
-    uint8_t next;
-    uint8_t len;
-    uint8_t cfg_type;
-    uint8_t bar;
-    uint8_t pad[3];
-    uint32_t offset;
-    uint32_t length;
-} __PACKED;
-
-struct virtio_pci_notify_cap {
-    struct virtio_pci_cap cap;
-    uint32_t notify_off_multiplier;
-} __PACKED;
 
 namespace virtio {
 
@@ -133,9 +103,9 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
 
             cap = (virtio_pci_cap *)(((uintptr_t)pci_config_) + off);
             LTRACEF("cap %p: type %#hhx next %#hhx len %#hhx cfg_type %#hhx bar %#hhx offset %#x length %#x\n",
-                    cap, cap->type, cap->next, cap->len, cap->cfg_type, cap->bar, cap->offset, cap->length);
+                    cap, cap->cfg_type, cap->cap_next, cap->cap_len, cap->cfg_type, cap->bar, cap->offset, cap->length);
 
-            if (cap->type == 0x9) { // vendor specific capability
+            if (cap->cfg_type == 0x9) { // vendor specific capability
                 switch (cap->cfg_type) {
                     case VIRTIO_PCI_CAP_COMMON_CFG: {
                         MapBar(cap->bar);
@@ -170,8 +140,8 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
                 }
             }
 
-            off = cap->next;
-            if (cap->next == 0)
+            off = cap->cap_next;
+            if (cap->cap_next == 0)
                 break;
         }
     }
