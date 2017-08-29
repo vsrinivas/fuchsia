@@ -142,7 +142,7 @@ source_set("common") {
     "//application/lib/app",
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",

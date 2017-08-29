@@ -4,7 +4,7 @@
 
 #include <math.h>
 
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
@@ -31,8 +31,8 @@ constexpr vec4 kAngledVector{2.f, -1.f, -.5f, 0.f};
 using ShapeTest = SessionTest;
 
 TEST_F(ShapeTest, Circle) {
-  const mozart::ResourceId id = 1;
-  EXPECT_TRUE(Apply(mozart::NewCreateCircleOp(id, 50.f)));
+  const scenic::ResourceId id = 1;
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateCircleOp(id, 50.f)));
 
   auto circle = FindResource<CircleShape>(id);
   ASSERT_NE(nullptr, circle.get());
@@ -90,8 +90,8 @@ TEST_F(ShapeTest, Circle) {
 }
 
 TEST_F(ShapeTest, Rectangle) {
-  const mozart::ResourceId id = 1;
-  EXPECT_TRUE(Apply(mozart::NewCreateRectangleOp(id, 30.f, 40.f)));
+  const scenic::ResourceId id = 1;
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateRectangleOp(id, 30.f, 40.f)));
 
   auto rectangle = FindResource<RectangleShape>(id);
   ASSERT_NE(nullptr, rectangle.get());
@@ -153,9 +153,9 @@ TEST_F(ShapeTest, Rectangle) {
 // TODO(MZ-159): This test needs a rounded rect factory to run but it is
 // not currently available in the engine for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
-  const mozart::ResourceId id = 1;
+  const scenic::ResourceId id = 1;
   EXPECT_TRUE(Apply(
-      mozart::NewCreateRoundedRectangleOp(id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
+      scenic_lib::NewCreateRoundedRectangleOp(id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
 
   auto rounded_rectangle = FindResource<RoundedRectangleShape>(id);
   ASSERT_NE(nullptr, rounded_rectangle.get());

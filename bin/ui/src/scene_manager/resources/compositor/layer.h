@@ -24,7 +24,7 @@ class Layer : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Layer(Session* session, mozart::ResourceId id);
+  Layer(Session* session, scenic::ResourceId id);
 
   ~Layer() override;
 

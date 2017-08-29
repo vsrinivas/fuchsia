@@ -12,7 +12,7 @@ class EntityNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  EntityNode(Session* session, mozart::ResourceId node_id);
+  EntityNode(Session* session, scenic::ResourceId node_id);
 
   void Accept(class ResourceVisitor* visitor) override;
 };

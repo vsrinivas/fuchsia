@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene_manager/tests/session_test.h"
@@ -15,29 +15,29 @@ namespace test {
 using NodeTest = SessionTest;
 
 TEST_F(NodeTest, Tagging) {
-  const mozart::ResourceId kNodeId = 1;
+  const scenic::ResourceId kNodeId = 1;
 
-  EXPECT_TRUE(Apply(mozart::NewCreateShapeNodeOp(kNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
   EXPECT_EQ(0u, shape_node->tag_value());
-  EXPECT_TRUE(Apply(mozart::NewSetTagOp(kNodeId, 42u)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetTagOp(kNodeId, 42u)));
   EXPECT_EQ(42u, shape_node->tag_value());
-  EXPECT_TRUE(Apply(mozart::NewSetTagOp(kNodeId, 0u)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetTagOp(kNodeId, 0u)));
   EXPECT_EQ(0u, shape_node->tag_value());
 }
 
 TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
-  const mozart::ResourceId kNodeId = 1;
-  const mozart::ResourceId kMaterialId = 2;
-  const mozart::ResourceId kShapeId = 3;
+  const scenic::ResourceId kNodeId = 1;
+  const scenic::ResourceId kMaterialId = 2;
+  const scenic::ResourceId kShapeId = 3;
 
-  EXPECT_TRUE(Apply(mozart::NewCreateShapeNodeOp(kNodeId)));
-  EXPECT_TRUE(Apply(mozart::NewCreateMaterialOp(kMaterialId)));
-  EXPECT_TRUE(Apply(mozart::NewSetTextureOp(kMaterialId, 0)));
-  EXPECT_TRUE(Apply(mozart::NewSetColorOp(kMaterialId, 255, 100, 100, 255)));
-  EXPECT_TRUE(Apply(mozart::NewCreateCircleOp(kShapeId, 50.f)));
-  EXPECT_TRUE(Apply(mozart::NewSetMaterialOp(kNodeId, kMaterialId)));
-  EXPECT_TRUE(Apply(mozart::NewSetShapeOp(kNodeId, kShapeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateMaterialOp(kMaterialId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetTextureOp(kMaterialId, 0)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetColorOp(kMaterialId, 255, 100, 100, 255)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateCircleOp(kShapeId, 50.f)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetMaterialOp(kNodeId, kMaterialId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewSetShapeOp(kNodeId, kShapeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
   auto material = FindResource<Material>(kMaterialId);
   auto circle = FindResource<Shape>(kShapeId);
@@ -50,50 +50,50 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
 
 TEST_F(NodeTest, NodesWithChildren) {
   // Child node that we will attach to various types of nodes.
-  const mozart::ResourceId kChildNodeId = 1;
-  EXPECT_TRUE(Apply(mozart::NewCreateShapeNodeOp(kChildNodeId)));
+  const scenic::ResourceId kChildNodeId = 1;
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kChildNodeId)));
   auto child_node = FindResource<Node>(kChildNodeId);
 
   // OK to detach a child that hasn't been attached.
-  EXPECT_TRUE(Apply(mozart::NewDetachOp(kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewDetachOp(kChildNodeId)));
 
-  const mozart::ResourceId kEntityNodeId = 10;
-  const mozart::ResourceId kShapeNodeId = 11;
-  // TODO: const mozart::ResourceId kClipNodeId = 12;
-  EXPECT_TRUE(Apply(mozart::NewCreateEntityNodeOp(kEntityNodeId)));
-  EXPECT_TRUE(Apply(mozart::NewCreateShapeNodeOp(kShapeNodeId)));
-  // TODO: EXPECT_TRUE(Apply(mozart::NewCreateClipNodeOp(kClipNodeId)));
+  const scenic::ResourceId kEntityNodeId = 10;
+  const scenic::ResourceId kShapeNodeId = 11;
+  // TODO: const scenic::ResourceId kClipNodeId = 12;
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(kEntityNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kShapeNodeId)));
+  // TODO: EXPECT_TRUE(Apply(scenic_lib::NewCreateClipNodeOp(kClipNodeId)));
   auto entity_node = FindResource<EntityNode>(kEntityNodeId);
   auto shape_node = FindResource<ShapeNode>(kShapeNodeId);
   // auto clip_node = FindResource<ClipNode>(kClipNodeId);
 
   // We expect to be able to add children to these types.
-  EXPECT_TRUE(Apply(mozart::NewAddChildOp(kEntityNodeId, kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewAddChildOp(kEntityNodeId, kChildNodeId)));
   EXPECT_EQ(entity_node.get(), child_node->parent());
-  EXPECT_TRUE(Apply(mozart::NewDetachOp(kChildNodeId)));
-  // EXPECT_TRUE(Apply(mozart::NewDetachOp(kChildNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewDetachOp(kChildNodeId)));
+  // EXPECT_TRUE(Apply(scenic_lib::NewDetachOp(kChildNodeId)));
 
   // We do not expect to be able to add children to these types.
   // TODO:
-  // EXPECT_FALSE(Apply(mozart::NewAddChildOp(kClipNodeId, kChildNodeId)));
+  // EXPECT_FALSE(Apply(scenic_lib::NewAddChildOp(kClipNodeId, kChildNodeId)));
   // EXPECT_EQ(nullptr, child_node->parent());
   // EXPECT_EQ(nullptr, child_node->parent());
-  EXPECT_FALSE(Apply(mozart::NewAddChildOp(kShapeNodeId, kChildNodeId)));
+  EXPECT_FALSE(Apply(scenic_lib::NewAddChildOp(kShapeNodeId, kChildNodeId)));
   EXPECT_EQ(nullptr, child_node->parent());
 }
 
 TEST_F(NodeTest, SettingHitTestBehavior) {
-  const mozart::ResourceId kNodeId = 1;
+  const scenic::ResourceId kNodeId = 1;
 
-  EXPECT_TRUE(Apply(mozart::NewCreateShapeNodeOp(kNodeId)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
 
   auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(mozart2::HitTestBehavior::kDefault,
+  EXPECT_EQ(scenic::HitTestBehavior::kDefault,
             shape_node->hit_test_behavior());
 
-  EXPECT_TRUE(Apply(mozart::NewSetHitTestBehaviorOp(
-      kNodeId, mozart2::HitTestBehavior::kSuppress)));
-  EXPECT_EQ(mozart2::HitTestBehavior::kSuppress,
+  EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorOp(
+      kNodeId, scenic::HitTestBehavior::kSuppress)));
+  EXPECT_EQ(scenic::HitTestBehavior::kSuppress,
             shape_node->hit_test_behavior());
 }
 

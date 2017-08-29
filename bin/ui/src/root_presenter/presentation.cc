@@ -43,7 +43,7 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(mozart::ViewManager* view_manager,
-                           mozart2::SceneManager* scene_manager)
+                           scenic::SceneManager* scene_manager)
     : view_manager_(view_manager),
       scene_manager_(scene_manager),
       session_(scene_manager_),
@@ -100,14 +100,14 @@ void Presentation::Present(mozart::ViewOwnerPtr view_owner,
 
   scene_manager_->GetDisplayInfo(ftl::MakeCopyable([
     weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner)
-  ](mozart2::DisplayInfoPtr display_info) mutable {
+  ](scenic::DisplayInfoPtr display_info) mutable {
     if (weak)
       weak->CreateViewTree(std::move(view_owner), std::move(display_info));
   }));
 }
 
 void Presentation::CreateViewTree(mozart::ViewOwnerPtr view_owner,
-                                  mozart2::DisplayInfoPtr display_info) {
+                                  scenic::DisplayInfoPtr display_info) {
   FTL_DCHECK(!display_info_);
   FTL_DCHECK(display_info);
   display_info_ = std::move(display_info);
@@ -384,7 +384,7 @@ void Presentation::PresentScene() {
     CursorState& state = it->second;
     if (state.visible) {
       if (!state.created) {
-        state.node = std::make_unique<mozart::client::ShapeNode>(&session_);
+        state.node = std::make_unique<scenic_lib::ShapeNode>(&session_);
         state.node->SetShape(cursor_shape_);
         state.node->SetMaterial(cursor_material_);
         scene_.AddChild(*state.node);
@@ -400,7 +400,7 @@ void Presentation::PresentScene() {
   }
 
   session_.Present(0, [weak = weak_factory_.GetWeakPtr()](
-                          mozart2::PresentationInfoPtr info) {
+                          scenic::PresentationInfoPtr info) {
     if (auto self = weak.get()) {
       uint64_t next_presentation_time =
           info->presentation_time + info->presentation_interval;

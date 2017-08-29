@@ -6,7 +6,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/services/application_environment.fidl.h"
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
+#include "apps/mozart/services/scenic/scene_manager.fidl.h"
 #include "apps/mozart/src/scene_manager/displays/display_manager.h"
 #include "apps/mozart/src/scene_manager/scene_manager_impl.h"
 #include "lib/escher/examples/common/demo.h"
@@ -37,7 +37,7 @@ class SceneManagerApp {
   escher::Escher escher_;
   std::unique_ptr<SceneManagerImpl> scene_manager_;
 
-  fidl::BindingSet<mozart2::SceneManager> bindings_;
+  fidl::BindingSet<scenic::SceneManager> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SceneManagerApp);
 };

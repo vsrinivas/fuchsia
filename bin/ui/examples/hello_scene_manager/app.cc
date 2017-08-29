@@ -25,16 +25,16 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
-#include "apps/mozart/lib/scene/client/host_memory.h"
-#include "apps/mozart/lib/scene/session_helpers.h"
-#include "apps/mozart/lib/scene/types.h"
-#include "apps/mozart/services/scene/ops.fidl.h"
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
-#include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/lib/scenic/client/host_memory.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
+#include "apps/mozart/lib/scenic/types.h"
+#include "apps/mozart/services/scenic/ops.fidl.h"
+#include "apps/mozart/services/scenic/scene_manager.fidl.h"
+#include "apps/mozart/services/scenic/session.fidl.h"
 #include "apps/mozart/src/scene_manager/tests/util.h"
 
 using namespace mozart;
-using namespace mozart::client;
+using namespace scenic_lib;
 
 namespace hello_scene_manager {
 
@@ -44,13 +44,13 @@ App::App()
     : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       loop_(mtl::MessageLoop::GetCurrent()) {
   // Connect to the SceneManager service.
-  scene_manager_ = application_context_
-                       ->ConnectToEnvironmentService<mozart2::SceneManager>();
+  scene_manager_ =
+      application_context_->ConnectToEnvironmentService<scenic::SceneManager>();
   scene_manager_.set_connection_error_handler([this] {
     FTL_LOG(INFO) << "Lost connection to SceneManager service.";
     loop_->QuitNow();
   });
-  scene_manager_->GetDisplayInfo([this](mozart2::DisplayInfoPtr display_info) {
+  scene_manager_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
@@ -73,15 +73,15 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
          checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
-  auto checkerboard_image_info = mozart2::ImageInfo::New();
+  auto checkerboard_image_info = scenic::ImageInfo::New();
   checkerboard_image_info->width = checkerboard_width;
   checkerboard_image_info->height = checkerboard_height;
   const size_t kBytesPerPixel = 4u;
   checkerboard_image_info->stride = checkerboard_width * kBytesPerPixel;
   checkerboard_image_info->pixel_format =
-      mozart2::ImageInfo::PixelFormat::BGRA_8;
-  checkerboard_image_info->color_space = mozart2::ImageInfo::ColorSpace::SRGB;
-  checkerboard_image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
+      scenic::ImageInfo::PixelFormat::BGRA_8;
+  checkerboard_image_info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
+  checkerboard_image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
 
   HostImage checkerboard_image(checkerboard_memory, 0,
                                std::move(checkerboard_image_info));
@@ -188,11 +188,11 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_2_contents.SetTranslation(0, 0, 10);
 }
 
-void App::Init(mozart2::DisplayInfoPtr display_info) {
+void App::Init(scenic::DisplayInfoPtr display_info) {
   FTL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
-  session_ = std::make_unique<mozart::client::Session>(scene_manager_.get());
+  session_ = std::make_unique<scenic_lib::Session>(scene_manager_.get());
   session_->set_connection_error_handler([this] {
     FTL_LOG(INFO) << "Session terminated.";
     loop_->QuitNow();
@@ -273,7 +273,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Present
   session_->Present(
-      next_presentation_time, [this](mozart2::PresentationInfoPtr info) {
+      next_presentation_time, [this](scenic::PresentationInfoPtr info) {
         Update(info->presentation_time + info->presentation_interval);
       });
 }

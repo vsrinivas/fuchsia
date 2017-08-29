@@ -1,0 +1,62 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+group("scenic") {
+  deps = [
+    ":client",
+    ":fidl_helpers",
+    ":skia",
+  ]
+}
+
+source_set("fidl_helpers") {
+  sources = [
+    "fidl_helpers.cc",
+    "fidl_helpers.h",
+  ]
+
+  public_deps = [
+    "//apps/mozart/services/scenic",
+  ]
+}
+
+source_set("client") {
+  sources = [
+    "client/host_image_cycler.cc",
+    "client/host_image_cycler.h",
+    "client/host_memory.cc",
+    "client/host_memory.h",
+    "client/resources.cc",
+    "client/resources.h",
+    "client/session.cc",
+    "client/session.h",
+  ]
+
+  public_deps = [
+    ":fidl_helpers",
+  ]
+
+  deps = [
+    "//garnet/public/lib/ftl",
+  ]
+}
+
+source_set("skia") {
+  sources = [
+    "skia/host_canvas_cycler.cc",
+    "skia/host_canvas_cycler.h",
+    "skia/host_surfaces.cc",
+    "skia/host_surfaces.h",
+    "skia/image_info.cc",
+    "skia/image_info.h",
+  ]
+
+  public_deps = [
+    ":client",
+    "//garnet/public/lib/ftl",
+    "//third_party/skia",
+  ]
+}

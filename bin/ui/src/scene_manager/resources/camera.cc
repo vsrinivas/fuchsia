@@ -8,7 +8,7 @@ namespace scene_manager {
 
 const ResourceTypeInfo Camera::kTypeInfo = {ResourceType::kCamera, "Camera"};
 
-Camera::Camera(Session* session, mozart::ResourceId id, ScenePtr scene)
+Camera::Camera(Session* session, scenic::ResourceId id, ScenePtr scene)
     : Resource(session, id, Camera::kTypeInfo), scene_(std::move(scene)) {}
 
 void Camera::SetProjection(const glm::vec3& eye_position,

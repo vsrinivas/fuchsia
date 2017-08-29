@@ -19,11 +19,11 @@ class SessionHandlerForTest : public SessionHandler {
   SessionHandlerForTest(
       Engine* engine,
       SessionId session_id,
-      ::fidl::InterfaceRequest<mozart2::Session> request,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+      ::fidl::InterfaceRequest<scenic::Session> request,
+      ::fidl::InterfaceHandle<scenic::SessionListener> listener);
 
-  // mozart2::Session interface methods.
-  void Enqueue(::fidl::Array<mozart2::OpPtr> ops) override;
+  // scenic::Session interface methods.
+  void Enqueue(::fidl::Array<scenic::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
                ::fidl::Array<mx::event> acquire_fences,
                ::fidl::Array<mx::event> release_fences,
@@ -63,8 +63,8 @@ class EngineForTest : public Engine {
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
       SessionId id,
-      ::fidl::InterfaceRequest<mozart2::Session> request,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
+      ::fidl::InterfaceRequest<scenic::Session> request,
+      ::fidl::InterfaceHandle<scenic::SessionListener> listener) override;
 };
 
 }  // namespace test

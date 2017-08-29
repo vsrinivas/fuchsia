@@ -43,7 +43,7 @@ JankView::JankView(mozart::ViewManagerPtr view_manager,
 JankView::~JankView() = default;
 
 void JankView::OnSceneInvalidated(
-    mozart2::PresentationInfoPtr presentation_info) {
+    scenic::PresentationInfoPtr presentation_info) {
   if (!typeface_)
     return;
 

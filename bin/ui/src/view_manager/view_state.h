@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/internal/view_inspector.h"
@@ -49,7 +49,7 @@ class ViewState : public ViewContainerState {
             mozart::ViewTokenPtr view_token,
             fidl::InterfaceRequest<mozart::View> view_request,
             mozart::ViewListenerPtr view_listener,
-            mozart::client::Session* session,
+            scenic_lib::Session* session,
             const std::string& label);
   ~ViewState() override;
 
@@ -66,7 +66,7 @@ class ViewState : public ViewContainerState {
   }
 
   // Gets the view's attachment point.
-  mozart::client::EntityNode& top_node() { return top_node_; }
+  scenic_lib::EntityNode& top_node() { return top_node_; }
 
   // Gets or sets the view stub which links this view into the
   // view hierarchy, or null if the view isn't linked anywhere.
@@ -118,7 +118,7 @@ class ViewState : public ViewContainerState {
 
   mozart::ViewTokenPtr view_token_;
   mozart::ViewListenerPtr view_listener_;
-  mozart::client::EntityNode top_node_;
+  scenic_lib::EntityNode top_node_;
 
   const std::string label_;
   mutable std::string formatted_label_cache_;

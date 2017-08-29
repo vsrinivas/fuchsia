@@ -6,24 +6,24 @@
 
 #include <memory>
 
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
+#include "apps/mozart/services/scenic/scene_manager.fidl.h"
 #include "apps/mozart/src/scene_manager/engine/engine.h"
 
 namespace scene_manager {
 
 class FrameScheduler;
 
-class SceneManagerImpl : public mozart2::SceneManager {
+class SceneManagerImpl : public scenic::SceneManager {
  public:
   explicit SceneManagerImpl(std::unique_ptr<Engine> engine);
   ~SceneManagerImpl() override;
 
   Engine* engine() { return engine_.get(); }
 
-  // mozart2::SceneManager interface methods.
+  // scenic::SceneManager interface methods.
   void CreateSession(
-      ::fidl::InterfaceRequest<mozart2::Session> request,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener) override;
+      ::fidl::InterfaceRequest<scenic::Session> request,
+      ::fidl::InterfaceHandle<scenic::SessionListener> listener) override;
   void GetDisplayInfo(const GetDisplayInfoCallback& callback) override;
 
  private:

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/services/scene/ops.fidl.h"
-#include "apps/mozart/services/scene/types.fidl.h"
+#include "apps/mozart/services/scenic/ops.fidl.h"
+#include "apps/mozart/services/scenic/types.fidl.h"
 
 #include <ostream>
 
 namespace scene_manager {
 
-std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op);
+std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op);
 std::ostream& operator<<(std::ostream& stream,
-                         const mozart2::CreateResourceOpPtr& op);
-std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag);
+                         const scenic::CreateResourceOpPtr& op);
+std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag);
 
 }  // namespace scene_manager

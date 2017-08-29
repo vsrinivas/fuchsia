@@ -9,7 +9,7 @@ namespace scene_manager {
 const ResourceTypeInfo EntityNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kEntityNode, "EntityNode"};
 
-EntityNode::EntityNode(Session* session, mozart::ResourceId node_id)
+EntityNode::EntityNode(Session* session, scenic::ResourceId node_id)
     : Node(session, node_id, EntityNode::kTypeInfo) {}
 
 }  // namespace scene_manager

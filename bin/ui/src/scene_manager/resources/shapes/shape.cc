@@ -9,7 +9,7 @@ namespace scene_manager {
 const ResourceTypeInfo Shape::kTypeInfo = {ResourceType::kShape, "Shape"};
 
 Shape::Shape(Session* session,
-             mozart::ResourceId id,
+             scenic::ResourceId id,
              const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(Shape::kTypeInfo));

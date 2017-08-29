@@ -14,11 +14,11 @@ executable("root_presenter") {
   deps = [
     "//application/lib/app",
     "//apps/mozart/lib/input",
-    "//apps/mozart/lib/scene:client",
+    "//apps/mozart/lib/scenic:client",
     "//apps/mozart/services/input",
     "//apps/mozart/services/input/cpp",
     "//apps/mozart/services/presentation",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/input_reader",

@@ -17,14 +17,14 @@ class MeshShape final : public Shape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  MeshShape(Session* session, mozart::ResourceId id);
+  MeshShape(Session* session, scenic::ResourceId id);
 
   bool BindBuffers(BufferPtr index_buffer,
-                   mozart2::MeshIndexFormat index_format,
+                   scenic::MeshIndexFormat index_format,
                    uint64_t index_offset,
                    uint32_t index_count,
                    BufferPtr vertex_buffer,
-                   const mozart2::MeshVertexFormatPtr& vertex_format,
+                   const scenic::MeshVertexFormatPtr& vertex_format,
                    uint64_t vertex_offset,
                    uint32_t vertex_count,
                    escher::BoundingBox bounding_box);

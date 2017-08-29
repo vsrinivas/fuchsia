@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/services/scenic/session.fidl.h"
 #include "apps/mozart/src/scene_manager/acquire_fence_set.h"
 #include "apps/mozart/src/scene_manager/engine/engine.h"
 #include "apps/mozart/src/scene_manager/engine/event_reporter.h"
@@ -47,7 +47,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
   // the Session is left unchanged.
-  bool ApplyOp(const mozart2::OpPtr& op);
+  bool ApplyOp(const scenic::OpPtr& op);
 
   SessionId id() const { return id_; }
   Engine* engine() const { return engine_; }
@@ -57,7 +57,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   size_t GetTotalResourceCount() const { return resource_count_; }
 
   // Return the number of resources that a client can identify via a
-  // mozart::ResourceId. This number is decremented when a ReleaseResourceOp is
+  // scenic::ResourceId. This number is decremented when a ReleaseResourceOp is
   // applied.  However, the resource may continue to exist if it is referenced
   // by other resources.
   size_t GetMappedResourceCount() const { return resources_.size(); }
@@ -77,10 +77,10 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   // applying them; they will later be applied by ApplyScheduledUpdates().
   // TODO: nothing is currently done with the acquire and release fences.
   void ScheduleUpdate(uint64_t presentation_time,
-                      ::fidl::Array<mozart2::OpPtr> ops,
+                      ::fidl::Array<scenic::OpPtr> ops,
                       ::fidl::Array<mx::event> acquire_fences,
                       ::fidl::Array<mx::event> release_fences,
-                      const mozart2::Session::PresentCallback& callback);
+                      const scenic::Session::PresentCallback& callback);
 
   // Called by ImagePipe::PresentImage().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
@@ -95,141 +95,140 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
 
   // Add an event to our queue, which will be scheduled to be flushed and sent
   // to the event reporter later.
-  void EnqueueEvent(mozart2::EventPtr event);
+  void EnqueueEvent(scenic::EventPtr event);
 
   // Called by SessionHandler::HitTest().
   void HitTest(uint32_t node_id,
-               mozart2::vec3Ptr ray_origin,
-               mozart2::vec3Ptr ray_direction,
-               const mozart2::Session::HitTestCallback& callback);
+               scenic::vec3Ptr ray_origin,
+               scenic::vec3Ptr ray_direction,
+               const scenic::Session::HitTestCallback& callback);
 
  private:
   // Called internally to initiate teardown.
   void BeginTearDown();
 
   // Operation application functions, called by ApplyOp().
-  bool ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op);
-  bool ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op);
-  bool ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op);
-  bool ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op);
-  bool ApplyAddChildOp(const mozart2::AddChildOpPtr& op);
-  bool ApplyAddPartOp(const mozart2::AddPartOpPtr& op);
-  bool ApplyDetachOp(const mozart2::DetachOpPtr& op);
-  bool ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op);
-  bool ApplySetTagOp(const mozart2::SetTagOpPtr& op);
-  bool ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op);
-  bool ApplySetScaleOp(const mozart2::SetScaleOpPtr& op);
-  bool ApplySetRotationOp(const mozart2::SetRotationOpPtr& op);
-  bool ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op);
-  bool ApplySetSizeOp(const mozart2::SetSizeOpPtr& op);
-  bool ApplySetShapeOp(const mozart2::SetShapeOpPtr& op);
-  bool ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op);
-  bool ApplySetClipOp(const mozart2::SetClipOpPtr& op);
-  bool ApplySetHitTestBehaviorOp(const mozart2::SetHitTestBehaviorOpPtr& op);
-  bool ApplySetCameraOp(const mozart2::SetCameraOpPtr& op);
-  bool ApplySetCameraProjectionOp(const mozart2::SetCameraProjectionOpPtr& op);
-  bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
-  bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
-  bool ApplySetColorOp(const mozart2::SetColorOpPtr& op);
-  bool ApplyBindMeshBuffersOp(const mozart2::BindMeshBuffersOpPtr& op);
-  bool ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op);
-  bool ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op);
-  bool ApplySetRendererOp(const mozart2::SetRendererOpPtr& op);
-  bool ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op);
-  bool ApplySetLabelOp(const mozart2::SetLabelOpPtr& op);
+  bool ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op);
+  bool ApplyReleaseResourceOp(const scenic::ReleaseResourceOpPtr& op);
+  bool ApplyExportResourceOp(const scenic::ExportResourceOpPtr& op);
+  bool ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op);
+  bool ApplyAddChildOp(const scenic::AddChildOpPtr& op);
+  bool ApplyAddPartOp(const scenic::AddPartOpPtr& op);
+  bool ApplyDetachOp(const scenic::DetachOpPtr& op);
+  bool ApplyDetachChildrenOp(const scenic::DetachChildrenOpPtr& op);
+  bool ApplySetTagOp(const scenic::SetTagOpPtr& op);
+  bool ApplySetTranslationOp(const scenic::SetTranslationOpPtr& op);
+  bool ApplySetScaleOp(const scenic::SetScaleOpPtr& op);
+  bool ApplySetRotationOp(const scenic::SetRotationOpPtr& op);
+  bool ApplySetAnchorOp(const scenic::SetAnchorOpPtr& op);
+  bool ApplySetSizeOp(const scenic::SetSizeOpPtr& op);
+  bool ApplySetShapeOp(const scenic::SetShapeOpPtr& op);
+  bool ApplySetMaterialOp(const scenic::SetMaterialOpPtr& op);
+  bool ApplySetClipOp(const scenic::SetClipOpPtr& op);
+  bool ApplySetHitTestBehaviorOp(const scenic::SetHitTestBehaviorOpPtr& op);
+  bool ApplySetCameraOp(const scenic::SetCameraOpPtr& op);
+  bool ApplySetCameraProjectionOp(const scenic::SetCameraProjectionOpPtr& op);
+  bool ApplySetLightIntensityOp(const scenic::SetLightIntensityOpPtr& op);
+  bool ApplySetTextureOp(const scenic::SetTextureOpPtr& op);
+  bool ApplySetColorOp(const scenic::SetColorOpPtr& op);
+  bool ApplyBindMeshBuffersOp(const scenic::BindMeshBuffersOpPtr& op);
+  bool ApplyAddLayerOp(const scenic::AddLayerOpPtr& op);
+  bool ApplySetLayerStackOp(const scenic::SetLayerStackOpPtr& op);
+  bool ApplySetRendererOp(const scenic::SetRendererOpPtr& op);
+  bool ApplySetEventMaskOp(const scenic::SetEventMaskOpPtr& op);
+  bool ApplySetLabelOp(const scenic::SetLabelOpPtr& op);
 
   // Resource creation functions, called by ApplyCreateResourceOp().
-  bool ApplyCreateMemory(mozart::ResourceId id, const mozart2::MemoryPtr& args);
-  bool ApplyCreateImage(mozart::ResourceId id, const mozart2::ImagePtr& args);
-  bool ApplyCreateImagePipe(mozart::ResourceId id,
-                            const mozart2::ImagePipeArgsPtr& args);
-  bool ApplyCreateBuffer(mozart::ResourceId id, const mozart2::BufferPtr& args);
-  bool ApplyCreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
-  bool ApplyCreateCamera(mozart::ResourceId id, const mozart2::CameraPtr& args);
-  bool ApplyCreateRenderer(mozart::ResourceId id,
-                           const mozart2::RendererPtr& args);
-  bool ApplyCreateDirectionalLight(mozart::ResourceId id,
-                                   const mozart2::DirectionalLightPtr& args);
-  bool ApplyCreateRectangle(mozart::ResourceId id,
-                            const mozart2::RectanglePtr& args);
-  bool ApplyCreateRoundedRectangle(mozart::ResourceId id,
-                                   const mozart2::RoundedRectanglePtr& args);
-  bool ApplyCreateCircle(mozart::ResourceId id, const mozart2::CirclePtr& args);
-  bool ApplyCreateMesh(mozart::ResourceId id, const mozart2::MeshPtr& args);
-  bool ApplyCreateMaterial(mozart::ResourceId id,
-                           const mozart2::MaterialPtr& args);
-  bool ApplyCreateClipNode(mozart::ResourceId id,
-                           const mozart2::ClipNodePtr& args);
-  bool ApplyCreateEntityNode(mozart::ResourceId id,
-                             const mozart2::EntityNodePtr& args);
-  bool ApplyCreateShapeNode(mozart::ResourceId id,
-                            const mozart2::ShapeNodePtr& args);
-  bool ApplyCreateDisplayCompositor(mozart::ResourceId id,
-                                    const mozart2::DisplayCompositorPtr& args);
+  bool ApplyCreateMemory(scenic::ResourceId id, const scenic::MemoryPtr& args);
+  bool ApplyCreateImage(scenic::ResourceId id, const scenic::ImagePtr& args);
+  bool ApplyCreateImagePipe(scenic::ResourceId id,
+                            const scenic::ImagePipeArgsPtr& args);
+  bool ApplyCreateBuffer(scenic::ResourceId id, const scenic::BufferPtr& args);
+  bool ApplyCreateScene(scenic::ResourceId id, const scenic::ScenePtr& args);
+  bool ApplyCreateCamera(scenic::ResourceId id, const scenic::CameraPtr& args);
+  bool ApplyCreateRenderer(scenic::ResourceId id,
+                           const scenic::RendererPtr& args);
+  bool ApplyCreateDirectionalLight(scenic::ResourceId id,
+                                   const scenic::DirectionalLightPtr& args);
+  bool ApplyCreateRectangle(scenic::ResourceId id,
+                            const scenic::RectanglePtr& args);
+  bool ApplyCreateRoundedRectangle(scenic::ResourceId id,
+                                   const scenic::RoundedRectanglePtr& args);
+  bool ApplyCreateCircle(scenic::ResourceId id, const scenic::CirclePtr& args);
+  bool ApplyCreateMesh(scenic::ResourceId id, const scenic::MeshPtr& args);
+  bool ApplyCreateMaterial(scenic::ResourceId id,
+                           const scenic::MaterialPtr& args);
+  bool ApplyCreateClipNode(scenic::ResourceId id,
+                           const scenic::ClipNodePtr& args);
+  bool ApplyCreateEntityNode(scenic::ResourceId id,
+                             const scenic::EntityNodePtr& args);
+  bool ApplyCreateShapeNode(scenic::ResourceId id,
+                            const scenic::ShapeNodePtr& args);
+  bool ApplyCreateDisplayCompositor(scenic::ResourceId id,
+                                    const scenic::DisplayCompositorPtr& args);
   bool ApplyCreateImagePipeCompositor(
-      mozart::ResourceId id,
-      const mozart2::ImagePipeCompositorPtr& args);
-  bool ApplyCreateLayerStack(mozart::ResourceId id,
-                             const mozart2::LayerStackPtr& args);
-  bool ApplyCreateLayer(mozart::ResourceId id, const mozart2::LayerPtr& args);
-  bool ApplyCreateVariable(mozart::ResourceId id,
-                           const mozart2::VariablePtr& args);
+      scenic::ResourceId id,
+      const scenic::ImagePipeCompositorPtr& args);
+  bool ApplyCreateLayerStack(scenic::ResourceId id,
+                             const scenic::LayerStackPtr& args);
+  bool ApplyCreateLayer(scenic::ResourceId id, const scenic::LayerPtr& args);
+  bool ApplyCreateVariable(scenic::ResourceId id,
+                           const scenic::VariablePtr& args);
 
   // Actually create resources.
-  ResourcePtr CreateMemory(mozart::ResourceId id,
-                           const mozart2::MemoryPtr& args);
-  ResourcePtr CreateImage(mozart::ResourceId id,
+  ResourcePtr CreateMemory(scenic::ResourceId id,
+                           const scenic::MemoryPtr& args);
+  ResourcePtr CreateImage(scenic::ResourceId id,
                           MemoryPtr memory,
-                          const mozart2::ImagePtr& args);
-  ResourcePtr CreateBuffer(mozart::ResourceId id,
+                          const scenic::ImagePtr& args);
+  ResourcePtr CreateBuffer(scenic::ResourceId id,
                            MemoryPtr memory,
                            uint32_t memory_offset,
                            uint32_t num_bytes);
-  ResourcePtr CreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
-  ResourcePtr CreateCamera(mozart::ResourceId id,
-                           const mozart2::CameraPtr& args);
-  ResourcePtr CreateRenderer(mozart::ResourceId id,
-                             const mozart2::RendererPtr& args);
-  ResourcePtr CreateDirectionalLight(mozart::ResourceId id,
+  ResourcePtr CreateScene(scenic::ResourceId id, const scenic::ScenePtr& args);
+  ResourcePtr CreateCamera(scenic::ResourceId id,
+                           const scenic::CameraPtr& args);
+  ResourcePtr CreateRenderer(scenic::ResourceId id,
+                             const scenic::RendererPtr& args);
+  ResourcePtr CreateDirectionalLight(scenic::ResourceId id,
                                      escher::vec3 direction,
                                      float intensity);
-  ResourcePtr CreateClipNode(mozart::ResourceId id,
-                             const mozart2::ClipNodePtr& args);
-  ResourcePtr CreateEntityNode(mozart::ResourceId id,
-                               const mozart2::EntityNodePtr& args);
-  ResourcePtr CreateShapeNode(mozart::ResourceId id,
-                              const mozart2::ShapeNodePtr& args);
-  ResourcePtr CreateDisplayCompositor(
-      mozart::ResourceId id,
-      const mozart2::DisplayCompositorPtr& args);
+  ResourcePtr CreateClipNode(scenic::ResourceId id,
+                             const scenic::ClipNodePtr& args);
+  ResourcePtr CreateEntityNode(scenic::ResourceId id,
+                               const scenic::EntityNodePtr& args);
+  ResourcePtr CreateShapeNode(scenic::ResourceId id,
+                              const scenic::ShapeNodePtr& args);
+  ResourcePtr CreateDisplayCompositor(scenic::ResourceId id,
+                                      const scenic::DisplayCompositorPtr& args);
   ResourcePtr CreateImagePipeCompositor(
-      mozart::ResourceId id,
-      const mozart2::ImagePipeCompositorPtr& args);
-  ResourcePtr CreateLayerStack(mozart::ResourceId id,
-                               const mozart2::LayerStackPtr& args);
-  ResourcePtr CreateLayer(mozart::ResourceId id, const mozart2::LayerPtr& args);
-  ResourcePtr CreateCircle(mozart::ResourceId id, float initial_radius);
-  ResourcePtr CreateRectangle(mozart::ResourceId id, float width, float height);
-  ResourcePtr CreateRoundedRectangle(mozart::ResourceId id,
+      scenic::ResourceId id,
+      const scenic::ImagePipeCompositorPtr& args);
+  ResourcePtr CreateLayerStack(scenic::ResourceId id,
+                               const scenic::LayerStackPtr& args);
+  ResourcePtr CreateLayer(scenic::ResourceId id, const scenic::LayerPtr& args);
+  ResourcePtr CreateCircle(scenic::ResourceId id, float initial_radius);
+  ResourcePtr CreateRectangle(scenic::ResourceId id, float width, float height);
+  ResourcePtr CreateRoundedRectangle(scenic::ResourceId id,
                                      float width,
                                      float height,
                                      float top_left_radius,
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);
-  ResourcePtr CreateMesh(mozart::ResourceId id);
-  ResourcePtr CreateMaterial(mozart::ResourceId id);
+  ResourcePtr CreateMesh(scenic::ResourceId id);
+  ResourcePtr CreateMaterial(scenic::ResourceId id);
 
   // Return false and log an error if the value is not of the expected type.
   // NOTE: although failure does not halt execution of the program, it does
   // indicate client error, and will be used by the caller to tear down the
   // Session.
-  bool AssertValueIsOfType(const mozart2::ValuePtr& value,
-                           const mozart2::Value::Tag* tags,
+  bool AssertValueIsOfType(const scenic::ValuePtr& value,
+                           const scenic::Value::Tag* tags,
                            size_t tag_count);
   template <size_t N>
-  bool AssertValueIsOfType(const mozart2::ValuePtr& value,
-                           const std::array<mozart2::Value::Tag, N>& tags) {
+  bool AssertValueIsOfType(const scenic::ValuePtr& value,
+                           const std::array<scenic::Value::Tag, N>& tags) {
     return AssertValueIsOfType(value, tags.data(), N);
   }
 
@@ -242,13 +241,13 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   struct Update {
     uint64_t presentation_time;
 
-    ::fidl::Array<mozart2::OpPtr> ops;
+    ::fidl::Array<scenic::OpPtr> ops;
     std::unique_ptr<AcquireFenceSet> acquire_fences;
     ::fidl::Array<mx::event> release_fences;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
-    mozart2::Session::PresentCallback present_callback;
+    scenic::Session::PresentCallback present_callback;
   };
   bool ApplyUpdate(Update* update);
   std::queue<Update> scheduled_updates_;
@@ -259,7 +258,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
     ImagePipePtr image_pipe;
   };
   std::queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
-  ::fidl::Array<mozart2::EventPtr> buffered_events_;
+  ::fidl::Array<scenic::EventPtr> buffered_events_;
 
   const SessionId id_;
   Engine* const engine_;

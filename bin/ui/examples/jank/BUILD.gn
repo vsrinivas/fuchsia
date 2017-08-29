@@ -15,7 +15,7 @@ executable("jank") {
     "//apps/mozart/lib/skia:fonts",
     "//apps/mozart/lib/view_framework:skia",
     "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",

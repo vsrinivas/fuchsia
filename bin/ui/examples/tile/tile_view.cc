@@ -187,13 +187,13 @@ void TileView::UpdateScene() {
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
   }
 
-  session()->Present(0, [](mozart2::PresentationInfoPtr info) {});
+  session()->Present(0, [](scenic::PresentationInfoPtr info) {});
 }
 
 TileView::ViewData::ViewData(const std::string& url,
                              uint32_t key,
                              app::ApplicationControllerPtr controller,
-                             mozart::client::Session* session)
+                             scenic_lib::Session* session)
     : url(url),
       key(key),
       controller(std::move(controller)),

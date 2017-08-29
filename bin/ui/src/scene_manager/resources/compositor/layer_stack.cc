@@ -12,7 +12,7 @@ namespace scene_manager {
 const ResourceTypeInfo LayerStack::kTypeInfo = {ResourceType::kLayerStack,
                                                 "LayerStack"};
 
-LayerStack::LayerStack(Session* session, mozart::ResourceId id)
+LayerStack::LayerStack(Session* session, scenic::ResourceId id)
     : Resource(session, id, LayerStack::kTypeInfo) {}
 
 LayerStack::~LayerStack() = default;

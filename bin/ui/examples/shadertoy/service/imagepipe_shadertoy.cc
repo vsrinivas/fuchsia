@@ -20,9 +20,9 @@ namespace shadertoy {
 
 ShadertoyStateForImagePipe::ShadertoyStateForImagePipe(
     App* app,
-    ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe)
+    ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe)
     : ShadertoyState(app),
-      image_pipe_(mozart2::ImagePipePtr::Create(std::move(image_pipe))) {
+      image_pipe_(scenic::ImagePipePtr::Create(std::move(image_pipe))) {
   image_pipe_.set_connection_error_handler([this] { this->Close(); });
 }
 
@@ -94,14 +94,14 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     fb.release_fence = std::move(release_semaphore_pair.second);
     fb.image_pipe_id = next_image_pipe_id_++;
 
-    auto image_info = mozart2::ImageInfo::New();
+    auto image_info = scenic::ImageInfo::New();
     image_info->width = width();
     image_info->height = height();
     image_info->stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
-    image_info->tiling = mozart2::ImageInfo::Tiling::GPU_OPTIMAL;
+    image_info->tiling = scenic::ImageInfo::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), mozart2::MemoryType::VK_DEVICE_MEMORY,
+                          std::move(vmo), scenic::MemoryType::VK_DEVICE_MEMORY,
                           image->memory_offset());
   }
 }
@@ -145,7 +145,7 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
 
   // Present the image and request another frame.
   auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-      mozart2::PresentationInfoPtr info) {
+      scenic::PresentationInfoPtr info) {
     // Need this cast in order to call protected member of superclass.
     if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
       self->OnFramePresented(info);

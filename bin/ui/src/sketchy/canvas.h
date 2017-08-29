@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "apps/mozart/services/fun/sketchy/canvas.fidl.h"
 #include "apps/mozart/src/sketchy/resources/resource_map.h"
 #include "apps/mozart/src/sketchy/resources/types.h"
@@ -17,7 +17,7 @@ namespace sketchy_service {
 
 class CanvasImpl final : public sketchy::Canvas {
  public:
-  CanvasImpl(mozart::client::Session* session, escher::Escher* escher);
+  CanvasImpl(scenic_lib::Session* session, escher::Escher* escher);
 
   // |sketchy::Canvas|
   void Init(::fidl::InterfaceHandle<sketchy::CanvasListener> listener) override;
@@ -38,7 +38,7 @@ class CanvasImpl final : public sketchy::Canvas {
   bool ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op);
 
   bool ApplyScenicImportResourceOp(
-      const mozart2::ImportResourceOpPtr& import_resource);
+      const scenic::ImportResourceOpPtr& import_resource);
 
   // Imports an exported ScenicNode that can be used as an
   // attachment point for a StrokeGroup.
@@ -49,9 +49,9 @@ class CanvasImpl final : public sketchy::Canvas {
   //     to the SceneManager to import the node.
   bool ScenicImportNode(ResourceId id, mx::eventpair token);
 
-  bool ApplyScenicAddChildOp(const mozart2::AddChildOpPtr& add_child);
+  bool ApplyScenicAddChildOp(const scenic::AddChildOpPtr& add_child);
 
-  mozart::client::Session* const session_;
+  scenic_lib::Session* const session_;
   // TODO: use more sophisticated factory that suballocates from larger GPU
   // memory allocations, and recycles buffers when they are no longer used.
   escher::BufferFactory buffer_factory_;

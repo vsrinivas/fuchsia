@@ -12,7 +12,7 @@ fidl("services") {
 
   public_deps = [
     "//apps/mozart/services/images",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
   ]
 }

@@ -14,7 +14,7 @@ namespace scene_manager {
 const ResourceTypeInfo Resource::kTypeInfo = {0, "Resource"};
 
 Resource::Resource(Session* session,
-                   mozart::ResourceId id,
+                   scenic::ResourceId id,
                    const ResourceTypeInfo& type_info)
     : session_(session), id_(id), type_info_(type_info) {
   FTL_DCHECK(session);
@@ -34,7 +34,7 @@ ErrorReporter* Resource::error_reporter() const {
 }
 
 bool Resource::SetLabel(const std::string& label) {
-  label_ = label.substr(0, mozart2::kLabelMaxLength);
+  label_ = label.substr(0, scenic::kLabelMaxLength);
   return true;
 }
 

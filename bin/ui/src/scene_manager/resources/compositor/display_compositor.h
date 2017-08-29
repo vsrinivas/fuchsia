@@ -17,7 +17,7 @@ class DisplayCompositor : public Compositor {
   static const ResourceTypeInfo kTypeInfo;
 
   DisplayCompositor(Session* session,
-                    mozart::ResourceId id,
+                    scenic::ResourceId id,
                     Display* display,
                     std::unique_ptr<DisplaySwapchain> swapchain);
 

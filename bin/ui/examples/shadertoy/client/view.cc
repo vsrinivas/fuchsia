@@ -5,7 +5,7 @@
 #include "apps/mozart/examples/shadertoy/client/view.h"
 
 #include "apps/mozart/examples/shadertoy/client/glsl_strings.h"
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 
 namespace shadertoy_client {
 
@@ -29,7 +29,7 @@ View::View(app::ApplicationContext* application_context,
 
   // Create an ImagePipe and pass one end of it to the ShadertoyFactory in
   // order to obtain a Shadertoy.
-  fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe_handle;
+  fidl::InterfaceHandle<scenic::ImagePipe> image_pipe_handle;
   auto image_pipe_request = image_pipe_handle.NewRequest();
   shadertoy_factory_->NewImagePipeShadertoy(shadertoy_.NewRequest(),
                                             std::move(image_pipe_handle));
@@ -55,19 +55,19 @@ View::View(app::ApplicationContext* application_context,
   // Pass the other end of the ImagePipe to the Session, and wrap the
   // resulting resource in a Material.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(mozart::NewCreateImagePipeOp(
+  session()->Enqueue(scenic_lib::NewCreateImagePipeOp(
       image_pipe_id, std::move(image_pipe_request)));
-  mozart::client::Material material(session());
+  scenic_lib::Material material(session());
   material.SetTexture(image_pipe_id);
   session()->ReleaseResource(image_pipe_id);
 
   // Create a rounded-rect shape to display the Shadertoy image on.
-  mozart::client::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight,
+  scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight,
                                          80, 80, 80, 80);
 
   constexpr size_t kNodeCount = 16;
   for (size_t i = 0; i < kNodeCount; ++i) {
-    mozart::client::ShapeNode node(session());
+    scenic_lib::ShapeNode node(session());
     node.SetShape(shape);
     node.SetMaterial(material);
     parent_node().AddChild(node);
@@ -77,7 +77,7 @@ View::View(app::ApplicationContext* application_context,
 
 View::~View() = default;
 
-void View::OnSceneInvalidated(mozart2::PresentationInfoPtr presentation_info) {
+void View::OnSceneInvalidated(scenic::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 

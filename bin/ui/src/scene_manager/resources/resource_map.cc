@@ -15,7 +15,7 @@ void ResourceMap::Clear() {
   resources_.clear();
 }
 
-bool ResourceMap::AddResource(mozart::ResourceId id, ResourcePtr resource) {
+bool ResourceMap::AddResource(scenic::ResourceId id, ResourcePtr resource) {
   FTL_DCHECK(resource);
 
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
@@ -28,7 +28,7 @@ bool ResourceMap::AddResource(mozart::ResourceId id, ResourcePtr resource) {
   return true;
 }
 
-bool ResourceMap::RemoveResource(mozart::ResourceId id) {
+bool ResourceMap::RemoveResource(scenic::ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
     error_reporter_->ERROR()

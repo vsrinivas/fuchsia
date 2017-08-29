@@ -10,7 +10,7 @@ const ResourceTypeInfo ImageBase::kTypeInfo = {ResourceType::kImageBase,
                                                "ImageBase"};
 
 ImageBase::ImageBase(Session* session,
-                     mozart::ResourceId id,
+                     scenic::ResourceId id,
                      const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(ImageBase::kTypeInfo));

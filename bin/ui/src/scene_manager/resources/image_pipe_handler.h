@@ -11,16 +11,16 @@ namespace scene_manager {
 
 class ImagePipe;
 
-class ImagePipeHandler : public mozart2::ImagePipe {
+class ImagePipeHandler : public scenic::ImagePipe {
  public:
-  ImagePipeHandler(::fidl::InterfaceRequest<mozart2::ImagePipe> request,
+  ImagePipeHandler(::fidl::InterfaceRequest<scenic::ImagePipe> request,
                    scene_manager::ImagePipe* image_pipe);
 
  private:
   void AddImage(uint32_t image_id,
-                mozart2::ImageInfoPtr image_info,
+                scenic::ImageInfoPtr image_info,
                 mx::vmo memory,
-                mozart2::MemoryType memory_type,
+                scenic::MemoryType memory_type,
                 uint64_t memory_offset) override;
   void RemoveImage(uint32_t image_id) override;
   // TODO(MZ-152): Add Presentation time to image_pipe.fidl.
@@ -30,7 +30,7 @@ class ImagePipeHandler : public mozart2::ImagePipe {
                     mx::event release_fence,
                     const PresentImageCallback& callback) override;
 
-  ::fidl::Binding<mozart2::ImagePipe> binding_;
+  ::fidl::Binding<scenic::ImagePipe> binding_;
   scene_manager::ImagePipe* image_pipe_;
 };
 

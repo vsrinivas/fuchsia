@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/mozart/src/scene_manager/resources/resource_linker.h"
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene_manager/tests/session_test.h"
 #include "gtest/gtest.h"
@@ -57,7 +57,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
     ASSERT_EQ(ResourceLinker::ResolutionResult::kSuccess, cause);
   };
 
-  linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
+  linker.ImportResource(scenic::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
   );
@@ -184,7 +184,7 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
     ASSERT_NE(0u, resource->type_flags() & kEntityNode);
     ASSERT_EQ(ResourceLinker::ResolutionResult::kSuccess, cause);
   };
-  linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
+  linker.ImportResource(scenic::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
   );
@@ -229,7 +229,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     ASSERT_EQ(
         destination.duplicate(MX_RIGHT_SAME_RIGHTS, &duplicate_destination),
         MX_OK);
-    linker.ImportResource(mozart2::ImportSpec::NODE,         // import spec
+    linker.ImportResource(scenic::ImportSpec::NODE,         // import spec
                           std::move(duplicate_destination),  // import handle
                           resolution_handler  // import resolution handler
     );

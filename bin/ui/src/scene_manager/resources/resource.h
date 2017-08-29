@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "apps/mozart/lib/scene/types.h"
+#include "apps/mozart/lib/scenic/types.h"
 #include "apps/mozart/src/scene_manager/resources/resource_type_info.h"
 #include "lib/ftl/memory/ref_counted.h"
 
@@ -34,7 +34,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
   // The session this Resource lives in and the id it was created with there.
   Session* session() const { return session_; }
-  mozart::ResourceId id() const { return id_; }
+  scenic::ResourceId id() const { return id_; }
 
   // An error reporter associated with the Resource's session. When operating
   // on this resource, always log errors to the ErrorReporter before failing.
@@ -87,7 +87,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
  protected:
   Resource(Session* session,
-           mozart::ResourceId id,
+           scenic::ResourceId id,
            const ResourceTypeInfo& type_info);
 
   friend class ResourceMap;
@@ -100,7 +100,7 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
 
  private:
   Session* const session_;
-  const mozart::ResourceId id_;
+  const scenic::ResourceId id_;
   const ResourceTypeInfo& type_info_;
   std::string label_;
   uint32_t event_mask_ = 0u;

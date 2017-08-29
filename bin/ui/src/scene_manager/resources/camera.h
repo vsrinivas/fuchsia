@@ -15,7 +15,7 @@ class Camera final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Camera(Session* session, mozart::ResourceId id, ScenePtr scene);
+  Camera(Session* session, scenic::ResourceId id, ScenePtr scene);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;

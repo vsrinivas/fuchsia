@@ -12,8 +12,7 @@ namespace scene_manager {
 class EventReporter {
  public:
   // Flushes enqueued session events to the session listener as a batch.
-  virtual void SendEvents(uint64_t presentation_time,
-                          ::fidl::Array<mozart2::EventPtr> buffered_events) = 0;
+  virtual void SendEvents(::fidl::Array<scenic::EventPtr> buffered_events) = 0;
 };
 
 }  // namespace scene_manager

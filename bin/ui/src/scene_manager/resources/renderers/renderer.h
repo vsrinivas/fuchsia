@@ -25,7 +25,7 @@ class Renderer : public Resource {
   // pixels.
   static const uint32_t kRequiredSwapchainPixelMultiple;
 
-  Renderer(Session* session, mozart::ResourceId id);
+  Renderer(Session* session, scenic::ResourceId id);
   ~Renderer();
 
   std::vector<escher::Object> CreateDisplayList(const ScenePtr& scene,

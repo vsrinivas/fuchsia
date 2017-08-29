@@ -9,7 +9,7 @@ namespace scene_manager {
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
 Memory::Memory(Session* session,
-               mozart::ResourceId id,
+               scenic::ResourceId id,
                const ResourceTypeInfo& type_info)
     : Resource(session, id, type_info) {}
 

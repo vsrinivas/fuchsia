@@ -8,7 +8,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/tasks/task_runner.h"
 
-#include "apps/mozart/services/scene/session.fidl.h"
+#include "apps/mozart/services/scenic/session.fidl.h"
 #include "apps/mozart/src/scene_manager/engine/engine.h"
 #include "apps/mozart/src/scene_manager/engine/event_reporter.h"
 #include "apps/mozart/src/scene_manager/engine/session.h"
@@ -19,36 +19,35 @@ namespace scene_manager {
 class SceneManagerImpl;
 
 // Implements the Session FIDL interface.  For now, does nothing but buffer
-// operations from Enqueue() before passing them all to |session_| when Commit()
-// is called.  Eventually, this class may do more work if performance profiling
-// suggests to.
-class SessionHandler : public mozart2::Session,
+// operations from Enqueue() before passing them all to |session_| when
+// Commit() is called.  Eventually, this class may do more work if performance
+// profiling suggests to.
+class SessionHandler : public scenic::Session,
                        public EventReporter,
                        private ErrorReporter {
  public:
   SessionHandler(Engine* engine,
                  SessionId session_id,
-                 ::fidl::InterfaceRequest<mozart2::Session> request,
-                 ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+                 ::fidl::InterfaceRequest<scenic::Session> request,
+                 ::fidl::InterfaceHandle<scenic::SessionListener> listener);
   ~SessionHandler() override;
 
   scene_manager::Session* session() const { return session_.get(); }
 
   // Flushes enqueued session events to the session listener as a batch.
-  void SendEvents(uint64_t presentation_time,
-                  ::fidl::Array<mozart2::EventPtr> events) override;
+  void SendEvents(::fidl::Array<scenic::EventPtr> events) override;
 
  protected:
-  // mozart2::Session interface methods.
-  void Enqueue(::fidl::Array<mozart2::OpPtr> ops) override;
+  // scenic::Session interface methods.
+  void Enqueue(::fidl::Array<scenic::OpPtr> ops) override;
   void Present(uint64_t presentation_time,
                ::fidl::Array<mx::event> acquire_fences,
                ::fidl::Array<mx::event> release_fences,
                const PresentCallback& callback) override;
 
   void HitTest(uint32_t node_id,
-               mozart2::vec3Ptr ray_origin,
-               mozart2::vec3Ptr ray_direction,
+               scenic::vec3Ptr ray_origin,
+               scenic::vec3Ptr ray_direction,
                const HitTestCallback& callback) override;
 
  private:
@@ -69,10 +68,10 @@ class SessionHandler : public mozart2::Session,
   Engine* const engine_;
   scene_manager::SessionPtr session_;
 
-  ::fidl::BindingSet<mozart2::Session> bindings_;
-  ::fidl::InterfacePtr<mozart2::SessionListener> listener_;
+  ::fidl::BindingSet<scenic::Session> bindings_;
+  ::fidl::InterfacePtr<scenic::SessionListener> listener_;
 
-  ::fidl::Array<mozart2::OpPtr> buffered_ops_;
+  ::fidl::Array<scenic::OpPtr> buffered_ops_;
 };
 
 }  // namespace scene_manager

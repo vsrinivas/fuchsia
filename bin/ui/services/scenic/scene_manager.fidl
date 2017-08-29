@@ -1,0 +1,20 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+import "apps/mozart/services/scenic/display_info.fidl";
+import "apps/mozart/services/scenic/session.fidl";
+
+[ServiceName="scenic::SceneManager"]
+interface SceneManager {
+  // Create a new Session, which is the primary way to interact with the
+  // SceneManager.
+  CreateSession(Session& session, SessionListener? listener);
+
+  // Get information about the SceneManager's primary display.
+  // TODO: in the future there will probably be a DisplayManager, and info about
+  // which displays to use will be provided to the SceneManager.
+  GetDisplayInfo() => (DisplayInfo info);
+};

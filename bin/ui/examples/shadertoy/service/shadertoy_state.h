@@ -28,7 +28,7 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
   // Factory constructor.
   static ftl::RefPtr<ShadertoyState> NewForImagePipe(
       App* app,
-      ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe);
+      ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe);
 
   // Factory constructor.
   static ftl::RefPtr<ShadertoyState> NewForView(
@@ -49,7 +49,7 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
   void SetMouse(glm::vec4 i_mouse);
 
   void SetImage(uint32_t channel,
-                ::fidl::InterfaceRequest<mozart2::ImagePipe> request);
+                ::fidl::InterfaceRequest<scenic::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);
@@ -58,7 +58,7 @@ class ShadertoyState : public ftl::RefCountedThreadSafe<ShadertoyState> {
   void Close();
 
   // Subclasses must call this from DrawFrame().
-  void OnFramePresented(const mozart2::PresentationInfoPtr& info);
+  void OnFramePresented(const scenic::PresentationInfoPtr& info);
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }

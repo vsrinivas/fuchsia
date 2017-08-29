@@ -4,7 +4,7 @@
 
 module mozart;
 
-import "apps/mozart/services/scene/scene_manager.fidl";
+import "apps/mozart/services/scenic/scene_manager.fidl";
 import "apps/mozart/services/views/view_trees.fidl";
 import "apps/mozart/services/views/views.fidl";
 
@@ -26,7 +26,7 @@ interface ViewManager {
   // Gets the scene manager associated with this view manager.
   // All graphical content for this view manager's views and view trees
   // must come from sessions created by this |scene_manager|.
-  GetSceneManager(mozart2.SceneManager& scene_manager);
+  GetSceneManager(scenic.SceneManager& scene_manager);
 
   // Creates a view.
   //

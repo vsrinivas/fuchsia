@@ -17,7 +17,7 @@ ViewManagerImpl::ViewManagerImpl(ViewRegistry* registry)
 ViewManagerImpl::~ViewManagerImpl() {}
 
 void ViewManagerImpl::GetSceneManager(
-    fidl::InterfaceRequest<mozart2::SceneManager> scene_manager_request) {
+    fidl::InterfaceRequest<scenic::SceneManager> scene_manager_request) {
   registry_->GetSceneManager(std::move(scene_manager_request));
 }
 

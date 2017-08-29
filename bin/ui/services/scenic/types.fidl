@@ -1,0 +1,183 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+struct vec2 {
+  float x;
+  float y;
+};
+
+struct vec3 {
+  float x;
+  float y;
+  float z;
+};
+
+struct vec4 {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+struct mat4 {
+  // Column major order.
+  array<float, 16> matrix;
+};
+
+// TODO(MZ-238): use floats instead of uint8.
+struct ColorRgba {
+  uint8 red;
+  uint8 green;
+  uint8 blue;
+  uint8 alpha;
+};
+
+struct Quaternion {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+struct Transform {
+  vec3 translation;
+  vec3 scale;
+  // Point around which rotation and scaling occur.
+  vec3 anchor;
+  Quaternion rotation;
+};
+
+union Value {
+  float vector1;
+  vec2 vector2;
+  vec3 vector3;
+  vec4 vector4;
+  mat4 matrix4x4;
+  ColorRgba color_rgba;
+  // Degrees of counter-clockwise rotation in the XY plane.
+  float degrees;
+  Quaternion quaternion;
+  Transform transform;
+  // ID of a value-producing resource (an animation or an expression).
+  // The type of this value matches the type produced by the named resource.
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a float, and |value| is ignored.
+struct FloatValue {
+  float value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec2, and |value| is ignored.
+struct Vector2Value {
+  vec2 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec3, and |value| is ignored.
+struct Vector3Value {
+  vec3 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec4, and |value| is ignored.
+struct Vector4Value {
+  vec4 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a vec4, and |value| is ignored.
+struct Matrix4Value {
+  mat4 value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a ColorRgba, and |value| is ignored.
+struct ColorRgbaValue {
+  ColorRgba value;
+  uint32 variable_id;
+};
+
+// A value that is specified explicitly by |value| if |variable_id| is zero,
+// or is the value produced by the resource identified by |variable_id|, e.g.
+// an animation or expression.  In the latter case, the value produced by the
+// resource must be a Quaternion, and |value| is ignored.
+struct QuaternionValue {
+  Quaternion value;
+  uint32 variable_id;
+};
+
+enum ValueType {
+  kNone = 0,
+  kVector1,
+  kVector2,
+  kVector3,
+  kVector4,
+  kMatrix4,
+  kColorRgba,
+  kQuaternion,
+  kTransform,
+};
+
+// Describes how nodes interact with hit testings.
+enum HitTestBehavior {
+  // Apply hit testing to the node's content, its parts, and its children.
+  kDefault = 0,
+
+  // Suppress hit testing of the node and everything it contains.
+  kSuppress,
+};
+
+// Rendering target metrics associated with a node.
+// See also |MetricsEvent|.
+struct Metrics {
+  // The ratio between the size of one logical pixel within the node's local
+  // coordinate system and the size of one physical pixel of the rendering
+  // target.
+  //
+  // This scale factors change in relation to the resolution of the rendering
+  // target and the scale transformations applied by containing nodes.
+  // They are always strictly positive and non-zero.
+  //
+  // For example, suppose the rendering target is a high resolution display
+  // with a device pixel ratio of 2.0 meaning that each logical pixel
+  // within the model corresponds to two physical pixels of the display.
+  // Assuming no scale transformations affect the node, then its metrics event
+  // will report a scale factor of 2.0.
+  //
+  // Building on this example, if instead the node's parent applies a
+  // scale transformation of 0.25 to the node, then the node's metrics event
+  // will report a scale factor of 0.5 indicating that the node should render
+  // its content at a reduced resolution and level of detail since a smaller
+  // area of physical pixels (half the size in each dimension) will be rendered.
+  float scale_x;
+  float scale_y;
+  float scale_z;
+};
+
+struct BoundingBox {
+  vec3 min;
+  vec3 max;
+};

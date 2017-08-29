@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scene/client/resources.h"
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "escher/vk/buffer_factory.h"
 
 namespace sketchy_service {
@@ -15,18 +15,18 @@ namespace sketchy_service {
 // create the Scenic buffer.
 class Buffer {
  public:
-  Buffer(mozart::client::Session* session,
+  Buffer(scenic_lib::Session* session,
          escher::BufferFactory* factory,
          vk::DeviceSize size);
 
-  Buffer(mozart::client::Session* session, escher::BufferPtr buffer);
+  Buffer(scenic_lib::Session* session, escher::BufferPtr buffer);
 
   const escher::BufferPtr& escher_buffer() const { return escher_buffer_; }
-  const mozart::client::Buffer& scenic_buffer() const { return scenic_buffer_; }
+  const scenic_lib::Buffer& scenic_buffer() const { return scenic_buffer_; }
 
  private:
   escher::BufferPtr escher_buffer_;
-  mozart::client::Buffer scenic_buffer_;
+  scenic_lib::Buffer scenic_buffer_;
 };
 
 }  // namespace sketchy_service

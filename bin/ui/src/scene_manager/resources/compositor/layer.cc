@@ -13,7 +13,7 @@ namespace scene_manager {
 
 const ResourceTypeInfo Layer::kTypeInfo = {ResourceType::kLayer, "Layer"};
 
-Layer::Layer(Session* session, mozart::ResourceId id)
+Layer::Layer(Session* session, scenic::ResourceId id)
     : Resource(session, id, Layer::kTypeInfo), translation_(0) {}
 
 Layer::~Layer() = default;

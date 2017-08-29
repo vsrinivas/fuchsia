@@ -33,8 +33,8 @@ void Resource::EnqueueCreateResourceOp(ResourceId resource_id,
 
 void Resource::EnqueueImportResourceOp(ResourceId resource_id,
                                        mx::eventpair token,
-                                       mozart2::ImportSpec spec) {
-  auto import_resource = mozart2::ImportResourceOp::New();
+                                       scenic::ImportSpec spec) {
+  auto import_resource = scenic::ImportResourceOp::New();
   import_resource->id = resource_id;
   import_resource->token = std::move(token);
   import_resource->spec = spec;
@@ -51,7 +51,7 @@ Stroke::Stroke(Canvas* canvas) : Resource(canvas) {
 }
 
 StrokeGroup::StrokeGroup(Canvas* canvas) : Resource(canvas) {
-  sketchy::StrokeGroupPtr  stroke_group = sketchy::StrokeGroup::New();
+  sketchy::StrokeGroupPtr stroke_group = sketchy::StrokeGroup::New();
   auto resource_args = sketchy::ResourceArgs::New();
   resource_args->set_stroke_group(std::move(stroke_group));
   EnqueueCreateResourceOp(id(), std::move(resource_args));
@@ -66,15 +66,15 @@ void StrokeGroup::AddStroke(Stroke& stroke) {
   EnqueueOp(std::move(op));
 }
 
-ImportNode::ImportNode(Canvas* canvas, mozart::client::EntityNode& export_node)
+ImportNode::ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node)
     : Resource(canvas) {
   mx::eventpair token;
   export_node.ExportAsRequest(&token);
-  EnqueueImportResourceOp(id(), std::move(token), mozart2::ImportSpec::NODE);
+  EnqueueImportResourceOp(id(), std::move(token), scenic::ImportSpec::NODE);
 }
 
 void ImportNode::AddChild(const Resource& child) {
-  auto add_child = mozart2::AddChildOp::New();
+  auto add_child = scenic::AddChildOp::New();
   add_child->child_id = child.id();
   add_child->node_id = id();
   auto op = sketchy::Op::New();

@@ -11,7 +11,7 @@ namespace scene_manager {
 const ResourceTypeInfo Buffer::kTypeInfo = {ResourceType::kBuffer, "Buffer"};
 
 Buffer::Buffer(Session* session,
-               mozart::ResourceId id,
+               scenic::ResourceId id,
                GpuMemoryPtr memory,
                uint32_t size,
                uint32_t offset)

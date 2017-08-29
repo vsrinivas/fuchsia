@@ -9,8 +9,8 @@
 #include <string>
 
 #include "application/services/service_provider.fidl.h"
-#include "apps/mozart/lib/scene/client/resources.h"
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "apps/mozart/services/input/input_connection.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
@@ -50,11 +50,11 @@ class BaseView : private ViewListener,
   ViewContainer* GetViewContainer();
 
   // Gets a wrapper for the view's session.
-  mozart::client::Session* session() { return &session_; }
+  scenic_lib::Session* session() { return &session_; }
 
   // Gets the imported parent node to which the session's tree of nodes
   // should be attached.
-  mozart::client::ImportNode& parent_node() { return parent_node_; }
+  scenic_lib::ImportNode& parent_node() { return parent_node_; }
 
   // Gets the current view properties.
   // Returns nullptr if unknown.
@@ -93,7 +93,7 @@ class BaseView : private ViewListener,
 
   // Gets the view's metrics.
   // This value is zero until the view receives metrics from its session.
-  const mozart2::Metrics& metrics() const { return adjusted_metrics_; }
+  const scenic::Metrics& metrics() const { return adjusted_metrics_; }
 
   // Gets the input connection.
   InputConnection* input_connection() { return input_connection_.get(); }
@@ -123,13 +123,12 @@ class BaseView : private ViewListener,
   //
   // The default implementation does nothing.
   virtual void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info);
+      scenic::PresentationInfoPtr presentation_info);
 
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnSessionEvent(uint64_t presentation_time,
-                              fidl::Array<mozart2::EventPtr> events);
+  virtual void OnSessionEvent(fidl::Array<scenic::EventPtr> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event
@@ -166,8 +165,7 @@ class BaseView : private ViewListener,
                const OnEventCallback& callback) override;
 
   void PresentScene(mx_time_t presentation_time);
-  void HandleSessionEvents(uint64_t presentation_time,
-                           fidl::Array<mozart2::EventPtr> events);
+  void HandleSessionEvents(fidl::Array<scenic::EventPtr> events);
   void AdjustMetricsAndPhysicalSize();
 
   ViewManagerPtr view_manager_;
@@ -183,10 +181,10 @@ class BaseView : private ViewListener,
   SizeF logical_size_;
   Size physical_size_;
   bool need_square_metrics_ = false;
-  mozart2::Metrics original_metrics_;
-  mozart2::Metrics adjusted_metrics_;
-  mozart::client::Session session_;
-  mozart::client::ImportNode parent_node_;
+  scenic::Metrics original_metrics_;
+  scenic::Metrics adjusted_metrics_;
+  scenic_lib::Session session_;
+  scenic_lib::ImportNode parent_node_;
 
   bool invalidate_pending_ = false;
   bool present_pending_ = false;

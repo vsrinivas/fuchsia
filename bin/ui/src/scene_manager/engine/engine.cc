@@ -71,7 +71,7 @@ bool Engine::ExportResource(ResourcePtr resource, mx::eventpair endpoint) {
 }
 
 void Engine::ImportResource(ImportPtr import,
-                            mozart2::ImportSpec spec,
+                            scenic::ImportSpec spec,
                             const mx::eventpair& endpoint) {
   // The import is not captured in the OnImportResolvedCallback because we don't
   // want the reference in the bind to prevent the import from being collected.
@@ -117,8 +117,8 @@ void Engine::ScheduleUpdate(uint64_t presentation_time) {
 }
 
 void Engine::CreateSession(
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+    ::fidl::InterfaceRequest<scenic::Session> request,
+    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
   SessionId session_id = next_session_id_++;
 
   auto handler =
@@ -136,8 +136,8 @@ std::unique_ptr<DisplaySwapchain> Engine::CreateDisplaySwapchain(
 
 std::unique_ptr<SessionHandler> Engine::CreateSessionHandler(
     SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+    ::fidl::InterfaceRequest<scenic::Session> request,
+    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
   return std::make_unique<SessionHandler>(this, session_id, std::move(request),
                                           std::move(listener));
 }
@@ -241,7 +241,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 
   // TODO(MZ-216): Traversing the whole graph just to compute this is pretty
   // inefficient.  We should optimize this.
-  mozart2::Metrics metrics;
+  scenic::Metrics metrics;
   metrics.scale_x = 1.f;
   metrics.scale_y = 1.f;
   metrics.scale_z = 1.f;
@@ -256,8 +256,8 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   // have some kind of backpointer from a session to its handler.
   for (auto node : updated_nodes) {
     if (node->session()) {
-      auto event = mozart2::Event::New();
-      event->set_metrics(mozart2::MetricsEvent::New());
+      auto event = scenic::Event::New();
+      event->set_metrics(scenic::MetricsEvent::New());
       event->get_metrics()->node_id = node->id();
       event->get_metrics()->metrics = node->reported_metrics().Clone();
 
@@ -267,14 +267,14 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
 }
 
 void Engine::UpdateMetrics(Node* node,
-                           const mozart2::Metrics& parent_metrics,
+                           const scenic::Metrics& parent_metrics,
                            std::vector<Node*>* updated_nodes) {
-  mozart2::Metrics local_metrics;
+  scenic::Metrics local_metrics;
   local_metrics.scale_x = parent_metrics.scale_x * node->scale().x;
   local_metrics.scale_y = parent_metrics.scale_y * node->scale().y;
   local_metrics.scale_z = parent_metrics.scale_z * node->scale().z;
 
-  if ((node->event_mask() & mozart2::kMetricsEventMask) &&
+  if ((node->event_mask() & scenic::kMetricsEventMask) &&
       !node->reported_metrics().Equals(local_metrics)) {
     node->set_reported_metrics(local_metrics);
     updated_nodes->push_back(node);

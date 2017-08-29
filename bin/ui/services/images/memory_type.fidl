@@ -1,4 +1,4 @@
-module mozart2;
+module scenic;
 
 // Specifies the type of VMO's memory.
 enum MemoryType {

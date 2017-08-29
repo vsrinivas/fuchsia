@@ -5,8 +5,8 @@
 #pragma once
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/scene/client/resources.h"
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "apps/mozart/lib/sketchy/resources.h"
 #include "apps/mozart/services/fun/sketchy/canvas.fidl.h"
 

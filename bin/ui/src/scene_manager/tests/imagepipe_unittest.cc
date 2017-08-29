@@ -5,7 +5,7 @@
 #include "escher/util/image_utils.h"
 #include "gtest/gtest.h"
 
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 #include "apps/mozart/lib/tests/test_with_message_loop.h"
 #include "apps/mozart/src/scene_manager/acquire_fence.h"
 #include "apps/mozart/src/scene_manager/fence.h"
@@ -112,7 +112,7 @@ class ImagePipeThatCreatesDummyImages : public ImagePipe {
   // Override to create an Image without a backing escher::Image.
   ImagePtr CreateImage(Session* session,
                        MemoryPtr memory,
-                       const mozart2::ImageInfoPtr& image_info,
+                       const scenic::ImageInfoPtr& image_info,
                        uint64_t memory_offset,
                        ErrorReporter* error_reporter) override {
     return Image::NewForTesting(session, 0u, dummy_resource_manager_, memory);
@@ -133,9 +133,9 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
     size_t image_dim = 100;
     auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
 
-    auto image_info = mozart2::ImageInfo::New();
-    image_info->pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
-    image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
+    auto image_info = scenic::ImageInfo::New();
+    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+    image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
     image_info->width = image_dim;
     image_info->height = image_dim;
     image_info->stride = image_dim;
@@ -143,7 +143,7 @@ TEST_F(ImagePipeTest, ImagePipeImageIdMustNotBeZero) {
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
                          CopyVmo(checkerboard->vmo()),
-                         mozart2::MemoryType::HOST_MEMORY, 0);
+                         scenic::MemoryType::HOST_MEMORY, 0);
 
     EXPECT_EQ("ImagePipe::AddImage: Image can not be assigned an ID of 0.",
               reported_errors_.back());
@@ -164,9 +164,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     size_t image_dim = 100;
     auto checkerboard = CreateVmoWithCheckerboardPixels(image_dim, image_dim);
 
-    auto image_info = mozart2::ImageInfo::New();
-    image_info->pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
-    image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
+    auto image_info = scenic::ImageInfo::New();
+    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+    image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
     image_info->width = image_dim;
     image_info->height = image_dim;
     image_info->stride = image_dim;
@@ -174,7 +174,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     // Add the image to the image pipe with ImagePipe.AddImage().
     image_pipe->AddImage(imageId1, std::move(image_info),
                          CopyVmo(checkerboard->vmo()),
-                         mozart2::MemoryType::HOST_MEMORY, 0);
+                         scenic::MemoryType::HOST_MEMORY, 0);
   }
 
   // Make checkerboard the currently displayed image.
@@ -211,9 +211,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   {
     size_t image_dim = 100;
     auto gradient = CreateVmoWithGradientPixels(image_dim, image_dim);
-    auto image_info = mozart2::ImageInfo::New();
-    image_info->pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
-    image_info->tiling = mozart2::ImageInfo::Tiling::LINEAR;
+    auto image_info = scenic::ImageInfo::New();
+    image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+    image_info->tiling = scenic::ImageInfo::Tiling::LINEAR;
     image_info->width = image_dim;
     image_info->height = image_dim;
     image_info->stride = image_dim;
@@ -221,7 +221,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
     // Add the image to the image pipe.
     image_pipe->AddImage(imageId2, std::move(image_info),
                          CopyVmo(gradient->vmo()),
-                         mozart2::MemoryType::HOST_MEMORY, 0);
+                         scenic::MemoryType::HOST_MEMORY, 0);
   }
 
   // The first image should not have been released.

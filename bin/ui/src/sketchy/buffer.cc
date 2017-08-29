@@ -7,19 +7,19 @@
 
 namespace sketchy_service {
 
-static mozart::client::Buffer NewScenicBufferFromEscherBuffer(
+static scenic_lib::Buffer NewScenicBufferFromEscherBuffer(
     const escher::BufferPtr& buffer,
-    mozart::client::Session* session) {
+    scenic_lib::Session* session) {
   auto result = buffer->device().exportMemoryMAGMA(buffer->mem()->base());
   FTL_CHECK(result.result == vk::Result::eSuccess);
 
-  mozart::client::Memory memory(session, mx::vmo(result.value),
-                                mozart2::MemoryType::VK_DEVICE_MEMORY);
+  scenic_lib::Memory memory(session, mx::vmo(result.value),
+                            scenic::MemoryType::VK_DEVICE_MEMORY);
 
-  return mozart::client::Buffer(memory, 0, buffer->size());
+  return scenic_lib::Buffer(memory, 0, buffer->size());
 }
 
-Buffer::Buffer(mozart::client::Session* session,
+Buffer::Buffer(scenic_lib::Session* session,
                escher::BufferFactory* factory,
                vk::DeviceSize size)
     : Buffer(session,
@@ -29,7 +29,7 @@ Buffer::Buffer(mozart::client::Session* session,
                                     vk::BufferUsageFlagBits::eTransferDst,
                                 vk::MemoryPropertyFlagBits::eDeviceLocal)) {}
 
-Buffer::Buffer(mozart::client::Session* session, escher::BufferPtr buffer)
+Buffer::Buffer(scenic_lib::Session* session, escher::BufferPtr buffer)
     : escher_buffer_(std::move(buffer)),
       scenic_buffer_(NewScenicBufferFromEscherBuffer(escher_buffer_, session)) {
 }

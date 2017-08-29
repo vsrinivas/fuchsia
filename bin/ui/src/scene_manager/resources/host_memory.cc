@@ -10,7 +10,7 @@ const ResourceTypeInfo HostMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kHostMemory, "HostMemory"};
 
 HostMemory::HostMemory(Session* session,
-                       mozart::ResourceId id,
+                       scenic::ResourceId id,
                        mx::vmo vmo,
                        uint64_t vmo_size)
     : Memory(session, id, HostMemory::kTypeInfo),
@@ -19,11 +19,11 @@ HostMemory::HostMemory(Session* session,
       size_(vmo_size) {}
 
 HostMemoryPtr HostMemory::New(Session* session,
-                              mozart::ResourceId id,
+                              scenic::ResourceId id,
                               vk::Device device,
-                              const mozart2::MemoryPtr& args,
+                              const scenic::MemoryPtr& args,
                               ErrorReporter* error_reporter) {
-  if (args->memory_type != mozart2::MemoryType::HOST_MEMORY) {
+  if (args->memory_type != scenic::MemoryType::HOST_MEMORY) {
     error_reporter->ERROR() << "scene_manager::HostMemory::New(): "
                                "Memory must be of type HOST_MEMORY.";
     return nullptr;
@@ -32,7 +32,7 @@ HostMemoryPtr HostMemory::New(Session* session,
 }
 
 HostMemoryPtr HostMemory::New(Session* session,
-                              mozart::ResourceId id,
+                              scenic::ResourceId id,
                               vk::Device device,
                               mx::vmo vmo,
                               ErrorReporter* error_reporter) {

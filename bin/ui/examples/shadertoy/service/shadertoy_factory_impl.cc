@@ -13,7 +13,7 @@ ShadertoyFactoryImpl::~ShadertoyFactoryImpl() = default;
 
 void ShadertoyFactoryImpl::NewImagePipeShadertoy(
     ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-    ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe) {
+    ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) {
   bindings_.AddBinding(
       std::make_unique<ShadertoyImpl>(
           ShadertoyState::NewForImagePipe(app_, std::move(image_pipe))),

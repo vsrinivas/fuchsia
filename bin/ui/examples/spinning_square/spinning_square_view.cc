@@ -27,12 +27,12 @@ SpinningSquareView::SpinningSquareView(
                "Spinning Square"),
       background_node_(session()),
       square_node_(session()) {
-  mozart::client::Material background_material(session());
+  scenic_lib::Material background_material(session());
   background_material.SetColor(0x67, 0x3a, 0xb7, 0xff);  // Deep Purple 500
   background_node_.SetMaterial(background_material);
   parent_node().AddChild(background_node_);
 
-  mozart::client::Material square_material(session());
+  scenic_lib::Material square_material(session());
   square_material.SetColor(0xf5, 0x00, 0x57, 0xff);  // Pink A400
   square_node_.SetMaterial(square_material);
   parent_node().AddChild(square_node_);
@@ -41,7 +41,7 @@ SpinningSquareView::SpinningSquareView(
 SpinningSquareView::~SpinningSquareView() {}
 
 void SpinningSquareView::OnSceneInvalidated(
-    mozart2::PresentationInfoPtr presentation_info) {
+    scenic::PresentationInfoPtr presentation_info) {
   if (!has_logical_size())
     return;
 
@@ -57,13 +57,13 @@ void SpinningSquareView::OnSceneInvalidated(
       (presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
   const float angle = t * M_PI * 2;
 
-  mozart::client::Rectangle background_shape(session(), logical_size().width,
+  scenic_lib::Rectangle background_shape(session(), logical_size().width,
                                              logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(
       (float[]){center_x, center_y, kBackgroundElevation});
 
-  mozart::client::Rectangle square_shape(session(), square_size, square_size);
+  scenic_lib::Rectangle square_shape(session(), square_size, square_size);
   square_node_.SetShape(square_shape);
   square_node_.SetTranslation((float[]){center_x, center_y, kSquareElevation});
   square_node_.SetRotation(

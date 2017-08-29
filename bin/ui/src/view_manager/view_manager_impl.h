@@ -19,7 +19,7 @@ class ViewManagerImpl : public mozart::ViewManager {
 
  private:
   // |ViewManager|:
-  void GetSceneManager(fidl::InterfaceRequest<mozart2::SceneManager>
+  void GetSceneManager(fidl::InterfaceRequest<scenic::SceneManager>
                            scene_manager_request) override;
   void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,

@@ -19,7 +19,7 @@ class ImageBase : public Resource {
 
  protected:
   ImageBase(Session* session,
-            mozart::ResourceId id,
+            scenic::ResourceId id,
             const ResourceTypeInfo& type_info);
 };
 

@@ -12,7 +12,7 @@ class CircleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  CircleShape(Session* session, mozart::ResourceId id, float initial_radius);
+  CircleShape(Session* session, scenic::ResourceId id, float initial_radius);
 
   float radius() const { return radius_; }
 

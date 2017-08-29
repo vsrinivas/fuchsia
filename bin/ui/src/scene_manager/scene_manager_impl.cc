@@ -12,8 +12,8 @@ SceneManagerImpl::SceneManagerImpl(std::unique_ptr<Engine> engine)
 SceneManagerImpl::~SceneManagerImpl() = default;
 
 void SceneManagerImpl::CreateSession(
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+    ::fidl::InterfaceRequest<scenic::Session> request,
+    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
   engine_->CreateSession(std::move(request), std::move(listener));
 }
 
@@ -21,7 +21,7 @@ void SceneManagerImpl::GetDisplayInfo(const GetDisplayInfoCallback& callback) {
   Display* display = engine_->display_manager()->default_display();
   FTL_CHECK(display) << "There must be a default display.";
 
-  auto info = mozart2::DisplayInfo::New();
+  auto info = scenic::DisplayInfo::New();
   info->physical_width = display->width();
   info->physical_height = display->height();
   info->device_pixel_ratio = display->device_pixel_ratio();

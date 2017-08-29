@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 #define APPS_MOZART_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
@@ -21,10 +21,10 @@ class SpinningSquareView : public mozart::BaseView {
  private:
   // |BaseView|:
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info) override;
+      scenic::PresentationInfoPtr presentation_info) override;
 
-  mozart::client::ShapeNode background_node_;
-  mozart::client::ShapeNode square_node_;
+  scenic_lib::ShapeNode background_node_;
+  scenic_lib::ShapeNode square_node_;
 
   uint64_t start_time_ = 0u;
 

@@ -1,4 +1,4 @@
-module mozart2;
+module scenic;
 
 // Information about a graphical image (texture) including its format and size.
 struct ImageInfo {

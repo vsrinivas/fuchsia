@@ -6,10 +6,10 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/examples/sketchy/scene.h"
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "apps/mozart/lib/sketchy/canvas.h"
-#include "apps/mozart/services/scene/display_info.fidl-common.h"
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
+#include "apps/mozart/services/scenic/display_info.fidl-common.h"
+#include "apps/mozart/services/scenic/scene_manager.fidl.h"
 
 namespace sketchy_example {
 
@@ -21,12 +21,12 @@ class App {
 
  private:
   // Called asynchronously by constructor.
-  void Init(mozart2::DisplayInfoPtr display_info);
+  void Init(scenic::DisplayInfoPtr display_info);
 
   mtl::MessageLoop* const loop_;
   const std::unique_ptr<app::ApplicationContext> context_;
-  mozart2::SceneManagerPtr scene_manager_;
-  const std::unique_ptr<mozart::client::Session> session_;
+  scenic::SceneManagerPtr scene_manager_;
+  const std::unique_ptr<scenic_lib::Session> session_;
   const std::unique_ptr<Canvas> canvas_;
   std::unique_ptr<Scene> scene_;
 };

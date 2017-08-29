@@ -11,7 +11,7 @@
 #include "application/lib/app/application_context.h"
 #include "application/services/application_launcher.fidl.h"
 #include "apps/mozart/examples/tile/tile_params.h"
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
@@ -36,13 +36,13 @@ class TileView : public mozart::BaseView,
     explicit ViewData(const std::string& url,
                       uint32_t key,
                       app::ApplicationControllerPtr controller,
-                      mozart::client::Session* session);
+                      scenic_lib::Session* session);
     ~ViewData();
 
     const std::string url;
     const uint32_t key;
     app::ApplicationControllerPtr controller;
-    mozart::client::EntityNode host_node;
+    scenic_lib::EntityNode host_node;
 
     mozart::ViewPropertiesPtr view_properties;
     mozart::ViewInfoPtr view_info;
@@ -89,7 +89,7 @@ class TileView : public mozart::BaseView,
   TileParams params_;
 
   // The container for all views.
-  mozart::client::EntityNode container_node_;
+  scenic_lib::EntityNode container_node_;
 
   // The key we will assigned to the next child view which is added.
   uint32_t next_child_view_key_ = 1u;

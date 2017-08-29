@@ -4,19 +4,19 @@
 
 module sketchy;
 
-import "apps/mozart/services/scene/types.fidl";
+import "apps/mozart/services/scenic/types.fidl";
 
 struct Touch {
-  mozart2.vec2 position;
+  scenic.vec2 position;
   uint32 nanoseconds;
   float pressure;
 };
 
 struct CubicBezier2 {
-  mozart2.vec2 pt0;
-  mozart2.vec2 pt1;
-  mozart2.vec2 pt2;
-  mozart2.vec2 pt3;
+  scenic.vec2 pt0;
+  scenic.vec2 pt1;
+  scenic.vec2 pt2;
+  scenic.vec2 pt3;
 };
 
 struct StrokePath {

@@ -30,16 +30,16 @@ class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, mozart::ResourceId id);
+  ImagePipe(Session* session, scenic::ResourceId id);
   ImagePipe(Session* session,
-            mozart::ResourceId id,
-            ::fidl::InterfaceRequest<mozart2::ImagePipe> request);
+            scenic::ResourceId id,
+            ::fidl::InterfaceRequest<scenic::ImagePipe> request);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
   void AddImage(uint32_t image_id,
-                mozart2::ImageInfoPtr image_info,
+                scenic::ImageInfoPtr image_info,
                 mx::vmo memory,
-                mozart2::MemoryType memory_type,
+                scenic::MemoryType memory_type,
                 uint64_t memory_offset);
   void RemoveImage(uint32_t image_id);
   // TODO(MZ-152): Add Presentation time to image_pipe.fidl.
@@ -47,7 +47,7 @@ class ImagePipe : public ImageBase {
                     uint64_t presentation_time,
                     mx::event acquire_fence,
                     mx::event release_fence,
-                    const mozart2::ImagePipe::PresentImageCallback& callback);
+                    const scenic::ImagePipe::PresentImageCallback& callback);
 
   void Accept(class ResourceVisitor* visitor) override;
 
@@ -77,7 +77,7 @@ class ImagePipe : public ImageBase {
   // Virtual so that test subclasses can override.
   virtual ImagePtr CreateImage(Session* session,
                                MemoryPtr memory,
-                               const mozart2::ImageInfoPtr& image_info,
+                               const scenic::ImageInfoPtr& image_info,
                                uint64_t memory_offset,
                                ErrorReporter* error_reporter);
 
@@ -86,19 +86,19 @@ class ImagePipe : public ImageBase {
   // A |Frame| stores the arguments passed to a particular invocation of
   // Present().
   struct Frame {
-    mozart::ResourceId image_id;
+    scenic::ResourceId image_id;
     uint64_t presentation_time;
     std::unique_ptr<AcquireFence> acquire_fence;
     mx::event release_fence;
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
-    mozart2::ImagePipe::PresentImageCallback present_image_callback;
+    scenic::ImagePipe::PresentImageCallback present_image_callback;
   };
   std::deque<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
 
-  mozart::ResourceId current_image_id_ = 0;
+  scenic::ResourceId current_image_id_ = 0;
   ImagePtr current_image_;
   mx::event current_release_fence_;
 

@@ -32,7 +32,7 @@ class Shape : public Resource {
 
  protected:
   Shape(Session* session,
-        mozart::ResourceId id,
+        scenic::ResourceId id,
         const ResourceTypeInfo& type_info);
 };
 

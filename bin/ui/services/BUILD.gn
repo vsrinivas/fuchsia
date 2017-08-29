@@ -11,7 +11,7 @@ group("services") {
     "input",
     "input/cpp",
     "presentation",
-    "scene",
+    "scenic",
     "views",
     "views/cpp",
   ]

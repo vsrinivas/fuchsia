@@ -12,15 +12,15 @@ namespace scene_manager {
 SessionHandler::SessionHandler(
     Engine* engine,
     SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
+    ::fidl::InterfaceRequest<scenic::Session> request,
+    ::fidl::InterfaceHandle<scenic::SessionListener> listener)
     : engine_(engine),
       session_(::ftl::MakeRefCounted<scene_manager::Session>(
           session_id,
           engine_,
           this,
           static_cast<ErrorReporter*>(this))),
-      listener_(::fidl::InterfacePtr<mozart2::SessionListener>::Create(
+      listener_(::fidl::InterfacePtr<scenic::SessionListener>::Create(
           std::move(listener))) {
   FTL_DCHECK(engine);
 
@@ -30,14 +30,13 @@ SessionHandler::SessionHandler(
 
 SessionHandler::~SessionHandler() {}
 
-void SessionHandler::SendEvents(uint64_t presentation_time,
-                                ::fidl::Array<mozart2::EventPtr> events) {
+void SessionHandler::SendEvents(::fidl::Array<scenic::EventPtr> events) {
   if (listener_) {
-    listener_->OnEvent(presentation_time, std::move(events));
+    listener_->OnEvent(std::move(events));
   }
 }
 
-void SessionHandler::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
+void SessionHandler::Enqueue(::fidl::Array<scenic::OpPtr> ops) {
   // TODO: Add them all at once instead of iterating.  The problem
   // is that ::fidl::Array doesn't support this.  Or, at least reserve
   // enough space.  But ::fidl::Array doesn't support this, either.
@@ -56,8 +55,8 @@ void SessionHandler::Present(uint64_t presentation_time,
 }
 
 void SessionHandler::HitTest(uint32_t node_id,
-                             mozart2::vec3Ptr ray_origin,
-                             mozart2::vec3Ptr ray_direction,
+                             scenic::vec3Ptr ray_origin,
+                             scenic::vec3Ptr ray_direction,
                              const HitTestCallback& callback) {
   session_->HitTest(node_id, std::move(ray_origin), std::move(ray_direction),
                     callback);

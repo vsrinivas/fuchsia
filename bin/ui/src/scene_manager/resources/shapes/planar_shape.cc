@@ -7,7 +7,7 @@
 namespace scene_manager {
 
 PlanarShape::PlanarShape(Session* session,
-                         mozart::ResourceId id,
+                         scenic::ResourceId id,
                          const ResourceTypeInfo& type_info)
     : Shape(session, id, type_info) {}
 

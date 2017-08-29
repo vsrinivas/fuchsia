@@ -6,8 +6,8 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "apps/mozart/lib/scene/client/resources.h"
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 
 namespace hello_scene_manager {
 
@@ -17,7 +17,7 @@ class App {
 
  private:
   // Called asynchronously by constructor.
-  void Init(mozart2::DisplayInfoPtr display_info);
+  void Init(scenic::DisplayInfoPtr display_info);
 
   // Updates and presents the scene.  Called first by Init().  Each invocation
   // schedules another call to Update() when the result of the previous
@@ -29,19 +29,19 @@ class App {
   void ReleaseSessionResources();
 
   void InitCheckerboardMaterial(
-      mozart::client::Material* uninitialized_material);
+      scenic_lib::Material* uninitialized_material);
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   mtl::MessageLoop* loop_;
-  mozart2::SceneManagerPtr scene_manager_;
+  scenic::SceneManagerPtr scene_manager_;
 
-  std::unique_ptr<mozart::client::Session> session_;
-  std::unique_ptr<mozart::client::DisplayCompositor> compositor_;
-  std::unique_ptr<mozart::client::Camera> camera_;
+  std::unique_ptr<scenic_lib::Session> session_;
+  std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
+  std::unique_ptr<scenic_lib::Camera> camera_;
 
-  std::unique_ptr<mozart::client::ShapeNode> rrect_node_;
-  std::unique_ptr<mozart::client::ShapeNode> clipper_1_;
-  std::unique_ptr<mozart::client::ShapeNode> clipper_2_;
+  std::unique_ptr<scenic_lib::ShapeNode> rrect_node_;
+  std::unique_ptr<scenic_lib::ShapeNode> clipper_1_;
+  std::unique_ptr<scenic_lib::ShapeNode> clipper_2_;
 
   // Time of the first update.  Animation of the "pane" content is based on the
   // time elapsed since this time.

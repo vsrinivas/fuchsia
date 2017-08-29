@@ -15,7 +15,7 @@ const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
 
 RoundedRectangleShape::RoundedRectangleShape(
     Session* session,
-    mozart::ResourceId id,
+    scenic::ResourceId id,
     const escher::RoundedRectSpec& spec,
     escher::MeshPtr mesh)
     : PlanarShape(session, id, RoundedRectangleShape::kTypeInfo),

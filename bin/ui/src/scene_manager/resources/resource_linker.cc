@@ -69,7 +69,7 @@ bool ResourceLinker::ExportResource(ResourcePtr resource,
 }
 
 void ResourceLinker::ImportResource(
-    mozart2::ImportSpec import_spec,
+    scenic::ImportSpec import_spec,
     const mx::eventpair& import_token,
     OnImportResolvedCallback import_resolved_callback) {
   // Make sure a callback is present.

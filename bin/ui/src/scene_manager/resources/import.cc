@@ -9,10 +9,10 @@
 namespace scene_manager {
 namespace {
 ResourcePtr CreateDelegate(Session* session,
-                           mozart::ResourceId id,
-                           mozart2::ImportSpec spec) {
+                           scenic::ResourceId id,
+                           scenic::ImportSpec spec) {
   switch (spec) {
-    case mozart2::ImportSpec::NODE:
+    case scenic::ImportSpec::NODE:
       return ftl::MakeRefCounted<EntityNode>(session, id);
   }
   return nullptr;
@@ -23,8 +23,8 @@ constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
                                                 "Import"};
 
 Import::Import(Session* session,
-               mozart::ResourceId id,
-               mozart2::ImportSpec spec,
+               scenic::ResourceId id,
+               scenic::ImportSpec spec,
                mx::eventpair import_token)
     : Resource(session, id, Import::kTypeInfo),
       import_token_(std::move(import_token)),

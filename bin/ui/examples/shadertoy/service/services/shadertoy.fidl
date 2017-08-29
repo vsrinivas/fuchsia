@@ -4,7 +4,7 @@
 
 module mozart.example;
 
-import "apps/mozart/services/scene/types.fidl";
+import "apps/mozart/services/scenic/types.fidl";
 import "apps/mozart/services/images/image_pipe.fidl";
 
 // Shadertoy (www.shadertoy.com) is an online community and tool for creating
@@ -40,10 +40,10 @@ interface Shadertoy {
   // i_mouse.zw
   //   - (when mouse is down) the current position of the mouse
   //   - (when mouse is up) the position of the last mouse-up event
-  SetMouse(mozart2.vec4 i_mouse);
+  SetMouse(scenic.vec4 i_mouse);
 
   // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
   // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
   // TODO: implement cubemap support.
-  SetImage(uint32 channel, mozart2.ImagePipe& image_pipe);
+  SetImage(uint32 channel, scenic.ImagePipe& image_pipe);
 };

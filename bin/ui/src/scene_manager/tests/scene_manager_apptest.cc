@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/synchronization/waitable_event.h"
 
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 #include "apps/mozart/lib/tests/test_with_message_loop.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene_manager/tests/mocks.h"
@@ -16,7 +16,7 @@ namespace scene_manager {
 namespace test {
 
 TEST_F(SceneManagerTest, CreateAndDestroySession) {
-  mozart2::SessionPtr session;
+  scenic::SessionPtr session;
   EXPECT_EQ(0U, engine()->GetSessionCount());
   manager_->CreateSession(session.NewRequest(), nullptr);
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
@@ -36,7 +36,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   // The release fences should be signalled after a subsequent Present.
   EXPECT_EQ(0u, engine()->GetSessionCount());
 
-  mozart2::SessionPtr session;
+  scenic::SessionPtr session;
   manager_->CreateSession(session.NewRequest(), nullptr);
 
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
@@ -44,9 +44,9 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   auto handler = static_cast<SessionHandlerForTest*>(engine()->FindSession(1));
 
   {
-    ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
-    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
+    ::fidl::Array<scenic::OpPtr> ops;
+    ops.push_back(scenic_lib::NewCreateCircleOp(1, 50.f));
+    ops.push_back(scenic_lib::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
   }
   RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
@@ -68,7 +68,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   // Call Present with release fences.
   session->Present(0u, ::fidl::Array<mx::event>::New(0),
                    std::move(release_fences),
-                   [](mozart2::PresentationInfoPtr info) {});
+                   [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
@@ -77,7 +77,7 @@ TEST_F(SceneManagerTest, ReleaseFences) {
   // Call Present again with no release fences.
   session->Present(0u, ::fidl::Array<mx::event>::New(0),
                    ::fidl::Array<mx::event>::New(0),
-                   [](mozart2::PresentationInfoPtr info) {});
+                   [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
   EXPECT_EQ(2u, handler->present_count());
 
@@ -91,7 +91,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   // Present, and not until the acquire fence has been signalled.
   EXPECT_EQ(0u, engine()->GetSessionCount());
 
-  mozart2::SessionPtr session;
+  scenic::SessionPtr session;
   manager_->CreateSession(session.NewRequest(), nullptr);
 
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
@@ -99,9 +99,9 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   auto handler = static_cast<SessionHandlerForTest*>(engine()->FindSession(1));
 
   {
-    ::fidl::Array<mozart2::OpPtr> ops;
-    ops.push_back(mozart::NewCreateCircleOp(1, 50.f));
-    ops.push_back(mozart::NewCreateCircleOp(2, 25.f));
+    ::fidl::Array<scenic::OpPtr> ops;
+    ops.push_back(scenic_lib::NewCreateCircleOp(1, 50.f));
+    ops.push_back(scenic_lib::NewCreateCircleOp(2, 25.f));
     session->Enqueue(std::move(ops));
   }
   RUN_MESSAGE_LOOP_UNTIL(handler->enqueue_count() == 1);
@@ -121,7 +121,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
 
   // Call Present with both the acquire and release fences.
   session->Present(0u, std::move(acquire_fences), std::move(release_fences),
-                   [](mozart2::PresentationInfoPtr info) {});
+                   [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 1);
   EXPECT_EQ(1u, handler->present_count());
 
@@ -130,7 +130,7 @@ TEST_F(SceneManagerTest, AcquireAndReleaseFences) {
   // Call Present again with no fences.
   session->Present(0u, ::fidl::Array<mx::event>::New(0),
                    ::fidl::Array<mx::event>::New(0),
-                   [](mozart2::PresentationInfoPtr info) {});
+                   [](scenic::PresentationInfoPtr info) {});
   RUN_MESSAGE_LOOP_UNTIL(handler->present_count() == 2);
 
   EXPECT_FALSE(IsFenceSignalled(release_fence));

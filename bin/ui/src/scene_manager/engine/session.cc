@@ -43,10 +43,10 @@ namespace {
 // or a variable.
 // TODO: There should also be a convenient way of type-checking a variable;
 // this will necessarily involve looking up the value in the ResourceMap.
-constexpr std::array<mozart2::Value::Tag, 2> kFloatValueTypes{
-    {mozart2::Value::Tag::VECTOR1, mozart2::Value::Tag::VARIABLE_ID}};
-constexpr std::array<mozart2::Value::Tag, 2> kVec3ValueTypes{
-    {mozart2::Value::Tag::VECTOR3, mozart2::Value::Tag::VARIABLE_ID}};
+constexpr std::array<scenic::Value::Tag, 2> kFloatValueTypes{
+    {scenic::Value::Tag::VECTOR1, scenic::Value::Tag::VARIABLE_ID}};
+constexpr std::array<scenic::Value::Tag, 2> kVec3ValueTypes{
+    {scenic::Value::Tag::VECTOR3, scenic::Value::Tag::VARIABLE_ID}};
 
 }  // anonymous namespace
 
@@ -68,75 +68,75 @@ Session::~Session() {
   FTL_DCHECK(!is_valid_);
 }
 
-bool Session::ApplyOp(const mozart2::OpPtr& op) {
+bool Session::ApplyOp(const scenic::OpPtr& op) {
   switch (op->which()) {
-    case mozart2::Op::Tag::CREATE_RESOURCE:
+    case scenic::Op::Tag::CREATE_RESOURCE:
       return ApplyCreateResourceOp(op->get_create_resource());
-    case mozart2::Op::Tag::RELEASE_RESOURCE:
+    case scenic::Op::Tag::RELEASE_RESOURCE:
       return ApplyReleaseResourceOp(op->get_release_resource());
-    case mozart2::Op::Tag::EXPORT_RESOURCE:
+    case scenic::Op::Tag::EXPORT_RESOURCE:
       return ApplyExportResourceOp(op->get_export_resource());
-    case mozart2::Op::Tag::IMPORT_RESOURCE:
+    case scenic::Op::Tag::IMPORT_RESOURCE:
       return ApplyImportResourceOp(op->get_import_resource());
-    case mozart2::Op::Tag::ADD_CHILD:
+    case scenic::Op::Tag::ADD_CHILD:
       return ApplyAddChildOp(op->get_add_child());
-    case mozart2::Op::Tag::ADD_PART:
+    case scenic::Op::Tag::ADD_PART:
       return ApplyAddPartOp(op->get_add_part());
-    case mozart2::Op::Tag::DETACH:
+    case scenic::Op::Tag::DETACH:
       return ApplyDetachOp(op->get_detach());
-    case mozart2::Op::Tag::DETACH_CHILDREN:
+    case scenic::Op::Tag::DETACH_CHILDREN:
       return ApplyDetachChildrenOp(op->get_detach_children());
-    case mozart2::Op::Tag::SET_TAG:
+    case scenic::Op::Tag::SET_TAG:
       return ApplySetTagOp(op->get_set_tag());
-    case mozart2::Op::Tag::SET_TRANSLATION:
+    case scenic::Op::Tag::SET_TRANSLATION:
       return ApplySetTranslationOp(op->get_set_translation());
-    case mozart2::Op::Tag::SET_SCALE:
+    case scenic::Op::Tag::SET_SCALE:
       return ApplySetScaleOp(op->get_set_scale());
-    case mozart2::Op::Tag::SET_ROTATION:
+    case scenic::Op::Tag::SET_ROTATION:
       return ApplySetRotationOp(op->get_set_rotation());
-    case mozart2::Op::Tag::SET_ANCHOR:
+    case scenic::Op::Tag::SET_ANCHOR:
       return ApplySetAnchorOp(op->get_set_anchor());
-    case mozart2::Op::Tag::SET_SIZE:
+    case scenic::Op::Tag::SET_SIZE:
       return ApplySetSizeOp(op->get_set_size());
-    case mozart2::Op::Tag::SET_SHAPE:
+    case scenic::Op::Tag::SET_SHAPE:
       return ApplySetShapeOp(op->get_set_shape());
-    case mozart2::Op::Tag::SET_MATERIAL:
+    case scenic::Op::Tag::SET_MATERIAL:
       return ApplySetMaterialOp(op->get_set_material());
-    case mozart2::Op::Tag::SET_CLIP:
+    case scenic::Op::Tag::SET_CLIP:
       return ApplySetClipOp(op->get_set_clip());
-    case mozart2::Op::Tag::SET_HIT_TEST_BEHAVIOR:
+    case scenic::Op::Tag::SET_HIT_TEST_BEHAVIOR:
       return ApplySetHitTestBehaviorOp(op->get_set_hit_test_behavior());
-    case mozart2::Op::Tag::SET_CAMERA:
+    case scenic::Op::Tag::SET_CAMERA:
       return ApplySetCameraOp(op->get_set_camera());
-    case mozart2::Op::Tag::SET_CAMERA_PROJECTION:
+    case scenic::Op::Tag::SET_CAMERA_PROJECTION:
       return ApplySetCameraProjectionOp(op->get_set_camera_projection());
-    case mozart2::Op::Tag::SET_LIGHT_INTENSITY:
+    case scenic::Op::Tag::SET_LIGHT_INTENSITY:
       return ApplySetLightIntensityOp(op->get_set_light_intensity());
-    case mozart2::Op::Tag::SET_TEXTURE:
+    case scenic::Op::Tag::SET_TEXTURE:
       return ApplySetTextureOp(op->get_set_texture());
-    case mozart2::Op::Tag::SET_COLOR:
+    case scenic::Op::Tag::SET_COLOR:
       return ApplySetColorOp(op->get_set_color());
-    case mozart2::Op::Tag::BIND_MESH_BUFFERS:
+    case scenic::Op::Tag::BIND_MESH_BUFFERS:
       return ApplyBindMeshBuffersOp(op->get_bind_mesh_buffers());
-    case mozart2::Op::Tag::ADD_LAYER:
+    case scenic::Op::Tag::ADD_LAYER:
       return ApplyAddLayerOp(op->get_add_layer());
-    case mozart2::Op::Tag::SET_LAYER_STACK:
+    case scenic::Op::Tag::SET_LAYER_STACK:
       return ApplySetLayerStackOp(op->get_set_layer_stack());
-    case mozart2::Op::Tag::SET_RENDERER:
+    case scenic::Op::Tag::SET_RENDERER:
       return ApplySetRendererOp(op->get_set_renderer());
-    case mozart2::Op::Tag::SET_EVENT_MASK:
+    case scenic::Op::Tag::SET_EVENT_MASK:
       return ApplySetEventMaskOp(op->get_set_event_mask());
-    case mozart2::Op::Tag::SET_LABEL:
+    case scenic::Op::Tag::SET_LABEL:
       return ApplySetLabelOp(op->get_set_label());
-    case mozart2::Op::Tag::__UNKNOWN__:
+    case scenic::Op::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FTL_CHECK(false);
       return false;
   }
 }
 
-bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
-  const mozart::ResourceId id = op->id;
+bool Session::ApplyCreateResourceOp(const scenic::CreateResourceOpPtr& op) {
+  const scenic::ResourceId id = op->id;
   if (id == 0) {
     error_reporter_->ERROR()
         << "scene_manager::Session::ApplyCreateResourceOp(): invalid ID: "
@@ -145,64 +145,64 @@ bool Session::ApplyCreateResourceOp(const mozart2::CreateResourceOpPtr& op) {
   }
 
   switch (op->resource->which()) {
-    case mozart2::Resource::Tag::MEMORY:
+    case scenic::Resource::Tag::MEMORY:
       return ApplyCreateMemory(id, op->resource->get_memory());
-    case mozart2::Resource::Tag::IMAGE:
+    case scenic::Resource::Tag::IMAGE:
       return ApplyCreateImage(id, op->resource->get_image());
-    case mozart2::Resource::Tag::IMAGE_PIPE:
+    case scenic::Resource::Tag::IMAGE_PIPE:
       return ApplyCreateImagePipe(id, op->resource->get_image_pipe());
-    case mozart2::Resource::Tag::BUFFER:
+    case scenic::Resource::Tag::BUFFER:
       return ApplyCreateBuffer(id, op->resource->get_buffer());
-    case mozart2::Resource::Tag::SCENE:
+    case scenic::Resource::Tag::SCENE:
       return ApplyCreateScene(id, op->resource->get_scene());
-    case mozart2::Resource::Tag::CAMERA:
+    case scenic::Resource::Tag::CAMERA:
       return ApplyCreateCamera(id, op->resource->get_camera());
-    case mozart2::Resource::Tag::RENDERER:
+    case scenic::Resource::Tag::RENDERER:
       return ApplyCreateRenderer(id, op->resource->get_renderer());
-    case mozart2::Resource::Tag::DIRECTIONAL_LIGHT:
+    case scenic::Resource::Tag::DIRECTIONAL_LIGHT:
       return ApplyCreateDirectionalLight(id,
                                          op->resource->get_directional_light());
-    case mozart2::Resource::Tag::RECTANGLE:
+    case scenic::Resource::Tag::RECTANGLE:
       return ApplyCreateRectangle(id, op->resource->get_rectangle());
-    case mozart2::Resource::Tag::ROUNDED_RECTANGLE:
+    case scenic::Resource::Tag::ROUNDED_RECTANGLE:
       return ApplyCreateRoundedRectangle(id,
                                          op->resource->get_rounded_rectangle());
-    case mozart2::Resource::Tag::CIRCLE:
+    case scenic::Resource::Tag::CIRCLE:
       return ApplyCreateCircle(id, op->resource->get_circle());
-    case mozart2::Resource::Tag::MESH:
+    case scenic::Resource::Tag::MESH:
       return ApplyCreateMesh(id, op->resource->get_mesh());
-    case mozart2::Resource::Tag::MATERIAL:
+    case scenic::Resource::Tag::MATERIAL:
       return ApplyCreateMaterial(id, op->resource->get_material());
-    case mozart2::Resource::Tag::CLIP_NODE:
+    case scenic::Resource::Tag::CLIP_NODE:
       return ApplyCreateClipNode(id, op->resource->get_clip_node());
-    case mozart2::Resource::Tag::ENTITY_NODE:
+    case scenic::Resource::Tag::ENTITY_NODE:
       return ApplyCreateEntityNode(id, op->resource->get_entity_node());
-    case mozart2::Resource::Tag::SHAPE_NODE:
+    case scenic::Resource::Tag::SHAPE_NODE:
       return ApplyCreateShapeNode(id, op->resource->get_shape_node());
-    case mozart2::Resource::Tag::DISPLAY_COMPOSITOR:
+    case scenic::Resource::Tag::DISPLAY_COMPOSITOR:
       return ApplyCreateDisplayCompositor(
           id, op->resource->get_display_compositor());
-    case mozart2::Resource::Tag::IMAGE_PIPE_COMPOSITOR:
+    case scenic::Resource::Tag::IMAGE_PIPE_COMPOSITOR:
       return ApplyCreateImagePipeCompositor(
           id, op->resource->get_image_pipe_compositor());
-    case mozart2::Resource::Tag::LAYER_STACK:
+    case scenic::Resource::Tag::LAYER_STACK:
       return ApplyCreateLayerStack(id, op->resource->get_layer_stack());
-    case mozart2::Resource::Tag::LAYER:
+    case scenic::Resource::Tag::LAYER:
       return ApplyCreateLayer(id, op->resource->get_layer());
-    case mozart2::Resource::Tag::VARIABLE:
+    case scenic::Resource::Tag::VARIABLE:
       return ApplyCreateVariable(id, op->resource->get_variable());
-    case mozart2::Resource::Tag::__UNKNOWN__:
+    case scenic::Resource::Tag::__UNKNOWN__:
       // FIDL validation should make this impossible.
       FTL_CHECK(false);
       return false;
   }
 }
 
-bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
+bool Session::ApplyReleaseResourceOp(const scenic::ReleaseResourceOpPtr& op) {
   return resources_.RemoveResource(op->id);
 }
 
-bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
+bool Session::ApplyExportResourceOp(const scenic::ExportResourceOpPtr& op) {
   if (!op->token) {
     error_reporter_->ERROR()
         << "scene_manager::Session::ApplyExportResourceOp(): "
@@ -215,7 +215,7 @@ bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
   return false;
 }
 
-bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
+bool Session::ApplyImportResourceOp(const scenic::ImportResourceOpPtr& op) {
   if (!op->token) {
     error_reporter_->ERROR()
         << "scene_manager::Session::ApplyImportResourceOp(): "
@@ -228,7 +228,7 @@ bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
   return resources_.AddResource(op->id, std::move(import));
 }
 
-bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {
+bool Session::ApplyAddChildOp(const scenic::AddChildOpPtr& op) {
   // Find the parent and child nodes.
   if (auto parent_node = resources_.FindResource<Node>(op->node_id)) {
     if (auto child_node = resources_.FindResource<Node>(op->child_id)) {
@@ -238,7 +238,7 @@ bool Session::ApplyAddChildOp(const mozart2::AddChildOpPtr& op) {
   return false;
 }
 
-bool Session::ApplyAddPartOp(const mozart2::AddPartOpPtr& op) {
+bool Session::ApplyAddPartOp(const scenic::AddPartOpPtr& op) {
   // Find the parent and part nodes.
   if (auto parent_node = resources_.FindResource<Node>(op->node_id)) {
     if (auto part_node = resources_.FindResource<Node>(op->part_id)) {
@@ -248,28 +248,28 @@ bool Session::ApplyAddPartOp(const mozart2::AddPartOpPtr& op) {
   return false;
 }
 
-bool Session::ApplyDetachOp(const mozart2::DetachOpPtr& op) {
+bool Session::ApplyDetachOp(const scenic::DetachOpPtr& op) {
   if (auto resource = resources_.FindResource<Resource>(op->id)) {
     return resource->Detach();
   }
   return false;
 }
 
-bool Session::ApplyDetachChildrenOp(const mozart2::DetachChildrenOpPtr& op) {
+bool Session::ApplyDetachChildrenOp(const scenic::DetachChildrenOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->node_id)) {
     return node->DetachChildren();
   }
   return false;
 }
 
-bool Session::ApplySetTagOp(const mozart2::SetTagOpPtr& op) {
+bool Session::ApplySetTagOp(const scenic::SetTagOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->node_id)) {
     return node->SetTagValue(op->tag_value);
   }
   return false;
 }
 
-bool Session::ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op) {
+bool Session::ApplySetTranslationOp(const scenic::SetTranslationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
       error_reporter_->ERROR()
@@ -282,7 +282,7 @@ bool Session::ApplySetTranslationOp(const mozart2::SetTranslationOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetScaleOp(const mozart2::SetScaleOpPtr& op) {
+bool Session::ApplySetScaleOp(const scenic::SetScaleOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
       error_reporter_->ERROR() << "scene_manager::Session::ApplySetScaleOp(): "
@@ -294,7 +294,7 @@ bool Session::ApplySetScaleOp(const mozart2::SetScaleOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetRotationOp(const mozart2::SetRotationOpPtr& op) {
+bool Session::ApplySetRotationOp(const scenic::SetRotationOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
       error_reporter_->ERROR()
@@ -307,7 +307,7 @@ bool Session::ApplySetRotationOp(const mozart2::SetRotationOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op) {
+bool Session::ApplySetAnchorOp(const scenic::SetAnchorOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->id)) {
     if (IsVariable(op->value)) {
       error_reporter_->ERROR() << "scene_manager::Session::ApplySetAnchorOp(): "
@@ -319,7 +319,7 @@ bool Session::ApplySetAnchorOp(const mozart2::SetAnchorOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetSizeOp(const mozart2::SetSizeOpPtr& op) {
+bool Session::ApplySetSizeOp(const scenic::SetSizeOpPtr& op) {
   if (auto layer = resources_.FindResource<Layer>(op->id)) {
     if (IsVariable(op->value)) {
       error_reporter_->ERROR() << "scene_manager::Session::ApplySetSizeOp(): "
@@ -331,7 +331,7 @@ bool Session::ApplySetSizeOp(const mozart2::SetSizeOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetShapeOp(const mozart2::SetShapeOpPtr& op) {
+bool Session::ApplySetShapeOp(const scenic::SetShapeOpPtr& op) {
   if (auto node = resources_.FindResource<ShapeNode>(op->node_id)) {
     if (auto shape = resources_.FindResource<Shape>(op->shape_id)) {
       node->SetShape(std::move(shape));
@@ -341,7 +341,7 @@ bool Session::ApplySetShapeOp(const mozart2::SetShapeOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
+bool Session::ApplySetMaterialOp(const scenic::SetMaterialOpPtr& op) {
   if (auto node = resources_.FindResource<ShapeNode>(op->node_id)) {
     if (auto material = resources_.FindResource<Material>(op->material_id)) {
       node->SetMaterial(std::move(material));
@@ -351,7 +351,7 @@ bool Session::ApplySetMaterialOp(const mozart2::SetMaterialOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
+bool Session::ApplySetClipOp(const scenic::SetClipOpPtr& op) {
   if (op->clip_id != 0) {
     // TODO(MZ-167): Support non-zero clip_id.
     error_reporter_->ERROR()
@@ -368,7 +368,7 @@ bool Session::ApplySetClipOp(const mozart2::SetClipOpPtr& op) {
 }
 
 bool Session::ApplySetHitTestBehaviorOp(
-    const mozart2::SetHitTestBehaviorOpPtr& op) {
+    const scenic::SetHitTestBehaviorOpPtr& op) {
   if (auto node = resources_.FindResource<Node>(op->node_id)) {
     return node->SetHitTestBehavior(op->hit_test_behavior);
   }
@@ -376,7 +376,7 @@ bool Session::ApplySetHitTestBehaviorOp(
   return false;
 }
 
-bool Session::ApplySetCameraOp(const mozart2::SetCameraOpPtr& op) {
+bool Session::ApplySetCameraOp(const scenic::SetCameraOpPtr& op) {
   if (auto renderer = resources_.FindResource<Renderer>(op->renderer_id)) {
     if (op->camera_id == 0) {
       renderer->SetCamera(nullptr);
@@ -389,7 +389,7 @@ bool Session::ApplySetCameraOp(const mozart2::SetCameraOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
+bool Session::ApplySetTextureOp(const scenic::SetTextureOpPtr& op) {
   if (auto material = resources_.FindResource<Material>(op->material_id)) {
     if (op->texture_id == 0) {
       material->SetTexture(nullptr);
@@ -403,7 +403,7 @@ bool Session::ApplySetTextureOp(const mozart2::SetTextureOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
+bool Session::ApplySetColorOp(const scenic::SetColorOpPtr& op) {
   if (auto material = resources_.FindResource<Material>(op->material_id)) {
     if (IsVariable(op->color)) {
       error_reporter_->ERROR() << "scene_manager::Session::ApplySetColorOp(): "
@@ -422,7 +422,7 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
   return false;
 }
 
-bool Session::ApplyBindMeshBuffersOp(const mozart2::BindMeshBuffersOpPtr& op) {
+bool Session::ApplyBindMeshBuffersOp(const scenic::BindMeshBuffersOpPtr& op) {
   auto mesh = resources_.FindResource<MeshShape>(op->mesh_id);
   auto index_buffer = resources_.FindResource<Buffer>(op->index_buffer_id);
   auto vertex_buffer = resources_.FindResource<Buffer>(op->vertex_buffer_id);
@@ -436,7 +436,7 @@ bool Session::ApplyBindMeshBuffersOp(const mozart2::BindMeshBuffersOpPtr& op) {
       op->vertex_offset, op->vertex_count, Unwrap(op->bounding_box));
 }
 
-bool Session::ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op) {
+bool Session::ApplyAddLayerOp(const scenic::AddLayerOpPtr& op) {
   auto layer_stack = resources_.FindResource<LayerStack>(op->layer_stack_id);
   auto layer = resources_.FindResource<Layer>(op->layer_id);
   if (layer_stack && layer) {
@@ -445,7 +445,7 @@ bool Session::ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op) {
+bool Session::ApplySetLayerStackOp(const scenic::SetLayerStackOpPtr& op) {
   auto compositor = resources_.FindResource<Compositor>(op->compositor_id);
   auto layer_stack = resources_.FindResource<LayerStack>(op->layer_stack_id);
   if (compositor && layer_stack) {
@@ -454,7 +454,7 @@ bool Session::ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetRendererOp(const mozart2::SetRendererOpPtr& op) {
+bool Session::ApplySetRendererOp(const scenic::SetRendererOpPtr& op) {
   auto layer = resources_.FindResource<Layer>(op->layer_id);
   auto renderer = resources_.FindResource<Renderer>(op->renderer_id);
 
@@ -464,7 +464,7 @@ bool Session::ApplySetRendererOp(const mozart2::SetRendererOpPtr& op) {
   return false;
 }
 
-bool Session::ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op) {
+bool Session::ApplySetEventMaskOp(const scenic::SetEventMaskOpPtr& op) {
   if (auto r = resources_.FindResource<Resource>(op->id)) {
     return r->SetEventMask(op->event_mask);
   }
@@ -472,7 +472,7 @@ bool Session::ApplySetEventMaskOp(const mozart2::SetEventMaskOpPtr& op) {
 }
 
 bool Session::ApplySetCameraProjectionOp(
-    const mozart2::SetCameraProjectionOpPtr& op) {
+    const scenic::SetCameraProjectionOpPtr& op) {
   // TODO(MZ-123): support variables.
   if (IsVariable(op->eye_position) || IsVariable(op->eye_look_at) ||
       IsVariable(op->eye_up) || IsVariable(op->fovy)) {
@@ -490,7 +490,7 @@ bool Session::ApplySetCameraProjectionOp(
 }
 
 bool Session::ApplySetLightIntensityOp(
-    const mozart2::SetLightIntensityOpPtr& op) {
+    const scenic::SetLightIntensityOpPtr& op) {
   // TODO(MZ-123): support variables.
   if (IsVariable(op->intensity)) {
     error_reporter_->ERROR()
@@ -510,21 +510,21 @@ bool Session::ApplySetLightIntensityOp(
   return false;
 }
 
-bool Session::ApplySetLabelOp(const mozart2::SetLabelOpPtr& op) {
+bool Session::ApplySetLabelOp(const scenic::SetLabelOpPtr& op) {
   if (auto r = resources_.FindResource<Resource>(op->id)) {
     return r->SetLabel(op->label.get());
   }
   return false;
 }
 
-bool Session::ApplyCreateMemory(mozart::ResourceId id,
-                                const mozart2::MemoryPtr& args) {
+bool Session::ApplyCreateMemory(scenic::ResourceId id,
+                                const scenic::MemoryPtr& args) {
   auto memory = CreateMemory(id, args);
   return memory ? resources_.AddResource(id, std::move(memory)) : false;
 }
 
-bool Session::ApplyCreateImage(mozart::ResourceId id,
-                               const mozart2::ImagePtr& args) {
+bool Session::ApplyCreateImage(scenic::ResourceId id,
+                               const scenic::ImagePtr& args) {
   if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
     if (auto image = CreateImage(id, std::move(memory), args)) {
       return resources_.AddResource(id, std::move(image));
@@ -534,15 +534,15 @@ bool Session::ApplyCreateImage(mozart::ResourceId id,
   return false;
 }
 
-bool Session::ApplyCreateImagePipe(mozart::ResourceId id,
-                                   const mozart2::ImagePipeArgsPtr& args) {
+bool Session::ApplyCreateImagePipe(scenic::ResourceId id,
+                                   const scenic::ImagePipeArgsPtr& args) {
   auto image_pipe = ftl::MakeRefCounted<ImagePipe>(
       this, id, std::move(args->image_pipe_request));
   return resources_.AddResource(id, image_pipe);
 }
 
-bool Session::ApplyCreateBuffer(mozart::ResourceId id,
-                                const mozart2::BufferPtr& args) {
+bool Session::ApplyCreateBuffer(scenic::ResourceId id,
+                                const scenic::BufferPtr& args) {
   if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
     if (auto buffer = CreateBuffer(id, std::move(memory), args->memory_offset,
                                    args->num_bytes)) {
@@ -552,27 +552,27 @@ bool Session::ApplyCreateBuffer(mozart::ResourceId id,
   return false;
 }
 
-bool Session::ApplyCreateScene(mozart::ResourceId id,
-                               const mozart2::ScenePtr& args) {
+bool Session::ApplyCreateScene(scenic::ResourceId id,
+                               const scenic::ScenePtr& args) {
   auto scene = CreateScene(id, args);
   return scene ? resources_.AddResource(id, std::move(scene)) : false;
 }
 
-bool Session::ApplyCreateCamera(mozart::ResourceId id,
-                                const mozart2::CameraPtr& args) {
+bool Session::ApplyCreateCamera(scenic::ResourceId id,
+                                const scenic::CameraPtr& args) {
   auto camera = CreateCamera(id, args);
   return camera ? resources_.AddResource(id, std::move(camera)) : false;
 }
 
-bool Session::ApplyCreateRenderer(mozart::ResourceId id,
-                                  const mozart2::RendererPtr& args) {
+bool Session::ApplyCreateRenderer(scenic::ResourceId id,
+                                  const scenic::RendererPtr& args) {
   auto renderer = CreateRenderer(id, args);
   return renderer ? resources_.AddResource(id, std::move(renderer)) : false;
 }
 
 bool Session::ApplyCreateDirectionalLight(
-    mozart::ResourceId id,
-    const mozart2::DirectionalLightPtr& args) {
+    scenic::ResourceId id,
+    const scenic::DirectionalLightPtr& args) {
   if (!AssertValueIsOfType(args->direction, kVec3ValueTypes) ||
       !AssertValueIsOfType(args->intensity, kFloatValueTypes)) {
     return false;
@@ -592,8 +592,8 @@ bool Session::ApplyCreateDirectionalLight(
   return light ? resources_.AddResource(id, std::move(light)) : false;
 }
 
-bool Session::ApplyCreateRectangle(mozart::ResourceId id,
-                                   const mozart2::RectanglePtr& args) {
+bool Session::ApplyCreateRectangle(scenic::ResourceId id,
+                                   const scenic::RectanglePtr& args) {
   if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
       !AssertValueIsOfType(args->height, kFloatValueTypes)) {
     return false;
@@ -613,8 +613,8 @@ bool Session::ApplyCreateRectangle(mozart::ResourceId id,
 }
 
 bool Session::ApplyCreateRoundedRectangle(
-    mozart::ResourceId id,
-    const mozart2::RoundedRectanglePtr& args) {
+    scenic::ResourceId id,
+    const scenic::RoundedRectanglePtr& args) {
   if (!AssertValueIsOfType(args->width, kFloatValueTypes) ||
       !AssertValueIsOfType(args->height, kFloatValueTypes) ||
       !AssertValueIsOfType(args->top_left_radius, kFloatValueTypes) ||
@@ -644,8 +644,8 @@ bool Session::ApplyCreateRoundedRectangle(
   return rectangle ? resources_.AddResource(id, std::move(rectangle)) : false;
 }
 
-bool Session::ApplyCreateCircle(mozart::ResourceId id,
-                                const mozart2::CirclePtr& args) {
+bool Session::ApplyCreateCircle(scenic::ResourceId id,
+                                const scenic::CirclePtr& args) {
   if (!AssertValueIsOfType(args->radius, kFloatValueTypes)) {
     return false;
   }
@@ -661,89 +661,89 @@ bool Session::ApplyCreateCircle(mozart::ResourceId id,
   return circle ? resources_.AddResource(id, std::move(circle)) : false;
 }
 
-bool Session::ApplyCreateMesh(mozart::ResourceId id,
-                              const mozart2::MeshPtr& args) {
+bool Session::ApplyCreateMesh(scenic::ResourceId id,
+                              const scenic::MeshPtr& args) {
   auto mesh = CreateMesh(id);
   return mesh ? resources_.AddResource(id, std::move(mesh)) : false;
 }
 
-bool Session::ApplyCreateMaterial(mozart::ResourceId id,
-                                  const mozart2::MaterialPtr& args) {
+bool Session::ApplyCreateMaterial(scenic::ResourceId id,
+                                  const scenic::MaterialPtr& args) {
   auto material = CreateMaterial(id);
   return material ? resources_.AddResource(id, std::move(material)) : false;
 }
 
-bool Session::ApplyCreateClipNode(mozart::ResourceId id,
-                                  const mozart2::ClipNodePtr& args) {
+bool Session::ApplyCreateClipNode(scenic::ResourceId id,
+                                  const scenic::ClipNodePtr& args) {
   auto node = CreateClipNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateEntityNode(mozart::ResourceId id,
-                                    const mozart2::EntityNodePtr& args) {
+bool Session::ApplyCreateEntityNode(scenic::ResourceId id,
+                                    const scenic::EntityNodePtr& args) {
   auto node = CreateEntityNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
-bool Session::ApplyCreateShapeNode(mozart::ResourceId id,
-                                   const mozart2::ShapeNodePtr& args) {
+bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
+                                   const scenic::ShapeNodePtr& args) {
   auto node = CreateShapeNode(id, args);
   return node ? resources_.AddResource(id, std::move(node)) : false;
 }
 
 bool Session::ApplyCreateDisplayCompositor(
-    mozart::ResourceId id,
-    const mozart2::DisplayCompositorPtr& args) {
+    scenic::ResourceId id,
+    const scenic::DisplayCompositorPtr& args) {
   auto compositor = CreateDisplayCompositor(id, args);
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
 bool Session::ApplyCreateImagePipeCompositor(
-    mozart::ResourceId id,
-    const mozart2::ImagePipeCompositorPtr& args) {
+    scenic::ResourceId id,
+    const scenic::ImagePipeCompositorPtr& args) {
   auto compositor = CreateImagePipeCompositor(id, args);
   return compositor ? resources_.AddResource(id, std::move(compositor)) : false;
 }
 
-bool Session::ApplyCreateLayerStack(mozart::ResourceId id,
-                                    const mozart2::LayerStackPtr& args) {
+bool Session::ApplyCreateLayerStack(scenic::ResourceId id,
+                                    const scenic::LayerStackPtr& args) {
   auto layer_stack = CreateLayerStack(id, args);
   return layer_stack ? resources_.AddResource(id, std::move(layer_stack))
                      : false;
 }
 
-bool Session::ApplyCreateLayer(mozart::ResourceId id,
-                               const mozart2::LayerPtr& args) {
+bool Session::ApplyCreateLayer(scenic::ResourceId id,
+                               const scenic::LayerPtr& args) {
   auto layer = CreateLayer(id, args);
   return layer ? resources_.AddResource(id, std::move(layer)) : false;
 }
 
-bool Session::ApplyCreateVariable(mozart::ResourceId id,
-                                  const mozart2::VariablePtr& args) {
+bool Session::ApplyCreateVariable(scenic::ResourceId id,
+                                  const scenic::VariablePtr& args) {
   error_reporter_->ERROR()
       << "scene_manager::Session::ApplyCreateVariable(): unimplemented";
   return false;
 }
 
-ResourcePtr Session::CreateMemory(mozart::ResourceId id,
-                                  const mozart2::MemoryPtr& args) {
+ResourcePtr Session::CreateMemory(scenic::ResourceId id,
+                                  const scenic::MemoryPtr& args) {
   vk::Device device = engine()->vk_device();
   switch (args->memory_type) {
-    case mozart2::MemoryType::VK_DEVICE_MEMORY:
+    case scenic::MemoryType::VK_DEVICE_MEMORY:
       return GpuMemory::New(this, id, device, args, error_reporter_);
-    case mozart2::MemoryType::HOST_MEMORY:
+    case scenic::MemoryType::HOST_MEMORY:
       return HostMemory::New(this, id, device, args, error_reporter_);
   }
 }
 
-ResourcePtr Session::CreateImage(mozart::ResourceId id,
+ResourcePtr Session::CreateImage(scenic::ResourceId id,
                                  MemoryPtr memory,
-                                 const mozart2::ImagePtr& args) {
+                                 const scenic::ImagePtr& args) {
   return Image::New(this, id, memory, args->info, args->memory_offset,
                     error_reporter_);
 }
 
-ResourcePtr Session::CreateBuffer(mozart::ResourceId id,
+ResourcePtr Session::CreateBuffer(scenic::ResourceId id,
                                   MemoryPtr memory,
                                   uint32_t memory_offset,
                                   uint32_t num_bytes) {
@@ -751,7 +751,7 @@ ResourcePtr Session::CreateBuffer(mozart::ResourceId id,
     // TODO(MZ-273): host memory should also be supported.
     error_reporter_->ERROR() << "scene_manager::Session::CreateBuffer(): "
                                 "memory must be of type "
-                                "mozart2.MemoryType.VK_DEVICE_MEMORY";
+                                "scenic.MemoryType.VK_DEVICE_MEMORY";
     return ResourcePtr();
   }
 
@@ -769,50 +769,50 @@ ResourcePtr Session::CreateBuffer(mozart::ResourceId id,
                                      memory_offset);
 }
 
-ResourcePtr Session::CreateScene(mozart::ResourceId id,
-                                 const mozart2::ScenePtr& args) {
+ResourcePtr Session::CreateScene(scenic::ResourceId id,
+                                 const scenic::ScenePtr& args) {
   return ftl::MakeRefCounted<Scene>(this, id);
 }
 
-ResourcePtr Session::CreateCamera(mozart::ResourceId id,
-                                  const mozart2::CameraPtr& args) {
+ResourcePtr Session::CreateCamera(scenic::ResourceId id,
+                                  const scenic::CameraPtr& args) {
   if (auto scene = resources_.FindResource<Scene>(args->scene_id)) {
     return ftl::MakeRefCounted<Camera>(this, id, std::move(scene));
   }
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateRenderer(mozart::ResourceId id,
-                                    const mozart2::RendererPtr& args) {
+ResourcePtr Session::CreateRenderer(scenic::ResourceId id,
+                                    const scenic::RendererPtr& args) {
   return ftl::MakeRefCounted<Renderer>(this, id);
 }
 
-ResourcePtr Session::CreateDirectionalLight(mozart::ResourceId id,
+ResourcePtr Session::CreateDirectionalLight(scenic::ResourceId id,
                                             escher::vec3 direction,
                                             float intensity) {
   return ftl::MakeRefCounted<DirectionalLight>(this, id, direction, intensity);
 }
 
-ResourcePtr Session::CreateClipNode(mozart::ResourceId id,
-                                    const mozart2::ClipNodePtr& args) {
+ResourcePtr Session::CreateClipNode(scenic::ResourceId id,
+                                    const scenic::ClipNodePtr& args) {
   error_reporter_->ERROR() << "scene_manager::Session::CreateClipNode(): "
                               "unimplemented.";
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateEntityNode(mozart::ResourceId id,
-                                      const mozart2::EntityNodePtr& args) {
+ResourcePtr Session::CreateEntityNode(scenic::ResourceId id,
+                                      const scenic::EntityNodePtr& args) {
   return ftl::MakeRefCounted<EntityNode>(this, id);
 }
 
-ResourcePtr Session::CreateShapeNode(mozart::ResourceId id,
-                                     const mozart2::ShapeNodePtr& args) {
+ResourcePtr Session::CreateShapeNode(scenic::ResourceId id,
+                                     const scenic::ShapeNodePtr& args) {
   return ftl::MakeRefCounted<ShapeNode>(this, id);
 }
 
 ResourcePtr Session::CreateDisplayCompositor(
-    mozart::ResourceId id,
-    const mozart2::DisplayCompositorPtr& args) {
+    scenic::ResourceId id,
+    const scenic::DisplayCompositorPtr& args) {
   Display* display = engine()->display_manager()->default_display();
   if (!display) {
     error_reporter_->ERROR() << "There is no default display available.";
@@ -829,8 +829,8 @@ ResourcePtr Session::CreateDisplayCompositor(
 }
 
 ResourcePtr Session::CreateImagePipeCompositor(
-    mozart::ResourceId id,
-    const mozart2::ImagePipeCompositorPtr& args) {
+    scenic::ResourceId id,
+    const scenic::ImagePipeCompositorPtr& args) {
   // TODO(MZ-179)
   error_reporter_->ERROR()
       << "scene_manager::Session::ApplyCreateImagePipeCompositor() "
@@ -838,27 +838,27 @@ ResourcePtr Session::CreateImagePipeCompositor(
   return ResourcePtr();
 }
 
-ResourcePtr Session::CreateLayerStack(mozart::ResourceId id,
-                                      const mozart2::LayerStackPtr& args) {
+ResourcePtr Session::CreateLayerStack(scenic::ResourceId id,
+                                      const scenic::LayerStackPtr& args) {
   return ftl::MakeRefCounted<LayerStack>(this, id);
 }
 
-ResourcePtr Session::CreateLayer(mozart::ResourceId id,
-                                 const mozart2::LayerPtr& args) {
+ResourcePtr Session::CreateLayer(scenic::ResourceId id,
+                                 const scenic::LayerPtr& args) {
   return ftl::MakeRefCounted<Layer>(this, id);
 }
 
-ResourcePtr Session::CreateCircle(mozart::ResourceId id, float initial_radius) {
+ResourcePtr Session::CreateCircle(scenic::ResourceId id, float initial_radius) {
   return ftl::MakeRefCounted<CircleShape>(this, id, initial_radius);
 }
 
-ResourcePtr Session::CreateRectangle(mozart::ResourceId id,
+ResourcePtr Session::CreateRectangle(scenic::ResourceId id,
                                      float width,
                                      float height) {
   return ftl::MakeRefCounted<RectangleShape>(this, id, width, height);
 }
 
-ResourcePtr Session::CreateRoundedRectangle(mozart::ResourceId id,
+ResourcePtr Session::CreateRoundedRectangle(scenic::ResourceId id,
                                             float width,
                                             float height,
                                             float top_left_radius,
@@ -883,11 +883,11 @@ ResourcePtr Session::CreateRoundedRectangle(mozart::ResourceId id,
       this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
 }
 
-ResourcePtr Session::CreateMesh(mozart::ResourceId id) {
+ResourcePtr Session::CreateMesh(scenic::ResourceId id) {
   return ftl::MakeRefCounted<MeshShape>(this, id);
 }
 
-ResourcePtr Session::CreateMaterial(mozart::ResourceId id) {
+ResourcePtr Session::CreateMaterial(scenic::ResourceId id) {
   return ftl::MakeRefCounted<Material>(this, id);
 }
 
@@ -924,8 +924,8 @@ ErrorReporter* Session::error_reporter() const {
   return error_reporter_ ? error_reporter_ : ErrorReporter::Default();
 }
 
-bool Session::AssertValueIsOfType(const mozart2::ValuePtr& value,
-                                  const mozart2::Value::Tag* tags,
+bool Session::AssertValueIsOfType(const scenic::ValuePtr& value,
+                                  const scenic::Value::Tag* tags,
                                   size_t tag_count) {
   FTL_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
@@ -948,12 +948,11 @@ bool Session::AssertValueIsOfType(const mozart2::ValuePtr& value,
   return false;
 }
 
-void Session::ScheduleUpdate(
-    uint64_t presentation_time,
-    ::fidl::Array<mozart2::OpPtr> ops,
-    ::fidl::Array<mx::event> acquire_fences,
-    ::fidl::Array<mx::event> release_events,
-    const mozart2::Session::PresentCallback& callback) {
+void Session::ScheduleUpdate(uint64_t presentation_time,
+                             ::fidl::Array<scenic::OpPtr> ops,
+                             ::fidl::Array<mx::event> acquire_fences,
+                             ::fidl::Array<mx::event> release_events,
+                             const scenic::Session::PresentCallback& callback) {
   if (is_valid()) {
     auto acquire_fence_set =
         std::make_unique<AcquireFenceSet>(std::move(acquire_fences));
@@ -991,7 +990,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
          scheduled_updates_.front().acquire_fences->ready()) {
     if (ApplyUpdate(&scheduled_updates_.front())) {
       needs_render = true;
-      auto info = mozart2::PresentationInfo::New();
+      auto info = scenic::PresentationInfo::New();
       info->presentation_time = presentation_time;
       info->presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));
@@ -1033,7 +1032,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
   return needs_render;
 }
 
-void Session::EnqueueEvent(mozart2::EventPtr event) {
+void Session::EnqueueEvent(scenic::EventPtr event) {
   if (is_valid()) {
     FTL_DCHECK(event);
     if (buffered_events_.empty()) {
@@ -1049,7 +1048,7 @@ void Session::EnqueueEvent(mozart2::EventPtr event) {
 
 void Session::FlushEvents() {
   if (!buffered_events_.empty() && session_handler_) {
-    session_handler_->SendEvents(0, std::move(buffered_events_));
+    session_handler_->SendEvents(std::move(buffered_events_));
   }
 }
 
@@ -1071,10 +1070,10 @@ bool Session::ApplyUpdate(Session::Update* update) {
 }
 
 void Session::HitTest(uint32_t node_id,
-                      mozart2::vec3Ptr ray_origin,
-                      mozart2::vec3Ptr ray_direction,
-                      const mozart2::Session::HitTestCallback& callback) {
-  fidl::Array<mozart2::HitPtr> wrapped_hits;
+                      scenic::vec3Ptr ray_origin,
+                      scenic::vec3Ptr ray_direction,
+                      const scenic::Session::HitTestCallback& callback) {
+  fidl::Array<scenic::HitPtr> wrapped_hits;
   if (auto node = resources_.FindResource<Node>(node_id)) {
     HitTester hit_tester;
     std::vector<Hit> hits = hit_tester.HitTest(
@@ -1082,7 +1081,7 @@ void Session::HitTest(uint32_t node_id,
                                  escher::vec4(Unwrap(ray_direction), 0.f)});
     wrapped_hits.resize(hits.size());
     for (size_t i = 0; i < hits.size(); i++) {
-      wrapped_hits[i] = mozart2::Hit::New();
+      wrapped_hits[i] = scenic::Hit::New();
       wrapped_hits[i]->tag_value = hits[i].tag_value;
       wrapped_hits[i]->inverse_transform = Wrap(hits[i].inverse_transform);
       wrapped_hits[i]->distance = hits[i].distance;

@@ -7,7 +7,7 @@
 namespace scene_manager {
 
 ImagePipeHandler::ImagePipeHandler(
-    ::fidl::InterfaceRequest<mozart2::ImagePipe> request,
+    ::fidl::InterfaceRequest<scenic::ImagePipe> request,
     scene_manager::ImagePipe* image_pipe)
     : binding_(this, std::move(request)), image_pipe_(image_pipe) {
   binding_.set_connection_error_handler(
@@ -15,9 +15,9 @@ ImagePipeHandler::ImagePipeHandler(
 }
 
 void ImagePipeHandler::AddImage(uint32_t image_id,
-                                mozart2::ImageInfoPtr image_info,
+                                scenic::ImageInfoPtr image_info,
                                 mx::vmo memory,
-                                mozart2::MemoryType memory_type,
+                                scenic::MemoryType memory_type,
                                 uint64_t memory_offset) {
   image_pipe_->AddImage(image_id, std::move(image_info), std::move(memory),
                         memory_type, memory_offset);

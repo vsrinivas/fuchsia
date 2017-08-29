@@ -15,7 +15,7 @@ const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
 
 DisplayCompositor::DisplayCompositor(
     Session* session,
-    mozart::ResourceId id,
+    scenic::ResourceId id,
     Display* display,
     std::unique_ptr<DisplaySwapchain> swapchain)
     : Compositor(session,

@@ -11,10 +11,10 @@ source_set("view_framework") {
   public_deps = [
     "//application/lib/app",
     "//application/services",
-    "//apps/mozart/lib/scene:client",
-    "//apps/mozart/lib/scene:session_helpers",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/lib/scenic:fidl_helpers",
     "//apps/mozart/services/input",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace",
     "//garnet/public/lib/fidl/cpp/bindings",
@@ -44,7 +44,7 @@ source_set("skia") {
 
   public_deps = [
     ":view_framework",
-    "//apps/mozart/lib/scene:skia",
+    "//apps/mozart/lib/scenic:skia",
     "//third_party/skia",
   ]
 }

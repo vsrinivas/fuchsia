@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "application/lib/app/connect.h"
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/input/ime_service.fidl.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
@@ -76,7 +76,7 @@ std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
   return new_chain;
 }
 
-mozart::TransformPtr ToTransform(mozart2::mat4Ptr matrix) {
+mozart::TransformPtr ToTransform(scenic::mat4Ptr matrix) {
   FTL_DCHECK(matrix);
   // Note: mat4 is column-major but transform is row-major
   auto transform = mozart::Transform::New();
@@ -108,7 +108,7 @@ ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
     : application_context_(application_context),
       scene_manager_(
           application_context_
-              ->ConnectToEnvironmentService<mozart2::SceneManager>()),
+              ->ConnectToEnvironmentService<scenic::SceneManager>()),
       session_(scene_manager_.get()),
       weak_factory_(this) {
   // TODO(MZ-128): Register session listener and destroy views if their
@@ -128,7 +128,7 @@ ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
 ViewRegistry::~ViewRegistry() {}
 
 void ViewRegistry::GetSceneManager(
-    fidl::InterfaceRequest<mozart2::SceneManager> scene_manager_request) {
+    fidl::InterfaceRequest<scenic::SceneManager> scene_manager_request) {
   // TODO(jeffbrown): We should have a better way to duplicate the
   // SceneManager connection without going back out through the environment.
   application_context_->ConnectToEnvironmentService(
@@ -680,7 +680,7 @@ void ViewRegistry::PresentSession() {
   FTL_DCHECK(present_session_scheduled_);
 
   present_session_scheduled_ = false;
-  session_.Present(0, [this](mozart2::PresentationInfoPtr info) {});
+  session_.Present(0, [this](scenic::PresentationInfoPtr info) {});
 }
 
 // VIEW AND VIEW TREE SERVICE PROVIDERS
@@ -728,7 +728,7 @@ void ViewRegistry::HitTest(const mozart::ViewTreeToken& view_tree_token,
       view_tree->GetRoot()->host_node()->id(),
       (float[3]){point.x, point.y, kHitTestOriginZ}, (float[3]){0.f, 0.f, -1.f},
       [ this,
-        callback = std::move(callback) ](fidl::Array<mozart2::HitPtr> hits) {
+        callback = std::move(callback) ](fidl::Array<scenic::HitPtr> hits) {
         std::vector<ViewHit> view_hits;
         view_hits.reserve(hits.size());
         for (auto& hit : hits) {

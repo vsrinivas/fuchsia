@@ -12,6 +12,6 @@ fidl("images") {
   ]
 
   public_deps = [
-    "//apps/mozart/services/presentation:presentation_info",
+    "//apps/mozart/services/scenic:presentation_info",
   ]
 }

@@ -10,8 +10,8 @@ App::App()
     : loop_(mtl::MessageLoop::GetCurrent()),
       context_(app::ApplicationContext::CreateFromStartupInfo()),
       scene_manager_(
-          context_->ConnectToEnvironmentService<mozart2::SceneManager>()),
-      session_(std::make_unique<mozart::client::Session>(scene_manager_.get())),
+          context_->ConnectToEnvironmentService<scenic::SceneManager>()),
+      session_(std::make_unique<scenic_lib::Session>(scene_manager_.get())),
       canvas_(std::make_unique<Canvas>(context_.get())) {
   session_->set_connection_error_handler([this] {
     FTL_LOG(INFO) << "sketchy_example: lost connection to scenic::Session.";
@@ -22,12 +22,12 @@ App::App()
         << "sketchy_example: lost connection to scenic::SceneManager.";
     loop_->QuitNow();
   });
-  scene_manager_->GetDisplayInfo([this](mozart2::DisplayInfoPtr display_info) {
+  scene_manager_->GetDisplayInfo([this](scenic::DisplayInfoPtr display_info) {
     Init(std::move(display_info));
   });
 }
 
-void App::Init(mozart2::DisplayInfoPtr display_info) {
+void App::Init(scenic::DisplayInfoPtr display_info) {
   scene_ = std::make_unique<Scene>(session_.get(), display_info->physical_width,
                                    display_info->physical_height);
 
@@ -39,7 +39,7 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
 
   uint64_t time = mx_time_get(MX_CLOCK_MONOTONIC);
   canvas_->Present(time);
-  session_->Present(time, [](mozart2::PresentationInfoPtr info) {});
+  session_->Present(time, [](scenic::PresentationInfoPtr info) {});
 }
 
 }  // namespace sketchy_example

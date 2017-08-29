@@ -10,7 +10,7 @@ const ResourceTypeInfo DirectionalLight::kTypeInfo = {
     ResourceType::kDirectionalLight, "DirectionalLight"};
 
 DirectionalLight::DirectionalLight(Session* session,
-                                   mozart::ResourceId id,
+                                   scenic::ResourceId id,
                                    const escher::vec3& direction,
                                    float intensity)
     : Resource(session, id, DirectionalLight::kTypeInfo),

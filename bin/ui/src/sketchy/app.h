@@ -19,8 +19,8 @@ class App {
  private:
   mtl::MessageLoop* loop_;
   std::unique_ptr<app::ApplicationContext> context_;
-  mozart2::SceneManagerPtr scene_manager_;
-  std::unique_ptr<mozart::client::Session> session_;
+  scenic::SceneManagerPtr scene_manager_;
+  std::unique_ptr<scenic_lib::Session> session_;
   fidl::BindingSet<sketchy::Canvas> bindings_;
   std::unique_ptr<CanvasImpl> canvas_;
 };

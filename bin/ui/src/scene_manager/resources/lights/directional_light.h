@@ -14,7 +14,7 @@ class DirectionalLight final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   DirectionalLight(Session* session,
-                   mozart::ResourceId id,
+                   scenic::ResourceId id,
                    const escher::vec3& direction,
                    float intensity);
 

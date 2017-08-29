@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include "apps/mozart/services/scene/types.fidl.h"
+#include "apps/mozart/services/scenic/types.fidl.h"
 #include "lib/escher/escher/geometry/transform.h"
 
 namespace scene_manager {
 
-inline mozart2::mat4Ptr Wrap(const escher::mat4& args) {
-  auto result = mozart2::mat4::New();
+inline scenic::mat4Ptr Wrap(const escher::mat4& args) {
+  auto result = scenic::mat4::New();
   auto& m = result->matrix;
   m.resize(16);
   m[0] = args[0][0];

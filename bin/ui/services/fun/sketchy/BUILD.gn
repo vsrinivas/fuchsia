@@ -14,7 +14,6 @@ fidl("sketchy") {
 
   public_deps = [
     "//apps/mozart/services/images",
-    "//apps/mozart/services/presentation:presentation_info",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
   ]
 }

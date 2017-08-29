@@ -30,7 +30,7 @@ const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
 const uint32_t Renderer::kRequiredSwapchainPixelMultiple =
     escher::impl::SsdoSampler::kSsdoAccelDownsampleFactor;
 
-Renderer::Renderer(Session* session, mozart::ResourceId id)
+Renderer::Renderer(Session* session, scenic::ResourceId id)
     : Resource(session, id, Renderer::kTypeInfo) {
   escher::MaterialPtr default_material_ =
       ftl::MakeRefCounted<escher::Material>();

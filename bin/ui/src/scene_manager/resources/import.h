@@ -24,8 +24,8 @@ class Import final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   Import(Session* session,
-         mozart::ResourceId id,
-         mozart2::ImportSpec spec,
+         scenic::ResourceId id,
+         scenic::ImportSpec spec,
          mx::eventpair import_token);
 
   ~Import() override;
@@ -42,7 +42,7 @@ class Import final : public Resource {
 
   /// The specification used to represent the underlying type of the resource
   /// being bound to the import.
-  mozart2::ImportSpec import_spec() const { return import_spec_; }
+  scenic::ImportSpec import_spec() const { return import_spec_; }
 
   /// The import token that is currently used by the resource linker to bind to
   /// exported resources. The import token must be a peer of the token used to
@@ -60,7 +60,7 @@ class Import final : public Resource {
   // TODO(MZ-132): Don't hold onto the token for the the duration of the
   // lifetime of the import resource. This bloats kernel handle tables.
   mx::eventpair import_token_;
-  const mozart2::ImportSpec import_spec_;
+  const scenic::ImportSpec import_spec_;
   const ResourcePtr delegate_;
   Resource* imported_resource_ = nullptr;
 

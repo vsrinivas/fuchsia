@@ -17,10 +17,10 @@ executable("client") {
     "//application/lib/app",
     "//apps/mozart/examples/shadertoy/service",
     "//apps/mozart/examples/shadertoy/service/services",
-    "//apps/mozart/lib/scene:client",
-    "//apps/mozart/lib/scene:session_helpers",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/lib/scenic:fidl_helpers",
     "//apps/mozart/lib/view_framework:view_provider",
-    "//apps/mozart/services/scene",
+    "//apps/mozart/services/scenic",
     "//apps/mozart/services/views",
     "//garnet/public/lib/fidl/cpp/bindings",
   ]

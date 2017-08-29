@@ -23,16 +23,16 @@ class HostMemory : public Memory {
 
   // Constructor for host memory.
   HostMemory(Session* session,
-             mozart::ResourceId id,
+             scenic::ResourceId id,
              mx::vmo vmo,
              uint64_t vmo_size);
 
-  // Helper method for creating HostMemory object from a mozart2::Memory.
+  // Helper method for creating HostMemory object from a scenic::Memory.
   // Create a HostMemory resource object from a CPU host memory-backed VMO.
   //
   // Returns the created HostMemory object or nullptr if there was an error.
   static HostMemoryPtr New(Session* session,
-                           mozart::ResourceId id,
+                           scenic::ResourceId id,
                            vk::Device device,
                            mx::vmo vmo,
                            ErrorReporter* error_reporter);
@@ -40,9 +40,9 @@ class HostMemory : public Memory {
   // Helper method that calls the above method with the VMO from |args|. Also
   // checks the memory type in debug mode.
   static HostMemoryPtr New(Session* session,
-                           mozart::ResourceId id,
+                           scenic::ResourceId id,
                            vk::Device device,
-                           const mozart2::MemoryPtr& args,
+                           const scenic::MemoryPtr& args,
                            ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;

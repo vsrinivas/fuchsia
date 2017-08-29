@@ -31,10 +31,10 @@ class SessionTest : public ::testing::Test,
                    std::string error_string) override;
 
   // Apply the specified Op, and verify that it succeeds.
-  bool Apply(mozart2::OpPtr op) { return session_->ApplyOp(std::move(op)); }
+  bool Apply(scenic::OpPtr op) { return session_->ApplyOp(std::move(op)); }
 
   template <class ResourceT>
-  ftl::RefPtr<ResourceT> FindResource(mozart::ResourceId id) {
+  ftl::RefPtr<ResourceT> FindResource(scenic::ResourceId id) {
     return session_->resources()->FindResource<ResourceT>(id);
   }
 

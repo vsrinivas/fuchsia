@@ -10,7 +10,7 @@
 
 #include "apps/mozart/lib/input/device_state.h"
 #include "apps/mozart/lib/input/input_device_impl.h"
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "apps/mozart/services/input/input_dispatcher.fidl.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
@@ -46,7 +46,7 @@ class Presentation : private mozart::ViewTreeListener,
                      private mozart::ViewContainerListener {
  public:
   Presentation(mozart::ViewManager* view_manager,
-               mozart2::SceneManager* scene_manager);
+               scenic::SceneManager* scene_manager);
 
   ~Presentation() override;
 
@@ -74,7 +74,7 @@ class Presentation : private mozart::ViewTreeListener,
       const OnPropertiesChangedCallback& callback) override;
 
   void CreateViewTree(mozart::ViewOwnerPtr view_owner,
-                      mozart2::DisplayInfoPtr display_info);
+                      scenic::DisplayInfoPtr display_info);
   void OnEvent(mozart::InputEventPtr event);
 
   void PresentScene();
@@ -84,26 +84,26 @@ class Presentation : private mozart::ViewTreeListener,
   bool UpdateAnimation(uint64_t presentation_time);
 
   mozart::ViewManager* const view_manager_;
-  mozart2::SceneManager* const scene_manager_;
+  scenic::SceneManager* const scene_manager_;
 
-  mozart::client::Session session_;
-  mozart::client::DisplayCompositor compositor_;
-  mozart::client::LayerStack layer_stack_;
-  mozart::client::Layer layer_;
-  mozart::client::Renderer renderer_;
+  scenic_lib::Session session_;
+  scenic_lib::DisplayCompositor compositor_;
+  scenic_lib::LayerStack layer_stack_;
+  scenic_lib::Layer layer_;
+  scenic_lib::Renderer renderer_;
   // TODO(MZ-254): put camera before scene.
-  mozart::client::Scene scene_;
-  mozart::client::Camera camera_;
-  mozart::client::EntityNode root_view_host_node_;
+  scenic_lib::Scene scene_;
+  scenic_lib::Camera camera_;
+  scenic_lib::EntityNode root_view_host_node_;
   mx::eventpair root_view_host_import_token_;
-  mozart::client::ImportNode root_view_parent_node_;
+  scenic_lib::ImportNode root_view_parent_node_;
   mx::eventpair root_view_parent_export_token_;
-  mozart::client::EntityNode content_view_host_node_;
+  scenic_lib::EntityNode content_view_host_node_;
   mx::eventpair content_view_host_import_token_;
-  mozart::client::RoundedRectangle cursor_shape_;
-  mozart::client::Material cursor_material_;
+  scenic_lib::RoundedRectangle cursor_shape_;
+  scenic_lib::Material cursor_material_;
 
-  mozart2::DisplayInfoPtr display_info_;
+  scenic::DisplayInfoPtr display_info_;
   float logical_width_ = 0.f;
   float logical_height_ = 0.f;
   float device_pixel_ratio_ = 1.f;
@@ -132,7 +132,7 @@ class Presentation : private mozart::ViewTreeListener,
     bool created;
     bool visible;
     mozart::PointF position;
-    std::unique_ptr<mozart::client::ShapeNode> node;
+    std::unique_ptr<scenic_lib::ShapeNode> node;
   };
 
   std::map<uint32_t, CursorState> cursors_;

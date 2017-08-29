@@ -12,7 +12,7 @@ const ResourceTypeInfo GpuMemory::kTypeInfo = {
     ResourceType::kMemory | ResourceType::kGpuMemory, "GpuMemory"};
 
 GpuMemory::GpuMemory(Session* session,
-                     mozart::ResourceId id,
+                     scenic::ResourceId id,
                      vk::Device device,
                      vk::DeviceMemory mem,
                      vk::DeviceSize size,
@@ -22,11 +22,11 @@ GpuMemory::GpuMemory(Session* session,
           escher::GpuMem::New(device, mem, size, memory_type_index)) {}
 
 GpuMemoryPtr GpuMemory::New(Session* session,
-                            mozart::ResourceId id,
+                            scenic::ResourceId id,
                             vk::Device device,
-                            const mozart2::MemoryPtr& args,
+                            const scenic::MemoryPtr& args,
                             ErrorReporter* error_reporter) {
-  if (args->memory_type != mozart2::MemoryType::VK_DEVICE_MEMORY) {
+  if (args->memory_type != scenic::MemoryType::VK_DEVICE_MEMORY) {
     error_reporter->ERROR() << "scene_manager::GpuMemory::New(): "
                                "Memory must be of type VK_DEVICE_MEMORY.";
     return nullptr;
@@ -35,7 +35,7 @@ GpuMemoryPtr GpuMemory::New(Session* session,
 }
 
 GpuMemoryPtr GpuMemory::New(Session* session,
-                            mozart::ResourceId id,
+                            scenic::ResourceId id,
                             vk::Device device,
                             mx::vmo vmo,
                             ErrorReporter* error_reporter) {

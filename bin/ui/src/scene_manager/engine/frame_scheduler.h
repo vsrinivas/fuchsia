@@ -14,9 +14,9 @@ namespace ftl {
 class TaskRunner;
 }  // namespace ftl
 
-namespace mozart2 {
+namespace scenic {
 class Metrics;
-}  // namespace mozart2
+}  // namespace scenic
 
 namespace scene_manager {
 

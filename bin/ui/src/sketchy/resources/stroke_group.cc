@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/sketchy/resources/stroke_group.h"
 
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 
 #include "escher/escher.h"
 #include "escher/geometry/tessellation.h"
@@ -16,7 +16,7 @@ const ResourceTypeInfo StrokeGroup::kTypeInfo("StrokeGroup",
                                               ResourceType::kStrokeGroup,
                                               ResourceType::kResource);
 
-StrokeGroup::StrokeGroup(mozart::client::Session* session,
+StrokeGroup::StrokeGroup(scenic_lib::Session* session,
                          escher::BufferFactory* buffer_factory)
     : shape_node_(session), material_(session), mesh_(session) {
   auto escher_mesh = escher::NewRingMesh(
@@ -33,12 +33,12 @@ StrokeGroup::StrokeGroup(mozart::client::Session* session,
   float bounding_box_max[] = {400.f, 400.f, 0.f};
 
   mesh_.BindBuffers(
-      index_buffer_->scenic_buffer(), mozart2::MeshIndexFormat::kUint32,
+      index_buffer_->scenic_buffer(), scenic::MeshIndexFormat::kUint32,
       escher_mesh->index_buffer_offset(), escher_mesh->num_indices(),
       vertex_buffer_->scenic_buffer(),
-      mozart::NewMeshVertexFormat(mozart2::ValueType::kVector2,
-                                  mozart2::ValueType::kNone,
-                                  mozart2::ValueType::kVector2),
+      scenic_lib::NewMeshVertexFormat(scenic::ValueType::kVector2,
+                                  scenic::ValueType::kNone,
+                                  scenic::ValueType::kVector2),
       escher_mesh->vertex_buffer_offset(), escher_mesh->num_vertices(),
       bounding_box_min, bounding_box_max);
 

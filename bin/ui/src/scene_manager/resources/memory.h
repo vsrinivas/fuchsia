@@ -20,7 +20,7 @@ class Memory : public Resource {
 
  protected:
   Memory(Session* session,
-         mozart::ResourceId id,
+         scenic::ResourceId id,
          const ResourceTypeInfo& type_info);
 };
 

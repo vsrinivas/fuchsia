@@ -7,7 +7,7 @@
 #include "application/lib/app/application_context.h"
 #include "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl.h"
 #include "apps/mozart/examples/shadertoy/service/services/shadertoy_factory.fidl.h"
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
@@ -24,7 +24,7 @@ class View : public mozart::BaseView {
  private:
   // |BaseView|.
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info) override;
+      scenic::PresentationInfoPtr presentation_info) override;
 
   app::ApplicationContext* const application_context_;
   mtl::MessageLoop* loop_;
@@ -32,7 +32,7 @@ class View : public mozart::BaseView {
   mozart::example::ShadertoyFactoryPtr shadertoy_factory_;
   mozart::example::ShadertoyPtr shadertoy_;
 
-  std::vector<mozart::client::ShapeNode> nodes_;
+  std::vector<scenic_lib::ShapeNode> nodes_;
 
   const mx_time_t start_time_;
 

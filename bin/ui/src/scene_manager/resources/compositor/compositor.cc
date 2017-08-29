@@ -26,7 +26,7 @@ const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
                                                 "Compositor"};
 
 Compositor::Compositor(Session* session,
-                       mozart::ResourceId id,
+                       scenic::ResourceId id,
                        const ResourceTypeInfo& type_info,
                        std::unique_ptr<Swapchain> swapchain)
     : Resource(session, id, type_info),

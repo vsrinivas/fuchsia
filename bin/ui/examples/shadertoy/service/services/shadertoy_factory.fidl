@@ -14,7 +14,7 @@ import "apps/mozart/services/views/view_token.fidl";
 interface ShadertoyFactory {
   // Create a new Shadertoy that will present its rendered content to
   // |image_pipe|.
-  NewImagePipeShadertoy(Shadertoy& toy, mozart2.ImagePipe image_pipe);
+  NewImagePipeShadertoy(Shadertoy& toy, scenic.ImagePipe image_pipe);
 
   // Create a new Shadertoy and a new view for it to render into.
   // If |handle_input_events| is true, then mouse/touch events will be

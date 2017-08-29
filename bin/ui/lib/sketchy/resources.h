@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scene/client/session.h"
-#include "apps/mozart/services/fun/sketchy/resources.fidl.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "apps/mozart/services/fun/sketchy/ops.fidl.h"
+#include "apps/mozart/services/fun/sketchy/resources.fidl.h"
 
 namespace sketchy_lib {
 
@@ -36,8 +36,8 @@ class Resource {
 
   // Enqueue an op in canvas to create a resource. Called in the constructor of
   // concrete resources to be created.
-  void EnqueueCreateResourceOp(
-      ResourceId resource_id, sketchy::ResourceArgsPtr args);
+  void EnqueueCreateResourceOp(ResourceId resource_id,
+                               sketchy::ResourceArgsPtr args);
 
   // Enqueue an op in canvas to import the resource. Called in the constructor
   // of concrete resources to be imported.
@@ -47,7 +47,7 @@ class Resource {
   // |spec| Type of the resource.
   void EnqueueImportResourceOp(ResourceId resource_id,
                                mx::eventpair token,
-                               mozart2::ImportSpec spec);
+                               scenic::ImportSpec spec);
 
   // Enqueue an op in canvas.
   void EnqueueOp(sketchy::OpPtr op);
@@ -81,7 +81,7 @@ class StrokeGroup final : public Resource {
 // Represents an imported node in a canvas.
 class ImportNode final : public Resource {
  public:
-  ImportNode(Canvas* canvas, mozart::client::EntityNode& export_node);
+  ImportNode(Canvas* canvas, scenic_lib::EntityNode& export_node);
   void AddChild(const Resource& child);
 
  private:

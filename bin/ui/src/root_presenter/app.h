@@ -58,7 +58,7 @@ class App : public mozart::Presenter,
   mozart::input::InputReader input_reader_;
 
   mozart::ViewManagerPtr view_manager_;
-  mozart2::SceneManagerPtr scene_manager_;
+  scenic::SceneManagerPtr scene_manager_;
 
   std::vector<std::unique_ptr<Presentation>> presentations_;
 

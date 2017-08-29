@@ -15,7 +15,7 @@ ViewState::ViewState(ViewRegistry* registry,
                      mozart::ViewTokenPtr view_token,
                      fidl::InterfaceRequest<mozart::View> view_request,
                      mozart::ViewListenerPtr view_listener,
-                     mozart::client::Session* session,
+                     scenic_lib::Session* session,
                      const std::string& label)
     : view_token_(std::move(view_token)),
       view_listener_(std::move(view_listener)),

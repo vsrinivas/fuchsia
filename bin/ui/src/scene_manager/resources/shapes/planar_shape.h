@@ -22,7 +22,7 @@ class PlanarShape : public Shape {
 
  protected:
   PlanarShape(Session* session,
-              mozart::ResourceId id,
+              scenic::ResourceId id,
               const ResourceTypeInfo& type_info);
 };
 

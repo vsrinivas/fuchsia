@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/services/scene/ops.fidl-common.h"
+#include "apps/mozart/services/scenic/ops.fidl-common.h"
 #include "apps/mozart/src/scene_manager/resources/resource.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/handles/object_info.h"
@@ -43,7 +43,7 @@ class ResourceLinker : private mtl::MessageLoopHandler {
   };
   using OnImportResolvedCallback =
       std::function<void(ResourcePtr, ResolutionResult)>;
-  void ImportResource(mozart2::ImportSpec spec,
+  void ImportResource(scenic::ImportSpec spec,
                       const mx::eventpair& import_token,
                       OnImportResolvedCallback import_resolved_callback);
 

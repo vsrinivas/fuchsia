@@ -11,8 +11,8 @@ App::App(escher::Escher *escher)
     : loop_(mtl::MessageLoop::GetCurrent()),
       context_(app::ApplicationContext::CreateFromStartupInfo()),
       scene_manager_(
-          context_->ConnectToEnvironmentService<mozart2::SceneManager>()),
-      session_(std::make_unique<mozart::client::Session>(scene_manager_.get())),
+          context_->ConnectToEnvironmentService<scenic::SceneManager>()),
+      session_(std::make_unique<scenic_lib::Session>(scene_manager_.get())),
       canvas_(std::make_unique<CanvasImpl>(session_.get(), escher)) {
   tracing::InitializeTracer(context_.get(), {"sketchy"});
   context_->outgoing_services()->AddService<sketchy::Canvas>(

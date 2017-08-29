@@ -16,7 +16,7 @@ class Scene final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Scene(Session* session, mozart::ResourceId node_id);
+  Scene(Session* session, scenic::ResourceId node_id);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;

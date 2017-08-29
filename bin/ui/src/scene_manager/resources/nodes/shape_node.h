@@ -15,7 +15,7 @@ class ShapeNode final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ShapeNode(Session* session, mozart::ResourceId node_id);
+  ShapeNode(Session* session, scenic::ResourceId node_id);
 
   void SetMaterial(MaterialPtr material);
   void SetShape(ShapePtr shape);

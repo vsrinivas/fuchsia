@@ -11,7 +11,7 @@ namespace sketchy_service {
 
 using namespace sketchy;
 
-CanvasImpl::CanvasImpl(mozart::client::Session* session, escher::Escher* escher)
+CanvasImpl::CanvasImpl(scenic_lib::Session* session, escher::Escher* escher)
     : session_(session), buffer_factory_(escher) {}
 
 void CanvasImpl::Init(::fidl::InterfaceHandle<CanvasListener> listener) {
@@ -107,9 +107,9 @@ bool CanvasImpl::ApplyRemoveStrokeOp(const RemoveStrokeOpPtr& op) {
 }
 
 bool CanvasImpl::ApplyScenicImportResourceOp(
-    const mozart2::ImportResourceOpPtr& import_resource) {
+    const scenic::ImportResourceOpPtr& import_resource) {
   switch (import_resource->spec) {
-    case mozart2::ImportSpec::NODE:
+    case scenic::ImportSpec::NODE:
       return ScenicImportNode(import_resource->id,
                               std::move(import_resource->token));
   }
@@ -126,8 +126,7 @@ bool CanvasImpl::ScenicImportNode(ResourceId id, mx::eventpair token) {
   return true;
 }
 
-bool CanvasImpl::ApplyScenicAddChildOp(
-    const mozart2::AddChildOpPtr& add_child) {
+bool CanvasImpl::ApplyScenicAddChildOp(const scenic::AddChildOpPtr& add_child) {
   auto import_node = resource_map_.FindResource<ImportNode>(add_child->node_id);
   auto stroke_group =
       resource_map_.FindResource<StrokeGroup>(add_child->child_id);

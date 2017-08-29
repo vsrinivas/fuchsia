@@ -20,7 +20,7 @@ class Image : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  // Create Image given a MemoryPtr, mozart2::ImageInfoPtr, and memory_offset.
+  // Create Image given a MemoryPtr, scenic::ImageInfoPtr, and memory_offset.
   //
   // |session| is the Session that this image can be referenced from.
   // |memory| is the memory that is associated with this image.
@@ -30,14 +30,14 @@ class Image : public ImageBase {
   //
   // Returns the created Image, or nullptr if there was an error.
   static ImagePtr New(Session* session,
-                      mozart::ResourceId id,
+                      scenic::ResourceId id,
                       MemoryPtr memory,
-                      const mozart2::ImageInfoPtr& image_info,
+                      const scenic::ImageInfoPtr& image_info,
                       uint64_t memory_offset,
                       ErrorReporter* error_reporter);
 
   static ImagePtr NewForTesting(Session* session,
-                                mozart::ResourceId id,
+                                scenic::ResourceId id,
                                 escher::ResourceManager* image_owner,
                                 MemoryPtr host_memory);
 
@@ -52,7 +52,7 @@ class Image : public ImageBase {
   // |vk_image| is the VkImage, whose lifetime is now controlled by this
   // object. |memory| is the GPU memory that is associated with this image.
   Image(Session* session,
-        mozart::ResourceId id,
+        scenic::ResourceId id,
         GpuMemoryPtr memory,
         escher::ImageInfo image_info,
         vk::Image vk_image_);
@@ -65,7 +65,7 @@ class Image : public ImageBase {
   // TODO: We might not want to hold on to the memory since we're uploading
   // its contents to the GPU and using the uploaded copy.
   Image(Session* session,
-        mozart::ResourceId id,
+        scenic::ResourceId id,
         MemoryPtr memory,
         escher::ImagePtr image);
 

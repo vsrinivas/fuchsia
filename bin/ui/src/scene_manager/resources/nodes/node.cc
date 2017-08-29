@@ -29,7 +29,7 @@ constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode;
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 
 Node::Node(Session* session,
-           mozart::ResourceId node_id,
+           scenic::ResourceId node_id,
            const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
   FTL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
@@ -49,8 +49,8 @@ bool Node::SetEventMask(uint32_t event_mask) {
 
   // If the client unsubscribed from the event, ensure that we will deliver
   // fresh metrics next time they subscribe.
-  if (!(event_mask & mozart2::kMetricsEventMask)) {
-    reported_metrics_ = mozart2::Metrics();
+  if (!(event_mask & scenic::kMetricsEventMask)) {
+    reported_metrics_ = scenic::Metrics();
   }
   return true;
 }
@@ -233,7 +233,7 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   return true;
 }
 
-bool Node::SetHitTestBehavior(mozart2::HitTestBehavior hit_test_behavior) {
+bool Node::SetHitTestBehavior(scenic::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;
   return true;
 }

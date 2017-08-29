@@ -6,12 +6,12 @@
 
 namespace scene_manager {
 
-using mozart2::Op;
-using mozart2::OpPtr;
-using mozart2::Resource;
-using mozart2::Value;
+using scenic::Op;
+using scenic::OpPtr;
+using scenic::Resource;
+using scenic::Value;
 
-std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
+std::ostream& operator<<(std::ostream& stream, const scenic::OpPtr& op) {
   switch (op->which()) {
     case Op::Tag::CREATE_RESOURCE:
       return stream << op->get_create_resource();
@@ -77,7 +77,7 @@ std::ostream& operator<<(std::ostream& stream, const mozart2::OpPtr& op) {
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const mozart2::CreateResourceOpPtr& op) {
+                         const scenic::CreateResourceOpPtr& op) {
   stream << "CreateResourceOp(id:" << op->id << " ";
   switch (op->resource->which()) {
     case Resource::Tag::MEMORY:
@@ -151,19 +151,19 @@ std::ostream& operator<<(std::ostream& stream,
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const mozart2::SetTextureOpPtr& op) {
+                         const scenic::SetTextureOpPtr& op) {
   stream << "SetTextureOp(id:" << op->material_id
          << " texture: " << op->texture_id;
   return stream << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const mozart2::SetColorOpPtr& op) {
+                         const scenic::SetColorOpPtr& op) {
   stream << "SetColorOp(id:" << op->material_id;
   return stream << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream, const mozart2::Value::Tag& tag) {
+std::ostream& operator<<(std::ostream& stream, const scenic::Value::Tag& tag) {
   switch (tag) {
     case Value::Tag::VECTOR1:
       return stream << "vec1";

@@ -2,7 +2,7 @@
 // Use of source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/mozart/lib/scene/session_helpers.h"
+#include "apps/mozart/lib/scenic/fidl_helpers.h"
 #include "apps/mozart/src/scene_manager/resources/nodes/entity_node.h"
 #include "apps/mozart/src/scene_manager/tests/session_test.h"
 #include "gtest/gtest.h"
@@ -24,17 +24,17 @@ TEST_F(ImportTest, ExportsResourceViaOp) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Setup the resource to export.
-  mozart::ResourceId resource_id = 1;
+  scenic::ResourceId resource_id = 1;
 
   // Create an entity node.
-  ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(resource_id)));
+  ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(resource_id)));
 
   // Assert that the entity node was correctly mapped in.
   ASSERT_EQ(1u, session_->GetMappedResourceCount());
 
   // Apply the export op.
   ASSERT_TRUE(
-      Apply(mozart::NewExportResourceOp(resource_id, std::move(source))));
+      Apply(scenic_lib::NewExportResourceOp(resource_id, std::move(source))));
 }
 
 TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
@@ -43,8 +43,8 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Apply the import op.
-  ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-      1 /* import resource ID */, mozart2::ImportSpec::NODE, /* spec */
+  ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+      1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
       std::move(destination))                                /* endpoint */
                     ));
 
@@ -61,7 +61,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   ASSERT_EQ(nullptr, import_node->imported_resource());
 
   // Import specs should match.
-  ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+  ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
 }
 
 TEST_F(ImportTest, PerformsFullLinking) {
@@ -72,8 +72,8 @@ TEST_F(ImportTest, PerformsFullLinking) {
   // Perform the import
   {
     // Apply the import op.
-    ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-        1 /* import resource ID */, mozart2::ImportSpec::NODE, /* spec */
+    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+        1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                                /* endpoint */
                       ));
 
@@ -93,19 +93,19 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Perform the export
   {
     // Create an entity node.
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(2)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(2)));
 
     // Assert that the entity node was correctly mapped in.
     ASSERT_EQ(2u, session_->GetMappedResourceCount());
 
     // Apply the export op.
-    ASSERT_TRUE(Apply(mozart::NewExportResourceOp(2, std::move(source))));
+    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceOp(2, std::move(source))));
   }
 
   // Bindings should have been resolved.
@@ -119,7 +119,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_NE(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
 
     // Check that it was bound to the right object.
     ASSERT_NE(nullptr, import_node->imported_resource());
@@ -159,8 +159,8 @@ TEST_F(ImportThreadedTest,
     ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
     // Apply the import op.
-    ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-        1 /* import resource ID */, mozart2::ImportSpec::NODE, /* spec */
+    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+        1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                                /* endpoint */
                       ));
 
@@ -181,11 +181,11 @@ TEST_F(ImportThreadedTest,
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
 
     // Release the import resource.
     ASSERT_TRUE(
-        Apply(mozart::NewReleaseResourceOp(1 /* import resource ID */)));
+        Apply(scenic_lib::NewReleaseResourceOp(1 /* import resource ID */)));
   });
 
   // Make sure the expiry handle tells us that the resource has expired.
@@ -205,8 +205,8 @@ TEST_F(ImportTest,
   ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
   // Apply the import op.
-  ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-      1 /* import resource ID */, mozart2::ImportSpec::NODE, /* spec */
+  ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+      1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
       std::move(destination))                                /* endpoint */
                     ));
 
@@ -226,7 +226,7 @@ TEST_F(ImportTest,
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Resolve by the resource owned by the import container.
@@ -248,8 +248,8 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
     ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
 
     // Apply the import op.
-    ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-        1 /* import resource ID */, mozart2::ImportSpec::NODE, /* spec */
+    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+        1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                                /* endpoint */
                       ));
 
@@ -266,17 +266,17 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
     ASSERT_EQ(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Attempt to add an entity node as a child to an unlinked resource.
   {
     // Create the entity node.
     ASSERT_TRUE(
-        Apply(mozart::NewCreateEntityNodeOp(2 /* child resource id */)));
+        Apply(scenic_lib::NewCreateEntityNodeOp(2 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(1 /* unlinked import resource */,
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1 /* unlinked import resource */,
                                             2 /* child resource */)));
   }
 }
@@ -289,8 +289,8 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
   // Perform the import
   {
     // Apply the import op.
-    ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-        1 /* import resource ID */, mozart2::ImportSpec::NODE, /* spec */
+    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+        1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
         std::move(destination))                                /* endpoint */
                       ));
 
@@ -310,19 +310,19 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_EQ(nullptr, import_node->imported_resource());
 
     // Import specs should match.
-    ASSERT_EQ(mozart2::ImportSpec::NODE, import_node->import_spec());
+    ASSERT_EQ(scenic::ImportSpec::NODE, import_node->import_spec());
   }
 
   // Perform the export
   {
     // Create an entity node.
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(2)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(2)));
 
     // Assert that the entity node was correctly mapped in.
     ASSERT_EQ(2u, session_->GetMappedResourceCount());
 
     // Apply the export op.
-    ASSERT_TRUE(Apply(mozart::NewExportResourceOp(2, std::move(source))));
+    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceOp(2, std::move(source))));
   }
 
   // Bindings should have been resolved.
@@ -336,17 +336,17 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     ASSERT_NE(import_node->imported_resource(), nullptr);
 
     // Import specs should match.
-    ASSERT_EQ(import_node->import_spec(), mozart2::ImportSpec::NODE);
+    ASSERT_EQ(import_node->import_spec(), scenic::ImportSpec::NODE);
   }
 
   // Attempt to add an entity node as a child to an linked resource.
   {
     // Create the entity node.
     ASSERT_TRUE(
-        Apply(mozart::NewCreateEntityNodeOp(3 /* child resource id */)));
+        Apply(scenic_lib::NewCreateEntityNodeOp(3 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(1 /* unlinked import resource */,
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1 /* unlinked import resource */,
                                             3 /* child resource */)));
   }
 }
@@ -385,29 +385,29 @@ TEST_F(ImportTest, DISABLED_EmbedderCanEmbedNodesFromElsewhere) {
 
   // Embedder.
   {
-    ASSERT_TRUE(Apply(mozart::NewCreateSceneOp(1)));
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(2)));
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(3)));
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(1, 2)));
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(2, 3)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateSceneOp(1)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(2)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(3)));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1, 2)));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(2, 3)));
 
     // Export.
-    ASSERT_TRUE(Apply(mozart::NewExportResourceOp(1, std::move(export_token))));
+    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceOp(1, std::move(export_token))));
     ASSERT_EQ(1u, engine_->GetResourceLinker().NumExports());
   }
 
   // Embeddee.
   {
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(1001)));
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(1002)));
-    ASSERT_TRUE(Apply(mozart::NewCreateEntityNodeOp(1003)));
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(1001, 1002)));
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(1002, 1003)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(1001)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(1002)));
+    ASSERT_TRUE(Apply(scenic_lib::NewCreateEntityNodeOp(1003)));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1001, 1002)));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1002, 1003)));
 
     // Import.
-    ASSERT_TRUE(Apply(mozart::NewImportResourceOp(
-        500, mozart2::ImportSpec::NODE, std::move(import_token))));
-    ASSERT_TRUE(Apply(mozart::NewAddChildOp(500, 1001)));
+    ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
+        500, scenic::ImportSpec::NODE, std::move(import_token))));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(500, 1001)));
   }
 
   // Check that the scene has an item in its imports. That is how the visitor

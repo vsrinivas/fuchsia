@@ -6,7 +6,7 @@ module sketchy;
 
 import "apps/mozart/services/fun/sketchy/resources.fidl";
 import "apps/mozart/services/fun/sketchy/types.fidl";
-import "apps/mozart/services/scene/ops.fidl";
+import "apps/mozart/services/scenic/ops.fidl";
 
 union Op {
   // Resource creation and lifecycle.
@@ -36,17 +36,17 @@ union Op {
   // - NODE: imported nodes enable the use of scenic.AddChildOp to insert
   //         stroke-groups into a Scenic scene-graph.
   // - MATERIAL: imported materials can be applied to a stroke-style.
-  mozart2.ImportResourceOp scenic_import_resource;
+  scenic.ImportResourceOp scenic_import_resource;
 
   // Attach a stroke-group as a child of the specified imported Scenic node.
-  mozart2.AddChildOp scenic_add_child;
+  scenic.AddChildOp scenic_add_child;
 
   // Detach a stroke-group from the Scenic node that it is attached to, if any.
-  mozart2.DetachOp scenic_detach;
+  scenic.DetachOp scenic_detach;
 
   // Set the material of a stroke-style.  This material will be applied to any
   // strokes/stroke-groups that use this style.
-  mozart2.SetMaterialOp scenic_set_material;
+  scenic.SetMaterialOp scenic_set_material;
 };
 
 // Instantiates a new resource.

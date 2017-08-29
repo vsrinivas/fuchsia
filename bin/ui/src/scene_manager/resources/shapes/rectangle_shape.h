@@ -13,7 +13,7 @@ class RectangleShape final : public PlanarShape {
   static const ResourceTypeInfo kTypeInfo;
 
   RectangleShape(Session* session,
-                 mozart::ResourceId id,
+                 scenic::ResourceId id,
                  float initial_width,
                  float initial_height);
 

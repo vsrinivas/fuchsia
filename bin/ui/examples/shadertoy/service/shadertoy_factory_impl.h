@@ -23,7 +23,7 @@ class ShadertoyFactoryImpl final : public mozart::example::ShadertoyFactory {
   // |ShadertoyFactory|
   void NewImagePipeShadertoy(
       ::fidl::InterfaceRequest<mozart::example::Shadertoy> toy_request,
-      ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe) override;
+      ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) override;
 
   // |ShadertoyFactory|
   void NewViewShadertoy(

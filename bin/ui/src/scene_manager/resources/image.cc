@@ -15,7 +15,7 @@ const ResourceTypeInfo Image::kTypeInfo = {
     ResourceType::kImage | ResourceType::kImageBase, "Image"};
 
 Image::Image(Session* session,
-             mozart::ResourceId id,
+             scenic::ResourceId id,
              MemoryPtr memory,
              escher::ImagePtr image)
     : ImageBase(session, id, Image::kTypeInfo),
@@ -23,7 +23,7 @@ Image::Image(Session* session,
       image_(std::move(image)) {}
 
 Image::Image(Session* session,
-             mozart::ResourceId id,
+             scenic::ResourceId id,
              GpuMemoryPtr memory,
              escher::ImageInfo image_info,
              vk::Image vk_image)
@@ -36,16 +36,16 @@ Image::Image(Session* session,
           static_cast<GpuMemory*>(memory_.get())->escher_gpu_mem())) {}
 
 ImagePtr Image::New(Session* session,
-                    mozart::ResourceId id,
+                    scenic::ResourceId id,
                     MemoryPtr memory,
-                    const mozart2::ImageInfoPtr& image_info,
+                    const scenic::ImageInfoPtr& image_info,
                     uint64_t memory_offset,
                     ErrorReporter* error_reporter) {
   vk::Format pixel_format = vk::Format::eUndefined;
   size_t bytes_per_pixel;
   size_t pixel_alignment;
   switch (image_info->pixel_format) {
-    case mozart2::ImageInfo::PixelFormat::BGRA_8:
+    case scenic::ImageInfo::PixelFormat::BGRA_8:
       pixel_format = vk::Format::eB8G8R8A8Unorm;
       bytes_per_pixel = 4u;
       pixel_alignment = 4u;
@@ -91,7 +91,7 @@ ImagePtr Image::New(Session* session,
           << "Image::CreateFromMemory(): stride must preserve pixel alignment.";
       return nullptr;
     }
-    if (image_info->tiling != mozart2::ImageInfo::Tiling::LINEAR) {
+    if (image_info->tiling != scenic::ImageInfo::Tiling::LINEAR) {
       error_reporter->ERROR()
           << "Image::CreateFromMemory(): tiling must be LINEAR for images "
           << "created using host memory.";
@@ -175,7 +175,7 @@ ImagePtr Image::New(Session* session,
 }
 
 ImagePtr Image::NewForTesting(Session* session,
-                              mozart::ResourceId id,
+                              scenic::ResourceId id,
                               escher::ResourceManager* image_owner,
                               MemoryPtr host_memory) {
   escher::ImagePtr escher_image = ftl::MakeRefCounted<escher::Image>(

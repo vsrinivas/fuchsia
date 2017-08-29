@@ -9,8 +9,8 @@
 #include <unordered_map>
 
 #include "application/lib/app/application_context.h"
-#include "apps/mozart/lib/scene/client/session.h"
-#include "apps/mozart/services/scene/scene_manager.fidl.h"
+#include "apps/mozart/lib/scenic/client/session.h"
+#include "apps/mozart/services/scenic/scene_manager.fidl.h"
 #include "apps/mozart/services/views/view_trees.fidl.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "apps/mozart/src/view_manager/input/input_connection_impl.h"
@@ -36,7 +36,7 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   // VIEW MANAGER REQUESTS
 
   void GetSceneManager(
-      fidl::InterfaceRequest<mozart2::SceneManager> scene_manager_request);
+      fidl::InterfaceRequest<scenic::SceneManager> scene_manager_request);
   void CreateView(fidl::InterfaceRequest<mozart::View> view_request,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   mozart::ViewListenerPtr view_listener,
@@ -221,8 +221,8 @@ class ViewRegistry : public ViewInspector, public InputOwner {
   }
 
   app::ApplicationContext* application_context_;
-  mozart2::SceneManagerPtr scene_manager_;
-  mozart::client::Session session_;
+  scenic::SceneManagerPtr scene_manager_;
+  scenic_lib::Session session_;
 
   bool traversal_scheduled_ = false;
   bool present_session_scheduled_ = false;

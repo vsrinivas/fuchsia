@@ -10,7 +10,7 @@
 
 #include <mx/eventpair.h>
 
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/services/views/views.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -124,10 +124,10 @@ class ViewStub {
   // This must be called by the view registry once it is time to bind the view's
   // graphical content to its host.  The host import token is consumed as
   // part of creating the host node.
-  void ImportHostNode(mozart::client::Session* session);
+  void ImportHostNode(scenic_lib::Session* session);
 
   // Gets the imported host node, or null if none.
-  mozart::client::ImportNode* host_node() { return host_node_.get(); }
+  scenic_lib::ImportNode* host_node() { return host_node_.get(); }
 
  private:
   void SetTreeRecursively(ViewTreeState* tree);
@@ -149,7 +149,7 @@ class ViewStub {
   bool unavailable_ = false;
 
   mx::eventpair host_import_token_;
-  std::unique_ptr<mozart::client::ImportNode> host_node_;
+  std::unique_ptr<scenic_lib::ImportNode> host_node_;
 
   // Non-null when we are waiting to transfer the |ViewOwner|.
   // Saves the |ViewOwner| we want to transfer ownership to, and a reference to

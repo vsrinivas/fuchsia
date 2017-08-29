@@ -1,0 +1,182 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+import "apps/mozart/services/scenic/nodes.fidl";
+import "apps/mozart/services/scenic/shapes.fidl";
+import "apps/mozart/services/scenic/types.fidl";
+import "apps/mozart/services/images/image_info.fidl";
+import "apps/mozart/services/images/image_pipe.fidl";
+import "apps/mozart/services/images/memory_type.fidl";
+
+// These are all of the types of resources that can be created within a
+// |Session|.
+union Resource {
+  // Memory resources.
+  Memory memory;
+  Image image;
+  ImagePipeArgs image_pipe;
+  Buffer buffer;
+
+  // Shapes (see shapes.fidl).
+  Rectangle rectangle;
+  RoundedRectangle rounded_rectangle;
+  Circle circle;
+  Mesh mesh;
+
+  // Materials.
+  Material material;
+
+  // Nodes.
+  ClipNode clip_node;
+  EntityNode entity_node;
+  ShapeNode shape_node;
+
+  // Layers.
+  DisplayCompositor display_compositor;
+  ImagePipeCompositor image_pipe_compositor;
+  LayerStack layer_stack;
+  Layer layer;
+
+  // Scene representation and display.
+  Scene scene;
+  Camera camera;
+  Renderer renderer;
+
+  // Lighting.
+  DirectionalLight directional_light;
+
+  // A value that can be used in place of a constant value.
+  Variable variable;
+};
+
+struct ImagePipeArgs {
+  scenic.ImagePipe& image_pipe_request;
+};
+
+// |Memory| is a |Resource| that wraps a client-provided Magenta vmo to register
+// it with Scenic.
+// TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
+struct Memory {
+  // The VMO which backs this memory.
+  handle<vmo> vmo;
+
+  // The type of memory stored in the VMO, namely whether it's GPU memory or
+  // host memory.
+  scenic.MemoryType memory_type;
+};
+
+// An image mapped to a range of a |Memory| resource.
+// TODO: more precise and extensive docs.
+struct Image {
+  scenic.ImageInfo info;
+
+  uint32 memory_id;      // id of a |Memory| resource
+  uint32 memory_offset;  // byte offset of image within |Memory| resource
+};
+
+// A buffer mapped to a range of |Memory|.
+struct Buffer {
+  uint32 memory_id;      // id of a |Memory| resource
+  uint32 memory_offset;  // byte offset of buffer within |Memory| resource
+  uint32 num_bytes;
+};
+
+// A DisplayCompositor draws its attached |LayerStack| into an image that is
+// presented on a display.
+struct DisplayCompositor {
+};
+
+// An ImagePipeCompositor draws its attached |LayerStack| into an image that is
+// presented on an image-pipe.
+struct ImagePipeCompositor {
+  scenic.ImagePipe target;
+};
+
+// A LayerStack is a stack of layers that are attached to a Compositor, which
+// draws them in order of increasing Z-order (or rather, presents the illusion
+// of drawing them in that order: it may apply any optimizations that don't
+// affect the output).
+//
+// Supported operations:
+// - AddLayer
+struct LayerStack {
+};
+
+// Supported operations:
+// - Detach
+// - SetCamera
+// - SetColor
+// - SetTexture
+// - SetSize (depth must be zero)
+// - SetSize
+// - SetTranslation (z component determines the relative Z-ordering of layers)
+// - SetRotation (must rotate around Z-axis)
+// - SetScale
+//
+// A layer is not drawn unless it has a camera, texture, or color.
+struct Layer {
+};
+
+
+// A Scene is the root of a scene-graph, and defines the rendering environment
+// (lighting, etc.) for the tree of nodes beneath it.  The following operations
+// may be  applied to a Scene (see ops.fidl):
+//   - Add/RemoveLight
+//   - AddChild
+struct Scene {
+};
+
+// A Camera is used to render a Scene from a particular Viewpoint.  This is
+// achieved by setting a Renderer to use the camera.  The following operations
+// may be applied to a Camera (see ops.fidl):
+//   - SetTransform
+//   - SetCameraProjection
+struct Camera {
+  // The scene that the camera is viewing.
+  uint32 scene_id;
+};
+
+// A Renderer renders a Scene via a Camera.  The following operations may be
+// applied to a Renderer (see ops.fidl):
+//   - SetCamera
+struct Renderer {
+};
+
+// A DirectionalLight is a Light that is emitted from a point at infinity.
+//
+// Although the light is directional, the light has some amount of angular
+// dispersion (i.e., the light is not fully columnated). For simplicity, we
+// assume the dispersion of the light source is symmetric about the light's
+// primary direction.
+//
+// The following operations may be applied to a DirectionalLight (see ops.fidl):
+//   - SetDirection
+//   - SetLightIntensity
+struct DirectionalLight {
+  Value direction;  // vec3.
+  Value intensity;  // float
+};
+
+// Simple texture-mapped material.
+//
+// Operations that can be performed later:
+// SetTextureOp will set the texture, or it can be left as zero (no texture).
+//   The texture can be an Image or ImagePipe.
+// SetColorOp will set the color.
+struct Material {
+};
+
+struct Variable {
+  ValueType type;
+  Value initial_value;  // Must match type.  Must not be a variable_id.
+};
+
+// Describes an exported resource that is to be imported by an ImportResourceOp.
+// NOTE: Currently just an enum of importable resource types, but may later be
+// expanded to express concepts like "meshes with a particular vertex format".
+enum ImportSpec {
+  NODE,
+};

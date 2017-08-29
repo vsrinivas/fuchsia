@@ -10,7 +10,7 @@ const ResourceTypeInfo RectangleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kRectangle, "RectangleShape"};
 
 RectangleShape::RectangleShape(Session* session,
-                               mozart::ResourceId id,
+                               scenic::ResourceId id,
                                float initial_width,
                                float initial_height)
     : PlanarShape(session, id, RectangleShape::kTypeInfo),

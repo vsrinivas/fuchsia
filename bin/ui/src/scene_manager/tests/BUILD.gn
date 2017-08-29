@@ -22,7 +22,7 @@ source_set("testing_deps") {
   ]
   public_deps = [
     ":util",
-    "//apps/mozart/lib/scene:session_helpers",
+    "//apps/mozart/lib/scenic:fidl_helpers",
     "//apps/mozart/lib/tests",
     "//apps/mozart/src/scene_manager:common",
     "//third_party/gtest",

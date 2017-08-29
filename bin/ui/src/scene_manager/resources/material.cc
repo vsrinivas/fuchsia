@@ -14,7 +14,7 @@ namespace scene_manager {
 const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
                                               "Material"};
 
-Material::Material(Session* session, mozart::ResourceId id)
+Material::Material(Session* session, scenic::ResourceId id)
     : Resource(session, id, Material::kTypeInfo),
       escher_material_(ftl::MakeRefCounted<escher::Material>()) {}
 

@@ -24,13 +24,13 @@ void ShadertoyImpl::SetResolution(uint32_t width, uint32_t height) {
   state_->SetResolution(width, height);
 }
 
-void ShadertoyImpl::SetMouse(mozart2::vec4Ptr i_mouse) {
+void ShadertoyImpl::SetMouse(scenic::vec4Ptr i_mouse) {
   state_->SetMouse(glm::vec4(i_mouse->x, i_mouse->y, i_mouse->z, i_mouse->w));
 }
 
 void ShadertoyImpl::SetImage(
     uint32_t channel,
-    ::fidl::InterfaceRequest<mozart2::ImagePipe> request) {
+    ::fidl::InterfaceRequest<scenic::ImagePipe> request) {
   state_->SetImage(channel, std::move(request));
 }
 

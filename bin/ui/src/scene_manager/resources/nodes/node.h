@@ -35,7 +35,7 @@ class Node : public Resource {
   bool SetRotation(const escher::quat& rotation);
   bool SetAnchor(const escher::vec3& anchor);
   bool SetClipToSelf(bool clip_to_self);
-  bool SetHitTestBehavior(mozart2::HitTestBehavior behavior);
+  bool SetHitTestBehavior(scenic::HitTestBehavior behavior);
 
   const escher::mat4& GetGlobalTransform() const;
 
@@ -45,13 +45,13 @@ class Node : public Resource {
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
   bool clip_to_self() const { return clip_to_self_; }
-  mozart2::HitTestBehavior hit_test_behavior() const {
+  scenic::HitTestBehavior hit_test_behavior() const {
     return hit_test_behavior_;
   }
 
   // The node's metrics as reported to the session listener.
-  mozart2::Metrics reported_metrics() const { return reported_metrics_; }
-  void set_reported_metrics(mozart2::Metrics metrics) {
+  scenic::Metrics reported_metrics() const { return reported_metrics_; }
+  void set_reported_metrics(scenic::Metrics metrics) {
     reported_metrics_ = metrics;
   }
 
@@ -83,7 +83,7 @@ class Node : public Resource {
 
  protected:
   Node(Session* session,
-       mozart::ResourceId node_id,
+       scenic::ResourceId node_id,
        const ResourceTypeInfo& type_info);
 
  private:
@@ -106,9 +106,9 @@ class Node : public Resource {
   mutable escher::mat4 global_transform_;
   mutable bool global_transform_dirty_ = true;
   bool clip_to_self_ = false;
-  mozart2::HitTestBehavior hit_test_behavior_ =
-      mozart2::HitTestBehavior::kDefault;
-  mozart2::Metrics reported_metrics_;
+  scenic::HitTestBehavior hit_test_behavior_ =
+      scenic::HitTestBehavior::kDefault;
+  scenic::Metrics reported_metrics_;
 };
 
 // Inline functions.

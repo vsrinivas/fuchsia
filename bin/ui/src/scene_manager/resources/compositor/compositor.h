@@ -53,7 +53,7 @@ class Compositor : public Resource {
   escher::Escher* escher() const { return escher_; }
 
   Compositor(Session* session,
-             mozart::ResourceId id,
+             scenic::ResourceId id,
              const ResourceTypeInfo& type_info,
              std::unique_ptr<Swapchain> swapchain);
 

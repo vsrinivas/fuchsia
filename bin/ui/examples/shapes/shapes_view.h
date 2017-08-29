@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_EXAMPLES_SHAPES_SHAPES_VIEW_H_
 #define APPS_MOZART_EXAMPLES_SHAPES_SHAPES_VIEW_H_
 
-#include "apps/mozart/lib/scene/client/resources.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
@@ -23,11 +23,11 @@ class ShapesView : public mozart::BaseView {
  private:
   // |BaseView|:
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info) override;
+      scenic::PresentationInfoPtr presentation_info) override;
 
-  mozart::client::ShapeNode background_node_;
-  mozart::client::ShapeNode card_node_;
-  mozart::client::ShapeNode circle_node_;
+  scenic_lib::ShapeNode background_node_;
+  scenic_lib::ShapeNode card_node_;
+  scenic_lib::ShapeNode circle_node_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ShapesView);
 };

@@ -15,7 +15,7 @@ class Buffer : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   Buffer(Session* session,
-         mozart::ResourceId id,
+         scenic::ResourceId id,
          GpuMemoryPtr memory,
          uint32_t size,
          uint32_t offset);

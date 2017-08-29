@@ -10,11 +10,9 @@ Canvas::Canvas(app::ApplicationContext* context)
     : Canvas(context->ConnectToEnvironmentService<sketchy::Canvas>()) {}
 
 Canvas::Canvas(sketchy::CanvasPtr canvas)
-    : canvas_(std::move(canvas)),
-      next_resource_id_(1) {
+    : canvas_(std::move(canvas)), next_resource_id_(1) {
   canvas_.set_connection_error_handler([this] {
-    FTL_LOG(INFO)
-    << "sketchy_lib::Canvas: lost connection to sketchy::Canvas.";
+    FTL_LOG(INFO) << "sketchy_lib::Canvas: lost connection to sketchy::Canvas.";
     mtl::MessageLoop::GetCurrent()->QuitNow();
   });
 }
@@ -28,7 +26,7 @@ void Canvas::Present(uint64_t time) {
     canvas_->Enqueue(std::move(ops_));
   }
   // TODO: Use this callback to drive Present loop.
-  canvas_->Present(time, [](mozart2::PresentationInfoPtr info) {});
+  canvas_->Present(time, [](scenic::PresentationInfoPtr info) {});
 }
 
 }  // namespace sketchy_lib

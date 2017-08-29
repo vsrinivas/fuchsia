@@ -14,7 +14,7 @@ namespace shadertoy {
 
 ftl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
     App* app,
-    ::fidl::InterfaceHandle<mozart2::ImagePipe> image_pipe) {
+    ::fidl::InterfaceHandle<scenic::ImagePipe> image_pipe) {
   return ftl::AdoptRef(
       new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
@@ -102,7 +102,7 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
 
 void ShadertoyState::SetImage(
     uint32_t channel,
-    ::fidl::InterfaceRequest<mozart2::ImagePipe> request) {
+    ::fidl::InterfaceRequest<scenic::ImagePipe> request) {
   FTL_CHECK(false) << "unimplemented";
 }
 
@@ -117,7 +117,7 @@ void ShadertoyState::RequestFrame(uint64_t presentation_time) {
 }
 
 void ShadertoyState::OnFramePresented(
-    const mozart2::PresentationInfoPtr& info) {
+    const scenic::PresentationInfoPtr& info) {
   FTL_DCHECK(is_drawing_);
   is_drawing_ = false;
   RequestFrame(info->presentation_time + info->presentation_interval);

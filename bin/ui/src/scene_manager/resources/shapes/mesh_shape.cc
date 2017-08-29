@@ -11,7 +11,7 @@ namespace scene_manager {
 const ResourceTypeInfo MeshShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kMesh, "MeshShape"};
 
-MeshShape::MeshShape(Session* session, mozart::ResourceId id)
+MeshShape::MeshShape(Session* session, scenic::ResourceId id)
     : Shape(session, id, MeshShape::kTypeInfo) {}
 
 escher::Object MeshShape::GenerateRenderObject(
@@ -27,27 +27,27 @@ bool MeshShape::GetIntersection(const escher::ray4& ray,
 }
 
 bool MeshShape::BindBuffers(BufferPtr index_buffer,
-                            mozart2::MeshIndexFormat index_format,
+                            scenic::MeshIndexFormat index_format,
                             uint64_t index_offset,
                             uint32_t index_count,
                             BufferPtr vertex_buffer,
-                            const mozart2::MeshVertexFormatPtr& vertex_format,
+                            const scenic::MeshVertexFormatPtr& vertex_format,
                             uint64_t vertex_offset,
                             uint32_t vertex_count,
                             escher::BoundingBox bounding_box) {
-  if (index_format != mozart2::MeshIndexFormat::kUint32) {
+  if (index_format != scenic::MeshIndexFormat::kUint32) {
     // TODO(MZ-275): only 32-bit indices are supported.
-    session()->error_reporter()->ERROR() << "BindBuffers::Update(): "
+    session()->error_reporter()->ERROR() << "BindBuffers::BindBuffers(): "
                                             "TODO(MZ-275): only 32-bit indices "
                                             "are supported.";
     return false;
   }
   escher::MeshSpec spec;
   switch (vertex_format->position_type) {
-    case mozart2::ValueType::kVector2:
+    case scenic::ValueType::kVector2:
       spec.flags |= escher::MeshAttribute::kPosition2D;
       break;
-    case mozart2::ValueType::kVector3:
+    case scenic::ValueType::kVector3:
       spec.flags |= escher::MeshAttribute::kPosition3D;
       break;
     default:
@@ -56,7 +56,7 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
       return false;
   }
   switch (vertex_format->normal_type) {
-    case mozart2::ValueType::kNone:
+    case scenic::ValueType::kNone:
       break;
     default:
       session()->error_reporter()->ERROR()
@@ -64,10 +64,10 @@ bool MeshShape::BindBuffers(BufferPtr index_buffer,
       return false;
   }
   switch (vertex_format->tex_coord_type) {
-    case mozart2::ValueType::kVector2:
+    case scenic::ValueType::kVector2:
       spec.flags |= escher::MeshAttribute::kUV;
       break;
-    case mozart2::ValueType::kNone:
+    case scenic::ValueType::kNone:
       break;
     default:
       session()->error_reporter()->ERROR()

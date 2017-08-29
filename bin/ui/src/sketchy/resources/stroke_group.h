@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/mozart/lib/scene/client/resources.h"
-#include "apps/mozart/lib/scene/client/session.h"
+#include "apps/mozart/lib/scenic/client/resources.h"
+#include "apps/mozart/lib/scenic/client/session.h"
 #include "apps/mozart/src/sketchy/buffer.h"
 #include "apps/mozart/src/sketchy/resources/resource.h"
 
@@ -19,19 +19,19 @@ class StrokeGroup final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  StrokeGroup(mozart::client::Session* session,
+  StrokeGroup(scenic_lib::Session* session,
               escher::BufferFactory* buffer_factory);
 
   // TODO(MZ-269): No Stroke class exists.
   // bool AddStroke(StrokePtr stroke);
   // bool RemoveStroke(StrokePtr stroke);
 
-  const mozart::client::ShapeNode& shape_node() const { return shape_node_; }
+  const scenic_lib::ShapeNode& shape_node() const { return shape_node_; }
 
  private:
-  mozart::client::ShapeNode shape_node_;
-  mozart::client::Material material_;
-  mozart::client::Mesh mesh_;
+  scenic_lib::ShapeNode shape_node_;
+  scenic_lib::Material material_;
+  scenic_lib::Mesh mesh_;
 
   // TODO: more sophisticated buffer management.
   std::unique_ptr<Buffer> vertex_buffer_;

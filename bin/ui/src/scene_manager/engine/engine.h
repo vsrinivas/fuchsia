@@ -54,7 +54,7 @@ class Engine : private FrameSchedulerDelegate {
   // a resource that was exported by another session.  Return nullptr if the
   // params are invalid.
   void ImportResource(ImportPtr import,
-                      mozart2::ImportSpec spec,
+                      scenic::ImportSpec spec,
                       const mx::eventpair& endpoint);
 
   DisplayManager* display_manager() const { return display_manager_; }
@@ -96,9 +96,8 @@ class Engine : private FrameSchedulerDelegate {
   // a new Image to present.
   void ScheduleUpdate(uint64_t presentation_time);
 
-  void CreateSession(
-      ::fidl::InterfaceRequest<mozart2::Session> request,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+  void CreateSession(::fidl::InterfaceRequest<scenic::Session> request,
+                     ::fidl::InterfaceHandle<scenic::SessionListener> listener);
 
   // Create a swapchain for the specified display.  The display must not already
   // be claimed by another swapchain.
@@ -124,8 +123,8 @@ class Engine : private FrameSchedulerDelegate {
   // Allow overriding to support tests.
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
       SessionId id,
-      ::fidl::InterfaceRequest<mozart2::Session> request,
-      ::fidl::InterfaceHandle<mozart2::SessionListener> listener);
+      ::fidl::InterfaceRequest<scenic::Session> request,
+      ::fidl::InterfaceHandle<scenic::SessionListener> listener);
 
   // Destroys the session with the given id.
   void TearDownSession(SessionId id);
@@ -152,7 +151,7 @@ class Engine : private FrameSchedulerDelegate {
   // Update reported metrics for nodes which subscribe to metrics events.
   // If anything changed, append the node to |updated_nodes|.
   void UpdateMetrics(Node* node,
-                     const mozart2::Metrics& parent_metrics,
+                     const scenic::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
   DisplayManager* const display_manager_;

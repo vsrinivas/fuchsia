@@ -11,7 +11,7 @@ namespace scene_manager {
 const ResourceTypeInfo ShapeNode::kTypeInfo = {
     ResourceType::kNode | ResourceType::kShapeNode, "ShapeNode"};
 
-ShapeNode::ShapeNode(Session* session, mozart::ResourceId node_id)
+ShapeNode::ShapeNode(Session* session, scenic::ResourceId node_id)
     : Node(session, node_id, ShapeNode::kTypeInfo) {}
 
 void ShapeNode::SetMaterial(MaterialPtr material) {

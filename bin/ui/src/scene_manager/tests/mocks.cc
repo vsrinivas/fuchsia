@@ -10,8 +10,8 @@ namespace test {
 SessionHandlerForTest::SessionHandlerForTest(
     Engine* engine,
     SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener)
+    ::fidl::InterfaceRequest<scenic::Session> request,
+    ::fidl::InterfaceHandle<scenic::SessionListener> listener)
     : SessionHandler(engine,
                      session_id,
                      std::move(request),
@@ -19,7 +19,7 @@ SessionHandlerForTest::SessionHandlerForTest(
       enqueue_count_(0),
       present_count_(0) {}
 
-void SessionHandlerForTest::Enqueue(::fidl::Array<mozart2::OpPtr> ops) {
+void SessionHandlerForTest::Enqueue(::fidl::Array<scenic::OpPtr> ops) {
   SessionHandler::Enqueue(std::move(ops));
   ++enqueue_count_;
 }
@@ -49,8 +49,8 @@ EngineForTest::EngineForTest(DisplayManager* display_manager,
 
 std::unique_ptr<SessionHandler> EngineForTest::CreateSessionHandler(
     SessionId session_id,
-    ::fidl::InterfaceRequest<mozart2::Session> request,
-    ::fidl::InterfaceHandle<mozart2::SessionListener> listener) {
+    ::fidl::InterfaceRequest<scenic::Session> request,
+    ::fidl::InterfaceHandle<scenic::SessionListener> listener) {
   return std::make_unique<SessionHandlerForTest>(
       this, session_id, std::move(request), std::move(listener));
 }
