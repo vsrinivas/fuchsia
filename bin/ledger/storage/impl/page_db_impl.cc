@@ -130,7 +130,8 @@ std::unique_ptr<PageDb::Batch> PageDbImpl::StartBatch() {
                                            coroutine_service_, page_storage_);
 }
 
-Status PageDbImpl::GetHeads(std::vector<CommitId>* heads) {
+Status PageDbImpl::GetHeads(coroutine::CoroutineHandler* /*handler*/,
+                            std::vector<CommitId>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(
       db_.GetEntriesByPrefix(convert::ToSlice(HeadRow::kPrefix), &entries));
@@ -138,17 +139,22 @@ Status PageDbImpl::GetHeads(std::vector<CommitId>* heads) {
   return Status::OK;
 }
 
-Status PageDbImpl::GetCommitStorageBytes(CommitIdView commit_id,
-                                         std::string* storage_bytes) {
+Status PageDbImpl::GetCommitStorageBytes(
+    coroutine::CoroutineHandler* /*handler*/,
+    CommitIdView commit_id,
+    std::string* storage_bytes) {
   return db_.Get(CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
-Status PageDbImpl::GetImplicitJournalIds(std::vector<JournalId>* journal_ids) {
+Status PageDbImpl::GetImplicitJournalIds(
+    coroutine::CoroutineHandler* /*handler*/,
+    std::vector<JournalId>* journal_ids) {
   return db_.GetByPrefix(convert::ToSlice(ImplicitJournalMetaRow::kPrefix),
                          journal_ids);
 }
 
-Status PageDbImpl::GetImplicitJournal(const JournalId& journal_id,
+Status PageDbImpl::GetImplicitJournal(coroutine::CoroutineHandler* /*handler*/,
+                                      const JournalId& journal_id,
                                       std::unique_ptr<Journal>* journal) {
   FTL_DCHECK(journal_id.size() == JournalEntryRow::kJournalIdSize);
   FTL_DCHECK(journal_id[0] == JournalEntryRow::kImplicitPrefix);

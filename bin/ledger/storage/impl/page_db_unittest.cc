@@ -63,17 +63,17 @@ class PageDbTest : public ::test::TestWithCoroutines {
 TEST_F(PageDbTest, HeadCommits) {
   EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::vector<CommitId> heads;
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
+    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
 
     CommitId cid = RandomCommitId();
     EXPECT_EQ(Status::OK, page_db_.AddHead(handler, cid, glue::RandUint64()));
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
+    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_EQ(1u, heads.size());
     EXPECT_EQ(cid, heads[0]);
 
     EXPECT_EQ(Status::OK, page_db_.RemoveHead(handler, cid));
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
+    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_TRUE(heads.empty());
   }));
 }
@@ -106,7 +106,7 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     }
 
     std::vector<CommitId> heads;
-    EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
+    EXPECT_EQ(Status::OK, page_db_.GetHeads(handler, &heads));
     EXPECT_EQ(timestamps.size(), heads.size());
 
     for (size_t i = 0; i < heads.size(); ++i) {
@@ -125,19 +125,19 @@ TEST_F(PageDbTest, Commits) {
     std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
         &page_storage_, RandomObjectId(), std::move(parents));
 
-    EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
+    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
+                                     handler, commit->GetId(), &storage_bytes));
 
     EXPECT_EQ(Status::OK,
               page_db_.AddCommitStorageBytes(handler, commit->GetId(),
                                              commit->GetStorageBytes()));
-    EXPECT_EQ(Status::OK,
-              page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
+    EXPECT_EQ(Status::OK, page_db_.GetCommitStorageBytes(
+                              handler, commit->GetId(), &storage_bytes));
     EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
 
     EXPECT_EQ(Status::OK, page_db_.RemoveCommit(handler, commit->GetId()));
-    EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
+    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetCommitStorageBytes(
+                                     handler, commit->GetId(), &storage_bytes));
   }));
 }
 
@@ -156,16 +156,18 @@ TEST_F(PageDbTest, Journals) {
 
     // Removing explicit journals should not affect the implicit ones.
     std::vector<JournalId> journal_ids;
-    EXPECT_EQ(Status::OK, page_db_.GetImplicitJournalIds(&journal_ids));
+    EXPECT_EQ(Status::OK,
+              page_db_.GetImplicitJournalIds(handler, &journal_ids));
     EXPECT_EQ(1u, journal_ids.size());
 
     std::unique_ptr<Journal> found_journal;
-    EXPECT_EQ(Status::OK,
-              page_db_.GetImplicitJournal(journal_ids[0], &found_journal));
+    EXPECT_EQ(Status::OK, page_db_.GetImplicitJournal(handler, journal_ids[0],
+                                                      &found_journal));
     EXPECT_EQ(Status::OK, page_db_.RemoveJournal(journal_ids[0]));
-    EXPECT_EQ(Status::NOT_FOUND,
-              page_db_.GetImplicitJournal(journal_ids[0], &found_journal));
-    EXPECT_EQ(Status::OK, page_db_.GetImplicitJournalIds(&journal_ids));
+    EXPECT_EQ(Status::NOT_FOUND, page_db_.GetImplicitJournal(
+                                     handler, journal_ids[0], &found_journal));
+    EXPECT_EQ(Status::OK,
+              page_db_.GetImplicitJournalIds(handler, &journal_ids));
     EXPECT_EQ(0u, journal_ids.size());
   }));
 }

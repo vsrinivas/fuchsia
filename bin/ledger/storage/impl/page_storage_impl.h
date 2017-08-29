@@ -115,11 +115,7 @@ class PageStorageImpl : public PageStorage {
                             PageDb::Batch* batch,
                             std::vector<ObjectId> object_ids);
 
-  void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,
-                  ChangeSource source,
-                  std::vector<ObjectId> new_objects,
-                  std::function<void(Status)> callback);
-  Status ContainsCommit(CommitIdView id);
+  Status ContainsCommit(coroutine::CoroutineHandler* handler, CommitIdView id);
   bool IsFirstCommit(CommitIdView id);
   // Adds the given synced object. |object_id| will be validated against the
   // expected one based on the |data| and an |OBJECT_ID_MISSMATCH| error will be
@@ -167,11 +163,26 @@ class PageStorageImpl : public PageStorage {
   // Synchronous versions of API methods using coroutines.
   Status SynchronousInit(coroutine::CoroutineHandler* handler);
 
+  Status SynchronousGetCommit(coroutine::CoroutineHandler* handler,
+                              CommitId commit_id,
+                              std::unique_ptr<const Commit>* commit);
+
+  Status SynchronousAddCommitFromLocal(coroutine::CoroutineHandler* handler,
+                                       std::unique_ptr<const Commit> commit,
+                                       std::vector<ObjectId> new_objects,
+                                       bool* notify_watchers);
+
+  Status SynchronousAddCommitsFromSync(
+      coroutine::CoroutineHandler* handler,
+      std::vector<CommitIdAndBytes> ids_and_bytes,
+      bool* notify_watchers);
+
   Status SynchronousAddCommits(
       coroutine::CoroutineHandler* handler,
       std::vector<std::unique_ptr<const Commit>> commits,
       ChangeSource source,
-      std::vector<ObjectId> new_objects);
+      std::vector<ObjectId> new_objects,
+      bool* notify_watchers);
 
   Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
                              ObjectId object_id,

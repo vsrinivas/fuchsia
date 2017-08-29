@@ -115,109 +115,79 @@ void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
 
 void PageStorageImpl::GetHeadCommitIds(
     std::function<void(Status, std::vector<CommitId>)> callback) {
-  std::vector<CommitId> commit_ids;
-  Status status = db_.GetHeads(&commit_ids);
-  if (status != Status::OK) {
-    callback(status, std::vector<CommitId>());
-    return;
-  }
-  callback(Status::OK, std::move(commit_ids));
+  coroutine_service_->StartCoroutine([
+    this, final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    std::vector<CommitId> commit_ids;
+    Status status = db_.GetHeads(handler, &commit_ids);
+    callback(status, std::move(commit_ids));
+  });
 }
 
 void PageStorageImpl::GetCommit(
     CommitIdView commit_id,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  if (IsFirstCommit(commit_id)) {
-    CommitImpl::Empty(this, std::move(callback));
-    return;
-  }
-  std::string bytes;
-  Status s = db_.GetCommitStorageBytes(commit_id, &bytes);
-  if (s != Status::OK) {
-    callback(s, nullptr);
-    return;
-  }
-  std::unique_ptr<const Commit> commit = CommitImpl::FromStorageBytes(
-      this, commit_id.ToString(), std::move(bytes));
-  if (!commit) {
-    callback(Status::FORMAT_ERROR, nullptr);
-    return;
-  }
-  callback(Status::OK, std::move(commit));
+  coroutine_service_->StartCoroutine([
+    this, commit_id = commit_id.ToString(), final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    std::unique_ptr<const Commit> commit;
+    Status status =
+        SynchronousGetCommit(handler, std::move(commit_id), &commit);
+    callback(status, std::move(commit));
+  });
 }
 
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                                          std::vector<ObjectId> new_objects,
                                          std::function<void(Status)> callback) {
-  // If the commit is already present, do nothing.
-  if (ContainsCommit(commit->GetId()) == Status::OK) {
-    callback(Status::OK);
-    return;
-  }
-  std::vector<std::unique_ptr<const Commit>> commits;
-  commits.reserve(1);
-  commits.push_back(std::move(commit));
-  AddCommits(std::move(commits), ChangeSource::LOCAL, std::move(new_objects),
-             callback);
+  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+    this, commit = std::move(commit), new_objects = std::move(new_objects),
+    final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    bool notify_watchers;
+    Status status = SynchronousAddCommitFromLocal(
+        handler, std::move(commit), std::move(new_objects), &notify_watchers);
+
+    // Notify the watchers after calling the callback. Otherwise, client
+    // code will receive the new commits notification before the
+    // confirmation that the given commits were successfully added.
+    callback(status);
+    if (status == Status::OK && notify_watchers) {
+      NotifyWatchers();
+    }
+  }));
 }
 
 void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {
-  std::vector<std::unique_ptr<const Commit>> commits;
+  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
+    this, ids_and_bytes = std::move(ids_and_bytes),
+    final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
-  std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
-  commits.reserve(ids_and_bytes.size());
+    bool notify_watchers;
+    Status status = SynchronousAddCommitsFromSync(
+        handler, std::move(ids_and_bytes), &notify_watchers);
 
-  for (auto& id_and_bytes : ids_and_bytes) {
-    ObjectId id = std::move(id_and_bytes.id);
-    std::string storage_bytes = std::move(id_and_bytes.bytes);
-    if (ContainsCommit(id) == Status::OK) {
-      MarkCommitSynced(id);
-      continue;
+    // Notify the watchers after calling the callback. Otherwise, client
+    // code will receive the new commits notification before the
+    // confirmation that the given commits were successfully added.
+    callback(status);
+    if (status == Status::OK && notify_watchers) {
+      NotifyWatchers();
     }
-
-    std::unique_ptr<const Commit> commit =
-        CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
-    if (!commit) {
-      FTL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
-      callback(Status::FORMAT_ERROR);
-      return;
-    }
-
-    // Remove parents from leaves.
-    for (const auto& parent_id : commit->GetParentIds()) {
-      auto it = leaves.find(&parent_id);
-      if (it != leaves.end()) {
-        leaves.erase(it);
-      }
-    }
-    leaves[&commit->GetId()] = commit.get();
-    commits.push_back(std::move(commit));
-  }
-
-  if (commits.empty()) {
-    callback(Status::OK);
-    return;
-  }
-
-  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
-  // Get all objects from sync and then add the commit objects.
-  for (const auto& leaf : leaves) {
-    btree::GetObjectsFromSync(coroutine_service_, this,
-                              leaf.second->GetRootId(), waiter->NewCallback());
-  }
-
-  waiter->Finalize(ftl::MakeCopyable([
-    this, commits = std::move(commits), callback = std::move(callback)
-  ](Status status) mutable {
-    if (status != Status::OK) {
-      callback(status);
-      return;
-    }
-
-    AddCommits(std::move(commits), ChangeSource::SYNC, std::vector<ObjectId>(),
-               callback);
   }));
 }
 
@@ -602,40 +572,13 @@ Status PageStorageImpl::MarkAllPiecesLocal(coroutine::CoroutineHandler* handler,
   return Status::OK;
 }
 
-void PageStorageImpl::AddCommits(
-    std::vector<std::unique_ptr<const Commit>> commits,
-    ChangeSource source,
-    std::vector<ObjectId> new_objects,
-    std::function<void(Status)> callback) {
-  FTL_DCHECK(new_objects.empty() || source == ChangeSource::LOCAL)
-      << "New objects must only be used when adding local commit.";
-
-  coroutine_service_->StartCoroutine(ftl::MakeCopyable([
-    this, commits = std::move(commits), source,
-    new_objects = std::move(new_objects), final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) mutable {
-    auto callback =
-        UpdateActiveHandlersCallback(handler, std::move(final_callback));
-    bool notify_watchers = commits_to_send_.empty();
-    Status status = SynchronousAddCommits(handler, std::move(commits), source,
-                                          std::move(new_objects));
-
-    // Notify the watchers after calling the callback. Otherwise, client code
-    // will receive the new commits notification before the confirmation that
-    // the given commits were successfully added.
-    callback(status);
-    if (status == Status::OK && notify_watchers) {
-      NotifyWatchers();
-    }
-  }));
-}
-
-Status PageStorageImpl::ContainsCommit(CommitIdView id) {
+Status PageStorageImpl::ContainsCommit(coroutine::CoroutineHandler* handler,
+                                       CommitIdView id) {
   if (IsFirstCommit(id)) {
     return Status::OK;
   }
   std::string bytes;
-  return db_.GetCommitStorageBytes(id, &bytes);
+  return db_.GetCommitStorageBytes(handler, id, &bytes);
 }
 
 bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
@@ -918,7 +861,7 @@ Status PageStorageImpl::SynchronousInit(coroutine::CoroutineHandler* handler) {
 
   // Add the default page head if this page is empty.
   std::vector<CommitId> heads;
-  s = db_.GetHeads(&heads);
+  s = db_.GetHeads(handler, &heads);
   if (s != Status::OK) {
     return s;
   }
@@ -938,7 +881,7 @@ Status PageStorageImpl::SynchronousInit(coroutine::CoroutineHandler* handler) {
 
   // Commit uncommited implicit journals.
   std::vector<JournalId> journal_ids;
-  s = db_.GetImplicitJournalIds(&journal_ids);
+  s = db_.GetImplicitJournalIds(handler, &journal_ids);
   if (s != Status::OK) {
     return s;
   }
@@ -946,7 +889,7 @@ Status PageStorageImpl::SynchronousInit(coroutine::CoroutineHandler* handler) {
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   for (JournalId& id : journal_ids) {
     std::unique_ptr<Journal> journal;
-    s = db_.GetImplicitJournal(id, &journal);
+    s = db_.GetImplicitJournal(handler, id, &journal);
     if (s != Status::OK) {
       FTL_LOG(ERROR) << "Failed to get implicit journal with status " << s
                      << ". journal id: " << id;
@@ -975,11 +918,124 @@ Status PageStorageImpl::SynchronousInit(coroutine::CoroutineHandler* handler) {
   return s;
 }
 
+Status PageStorageImpl::SynchronousGetCommit(
+    coroutine::CoroutineHandler* handler,
+    CommitId commit_id,
+    std::unique_ptr<const Commit>* commit) {
+  if (IsFirstCommit(commit_id)) {
+    Status s;
+    if (coroutine::SyncCall(
+            handler,
+            [this](std::function<void(Status, std::unique_ptr<const Commit>)>
+                       callback) {
+              CommitImpl::Empty(this, std::move(callback));
+            },
+            &s, commit)) {
+      return Status::INTERRUPTED;
+    }
+    return s;
+  }
+  std::string bytes;
+  Status s = db_.GetCommitStorageBytes(handler, commit_id, &bytes);
+  if (s != Status::OK) {
+    return s;
+  }
+  std::unique_ptr<const Commit> result =
+      CommitImpl::FromStorageBytes(this, commit_id, std::move(bytes));
+  if (!result) {
+    return Status::FORMAT_ERROR;
+  }
+  commit->swap(result);
+  return Status::OK;
+}
+
+Status PageStorageImpl::SynchronousAddCommitFromLocal(
+    coroutine::CoroutineHandler* handler,
+    std::unique_ptr<const Commit> commit,
+    std::vector<ObjectId> new_objects,
+    bool* notify_watchers) {
+  // If the commit is already present, do nothing.
+  if (ContainsCommit(handler, commit->GetId()) == Status::OK) {
+    return Status::OK;
+  }
+
+  std::vector<std::unique_ptr<const Commit>> commits;
+  commits.reserve(1);
+  commits.push_back(std::move(commit));
+
+  return SynchronousAddCommits(handler, std::move(commits), ChangeSource::LOCAL,
+                               std::move(new_objects), notify_watchers);
+}
+
+Status PageStorageImpl::SynchronousAddCommitsFromSync(
+    coroutine::CoroutineHandler* handler,
+    std::vector<CommitIdAndBytes> ids_and_bytes,
+    bool* notify_watchers) {
+  std::vector<std::unique_ptr<const Commit>> commits;
+
+  std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
+  commits.reserve(ids_and_bytes.size());
+
+  for (auto& id_and_bytes : ids_and_bytes) {
+    ObjectId id = std::move(id_and_bytes.id);
+    std::string storage_bytes = std::move(id_and_bytes.bytes);
+    if (ContainsCommit(handler, id) == Status::OK) {
+      MarkCommitSynced(id);
+      continue;
+    }
+
+    std::unique_ptr<const Commit> commit =
+        CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
+    if (!commit) {
+      FTL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
+      return Status::FORMAT_ERROR;
+    }
+
+    // Remove parents from leaves.
+    for (const auto& parent_id : commit->GetParentIds()) {
+      auto it = leaves.find(&parent_id);
+      if (it != leaves.end()) {
+        leaves.erase(it);
+      }
+    }
+    leaves[&commit->GetId()] = commit.get();
+    commits.push_back(std::move(commit));
+  }
+
+  if (commits.empty()) {
+    return Status::OK;
+  }
+
+  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+  // Get all objects from sync and then add the commit objects.
+  for (const auto& leaf : leaves) {
+    btree::GetObjectsFromSync(coroutine_service_, this,
+                              leaf.second->GetRootId(), waiter->NewCallback());
+  }
+
+  Status waiter_status;
+  if (coroutine::SyncCall(
+          handler,
+          [waiter = std::move(waiter)](std::function<void(Status)> callback) {
+            waiter->Finalize(std::move(callback));
+          },
+          &waiter_status)) {
+    return Status::INTERRUPTED;
+  }
+  if (waiter_status != Status::OK) {
+    return waiter_status;
+  }
+
+  return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
+                               std::vector<ObjectId>(), notify_watchers);
+}
+
 Status PageStorageImpl::SynchronousAddCommits(
     coroutine::CoroutineHandler* handler,
     std::vector<std::unique_ptr<const Commit>> commits,
     ChangeSource source,
-    std::vector<ObjectId> new_objects) {
+    std::vector<ObjectId> new_objects,
+    bool* notify_watchers) {
   // Apply all changes atomically.
   std::unique_ptr<PageDb::Batch> batch = db_.StartBatch();
   std::set<const CommitId*, StringPointerComparator> added_commits;
@@ -1006,7 +1062,7 @@ Status PageStorageImpl::SynchronousAddCommits(
       // are received in a single batch.
       for (const CommitIdView& parent_id : commit->GetParentIds()) {
         if (added_commits.count(&parent_id) == 0) {
-          s = ContainsCommit(parent_id);
+          s = ContainsCommit(handler, parent_id);
           if (s != Status::OK) {
             FTL_LOG(ERROR) << "Failed to find parent commit \""
                            << ToHex(parent_id) << "\" of commit \""
@@ -1040,7 +1096,7 @@ Status PageStorageImpl::SynchronousAddCommits(
       // NOT_FOUND while a commit is added, and batch->Execute() will break
       // the invariants of this system (in particular, that synced commits
       // cannot become unsynced).
-      s = ContainsCommit(commit->GetId());
+      s = ContainsCommit(handler, commit->GetId());
       if (s == Status::NOT_FOUND) {
         s = batch->AddCommitStorageBytes(handler, commit->GetId(),
                                          commit->GetStorageBytes());
@@ -1111,6 +1167,7 @@ Status PageStorageImpl::SynchronousAddCommits(
 
   s = batch->Execute();
 
+  *notify_watchers = commits_to_send_.empty();
   commits_to_send_.emplace(source, std::move(commits_to_send));
   return s;
 }

@@ -17,11 +17,15 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   // PageDb:
   Status Init() override;
   std::unique_ptr<PageDb::Batch> StartBatch() override;
-  Status GetHeads(std::vector<CommitId>* heads) override;
-  Status GetCommitStorageBytes(CommitIdView commit_id,
+  Status GetHeads(coroutine::CoroutineHandler* handler,
+                  std::vector<CommitId>* heads) override;
+  Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,
+                               CommitIdView commit_id,
                                std::string* storage_bytes) override;
-  Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) override;
-  Status GetImplicitJournal(const JournalId& journal_id,
+  Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
+                               std::vector<JournalId>* journal_ids) override;
+  Status GetImplicitJournal(coroutine::CoroutineHandler* handler,
+                            const JournalId& journal_id,
                             std::unique_ptr<Journal>* journal) override;
   Status GetJournalValue(const JournalId& journal_id,
                          ftl::StringView key,

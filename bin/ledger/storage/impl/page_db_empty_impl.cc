@@ -12,18 +12,23 @@ Status PageDbEmptyImpl::Init() {
 std::unique_ptr<PageDb::Batch> PageDbEmptyImpl::StartBatch() {
   return std::make_unique<PageDbEmptyImpl>();
 }
-Status PageDbEmptyImpl::GetHeads(std::vector<CommitId>* /*heads*/) {
+Status PageDbEmptyImpl::GetHeads(coroutine::CoroutineHandler* /*handler*/,
+                                 std::vector<CommitId>* /*heads*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetCommitStorageBytes(CommitIdView /*commit_id*/,
-                                              std::string* /*storage_bytes*/) {
+Status PageDbEmptyImpl::GetCommitStorageBytes(
+    coroutine::CoroutineHandler* /*handler*/,
+    CommitIdView /*commit_id*/,
+    std::string* /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetImplicitJournalIds(
+    coroutine::CoroutineHandler* /*handler*/,
     std::vector<JournalId>* /*journal_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetImplicitJournal(
+    coroutine::CoroutineHandler* /*handler*/,
     const JournalId& /*journal_id*/,
     std::unique_ptr<Journal>* /*journal*/) {
   return Status::NOT_IMPLEMENTED;

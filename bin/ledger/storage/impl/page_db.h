@@ -167,22 +167,26 @@ class PageDb : public PageDbMutator {
   // values. It is not an error if no heads are found. The resulting |heads| are
   // ordered by the timestamp given at their insertion and if identical, by
   // their id.
-  virtual Status GetHeads(std::vector<CommitId>* heads) = 0;
+  virtual Status GetHeads(coroutine::CoroutineHandler* handler,
+                          std::vector<CommitId>* heads) = 0;
 
   // Commits.
   // Finds the commit with the given |commit_id| and stores its represenation in
   // storage bytes in the |storage_bytes| string.
-  virtual Status GetCommitStorageBytes(CommitIdView commit_id,
+  virtual Status GetCommitStorageBytes(coroutine::CoroutineHandler* handler,
+                                       CommitIdView commit_id,
                                        std::string* storage_bytes) = 0;
 
   // Journals.
   // Finds all implicit journal ids and replaces the contents of |journal_ids|
   // with their ids.
-  virtual Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) = 0;
+  virtual Status GetImplicitJournalIds(coroutine::CoroutineHandler* handler,
+                                       std::vector<JournalId>* journal_ids) = 0;
 
   // Stores the implicit journal with the given |journal_id| in the |journal|
   // parameter.
-  virtual Status GetImplicitJournal(const JournalId& journal_id,
+  virtual Status GetImplicitJournal(coroutine::CoroutineHandler* handler,
+                                    const JournalId& journal_id,
                                     std::unique_ptr<Journal>* journal) = 0;
 
   // Finds the value for the given |key| in the journal with the given id.
