@@ -282,7 +282,6 @@ static void ethmac_send(void* cookie, uint32_t options, void* data, size_t lengt
 
     // Send zero-length terminal packet, if needed
     if (send_terminal_packet) {
-        printf("%s: attempting to write 0 bytes -- the end is near (see MG-1026)\n", module_name);
         tx_req2->length = 0;
         bytes_copied = iotxn_copyto(tx_req2, byte_data, 0, 0);
         if (bytes_copied < 0) {
