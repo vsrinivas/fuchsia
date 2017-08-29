@@ -312,17 +312,17 @@ template("package") {
       ]
 
       args = [ rebase_path(id_file) ]
-      foreach(binary, binaries) {
+      foreach(binary, pkg.binaries) {
         args += [ rebase_path("$root_build_dir/${binary.name}") ]
       }
-      foreach(test, tests) {
+      foreach(test, pkg.tests) {
         args += [ rebase_path("$root_build_dir/${test.name}") ]
       }
-      foreach(driver, drivers) {
+      foreach(driver, pkg.drivers) {
         driver_path = rebase_path("$root_build_dir/${driver.name}")
         args += [ rebase_path(driver_path) ]
       }
-      foreach(library, libraries) {
+      foreach(library, pkg.libraries) {
         library_path = "$shared_toolchain_out_dir/${library.name}"
         args += [ rebase_path(library_path) ]
       }
