@@ -355,7 +355,7 @@ mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_
     ret = thrd_detach(thread);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to detach device thread %d\n", ret);
-        goto cleanup;
+        return MX_ERR_INTERNAL;
     }
 
     return MX_OK;
