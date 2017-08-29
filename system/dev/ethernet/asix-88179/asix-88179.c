@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
@@ -21,21 +22,6 @@
 #include <unistd.h>
 
 #include "asix-88179.h"
-
-#define AX88179_DEBUG 0
-#define AX88179_DEBUG_VERBOSE 0
-#if AX88179_DEBUG
-#  define xprintf(args...) printf(args)
-#else
-#  define xprintf(args...)
-#endif
-
-// TODO(tkilbourn): remove all xxprintfs once the batch tx path is proven
-#if AX88179_DEBUG_VERBOSE
-#  define xxprintf(args...) printf(args)
-#else
-#  define xxprintf(args...)
-#endif
 
 #define READ_REQ_COUNT 8
 #define WRITE_REQ_COUNT 8
@@ -97,20 +83,20 @@ static mx_status_t ax88179_read_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t re
     mx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                                      AX88179_REQ_MAC, reg_addr, reg_len, data, reg_len,
                                      MX_TIME_INFINITE);
-#if AX88179_DEBUG
-    printf("read mac %#x:\n", reg_addr);
-    if (status > 0) {
-        hexdump8(data, status);
+    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+        dprintf(SPEW, "read mac %#x:\n", reg_addr);
+        if (status > 0) {
+            hexdump8(data, status);
+        }
     }
-#endif
     return status;
 }
 
 static mx_status_t ax88179_write_mac(ax88179_t* eth, uint8_t reg_addr, uint8_t reg_len, void* data) {
-#if AX88179_DEBUG
-    printf("write mac %#x:\n", reg_addr);
-    hexdump8(data, reg_len);
-#endif
+    if (driver_get_log_flags() & DDK_LOG_SPEW) {
+        dprintf(SPEW, "write mac %#x:\n", reg_addr);
+        hexdump8(data, reg_len);
+    }
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_MAC,
                        reg_addr, reg_len, data, reg_len, MX_TIME_INFINITE);
 }
@@ -119,18 +105,14 @@ static mx_status_t ax88179_read_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t* 
     mx_status_t status = usb_control(&eth->usb, USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
                                      AX88179_REQ_PHY, AX88179_PHY_ID, reg_addr, data, sizeof(*data),
                                      MX_TIME_INFINITE);
-#if AX88179_DEBUG
     if (status == sizeof(*data)) {
-        printf("read phy %#x: %#x\n", reg_addr, *data);
+        dprintf(SPEW, "read phy %#x: %#x\n", reg_addr, *data);
     }
-#endif
     return status;
 }
 
 static mx_status_t ax88179_write_phy(ax88179_t* eth, uint8_t reg_addr, uint16_t data) {
-#if AX88179_DEBUG
-    printf("write phy %#x: %#x\n", reg_addr, data);
-#endif
+    dprintf(SPEW, "write phy %#x: %#x\n", reg_addr, data);
     return usb_control(&eth->usb, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE, AX88179_REQ_PHY,
                        AX88179_PHY_ID, reg_addr, &data, sizeof(data), MX_TIME_INFINITE);
 }
@@ -175,19 +157,19 @@ static uint8_t ax88179_bulk_in_config[5][5][5] = {
 static mx_status_t ax88179_configure_bulk_in(ax88179_t* eth, uint8_t plsr) {
     uint8_t usb_mode = plsr & AX88179_PLSR_USB_MASK;
     if (usb_mode & (usb_mode-1)) {
-        printf("ax88179: invalid usb mode: %#x\n", usb_mode);
+        dprintf(ERROR, "ax88179: invalid usb mode: %#x\n", usb_mode);
         return MX_ERR_INVALID_ARGS;
     }
 
     uint8_t speed = plsr & AX88179_PLSR_EPHY_MASK;
     if (speed & (speed-1)) {
-        printf("ax88179: invalid eth speed: %#x\n", speed);
+        dprintf(ERROR, "ax88179: invalid eth speed: %#x\n", speed);
     }
 
     mx_status_t status = ax88179_write_mac(eth, AX88179_MAC_RQCR, 5,
             ax88179_bulk_in_config[usb_mode][speed >> 4]);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RQCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RQCR, status);
     }
     return status;
 }
@@ -196,26 +178,26 @@ static mx_status_t ax88179_configure_medium_mode(ax88179_t* eth) {
     uint16_t data = 0;
     mx_status_t status = ax88179_read_phy(eth, AX88179_PHY_PHYSR, &data);
     if (status < 0) {
-        printf("ax88179_read_phy to %#x failed: %d\n", AX88179_PHY_PHYSR, status);
+        dprintf(ERROR, "ax88179_read_phy to %#x failed: %d\n", AX88179_PHY_PHYSR, status);
         return status;
     }
 
     unsigned int mode = (data & (AX88179_PHYSR_SPEED|AX88179_PHYSR_DUPLEX)) >> 13;
-    xprintf("ax88179 medium mode: %#x\n", mode);
+    dprintf(TRACE, "ax88179 medium mode: %#x\n", mode);
     if (mode == 4 || mode > 5) {
-        printf("ax88179 mode invalid\n");
+        dprintf(ERROR, "ax88179 mode invalid (mode=%u)\n", mode);
         return MX_ERR_NOT_SUPPORTED;
     }
     status = ax88179_write_mac(eth, AX88179_MAC_MSR, 2, ax88179_media_mode[mode]);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_MSR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_MSR, status);
         return status;
     }
 
     data = 0;
     status = ax88179_read_mac(eth, AX88179_MAC_PLSR, 1, &data);
     if (status < 0) {
-        printf("ax88179_read_mac to %#x failed: %d\n", AX88179_MAC_PLSR, status);
+        dprintf(ERROR, "ax88179_read_mac to %#x failed: %d\n", AX88179_MAC_PLSR, status);
         return status;
     }
     status = ax88179_configure_bulk_in(eth, data & 0xff);
@@ -224,10 +206,10 @@ static mx_status_t ax88179_configure_medium_mode(ax88179_t* eth) {
 }
 
 static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
-    xprintf("request len %" PRIu64"\n", request->actual);
+    dprintf(SPEW, "request len %" PRIu64"\n", request->actual);
 
     if (request->actual < 4) {
-        printf("ax88179_recv short packet\n");
+        dprintf(ERROR, "ax88179_recv short packet\n");
         return MX_ERR_INTERNAL;
     }
 
@@ -236,9 +218,9 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
 
     ptrdiff_t rxhdr_off = request->actual - sizeof(ax88179_rx_hdr_t);
     ax88179_rx_hdr_t* rxhdr = (ax88179_rx_hdr_t*)(read_data + rxhdr_off);
-    xprintf("rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
+    dprintf(SPEW, "rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
     if (rxhdr->num_pkts < 1 || rxhdr->pkt_hdr_off >= rxhdr_off) {
-        printf("%s bad packet\n", __func__);
+        dprintf(ERROR, "%s bad packet\n", __func__);
         return MX_ERR_IO_DATA_INTEGRITY;
     }
 
@@ -246,45 +228,45 @@ static mx_status_t ax88179_recv(ax88179_t* eth, iotxn_t* request) {
     size_t packet = 0;
 
     while (packet < rxhdr->num_pkts) {
-        xprintf("next packet: %zd\n", packet);
+        dprintf(SPEW, "next packet: %zd\n", packet);
         ptrdiff_t pkt_idx = packet++ * sizeof(uint32_t);
         uint32_t* pkt_hdr = (uint32_t*)(read_data + rxhdr->pkt_hdr_off + pkt_idx);
         if ((uintptr_t)pkt_hdr >= (uintptr_t)rxhdr) {
-            printf("%s packet header out of bounds, packet header=%p rx header=%p\n",
+            dprintf(ERROR, "%s packet header out of bounds, packet header=%p rx header=%p\n",
                     __func__, pkt_hdr, rxhdr);
             return MX_ERR_IO_DATA_INTEGRITY;
         }
         uint16_t pkt_len = le16toh((*pkt_hdr & AX88179_RX_PKTLEN) >> 16);
-        xprintf("pkt_hdr: %0#x pkt_len: %u\n", *pkt_hdr, pkt_len);
+        dprintf(SPEW, "pkt_hdr: %0#x pkt_len: %u\n", *pkt_hdr, pkt_len);
         if (pkt_len < 2) {
-            printf("%s short packet (len=%u)\n", __func__,  pkt_len);
+            dprintf(ERROR, "%s short packet (len=%u)\n", __func__,  pkt_len);
             return MX_ERR_IO_DATA_INTEGRITY;
         }
         if (offset + pkt_len > rxhdr->pkt_hdr_off) {
-            printf("%s invalid packet length %u > %lu bytes remaining\n",
+            dprintf(ERROR, "%s invalid packet length %u > %lu bytes remaining\n",
                     __func__, pkt_len, rxhdr->pkt_hdr_off - offset);
             return MX_ERR_IO_DATA_INTEGRITY;
         }
 
         bool drop = false;
         if (*pkt_hdr & AX88179_RX_DROPPKT) {
-            xprintf("%s DropPkt\n", __func__);
+            dprintf(SPEW, "%s DropPkt\n", __func__);
             drop = true;
         }
         if (*pkt_hdr & AX88179_RX_MIIER) {
-            xprintf("%s MII-Er\n", __func__);
+            dprintf(SPEW, "%s MII-Er\n", __func__);
             drop = true;
         }
         if (*pkt_hdr & AX88179_RX_CRCER) {
-            xprintf("%s CRC-Er\n", __func__);
+            dprintf(SPEW, "%s CRC-Er\n", __func__);
             drop = true;
         }
         if (!(*pkt_hdr & AX88179_RX_OK)) {
-            xprintf("%s !GoodPkt\n", __func__);
+            dprintf(SPEW, "%s !GoodPkt\n", __func__);
             drop = true;
         }
         if (!drop) {
-            xprintf("offset = %zd\n", offset);
+            dprintf(SPEW, "offset = %zd\n", offset);
             eth->ifc->recv(eth->cookie, read_data + offset + 2, pkt_len - 2, 0);
         }
 
@@ -306,7 +288,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
 
     mtx_lock(&eth->mutex);
     if (request->status == MX_ERR_IO_REFUSED) {
-        printf("ax88179_read_complete usb_reset_endpoint\n");
+        dprintf(TRACE, "ax88179_read_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     } else if ((request->status == MX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
@@ -321,7 +303,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
 }
 
 static void ax88179_write_complete(iotxn_t* request, void* cookie) {
-    xxprintf("ax88179: write complete\n");
+    dprintf(DEBUG1, "ax88179: write complete\n");
     ax88179_t* eth = (ax88179_t*)cookie;
 
     if (request->status == MX_ERR_IO_NOT_PRESENT) {
@@ -333,16 +315,16 @@ static void ax88179_write_complete(iotxn_t* request, void* cookie) {
     MX_DEBUG_ASSERT(eth->tx_in_flight <= MAX_TX_IN_FLIGHT);
     list_add_tail(&eth->free_write_reqs, &request->node);
     if (request->status == MX_ERR_IO_REFUSED) {
-        printf("ax88179_write_complete usb_reset_endpoint\n");
+        dprintf(TRACE, "ax88179_write_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
 
     iotxn_t* next = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
     if (next == NULL) {
         eth->tx_in_flight--;
-        xxprintf("ax88179: no pending write txns, %u outstanding\n", eth->tx_in_flight);
+        dprintf(DEBUG1, "ax88179: no pending write txns, %u outstanding\n", eth->tx_in_flight);
     } else {
-        xxprintf("ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
+        dprintf(DEBUG1, "ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
                  next, next->length, eth->tx_in_flight);
         iotxn_queue(eth->usb_device, next);
     }
@@ -362,11 +344,9 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
 
         iotxn_copyfrom(request, status, sizeof(status), 0);
         if (memcmp(eth->status, status, sizeof(eth->status))) {
-#if AX88179_DEBUG
             const uint8_t* b = status;
-            printf("ax88179 status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-                   b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
-#endif
+            dprintf(TRACE, "ax88179 status changed: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
             memcpy(eth->status, status, sizeof(eth->status));
             uint8_t bb = eth->status[2];
             bool online = (bb & 1) != 0;
@@ -381,12 +361,12 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
                     list_delete(&req->node);
                     iotxn_queue(eth->usb_device, req);
                 }
-                xprintf("ax88179 now online\n");
+                dprintf(TRACE, "ax88179 now online\n");
                 if (eth->ifc) {
                     eth->ifc->status(eth->cookie, ETH_STATUS_ONLINE);
                 }
             } else if (!online && was_online) {
-                xprintf("ax88179 now offline\n");
+                dprintf(TRACE, "ax88179 now offline\n");
                 if (eth->ifc) {
                     eth->ifc->status(eth->cookie, 0);
                 }
@@ -418,10 +398,10 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
 
     iotxn_t* txn = NULL;
     if (list_is_empty(&eth->pending_tx)) {
-        xxprintf("ax88179: no pending txns, getting free write req\n");
+        dprintf(DEBUG1, "ax88179: no pending txns, getting free write req\n");
         txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
         if (txn == NULL) {
-            xxprintf("ax88179: no free write txns!\n");
+            dprintf(DEBUG1, "ax88179: no free write txns!\n");
             mtx_unlock(&eth->tx_lock);
             return;
         }
@@ -429,23 +409,23 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
         list_add_tail(&eth->pending_tx, &txn->node);
     } else {
         txn = list_peek_tail_type(&eth->pending_tx, iotxn_t, node);
-        xxprintf("ax88179: got tail iotxn (%p)\n", txn);
+        dprintf(DEBUG1, "ax88179: got tail iotxn (%p)\n", txn);
     }
 
     mx_off_t txn_len = ALIGN(txn->length, 4);
-    xxprintf("ax88179: current iotxn len=%lu, next packet len=%zu\n", txn_len, length);
+    dprintf(DEBUG1, "ax88179: current iotxn len=%lu, next packet len=%zu\n", txn_len, length);
     if (length > USB_BUF_SIZE - sizeof(ax88179_tx_hdr_t) - txn_len) {
-        xxprintf("ax88179: getting new write req\n");
+        dprintf(DEBUG1, "ax88179: getting new write req\n");
         txn = list_remove_head_type(&eth->free_write_reqs, iotxn_t, node);
         if (txn == NULL) {
-            xxprintf("ax88179: no free write txns!\n");
+            dprintf(DEBUG1, "ax88179: no free write txns!\n");
             mtx_unlock(&eth->tx_lock);
             return;
         }
         txn->length = txn_len = 0;
         list_add_tail(&eth->pending_tx, &txn->node);
     }
-    xxprintf("ax88179: txn=%p\n", txn);
+    dprintf(DEBUG1, "ax88179: txn=%p\n", txn);
 
     ax88179_tx_hdr_t hdr = {
         .tx_len = htole16(length),
@@ -456,17 +436,17 @@ static void ax88179_send(void* ctx, uint32_t options, void* data, size_t length)
     txn->length = txn_len + sizeof(hdr) + length;
 
     if (options & ETHMAC_TX_OPT_MORE) {
-        xxprintf("ax88179: waiting for more data, %u outstanding\n", eth->tx_in_flight);
+        dprintf(DEBUG1, "ax88179: waiting for more data, %u outstanding\n", eth->tx_in_flight);
         mtx_unlock(&eth->tx_lock);
         return;
     }
     if (eth->tx_in_flight == MAX_TX_IN_FLIGHT) {
-        xxprintf("ax88179: max outstanding tx, waiting\n");
+        dprintf(DEBUG1, "ax88179: max outstanding tx, waiting\n");
         mtx_unlock(&eth->tx_lock);
         return;
     }
     txn = list_remove_head_type(&eth->pending_tx, iotxn_t, node);
-    xxprintf("ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
+    dprintf(DEBUG1, "ax88179: queuing iotxn (%p) of length %lu, %u outstanding\n",
              txn, txn->length, eth->tx_in_flight);
     iotxn_queue(eth->usb_device, txn);
     eth->tx_in_flight++;
@@ -562,9 +542,9 @@ static ethmac_protocol_ops_t ethmac_ops = {
         reg = 0; \
         mx_status_t status = ax88179_read_mac(eth, r, len, &reg); \
         if (status < 0) { \
-            printf("ax88179: could not read reg " #r ": %d\n", status); \
+            dprintf(ERROR, "ax88179: could not read reg " #r ": %d\n", status); \
         } else { \
-            printf("ax88179: reg " #r " = %" PRIx64 "\n", reg); \
+            dprintf(SPEW, "ax88179: reg " #r " = %" PRIx64 "\n", reg); \
         } \
     } while(0)
 
@@ -588,14 +568,14 @@ static int ax88179_thread(void* arg) {
     // Enable embedded PHY
     mx_status_t status = ax88179_write_mac(eth, AX88179_MAC_EPPRCR, 2, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_EPPRCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_EPPRCR, status);
         goto fail;
     }
     mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
     data = 0x0020;
     status = ax88179_write_mac(eth, AX88179_MAC_EPPRCR, 2, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_EPPRCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_EPPRCR, status);
         goto fail;
     }
     mx_nanosleep(mx_deadline_after(MX_MSEC(200)));
@@ -604,7 +584,7 @@ static int ax88179_thread(void* arg) {
     data = 0x03;
     status = ax88179_write_mac(eth, AX88179_MAC_CLKSR, 1, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_CLKSR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_CLKSR, status);
         goto fail;
     }
     mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
@@ -612,20 +592,20 @@ static int ax88179_thread(void* arg) {
     // Read the MAC addr
     status = ax88179_read_mac(eth, AX88179_MAC_NIDR, 6, eth->mac_addr);
     if (status < 0) {
-        printf("ax88179_read_mac to %#x failed: %d\n", AX88179_MAC_NIDR, status);
+        dprintf(ERROR, "ax88179_read_mac to %#x failed: %d\n", AX88179_MAC_NIDR, status);
         goto fail;
     }
 
-    printf("ax88179 MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
-           eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
-           eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
+    dprintf(INFO, "ax88179 MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+            eth->mac_addr[0], eth->mac_addr[1], eth->mac_addr[2],
+            eth->mac_addr[3], eth->mac_addr[4], eth->mac_addr[5]);
 
     ///* Disabled for now
     // Ensure that the MAC RX is disabled
     data = 0;
     status = ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
         goto fail;
     }
     //*/
@@ -633,7 +613,7 @@ static int ax88179_thread(void* arg) {
     // Set RX Bulk-in sizes -- use USB 3.0/1000Mbps at this point
     status = ax88179_configure_bulk_in(eth, AX88179_PLSR_USB_SS|AX88179_PLSR_EPHY_1000);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RQCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RQCR, status);
         goto fail;
     }
 
@@ -641,13 +621,13 @@ static int ax88179_thread(void* arg) {
     data = 0x3c;
     status = ax88179_write_mac(eth, AX88179_MAC_PWLLR, 1, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_PWLLR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_PWLLR, status);
         goto fail;
     }
     data = 0x5c;
     status = ax88179_write_mac(eth, AX88179_MAC_PWLHR, 1, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_PWLHR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_PWLHR, status);
         goto fail;
     }
 
@@ -655,12 +635,12 @@ static int ax88179_thread(void* arg) {
     data = (1<<6) | (1<<5) | (1<<2) | (1<<1) | (1<<0);
     status = ax88179_write_mac(eth, AX88179_MAC_CRCR, 1, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_CRCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_CRCR, status);
         goto fail;
     }
     status = ax88179_write_mac(eth, AX88179_MAC_CTCR, 1, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_CTCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_CTCR, status);
         goto fail;
     }
 
@@ -670,13 +650,13 @@ static int ax88179_thread(void* arg) {
     uint16_t phy_data = 0;
     status = ax88179_read_phy(eth, AX88179_PHY_BMCR, &phy_data);
     if (status < 0) {
-        printf("ax88179_read_phy to %#x failed: %d\n", AX88179_PHY_BMCR, status);
+        dprintf(ERROR, "ax88179_read_phy to %#x failed: %d\n", AX88179_PHY_BMCR, status);
         goto fail;
     }
     phy_data |= 0x1200;
     status = ax88179_write_phy(eth, AX88179_PHY_BMCR, phy_data);
     if (status < 0) {
-        printf("ax88179_write_phy to %#x failed: %d\n", AX88179_PHY_BMCR, status);
+        dprintf(ERROR, "ax88179_write_phy to %#x failed: %d\n", AX88179_PHY_BMCR, status);
         goto fail;
     }
 
@@ -684,7 +664,7 @@ static int ax88179_thread(void* arg) {
     data = 0x013b;
     status = ax88179_write_mac(eth, AX88179_MAC_MSR, 2, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_MSR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_MSR, status);
         goto fail;
     }
 
@@ -692,7 +672,7 @@ static int ax88179_thread(void* arg) {
     data = 0x039a;
     status = ax88179_write_mac(eth, AX88179_MAC_RCR, 2, &data);
     if (status < 0) {
-        printf("ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
+        dprintf(ERROR, "ax88179_write_mac to %#x failed: %d\n", AX88179_MAC_RCR, status);
         goto fail;
     }
 
@@ -708,7 +688,7 @@ static int ax88179_thread(void* arg) {
 
     status = device_add(eth->usb_device, &args, &eth->device);
     if (status < 0) {
-        printf("ax88179: failed to create device: %d\n", status);
+        dprintf(ERROR, "ax88179: failed to create device: %d\n", status);
         goto fail;
     }
 
@@ -736,7 +716,7 @@ fail:
 }
 
 static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
-    xprintf("ax88179_bind\n");
+    dprintf(TRACE, "ax88179_bind\n");
 
     usb_protocol_t usb;
     mx_status_t result = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
@@ -777,13 +757,13 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_desc_iter_release(&iter);
 
     if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
-        printf("ax88179_bind could not find endpoints\n");
+        dprintf(ERROR, "ax88179_bind could not find endpoints\n");
         return MX_ERR_NOT_SUPPORTED;
     }
 
     ax88179_t* eth = calloc(1, sizeof(ax88179_t));
     if (!eth) {
-        printf("Not enough memory for ax88179_t\n");
+        dprintf(ERROR, "Not enough memory for ax88179_t\n");
         return MX_ERR_NO_MEMORY;
     }
 
@@ -834,7 +814,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     /* This is not needed, as long as the xhci stack does it for us.
     status = usb_set_configuration(device, 1);
     if (status < 0) {
-        printf("aax88179_bind could not set configuration: %d\n", status);
+        dprintf(ERROR, "aax88179_bind could not set configuration: %d\n", status);
         return MX_ERR_NOT_SUPPORTED;
     }
     */
@@ -846,7 +826,7 @@ static mx_status_t ax88179_bind(void* ctx, mx_device_t* device, void** cookie) {
     return MX_OK;
 
 fail:
-    printf("ax88179_bind failed: %d\n", status);
+    dprintf(ERROR, "ax88179_bind failed: %d\n", status);
     ax88179_free(eth);
     return status;
 }
