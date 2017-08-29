@@ -4,6 +4,7 @@
 
 #include "ethertap.h"
 
+#include <ddk/debug.h>
 #include <magenta/compiler.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/type_support.h>
@@ -12,8 +13,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#define xprintf(args...) \
-  do { if (unlikely(options_ & ETHERTAP_OPT_TRACE)) printf("ethertap: " args); } while (0)
+// This macro allows for per-device tracing rather than enabling tracing for the whole driver
+// TODO(tkilbourn): decide whether this is worth the effort
+#define ethertap_trace(args...) \
+  do { if (unlikely(options_ & ETHERTAP_OPT_TRACE)) dprintf(INFO, "ethertap: " args); } while (0)
 
 namespace eth {
 
@@ -47,7 +50,7 @@ mx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
 
         status = tap->DdkAdd(config.name);
         if (status != MX_OK) {
-            printf("tapctl: could not add tap device: %d\n", status);
+            dprintf(ERROR, "tapctl: could not add tap device: %d\n", status);
         } else {
             // devmgr owns the memory until release is called
             tap.release();
@@ -55,7 +58,7 @@ mx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
             mx_handle_t* out = reinterpret_cast<mx_handle_t*>(out_buf);
             *out = remote.release();
             *out_actual = sizeof(mx_handle_t);
-            printf("tapctl: created ethertap device '%s'\n", config.name);
+            dprintf(INFO, "tapctl: created ethertap device '%s'\n", config.name);
         }
         return status;
     }
@@ -85,14 +88,14 @@ TapDevice::TapDevice(mx_device_t* device, const ethertap_ioctl_config* config, m
 }
 
 void TapDevice::DdkRelease() {
-    xprintf("DdkRelease\n");
+    ethertap_trace("DdkRelease\n");
     // Only the thread can call DdkRemove(), which means the thread is exiting on its own. No need
     // to join the thread.
     delete this;
 }
 
 void TapDevice::DdkUnbind() {
-    xprintf("DdkUnbind\n");
+    ethertap_trace("DdkUnbind\n");
     mxtl::AutoLock lock(&lock_);
     mx_status_t status = data_.signal(0, TAP_SHUTDOWN);
     MX_DEBUG_ASSERT(status == MX_OK);
@@ -108,13 +111,13 @@ mx_status_t TapDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
 }
 
 void TapDevice::EthmacStop() {
-    xprintf("EthmacStop\n");
+    ethertap_trace("EthmacStop\n");
     mxtl::AutoLock lock(&lock_);
     ethmac_proxy_.reset();
 }
 
 mx_status_t TapDevice::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
-    xprintf("EthmacStart\n");
+    ethertap_trace("EthmacStart\n");
     mxtl::AutoLock lock(&lock_);
     if (ethmac_proxy_ != nullptr) {
         return MX_ERR_ALREADY_BOUND;
@@ -129,17 +132,17 @@ void TapDevice::EthmacSend(uint32_t options, void* data, size_t length) {
     MX_DEBUG_ASSERT(length <= mtu_);
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
         mxtl::AutoLock lock(&lock_);
-        xprintf("sending %zu bytes\n", length);
+        ethertap_trace("sending %zu bytes\n", length);
         hexdump8_ex(data, length, 0);
     }
     mx_status_t status = data_.write(0u, data, length, nullptr);
     if (status != MX_OK) {
-        printf("ethertap: EthmacSend error writing: %d\n", status);
+        dprintf(ERROR, "ethertap: EthmacSend error writing: %d\n", status);
     }
 }
 
 int TapDevice::Thread() {
-    xprintf("starting main thread\n");
+    ethertap_trace("starting main thread\n");
     mx_signals_t pending;
     mxtl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
@@ -149,7 +152,7 @@ int TapDevice::Thread() {
     while (true) {
         status = data_.wait_one(wait, MX_TIME_INFINITE, &pending);
         if (status != MX_OK) {
-            xprintf("error waiting on data: %d\n", status);
+            ethertap_trace("error waiting on data: %d\n", status);
             break;
         }
 
@@ -167,16 +170,16 @@ int TapDevice::Thread() {
             }
         }
         if (pending & MX_SOCKET_PEER_CLOSED) {
-            xprintf("socket closed (peer)\n");
+            ethertap_trace("socket closed (peer)\n");
             break;
         }
         if (pending & TAP_SHUTDOWN) {
-            xprintf("socket closed (self)\n");
+            ethertap_trace("socket closed (self)\n");
             break;
         }
     }
 
-    printf("ethertap: device '%s' destroyed\n", name());
+    dprintf(INFO, "ethertap: device '%s' destroyed\n", name());
     data_.reset();
     DdkRemove();
 
@@ -196,17 +199,17 @@ mx_status_t TapDevice::UpdateLinkStatus(mx_signals_t observed) {
     mx_signals_t clear = 0;
 
     if (observed_online(observed) && observed_offline(observed)) {
-        printf("ethertap: error asserting both online and offline\n");
+        dprintf(ERROR, "ethertap: error asserting both online and offline\n");
         return MX_ERR_BAD_STATE;
     }
 
     if (observed_offline(observed)) {
-        xprintf("offline asserted\n");
+        ethertap_trace("offline asserted\n");
         online_ = false;
         clear |= ETHERTAP_SIGNAL_OFFLINE;
     }
     if (observed_online(observed)) {
-        xprintf("online asserted\n");
+        ethertap_trace("online asserted\n");
         online_ = true;
         clear |= ETHERTAP_SIGNAL_ONLINE;
     }
@@ -216,12 +219,12 @@ mx_status_t TapDevice::UpdateLinkStatus(mx_signals_t observed) {
         if (ethmac_proxy_ != nullptr) {
             ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
         }
-        xprintf("device '%s' is now %s\n", name(), online_ ? "online" : "offline");
+        ethertap_trace("device '%s' is now %s\n", name(), online_ ? "online" : "offline");
     }
     if (clear) {
         mx_status_t status = data_.signal(clear, 0);
         if (status != MX_OK) {
-            printf("ethertap: could not clear status signals: %d\n", status);
+            dprintf(ERROR, "ethertap: could not clear status signals: %d\n", status);
             return status;
         }
     }
@@ -232,13 +235,13 @@ mx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
     size_t actual = 0;
     mx_status_t status = data_.read(0u, buffer, capacity, &actual);
     if (status != MX_OK) {
-        printf("ethertap: error reading data: %d\n", status);
+        dprintf(ERROR, "ethertap: error reading data: %d\n", status);
         return status;
     }
 
     mxtl::AutoLock lock(&lock_);
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
-        xprintf("received %zu bytes\n", actual);
+        ethertap_trace("received %zu bytes\n", actual);
         hexdump8_ex(buffer, actual, 0);
     }
     if (ethmac_proxy_ != nullptr) {
@@ -253,7 +256,7 @@ extern "C" mx_status_t tapctl_bind(void* ctx, mx_device_t* device, void** cookie
     auto dev = mxtl::unique_ptr<eth::TapCtl>(new eth::TapCtl(device));
     mx_status_t status = dev->DdkAdd("tapctl");
     if (status != MX_OK) {
-        printf("%s: could not add device: %d\n", __func__, status);
+        dprintf(ERROR, "%s: could not add device: %d\n", __func__, status);
     } else {
         // devmgr owns the memory now
         dev.release();
