@@ -170,7 +170,7 @@ TEST_F(ImportThreadedTest,
 
     // Assert that the resource linker is ready to potentially link the
     // resource.
-    ASSERT_EQ(1u, engine_->GetResourceLinker().UnresolvedImports());
+    ASSERT_EQ(1u, engine_->GetResourceLinker().NumUnresolvedImports());
 
     // Assert that the import node was setup with the correct properties.
     auto import_node = FindResource<Import>(1);
@@ -194,7 +194,7 @@ TEST_F(ImportThreadedTest,
   // Assert that the resource linker has removed the unresolved import
   // registration. We have already asserted that the unresolved import was
   // registered in the initial post task.
-  ASSERT_EQ(engine_->GetResourceLinker().UnresolvedImports(), 0u);
+  ASSERT_EQ(engine_->GetResourceLinker().NumUnresolvedImports(), 0u);
 }
 
 TEST_F(ImportTest,
@@ -393,7 +393,7 @@ TEST_F(ImportTest, DISABLED_EmbedderCanEmbedNodesFromElsewhere) {
 
     // Export.
     ASSERT_TRUE(Apply(mozart::NewExportResourceOp(1, std::move(export_token))));
-    ASSERT_EQ(1u, engine_->GetResourceLinker().UnresolvedExports());
+    ASSERT_EQ(1u, engine_->GetResourceLinker().NumExports());
   }
 
   // Embeddee.

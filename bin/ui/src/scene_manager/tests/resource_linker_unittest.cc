@@ -30,7 +30,7 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
 
   ASSERT_TRUE(linker.ExportResource(resource, std::move(source)));
 
-  ASSERT_EQ(1u, linker.UnresolvedExports());
+  ASSERT_EQ(1u, linker.NumExports());
 }
 
 TEST_F(ResourceLinkerTest, AllowsImport) {
@@ -44,7 +44,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
 
   ASSERT_TRUE(linker.ExportResource(exported, std::move(source)));
 
-  ASSERT_EQ(1u, linker.UnresolvedExports());
+  ASSERT_EQ(1u, linker.NumExports());
 
   bool did_resolve = false;
   ResourceLinker::OnImportResolvedCallback resolution_handler =
@@ -60,12 +60,30 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
-                        );
+  );
 
   // Make sure the closure and its assertions are not skipped.
   ASSERT_TRUE(did_resolve);
-  ASSERT_EQ(1u, linker.UnresolvedExports());
-  ASSERT_EQ(0u, linker.UnresolvedImports());
+  ASSERT_EQ(1u, linker.NumExports());
+  ASSERT_EQ(0u, linker.NumUnresolvedImports());
+}
+
+TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceAndDestinationHandles) {
+  ResourceLinker linker;
+
+  mx::eventpair source_out;
+  {
+    mx::eventpair destination;
+    mx::eventpair source;
+    ASSERT_EQ(MX_OK, mx::eventpair::create(0, &source, &destination));
+    source_out = mx::eventpair{source.get()};
+    // source and destination dies now.
+  }
+
+  auto resource =
+      ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+  ASSERT_FALSE(linker.ExportResource(resource, std::move(source_out)));
+  ASSERT_EQ(0u, linker.NumExports());
 }
 
 TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
@@ -83,12 +101,12 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
   auto resource =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
   ASSERT_FALSE(linker.ExportResource(resource, std::move(source_out)));
-  ASSERT_EQ(0u, linker.UnresolvedExports());
+  ASSERT_EQ(0u, linker.NumExports());
 }
 
-// TODO(chinmaygarde): Figure out how the related koid if valid when we have
-// killed the destination.
-TEST_F(ResourceLinkerTest, DISABLED_CannotExportWithDeadDestinationHandle) {
+// Related koid of the source handle is valid as long as the source handle
+// itself is valid (i.e. it doesn't matter if the destination handle is dead).
+TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   ResourceLinker linker;
 
   mx::eventpair source;
@@ -100,8 +118,8 @@ TEST_F(ResourceLinkerTest, DISABLED_CannotExportWithDeadDestinationHandle) {
 
   auto resource =
       ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
-  ASSERT_FALSE(linker.ExportResource(resource, std::move(source)));
-  ASSERT_EQ(0u, linker.UnresolvedExports());
+  ASSERT_TRUE(linker.ExportResource(resource, std::move(source)));
+  ASSERT_EQ(1u, linker.NumExports());
 }
 
 TEST_F(ResourceLinkerTest,
@@ -122,7 +140,7 @@ TEST_F(ResourceLinkerTest,
     auto resource =
         ftl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
     ASSERT_TRUE(linker.ExportResource(resource, std::move(source)));
-    ASSERT_EQ(1u, linker.UnresolvedExports());
+    ASSERT_EQ(1u, linker.NumExports());
 
     // Set an expiry callback that checks the resource expired for the right
     // reason and signal the latch.
@@ -130,7 +148,7 @@ TEST_F(ResourceLinkerTest,
                                     ResourcePtr resource,
                                     ResourceLinker::ExpirationCause cause) {
       ASSERT_EQ(ResourceLinker::ExpirationCause::kImportHandleClosed, cause);
-      ASSERT_EQ(0u, linker.UnresolvedExports());
+      ASSERT_EQ(0u, linker.NumExports());
       latch.Signal();
     });
 
@@ -169,16 +187,16 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   linker.ImportResource(mozart2::ImportSpec::NODE,  // import spec
                         std::move(destination),     // import handle
                         resolution_handler          // import resolution handler
-                        );
+  );
   ASSERT_FALSE(did_resolve);
-  ASSERT_EQ(0u, linker.UnresolvedExports());
-  ASSERT_EQ(1u, linker.UnresolvedImports());
+  ASSERT_EQ(0u, linker.NumExports());
+  ASSERT_EQ(1u, linker.NumUnresolvedImports());
 
   // Export.
   ASSERT_TRUE(linker.ExportResource(exported, std::move(source)));
-  ASSERT_EQ(1u, linker.UnresolvedExports());  // Since we already have the
-                                              // destination handle in scope.
-  ASSERT_EQ(0u, linker.UnresolvedImports());
+  ASSERT_EQ(1u, linker.NumExports());  // Since we already have the
+                                       // destination handle in scope.
+  ASSERT_EQ(0u, linker.NumUnresolvedImports());
   ASSERT_TRUE(did_resolve);
 }
 
@@ -214,17 +232,17 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     linker.ImportResource(mozart2::ImportSpec::NODE,         // import spec
                           std::move(duplicate_destination),  // import handle
                           resolution_handler  // import resolution handler
-                          );
+    );
     ASSERT_EQ(0u, resolution_count);
-    ASSERT_EQ(0u, linker.UnresolvedExports());
-    ASSERT_EQ(i, linker.UnresolvedImports());
+    ASSERT_EQ(0u, linker.NumExports());
+    ASSERT_EQ(i, linker.NumUnresolvedImports());
   }
 
   // Export.
   ASSERT_TRUE(linker.ExportResource(exported, std::move(source)));
-  ASSERT_EQ(1u, linker.UnresolvedExports());  // Since we already have the
-                                              // destination handle in scope.
-  ASSERT_EQ(0u, linker.UnresolvedImports());
+  ASSERT_EQ(1u, linker.NumExports());  // Since we already have the
+                                       // destination handle in scope.
+  ASSERT_EQ(0u, linker.NumUnresolvedImports());
   ASSERT_EQ(kImportCount, resolution_count);
 }
 

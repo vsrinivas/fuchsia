@@ -193,6 +193,12 @@ bool Session::ApplyReleaseResourceOp(const mozart2::ReleaseResourceOpPtr& op) {
 }
 
 bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
+  if (!op->token) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplyExportResourceOp(): "
+           "no token provided.";
+    return false;
+  }
   if (auto resource = resources_.FindResource<Resource>(op->id)) {
     return engine_->ExportResource(std::move(resource), std::move(op->token));
   }
@@ -200,6 +206,12 @@ bool Session::ApplyExportResourceOp(const mozart2::ExportResourceOpPtr& op) {
 }
 
 bool Session::ApplyImportResourceOp(const mozart2::ImportResourceOpPtr& op) {
+  if (!op->token) {
+    error_reporter_->ERROR()
+        << "scene_manager::Session::ApplyImportResourceOp(): "
+           "no token provided.";
+    return false;
+  }
   ImportPtr import =
       ftl::MakeRefCounted<Import>(this, op->id, op->spec, std::move(op->token));
   engine_->ImportResource(import, op->spec, import->import_token());
