@@ -12,7 +12,7 @@
 #include "apps/media/services/video_renderer.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/video/video_frame_source.h"
-#include "apps/mozart/lib/scene/client/host_image_cycler.h"
+#include "apps/mozart/lib/scenic/client/host_image_cycler.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
@@ -48,12 +48,12 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
    private:
     // |BaseView|:
     void OnSceneInvalidated(
-        mozart2::PresentationInfoPtr presentation_info) override;
+        scenic::PresentationInfoPtr presentation_info) override;
 
     std::shared_ptr<VideoFrameSource> video_frame_source_;
     TimelineFunction timeline_function_;
 
-    mozart::client::HostImageCycler image_cycler_;
+    scenic_lib::HostImageCycler image_cycler_;
 
     FTL_DISALLOW_COPY_AND_ASSIGN(View);
   };

@@ -58,7 +58,7 @@ MediaPlayerView::MediaPlayerView(
       controls_widget_(session()) {
   FTL_DCHECK(params.is_valid());
 
-  mozart::client::Material background_material(session());
+  scenic_lib::Material background_material(session());
   background_material.SetColor(0x1a, 0x23, 0x7e, 0xff);  // Indigo 900
   background_node_.SetMaterial(background_material);
   parent_node().AddChild(background_node_);
@@ -95,7 +95,7 @@ MediaPlayerView::MediaPlayerView(
     video_renderer_->CreateView(video_view_owner.NewRequest());
 
     mx::eventpair video_host_import_token;
-    video_host_node_.reset(new mozart::client::EntityNode(session()));
+    video_host_node_.reset(new scenic_lib::EntityNode(session()));
     video_host_node_->ExportAsRequest(&video_host_import_token);
     parent_node().AddChild(*video_host_node_);
     GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner),
@@ -186,7 +186,7 @@ void MediaPlayerView::Layout() {
     return;
 
   // Make the background fill the space.
-  mozart::client::Rectangle background_shape(session(), logical_size().width,
+  scenic_lib::Rectangle background_shape(session(), logical_size().width,
                                              logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(logical_size().width * .5f,
@@ -257,7 +257,7 @@ void MediaPlayerView::Layout() {
 }
 
 void MediaPlayerView::OnSceneInvalidated(
-    mozart2::PresentationInfoPtr presentation_info) {
+    scenic::PresentationInfoPtr presentation_info) {
   if (!has_physical_size())
     return;
 

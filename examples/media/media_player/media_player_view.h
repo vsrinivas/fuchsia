@@ -13,7 +13,7 @@
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/media/services/net_media_player.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"
-#include "apps/mozart/lib/scene/skia/host_canvas_cycler.h"
+#include "apps/mozart/lib/scenic/skia/host_canvas_cycler.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "lib/ftl/macros.h"
 
@@ -34,7 +34,7 @@ class MediaPlayerView : public mozart::BaseView {
   // |BaseView|:
   void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info) override;
+      scenic::PresentationInfoPtr presentation_info) override;
   void OnChildAttached(uint32_t child_key,
                        mozart::ViewInfoPtr child_view_info) override;
   void OnChildUnavailable(uint32_t child_key) override;
@@ -73,9 +73,9 @@ class MediaPlayerView : public mozart::BaseView {
     return float(1000000000.0 / double(frame_time_ - prev_frame_time_));
   }
 
-  mozart::client::ShapeNode background_node_;
-  mozart::skia::HostCanvasCycler controls_widget_;
-  std::unique_ptr<mozart::client::EntityNode> video_host_node_;
+  scenic_lib::ShapeNode background_node_;
+  scenic_lib::skia::HostCanvasCycler controls_widget_;
+  std::unique_ptr<scenic_lib::EntityNode> video_host_node_;
 
   media::NetMediaPlayerPtr net_media_player_;
   media::VideoRendererPtr video_renderer_;

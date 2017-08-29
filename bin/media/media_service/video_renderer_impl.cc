@@ -66,7 +66,7 @@ VideoRendererImpl::View::~View() {
 }
 
 void VideoRendererImpl::View::OnSceneInvalidated(
-    mozart2::PresentationInfoPtr presentation_info) {
+    scenic::PresentationInfoPtr presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
 
   video_frame_source_->AdvanceReferenceTime(
@@ -77,10 +77,10 @@ void VideoRendererImpl::View::OnSceneInvalidated(
     return;
 
   // Update the image.
-  const mozart::client::HostImage* image = image_cycler_.AcquireImage(
+  const scenic_lib::HostImage* image = image_cycler_.AcquireImage(
       video_size.width, video_size.height, video_size.width * 4u,
-      mozart2::ImageInfo::PixelFormat::BGRA_8,
-      mozart2::ImageInfo::ColorSpace::SRGB);
+      scenic::ImageInfo::PixelFormat::BGRA_8,
+      scenic::ImageInfo::ColorSpace::SRGB);
   FTL_DCHECK(image);
   video_frame_source_->GetRgbaFrame(static_cast<uint8_t*>(image->image_ptr()),
                                     video_size);
