@@ -27,12 +27,10 @@ static bool container_is_valid(const bootdata_t* container) {
 static mx_status_t load_magenta(const int fd, const uintptr_t addr, const size_t size,
                                 const uintptr_t first_page, uintptr_t* guest_ip,
                                 uintptr_t* end_off) {
+    magenta_kernel_t* header = reinterpret_cast<magenta_kernel_t*>(addr + kKernelOffset);
     // Move the first page to where magenta would like it to be
-    uintptr_t header_addr = (uintptr_t)memmove((void*)(addr + kKernelOffset),
-                                               (void*)first_page,
-                                               PAGE_SIZE);
+    memmove(header, reinterpret_cast<void*>(first_page), PAGE_SIZE);
 
-    magenta_kernel_t* header = (magenta_kernel_t*)header_addr;
     if (!container_is_valid(&header->hdr_file)) {
         fprintf(stderr, "Invalid Magenta container\n");
         return MX_ERR_IO_DATA_INTEGRITY;
@@ -51,9 +49,9 @@ static mx_status_t load_magenta(const int fd, const uintptr_t addr, const size_t
     // the bootdata_kernel_t portion of magenta_kernel_t that's included in the header length.
     uintptr_t data_off = kKernelOffset + PAGE_SIZE;
     size_t data_len = header->hdr_kernel.length -
-                      (PAGE_SIZE - (sizeof(magenta_kernel_t) - sizeof(bootdata_kernel_t)));
+                      (PAGE_SIZE - sizeof(magenta_kernel_t) + sizeof(bootdata_kernel_t));
 
-    int ret = read(fd, (void*)(addr + data_off), data_len);
+    ssize_t ret = read(fd, reinterpret_cast<void*>(addr + data_off), data_len);
     if (ret < 0 || (size_t)ret != data_len) {
         fprintf(stderr, "Failed to read Magenta kernel data\n");
         return MX_ERR_IO;
@@ -72,16 +70,20 @@ static mx_status_t load_cmdline(const char* cmdline, const uintptr_t addr,
     bootdata_t* cmdline_hdr = (bootdata_t*)(addr + data_off);
     cmdline_hdr->type = BOOTDATA_CMDLINE;
     size_t cmdline_len = strlen(cmdline) + 1;
-    cmdline_hdr->length = cmdline_len;
+    if (cmdline_len > UINT32_MAX) {
+        fprintf(stderr, "Command line length is outside of 32-bit range\n");
+        return MX_ERR_OUT_OF_RANGE;
+    }
+    cmdline_hdr->length = cmdline_len & UINT32_MAX;
     memcpy(cmdline_hdr + 1, cmdline, cmdline_len);
 
-    bootdata_hdr->length += cmdline_hdr->length + sizeof(bootdata_t);
+    bootdata_hdr->length += cmdline_hdr->length + static_cast<uint32_t>(sizeof(bootdata_t));
     return MX_OK;
 }
 
 static mx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr_t bootdata_off) {
     bootdata_t ramdisk_hdr;
-    int ret = read(fd, &ramdisk_hdr, sizeof(bootdata_t));
+    ssize_t ret = read(fd, &ramdisk_hdr, sizeof(bootdata_t));
     if (ret != sizeof(bootdata_t)) {
         fprintf(stderr, "Failed to read BOOTFS image header\n");
         return MX_ERR_IO;
@@ -100,7 +102,7 @@ static mx_status_t load_bootfs(const int fd, const uintptr_t addr, const uintptr
         return MX_ERR_IO;
     }
 
-    bootdata_hdr->length += ramdisk_hdr.length + sizeof(bootdata_t);
+    bootdata_hdr->length += ramdisk_hdr.length + static_cast<uint32_t>(sizeof(bootdata_t));
     return MX_OK;
 }
 
@@ -110,16 +112,18 @@ static mx_status_t create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_o
         return MX_ERR_INVALID_ARGS;
 
     const size_t e820_size = guest_e820_size(size);
-    const uint32_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
-                                  sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
+    const size_t bootdata_len = sizeof(bootdata_t) + BOOTDATA_ALIGN(sizeof(uint64_t)) +
+                                sizeof(bootdata_t) + BOOTDATA_ALIGN(e820_size);
     if (bootdata_off + bootdata_len > size)
         return MX_ERR_BUFFER_TOO_SMALL;
+    if (bootdata_len > UINT32_MAX)
+        return MX_ERR_OUT_OF_RANGE;
 
     // Bootdata container.
     bootdata_t* header = (bootdata_t*)(addr + bootdata_off);
     header->type = BOOTDATA_CONTAINER;
     header->extra = BOOTDATA_MAGIC;
-    header->length = bootdata_len;
+    header->length = static_cast<uint32_t>(bootdata_len);
 
     // ACPI root table pointer.
     bootdata_off += sizeof(bootdata_t);
@@ -135,7 +139,7 @@ static mx_status_t create_bootdata(uintptr_t addr, size_t size, uintptr_t acpi_o
     bootdata_off += BOOTDATA_ALIGN(sizeof(uint64_t));
     bootdata = (bootdata_t*)(addr + bootdata_off);
     bootdata->type = BOOTDATA_E820_TABLE;
-    bootdata->length = e820_size;
+    bootdata->length = static_cast<uint32_t>(e820_size);
 
     bootdata_off += sizeof(bootdata_t);
     return guest_create_e820(addr, size, bootdata_off);

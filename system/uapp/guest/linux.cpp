@@ -94,7 +94,7 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
 
     // Default to the preferred address, then change if we're relocatable
     uintptr_t runtime_start = ZP64(first_page, ZP_SH_64_PREF_ADDRESS);
-    if (ZP8(first_page, ZP_SH_8_RELOCATABLE)) {
+    if (ZP8(first_page, ZP_SH_8_RELOCATABLE) > 0) {
         uint64_t kernel_alignment = ZP32(first_page, ZP_SH_32_KERNEL_ALIGN);
         uint64_t aligned_address = ALIGN(kDefaultKernelOffset, kernel_alignment);
         runtime_start = aligned_address;
@@ -109,11 +109,15 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     // Copy the command line string below the zero page.
     size_t cmdline_len = strlen(cmdline) + 1;
     uintptr_t cmdline_off = boot_params_off - cmdline_len;
+    if (cmdline_off > UINT32_MAX) {
+        fprintf(stderr, "Command line offset is outside of 32-bit range\n");
+        return MX_ERR_OUT_OF_RANGE;
+    }
     memcpy((char*)(addr + cmdline_off), cmdline, cmdline_len);
+    ZP32(zero_page, ZP_SH_32_COMMAND_LINE) = static_cast<uint32_t>(cmdline_off);
 
-    // TODO(andymutton): Setup everything else.
+    // Set type of bootloader.
     ZP8(zero_page, ZP_SH_8_LOADER_TYPE) = LOADER_TYPE_UNSPECIFIED;
-    ZP32(zero_page, ZP_SH_32_COMMAND_LINE) = cmdline_off;
 
     // Zero video, columns and lines to skip early video init - just serial output for now.
     ZP8(zero_page, ZP_SI_8_VIDEO_MODE) = 0;
@@ -121,12 +125,12 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     ZP8(zero_page, ZP_SI_8_VIDEO_LINES) = 0;
 
     // Setup e820 memory map.
-    int e820_entries = guest_e820_size(size) / sizeof(e820entry_t);
+    size_t e820_entries = guest_e820_size(size) / sizeof(e820entry_t);
     if (e820_entries > MAX_E820_ENTRIES) {
         fprintf(stderr, "Not enough space for e820 memory map\n");
         return MX_ERR_BAD_STATE;
     }
-    ZP8(zero_page, ZP_SH_8_E820_COUNT) = e820_entries;
+    ZP8(zero_page, ZP_SH_8_E820_COUNT) = static_cast<uint8_t>(e820_entries);
 
     uintptr_t e820_off = boot_params_off + ZP_SH_XX_E820_MAP;
     mx_status_t status = guest_create_e820(addr, size, e820_off);
@@ -152,7 +156,7 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
     size_t remaining = ZP32(zero_page, ZP_SH_32_SYSSIZE) << 4;
     ret = read(fd, (void*)(addr + runtime_start), remaining);
     if ((size_t)ret != remaining) {
-        fprintf(stderr, "Failed to read Linux image\n");
+        fprintf(stderr, "Failed to read Linux kernel data\n");
         return MX_ERR_IO;
     }
 
@@ -160,21 +164,26 @@ mx_status_t setup_linux(const uintptr_t addr, const size_t size, const uintptr_t
         ZP32(zero_page, ZP_SH_32_RAMDISK_IMAGE) = kInitrdOffset;
         int initrd_fd = open(initrd_path, O_RDONLY);
         if (initrd_fd < 0) {
-            fprintf(stderr, "Failed to open initial RAM disk image\n");
+            fprintf(stderr, "Failed to open initial RAM disk\n");
             return MX_ERR_IO;
         }
         struct stat initrd_stat;
         off_t ret = fstat(initrd_fd, &initrd_stat);
         if (ret < 0) {
-            fprintf(stderr, "Failed to stat initial RAM disk image\n");
+            fprintf(stderr, "Failed to stat initial RAM disk\n");
             return MX_ERR_IO;
         }
+        if (initrd_stat.st_size > UINT32_MAX ||
+            static_cast<size_t>(initrd_stat.st_size) > size - kInitrdOffset) {
+            fprintf(stderr, "Initial RAM disk is too large\n");
+            return MX_ERR_OUT_OF_RANGE;
+        }
+        ZP32(zero_page, ZP_SH_32_RAMDISK_SIZE) = static_cast<uint32_t>(initrd_stat.st_size);
         ret = read(initrd_fd, (void*)(addr + kInitrdOffset), initrd_stat.st_size);
         if (ret != initrd_stat.st_size) {
-            fprintf(stderr, "Failed to read initial RAM disk image\n");
+            fprintf(stderr, "Failed to read initial RAM disk\n");
             return MX_ERR_IO;
         }
-        ZP32(zero_page, ZP_SH_32_RAMDISK_SIZE) = initrd_stat.st_size;
     }
 
     *guest_ip = runtime_start + LEGACY_64_ENTRY_OFFSET;

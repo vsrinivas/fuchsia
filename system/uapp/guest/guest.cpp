@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <mxtl/unique_ptr.h>
 #include <virtio/balloon.h>
 
 #include "linux.h"
@@ -58,7 +60,7 @@ static mx_status_t create_vmo(uint64_t size, uintptr_t* addr, mx_handle_t* vmo) 
 }
 
 static void balloon_stats_handler(const virtio_balloon_stat_t* stats, size_t len, void* ctx) {
-    balloon_t* balloon = ctx;
+    balloon_t* balloon = static_cast<balloon_t*>(ctx);
     for (size_t i = 0; i < len; ++i) {
         if (stats[i].tag != VIRTIO_BALLOON_S_AVAIL)
             continue;
@@ -67,7 +69,7 @@ static void balloon_stats_handler(const virtio_balloon_stat_t* stats, size_t len
         uint32_t current_pages = balloon->config.num_pages;
         mtx_unlock(&balloon->mutex);
 
-        uint64_t available_pages = stats[i].val / VIRTIO_BALLOON_PAGE_SIZE;
+        uint32_t available_pages = static_cast<uint32_t>(stats[i].val / VIRTIO_BALLOON_PAGE_SIZE);
         uint32_t target_pages = current_pages + (available_pages - balloon_threshold_pages);
         if (current_pages == target_pages)
             return;
@@ -83,30 +85,26 @@ static void balloon_stats_handler(const virtio_balloon_stat_t* stats, size_t len
 
 typedef struct balloon_task_args {
     balloon_t* balloon;
-    int interval;
+    mx_duration_t interval;
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
-    balloon_task_args_t* args = ctx;
-    balloon_t* balloon = args->balloon;
+    mxtl::unique_ptr<balloon_task_args_t> args(static_cast<balloon_task_args_t*>(ctx));
     while (true) {
-        mx_nanosleep(mx_deadline_after(MX_SEC(args->interval)));
-        balloon_request_stats(balloon, &balloon_stats_handler, balloon);
+        mx_nanosleep(mx_deadline_after(args->interval));
+        balloon_request_stats(args->balloon, &balloon_stats_handler, args->balloon);
     }
-    free(args);
     return MX_OK;
 }
 
-static mx_status_t poll_balloon_stats(balloon_t* balloon, int interval) {
+static mx_status_t poll_balloon_stats(balloon_t* balloon, mx_duration_t interval) {
     thrd_t thread;
-    balloon_task_args_t* args = calloc(1, sizeof(balloon_task_args_t));
-    args->balloon = balloon;
-    args->interval = interval;
+    auto args = new balloon_task_args_t{balloon, interval};
 
     int ret = thrd_create(&thread, balloon_stats_task, args);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create balloon thread %d\n", ret);
-        free(args);
+        delete args;
         return MX_ERR_INTERNAL;
     }
 
@@ -124,7 +122,7 @@ int main(int argc, char** argv) {
     const char* block_path = NULL;
     const char* ramdisk_path = NULL;
     const char* cmdline = NULL;
-    const char* balloon_poll_interval = NULL;
+    mx_duration_t balloon_poll_interval = 0;
     bool balloon_deflate_on_demand = false;
     int opt;
     while ((opt = getopt(argc, argv, "b:r:c:m:dp:")) != -1) {
@@ -139,13 +137,23 @@ int main(int argc, char** argv) {
             cmdline = optarg;
             break;
         case 'm':
-            balloon_poll_interval = optarg;
+            balloon_poll_interval = MX_SEC(strtoul(optarg, nullptr, 10));
+            if (balloon_poll_interval <= 0) {
+                fprintf(stderr, "Invalid balloon interval %s. Must be an integer greater than 0\n",
+                        optarg);
+                return MX_ERR_INVALID_ARGS;
+            }
             break;
         case 'd':
             balloon_deflate_on_demand = true;
             break;
         case 'p':
-            balloon_threshold_pages = strtoul(optarg, NULL, 10);
+            balloon_threshold_pages = static_cast<uint32_t>(strtoul(optarg, nullptr, 10));
+            if (balloon_threshold_pages <= 0) {
+                fprintf(stderr, "Invalid balloon threshold %s. Must be an integer greater than 0\n",
+                        optarg);
+                return MX_ERR_INVALID_ARGS;
+            }
             break;
         default:
             return usage(cmd);
@@ -305,15 +313,8 @@ int main(int argc, char** argv) {
     status = pci_device_async(&balloon.virtio_device.pci_device, vcpu, guest);
     if (status != MX_OK)
         return status;
-    if (balloon_poll_interval != NULL) {
-        int interval = strtoul(balloon_poll_interval, NULL, 10);
-        if (interval == 0) {
-            fprintf(stderr, "Invalid balloon interval '%s'. Must be an integer greater than 0.\n",
-                    balloon_poll_interval);
-            return MX_ERR_INVALID_ARGS;
-        }
-        poll_balloon_stats(&balloon, interval);
-    }
+    if (balloon_poll_interval > 0)
+        poll_balloon_stats(&balloon, balloon_poll_interval);
 
     vcpu_ctx_t vcpu_ctx;
     vcpu_init(&vcpu_ctx);

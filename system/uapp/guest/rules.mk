@@ -10,9 +10,9 @@ MODULE_TYPE := userapp
 MODULE_GROUP := misc
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/guest.c \
-    $(LOCAL_DIR)/linux.c \
-    $(LOCAL_DIR)/magenta.c \
+    $(LOCAL_DIR)/guest.cpp \
+    $(LOCAL_DIR)/linux.cpp \
+    $(LOCAL_DIR)/magenta.cpp \
 
 MODULE_LIBS := \
     system/ulib/c \
@@ -21,6 +21,8 @@ MODULE_LIBS := \
     system/ulib/mxio \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/mxcpp \
+    system/ulib/mxtl \
     system/ulib/virtio \
 
 include make/module.mk

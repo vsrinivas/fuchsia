@@ -8,6 +8,8 @@
 
 #include <magenta/types.h>
 
+__BEGIN_CDECLS
+
 typedef struct mx_packet_guest_io mx_packet_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
 
@@ -25,3 +27,5 @@ typedef struct io_port {
 void io_port_init(io_port_t* io_port);
 mx_status_t io_port_read(const io_port_t* io_port, uint16_t port, mx_vcpu_io_t* vcpu_io);
 mx_status_t io_port_write(io_port_t* io_port, const mx_packet_guest_io_t* io);
+
+__END_CDECLS

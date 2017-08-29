@@ -42,6 +42,8 @@
 
 // clang-format on
 
+__BEGIN_CDECLS
+
 typedef struct instruction instruction_t;
 typedef struct io_apic io_apic_t;
 typedef struct mx_packet_guest_io mx_packet_guest_io_t;
@@ -138,3 +140,5 @@ mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t
 
 /* Raise the configured interrupt for the given PCI device. */
 mx_status_t pci_interrupt(pci_device_t* device);
+
+__END_CDECLS

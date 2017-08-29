@@ -39,7 +39,7 @@ mx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, mx_vcpu_stat
 
 #define DEFINE_INST_VAL(size)                                                \
     static inline uint##size##_t inst_val##size(const instruction_t* inst) { \
-        return inst->reg != NULL ? *inst->reg : inst->imm;                   \
+        return (uint##size##_t)(inst->reg != NULL ? *inst->reg : inst->imm); \
     }
 DEFINE_INST_VAL(32);
 DEFINE_INST_VAL(16);
@@ -96,7 +96,7 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
         : [i1] "r"(value1), [i2] "r"(value2)
         : "cc");
     // Extract the value of the %ah register from the %ax register.
-    return ax_reg >> 8;
+    return (uint16_t)(ax_reg >> 8);
 }
 #endif
 

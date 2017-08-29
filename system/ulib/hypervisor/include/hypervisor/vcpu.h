@@ -8,6 +8,8 @@
 
 #include <magenta/syscalls/hypervisor.h>
 
+__BEGIN_CDECLS
+
 typedef struct io_apic io_apic_t;
 typedef struct io_port io_port_t;
 typedef struct mx_port_packet mx_port_packet_t;
@@ -95,3 +97,5 @@ typedef mx_status_t (*device_handler_fn_t)(mx_handle_t vcpu, mx_port_packet_t* p
  */
 mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
                          size_t len, device_handler_fn_t handler, void* ctx);
+
+__END_CDECLS

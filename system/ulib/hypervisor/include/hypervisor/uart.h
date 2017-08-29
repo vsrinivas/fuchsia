@@ -26,6 +26,8 @@
 
 // clang-format on
 
+__BEGIN_CDECLS
+
 typedef struct io_apic io_apic_t;
 typedef struct mx_packet_guest_io mx_packet_guest_io_t;
 typedef struct mx_vcpu_io mx_vcpu_io_t;
@@ -54,3 +56,5 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io);
 
 /* Start asynchronous handling of writes to the UART. */
 mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest);
+
+__END_CDECLS
