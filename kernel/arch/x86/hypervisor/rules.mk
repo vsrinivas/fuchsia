@@ -5,19 +5,16 @@
 # https://opensource.org/licenses/MIT
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
+SUBARCH_DIR := $(LOCAL_DIR)/../64
 
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/guest_physical_address_space.cpp \
-	$(LOCAL_DIR)/fault.cpp \
-	$(LOCAL_DIR)/hypervisor_unittest.cpp \
-	$(LOCAL_DIR)/packet_mux.cpp \
-
-MODULE_DEPS := \
-	kernel/arch/$(ARCH)/hypervisor \
-	kernel/lib/magenta \
-	kernel/lib/mxtl \
-	kernel/lib/unittest \
+	$(LOCAL_DIR)/guest.cpp \
+	$(LOCAL_DIR)/vcpu.cpp \
+	$(LOCAL_DIR)/vmexit.cpp \
+	$(LOCAL_DIR)/vmx_cpu_state.cpp \
+\
+	$(SUBARCH_DIR)/hypervisor.S \
 
 include make/module.mk

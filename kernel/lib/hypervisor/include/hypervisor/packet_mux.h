@@ -6,31 +6,11 @@
 
 #pragma once
 
+#include <magenta/port_dispatcher.h>
+#include <magenta/semaphore.h>
 #include <mxtl/arena.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
-
-#if WITH_LIB_MAGENTA
-#include <magenta/port_dispatcher.h>
-#include <magenta/semaphore.h>
-#else // WITH_LIB_MAGENTA
-#include <magenta/syscalls/port.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
-class PortDispatcher : public mxtl::RefCounted<PortDispatcher> {};
-struct PortPacket {
-    PortPacket(const void* handle, void* allocator) {}
-};
-struct PortAllocator {
-    virtual PortPacket* Alloc() { return nullptr; }
-    virtual void Free(PortPacket* port_packet) {}
-};
-struct Semaphore {
-    Semaphore(int64_t initial_count) {}
-    int Post() { return 0; }
-    mx_status_t Wait(lk_time_t deadline) { return MX_ERR_NOT_SUPPORTED; }
-};
-#endif // WITH_LIB_MAGENTA
 
 /* Reloads the hypervisor state. */
 struct StateReloader {

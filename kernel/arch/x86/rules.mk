@@ -45,7 +45,6 @@ MODULE_SRCS += \
 	$(SUBARCH_DIR)/start.S \
 	$(SUBARCH_DIR)/asm.S \
 	$(SUBARCH_DIR)/exceptions.S \
-	$(SUBARCH_DIR)/hypervisor.S \
 	$(SUBARCH_DIR)/ops.S \
 	$(SUBARCH_DIR)/mexec.S \
 	$(SUBARCH_DIR)/syscall.S \
@@ -77,14 +76,9 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/thread.cpp \
 	$(LOCAL_DIR)/tsc.cpp \
 	$(LOCAL_DIR)/user_copy.cpp \
-	$(LOCAL_DIR)/hypervisor/guest.cpp \
-	$(LOCAL_DIR)/hypervisor/vcpu.cpp \
-	$(LOCAL_DIR)/hypervisor/vmexit.cpp \
-	$(LOCAL_DIR)/hypervisor/vmx_cpu_state.cpp \
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \
-	kernel/lib/hypervisor \
 	kernel/lib/mxtl \
 
 include $(LOCAL_DIR)/toolchain.mk

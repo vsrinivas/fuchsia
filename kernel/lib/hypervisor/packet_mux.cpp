@@ -52,7 +52,6 @@ mx_status_t PortRange::Init() {
 }
 
 mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* reloader) {
-#if WITH_LIB_MAGENTA
     PortPacket* port_packet = port_allocator_.Alloc(reloader);
     if (port_packet == nullptr)
         return MX_ERR_NO_MEMORY;
@@ -63,9 +62,6 @@ mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* relo
     if (status != MX_OK)
         port_allocator_.Free(port_packet);
     return status;
-#else
-    return MX_ERR_NOT_SUPPORTED;
-#endif // WITH_LIB_MAGENTA
 }
 
 mx_status_t PacketMux::AddPortRange(mx_vaddr_t addr, size_t len,
