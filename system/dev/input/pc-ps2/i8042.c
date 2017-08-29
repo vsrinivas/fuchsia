@@ -645,6 +645,10 @@ static void i8042_stop(void* ctx) {
 
 static mx_status_t i8042_get_descriptor(void* ctx, uint8_t desc_type,
         void** data, size_t* len) {
+    if (data == NULL || len == NULL) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
     if (desc_type != HID_DESC_TYPE_REPORT) {
         return MX_ERR_NOT_FOUND;
     }
