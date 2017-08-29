@@ -43,7 +43,7 @@ struct SupportedImageProperties {
 };
 
 struct ImagePipeSurface {
-    fidl::SynchronousInterfacePtr<mozart2::ImagePipe> image_pipe;
+    fidl::SynchronousInterfacePtr<scenic::ImagePipe> image_pipe;
     SupportedImageProperties supported_properties;
 };
 
@@ -55,7 +55,7 @@ struct PendingImageInfo {
 class ImagePipeSwapchain {
 public:
     ImagePipeSwapchain(SupportedImageProperties supported_properties,
-                       fidl::SynchronousInterfacePtr<mozart2::ImagePipe> image_pipe)
+                       fidl::SynchronousInterfacePtr<scenic::ImagePipe> image_pipe)
         : supported_properties_(supported_properties), image_pipe_(std::move(image_pipe)),
           image_pipe_closed_(false)
     {
@@ -72,7 +72,7 @@ public:
 
 private:
     SupportedImageProperties supported_properties_;
-    fidl::SynchronousInterfacePtr<mozart2::ImagePipe> image_pipe_;
+    fidl::SynchronousInterfacePtr<scenic::ImagePipe> image_pipe_;
     std::vector<VkImage> images_;
     std::vector<VkDeviceMemory> memories_;
     std::vector<uint32_t> acquired_ids_;
@@ -179,16 +179,16 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
 
         mx::vmo vmo(vmo_handle);
 
-        auto image_info = mozart2::ImageInfo::New();
+        auto image_info = scenic::ImageInfo::New();
         image_info->width = width;
         image_info->height = height;
         image_info->stride = layout.rowPitch;
-        image_info->pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
-        image_info->color_space = mozart2::ImageInfo::ColorSpace::SRGB;
-        image_info->tiling = mozart2::ImageInfo::Tiling::GPU_OPTIMAL;
+        image_info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+        image_info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
+        image_info->tiling = scenic::ImageInfo::Tiling::GPU_OPTIMAL;
 
         image_pipe_->AddImage(i, std::move(image_info), std::move(vmo),
-                              mozart2::MemoryType::VK_DEVICE_MEMORY, 0);
+                              scenic::MemoryType::VK_DEVICE_MEMORY, 0);
 
         available_ids_.push_back(i);
     }
@@ -388,8 +388,8 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateMagmaSurfaceKHR(VkInstance instance,
     std::vector<VkSurfaceFormatKHR> formats(
         {{VK_FORMAT_B8G8R8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR}});
     surface->supported_properties = {{pCreateInfo->width, pCreateInfo->height}, formats};
-    surface->image_pipe = fidl::SynchronousInterfacePtr<mozart2::ImagePipe>::Create(
-        fidl::InterfaceHandle<mozart2::ImagePipe>(mx::channel(pCreateInfo->imagePipeHandle), 0u));
+    surface->image_pipe = fidl::SynchronousInterfacePtr<scenic::ImagePipe>::Create(
+        fidl::InterfaceHandle<scenic::ImagePipe>(mx::channel(pCreateInfo->imagePipeHandle), 0u));
     *pSurface = reinterpret_cast<VkSurfaceKHR>(surface);
     return VK_SUCCESS;
 }

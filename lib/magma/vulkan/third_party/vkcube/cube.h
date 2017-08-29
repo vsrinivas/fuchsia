@@ -88,7 +88,7 @@ struct demo {
 #elif defined(VK_USE_PLATFORM_MAGMA_KHR) && defined(CUBE_USE_IMAGE_PIPE)
     uint32_t image_pipe_handle;
     display_pipe::DisplayProviderPtr display;
-    mozart2::ImagePipePtr pipe;
+    scenic::ImagePipePtr pipe;
 #endif
     VkSurfaceKHR surface;
     bool prepared;

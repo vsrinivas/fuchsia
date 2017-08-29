@@ -13,7 +13,7 @@
 #include "magma/src/display_pipe/services/display_provider.fidl.h"
 
 display_pipe::DisplayProviderPtr display;
-mozart2::ImagePipePtr image_pipe;
+scenic::ImagePipePtr image_pipe;
 uint64_t hsv_index;
 
 // HSV code adopted from:
@@ -93,7 +93,7 @@ class BufferHandler : public mtl::MessageLoopHandler {
       buffer_->dupReleaseFence(&rel);
 
       image_pipe->PresentImage(index_, 0, std::move(acq), std::move(rel),
-                               [](mozart2::PresentationInfoPtr info) {});
+                               [](scenic::PresentationInfoPtr info) {});
 
       uint8_t r, g, b;
       hsv_color(hsv_index, &r, &g, &b);
@@ -123,17 +123,17 @@ void allocate_buffer(uint32_t index, uint32_t width, uint32_t height) {
     Buffer *buffer = Buffer::NewBuffer(width, height);
     buffers[index] = buffer;
 
-    auto info = mozart2::ImageInfo::New();
+    auto info = scenic::ImageInfo::New();
     info->width = width;
     info->height = height;
     info->stride = width * 4;
-    info->pixel_format = mozart2::ImageInfo::PixelFormat::BGRA_8;
-    info->color_space = mozart2::ImageInfo::ColorSpace::SRGB;
+    info->pixel_format = scenic::ImageInfo::PixelFormat::BGRA_8;
+    info->color_space = scenic::ImageInfo::ColorSpace::SRGB;
 
     mx::vmo vmo;
     buffer->dupVmo(&vmo);
     image_pipe->AddImage(index, std::move(info), std::move(vmo),
-                         mozart2::MemoryType::HOST_MEMORY, 0);
+                         scenic::MemoryType::HOST_MEMORY, 0);
 
     handlers[index] = new BufferHandler(buffer, index);
 }

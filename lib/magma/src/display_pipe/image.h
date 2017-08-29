@@ -15,7 +15,7 @@ class Image {
 
   // Returns nullptr on error.
   static std::unique_ptr<Image> Create(std::shared_ptr<MagmaConnection> conn,
-                                       const mozart2::ImageInfo &info,
+                                       const scenic::ImageInfo &info,
                                        mx::vmo memory, uint64_t offset);
   magma_buffer_t buffer() { return buffer_; }
 
@@ -24,7 +24,7 @@ class Image {
  private:
   Image();
   std::shared_ptr<MagmaConnection> conn_;
-  mozart2::ImageInfo info_;
+  scenic::ImageInfo info_;
   mx::vmo memory_;
   uint64_t offset_;
 

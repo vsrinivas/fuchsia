@@ -13,29 +13,26 @@
 
 namespace display_pipe {
 
-class ImagePipeImpl : public mozart2::ImagePipe {
- public:
-  ImagePipeImpl(std::shared_ptr<MagmaConnection> conn);
-  ~ImagePipeImpl() override;
+class ImagePipeImpl : public scenic::ImagePipe {
+public:
+    ImagePipeImpl(std::shared_ptr<MagmaConnection> conn);
+    ~ImagePipeImpl() override;
 
-  void AddImage(uint32_t image_id,
-                mozart2::ImageInfoPtr image_info,
-                mx::vmo memory, mozart2::MemoryType memory_type,
-                uint64_t memory_offset) override;
-  void RemoveImage(uint32_t image_id) override;
-  void PresentImage(uint32_t image_id, uint64_t presetation_time,
-                    mx::event acquire_fence, mx::event release_fence,
-                    const PresentImageCallback& callback) override;
+    void AddImage(uint32_t image_id, scenic::ImageInfoPtr image_info, mx::vmo memory,
+                  scenic::MemoryType memory_type, uint64_t memory_offset) override;
+    void RemoveImage(uint32_t image_id) override;
+    void PresentImage(uint32_t image_id, uint64_t presetation_time, mx::event acquire_fence,
+                      mx::event release_fence, const PresentImageCallback& callback) override;
 
-  void AddBinding(fidl::InterfaceRequest<ImagePipe> request);
+    void AddBinding(fidl::InterfaceRequest<ImagePipe> request);
 
- private:
-  std::shared_ptr<MagmaConnection> conn_;
-  std::unordered_map<uint32_t, std::unique_ptr<Image>> images_;
-  fidl::BindingSet<mozart2::ImagePipe> bindings_;
+private:
+    std::shared_ptr<MagmaConnection> conn_;
+    std::unordered_map<uint32_t, std::unique_ptr<Image>> images_;
+    fidl::BindingSet<scenic::ImagePipe> bindings_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ImagePipeImpl);
+    FTL_DISALLOW_COPY_AND_ASSIGN(ImagePipeImpl);
 };
-}  // namespace display_pipe
+} // namespace display_pipe
 
-#endif  // MAGMA_IMAGE_PIPE_IMPL_H_
+#endif // MAGMA_IMAGE_PIPE_IMPL_H_

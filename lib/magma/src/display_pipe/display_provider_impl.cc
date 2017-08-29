@@ -31,7 +31,7 @@ void DisplayProviderImpl::GetInfo(const GetInfoCallback& callback) {
 }
 
 void DisplayProviderImpl::BindPipe(
-    ::fidl::InterfaceRequest<mozart2::ImagePipe> pipe) {
+    ::fidl::InterfaceRequest<scenic::ImagePipe> pipe) {
     image_pipe_.AddBinding(std::move(pipe));
 }
 

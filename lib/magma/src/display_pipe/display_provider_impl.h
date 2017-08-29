@@ -20,7 +20,7 @@ class DisplayProviderImpl : public DisplayProvider {
   ~DisplayProviderImpl() override;
 
   void GetInfo(const GetInfoCallback& callback) override;
-  void BindPipe(::fidl::InterfaceRequest<mozart2::ImagePipe> pipe) override;
+  void BindPipe(::fidl::InterfaceRequest<scenic::ImagePipe> pipe) override;
 
   void AddBinding(fidl::InterfaceRequest<DisplayProvider> request);
 
