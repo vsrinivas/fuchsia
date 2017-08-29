@@ -45,6 +45,10 @@
       "exec": "/system/test/netstack_loopback_test"
     },
     {
+      "name": "netstack_netiface_test",
+      "exec": "/system/bin/report_result /system/test/netstack_netiface_test"
+    },
+    {
       "name": "power_manager_tests",
       "exec": "/system/bin/report_result /system/test/power_manager_test"
     },
