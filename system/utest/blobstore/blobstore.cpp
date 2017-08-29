@@ -149,7 +149,7 @@ static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdi
     }
 
     if (TestType == FS_TEST_FVM) {
-        size_t slice_size = blk_size * blk_count / 8;
+        size_t slice_size = blk_size * blk_count / 4096;
         ASSERT_EQ((blk_count * blk_size) % slice_size, 0);
         int fd = open(ramdisk_path_out, O_RDWR);
         if (fd < 0) {
@@ -1381,6 +1381,57 @@ static bool QueryDevicePath(void) {
     END_TEST;
 }
 
+// This tests growing both additional inodes and blocks
+template <fs_test_type_t TestType>
+static bool ResizePartition(void) {
+    BEGIN_TEST;
+    ASSERT_EQ(TestType, FS_TEST_FVM);
+    char ramdisk_path[PATH_MAX];
+    char fvm_path[PATH_MAX];
+    ASSERT_EQ(StartBlobstoreTest<TestType>(512, 1 << 20, ramdisk_path, fvm_path), 0,
+              "Mounting Blobstore");
+
+    // Create 5000 blobs. Test slices are small enough that this will require both inodes and
+    // blocks to be added
+    for (size_t d = 0; d < 5000; d++) {
+        if (d % 500 == 0) {
+            printf("Creating blob: %lu\n", d);
+        }
+
+        mxtl::unique_ptr<blob_info_t> info;
+        ASSERT_TRUE(GenerateBlob(10, &info));
+
+        int fd;
+        ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
+                             info->data.get(), info->size_data, &fd));
+        ASSERT_EQ(close(fd), 0);
+    }
+
+    // Remount partition
+    ASSERT_EQ(umount(MOUNT_PATH), MX_OK, "Could not unmount blobstore");
+    ASSERT_EQ(MountBlobstore(ramdisk_path), 0, "Could not re-mount blobstore");
+
+    DIR* dir = opendir(MOUNT_PATH);
+    ASSERT_NONNULL(dir);
+    unsigned entries_deleted = 0;
+    char path[PATH_MAX];
+    struct dirent* de;
+
+    // Unlink all blobs
+    while ((de = readdir(dir)) != nullptr) {
+        strcpy(path, MOUNT_PATH "/");
+        strcat(path, de->d_name);
+        ASSERT_EQ(unlink(path), 0);
+        entries_deleted++;
+    }
+
+    ASSERT_EQ(closedir(dir), 0);
+    ASSERT_EQ(entries_deleted, 5000);
+    ASSERT_EQ(EndBlobstoreTest<TestType>(ramdisk_path, fvm_path), 0, "unmounting blobstore");
+    END_TEST;
+}
+
+
 BEGIN_TEST_CASE(blobstore_tests)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestBasic)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, TestMmap)
@@ -1403,6 +1454,7 @@ RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLargeMultithreaded)
 RUN_TEST_FOR_ALL_TYPES(LARGE, CreateUmountRemountLarge)
 RUN_TEST_FOR_ALL_TYPES(LARGE, NoSpace)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, QueryDevicePath)
+RUN_TEST_MEDIUM(ResizePartition<FS_TEST_FVM>)
 END_TEST_CASE(blobstore_tests)
 
 int main(int argc, char** argv) {

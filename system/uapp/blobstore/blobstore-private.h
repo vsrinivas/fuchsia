@@ -244,6 +244,12 @@ public:
     }
     txnid_t TxnId() const { return txnid_; }
 
+    // If possible, attempt to resize the blobstore partition.
+    // Add one additional slice for inodes.
+    mx_status_t AddInodes();
+    // Add enough slices required to hold nblocks additional blocks.
+    mx_status_t AddBlocks(size_t nblocks);
+
     int blockfd_;
     blobstore_info_t info_;
 

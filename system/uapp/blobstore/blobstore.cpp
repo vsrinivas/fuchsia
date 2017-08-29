@@ -17,6 +17,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/limits.h>
 #include <mxtl/ref_ptr.h>
 
 #define MXDEBUG 0
@@ -382,7 +383,14 @@ void VnodeBlob::QueueUnlink() {
 mx_status_t Blobstore::AllocateBlocks(size_t nblocks, size_t* blkno_out) {
     mx_status_t status;
     if ((status = block_map_.Find(false, 0, block_map_.size(), nblocks, blkno_out)) != MX_OK) {
-        return MX_ERR_NO_SPACE;
+        // If we have run out of blocks, attempt to add block slices via FVM
+        size_t old_size = block_map_.size();
+        if (AddBlocks(nblocks) != MX_OK) {
+            return MX_ERR_NO_SPACE;
+        } else if (block_map_.Find(false, old_size, block_map_.size(), nblocks, blkno_out)
+                   != MX_OK) {
+            return MX_ERR_NO_SPACE;
+        }
     }
     status = block_map_.Set(*blkno_out, *blkno_out + nblocks);
     assert(status == MX_OK);
@@ -403,14 +411,31 @@ void Blobstore::FreeBlocks(size_t nblocks, size_t blkno) {
 mx_status_t Blobstore::AllocateNode(size_t* node_index_out) {
     for (size_t i = 0; i < info_.inode_count; ++i) {
         if (GetNode(i)->start_block == kStartBlockFree) {
-            // Found a free node. Mark it as reserved so no one else can allocateit.
+            // Found a free node. Mark it as reserved so no one else can allocate it.
             GetNode(i)->start_block = kStartBlockReserved;
             info_.alloc_inode_count++;
             *node_index_out = i;
             return MX_OK;
         }
     }
-    return MX_ERR_NO_RESOURCES;
+
+    // If we didn't find any free inodes, try adding more via FVM.
+    size_t old_inode_count = info_.inode_count;
+    if (AddInodes() != MX_OK) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    for (size_t i = old_inode_count; i < info_.inode_count; ++i) {
+        if (GetNode(i)->start_block == kStartBlockFree) {
+            // Found a free node. Mark it as reserved so no one else can allocate it.
+            GetNode(i)->start_block = kStartBlockReserved;
+            info_.alloc_inode_count++;
+            *node_index_out = i;
+            return MX_OK;
+        }
+    }
+
+    return MX_ERR_NO_SPACE;
 }
 
 // Frees a node IN MEMORY
@@ -588,6 +613,104 @@ mx_status_t Blobstore::AttachVmo(mx_handle_t vmo, vmoid_t* out) {
     }
     return MX_OK;
 }
+
+mx_status_t Blobstore::AddInodes() {
+    if (!(info_.flags & kBlobstoreFlagFVM)) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    const size_t kBlocksPerSlice = info_.slice_size / kBlobstoreBlockSize;
+    extend_request_t request;
+    request.length = 1;
+    request.offset = (kFVMNodeMapStart / kBlocksPerSlice) + info_.ino_slices;
+    if (ioctl_block_fvm_extend(blockfd_, &request) < 0) {
+        fprintf(stderr, "Blobstore::AddInodes fvm_extend failure");
+        return MX_ERR_NO_SPACE;
+    }
+
+    const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size / kBlobstoreInodeSize);
+    uint64_t inodes64 = (info_.ino_slices + static_cast<uint32_t>(request.length))
+                        * kInodesPerSlice;
+    MX_DEBUG_ASSERT(inodes64 <= mxtl::numeric_limits<uint32_t>::max());
+    uint32_t inodes = static_cast<uint32_t>(inodes64);
+    uint32_t inoblks = (inodes + kBlobstoreInodesPerBlock - 1) / kBlobstoreInodesPerBlock;
+    MX_DEBUG_ASSERT(info_.inode_count <= mxtl::numeric_limits<uint32_t>::max());
+    uint32_t inoblks_old = (static_cast<uint32_t>(info_.inode_count) + kBlobstoreInodesPerBlock - 1)
+                           / kBlobstoreInodesPerBlock;
+    MX_DEBUG_ASSERT(inoblks_old <= inoblks);
+
+    if (node_map_->Grow(inoblks * kBlobstoreBlockSize) != MX_OK) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    info_.vslice_count += request.length;
+    info_.ino_slices += static_cast<uint32_t>(request.length);
+    info_.inode_count = inodes;
+
+    // Reset new inodes to 0
+    uintptr_t addr = reinterpret_cast<uintptr_t>(node_map_->GetData());
+    memset(reinterpret_cast<void*>(addr + kBlobstoreBlockSize * inoblks_old), 0,
+                                   (kBlobstoreBlockSize * (inoblks - inoblks_old)));
+
+    WriteTxn txn(this);
+    txn.Enqueue(info_vmoid_, 0, 0, 1);
+    txn.Enqueue(node_map_vmoid_, inoblks_old, NodeMapStartBlock(info_) + inoblks_old,
+                inoblks - inoblks_old);
+    return txn.Flush();
+}
+
+mx_status_t Blobstore::AddBlocks(size_t nblocks) {
+    if (!(info_.flags & kBlobstoreFlagFVM)) {
+        return MX_ERR_NO_SPACE;
+    }
+
+    const size_t kBlocksPerSlice = info_.slice_size / kBlobstoreBlockSize;
+    extend_request_t request;
+    // Number of slices required to add nblocks
+    request.length = (nblocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
+    request.offset = (kFVMDataStart / kBlocksPerSlice) + info_.dat_slices;
+
+    uint64_t blocks64 = (info_.dat_slices + request.length) * kBlocksPerSlice;
+    MX_DEBUG_ASSERT(blocks64 <= mxtl::numeric_limits<uint32_t>::max());
+    uint32_t blocks = static_cast<uint32_t>(blocks64);
+    uint32_t abmblks = (blocks + kBlobstoreBlockBits - 1) / kBlobstoreBlockBits;
+    uint64_t abmblks_old = (info_.block_count + kBlobstoreBlockBits - 1) / kBlobstoreBlockBits;
+    MX_DEBUG_ASSERT(abmblks_old <= abmblks);
+
+    if (abmblks > kBlocksPerSlice) {
+        //TODO(planders): Allocate more slices for the block bitmap.
+        fprintf(stderr, "Blobstore::AddBlocks needs to increase block bitmap size");
+        return MX_ERR_NO_SPACE;
+    }
+
+    if (ioctl_block_fvm_extend(blockfd_, &request) < 0) {
+        fprintf(stderr, "Blobstore::AddBlocks FVM Extend failure");
+        return MX_ERR_NO_SPACE;
+    }
+
+    // Grow the block bitmap to hold new number of blocks
+    if (block_map_.Grow(mxtl::roundup(blocks, kBlobstoreBlockBits)) != MX_OK) {
+        return MX_ERR_NO_SPACE;
+    }
+    // Grow before shrinking to ensure the underlying storage is a multiple
+    // of kBlobstoreBlockSize.
+    block_map_.Shrink(blocks);
+
+    WriteTxn txn(this);
+    if (abmblks > abmblks_old) {
+        txn.Enqueue(block_map_vmoid_, abmblks_old, DataStartBlock(info_) + abmblks_old,
+                    abmblks - abmblks_old);
+    }
+
+    info_.vslice_count += request.length;
+    info_.dat_slices += static_cast<uint32_t>(request.length);
+    info_.block_count = blocks;
+
+    txn.Enqueue(info_vmoid_, 0, 0, 1);
+    return txn.Flush();
+}
+
+
 
 Blobstore::Blobstore(int fd, const blobstore_info_t* info)
     : blockfd_(fd) {
