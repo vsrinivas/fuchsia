@@ -36,7 +36,7 @@ class MotermView : public mozart::SkiaView, public MotermModel::Delegate {
   // |BaseView|:
   void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
   void OnSceneInvalidated(
-      mozart2::PresentationInfoPtr presentation_info) override;
+      scenic::PresentationInfoPtr presentation_info) override;
   bool OnInputEvent(mozart::InputEventPtr event) override;
 
   // |MotermModel::Delegate|:

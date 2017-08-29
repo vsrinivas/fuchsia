@@ -125,7 +125,7 @@ void MotermView::Blink(uint64_t blink_timer_id) {
 }
 
 void MotermView::OnSceneInvalidated(
-    mozart2::PresentationInfoPtr presentation_info) {
+    scenic::PresentationInfoPtr presentation_info) {
   if (!regular_typeface_)
     return;
 
