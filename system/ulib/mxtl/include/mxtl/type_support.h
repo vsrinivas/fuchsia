@@ -198,6 +198,10 @@ struct is_signed_integer : internal::is_signed_integer<T>::type {};
 template <typename T>
 struct is_unsigned_integer : internal::is_unsigned_integer<T>::type {};
 
+// is_enum is a builtin
+template<typename T>
+struct is_enum : integral_constant<bool, __is_enum(T)> { };
+
 // is_pod is a builtin
 template<typename T>
 struct is_pod : integral_constant<bool, __is_pod(T)> { };

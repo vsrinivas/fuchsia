@@ -268,6 +268,17 @@ static_assert(!mxtl::is_unsigned_integer<A*>::value, "A pointer is not unsigned 
 
 } // namespace is_unsigned_integer_tests
 
+namespace is_enum_tests {
+
+enum E {};
+struct S {};
+static_assert(mxtl::is_enum<E>::value, "enum is an enum");
+static_assert(!mxtl::is_enum<S>::value, "struct is not an enum");
+static_assert(!mxtl::is_enum<int>::value, "int is not an enum");
+static_assert(!mxtl::is_enum<void>::value, "void is not an enum");
+
+} // namespace is_enum_tests
+
 namespace is_pointer_tests {
 
 struct StructType   {
