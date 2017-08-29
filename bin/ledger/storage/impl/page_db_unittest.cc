@@ -72,7 +72,7 @@ TEST_F(PageDbTest, HeadCommits) {
   EXPECT_TRUE(heads.empty());
 
   CommitId cid = RandomCommitId();
-  EXPECT_EQ(Status::OK, page_db_.AddHead(cid, glue::RandUint64()));
+  EXPECT_EQ(Status::OK, page_db_.AddHead(handler_, cid, glue::RandUint64()));
   EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
   EXPECT_EQ(1u, heads.size());
   EXPECT_EQ(cid, heads[0]);
@@ -105,7 +105,7 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
   std::map<int64_t, CommitId> commits;
   for (auto ts : random_ordered_timestamps) {
     commits[ts] = RandomCommitId();
-    EXPECT_EQ(Status::OK, page_db_.AddHead(commits[ts], ts));
+    EXPECT_EQ(Status::OK, page_db_.AddHead(handler_, commits[ts], ts));
   }
 
   std::vector<CommitId> heads;
@@ -151,7 +151,7 @@ TEST_F(PageDbTest, Journals) {
   EXPECT_EQ(Status::OK, page_db_.CreateJournal(handler_, JournalType::EXPLICIT,
                                                commit_id, &explicit_journal));
 
-  EXPECT_EQ(Status::OK, page_db_.RemoveExplicitJournals());
+  EXPECT_EQ(Status::OK, page_db_.RemoveExplicitJournals(handler_));
 
   // Removing explicit journals should not affect the implicit ones.
   std::vector<JournalId> journal_ids;

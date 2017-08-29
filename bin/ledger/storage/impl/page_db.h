@@ -44,7 +44,9 @@ class PageDbMutator {
 
   // Heads.
   // Adds the given |head| in the set of commit heads.
-  virtual Status AddHead(CommitIdView head, int64_t timestamp) = 0;
+  virtual Status AddHead(coroutine::CoroutineHandler* handler,
+                         CommitIdView head,
+                         int64_t timestamp) = 0;
 
   // Removes the given |head| from the head commits.
   virtual Status RemoveHead(coroutine::CoroutineHandler* handler,
@@ -76,7 +78,8 @@ class PageDbMutator {
                                     std::unique_ptr<Journal>* journal) = 0;
 
   // Removes all information on explicit journals from the database.
-  virtual Status RemoveExplicitJournals() = 0;
+  virtual Status RemoveExplicitJournals(
+      coroutine::CoroutineHandler* handler) = 0;
 
   // Removes all information on the journal with the given |journal_id| from the
   // database.

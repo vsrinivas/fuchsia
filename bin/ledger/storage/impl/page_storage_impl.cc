@@ -89,61 +89,65 @@ PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
 PageStorageImpl::~PageStorageImpl() {}
 
 void PageStorageImpl::Init(std::function<void(Status)> callback) {
-  // Initialize PageDb.
-  Status s = db_.Init();
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
-
-  // Add the default page head if this page is empty.
-  std::vector<CommitId> heads;
-  s = db_.GetHeads(&heads);
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
-  if (heads.empty()) {
-    s = db_.AddHead(kFirstPageCommitId, 0);
+  coroutine_service_->StartCoroutine([ this, callback = std::move(callback) ](
+      coroutine::CoroutineHandler * handler) {
+    // Initialize PageDb.
+    Status s = db_.Init();
     if (s != Status::OK) {
       callback(s);
       return;
     }
-  }
 
-  // Remove uncommited explicit journals.
-  db_.RemoveExplicitJournals();
-
-  // Commit uncommited implicit journals.
-  std::vector<JournalId> journal_ids;
-  s = db_.GetImplicitJournalIds(&journal_ids);
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
-  auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
-  for (JournalId& id : journal_ids) {
-    std::unique_ptr<Journal> journal;
-    s = db_.GetImplicitJournal(id, &journal);
+    // Add the default page head if this page is empty.
+    std::vector<CommitId> heads;
+    s = db_.GetHeads(&heads);
     if (s != Status::OK) {
-      FTL_LOG(ERROR) << "Failed to get implicit journal with status " << s
-                     << ". journal id: " << id;
       callback(s);
       return;
     }
+    if (heads.empty()) {
+      s = db_.AddHead(handler, kFirstPageCommitId, 0);
+      if (s != Status::OK) {
+        callback(s);
+        return;
+      }
+    }
 
-    CommitJournal(
-        std::move(journal), [status_callback = waiter->NewCallback()](
-                                Status status, std::unique_ptr<const Commit>) {
-          if (status != Status::OK) {
-            FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
-                              "previous Ledger execution.";
-          }
-          status_callback(status);
-        });
-  }
+    // Remove uncommited explicit journals.
+    db_.RemoveExplicitJournals(handler);
 
-  waiter->Finalize(std::move(callback));
+    // Commit uncommited implicit journals.
+    std::vector<JournalId> journal_ids;
+    s = db_.GetImplicitJournalIds(&journal_ids);
+    if (s != Status::OK) {
+      callback(s);
+      return;
+    }
+    auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
+    for (JournalId& id : journal_ids) {
+      std::unique_ptr<Journal> journal;
+      s = db_.GetImplicitJournal(id, &journal);
+      if (s != Status::OK) {
+        FTL_LOG(ERROR) << "Failed to get implicit journal with status " << s
+                       << ". journal id: " << id;
+        callback(s);
+        return;
+      }
+
+      CommitJournal(
+          std::move(journal), [status_callback = waiter->NewCallback()](
+                                  Status status,
+                                  std::unique_ptr<const Commit>) {
+            if (status != Status::OK) {
+              FTL_LOG(ERROR) << "Failed to commit implicit journal created in "
+                                "previous Ledger execution.";
+            }
+            status_callback(status);
+          });
+    }
+
+    waiter->Finalize(std::move(callback));
+  });
 }
 
 PageId PageStorageImpl::GetId() {
@@ -749,7 +753,8 @@ void PageStorageImpl::AddCommits(
       }
       // Update heads in Db.
       for (const auto& head_timestamp : heads_to_add) {
-        Status s = batch->AddHead(head_timestamp.first, head_timestamp.second);
+        Status s = batch->AddHead(handler, head_timestamp.first,
+                                  head_timestamp.second);
         if (s != Status::OK) {
           callback(s);
           return;

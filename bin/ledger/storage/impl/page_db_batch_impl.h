@@ -20,7 +20,9 @@ class PageDbBatchImpl : public PageDb::Batch {
   ~PageDbBatchImpl() override;
 
   // Heads.
-  Status AddHead(CommitIdView head, int64_t timestamp) override;
+  Status AddHead(coroutine::CoroutineHandler* handler,
+                 CommitIdView head,
+                 int64_t timestamp) override;
   Status RemoveHead(coroutine::CoroutineHandler* handler,
                     CommitIdView head) override;
 
@@ -40,7 +42,7 @@ class PageDbBatchImpl : public PageDb::Batch {
                             const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override;
-  Status RemoveExplicitJournals() override;
+  Status RemoveExplicitJournals(coroutine::CoroutineHandler* handler) override;
   Status RemoveJournal(const JournalId& journal_id) override;
 
   // Journal entries.

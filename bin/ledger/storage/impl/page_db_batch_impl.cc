@@ -24,7 +24,9 @@ PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch,
 
 PageDbBatchImpl::~PageDbBatchImpl() {}
 
-Status PageDbBatchImpl::AddHead(CommitIdView head, int64_t timestamp) {
+Status PageDbBatchImpl::AddHead(coroutine::CoroutineHandler* /*handler*/,
+                                CommitIdView head,
+                                int64_t timestamp) {
   return batch_->Put(HeadRow::GetKeyFor(head), SerializeNumber(timestamp));
 }
 
@@ -69,7 +71,8 @@ Status PageDbBatchImpl::CreateMergeJournal(
   return Status::OK;
 }
 
-Status PageDbBatchImpl::RemoveExplicitJournals() {
+Status PageDbBatchImpl::RemoveExplicitJournals(
+    coroutine::CoroutineHandler* /*handler*/) {
   static std::string kExplicitJournalPrefix =
       ftl::Concatenate({JournalEntryRow::kPrefix,
                         ftl::StringView(&JournalEntryRow::kImplicitPrefix, 1)});

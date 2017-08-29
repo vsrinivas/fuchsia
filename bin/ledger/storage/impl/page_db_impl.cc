@@ -242,9 +242,11 @@ Status PageDbImpl::GetSyncMetadata(ftl::StringView key, std::string* value) {
   return db_.Get(SyncMetadataRow::GetKeyFor(key), value);
 }
 
-Status PageDbImpl::AddHead(CommitIdView head, int64_t timestamp) {
+Status PageDbImpl::AddHead(coroutine::CoroutineHandler* handler,
+                           CommitIdView head,
+                           int64_t timestamp) {
   auto batch = StartBatch();
-  batch->AddHead(head, timestamp);
+  batch->AddHead(handler, head, timestamp);
   return batch->Execute();
 }
 
@@ -288,9 +290,10 @@ Status PageDbImpl::CreateMergeJournal(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::RemoveExplicitJournals() {
+Status PageDbImpl::RemoveExplicitJournals(
+    coroutine::CoroutineHandler* handler) {
   auto batch = StartBatch();
-  batch->RemoveExplicitJournals();
+  batch->RemoveExplicitJournals(handler);
   return batch->Execute();
 }
 

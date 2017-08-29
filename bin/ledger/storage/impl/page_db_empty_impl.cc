@@ -66,7 +66,9 @@ Status PageDbEmptyImpl::GetSyncMetadata(ftl::StringView /*key*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::AddHead(CommitIdView /*head*/, int64_t /*timestamp*/) {
+Status PageDbEmptyImpl::AddHead(coroutine::CoroutineHandler* /*handler*/,
+                                CommitIdView /*head*/,
+                                int64_t /*timestamp*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveHead(coroutine::CoroutineHandler* /*handler*/,
@@ -96,7 +98,8 @@ Status PageDbEmptyImpl::CreateMergeJournal(
     std::unique_ptr<Journal>* /*journal*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::RemoveExplicitJournals() {
+Status PageDbEmptyImpl::RemoveExplicitJournals(
+    coroutine::CoroutineHandler* /*handler*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::RemoveJournal(const JournalId& /*journal_id*/) {
