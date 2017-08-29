@@ -5,6 +5,7 @@
 #pragma once
 
 #include "apps/mozart/services/scene/types.fidl.h"
+#include "lib/escher/escher/geometry/bounding_box.h"
 #include "lib/escher/escher/geometry/transform.h"
 
 namespace scene_manager {
@@ -34,6 +35,10 @@ inline escher::quat Unwrap(const mozart2::QuaternionPtr& args) {
 inline escher::Transform Unwrap(const mozart2::TransformPtr& args) {
   return {Unwrap(args->translation), Unwrap(args->scale),
           Unwrap(args->rotation), Unwrap(args->anchor)};
+}
+
+inline escher::BoundingBox Unwrap(const mozart2::BoundingBoxPtr& args) {
+  return {Unwrap(args->min), Unwrap(args->max)};
 }
 
 inline bool IsFloat(const mozart2::ValuePtr& val) {

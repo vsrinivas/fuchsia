@@ -31,24 +31,6 @@ struct Circle {
   Value radius;  // float
 };
 
-struct Mesh {
-  uint32 index_buffer_id;  // ID of a Buffer containing the mesh indices.
-  MeshIndexFormat index_format;
-  uint64 index_offset;  // bytes from start of Buffer
-  uint32 index_count;
-  uint32 vertex_buffer_id;  // ID of a Buffer containing the mesh vertices.
-  MeshVertexFormat vertex_format;
-  uint64 vertex_offset; // bytes from start of Buffer
-  uint32 vertex_count;
-};
-
-enum MeshIndexFormat {
-  kUint16 = 1,
-  kUint32,
-};
-
-struct MeshVertexFormat {
-  ValueType position_type;
-  ValueType normal_type;
-  ValueType tex_coord_type;
-};
+// A Mesh cannot be rendered until it has been updated for the first time; see
+// BindMeshBuffersOp.
+struct Mesh {};

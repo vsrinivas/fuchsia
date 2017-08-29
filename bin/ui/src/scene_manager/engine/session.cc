@@ -7,6 +7,7 @@
 #include "apps/mozart/src/scene_manager/engine/hit_tester.h"
 #include "apps/mozart/src/scene_manager/engine/session_handler.h"
 #include "apps/mozart/src/scene_manager/print_op.h"
+#include "apps/mozart/src/scene_manager/resources/buffer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
@@ -23,6 +24,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
+#include "apps/mozart/src/scene_manager/resources/shapes/mesh_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/util/unwrap.h"
@@ -114,6 +116,8 @@ bool Session::ApplyOp(const mozart2::OpPtr& op) {
       return ApplySetTextureOp(op->get_set_texture());
     case mozart2::Op::Tag::SET_COLOR:
       return ApplySetColorOp(op->get_set_color());
+    case mozart2::Op::Tag::BIND_MESH_BUFFERS:
+      return ApplyBindMeshBuffersOp(op->get_bind_mesh_buffers());
     case mozart2::Op::Tag::ADD_LAYER:
       return ApplyAddLayerOp(op->get_add_layer());
     case mozart2::Op::Tag::SET_LAYER_STACK:
@@ -418,6 +422,20 @@ bool Session::ApplySetColorOp(const mozart2::SetColorOpPtr& op) {
   return false;
 }
 
+bool Session::ApplyBindMeshBuffersOp(const mozart2::BindMeshBuffersOpPtr& op) {
+  auto mesh = resources_.FindResource<MeshShape>(op->mesh_id);
+  auto index_buffer = resources_.FindResource<Buffer>(op->index_buffer_id);
+  auto vertex_buffer = resources_.FindResource<Buffer>(op->vertex_buffer_id);
+  if (!mesh || !index_buffer || !vertex_buffer) {
+    return false;
+  }
+
+  return mesh->BindBuffers(
+      std::move(index_buffer), op->index_format, op->index_offset,
+      op->index_count, std::move(vertex_buffer), op->vertex_format,
+      op->vertex_offset, op->vertex_count, Unwrap(op->bounding_box));
+}
+
 bool Session::ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op) {
   auto layer_stack = resources_.FindResource<LayerStack>(op->layer_stack_id);
   auto layer = resources_.FindResource<Layer>(op->layer_id);
@@ -508,7 +526,7 @@ bool Session::ApplyCreateMemory(mozart::ResourceId id,
 bool Session::ApplyCreateImage(mozart::ResourceId id,
                                const mozart2::ImagePtr& args) {
   if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
-    if (auto image = CreateImage(id, memory, args)) {
+    if (auto image = CreateImage(id, std::move(memory), args)) {
       return resources_.AddResource(id, std::move(image));
     }
   }
@@ -525,8 +543,12 @@ bool Session::ApplyCreateImagePipe(mozart::ResourceId id,
 
 bool Session::ApplyCreateBuffer(mozart::ResourceId id,
                                 const mozart2::BufferPtr& args) {
-  error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateBuffer(): unimplemented";
+  if (auto memory = resources_.FindResource<Memory>(args->memory_id)) {
+    if (auto buffer = CreateBuffer(id, std::move(memory), args->memory_offset,
+                                   args->num_bytes)) {
+      return resources_.AddResource(id, std::move(buffer));
+    }
+  }
   return false;
 }
 
@@ -641,9 +663,8 @@ bool Session::ApplyCreateCircle(mozart::ResourceId id,
 
 bool Session::ApplyCreateMesh(mozart::ResourceId id,
                               const mozart2::MeshPtr& args) {
-  error_reporter_->ERROR()
-      << "scene_manager::Session::ApplyCreateMesh(): unimplemented";
-  return false;
+  auto mesh = CreateMesh(id);
+  return mesh ? resources_.AddResource(id, std::move(mesh)) : false;
 }
 
 bool Session::ApplyCreateMaterial(mozart::ResourceId id,
@@ -720,6 +741,32 @@ ResourcePtr Session::CreateImage(mozart::ResourceId id,
                                  const mozart2::ImagePtr& args) {
   return Image::New(this, id, memory, args->info, args->memory_offset,
                     error_reporter_);
+}
+
+ResourcePtr Session::CreateBuffer(mozart::ResourceId id,
+                                  MemoryPtr memory,
+                                  uint32_t memory_offset,
+                                  uint32_t num_bytes) {
+  if (!memory->IsKindOf<GpuMemory>()) {
+    // TODO(MZ-273): host memory should also be supported.
+    error_reporter_->ERROR() << "scene_manager::Session::CreateBuffer(): "
+                                "memory must be of type "
+                                "mozart2.MemoryType.VK_DEVICE_MEMORY";
+    return ResourcePtr();
+  }
+
+  auto gpu_memory = memory->As<GpuMemory>();
+  if (memory_offset + num_bytes > gpu_memory->size()) {
+    error_reporter_->ERROR() << "scene_manager::Session::CreateBuffer(): "
+                                "buffer does not fit within memory (buffer "
+                                "offset: "
+                             << memory_offset << ", buffer size: " << num_bytes
+                             << ", memory size: " << gpu_memory->size() << ")";
+    return ResourcePtr();
+  }
+
+  return ftl::MakeRefCounted<Buffer>(this, id, std::move(gpu_memory), num_bytes,
+                                     memory_offset);
 }
 
 ResourcePtr Session::CreateScene(mozart::ResourceId id,
@@ -834,6 +881,10 @@ ResourcePtr Session::CreateRoundedRectangle(mozart::ResourceId id,
 
   return ftl::MakeRefCounted<RoundedRectangleShape>(
       this, id, rect_spec, factory->NewRoundedRect(rect_spec, mesh_spec));
+}
+
+ResourcePtr Session::CreateMesh(mozart::ResourceId id) {
+  return ftl::MakeRefCounted<MeshShape>(this, id);
 }
 
 ResourcePtr Session::CreateMaterial(mozart::ResourceId id) {

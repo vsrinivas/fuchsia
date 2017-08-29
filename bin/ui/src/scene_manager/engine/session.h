@@ -131,6 +131,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   bool ApplySetLightIntensityOp(const mozart2::SetLightIntensityOpPtr& op);
   bool ApplySetTextureOp(const mozart2::SetTextureOpPtr& op);
   bool ApplySetColorOp(const mozart2::SetColorOpPtr& op);
+  bool ApplyBindMeshBuffersOp(const mozart2::BindMeshBuffersOpPtr& op);
   bool ApplyAddLayerOp(const mozart2::AddLayerOpPtr& op);
   bool ApplySetLayerStackOp(const mozart2::SetLayerStackOpPtr& op);
   bool ApplySetRendererOp(const mozart2::SetRendererOpPtr& op);
@@ -180,6 +181,10 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
   ResourcePtr CreateImage(mozart::ResourceId id,
                           MemoryPtr memory,
                           const mozart2::ImagePtr& args);
+  ResourcePtr CreateBuffer(mozart::ResourceId id,
+                           MemoryPtr memory,
+                           uint32_t memory_offset,
+                           uint32_t num_bytes);
   ResourcePtr CreateScene(mozart::ResourceId id, const mozart2::ScenePtr& args);
   ResourcePtr CreateCamera(mozart::ResourceId id,
                            const mozart2::CameraPtr& args);
@@ -212,6 +217,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
                                      float top_right_radius,
                                      float bottom_right_radius,
                                      float bottom_left_radius);
+  ResourcePtr CreateMesh(mozart::ResourceId id);
   ResourcePtr CreateMaterial(mozart::ResourceId id);
 
   // Return false and log an error if the value is not of the expected type.

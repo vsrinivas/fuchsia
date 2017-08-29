@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/resources/resource_visitor.h"
 
+#include "apps/mozart/src/scene_manager/resources/buffer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/compositor.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
@@ -22,6 +23,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
+#include "apps/mozart/src/scene_manager/resources/shapes/mesh_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/shape.h"
@@ -44,6 +46,10 @@ void ImagePipe::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 
+void Buffer::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
 void EntityNode::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
@@ -61,6 +67,10 @@ void RectangleShape::Accept(ResourceVisitor* visitor) {
 }
 
 void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
+  visitor->Visit(this);
+}
+
+void MeshShape::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
 

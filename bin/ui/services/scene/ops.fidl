@@ -46,6 +46,9 @@ union Op {
   SetTextureOp set_texture;
   SetColorOp set_color;
 
+  // Mesh operations.
+  BindMeshBuffersOp bind_mesh_buffers;
+
   // Layer operations.
   AddLayerOp add_layer;
   SetLayerStackOp set_layer_stack;
@@ -393,6 +396,42 @@ struct SetTextureOp {
 struct SetColorOp {
   uint32 material_id;
   ColorRgbaValue color;
+};
+
+
+
+// Set a mesh's indices and vertices.
+//
+// |mesh_id| refs the Mesh to be updated.
+// |index_buffer_id| refs a Buffer that contains the mesh indices.
+// |index_format| defines how the index buffer data is to be interpreted.
+// |index_offset| number of bytes from the start of the index Buffer.
+// |index_count| number of indices.
+// |vertex_buffer_id| refs a Buffer that contains the mesh vertices.
+// |vertex_format| defines how the vertex buffer data is to be interpreted.
+// |vertex_offset| number of bytes from the start of the vertex Buffer.
+// |vertex_count| number of vertices.
+// |bounding_box| must contain all vertices within the specified range.
+enum MeshIndexFormat {
+  kUint16 = 1,
+  kUint32,
+};
+struct MeshVertexFormat {
+  ValueType position_type;
+  ValueType normal_type;
+  ValueType tex_coord_type;
+};
+struct BindMeshBuffersOp {
+  uint32 mesh_id;
+  uint32 index_buffer_id;
+  MeshIndexFormat index_format;
+  uint64 index_offset;
+  uint32 index_count;
+  uint32 vertex_buffer_id;
+  MeshVertexFormat vertex_format;
+  uint64 vertex_offset;
+  uint32 vertex_count;
+  BoundingBox bounding_box;
 };
 
 // Add a layer to a layer stack.

@@ -11,6 +11,7 @@ class GpuMemory;
 class HostMemory;
 class Image;
 class ImagePipe;
+class Buffer;
 class EntityNode;
 class Node;
 class ShapeNode;
@@ -18,6 +19,7 @@ class Scene;
 class CircleShape;
 class RectangleShape;
 class RoundedRectangleShape;
+class MeshShape;
 class Material;
 class DisplayCompositor;
 class LayerStack;
@@ -34,6 +36,7 @@ class ResourceVisitor {
   virtual void Visit(HostMemory* r) = 0;
   virtual void Visit(Image* r) = 0;
   virtual void Visit(ImagePipe* r) = 0;
+  virtual void Visit(Buffer* r) = 0;
 
   // Nodes.
   virtual void Visit(EntityNode* r) = 0;
@@ -43,6 +46,7 @@ class ResourceVisitor {
   virtual void Visit(CircleShape* r) = 0;
   virtual void Visit(RectangleShape* r) = 0;
   virtual void Visit(RoundedRectangleShape* r) = 0;
+  virtual void Visit(MeshShape* r) = 0;
 
   // Materials.
   virtual void Visit(Material* r) = 0;

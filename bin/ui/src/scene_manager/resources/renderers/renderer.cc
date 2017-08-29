@@ -77,6 +77,10 @@ void Renderer::Visitor::Visit(ImagePipe* r) {
   FTL_CHECK(false);
 }
 
+void Renderer::Visitor::Visit(Buffer* r) {
+  FTL_CHECK(false);
+}
+
 void Renderer::Visitor::Visit(EntityNode* r) {
   VisitNode(r);
 }
@@ -188,6 +192,10 @@ void Renderer::Visitor::Visit(RectangleShape* r) {
 }
 
 void Renderer::Visitor::Visit(RoundedRectangleShape* r) {
+  FTL_CHECK(false);
+}
+
+void Renderer::Visitor::Visit(MeshShape* r) {
   FTL_CHECK(false);
 }
 

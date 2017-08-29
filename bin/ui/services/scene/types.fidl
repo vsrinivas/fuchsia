@@ -177,3 +177,8 @@ struct Metrics {
   float scale_y;
   float scale_z;
 };
+
+struct BoundingBox {
+  vec3 min;
+  vec3 max;
+};

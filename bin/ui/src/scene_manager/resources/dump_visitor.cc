@@ -6,6 +6,7 @@
 
 #include <ostream>
 
+#include "apps/mozart/src/scene_manager/resources/buffer.h"
 #include "apps/mozart/src/scene_manager/resources/camera.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/display_compositor.h"
 #include "apps/mozart/src/scene_manager/resources/compositor/layer.h"
@@ -22,6 +23,7 @@
 #include "apps/mozart/src/scene_manager/resources/nodes/shape_node.h"
 #include "apps/mozart/src/scene_manager/resources/renderers/renderer.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/circle_shape.h"
+#include "apps/mozart/src/scene_manager/resources/shapes/mesh_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rectangle_shape.h"
 #include "apps/mozart/src/scene_manager/resources/shapes/rounded_rectangle_shape.h"
 #include "lib/ftl/logging.h"
@@ -61,6 +63,16 @@ void DumpVisitor::Visit(Image* r) {
   BeginItem("Image", r);
   VisitEscherImage(r->GetEscherImage().get());
   VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(Buffer* r) {
+  BeginItem("Buffer", r);
+  WriteProperty("size") << r->size();
+  VisitResource(r);
+  BeginSection("memory");
+  r->memory()->Accept(this);
+  EndSection();
   EndItem();
 }
 
@@ -157,6 +169,24 @@ void DumpVisitor::Visit(RoundedRectangleShape* r) {
   WriteProperty("top_right_radius") << r->top_right_radius();
   WriteProperty("bottom_right_radius") << r->bottom_right_radius();
   WriteProperty("bottom_left_radius") << r->bottom_left_radius();
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(MeshShape* r) {
+  BeginItem("MeshShape", r);
+  if (auto& mesh = r->escher_mesh()) {
+    WriteProperty("num_indices") << mesh->num_indices();
+    WriteProperty("num_vertices") << mesh->num_vertices();
+    WriteProperty("index_buffer_offset") << mesh->index_buffer_offset();
+    WriteProperty("vertex_buffer_offset") << mesh->vertex_buffer_offset();
+    BeginSection("index_buffer");
+    r->index_buffer()->Accept(this);
+    EndSection();
+    BeginSection("vertx_buffer");
+    r->vertex_buffer()->Accept(this);
+    EndSection();
+  }
   VisitResource(r);
   EndItem();
 }

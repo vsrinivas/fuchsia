@@ -49,11 +49,13 @@ class Renderer : public Resource {
     void Visit(HostMemory* r) override;
     void Visit(Image* r) override;
     void Visit(ImagePipe* r) override;
+    void Visit(Buffer* r) override;
     void Visit(EntityNode* r) override;
     void Visit(ShapeNode* r) override;
     void Visit(CircleShape* r) override;
     void Visit(RectangleShape* r) override;
     void Visit(RoundedRectangleShape* r) override;
+    void Visit(MeshShape* r) override;
     void Visit(Material* r) override;
     void Visit(DisplayCompositor* r) override;
     void Visit(LayerStack* r) override;
