@@ -13,8 +13,8 @@ executable("echo_client_cpp_bin") {
 
   deps = [
     "//application/lib/app",
-    "//lib/fidl/cpp/bindings",
-    "//lib/fidl/examples/services",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/examples/services",
     "//lib/ftl",
     "//lib/mtl",
   ]

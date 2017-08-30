@@ -8,6 +8,6 @@ source_set("waiter") {
   ]
 
   public_deps = [
-    "//lib/fidl/c/waiter",
+    "//garnet/public/lib/fidl/c/waiter",
   ]
 }

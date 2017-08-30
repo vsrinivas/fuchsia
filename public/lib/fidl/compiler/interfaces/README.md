@@ -5,5 +5,5 @@ These files represent the interface between the front-end of the FIDL compiler
 variety of languages. The interface is expressed in FIDL which introduces a
 somewhat circular dependency.
 
-There's a script `//lib/fidl/compiler/interfaces/update.sh` that can be run to
+There's a script `//garnet/public/lib/fidl/compiler/interfaces/update.sh` that can be run to
 update the appropriate files.

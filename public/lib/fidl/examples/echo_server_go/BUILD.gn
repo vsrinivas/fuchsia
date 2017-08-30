@@ -9,7 +9,7 @@ go_binary("echo_server_go_bin") {
   output_name = "echo_server_go"
   gopackage = "fuchsia.googlesource.com/fidl_examples/echo_server_go"
   deps = [
-    "//lib/fidl/examples/services",
+    "//garnet/public/lib/fidl/examples/services",
   ]
   go_dependencies = [
     {
@@ -17,7 +17,11 @@ go_binary("echo_server_go_bin") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "lib/fidl/examples"
+      source = "$root_gen_dir/go/src/garnet/public/lib/fidl/examples"
     },
     {
       package = "application/lib/app"

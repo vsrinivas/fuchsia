@@ -17,6 +17,11 @@ declare_args() {
 
   # Generate Rust code from fidl bindings.
   generate_fidl_for_rust = packages_have_rust
+
+  # Directories to search for FIDL imports.
+  fidl_import_dirs = [
+    "//garnet/public",
+  ]
 }
 
 if (generate_fidl_for_dart) {
@@ -105,22 +110,22 @@ template("fidl") {
     action_foreach(generator_target_name) {
       script = "/usr/bin/env"
       public_deps = [
-        "//lib/fidl/compiler:fidl(//build/toolchain:host_x64)",
+        "//garnet/public/lib/fidl/compiler:fidl(//build/toolchain:host_x64)",
       ]
       deps = [
-        "//lib/fidl/compiler/legacy_generators(//build/toolchain:host_x64)",
+        "//garnet/public/lib/fidl/compiler/legacy_generators(//build/toolchain:host_x64)",
       ]
       if (generate_fidl_for_rust) {
         deps += [
           ":$map_target",
-          "//lib/fidl/compiler:fidl-rust(//build/toolchain:host_x64)",
+          "//garnet/public/lib/fidl/compiler:fidl-rust(//build/toolchain:host_x64)",
         ]
       }
       if (generate_fidl_for_go) {
-        deps += [ "//lib/fidl/compiler:fidl-go(//build/toolchain:host_x64)" ]
+        deps += [ "//garnet/public/lib/fidl/compiler:fidl-go(//build/toolchain:host_x64)" ]
       }
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
-        deps += [ "//lib/fidl/compiler/interfaces:interfaces" ]
+        deps += [ "//garnet/public/lib/fidl/compiler/interfaces:interfaces" ]
       }
       sources = invoker.sources
 
@@ -184,6 +189,13 @@ template("fidl") {
         }
       }
 
+      foreach(import_dir, fidl_import_dirs) {
+        args += [
+          "-I",
+          rebase_path(import_dir, root_build_dir),
+        ]
+      }
+
       if (defined(invoker.import_dirs)) {
         foreach(import_dir, invoker.import_dirs) {
           args += [
@@ -219,10 +231,10 @@ template("fidl") {
       testonly = invoker.testonly
     }
 
-    public_configs = [ "//lib/fidl/build/config:fidl_source" ]
+    public_configs = [ "//garnet/public/lib/fidl/build/config:fidl_source" ]
 
     public_deps = [
-      "//lib/fidl/cpp/bindings",
+      "//garnet/public/lib/fidl/cpp/bindings",
     ]
 
     public_deps += cpp_public_deps
@@ -245,10 +257,10 @@ template("fidl") {
       testonly = invoker.testonly
     }
 
-    public_configs = [ "//lib/fidl/build/config:fidl_source" ]
+    public_configs = [ "//garnet/public/lib/fidl/build/config:fidl_source" ]
 
     public_deps = [
-      "//lib/fidl/cpp/bindings",
+      "//garnet/public/lib/fidl/cpp/bindings",
     ]
 
     public_deps += cpp_public_deps
@@ -270,10 +282,10 @@ template("fidl") {
       testonly = invoker.testonly
     }
 
-    public_configs = [ "//lib/fidl/build/config:fidl_source" ]
+    public_configs = [ "//garnet/public/lib/fidl/build/config:fidl_source" ]
 
     public_deps = [
-      "//lib/fidl/cpp/bindings:serialization",
+      "//garnet/public/lib/fidl/cpp/bindings:serialization",
     ]
 
     public_deps += cpp_public_deps
@@ -306,7 +318,7 @@ template("fidl") {
   }
 
   action("${target_name}_python") {
-    script = "//lib/fidl/build/zip.py"
+    script = "//garnet/public/lib/fidl/build/zip.py"
 
     deps = []
     zip_inputs = []
@@ -352,7 +364,7 @@ template("fidl") {
     rust_crate_target_name = "${target_name}_rust"
 
     action(rust_crate_target_name) {
-      script = "//lib/fidl/build/make_crate.py"
+      script = "//garnet/public/lib/fidl/build/make_crate.py"
 
       deps = []
       dep_inputs = []
@@ -398,7 +410,7 @@ template("fidl") {
     }
 
     rust_library("${target_name}_rust_library") {
-      name = exec_script("//lib/fidl/build/label_to_crate.py",
+      name = exec_script("//garnet/public/lib/fidl/build/label_to_crate.py",
                          [ rebase_path(generator_rust_crate_output,
                                        root_gen_dir) ],
                          "trim string")
@@ -415,7 +427,7 @@ template("fidl") {
       }
 
       deps += [
-        "//lib/fidl/rust/fidl",
+        "//garnet/public/lib/fidl/rust/fidl",
         "//rust/magenta-rs:magenta",
         "//rust/tokio-fuchsia",
         "//third_party/rust-crates:futures-0.1.15",
@@ -428,7 +440,7 @@ template("fidl") {
     # for resolving dependencies in the Rust binding generation.
     save_target = target_name
     action(map_target) {
-      script = "//lib/fidl/build/make_map.py"
+      script = "//garnet/public/lib/fidl/build/make_map.py"
 
       deps = []
 
@@ -504,11 +516,11 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}-common.h",
                 "{{source_gen_dir}}/{{source_file_part}}-internal.h",
               ])
-      public_configs = [ "//lib/fidl/build/config:fidl_source" ]
+      public_configs = [ "//garnet/public/lib/fidl/build/config:fidl_source" ]
       deps = [
         ":$generator_target_name",
-        "//lib/fidl/compiler/interfaces:interfaces__generator",
-        "//lib/fidl/cpp/bindings",
+        "//garnet/public/lib/fidl/compiler/interfaces:interfaces__generator",
+        "//garnet/public/lib/fidl/cpp/bindings",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -529,12 +541,12 @@ template("fidl") {
                                   "{{source_gen_dir}}/{{source_file_part}}.h",
                                   "{{source_gen_dir}}/{{source_file_part}}.cc",
                                 ])
-      public_configs = [ "//lib/fidl/cpp/bindings:bindings_config" ]
+      public_configs = [ "//garnet/public/lib/fidl/cpp/bindings:bindings_config" ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
-        "//lib/fidl/compiler/interfaces:interfaces__generator",
-        "//lib/fidl/cpp/bindings",
+        "//garnet/public/lib/fidl/compiler/interfaces:interfaces__generator",
+        "//garnet/public/lib/fidl/cpp/bindings",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -556,14 +568,14 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}-sync.h",
               ])
       public_configs = [
-        "//lib/fidl/cpp/bindings:bindings_config",
-        "//lib/fidl/build/config:fidl_source",
+        "//garnet/public/lib/fidl/cpp/bindings:bindings_config",
+        "//garnet/public/lib/fidl/build/config:fidl_source",
       ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
-        "//lib/fidl/compiler/interfaces:interfaces__generator",
-        "//lib/fidl/cpp/bindings",
+        "//garnet/public/lib/fidl/compiler/interfaces:interfaces__generator",
+        "//garnet/public/lib/fidl/cpp/bindings",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -592,7 +604,7 @@ template("fidl") {
       # up.
       disable_analysis = true
 
-      #analysis_options = "//lib/fidl/dart/analysis_options_fidl"
+      #analysis_options = "//garnet/public/lib/fidl/dart/analysis_options_fidl"
 
       deps = [
         "//lib/fidl/dart",

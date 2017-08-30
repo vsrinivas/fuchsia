@@ -10,7 +10,7 @@ dart_app("hello_fidl_dart") {
   source_dir = "."
 
   deps = [
-    "//lib/fidl/examples/services:services_dart",
-    "//lib/fidl/dart",
+    "//garnet/public/lib/fidl/examples/services:services_dart",
+    "//garnet/public/lib/fidl/dart",
   ]
 }
