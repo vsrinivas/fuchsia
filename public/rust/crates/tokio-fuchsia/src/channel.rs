@@ -134,6 +134,7 @@ impl fmt::Debug for Channel {
 /// A future used to receive a message from a channel.
 ///
 /// This is created by the `Channel::recv_msg` method.
+#[must_use]
 pub struct RecvMsg<T> {
     state: RecvState<T>,
 }
@@ -172,6 +173,7 @@ impl<T> Future for RecvMsg<T>
 
 /// Allows repeatedly listening for messages while re-using the message buffer
 /// and receiving the channel and buffer for use in the callback.
+#[must_use]
 pub struct ChainServer<F,U> {
     callback: F,
     opts: u32,
@@ -214,6 +216,7 @@ impl<F,U> Future for ChainServer<F,U>
 }
 
 /// Allows repeatedly listening for messages while re-using the message buffer.
+#[must_use]
 pub struct RepeatServer<F> {
     chan: Channel,
     callback: F,
