@@ -91,7 +91,10 @@ mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_add
     block->virtio_device.guest_physmem_addr = guest_physmem_addr;
     block->virtio_device.guest_physmem_size = guest_physmem_size;
     // Virtio 1.0: 5.2.5.2: Devices SHOULD always offer VIRTIO_BLK_F_FLUSH
-    block->virtio_device.features |= VIRTIO_BLK_F_FLUSH;
+    block->virtio_device.features |= VIRTIO_BLK_F_FLUSH
+                                     // Required by magenta guests.
+                                     | VIRTIO_BLK_F_BLK_SIZE;
+    block->config.blk_size = SECTOR_SIZE;
 
     // Setup Virtio queue.
     block->queue.size = QUEUE_SIZE;
