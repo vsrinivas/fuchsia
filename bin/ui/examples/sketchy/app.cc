@@ -34,9 +34,11 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
       display_info->physical_width,
       display_info->physical_height);
 
-  ResourceId node = canvas_->ImportNode(scene_->stroke_group_holder());
-  ResourceId stroke = canvas_->resources()->CreateStroke();
-  canvas_->AddStrokeToNode(stroke, node);
+  ImportNode node(canvas_.get(), scene_->stroke_group_holder());
+  Stroke stroke(canvas_.get());
+  StrokeGroup group(canvas_.get());
+  group.AddStroke(stroke);
+  node.AddChild(group);
 
   uint64_t time = mx_time_get(MX_CLOCK_MONOTONIC);
   canvas_->Present(time);

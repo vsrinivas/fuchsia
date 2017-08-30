@@ -6,50 +6,80 @@
 
 namespace sketchy_lib {
 
-using sketchy::Op;
-using sketchy::OpPtr;
-using sketchy::ResourceArgs;
-using sketchy::ResourceArgsPtr;
+Resource::Resource(Canvas* canvas)
+    : canvas_(canvas), id_(canvas_->AllocateResourceId()) {}
 
-ResourceManager::ResourceManager(Canvas* canvas)
-    : canvas_(canvas),
-      next_resource_id_(1) {}
-
-ResourceId ResourceManager::CreateAnonymousResource() {
-  return next_resource_id_++;
+Resource::~Resource() {
+  auto release_resource = sketchy::ReleaseResourceOp::New();
+  release_resource->id = id_;
+  auto op = sketchy::Op::New();
+  op->set_release_resource(std::move(release_resource));
+  canvas_->ops_.push_back(std::move(op));
 }
 
-ResourceId ResourceManager::CreateStroke() {
-  sketchy::StrokePtr stroke = sketchy::Stroke::New();
-  ResourceArgsPtr resource_args = ResourceArgs::New();
-  resource_args->set_stroke(std::move(stroke));
-  return CreateResource(std::move(resource_args));
+void Resource::EnqueueOp(sketchy::OpPtr op) {
+  canvas_->ops_.push_back(std::move(op));
 }
 
-ResourceId ResourceManager::CreateStrokeGroup() {
-  sketchy::StrokeGroupPtr stroke_group = sketchy::StrokeGroup::New();
-  ResourceArgsPtr resource_args = ResourceArgs::New();
-  resource_args->set_stroke_group(std::move(stroke_group));
-  return CreateResource(std::move(resource_args));
-}
-
-ResourceId ResourceManager::CreateResource(ResourceArgsPtr args) {
-  ResourceId resource_id = next_resource_id_++;
+void Resource::EnqueueCreateResourceOp(ResourceId resource_id,
+                                       sketchy::ResourceArgsPtr args) {
   auto create_resource = sketchy::CreateResourceOp::New();
   create_resource->id = resource_id;
   create_resource->args = std::move(args);
-  auto op = Op::New();
+  auto op = sketchy::Op::New();
   op->set_create_resource(std::move(create_resource));
-  canvas_->ops_.push_back(std::move(op));
-  return resource_id;
+  EnqueueOp(std::move(op));
 }
 
-void ResourceManager::ReleaseResource(ResourceId resource_id) {
-  auto release_resource = sketchy::ReleaseResourceOp::New();
-  release_resource->id = resource_id;
-  auto op = Op::New();
-  op->set_release_resource(std::move(release_resource));
-  canvas_->ops_.push_back(std::move(op));
+void Resource::EnqueueImportResourceOp(ResourceId resource_id,
+                                       mx::eventpair token,
+                                       mozart2::ImportSpec spec) {
+  auto import_resource = mozart2::ImportResourceOp::New();
+  import_resource->id = resource_id;
+  import_resource->token = std::move(token);
+  import_resource->spec = spec;
+  auto op = sketchy::Op::New();
+  op->set_scenic_import_resource(std::move(import_resource));
+  EnqueueOp(std::move(op));
+}
+
+Stroke::Stroke(Canvas* canvas) : Resource(canvas) {
+  sketchy::StrokePtr stroke = sketchy::Stroke::New();
+  auto resource_args = sketchy::ResourceArgs::New();
+  resource_args->set_stroke(std::move(stroke));
+  EnqueueCreateResourceOp(id(), std::move(resource_args));
+}
+
+StrokeGroup::StrokeGroup(Canvas* canvas) : Resource(canvas) {
+  sketchy::StrokeGroupPtr  stroke_group = sketchy::StrokeGroup::New();
+  auto resource_args = sketchy::ResourceArgs::New();
+  resource_args->set_stroke_group(std::move(stroke_group));
+  EnqueueCreateResourceOp(id(), std::move(resource_args));
+}
+
+void StrokeGroup::AddStroke(Stroke& stroke) {
+  auto add_stroke = sketchy::AddStrokeOp::New();
+  add_stroke->stroke_id = stroke.id();
+  add_stroke->group_id = id();
+  auto op = sketchy::Op::New();
+  op->set_add_stroke(std::move(add_stroke));
+  EnqueueOp(std::move(op));
+}
+
+ImportNode::ImportNode(Canvas* canvas, mozart::client::EntityNode& export_node)
+    : Resource(canvas) {
+  mx::eventpair token;
+  export_node.ExportAsRequest(&token);
+  EnqueueImportResourceOp(id(), std::move(token), mozart2::ImportSpec::NODE);
+}
+
+void ImportNode::AddChild(const Resource& child) {
+  auto add_child = mozart2::AddChildOp::New();
+  add_child->child_id = child.id();
+  add_child->node_id = id();
+  auto op = sketchy::Op::New();
+  op->set_scenic_add_child(std::move(add_child));
+  EnqueueOp(std::move(op));
 }
 
 }  // namespace sketchy_lib

@@ -86,7 +86,8 @@ bool CanvasImpl::CreateStrokeGroup(
     ResourceId id, const sketchy::StrokeGroupPtr& stroke_group) {
   // TODO(MZ-269): unimplemented.
   FTL_LOG(ERROR) << "CreateStrokeGroup: unimplemented.";
-  return false;
+  // This dummy true is for the client demo.
+  return true;
 }
 
 bool CanvasImpl::ApplyReleaseResourceOp(const ReleaseResourceOpPtr& op) {
@@ -96,7 +97,8 @@ bool CanvasImpl::ApplyReleaseResourceOp(const ReleaseResourceOpPtr& op) {
 bool CanvasImpl::ApplyAddStrokeOp(const AddStrokeOpPtr& op) {
   // TODO(MZ-269): unimplemented.
   FTL_LOG(ERROR) << "ApplyAddStrokeOp: unimplemented.";
-  return false;
+  // This dummy true is for the client demo.
+  return true;
 }
 
 bool CanvasImpl::ApplyRemoveStrokeOp(const RemoveStrokeOpPtr& op) {

@@ -14,8 +14,8 @@ class Scene {
  public:
   Scene(mozart::client::Session* session, float width, float height);
 
-  mozart::client::EntityNode* stroke_group_holder() {
-    return &stroke_group_holder_;
+  mozart::client::EntityNode& stroke_group_holder() {
+    return stroke_group_holder_;
   }
 
  private:
