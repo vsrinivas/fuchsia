@@ -5,14 +5,14 @@ use apps_ledger_services_internal::*;
 use fidl;
 use fuchsia::{Launcher, App};
 use tokio_core::reactor;
-use futures::{self, BoxFuture, Future};
+use futures::{future, Future};
 use magenta::{Vmo, self};
 
 macro_rules! try_to_fut {
     ($e:expr) => {
         match $e {
             Ok(x) => x,
-            Err(e) => return Box::new(futures::future::err(e.into())),
+            Err(e) => return Box::new(future::err(e.into())),
         }
     }
 }
@@ -27,7 +27,7 @@ pub struct LedgerInstance {
 impl LedgerInstance {
     /// This method of getting a ledger is only applicable to command line apps and should not be used in non-test programs
     pub fn new(launcher: &mut Launcher, repo_path: String, ledger_id: Vec<u8>,
-            handle: &reactor::Handle) -> BoxFuture<LedgerInstance, LedgerError>
+            handle: &reactor::Handle) -> Box<Future<Item = LedgerInstance, Error = LedgerError>>
     {
         let args = vec![String::from("--no_minfs_wait"), String::from("--no_persisted_config")];
         let ledger_url = String::from("file:///system/apps/ledger");
