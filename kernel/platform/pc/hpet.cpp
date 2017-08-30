@@ -12,6 +12,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm/vm_aspace.h>
+#include <mxtl/algorithm.h>
 
 struct hpet_timer_registers {
     volatile uint64_t conf_caps;
@@ -128,7 +129,15 @@ status_t hpet_timer_disable(uint n)
 
 uint64_t hpet_get_value(void)
 {
-    return hpet_regs->main_counter_value;
+    uint64_t v = hpet_regs->main_counter_value;
+    uint64_t v2 = hpet_regs->main_counter_value;
+    /* Even though the specification says it should not be necessary to read
+     * multiple times, we have observed that QEMU converts the 64-bit
+     * memory access in to two 32-bit accesses, resulting in bad reads. QEMU
+     * reads the low 32-bits first, so the result is a large jump when it
+     * wraps 32 bits.  To work around this, we return the lesser of two reads.
+     */
+    return mxtl::min(v, v2);
 }
 
 status_t hpet_set_value(uint64_t v)

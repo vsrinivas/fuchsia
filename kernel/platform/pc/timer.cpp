@@ -466,6 +466,7 @@ static void platform_init_timer(uint level)
         calibration_clock = CLOCK_HPET;
         const uint64_t hpet_ms_rate = hpet_ticks_per_ms();
         ASSERT(hpet_ms_rate <= UINT32_MAX);
+        printf("HPET frequency: %" PRIu64 " ticks/ms\n", hpet_ms_rate);
         fp_32_64_div_32_32(&ns_per_hpet, 1000 * 1000, static_cast<uint32_t>(hpet_ms_rate));
         // Add 1ns to conservatively deal with rounding
         ns_per_hpet_rounded_up = u32_mul_u64_fp32_64(1, ns_per_hpet) + 1;
