@@ -9,6 +9,16 @@ import "apps/modular/services/agent/agent_context.fidl";
 
 // This service is implemented by an application that is meant to be run as an
 // Agent.
+//
+// When an agent application also implements the |Lifecycle| interface, it can
+// receive a signal for when it should stop. An agent may be stopped for the
+// following reasons:
+// (1) ComponentContext::Done() is called by this Agent indicating that it has
+// completed its work.
+// (2) All AgentControllers associated with this agent are closed.
+// (3) The system wants to optimize for resources.
+// Once the framework delivers a |Lifecycle.Terminate()|, the agent application
+// may exit itself, or is killed by framework after a timeout.
 [ServiceName="modular.Agent"]  // Created by each agent.
 interface Agent {
   // Called when this Agent is first instantiated i.e. a process is created and
@@ -35,18 +45,4 @@ interface Agent {
   // until its callback returns. Instead, we should cap task length with
   // strategies like budgets.
   RunTask(string task_id) => ();
-
-  // This method is invoked by the framework to notify the Agent that it has
-  // to stop. What can cause a request to an Agent to Stop():
-  // (1) ComponentContext::Done() is called by this Agent indicating that it has
-  // completed its work.
-  // (2) All AgentControllers associated with this agent are closed.
-  // (3) The system wants to optimize for resources.
-  //
-  // Additionally an Agent is stopped when it closes the pipe for this
-  // interface. But obviously in that case, Stop() can no longeer be called.
-  //
-  // The framework will wait to actually close its connection until after Stop()
-  // returns, or after a timeout, whichever occurs earlier.
-  Stop() => ();
 };

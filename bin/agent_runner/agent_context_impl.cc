@@ -123,13 +123,6 @@ class AgentContextImpl::StopCall : Operation<bool> {
       agent_context_impl_->agent_context_binding_.Close();
     };
 
-    // Whichever of these signals triggers first:
-    // TODO(vardhan): Once all agents convert to using |app.Lifecycle|, remove
-    // Agent.Stop().
-    if (!agent_context_impl_->app_client_.primary_service()) {
-      agent_context_impl_->agent_.set_connection_error_handler(kill_agent);
-      agent_context_impl_->agent_->Stop(kill_agent);
-    }
     agent_context_impl_->app_client_.AppTerminate(kill_agent, kKillTimeout);
   }
 

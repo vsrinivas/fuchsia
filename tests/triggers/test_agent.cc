@@ -67,12 +67,6 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent>,
                                       [callback] { callback(); });
   }
 
-  // |Agent|
-  void Stop(const StopCallback& callback) override {
-    FTL_CHECK(false) << "Shouldn't be here.";
-    callback();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     modular::testing::GetStore()->Put("trigger_test_agent_stopped", "",

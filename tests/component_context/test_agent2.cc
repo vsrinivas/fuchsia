@@ -39,12 +39,6 @@ class TestAgentApp : modular::testing::ComponentBase<modular::Agent> {
   void RunTask(const fidl::String& /*task_id*/,
                const RunTaskCallback& /*callback*/) override {}
 
-  // |Agent|
-  void Stop(const StopCallback& callback) override {
-    FTL_CHECK(false) << "Shouldn't be here.";
-    callback();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     terminate_called_.Pass();

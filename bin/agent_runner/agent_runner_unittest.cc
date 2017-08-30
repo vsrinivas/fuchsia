@@ -4,7 +4,6 @@
 
 #include <memory>
 
-#include "apps/modular/src/agent_runner/agent_runner.h"
 #include "application/lib/app/service_provider_impl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/maxwell/services/user/user_intelligence_provider.fidl.h"
@@ -16,6 +15,7 @@
 #include "apps/modular/lib/testing/test_with_message_loop.h"
 #include "apps/modular/services/agent/agent.fidl.h"
 #include "apps/modular/services/auth/account_provider.fidl.h"
+#include "apps/modular/src/agent_runner/agent_runner.h"
 #include "apps/modular/src/component/message_queue_manager.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -162,12 +162,6 @@ class MyDummyAgent : Agent,
   void RunTask(const fidl::String& /*task_id*/,
                const RunTaskCallback& /*callback*/) override {
     ++counts["RunTask"];
-  }
-
-  // |Agent|
-  void Stop(const StopCallback& callback) override {
-    ++counts["Stop"];
-    callback();
   }
 
  private:
