@@ -37,6 +37,8 @@ class TestApplicationController : app::ApplicationController {
 
   void Detach() override {}
 
+  void Wait(const WaitCallback& callback) override {}
+
   fidl::Binding<app::ApplicationController> binding_;
 
   bool killed_{};

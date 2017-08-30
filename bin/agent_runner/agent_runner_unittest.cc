@@ -140,6 +140,8 @@ class MyDummyAgent : Agent,
   void Kill() override { ++counts["Kill"]; }
   // |ApplicationController|
   void Detach() override { ++counts["Detach"]; }
+  // |ApplicationController|
+  void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
 
   // |Agent|
   void Initialize(
