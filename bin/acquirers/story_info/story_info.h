@@ -61,9 +61,6 @@ class StoryInfoAcquirer : public modular::Agent,
   void RunTask(const fidl::String& task_id,
                const RunTaskCallback& callback) override;
 
-  // |Agent|
-  void Stop(const StopCallback& callback) override;
-
   // |FocusWatcher|
   void OnFocusChange(modular::FocusInfoPtr info) override;
 

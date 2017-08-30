@@ -75,11 +75,6 @@ void StoryInfoAcquirer::RunTask(const fidl::String& task_id,
   FTL_LOG(FATAL) << "Not implemented.";
 }
 
-void StoryInfoAcquirer::Stop(const StopCallback& callback) {
-  // TODO(thatguy): Stop all watchers, reset all InterfacePtrs (close channels).
-  callback();
-}
-
 void StoryInfoAcquirer::Initialize(
     fidl::InterfaceHandle<modular::StoryProvider> story_provider,
     fidl::InterfaceHandle<modular::FocusProvider> focus_provider,

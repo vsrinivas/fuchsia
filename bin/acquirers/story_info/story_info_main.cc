@@ -5,25 +5,38 @@
 #include "application/lib/app/application_context.h"
 #include "apps/maxwell/src/acquirers/story_info/story_info.h"
 #include "apps/modular/services/agent/agent.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace maxwell {
 
-class StoryInfoApp {
+class StoryInfoApp : modular::Lifecycle {
  public:
   StoryInfoApp(app::ApplicationContext* app_context)
-      : agent_binding_(&story_info_acquirer_) {
+      : agent_binding_(&story_info_acquirer_), lifecycle_binding_(this) {
     app_context->outgoing_services()->AddService<modular::Agent>(
         [this](fidl::InterfaceRequest<modular::Agent> request) {
           FTL_DCHECK(!agent_binding_.is_bound());
           agent_binding_.Bind(std::move(request));
         });
+    app_context->outgoing_services()->AddService<modular::Lifecycle>(
+        [this](fidl::InterfaceRequest<modular::Lifecycle> request) {
+          FTL_DCHECK(!lifecycle_binding_.is_bound());
+          lifecycle_binding_.Bind(std::move(request));
+        });
   }
 
  private:
+  // |Lifecycle|
+  void Terminate() override {
+    agent_binding_.Close();
+    mtl::MessageLoop::GetCurrent()->QuitNow();
+  }
+
   StoryInfoAcquirer story_info_acquirer_;
   fidl::Binding<modular::Agent> agent_binding_;
+  fidl::Binding<modular::Lifecycle> lifecycle_binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryInfoApp);
 };
