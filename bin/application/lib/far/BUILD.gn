@@ -21,7 +21,7 @@ source_set("far") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -32,6 +32,6 @@ source_set("far_vmo") {
 
   deps = [
     ":far",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
