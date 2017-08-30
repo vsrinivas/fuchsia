@@ -42,7 +42,7 @@ void clock_tests(void)
                 continue;
             }
             last = t2;
-            if (last - start > LK_MSEC(5))
+            if (last - start > LK_SEC(5))
                 break;
         }
     }
