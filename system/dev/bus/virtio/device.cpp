@@ -105,7 +105,7 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             LTRACEF("cap %p: type %#hhx next %#hhx len %#hhx cfg_type %#hhx bar %#hhx offset %#x length %#x\n",
                     cap, cap->cfg_type, cap->cap_next, cap->cap_len, cap->cfg_type, cap->bar, cap->offset, cap->length);
 
-            if (cap->cfg_type == 0x9) { // vendor specific capability
+            if (cap->cap_vndr == 0x9) { // vendor specific capability
                 switch (cap->cfg_type) {
                     case VIRTIO_PCI_CAP_COMMON_CFG: {
                         MapBar(cap->bar);
