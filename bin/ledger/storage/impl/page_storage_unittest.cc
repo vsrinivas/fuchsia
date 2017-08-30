@@ -176,10 +176,6 @@ class PageStorageTest : public StorageTest {
     message_loop_.Run();
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(id, storage_->GetId());
-
-    coroutine_service_.StartCoroutine(
-        callback::Capture(MakeQuitTask(), &handler_));
-    EXPECT_FALSE(RunLoopWithTimeout());
   }
 
  protected:
@@ -344,10 +340,11 @@ class PageStorageTest : public StorageTest {
   }
 
   Status WriteObject(
+      coroutine::CoroutineHandler* handler,
       ObjectData* data,
       PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
-        handler_, data->object_id, data->ToChunk(), object_status);
+        handler, data->object_id, data->ToChunk(), object_status);
   }
 
   Status ReadObject(ObjectId object_id, std::unique_ptr<const Object>* object) {
@@ -355,12 +352,12 @@ class PageStorageTest : public StorageTest {
                                                                       object);
   }
 
-  Status DeleteObject(ObjectId object_id) {
+  Status DeleteObject(coroutine::CoroutineHandler* handler,
+                      ObjectId object_id) {
     return PageStorageImplAccessorForTest::GetDb(storage_).DeleteObject(
-        handler_, object_id);
+        handler, object_id);
   }
 
-  coroutine::CoroutineHandler* handler_;
   coroutine::CoroutineServiceImpl coroutine_service_;
   std::thread io_thread_;
   files::ScopedTempDir tmp_dir_;
@@ -463,69 +460,72 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  FakeSyncDelegate sync;
-  storage_->SetSyncDelegate(&sync);
+  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    FakeSyncDelegate sync;
+    storage_->SetSyncDelegate(&sync);
 
-  // Create a node with 2 values.
-  ObjectData lazy_value("Some data", InlineBehavior::PREVENT);
-  ObjectData eager_value("More data", InlineBehavior::PREVENT);
-  std::vector<Entry> entries = {
-      Entry{"key0", lazy_value.object_id, KeyPriority::LAZY},
-      Entry{"key1", eager_value.object_id, KeyPriority::EAGER},
-  };
-  std::unique_ptr<const btree::TreeNode> node;
-  ASSERT_TRUE(CreateNodeFromEntries(
-      entries, std::vector<ObjectId>(entries.size() + 1), &node));
-  ObjectId root_id = node->GetId();
+    // Create a node with 2 values.
+    ObjectData lazy_value("Some data", InlineBehavior::PREVENT);
+    ObjectData eager_value("More data", InlineBehavior::PREVENT);
+    std::vector<Entry> entries = {
+        Entry{"key0", lazy_value.object_id, KeyPriority::LAZY},
+        Entry{"key1", eager_value.object_id, KeyPriority::EAGER},
+    };
+    std::unique_ptr<const btree::TreeNode> node;
+    ASSERT_TRUE(CreateNodeFromEntries(
+        entries, std::vector<ObjectId>(entries.size() + 1), &node));
+    ObjectId root_id = node->GetId();
 
-  // Add the three objects to FakeSyncDelegate.
-  sync.AddObject(lazy_value.object_id, lazy_value.value);
-  sync.AddObject(eager_value.object_id, eager_value.value);
-  std::unique_ptr<const Object> root_object =
-      TryGetObject(root_id, PageStorage::Location::NETWORK);
+    // Add the three objects to FakeSyncDelegate.
+    sync.AddObject(lazy_value.object_id, lazy_value.value);
+    sync.AddObject(eager_value.object_id, eager_value.value);
+    std::unique_ptr<const Object> root_object =
+        TryGetObject(root_id, PageStorage::Location::NETWORK);
 
-  ftl::StringView root_data;
-  ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-  sync.AddObject(root_id, root_data.ToString());
+    ftl::StringView root_data;
+    ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
+    sync.AddObject(root_id, root_data.ToString());
 
-  // Remove the root from the local storage. The two values were never added.
-  ASSERT_EQ(Status::OK, DeleteObject(root_id));
+    // Remove the root from the local storage. The two values were never added.
+    ASSERT_EQ(Status::OK, DeleteObject(handler, root_id));
 
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), root_id, std::move(parent));
-  CommitId id = commit->GetId();
+    std::vector<std::unique_ptr<const Commit>> parent;
+    parent.emplace_back(GetFirstHead());
+    std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+        storage_.get(), root_id, std::move(parent));
+    CommitId id = commit->GetId();
 
-  // Adding the commit should only request the tree node and the eager value.
-  sync.object_requests.clear();
-  storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
-                               [this](Status status) {
-                                 EXPECT_EQ(Status::OK, status);
-                                 message_loop_.PostQuitTask();
-                               });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(2u, sync.object_requests.size());
-  EXPECT_TRUE(sync.object_requests.find(root_id) != sync.object_requests.end());
-  EXPECT_TRUE(sync.object_requests.find(eager_value.object_id) !=
-              sync.object_requests.end());
+    // Adding the commit should only request the tree node and the eager value.
+    sync.object_requests.clear();
+    storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
+                                 [this](Status status) {
+                                   EXPECT_EQ(Status::OK, status);
+                                   message_loop_.PostQuitTask();
+                                 });
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(2u, sync.object_requests.size());
+    EXPECT_TRUE(sync.object_requests.find(root_id) !=
+                sync.object_requests.end());
+    EXPECT_TRUE(sync.object_requests.find(eager_value.object_id) !=
+                sync.object_requests.end());
 
-  // Adding the same commit twice should not request any objects from sync.
-  sync.object_requests.clear();
-  storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
-                               [this](Status status) {
-                                 EXPECT_EQ(Status::OK, status);
-                                 message_loop_.PostQuitTask();
-                               });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_TRUE(sync.object_requests.empty());
+    // Adding the same commit twice should not request any objects from sync.
+    sync.object_requests.clear();
+    storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
+                                 [this](Status status) {
+                                   EXPECT_EQ(Status::OK, status);
+                                   message_loop_.PostQuitTask();
+                                 });
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_TRUE(sync.object_requests.empty());
 
-  std::unique_ptr<const Commit> found = GetCommit(id);
-  EXPECT_EQ(commit->GetStorageBytes(), found->GetStorageBytes());
+    std::unique_ptr<const Commit> found = GetCommit(id);
+    EXPECT_EQ(commit->GetStorageBytes(), found->GetStorageBytes());
 
-  // Check that the commit is not marked as unsynced.
-  std::vector<std::unique_ptr<const Commit>> commits = GetUnsyncedCommits();
-  EXPECT_TRUE(commits.empty());
+    // Check that the commit is not marked as unsynced.
+    std::vector<std::unique_ptr<const Commit>> commits = GetUnsyncedCommits();
+    EXPECT_TRUE(commits.empty());
+  });
 }
 
 // Check that receiving a remote commit that is already present locally but not
@@ -698,35 +698,39 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 }
 
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
-  FakePageDbImpl db(&coroutine_service_, storage_.get());
+  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    FakePageDbImpl db(&coroutine_service_, storage_.get());
 
-  std::unique_ptr<Journal> journal;
-  // Explicit journals.
-  // The first call will fail because FakePageDbImpl::AddJournalEntry()
-  // returns an error. After a failed call all other Put/Delete/Commit
-  // operations should fail with ILLEGAL_STATE.
-  db.CreateJournal(handler_, JournalType::EXPLICIT, RandomCommitId(), &journal);
-  EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
-  EXPECT_EQ(Status::ILLEGAL_STATE,
-            journal->Put("key", "value", KeyPriority::EAGER));
-  EXPECT_EQ(Status::ILLEGAL_STATE, journal->Delete("key"));
+    std::unique_ptr<Journal> journal;
+    // Explicit journals.
+    // The first call will fail because FakePageDbImpl::AddJournalEntry()
+    // returns an error. After a failed call all other Put/Delete/Commit
+    // operations should fail with ILLEGAL_STATE.
+    db.CreateJournal(handler, JournalType::EXPLICIT, RandomCommitId(),
+                     &journal);
+    EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
+    EXPECT_EQ(Status::ILLEGAL_STATE,
+              journal->Put("key", "value", KeyPriority::EAGER));
+    EXPECT_EQ(Status::ILLEGAL_STATE, journal->Delete("key"));
 
-  TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE);
+    TryCommitJournal(std::move(journal), Status::ILLEGAL_STATE);
 
-  // Implicit journals.
-  // All calls will fail because of FakePageDbImpl implementation, not because
-  // of an ILLEGAL_STATE error.
-  db.CreateJournal(handler_, JournalType::IMPLICIT, RandomCommitId(), &journal);
-  EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
-  Status put_status = journal->Put("key", "value", KeyPriority::EAGER);
-  EXPECT_NE(Status::ILLEGAL_STATE, put_status);
-  EXPECT_NE(Status::ILLEGAL_STATE, journal->Delete("key"));
-  storage_->CommitJournal(std::move(journal),
-                          [this](Status s, std::unique_ptr<const Commit>) {
-                            EXPECT_NE(Status::ILLEGAL_STATE, s);
-                            message_loop_.PostQuitTask();
-                          });
-  ASSERT_FALSE(RunLoopWithTimeout());
+    // Implicit journals.
+    // All calls will fail because of FakePageDbImpl implementation, not because
+    // of an ILLEGAL_STATE error.
+    db.CreateJournal(handler, JournalType::IMPLICIT, RandomCommitId(),
+                     &journal);
+    EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
+    Status put_status = journal->Put("key", "value", KeyPriority::EAGER);
+    EXPECT_NE(Status::ILLEGAL_STATE, put_status);
+    EXPECT_NE(Status::ILLEGAL_STATE, journal->Delete("key"));
+    storage_->CommitJournal(std::move(journal),
+                            [this](Status s, std::unique_ptr<const Commit>) {
+                              EXPECT_NE(Status::ILLEGAL_STATE, s);
+                              message_loop_.PostQuitTask();
+                            });
+    ASSERT_FALSE(RunLoopWithTimeout());
+  });
 }
 
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
@@ -852,15 +856,17 @@ TEST_F(PageStorageTest, AddSyncPiece) {
 }
 
 TEST_F(PageStorageTest, GetObject) {
-  ObjectData data("Some data");
-  ASSERT_EQ(Status::OK, WriteObject(&data));
+  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    ObjectData data("Some data");
+    ASSERT_EQ(Status::OK, WriteObject(handler, &data));
 
-  std::unique_ptr<const Object> object =
-      TryGetObject(data.object_id, PageStorage::Location::LOCAL);
-  EXPECT_EQ(data.object_id, object->GetId());
-  ftl::StringView object_data;
-  ASSERT_EQ(Status::OK, object->GetData(&object_data));
-  EXPECT_EQ(data.value, convert::ToString(object_data));
+    std::unique_ptr<const Object> object =
+        TryGetObject(data.object_id, PageStorage::Location::LOCAL);
+    EXPECT_EQ(data.object_id, object->GetId());
+    ftl::StringView object_data;
+    ASSERT_EQ(Status::OK, object->GetData(&object_data));
+    EXPECT_EQ(data.value, convert::ToString(object_data));
+  });
 }
 
 TEST_F(PageStorageTest, GetObjectFromSync) {
@@ -1151,70 +1157,72 @@ TEST_F(PageStorageTest, SyncMetadata) {
 }
 
 TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
-  FakeSyncDelegate sync;
-  storage_->SetSyncDelegate(&sync);
+  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    FakeSyncDelegate sync;
+    storage_->SetSyncDelegate(&sync);
 
-  // Build the commit Tree with:
-  //         0
-  //         |
-  //         1  2
-  std::vector<ObjectId> object_ids;
-  object_ids.resize(3);
-  for (size_t i = 0; i < object_ids.size(); ++i) {
-    ObjectData value("value" + std::to_string(i), InlineBehavior::PREVENT);
-    std::vector<Entry> entries = {
-        Entry{"key" + std::to_string(i), value.object_id, KeyPriority::EAGER}};
-    std::unique_ptr<const btree::TreeNode> node;
-    ASSERT_TRUE(CreateNodeFromEntries(
-        entries, std::vector<ObjectId>(entries.size() + 1), &node));
-    object_ids[i] = node->GetId();
-    sync.AddObject(value.object_id, value.value);
-    std::unique_ptr<const Object> root_object =
-        TryGetObject(object_ids[i], PageStorage::Location::NETWORK);
-    ftl::StringView root_data;
-    ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
-    sync.AddObject(object_ids[i], root_data.ToString());
+    // Build the commit Tree with:
+    //         0
+    //         |
+    //         1  2
+    std::vector<ObjectId> object_ids;
+    object_ids.resize(3);
+    for (size_t i = 0; i < object_ids.size(); ++i) {
+      ObjectData value("value" + std::to_string(i), InlineBehavior::PREVENT);
+      std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
+                                          value.object_id, KeyPriority::EAGER}};
+      std::unique_ptr<const btree::TreeNode> node;
+      ASSERT_TRUE(CreateNodeFromEntries(
+          entries, std::vector<ObjectId>(entries.size() + 1), &node));
+      object_ids[i] = node->GetId();
+      sync.AddObject(value.object_id, value.value);
+      std::unique_ptr<const Object> root_object =
+          TryGetObject(object_ids[i], PageStorage::Location::NETWORK);
+      ftl::StringView root_data;
+      ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
+      sync.AddObject(object_ids[i], root_data.ToString());
 
-    // Remove the root from the local storage. The value was never added.
-    ASSERT_EQ(Status::OK, DeleteObject(object_ids[i]));
-  }
+      // Remove the root from the local storage. The value was never added.
+      ASSERT_EQ(Status::OK, DeleteObject(handler, object_ids[i]));
+    }
 
-  std::vector<std::unique_ptr<const Commit>> parent;
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit0 = CommitImpl::FromContentAndParents(
-      storage_.get(), object_ids[0], std::move(parent));
-  parent.clear();
+    std::vector<std::unique_ptr<const Commit>> parent;
+    parent.emplace_back(GetFirstHead());
+    std::unique_ptr<const Commit> commit0 = CommitImpl::FromContentAndParents(
+        storage_.get(), object_ids[0], std::move(parent));
+    parent.clear();
 
-  parent.emplace_back(GetFirstHead());
-  std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
-      storage_.get(), object_ids[1], std::move(parent));
-  parent.clear();
+    parent.emplace_back(GetFirstHead());
+    std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
+        storage_.get(), object_ids[1], std::move(parent));
+    parent.clear();
 
-  parent.emplace_back(commit1->Clone());
-  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      storage_.get(), object_ids[2], std::move(parent));
+    parent.emplace_back(commit1->Clone());
+    std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
+        storage_.get(), object_ids[2], std::move(parent));
 
-  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit0->GetId(),
-                                 commit0->GetStorageBytes().ToString());
-  commits_and_bytes.emplace_back(commit1->GetId(),
-                                 commit1->GetStorageBytes().ToString());
-  commits_and_bytes.emplace_back(commit2->GetId(),
-                                 commit2->GetStorageBytes().ToString());
+    std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+    commits_and_bytes.emplace_back(commit0->GetId(),
+                                   commit0->GetStorageBytes().ToString());
+    commits_and_bytes.emplace_back(commit1->GetId(),
+                                   commit1->GetStorageBytes().ToString());
+    commits_and_bytes.emplace_back(commit2->GetId(),
+                                   commit2->GetStorageBytes().ToString());
 
-  Status status;
-  storage_->AddCommitsFromSync(std::move(commits_and_bytes),
-                               callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+    Status status;
+    storage_->AddCommitsFromSync(std::move(commits_and_bytes),
+                                 callback::Capture(MakeQuitTask(), &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
 
-  EXPECT_EQ(4u, sync.object_requests.size());
-  EXPECT_NE(sync.object_requests.find(object_ids[0]),
-            sync.object_requests.end());
-  EXPECT_EQ(sync.object_requests.find(object_ids[1]),
-            sync.object_requests.end());
-  EXPECT_NE(sync.object_requests.find(object_ids[2]),
-            sync.object_requests.end());
+    EXPECT_EQ(4u, sync.object_requests.size());
+    EXPECT_NE(sync.object_requests.find(object_ids[0]),
+              sync.object_requests.end());
+    EXPECT_EQ(sync.object_requests.find(object_ids[1]),
+              sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find(object_ids[2]),
+              sync.object_requests.end());
+  });
 }
 
 TEST_F(PageStorageTest, Generation) {
