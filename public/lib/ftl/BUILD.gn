@@ -20,6 +20,10 @@ source_set("ftl_common") {
     "ftl_export.h",
     "macros.h",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }
 
 source_set("ftl_header_only_types") {
@@ -28,6 +32,10 @@ source_set("ftl_header_only_types") {
   sources = [
     "functional/closure.h",
     "time/time_delta.h",
+  ]
+
+  public_configs = [
+    "//garnet/public:config",
   ]
 }
 
@@ -180,6 +188,10 @@ if (is_fuchsia) {
   shared_library("ftl_logging") {
     public_deps = [
       ":ftl_logging_lib",
+    ]
+
+    public_configs = [
+      "//garnet/public:config",
     ]
   }
 } else {
