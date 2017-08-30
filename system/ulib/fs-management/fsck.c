@@ -71,11 +71,11 @@ mx_status_t fsck(const char* devicepath, disk_format_t df,
                  const fsck_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return fsck_mxfs(devicepath, options, cb, "boot/bin/minfs");
+        return fsck_mxfs(devicepath, options, cb, "/boot/bin/minfs");
     case DISK_FORMAT_FAT:
         return fsck_fat(devicepath, options, cb);
     case DISK_FORMAT_BLOBFS:
-        return fsck_mxfs(devicepath, options, cb, "boot/bin/blobstore");
+        return fsck_mxfs(devicepath, options, cb, "/boot/bin/blobstore");
     default:
         return MX_ERR_NOT_SUPPORTED;
     }
