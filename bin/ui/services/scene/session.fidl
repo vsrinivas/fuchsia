@@ -187,9 +187,6 @@ interface SessionListener {
   // Called to deliver a batch of one or more events to the listener.
   // Use |SetEventMaskOp| to enable event delivery for a resource.
   //
-  // The |presentation_time| timestamp indicates the presentation time
-  // associated with the state of the scene graph about which the events
-  // were produced.  The timestamp increases monotonically but successive
-  // batches of events may have the same presentation time.
+  // The |presentation_time| timestamp is deprecated.
   OnEvent(uint64 presentation_time, array<Event> events);
 };

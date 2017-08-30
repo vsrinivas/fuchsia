@@ -56,7 +56,8 @@ Session::Session(SessionId id,
       engine_(engine),
       error_reporter_(error_reporter),
       session_handler_(session_handler),
-      resources_(error_reporter) {
+      resources_(error_reporter),
+      weak_factory_(this) {
   FTL_DCHECK(engine);
   FTL_DCHECK(error_reporter);
 }
@@ -932,7 +933,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
                                     uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "id", id_, "time",
                  presentation_time, "interval", presentation_interval);
-  last_presentation_time_ = presentation_time;
+
   bool needs_render = false;
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= presentation_time &&
@@ -986,20 +987,18 @@ void Session::EnqueueEvent(mozart2::EventPtr event) {
     FTL_DCHECK(event);
     if (buffered_events_.empty()) {
       mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-          [this] { FlushEvents(); });
+          [weak = weak_factory_.GetWeakPtr()] {
+            if (weak)
+              weak->FlushEvents();
+          });
     }
-    buffered_events_[last_presentation_time_].push_back(std::move(event));
+    buffered_events_.push_back(std::move(event));
   }
 }
 
 void Session::FlushEvents() {
   if (!buffered_events_.empty() && session_handler_) {
-    // |buffered_events_| is sorted, which ensures that delivery of events is
-    // monotonically increasing in presentation time.
-    for (auto& entry : buffered_events_) {
-      session_handler_->SendEvents(entry.first, std::move(entry.second));
-    }
-    buffered_events_.clear();
+    session_handler_->SendEvents(0, std::move(buffered_events_));
   }
 }
 

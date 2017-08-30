@@ -253,12 +253,7 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
     ImagePipePtr image_pipe;
   };
   std::queue<ImagePipeUpdate> scheduled_image_pipe_updates_;
-  // Map of presentation time -> mozart2::Event. Must be sorted to ensure
-  // delivery of events is monotonically increasing in presentation time.
-  std::map<uint64_t, ::fidl::Array<mozart2::EventPtr>> buffered_events_;
-
-  // The last presentation time this session received.
-  uint64_t last_presentation_time_ = 0;
+  ::fidl::Array<mozart2::EventPtr> buffered_events_;
 
   const SessionId id_;
   Engine* const engine_;
@@ -269,6 +264,8 @@ class Session : public ftl::RefCountedThreadSafe<Session> {
 
   size_t resource_count_ = 0;
   bool is_valid_ = true;
+
+  ftl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };
 
 }  // namespace scene_manager
