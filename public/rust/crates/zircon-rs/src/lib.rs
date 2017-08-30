@@ -461,6 +461,31 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
         <Self as Into<Handle>>::into(self)
             .replace(rights).map(|handle| Self::from(handle))
     }
+
+    /// Converts the value into its inner handle.
+    ///
+    /// This is a convenience function which simply forwards to the `Into` trait.
+    fn into_handle(self) -> Handle {
+        self.into()
+    }
+
+    /// Creates an instance of this type from a handle.
+    ///
+    /// This is a convenience function which simply forwards to the `From` trait.
+    fn from_handle(handle: Handle) -> Self {
+        Self::from(handle)
+    }
+
+    /// Creates an instance of another handle-based type from this value's inner handle.
+    fn into_handle_based<H: HandleBased>(self) -> H {
+        H::from_handle(self.into_handle())
+    }
+
+    /// Creates an instance of this type from the inner handle of another
+    /// handle-based type.
+    fn from_handle_based<H: HandleBased>(h: H) -> Self {
+        Self::from_handle(h.into_handle())
+    }
 }
 
 /// A trait implemented by all handles for objects which have a peer.
