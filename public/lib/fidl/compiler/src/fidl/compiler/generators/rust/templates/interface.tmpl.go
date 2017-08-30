@@ -47,7 +47,7 @@ pub use {{$interface.Name}}::I as {{$interface.Name}}_I;
 
 pub mod {{$interface.Name}} {
     use fidl::{self, DecodeBuf, EncodeBuf, EncodablePtr, DecodablePtr, Stub};
-    use futures::{BoxFuture, Future, future};
+    use futures::{Future, future};
     use magenta;
     use tokio_core::reactor;
     use super::*;
@@ -62,13 +62,16 @@ pub mod {{$interface.Name}} {
     , {{$field.Name}}: {{$field.Type}}
 {{- end -}}
 )
-    {{- if ne $message.ResponseStruct.Name "" }} -> BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}, fidl::Error>{{end}};
+    {{- if ne $message.ResponseStruct.Name "" }} -> Box<Future<Item = {{template "GenerateResponseType" $message.ResponseStruct}}, Error = fidl::Error> + Send>{{end}};
 {{end}}    }
 
     pub struct Dispatcher<T: self::I>(pub T);
 
     impl<T: self::I> Stub for Dispatcher<T> {
-        fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> BoxFuture<EncodeBuf, fidl::Error> {
+        // TODO(cramertj): consider optimizing to avoid unnecessary boxing
+        type DispatchFuture = Box<Future<Item = EncodeBuf, Error = fidl::Error> + Send>;
+
+        fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture {
             let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
             match name {
 {{range $message := $interface.Messages}}{{if ne $message.ResponseStruct.Name ""}}                {{$message.MessageOrdinal}} => self.
@@ -100,7 +103,7 @@ pub mod {{$interface.Name}} {
                 );
             Ok(())
         }
-        {{- else}} -> BoxFuture<EncodeBuf, fidl::Error> {
+        {{- else}} -> Box<Future<Item = EncodeBuf, Error = fidl::Error> + Send> {
             let r: ::fidl::Result<{{$message.RequestStruct.Name}}> = ::fidl::DecodablePtr::decode_obj(request, 24);
             match r {
                 Ok(request) => Box::new(self.0.{{$message.Name}}(
@@ -151,7 +154,7 @@ pub mod {{$interface.Name}} {
         fn {{$message.Name}}(&mut self
     {{- range $field := $message.RequestStruct.Fields}}, {{$field.Name}}: {{$field.Type}}
     {{- end -}} )
-    {{- if ne $message.ResponseStruct.Name "" }} -> BoxFuture<{{template "GenerateResponseType" $message.ResponseStruct}}, fidl::Error>
+    {{- if ne $message.ResponseStruct.Name "" }} -> Box<Future<Item = {{template "GenerateResponseType" $message.ResponseStruct}}, Error = fidl::Error> + Send>
     {{- end}} {
             let request = {{$message.RequestStruct.Name}} {
 {{range $field := $message.RequestStruct.Fields}}                {{$field.Name}}: {{$field.Name}},
@@ -161,7 +164,7 @@ pub mod {{$interface.Name}} {
             {{- end}}({{$message.MessageOrdinal}});
             ::fidl::EncodablePtr::encode_obj(request, &mut encode_buf);
 {{if eq $message.ResponseStruct.Name ""}}            self.0.send_msg(&mut encode_buf);
-{{else}}            Box::new(self.0.send_msg_expect_response(encode_buf).and_then(|mut decode_buf| {
+{{else}}            Box::new(self.0.send_msg_expect_response(&mut encode_buf).and_then(|mut decode_buf| {
                 let r: {{$message.ResponseStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(&mut decode_buf, 24));
                 Ok(
 {{- if ne 1 (len $message.ResponseStruct.Fields) -}} ( {{- end -}}

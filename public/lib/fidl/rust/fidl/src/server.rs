@@ -8,27 +8,29 @@ use {DecodeBuf, EncodeBuf, Error, Result, MsgType};
 
 use std::io;
 
-use futures::{Async, Poll};
+use futures::{Async, Future, Poll};
 use tokio_core::reactor::Handle;
 
 use magenta::Channel;
 
 use tokio_fuchsia;
 
-use futures::{BoxFuture, Future};
-
 pub trait Stub {
-    fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> BoxFuture<EncodeBuf, Error>;
+    type DispatchFuture: Future<Item = EncodeBuf, Error = Error>;
+
+    fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
 
     fn dispatch(&mut self, request: &mut DecodeBuf) -> Result<()>;
 }
 
 /// Allows repeatedly listening for messages while re-using the message buffer.
-pub struct Server<S> {
+pub struct Server<S: Stub> {
     channel: tokio_fuchsia::Channel,
     stub: S,
     buf: DecodeBuf,
-    dispatch_futures: Vec<(u64, BoxFuture<EncodeBuf, Error>)>,
+    // TODO(cramertj): consider spawning these separately or keeping them in a
+    // map (rather than a vec) to improve performance
+    dispatch_futures: Vec<(u64, S::DispatchFuture)>,
 }
 
 impl<S: Stub> Server<S> {
@@ -98,9 +100,11 @@ mod tests {
     struct DummyDispatcher;
 
     impl Stub for DummyDispatcher {
-        fn dispatch_with_response(&mut self, _request: &mut DecodeBuf) -> BoxFuture<EncodeBuf, Error> {
+        type DispatchFuture = future::FutureResult<EncodeBuf, Error>;
+
+        fn dispatch_with_response(&mut self, _request: &mut DecodeBuf) -> Self::DispatchFuture {
             let buf = EncodeBuf::new_response(43);
-            Box::new(future::ok(buf))
+            future::ok(buf)
         }
 
         fn dispatch(&mut self, request: &mut DecodeBuf) -> Result<()> {

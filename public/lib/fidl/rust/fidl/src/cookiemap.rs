@@ -22,6 +22,13 @@ impl<T> CookieMap<T> {
         }
     }
 
+    // Allow inspecting the inner BTree directly in order to use e.g. the `Entry`
+    // API. The privacy is limited to `pub(crate)` to prevent external types from
+    // relying on the concrete type of the map.
+    pub(crate) fn inner_map(&mut self) -> &mut BTreeMap<u64, T> {
+        &mut self.inner
+    }
+
     pub fn insert(&mut self, element: T) -> u64 {
         self.counter += 1;
         let key = self.counter;
