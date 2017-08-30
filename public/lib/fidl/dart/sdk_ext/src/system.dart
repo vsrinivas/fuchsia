@@ -28,7 +28,7 @@ class HandleResult extends _Result {
   final Handle handle;
   const HandleResult(final int status, [this.handle]) : super(status);
   @override
-  toString() => 'HandleResult(status=$status, handle=$handle)';
+  String toString() => 'HandleResult(status=$status, handle=$handle)';
 }
 
 class HandlePairResult extends _Result {
@@ -37,7 +37,7 @@ class HandlePairResult extends _Result {
   const HandlePairResult(final int status, [this.first, this.second])
       : super(status);
   @override
-  toString() => 'HandlePairResult(status=$status, first=$first, second=$second)';
+  String toString() => 'HandlePairResult(status=$status, first=$first, second=$second)';
 }
 
 class ReadResult extends _Result {
@@ -50,21 +50,21 @@ class ReadResult extends _Result {
       bytes.buffer.asUint8List(bytes.offsetInBytes, numBytes);
   String bytesAsUTF8String() => UTF8.decode(bytesAsUint8List());
   @override
-  toString() => 'ReadResult(status=$status, bytes=$bytes, numBytes=$numBytes, handles=$handles)';
+  String toString() => 'ReadResult(status=$status, bytes=$bytes, numBytes=$numBytes, handles=$handles)';
 }
 
 class WriteResult extends _Result {
   final int numBytes;
   const WriteResult(final int status, [this.numBytes]) : super(status);
   @override
-  toString() => 'WriteResult(status=$status, numBytes=$numBytes)';
+  String toString() => 'WriteResult(status=$status, numBytes=$numBytes)';
 }
 
 class GetSizeResult extends _Result {
   final int size;
   const GetSizeResult(final int status, [this.size]) : super(status);
   @override
-  toString() => 'GetSizeResult(status=$status, size=$size)';
+  String toString() => 'GetSizeResult(status=$status, size=$size)';
 }
 
 class System extends NativeFieldWrapperClass2 {
