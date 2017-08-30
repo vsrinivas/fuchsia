@@ -200,7 +200,7 @@ private:
 /* Pins execution to a CPU within a given scope. */
 class AutoPin {
 public:
-    AutoPin(uint cpu);
+    AutoPin(cpu_num_t cpu);
     ~AutoPin();
 
 private:

@@ -221,7 +221,7 @@ static enum handler_return bcm28xx_handle_fiq(struct arm64_iframe_short* frame) 
 }
 
 
-static status_t bcm28xx_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+static status_t bcm28xx_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     /* filter out targets outside of the range of cpus we care about */
     target &= ((1UL << SMP_MAX_CPUS) - 1);
     if (target != 0) {

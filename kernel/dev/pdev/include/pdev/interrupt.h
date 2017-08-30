@@ -30,7 +30,7 @@ struct pdev_interrupt_ops {
                            enum interrupt_polarity* pol);
     bool (*is_valid)(unsigned int vector, uint32_t flags);
     unsigned int (*remap)(unsigned int vector);
-    status_t (*send_ipi)(mp_cpu_mask_t target, mp_ipi_t ipi);
+    status_t (*send_ipi)(cpu_mask_t target, mp_ipi_t ipi);
     void (*init_percpu_early)(void);
     void (*init_percpu)(void);
     enum handler_return (*handle_irq)(iframe* frame);

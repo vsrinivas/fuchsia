@@ -9,6 +9,7 @@
 #include <arch/arm64/el2_state.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <kernel/mp.h>
 #include <vm/pmm.h>
 
 static fbl::Mutex el2_mutex;
@@ -71,7 +72,7 @@ zx_status_t El2CpuState::Create(fbl::unique_ptr<El2CpuState>* out) {
     }
 
     // Setup EL2 for all online CPUs.
-    mp_cpu_mask_t cpu_mask = percpu_exec(el2_on_task, &el2_stacks);
+    cpu_mask_t cpu_mask = percpu_exec(el2_on_task, &el2_stacks);
     if (cpu_mask != mp_get_online_mask()) {
         mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, el2_off_task, nullptr);
         return ZX_ERR_NOT_SUPPORTED;

@@ -75,7 +75,7 @@ static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
             : "memory");
 }
 
-static inline uint arch_curr_cpu_num(void) {
+static inline cpu_num_t arch_curr_cpu_num(void) {
     return arm64_read_percpu_u32(offsetof(struct arm64_percpu, cpu_num));
 }
 

@@ -78,7 +78,7 @@ zx_status_t x86_allocate_ap_structures(uint32_t *apic_ids, uint8_t cpu_count)
     return ZX_OK;
 }
 
-void x86_init_percpu(uint cpu_num)
+void x86_init_percpu(cpu_num_t cpu_num)
 {
     struct x86_percpu *const percpu =
         cpu_num == 0 ? &bp_percpu : &ap_percpus[cpu_num - 1];
@@ -225,7 +225,7 @@ int x86_apic_id_to_cpu_num(uint32_t apic_id)
     return -1;
 }
 
-zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi)
+zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi)
 {
     uint8_t vector = 0;
     switch (ipi) {
@@ -252,7 +252,7 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_
 
     ASSERT(x86_num_cpus <= sizeof(mask) * CHAR_BIT);
 
-    mp_cpu_mask_t remaining = mask;
+    cpu_mask_t remaining = mask;
     uint cpu_id = 0;
     while (remaining && cpu_id < x86_num_cpus) {
         if (remaining & 1) {

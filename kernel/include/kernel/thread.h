@@ -11,6 +11,7 @@
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <debug.h>
+#include <kernel/cpu.h>
 #include <kernel/spinlock.h>
 #include <kernel/wait.h>
 #include <list.h>
@@ -92,8 +93,8 @@ typedef struct thread {
     int base_priority;
     int priority_boost;
 
-    uint last_cpu;  /* last/current cpu the thread is running on */
-    int pinned_cpu; /* only run on pinned_cpu if >= 0 */
+    cpu_num_t last_cpu;  /* last/current cpu the thread is running on, INVALID_CPU if it's never run */
+    cpu_num_t pinned_cpu; /* only run on pinned_cpu if >= 0 */
 
     /* pointer to the kernel address space this thread is associated with */
     struct vmm_aspace* aspace;

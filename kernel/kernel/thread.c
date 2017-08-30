@@ -129,7 +129,7 @@ thread_t* thread_create_etc(
     t->blocking_wait_queue = NULL;
     t->blocked_status = ZX_OK;
     t->interruptable = false;
-    thread_set_last_cpu(t, 0);
+    t->last_cpu = INVALID_CPU;
 
     t->retcode = 0;
     wait_queue_init(&t->retcode_wait_queue);
@@ -320,7 +320,7 @@ status_t thread_suspend(thread_t* t) {
         /* The following call is not essential.  It just makes the
              * thread suspension happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(MP_IPI_TARGET_MASK, 1u << thread_last_cpu(t), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->last_cpu), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended already */
@@ -568,7 +568,7 @@ void thread_kill(thread_t* t, bool block) {
         /* The following call is not essential.  It just makes the
              * thread termination happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(MP_IPI_TARGET_MASK, 1u << thread_last_cpu(t), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->last_cpu), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended, resume it so it can get the kill signal */
@@ -604,19 +604,19 @@ done:
     THREAD_UNLOCK(state);
 }
 
-/* Migrates the current thread to the CPU identified by target_cpuid. */
-void thread_migrate_cpu(const uint target_cpuid) {
+/* Migrates the current thread to the CPU identified by target_cpu. */
+void thread_migrate_cpu(const cpu_num_t target_cpu) {
     thread_t* self = get_current_thread();
-    thread_set_pinned_cpu(self, target_cpuid);
+    thread_set_pinned_cpu(self, target_cpu);
 
-    mp_reschedule(MP_IPI_TARGET_MASK, 1u << target_cpuid, 0);
+    mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(target_cpu), 0);
 
     // When we return from this call, we should have migrated to the target cpu
     thread_yield();
 
     // Make sure that we have actually migrated.
-    const uint current_cpu_id = thread_last_cpu(self);
-    DEBUG_ASSERT(current_cpu_id == target_cpuid);
+    const cpu_num_t current_cpu_id = self->last_cpu;
+    DEBUG_ASSERT(current_cpu_id == target_cpu);
 }
 
 // thread_lock must be held when calling this function.  This function will
@@ -1138,7 +1138,7 @@ void dump_thread(thread_t* t, bool full_dump) {
 
     if (full_dump) {
         dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
-        dprintf(INFO, "\tstate %s, last_cpu %u, pinned_cpu %d, priority %d:%d, "
+        dprintf(INFO, "\tstate %s, last_cpu %u, pinned_cpu %u, priority %d:%d, "
                       "remaining time slice %" PRIu64 "\n",
                 thread_state_to_str(t->state), t->last_cpu, t->pinned_cpu, t->base_priority,
                 t->priority_boost, t->remaining_time_slice);

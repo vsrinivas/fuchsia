@@ -65,7 +65,7 @@ static uint arch_curr_cpu_num_slow() {
     return arm64_cpu_map[cluster][cpu];
 }
 
-zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_t ipi) {
+zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi) {
     LTRACEF("target %d mask %#x, ipi %d\n", target, mask, ipi);
 
     // translate the high level target + mask mechanism into just a mask
@@ -73,7 +73,7 @@ zx_status_t arch_mp_send_ipi(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_ipi_
         mask = (1ul << SMP_MAX_CPUS) - 1;
     } else if (target == MP_IPI_TARGET_ALL) {
         mask = (1ul << SMP_MAX_CPUS) - 1;
-        mask &= ~(1u << arch_curr_cpu_num());
+        mask &= ~cpu_num_to_mask(arch_curr_cpu_num());
     }
 
     return interrupt_send_ipi(mask, ipi);

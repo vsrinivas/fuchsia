@@ -15,6 +15,8 @@
 #ifndef ASSEMBLY
 
 #include <arch/defines.h>
+#include <kernel/atomic.h>
+#include <kernel/cpu.h>
 #include <zircon/compiler.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -31,7 +33,7 @@ static bool arch_in_int_handler(void);
 
 static uint64_t arch_cycle_count(void);
 
-static uint arch_curr_cpu_num(void);
+static cpu_num_t arch_curr_cpu_num(void);
 static uint arch_max_num_cpus(void);
 
 /* Use to align structures on cache lines to avoid cpu aliasing. */

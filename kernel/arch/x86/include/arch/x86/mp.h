@@ -64,7 +64,7 @@ struct x86_percpu {
     uintptr_t gpf_return_target;
 
     /* CPU number */
-    uint32_t cpu_num;
+    cpu_num_t cpu_num;
 
     /* This CPU's default TSS */
     tss_t default_tss __ALIGNED(16);
@@ -104,7 +104,7 @@ static inline struct x86_percpu *x86_get_percpu(void)
     return (struct x86_percpu *)x86_read_gs_offset64(PERCPU_DIRECT_OFFSET);
 }
 
-static inline uint arch_curr_cpu_num(void)
+static inline cpu_num_t arch_curr_cpu_num(void)
 {
     return x86_get_percpu()->cpu_num;
 }

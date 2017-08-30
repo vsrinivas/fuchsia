@@ -66,7 +66,7 @@ static unsigned int default_remap(unsigned int vector) {
     return 0;
 }
 
-static status_t default_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+static status_t default_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return ZX_ERR_NOT_CONFIGURED;
 }
 
@@ -130,7 +130,7 @@ unsigned int remap_interrupt(unsigned int vector) {
     return intr_ops->remap(vector);
 }
 
-status_t interrupt_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+status_t interrupt_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     return intr_ops->send_ipi(target, ipi);
 }
 

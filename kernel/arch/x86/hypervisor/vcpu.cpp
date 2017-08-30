@@ -214,7 +214,7 @@ static bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid) {
            arch_curr_cpu_num() == cpu;
 }
 
-AutoPin::AutoPin(uint cpu)
+AutoPin::AutoPin(cpu_num_t cpu)
     : prev_cpu_(thread_pinned_cpu(get_current_thread())), thread_(pin_thread(cpu)) {}
 
 AutoPin::~AutoPin() {
@@ -683,7 +683,7 @@ zx_status_t Vcpu::Interrupt(uint32_t vector) {
     if (!local_apic_signal_interrupt(&local_apic_state_, vector, true)) {
         // If we did not signal the VCPU, it means it is currently running,
         // therefore we should issue an IPI to force a VM exit.
-        mp_reschedule(MP_IPI_TARGET_MASK, 1u << cpu_of(vpid_), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_of(vpid_)), 0);
     }
     return ZX_OK;
 }

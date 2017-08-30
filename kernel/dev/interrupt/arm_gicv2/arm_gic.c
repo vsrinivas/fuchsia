@@ -272,7 +272,7 @@ static enum handler_return gic_handle_fiq(struct iframe *frame)
     PANIC_UNIMPLEMENTED;
 }
 
-static status_t gic_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi) {
+static status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
     uint gic_ipi_num = ipi + ipi_base;
 
     /* filter out targets outside of the range of cpus we care about */

@@ -116,7 +116,7 @@ void* VmxPage::VirtualAddress() const {
     return paddr_to_kvaddr(pa_);
 }
 
-static zx_status_t vmxon_task(void* context, uint cpu_num) {
+static zx_status_t vmxon_task(void* context, cpu_num_t cpu_num) {
     auto pages = static_cast<fbl::Array<VmxPage>*>(context);
     VmxPage& page = (*pages)[cpu_num];
 
@@ -218,7 +218,7 @@ zx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
     }
 
     // Enable VMX for all online CPUs.
-    mp_cpu_mask_t cpu_mask = percpu_exec(vmxon_task, &vmxon_pages);
+    cpu_mask_t cpu_mask = percpu_exec(vmxon_task, &vmxon_pages);
     if (cpu_mask != mp_get_online_mask()) {
         mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask, vmxoff_task, nullptr);
         return ZX_ERR_NOT_SUPPORTED;

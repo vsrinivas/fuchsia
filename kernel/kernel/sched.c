@@ -105,17 +105,17 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
 }
 
 /* pick a 'random' cpu */
-static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask) {
+static cpu_mask_t rand_cpu(const cpu_mask_t mask) {
     if (unlikely(mask == 0))
         return 0;
 
     /* check that the mask passed in has at least one bit set in the online mask */
-    mp_cpu_mask_t online = mp_get_online_mask();
+    cpu_mask_t online = mp_get_online_mask();
     if (unlikely((mask & online) == 0))
         return 0;
 
     /* compute the highest online cpu */
-    uint highest_cpu = (sizeof(mp_cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(online);
+    uint highest_cpu = (sizeof(cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(online);
 
     /* not very random, round robins a bit through the mask until it gets a hit */
     for (;;) {
@@ -131,15 +131,15 @@ static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask) {
 }
 
 /* find a cpu to wake up */
-static mp_cpu_mask_t find_cpu_mask(thread_t* t) {
+static cpu_mask_t find_cpu_mask(thread_t* t) {
     /* get the last cpu the thread ran on */
-    mp_cpu_mask_t last_ran_cpu_mask = (1u << thread_last_cpu(t));
+    cpu_mask_t last_ran_cpu_mask = cpu_num_to_mask(thread_last_cpu(t));
 
     /* the current cpu */
-    mp_cpu_mask_t curr_cpu_mask = (1u << arch_curr_cpu_num());
+    cpu_mask_t curr_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
 
     /* get a list of idle cpus */
-    mp_cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
+    cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
     if (idle_cpu_mask != 0) {
         if (idle_cpu_mask & curr_cpu_mask) {
             /* the current cpu is idle, so run it here */
@@ -167,7 +167,7 @@ static mp_cpu_mask_t find_cpu_mask(thread_t* t) {
 }
 
 /* run queue manipulation */
-static void insert_in_run_queue_head(uint cpu, thread_t* t) {
+static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
     int ep = effec_priority(t);
@@ -179,7 +179,7 @@ static void insert_in_run_queue_head(uint cpu, thread_t* t) {
     mp_set_cpu_busy(cpu);
 }
 
-static void insert_in_run_queue_tail(uint cpu, thread_t* t) {
+static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
     int ep = effec_priority(t);
@@ -191,7 +191,7 @@ static void insert_in_run_queue_tail(uint cpu, thread_t* t) {
     mp_set_cpu_busy(cpu);
 }
 
-static thread_t* sched_get_top_thread(uint cpu) {
+static thread_t* sched_get_top_thread(cpu_num_t cpu) {
     /* pop the head of the highest priority queue with any threads
      * queued up on the passed in cpu.
      */
@@ -203,7 +203,7 @@ static thread_t* sched_get_top_thread(uint cpu) {
         thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
         DEBUG_ASSERT(newthread);
-        DEBUG_ASSERT_MSG(newthread->pinned_cpu < 0 || newthread->pinned_cpu == (int)cpu,
+        DEBUG_ASSERT_MSG(!is_valid_cpu_num(newthread->pinned_cpu) || newthread->pinned_cpu == cpu,
                          "thread %p name %s\n", newthread, newthread->name);
 
         if (list_is_empty(&c->run_queue[highest_queue]))
@@ -235,10 +235,10 @@ void sched_block(void) {
 /* find a cpu to run the thread on, put it in the run queue for that cpu, and accumulate a list
  * of cpus we'll need to reschedule, including the local cpu.
  */
-static void find_cpu_and_insert(thread_t* t, bool* local_resched, mp_cpu_mask_t *accum_cpu_mask) {
-    if (likely(t->pinned_cpu < 0)) {
+static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t *accum_cpu_mask) {
+    if (likely(!is_valid_cpu_num(t->pinned_cpu))) {
         /* find a core to run it on */
-        mp_cpu_mask_t cpu = find_cpu_mask(t);
+        cpu_mask_t cpu = find_cpu_mask(t);
         if (cpu == 0) {
             insert_in_run_queue_head(arch_curr_cpu_num(), t);
             *local_resched = true;
@@ -251,7 +251,7 @@ static void find_cpu_and_insert(thread_t* t, bool* local_resched, mp_cpu_mask_t 
         if ((uint)t->pinned_cpu == arch_curr_cpu_num()) {
             *local_resched = true;
         } else {
-            *accum_cpu_mask |= (1u << t->pinned_cpu);
+            *accum_cpu_mask |= cpu_num_to_mask(t->pinned_cpu);
         }
         insert_in_run_queue_head(t->pinned_cpu, t);
     }
@@ -271,7 +271,7 @@ bool sched_unblock(thread_t* t) {
     t->state = THREAD_READY;
 
     bool local_resched = false;
-    mp_cpu_mask_t mask = 0;
+    cpu_mask_t mask = 0;
     find_cpu_and_insert(t, &local_resched, &mask);
 
     if (mask)
@@ -287,7 +287,7 @@ bool sched_unblock_list(struct list_node* list) {
 
     /* pop the list of threads and shove into the scheduler */
     bool local_resched = false;
-    mp_cpu_mask_t accum_cpu_mask = 0;
+    cpu_mask_t accum_cpu_mask = 0;
     thread_t* t;
     while ((t = list_remove_tail_type(list, thread_t, queue_node))) {
         DEBUG_ASSERT(t->magic == THREAD_MAGIC);

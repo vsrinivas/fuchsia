@@ -8,7 +8,8 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <kernel/mp.h>
+#include <kernel/cpu.h>
+#include <kernel/thread.h>
 
 namespace hypervisor {
 
@@ -48,11 +49,11 @@ private:
 
 } // namespace hypervisor
 
-typedef zx_status_t (* percpu_task_t)(void* context, uint cpu_num);
+typedef zx_status_t (* percpu_task_t)(void* context, cpu_num_t cpu_num);
 
 /* Executes a task on each online CPU, and returns a CPU mask containing each
  * CPU the task was successfully run on. */
-mp_cpu_mask_t percpu_exec(percpu_task_t task, void* context);
+cpu_mask_t percpu_exec(percpu_task_t task, void* context);
 
 /* Pin the current thread to a CPU, and reschedule it to execute on that CPU. */
-thread_t* pin_thread(uint cpu);
+thread_t* pin_thread(cpu_num_t cpu);

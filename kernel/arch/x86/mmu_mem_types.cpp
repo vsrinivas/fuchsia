@@ -13,6 +13,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <arch/x86/registers.h>
+#include <kernel/mp.h>
 #include <lib/console.h>
 
 /* address widths from mmu.c */
@@ -119,7 +120,7 @@ void x86_mmu_mem_type_init(void)
  *
  * This algorithm is based on section 11.11.8 of Intel 3A
  */
-void x86_pat_sync(mp_cpu_mask_t targets)
+void x86_pat_sync(cpu_mask_t targets)
 {
     targets &= mp_get_online_mask();
 

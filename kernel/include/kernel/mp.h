@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <kernel/cpu.h>
 #include <kernel/mutex.h>
-#include <kernel/thread.h>
 #include <limits.h>
 #include <zircon/compiler.h>
 #include <stdbool.h>
@@ -16,11 +16,8 @@
 
 __BEGIN_CDECLS
 
-typedef uint32_t mp_cpu_mask_t;
 typedef void (*mp_ipi_task_func_t)(void* context);
 typedef void (*mp_sync_task_t)(void* context);
-
-static_assert(SMP_MAX_CPUS <= sizeof(mp_cpu_mask_t) * CHAR_BIT, "");
 
 /* by default, mp_mbx_reschedule does not signal to cpus that are running realtime
  * threads. Override this behavior.
@@ -46,8 +43,8 @@ typedef enum {
 
 void mp_init(void);
 
-void mp_reschedule(mp_ipi_target_t, mp_cpu_mask_t mask, uint flags);
-void mp_sync_exec(mp_ipi_target_t, mp_cpu_mask_t mask, mp_sync_task_t task, void* context);
+void mp_reschedule(mp_ipi_target_t, cpu_mask_t mask, uint flags);
+void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
 status_t mp_hotplug_cpu(uint cpu_id);
 status_t mp_unplug_cpu(uint cpu_id);
@@ -68,13 +65,13 @@ struct mp_ipi_task {
 /* global mp state to track what the cpus are up to */
 struct mp_state {
     /* cpus that are currently online */
-    volatile mp_cpu_mask_t online_cpus;
+    volatile cpu_mask_t online_cpus;
     /* cpus that are currently schedulable */
-    volatile mp_cpu_mask_t active_cpus;
+    volatile cpu_mask_t active_cpus;
 
     /* only safely accessible with thread lock held */
-    mp_cpu_mask_t idle_cpus;
-    mp_cpu_mask_t realtime_cpus;
+    cpu_mask_t idle_cpus;
+    cpu_mask_t realtime_cpus;
 
     spin_lock_t ipi_task_lock;
     /* list of outstanding tasks for CPUs to execute.  Should only be
@@ -90,16 +87,16 @@ extern struct mp_state mp;
 void mp_set_curr_cpu_online(bool online);
 void mp_set_curr_cpu_active(bool active);
 
-static inline int mp_is_cpu_active(uint cpu) {
-    return atomic_load((int*)&mp.active_cpus) & (1 << cpu);
+static inline int mp_is_cpu_active(cpu_num_t cpu) {
+    return atomic_load((int*)&mp.active_cpus) & cpu_num_to_mask(cpu);
 }
 
-static inline int mp_is_cpu_idle(uint cpu) {
-    return mp.idle_cpus & (1 << cpu);
+static inline int mp_is_cpu_idle(cpu_num_t cpu) {
+    return mp.idle_cpus & cpu_num_to_mask(cpu);
 }
 
-static inline int mp_is_cpu_online(uint cpu) {
-    return mp.online_cpus & (1 << cpu);
+static inline int mp_is_cpu_online(cpu_num_t cpu) {
+    return mp.online_cpus & cpu_num_to_mask(cpu);
 }
 
 /* must be called with the thread lock held */
@@ -108,35 +105,35 @@ static inline int mp_is_cpu_online(uint cpu) {
  * idle == (cpu run queue empty & cpu running idle thread)
  * busy == !idle
  */
-static inline void mp_set_cpu_idle(uint cpu) {
-    mp.idle_cpus |= 1U << cpu;
+static inline void mp_set_cpu_idle(cpu_num_t cpu) {
+    mp.idle_cpus |= cpu_num_to_mask(cpu);
 }
 
-static inline void mp_set_cpu_busy(uint cpu) {
-    mp.idle_cpus &= ~(1U << cpu);
+static inline void mp_set_cpu_busy(cpu_num_t cpu) {
+    mp.idle_cpus &= ~cpu_num_to_mask(cpu);
 }
 
-static inline mp_cpu_mask_t mp_get_idle_mask(void) {
+static inline cpu_mask_t mp_get_idle_mask(void) {
     return mp.idle_cpus;
 }
 
-static inline mp_cpu_mask_t mp_get_active_mask(void) {
+static inline cpu_mask_t mp_get_active_mask(void) {
     return atomic_load((int*)&mp.active_cpus);
 }
 
-static inline mp_cpu_mask_t mp_get_online_mask(void) {
+static inline cpu_mask_t mp_get_online_mask(void) {
     return mp.online_cpus;
 }
 
-static inline void mp_set_cpu_realtime(uint cpu) {
-    mp.realtime_cpus |= 1U << cpu;
+static inline void mp_set_cpu_realtime(cpu_num_t cpu) {
+    mp.realtime_cpus |= cpu_num_to_mask(cpu);
 }
 
-static inline void mp_set_cpu_non_realtime(uint cpu) {
-    mp.realtime_cpus &= ~(1U << cpu);
+static inline void mp_set_cpu_non_realtime(cpu_num_t cpu) {
+    mp.realtime_cpus &= ~cpu_num_to_mask(cpu);
 }
 
-static inline mp_cpu_mask_t mp_get_realtime_mask(void) {
+static inline cpu_mask_t mp_get_realtime_mask(void) {
     return mp.realtime_cpus;
 }
 

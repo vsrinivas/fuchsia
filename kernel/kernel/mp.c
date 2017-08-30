@@ -40,8 +40,8 @@ void mp_init(void) {
     }
 }
 
-void mp_reschedule(mp_ipi_target_t target, mp_cpu_mask_t mask, uint flags) {
-    uint local_cpu = arch_curr_cpu_num();
+void mp_reschedule(mp_ipi_target_t target, cpu_mask_t mask, uint flags) {
+    const cpu_num_t local_cpu = arch_curr_cpu_num();
 
     LTRACEF("local %u, target %u, mask %#x\n", local_cpu, target, mask);
 
@@ -56,7 +56,7 @@ void mp_reschedule(mp_ipi_target_t target, mp_cpu_mask_t mask, uint flags) {
 
             /* mask out cpus that are not active and the local cpu */
             mask &= mp.active_cpus;
-            mask &= ~(1U << local_cpu);
+            mask &= ~cpu_num_to_mask(local_cpu);
 
             /* mask out cpus that are currently running realtime code */
             if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
@@ -74,7 +74,7 @@ struct mp_sync_context {
     mp_sync_task_t task;
     void* task_context;
     /* Mask of which CPUs need to finish the task */
-    volatile mp_cpu_mask_t outstanding_cpus;
+    volatile cpu_mask_t outstanding_cpus;
 };
 
 static void mp_sync_task(void* raw_context) {
@@ -82,7 +82,7 @@ static void mp_sync_task(void* raw_context) {
     context->task(context->task_context);
     /* use seq-cst atomic to ensure this update is not seen before the
      * side-effects of context->task */
-    atomic_and((int*)&context->outstanding_cpus, ~(1U << arch_curr_cpu_num()));
+    atomic_and((int*)&context->outstanding_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
     arch_spinloop_signal();
 }
 
@@ -94,7 +94,7 @@ static void mp_sync_task(void* raw_context) {
  *
  * Interrupts must be disabled if calling with MP_IPI_TARGET_ALL_BUT_LOCAL as target
  */
-void mp_sync_exec(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_sync_task_t task, void* context) {
+void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, void* context) {
     uint num_cpus = arch_max_num_cpus();
 
     if (target == MP_IPI_TARGET_ALL) {
@@ -103,7 +103,7 @@ void mp_sync_exec(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_sync_task_t tas
         /* targeting all other CPUs but the current one is hazardous
          * if the local CPU may be changed underneath us */
         DEBUG_ASSERT(arch_ints_disabled());
-        mask = mp_get_online_mask() & ~(1U << arch_curr_cpu_num());
+        mask = mp_get_online_mask() & ~cpu_num_to_mask(arch_curr_cpu_num());
     }
 
     /* Mask any offline CPUs from target list */
@@ -114,11 +114,11 @@ void mp_sync_exec(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_sync_task_t tas
     arch_interrupt_save(&irqstate, SPIN_LOCK_FLAG_INTERRUPTS);
     smp_mb();
 
-    uint local_cpu = arch_curr_cpu_num();
+    const uint local_cpu = arch_curr_cpu_num();
 
     /* remove self from target lists, since no need to IPI ourselves */
-    bool targetting_self = !!(mask & (1U << local_cpu));
-    mask &= ~(1U << local_cpu);
+    bool targetting_self = !!(mask & cpu_num_to_mask(local_cpu));
+    mask &= ~cpu_num_to_mask(local_cpu);
 
     /* create tasks to enqueue (we need one per target due to each containing
      * a linked list node */
@@ -136,7 +136,7 @@ void mp_sync_exec(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_sync_task_t tas
 
     /* enqueue tasks */
     spin_lock(&mp.ipi_task_lock);
-    mp_cpu_mask_t remaining = mask;
+    cpu_mask_t remaining = mask;
     uint cpu_id = 0;
     while (remaining && cpu_id < num_cpus) {
         if (remaining & 1) {
@@ -164,9 +164,9 @@ void mp_sync_exec(mp_ipi_target_t target, mp_cpu_mask_t mask, mp_sync_task_t tas
     while (1) {
         /* See comment in mp_unplug_trampoline about related CPU hotplug
          * guarantees. */
-        mp_cpu_mask_t outstanding = atomic_load_relaxed(
+        cpu_mask_t outstanding = atomic_load_relaxed(
             (int*)&sync_context.outstanding_cpus);
-        mp_cpu_mask_t online = mp_get_online_mask();
+        cpu_mask_t online = mp_get_online_mask();
         if ((outstanding & online) == 0) {
             break;
         }
@@ -331,23 +331,23 @@ cleanup_mutex:
 
 void mp_set_curr_cpu_online(bool online) {
     if (online) {
-        atomic_or((volatile int*)&mp.online_cpus, 1U << arch_curr_cpu_num());
+        atomic_or((volatile int*)&mp.online_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
     } else {
-        atomic_and((volatile int*)&mp.online_cpus, ~(1U << arch_curr_cpu_num()));
+        atomic_and((volatile int*)&mp.online_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
     }
 }
 
 void mp_set_curr_cpu_active(bool active) {
     if (active) {
-        atomic_or((volatile int*)&mp.active_cpus, 1U << arch_curr_cpu_num());
+        atomic_or((volatile int*)&mp.active_cpus, cpu_num_to_mask(arch_curr_cpu_num()));
     } else {
-        atomic_and((volatile int*)&mp.active_cpus, ~(1U << arch_curr_cpu_num()));
+        atomic_and((volatile int*)&mp.active_cpus, ~cpu_num_to_mask(arch_curr_cpu_num()));
     }
 }
 
 enum handler_return mp_mbx_generic_irq(void) {
     DEBUG_ASSERT(arch_ints_disabled());
-    uint local_cpu = arch_curr_cpu_num();
+    const cpu_num_t local_cpu = arch_curr_cpu_num();
 
     CPU_STATS_INC(generic_ipis);
 
@@ -366,13 +366,13 @@ enum handler_return mp_mbx_generic_irq(void) {
 }
 
 enum handler_return mp_mbx_reschedule_irq(void) {
-    uint cpu = arch_curr_cpu_num();
+    const cpu_num_t cpu = arch_curr_cpu_num();
 
     LTRACEF("cpu %u\n", cpu);
 
     CPU_STATS_INC(reschedule_ipis);
 
-    return (mp.active_cpus & (1U << cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return (mp.active_cpus & cpu_num_to_mask(cpu)) ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
 __WEAK status_t arch_mp_cpu_hotplug(uint cpu_id) {
