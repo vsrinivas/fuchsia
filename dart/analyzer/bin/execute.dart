@@ -20,9 +20,11 @@ import 'package:path/path.dart' as path;
 const String _optionSdkPath = "sdk-path";
 const String _optionSourceDir = "source-dir";
 const String _optionShowResults = "show-results";
+const String _optionCachePath = "cache-path";
 const List<String> _requiredOptions = const [
   _optionSdkPath,
   _optionSourceDir,
+  _optionCachePath,
 ];
 
 Future<Null> main(List<String> args) async {
@@ -30,7 +32,8 @@ Future<Null> main(List<String> args) async {
     ..addOption(_optionSdkPath, help: "Path to the Dart SDK")
     ..addOption(_optionSourceDir, help: "The source directory")
     ..addFlag(_optionShowResults,
-        help: "Whether to always show results", negatable: true);
+        help: "Whether to always show results", negatable: true)
+    ..addOption(_optionCachePath, help: "Path to the analysis cache");
   final argResults = parser.parse(args);
   if (_requiredOptions
       .any((String option) => !argResults.options.contains(option))) {
@@ -41,9 +44,10 @@ Future<Null> main(List<String> args) async {
   final stopwatch = new Stopwatch()..start();
 
   final client = await AnalysisServer.create(
-    sdkPath: argResults[_optionSdkPath],
+    sdkPath: path.canonicalize(argResults[_optionSdkPath]),
     clientId: 'Fuchsia Dart build analyzer',
     clientVersion: '0.1',
+    serverArgs: ["--cache", path.canonicalize(argResults[_optionCachePath])],
   );
 
   final completer = new Completer();
