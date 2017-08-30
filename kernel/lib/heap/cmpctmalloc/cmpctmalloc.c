@@ -28,6 +28,82 @@
 // Allocation strategy takes place with a global mutex.  Freelist entries are
 // kept in linked lists with 8 different sizes per binary order of magnitude
 // and the header size is two words with eager coalescing on free.
+//
+// ## Concepts ##
+//
+// OS allocation:
+//   A contiguous range of pages allocated from the OS using heap_page_alloc(),
+//   typically via heap_grow(). Initial layout:
+//
+//   Low addr =>
+//     header_t left_sentinel -- Marked as allocated, |left| pointer NULL.
+//     free_t memory_area -- Marked as free, with appropriate size,
+//                           and pointed to by a free bucket.
+//     [bulk of usable memory]
+//     header_t right_sentinel -- Marked as allocated, size zero
+//   <= High addr
+//
+//   For a normal allocation, the free memory area is added to the
+//   appropriate free bucket and picked up later in the cmpct_alloc()
+//   logic. For a large allocation, the area skips the primary free buckets
+//   and is returned directly via a |free_t** bucket| param.
+//
+//   cmpctmalloc does not keep a list of OS allocations; each is meant to free
+//   itself to the OS when all of its memory areas become free.
+//
+// Memory area:
+//   A sub-range of an OS allocation. Used to satisfy
+//   cmpct_alloc()/cmpct_memalign() calls. Can be free and live in a free
+//   bucket, or can be allocated and managed by the user.
+//
+//   Memory areas, both free and allocated, always begin with a header_t,
+//   followed by the area's usable memory. header_t.size includes the size of
+//   the header. untag(header_t.left) points to the preceding area's header_t.
+//
+//   The low bits of header_t.left hold additional flags about the area:
+//   - FREE_BIT: The area is free, and lives in a free bucket
+//   This bit shouldn't be checked directly; use is_tagged_as_free().
+//
+//   If the area is free (is_tagged_as_free(header_t*)), the area's header
+//   includes the doubly-linked free list pointers defined by free_t (which is a
+//   header_t overlay). Those pointers are used to chain the free area off of
+//   the appropriately-sized free bucket.
+//
+// Normal (small/non-large) allocation:
+//   An alloction of less than HEAP_LARGE_ALLOC_BYTES, which can fit in a free
+//   bucket.
+//
+// Large allocation:
+//   An alloction of more than HEAP_LARGE_ALLOC_BYTES. Won't fit in any free
+//   buckets, so it always creates a new OS allocation.
+//
+// Free buckets:
+//   Freelist entries are kept in linked lists with 8 different sizes per binary
+//   order of magnitude: heap.free_lists[NUMBER_OF_BUCKETS]
+//
+//   Allocations are always rounded up to the nearest bucket size. This would
+//   appear to waste memory, but in fact it avoids some fragmentation.
+//
+//   Consider two buckets with size 512 and 576 (512 + 64). Perhaps the program
+//   often allocates 528 byte objects for some reason. When we need to allocate
+//   528 bytes, we round that up to 576 bytes. When it is freed, it goes in the
+//   576 byte bucket, where it is available for the next of the common 528 byte
+//   allocations.
+//
+//   If we did not round up allocations, then (assuming no coalescing is
+//   possible) we would have to place the freed 528 bytes in the 512 byte
+//   bucket, since only memory areas greater than or equal to 576 bytes can go
+//   in the 576 byte bucket. The next time we need to allocate a 528 byte object
+//   we do not look in the 512 byte bucket, because we want to be sure the first
+//   memory area we look at is big enough, to avoid searching a long chain of
+//   just-too-small memory areas on the free list. We would not find the 528
+//   byte space and would have to carve out a new 528 byte area from a large
+//   free memory area, making fragmentation worse.
+//
+// cmpct_free() behavior:
+//   Freed memory areas are eagerly coalesced with free left/right neighbors. If
+//   the new free area covers an entire OS allocation (i.e., its left and right
+//   neighbors are both sentinels), the OS allocation is returned to the OS.
 
 #if defined(DEBUG) || LK_DEBUGLEVEL > 2
 #define CMPCT_DEBUG
@@ -48,11 +124,12 @@ static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 // Individual allocations above 4Mbytes are just fetched directly from the
 // block allocator.
 #define HEAP_ALLOC_VIRTUAL_BITS 22
+#define HEAP_LARGE_ALLOC_BYTES (1u << HEAP_ALLOC_VIRTUAL_BITS)
 
 // When we grow the heap we have to have somewhere in the freelist to put the
 // resulting freelist entry, so the freelist has to have a certain number of
 // buckets.
-static_assert(HEAP_GROW_SIZE <= (1u << HEAP_ALLOC_VIRTUAL_BITS), "");
+static_assert(HEAP_GROW_SIZE <= HEAP_LARGE_ALLOC_BYTES, "");
 
 // Buckets for allocations.  The smallest 15 buckets are 8, 16, 24, etc. up to
 // 120 bytes.  After that we round up to the nearest size that can be written
@@ -62,9 +139,21 @@ static_assert(HEAP_GROW_SIZE <= (1u << HEAP_ALLOC_VIRTUAL_BITS), "");
 // is 16 bytes larger than the header, but we have it for simplicity.
 #define NUMBER_OF_BUCKETS (1 + 15 + (HEAP_ALLOC_VIRTUAL_BITS - 7) * 8)
 
+// If a header's |left| field has this bit set, it is free and lives in
+// a free bucket.
+#define FREE_BIT (1 << 0)
+
+#define HEADER_LEFT_BIT_MASK FREE_BIT
+
 // All individual memory areas on the heap start with this.
 typedef struct header_struct {
-    struct header_struct* left; // Pointer to the previous area in memory order.
+    // Pointer to the previous area in memory order. The lower bit is used to
+    // store extra state: see FREE_BIT. The left sentinel will have NULL in the
+    // address portion of this field. Left and right sentinels will always be
+    // marked as "allocated" to avoid coalescing.
+    struct header_struct* left;
+    // The size of the memory area in bytes, including this header.
+    // The right sentinel will have 0 in this field.
     size_t size;
 } header_t;
 
@@ -75,12 +164,20 @@ typedef struct free_struct {
 } free_t;
 
 struct heap {
+    // Total bytes allocated from the OS for the heap.
     size_t size;
+
+    // Bytes of usable free space in the heap.
     size_t remaining;
+
+    // Guards all elements in this structure. See lock(), unlock().
     mutex_t lock;
+
+    // Free lists, bucketed by size. See size_to_index_helper().
     free_t* free_lists[NUMBER_OF_BUCKETS];
-    // We have some 32 bit words that tell us whether there is an entry in the
-    // freelist.
+
+    // Bitmask that tracks whether a given free_lists entry has any elements.
+    // See set_free_list_bit(), clear_free_list_bit().
 #define BUCKET_WORDS (((NUMBER_OF_BUCKETS) + 31) >> 5)
     uint32_t free_list_bits[BUCKET_WORDS];
 };
@@ -139,7 +236,8 @@ void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) {
     unlock();
 }
 
-// Operates in sizes that don't include the allocation header.
+// Operates in sizes that don't include the allocation header;
+// i.e., the usable portion of a memory area.
 static int size_to_index_helper(
     size_t size, size_t* rounded_up_out, int adjust, int increment) {
     // First buckets are simply 8-spaced up to 128.
@@ -194,15 +292,17 @@ static int size_to_index_freeing(size_t size) {
 }
 
 static inline header_t* tag_as_free(void* left) {
-    return (header_t*)((uintptr_t)left | 1);
+    return (header_t*)((uintptr_t)left | FREE_BIT);
 }
 
-static inline bool is_tagged_as_free(header_t* header) {
-    return ((uintptr_t)(header->left) & 1) != 0;
+// Returns true if this header_t is marked as free.
+static inline bool is_tagged_as_free(const header_t* header) {
+    // The free bit is stashed in the lower bit of header->left.
+    return ((uintptr_t)(header->left) & FREE_BIT) != 0;
 }
 
-static inline header_t* untag(void* left) {
-    return (header_t*)((uintptr_t)left & ~1);
+static inline header_t* untag(const void* left) {
+    return (header_t*)((uintptr_t)left & ~HEADER_LEFT_BIT_MASK);
 }
 
 static inline header_t* right_header(header_t* header) {
@@ -234,8 +334,8 @@ static int find_nonempty_bucket(int index) {
     return -1;
 }
 
-static bool is_start_of_os_allocation(header_t* header) {
-    return header->left == untag(NULL);
+static bool is_start_of_os_allocation(const header_t* header) {
+    return untag(header->left) == untag(NULL);
 }
 
 static void create_free_area(
@@ -266,12 +366,20 @@ static bool is_end_of_os_allocation(char* address) {
     return ((header_t*)address)->size == 0;
 }
 
-static void free_to_os(header_t* header, size_t size) {
+static void free_to_os(void* ptr, size_t size) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(ptr));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-    heap_page_free(header, size >> PAGE_SIZE_SHIFT);
+    LTRACEF("Returning 0x%zx bytes @%p to OS\n", size, ptr);
+    heap_page_free(ptr, size >> PAGE_SIZE_SHIFT);
     theheap.size -= size;
 }
 
+// Frees |size| bytes starting at |address|, either to a free bucket or to the
+// OS (in which case the left/right sentinels are freed as well). |address|
+// should point to what would be the header_t of the memory area to free, and
+// |left| and |size| should be set to the values that the header_t would have
+// contained. This is broken out because the header_t will not contain the
+// proper size when coalescing neighboring areas.
 static void free_memory(void* address, void* left, size_t size) {
     left = untag(left);
     if (IS_PAGE_ALIGNED(left) &&
@@ -785,7 +893,12 @@ void* cmpct_alloc(size_t size) {
         return NULL;
     }
 
-    if (size + sizeof(header_t) > (1u << HEAP_ALLOC_VIRTUAL_BITS)) {
+    // TODO(dbort): Look into the large vs. small threshold. A "small"
+    // allocation of 0x3ff000 and a "large" allocation of 0x400000 will both
+    // allocate 0x401000 bytes from the OS; seems like there should be a sharper
+    // distinction. The problem seems to be that growby is rounded up to a
+    // bucket size, then heap_grow adds 2*header_t and rounds up to a page.
+    if (size + sizeof(header_t) > HEAP_LARGE_ALLOC_BYTES) {
         return large_alloc(size);
     }
 
@@ -798,9 +911,11 @@ void* cmpct_alloc(size_t size) {
     int bucket = find_nonempty_bucket(start_bucket);
     if (bucket == -1) {
         // Grow heap by at least 12% if we can.
-        size_t growby = MIN(1u << HEAP_ALLOC_VIRTUAL_BITS,
+        size_t growby = MIN(HEAP_LARGE_ALLOC_BYTES,
                             MAX(theheap.size >> 3,
                                 MAX(HEAP_GROW_SIZE, rounded_up)));
+        // Try to add a new OS allocation to the heap, reducing the size until
+        // we succeed or get too small.
         while (heap_grow(growby, NULL) < 0) {
             if (growby <= rounded_up) {
                 unlock();
@@ -922,14 +1037,20 @@ void* cmpct_realloc(void* payload, size_t size) {
 
 static void add_to_heap(void* new_area, size_t size, free_t** bucket) {
     void* top = (char*)new_area + size;
+
+    // Set up the left sentinel. Its |left| field will not have FREE_BIT set,
+    // stopping attempts to coalesce left.
     header_t* left_sentinel = (header_t*)new_area;
-    // Not free, stops attempts to coalesce left.
     create_allocation_header(left_sentinel, 0, sizeof(header_t), NULL);
+
+    // Set up the usable memory area, which will be marked free.
     header_t* new_header = left_sentinel + 1;
     size_t free_size = size - 2 * sizeof(header_t);
     create_free_area(new_header, left_sentinel, free_size, bucket);
+
+    // Set up the right sentinel. Its |left| field will not have FREE_BIT bit
+    // set, stopping attempts to coalesce right.
     header_t* right_sentinel = (header_t*)(top - sizeof(header_t));
-    // Not free, stops attempts to coalesce right.
     create_allocation_header(right_sentinel, 0, 0, new_header);
 }
 
@@ -945,10 +1066,10 @@ static ssize_t heap_grow(size_t size, free_t** bucket) {
     if (ptr == NULL) {
         return MX_ERR_NO_MEMORY;
     }
+    LTRACEF("Growing heap by 0x%zx bytes, new ptr %p (%s)\n",
+            size, ptr, bucket ? "large" : "small");
 
     theheap.size += size;
-
-    LTRACEF("growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
     add_to_heap(ptr, size, bucket);
 
     return size;
