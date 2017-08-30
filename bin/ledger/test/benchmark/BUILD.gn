@@ -9,6 +9,7 @@ group("benchmark") {
 
   public_deps = [
     ":launch_benchmark",
+    ":run_ledger_benchmarks",
     "//apps/ledger/src/test/benchmark/convergence",
     "//apps/ledger/src/test/benchmark/lib",
     "//apps/ledger/src/test/benchmark/put",
@@ -35,5 +36,14 @@ executable("launch_benchmark") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+copy("run_ledger_benchmarks") {
+  sources = [
+    "run_ledger_benchmarks.sh"
+  ]
+  outputs = [
+    "$root_out_dir/run_ledger_benchmarks.sh"
   ]
 }
