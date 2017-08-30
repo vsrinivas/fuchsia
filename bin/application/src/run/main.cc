@@ -4,6 +4,7 @@
 
 #include <mxio/util.h>
 
+#include "application/services/application_controller.fidl-sync.h"
 #include "application/services/application_launcher.fidl-sync.h"
 #include "application/services/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
@@ -34,6 +35,14 @@ int main(int argc, const char** argv) {
   mxio_service_connect_at(service_root.get(), launcher->Name_,
                           launcher_request.PassChannel().release());
 
-  launcher->CreateApplication(std::move(launch_info), nullptr);
-  return 0;
+  fidl::SynchronousInterfacePtr<app::ApplicationController> controller;
+  auto controller_request = GetSynchronousProxy(&controller);
+  launcher->CreateApplication(std::move(launch_info), std::move(controller_request));
+
+  int32_t return_code;
+  if (!controller->Wait(&return_code)) {
+    fprintf(stderr, "%s exited without a return code\n", argv[1]);
+    return 1;
+  }
+  return return_code;
 }

@@ -33,16 +33,20 @@ class ApplicationControllerImpl : public ApplicationController,
   // |ApplicationController| implementation:
   void Kill() override;
   void Detach() override;
+  void Wait(const WaitCallback& callback) override;
 
  private:
   // |mtl::MessageLoopHandler| implementation:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending, uint64_t count) override;
+
+  bool SendReturnCodeIfTerminated();
 
   fidl::Binding<ApplicationController> binding_;
   ApplicationEnvironmentImpl* environment_;
   std::unique_ptr<archive::FileSystem> fs_;
   mx::process process_;
   std::string path_;
+  std::vector<WaitCallback> wait_callbacks_;
 
   mtl::MessageLoop::HandlerKey termination_handler_ = 0u;
 
