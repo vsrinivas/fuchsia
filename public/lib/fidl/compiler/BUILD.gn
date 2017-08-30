@@ -1,0 +1,52 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+
+group("compiler") {
+  testonly = true
+
+  deps = [
+    ":fidl",
+    ":fidl-c",
+    ":fidl-go",
+    ":fidl-rust",
+  ]
+}
+
+# Build the fidl compiler
+go_binary("fidl") {
+  go_dependencies = [ {
+        source = "src/fidl"
+        package = "fidl"
+      } ]
+  gopackage = "fidl/compiler/cmd/fidl"
+}
+
+# Build the C generator
+go_binary("fidl-c") {
+  go_dependencies = [ {
+        source = "src/fidl"
+        package = "fidl"
+      } ]
+  gopackage = "fidl/compiler/generators/c"
+}
+
+# Build the Go generator
+go_binary("fidl-go") {
+  go_dependencies = [ {
+        source = "src/fidl"
+        package = "fidl"
+      } ]
+  gopackage = "fidl/compiler/generators/go"
+}
+
+# Build the Rust generator
+go_binary("fidl-rust") {
+  go_dependencies = [ {
+        source = "src/fidl"
+        package = "fidl"
+      } ]
+  gopackage = "fidl/compiler/generators/rust"
+}

@@ -1,0 +1,16 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("fidl.gni")
+
+group("fidl") {
+  testonly = true
+  deps = [
+    # TODO(phosek): disable fuzz target until we roll the new toolchain
+    #"fuzz:fidl-fuzzer(//build/toolchain:host_x64)",
+    "compiler/interfaces",
+    "cpp/bindings/tests:lib_fidl_cpp_tests",
+    "dart/test",
+  ]
+}

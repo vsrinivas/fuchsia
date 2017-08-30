@@ -1,0 +1,106 @@
+{%- import "validation_macros.tmpl" as validation_macros %}
+{%- set class_name = union.name ~ "_Data" %}
+{%- set enum_name = union.name ~ "_Tag" -%}
+
+// static
+{{class_name}}* {{class_name}}::New(::fidl::internal::Buffer* buf) {
+  return new (buf->Allocate(sizeof({{class_name}}))) {{class_name}}();
+}
+
+{# TODO(vardhan): Set error messages here for the remaining validation
+   errors. #}
+// static
+::fidl::internal::ValidationError {{class_name}}::Validate(
+    const void* data,
+    ::fidl::internal::BoundsChecker* bounds_checker,
+    bool inlined,
+    std::string* err) {
+  if (!data)
+    return ::fidl::internal::ValidationError::NONE;
+
+  if (!::fidl::internal::IsAligned(data)) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
+    return ::fidl::internal::ValidationError::MISALIGNED_OBJECT;
+  }
+
+  // If the union is inlined in another structure its memory was already claimed.
+  // This ONLY applies to the union itself, NOT anything which the union points
+  // to.
+  if (!inlined && !bounds_checker->ClaimMemory(data, sizeof({{class_name}}))) {
+    FIDL_INTERNAL_DEBUG_SET_ERROR_MSG(err) << "";
+    return ::fidl::internal::ValidationError::ILLEGAL_MEMORY_RANGE;
+  }
+
+  const {{class_name}}* object = static_cast<const {{class_name}}*>(data);
+  FTL_ALLOW_UNUSED_LOCAL(object);
+
+  if (object->is_null())
+    return ::fidl::internal::ValidationError::NONE;
+
+  switch (object->tag) {
+{%  for field in union.fields %}
+    case {{enum_name}}::{{field.name|upper}}: {
+{{ validation_macros.validate_union_field(field, union, "err")|indent(8) }}
+    }
+{%- endfor %}
+    default:
+      // Unknown tags should not cause validation to fail.
+      break;
+  }
+  return ::fidl::internal::ValidationError::NONE;
+}
+
+void {{class_name}}::set_null() {
+  size = 0U;
+  tag = static_cast<{{enum_name}}>(0);
+  data.unknown = 0U;
+}
+
+{{class_name}}::{{class_name}}() {
+}
+
+void {{class_name}}::EncodePointersAndHandles(
+    std::vector<mx_handle_t>* handles) {
+  switch (tag) {
+{%- for field in union.fields %}
+    case {{enum_name}}::{{field.name|upper}}: {
+{%-   if field.kind|is_object_kind %}
+      ::fidl::internal::Encode(&data.f_{{field.name}}, handles);
+{%-   elif field.kind|is_any_handle_kind %}
+      ::fidl::internal::EncodeHandle(&data.f_{{field.name}}, handles);
+{%-   elif field.kind|is_interface_kind %}
+      ::fidl::internal::EncodeHandle(
+          reinterpret_cast<::fidl::internal::Interface_Data*>(
+              &data.f_{{field.name}}), handles);
+{%-   endif %}
+      return;
+    }
+{%- endfor %}
+    case {{enum_name}}::__UNKNOWN__: {
+      FTL_DCHECK(false) << "No sane way to serialize a union with an unknown tag.";
+      break;
+    }
+  }
+}
+
+void {{class_name}}::DecodePointersAndHandles(
+    std::vector<mx_handle_t>* handles) {
+  switch (tag) {
+{%- for field in union.fields %}
+    case {{enum_name}}::{{field.name|upper}}: {
+{%-   if field.kind|is_object_kind %}
+      ::fidl::internal::Decode(&data.f_{{field.name}}, handles);
+{%-   elif field.kind|is_any_handle_kind %}
+      ::fidl::internal::DecodeHandle(&data.f_{{field.name}}, handles);
+{%-   elif field.kind|is_interface_kind %}
+      ::fidl::internal::DecodeHandle(
+          reinterpret_cast<::fidl::internal::Interface_Data*>(
+              &data.f_{{field.name}}), handles);
+{%-   endif %}
+      return;
+    }
+{%- endfor %}
+    default:
+      return;
+  }
+}

@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  enable_ossfuzz = false
+}
+
+executable("fidl-fuzzer") {
+  sources = [
+    "fuzzer.cc",
+    "test.cc",
+    "test.h",
+  ]
+  deps = [
+    "//magenta/system/host/fidl:compiler",
+  ]
+
+  cflags = [
+    "-fsanitize=address",
+    "-fsanitize-coverage=trace-pc-guard",
+  ]
+
+  ldflags = cflags
+
+  if (enable_ossfuzz) {
+    libs = [ "FuzzingEngine" ]
+    lib_dirs = [ "/usr/lib" ]
+  } else {
+    deps += [ "//third_party/llvm/lib/Fuzzer" ]
+  }
+}

@@ -1,0 +1,14 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples") {
+  deps = [
+    "echo_client_cpp",
+    "echo_client_go",
+    "echo_server_cpp",
+    "echo_server_go",
+    "hello_fidl",
+    "hello_fidl_dart"
+  ]
+}

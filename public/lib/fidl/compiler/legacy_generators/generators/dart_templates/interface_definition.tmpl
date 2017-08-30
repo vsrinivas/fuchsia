@@ -1,0 +1,208 @@
+{%- for method in interface.methods %}
+const int _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name = {{method.ordinal}};
+{%- endfor %}
+
+{#--- Interface Enums #}
+{%- from "enum_definition.tmpl" import enum_def -%}
+{%- for enum in interface.enums %}
+  {{ enum_def(enum, typepkg, package) }}
+{%-  endfor %}
+
+abstract class {{interface|name}} {
+{%- if interface.service_name %}
+  static const String serviceName = '{{interface.service_name}}';
+{%- else %}
+  static const String serviceName = null;
+{%- endif %}
+
+{%- for method in interface.methods %}
+{%- if method.response_parameters == None %}
+  void {{method|name}}(
+    {%- for parameter in method.parameters -%}
+      {{parameter.kind|dart_type}} {{parameter|name}}{% if not loop.last %}, {% endif %}
+    {%- endfor -%}
+    );
+{%- else %}
+  void {{method|name}}(
+  {%- for parameter in method.parameters -%}
+    {{parameter.kind|dart_type}} {{parameter|name}},
+  {%- endfor -%}
+     void callback(
+      {%- for param in method.response_parameters -%}
+        {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
+      {%- endfor -%}
+     ));
+{%- endif %}
+{%- endfor %}
+
+{#--- Interface Constants #}
+{%- for constant in interface.constants %}
+  static const {{constant.kind|dart_type}} {{constant|name}} = {{constant.resolved_value}};
+{%-   endfor %}
+}
+
+class {{interface|name}}Proxy extends bindings.Proxy<{{interface|name}}>
+    implements {{interface|name}} {
+
+  {{interface|name}}Proxy() : super(new bindings.ProxyController<{{interface|name}}>(
+      serviceName: {{interface|name}}.serviceName)) {
+    ctrl.onResponse = _handleResponse;
+  }
+
+  void _handleResponse(bindings.ServiceMessage message) {
+    switch (message.header.type) {
+{%- for method in interface.methods %}
+{%- if method.response_parameters != None %}
+{%- set response_struct = method.response_param_struct %}
+      case _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name:
+        final Function callback = ctrl.getCallback(message);
+        if (callback == null) {
+          message.closeAllHandles();
+        } else {
+          {%- if method.response_parameters %}
+            final response = {{response_struct|name}}.deserialize(message.payload);
+          {%- endif %}
+          callback(
+            {%- for param in method.response_parameters -%}
+              response.{{param|name}} {% if not loop.last %}, {% endif %}
+            {%- endfor -%}
+          );
+        }
+        break;
+{%- endif %}
+{%- endfor %}
+      default:
+        ctrl.proxyError('Unexpected message type: ${message.header.type}');
+        ctrl.close();
+        break;
+    }
+  }
+
+{% for method in interface.methods %}
+{%- if method.response_parameters == None %}
+  @override
+  void {{method|name}}(
+{%- for parameter in method.parameters -%}
+    {{parameter.kind|dart_type}} {{parameter|name}}{% if not loop.last %}, {% endif %}
+{%- endfor -%}
+{%- set request_struct = method.param_struct -%}
+  ) {
+    if (!ctrl.isBound) {
+      ctrl.proxyError("The Proxy is closed.");
+      return;
+    }
+    var params = new {{request_struct|name}}();
+{%- for parameter in method.parameters %}
+    params.{{parameter|name}} = {{parameter|name}};
+{%- endfor %}
+    ctrl.sendMessage(params, _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name);
+  }
+{%- else %}
+{%- set request_struct = method.param_struct %}
+{%- set response_struct = method.response_param_struct %}
+  @override
+  void {{method|name}}(
+{%- for parameter in method.parameters -%}
+    {{parameter.kind|dart_type}} {{parameter|name}},
+{%- endfor -%}
+    void callback(
+      {%- for param in method.response_parameters -%}
+        {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
+      {%- endfor -%}
+    )) {
+    var params = new {{request_struct|name}}();
+{%- for parameter in method.parameters %}
+    params.{{parameter|name}} = {{parameter|name}};
+{%- endfor %}
+    Function zonedCallback;
+    if ((callback == null) || identical(Zone.current, Zone.ROOT)) {
+      zonedCallback = callback;
+    } else {
+      Zone z = Zone.current;
+      zonedCallback = ((
+      {%- for param in method.response_parameters -%}
+        {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
+      {%- endfor -%}
+      ) {
+        z.bindCallback(() {
+          callback(
+      {%- for param in method.response_parameters -%}
+        {{param|name}}{% if not loop.last %}, {% endif %}
+      {%- endfor -%}
+          );
+        })();
+      });
+    }
+    ctrl.sendMessageWithRequestId(
+        params,
+        _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name,
+        -1,
+        bindings.MessageHeader.kMessageExpectsResponse,
+        zonedCallback);
+  }
+{%- endif %}
+{%- endfor %}
+}
+
+class {{interface|name}}Binding
+    extends bindings.Binding<{{interface|name}}> {
+
+{%- for method in interface.methods %}
+{%- if method.response_parameters != None %}
+{%- set response_struct = method.response_param_struct %}
+  Function _{{response_struct|name|lower_camel}}Responder(
+      bindings.MessageSink respond, int requestId) {
+  return (
+      {%- for param in method.response_parameters -%}
+        {{param.kind|dart_type}} {{param|name}}{% if not loop.last %}, {% endif %}
+      {%- endfor -%}
+    ) {
+      var result = new {{response_struct|name}}();
+      {%- for param in method.response_parameters %}
+      result.{{param|name}} = {{param|name}};
+      {%- endfor %}
+      respond(result.serializeWithHeader(new bindings.MessageHeader.withRequestId(
+          _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name,
+          bindings.MessageHeader.kMessageIsResponse,
+          requestId)));
+    };
+  }
+{%- endif %}
+{%- endfor %}
+
+  @override
+  void handleMessage(bindings.ServiceMessage message,
+                     bindings.MessageSink respond) {
+    switch (message.header.type) {
+{%- for method in interface.methods %}
+{%- set request_struct = method.param_struct %}
+      case _{{interface|name|lower_camel}}Method{{method|name|upper_camel}}Name:
+{%- if method.parameters %}
+        var params = {{request_struct|name}}.deserialize(
+            message.payload);
+{%- endif %}
+{%- if method.response_parameters == None %}
+        impl.{{method|name}}(
+          {%- for parameter in method.parameters -%}
+              params.{{parameter|name}}{% if not loop.last %}, {% endif %}
+          {%- endfor -%}
+        );
+{%- else %}
+{%- set response_struct = method.response_param_struct %}
+        impl.{{method|name}}(
+          {%- for parameter in method.parameters -%}
+              params.{{parameter|name}}, {% endfor -%}
+          _{{response_struct|name|lower_camel}}Responder(
+              respond, message.header.requestId));
+{%- endif %}
+        break;
+{%- endfor %}
+      default:
+        throw new bindings.FidlCodecError('Unexpected message name');
+        break;
+    }
+  }
+
+  @override
+  int get version => {{interface.version}};
+}

@@ -1,0 +1,69 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../fidl.gni")
+
+fidl("test_interfaces") {
+  testonly = true
+
+  # Some of those files are part of tests that check type info generation.
+  generate_type_info = true
+  sources = [
+    "math_calculator.fidl",
+    "minimal_interface.fidl",
+    "no_module.fidl",
+    "ping_service.fidl",
+    "rect.fidl",
+    "regression_tests.fidl",
+    "sample_factory.fidl",
+    "sample_import.fidl",
+    "sample_import2.fidl",
+    "sample_interfaces.fidl",
+    "sample_service.fidl",
+    "scoping.fidl",
+    "serialization_test_structs.fidl",
+    "test_arrays.fidl",
+    "test_constants.fidl",
+    "test_enums.fidl",
+    "test_included_unions.fidl",
+    "test_structs.fidl",
+    "test_handles.fidl",
+    "test_unions.fidl",
+    "validation_test_interfaces.fidl",
+  ]
+}
+
+fidl("versioning_test_service_interfaces") {
+  # FIXME: Dart packaged applications cannot depend on testonly fidls.
+  # testonly = true
+  sources = [
+    "versioning_test_service.fidl",
+  ]
+}
+
+fidl("versioning_test_client_interfaces") {
+  # FIXME: Dart packaged applications cannot depend on testonly fidls.
+  # testonly = true
+  sources = [
+    "versioning_test_client.fidl",
+  ]
+}
+
+# Declare the validation parser library with a C interface.
+#
+# Generates a static library which C binaries or languages with a C FFI
+# can link against to get a parser for the validation test "golden files".
+#
+
+#static_library("validation_parser") {
+#  testonly = true
+#  complete_static_lib = true
+#  sources = [
+#    "validation_parser/validation_parser.cc",
+#    "validation_parser/validation_parser.h",
+#  ]
+#  deps = [
+#    "../../../cpp/bindings/tests:mojo_public_bindings_test_utils",
+#  ]
+#}
