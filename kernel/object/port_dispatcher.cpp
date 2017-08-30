@@ -283,8 +283,8 @@ bool PortDispatcher::CanReap(PortObserver* observer, PortPacket* port_packet) {
     return false;
 }
 
-mx_status_t PortDispatcher::MakeObservers(uint32_t options, Handle* handle, uint64_t key,
-                                          mx_signals_t signals) {
+mx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
+                                         mx_signals_t signals) {
     canary_.Assert();
 
     // Called under the handle table lock.

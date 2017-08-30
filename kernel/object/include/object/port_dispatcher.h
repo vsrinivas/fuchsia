@@ -156,7 +156,7 @@ public:
     bool CanReap(PortObserver* observer, PortPacket* port_packet);
 
     // Called under the handle table lock.
-    mx_status_t MakeObservers(uint32_t options, Handle* handle, uint64_t key, mx_signals_t signals);
+    mx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, mx_signals_t signals);
 
     // Called under the handle table lock. Returns true if at least one packet was
     // removed from the queue.

@@ -187,6 +187,6 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
         if (!handle->HasRights(MX_RIGHT_READ))
             return MX_ERR_ACCESS_DENIED;
 
-        return port->MakeObservers(options, handle, key, signals);
+        return port->MakeObserver(options, handle, key, signals);
     }
 }
