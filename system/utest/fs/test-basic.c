@@ -53,7 +53,10 @@ bool test_basic(void) {
     fd1 = open("::emptydir", O_RDONLY, 0644);
     ASSERT_GT(fd1, 0, "");
 
-    ASSERT_EQ(read(fd1, NULL, 0), -1, "");
+    // Zero-sized reads should always succeed
+    ASSERT_EQ(read(fd1, NULL, 0), 0, "");
+    // But nonzero reads to directories should always fail
+    ASSERT_EQ(read(fd1, NULL, 5), -1, "");
     ASSERT_EQ(write(fd1, "Don't write to directories", 26), -1, "");
     ASSERT_EQ(ftruncate(fd1, 0), -1, "");
     ASSERT_EQ(rmdir("::emptydir"), 0, "");
