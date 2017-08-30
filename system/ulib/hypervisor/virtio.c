@@ -122,8 +122,8 @@ static void virtio_queue_signal(virtio_queue_t* queue) {
     mtx_unlock(&queue->mutex);
 }
 
-static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t vcpu,
-                                           uint16_t port, const mx_packet_guest_io_t* io) {
+static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint16_t port,
+                                           const mx_packet_guest_io_t* io) {
     virtio_device_t* device = pci_device_to_virtio(pci_device);
     virtio_queue_t* queue = selected_queue(device);
     switch (port) {
@@ -193,7 +193,7 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, mx_handle_t
     // Handle device-specific accesses.
     if (port >= VIRTIO_PCI_DEVICE_CFG_BASE) {
         uint16_t device_offset = port - VIRTIO_PCI_DEVICE_CFG_BASE;
-        return device->ops->write(device, vcpu, device_offset, io);
+        return device->ops->write(device, device_offset, io);
     }
 
     fprintf(stderr, "Unhandled virtio device write %#x\n", port);

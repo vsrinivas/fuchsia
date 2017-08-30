@@ -40,7 +40,7 @@ static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint16_t
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t pci_bar_write_unsupported(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
+static mx_status_t pci_bar_write_unsupported(pci_device_t* device, uint16_t port,
                                              const mx_packet_guest_io_t* io) {
     return MX_ERR_NOT_SUPPORTED;
 }
@@ -434,18 +434,18 @@ uint16_t pci_bar_size(pci_device_t* device) {
     return device->bar_size;
 }
 
-static mx_status_t pci_handler(mx_handle_t vcpu, mx_port_packet_t* packet, void* ctx) {
+static mx_status_t pci_handler(mx_port_packet_t* packet, void* ctx) {
     pci_device_t* pci_device = ctx;
     mx_packet_guest_io_t* io = &packet->guest_io;
     uint32_t bar_base = pci_bar_base(pci_device);
 
-    return pci_device->ops->write_bar(pci_device, vcpu, io->port - bar_base, io);
+    return pci_device->ops->write_bar(pci_device, io->port - bar_base, io);
 }
 
-mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t guest) {
+mx_status_t pci_device_async(pci_device_t* device, mx_handle_t guest) {
     uint32_t bar_base = pci_bar_base(device);
     uint16_t bar_size = pci_bar_size(device);
-    return device_async(vcpu, guest, MX_GUEST_TRAP_IO, bar_base, bar_size, pci_handler, device);
+    return device_async(guest, MX_GUEST_TRAP_IO, bar_base, bar_size, pci_handler, device);
 }
 
 mx_status_t pci_interrupt(pci_device_t* pci_device) {

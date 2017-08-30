@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
         if (status != MX_OK)
             return status;
 
-        status = pci_device_async(virtio_block, vcpu, guest);
+        status = pci_device_async(virtio_block, guest);
         if (status != MX_OK)
             return status;
     }
@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
                              PCI_DEVICE_VIRTIO_BALLOON);
     if (status != MX_OK)
         return status;
-    status = pci_device_async(&balloon.virtio_device.pci_device, vcpu, guest);
+    status = pci_device_async(&balloon.virtio_device.pci_device, guest);
     if (status != MX_OK)
         return status;
     if (balloon_poll_interval > 0)

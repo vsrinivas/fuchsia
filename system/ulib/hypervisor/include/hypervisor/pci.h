@@ -58,8 +58,7 @@ typedef struct pci_device_ops {
     mx_status_t (*read_bar)(const pci_device_t* device, uint16_t port, mx_vcpu_io_t* vcpu_io);
 
     // Write to a region mapped by a BAR register.
-    mx_status_t (*write_bar)(pci_device_t* device, mx_handle_t vcpu, uint16_t port,
-                             const mx_packet_guest_io_t* io);
+    mx_status_t (*write_bar)(pci_device_t* device, uint16_t port, const mx_packet_guest_io_t* io);
 } pci_device_ops_t;
 
 /* Stores the state of PCI devices. */
@@ -136,7 +135,7 @@ uint32_t pci_bar_base(pci_device_t* device);
 uint16_t pci_bar_size(pci_device_t* device);
 
 /* Start asynchronous handling of writes to the pci device. */
-mx_status_t pci_device_async(pci_device_t* device, mx_handle_t vcpu, mx_handle_t guest);
+mx_status_t pci_device_async(pci_device_t* device, mx_handle_t guest);
 
 /* Raise the configured interrupt for the given PCI device. */
 mx_status_t pci_interrupt(pci_device_t* device);

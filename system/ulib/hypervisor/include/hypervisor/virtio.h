@@ -38,12 +38,10 @@ typedef struct virtio_queue virtio_queue_t;
 /* Device-specific operations. */
 typedef struct virtio_device_ops {
     // Read a device configuration field.
-    mx_status_t (*read)(const virtio_device_t* device, uint16_t port,
-                        mx_vcpu_io_t* vcpu_io);
+    mx_status_t (*read)(const virtio_device_t* device, uint16_t port, mx_vcpu_io_t* vcpu_io);
 
     // Write a device configuration field.
-    mx_status_t (*write)(virtio_device_t* device, mx_handle_t vcpu, uint16_t port,
-                         const mx_packet_guest_io_t* io);
+    mx_status_t (*write)(virtio_device_t* device, uint16_t port, const mx_packet_guest_io_t* io);
 
     // Handle notify events for one of this devices queues.
     mx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);

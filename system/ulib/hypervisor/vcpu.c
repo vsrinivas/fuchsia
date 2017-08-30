@@ -293,7 +293,6 @@ mx_status_t vcpu_packet_handler(vcpu_ctx_t* vcpu_ctx, mx_port_packet_t* packet) 
 
 typedef struct device {
     mx_handle_t port;
-    mx_handle_t vcpu;
     device_handler_fn_t handler;
     void* ctx;
 } device_t;
@@ -309,7 +308,7 @@ static int device_loop(void* ctx) {
             goto cleanup;
         }
 
-        status = device->handler(device->vcpu, &packet, device->ctx);
+        status = device->handler(&packet, device->ctx);
         if (status != MX_OK) {
             fprintf(stderr, "Unable to handle packet for device %d\n", status);
             goto cleanup;
@@ -322,14 +321,13 @@ cleanup:
     return MX_ERR_INTERNAL;
 }
 
-mx_status_t device_async(mx_handle_t vcpu, mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
+mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
                          size_t len, device_handler_fn_t handler, void* ctx) {
     device_t* device = calloc(1, sizeof(device_t));
     if (device == NULL) {
         fprintf(stderr, "Failed to allocate device\n");
         return MX_ERR_NO_MEMORY;
     }
-    device->vcpu = vcpu;
     device->handler = handler;
     device->ctx = ctx;
 

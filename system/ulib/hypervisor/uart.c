@@ -149,12 +149,12 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     }
 }
 
-static mx_status_t uart_handler(mx_handle_t vcpu, mx_port_packet_t* packet, void* ctx) {
+static mx_status_t uart_handler(mx_port_packet_t* packet, void* ctx) {
     return uart_write(ctx, &packet->guest_io);
 }
 
 mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest) {
     const mx_vaddr_t uart_addr = UART_RECEIVE_PORT;
     const size_t uart_len = UART_SCR_SCRATCH_PORT + 1 - uart_addr;
-    return device_async(vcpu, guest, MX_GUEST_TRAP_IO, uart_addr, uart_len, uart_handler, uart);
+    return device_async(guest, MX_GUEST_TRAP_IO, uart_addr, uart_len, uart_handler, uart);
 }
