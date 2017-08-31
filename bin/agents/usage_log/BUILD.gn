@@ -17,12 +17,13 @@ dart_app("usage_log_dart") {
     "//apps/cobalt_client/services:cobalt_dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
-    "//lib/fidl/dart",
+    "//garnet/public/lib/fidl/dart",
   ]
 }
 
 package("usage_log") {
   app = true
+
   # this should be set to true once dart packages can be archives
   archive = false
 

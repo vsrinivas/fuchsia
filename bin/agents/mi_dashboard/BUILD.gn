@@ -20,7 +20,7 @@ dart_app("mi_dashboard_dart") {
     "//apps/maxwell/services/suggestion:debug_dart",
     "//apps/maxwell/services/suggestion:suggestion_dart",
     "//apps/maxwell/services/user:user_dart",
-    "//lib/fidl/dart",
+    "//garnet/public/lib/fidl/dart",
     "//third_party/dart-pkg/pub/http",
   ]
 }

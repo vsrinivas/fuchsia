@@ -10,7 +10,7 @@ source_set("entity_span") {
 
   public_deps = [
     "//apps/modular/lib/rapidjson",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -24,6 +24,6 @@ source_set("entity_utils") {
     ":entity_span",
     "//apps/maxwell/services/context",
     "//apps/modular/lib/rapidjson",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }

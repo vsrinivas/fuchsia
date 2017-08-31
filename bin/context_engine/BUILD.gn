@@ -81,7 +81,7 @@ source_set("context_engine_impl") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/context_engine/coprocessors:aggregate",
     "//apps/maxwell/src/context_engine/coprocessors:focused_story",
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
 
@@ -93,7 +93,7 @@ source_set("debug") {
 
   deps = [
     "//apps/maxwell/services/context:debug",
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
 
@@ -105,7 +105,7 @@ source_set("scope_utils") {
 
   deps = [
     "//apps/maxwell/services/user:scope",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/boringssl",  # for sha256
   ]
 }
