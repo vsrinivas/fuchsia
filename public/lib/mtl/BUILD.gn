@@ -1,0 +1,75 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+group("mtl") {
+  public_deps = [
+    ":mtl_lib",
+    "//magenta/system/ulib/fs",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxtl",
+  ]
+}
+
+shared_library("mtl_lib") {
+  output_name = "mtl"
+
+  public_deps = [
+    "//lib/mtl/handles",
+    "//lib/mtl/io",
+    "//lib/mtl/socket",
+    "//lib/mtl/tasks",
+    "//lib/mtl/threading",
+    "//lib/mtl/vfs",
+    "//lib/mtl/vmo",
+    "//lib/mtl/waiter",
+  ]
+}
+
+executable("mtl_unittests") {
+  testonly = true
+
+  sources = [
+    "handles/object_info_unittest.cc",
+    "io/redirection_unittest.cc",
+    "socket/blocking_drain_unittest.cc",
+    "socket/files_unittest.cc",
+    "socket/socket_drainer_unittest.cc",
+    "socket/strings_unittest.cc",
+    "tasks/fd_waiter_unittest.cc",
+    "tasks/message_loop_unittest.cc",
+    "threading/create_thread_unittest.cc",
+    "threading/thread_unittest.cc",
+    "vmo/file_unittest.cc",
+    "vmo/shared_vmo_unittest.cc",
+    "vmo/strings_unittest.cc",
+    "vmo/vector_unittest.cc",
+  ]
+
+  deps = [
+    ":mtl",
+    "//lib/mtl/test",
+    "//third_party/gtest",
+  ]
+}
+
+package("package") {
+  testonly = true
+
+  package_name = "mtl"
+
+  deps = [
+    ":mtl",
+    ":mtl_unittests",
+  ]
+
+  libraries = [ {
+        name = "libmtl.so"
+      } ]
+
+  tests = [ {
+        name = "mtl_unittests"
+      } ]
+}
