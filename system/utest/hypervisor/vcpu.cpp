@@ -38,7 +38,7 @@ static mx_status_t vcpu_write_test_state(vcpu_ctx_t* vcpu_ctx, uint32_t kind, co
     if (kind != MX_VCPU_IO || len != sizeof(mx_vcpu_io_t))
         return MX_ERR_INVALID_ARGS;
     test_t* test = (test_t*) vcpu_ctx;
-    const mx_vcpu_io_t* io = buffer;
+    auto io = static_cast<const mx_vcpu_io_t*>(buffer);
     memcpy(&test->vcpu_io, io, sizeof(*io));
     return MX_OK;
 }

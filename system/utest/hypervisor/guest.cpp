@@ -228,7 +228,7 @@ static bool guest_set_trap(void) {
     ASSERT_EQ(inst.mem, 8u, "");
     ASSERT_EQ(inst.imm, 0u, "");
     ASSERT_EQ(inst.reg, &vcpu_state.rax, "");
-    ASSERT_EQ(inst.flags, NULL, "");
+    ASSERT_NULL(inst.flags, "");
 #endif
 
     ASSERT_TRUE(teardown(&test), "");

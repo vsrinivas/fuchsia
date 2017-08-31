@@ -50,12 +50,12 @@ static void setup_block(block_t* block, const char* block_path, virtio_mem_t* me
     setup_queue(&block->queue, mem);
 }
 
-static int mkblk(char* path) {
+static ssize_t mkblk(char* path) {
     int fd = mkstemp(path);
     if (fd >= 0) {
         uint8_t zeroes[SECTOR_SIZE * 8];
         memset(zeroes, 0, sizeof(zeroes));
-        int ret = write(fd, zeroes, sizeof(zeroes));
+        ssize_t ret = write(fd, zeroes, sizeof(zeroes));
         if (ret < 0)
             return ret;
     }
@@ -412,7 +412,7 @@ static mx_status_t write_sector(int fd, uint8_t value, uint32_t sector, size_t l
     uint8_t buffer[SECTOR_SIZE];
     memset(buffer, value, len);
 
-    int ret = lseek(fd, sector * SECTOR_SIZE, SEEK_SET);
+    ssize_t ret = lseek(fd, sector * SECTOR_SIZE, SEEK_SET);
     if (ret < 0)
         return MX_ERR_IO;
     ret = write(fd, buffer, len);

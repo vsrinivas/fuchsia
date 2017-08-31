@@ -9,17 +9,23 @@
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
+static void* page_addr(void* base, size_t page) {
+    uintptr_t addr = reinterpret_cast<uintptr_t>(base);
+    addr += PAGE_SIZE * page;
+    return reinterpret_cast<void*>(addr);
+}
+
 static void hexdump_result(void* actual, void* expected) {
     printf("\nactual:\n");
-    hexdump_ex(actual + PAGE_SIZE * 0, 16, PAGE_SIZE * 0);
-    hexdump_ex(actual + PAGE_SIZE * 1, 16, PAGE_SIZE * 1);
-    hexdump_ex(actual + PAGE_SIZE * 2, 16, PAGE_SIZE * 2);
-    hexdump_ex(actual + PAGE_SIZE * 3, 32, PAGE_SIZE * 3);
+    hexdump_ex(page_addr(actual, 0), 16, PAGE_SIZE * 0);
+    hexdump_ex(page_addr(actual, 1), 16, PAGE_SIZE * 1);
+    hexdump_ex(page_addr(actual, 2), 16, PAGE_SIZE * 2);
+    hexdump_ex(page_addr(actual, 3), 32, PAGE_SIZE * 3);
     printf("expected:\n");
-    hexdump_ex(expected + PAGE_SIZE * 0, 16, PAGE_SIZE * 0);
-    hexdump_ex(expected + PAGE_SIZE * 1, 16, PAGE_SIZE * 1);
-    hexdump_ex(expected + PAGE_SIZE * 2, 16, PAGE_SIZE * 2);
-    hexdump_ex(expected + PAGE_SIZE * 3, 32, PAGE_SIZE * 3);
+    hexdump_ex(page_addr(expected, 0), 16, PAGE_SIZE * 0);
+    hexdump_ex(page_addr(expected, 1), 16, PAGE_SIZE * 1);
+    hexdump_ex(page_addr(expected, 2), 16, PAGE_SIZE * 2);
+    hexdump_ex(page_addr(expected, 3), 32, PAGE_SIZE * 3);
 }
 
 #define ASSERT_EPT_EQ(actual, expected, size, msg)            \

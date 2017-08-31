@@ -16,9 +16,8 @@
 #define EXPECTED_INT    43u
 
 static void stub_io_apic(io_apic_t* io_apic) {
-    static local_apic_t local_apic = {
-        .vcpu = MX_HANDLE_INVALID
-    };
+    static local_apic_t local_apic = {};
+    local_apic.vcpu = MX_HANDLE_INVALID;
     io_apic_init(io_apic);
     io_apic->local_apic[0] = &local_apic;
 }
@@ -26,10 +25,9 @@ static void stub_io_apic(io_apic_t* io_apic) {
 static bool read_iir(void) {
     BEGIN_TEST;
     {
-        uart_t uart = {
-            // If interrupt id is thr, it should be cleared to none
-            .interrupt_id = UART_INTERRUPT_ID_THR_EMPTY
-        };
+        uart_t uart = {};
+        // If interrupt id is thr, it should be cleared to none
+        uart.interrupt_id = UART_INTERRUPT_ID_THR_EMPTY;
         mx_vcpu_io_t vcpu_io;
 
         mx_status_t status = uart_read(&uart, UART_INTERRUPT_ID_PORT, &vcpu_io);
@@ -39,10 +37,9 @@ static bool read_iir(void) {
         ASSERT_EQ(uart.interrupt_id, UART_INTERRUPT_ID_NONE, "");
     }
     {
-        uart_t uart = {
-            // If interrupt id is not thr, it should be left alone.
-            .interrupt_id = UART_INTERRUPT_ID_RDA
-        };
+        uart_t uart = {};
+        // If interrupt id is not thr, it should be left alone.
+        uart.interrupt_id = UART_INTERRUPT_ID_RDA;
         mx_vcpu_io_t vcpu_io;
 
         mx_status_t status = uart_read(&uart, UART_INTERRUPT_ID_PORT, &vcpu_io);
@@ -68,11 +65,10 @@ static bool write_ier(void) {
         stub_io_apic(&io_apic);
         uart_init(&uart, &io_apic);
 
-        mx_packet_guest_io_t guest_io = {
-            .port = UART_INTERRUPT_ENABLE_PORT,
-            .access_size = 1,
-            .u8 = UART_INTERRUPT_ENABLE_RDA
-        };
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
+        guest_io.access_size = 1;
+        guest_io.u8 = UART_INTERRUPT_ENABLE_RDA;
 
         mx_status_t status = uart_write(&uart, &guest_io);
         ASSERT_EQ(status, MX_OK, "");
@@ -85,12 +81,11 @@ static bool write_ier(void) {
         stub_io_apic(&io_apic);
         uart_init(&uart, &io_apic);
 
-        mx_packet_guest_io_t guest_io = {
-            .port = UART_INTERRUPT_ENABLE_PORT,
-            .access_size = 1,
-            // THR enable should trigger a THR interrupt
-            .u8 = UART_INTERRUPT_ENABLE_THR_EMPTY
-        };
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
+        guest_io.access_size = 1;
+        // THR enable should trigger a THR interrupt
+        guest_io.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
 
         mx_status_t status = uart_write(&uart, &guest_io);
         ASSERT_EQ(status, MX_OK, "");
@@ -105,12 +100,11 @@ static bool write_ier(void) {
         uart_init(&uart, &io_apic);
         uart.raise_interrupt = dummy_raise_interrupt;
 
-        mx_packet_guest_io_t guest_io = {
-            .port = UART_INTERRUPT_ENABLE_PORT,
-            .access_size = 1,
-            // THR enable should trigger a THR interrupt
-            .u8 = UART_INTERRUPT_ENABLE_THR_EMPTY
-        };
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
+        guest_io.access_size = 1;
+        // THR enable should trigger a THR interrupt
+        guest_io.u8 = UART_INTERRUPT_ENABLE_THR_EMPTY;
 
         mx_status_t status = uart_write(&uart, &guest_io);
         ASSERT_EQ(status, MX_OK, "");
@@ -132,11 +126,12 @@ static bool write_thr(void) {
         // If this was responding to a THR empty interrupt, IIR should be reset
         // on THR write.
         uart.interrupt_id = UART_INTERRUPT_ID_THR_EMPTY;
-        mx_packet_guest_io_t guest_io = {
-            .port = UART_RECEIVE_PORT,
-            .access_size = 3,
-            .data = {0x75, 0x61, 0x0d},
-        };
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_RECEIVE_PORT;
+        guest_io.access_size = 3;
+        guest_io.data[0] = 0x75;
+        guest_io.data[1] = 0x61;
+        guest_io.data[2] = 0x0d;
 
         mx_status_t status = uart_write(&uart, &guest_io);
         ASSERT_EQ(status, MX_OK, "");
@@ -152,11 +147,12 @@ static bool write_thr(void) {
         // If THR empty interrupts are enabled, an interrupt should be raised.
         uart.interrupt_enable = UART_INTERRUPT_ENABLE_THR_EMPTY;
         uart.interrupt_id = UART_INTERRUPT_ID_NONE;
-        mx_packet_guest_io_t guest_io = {
-            .port = UART_RECEIVE_PORT,
-            .access_size = 3,
-            .data = {0x72, 0x74, 0x0d},
-        };
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_RECEIVE_PORT;
+        guest_io.access_size = 3;
+        guest_io.data[0] = 0x72;
+        guest_io.data[1] = 0x74;
+        guest_io.data[2] = 0x0d;
 
         mx_status_t status = uart_write(&uart, &guest_io);
         ASSERT_EQ(status, MX_OK, "");
