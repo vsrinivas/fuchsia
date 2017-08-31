@@ -7,7 +7,7 @@
 #include <cstdio>
 
 // TODO(tkilbourn): use standard logging infrastructure
-namespace rt5370 {
+namespace ralink {
 constexpr int kLogError = 0;
 constexpr int kLogWarning = 1;
 constexpr int kLogInfo = 2;
@@ -18,7 +18,7 @@ constexpr int kLogLevel = kLogInfo;
 
 #define logf(level, level_prefix, args...) do { \
     if (kLogLevel >= level) { \
-        std::printf("rt5370: " level_prefix args); \
+        std::printf("ralink: " level_prefix args); \
     } \
 } while (false)
 
@@ -27,4 +27,4 @@ constexpr int kLogLevel = kLogInfo;
 #define infof(args...) logf(kLogInfo, "[I] ", args)
 #define debugf(args...) logf(kLogDebug, "[D] ", args)
 #define debugfn() debugf("%s\n", __func__)
-}  // namespace rt5370
+}  // namespace ralink

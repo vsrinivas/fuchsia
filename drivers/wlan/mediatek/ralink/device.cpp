@@ -4,7 +4,7 @@
 
 #include "device.h"
 #include "logging.h"
-#include "rt5370.h"
+#include "ralink.h"
 
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlan.h>
@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <cstdio>
 
-#define RT5370_DUMP_EEPROM 0
-#define RT5370_DUMP_RX 0
+#define RALINK_DUMP_EEPROM 0
+#define RALINK_DUMP_RX 0
 
 #define CHECK_REG(reg, op, status) \
     do { \
@@ -56,11 +56,11 @@ constexpr T abs(T t) {
 
 uint16_t extract_tx_power(int hw_index, uint16_t txpower) {
     uint16_t val = (hw_index % 2) ? (txpower >> 8) & 0xff : txpower & 0xff;
-    return mxtl::clamp(val, rt5370::kMinTxPower, rt5370::kMaxTxPower);
+    return mxtl::clamp(val, ralink::kMinTxPower, ralink::kMaxTxPower);
 }
 }  // namespace
 
-namespace rt5370 {
+namespace ralink {
 
 constexpr mx_duration_t Device::kDefaultBusyWait;
 
@@ -193,7 +193,7 @@ mx_status_t Device::Bind() {
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
-    status = DdkAdd("rt5370");
+    status = DdkAdd("ralink");
     if (status != MX_OK) {
         errorf("could not add device err=%d\n", status);
     } else {
@@ -245,7 +245,7 @@ mx_status_t Device::ReadEeprom() {
         status = BusyWait(&ec, [&ec]() { return !ec.efsrom_kick(); });
         if (status != MX_OK) {
             if (status == MX_ERR_TIMED_OUT) {
-                errorf("rt5370 busy wait for EFUSE_CTRL failed\n");
+                errorf("ralink busy wait for EFUSE_CTRL failed\n");
             }
             return status;
         }
@@ -278,8 +278,8 @@ mx_status_t Device::ReadEeprom() {
         eeprom_[i+7] = htole32(rd3.val()) >> 16;
     }
 
-#if RT5370_DUMP_EEPROM
-    std::printf("rt5370: eeprom dump");
+#if RALINK_DUMP_EEPROM
+    std::printf("ralink: eeprom dump");
     for (size_t i = 0; i < eeprom_.size(); i++) {
         if (i % 8 == 0) {
             std::printf("\n0x%04zx: ", i);
@@ -400,7 +400,7 @@ mx_status_t Device::LoadFirmware() {
     }
     infof("FW version %u.%u\n", fwversion[0], fwversion[1]);
     // Linux rt2x00 driver has more intricate size checking for different
-    // chipsets. We just care that it's 8kB for the rt5370.
+    // chipsets. We just care that it's 8kB for ralink.
     if (fw_size != 8192) {
         errorf("FW: bad length (%zu)\n", fw_size);
         return MX_ERR_BAD_STATE;
@@ -438,8 +438,7 @@ mx_status_t Device::LoadFirmware() {
     }
     debugf("autorun not enabled\n");
 
-    // Send the firmware to the chip
-    // For rt5370, start at offset 4096 and send 4096 bytes
+    // Send the firmware to the chip. Start at offset 4096 and send 4096 bytes
     size_t offset = 4096;
     size_t remaining = fw_size - offset;
     uint8_t buf[64];
@@ -2009,7 +2008,7 @@ mx_status_t Device::BusyWait(R* reg, Predicate pred, mx_duration_t delay) {
 
 static void dump_rx(iotxn_t* request, RxInfo rx_info, RxDesc rx_desc,
         Rxwi0 rxwi0, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 rxwi3) {
-#if RT5370_DUMP_RX
+#if RALINK_DUMP_RX
     uint8_t* data;
     iotxn_mmap(request, reinterpret_cast<void**>(&data));
     debugf("dumping received packet\n");
@@ -2431,4 +2430,4 @@ void Device::WriteIotxnComplete(iotxn_t* request, void* cookie) {
     dev->HandleTxComplete(request);
 }
 
-}  // namespace rt5370
+}  // namespace ralink

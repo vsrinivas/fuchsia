@@ -6,7 +6,7 @@
 
 #include "register.h"
 
-namespace rt5370 {
+namespace ralink {
 
 enum UsbVendorRequest : uint8_t {
     kDeviceMode = 1,
@@ -988,4 +988,4 @@ struct TxPacket {
     uint8_t payload[];
 } __PACKED;
 
-}  // namespace rt5370
+}  // namespace ralink

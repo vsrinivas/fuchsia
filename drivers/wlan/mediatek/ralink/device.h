@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace rt5370 {
+namespace ralink {
 
 template <uint16_t A> class Register;
 template <uint8_t A> class BbpRegister;
@@ -149,4 +149,4 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     std::vector<iotxn_t*> free_write_reqs_ __TA_GUARDED(lock_);
 };
 
-}  // namespace rt5370
+}  // namespace ralink

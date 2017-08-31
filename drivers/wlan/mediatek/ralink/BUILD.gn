@@ -5,8 +5,8 @@
 import("//build/config/fuchsia/rules.gni")
 import("//packages/package.gni")
 
-driver_module("rt5370_driver") {
-  output_name = "rt5370"
+driver_module("ralink_driver") {
+  output_name = "ralink"
 
   sources = [
     "binding.c",
@@ -14,7 +14,7 @@ driver_module("rt5370_driver") {
     "device.h",
     "driver.cpp",
     "register.h",
-    "rt5370.h",
+    "ralink.h",
   ]
 
   defines = [ "MX_DEBUGLEVEL=2" ]
@@ -33,7 +33,7 @@ driver_module("rt5370_driver") {
   ]
 }
 
-copy("rt5370-firmware") {
+copy("ralink-firmware") {
   sources = [
     "firmware/rt2870.bin",
   ]
@@ -42,18 +42,18 @@ copy("rt5370-firmware") {
   ]
 }
 
-package("rt5370") {
+package("ralink") {
   deps = [
-    ":rt5370_driver",
+    ":ralink_driver",
 
     # The copy step has to be in the shared-library toolchain to use the
     # expected output directory, since we treat firmware blobs as if they
     # were libraries which always use the shared-library toolchain to build.
-    ":rt5370-firmware($shlib_toolchain)",
+    ":ralink-firmware($shlib_toolchain)",
   ]
 
   drivers = [ {
-        name = "rt5370.so"
+        name = "ralink.so"
       } ]
 
   libraries = [ {

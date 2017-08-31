@@ -7,7 +7,7 @@
 #include <drivers/wifi/common/bitfield.h>
 #include <type_traits>
 
-namespace rt5370 {
+namespace ralink {
 
 using wlan::common::BitField;
 using wlan::common::AddressableBitField;
@@ -39,4 +39,4 @@ class RfcsrRegister : public AddressableBitField<uint8_t, uint8_t, A> {
     constexpr RfcsrRegister() = default;
 };
 
-}  // namespace rt5370
+}  // namespace ralink

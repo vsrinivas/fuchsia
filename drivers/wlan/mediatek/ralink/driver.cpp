@@ -13,8 +13,9 @@
 #include <vector>
 
 #include "device.h"
+#include "logging.h"
 
-extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie) {
+extern "C" mx_status_t ralink_bind(void* ctx, mx_device_t* device, void** cookie) {
     std::printf("%s\n", __func__);
 
     usb_protocol_t usb;
@@ -52,7 +53,7 @@ extern "C" mx_status_t rt5370_bind(void* ctx, mx_device_t* device, void** cookie
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    auto rtdev = new rt5370::Device(device, &usb, blkin_endpt, std::move(blkout_endpts));
+    auto rtdev = new ralink::Device(device, &usb, blkin_endpt, std::move(blkout_endpts));
     auto f = std::async(std::launch::async, [rtdev]() {
                 auto status = rtdev->Bind();
                 if (status != MX_OK) {
