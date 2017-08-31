@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "apps/fonts/services/font_provider.fidl.h"
+#include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/ftl/macros.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/rapidjson.h"

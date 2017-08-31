@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "application/lib/app/application_context.h"
-#include "apps/fonts/font_provider_impl.h"
+#include "garnet/bin/fonts/font_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

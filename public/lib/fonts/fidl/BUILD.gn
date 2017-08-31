@@ -4,7 +4,7 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("services") {
+fidl("fidl") {
   sources = [
     "font_provider.fidl",
   ]

@@ -36,12 +36,11 @@ function download_file_if_needed() {
 function download_tarball() {
   local name="${1}"
   local base_url="${2}"
-  local untar_dir="${3}"
+  local untar_dir="${SCRIPT_ROOT}/${3}"
   local extension="${4}"
-  local base_path="${SCRIPT_ROOT}/${untar_dir}"
-  local tar_path="${base_path}.${extension}"
+  local tar_path="${untar_dir}.${extension}"
 
-  download_file_if_needed "${name}" "${base_path}" "${extension}"
+  download_file_if_needed "${name}" "${untar_dir}" "${extension}"
   case "x${extension}" in
     xtar*) local extract_cmd="tar xf" ;;
     xzip) local extract_cmd="unzip" ;;

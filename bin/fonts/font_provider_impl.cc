@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/fonts/font_provider_impl.h"
+#include "garnet/bin/fonts/font_provider_impl.h"
 
 #include <string.h>
 

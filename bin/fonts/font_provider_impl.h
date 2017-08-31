@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/fonts/font_family.h"
-#include "apps/fonts/services/font_provider.fidl.h"
+#include "garnet/bin/fonts/font_family.h"
+#include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 
