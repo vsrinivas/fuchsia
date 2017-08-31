@@ -55,8 +55,8 @@ executable("user_runner") {
     "//apps/modular/src/story_runner",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace:provider",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -75,8 +75,8 @@ executable("dev_user_shell") {
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -98,8 +98,8 @@ source_set("focus") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/user:focus",
     "//apps/modular/services/user:private",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

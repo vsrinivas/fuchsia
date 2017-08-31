@@ -9,7 +9,7 @@ source_set("filesystem") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -21,7 +21,7 @@ source_set("util") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -34,7 +34,7 @@ source_set("unittests") {
 
   deps = [
     ":util",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
   ]
 }

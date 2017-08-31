@@ -25,8 +25,8 @@ executable("test_link_data") {
     "//apps/modular/services/user",
     "//apps/mozart/services/views",
     "//apps/test_runner/services:test_runner",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

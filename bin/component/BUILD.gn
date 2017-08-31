@@ -23,7 +23,7 @@ source_set("component") {
     "//apps/modular/lib/ledger:storage",
     "//apps/modular/services/component",
     "//apps/modular/src/agent_runner:public",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

@@ -39,7 +39,7 @@ executable("device_runner") {
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace:provider",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -67,7 +67,7 @@ source_set("lib") {
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace:provider",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -81,7 +81,7 @@ executable("device_runner_monitor") {
     "//application/lib/app",
     "//application/services",
     "//apps/modular/services/device",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -96,7 +96,7 @@ executable("dev_device_shell") {
     "//apps/modular/lib/testing",
     "//apps/modular/services/device",
     "//apps/mozart/services/views",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -112,7 +112,7 @@ source_set("unittests") {
     ":lib",
     "//application/lib/app",
     "//apps/modular/lib/testing:test_with_message_loop",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]

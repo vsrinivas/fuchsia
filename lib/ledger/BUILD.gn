@@ -18,7 +18,7 @@ source_set("operations") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:json_xdr",
     "//apps/modular/lib/fidl:operation",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -32,8 +32,8 @@ source_set("page_client") {
   deps = [
     "//apps/ledger/services/public",
     "//apps/modular/lib/fidl:array_to_string",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -48,8 +48,8 @@ source_set("storage") {
     "//apps/modular/lib/util",
     "//apps/modular/services/module:module_data",
     "//apps/modular/services/story:private",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -62,7 +62,7 @@ source_set("unittests") {
 
   deps = [
     ":storage",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]

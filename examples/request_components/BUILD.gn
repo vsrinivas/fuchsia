@@ -6,7 +6,7 @@ executable("request_components") {
   deps = [
     "//application/lib/app",
     "//apps/modular/services/component",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 

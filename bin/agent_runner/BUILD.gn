@@ -31,8 +31,8 @@ source_set("agent_runner") {
     "//apps/modular/services/component",
     "//apps/modular/services/lifecycle",
     "//apps/modular/src/component",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -58,7 +58,7 @@ source_set("unittests") {
     "//apps/modular/services/agent",
     "//apps/modular/services/auth",
     "//apps/modular/src/component",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]
@@ -81,7 +81,7 @@ source_set("public") {
     "//apps/modular/services/agent",
     "//apps/modular/services/agent/agent_controller",
     "//apps/modular/services/auth",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 }

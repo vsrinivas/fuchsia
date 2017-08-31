@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/fidl.gni")
 
 group("controller") {
   deps = [
@@ -23,7 +23,7 @@ executable("suggest_shell_controller") {
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

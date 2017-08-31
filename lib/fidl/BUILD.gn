@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/fidl.gni")
 
 source_set("app_client") {
   sources = [
@@ -17,8 +17,8 @@ source_set("app_client") {
   deps = [
     "//apps/modular/services/config",
     "//apps/modular/services/lifecycle",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -29,7 +29,7 @@ source_set("array_to_string") {
   ]
 
   deps = [
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
 
@@ -46,7 +46,7 @@ source_set("context") {
   ]
 
   public_deps = [
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
 
@@ -62,7 +62,7 @@ source_set("json_xdr") {
     "//apps/modular/lib/rapidjson",
   ]
   deps = [
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
 
@@ -74,7 +74,7 @@ source_set("operation") {
 
   deps = [
     "//apps/tracing/lib/trace:provider",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -85,8 +85,8 @@ source_set("proxy") {
   ]
 
   deps = [
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -101,8 +101,8 @@ source_set("scope") {
   ]
 
   deps = [
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -116,8 +116,8 @@ source_set("single_service_app") {
     "//application/services",
     "//apps/modular/services/lifecycle",
     "//apps/mozart/services/views",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -134,7 +134,7 @@ source_set("view_host") {
   deps = [
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -147,7 +147,7 @@ source_set("message_receiver_client") {
 
   deps = [
     "//apps/modular/services/component",
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 }
 
@@ -171,7 +171,7 @@ source_set("unittests") {
     ":unittest_fidl",
     "//application/lib/app",
     "//apps/modular/lib/testing:test_with_message_loop",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]

@@ -12,8 +12,8 @@ executable("todo_cpp") {
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 

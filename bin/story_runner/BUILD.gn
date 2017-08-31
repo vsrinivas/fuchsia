@@ -57,8 +57,8 @@ source_set("story_runner") {
     "//apps/modular/src/component",
     "//apps/modular/src/user_runner:focus",
     "//apps/mozart/services/views",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -73,7 +73,7 @@ executable("dev_story_shell") {
     "//apps/modular/lib/fidl:view_host",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
