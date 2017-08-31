@@ -23,8 +23,8 @@ executable("root_presenter") {
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/input_reader",
     "//apps/tracing/lib/trace:provider",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
   libs = [ "hid" ]

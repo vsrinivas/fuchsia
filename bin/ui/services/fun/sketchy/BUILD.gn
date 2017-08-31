@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/fidl/fidl.gni")
+import("//garnet/public/lib/fidl/fidl.gni")
 
 fidl("sketchy") {
   sources = [
@@ -14,7 +14,7 @@ fidl("sketchy") {
 
   public_deps = [
     "//apps/mozart/services/images",
-    "//apps/mozart/services/scene",
     "//apps/mozart/services/presentation:presentation_info",
+    "//apps/mozart/services/scene",
   ]
 }

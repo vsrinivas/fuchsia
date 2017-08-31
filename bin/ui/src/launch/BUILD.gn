@@ -11,7 +11,7 @@ executable("launch") {
     "//application/lib/app",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

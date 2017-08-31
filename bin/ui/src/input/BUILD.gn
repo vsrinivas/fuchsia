@@ -11,7 +11,7 @@ executable("input") {
     "//application/lib/app",
     "//apps/mozart/services/input",
     "//apps/mozart/services/input/cpp",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 

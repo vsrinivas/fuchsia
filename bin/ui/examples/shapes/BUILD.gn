@@ -16,8 +16,8 @@ executable("shapes") {
     "//apps/mozart/lib/view_framework:view_provider",
     "//apps/mozart/services/scene",
     "//apps/mozart/services/views",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

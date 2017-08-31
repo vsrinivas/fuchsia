@@ -12,7 +12,7 @@ source_set("input") {
 
   deps = [
     "//apps/mozart/services/input",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 

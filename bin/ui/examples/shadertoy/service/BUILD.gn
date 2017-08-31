@@ -33,14 +33,14 @@ executable("service") {
   deps = [
     "services",
     "//application/lib/app",
-    "//apps/mozart/services/scene",
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/scene",
+    "//apps/mozart/services/scene",
     "//apps/tracing/lib/trace:provider",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
     "//lib/mtl",
     "//magma:vulkan",
   ]

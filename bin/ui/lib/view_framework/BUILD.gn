@@ -17,8 +17,8 @@ source_set("view_framework") {
     "//apps/mozart/services/scene",
     "//apps/mozart/services/views",
     "//apps/tracing/lib/trace",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 }
 

@@ -11,6 +11,6 @@ source_set("cpp") {
   public_deps = [
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/views",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }

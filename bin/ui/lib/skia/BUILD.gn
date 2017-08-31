@@ -22,7 +22,7 @@ source_set("fonts") {
     ":type_converters",
     ":vmo",
     "//apps/fonts/services",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/skia",
   ]
 }
@@ -50,7 +50,7 @@ source_set("vmo") {
   ]
 
   public_deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",

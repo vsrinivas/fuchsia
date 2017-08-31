@@ -49,8 +49,8 @@ source_set("lib") {
     "//apps/mozart/src/view_manager/input",
     "//apps/mozart/src/view_manager/internal",
     "//apps/tracing/lib/trace:provider",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

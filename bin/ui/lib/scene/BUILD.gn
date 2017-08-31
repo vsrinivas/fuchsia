@@ -40,23 +40,23 @@ source_set("client") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 
 source_set("skia") {
   sources = [
-    "skia/image_info.cc",
-    "skia/image_info.h",
     "skia/host_canvas_cycler.cc",
     "skia/host_canvas_cycler.h",
     "skia/host_surfaces.cc",
     "skia/host_surfaces.h",
+    "skia/image_info.cc",
+    "skia/image_info.h",
   ]
 
   public_deps = [
     ":client",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/skia",
   ]
 }

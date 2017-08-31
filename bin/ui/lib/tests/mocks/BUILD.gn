@@ -20,8 +20,8 @@ source_set("mocks") {
 
   deps = [
     "//apps/mozart/src/view_manager:lib",
-    "//lib/fidl/cpp/bindings",
-    "//lib/fidl/cpp/bindings:bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",
   ]
 }

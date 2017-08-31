@@ -18,8 +18,8 @@ source_set("input") {
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/view_manager/internal",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

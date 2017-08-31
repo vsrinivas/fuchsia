@@ -26,8 +26,8 @@ executable("view_manager_apptests") {
     "//apps/mozart/src/tests:main",
     "//apps/mozart/src/view_manager:lib",
     "//apps/mozart/src/view_manager/input",
-    "//lib/fidl/cpp/bindings",
-    "//lib/fidl/cpp/bindings:bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",
   ]
 }

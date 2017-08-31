@@ -140,10 +140,10 @@ source_set("common") {
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/scene",
     "//apps/tracing/lib/trace:provider",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
     "//lib/mtl",
   ]
 

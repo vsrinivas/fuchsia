@@ -24,8 +24,8 @@ executable("input_apptests") {
     "//apps/mozart/lib/tests/mocks",
     "//apps/mozart/services/input",
     "//apps/mozart/src/tests:main",
-    "//lib/fidl/cpp/bindings",
-    "//lib/fidl/cpp/bindings:bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings:bindings",
     "//third_party/gtest",
   ]
 }

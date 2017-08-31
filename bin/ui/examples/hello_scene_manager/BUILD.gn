@@ -17,9 +17,9 @@ executable("hello_scene_manager") {
     "//apps/mozart/lib/scene:session_helpers",
     "//apps/mozart/services/scene",
     "//apps/mozart/src/scene_manager/tests:util",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/escher/escher",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
     "//lib/mtl",
   ]
 

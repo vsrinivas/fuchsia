@@ -35,7 +35,7 @@ source_set("util") {
     "util.h",
   ]
   public_deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
