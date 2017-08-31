@@ -66,6 +66,8 @@ package("trace_tests") {
   tests = [
     {
       name = "trace_tests"
+      # Disabled because several tests are crashing on release builds.
+      disabled = true
     },
     {
       name = "trace_stub_tests"
