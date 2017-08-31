@@ -14,8 +14,7 @@ App::App()
       session_(std::make_unique<mozart::client::Session>(scene_manager_.get())),
       canvas_(std::make_unique<Canvas>(context_.get())) {
   session_->set_connection_error_handler([this] {
-    FTL_LOG(INFO)
-        << "sketchy_example: lost connection to scenic::Session.";
+    FTL_LOG(INFO) << "sketchy_example: lost connection to scenic::Session.";
     loop_->QuitNow();
   });
   scene_manager_.set_connection_error_handler([this] {
@@ -29,10 +28,8 @@ App::App()
 }
 
 void App::Init(mozart2::DisplayInfoPtr display_info) {
-  scene_ = std::make_unique<Scene>(
-      session_.get(),
-      display_info->physical_width,
-      display_info->physical_height);
+  scene_ = std::make_unique<Scene>(session_.get(), display_info->physical_width,
+                                   display_info->physical_height);
 
   ImportNode node(canvas_.get(), scene_->stroke_group_holder());
   Stroke stroke(canvas_.get());
@@ -42,7 +39,7 @@ void App::Init(mozart2::DisplayInfoPtr display_info) {
 
   uint64_t time = mx_time_get(MX_CLOCK_MONOTONIC);
   canvas_->Present(time);
-  session_->Present(time, [](mozart2::PresentationInfoPtr info){});
+  session_->Present(time, [](mozart2::PresentationInfoPtr info) {});
 }
 
 }  // namespace sketchy_example

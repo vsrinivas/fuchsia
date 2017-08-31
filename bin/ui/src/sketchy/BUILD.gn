@@ -8,6 +8,8 @@ executable("sketchy") {
   sources = [
     "app.cc",
     "app.h",
+    "buffer.cc",
+    "buffer.h",
     "canvas.cc",
     "canvas.h",
     "main.cc",
@@ -17,6 +19,8 @@ executable("sketchy") {
     "resources/resource.h",
     "resources/resource_map.cc",
     "resources/resource_map.h",
+    "resources/stroke_group.cc",
+    "resources/stroke_group.h",
     "resources/types.h",
   ]
 

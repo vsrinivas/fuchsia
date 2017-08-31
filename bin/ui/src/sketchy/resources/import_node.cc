@@ -4,18 +4,21 @@
 
 #include "apps/mozart/src/sketchy/resources/import_node.h"
 
+#include "apps/mozart/src/sketchy/resources/stroke_group.h"
+
 namespace sketchy_service {
 
-const ResourceTypeInfo ImportNode::kTypeInfo(
-    "ImportNode", ResourceType::kImportNode, ResourceType::kResource);
+const ResourceTypeInfo ImportNode::kTypeInfo("ImportNode",
+                                             ResourceType::kImportNode,
+                                             ResourceType::kResource);
 
 ImportNode::ImportNode(mozart::client::Session* session, mx::eventpair token)
     : node_(session) {
   node_.Bind(std::move(token));
 }
 
-void ImportNode::AddChild(const mozart::client::Node& child) {
-  node_.AddChild(child);
+void ImportNode::AddChild(const StrokeGroupPtr& stroke_group) {
+  node_.AddChild(stroke_group->shape_node());
 }
 
 }  // namespace sketchy_service

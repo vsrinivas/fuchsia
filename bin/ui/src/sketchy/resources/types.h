@@ -14,6 +14,7 @@ using ResourceId = uint32_t;
 enum class ResourceType {
   kResource = 1 << 0,
   kImportNode = 1 << 1,
+  kStrokeGroup = 1 << 2,
 };
 
 typedef escher::TypeInfo<ResourceType> ResourceTypeInfo;

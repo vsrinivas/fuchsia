@@ -4,18 +4,17 @@
 
 #include "apps/mozart/src/sketchy/canvas.h"
 #include "apps/mozart/src/sketchy/resources/import_node.h"
+#include "apps/mozart/src/sketchy/resources/stroke_group.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace sketchy_service {
 
 using namespace sketchy;
 
-CanvasImpl::CanvasImpl(mozart::client::Session* session,
-                       escher::Escher *escher)
-    : session_(session) {}
+CanvasImpl::CanvasImpl(mozart::client::Session* session, escher::Escher* escher)
+    : session_(session), buffer_factory_(escher) {}
 
-void CanvasImpl::Init(
-    ::fidl::InterfaceHandle<CanvasListener> listener) {
+void CanvasImpl::Init(::fidl::InterfaceHandle<CanvasListener> listener) {
   // TODO(MZ-269): unimplemented.
   FTL_LOG(ERROR) << "Init: unimplemented.";
 }
@@ -54,7 +53,7 @@ bool CanvasImpl::ApplyOp(const OpPtr& op) {
       return ApplyScenicAddChildOp(op->get_scenic_add_child());
     default:
       FTL_DCHECK(false) << "Unsupported op: "
-          << static_cast<uint32_t>(op->which());
+                        << static_cast<uint32_t>(op->which());
       return false;
   }
 }
@@ -63,14 +62,15 @@ bool CanvasImpl::ApplyCreateResourceOp(
     const CreateResourceOpPtr& create_resource) {
   switch (create_resource->args->which()) {
     case ResourceArgs::Tag::STROKE:
-      return CreateStroke(
-          create_resource->id, create_resource->args->get_stroke());
+      return CreateStroke(create_resource->id,
+                          create_resource->args->get_stroke());
     case ResourceArgs::Tag::STROKE_GROUP:
-      return CreateStrokeGroup(
-          create_resource->id, create_resource->args->get_stroke_group());
+      return CreateStrokeGroup(create_resource->id,
+                               create_resource->args->get_stroke_group());
     default:
       FTL_DCHECK(false) << "Unsupported resource: "
-          << static_cast<uint32_t>(create_resource->args->which());
+                        << static_cast<uint32_t>(
+                               create_resource->args->which());
       return false;
   }
 }
@@ -83,11 +83,10 @@ bool CanvasImpl::CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke) {
 }
 
 bool CanvasImpl::CreateStrokeGroup(
-    ResourceId id, const sketchy::StrokeGroupPtr& stroke_group) {
-  // TODO(MZ-269): unimplemented.
-  FTL_LOG(ERROR) << "CreateStrokeGroup: unimplemented.";
-  // This dummy true is for the client demo.
-  return true;
+    ResourceId id,
+    const sketchy::StrokeGroupPtr& stroke_group) {
+  return resource_map_.AddResource(
+      id, ftl::MakeRefCounted<StrokeGroup>(session_, &buffer_factory_));
 }
 
 bool CanvasImpl::ApplyReleaseResourceOp(const ReleaseResourceOpPtr& op) {
@@ -111,8 +110,8 @@ bool CanvasImpl::ApplyScenicImportResourceOp(
     const mozart2::ImportResourceOpPtr& import_resource) {
   switch (import_resource->spec) {
     case mozart2::ImportSpec::NODE:
-      return ScenicImportNode(
-          import_resource->id, std::move(import_resource->token));
+      return ScenicImportNode(import_resource->id,
+                              std::move(import_resource->token));
   }
 }
 
@@ -129,21 +128,14 @@ bool CanvasImpl::ScenicImportNode(ResourceId id, mx::eventpair token) {
 
 bool CanvasImpl::ApplyScenicAddChildOp(
     const mozart2::AddChildOpPtr& add_child) {
-  auto node = resource_map_.FindResource<ImportNode>(add_child->node_id);
+  auto import_node = resource_map_.FindResource<ImportNode>(add_child->node_id);
+  auto stroke_group =
+      resource_map_.FindResource<StrokeGroup>(add_child->child_id);
+  if (!import_node || !stroke_group) {
+    return false;
+  }
 
-  // TODO: Remove this. For now it will just add a hard-coded shape node
-  // regardless of the request.
-  mozart::client::Circle circle(session_, 200);
-  mozart::client::Material fuchsia_material(session_);
-  fuchsia_material.SetColor(255, 0, 255, 255);
-  mozart::client::ShapeNode child_node(session_);
-  child_node.SetShape(circle);
-  child_node.SetMaterial(fuchsia_material);
-  child_node.SetTranslation(200, 200, 0);
-  node->AddChild(child_node);
-
-  // TODO: Look up the resource for the child, and add the correct thing to
-  // the node.
+  import_node->AddChild(stroke_group);
   return true;
 }
 

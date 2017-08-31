@@ -4,13 +4,15 @@
 
 #pragma once
 
-#include "apps/mozart/src/sketchy/resources/resource.h"
 #include "apps/mozart/lib/scene/client/resources.h"
 #include "apps/mozart/lib/scene/client/session.h"
-#include "escher/base/typed_reffable.h"
+#include "apps/mozart/src/sketchy/resources/resource.h"
 #include "lib/ftl/memory/ref_counted.h"
 
 namespace sketchy_service {
+
+class StrokeGroup;
+using StrokeGroupPtr = ftl::RefPtr<StrokeGroup>;
 
 // Wrapper of mozart::client::ImportNode. To import a node, client should
 // export it as token, and this class takes that token, so that it functions
@@ -21,7 +23,7 @@ class ImportNode final : public Resource {
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
   ImportNode(mozart::client::Session* session, mx::eventpair token);
-  void AddChild(const mozart::client::Node& child);
+  void AddChild(const StrokeGroupPtr& stroke_group);
 
   // Resource ID shared with scene manager.
   uint32_t id() { return node_.id(); }

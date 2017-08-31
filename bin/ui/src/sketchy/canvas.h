@@ -6,11 +6,12 @@
 
 #include <unordered_map>
 
-#include "apps/mozart/src/sketchy/resources/resource_map.h"
-#include "apps/mozart/src/sketchy/resources/types.h"
 #include "apps/mozart/lib/scene/client/session.h"
 #include "apps/mozart/services/fun/sketchy/canvas.fidl.h"
+#include "apps/mozart/src/sketchy/resources/resource_map.h"
+#include "apps/mozart/src/sketchy/resources/types.h"
 #include "escher/escher.h"
+#include "escher/vk/buffer_factory.h"
 
 namespace sketchy_service {
 
@@ -21,8 +22,8 @@ class CanvasImpl final : public sketchy::Canvas {
   // |sketchy::Canvas|
   void Init(::fidl::InterfaceHandle<sketchy::CanvasListener> listener) override;
   void Enqueue(::fidl::Array<sketchy::OpPtr> ops) override;
-  void Present(
-      uint64_t presentation_time, const PresentCallback& callback) override;
+  void Present(uint64_t presentation_time,
+               const PresentCallback& callback) override;
 
  private:
   bool ApplyOp(const sketchy::OpPtr& op);
@@ -30,8 +31,8 @@ class CanvasImpl final : public sketchy::Canvas {
   bool ApplyCreateResourceOp(const sketchy::CreateResourceOpPtr& op);
   bool ApplyReleaseResourceOp(const sketchy::ReleaseResourceOpPtr& op);
   bool CreateStroke(ResourceId id, const sketchy::StrokePtr& stroke);
-  bool CreateStrokeGroup(
-      ResourceId id, const sketchy::StrokeGroupPtr& stroke_group);
+  bool CreateStrokeGroup(ResourceId id,
+                         const sketchy::StrokeGroupPtr& stroke_group);
 
   bool ApplyAddStrokeOp(const sketchy::AddStrokeOpPtr& op);
   bool ApplyRemoveStrokeOp(const sketchy::RemoveStrokeOpPtr& op);
@@ -50,7 +51,11 @@ class CanvasImpl final : public sketchy::Canvas {
 
   bool ApplyScenicAddChildOp(const mozart2::AddChildOpPtr& add_child);
 
-  mozart::client::Session* session_;
+  mozart::client::Session* const session_;
+  // TODO: use more sophisticated factory that suballocates from larger GPU
+  // memory allocations, and recycles buffers when they are no longer used.
+  escher::BufferFactory buffer_factory_;
+
   ::fidl::Array<sketchy::OpPtr> ops_;
   ResourceMap resource_map_;
 };
