@@ -13,11 +13,6 @@
 #include <magenta/hw/usb.h>
 
 typedef struct {
-    uint8_t index;
-    char string[];
-} usb_device_string_t;
-
-typedef struct {
     uint8_t interface_class;
     uint8_t interface_subclass;
     uint8_t interface_protocol;
@@ -27,7 +22,7 @@ typedef struct {
 #define IOCTL_USB_DEVICE_SET_DEVICE_DESC    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_DEVICE, 0)
 
 // Sets a string descriptor a string in the USB device descriptor
-#define IOCTL_USB_DEVICE_SET_STRING_DESC    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_DEVICE, 1)
+#define IOCTL_USB_DEVICE_ALLOC_STRING_DESC  IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_USB_DEVICE, 1)
 
 // Adds a new function to the USB current configuration
 // Must be called before IOCTL_USB_DEVICE_BIND_FUNCTIONS or after IOCTL_USB_DEVICE_CLEAR_FUNCTIONS
@@ -42,8 +37,8 @@ typedef struct {
 
 IOCTL_WRAPPER_IN(ioctl_usb_device_set_device_desc, IOCTL_USB_DEVICE_SET_DEVICE_DESC, \
                  usb_device_descriptor_t)
-IOCTL_WRAPPER_VARIN(ioctl_usb_device_set_string_desc, IOCTL_USB_DEVICE_SET_STRING_DESC, \
-                    usb_device_string_t)
+IOCTL_WRAPPER_VARIN_OUT(ioctl_usb_device_alloc_string_desc, IOCTL_USB_DEVICE_ALLOC_STRING_DESC, \
+                        char, uint8_t)
 IOCTL_WRAPPER_IN(ioctl_usb_device_add_function, IOCTL_USB_DEVICE_ADD_FUNCTION, \
                  usb_function_descriptor_t)
 IOCTL_WRAPPER(ioctl_usb_device_bind_functions, IOCTL_USB_DEVICE_BIND_FUNCTIONS)

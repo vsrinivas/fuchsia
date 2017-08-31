@@ -21,33 +21,10 @@
 #define GOOGLE_CDC_PID  0xA020
 #define GOOGLE_UMS_PID  0xA021
 
-enum {
-    MANUFACTURER_INDEX = 1,
-    PRODUCT_INDEX,
-    SERIAL_INDEX,
-};
-
-static const usb_device_string_t manufacturer_string = {
-    .index = MANUFACTURER_INDEX,
-    .string = "Magenta",
-};
-
-static const usb_device_string_t cdc_product_string = {
-    .index = PRODUCT_INDEX,
-    .string = " CDC Ethernet",
-};
-
-static const usb_device_string_t ums_product_string = {
-    .index = PRODUCT_INDEX,
-    .string = "USB Mass Storage",
-};
-
-static const usb_device_string_t serial_string = {
-    .index = SERIAL_INDEX,
-    .string = "12345678",
-};
-
-#define USB_STRLEN(s) (sizeof(usb_device_string_t) + strlen((s)->string) + 1)
+#define MANUFACTURER_STRING "Magenta"
+#define CDC_PRODUCT_STRING  "CDC Ethernet"
+#define UMS_PRODUCT_STRING  "USB Mass Storage"
+#define SERIAL_STRING       "12345678"
 
 const usb_function_descriptor_t cdc_function_desc = {
     .interface_class = USB_CLASS_COMM,
@@ -63,21 +40,21 @@ const usb_function_descriptor_t ums_function_desc = {
 
 typedef struct {
     const usb_function_descriptor_t* desc;
-    const usb_device_string_t* product_string;
+    const char* product_string;
     uint16_t vid;
     uint16_t pid;
 } usb_function_t;
 
 static const usb_function_t cdc_function = {
     .desc = &cdc_function_desc,
-    .product_string = &cdc_product_string,
+    .product_string = CDC_PRODUCT_STRING,
     .vid = GOOGLE_VID,
     .pid = GOOGLE_CDC_PID,
 };
 
 static const usb_function_t ums_function = {
     .desc = &ums_function_desc,
-    .product_string = &ums_product_string,
+    .product_string = UMS_PRODUCT_STRING,
     .vid = GOOGLE_VID,
     .pid = GOOGLE_UMS_PID,
 };
@@ -90,11 +67,9 @@ static usb_device_descriptor_t device_desc = {
     .bDeviceSubClass = 0,
     .bDeviceProtocol = 0,
     .bMaxPacketSize0 = 64,
-//    idVendor and idProduct filled in later
+//   idVendor and idProduct are filled in later
     .bcdDevice = htole16(0x0100),
-    .iManufacturer = MANUFACTURER_INDEX,
-    .iProduct = PRODUCT_INDEX,
-    .iSerialNumber = SERIAL_INDEX,
+//    iManufacturer, iProduct and iSerialNumber are filled in later
     .bNumConfigurations = 1,
 };
 
@@ -128,32 +103,35 @@ static mx_status_t device_init(int fd, const usb_function_t* function) {
     device_desc.idVendor = htole16(function->vid);
     device_desc.idProduct = htole16(function->pid);
 
+    // allocate string descriptors
+    mx_status_t status = ioctl_usb_device_alloc_string_desc(fd, MANUFACTURER_STRING,
+                                                            strlen(MANUFACTURER_STRING) + 1,
+                                                            &device_desc.iManufacturer);
+    if (status < 0) {
+        fprintf(stderr, "ioctl_usb_device_alloc_string_desc failed: %d\n", status);
+        return status;
+    }
+    status = ioctl_usb_device_alloc_string_desc(fd, function->product_string,
+                                                strlen(function->product_string) + 1,
+                                                &device_desc.iProduct);
+    if (status < 0) {
+        fprintf(stderr, "ioctl_usb_device_alloc_string_desc failed: %d\n", status);
+        return status;
+    }
+    status = ioctl_usb_device_alloc_string_desc(fd, SERIAL_STRING, strlen(SERIAL_STRING) + 1,
+                                                &device_desc.iSerialNumber);
+    if (status < 0) {
+        fprintf(stderr, "ioctl_usb_device_alloc_string_desc failed: %d\n", status);
+        return status;
+    }
+
     // set device descriptor
-    mx_status_t status = ioctl_usb_device_set_device_desc(fd, &device_desc);
+    status = ioctl_usb_device_set_device_desc(fd, &device_desc);
     if (status < 0) {
         fprintf(stderr, "ioctl_usb_device_set_device_desc failed: %d\n", status);
         return status;
     }
 
-    // set string descriptors
-    status = ioctl_usb_device_set_string_desc(fd, &manufacturer_string,
-                                              USB_STRLEN(&manufacturer_string));
-    if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_set_string_desc failed: %d\n", status);
-        return status;
-    }
-    status = ioctl_usb_device_set_string_desc(fd, function->product_string,
-                                              USB_STRLEN(function->product_string));
-    if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_set_string_desc failed: %d\n", status);
-        return status;
-    }
-    status = ioctl_usb_device_set_string_desc(fd, &serial_string,
-                                              USB_STRLEN(&serial_string));
-    if (status < 0) {
-        fprintf(stderr, "ioctl_usb_device_set_string_desc failed: %d\n", status);
-        return status;
-    }
 
     status = ioctl_usb_device_add_function(fd, function->desc);
     if (status < 0) {

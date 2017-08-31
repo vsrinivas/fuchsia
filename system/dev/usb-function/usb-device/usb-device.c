@@ -381,17 +381,30 @@ static mx_status_t usb_dev_set_device_desc(usb_device_t* dev, const void* in_buf
     return MX_OK;
 }
 
-static mx_status_t usb_dev_set_string_desc(usb_device_t* dev, const void* in_buf, size_t in_len) {
-printf("usb_dev_set_string_desc %zu\n", in_len);
-    if (in_len < sizeof(usb_device_string_t) + 1) {
+static mx_status_t usb_dev_alloc_string_desc(usb_device_t* dev, const void* in_buf, size_t in_len,
+                                             void* out_buf, size_t out_len, size_t* out_actual) {
+    if (in_len < 2 || out_len < sizeof(uint8_t)) {
         return MX_ERR_INVALID_ARGS;
     }
-    const usb_device_string_t* string = in_buf;
+    unsigned i;
+    for (i = 1; i < countof(dev->strings); i++) {
+        if (!dev->strings[i]) {
+            break;
+        }
+    }
+    if (i == countof(dev->strings)) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
     // make sure string is zero terminated
     *((char *)in_buf + in_len - 1) = 0;
-    free(dev->strings[string->index]);
-    dev->strings[string->index] = strdup(string->string);
-    return dev->strings[string->index] ? MX_OK : MX_ERR_NO_MEMORY;
+    dev->strings[i] = strdup((char *)in_buf);
+    if (!dev->strings[i]) {
+        return MX_ERR_NO_MEMORY;
+    }
+    *((uint8_t *)out_buf) = i;
+    *out_actual = sizeof(uint8_t);
+    return MX_OK;
 }
 
 static mx_status_t usb_dev_add_function(usb_device_t* dev, const void* in_buf, size_t in_len) {
@@ -487,6 +500,11 @@ static mx_status_t usb_dev_clear_functions(usb_device_t* dev) {
     dev->functions_bound = false;
     dev->function_count = 0;
     memset(dev->endpoint_map, 0, sizeof(dev->endpoint_map));
+    for (unsigned i = 0; i < countof(dev->strings); i++) {
+        free(dev->strings[i]);
+        dev->strings[i] = NULL;
+    }
+
     return MX_OK;
 }
 
@@ -498,8 +516,8 @@ static mx_status_t usb_dev_ioctl(void* ctx, uint32_t op, const void* in_buf, siz
     switch (op) {
     case IOCTL_USB_DEVICE_SET_DEVICE_DESC:
         return usb_dev_set_device_desc(dev, in_buf, in_len);
-    case IOCTL_USB_DEVICE_SET_STRING_DESC:
-        return usb_dev_set_string_desc(dev, in_buf, in_len);
+    case IOCTL_USB_DEVICE_ALLOC_STRING_DESC:
+        return usb_dev_alloc_string_desc(dev, in_buf, in_len, out_buf, out_len, out_actual);
     case IOCTL_USB_DEVICE_ADD_FUNCTION:
         return usb_dev_add_function(dev, in_buf, in_len);
     case IOCTL_USB_DEVICE_BIND_FUNCTIONS:
