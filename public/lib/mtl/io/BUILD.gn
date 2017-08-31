@@ -15,7 +15,7 @@ source_set("io") {
   libs = [ "magenta" ]
 
   public_deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl/tasks",
     "//magenta/system/ulib/mx",
   ]

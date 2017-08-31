@@ -17,6 +17,6 @@ source_set("threading") {
   ]
 
   public_deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }

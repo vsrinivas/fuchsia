@@ -20,7 +20,7 @@ source_set("tasks") {
     "magenta",
   ]
   public_deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl/handles",
     "//magenta/system/ulib/async:loop",
     "//magenta/system/ulib/mx",
