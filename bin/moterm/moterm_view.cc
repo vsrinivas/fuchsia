@@ -6,11 +6,11 @@
 
 #include <unistd.h>
 
-#include "apps/fonts/services/font_provider.fidl.h"
 #include "apps/moterm/command.h"
 #include "apps/moterm/key_util.h"
 #include "apps/moterm/moterm_model.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
+#include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
