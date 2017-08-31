@@ -18,10 +18,10 @@ import (
 type state interface {
 	run(*Client) (time.Duration, error)
 	commandIsDisabled() bool
-	handleCommand(r *commandRequest) (state, error)
+	handleCommand(*commandRequest, *Client) (state, error)
 	handleMLMEMsg(interface{}, *Client) (state, error)
 	handleMLMETimeout(*Client) (state, error)
-	needTimer() (bool, time.Duration)
+	needTimer(*Client) (bool, time.Duration)
 	timerExpired(*Client) (state, error)
 }
 
@@ -29,6 +29,7 @@ type Command int
 
 const (
 	CmdScan Command = iota
+	CmdSetScanConfig
 )
 
 const InfiniteTimeout = 0 * time.Second
@@ -39,30 +40,21 @@ const DefaultScanInterval = 5 * time.Second
 const ScanTimeout = 30 * time.Second
 
 type scanState struct {
-	scanInterval time.Duration
-	pause        bool
-	running      bool
-	cmdPending   *commandRequest
+	pause      bool
+	running    bool
+	cmdPending *commandRequest
 }
 
 var twoPointFourGhzChannels = []uint16{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 var broadcastBssid = [6]uint8{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 func newScanState(c *Client) *scanState {
-	scanInterval := time.Duration(0)
 	pause := true
-	if c.cfg != nil {
-		scanInterval = DefaultScanInterval
-		if c.cfg.ScanInterval > 0 {
-			scanInterval = time.Duration(c.cfg.ScanInterval) * time.Second
-		}
-		if c.cfg.SSID != "" {
-			// start periodic scan.
-			pause = false
-		}
+	if c.cfg != nil && c.cfg.SSID != "" {
+		// start periodic scan.
+		pause = false
 	}
-
-	return &scanState{scanInterval: scanInterval, pause: pause}
+	return &scanState{pause: pause}
 }
 
 func (s *scanState) String() string {
@@ -83,14 +75,19 @@ func newScanRequest(ssid string) *mlme.ScanRequest {
 
 func (s *scanState) run(c *Client) (time.Duration, error) {
 	var req *mlme.ScanRequest
+	timeout := ScanTimeout
 	if s.cmdPending != nil && s.cmdPending.id == CmdScan {
+		sr := s.cmdPending.arg.(*wlan_service.ScanRequest)
+		if sr.Timeout > 0 {
+			timeout = time.Duration(sr.Timeout) * time.Second
+		}
 		req = newScanRequest("")
 	} else if c.cfg != nil && c.cfg.SSID != "" && !s.pause {
 		req = newScanRequest(c.cfg.SSID)
 	}
 	if req != nil {
 		if debug {
-			log.Printf("scan req: %v timeout: %v", req, ScanTimeout)
+			log.Printf("scan req: %v timeout: %v", req, timeout)
 		}
 		err := c.sendMessage(req, int32(mlme.Method_ScanRequest))
 		if err != nil {
@@ -98,17 +95,42 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		}
 		s.running = true
 	}
-	return ScanTimeout, nil
+	return timeout, nil
 }
 
 func (s *scanState) commandIsDisabled() bool {
 	return s.running
 }
 
-func (s *scanState) handleCommand(cmd *commandRequest) (state, error) {
+func (s *scanState) handleCommand(cmd *commandRequest, c *Client) (state, error) {
 	switch cmd.id {
 	case CmdScan:
+		_, ok := cmd.arg.(*wlan_service.ScanRequest)
+		if !ok {
+			res := &CommandResult{}
+			res.Err = &wlan_service.Error{
+				wlan_service.ErrCode_InvalidArgs,
+				"Invalid arguments",
+			}
+			cmd.respC <- res
+		}
 		s.cmdPending = cmd
+	case CmdSetScanConfig:
+		newCfg, ok := cmd.arg.(*Config)
+		res := &CommandResult{}
+		if !ok {
+			res.Err = &wlan_service.Error{
+				wlan_service.ErrCode_InvalidArgs,
+				"Invalid arguments",
+			}
+		} else {
+			c.cfg = newCfg
+			if debug {
+				log.Printf("New cfg: SSID %v, interval %v",
+					c.cfg.SSID, c.cfg.ScanInterval)
+			}
+		}
+		cmd.respC <- res
 	}
 	return s, nil
 }
@@ -149,14 +171,21 @@ func (s *scanState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *scanState) needTimer() (bool, time.Duration) {
+func (s *scanState) needTimer(c *Client) (bool, time.Duration) {
 	if s.running {
 		return false, 0
 	}
-	if debug {
-		log.Printf("scan pause %v start", s.scanInterval)
+	if c.cfg == nil || c.cfg.SSID == "" {
+		return false, 0
 	}
-	return true, s.scanInterval
+	scanInterval := DefaultScanInterval
+	if c.cfg != nil && c.cfg.ScanInterval > 0 {
+		scanInterval = time.Duration(c.cfg.ScanInterval) * time.Second
+	}
+	if debug {
+		log.Printf("scan pause %v start", scanInterval)
+	}
+	return true, scanInterval
 }
 
 func (s *scanState) timerExpired(c *Client) (state, error) {
@@ -196,7 +225,7 @@ func (s *joinState) commandIsDisabled() bool {
 	return true
 }
 
-func (s *joinState) handleCommand(r *commandRequest) (state, error) {
+func (s *joinState) handleCommand(r *commandRequest, c *Client) (state, error) {
 	return s, nil
 }
 
@@ -221,7 +250,7 @@ func (s *joinState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *joinState) needTimer() (bool, time.Duration) {
+func (s *joinState) needTimer(c *Client) (bool, time.Duration) {
 	return false, 0
 }
 
@@ -259,7 +288,7 @@ func (s *authState) commandIsDisabled() bool {
 	return true
 }
 
-func (s *authState) handleCommand(r *commandRequest) (state, error) {
+func (s *authState) handleCommand(r *commandRequest, c *Client) (state, error) {
 	return s, nil
 }
 
@@ -284,7 +313,7 @@ func (s *authState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *authState) needTimer() (bool, time.Duration) {
+func (s *authState) needTimer(c *Client) (bool, time.Duration) {
 	return false, 0
 }
 
@@ -327,18 +356,18 @@ func (s *assocState) createCapabilityRSNElement() []byte {
 	rsne := elements.NewEmptyRSN()
 	rsne.GroupData = &elements.CipherSuite{
 		Type: elements.CipherSuiteType_CCMP128,
-		OUI: elements.DefaultCipherSuiteOUI,
+		OUI:  elements.DefaultCipherSuiteOUI,
 	}
 	rsne.PairwiseCiphers = []elements.CipherSuite{
 		{
 			Type: elements.CipherSuiteType_CCMP128,
-			OUI: elements.DefaultCipherSuiteOUI,
+			OUI:  elements.DefaultCipherSuiteOUI,
 		},
 	}
 	rsne.AKMs = []elements.AKMSuite{
 		{
 			Type: elements.AkmSuiteType_PSK,
-			OUI: elements.DefaultCipherSuiteOUI,
+			OUI:  elements.DefaultCipherSuiteOUI,
 		},
 	}
 	capabilities := uint16(0)
@@ -350,7 +379,7 @@ func (s *assocState) commandIsDisabled() bool {
 	return true
 }
 
-func (s *assocState) handleCommand(r *commandRequest) (state, error) {
+func (s *assocState) handleCommand(r *commandRequest, c *Client) (state, error) {
 	return s, nil
 }
 
@@ -375,7 +404,7 @@ func (s *assocState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *assocState) needTimer() (bool, time.Duration) {
+func (s *assocState) needTimer(c *Client) (bool, time.Duration) {
 	return false, 0
 }
 
@@ -405,7 +434,7 @@ func (s *associatedState) commandIsDisabled() bool {
 	return false
 }
 
-func (s *associatedState) handleCommand(r *commandRequest) (state, error) {
+func (s *associatedState) handleCommand(r *commandRequest, c *Client) (state, error) {
 	// TODO: handle Scan command
 	r.respC <- &CommandResult{nil,
 		&wlan_service.Error{
@@ -443,7 +472,7 @@ func (s *associatedState) handleMLMETimeout(c *Client) (state, error) {
 	return s, nil
 }
 
-func (s *associatedState) needTimer() (bool, time.Duration) {
+func (s *associatedState) needTimer(c *Client) (bool, time.Duration) {
 	return false, 0
 }
 

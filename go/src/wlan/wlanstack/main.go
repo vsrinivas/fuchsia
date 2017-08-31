@@ -27,7 +27,7 @@ type Wlanstack struct {
 	client []*wlan.Client
 }
 
-func (ws *Wlanstack) Scan() (res wlan_service.ScanResult, err error) {
+func (ws *Wlanstack) Scan(sr wlan_service.ScanRequest) (res wlan_service.ScanResult, err error) {
 	cli := ws.getCurrentClient()
 	if cli == nil {
 		return wlan_service.ScanResult{
@@ -38,7 +38,7 @@ func (ws *Wlanstack) Scan() (res wlan_service.ScanResult, err error) {
 		}, nil
 	}
 	respC := make(chan *wlan.CommandResult, 1)
-	cli.PostCommand(wlan.CmdScan, respC)
+	cli.PostCommand(wlan.CmdScan, &sr, respC)
 
 	resp := <-respC
 	if resp.Err != nil {
@@ -67,6 +67,26 @@ func (ws *Wlanstack) Scan() (res wlan_service.ScanResult, err error) {
 		wlan_service.Error{wlan_service.ErrCode_Ok, "OK"},
 		&aps,
 	}, nil
+}
+
+func (ws *Wlanstack) Connect(sc wlan_service.ConnectConfig) (wserr wlan_service.Error, err error) {
+	cli := ws.getCurrentClient()
+	if cli == nil {
+		return wlan_service.Error{
+			wlan_service.ErrCode_NotFound,
+			"No wlan interface found"}, nil
+	}
+	cfg := wlan.NewConfig()
+	cfg.SSID = sc.Ssid
+	cfg.ScanInterval = int(sc.ScanInterval)
+	respC := make(chan *wlan.CommandResult, 1)
+	cli.PostCommand(wlan.CmdSetScanConfig, cfg, respC)
+
+	resp := <-respC
+	if resp.Err != nil {
+		return *resp.Err, nil
+	}
+	return wlan_service.Error{wlan_service.ErrCode_Ok, "OK"}, nil
 }
 
 func (ws *Wlanstack) Bind(r wlan_service.Wlan_Request) {

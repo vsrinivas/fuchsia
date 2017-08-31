@@ -24,6 +24,7 @@ const debug = false
 
 type commandRequest struct {
 	id    Command
+	arg   interface{}
 	respC chan *CommandResult
 }
 
@@ -98,8 +99,8 @@ func (c *Client) Close() {
 	c.mlmeChan.Close()
 }
 
-func (c *Client) PostCommand(cmd Command, respC chan *CommandResult) {
-	c.cmdC <- &commandRequest{cmd, respC}
+func (c *Client) PostCommand(cmd Command, arg interface{}, respC chan *CommandResult) {
+	c.cmdC <- &commandRequest{cmd, arg, respC}
 }
 
 func (c *Client) Run() {
@@ -143,7 +144,7 @@ event_loop:
 
 		// 3) If c.state.needTimer true, we start the timer.
 		//    timerC will block until the timer is expired.
-		timerIsNeeded, duration := c.state.needTimer()
+		timerIsNeeded, duration := c.state.needTimer(c)
 		if timerIsNeeded {
 			if timer != nil {
 				timer.Reset(duration)
@@ -172,7 +173,7 @@ event_loop:
 			if debug {
 				log.Printf("got a command")
 			}
-			nextState, err = c.state.handleCommand(r)
+			nextState, err = c.state.handleCommand(r, c)
 		case <-timerC:
 			nextState, err = c.state.timerExpired(c)
 		}

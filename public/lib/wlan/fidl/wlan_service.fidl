@@ -23,14 +23,25 @@ struct AP {
   uint8        last_rssi;
 };
 
+struct ScanRequest {
+  uint8 timeout; // seconds
+  // TODO: more parameters here
+};
+
 struct ScanResult {
   Error error;
   array<AP>? aps;
+};
+
+struct ConnectConfig {
+  string ssid;
+  uint8  scanInterval; // seconds
 };
 
 // Stub interface; eventually to be replaced by something based on the 802.11
 // SME / MSGCF.
 [ServiceName="wlan::WlanService"]
 interface Wlan {
-  Scan() => (ScanResult result);
+  Scan(ScanRequest request) => (ScanResult result);
+  Connect(ConnectConfig request) => (Error error);
 };
