@@ -491,7 +491,9 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
   EXPECT_TRUE(values[1].Equals(ToArray(entries[3]->value)));
 }
 
-TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
+// This test occasionally causes kernel panic
+// https://fuchsia.atlassian.net/browse/MG-1088
+TEST_F(PageSnapshotIntegrationTest, DISABLED_PageCreateReferenceFromSocketWrongSize) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
 
