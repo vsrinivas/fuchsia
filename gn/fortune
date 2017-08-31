@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "fortune": "//bin/fortune"
+        "fortune": "//garnet/bin/fortune"
     }
 }
