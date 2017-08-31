@@ -19,9 +19,7 @@ declare_args() {
   generate_fidl_for_rust = packages_have_rust
 
   # Directories to search for FIDL imports.
-  fidl_import_dirs = [
-    "//garnet/public",
-  ]
+  fidl_import_dirs = [ "//garnet/public" ]
 }
 
 if (generate_fidl_for_dart) {
@@ -63,8 +61,8 @@ template("fidl") {
   cpp_sync_sources_target_name = "${target_name}_${cpp_sources_suffix}_sync"
 
   if (defined(invoker.sources)) {
-    legacy_gen_path =
-        rebase_path("${root_build_dir}/host_x64/legacy_generators/run_code_generators.py")
+    legacy_gen_path = rebase_path(
+            "${root_build_dir}/host_x64/legacy_generators/run_code_generators.py")
     fidl_tool = rebase_path("${root_build_dir}/host_x64/fidl")
 
     generator_cpp_outputs = [
@@ -541,7 +539,8 @@ template("fidl") {
                                   "{{source_gen_dir}}/{{source_file_part}}.h",
                                   "{{source_gen_dir}}/{{source_file_part}}.cc",
                                 ])
-      public_configs = [ "//garnet/public/lib/fidl/cpp/bindings:bindings_config" ]
+      public_configs =
+          [ "//garnet/public/lib/fidl/cpp/bindings:bindings_config" ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
@@ -607,7 +606,7 @@ template("fidl") {
       #analysis_options = "//garnet/public/lib/fidl/dart/analysis_options_fidl"
 
       deps = [
-        "//lib/fidl/dart",
+        "//garnet/public/lib/fidl/dart",
       ]
       fidl_deps = []
       if (defined(invoker.deps)) {

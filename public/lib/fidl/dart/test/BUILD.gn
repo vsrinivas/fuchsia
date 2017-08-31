@@ -17,6 +17,6 @@ dart_fuchsia_test("fidl_dart_core_test") {
   source_dir = "."
 
   deps = [
-    "//lib/fidl/dart",
+    "//garnet/public/lib/fidl/dart",
   ]
 }

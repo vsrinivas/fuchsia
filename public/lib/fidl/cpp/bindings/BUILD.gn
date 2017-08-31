@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 config("bindings_config") {
-  configs = [
-    "//magenta/system/ulib/mx:mx_config"
-  ]
+  configs = [ "//magenta/system/ulib/mx:mx_config" ]
 }
 
 # This target provides source files and dependencies required for serializing
@@ -46,12 +44,12 @@ source_set("serialization") {
   ]
 
   public_deps = [
-    "//lib/ftl:ftl_logging",
     "//garnet/public/lib/fidl/cpp/waiter",
+    "//garnet/public/lib/ftl:ftl_logging",
     "//magenta/system/ulib/mx",
   ]
 
-  public_configs = [":bindings_config"]
+  public_configs = [ ":bindings_config" ]
 }
 
 source_set("bindings") {

@@ -2,7 +2,7 @@
 
 set -e -u
 
-# Go into the //lib/fidl directory.
+# Go into the //garnet/public/lib/fidl directory.
 cd $(dirname $0)/../..
 
 # Assume we're using an x86-64 debug build.

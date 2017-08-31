@@ -8,7 +8,7 @@ executable("listen") {
   ]
   deps = [
     "//application/lib/app",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]
