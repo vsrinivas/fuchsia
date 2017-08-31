@@ -64,6 +64,7 @@ void TestPipelineFactory::ServiceOneRequest() {
 }
 
 // This test is disabled because it hangs on arm64.
+// TODO(ES-34): un-disable when possible.
 TEST(PipelineCache, DISABLED_SuperComprehensive) {
   PipelineCache cache;
   auto factory = ftl::MakeRefCounted<TestPipelineFactory>();
