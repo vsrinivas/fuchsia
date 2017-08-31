@@ -42,7 +42,7 @@ source_set("time_service_src") {
   ]
   public_configs = [ ":ts_config" ]
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/boringssl",
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",
@@ -56,7 +56,7 @@ executable("time_service") {
   public_configs = [ ":ts_config" ]
   deps = [
     ":time_service_src",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 
@@ -73,7 +73,7 @@ executable("tests") {
   deps = [
     ":time_service_src",
     "//apps/test_runner/src:gtest_main",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/boringssl",
     "//third_party/gtest",
     "//third_party/roughtime:client_lib",
