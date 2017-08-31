@@ -65,6 +65,6 @@ source_set("framework") {
   deps = [
     "//apps/media/lib/timeline:host_compatible",
     "//apps/media/src/util:host_compatible",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }

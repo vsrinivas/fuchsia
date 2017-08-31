@@ -23,7 +23,7 @@ source_set("video") {
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/geometry/cpp",
     "//apps/tracing/lib/trace",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 

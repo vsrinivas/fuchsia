@@ -30,7 +30,7 @@ source_set("transport") {
     "//apps/media/services",
     "//apps/media/services/flog",
     "//apps/mozart/services/geometry",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 

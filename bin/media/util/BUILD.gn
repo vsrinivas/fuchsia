@@ -23,7 +23,7 @@ source_set("util") {
   deps = [
     "//apps/media/lib/timeline",
     "//apps/media/services",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -39,7 +39,7 @@ source_set("host_compatible") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 

@@ -38,7 +38,7 @@ source_set("ffmpeg") {
     "//apps/media/src/framework",
     "//apps/media/src/util",
     "//apps/tracing/lib/trace",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/ffmpeg",
   ]

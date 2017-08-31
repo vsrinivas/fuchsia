@@ -12,7 +12,7 @@ dart_package("dart") {
   deps = [
     "//application/lib/app/dart",
     "//apps/media/services:services_dart",
-    "//lib/fidl/dart",
+    "//garnet/public/lib/fidl/dart",
   ]
 
   analysis_options = "//apps/modules/common/analysis_options.yaml"

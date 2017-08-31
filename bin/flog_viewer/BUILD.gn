@@ -50,7 +50,7 @@ executable("flog_viewer") {
     "//apps/media/services",
     "//apps/media/services/flog",
     "//apps/media/src/util",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

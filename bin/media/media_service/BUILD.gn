@@ -55,7 +55,7 @@ executable("media_service") {
     "//apps/network/services",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }

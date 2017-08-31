@@ -29,9 +29,9 @@ executable("net_media_service") {
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//apps/network/services",
+    "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/url",
-    "//lib/fidl/cpp/bindings",
     "//lib/mtl",
   ]
 }
@@ -43,7 +43,7 @@ source_set("serialization") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }
 

@@ -14,7 +14,6 @@ executable("audio_server") {
     "audio_server_impl.cc",
     "gain.cc",
     "main.cc",
-    "platform/magenta/magenta_output.cc",
     "platform/generic/mixer.cc",
     "platform/generic/mixers/linear_sampler.cc",
     "platform/generic/mixers/no_op.cc",
@@ -22,6 +21,7 @@ executable("audio_server") {
     "platform/generic/output_formatter.cc",
     "platform/generic/standard_output_base.cc",
     "platform/generic/throttle_output.cc",
+    "platform/magenta/magenta_output.cc",
   ]
 
   public_deps = [
@@ -36,7 +36,7 @@ executable("audio_server") {
     "//apps/media/src/audio",
     "//apps/media/src/util",
     "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",

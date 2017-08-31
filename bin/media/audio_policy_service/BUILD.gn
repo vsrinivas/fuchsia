@@ -4,16 +4,16 @@
 
 executable("audio_policy_service") {
   sources = [
-    "main.cc",
     "audio_policy_service_impl.cc",
     "audio_policy_service_impl.h",
+    "main.cc",
   ]
 
   deps = [
     "//application/lib/app",
     "//apps/media/services",
     "//apps/media/src/util",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
