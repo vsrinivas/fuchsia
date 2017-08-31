@@ -62,13 +62,13 @@ typedef struct gpt_device {
     // pointer to a list of partitions
 } gpt_device_t;
 
-bool is_sys_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_sys_guid(uint8_t* guid, ssize_t len);
 // determines whether guid is system guid
 
-bool is_data_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_data_guid(uint8_t* guid, ssize_t len);
 // determines whether guid is data guid
 
-bool is_efi_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
 // determines whether guid is efi guid
 
 int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** out_dev);

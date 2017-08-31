@@ -218,19 +218,19 @@ mx_status_t process_block_device(const char* device_name) {
         break;
     }
     case DISK_FORMAT_MINFS: {
-        if (is_sys_guid(guid, len)) {
+        if (gpt_is_sys_guid(guid, len)) {
             mount_options.readonly = true;
             mount_options.wait_until_ready = true;
             mount_options.create_mountpoint = true;
             check_and_remount(device_path, PATH_SYSTEM, disk_format, &mount_options);
-        } else if (is_data_guid(guid, len)) {
+        } else if (gpt_is_data_guid(guid, len)) {
             mount_options.wait_until_ready = true;
             check_and_remount(device_path, PATH_DATA, disk_format, &mount_options);
         }
         break;
     }
     case DISK_FORMAT_FAT: {
-        if (!is_efi_guid(guid, len)) {
+        if (!gpt_is_efi_guid(guid, len)) {
             mount_options.readonly = false;
             mount_options.wait_until_ready = true;
             check_and_remount_fat(device_path, topo_path, &mount_options);

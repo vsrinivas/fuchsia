@@ -54,7 +54,7 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
 
     // check if this partition matches any special type GUID
     if (read_sz == GPT_GUID_LEN) {
-        if (is_sys_guid(type_guid, read_sz)) {
+        if (gpt_is_sys_guid(type_guid, read_sz)) {
             if (secondary_bootfs_ready()) {
                 return MX_ERR_ALREADY_BOUND;
             }
@@ -72,7 +72,7 @@ static mx_status_t mount_minfs(int fd, mount_options_t* options) {
             }
 
             return st;
-        } else if (is_data_guid(type_guid, read_sz)) {
+        } else if (gpt_is_data_guid(type_guid, read_sz)) {
             if (data_mounted) {
                 return MX_ERR_ALREADY_BOUND;
             }
@@ -160,7 +160,7 @@ static mx_status_t block_device_added(int dirfd, int event, const char* name, vo
         // Use the GUID to avoid auto-mounting the EFI partition
         uint8_t guid[GPT_GUID_LEN];
         ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
-        bool efi = is_efi_guid(guid, r);
+        bool efi = gpt_is_efi_guid(guid, r);
         if (efi) {
           close(fd);
           printf("devmgr: not automounting efi\n");
