@@ -42,7 +42,5 @@ MODULE_DEPS += \
 KERNEL_DEFINES += \
     PLATFORM_SUPPORTS_PANIC_SHELL=1
 
-SMP_MAX_CPUS ?= 8
-
 include make/module.mk
 
