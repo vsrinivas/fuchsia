@@ -63,7 +63,8 @@ void TestPipelineFactory::ServiceOneRequest() {
   request.promise.set_value(pipeline);
 }
 
-TEST(PipelineCache, SuperComprehensive) {
+// This test is disabled because it hangs on arm64.
+TEST(PipelineCache, DISABLED_SuperComprehensive) {
   PipelineCache cache;
   auto factory = ftl::MakeRefCounted<TestPipelineFactory>();
 
