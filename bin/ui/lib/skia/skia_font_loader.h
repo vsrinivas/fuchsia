@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/fonts/services/font_provider.fidl.h"
+#include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/ftl/macros.h"
 #include "third_party/skia/include/core/SkTypeface.h"
 

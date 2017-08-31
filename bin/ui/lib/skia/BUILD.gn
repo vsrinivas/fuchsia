@@ -21,7 +21,7 @@ source_set("fonts") {
   deps = [
     ":type_converters",
     ":vmo",
-    "//apps/fonts/services",
+    "//garnet/public/lib/fonts/fidl",
     "//garnet/public/lib/ftl",
     "//third_party/skia",
   ]
