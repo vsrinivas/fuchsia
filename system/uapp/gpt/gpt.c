@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <getopt.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <magenta/device/block.h>
@@ -15,6 +16,37 @@
 #include <unistd.h>
 
 #define FLAG_HIDDEN ((uint64_t) 0x2)
+
+static const char* bin_name;
+
+static void print_usage(void) {
+    printf("usage:\n");
+    printf("Note that for all these commands, [<dev>] is the device containing the GPT.\n");
+    printf("Although using a GPT will split your device into small partitions, [<dev>] \n");
+    printf("should always refer to the containing device, NOT block devices representing\n");
+    printf("the partitions themselves.\n\n");
+    printf("> %s dump [<dev>]\n", bin_name);
+    printf("  View the properties of the selected device\n");
+    printf("> %s init [<dev>]\n", bin_name);
+    printf("  Initialize the block device with a GPT\n");
+    printf("> %s repartition <dev> [[<label> <type> <size>], ...]\n", bin_name);
+    printf("  Destructively repartition the device with the given layout\n");
+    printf("    e.g.\n");
+    printf("    %s repartition /dev/class/block-core/000", bin_name);
+    printf(" esp efi 100m sys system 5g blob blobfs 50%% data data 50%%\n");
+    printf("> %s add <start block> <end block> <name> [<dev>]\n", bin_name);
+    printf("  Add a partition to the device (and create a GPT if one does not exist)\n");
+    printf("  Range of blocks is INCLUSIVE (both start and end). Full device range\n");
+    printf("  may be queried using '%s dump'\n", bin_name);
+    printf("> %s edit <n> type|id BLOBFS|DATA|SYSTEM|EFI|<guid> [<dev>]\n", bin_name);
+    printf("  Edit the GUID of the nth partition on the device\n");
+    printf("> %s edit_cros <n> [-T <tries>] [-S <successful>] [-P <priority] <dev>\n", bin_name);
+    printf("  Edit the GUID of the nth partition on the device\n");
+    printf("> %s remove <n> [<dev>]\n", bin_name);
+    printf("  Remove the nth partition from the device\n");
+    printf("> %s visible <n> true|false [<dev>]\n", bin_name);
+    printf("  Set the visibility of the nth partition on the device\n");
+}
 
 static int cgetc(void) {
     uint8_t ch;
@@ -446,6 +478,118 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
 }
 
 /*
+ * Edit a Chrome OS kernel partition, changing its attributes.
+ *
+ * argv/argc should correspond only to the arguments after the command.
+ */
+static mx_status_t edit_cros_partition(char* const * argv, int argc) {
+    gpt_device_t* gpt = NULL;
+    gpt_partition_t* part = NULL;
+    int fd = -1;
+
+    char* end;
+    long idx_part = strtol(argv[0], &end, 10);
+    if (*end != 0 || argv[0][0] == 0) {
+        print_usage();
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    // Use -1 as a sentinel for "not changing"
+    int tries = -1;
+    int priority = -1;
+    int successful = -1;
+
+    int c;
+    while ((c = getopt(argc, argv, "T:P:S:")) > 0) {
+        switch (c) {
+        case 'T': {
+            long val = strtol(optarg, &end, 10);
+            if (*end != 0 || optarg[0] == 0) {
+                goto usage;
+            }
+            if (val < 0 || val > 15) {
+                printf("tries must be in the range [0, 16)\n");
+                goto usage;
+            }
+            tries = val;
+            break;
+        }
+        case 'P': {
+            long val = strtol(optarg, &end, 10);
+            if (*end != 0 || optarg[0] == 0) {
+                goto usage;
+            }
+            if (val < 0 || val > 15) {
+                printf("priority must be in the range [0, 16)\n");
+                goto usage;
+            }
+            priority = val;
+            break;
+        }
+        case 'S': {
+            if (!strncmp(optarg, "0", 2)) {
+                successful = 0;
+            } else if (!strncmp(optarg, "1", 2)) {
+                successful = 1;
+            } else {
+                printf("successful must be 0 or 1\n");
+                goto usage;
+            }
+            break;
+        }
+        default:
+            printf("Unknown option\n");
+            goto usage;
+        }
+    }
+
+    if (optind != argc - 1) {
+        printf("Did not specify device arg\n");
+        goto usage;
+    }
+
+    char* path_device = argv[optind];
+
+    mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
+                                      &part);
+    if (rc != MX_OK) {
+        return rc;
+    }
+
+    if (!gpt_cros_is_kernel_guid(part->type, GPT_GUID_LEN)) {
+        printf("Partition is not a CrOS kernel partition\n");
+        rc = MX_ERR_INVALID_ARGS;
+        goto cleanup;
+    }
+
+    if (tries >= 0) {
+        if (gpt_cros_attr_set_tries(&part->flags, tries) < 0) {
+            printf("Failed to set tries\n");
+            rc = MX_ERR_INVALID_ARGS;
+            goto cleanup;
+        }
+    }
+    if (priority >= 0) {
+        if (gpt_cros_attr_set_priority(&part->flags, priority) < 0) {
+            printf("Failed to set priority\n");
+            rc = MX_ERR_INVALID_ARGS;
+            goto cleanup;
+        }
+    }
+    if (successful >= 0) {
+        gpt_cros_attr_set_successful(&part->flags, successful);
+    }
+
+    rc = commit(gpt, fd);
+cleanup:
+    tear_down_gpt(fd, gpt);
+    return rc;
+usage:
+    print_usage();
+    return MX_ERR_INVALID_ARGS;
+}
+
+/*
  * Set whether a partition is visible or not to the EFI firmware. If a
  * partition is set as hidden, the firmware will not attempt to boot from the
  * partition.
@@ -633,6 +777,7 @@ repartition_end:
 }
 
 int main(int argc, char** argv) {
+    bin_name = argv[0];
     if (argc == 1) goto usage;
 
     const char* cmd = argv[1];
@@ -651,7 +796,12 @@ int main(int argc, char** argv) {
     } else if (!strcmp(cmd, "edit")) {
         if (argc <= 5) goto usage;
         if (edit_partition(argv[5], strtol(argv[2], NULL, 0), argv[3], argv[4])) {
-            printf("Failed to edit partition.\n");
+            printf("failed to edit partition.\n");
+        }
+    } else if (!strcmp(cmd, "edit_cros")) {
+        if (argc <= 4) goto usage;
+        if (edit_cros_partition(argv + 2, argc - 2)) {
+            printf("failed to edit partition.\n");
         }
     } else if (!strcmp(cmd, "visible")) {
         if (argc < 5) goto usage;
@@ -677,29 +827,6 @@ int main(int argc, char** argv) {
 
     return 0;
 usage:
-    printf("usage:\n");
-    printf("Note that for all these commands, [<dev>] is the device containing the GPT.\n");
-    printf("Although using a GPT will split your device into small partitions, [<dev>] \n");
-    printf("should always refer to the containing device, NOT block devices representing\n");
-    printf("the partitions themselves.\n\n");
-    printf("> %s dump [<dev>]\n", argv[0]);
-    printf("  View the properties of the selected device\n");
-    printf("> %s init [<dev>]\n", argv[0]);
-    printf("  Initialize the block device with a GPT\n");
-    printf("> %s repartition <dev> [[<label> <type> <size>], ...]\n", argv[0]);
-    printf("  Destructively repartition the device with the given layout\n");
-    printf("    e.g.\n");
-    printf("    %s repartition /dev/class/block-core/000", argv[0]);
-    printf(" esp efi 100m sys system 5g blob blobfs 50%% data data 50%%\n");
-    printf("> %s add <start block> <end block> <name> [<dev>]\n", argv[0]);
-    printf("  Add a partition to the device (and create a GPT if one does not exist)\n");
-    printf("  Range of blocks is INCLUSIVE (both start and end). Full device range\n");
-    printf("  may be queried using '%s dump'\n", argv[0]);
-    printf("> %s edit <n> type|id BLOBFS|DATA|SYSTEM|EFI|<guid> [<dev>]\n", argv[0]);
-    printf("  Edit the GUID of the nth partition on the device\n");
-    printf("> %s remove <n> [<dev>]\n", argv[0]);
-    printf("  Remove the nth partition from the device\n");
-    printf("> %s visible <n> true|false [<dev>]\n", argv[0]);
-    printf("  Set the visibility of the nth partition on the device\n");
+    print_usage();
     return 0;
 }
