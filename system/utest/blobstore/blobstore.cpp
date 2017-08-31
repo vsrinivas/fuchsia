@@ -105,12 +105,9 @@ static int MountBlobstore(const char* ramdisk_path) {
 
 // Creates a ramdisk, formats it, and mounts it at a mount point.
 static int StartBlobstoreTest(uint64_t blk_size, uint64_t blk_count, char* ramdisk_path_out) {
-    int dirfd = mkdir(MOUNT_PATH, 0755);
-    if ((dirfd < 0) && errno != EEXIST) {
+    if ((mkdir(MOUNT_PATH, 0755) < 0) && errno != EEXIST) {
         fprintf(stderr, "Could not create mount point for test filesystems\n");
         return -1;
-    } else if (dirfd > 0) {
-        close(dirfd);
     }
 
     if (create_ramdisk(blk_size, blk_count, ramdisk_path_out)) {

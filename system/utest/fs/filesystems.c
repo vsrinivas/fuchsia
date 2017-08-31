@@ -131,11 +131,9 @@ static int unlink_recursive(const char* path) {
 int mount_memfs(const char* disk_path, const char* mount_path) {
     struct stat st;
     if (stat(test_root_path, &st)) {
-        int fd = mkdir(test_root_path, 0644);
-        if (fd < 0) {
+        if (mkdir(test_root_path, 0644) < 0) {
             return -1;
         }
-        close(fd);
     } else if (!S_ISDIR(st.st_mode)) {
         return -1;
     }
