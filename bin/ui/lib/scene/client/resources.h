@@ -156,6 +156,44 @@ class Image : public Resource {
   FTL_DISALLOW_COPY_AND_ASSIGN(Image);
 };
 
+// Represents a buffer that is immutably bound to a range of a memory resource.
+class Buffer final : public Resource {
+ public:
+  Buffer(const Memory& memory, off_t memory_offset, size_t buffer_size);
+  Buffer(Session* session,
+         uint32_t memory_id,
+         off_t memory_offset,
+         size_t buffer_size);
+  Buffer(Buffer&& moved);
+  ~Buffer();
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(Buffer);
+};
+
+// Represents a mesh resource in a session.  Before it can be rendered, it
+// must be bound to index and vertex arrays by calling the Update() method.
+class Mesh final : public Shape {
+ public:
+  Mesh(Session* session);
+  Mesh(Mesh&& moved);
+  ~Mesh();
+
+  void BindBuffers(const Buffer& index_buffer,
+                   mozart2::MeshIndexFormat index_format,
+                   uint64_t index_offset,
+                   uint32_t index_count,
+                   const Buffer& vertex_buffer,
+                   mozart2::MeshVertexFormatPtr vertex_format,
+                   uint64_t vertex_offset,
+                   uint32_t vertex_count,
+                   const float bounding_box_min[3],
+                   const float bounding_box_max[3]);
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(Mesh);
+};
+
 // Represents a material resource in a session.
 class Material final : public Resource {
  public:

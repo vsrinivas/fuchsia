@@ -117,6 +117,22 @@ size_t Image::ComputeSize(const mozart2::ImageInfo& image_info) {
   FTL_NOTREACHED();
 }
 
+Buffer::Buffer(const Memory& memory, off_t memory_offset, size_t num_bytes)
+    : Buffer(memory.session(), memory.id(), memory_offset, num_bytes) {}
+
+Buffer::Buffer(Session* session,
+               uint32_t memory_id,
+               off_t memory_offset,
+               size_t num_bytes)
+    : Resource(session) {
+  session->Enqueue(
+      mozart::NewCreateBufferOp(id(), memory_id, memory_offset, num_bytes));
+}
+
+Buffer::Buffer(Buffer&& moved) : Resource(std::move(moved)) {}
+
+Buffer::~Buffer() = default;
+
 Memory::Memory(Session* session, mx::vmo vmo, mozart2::MemoryType memory_type)
     : Resource(session), memory_type_(memory_type) {
   session->Enqueue(
@@ -127,6 +143,30 @@ Memory::Memory(Memory&& moved)
     : Resource(std::move(moved)), memory_type_(moved.memory_type_) {}
 
 Memory::~Memory() = default;
+
+Mesh::Mesh(Session* session) : Shape(session) {
+  session->Enqueue(mozart::NewCreateMeshOp(id()));
+}
+
+Mesh::Mesh(Mesh&& moved) : Shape(std::move(moved)) {}
+
+Mesh::~Mesh() = default;
+
+void Mesh::BindBuffers(const Buffer& index_buffer,
+                       mozart2::MeshIndexFormat index_format,
+                       uint64_t index_offset,
+                       uint32_t index_count,
+                       const Buffer& vertex_buffer,
+                       mozart2::MeshVertexFormatPtr vertex_format,
+                       uint64_t vertex_offset,
+                       uint32_t vertex_count,
+                       const float bounding_box_min[3],
+                       const float bounding_box_max[3]) {
+  session()->Enqueue(mozart::NewBindMeshBuffersOp(
+      id(), index_buffer.id(), index_format, index_offset, index_count,
+      vertex_buffer.id(), std::move(vertex_format), vertex_offset, vertex_count,
+      bounding_box_min, bounding_box_max));
+}
 
 Material::Material(Session* session) : Resource(session) {
   session->Enqueue(mozart::NewCreateMaterialOp(id()));

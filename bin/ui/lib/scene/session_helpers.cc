@@ -292,6 +292,15 @@ mozart2::OpPtr NewCreateVarRoundedRectangleOp(
   return NewCreateResourceOp(id, std::move(resource));
 }
 
+mozart2::OpPtr NewCreateMeshOp(uint32_t id) {
+  auto mesh = mozart2::Mesh::New();
+
+  auto resource = mozart2::Resource::New();
+  resource->set_mesh(std::move(mesh));
+
+  return NewCreateResourceOp(id, std::move(resource));
+}
+
 mozart2::OpPtr NewCreateMaterialOp(uint32_t id) {
   auto material = mozart2::Material::New();
 
@@ -617,6 +626,54 @@ mozart2::OpPtr NewSetColorOp(uint32_t material_id,
 
   auto op = mozart2::Op::New();
   op->set_set_color(std::move(set_color));
+
+  return op;
+}
+
+mozart2::MeshVertexFormatPtr NewMeshVertexFormat(
+    mozart2::ValueType position_type,
+    mozart2::ValueType normal_type,
+    mozart2::ValueType tex_coord_type) {
+  auto vertex_format = mozart2::MeshVertexFormat::New();
+  vertex_format->position_type = position_type;
+  vertex_format->normal_type = normal_type;
+  vertex_format->tex_coord_type = tex_coord_type;
+  return vertex_format;
+}
+
+mozart2::OpPtr NewBindMeshBuffersOp(uint32_t mesh_id,
+                                    uint32_t index_buffer_id,
+                                    mozart2::MeshIndexFormat index_format,
+                                    uint64_t index_offset,
+                                    uint32_t index_count,
+                                    uint32_t vertex_buffer_id,
+                                    mozart2::MeshVertexFormatPtr vertex_format,
+                                    uint64_t vertex_offset,
+                                    uint32_t vertex_count,
+                                    const float bounding_box_min[3],
+                                    const float bounding_box_max[3]) {
+  auto bind_mesh_buffers = mozart2::BindMeshBuffersOp::New();
+  bind_mesh_buffers->mesh_id = mesh_id;
+  bind_mesh_buffers->index_buffer_id = index_buffer_id;
+  bind_mesh_buffers->index_format = index_format;
+  bind_mesh_buffers->index_offset = index_offset;
+  bind_mesh_buffers->index_count = index_count;
+  bind_mesh_buffers->vertex_buffer_id = vertex_buffer_id;
+  bind_mesh_buffers->vertex_format = std::move(vertex_format);
+  bind_mesh_buffers->vertex_offset = vertex_offset;
+  bind_mesh_buffers->vertex_count = vertex_count;
+  auto& bbox = bind_mesh_buffers->bounding_box = mozart2::BoundingBox::New();
+  bbox->min = mozart2::vec3::New();
+  bbox->min->x = bounding_box_min[0];
+  bbox->min->y = bounding_box_min[1];
+  bbox->min->z = bounding_box_min[2];
+  bbox->max = mozart2::vec3::New();
+  bbox->max->x = bounding_box_max[0];
+  bbox->max->y = bounding_box_max[1];
+  bbox->max->z = bounding_box_max[2];
+
+  auto op = mozart2::Op::New();
+  op->set_bind_mesh_buffers(std::move(bind_mesh_buffers));
 
   return op;
 }

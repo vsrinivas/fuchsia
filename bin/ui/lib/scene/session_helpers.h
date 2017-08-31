@@ -77,6 +77,8 @@ mozart2::OpPtr NewCreateVarRoundedRectangleOp(
     uint32_t bottom_left_radius_var_id,
     uint32_t bottom_right_radius_var_id);
 
+mozart2::OpPtr NewCreateMeshOp(uint32_t id);
+
 mozart2::OpPtr NewCreateMaterialOp(uint32_t id);
 mozart2::OpPtr NewCreateClipNodeOp(uint32_t id);
 mozart2::OpPtr NewCreateEntityNodeOp(uint32_t id);
@@ -139,6 +141,23 @@ mozart2::OpPtr NewSetColorOp(uint32_t node_id,
                              uint8_t green,
                              uint8_t blue,
                              uint8_t alpha);
+
+// Mesh operations.
+mozart2::MeshVertexFormatPtr NewMeshVertexFormat(
+    mozart2::ValueType position_type,
+    mozart2::ValueType normal_type,
+    mozart2::ValueType tex_coord_type);
+mozart2::OpPtr NewBindMeshBuffersOp(uint32_t mesh_id,
+                                    uint32_t index_buffer_id,
+                                    mozart2::MeshIndexFormat index_format,
+                                    uint64_t index_offset,
+                                    uint32_t index_count,
+                                    uint32_t vertex_buffer_id,
+                                    mozart2::MeshVertexFormatPtr vertex_format,
+                                    uint64_t vertex_offset,
+                                    uint32_t vertex_count,
+                                    const float bounding_box_min[3],
+                                    const float bounding_box_max[3]);
 
 // Layer / LayerStack / Compositor operations.
 mozart2::OpPtr NewAddLayerOp(uint32_t layer_stack_id, uint32_t layer_id);
