@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "fonts": "//apps/fonts"
+        "fonts": "//garnet/bin/fonts"
     }
 }
