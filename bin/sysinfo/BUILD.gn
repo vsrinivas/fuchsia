@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("sysinfo") {
   sources = [
     "sysinfo.cc",
@@ -11,6 +13,20 @@ executable("sysinfo") {
     "magenta",
   ]
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
+  ]
+}
+
+package("package") {
+  deps = [
+    ":sysinfo",
+  ]
+
+  package_name = "sysinfo"
+
+  binaries = [
+    {
+      name = "sysinfo"
+    },
   ]
 }

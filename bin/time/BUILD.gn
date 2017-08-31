@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//packages/package.gni")
+
 executable("time") {
   sources = [
     "time.cc",
@@ -9,5 +11,19 @@ executable("time") {
   libs = [
     "launchpad",
     "magenta",
+  ]
+}
+
+package("package") {
+  deps = [
+    ":time",
+  ]
+
+  package_name = "time"
+
+  binaries = [
+    {
+      name = "time"
+    },
   ]
 }
