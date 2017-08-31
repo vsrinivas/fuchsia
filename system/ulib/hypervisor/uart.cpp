@@ -13,15 +13,11 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
 
-// clang-format off
-
 /* UART configuration constants. */
-#define UART_BUFFER_SIZE                512u
+#define UART_BUFFER_SIZE 512u
 
 /* UART configuration masks. */
-#define UART_INTERRUPT_ID_NO_FIFO_MASK  BIT_MASK(4)
-
-// clang-format on
+static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
 
 void uart_init(uart_t* uart, const io_apic_t* io_apic) {
     memset(uart, 0, sizeof(*uart));
@@ -72,7 +68,7 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     case UART_INTERRUPT_ID_PORT:
         vcpu_io->access_size = 1;
         mtx_lock(&uart->mutex);
-        vcpu_io->u8 = UART_INTERRUPT_ID_NO_FIFO_MASK & uart->interrupt_id;
+        vcpu_io->u8 = kUartInterruptIdNoFifoMask & uart->interrupt_id;
 
         // Reset THR empty interrupt on IIR (or RBR) access.
         if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
@@ -150,7 +146,8 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
 }
 
 static mx_status_t uart_handler(mx_port_packet_t* packet, void* ctx) {
-    return uart_write(ctx, &packet->guest_io);
+    uart_t* uart = static_cast<uart_t*>(ctx);
+    return uart_write(uart, &packet->guest_io);
 }
 
 mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest) {

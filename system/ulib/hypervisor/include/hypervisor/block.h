@@ -33,7 +33,7 @@ typedef struct block {
     virtio_blk_config_t config;
 } block_t;
 
-mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
+mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem_addr,
                        size_t guest_physmem_size);
 
 /* Block device that returns reads and writes to a file. */

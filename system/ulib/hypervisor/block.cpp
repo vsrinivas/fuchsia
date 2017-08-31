@@ -54,7 +54,7 @@ static const virtio_device_ops_t kBlockVirtioDeviceOps = {
     .queue_notify = &block_queue_notify,
 };
 
-mx_status_t block_init(block_t* block, const char* path, void* guest_physmem_addr,
+mx_status_t block_init(block_t* block, const char* path, uintptr_t guest_physmem_addr,
                        size_t guest_physmem_size) {
     memset(block, 0, sizeof(*block));
 
@@ -184,7 +184,7 @@ static mx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags,
     if (file_state->blk_req == NULL) {
         if (len != sizeof(*file_state->blk_req))
             return MX_ERR_INVALID_ARGS;
-        file_state->blk_req = addr;
+        file_state->blk_req = static_cast<virtio_blk_req_t*>(addr);
         return MX_OK;
     }
 
@@ -210,7 +210,7 @@ static mx_status_t block_queue_handler(void* addr, uint32_t len, uint16_t flags,
         if (status != MX_OK)
             file_state->status = to_virtio_status(status);
     }
-    uint8_t* status = addr;
+    uint8_t* status = static_cast<uint8_t*>(addr);
     *status = file_state->status;
     return MX_OK;
 }

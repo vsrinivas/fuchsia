@@ -46,7 +46,7 @@ static void setup_queue(virtio_queue_t* queue, virtio_mem_t* mem) {
 }
 
 static void setup_block(block_t* block, const char* block_path, virtio_mem_t* mem) {
-    block_init(block, block_path, mem, sizeof(*mem));
+    block_init(block, block_path, (uintptr_t)mem, sizeof(*mem));
     setup_queue(&block->queue, mem);
 }
 

@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
     block_t block;
     pci_device_t* virtio_block = &block.virtio_device.pci_device;
     if (block_path != NULL) {
-        status = block_init(&block, block_path, (void*)addr, kVmoSize);
+        status = block_init(&block, block_path, addr, kVmoSize);
         if (status != MX_OK)
             return status;
 
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
     }
     // Setup memory balloon.
     balloon_t balloon;
-    balloon_init(&balloon, (void*)addr, kVmoSize, physmem_vmo);
+    balloon_init(&balloon, addr, kVmoSize, physmem_vmo);
     balloon.deflate_on_demand = balloon_deflate_on_demand;
     status = pci_bus_connect(&bus, &balloon.virtio_device.pci_device,
                              PCI_DEVICE_VIRTIO_BALLOON);

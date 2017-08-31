@@ -59,9 +59,9 @@ typedef struct queue_ctx {
  */
 static mx_status_t queue_range_op(void* addr, uint32_t len, uint16_t flags, uint32_t* used,
                                   void* ctx) {
-    queue_ctx_t* balloon_op_ctx = ctx;
+    queue_ctx_t* balloon_op_ctx = static_cast<queue_ctx_t*>(ctx);
     balloon_t* balloon = balloon_op_ctx->balloon;
-    uint32_t* pfns = addr;
+    uint32_t* pfns = static_cast<uint32_t*>(addr);
     uint32_t pfn_count = len / 4;
 
     // If the driver writes contiguous PFNs to the array we'll batch them up
@@ -157,7 +157,7 @@ static const virtio_device_ops_t kBalloonVirtioDeviceOps = {
     .queue_notify = &balloon_queue_notify,
 };
 
-void balloon_init(balloon_t* balloon, void* guest_physmem_addr, size_t guest_physmem_size,
+void balloon_init(balloon_t* balloon, uintptr_t guest_physmem_addr, size_t guest_physmem_size,
                   mx_handle_t guest_physmem_vmo) {
     memset(balloon, 0, sizeof(*balloon));
 
@@ -233,7 +233,7 @@ mx_status_t balloon_request_stats(balloon_t* balloon, balloon_stats_fn_t handler
     }
 
     // Invoke the handler on the stats.
-    const virtio_balloon_stat_t* stats = desc.addr;
+    auto stats = static_cast<const virtio_balloon_stat_t*>(desc.addr);
     size_t stats_count = desc.len / sizeof(virtio_balloon_stat_t);
     handler(stats, stats_count, ctx);
     mtx_unlock(&balloon->stats.mutex);

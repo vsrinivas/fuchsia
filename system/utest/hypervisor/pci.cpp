@@ -39,7 +39,7 @@ static bool read_config_register_bytewise(void) {
         uint32_t value = 0;
         EXPECT_EQ(pci_device_read(device, reg, 1, &value), MX_OK,
                   "Failed to read PCI_CONFIG_VENDOR_ID");
-        EXPECT_EQ(value, BITS_SHIFT(expected_device_vendor, i * 8 + 7, i * 8),
+        EXPECT_EQ(value, bits_shift(expected_device_vendor, i * 8 + 7, i * 8),
                   "Unexpected value of PCI_CONFIG_VENDOR_ID");
     }
 

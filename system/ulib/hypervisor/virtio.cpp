@@ -10,6 +10,8 @@
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls/port.h>
+#include <mxtl/unique_ptr.h>
+
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
@@ -19,13 +21,16 @@
 #define PCI_ALIGN(n)                    ((((uintptr_t)n) + 4095) & ~4095)
 
 #define PCI_VENDOR_ID_VIRTIO            0x1af4u
-#define PCI_DEVICE_ID_VIRTIO_LEGACY(id) (0xfff + (id))
+
+static constexpr uint16_t virtio_pci_legacy_id(uint16_t virtio_id) {
+      return static_cast<uint16_t>(virtio_id + 0xfffu);
+}
 
 // clang-format on
 
 // Convert guest-physical addresses to usable virtual addresses.
 #define guest_paddr_to_host_vaddr(device, addr) \
-    ((device)->guest_physmem_addr + (addr))
+    (static_cast<mx_vaddr_t>(((device)->guest_physmem_addr) + (addr)))
 
 // Returns a circular index into a Virtio ring.
 static uint32_t ring_index(virtio_queue_t* queue, uint32_t index) {
@@ -87,7 +92,7 @@ static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint16
 
     // Handle device-specific accesses.
     if (port >= VIRTIO_PCI_DEVICE_CFG_BASE) {
-        uint16_t device_offset = port - VIRTIO_PCI_DEVICE_CFG_BASE;
+        uint16_t device_offset = static_cast<uint16_t>(port - VIRTIO_PCI_DEVICE_CFG_BASE);
         return device->ops->read(device, device_offset, vcpu_io);
     }
 
@@ -96,19 +101,46 @@ static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint16
 }
 
 static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
-    void* mem_addr = queue->virtio_device->guest_physmem_addr;
-    size_t mem_size = queue->virtio_device->guest_physmem_size;
+    virtio_device_t* device = queue->virtio_device;
+    uintptr_t mem_addr = device->guest_physmem_addr;
+    size_t mem_size = device->guest_physmem_size;
 
     queue->pfn = pfn;
-    queue->desc = guest_paddr_to_host_vaddr(queue->virtio_device, queue->pfn * PAGE_SIZE);
-    queue->avail = (void*)&queue->desc[queue->size];
-    queue->used_event = (void*)&queue->avail->ring[queue->size];
-    queue->used = (void*)PCI_ALIGN(queue->used_event + sizeof(uint16_t));
-    queue->avail_event = (void*)&queue->used->ring[queue->size];
-    volatile const void* end = queue->avail_event + 1;
-    if (end < (void*)queue->desc || end > mem_addr + mem_size) {
+
+    // Descriptor Table.
+    uintptr_t desc_paddr = queue->pfn * PAGE_SIZE;
+    uintptr_t desc_size = queue->size * sizeof(queue->desc[0]);
+    mx_vaddr_t desc_host_vaddr = guest_paddr_to_host_vaddr(device, desc_paddr);
+    queue->desc = reinterpret_cast<decltype(queue->desc)>(desc_host_vaddr);
+
+    // Avail Ring.
+    uintptr_t avail_paddr = desc_paddr + desc_size;
+    uintptr_t avail_size = sizeof(queue->avail) + (queue->size * sizeof(queue->avail->ring[0]));
+    mx_vaddr_t avail_host_vaddr = guest_paddr_to_host_vaddr(device, avail_paddr);
+    queue->avail = reinterpret_cast<decltype(queue->avail)>(avail_host_vaddr);
+
+    // Used Event.
+    uintptr_t used_event_paddr = avail_paddr + avail_size;
+    uintptr_t used_event_size = sizeof(queue->used_event);
+    mx_vaddr_t used_event_host_vaddr = guest_paddr_to_host_vaddr(device, used_event_paddr);
+    queue->used_event = reinterpret_cast<decltype(queue->used_event)>(used_event_host_vaddr);
+
+    // Used Ring.
+    uintptr_t used_paddr = PCI_ALIGN(used_event_paddr + used_event_size);
+    uintptr_t used_size = sizeof(queue->used) + (queue->size * sizeof(queue->used->ring[0]));
+    mx_vaddr_t used_host_vaddr = guest_paddr_to_host_vaddr(device, used_paddr);
+    queue->used = reinterpret_cast<decltype(queue->used)>(used_host_vaddr);
+
+    // Avail Event.
+    uintptr_t avail_event_paddr = used_paddr + used_size;
+    uintptr_t avail_event_size = sizeof(queue->avail_event);
+    mx_vaddr_t avail_event_host_paddr = guest_paddr_to_host_vaddr(device, avail_event_paddr);
+    queue->avail_event = reinterpret_cast<decltype(queue->avail_event)>(avail_event_host_paddr);
+
+    mx_vaddr_t end = avail_event_host_paddr + avail_event_size;
+    if (end < desc_paddr || end > mem_addr + mem_size) {
         fprintf(stderr, "Ring is outside of guest memory\n");
-        memset(queue, 0, sizeof(virtio_queue_t));
+        memset(queue, 0, sizeof(*queue));
         return MX_ERR_OUT_OF_RANGE;
     }
 
@@ -192,7 +224,7 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint16_t po
 
     // Handle device-specific accesses.
     if (port >= VIRTIO_PCI_DEVICE_CFG_BASE) {
-        uint16_t device_offset = port - VIRTIO_PCI_DEVICE_CFG_BASE;
+        uint16_t device_offset = static_cast<uint16_t>(port - VIRTIO_PCI_DEVICE_CFG_BASE);
         return device->ops->write(device, device_offset, io);
     }
 
@@ -207,11 +239,12 @@ static const pci_device_ops_t kVirtioPciLegacyDeviceOps = {
 
 void virtio_pci_init(virtio_device_t* device) {
     device->pci_device.vendor_id = PCI_VENDOR_ID_VIRTIO;
-    device->pci_device.device_id = PCI_DEVICE_ID_VIRTIO_LEGACY(device->device_id);
+    device->pci_device.device_id = virtio_pci_legacy_id(device->device_id);
     device->pci_device.subsystem_vendor_id = 0;
     device->pci_device.subsystem_id = device->device_id;
     device->pci_device.class_code = 0;
-    device->pci_device.bar_size = sizeof(virtio_pci_legacy_config_t) + device->config_size;
+    device->pci_device.bar_size = static_cast<uint16_t>(
+        sizeof(virtio_pci_legacy_config_t) + device->config_size);
     device->pci_device.impl = device;
     device->pci_device.ops = &kVirtioPciLegacyDeviceOps;
 }
@@ -251,7 +284,7 @@ typedef struct poll_task_args {
 
 static int virtio_queue_poll_task(void* ctx) {
     mx_status_t result = MX_OK;
-    poll_task_args_t* args = ctx;
+    mxtl::unique_ptr<poll_task_args_t> args(static_cast<poll_task_args_t*>(ctx));
     while (true) {
         uint16_t descriptor;
         virtio_queue_wait(args->queue, &descriptor);
@@ -273,21 +306,17 @@ static int virtio_queue_poll_task(void* ctx) {
             break;
     }
 
-    free(args);
     return result;
 }
 
 mx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t handler, void* ctx) {
-    poll_task_args_t* args = calloc(1, sizeof(*args));
-    args->queue = queue;
-    args->handler = handler;
-    args->ctx = ctx;
+    poll_task_args_t* args = new poll_task_args_t{queue, handler, ctx};
 
     thrd_t thread;
     int ret = thrd_create(&thread, virtio_queue_poll_task, args);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create queue thread %d\n", ret);
-        free(args);
+        delete args;
         return MX_ERR_INTERNAL;
     }
 
@@ -302,14 +331,15 @@ mx_status_t virtio_queue_poll(virtio_queue_t* queue, virtio_queue_poll_fn_t hand
 
 mx_status_t virtio_queue_read_desc(virtio_queue_t* queue, uint16_t desc_index,
                                    virtio_desc_t* out) {
-    struct vring_desc desc = queue->desc[desc_index];
-    size_t mem_size = queue->virtio_device->guest_physmem_size;
+    virtio_device_t* device = queue->virtio_device;
+    volatile struct vring_desc& desc = queue->desc[desc_index];
+    size_t mem_size = device->guest_physmem_size;
 
     const uint64_t end = desc.addr + desc.len;
     if (end < desc.addr || end > mem_size)
         return MX_ERR_OUT_OF_RANGE;
 
-    out->addr = guest_paddr_to_host_vaddr(queue->virtio_device, desc.addr);
+    out->addr = reinterpret_cast<void*>(guest_paddr_to_host_vaddr(device, desc.addr));
     out->len = desc.len;
     out->has_next = desc.flags & VRING_DESC_F_NEXT;
     out->writable = desc.flags & VRING_DESC_F_WRITE;
@@ -340,7 +370,7 @@ void virtio_queue_return(virtio_queue_t* queue, uint16_t index, uint32_t len) {
 mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handler, void* context) {
     uint16_t head;
     uint32_t used_len = 0;
-    void* mem_addr = queue->virtio_device->guest_physmem_addr;
+    uintptr_t mem_addr = queue->virtio_device->guest_physmem_addr;
     size_t mem_size = queue->virtio_device->guest_physmem_size;
 
     // Get the next descriptor from the available ring. If none are available
@@ -353,22 +383,23 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
 
     status = MX_OK;
     uint16_t desc_index = head;
-    struct vring_desc desc;
+    volatile const struct vring_desc* desc;
     do {
-        desc = queue->desc[desc_index];
+        desc = &queue->desc[desc_index];
 
-        const uint64_t end = desc.addr + desc.len;
-        if (end < desc.addr || end > mem_size)
+        const uint64_t end = desc->addr + desc->len;
+        if (end < desc->addr || end > mem_size)
             return MX_ERR_OUT_OF_RANGE;
 
-        status = handler(mem_addr + desc.addr, desc.len, desc.flags, &used_len, context);
+        void* addr = reinterpret_cast<void*>(mem_addr + desc->addr);
+        status = handler(addr, desc->len, desc->flags, &used_len, context);
         if (status != MX_OK) {
-            fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n", desc.addr, desc.len, status);
+            fprintf(stderr, "Virtio request (%#lx, %u) failed %d\n", desc->addr, desc->len, status);
             return status;
         }
 
-        desc_index = desc.next;
-    } while (desc.flags & VRING_DESC_F_NEXT);
+        desc_index = desc->next;
+    } while (desc->flags & VRING_DESC_F_NEXT);
 
     virtio_queue_return(queue, head, used_len);
 

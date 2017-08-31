@@ -9,7 +9,8 @@
 #include <hypervisor/decode.h>
 #include <magenta/syscalls/port.h>
 
-#define IO_APIC_REDIRECT_OFFSETS 96u
+#define IO_APIC_REDIRECTS 48u
+#define IO_APIC_REDIRECT_OFFSETS (IO_APIC_REDIRECTS * 2)
 #define IO_APIC_MAX_LOCAL_APICS 16u
 
 __BEGIN_CDECLS
@@ -42,10 +43,10 @@ mx_status_t io_apic_handler(io_apic_t* io_apic, const mx_packet_guest_mem_t* mem
 /* Returns the redirected interrupt vector and target VCPU for the given
  * global IRQ.
  */
-mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint8_t global_irq, uint8_t* vector,
+mx_status_t io_apic_redirect(const io_apic_t* io_apic, uint32_t global_irq, uint8_t* vector,
                              mx_handle_t* vcpu);
 
 /* Signals the given global IRQ. */
-mx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint8_t global_irq);
+mx_status_t io_apic_interrupt(const io_apic_t* io_apic, uint32_t global_irq);
 
 __END_CDECLS

@@ -46,7 +46,7 @@ static uint8_t mem_size(bool h66, bool rex_w) {
 }
 
 static uint8_t register_id(uint8_t mod_rm, bool rex_r) {
-    return ((mod_rm >> 3) & 0b111) + (rex_r ? 0b1000 : 0);
+    return static_cast<uint8_t>(((mod_rm >> 3) & 0b111) + (rex_r ? 0b1000 : 0));
 }
 
 static uint64_t* select_register(mx_vcpu_state_t* vcpu_state, uint8_t register_id) {

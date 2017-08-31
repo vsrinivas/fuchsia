@@ -72,7 +72,7 @@ typedef struct virtio_device {
     virtio_queue_t* queues;
 
     // Address of guest physical memory.
-    void* guest_physmem_addr;
+    uintptr_t guest_physmem_addr;
     // Size of guest physical memory.
     size_t guest_physmem_size;
 
@@ -106,7 +106,7 @@ typedef struct virtio_queue {
 
     // Queue PFN used to locate this queue in guest physical address space.
     uint32_t pfn;
-    uint32_t size;
+    uint16_t size;
     uint16_t index;
 
     // Pointer to the owning device.

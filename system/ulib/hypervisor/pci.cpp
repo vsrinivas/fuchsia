@@ -27,8 +27,8 @@
 
 static const uint32_t kPioBase = 0x8000;
 static const uint32_t kMaxBarSize = 1 << 8;
-static const uint32_t kPioAddressMask = (uint32_t)~BIT_MASK(2);
-static const uint32_t kMmioAddressMask = (uint32_t)~BIT_MASK(4);
+static const uint32_t kPioAddressMask = ~bit_mask<uint32_t>(2);
+static const uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
 /* Per-device IRQ assignments.
  *
  * These are provided to the guest via the _SB section in the DSDT ACPI table.
@@ -82,7 +82,7 @@ mx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) 
         return MX_ERR_NOT_SUPPORTED;
 
     device->bus = bus;
-    device->bar_size = bar_size;
+    device->bar_size = static_cast<uint16_t>(bar_size);
     device->bar[0] = kPioBase + (slot * kMaxBarSize);
     device->command = PCI_COMMAND_IO_EN;
     device->global_irq = kPciGlobalIrqAssigments[slot];
@@ -102,7 +102,7 @@ static void pci_addr_invalid_read(uint8_t len, uint32_t* value) {
     // it is adequate for the host bus to PCI bridge to return a value of all
     // 1's on read accesses to Configuration Space registers of non-existent
     // devices.
-    *value = (uint32_t)BIT_MASK(len * 8);
+    *value = bit_mask<uint32_t>(len * 8);
 }
 
 mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
@@ -126,7 +126,7 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
 
         switch (inst->mem) {
         case 1:
-            return inst_test8(inst, inst->imm, value);
+            return inst_test8(inst, static_cast<uint8_t>(inst->imm), static_cast<uint8_t>(value));
         default:
             return MX_ERR_NOT_SUPPORTED;
         }
@@ -141,9 +141,9 @@ mx_status_t pci_bus_handler(pci_bus_t* bus, const mx_packet_guest_mem_t* mem,
 
         switch (inst->mem) {
         case 1:
-            return inst_read8(inst, value);
+            return inst_read8(inst, static_cast<uint8_t>(value));
         case 2:
-            return inst_read16(inst, value);
+            return inst_read16(inst, static_cast<uint16_t>(value));
         case 4:
             return inst_read32(inst, value);
         default:
@@ -175,12 +175,12 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
     switch (port) {
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP: {
         uint32_t bit_offset = (port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
-        uint32_t bit_mask = (uint32_t)BIT_MASK(access_size * 8);
+        uint32_t mask = bit_mask<uint32_t>(access_size * 8);
         mtx_lock((mtx_t*)&bus->mutex);
         uint32_t addr = bus->config_addr >> bit_offset;
         mtx_unlock((mtx_t*)&bus->mutex);
         vcpu_io->access_size = access_size;
-        vcpu_io->u32 = (vcpu_io->u32 & ~bit_mask) | (addr & bit_mask);
+        vcpu_io->u32 = (vcpu_io->u32 & ~mask) | (addr & mask);
         return MX_OK;
     }
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP: {
@@ -195,8 +195,8 @@ mx_status_t pci_bus_read(const pci_bus_t* bus, uint16_t port, uint8_t access_siz
         }
 
         const pci_device_t* device = bus->device[PCI_TYPE1_DEVICE(addr)];
-        uint16_t reg = PCI_TYPE1_REGISTER(addr) + port - PCI_CONFIG_DATA_PORT_BASE;
-        return pci_device_read(device, reg, access_size, &vcpu_io->u32);
+        uint32_t reg = PCI_TYPE1_REGISTER(addr) + port - PCI_CONFIG_DATA_PORT_BASE;
+        return pci_device_read(device, static_cast<uint16_t>(reg), access_size, &vcpu_io->u32);
     }
     default:
         return MX_ERR_NOT_SUPPORTED;
@@ -211,13 +211,13 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_packet_guest_io_t* io) {
         // portions of the 32bit register without trampling the other bits.
         uint32_t bit_offset = (io->port - PCI_CONFIG_ADDRESS_PORT_BASE) * 8;
         uint32_t bit_size = io->access_size * 8;
-        uint32_t bit_mask = (uint32_t)BIT_MASK(bit_size);
+        uint32_t mask = bit_mask<uint32_t>(bit_size);
 
         mtx_lock(&bus->mutex);
         // Clear out the bits we'll be modifying.
-        bus->config_addr = CLEAR_BITS(bus->config_addr, bit_size, bit_offset);
+        bus->config_addr = clear_bits(bus->config_addr, bit_size, bit_offset);
         // Set the bits of the address.
-        bus->config_addr |= (io->u32 & bit_mask) << bit_offset;
+        bus->config_addr |= (io->u32 & mask) << bit_offset;
         mtx_unlock(&bus->mutex);
         return MX_OK;
     }
@@ -229,8 +229,8 @@ mx_status_t pci_bus_write(pci_bus_t* bus, const mx_packet_guest_io_t* io) {
             return MX_ERR_OUT_OF_RANGE;
 
         pci_device_t* device = bus->device[PCI_TYPE1_DEVICE(addr)];
-        uint16_t reg = PCI_TYPE1_REGISTER(addr) + io->port - PCI_CONFIG_DATA_PORT_BASE;
-        return pci_device_write(device, reg, io->access_size, io->u32);
+        uint32_t reg = PCI_TYPE1_REGISTER(addr) + io->port - PCI_CONFIG_DATA_PORT_BASE;
+        return pci_device_write(device, static_cast<uint16_t>(reg), io->access_size, io->u32);
     }
     default:
         return MX_ERR_NOT_SUPPORTED;
@@ -324,15 +324,15 @@ mx_status_t pci_device_read(const pci_device_t* device, uint16_t reg, uint8_t le
     // Perform 4-byte aligned read and then shift + mask the result to get the
     // expected value.
     uint32_t word = 0;
-    const uint32_t reg_mask = BIT_MASK(2);
-    uint8_t word_aligend_reg = reg & ~reg_mask;
-    uint8_t bit_offset = (reg & reg_mask) * 8;
+    const uint8_t reg_mask = bit_mask<uint8_t>(2);
+    uint8_t word_aligend_reg = static_cast<uint8_t>(reg & ~reg_mask);
+    uint8_t bit_offset = static_cast<uint8_t>((reg & reg_mask) * 8);
     mx_status_t status = pci_device_read_word(device, word_aligend_reg, &word);
     if (status != MX_OK)
         return status;
 
     word >>= bit_offset;
-    word &= BIT_MASK(len * 8);
+    word &= bit_mask<uint32_t>(len * 8);
     *value = word;
     return MX_OK;
 }
@@ -352,7 +352,7 @@ mx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, ui
         if (len != 2)
             return MX_ERR_NOT_SUPPORTED;
         mtx_lock(&device->mutex);
-        device->command = value;
+        device->command = static_cast<uint16_t>(value);
         mtx_unlock(&device->mutex);
         return MX_OK;
     case PCI_REGISTER_BAR_0: {
@@ -411,7 +411,7 @@ pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, 
             continue;
 
         if (addr >= bar_base && addr < bar_base + bar_size) {
-            *off = addr - bar_base;
+            *off = static_cast<uint16_t>(addr - bar_base);
             return bus->device[i];
         }
     }
@@ -435,11 +435,12 @@ uint16_t pci_bar_size(pci_device_t* device) {
 }
 
 static mx_status_t pci_handler(mx_port_packet_t* packet, void* ctx) {
-    pci_device_t* pci_device = ctx;
+    pci_device_t* pci_device = static_cast<pci_device_t*>(ctx);
     mx_packet_guest_io_t* io = &packet->guest_io;
     uint32_t bar_base = pci_bar_base(pci_device);
+    uint16_t device_port = static_cast<uint16_t>(io->port - bar_base);
 
-    return pci_device->ops->write_bar(pci_device, io->port - bar_base, io);
+    return pci_device->ops->write_bar(pci_device, device_port, io);
 }
 
 mx_status_t pci_device_async(pci_device_t* device, mx_handle_t guest) {

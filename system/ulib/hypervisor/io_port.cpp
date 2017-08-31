@@ -45,8 +45,8 @@ void io_port_init(io_port_t* io_port) {
     memset(io_port, 0, sizeof(*io_port));
 }
 
-static uint8_t to_bcd(uint8_t binary) {
-    return ((binary / 10) << 4) | (binary % 10);
+static uint8_t to_bcd(int binary) {
+    return static_cast<uint8_t>(((binary / 10) << 4) | (binary % 10));
 }
 
 static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
@@ -70,10 +70,14 @@ static mx_status_t handle_rtc(uint8_t rtc_index, uint8_t* value) {
     case RTC_REGISTER_MONTH:
         *value = to_bcd(tm.tm_mon);
         break;
-    case RTC_REGISTER_YEAR:
+    case RTC_REGISTER_YEAR: {
         // RTC expects the number of years since 2000.
-        *value = to_bcd(tm.tm_year - 100);
+        int year = tm.tm_year - 100;
+        if (year < 0)
+            year = 0;
+        *value = to_bcd(year);
         break;
+    }
     case RTC_REGISTER_A:
         // Ensure that UIP is 0. Other values (clock frequency) are obsolete.
         *value = 0;

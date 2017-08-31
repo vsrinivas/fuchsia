@@ -52,9 +52,8 @@ typedef struct balloon {
     virtio_balloon_config_t config;
 } balloon_t;
 
-void balloon_init(balloon_t* balloon, void* guest_physmem_addr, size_t guest_physmem_size,
+void balloon_init(balloon_t* balloon, uintptr_t guest_physmem_addr, size_t guest_physmem_size,
                   mx_handle_t guest_physmem_vmo);
-
 
 /* Callback for balloon_request_stats. */
 typedef void (*balloon_stats_fn_t)(const virtio_balloon_stat_t* stats, size_t len, void* ctx);

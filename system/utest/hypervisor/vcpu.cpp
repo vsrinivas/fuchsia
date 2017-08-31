@@ -265,9 +265,10 @@ static bool read_pci_config_data_port(void) {
     packet.guest_io.access_size = 2;
     test.bus.config_addr = PCI_TYPE1_ADDR(0, 0, 0, PCI_CONFIG_DEVICE_ID);
     // Verify we're using a 4b aligned register address.
-    EXPECT_EQ(test.bus.config_addr & BIT_MASK(2), 0u, "");
+    EXPECT_EQ(test.bus.config_addr & bit_mask<uint32_t>(2), 0u, "");
     // Add the register offset to the data port base address.
-    packet.guest_io.port = PCI_CONFIG_DATA_PORT_BASE + (PCI_CONFIG_DEVICE_ID & BIT_MASK(2));
+    packet.guest_io.port = PCI_CONFIG_DATA_PORT_BASE +
+        (PCI_CONFIG_DEVICE_ID & bit_mask<uint32_t>(2));
     EXPECT_EQ(vcpu_packet_handler(&test.vcpu_ctx, &packet), MX_OK,
               "Failed to handle guest packet");
     EXPECT_EQ(test.vcpu_io.access_size, 2, "Incorrect IO access_size");

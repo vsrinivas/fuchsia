@@ -17,6 +17,7 @@
 #include <hypervisor/vcpu.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
+#include <mxtl/unique_ptr.h>
 
 #include "acpi_priv.h"
 
@@ -81,13 +82,15 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_g
     case LOCAL_APIC_REGISTER_TMR_31_0 ... LOCAL_APIC_REGISTER_TMR_255_224:
     case LOCAL_APIC_REGISTER_IRR_31_0 ... LOCAL_APIC_REGISTER_IRR_255_224:
         return inst_read32(inst, 0);
-    case LOCAL_APIC_REGISTER_ID:
+    case LOCAL_APIC_REGISTER_ID: {
         // The IO APIC implementation currently assumes these won't change.
         if (inst->type == INST_MOV_WRITE && inst_val32(inst) != local_apic->regs->id.u32) {
             fprintf(stderr, "Changing APIC IDs is not supported.\n");
             return MX_ERR_NOT_SUPPORTED;
         }
-        return inst_rw32(inst, local_apic->apic_addr + offset);
+        uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic->apic_addr) + offset;
+        return inst_rw32(inst, reinterpret_cast<uint32_t*>(addr));
+    }
     case LOCAL_APIC_REGISTER_DFR:
     case LOCAL_APIC_REGISTER_ICR_31_0 ... LOCAL_APIC_REGISTER_ICR_63_32:
     case LOCAL_APIC_REGISTER_LDR:
@@ -97,8 +100,10 @@ static mx_status_t handle_local_apic(local_apic_t* local_apic, const mx_packet_g
     case LOCAL_APIC_REGISTER_LVT_PERFMON:
     case LOCAL_APIC_REGISTER_LVT_THERMAL:
     case LOCAL_APIC_REGISTER_LVT_TIMER:
-    case LOCAL_APIC_REGISTER_SVR:
-        return inst_rw32(inst, local_apic->apic_addr + offset);
+    case LOCAL_APIC_REGISTER_SVR: {
+        uintptr_t addr = reinterpret_cast<uintptr_t>(local_apic->apic_addr) + offset;
+        return inst_rw32(inst, reinterpret_cast<uint32_t*>(addr));
+    }
     case LOCAL_APIC_REGISTER_INITIAL_COUNT: {
         uint32_t initial_count;
         mx_status_t status = inst_write32(inst, &initial_count);
@@ -298,38 +303,31 @@ typedef struct device {
 } device_t;
 
 static int device_loop(void* ctx) {
-    device_t* device = ctx;
+    mxtl::unique_ptr<device_t> device(static_cast<device_t*>(ctx));
 
     while (true) {
         mx_port_packet_t packet;
         mx_status_t status = mx_port_wait(device->port, MX_TIME_INFINITE, &packet, 0);
         if (status != MX_OK) {
             fprintf(stderr, "Failed to wait for device port %d\n", status);
-            goto cleanup;
+            break;
         }
 
         status = device->handler(&packet, device->ctx);
         if (status != MX_OK) {
             fprintf(stderr, "Unable to handle packet for device %d\n", status);
-            goto cleanup;
+            break;
         }
     }
 
-cleanup:
     mx_handle_close(device->port);
-    free(device);
     return MX_ERR_INTERNAL;
 }
 
 mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
                          size_t len, device_handler_fn_t handler, void* ctx) {
-    device_t* device = calloc(1, sizeof(device_t));
-    if (device == NULL) {
-        fprintf(stderr, "Failed to allocate device\n");
-        return MX_ERR_NO_MEMORY;
-    }
-    device->handler = handler;
-    device->ctx = ctx;
+    int ret;
+    auto device = new device_t{MX_HANDLE_INVALID, handler, ctx};
 
     mx_status_t status = mx_port_create(0, &device->port);
     if (status != MX_OK) {
@@ -344,7 +342,7 @@ mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
     }
 
     thrd_t thread;
-    int ret = thrd_create(&thread, device_loop, device);
+    ret = thrd_create(&thread, device_loop, device);
     if (ret != thrd_success) {
         fprintf(stderr, "Failed to create device thread %d\n", ret);
         goto cleanup;
@@ -360,6 +358,6 @@ mx_status_t device_async(mx_handle_t guest, uint32_t kind, mx_vaddr_t addr,
 cleanup:
     mx_handle_close(device->port);
 mem_cleanup:
-    free(device);
+    delete device;
     return MX_ERR_INTERNAL;
 }
