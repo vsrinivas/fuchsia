@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/cros.c \
     $(LOCAL_DIR)/gpt.c \
 
 MODULE_STATIC_LIBS := third_party/ulib/cksum

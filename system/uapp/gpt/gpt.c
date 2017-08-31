@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h> // for mx_cprng_draw
@@ -45,6 +46,25 @@ struct guid {
 static char* guid_to_cstring(char* dst, const uint8_t* src) {
     struct guid* guid = (struct guid*)src;
     sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2, guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3], guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
+    return dst;
+}
+
+static char* cros_flags_to_cstring(char* dst, size_t dst_len, uint64_t flags) {
+    uint32_t priority = gpt_cros_attr_get_priority(flags);
+    uint32_t tries = gpt_cros_attr_get_tries(flags);
+    bool successful = gpt_cros_attr_get_successful(flags);
+    snprintf(dst, dst_len, "priority=%u tries=%u successful=%u", priority, tries, successful);
+    dst[dst_len-1] = 0;
+    return dst;
+}
+
+static char* flags_to_cstring(char* dst, size_t dst_len, const uint8_t* guid, uint64_t flags) {
+    if (gpt_cros_is_kernel_guid(guid, sizeof(struct guid))) {
+        return cros_flags_to_cstring(dst, dst_len, flags);
+    } else {
+        snprintf(dst, dst_len, "0x%016" PRIx64, flags);
+    }
+    dst[dst_len-1] = 0;
     return dst;
 }
 
@@ -127,6 +147,7 @@ static void dump_partitions(const char* dev) {
     char name[GPT_GUID_STRLEN];
     char guid[GPT_GUID_STRLEN];
     char id[GPT_GUID_STRLEN];
+    char flags_str[256];
     int i;
     for (i = 0; i < PARTITIONS_COUNT; i++) {
         p = gpt->partitions[i];
@@ -138,6 +159,8 @@ static void dump_partitions(const char* dev) {
                p->first, p->last, p->last - p->first + 1);
         printf("    id:   %s\n", guid_to_cstring(guid, (const uint8_t*)p->guid));
         printf("    type: %s\n", guid_to_cstring(id, (const uint8_t*)p->type));
+        printf("    flags: %s\n", flags_to_cstring(flags_str, sizeof(flags_str), p->type,
+                                                   p->flags));
     }
     printf("Total: %d partitions\n", i);
 
