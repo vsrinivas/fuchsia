@@ -6,8 +6,7 @@
 #define PLATFORM_TRACE_H
 
 #if MAGMA_ENABLE_TRACING
-#include "apps/tracing/lib/trace/event.h"    //nogncheck
-#include "apps/tracing/lib/trace/provider.h" //nogncheck
+#include <trace/event.h>
 #define TRACE_NONCE_DECLARE(x) uint64_t x = TRACE_NONCE()
 #else
 #define TRACE_NONCE() 0

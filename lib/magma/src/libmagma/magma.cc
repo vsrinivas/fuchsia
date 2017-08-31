@@ -9,8 +9,6 @@
 #include "platform_connection.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
-#include <mutex>
-#include <thread>
 #include <vector>
 
 magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
@@ -24,18 +22,6 @@ magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
                                sizeof(device_handle));
     if (ioctl_ret < 0)
         return DRETP(nullptr, "mxio_ioctl failed: %d", ioctl_ret);
-
-#if MAGMA_ENABLE_TRACING
-    static std::once_flag trace_init_flag;
-    std::call_once(trace_init_flag, [] {
-        std::thread([] {
-            mtl::MessageLoop loop;
-            tracing::InitializeTracer(app::ApplicationContext::CreateFromStartupInfo().get(),
-                                      {"libmagma"});
-            loop.Run();
-        }).detach();
-    });
-#endif
 
     // Here we release ownership of the connection to the client
     return magma::PlatformIpcConnection::Create(device_handle).release();

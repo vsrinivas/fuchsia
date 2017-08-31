@@ -51,10 +51,8 @@ extern "C" {
 #include "platform_trace.h"
 
 #ifdef MAGMA_ENABLE_TRACING
-#include "application/lib/app/application_context.h"
-#include "apps/tracing/lib/trace/provider.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include <thread>
+#include <async/loop.h>
+#include <trace-provider/provider.h>
 #endif
 
 //#include <vulkan/vk_sdk_platform.h>
@@ -840,7 +838,7 @@ static void demo_prepare_buffers(struct demo *demo) {
         } else if (swapchainExtent.width > surfCapabilities.maxImageExtent.width) {
             swapchainExtent.width = surfCapabilities.maxImageExtent.width;
         }
-        
+
         if (swapchainExtent.height < surfCapabilities.minImageExtent.height) {
             swapchainExtent.height = surfCapabilities.minImageExtent.height;
         } else if (swapchainExtent.height > surfCapabilities.maxImageExtent.height) {
@@ -1953,7 +1951,7 @@ static void demo_cleanup(struct demo *demo) {
     xcb_destroy_window(demo->connection, demo->xcb_window);
     xcb_disconnect(demo->connection);
     free(demo->atom_wm_delete_window);
-#endif    
+#endif
 }
 
 static void demo_resize(struct demo *demo) {
@@ -2224,7 +2222,7 @@ static void demo_create_xcb_window(struct demo *demo) {
 #endif
 
 #if defined(VK_USE_PLATFORM_MAGMA_KHR)
-static void demo_run_magma(struct demo *demo) 
+static void demo_run_magma(struct demo *demo)
 {
     uint32_t num_frames = 60;
     uint32_t elapsed_frames = 0;
@@ -2711,9 +2709,9 @@ static void demo_init_vk_swapchain(struct demo *demo) {
         VkMagmaSurfaceCreateInfoKHR createInfo = {
             .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
             .pNext = nullptr,
-        };  
+        };
         err = vkCreateMagmaSurfaceKHR(demo->inst, &createInfo, nullptr, &demo->surface);
-#endif        
+#endif
     }
     assert(!err);
 
@@ -2916,7 +2914,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->suppress_popups = true;
             continue;
         }
-        if ((strcmp(argv[i], "--size") == 0 || strcmp(argv[i], "--res") == 0) && 
+        if ((strcmp(argv[i], "--size") == 0 || strcmp(argv[i], "--res") == 0) &&
             (i < argc - 2) && sscanf(argv[i + 1], "%u", &demo->width) == 1 &&
             sscanf(argv[i + 2], "%u", &demo->height) == 1) {
             i += 2;
@@ -2995,34 +2993,15 @@ int cube_main(int argc, char **argv) {
     return validation_error;
 }
 
-void TraceInit()
-{
-#if defined(MAGMA_ENABLE_TRACING)
-    std::thread trace_thread = std::thread([] {
-        mtl::MessageLoop loop;
-
-        auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-        if (!app_context) {
-            printf("vkcube: no app context environment, can't trace\n");
-            return;
-        }
-
-        tracing::TraceSettings settings = {"vkcube"};
-        InitializeTracer(app_context->ConnectToEnvironmentService<tracing::TraceRegistry>(),
-                         settings);
-
-        loop.Run();
-        printf("vkcube: trace thread exiting\n");
-    });
-    trace_thread.detach();
-#endif
-}
-
 int test_vk_cube(int argc, char** argv)
 {
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif
-    TraceInit();
+#if defined(MAGMA_ENABLE_TRACING)
+    async::Loop loop;
+    loop.StartThread();
+    trace::TraceProvider trace_provider(loop.async());
+#endif
     return cube_main(argc, argv);
 }

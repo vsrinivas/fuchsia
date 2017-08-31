@@ -5,21 +5,26 @@
 #ifndef MAGENTA_PLATFORM_TRACE_H
 #define MAGENTA_PLATFORM_TRACE_H
 
-#include "mx/channel.h"
+#if MAGMA_ENABLE_TRACING
+#include <async/loop.h>
+#include <trace-provider/provider.h>
+#endif
+
 #include "platform_trace.h"
-#include <thread>
 
 namespace magma {
 
-
+#if MAGMA_ENABLE_TRACING
 class MagentaPlatformTrace : public PlatformTrace {
 public:
     MagentaPlatformTrace();
 
 private:
-    std::thread trace_thread_;
+    async::Loop loop_;
+    trace::TraceProvider trace_provider_;
 };
+#endif
 
-} //
+} // namespace magma
 
 #endif // MAGENTA_PLATFORM_TRACE_H

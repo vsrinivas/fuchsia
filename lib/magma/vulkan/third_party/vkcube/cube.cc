@@ -49,10 +49,8 @@
 #include "platform_trace.h"
 
 #ifdef MAGMA_ENABLE_TRACING
-#include "application/lib/app/application_context.h"
-#include "apps/tracing/lib/trace/provider.h"
-#include "lib/mtl/tasks/message_loop.h"
-#include <thread>
+#include <async/loop.h>
+#include <trace-provider/provider.h>
 #endif
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -2765,6 +2763,7 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
     }
 
     mtl::MessageLoop loop;
+    trace::TraceProvider trace_provider(loop.async());
 
     auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
     app::ServiceProviderPtr services;
@@ -2834,34 +2833,15 @@ int cube_main(int argc, char** argv)
     return validation_error;
 }
 
-void TraceInit()
-{
-#if defined(MAGMA_ENABLE_TRACING)
-    std::thread trace_thread = std::thread([] {
-        mtl::MessageLoop loop;
-
-        auto app_context = app::ApplicationContext::CreateFromStartupInfo();
-        if (!app_context) {
-            printf("vkcube: no app context environment, can't trace\n");
-            return;
-        }
-
-        tracing::TraceSettings settings = {"vkcube"};
-        InitializeTracer(app_context->ConnectToEnvironmentService<tracing::TraceRegistry>(),
-                         settings);
-
-        loop.Run();
-        printf("vkcube: trace thread exiting\n");
-    });
-    trace_thread.detach();
-#endif
-}
-
 int test_vk_cube(int argc, char** argv)
 {
 #if defined(MAGMA_USE_SHIM)
     VulkanShimInit();
 #endif
-    TraceInit();
+#if defined(MAGMA_ENABLE_TRACING)
+    async::Loop loop;
+    loop.StartThread();
+    trace::TraceProvider trace_provider(loop.async());
+#endif
     return cube_main(argc, argv);
 }
