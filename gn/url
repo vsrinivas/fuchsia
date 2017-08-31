@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "url_tests": "//lib/url:url_tests"
+        "url_tests": "//garnet/public/lib/url:url_tests"
     }
 }
