@@ -18,8 +18,8 @@ executable("bootstrap") {
     "//application/lib/svc",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
+    "//garnet/public/lib/url",
     "//lib/mtl",
-    "//lib/url",
     "//third_party/rapidjson",
   ]
 }
