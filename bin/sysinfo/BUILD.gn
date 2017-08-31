@@ -1,0 +1,32 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("sysinfo") {
+  sources = [
+    "sysinfo.cc",
+  ]
+  libs = [
+    "launchpad",
+    "magenta",
+  ]
+  deps = [
+    "//garnet/public/lib/ftl",
+  ]
+}
+
+package("package") {
+  deps = [
+    ":sysinfo",
+  ]
+
+  package_name = "sysinfo"
+
+  binaries = [
+    {
+      name = "sysinfo"
+    },
+  ]
+}
