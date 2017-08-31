@@ -177,11 +177,7 @@ def main():
     if not amalgamation:
         return 1
 
-    if len(amalgamation.boot.files) != 0:
-        write_manifest(args.boot_manifest, amalgamation.boot.files)
-    else:
-        if os.path.exists(args.boot_manifest):
-            os.remove(args.boot_manifest)
+    write_manifest(args.boot_manifest, amalgamation.boot.files)
     write_manifest(args.system_manifest, amalgamation.system.files, autorun=args.autorun)
 
     update_gopath(amalgamation.gopaths, amalgamation.build_root)
