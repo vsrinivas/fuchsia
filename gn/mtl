@@ -6,6 +6,6 @@
         "ftl"
     ],
     "packages": {
-        "mtl": "//lib/mtl:package"
+        "mtl": "//garnet/public/lib/mtl:package"
     }
 }
