@@ -7,7 +7,7 @@
         "mtl"
     ],
     "labels": [
-        "//bin/listen"
+        "//garnet/bin/listen"
     ],
     "binaries": [
         {
