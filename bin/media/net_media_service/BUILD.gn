@@ -29,10 +29,10 @@ executable("net_media_service") {
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//apps/network/services",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/url",
     "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
     "//lib/mtl",
-    "//lib/url",
   ]
 }
 
