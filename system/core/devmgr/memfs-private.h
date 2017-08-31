@@ -16,6 +16,7 @@
 
 #ifdef __cplusplus
 
+#include <mxtl/atomic.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -41,17 +42,18 @@ public:
 
     virtual ~VnodeMemfs();
 
-    // TODO(smklein): The following members should become private
-    uint32_t seqcount_;
-
     mxtl::RefPtr<Dnode> dnode_;
     uint32_t link_count_;
 
 protected:
     VnodeMemfs();
 
+    uint64_t ino_;
     uint64_t create_time_;
     uint64_t modify_time_;
+
+private:
+    static mxtl::atomic<uint64_t> ino_ctr_;
 };
 
 class VnodeFile final : public VnodeMemfs {

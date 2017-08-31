@@ -18,6 +18,7 @@
 #include <mxio/vfs.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
+#include <mxtl/atomic.h>
 #include <mxtl/auto_lock.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
@@ -53,7 +54,10 @@ static bool WindowMatchesVMO(mx_handle_t vmo, mx_off_t offset, mx_off_t length) 
     return size == length;
 }
 
-VnodeMemfs::VnodeMemfs() : seqcount_(0), dnode_(nullptr), link_count_(0) {
+mxtl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
+
+VnodeMemfs::VnodeMemfs() : dnode_(nullptr), link_count_(0),
+    ino_(ino_ctr_.fetch_add(1, mxtl::memory_order_relaxed)) {
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {
@@ -259,6 +263,7 @@ constexpr uint64_t kMemfsBlksize = PAGE_SIZE;
 
 mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
+    attr->inode = ino_;
     attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
@@ -271,6 +276,7 @@ mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
 
 mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
+    attr->inode = ino_;
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->size = 0;
     attr->blksize = kMemfsBlksize;
@@ -283,6 +289,7 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
 
 mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
+    attr->inode = ino_;
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
