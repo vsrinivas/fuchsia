@@ -1,0 +1,98 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+static_library("url") {
+  sources = [
+    "gurl.cc",
+    "gurl.h",
+    "third_party/mozilla/url_parse.cc",
+    "third_party/mozilla/url_parse.h",
+    "url_canon.h",
+    "url_canon_etc.cc",
+    "url_canon_fileurl.cc",
+    "url_canon_host.cc",
+    "url_canon_icu.cc",
+    "url_canon_icu.h",
+    "url_canon_internal.cc",
+    "url_canon_internal.h",
+    "url_canon_internal_file.h",
+    "url_canon_ip.cc",
+    "url_canon_ip.h",
+    "url_canon_mailtourl.cc",
+    "url_canon_path.cc",
+    "url_canon_pathurl.cc",
+    "url_canon_query.cc",
+    "url_canon_relative.cc",
+    "url_canon_stdstring.cc",
+    "url_canon_stdstring.h",
+    "url_canon_stdurl.cc",
+    "url_constants.cc",
+    "url_constants.h",
+    "url_export.h",
+    "url_file.h",
+    "url_parse_file.cc",
+    "url_parse_internal.h",
+    "url_util.cc",
+    "url_util.h",
+  ]
+
+  defines = [ "URL_IMPLEMENTATION" ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/icu",
+  ]
+
+  public_deps = [
+    "//apps/icu_data/lib",
+  ]
+}
+
+# TODO(kulakowski) Restore app tests. Adding a dummy target means not
+# having to change the packages manifest, which is JSON and hence
+# commentless.
+executable("url_apptests") {
+  testonly = true
+  sources = [
+    "dummy_unittest.cc",
+  ]
+}
+
+package("url_tests") {
+  testonly = true
+
+  deps = [
+    ":url_apptests",
+  ]
+
+  tests = [ {
+        name = "url_apptests"
+      } ]
+}
+# mojo_native_application("url_apptests") {
+#   testonly = true
+#   sources = [
+#     "gurl_unittest.cc",
+#     "test/icu_unittest_base.h",
+#     "url_canon_icu_unittest.cc",
+#     "url_canon_unittest.cc",
+#     "url_parse_unittest.cc",
+#     "url_test_utils.h",
+#     "url_util_unittest.cc",
+#   ]
+#
+#   deps = [
+#     ":url",
+#     "//lib/ftl",
+#     "//mojo/public/cpp/application:standalone",
+#     "//mojo/public/cpp/application:test_support_standalone",
+#     "//mojo/system",
+#     "//third_party/gtest",
+#     "//third_party/icu",
+#   ]
+#
+#   libs = [ "magenta" ]
+# }
