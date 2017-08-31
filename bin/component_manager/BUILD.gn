@@ -21,9 +21,9 @@ executable("component_manager_main") {
     "//application/lib/app",
     "//apps/modular/services/component",
     "//apps/network/services",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/url",
     "//lib/mtl",
-    "//lib/url",
     "//third_party/rapidjson",
   ]
 
