@@ -39,6 +39,8 @@
 #define LOCAL_KTRACE2(probe, x, y)
 #endif
 
+#define LOCAL_TRACE 0
+
 #define DEBUG_THREAD_CONTEXT_SWITCH 0
 
 #define TRACE_CONTEXT_SWITCH(str, x...)  \
@@ -49,6 +51,8 @@
 
 /* threads get 10ms to run before they use up their time slice and the scheduler is invoked */
 #define THREAD_INITIAL_TIME_SLICE ZX_MSEC(10)
+
+static bool local_migrate_if_needed(thread_t *curr_thread);
 
 /* compute the effective priority of a thread */
 static int effec_priority(const thread_t* t) {
@@ -104,7 +108,7 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
     t->priority_boost--;
 }
 
-/* pick a 'random' cpu */
+/* pick a 'random' cpu out of the passed in mask of cpus */
 static cpu_mask_t rand_cpu(const cpu_mask_t mask) {
     if (unlikely(mask == 0))
         return 0;
@@ -115,7 +119,7 @@ static cpu_mask_t rand_cpu(const cpu_mask_t mask) {
         return 0;
 
     /* compute the highest online cpu */
-    uint highest_cpu = (sizeof(cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(online);
+    cpu_mask_t highest_cpu = highest_cpu_set(online);
 
     /* not very random, round robins a bit through the mask until it gets a hit */
     for (;;) {
@@ -133,17 +137,24 @@ static cpu_mask_t rand_cpu(const cpu_mask_t mask) {
 /* find a cpu to wake up */
 static cpu_mask_t find_cpu_mask(thread_t* t) {
     /* get the last cpu the thread ran on */
-    cpu_mask_t last_ran_cpu_mask = cpu_num_to_mask(thread_last_cpu(t));
+    cpu_mask_t last_ran_cpu_mask = cpu_num_to_mask(t->last_cpu);
 
     /* the current cpu */
     cpu_mask_t curr_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
 
-    /* get a list of idle cpus */
+    /* the thread's affinity mask */
+    cpu_mask_t cpu_affinity = t->cpu_affinity;
+
+    LTRACEF_LEVEL(2, "last %#x curr %#x aff %#x name %s\n",
+            last_ran_cpu_mask, curr_cpu_mask, cpu_affinity, t->name);
+
+    /* get a list of idle cpus and mask off the ones that aren't in our affinity mask */
     cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
+    idle_cpu_mask &= cpu_affinity;
     if (idle_cpu_mask != 0) {
         if (idle_cpu_mask & curr_cpu_mask) {
-            /* the current cpu is idle, so run it here */
-            return 0;
+            /* the current cpu is idle and within our affinity mask, so run it here */
+            return curr_cpu_mask;
         }
 
         if (last_ran_cpu_mask & idle_cpu_mask) {
@@ -155,15 +166,26 @@ static cpu_mask_t find_cpu_mask(thread_t* t) {
         return rand_cpu(idle_cpu_mask);
     }
 
-    /* no idle cpus */
-    if (last_ran_cpu_mask == curr_cpu_mask) {
-        /* the last cpu it ran on is us */
-        /* pick a random cpu that isn't the current one */
-        return rand_cpu(mp_get_online_mask() & ~(curr_cpu_mask));
-    } else {
-        /* pick the last cpu it ran on */
+    /* no idle cpus in our affinity mask */
+
+    /* if the last cpu it ran on is in the affinity mask and not the current cpu, pick that */
+    if ((last_ran_cpu_mask & cpu_affinity) && last_ran_cpu_mask != curr_cpu_mask) {
         return last_ran_cpu_mask;
     }
+
+    /* fall back to picking a cpu out of the affinity mask, preferring something other
+     * than the local cpu.
+     * the affinity mask hard pins the thread to the cpus in the mask, so it's not possible
+     * to pick a cpu outside of that list.
+     */
+    cpu_mask_t mask = cpu_affinity & ~(curr_cpu_mask);
+    if (mask == 0)
+        return curr_cpu_mask; /* local cpu is the only choice */
+
+    mask = rand_cpu(mask);
+    if (mask == 0)
+        return curr_cpu_mask; /* local cpu is the only choice */
+    return mask;
 }
 
 /* run queue manipulation */
@@ -203,8 +225,10 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) {
         thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
         DEBUG_ASSERT(newthread);
-        DEBUG_ASSERT_MSG(!is_valid_cpu_num(newthread->pinned_cpu) || newthread->pinned_cpu == cpu,
-                         "thread %p name %s\n", newthread, newthread->name);
+        DEBUG_ASSERT_MSG(newthread->cpu_affinity & cpu_num_to_mask(cpu),
+                         "thread %p name %s, aff %#x cpu %u\n", newthread, newthread->name,
+                         newthread->cpu_affinity, cpu);
+        DEBUG_ASSERT(newthread->curr_cpu == cpu);
 
         if (list_is_empty(&c->run_queue[highest_queue]))
             c->run_queue_bitmap &= ~(1u << highest_queue);
@@ -236,24 +260,24 @@ void sched_block(void) {
  * of cpus we'll need to reschedule, including the local cpu.
  */
 static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t *accum_cpu_mask) {
-    if (likely(!is_valid_cpu_num(t->pinned_cpu))) {
-        /* find a core to run it on */
-        cpu_mask_t cpu = find_cpu_mask(t);
-        if (cpu == 0) {
-            insert_in_run_queue_head(arch_curr_cpu_num(), t);
-            *local_resched = true;
-        } else {
-            insert_in_run_queue_head(__builtin_ctz(cpu), t);
-            *accum_cpu_mask |= cpu;
-        }
+    /* find a core to run it on */
+    cpu_mask_t cpu = find_cpu_mask(t);
+    cpu_num_t cpu_num;
+
+    DEBUG_ASSERT(cpu != 0);
+
+    cpu_num = lowest_cpu_set(cpu);
+    if (cpu_num == arch_curr_cpu_num()) {
+        *local_resched = true;
     } else {
-        /* it's a pinned thread, always put it in the run queue it's pinned to */
-        if ((uint)t->pinned_cpu == arch_curr_cpu_num()) {
-            *local_resched = true;
-        } else {
-            *accum_cpu_mask |= cpu_num_to_mask(t->pinned_cpu);
-        }
-        insert_in_run_queue_head(t->pinned_cpu, t);
+        *accum_cpu_mask |= cpu_num_to_mask(cpu_num);
+    }
+
+    t->curr_cpu = cpu_num;
+    if (t->remaining_time_slice > 0) {
+        insert_in_run_queue_head(cpu_num, t);
+    } else {
+        insert_in_run_queue_tail(cpu_num, t);
     }
 }
 
@@ -307,6 +331,23 @@ bool sched_unblock_list(struct list_node* list) {
     return local_resched;
 }
 
+/* handle the special case of resuming a newly created idle thread */
+void sched_unblock_idle(thread_t* t) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    DEBUG_ASSERT(thread_is_idle(t));
+    DEBUG_ASSERT(t->cpu_affinity && (t->cpu_affinity & (t->cpu_affinity - 1)) == 0);
+
+    /* idle thread is special case, just jam it into the cpu's run queue in the thread's
+     * affinity mask and mark it ready.
+     */
+    t->state = THREAD_READY;
+    cpu_num_t cpu = lowest_cpu_set(t->cpu_affinity);
+    t->curr_cpu = cpu;
+    insert_in_run_queue_head(cpu, t);
+}
+
+/* the thread is voluntarily giving up its time slice */
 void sched_yield(void) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
@@ -315,13 +356,16 @@ void sched_yield(void) {
 
     LOCAL_KTRACE0("sched_yield");
 
-    current_thread->state = THREAD_READY;
-
     /* consume the rest of the time slice, deboost ourself, and go to the end of a queue */
     current_thread->remaining_time_slice = 0;
     deboost_thread(current_thread, false);
-    insert_in_run_queue_tail(arch_curr_cpu_num(), current_thread);
 
+    current_thread->state = THREAD_READY;
+
+    if (local_migrate_if_needed(current_thread))
+        return;
+
+    insert_in_run_queue_tail(arch_curr_cpu_num(), current_thread);
     sched_resched_internal();
 }
 
@@ -332,17 +376,25 @@ void sched_preempt(void) {
     thread_t* current_thread = get_current_thread();
     uint curr_cpu = arch_curr_cpu_num();
 
+    DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
+    DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
     LOCAL_KTRACE0("sched_preempt");
 
     current_thread->state = THREAD_READY;
 
     /* idle thread doesn't go in the run queue */
     if (likely(!thread_is_idle(current_thread))) {
+        if (current_thread->remaining_time_slice <= 0) {
+            /* if we're out of quantum, deboost the thread and put it at the tail of a queue */
+            deboost_thread(current_thread, true);
+        }
+
+        if (local_migrate_if_needed(current_thread))
+            return;
+
         if (current_thread->remaining_time_slice > 0) {
             insert_in_run_queue_head(curr_cpu, current_thread);
         } else {
-            /* if we're out of quantum, deboost the thread and put it at the tail of a queue */
-            deboost_thread(current_thread, true);
             insert_in_run_queue_tail(curr_cpu, current_thread);
         }
     }
@@ -357,6 +409,8 @@ void sched_reschedule(void) {
     thread_t* current_thread = get_current_thread();
     uint curr_cpu = arch_curr_cpu_num();
 
+    DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
+    DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
     LOCAL_KTRACE0("sched_reschedule");
 
     current_thread->state = THREAD_READY;
@@ -367,6 +421,9 @@ void sched_reschedule(void) {
         /* deboost the current thread */
         deboost_thread(current_thread, false);
 
+        if (local_migrate_if_needed(current_thread))
+            return;
+
         if (current_thread->remaining_time_slice > 0) {
             insert_in_run_queue_head(curr_cpu, current_thread);
         } else {
@@ -375,6 +432,95 @@ void sched_reschedule(void) {
     }
 
     sched_resched_internal();
+}
+
+/* migrate the current thread to a new cpu and locally reschedule to seal the deal */
+static void migrate_current_thread(thread_t *current_thread) {
+    bool local_resched = false;
+    cpu_mask_t accum_cpu_mask = 0;
+
+    // current thread, so just shove ourself into another cpu's queue and reschedule locally
+    current_thread->state = THREAD_READY;
+    find_cpu_and_insert(current_thread, &local_resched, &accum_cpu_mask);
+    if (accum_cpu_mask)
+        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+    sched_resched_internal();
+}
+
+/* check to see if the current thread needs to migrate to a new core */
+/* the passed argument must be the current thread and must already be pushed into the READY state */
+static bool local_migrate_if_needed(thread_t *curr_thread) {
+    DEBUG_ASSERT(curr_thread == get_current_thread());
+    DEBUG_ASSERT(curr_thread->state == THREAD_READY);
+
+    /* if the affinity mask does not include the current cpu, migrate us right now */
+    if (unlikely((curr_thread->cpu_affinity & cpu_num_to_mask(curr_thread->curr_cpu)) == 0)) {
+        migrate_current_thread(curr_thread);
+        return true;
+    }
+    return false;
+}
+
+/* potentially migrate a thread to a new core based on the affinity mask on the thread. If it's
+ * running or in a scheduler queue, handle it.
+ */
+void sched_migrate(thread_t *t) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    bool local_resched = false;
+    cpu_mask_t accum_cpu_mask = 0;
+    switch (t->state) {
+    case THREAD_RUNNING:
+        // see if we need to migrate
+        if (t->cpu_affinity & cpu_num_to_mask(t->curr_cpu)) {
+            // it's running and the new mask contains the core it's already running on, nothing to do.
+            //TRACEF("t %p nomigrate\n", t);
+            return;
+        }
+
+        // we need to migrate
+        if (t == get_current_thread()) {
+            // current thread, so just shove ourself into another cpu's queue and reschedule locally
+            migrate_current_thread(t);
+            return;
+        } else {
+            // running on another cpu, interrupt and let sched_preempt() sort it out
+            accum_cpu_mask = cpu_num_to_mask(t->curr_cpu);
+        }
+        break;
+    case THREAD_READY:
+        if (t->cpu_affinity & cpu_num_to_mask(t->curr_cpu)) {
+            // it's ready and the new mask contains the core it's already waiting on, nothing to do.
+            //TRACEF("t %p nomigrate\n", t);
+            return;
+        }
+
+        // it's sitting in a run queue somewhere, so pull it out of that one and find a new home
+        DEBUG_ASSERT_MSG(list_in_list(&t->queue_node), "thread %p name %s curr_cpu %u\n", t, t->name, t->curr_cpu);
+        list_delete(&t->queue_node);
+
+        DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
+
+        struct percpu* c = &percpu[t->curr_cpu];
+        int pri = effec_priority(t);
+        if (list_is_empty(&c->run_queue[pri])) {
+            c->run_queue_bitmap &= ~(1u << pri);
+        }
+
+        find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
+        break;
+    default:
+        // the other states do not matter, exit
+        return;
+    }
+
+    // send some ipis based on the previous code
+    if (accum_cpu_mask) {
+        mp_reschedule(MP_IPI_TARGET_MASK, accum_cpu_mask, 0);
+    }
+    if (local_resched) {
+        sched_reschedule();
+    }
 }
 
 /* preemption timer that is set whenever a thread is scheduled */
@@ -429,7 +575,7 @@ void sched_resched_internal(void) {
 
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
+    DEBUG_ASSERT_MSG(current_thread->state != THREAD_RUNNING, "state %u\n", current_thread->state);
     DEBUG_ASSERT(!arch_in_int_handler());
 
     CPU_STATS_INC(reschedules);
@@ -466,7 +612,10 @@ void sched_resched_internal(void) {
     newthread->last_started_running = now;
 
     /* mark the cpu ownership of the threads */
-    thread_set_last_cpu(newthread, cpu);
+    if (oldthread->state != THREAD_READY)
+        oldthread->curr_cpu = INVALID_CPU;
+    newthread->last_cpu = cpu;
+    newthread->curr_cpu = cpu;
 
     /* if we selected the idle thread the cpu's run queue must be empty, so mark the
      * cpu as idle */

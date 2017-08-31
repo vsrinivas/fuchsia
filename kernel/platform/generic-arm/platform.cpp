@@ -305,7 +305,7 @@ void platform_halt_cpu(void) {
     zx_status_t result;
     park_cpu park = (park_cpu)KERNEL_SPIN_OFFSET;
     thread_t *self = get_current_thread();
-    const uint cpuid = thread_last_cpu(self);
+    const cpu_num_t cpuid = self->last_cpu;
 
     fbl::AutoLock lock(&cpu_halt_lock);
     // If we're the first CPU to halt then we need to create an address space to
@@ -393,7 +393,7 @@ static int park_cpu_thread(void* arg) {
     uint32_t cpu_id = (uint32_t)((uintptr_t)arg & 0xffffffff);
 
     // From hereon in, this thread will always be assigned to the pinned cpu.
-    thread_migrate_cpu(cpu_id);
+    thread_migrate_to_cpu(cpu_id);
 
     arch_disable_ints();
 

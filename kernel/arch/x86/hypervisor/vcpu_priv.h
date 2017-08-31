@@ -204,6 +204,6 @@ public:
     ~AutoPin();
 
 private:
-    int prev_cpu_;
+    cpu_mask_t prev_cpu_mask_;
     thread_t* thread_;
 };

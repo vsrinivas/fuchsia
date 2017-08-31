@@ -54,7 +54,6 @@ static status_t thread_unblock_from_wait_queue(thread_t* t, status_t wait_queue_
 static void init_thread_struct(thread_t* t, const char* name) {
     memset(t, 0, sizeof(thread_t));
     t->magic = THREAD_MAGIC;
-    thread_set_pinned_cpu(t, -1);
     strlcpy(t->name, name, sizeof(t->name));
     wait_queue_init(&t->retcode_wait_queue);
 }
@@ -129,7 +128,9 @@ thread_t* thread_create_etc(
     t->blocking_wait_queue = NULL;
     t->blocked_status = ZX_OK;
     t->interruptable = false;
+    t->curr_cpu = INVALID_CPU;
     t->last_cpu = INVALID_CPU;
+    t->cpu_affinity = CPU_MASK_ALL;
 
     t->retcode = 0;
     wait_queue_init(&t->retcode_wait_queue);
@@ -320,7 +321,7 @@ status_t thread_suspend(thread_t* t) {
         /* The following call is not essential.  It just makes the
              * thread suspension happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->last_cpu), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->curr_cpu), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended already */
@@ -568,7 +569,7 @@ void thread_kill(thread_t* t, bool block) {
         /* The following call is not essential.  It just makes the
              * thread termination happen sooner rather than at the next
              * timer interrupt or syscall. */
-        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->last_cpu), 0);
+        mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(t->curr_cpu), 0);
         break;
     case THREAD_SUSPENDED:
         /* thread is suspended, resume it so it can get the kill signal */
@@ -604,19 +605,27 @@ done:
     THREAD_UNLOCK(state);
 }
 
-/* Migrates the current thread to the CPU identified by target_cpu. */
-void thread_migrate_cpu(const cpu_num_t target_cpu) {
-    thread_t* self = get_current_thread();
-    thread_set_pinned_cpu(self, target_cpu);
+// Sets the cpu affinity mask of a thread to the passed in mask and migrate
+// the thread if active.
+void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
+    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
-    mp_reschedule(MP_IPI_TARGET_MASK, cpu_num_to_mask(target_cpu), 0);
+    THREAD_LOCK(state);
 
-    // When we return from this call, we should have migrated to the target cpu
-    thread_yield();
+    // make sure the passed in mask is valid and at least one cpu can run the thread
+    if (affinity & mp_get_online_mask()) {
+        // set the affinity mask
+        t->cpu_affinity = affinity;
 
-    // Make sure that we have actually migrated.
-    const cpu_num_t current_cpu_id = self->last_cpu;
-    DEBUG_ASSERT(current_cpu_id == target_cpu);
+        // let the scheduler deal with it
+        sched_migrate(t);
+    }
+
+    THREAD_UNLOCK(state);
+}
+
+void thread_migrate_to_cpu(const cpu_num_t target_cpu) {
+    thread_set_cpu_affinity(get_current_thread(), cpu_num_to_mask(target_cpu));
 }
 
 // thread_lock must be held when calling this function.  This function will
@@ -921,9 +930,8 @@ zx_duration_t thread_runtime(const thread_t* t) {
  */
 void thread_construct_first(thread_t* t, const char* name) {
     DEBUG_ASSERT(arch_ints_disabled());
-    /* Due to somethings below being macros, this might be unused on
-     * non-SMP builds */
-    __UNUSED uint cpu = arch_curr_cpu_num();
+
+    cpu_num_t cpu = arch_curr_cpu_num();
 
     init_thread_struct(t, name);
     t->base_priority = HIGHEST_PRIORITY;
@@ -931,8 +939,9 @@ void thread_construct_first(thread_t* t, const char* name) {
     t->state = THREAD_RUNNING;
     t->flags = THREAD_FLAG_DETACHED;
     t->signals = 0;
-    thread_set_last_cpu(t, cpu);
-    thread_set_pinned_cpu(t, cpu);
+    t->curr_cpu = cpu;
+    t->last_cpu = cpu;
+    t->cpu_affinity = cpu_num_to_mask(cpu);
 
     arch_thread_construct_first(t);
 
@@ -1027,7 +1036,10 @@ void thread_become_idle(void) {
     t->base_priority = IDLE_PRIORITY;
     t->priority_boost = 0;
     t->flags |= THREAD_FLAG_IDLE;
-    thread_set_pinned_cpu(t, arch_curr_cpu_num());
+    cpu_num_t curr_cpu = arch_curr_cpu_num();
+    t->last_cpu = curr_cpu;
+    t->curr_cpu = curr_cpu;
+    t->cpu_affinity = cpu_num_to_mask(curr_cpu);
 
     mp_set_curr_cpu_active(true);
     mp_set_cpu_idle(arch_curr_cpu_num());
@@ -1062,7 +1074,7 @@ void thread_secondary_cpu_entry(void) {
 /**
  * @brief Create an idle thread for a secondary CPU
  */
-thread_t* thread_create_idle_thread(uint cpu_num) {
+thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
     DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
     /* Shouldn't be initialized yet */
@@ -1080,8 +1092,13 @@ thread_t* thread_create_idle_thread(uint cpu_num) {
     if (t == NULL) {
         return t;
     }
-    t->flags |= THREAD_FLAG_IDLE;
-    thread_set_pinned_cpu(t, cpu_num);
+    t->flags |= THREAD_FLAG_IDLE | THREAD_FLAG_DETACHED;
+    t->cpu_affinity = cpu_num_to_mask(cpu_num);
+
+    THREAD_LOCK(state);
+    sched_unblock_idle(t);
+    THREAD_UNLOCK(state);
+
     return t;
 }
 
@@ -1138,9 +1155,9 @@ void dump_thread(thread_t* t, bool full_dump) {
 
     if (full_dump) {
         dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
-        dprintf(INFO, "\tstate %s, last_cpu %u, pinned_cpu %u, priority %d:%d, "
+        dprintf(INFO, "\tstate %s, curr/last cpu %d/%d, cpu_affinity %#x, priority %d:%d, "
                       "remaining time slice %" PRIu64 "\n",
-                thread_state_to_str(t->state), t->last_cpu, t->pinned_cpu, t->base_priority,
+                thread_state_to_str(t->state), (int)t->curr_cpu, (int)t->last_cpu, t->cpu_affinity, t->base_priority,
                 t->priority_boost, t->remaining_time_slice);
         dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
                 runtime, runtime / 1000000000);

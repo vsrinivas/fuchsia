@@ -294,7 +294,7 @@ status_t mp_unplug_cpu(uint cpu_id) {
     }
 
     /* Pin to the target CPU */
-    thread_set_pinned_cpu(t, cpu_id);
+    thread_set_cpu_affinity(t, cpu_num_to_mask(cpu_id));
     /* Set real time to cancel the pre-emption timer */
     thread_set_real_time(t);
 

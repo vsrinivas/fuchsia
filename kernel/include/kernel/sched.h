@@ -20,6 +20,8 @@ void sched_yield(void);
 void sched_preempt(void);
 void sched_reschedule(void);
 void sched_resched_internal(void);
+void sched_unblock_idle(thread_t *t);
+void sched_migrate(thread_t *t);
 
 /* return true if the thread was placed on the current cpu's run queue */
 /* this usually means the caller should locally reschedule soon */

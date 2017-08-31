@@ -58,7 +58,7 @@ static void timer_test_all_cpus(void) {
             printf("failed to create thread for cpu %d\n", i);
             return;
         }
-        thread_set_pinned_cpu(timer_threads[i], i);
+        thread_set_cpu_affinity(timer_threads[i], cpu_num_to_mask(i));
         thread_resume(timer_threads[i]);
     }
     uint joined = 0;

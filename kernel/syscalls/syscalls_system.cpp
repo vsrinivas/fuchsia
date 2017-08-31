@@ -277,7 +277,7 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo,
     // It is unsafe to return from this function beyond this point.
     // This is because we have swapped out the user address space and halted the
     // secondary cores and there is no trivial way to bring both of these back.
-    thread_migrate_cpu(BOOT_CPU_ID);
+    thread_migrate_to_cpu(BOOT_CPU_ID);
 
     // Allow the platform to patch the bootdata with any platform specific
     // sections before mexecing.

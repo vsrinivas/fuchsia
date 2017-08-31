@@ -203,22 +203,22 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
     return ZX_OK;
 }
 
-static uint cpu_of(uint16_t vpid) {
+static cpu_num_t cpu_of(uint16_t vpid) {
     return vpid % arch_max_num_cpus();
 }
 
 static bool check_pinned_cpu_invariant(const thread_t* thread, uint16_t vpid) {
-    uint cpu = cpu_of(vpid);
+    cpu_num_t cpu = cpu_of(vpid);
     return thread == get_current_thread() &&
-           thread_pinned_cpu(thread) == static_cast<int>(cpu) &&
+           thread->cpu_affinity & cpu_num_to_mask(cpu) &&
            arch_curr_cpu_num() == cpu;
 }
 
 AutoPin::AutoPin(cpu_num_t cpu)
-    : prev_cpu_(thread_pinned_cpu(get_current_thread())), thread_(pin_thread(cpu)) {}
+    : prev_cpu_mask_(get_current_thread()->cpu_affinity), thread_(pin_thread(cpu)) {}
 
 AutoPin::~AutoPin() {
-    thread_set_pinned_cpu(thread_, prev_cpu_);
+    thread_set_cpu_affinity(thread_, prev_cpu_mask_);
 }
 
 static uint64_t ept_pointer(paddr_t pml4_address) {

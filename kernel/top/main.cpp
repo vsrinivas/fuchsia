@@ -74,7 +74,7 @@ void lk_main() {
     // create a thread to complete system initialization
     dprintf(SPEW, "creating bootstrap completion thread\n");
     thread_t* t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-    thread_set_pinned_cpu(t, 0);
+    thread_set_cpu_affinity(t, cpu_num_to_mask(0));
     thread_detach(t);
     thread_resume(t);
 
@@ -136,7 +136,6 @@ void lk_init_secondary_cpus(uint secondary_cpu_count) {
             secondary_idle_thread_count = i;
             break;
         }
-        thread_detach_and_resume(t);
     }
     secondary_idle_thread_count = secondary_cpu_count;
 }

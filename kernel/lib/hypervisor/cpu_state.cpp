@@ -36,9 +36,6 @@ cpu_mask_t percpu_exec(percpu_task_t task, void* context) {
 
 thread_t* pin_thread(cpu_num_t cpu) {
     thread_t* thread = get_current_thread();
-    if (thread_pinned_cpu(thread) != static_cast<int>(cpu))
-        thread_set_pinned_cpu(thread, cpu);
-    if (arch_curr_cpu_num() != cpu)
-        thread_reschedule();
+    thread_set_cpu_affinity(thread, cpu_num_to_mask(cpu));
     return thread;
 }

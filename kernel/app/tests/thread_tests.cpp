@@ -10,11 +10,14 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <fbl/mutex.h>
 #include <inttypes.h>
 #include <kernel/event.h>
+#include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <platform.h>
+#include <pow2.h>
 #include <rand.h>
 #include <string.h>
 #include <trace.h>
@@ -345,7 +348,7 @@ static void preempt_test(void) {
     for (int i = 0; i < num_threads; i++) {
         thread_t* t = thread_create("preempt tester", &preempt_tester, NULL, LOW_PRIORITY, DEFAULT_STACK_SIZE);
         thread_set_real_time(t);
-        thread_set_pinned_cpu(t, 0);
+        thread_set_cpu_affinity(t, cpu_num_to_mask(0));
         thread_detach_and_resume(t);
     }
 
@@ -565,6 +568,101 @@ static void kill_tests(void) {
     event_destroy(&e);
 }
 
+struct affinity_test_state {
+    thread_t* threads[16] = {};
+    volatile bool shutdown = false;
+};
+
+template <typename T>
+static void spin_while(zx_time_t t, T func) {
+    zx_time_t start = current_time();
+
+    while ((current_time() - start) < t) {
+        func();
+    }
+}
+
+static int affinity_test_thread(void* arg) {
+    thread_t* t = get_current_thread();
+    affinity_test_state* state = static_cast<affinity_test_state*>(arg);
+
+    printf("top of affinity tester %p\n", t);
+
+    while (!state->shutdown) {
+        int which = rand() % countof(state->threads);
+        switch (rand() % 5) {
+        case 0: // set affinity
+            //printf("%p set aff %p\n", t, state->threads[which]);
+            thread_set_cpu_affinity(state->threads[which], (cpu_mask_t)rand());
+            break;
+        case 1: // sleep for a bit
+            //printf("%p sleep\n", t);
+            thread_sleep_relative(ZX_USEC(rand() % 100));
+            break;
+        case 2: // spin for a bit
+            //printf("%p spin\n", t);
+            spin((uint32_t)rand() % 100);
+            //printf("%p spin done\n", t);
+            break;
+        case 3: // yield
+            //printf("%p yield\n", t);
+            spin_while(ZX_USEC((uint32_t)rand() % 100), thread_yield);
+            //printf("%p yield done\n", t);
+            break;
+        case 4: // reschedule
+            //printf("%p reschedule\n", t);
+            spin_while(ZX_USEC((uint32_t)rand() % 100), thread_reschedule);
+            //printf("%p reschedule done\n", t);
+            break;
+        }
+    }
+
+    printf("affinity tester %p exiting\n", t);
+
+    return 0;
+}
+
+// start a bunch of threads that randomly set the affinity of the other threads
+// to random masks while doing various work.
+// a sucessful pass is one where it completes the run without tripping over any asserts
+// in the scheduler code.
+__NO_INLINE static void affinity_test() {
+    printf("starting thread affinity test\n");
+
+    cpu_mask_t online = mp_get_online_mask();
+    if (!online || ispow2(online)) {
+        printf("aborting test, not enough online cpus\n");
+        return;
+    }
+
+    affinity_test_state state;
+
+    for (auto& t : state.threads) {
+        t = thread_create("affinity_tester", &affinity_test_thread, &state,
+                          LOW_PRIORITY, DEFAULT_STACK_SIZE);
+    }
+
+    for (auto& t : state.threads) {
+        thread_resume(t);
+    }
+
+    static const int duration = 30;
+    printf("running tests for %i seconds\n", duration);
+    for (int i = 0; i < duration; i++) {
+        thread_sleep_relative(ZX_SEC(1));
+        printf("%d sec elapsed\n", i + 1);
+    }
+    state.shutdown = true;
+    thread_sleep_relative(ZX_SEC(1));
+
+    for (auto& t : state.threads) {
+        printf("joining thread %p\n", t);
+        thread_join(t, nullptr, ZX_TIME_INFINITE);
+    }
+
+    printf("done with affinity test\n");
+}
+
 int thread_tests(void) {
     kill_tests();
 
@@ -580,6 +678,8 @@ int thread_tests(void) {
     preempt_test();
 
     join_test();
+
+    affinity_test();
 
     return 0;
 }

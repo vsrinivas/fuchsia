@@ -705,7 +705,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
 void platform_halt_secondary_cpus(void)
 {
     // Migrate this thread to the boot cpu.
-    thread_migrate_cpu(BOOT_CPU_ID);
+    thread_migrate_to_cpu(BOOT_CPU_ID);
 
     // Send a shutdown interrupt to all the other cores.
     apic_send_broadcast_ipi(0x00, DELIVERY_MODE_INIT);

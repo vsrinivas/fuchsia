@@ -93,8 +93,10 @@ typedef struct thread {
     int base_priority;
     int priority_boost;
 
-    cpu_num_t last_cpu;  /* last/current cpu the thread is running on, INVALID_CPU if it's never run */
-    cpu_num_t pinned_cpu; /* only run on pinned_cpu if >= 0 */
+    /* current cpu the thread is either running on or in the ready queue, undefined otherwise */
+    cpu_num_t curr_cpu;
+    cpu_num_t last_cpu;  /* last cpu the thread ran on, INVALID_CPU if it's never run */
+    cpu_mask_t cpu_affinity; /* mask of cpus that this thread can run on */
 
     /* pointer to the kernel address space this thread is associated with */
     struct vmm_aspace* aspace;
@@ -154,22 +156,6 @@ typedef struct thread {
 #endif
 } thread_t;
 
-static inline uint thread_last_cpu(const thread_t* t) {
-    return t->last_cpu;
-}
-
-static inline void thread_set_last_cpu(thread_t* t, uint c) {
-    t->last_cpu = c;
-}
-
-static inline int thread_pinned_cpu(const thread_t* t) {
-    return t->pinned_cpu;
-}
-
-static inline void thread_set_pinned_cpu(thread_t* t, int c) {
-    t->pinned_cpu = c;
-}
-
 /* thread priority */
 #define NUM_PRIORITIES (32)
 #define LOWEST_PRIORITY (0)
@@ -205,7 +191,13 @@ status_t thread_suspend(thread_t*);
 void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;
 void thread_forget(thread_t*);
-void thread_migrate_cpu(const uint target_cpuid);
+
+/* set the mask of valid cpus to run the thread on. migrates the thread to satisfy
+ * the new constraint */
+void thread_set_cpu_affinity(thread_t* t, cpu_mask_t mask);
+
+/* migrates the current thread to the CPU identified by target_cpu */
+void thread_migrate_to_cpu(cpu_num_t target_cpuid);
 
 status_t thread_detach(thread_t* t);
 status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline);
