@@ -38,11 +38,16 @@ source_set("mxtl") {
     "include/mxtl/ref_ptr.h",
     "include/mxtl/slab_allocator.h",
     "include/mxtl/slab_malloc.h",
+    "include/mxtl/string.h",
     "include/mxtl/string_piece.h",
+    "include/mxtl/string_printf.h",
     "include/mxtl/type_support.h",
     "include/mxtl/unique_free_ptr.h",
     "include/mxtl/unique_ptr.h",
+    "include/mxtl/vector.h",
     "string_piece.cpp",
+    "string_printf.cpp",
+    "string.cpp",
   ]
 
   public_configs = [ ":mxtl_config" ]
