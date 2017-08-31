@@ -7,7 +7,7 @@ if $FUCHSIA_DIR != ""
   let g:ycm_global_ycm_extra_conf = $FUCHSIA_DIR . '/scripts/vim/ycm_extra_conf.py'
 
   set runtimepath+=$FUCHSIA_DIR/scripts/vim/
-  set runtimepath+=$FUCHSIA_DIR/lib/fidl/tools/vim/
+  set runtimepath+=$FUCHSIA_DIR/garnet/public/lib/fidl/tools/vim/
 
   " The "filetype plugin" line must come AFTER the changes to runtimepath
   " above (so the proper directories are searched), but must come BEFORE the
