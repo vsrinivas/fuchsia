@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+set -e
+
+UEFI_DIR=${1:-/tmp/hikey/uefi}
+UEFI_URL='http://builds.96boards.org/snapshots/reference-platform/components/uefi-staging/14/hikey960/release/'
+
+echo Creating $UEFI_DIR...
+mkdir -p "$UEFI_DIR"
+cd "$UEFI_DIR"
+
+echo Fetching $UEFI_URL...
+wget -A bin,config,efi,hikey_idt,img,txt -m -nd -np "$UEFI_URL"
+
+echo Running hikey_idt...
+chmod +x hikey_idt
+./hikey_idt -c config
+
+# Use fastboot to permanently flash firmware after this point.
