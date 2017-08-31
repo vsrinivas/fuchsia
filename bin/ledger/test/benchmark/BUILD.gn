@@ -33,17 +33,17 @@ executable("launch_benchmark") {
     "//apps/ledger/src/test/benchmark/put:lib",
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
 
 copy("run_ledger_benchmarks") {
   sources = [
-    "run_ledger_benchmarks.sh"
+    "run_ledger_benchmarks.sh",
   ]
   outputs = [
-    "$root_out_dir/run_ledger_benchmarks.sh"
+    "$root_out_dir/run_ledger_benchmarks.sh",
   ]
 }

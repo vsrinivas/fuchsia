@@ -17,7 +17,7 @@ source_set("test") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//magenta/system/ulib/mx",
   ]
 

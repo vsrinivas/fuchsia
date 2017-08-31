@@ -76,8 +76,8 @@ source_set("lib") {
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//apps/tracing/lib/trace",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 
   public_deps = [
@@ -109,7 +109,7 @@ source_set("test_utils") {
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 }
@@ -143,7 +143,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]

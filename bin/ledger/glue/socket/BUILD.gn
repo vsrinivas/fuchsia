@@ -15,8 +15,8 @@ source_set("socket") {
 
   public_deps = [
     "//apps/ledger/src/callback",
-    "//lib/fidl/c/waiter",
-    "//lib/fidl/cpp/waiter",
+    "//garnet/public/lib/fidl/c/waiter",
+    "//garnet/public/lib/fidl/cpp/waiter",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]

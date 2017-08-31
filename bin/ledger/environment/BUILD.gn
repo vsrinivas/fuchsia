@@ -13,7 +13,7 @@ source_set("environment") {
   public_deps = [
     "//apps/ledger/src/coroutine",
     "//apps/ledger/src/network",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 
   deps = [
@@ -32,7 +32,7 @@ source_set("unittests") {
 
   deps = [
     ":environment",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",
   ]

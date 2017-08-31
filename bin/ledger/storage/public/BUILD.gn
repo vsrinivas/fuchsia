@@ -26,8 +26,8 @@ source_set("public") {
 
   public_deps = [
     "//apps/ledger/src/convert",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]

@@ -27,7 +27,7 @@ executable("tool") {
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/network/services",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 

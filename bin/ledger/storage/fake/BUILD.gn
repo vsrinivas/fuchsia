@@ -29,12 +29,12 @@ source_set("lib") {
   public_deps = [
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 
   deps = [
     "//apps/ledger/src/glue/crypto",
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
     "//lib/mtl",
   ]
 

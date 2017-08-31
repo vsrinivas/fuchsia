@@ -14,7 +14,7 @@ source_set("context") {
 
   deps = [
     "//apps/ledger/src/coroutine/context/$target_cpu",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 
   public_deps = [
@@ -33,7 +33,7 @@ source_set("unittests") {
 
   deps = [
     ":context",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
   ]
 

@@ -13,12 +13,12 @@ source_set("convert") {
   ]
 
   deps = [
-    "//lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings",
   ]
 
   public_deps = [
     ":byte_storage",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//magenta/system/ulib/mx",
     "//third_party/leveldb",
     "//third_party/rapidjson",

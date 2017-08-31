@@ -25,7 +25,7 @@ source_set("callback") {
 
   deps = [
     "//apps/tracing/lib/trace:provider",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//lib/mtl",
   ]
 

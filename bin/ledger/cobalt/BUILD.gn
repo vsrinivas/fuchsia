@@ -12,7 +12,7 @@ source_set("cobalt") {
 
   public_deps = [
     "//application/lib/app",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 
   deps = [

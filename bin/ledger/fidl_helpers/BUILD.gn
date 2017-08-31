@@ -12,8 +12,8 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
