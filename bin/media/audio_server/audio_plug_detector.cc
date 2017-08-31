@@ -19,7 +19,7 @@
 
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/platform/magenta/magenta_output.h"
+#include "apps/media/src/audio_server/platform/driver_output.h"
 #include "lib/ftl/files/unique_fd.h"
 
 namespace media {
@@ -98,7 +98,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name) {
     return;
   }
 
-  new_output = MagentaOutput::Create(std::move(channel), manager_);
+  new_output = DriverOutput::Create(std::move(channel), manager_);
   if (new_output == nullptr) {
     FTL_LOG(WARNING) << "Failed to instantiate audio output for \"" << name
                      << "\"";

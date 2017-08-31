@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/platform/magenta/magenta_output.h"
+#include "apps/media/src/audio_server/platform/driver_output.h"
 
 #include <fcntl.h>
 #include <magenta/device/audio.h>
@@ -40,18 +40,18 @@ static constexpr mx_duration_t kUnderflowCooldown = MX_SEC(1);
 static mxtl::atomic<mx_txid_t> TXID_GEN(1);
 static thread_local mx_txid_t TXID = TXID_GEN.fetch_add(1);
 
-AudioOutputPtr MagentaOutput::Create(mx::channel channel,
+AudioOutputPtr DriverOutput::Create(mx::channel channel,
                                      AudioOutputManager* manager) {
-  return AudioOutputPtr(new MagentaOutput(std::move(channel), manager));
+  return AudioOutputPtr(new DriverOutput(std::move(channel), manager));
 }
 
-MagentaOutput::MagentaOutput(mx::channel channel, AudioOutputManager* manager)
+DriverOutput::DriverOutput(mx::channel channel, AudioOutputManager* manager)
     : StandardOutputBase(manager), stream_channel_(std::move(channel)) {}
 
-MagentaOutput::~MagentaOutput() {}
+DriverOutput::~DriverOutput() {}
 
 template <typename ReqType, typename RespType>
-mx_status_t MagentaOutput::SyncDriverCall(const mx::channel& channel,
+mx_status_t DriverOutput::SyncDriverCall(const mx::channel& channel,
                                           const ReqType& req,
                                           RespType* resp,
                                           mx_handle_t* resp_handle_out) {
@@ -101,7 +101,7 @@ mx_status_t MagentaOutput::SyncDriverCall(const mx::channel& channel,
   return resp->result;
 }
 
-MediaResult MagentaOutput::Init() {
+MediaResult DriverOutput::Init() {
   // TODO(johngro): Refactor all of this to be asynchronous.
 
   // Configure our stream's output format, get our ring buffer back upon
@@ -269,7 +269,7 @@ MediaResult MagentaOutput::Init() {
   return MediaResult::OK;
 }
 
-void MagentaOutput::Cleanup() {
+void DriverOutput::Cleanup() {
   if (started_) {
     audio_rb_cmd_stop_req_t req;
     audio_rb_cmd_stop_resp_t resp;
@@ -292,7 +292,7 @@ void MagentaOutput::Cleanup() {
   stream_channel_.reset();
 }
 
-bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
+bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
   int64_t now;
 
   // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
@@ -456,7 +456,7 @@ bool MagentaOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
   return true;
 }
 
-bool MagentaOutput::FinishMixJob(const MixJob& job) {
+bool DriverOutput::FinishMixJob(const MixJob& job) {
   // TODO(johngro): Flush cache here!
 
   if (VERBOSE_TIMING_DEBUG) {
@@ -485,7 +485,7 @@ bool MagentaOutput::FinishMixJob(const MixJob& job) {
   return true;
 }
 
-void MagentaOutput::ScheduleNextLowWaterWakeup() {
+void DriverOutput::ScheduleNextLowWaterWakeup() {
   // Schedule the next callback for when we are at the low water mark behind
   // the write pointer.
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
@@ -494,7 +494,7 @@ void MagentaOutput::ScheduleNextLowWaterWakeup() {
       ftl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
-mx_status_t MagentaOutput::EventReflector::Activate(
+mx_status_t DriverOutput::EventReflector::Activate(
     mx::channel stream_channel) {
   auto ch = ::audio::DispatcherChannelAllocator::New();
 
@@ -508,7 +508,7 @@ mx_status_t MagentaOutput::EventReflector::Activate(
   return ch->Activate(mxtl::WrapRefPtr(this), mxtl::move(stream_channel));
 }
 
-mx_status_t MagentaOutput::EventReflector::ProcessChannel(
+mx_status_t DriverOutput::EventReflector::ProcessChannel(
     DispatcherChannel* channel) {
   FTL_DCHECK(channel != nullptr);
 
@@ -563,7 +563,7 @@ mx_status_t MagentaOutput::EventReflector::ProcessChannel(
   }
 }
 
-void MagentaOutput::EventReflector::NotifyChannelDeactivated(
+void DriverOutput::EventReflector::NotifyChannelDeactivated(
     const DispatcherChannel& channel) {
   // If our stream channel has been unplugged out from under us, the deivce
   // which publishes our stream has been removed from the system (or the driver
@@ -578,7 +578,7 @@ void MagentaOutput::EventReflector::NotifyChannelDeactivated(
       });
 }
 
-void MagentaOutput::EventReflector::HandlePlugStateChange(bool plugged,
+void DriverOutput::EventReflector::HandlePlugStateChange(bool plugged,
                                                           mx_time_t plug_time) {
   // If this was a hardwired output, just use the current time as the plug time.
   if (!plug_time) {

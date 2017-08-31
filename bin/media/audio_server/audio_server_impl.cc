@@ -13,8 +13,7 @@ namespace media {
 namespace audio {
 
 AudioServerImpl::AudioServerImpl()
-    : application_context_(
-          app::ApplicationContext::CreateFromStartupInfo()),
+    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
       output_manager_(this),
       cleanup_queue_(new CleanupQueue) {
   FTL_DCHECK(application_context_);
@@ -42,9 +41,8 @@ AudioServerImpl::AudioServerImpl()
   // non-realtime ones).  This, however, will take more significant
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
-  task_runner_->PostTask([]() {
-      mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-  });
+  task_runner_->PostTask(
+      []() { mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
   MediaResult res = output_manager_.Init();
@@ -67,10 +65,8 @@ void AudioServerImpl::Shutdown() {
 void AudioServerImpl::CreateRenderer(
     fidl::InterfaceRequest<AudioRenderer> audio_renderer,
     fidl::InterfaceRequest<MediaRenderer> media_renderer) {
-  output_manager_.AddRenderer(
-      AudioRendererImpl::Create(std::move(audio_renderer),
-                                std::move(media_renderer),
-                                this));
+  output_manager_.AddRenderer(AudioRendererImpl::Create(
+      std::move(audio_renderer), std::move(media_renderer), this));
 }
 
 void AudioServerImpl::SetMasterGain(float db_gain) {

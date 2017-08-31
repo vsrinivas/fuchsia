@@ -14,6 +14,7 @@ executable("audio_server") {
     "audio_server_impl.cc",
     "gain.cc",
     "main.cc",
+    "platform/driver_output.cc",
     "platform/generic/mixer.cc",
     "platform/generic/mixers/linear_sampler.cc",
     "platform/generic/mixers/no_op.cc",
@@ -21,7 +22,6 @@ executable("audio_server") {
     "platform/generic/output_formatter.cc",
     "platform/generic/standard_output_base.cc",
     "platform/generic/throttle_output.cc",
-    "platform/magenta/magenta_output.cc",
   ]
 
   public_deps = [

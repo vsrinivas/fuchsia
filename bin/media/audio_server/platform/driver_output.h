@@ -14,11 +14,11 @@
 namespace media {
 namespace audio {
 
-class MagentaOutput : public StandardOutputBase {
+class DriverOutput : public StandardOutputBase {
  public:
   static AudioOutputPtr Create(mx::channel channel,
                                AudioOutputManager* manager);
-  ~MagentaOutput();
+  ~DriverOutput();
 
   // AudioOutput implementation
   MediaResult Init() override;
@@ -41,7 +41,7 @@ class MagentaOutput : public StandardOutputBase {
   // dispatcher's thread pool, such as plug detection notifications or the
   // stream being unpublished by the stream driver.
   //
-  // In an ideal world, all of these tasks would be handled by the MagentaOutput
+  // In an ideal world, all of these tasks would be handled by the DriverOutput
   // directly, but there are some architectural issues which prevent this at the
   // moment.  In specific...
   //
@@ -51,7 +51,7 @@ class MagentaOutput : public StandardOutputBase {
   // two mechanisms are not compatible and should not be mixed.  Eventually, we
   // will convert the outputs to use mxtl intrusive primitives (for lists, sets,
   // ref counts, etc...), but until then, we need a separate object owned by the
-  // MagentaOutput to serve as bridge between the two worlds.
+  // DriverOutput to serve as bridge between the two worlds.
   //
   // Additionally; using the audio dispatcher framework basically commits a user
   // to all async processing all of the time.  Attempting to use the
@@ -61,7 +61,7 @@ class MagentaOutput : public StandardOutputBase {
   // driver and move to a purely async state machine model, but until that
   // happens we need to keep the event paths separate.
   //
-  // Finally; the MagentaOutput is driven almost entirely by timing in steady
+  // Finally; the DriverOutput is driven almost entirely by timing in steady
   // state operation.  Unfortunately, we do not currently have a kernel
   // primitive we can use to signal a magenta port at a scheduled time.  Once
   // this functionality arrives, we can...
@@ -69,7 +69,7 @@ class MagentaOutput : public StandardOutputBase {
   // 1) Add support to the dispatcher for timers in addition to channels.
   // 2) Transition mixer outputs to use mxtl intrusive ref counting.
   // 3) Move event processing for the stream and ring-buffer channels into the
-  //    MagentaOutput itself.
+  //    DriverOutput itself.
   // 4) Convert all communications between the mixer output and the driver to be
   //    asynchronous, and move timing over to the new timing object.
   //
@@ -96,7 +96,7 @@ class MagentaOutput : public StandardOutputBase {
     AudioOutputWeakPtr  output_;
   };
 
-  MagentaOutput(mx::channel channel, AudioOutputManager* manager);
+  DriverOutput(mx::channel channel, AudioOutputManager* manager);
 
   template <typename ReqType, typename RespType>
   mx_status_t SyncDriverCall(const mx::channel& channel,
