@@ -4,6 +4,6 @@
     ],
     "packages": {
         "wlan": "//drivers/wifi/wlan",
-        "rt5370": "//drivers/wifi/mediatek/rt5370"
+        "ralink": "//drivers/wifi/mediatek/ralink"
     }
 }
