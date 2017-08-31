@@ -201,7 +201,7 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
         // short write because we're beyond the end of the permissible length
         return MX_ERR_FILE_BIG;
     }
-    modify_time_ = mx_time_get(MX_CLOCK_UTC);
+    UpdateModified();
     return actual;
 }
 

@@ -49,6 +49,7 @@ void Dnode::RemoveFromParent() {
             // '..' no longer references parent.
             parent_->vnode_->link_count_--;
         }
+        parent_->vnode_->UpdateModified();
         if (parent_->vnode_->IsDetachedDevice() && !parent_->HasChildren()) {
             // Extremely special case: Parent is a detached device node,
             // which has had a linked reference, but just ran out of children.
@@ -94,6 +95,7 @@ void Dnode::AddChild(mxtl::RefPtr<Dnode> parent, mxtl::RefPtr<Dnode> child) {
         child->ordering_token_ = parent->children_.back().ordering_token_ + 1;
     }
     parent->children_.push_back(mxtl::move(child));
+    parent->vnode_->UpdateModified();
 }
 
 mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out) const {

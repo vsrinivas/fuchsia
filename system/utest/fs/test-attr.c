@@ -19,15 +19,15 @@
 
 #define ROUND_DOWN(t, granularity) ((t) - ((t) % (granularity)))
 
-int64_t nstimespec(struct timespec ts) {
+mx_time_t nstimespec(struct timespec ts) {
     // assumes very small number of seconds in deltas
     return ts.tv_sec * MX_SEC(1) + ts.tv_nsec;
 }
 
 bool test_attr(void) {
     BEGIN_TEST;
-    int64_t now = mx_time_get(MX_CLOCK_UTC);
-    ASSERT_NE(now, 0, "mx_time_get only returns zero on error");
+    mx_time_t now = mx_time_get(MX_CLOCK_UTC);
+    ASSERT_NE(now, 0u, "mx_time_get only returns zero on error");
 
     int fd1 = open("::file.txt", O_CREAT | O_RDWR, 0644);
     ASSERT_GT(fd1, 0, "");
@@ -87,7 +87,77 @@ bool test_blksize(void) {
     END_TEST;
 }
 
+bool test_time(void) {
+    BEGIN_TEST;
+
+    mx_time_t now = mx_time_get(MX_CLOCK_UTC);
+    ASSERT_NE(now, 0u, "mx_time_get only returns zero on error");
+
+    // Create a parent directory to contain new contents
+    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    ASSERT_EQ(mkdir("::parent", 0666), 0, "");
+    ASSERT_EQ(mkdir("::parent2", 0666), 0, "");
+
+    // Ensure the parent directory's create + modified times
+    // were initialized correctly.
+    struct stat statb;
+    ASSERT_EQ(stat("::parent", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_ctim), now, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+    now = nstimespec(statb.st_ctim);
+
+    // Create a file in the parent directory
+    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    int fd = open("::parent/child", O_CREAT | O_RDWR);
+    ASSERT_GT(fd, 0, "");
+    ASSERT_EQ(close(fd), 0, "");
+
+    // Time moved forward in both the child...
+    ASSERT_EQ(stat("::parent/child", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+    // ... and the parent
+    ASSERT_EQ(stat("::parent", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+    now = nstimespec(statb.st_mtim);
+
+    // Link the child into a second directory
+    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    ASSERT_EQ(link("::parent/child", "::parent2/child"), 0, "");
+    // Source directory is not impacted
+    ASSERT_EQ(stat("::parent", &statb), 0, "");
+    ASSERT_EQ(nstimespec(statb.st_mtim), now, "");
+    // Target directory is updated
+    ASSERT_EQ(stat("::parent2", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+    now = nstimespec(statb.st_mtim);
+
+    // Unlink the child, and the parent's time should
+    // move forward again
+    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    ASSERT_EQ(unlink("::parent2/child"), 0, "");
+    ASSERT_EQ(stat("::parent2", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+    now = nstimespec(statb.st_mtim);
+
+    // Rename the child, and both the source and dest
+    // directories should be updated
+    mx_nanosleep(mx_deadline_after(test_info->nsec_granularity));
+    ASSERT_EQ(rename("::parent/child", "::parent2/child"), 0, "");
+    ASSERT_EQ(stat("::parent", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+    ASSERT_EQ(stat("::parent2", &statb), 0, "");
+    ASSERT_GT(nstimespec(statb.st_mtim), now, "");
+
+    // Clean up
+    ASSERT_EQ(unlink("::parent2/child"), 0, "");
+    ASSERT_EQ(rmdir("::parent2"), 0, "");
+    ASSERT_EQ(rmdir("::parent"), 0, "");
+
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(attr_tests,
     RUN_TEST_MEDIUM(test_attr)
     RUN_TEST_MEDIUM(test_blksize)
+    RUN_TEST_MEDIUM(test_time)
 )
