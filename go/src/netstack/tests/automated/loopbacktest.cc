@@ -204,7 +204,8 @@ TEST_F(NetDatagramTest, LoopbackDatagramSendto) {
 
   const char* msg = "hello";
 
-  int attempts = 3;
+  // TODO: Remove do-while if the bots are happy.
+  int attempts = 1;
   int nfd = -1;
   do {
     int sendfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -237,7 +238,8 @@ TEST_F(NetDatagramTest, LoopbackDatagramConnectWrite) {
 
   const char* msg = "hello";
 
-  int attempts = 3;
+  // TODO: Remove do-while if the bots are happy.
+  int attempts = 1;
   int nfd = -1;
   do {
     int sendfd = socket(AF_INET, SOCK_DGRAM, 0);
