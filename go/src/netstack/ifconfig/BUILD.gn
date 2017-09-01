@@ -22,7 +22,7 @@ go_binary("ifconfig") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
     },
     {
       package = "github.com/google/netstack"

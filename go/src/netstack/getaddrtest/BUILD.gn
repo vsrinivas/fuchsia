@@ -22,7 +22,7 @@ go_binary("getaddrtest") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
     },
   ]
 
