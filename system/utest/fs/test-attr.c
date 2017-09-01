@@ -87,8 +87,15 @@ bool test_blksize(void) {
     END_TEST;
 }
 
-bool test_time(void) {
+bool test_parent_directory_time(void) {
     BEGIN_TEST;
+
+    if (strcmp(test_info->name, "FAT") == 0) {
+        // FAT does not update parent directory times when children
+        // are updated
+        printf("FAT parent directory timestamps aren't updated; skipping test...\n");
+        return true;
+    }
 
     mx_time_t now = mx_time_get(MX_CLOCK_UTC);
     ASSERT_NE(now, 0u, "mx_time_get only returns zero on error");
@@ -159,5 +166,5 @@ bool test_time(void) {
 RUN_FOR_ALL_FILESYSTEMS(attr_tests,
     RUN_TEST_MEDIUM(test_attr)
     RUN_TEST_MEDIUM(test_blksize)
-    RUN_TEST_MEDIUM(test_time)
+    RUN_TEST_MEDIUM(test_parent_directory_time)
 )

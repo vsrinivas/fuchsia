@@ -343,7 +343,7 @@ fs_info_t FILESYSTEMS[NUM_FILESYSTEMS] = {
         .supports_resize = true,
         .nsec_granularity = 1,
     },
-    {"thinfs",
+    {"FAT",
         thinfs_exists, mkfs_thinfs, mount_thinfs, unmount_thinfs, fsck_thinfs,
         .can_be_mounted = true,
         .can_mount_sub_filesystems = false,
