@@ -13,7 +13,7 @@ go_binary("power_manager") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
     },
     {
       package = "application/lib/app"
@@ -41,7 +41,7 @@ go_test("power_manager_test") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
     },
     {
       package = "application/lib/svc"
