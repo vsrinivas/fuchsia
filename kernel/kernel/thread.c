@@ -1413,8 +1413,6 @@ bool wait_queue_is_empty(wait_queue_t* wait) {
  */
 void wait_queue_destroy(wait_queue_t* wait) {
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (!list_is_empty(&wait->list)) {
         panic("wait_queue_destroy() called on non-empty wait_queue_t\n");

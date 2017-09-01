@@ -14,9 +14,7 @@ Semaphore::Semaphore(int64_t initial_count) : count_(initial_count) {
 }
 
 Semaphore::~Semaphore() {
-    THREAD_LOCK(state);
     wait_queue_destroy(&waitq_);
-    THREAD_UNLOCK(state);
 }
 
 int Semaphore::Post() {

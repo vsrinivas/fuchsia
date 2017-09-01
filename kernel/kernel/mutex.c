@@ -43,7 +43,6 @@ void mutex_destroy(mutex_t* m) {
     DEBUG_ASSERT(m->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
 
-    THREAD_LOCK(state);
 #if LK_DEBUGLEVEL > 0
     if (unlikely(mutex_val(m) != 0)) {
         thread_t* holder = mutex_holder(m);
@@ -56,7 +55,6 @@ void mutex_destroy(mutex_t* m) {
     m->magic = 0;
     m->val = 0;
     wait_queue_destroy(&m->wait);
-    THREAD_UNLOCK(state);
 }
 
 /**

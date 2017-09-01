@@ -26,9 +26,7 @@ FutexNode::~FutexNode() {
 
     DEBUG_ASSERT(!IsInQueue());
 
-    THREAD_LOCK(state);
     wait_queue_destroy(&wait_queue_);
-    THREAD_UNLOCK(state);
 }
 
 bool FutexNode::IsInQueue() const {

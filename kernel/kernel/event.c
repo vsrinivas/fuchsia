@@ -53,14 +53,10 @@ void event_init(event_t* e, bool initial, uint flags) {
 void event_destroy(event_t* e) {
     DEBUG_ASSERT(e->magic == EVENT_MAGIC);
 
-    THREAD_LOCK(state);
-
     e->magic = 0;
     e->signaled = false;
     e->flags = 0;
     wait_queue_destroy(&e->wait);
-
-    THREAD_UNLOCK(state);
 }
 
 /**
