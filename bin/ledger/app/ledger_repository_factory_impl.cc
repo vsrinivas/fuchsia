@@ -220,7 +220,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     std::unique_ptr<SyncWatcherSet> watchers =
         std::make_unique<SyncWatcherSet>();
     auto repository = std::make_unique<LedgerRepositoryImpl>(
-        repository_path, environment_, std::move(watchers), nullptr);
+        repository_information.content_path, environment_, std::move(watchers), nullptr);
     container->SetRepository(Status::OK, std::move(repository));
     return;
   }
@@ -279,6 +279,7 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     callback(Status::IO_ERROR);
     return;
   }
+
   auto find_repository = repositories_.find(repository_information.name);
   if (find_repository != repositories_.end()) {
     FTL_LOG(WARNING) << "The repository to be erased is running, "
@@ -412,6 +413,7 @@ Status LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     const RepositoryInformation& repository_information) {
   files::ScopedTempDir tmp_directory(repository_information.staging_path);
   std::string destination = tmp_directory.path() + "/content";
+
   if (rename(repository_information.content_path.c_str(),
              destination.c_str()) != 0) {
     FTL_LOG(ERROR) << "Unable to move repository local storage at "
