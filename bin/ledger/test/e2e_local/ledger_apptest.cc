@@ -78,6 +78,68 @@ class LedgerAppTest : public ::test::TestWithMessageLoop {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
+  ::testing::AssertionResult GetRootPage(
+      ledger::LedgerRepositoryPtr* ledger_repository,
+      fidl::Array<uint8_t> ledger_name,
+      ledger::PagePtr* page) {
+    ledger::Status status;
+    ledger::LedgerPtr ledger;
+    (*ledger_repository)
+        ->GetLedger(TestArray(), ledger.NewRequest(),
+                    callback::Capture(MakeQuitTask(), &status));
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure()
+             << "GetLedger callback was not executed";
+    }
+    if (status != ledger::Status::OK) {
+      return ::testing::AssertionFailure()
+             << "GetLedger failed with status " << status;
+    }
+
+    ledger->GetRootPage(page->NewRequest(),
+                        callback::Capture(MakeQuitTask(), &status));
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure()
+             << "GetRootPage callback was not executed";
+    }
+    if (status != ledger::Status::OK) {
+      return ::testing::AssertionFailure()
+             << "GetRootPage failed with status " << status;
+    }
+    return ::testing::AssertionSuccess();
+  }
+
+  ::testing::AssertionResult GetPageEntryCount(ledger::PagePtr* page,
+                                               size_t* entry_count) {
+    ledger::Status status;
+    ledger::PageSnapshotPtr snapshot;
+    (*page)->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+                         callback::Capture(MakeQuitTask(), &status));
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure()
+             << "GetSnapshot callback was not executed";
+    }
+    if (status != ledger::Status::OK) {
+      return ::testing::AssertionFailure()
+             << "GetSnapshot failed with status " << status;
+    }
+    fidl::Array<ledger::InlinedEntryPtr> entries;
+    fidl::Array<uint8_t> next_token;
+    snapshot->GetEntriesInline(
+        nullptr, nullptr,
+        callback::Capture(MakeQuitTask(), &status, &entries, &next_token));
+    if (RunLoopWithTimeout()) {
+      return ::testing::AssertionFailure()
+             << "GetEntriesInline callback was not executed";
+    }
+    if (status != ledger::Status::OK) {
+      return ::testing::AssertionFailure()
+             << "GetEntriesInline failed with status " << status;
+    }
+    *entry_count = entries.size();
+    return ::testing::AssertionSuccess();
+  }
+
   app::ApplicationContext* application_context() {
     return application_context_.get();
   }
@@ -243,6 +305,76 @@ TEST_F(LedgerAppTest, EraseRepository) {
   EXPECT_FALSE(files::IsFile(deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
   EXPECT_TRUE(cleared);
+
+  // Verify that the Ledger app didn't crash.
+  EXPECT_FALSE(ledger_shut_down);
+}
+
+TEST_F(LedgerAppTest, EraseRepositoryNoFirebaseConfiguration) {
+  Init({"--no_network_for_testing"});
+  bool ledger_shut_down = false;
+  RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
+
+  ledger::Status status;
+  files::ScopedTempDir tmp_dir;
+
+  // Connect to the repository, so that we can verify that we're disconnected
+  // when the erase method is called.
+  ledger::LedgerRepositoryPtr ledger_repository;
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), nullptr, nullptr, ledger_repository.NewRequest(),
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  // Add an entry in a root page.
+  ledger::PagePtr page;
+  fidl::Array<uint8_t> ledger_name = TestArray();
+  EXPECT_TRUE(GetRootPage(&ledger_repository, ledger_name.Clone(), &page));
+
+  page->Put(TestArray(), TestArray(),
+            callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  size_t entry_count;
+  ASSERT_TRUE(GetPageEntryCount(&page, &entry_count));
+  EXPECT_EQ(1u, entry_count);
+
+  bool repo_disconnected = false;
+  bool page_disconnected = false;
+  ledger_repository.set_connection_error_handler(
+      [&repo_disconnected] { repo_disconnected = true; });
+  page.set_connection_error_handler(
+      [&page_disconnected] { page_disconnected = true; });
+
+  // Erase the repository.
+  ledger_repository_factory_->EraseRepository(
+      tmp_dir.path(), nullptr, nullptr,
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  // Verify that the local storage was cleared and the client was disconnected.
+  bool cleared = RunLoopUntil([&repo_disconnected, &page_disconnected] {
+    return repo_disconnected && page_disconnected;
+  });
+  EXPECT_TRUE(repo_disconnected);
+  EXPECT_TRUE(page_disconnected);
+  EXPECT_TRUE(cleared);
+
+  ledger::LedgerRepositoryPtr ledger_repository_2;
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), nullptr, nullptr, ledger_repository_2.NewRequest(),
+      callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(ledger::Status::OK, status);
+
+  ledger::PagePtr page_2;
+  EXPECT_TRUE(
+      GetRootPage(&ledger_repository_2, std::move(ledger_name), &page_2));
+  ASSERT_TRUE(GetPageEntryCount(&page_2, &entry_count));
+  EXPECT_EQ(0u, entry_count);
 
   // Verify that the Ledger app didn't crash.
   EXPECT_FALSE(ledger_shut_down);

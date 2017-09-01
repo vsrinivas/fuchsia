@@ -70,7 +70,7 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
 
 }  // namespace
 
-// Container for a LedgerRepositoryImpl that keeps tracks of the in-flight FIDL
+// Container for a LedgerRepositoryImpl that keeps track of the in-flight FIDL
 // requests and callbacks and fires them when the repository is available.
 // TODO(ppi): LE-224 extract this into a generic class shared with
 // LedgerManager.
@@ -144,7 +144,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
 
     // TODO(ppi): rather than failing all already pending and future requests,
-    // we should stash them and fullfill them once the deletion is finished.
+    // we should stash them and fulfill them once the deletion is finished.
     status_ = Status::INTERNAL_ERROR;
   }
 
@@ -220,7 +220,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     std::unique_ptr<SyncWatcherSet> watchers =
         std::make_unique<SyncWatcherSet>();
     auto repository = std::make_unique<LedgerRepositoryImpl>(
-        repository_information.content_path, environment_, std::move(watchers), nullptr);
+        repository_information.content_path, environment_, std::move(watchers),
+        nullptr);
     container->SetRepository(Status::OK, std::move(repository));
     return;
   }
@@ -287,15 +288,25 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
     find_repository->second.Detach();
   }
 
+  auto final_callback =
+      [ this, callback,
+        repository_name = repository_information.name ](Status status) {
+    auto delete_repository = repositories_.find(repository_name);
+    if (delete_repository != repositories_.end()) {
+      repositories_.erase(delete_repository);
+    }
+    callback(status);
+  };
+
   Status status = DeleteRepositoryDirectory(repository_information);
   if (status != Status::OK) {
-    callback(status);
+    final_callback(status);
     return;
   }
 
   if (!firebase_config || !token_provider) {
     // No sync configuration passed, only delete the local state.
-    callback(Status::OK);
+    final_callback(Status::OK);
     return;
   }
 
@@ -307,16 +318,9 @@ void LedgerRepositoryFactoryImpl::EraseRepository(
           environment_->main_runner(), environment_->network_service(),
           firebase_config->server_id, firebase_config->api_key,
           std::move(token_provider_ptr)),
-      ftl::MakeCopyable([ this, callback, delete_repository = find_repository ](
-          bool succeeded) {
-        if (delete_repository != repositories_.end()) {
-          repositories_.erase(delete_repository);
-        }
-        if (succeeded) {
-          callback(Status::OK);
-        } else {
-          callback(Status::INTERNAL_ERROR);
-        }
+      ftl::MakeCopyable([final_callback =
+                             std::move(final_callback)](bool succeeded) {
+        final_callback(succeeded ? Status::OK : Status::INTERNAL_ERROR);
       }));
 }
 
@@ -372,8 +376,6 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
     LedgerRepositoryContainer* container,
     const RepositoryInformation& repository_information,
     cloud_sync::UserConfig user_config) {
-  const std::string temp_dir =
-      ftl::Concatenate({repository_information.content_path, "/tmp"});
   if (config_persistence_ == ConfigPersistence::PERSIST &&
       !CheckSyncConfig(user_config, repository_information)) {
     container->SetRepository(Status::CONFIGURATION_ERROR, nullptr);
