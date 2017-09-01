@@ -4,11 +4,13 @@
 
 #include <unittest/unittest.h>
 #include <sched.h>
-#include <stdbool.h>
+#include <threads.h>
 
 #include "dso-ctor/dso-ctor.h"
 
-static bool global_ctor_ran;
+namespace {
+
+bool global_ctor_ran;
 
 static struct Global {
     Global() { global_ctor_ran = true; }
@@ -27,7 +29,7 @@ bool check_ctor() {
     END_TEST;
 }
 
-static int my_static = 23;
+int my_static = 23;
 
 bool check_initializer() {
     BEGIN_TEST;
@@ -35,10 +37,38 @@ bool check_initializer() {
     END_TEST;
 }
 
+bool tlocal_ctor_ran, tlocal_dtor_ran;
+thread_local ThreadLocal<&tlocal_ctor_ran, &tlocal_dtor_ran> tlocal;
+
+int do_thread_local_dtor_test(void*) {
+    BEGIN_HELPER;
+    EXPECT_TRUE(decltype(tlocal)::check_before_reference());
+    tlocal.flag = true;
+    EXPECT_TRUE(decltype(tlocal)::check_after_reference());
+    EXPECT_TRUE(check_dso_tlocal_in_thread());
+    END_HELPER;
+}
+
+bool check_thread_local_ctor_dtor() {
+    BEGIN_TEST;
+    thrd_t th;
+    ASSERT_EQ(thrd_create(&th, &do_thread_local_dtor_test, nullptr),
+              thrd_success);
+    int retval = -1;
+    EXPECT_EQ(thrd_join(th, &retval), thrd_success);
+    EXPECT_TRUE(static_cast<bool>(retval));
+    EXPECT_TRUE(decltype(tlocal)::check_after_join());
+    EXPECT_TRUE(check_dso_tlocal_after_join());
+    END_TEST;
+}
+
+}  // namespace
+
 BEGIN_TEST_CASE(ctors)
 RUN_TEST(check_ctor)
 RUN_TEST(check_initializer)
 RUN_TEST(check_dso_ctor)
+RUN_TEST(check_thread_local_ctor_dtor)
 END_TEST_CASE(ctors)
 
 int main(int argc, char** argv) {
