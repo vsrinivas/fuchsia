@@ -41,7 +41,7 @@ executable("moterm") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/fonts/fidl",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/libteken",
     "//third_party/skia",
   ]
