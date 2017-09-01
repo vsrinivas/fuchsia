@@ -51,18 +51,27 @@ static_assert(sizeof(gpt_header_t) == 512, "unexpected gpt header size");
 static_assert(sizeof(gpt_partition_t) == GPT_ENTRY_SIZE, "unexpected gpt entry size");
 
 typedef struct gpt_priv {
-    int fd;
     // device to use
-    uint64_t blocksize;
+    int fd;
+
     // block size in bytes
-    uint64_t blocks;
+    uint64_t blocksize;
+
     // number of blocks
-    bool mbr;
+    uint64_t blocks;
+
     // true if valid mbr exists on disk
-    gpt_header_t header;
+    bool mbr;
+
     // header buffer, should be primary copy
-    gpt_partition_t ptable[PARTITIONS_COUNT];
+    gpt_header_t header;
+
     // partition table buffer
+    gpt_partition_t ptable[PARTITIONS_COUNT];
+
+    // copy of buffer from when last init'd or sync'd.
+    gpt_partition_t backup[PARTITIONS_COUNT];
+
     gpt_device_t device;
 } gpt_priv_t;
 
@@ -99,6 +108,43 @@ bool gpt_is_data_guid(uint8_t* guid, ssize_t len) {
 bool gpt_is_efi_guid(uint8_t* guid, ssize_t len) {
     static const uint8_t efi_guid[GPT_GUID_LEN] = GUID_EFI_VALUE;
     return len == GPT_GUID_LEN && !memcmp(guid, efi_guid, GPT_GUID_LEN);
+}
+
+int gpt_get_diffs(gpt_device_t* dev, int idx, unsigned* diffs) {
+    gpt_priv_t* priv = get_priv(dev);
+
+    *diffs = 0;
+
+    if (idx >= PARTITIONS_COUNT) {
+        return -1;
+    }
+
+    if (dev->partitions[idx] == NULL) {
+        return -1;
+    }
+
+    gpt_partition_t* a = dev->partitions[idx];
+    gpt_partition_t* b = priv->backup + idx;
+    if (memcmp(a->type, b->type, sizeof(a->type))) {
+        *diffs |= GPT_DIFF_TYPE;
+    }
+    if (memcmp(a->guid, b->guid, sizeof(a->guid))) {
+        *diffs |= GPT_DIFF_GUID;
+    }
+    if (a->first != b->first) {
+        *diffs |= GPT_DIFF_FIRST;
+    }
+    if (a->last != b->last) {
+        *diffs |= GPT_DIFF_LAST;
+    }
+    if (a->flags != b->flags) {
+        *diffs |= GPT_DIFF_FLAGS;
+    }
+    if (memcmp(a->name, b->name, sizeof(a->name))) {
+        *diffs |= GPT_DIFF_NAME;
+    }
+
+    return 0;
 }
 
 int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** out_dev) {
@@ -185,6 +231,9 @@ int gpt_device_init(int fd, uint64_t blocksize, uint64_t blocks, gpt_device_t** 
         printf("table crc check failed\n");
         goto out;
     }
+
+    // save original state so we can know what we changed
+    memcpy(priv->backup, priv->ptable, sizeof(priv->ptable));
 
     // fill the table of valid partitions
     for (unsigned i = 0; i < header->entries_count; i++) {
@@ -329,6 +378,9 @@ int gpt_device_sync(gpt_device_t* dev) {
     if (rc < 0) {
         goto fail;
     }
+
+    // align backup with new on-disk state
+    memcpy(priv->backup, priv->ptable, sizeof(priv->ptable));
 
     dev->valid = true;
 
