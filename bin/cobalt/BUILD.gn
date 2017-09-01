@@ -41,8 +41,8 @@ executable("cobalt") {
     "//application/lib/app",
     "//apps/cobalt_client/services:cobalt",
     "//cobalt/encoder",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//third_party/grpc:grpc++",
 
     # TODO(rudominer) Change to protobuf_lite after we have a different way
@@ -59,8 +59,8 @@ executable("cobalt_testapp") {
   deps = [
     "//application/lib/app",
     "//apps/cobalt_client/services:cobalt_sync",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
