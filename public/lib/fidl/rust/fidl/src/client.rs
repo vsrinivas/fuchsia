@@ -152,7 +152,7 @@ impl Client {
 
         future::Either::B(MessageResponse {
             id: id,
-            client: self.inner.clone(),
+            client: Some(self.inner.clone()),
         })
     }
 }
@@ -160,20 +160,34 @@ impl Client {
 #[must_use]
 pub struct MessageResponse {
     id: u64,
-    client: Arc<ClientInner>,
+    // `None` if the message response has been recieved
+    client: Option<Arc<ClientInner>>,
 }
 
 impl Future for MessageResponse {
     type Item = DecodeBuf;
     type Error = Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        self.client.poll_recv(self.id)
+        let res = if let Some(ref client) = self.client {
+            client.poll_recv(self.id)
+        } else {
+            return Err(Error::PollAfterCompletion)
+        };
+
+        // Drop the client reference if the response has been received
+        if let Ok(Async::Ready(_)) = res {
+            self.client.take();
+        }
+
+        res
     }
 }
 
 impl Drop for MessageResponse {
     fn drop(&mut self) {
-        self.client.deregister_msg_interest(self.id)
+        if let Some(ref client) = self.client {
+            client.deregister_msg_interest(self.id)
+        }
     }
 }
 

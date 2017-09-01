@@ -20,7 +20,11 @@ pub enum Error {
     UnknownOrdinal,
     UnknownUnionTag,
     RemoteClosed,
+    PollAfterCompletion,
     IoError(io::Error),
+
+    #[doc(hidden)]
+    __Nonexhaustive,
 }
 
 impl From<io::Error> for Error {
