@@ -9,7 +9,7 @@
 #include <cstdint>
 #ifdef __APPLE__
 // TODO(dje): Private copy until available on osx.
-#include <bin/gdbserver/third_party/musl/include/elf.h>
+#include <garnet/bin/gdbserver/third_party/musl/include/elf.h>
 #else
 #include <elf.h>
 #endif
