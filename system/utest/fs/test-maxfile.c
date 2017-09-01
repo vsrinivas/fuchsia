@@ -49,6 +49,6 @@ bool test_maxfile(void) {
     END_TEST;
 }
 
-RUN_FOR_ALL_FILESYSTEMS(maxfile_tests,
+RUN_FOR_ALL_FILESYSTEMS_SIZE(maxfile_tests, (1 << 29),
     RUN_TEST_LARGE(test_maxfile)
 )

@@ -57,7 +57,7 @@ typedef enum fs_test_type {
     FS_TEST_FVM,
 } fs_test_type_t;
 
-void setup_fs_test(fs_test_type_t test_class);
+void setup_fs_test(size_t disk_size, fs_test_type_t test_class);
 void teardown_fs_test(fs_test_type_t test_class);
 
 inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
@@ -74,12 +74,12 @@ inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
 // for filesystem tests when "utest_test_type" is not at
 // LEAST size "medium". This avoids the overhead of creating
 // a ramdisk when running small tests.
-#define BEGIN_FS_TEST_CASE(case_name, fs_type, fs_name, info) \
-    BEGIN_TEST_CASE(case_name##_##fs_name)                    \
-    if (utest_test_type & ~TEST_SMALL) {                      \
-        test_info = info;                                     \
-        if (can_execute_test(test_info, fs_type)) {           \
-            setup_fs_test(fs_type);
+#define BEGIN_FS_TEST_CASE(case_name, dsize, fs_type, fs_name, info) \
+    BEGIN_TEST_CASE(case_name##_##fs_name)                           \
+    if (utest_test_type & ~TEST_SMALL) {                             \
+        test_info = info;                                            \
+        if (can_execute_test(test_info, fs_type)) {                  \
+            setup_fs_test(dsize, fs_type);
 
 #define END_FS_TEST_CASE(case_name, fs_type, fs_name) \
             teardown_fs_test(fs_type);                \
@@ -89,20 +89,25 @@ inline bool can_execute_test(fs_info_t* info, fs_test_type_t t) {
     }                                                 \
     END_TEST_CASE(case_name##_##fs_name)
 
-#define FS_TEST_CASE(case_name, CASE_TESTS, test_type, fs_type, index)     \
-    BEGIN_FS_TEST_CASE(case_name, test_type, fs_type, &FILESYSTEMS[index]) \
-    CASE_TESTS                                                             \
+#define FS_TEST_CASE(case_name, dsize, CASE_TESTS, test_type, fs_type, index)     \
+    BEGIN_FS_TEST_CASE(case_name, dsize, test_type, fs_type, &FILESYSTEMS[index]) \
+    CASE_TESTS                                                                    \
     END_FS_TEST_CASE(case_name, test_type, fs_type)
 
-#define RUN_FOR_ALL_FILESYSTEMS_TYPE(case_name, test_type, CASE_TESTS) \
-    FS_TEST_CASE(case_name, CASE_TESTS, test_type, memfs, 0)           \
-    FS_TEST_CASE(case_name, CASE_TESTS, test_type, minfs, 1)           \
-    FS_TEST_CASE(case_name, CASE_TESTS, test_type, thinfs, 2)
+#define DEFAULT_DISK_SIZE (1llu << 32)
 
-#define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)               \
-    FS_TEST_CASE(case_name, CASE_TESTS, FS_TEST_NORMAL, memfs, 0)    \
-    FS_TEST_CASE(case_name, CASE_TESTS, FS_TEST_NORMAL, minfs, 1)    \
-    FS_TEST_CASE(case_name##_fvm, CASE_TESTS, FS_TEST_FVM, minfs, 1) \
-    FS_TEST_CASE(case_name, CASE_TESTS, FS_TEST_NORMAL, thinfs, 2)
+#define RUN_FOR_ALL_FILESYSTEMS_TYPE(case_name, test_type, CASE_TESTS)           \
+    FS_TEST_CASE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS, test_type, memfs, 0)  \
+    FS_TEST_CASE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS, test_type, minfs, 1)  \
+    FS_TEST_CASE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS, test_type, thinfs, 2)
+
+#define RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, dsize, CASE_TESTS)          \
+    FS_TEST_CASE(case_name, dsize, CASE_TESTS, FS_TEST_NORMAL, memfs, 0)    \
+    FS_TEST_CASE(case_name, dsize, CASE_TESTS, FS_TEST_NORMAL, minfs, 1)    \
+    FS_TEST_CASE(case_name##_fvm, dsize, CASE_TESTS, FS_TEST_FVM, minfs, 1) \
+    FS_TEST_CASE(case_name, dsize, CASE_TESTS, FS_TEST_NORMAL, thinfs, 2)
+
+#define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)                     \
+    RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, DEFAULT_DISK_SIZE, CASE_TESTS)
 
 __END_CDECLS;

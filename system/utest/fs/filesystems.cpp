@@ -38,7 +38,6 @@ const fsck_options_t test_fsck_options = {
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 #define TEST_BLOCK_SIZE 512
-#define TEST_BLOCK_COUNT (1 << 20)
 // This slice size is intentionally somewhat small, so
 // we can test increasing the size of a "single-slice"
 // inode table. We may want support for tests with configurable
@@ -51,7 +50,7 @@ constexpr uint8_t kTestUniqueGUID[] = {
 };
 constexpr uint8_t kTestPartGUID[] = GUID_DATA_VALUE;
 
-void setup_fs_test(fs_test_type_t test_class) {
+void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
     test_root_path = MOUNT_PATH;
     int r = mkdir(test_root_path, 0755);
     if ((r < 0) && errno != EEXIST) {
@@ -60,7 +59,8 @@ void setup_fs_test(fs_test_type_t test_class) {
     }
 
     if (!use_real_disk) {
-        if (create_ramdisk(TEST_BLOCK_SIZE, TEST_BLOCK_COUNT, test_disk_path)) {
+        size_t block_count = disk_size / TEST_BLOCK_SIZE;
+        if (create_ramdisk(TEST_BLOCK_SIZE, block_count, test_disk_path)) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }
