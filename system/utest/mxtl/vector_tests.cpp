@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <unittest/unittest.h>
+#include <mxtl/string.h>
 #include <mxtl/tests/lfsr.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -744,6 +745,43 @@ bool vector_test_no_alloc_check() {
     END_TEST;
 }
 
+bool vector_test_implicit_conversion() {
+    BEGIN_TEST;
+
+    {
+        mxtl::Vector<mxtl::String> v;
+        v.push_back(mxtl::String("First"));
+        v.push_back("Second");
+        v.insert(2, mxtl::String("Third"));
+        v.insert(3, "Fourth");
+
+        ASSERT_EQ(strcmp(v[0].c_str(), "First"), 0);
+        ASSERT_EQ(strcmp(v[1].c_str(), "Second"), 0);
+        ASSERT_EQ(strcmp(v[2].c_str(), "Third"), 0);
+        ASSERT_EQ(strcmp(v[3].c_str(), "Fourth"), 0);
+    }
+
+    {
+        mxtl::Vector<mxtl::String> v;
+        mxtl::AllocChecker ac;
+        v.push_back(mxtl::String("First"), &ac);
+        ASSERT_TRUE(ac.check());
+        v.push_back("Second", &ac);
+        ASSERT_TRUE(ac.check());
+        v.insert(2, mxtl::String("Third"), &ac);
+        ASSERT_TRUE(ac.check());
+        v.insert(3, "Fourth", &ac);
+        ASSERT_TRUE(ac.check());
+
+        ASSERT_EQ(strcmp(v[0].c_str(), "First"), 0);
+        ASSERT_EQ(strcmp(v[1].c_str(), "Second"), 0);
+        ASSERT_EQ(strcmp(v[2].c_str(), "Third"), 0);
+        ASSERT_EQ(strcmp(v[3].c_str(), "Fourth"), 0);
+    }
+
+    END_TEST;
+}
+
 }  // namespace anonymous
 
 #define RUN_FOR_ALL_TRAITS(test_base, test_size)              \
@@ -763,7 +801,9 @@ bool vector_test_no_alloc_check() {
 BEGIN_TEST_CASE(vector_tests)
 RUN_FOR_ALL(vector_test_access_release)
 RUN_FOR_ALL(vector_test_push_back_in_capacity)
+RUN_TEST((vector_test_push_back_by_const_ref_in_capacity<ValueTypeTraits, 100>))
 RUN_FOR_ALL(vector_test_push_back_beyond_capacity)
+RUN_TEST((vector_test_push_back_by_const_ref_beyond_capacity<ValueTypeTraits, 100>))
 RUN_FOR_ALL(vector_test_pop_back)
 RUN_FOR_ALL(vector_test_allocation_failure)
 RUN_FOR_ALL(vector_test_move)
@@ -771,8 +811,7 @@ RUN_FOR_ALL(vector_test_swap)
 RUN_FOR_ALL(vector_test_iterator)
 RUN_FOR_ALL(vector_test_insert_delete)
 RUN_FOR_ALL(vector_test_no_alloc_check)
-RUN_TEST((vector_test_push_back_by_const_ref_in_capacity<ValueTypeTraits, 100>))
-RUN_TEST((vector_test_push_back_by_const_ref_beyond_capacity<ValueTypeTraits, 100>))
+RUN_TEST(vector_test_implicit_conversion)
 END_TEST_CASE(vector_tests)
 
 }  // namespace tests

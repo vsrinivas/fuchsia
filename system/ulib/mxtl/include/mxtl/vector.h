@@ -122,46 +122,36 @@ public:
         other.capacity_ = capacity;
     }
 
-    // TODO(smklein): In the future, if we want to be able to push back
-    // function pointers and arrays with impunity without requiring exact
-    // types, this 'remove_cv_ref' call should probably be replaced with a
-    // 'mxtl::decay' call.
-    template <typename U,
-              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
-    void push_back(U&& value, AllocChecker* ac) {
-        if (!grow_for_new_element(ac)) {
-            return;
-        }
-        new (&ptr_[size_++]) T(mxtl::forward<U>(value));
+    void push_back(T&& value, AllocChecker* ac) {
+        push_back_internal(mxtl::move(value), ac);
     }
 
-    template <typename U,
-              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
-    void push_back(U&& value) {
-        grow_for_new_element();
-        new (&ptr_[size_++]) T(mxtl::forward<U>(value));
+    void push_back(const T& value, AllocChecker* ac) {
+        push_back_internal(value, ac);
     }
 
-    // Insert an element into the |index| position in the vector, shifting
-    // all subsequent elements back one position.
-    //
-    // Index must be less than or equal to the size of the vector.
-    template <typename U,
-              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
-    void insert(size_t index, U&& value, AllocChecker* ac) {
-        MX_DEBUG_ASSERT(index <= size_);
-        if (!grow_for_new_element(ac)) {
-            return;
-        }
-        insert_complete(index, mxtl::forward<U>(value));
+    void push_back(T&& value) {
+        push_back_internal(mxtl::move(value));
     }
 
-    template <typename U,
-              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
-    void insert(size_t index, U&& value) {
-        MX_DEBUG_ASSERT(index <= size_);
-        grow_for_new_element();
-        insert_complete(index, mxtl::forward<U>(value));
+    void push_back(const T& value) {
+        push_back_internal(value);
+    }
+
+    void insert(size_t index, T&& value, AllocChecker* ac) {
+        insert_internal(index, mxtl::move(value), ac);
+    }
+
+    void insert(size_t index, const T& value, AllocChecker* ac) {
+        insert_internal(index, value, ac);
+    }
+
+    void insert(size_t index, T&& value) {
+        insert_internal(index, mxtl::move(value));
+    }
+
+    void insert(size_t index, const T& value) {
+        insert_internal(index, value);
     }
 
     // Remove an element from the |index| position in the vector, shifting
@@ -205,6 +195,48 @@ public:
     }
 
 private:
+    // TODO(smklein): In the future, if we want to be able to push back
+    // function pointers and arrays with impunity without requiring exact
+    // types, this 'remove_cv_ref' call should probably be replaced with a
+    // 'mxtl::decay' call.
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void push_back_internal(U&& value, AllocChecker* ac) {
+        if (!grow_for_new_element(ac)) {
+            return;
+        }
+        new (&ptr_[size_++]) T(mxtl::forward<U>(value));
+    }
+
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void push_back_internal(U&& value) {
+        grow_for_new_element();
+        new (&ptr_[size_++]) T(mxtl::forward<U>(value));
+    }
+
+    // Insert an element into the |index| position in the vector, shifting
+    // all subsequent elements back one position.
+    //
+    // Index must be less than or equal to the size of the vector.
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void insert_internal(size_t index, U&& value, AllocChecker* ac) {
+        MX_DEBUG_ASSERT(index <= size_);
+        if (!grow_for_new_element(ac)) {
+            return;
+        }
+        insert_complete(index, mxtl::forward<U>(value));
+    }
+
+    template <typename U,
+              typename = typename enable_if<is_same<internal::remove_cv_ref<U>, T>::value>::type>
+    void insert_internal(size_t index, U&& value) {
+        MX_DEBUG_ASSERT(index <= size_);
+        grow_for_new_element();
+        insert_complete(index, mxtl::forward<U>(value));
+    }
+
     // The second half of 'insert', which asumes that there is enough
     // room for a new element.
     template <typename U,
