@@ -3,6 +3,6 @@
         "dart"
     ],
     "labels": [
-        "//lib/widgets/packages/widgets:test"
+        "//topaz/lib/widgets/packages/widgets:test"
     ]
 }
