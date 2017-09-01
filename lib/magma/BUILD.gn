@@ -53,14 +53,14 @@ package("magma-common") {
 package("magma") {
   if (target_cpu == "x64") {
     deps = [
-      "$msd_intel_gen_build_root:msd_vendor",
+      "$msd_intel_gen_build_root:msd_intel",
     ]
     drivers = [ {
           # This driver is needed early in bootup (i.e. in the /boot partition)
           # so that devmgr correctly chooses it over the intel-i915.so driver on
           # hardware with supported intel GPUs.
           early_boot_driver = true
-          name = "libmsd_vendor.so"
+          name = "libmsd_intel.so"
         } ]
   }
 }
