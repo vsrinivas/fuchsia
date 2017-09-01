@@ -18,7 +18,7 @@ wlan_go_dependencies = [
   },
   {
     package = "fidl"
-    source = "//lib/fidl/go/src/fidl"
+    source = "//garnet/public/lib/fidl/go/src/fidl"
   },
   {
     package = "apps/netstack/eth"
@@ -69,7 +69,7 @@ go_binary("wlantool_bin") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
     },
   ]
 }
