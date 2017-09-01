@@ -23,7 +23,7 @@ executable("component_manager_main") {
     "//apps/network/services",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/url",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]
 

@@ -23,7 +23,7 @@ executable("child_module") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
@@ -39,6 +39,6 @@ executable("parent_module") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

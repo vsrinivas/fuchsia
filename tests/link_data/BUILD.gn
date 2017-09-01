@@ -27,6 +27,6 @@ executable("test_link_data") {
     "//apps/test_runner/services:test_runner",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

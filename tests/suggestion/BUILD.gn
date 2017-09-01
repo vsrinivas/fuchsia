@@ -24,7 +24,7 @@ executable("suggestion_proposal_test_module") {
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
@@ -41,6 +41,6 @@ executable("suggestion_test_user_shell") {
     "//apps/modular/services/component",
     "//apps/modular/services/module",
     "//apps/modular/services/user",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

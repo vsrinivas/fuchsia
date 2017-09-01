@@ -30,7 +30,7 @@ executable("context_link_user_shell") {
     "//apps/test_runner/services:test_runner",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
@@ -46,6 +46,6 @@ executable("context_link_module") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

@@ -10,7 +10,7 @@ source_set("filesystem") {
 
   deps = [
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 

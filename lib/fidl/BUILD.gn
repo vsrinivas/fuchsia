@@ -19,7 +19,7 @@ source_set("app_client") {
     "//apps/modular/services/lifecycle",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
@@ -135,7 +135,7 @@ source_set("view_host") {
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
@@ -172,7 +172,7 @@ source_set("unittests") {
     "//application/lib/app",
     "//apps/modular/lib/testing:test_with_message_loop",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 }

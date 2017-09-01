@@ -15,7 +15,7 @@ executable("hello_app_parent") {
   deps = [
     ":interfaces",
     "//application/lib/app",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   sources = [
@@ -27,7 +27,7 @@ executable("hello_app_child") {
   deps = [
     ":interfaces",
     "//application/lib/app",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   sources = [

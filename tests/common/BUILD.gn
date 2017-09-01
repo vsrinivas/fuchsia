@@ -22,6 +22,6 @@ executable("null_module") {
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/services/views",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

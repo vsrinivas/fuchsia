@@ -7,7 +7,7 @@ executable("request_components") {
     "//application/lib/app",
     "//apps/modular/services/component",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   sources = [
