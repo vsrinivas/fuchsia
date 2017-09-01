@@ -240,6 +240,8 @@ static mx_status_t handle_output(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_
     case PCI_CONFIG_ADDRESS_PORT_BASE ... PCI_CONFIG_ADDRESS_PORT_TOP:
     case PCI_CONFIG_DATA_PORT_BASE ... PCI_CONFIG_DATA_PORT_TOP:
         return pci_bus_write(vcpu_ctx->guest_ctx->bus, io);
+    case UART_INTERRUPT_ENABLE_PORT ... UART_SCR_SCRATCH_PORT:
+        return uart_write(vcpu_ctx->guest_ctx->uart, io);
     }
     fprintf(stderr, "Unhandled port out %#x\n", io->port);
     return MX_ERR_NOT_SUPPORTED;

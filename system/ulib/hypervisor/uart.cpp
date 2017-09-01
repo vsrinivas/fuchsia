@@ -101,32 +101,44 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
 
     switch (io->port) {
     case UART_RECEIVE_PORT: {
-        for (int i = 0; i < io->access_size; i++) {
-            buffer[offset++] = io->data[i];
-            if (offset == UART_BUFFER_SIZE || io->data[i] == '\r') {
-                printf("%.*s", offset, buffer);
-                offset = 0;
-            }
-        }
+        mx_status_t status;
+
         mtx_lock(&uart->mutex);
-        uart->line_status = UART_THR_EMPTY;
+        if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH) {
+            // Ignore writes when divisor latch is enabled.
+            status = (io->access_size != 1) ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
+        } else {
+            for (int i = 0; i < io->access_size; i++) {
+                buffer[offset++] = io->data[i];
+                if (offset == UART_BUFFER_SIZE || io->data[i] == '\r') {
+                    printf("%.*s", offset, buffer);
+                    offset = 0;
+                }
+            }
+            uart->line_status = UART_THR_EMPTY;
 
-        // Reset THR empty interrupt on THR write.
-        if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
-            uart->interrupt_id = UART_INTERRUPT_ID_NONE;
+            // Reset THR empty interrupt on THR write.
+            if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
+                uart->interrupt_id = UART_INTERRUPT_ID_NONE;
 
-        // TODO(andymutton): Do this asynchronously so that we don't overrun linux's
-        // interrupt flood check.
-        mx_status_t status = maybe_raise_thr_empty(uart);
+            // TODO(andymutton): Do this asynchronously so that we don't overrun Linux's
+            // interrupt flood check.
+            status = maybe_raise_thr_empty(uart);
+        }
         mtx_unlock(&uart->mutex);
         return status;
     }
     case UART_INTERRUPT_ENABLE_PORT: {
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
+        mx_status_t status = MX_OK;
         mtx_lock(&uart->mutex);
-        uart->interrupt_enable = io->u8;
-        mx_status_t status = maybe_raise_thr_empty(uart);
+
+        // Ignore writes when divisor latch is enabled.
+        if (!(uart->line_control & UART_LINE_CONTROL_DIV_LATCH)) {
+            uart->interrupt_enable = io->u8;
+            status = maybe_raise_thr_empty(uart);
+        }
         mtx_unlock(&uart->mutex);
         return status;
     }
@@ -151,7 +163,5 @@ static mx_status_t uart_handler(mx_port_packet_t* packet, void* ctx) {
 }
 
 mx_status_t uart_async(uart_t* uart, mx_handle_t vcpu, mx_handle_t guest) {
-    const mx_vaddr_t uart_addr = UART_RECEIVE_PORT;
-    const size_t uart_len = UART_SCR_SCRATCH_PORT + 1 - uart_addr;
-    return device_async(guest, MX_GUEST_TRAP_IO, uart_addr, uart_len, uart_handler, uart);
+    return device_async(guest, MX_GUEST_TRAP_IO, UART_RECEIVE_PORT, 1, uart_handler, uart);
 }

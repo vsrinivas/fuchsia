@@ -61,6 +61,23 @@ static bool write_ier(void) {
     uart_t uart;
     io_apic_t io_apic;
     {
+        // Setting IER when divisor latch is on should be a no-op
+        stub_io_apic(&io_apic);
+        uart_init(&uart, &io_apic);
+        uart.line_control = UART_LINE_CONTROL_DIV_LATCH;
+        uart.interrupt_enable = 0;
+
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_INTERRUPT_ENABLE_PORT;
+        guest_io.access_size = 1;
+        guest_io.u8 = UART_INTERRUPT_ENABLE_RDA;
+
+        mx_status_t status = uart_write(&uart, &guest_io);
+        ASSERT_EQ(status, MX_OK, "");
+        ASSERT_EQ(uart.interrupt_enable, 0, "");
+        ASSERT_EQ(uart.interrupt_id, UART_INTERRUPT_ID_NONE, ""); // should be untouched
+    }
+    {
         // Setting anything not THR enable shouldn't trigger any interrupts.
         stub_io_apic(&io_apic);
         uart_init(&uart, &io_apic);
@@ -119,6 +136,23 @@ static bool write_thr(void) {
 
     uart_t uart;
     io_apic_t io_apic;
+    {
+        stub_io_apic(&io_apic);
+        uart_init(&uart, &io_apic);
+
+        // If divisor latch is enabled, this should be a no-op, so interrupt_id
+        // should remain the same.
+        uart.line_control = UART_LINE_CONTROL_DIV_LATCH;
+        uart.interrupt_id = UART_INTERRUPT_ID_THR_EMPTY;
+        mx_packet_guest_io_t guest_io = {};
+        guest_io.port = UART_RECEIVE_PORT;
+        guest_io.u8 = 0x1;
+        guest_io.access_size = 1;
+
+        mx_status_t status = uart_write(&uart, &guest_io);
+        ASSERT_EQ(status, MX_OK, "");
+        ASSERT_EQ(uart.interrupt_id, UART_INTERRUPT_ID_THR_EMPTY, "");
+    }
     {
         stub_io_apic(&io_apic);
         uart_init(&uart, &io_apic);

@@ -16,6 +16,7 @@
 #define UART_INTERRUPT_ID_NONE          (1u << 0)
 #define UART_INTERRUPT_ID_THR_EMPTY     (1u << 1)
 #define UART_INTERRUPT_ID_RDA           (1u << 2)
+#define UART_LINE_CONTROL_DIV_LATCH     (1u << 7)
 #define UART_STATUS_EMPTY               (1u << 5)
 #define UART_STATUS_IDLE                (1u << 6)
 
