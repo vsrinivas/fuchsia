@@ -34,20 +34,24 @@ mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
 #define CD_RECURSE 2
 
 mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
-                                         uint32_t* bno_out) {
+                                         uint32_t* next_n, uint32_t* bno_out) {
+    // The default value for the "next n". It's easier to set it here anyway,
+    // since we proceed to modify n in the code below.
+    *next_n = n + 1;
     if (n < kMinfsDirect) {
         *bno_out = inode->dnum[n];
         return MX_OK;
     }
 
     n -= kMinfsDirect;
-    uint32_t i = n / kMinfsDirectPerIndirect;
-    uint32_t j = n % kMinfsDirectPerIndirect;
+    uint32_t i = n / kMinfsDirectPerIndirect; // indirect index
+    uint32_t j = n % kMinfsDirectPerIndirect; // direct index
 
     if (i < kMinfsIndirect) {
         uint32_t ibno;
         if ((ibno = inode->inum[i]) == 0) {
             *bno_out = 0;
+            *next_n = kMinfsDirect + (i + 1) * kMinfsDirectPerIndirect;
             return MX_OK;
         }
         char data[kMinfsBlockSize];
@@ -61,8 +65,9 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
     }
 
     n -= kMinfsIndirect * kMinfsDirectPerIndirect;
-    i = n / (kMinfsDirectPerIndirect * kMinfsDirectPerIndirect); // doubly indirect index
-    n -= (i * kMinfsDirectPerIndirect * kMinfsDirectPerIndirect);
+    const uint32_t kMinfsDirectPerDindirect = kMinfsDirectPerIndirect * kMinfsDirectPerIndirect;
+    i = n / (kMinfsDirectPerDindirect); // doubly indirect index
+    n -= (i * kMinfsDirectPerDindirect);
     j = n / kMinfsDirectPerIndirect; // indirect index
     uint32_t k = n % kMinfsDirectPerIndirect; // direct index
 
@@ -70,31 +75,34 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
         uint32_t dibno;
         if ((dibno = inode->dinum[i]) == 0) {
             *bno_out = 0;
+            *next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
+                    (i + 1) * kMinfsDirectPerDindirect;
             return MX_OK;
         }
 
-        if (cached_doubly_indirect_ != i) {
+        if (cached_doubly_indirect_ != dibno) {
             mx_status_t status;
             if ((status = fs_->bc_->Readblk(dibno, doubly_indirect_cache_)) != MX_OK) {
                 return status;
             }
-            cached_doubly_indirect_ = i;
-            cached_indirect_ = UINT_MAX;
+            cached_doubly_indirect_ = dibno;
         }
 
         uint32_t* dientry = reinterpret_cast<uint32_t*>(doubly_indirect_cache_);
         uint32_t ibno;
         if ((ibno = dientry[j]) == 0) {
             *bno_out = 0;
+            *next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
+                    (i * kMinfsDirectPerDindirect) + (j + 1) * kMinfsDirectPerIndirect;
             return MX_OK;
         }
 
-        if (cached_indirect_ != j) {
+        if (cached_indirect_ != ibno) {
             mx_status_t status;
             if ((status = fs_->bc_->Readblk(ibno, indirect_cache_)) != MX_OK) {
                 return status;
             }
-            cached_indirect_ = j;
+            cached_indirect_ = ibno;
         }
 
         uint32_t* ientry = reinterpret_cast<uint32_t*>(indirect_cache_);
@@ -265,7 +273,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
     }
     FS_TRACE_INFO(" ...\n");
 
-    uint32_t blocks = 0;
+    uint32_t block_count = 0;
 
     // count and sanity-check indirect blocks
     for (unsigned n = 0; n < kMinfsIndirect; n++) {
@@ -276,7 +284,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
                      ino, n, inode->inum[n], msg);
                 conforming_ = false;
             }
-            blocks++;
+            block_count++;
         }
     }
 
@@ -289,7 +297,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
                      ino, n, inode->dinum[n], msg);
                 conforming_ = false;
             }
-            blocks++;
+            block_count++;
 
             char data[kMinfsBlockSize];
             mx_status_t status;
@@ -305,47 +313,54 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
                             ino, m, entry[m], msg);
                         conforming_ = false;
                     }
-                    blocks++;
+                    block_count++;
                 }
             }
         }
     }
 
     // count and sanity-check data blocks
-    unsigned blocks_allocated = 0;
-    cached_doubly_indirect_ = UINT_MAX;
-    cached_indirect_ = UINT_MAX;
 
-    for (unsigned n = 0 ; ; n++) {
+    // The next block which would be allocated if we expand the file size
+    // by a single block.
+    unsigned next_blk = 0;
+    cached_doubly_indirect_ = 0;
+    cached_indirect_ = 0;
+
+    uint32_t n = 0;
+    while (true) {
         mx_status_t status;
         uint32_t bno;
-        if ((status = GetInodeNthBno(inode, n, &bno)) < 0) {
+        uint32_t next_n;
+        if ((status = GetInodeNthBno(inode, n, &next_n, &bno)) < 0) {
             if (status == MX_ERR_OUT_OF_RANGE) {
                 break;
             } else {
                 return status;
             }
         }
+        assert(next_n > n);
         if (bno) {
-            blocks++;
+            next_blk = n + 1;
+            block_count++;
             const char* msg;
             if ((msg = CheckDataBlock(bno)) != nullptr) {
                 FS_TRACE_WARN("check: ino#%u: block %u(@%u): %s\n", ino, n, bno, msg);
                 conforming_ = false;
             }
-            blocks_allocated = n + 1;
         }
+        n = next_n;
     }
-    if (blocks_allocated) {
+    if (next_blk) {
         unsigned max_blocks = mxtl::roundup(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
-        if (blocks_allocated > max_blocks) {
+        if (next_blk > max_blocks) {
             FS_TRACE_WARN("check: ino#%u: filesize too small\n", ino);
             conforming_ = false;
         }
     }
-    if (blocks != inode->block_count) {
+    if (block_count != inode->block_count) {
         FS_TRACE_WARN("check: ino#%u: block count %u, actual blocks %u\n",
-             ino, inode->block_count, blocks);
+             ino, inode->block_count, block_count);
         conforming_ = false;
     }
     return MX_OK;
@@ -478,8 +493,8 @@ mx_status_t MinfsChecker::Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* 
     links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
     links_[0] = -1;
 
-    cached_doubly_indirect_ = UINT_MAX;
-    cached_indirect_ = UINT_MAX;
+    cached_doubly_indirect_ = 0;
+    cached_indirect_ = 0;
 
     mx_status_t status;
     if ((status = checked_inodes_.Reset(info->inode_count)) < 0) {

@@ -414,7 +414,14 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
 
     mx_status_t GetInode(minfs_inode_t* inode, uint32_t ino);
-    mx_status_t GetInodeNthBno(minfs_inode_t* inode, uint32_t n, uint32_t* bno_out);
+
+    // Returns the nth block within an inode, relative to the start of the
+    // file. Returns the "next_n" which might contain a bno. This "next_n"
+    // is for performance reasons -- it allows fsck to avoid repeatedly checking
+    // the same indirect / doubly indirect blocks with all internal
+    // bno unallocated.
+    mx_status_t GetInodeNthBno(minfs_inode_t* inode, uint32_t n, uint32_t* next_n,
+                               uint32_t* bno_out);
     mx_status_t CheckDirectory(minfs_inode_t* inode, uint32_t ino,
                                uint32_t parent, uint32_t flags);
     const char* CheckDataBlock(uint32_t bno);
