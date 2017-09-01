@@ -868,9 +868,6 @@ mx_status_t ThreadDispatcher::GetInfoForUserspace(mx_info_thread_t* info) {
     case ExceptionPort::Type::JOB:
         info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_JOB;
         break;
-    case ExceptionPort::Type::SYSTEM:
-        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_SYSTEM;
-        break;
     default:
         DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
                          static_cast<int>(excp_port_type));

@@ -63,7 +63,7 @@ public:
         mxtl::RefPtr<ExceptionPort> eport;
         ExceptionPort::Type expected_type = ExceptionPort::Type::NONE;
 
-        while (previous_type_ != ExceptionPort::Type::SYSTEM) {
+        while (true) {
             switch (previous_type_) {
                 case ExceptionPort::Type::NONE:
                     eport = thread_->process()->debugger_exception_port();
@@ -88,8 +88,8 @@ public:
                         eport = previous_job_->exception_port();
                         expected_type = ExceptionPort::Type::JOB;
                     } else {
-                        eport = GetSystemExceptionPort();
-                        expected_type = ExceptionPort::Type::SYSTEM;
+                        // Reached the root job and there was no handler.
+                       return false;
                     }
                     break;
                 default:
@@ -104,9 +104,7 @@ public:
                 return true;
             }
         }
-
-        // Done, no more to try.
-        return false;
+        __UNREACHABLE;
     }
 
 private:

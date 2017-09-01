@@ -72,18 +72,6 @@ ExceptionPort::~ExceptionPort() {
     DEBUG_ASSERT(!IsBoundLocked());
 }
 
-void ExceptionPort::SetSystemTarget() {
-    canary_.Assert();
-
-    LTRACE_ENTRY_OBJ;
-    AutoLock lock(&lock_);
-    DEBUG_ASSERT_MSG(type_ == Type::SYSTEM,
-                     "unexpected type %d", static_cast<int>(type_));
-    DEBUG_ASSERT(!IsBoundLocked());
-    DEBUG_ASSERT(port_ != nullptr);
-    bound_to_system_ = true;
-}
-
 void ExceptionPort::SetTarget(const mxtl::RefPtr<JobDispatcher>& target) {
     canary_.Assert();
 
@@ -154,15 +142,7 @@ void ExceptionPort::OnPortZeroHandles() {
         OnTargetUnbind();
     } else {
         switch (type_) {
-            case Type::SYSTEM: {
-                DEBUG_ASSERT(bound_to_system_);
-                DEBUG_ASSERT(target_ == nullptr);
-                lock.release();  // The target may call our ::OnTargetUnbind
-                ResetSystemExceptionPort();
-                break;
-            }
             case Type::JOB: {
-                DEBUG_ASSERT(!bound_to_system_);
                 DEBUG_ASSERT(target_ != nullptr);
                 auto job = DownCastDispatcher<JobDispatcher>(&target_);
                 DEBUG_ASSERT(job != nullptr);
@@ -172,7 +152,6 @@ void ExceptionPort::OnPortZeroHandles() {
             }
             case Type::PROCESS:
             case Type::DEBUGGER: {
-                DEBUG_ASSERT(!bound_to_system_);
                 DEBUG_ASSERT(target_ != nullptr);
                 auto process = DownCastDispatcher<ProcessDispatcher>(&target_);
                 DEBUG_ASSERT(process != nullptr);
@@ -181,7 +160,6 @@ void ExceptionPort::OnPortZeroHandles() {
                 break;
             }
             case Type::THREAD: {
-                DEBUG_ASSERT(!bound_to_system_);
                 DEBUG_ASSERT(target_ != nullptr);
                 auto thread = DownCastDispatcher<ThreadDispatcher>(&target_);
                 DEBUG_ASSERT(thread != nullptr);
@@ -230,7 +208,6 @@ void ExceptionPort::OnTargetUnbind() {
         // Drop references to the target.
         // We may not have a target if the binding (Set*Target) never happened,
         // so don't require that we're bound.
-        bound_to_system_ = false;
         target_.reset();
     }
     // It should actually be safe to hold our lock while calling into

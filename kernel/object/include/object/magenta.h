@@ -19,7 +19,6 @@ class ProcessDispatcher;
 mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
 // Returns true if a port had been set.
 bool ResetSystemExceptionPort();
-mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 

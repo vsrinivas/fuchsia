@@ -84,16 +84,12 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
         // TODO(MG-987): handle for system exception
         if (debugger)
             return MX_ERR_INVALID_ARGS;
-        status = ExceptionPort::Create(ExceptionPort::Type::SYSTEM,
+        status = ExceptionPort::Create(ExceptionPort::Type::JOB,
                                        mxtl::move(port), key, &eport);
         if (status != MX_OK)
             return status;
-        status = SetSystemExceptionPort(eport);
-        if (status != MX_OK)
-            return status;
 
-        eport->SetSystemTarget();
-        return MX_OK;
+        return SetSystemExceptionPort(eport);
     }
 
     mxtl::RefPtr<Dispatcher> dispatcher;

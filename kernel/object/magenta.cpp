@@ -57,10 +57,6 @@ size_t internal::OutstandingHandles() {
     return outstanding_handles;
 }
 
-// The system exception port.
-static mutex_t system_exception_mutex = MUTEX_INITIAL_VALUE(system_exception_mutex);
-static mxtl::RefPtr<ExceptionPort> system_exception_port TA_GUARDED(system_exception_mutex);
-
 // All jobs and processes are rooted at the |root_job|.
 static mxtl::RefPtr<JobDispatcher> root_job;
 
@@ -277,29 +273,12 @@ void internal::DumpHandleTableInfo() {
 }
 
 mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
-    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::SYSTEM);
-
-    AutoLock lock(&system_exception_mutex);
-    if (system_exception_port)
-        return MX_ERR_BAD_STATE;
-    system_exception_port = eport;
-    return MX_OK;
+    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
+    return root_job->SetExceptionPort(mxtl::move(eport));
 }
 
 bool ResetSystemExceptionPort() {
-    AutoLock lock(&system_exception_mutex);
-    if (system_exception_port == nullptr) {
-        // Attempted to unbind when no exception port is bound.
-        return false;
-    }
-    system_exception_port->OnTargetUnbind();
-    system_exception_port.reset();
-    return true;
-}
-
-mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort() {
-    AutoLock lock(&system_exception_mutex);
-    return system_exception_port;
+    return root_job->ResetExceptionPort(false /* quietly */);
 }
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
