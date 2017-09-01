@@ -9,6 +9,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 }

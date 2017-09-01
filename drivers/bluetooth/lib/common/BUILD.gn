@@ -27,7 +27,7 @@ source_set("common") {
   ]
 
   public_deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//magenta/system/ulib/mxtl",
   ]
 }
@@ -51,8 +51,8 @@ source_set("tests") {
 
   deps = [
     ":common",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 }

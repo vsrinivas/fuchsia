@@ -21,8 +21,8 @@ executable("bluetoothcli") {
     "//application/lib/app",
     "//apps/bluetooth/service/interfaces",
     "//apps/bluetooth/tools/lib",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//magenta/third_party/ulib/linenoise",
   ]
 }
