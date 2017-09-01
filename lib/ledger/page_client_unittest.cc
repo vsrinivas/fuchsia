@@ -87,19 +87,6 @@ class PageClientTest : public TestWithMessageLoop {
     page_client_.reset();
     page_client_a_.reset();
     page_client_b_.reset();
-
-    // HACK(mesch): As workaround for LE-304 we delete the page we used, since
-    // ledger repository doesn't get properly erased.
-    bool page_deleted = false;
-    ledger_client_->ledger()->DeletePage(
-        page_id_.Clone(), [&page_deleted](ledger::Status status) {
-          ASSERT_EQ(ledger::Status::OK, status);
-          page_deleted = true;
-        });
-    if (!page_deleted) {
-      RunLoopUntil([&page_deleted] { return page_deleted; });
-    }
-
     ledger_client_.reset();
 
     bool repo_deleted = false;
