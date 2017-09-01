@@ -10,8 +10,8 @@ source_set("intel-pt-decode") {
   ]
 
   deps = [
-    "//bin/gdbserver/third_party/simple-pt:reader",
-    "//bin/gdbserver/lib/debugger-utils",
+    "//garnet/bin/gdbserver/third_party/simple-pt:reader",
+    "//garnet/bin/gdbserver/lib/debugger-utils",
     "//lib/ftl",
     "//third_party/processor-trace/libipt",
   ]

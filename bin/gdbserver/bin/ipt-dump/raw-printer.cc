@@ -12,8 +12,8 @@
 #include <string>
 #include <vector>
 
-#include "bin/gdbserver/lib/intel-pt-decode/decoder.h"
-#include "bin/gdbserver/third_party/simple-pt/printer-util.h"
+#include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
+#include "garnet/bin/gdbserver/third_party/simple-pt/printer-util.h"
 
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"

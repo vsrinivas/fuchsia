@@ -8,12 +8,12 @@
 #include <unordered_set>
 #include <vector>
 
-#include "bin/gdbserver/lib/debugger-utils/build-ids.h"
-#include "bin/gdbserver/lib/debugger-utils/elf-reader.h"
-#include "bin/gdbserver/lib/debugger-utils/elf-symtab.h"
-#include "bin/gdbserver/lib/debugger-utils/ktrace-reader.h"
-#include "bin/gdbserver/lib/debugger-utils/load-maps.h"
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/build-ids.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/elf-reader.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/elf-symtab.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/ktrace-reader.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/load-maps.h"
+#include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 

@@ -11,7 +11,7 @@ source_set("reader") {
   ]
 
   deps = [
-    "//bin/gdbserver/lib/debugger-utils",
+    "//garnet/bin/gdbserver/lib/debugger-utils",
     "//lib/ftl",
     "//third_party/processor-trace/libipt",
   ]
@@ -28,8 +28,8 @@ source_set("printer") {
   ]
 
   deps = [
-    "//bin/gdbserver/lib/debugger-utils",
-    "//bin/gdbserver/lib/intel-pt-decode",
+    "//garnet/bin/gdbserver/lib/debugger-utils",
+    "//garnet/bin/gdbserver/lib/intel-pt-decode",
     "//lib/ftl",
     "//third_party/processor-trace/libipt",
   ]

@@ -37,7 +37,7 @@
 #include <string>
 #include <vector>
 
-#include "bin/gdbserver/lib/intel-pt-decode/decoder.h"
+#include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/functional/auto_call.h"

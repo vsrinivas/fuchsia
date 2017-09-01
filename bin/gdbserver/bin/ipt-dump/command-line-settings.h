@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "bin/gdbserver/third_party/simple-pt/call-printer.h"
+#include "garnet/bin/gdbserver/third_party/simple-pt/call-printer.h"
 
 #include "printer-config.h"
 #include "raw-printer.h"

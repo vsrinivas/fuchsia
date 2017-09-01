@@ -11,10 +11,10 @@
 
 #include <map>
 
-#include "bin/gdbserver/lib/debugger-utils/ktrace-reader.h"
-#include "bin/gdbserver/lib/debugger-utils/util.h"
-#include "bin/gdbserver/third_party/simple-pt/elf.h"
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/ktrace-reader.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/util.h"
+#include "garnet/bin/gdbserver/third_party/simple-pt/elf.h"
+#include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"

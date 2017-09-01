@@ -32,7 +32,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "bin/gdbserver/third_party/simple-pt/symtab.h"
+#include "garnet/bin/gdbserver/third_party/simple-pt/symtab.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 

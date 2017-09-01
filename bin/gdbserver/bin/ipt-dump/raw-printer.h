@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include "bin/gdbserver/lib/intel-pt-decode/decoder.h"
+#include "garnet/bin/gdbserver/lib/intel-pt-decode/decoder.h"
 
 #include "lib/ftl/macros.h"
 

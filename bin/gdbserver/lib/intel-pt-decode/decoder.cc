@@ -18,7 +18,7 @@
 #include <memory>
 #include <string>
 
-#include "bin/gdbserver/lib/debugger-utils/util.h"
+#include "garnet/bin/gdbserver/lib/debugger-utils/util.h"
 
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
