@@ -86,11 +86,20 @@ PageStorageImpl::PageStorageImpl(coroutine::CoroutineService* coroutine_service,
       db_(coroutine_service, this, page_dir + kLevelDbDir),
       page_sync_(nullptr) {}
 
-PageStorageImpl::~PageStorageImpl() {}
+PageStorageImpl::~PageStorageImpl() {
+  // Interrupt any active handlers.
+  for (auto handler : handlers_) {
+    handler->Continue(true);
+  }
+}
 
 void PageStorageImpl::Init(std::function<void(Status)> callback) {
-  coroutine_service_->StartCoroutine([ this, callback = std::move(callback) ](
-      coroutine::CoroutineHandler * handler) {
+  coroutine_service_->StartCoroutine([
+    this, final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     // Initialize PageDb.
     Status s = db_.Init();
     if (s != Status::OK) {
@@ -271,8 +280,11 @@ void PageStorageImpl::StartCommit(
     JournalType journal_type,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([
-    this, commit_id, journal_type, callback = std::move(callback)
+    this, commit_id, journal_type, final_callback = std::move(callback)
   ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     std::unique_ptr<Journal> journal;
     Status status =
         db_.CreateJournal(handler, journal_type, commit_id, &journal);
@@ -285,8 +297,11 @@ void PageStorageImpl::StartMergeCommit(
     const CommitId& right,
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([
-    this, left, right, callback = std::move(callback)
+    this, left, right, final_callback = std::move(callback)
   ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     std::unique_ptr<Journal> journal;
     Status status = db_.CreateMergeJournal(handler, left, right, &journal);
     callback(status, std::move(journal));
@@ -374,8 +389,11 @@ void PageStorageImpl::GetUnsyncedPieces(
 void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
-    this, object_id = object_id.ToString(), callback = std::move(callback)
+    this, object_id = object_id.ToString(), final_callback = std::move(callback)
   ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     callback(
         db_.SetObjectStatus(handler, object_id, PageDbObjectStatus::SYNCED));
   });
@@ -523,8 +541,11 @@ void PageStorageImpl::SetSyncMetadata(ftl::StringView key,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, key = key.ToString(), value = value.ToString(),
-    callback = std::move(callback)
+    final_callback = std::move(callback)
   ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     callback(db_.SetSyncMetadata(handler, key, value));
   });
 }
@@ -650,8 +671,11 @@ void PageStorageImpl::AddCommits(
 
   coroutine_service_->StartCoroutine(ftl::MakeCopyable([
     this, commits = std::move(commits), source,
-    new_objects = std::move(new_objects), callback = std::move(callback)
+    new_objects = std::move(new_objects), final_callback = std::move(callback)
   ](coroutine::CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     // Apply all changes atomically.
     std::unique_ptr<PageDb::Batch> batch = db_.StartBatch();
     std::set<const CommitId*, StringPointerComparator> added_commits;
@@ -820,8 +844,11 @@ void PageStorageImpl::AddPiece(ObjectId object_id,
                                std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine(ftl::MakeCopyable([
     this, object_id = std::move(object_id), data = std::move(data), source,
-    callback = std::move(callback)
+    final_callback = std::move(callback)
   ](coroutine::CoroutineHandler * handler) mutable {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
     FTL_DCHECK(GetObjectIdType(object_id) != ObjectIdType::INLINE);
     FTL_DCHECK(object_id ==
                ComputeObjectId(GetObjectType(GetObjectIdType(object_id)),

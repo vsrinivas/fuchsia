@@ -149,6 +149,23 @@ class PageStorageImpl : public PageStorage {
   // Notifies the registered watchers with the |commits| in commit_to_send_.
   void NotifyWatchers();
 
+  // Immediately adds the |handler| in the set of active ones, and once the
+  // returned callback is called, removes the |handler| from the set, and calls
+  // the given |callback|.
+  template <typename... Args>
+  std::function<void(Args...)> UpdateActiveHandlersCallback(
+      coroutine::CoroutineHandler* handler,
+      std::function<void(Args...)> callback) {
+    handlers_.insert(handler);
+    return [ this, handler, callback = std::move(callback) ](Args... args) {
+      // Remove the handler before calling the final callback. Otherwise the
+      // handler might be unnecessarily interrupted, if this PageStorage
+      // destructor is called in the callback.
+      handlers_.erase(handler);
+      callback(std::forward<Args>(args)...);
+    };
+  }
+
   coroutine::CoroutineService* const coroutine_service_;
   const PageId page_id_;
   PageDbImpl db_;
@@ -158,6 +175,8 @@ class PageStorageImpl : public PageStorage {
   std::queue<
       std::pair<ChangeSource, std::vector<std::unique_ptr<const Commit>>>>
       commits_to_send_;
+  // The set of active handlers.
+  std::unordered_set<coroutine::CoroutineHandler*> handlers_;
 };
 
 }  // namespace storage
