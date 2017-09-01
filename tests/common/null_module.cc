@@ -23,6 +23,8 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
   NullModule() { TestInit(__FILE__); }
   ~NullModule() override = default;
 
+  TestPoint initialized_{"Child module initialized"};
+
   // |Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context,
@@ -41,6 +43,8 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
     done();
   }
 
+  TestPoint stopped_{"Child module stopped"};
+
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();
@@ -48,9 +52,6 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
   }
 
   modular::ModuleContextPtr module_context_;
-
-  TestPoint initialized_{"Child module initialized"};
-  TestPoint stopped_{"Child module stopped"};
 };
 
 }  // namespace

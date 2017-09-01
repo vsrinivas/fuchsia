@@ -120,7 +120,9 @@ void UserRunnerImpl::Initialize(
       ledger_client_.get(), fidl::Array<uint8_t>::New(16));
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
-        device_map_impl_->Connect(std::move(request));
+        if (device_map_impl_) {
+          device_map_impl_->Connect(std::move(request));
+        }
       });
 
   // RemoteInvoker
@@ -130,7 +132,9 @@ void UserRunnerImpl::Initialize(
   remote_invoker_impl_ = std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
   user_scope_->AddService<RemoteInvoker>(
       [this](fidl::InterfaceRequest<RemoteInvoker> request) {
-        remote_invoker_impl_->Connect(std::move(request));
+        if (remote_invoker_impl_) {
+          remote_invoker_impl_->Connect(std::move(request));
+        }
       });
 
   // Setup MessageQueueManager.
@@ -224,8 +228,11 @@ void UserRunnerImpl::Initialize(
       std::move(component_scope), intelligence_services_.NewRequest());
 
   user_scope_->AddService<resolver::Resolver>(
-      std::bind(&maxwell::UserIntelligenceProvider::GetResolver,
-                user_intelligence_provider_.get(), std::placeholders::_1));
+      [this](fidl::InterfaceRequest<resolver::Resolver> request) {
+        if (user_intelligence_provider_) {
+          user_intelligence_provider_->GetResolver(std::move(request));
+        }
+      });
   // End init maxwell.
 
   fidl::InterfacePtr<FocusProvider> focus_provider_story_provider;
@@ -256,20 +263,77 @@ void UserRunnerImpl::Initialize(
 void UserRunnerImpl::Terminate() {
   FTL_LOG(INFO) << "UserRunner::Terminate()";
 
+  // We need to Terminate() every member that has life cycle here. In addition,
+  // everything that has fidl connections to something that is told to
+  // Terminate(), if it doesn't have a Terminate() on its own, must be reset()
+  // before the thing it connects to receives Terminate(). Specifically, all
+  // PageClient instances and the LedgerClient instance must be reset() before
+  // the ledger app is AppTerminate()d.
+  //
+  // TODO(mesch,alhaad): It would be nice if this dependency relationship graph
+  // would be created implicitly and automatically from the initialization
+  // sequence (which must reflect the same dependency semi-ordering in reverse)
+  // executed in Initialize(). I.e. it would be nice if we had the asynchronous
+  // analogue of what constructor/destructor order aligmnent does for
+  // synchronous initialization and termination.
+  //
+  // A few ideas in that direction:
+  //
+  // * Several members are kept here but used only by other members. Ownership
+  //   should be transferred accordingly.
+  //
+  // * We could use more structured holders than unqiue_ptr<>s which also hold
+  //   dependent pointers, and the asynchronously generically traverse the
+  //   resulting graph.
+  //
+  // This list is the reverse from the initialization order executed in
+  // Initialize() above.
   user_shell_->AppTerminate([this] {
-    // We teardown |story_provider_impl_| before |agent_runner_| because the
-    // modules running in a story might freak out if agents they are connected
-    // to go away while they are still running. On the other hand agents are
-    // meant to outlive story lifetimes.
-    story_provider_impl_->Teardown([this] {
-      agent_runner_->Teardown([this] {
-        ledger_app_client_->AppTerminate([this] {
-          FTL_LOG(INFO) << "UserRunner::Terminate(): done";
-          mtl::MessageLoop::GetCurrent()->QuitNow();
+      user_shell_.reset();
+
+      visible_stories_handler_.reset();
+      focus_handler_.reset();
+
+      // We teardown |story_provider_impl_| before |agent_runner_| because the
+      // modules running in a story might freak out if agents they are connected
+      // to go away while they are still running. On the other hand agents are
+      // meant to outlive story lifetimes.
+      story_provider_impl_->Teardown([this] {
+          story_provider_impl_.reset();
+
+          user_intelligence_provider_.reset();
+          maxwell_->AppTerminate([this] {
+              maxwell_.reset();
+              maxwell_component_context_binding_.reset();
+              maxwell_component_context_impl_.reset();
+
+              agent_runner_->Teardown([this] {
+                  agent_runner_.reset();
+                  agent_runner_storage_.reset();
+
+                  message_queue_manager_.reset();
+                  remote_invoker_impl_.reset();
+                  device_map_impl_.reset();
+
+                  ledger_client_.reset();
+                  ledger_repository_.reset();
+                  ledger_repository_factory_.reset();
+
+                  ledger_app_client_->AppTerminate([this] {
+                      ledger_app_client_.reset();
+                      user_shell_.reset();
+                      user_scope_.reset();
+                      account_.reset();
+                      user_context_.reset();
+                      token_provider_factory_.reset();
+
+                      FTL_LOG(INFO) << "UserRunner::Terminate(): done";
+                      mtl::MessageLoop::GetCurrent()->QuitNow();
+                    });
+                });
+            });
         });
-      });
     });
-  });
 }
 
 void UserRunnerImpl::GetAccount(const GetAccountCallback& callback) {
@@ -390,6 +454,8 @@ void UserRunnerImpl::SetupLedger() {
   ConnectToService(ledger_app_client_->services(),
                    ledger_repository_factory_.NewRequest());
 
+  // The directory "/data" is the data root "/data/LEDGER" that the ledger app
+  // client is configured to.
   ledger_repository_factory_->GetRepository(
       "/data", std::move(firebase_config), std::move(ledger_token_provider),
       ledger_repository_.NewRequest(), [this](ledger::Status status) {

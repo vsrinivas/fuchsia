@@ -216,6 +216,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
     // state notifications at all from the story provider.
     switch (story_state) {
       case modular::StoryState::INITIAL:
+        FTL_CHECK(story_state != modular::StoryState::INITIAL);
         // Doesn't happen in this test, presumably because of the STOPPED
         // StoryState HACK(jimbe) in StoryProviderImpl::OnChange().
         break;
@@ -241,6 +242,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
         break;
       case modular::StoryState::ERROR:
         // Doesn't happen in this test.
+        FTL_CHECK(story_state != modular::StoryState::ERROR);
         break;
     }
   }
@@ -391,18 +393,13 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
         [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
           story1_get_controller_.Pass();
           story_info_ = std::move(story_info);
-          TestStory1_Run(0);
+          TestStory1_Run();
         });
   }
 
   TestPoint story1_run_{"Story1 Run"};
 
-  void TestStory1_Run(const int round) {
-    if (!story_controller_) {
-      story_provider_->GetController(story_info_->id,
-                                     story_controller_.NewRequest());
-    }
-
+  void TestStory1_Run() {
     story_done_watcher_.Continue([this] {
       story_controller_->Stop([this] {
         TeardownStoryController();
@@ -413,6 +410,7 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
             [this] { TestStory2(); });
       });
     });
+
     story_done_watcher_.Watch(&story_controller_);
 
     story_modules_watcher_.Watch(&story_controller_);
@@ -421,11 +419,6 @@ class TestUserShellApp : modular::testing::ComponentBase<modular::UserShell> {
     // Start and show the new story.
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
-
-    if (round == 0) {
-      story_controller_->AddModule(nullptr, "second", settings_.second_module,
-                                   "root2", nullptr);
-    }
   }
 
   TestPoint story2_create_{"Story2 Create"};
