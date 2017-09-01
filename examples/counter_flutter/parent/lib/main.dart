@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_controller.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
@@ -43,13 +45,14 @@ typedef void _ChildViewCallback(ChildViewConnection connection);
 // This module produces two things: A connection to the view of its
 // child module, and updates of the value shared with that child module
 // through a Link.
-class _ParentCounterModule extends Module implements LinkWatcher {
+class _ParentCounterModule implements Module, Lifecycle, LinkWatcher {
   _ParentCounterModule(this._valueCallback, this._childViewCallback);
 
   final _ValueCallback _valueCallback;
   final _ChildViewCallback _childViewCallback;
 
   final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
   final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
   final ModuleContextProxy _moduleContext = new ModuleContextProxy();
@@ -57,8 +60,12 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
 
-  void bind(InterfaceRequest<Module> request) {
+  void bindModule(InterfaceRequest<Module> request) {
     _moduleBinding.bind(this, request);
+  }
+  
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   /// |Module|
@@ -101,19 +108,17 @@ class _ParentCounterModule extends Module implements LinkWatcher {
     _childViewCallback(new ChildViewConnection(viewOwnerPair.passHandle()));
   }
 
-  /// |Module|
+  /// |Lifecycle|
   @override
-  void stop(void callback()) {
-    _log('_ParentCounterModule.stop()');
+  void terminate() {
+    _log('_ParentCounterModule.terminate()');
 
     _linkWatcherBinding.close();
     _link.ctrl.close();
     _moduleContext.ctrl.close();
-
-    // Invoke the callback to signal that the clean-up process is done.
-    callback();
-
     _moduleBinding.close();
+    _lifecycleBinding.close();
+    Isolate.current.kill();
   }
 
   /// |LinkWatcher|
@@ -136,11 +141,17 @@ class _ParentCounterModule extends Module implements LinkWatcher {
 class _AppState {
   _AppState(this._context) {
     _module = new _ParentCounterModule(_updateValue, _updateChildView);
-    _context.outgoingServices.addServiceForName(
+    _context.outgoingServices
+    ..addServiceForName(
         (InterfaceRequest<Module> request) {
       _log('Service request for Module');
-      _module.bind(request);
-    }, Module.serviceName);
+      _module.bindModule(request);
+    }, Module.serviceName)
+    ..addServiceForName(
+        (InterfaceRequest<Lifecycle> request) {
+      _log('Service request for Lifecycle');
+      _module.bindLifecycle(request);
+    }, Lifecycle.serviceName);
   }
 
   // NOTE(mesch): _context is a constructor argument and only used

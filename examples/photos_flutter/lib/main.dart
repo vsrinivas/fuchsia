@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:isolate';
+
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
@@ -22,12 +25,18 @@ void _log(String msg) {
 }
 
 /// An implementation of the [Module] interface.
-class ModuleImpl extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
+class ModuleImpl implements Module, Lifecycle {
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
-  void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+  void bindModule(InterfaceRequest<Module> request) {
+    _moduleBinding.bind(this, request);
+  }
+
+  /// Bind an [InterfaceRequest] for a [Lifecycle] interface to this object.
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   /// Implementation of the Initialize(Story story, Link link) method.
@@ -39,15 +48,12 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::initialize call');
   }
 
-  /// Implementation of the Stop() => (); method.
   @override
-  void stop(void callback()) {
-    _log('ModuleImpl.stop()');
-
-    // Invoke the callback to signal that the clean-up process is done.
-    callback();
-
-    _binding.close();
+  void terminate() {
+    _log('ModuleImpl.terminate()');
+    _moduleBinding.close();
+    _lifecycleBinding.close();
+    Isolate.current.kill();
   }
 }
 
@@ -55,14 +61,21 @@ class ModuleImpl extends Module {
 void main() {
   _log('Module started with ApplicationContext: $_appContext');
 
+  _moduleImpl = new ModuleImpl();
+
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
-  _appContext.outgoingServices.addServiceForName(
+  _appContext.outgoingServices
+  ..addServiceForName(
     (request) {
       _log('Received binding request for Module');
-      _moduleImpl = new ModuleImpl();
-      _moduleImpl.bind(request);
+      _moduleImpl.bindModule(request);
     },
     Module.serviceName,
+  )..addServiceForName(
+    (request) {
+      _moduleImpl.bindLifecycle(request);
+    },
+    Lifecycle.serviceName,
   );
   final storage = new DummyPhotoStorage();
   runApp(new MaterialApp(

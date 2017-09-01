@@ -11,8 +11,9 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/todo_cpp/generator.h"
 #include "apps/modular/services/component/component_context.fidl.h"
-#include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
+#include "apps/modular/services/module/module.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
@@ -21,7 +22,8 @@ namespace todo {
 
 using Key = fidl::Array<uint8_t>;
 
-class TodoApp : public modular::Module, public ledger::PageWatcher {
+class TodoApp : public modular::Module, public ledger::PageWatcher,
+                modular::Lifecycle {
  public:
   TodoApp();
 
@@ -31,14 +33,15 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
-  void Stop(const StopCallback& done) override;
-
   // ledger::PageWatcher:
   void OnChange(ledger::PageChangePtr page_change,
                 ledger::ResultState result_state,
                 const OnChangeCallback& callback) override;
 
  private:
+  // |modular.Lifecycle|
+  void Terminate() override;
+
   void List(ledger::PageSnapshotPtr snapshot);
 
   void GetKeys(std::function<void(fidl::Array<Key>)> callback);

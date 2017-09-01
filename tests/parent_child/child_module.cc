@@ -32,12 +32,6 @@ class ChildApp : modular::testing::ComponentBase<modular::Module> {
     module_context_.Bind(std::move(module_context));
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();

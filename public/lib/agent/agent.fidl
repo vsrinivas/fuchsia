@@ -10,7 +10,7 @@ import "apps/modular/services/agent/agent_context.fidl";
 // This service is implemented by an application that is meant to be run as an
 // Agent.
 //
-// When an agent application also implements the |Lifecycle| interface, it can
+// When an agent application implements the |Lifecycle| interface, it can
 // receive a signal for when it should stop. An agent may be stopped for the
 // following reasons:
 // (1) ComponentContext::Done() is called by this Agent indicating that it has

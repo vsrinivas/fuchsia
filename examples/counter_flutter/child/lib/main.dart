@@ -7,10 +7,12 @@
 // classes and their members, see the comments there.
 
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:flutter/material.dart';
@@ -25,20 +27,25 @@ void _log(String msg) {
 typedef void _ValueCallback(int);
 typedef void _UpdateCallback();
 
-class _ChildCounterModule extends Module implements LinkWatcher {
+class _ChildCounterModule implements Module, Lifecycle, LinkWatcher {
   _ChildCounterModule(this._valueCallback);
 
   final _ValueCallback _valueCallback;
 
   final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
   final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
   final LinkProxy _link = new LinkProxy();
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
 
-  void bind(InterfaceRequest<Module> request) {
+  void bindModule(InterfaceRequest<Module> request) {
     _moduleBinding.bind(this, request);
+  }
+  
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   /// |Module|
@@ -57,17 +64,16 @@ class _ChildCounterModule extends Module implements LinkWatcher {
     _link.watchAll(_linkWatcherBinding.wrap(this));
   }
 
-  /// |Module|
+  /// |Lifecycle|
   @override
-  void stop(void callback()) {
-    _log('_ChildCounterModule.stop()');
+  void terminate() {
+    _log('_ChildCounterModule.terminate()');
 
     _linkWatcherBinding.close();
     _link.ctrl.close();
-
-    callback();
-
     _moduleBinding.close();
+    _lifecycleBinding.close();
+    Isolate.current.kill();
   }
 
   /// |LinkWatcher|
@@ -89,11 +95,17 @@ class _ChildCounterModule extends Module implements LinkWatcher {
 class _AppState {
   _AppState(this._context) {
     _module = new _ChildCounterModule(_updateValue);
-    _context.outgoingServices.addServiceForName(
+    _context.outgoingServices
+    ..addServiceForName(
         (InterfaceRequest<Module> request) {
       _log('Service request for Module');
-      _module.bind(request);
-    }, Module.serviceName);
+      _module.bindModule(request);
+    }, Module.serviceName)
+    ..addServiceForName(
+        (InterfaceRequest<Lifecycle> request) {
+      _log('Service request for Lifecycle');
+      _module.bindLifecycle(request);
+    }, Lifecycle.serviceName);
   }
 
   // NOTE(mesch): _context is a constructor argument and only used

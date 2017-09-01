@@ -48,11 +48,6 @@ void ModuleApp::Initialize(
     fidl::InterfaceHandle<app::ServiceProvider> /*incoming_services*/,
     fidl::InterfaceRequest<app::ServiceProvider> /*outgoing_services*/) {}
 
-void ModuleApp::Stop(const StopCallback& done) {
-  FTL_NOTREACHED();
-  done();
-}
-
 void ModuleApp::Terminate() {
   mtl::MessageLoop::GetCurrent()->QuitNow();
 }

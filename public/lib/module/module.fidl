@@ -13,6 +13,26 @@ import "apps/modular/services/module/module_context.fidl";
 // When ModuleContext.StartModule() is invoked, the Module instance is
 // requested from its application and its dependent services and
 // parameters are passed to it by Initialize().
+//
+// When a module application implements the |Lifecycle| interface, it can
+// receive a signal for when it should stop. A module may be stopped for the
+// following reasons:
+//
+// (1) StoryController.Stop() is called to stop the whole story. A
+//     plausible occasion for this to happen is that the root module
+//     has signalled that it's Done().
+//
+// (2) ModuleController.Stop() is called by the caller that started
+//     this Module. A plausible occasion for this to happen is that
+//     the module has signalled before that it's Done().
+//
+// Additionally a Module instance is stopped when Module instance
+// closes its own connection.
+//
+// Other connections the Module instance may hold, such as to Link,
+// LinkWatcher, ModuleController of other Module instances, may be
+// closed before Lifecycle.Terminate() is called. (TBD to give more
+// guarantees.)
 [ServiceName="modular.Module"]  // Created by each module app.
 interface Module {
   // The arguments to Initialize() are the ModuleContext instance that created
@@ -33,29 +53,4 @@ interface Module {
   Initialize(ModuleContext module_context,
              app.ServiceProvider? incoming_services,
              app.ServiceProvider&? outgoing_services);
-
-  // This method is invoked by the ModuleContext instance to notify the module
-  // that something in the system has requested it to stop. What can
-  // cause a request to a module to Stop():
-  //
-  // (1) StoryController.Stop() is called to stop the whole ModuleContext. A
-  //     plausible occasion for this to happen is that the root module
-  //     has signalled that it's Done().
-  //
-  // (2) ModuleController.Stop() is called by the caller that started
-  //     this Module. A plausible occasion for this to happen is that
-  //     the module has signalled before that it's Done().
-  //
-  // Additionally a Module instance is stopped when Module instance
-  // closes its own connection. But obviously in that case, Stop() can
-  // no longer be invoked on it.
-  //
-  // The ModuleContext implementation will wait to actually close its
-  // connection to the Module instance until after Stop() returns, or
-  // after a timeout of 1 second (TBD), whichever occurs earlier.
-  //
-  // Other connections the Module instance may hold, such as to Link,
-  // LinkWatcher, ModuleController of other Module instances, may be
-  // closed before Stop() is called. (TBD to give more guarantees.)
-  Stop() => ();
 };

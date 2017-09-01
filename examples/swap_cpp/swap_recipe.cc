@@ -86,12 +86,6 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     SwapModule();
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override { mtl::MessageLoop::GetCurrent()->QuitNow(); }
 

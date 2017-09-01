@@ -63,12 +63,6 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
                "context_link_test\"}}");
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();

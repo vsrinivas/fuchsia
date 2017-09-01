@@ -315,12 +315,6 @@ class RecipeApp : modular::SingleServiceApp<modular::Module> {
     });
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     // TODO(mesch): This is tentative. Not sure what the right amount

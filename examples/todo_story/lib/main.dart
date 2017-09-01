@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:flutter/material.dart';
@@ -23,8 +25,9 @@ void _log(String msg) {
 }
 
 /// An implementation of the [Module] interface.
-class TodoModule extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
+class TodoModule implements Module, Lifecycle {
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
   final Completer<LinkProxy> _linkCompleter = new Completer<LinkProxy>();
   LinkConnector linkConnector;
 
@@ -33,8 +36,13 @@ class TodoModule extends Module {
   }
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
-  void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+  void bindModule(InterfaceRequest<Module> request) {
+    _moduleBinding.bind(this, request);
+  }
+
+  /// Bind an [InterfaceRequest] for a [Lifecycle] interface to this object.
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   /// Implementation of the Initialize(Story story, Link link) method.
@@ -52,15 +60,13 @@ class TodoModule extends Module {
     _linkCompleter.complete(link);
   }
 
-  /// Implementation of the Stop() => (); method.
+  /// Implementation of the Lifecycle.Terminate() method.
   @override
-  void stop(void callback()) {
-    _log('TodoModule.stop()');
-
-    // Invoke the callback to signal that the clean-up process is done.
-    callback();
-
-    _binding.close();
+  void terminate() {
+    _log('TodoModule.terminate()');
+    _moduleBinding.close();
+    _lifecycleBinding.close();
+    Isolate.current.kill();
   }
 }
 
@@ -69,12 +75,18 @@ void main() {
 
   final module = new TodoModule();
 
-  _appContext.outgoingServices.addServiceForName(
+  _appContext.outgoingServices
+  ..addServiceForName(
     (request) {
       _log('Received binding request for Module');
-      module.bind(request);
+      module.bindModule(request);
     },
     Module.serviceName,
+  )..addServiceForName(
+    (request) {
+      module.bindLifecycle(request);
+    },
+    Lifecycle.serviceName,
   );
 
   runApp(new MaterialApp(

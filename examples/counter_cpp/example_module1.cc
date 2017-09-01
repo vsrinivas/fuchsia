@@ -174,12 +174,6 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
                        }));
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     store_.Stop();

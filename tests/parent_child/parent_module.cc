@@ -89,12 +89,6 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
 
   TestPoint stopped_{"Parent module stopped"};
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();

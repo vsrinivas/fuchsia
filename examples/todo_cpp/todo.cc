@@ -126,8 +126,8 @@ void TodoApp::Initialize(
   mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
 }
 
-void TodoApp::Stop(const StopCallback& done) {
-  done();
+void TodoApp::Terminate() {
+  mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
 void TodoApp::OnChange(ledger::PageChangePtr /*page_change*/,

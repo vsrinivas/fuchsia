@@ -18,13 +18,6 @@ namespace modular {
 constexpr ftl::TimeDelta kStoryTeardownTimeout = ftl::TimeDelta::FromSeconds(1);
 constexpr char kAppStoragePath[] = "/data/APP_DATA";
 
-// Template specializations for fidl services that don't have a Terminate()
-template <>
-void AppClient<Module>::ServiceTerminate(
-    const std::function<void()>& /*done*/) {
-  FTL_NOTREACHED();
-}
-
 namespace {
 
 // A stopgap solution to map a module's url to a directory name where the
@@ -102,16 +95,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     return;
   }
 
-  // This function causes |this| to be deleted when called once, but may
-  // be called twice, so the second call must be protected from fully
-  // executing.
-  auto called = std::make_shared<bool>(false);
-  auto cont = [this, called] {
-    if (*called) {
-      return;
-    }
-    *called = true;
-
+  auto cont = [this] {
     module_service_.reset();
     SetState(ModuleState::STOPPED);
 
@@ -145,14 +129,6 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     module_service_.set_connection_error_handler(nullptr);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
   } else {
-    // TODO(vardhan): Remove once modules apps have converted to using
-    // Lifecycle.
-    if (!app_client_.primary_service()) {
-      // The contract for Stop() is that the Application will be killed when
-      // the Module's handle is closed.
-      module_service_.set_connection_error_handler(cont);
-      module_service_->Stop(cont);
-    }
     app_client_.AppTerminate(cont, kStoryTeardownTimeout);
   }
 }

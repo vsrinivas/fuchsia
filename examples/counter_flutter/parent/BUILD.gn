@@ -14,6 +14,7 @@ flutter_app("example_flutter_counter_parent") {
   main_dart = "lib/main.dart"
   deps = [
     "//application/lib/app/dart",
+    "//apps/modular/services/lifecycle:lifecycle_dart",
     "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/lib/flutter",

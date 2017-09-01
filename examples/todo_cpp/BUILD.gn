@@ -10,6 +10,7 @@ executable("todo_cpp") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/modular/services/component",
+    "//apps/modular/services/lifecycle",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//garnet/public/lib/fidl/cpp/bindings",

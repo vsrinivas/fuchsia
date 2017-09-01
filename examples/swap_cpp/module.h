@@ -47,9 +47,6 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
-  // |Module|
-  void Stop(const StopCallback& done) override;
-
   // |Lifecycle|
   void Terminate() override;
 

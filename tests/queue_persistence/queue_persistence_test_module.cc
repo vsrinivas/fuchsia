@@ -119,12 +119,6 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
         [this](const fidl::String&) { module_context_->Done(); });
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();

@@ -7,6 +7,7 @@
 #include "apps/modular/lib/testing/reporting.h"
 #include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "apps/modular/services/remote/remote_invoker.fidl.h"
@@ -71,12 +72,6 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
           }
           module_context_->Done();
         });
-  }
-
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
   }
 
   // |Lifecycle|

@@ -84,12 +84,6 @@ class SuggestionApp : modular::testing::ComponentBase<modular::Module> {
         ftl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();

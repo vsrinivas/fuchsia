@@ -23,7 +23,7 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
   NullModule() { TestInit(__FILE__); }
   ~NullModule() override = default;
 
-  TestPoint initialized_{"Child module initialized"};
+  TestPoint initialized_{"Null module initialized"};
 
   // |Module|
   void Initialize(
@@ -37,13 +37,7 @@ class NullModule : modular::testing::ComponentBase<modular::Module> {
     module_context_->Done();
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
-  TestPoint stopped_{"Child module stopped"};
+  TestPoint stopped_{"Null module stopped"};
 
   // |Lifecycle|
   void Terminate() override {

@@ -173,12 +173,6 @@ class ParentApp : modular::testing::ComponentBase<modular::Module> {
         ftl::TimeDelta::FromMilliseconds(500));
   }
 
-  // |Module|
-  void Stop(const StopCallback& done) override {
-    FTL_NOTREACHED();
-    done();
-  }
-
   // |Lifecycle|
   void Terminate() override {
     stopped_.Pass();
