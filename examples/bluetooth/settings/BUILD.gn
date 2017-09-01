@@ -15,8 +15,8 @@ flutter_app("settings") {
     "//apps/modular/services/module:module_dart",
     "//lib/fidl/dart",
     "//lib/flutter/packages/flutter",
-    "//lib/widgets/packages/logging:lib.logging",
-    "//lib/widgets/packages/widgets:lib.widgets",
+    "//topaz/lib/widgets/packages/logging:lib.logging",
+    "//topaz/lib/widgets/packages/widgets:lib.widgets",
   ]
 
   analysis_options = "//apps/bluetooth/examples/.analysis_options"

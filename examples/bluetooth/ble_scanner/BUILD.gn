@@ -15,7 +15,7 @@ flutter_app("ble_scanner") {
     "//apps/modular/services/module:module_dart",
     "//lib/fidl/dart",
     "//lib/flutter/packages/flutter",
-    "//lib/widgets/packages/widgets:lib.widgets",
+    "//topaz/lib/widgets/packages/widgets:lib.widgets",
   ]
 
   analysis_options = "//apps/bluetooth/examples/.analysis_options"
