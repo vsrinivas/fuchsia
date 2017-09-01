@@ -21,6 +21,7 @@ mxtl_common_tests := \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/recycler_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \
+    $(LOCAL_DIR)/string_buffer_tests.cpp \
     $(LOCAL_DIR)/string_piece_tests.cpp \
     $(LOCAL_DIR)/string_printf_tests.cpp \
     $(LOCAL_DIR)/string_tests.cpp \
