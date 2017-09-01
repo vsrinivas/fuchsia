@@ -80,8 +80,8 @@ executable("netconnector") {
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//apps/netstack/services",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]
 }

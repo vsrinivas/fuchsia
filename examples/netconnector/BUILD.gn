@@ -19,8 +19,8 @@ executable("netconnector_example_bin") {
     "//application/lib/app",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
   ]
 }
 

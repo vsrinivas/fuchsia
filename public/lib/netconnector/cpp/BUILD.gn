@@ -15,9 +15,9 @@ source_set("lib") {
     "//application/lib/app",
     "//application/lib/svc",
     "//apps/netconnector/services",
-    "//lib/fidl/cpp/waiter",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/fidl/cpp/waiter",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
 }
