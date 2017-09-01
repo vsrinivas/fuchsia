@@ -247,7 +247,7 @@ box and typing "moterm"
 
 * Using Magenta - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Copying-files-to-and-from-Magenta)
 * [Fuchsia documentation](https://fuchsia.googlesource.com/docs) hub
-* Build [Fuchsia's toolchain](building_toolchain.md)
+* Build [Fuchsia's toolchain](toolchain.md)
 * More about the [build commands](build_system.md) called under-the-hood by `fbuild`
 * More information on the system bootstrap application is
 [here](https://fuchsia.googlesource.com/application/+/HEAD/src/bootstrap/).
