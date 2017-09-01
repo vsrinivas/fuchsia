@@ -1,0 +1,130 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "apps/fonts/font_provider_impl.h"
+
+#include <string.h>
+
+#include <magenta/status.h>
+#include <magenta/syscalls.h>
+#include <utility>
+
+#include "lib/ftl/files/file.h"
+#include "lib/ftl/logging.h"
+#include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/rapidjson.h"
+
+namespace fonts {
+namespace {
+
+constexpr char kFontManifestPath[] = "/pkg/data/manifest.json";
+constexpr char kFallback[] = "fallback";
+constexpr char kFamilies[] = "families";
+
+constexpr mx_rights_t kFontDataRights =
+    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP;
+
+}  // namespace
+
+FontProviderImpl::FontProviderImpl() = default;
+
+FontProviderImpl::~FontProviderImpl() = default;
+
+bool FontProviderImpl::LoadFontsInternal() {
+  std::string json_data;
+  if (!files::ReadFileToString(kFontManifestPath, &json_data)) {
+    FTL_LOG(ERROR) << "Failed to read font manifest from '" << kFontManifestPath
+                   << "'.";
+    return false;
+  }
+
+  rapidjson::Document document;
+  document.Parse(json_data.data());
+  if (document.HasParseError() || !document.IsObject()) {
+    FTL_LOG(ERROR) << "Font manifest was not vaild JSON.";
+    return false;
+  }
+
+  const auto& fallback = document.FindMember(kFallback);
+  if (fallback == document.MemberEnd() || !fallback->value.IsString()) {
+    FTL_LOG(ERROR)
+        << "Font manifest did not contain a valid 'fallback' family.";
+    return false;
+  }
+  fallback_ = fallback->value.GetString();
+
+  const auto& families = document.FindMember(kFamilies);
+  if (families == document.MemberEnd() || !families->value.IsArray()) {
+    FTL_LOG(ERROR) << "Font manifest did not contain any families.";
+    return false;
+  }
+
+  for (const auto& family : families->value.GetArray()) {
+    auto parsed_family = std::make_unique<FontFamily>();
+    if (!parsed_family->Load(family))
+      return false;
+    std::string name = parsed_family->name();
+    families_.emplace(name, std::move(parsed_family));
+  }
+
+  if (families_.find(fallback_) == families_.end()) {
+    FTL_LOG(ERROR) << "Font manifest did not contain '" << fallback_
+                   << "', which is the fallback family.";
+    return false;
+  }
+
+  return true;
+}
+
+bool FontProviderImpl::LoadFonts() {
+  bool loaded_all = LoadFontsInternal();
+  if (!loaded_all)
+    Reset();
+  return loaded_all;
+}
+
+void FontProviderImpl::Reset() {
+  fallback_.clear();
+  families_.clear();
+}
+
+void FontProviderImpl::AddBinding(
+    fidl::InterfaceRequest<FontProvider> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+void FontProviderImpl::GetFont(FontRequestPtr request,
+                               const GetFontCallback& callback) {
+  if (families_.empty()) {
+    callback(nullptr);
+    return;
+  }
+
+  auto it = families_.find(request->family);
+  if (it == families_.end())
+    it = families_.find(fallback_);
+
+  if (it == families_.end()) {
+    callback(nullptr);
+    return;
+  }
+
+  mx::vmo* font_data = it->second->GetFontData(request);
+  if (!font_data) {
+    callback(nullptr);
+    return;
+  }
+
+  auto data = FontData::New();
+  if (font_data->duplicate(kFontDataRights, &data->vmo) < 0) {
+    callback(nullptr);
+    return;
+  }
+
+  auto response = FontResponse::New();
+  response->data = std::move(data);
+  callback(std::move(response));
+}
+
+}  // namespace fonts

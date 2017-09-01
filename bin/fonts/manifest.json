@@ -1,0 +1,168 @@
+{
+  "fallback": "Roboto",
+  "families": [
+    {
+      "family": "MaterialIcons",
+      "fonts": [
+        {
+          "asset": "/pkg/data/fonts/MaterialIcons-Regular.ttf"
+        }
+      ]
+    },
+    {
+      "family": "Roboto",
+      "fonts": [
+        {
+          "asset": "/pkg/data/fonts/Roboto-Regular.ttf"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Italic.ttf",
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Thin.ttf",
+          "weight": 100
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-ThinItalic.ttf",
+          "weight": 100,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-LightItalic.ttf",
+          "weight": 300,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Medium.ttf",
+          "weight": 500
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-MediumItalic.ttf",
+          "weight": 500,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Bold.ttf",
+          "weight": 700
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-BoldItalic.ttf",
+          "weight": 700,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Black.ttf",
+          "weight": 900
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-BlackItalic.ttf",
+          "weight": 900,
+          "slant": "italic"
+        }
+      ]
+    },
+    {
+      "family": "RobotoCondensed",
+      "fonts": [
+        {
+          "asset": "/pkg/data/fonts/RobotoCondensed-Regular.ttf"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoCondensed-Italic.ttf",
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-LightItalic.ttf",
+          "weight": 300,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-Bold.ttf",
+          "weight": 700
+        },
+        {
+          "asset": "/pkg/data/fonts/Roboto-BoldItalic.ttf",
+          "weight": 700,
+          "slant": "italic"
+        }
+      ]
+    },
+    {
+      "family": "RobotoMono",
+      "fonts": [
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-Regular.ttf"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-Italic.ttf",
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-Thin.ttf",
+          "weight": 100
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-ThinItalic.ttf",
+          "weight": 100,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-LightItalic.ttf",
+          "weight": 300,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-Medium.ttf",
+          "weight": 500
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-MediumItalic.ttf",
+          "weight": 500,
+          "slant": "italic"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-Bold.ttf",
+          "weight": 700
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoMono-BoldItalic.ttf",
+          "weight": 700,
+          "slant": "italic"
+        }
+      ]
+    },
+    {
+      "family": "RobotoSlab",
+      "fonts": [
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Regular.ttf"
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Thin.ttf",
+          "weight": 100
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "/pkg/data/fonts/RobotoSlab-Bold.ttf",
+          "weight": 700
+        }
+      ]
+    }
+  ]
+}
