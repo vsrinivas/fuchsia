@@ -15,8 +15,8 @@ executable("icu_data_provider") {
     "lib",
     "services",
     "//application/lib/app",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
   ]
 
   data = [
