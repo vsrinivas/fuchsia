@@ -39,7 +39,7 @@ package("magma-common") {
         name = "libmagma.so"
       },
       {
-        name = "libvulkan_vendor.so"
+        name = "libvulkan_intel.so"
       },
     ]
 
