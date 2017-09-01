@@ -7,8 +7,8 @@ import("//magma/gnbuild/magma.gni")
 
 shared_ldflags = "-Wl,--no-undefined"
 
-driver_module("msd_vendor") {
-  output_name = "libmsd_vendor"
+driver_module("msd_intel") {
+  output_name = "libmsd_intel"
 
   deps = [
     "$magma_build_root/src/main",
