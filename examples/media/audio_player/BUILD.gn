@@ -15,6 +15,6 @@ executable("audio_player") {
     "//application/lib/app",
     "//apps/media/lib/timeline",
     "//apps/media/services",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

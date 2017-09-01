@@ -25,7 +25,7 @@ source_set("flog") {
     "//apps/media/services/flog",
     "//apps/tracing/lib/trace",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   if (enable_flog) {

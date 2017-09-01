@@ -30,6 +30,6 @@ source_set("fidl") {
     "//apps/media/src/util",
     "//apps/network/services",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

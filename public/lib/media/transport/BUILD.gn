@@ -44,6 +44,6 @@ test("tests") {
 
   deps = [
     ":transport",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

@@ -12,6 +12,6 @@ executable("vol") {
     "//apps/media/lib/audio",
     "//apps/media/services",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

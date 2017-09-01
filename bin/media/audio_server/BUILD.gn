@@ -37,7 +37,7 @@ executable("audio_server") {
     "//apps/media/src/util",
     "//drivers/audio/dispatcher-pool:audio-dispatcher-pool",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
   ]

@@ -24,7 +24,7 @@ source_set("util") {
     "//apps/media/lib/timeline",
     "//apps/media/services",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 

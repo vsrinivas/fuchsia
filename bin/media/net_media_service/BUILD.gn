@@ -32,7 +32,7 @@ executable("net_media_service") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/url",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 

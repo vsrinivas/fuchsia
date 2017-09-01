@@ -56,7 +56,7 @@ executable("media_service") {
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
 
@@ -81,6 +81,6 @@ executable("tests") {
     "//apps/media/services",
     "//apps/media/src/fidl",
     "//apps/media/src/framework_create",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

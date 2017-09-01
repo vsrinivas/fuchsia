@@ -20,6 +20,6 @@ executable("flog_service") {
     "//apps/media/services/flog",
     "//apps/media/src/util",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
