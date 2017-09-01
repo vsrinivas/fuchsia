@@ -19,7 +19,7 @@ flutter_app("sketchy_ui") {
     "//apps/mozart/lib/flutter",
     "//apps/mozart/services/views:views_dart",
     "//lib/escher/examples/common/services:services_dart",
-    "//lib/fidl/dart",
+    "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
   ]
 }

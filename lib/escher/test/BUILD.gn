@@ -23,7 +23,7 @@ executable("escher_unittests") {
   deps = [
     "base:base_unittests",
     "//lib/escher/escher",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",

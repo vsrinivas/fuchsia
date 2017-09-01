@@ -10,7 +10,7 @@ static_library("common") {
     "demo_harness.h",
   ]
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
@@ -33,7 +33,7 @@ static_library("common") {
       "//application/lib/app:app",
       "//apps/modular/services/module:module_cpp_sources",
       "//lib/escher/examples/common/services",
-      "//lib/mtl",
+      "//garnet/public/lib/mtl",
     ]
     sources += [
       "demo_harness_fuchsia.cc",

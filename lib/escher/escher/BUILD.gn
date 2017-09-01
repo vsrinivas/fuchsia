@@ -44,7 +44,7 @@ static_library("escher") {
 
   public_deps = [
     "//lib/escher/escher/base:escher_base",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 
   sources = [
