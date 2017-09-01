@@ -20,6 +20,6 @@ executable("ime") {
     "//apps/mozart/services/input/cpp",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

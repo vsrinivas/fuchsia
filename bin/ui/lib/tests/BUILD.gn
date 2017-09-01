@@ -12,7 +12,7 @@ source_set("tests") {
   public_deps = [
     "//application/lib/app:app",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 }

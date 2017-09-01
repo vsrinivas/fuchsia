@@ -51,7 +51,7 @@ source_set("vmo") {
 
   public_deps = [
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//third_party/skia",
   ]

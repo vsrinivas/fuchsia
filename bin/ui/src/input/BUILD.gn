@@ -12,7 +12,7 @@ executable("input") {
     "//apps/mozart/services/input",
     "//apps/mozart/services/input/cpp",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   libs = [ "hid" ]

@@ -20,7 +20,7 @@ executable("paint") {
     "//apps/mozart/services/views",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/skia",
   ]
 }

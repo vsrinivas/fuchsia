@@ -144,7 +144,7 @@ source_set("common") {
     "//garnet/public/lib/ftl",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   public_configs = [ ":common_include_dirs" ]

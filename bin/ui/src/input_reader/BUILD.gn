@@ -15,7 +15,7 @@ source_set("input_reader") {
     "//apps/mozart/services/input",
     "//apps/mozart/services/input/cpp",
     "//apps/tracing/lib/trace",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
 

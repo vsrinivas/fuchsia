@@ -20,6 +20,6 @@ source_set("input") {
     "//apps/mozart/src/view_manager/internal",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

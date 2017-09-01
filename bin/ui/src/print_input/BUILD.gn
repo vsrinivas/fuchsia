@@ -12,6 +12,6 @@ executable("print_input") {
     "//apps/mozart/services/input/cpp",
     "//apps/mozart/src/input_reader",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

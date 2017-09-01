@@ -41,7 +41,7 @@ executable("service") {
     "//garnet/public/lib/ftl",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magma:vulkan",
   ]
 
