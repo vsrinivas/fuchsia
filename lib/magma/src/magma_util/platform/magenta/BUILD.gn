@@ -178,7 +178,7 @@ source_set("trace") {
     public_deps = [
       "//apps/tracing/lib/trace:provider",
       "//apps/tracing/services",
-      "//lib/mtl",
+      "//garnet/public/lib/mtl",
     ]
   }
 
