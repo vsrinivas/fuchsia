@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 
+#include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <queue>
@@ -141,14 +142,14 @@ void InspectCommand::DisplayCommit(ftl::Closure on_done) {
   std::unique_ptr<storage::LedgerStorageImpl> ledger_storage(
       GetLedgerStorage());
   storage::PageId page_id;
-  if (!FromHexString(args_[3], &page_id)) {
-    FTL_LOG(ERROR) << "Unable to parse page id " << args_[3];
+  if (!FromHexString(args_[4], &page_id)) {
+    FTL_LOG(ERROR) << "Unable to parse page id " << args_[4];
     on_done();
     return;
   }
   storage::CommitId commit_id;
-  if (!FromHexString(args_[4], &commit_id)) {
-    FTL_LOG(ERROR) << "Unable to parse commit id " << args_[4];
+  if (!FromHexString(args_[5], &commit_id)) {
+    FTL_LOG(ERROR) << "Unable to parse commit id " << args_[5];
     on_done();
     return;
   }
@@ -233,8 +234,8 @@ void InspectCommand::DisplayCommitGraph(ftl::Closure on_done) {
   std::unique_ptr<storage::LedgerStorageImpl> ledger_storage(
       GetLedgerStorage());
   storage::PageId page_id;
-  if (!FromHexString(args_[3], &page_id)) {
-    FTL_LOG(ERROR) << "Unable to parse page id " << args_[3];
+  if (!FromHexString(args_[4], &page_id)) {
+    FTL_LOG(ERROR) << "Unable to parse page id " << args_[4];
     on_done();
     return;
   }
@@ -298,8 +299,13 @@ void InspectCommand::DisplayGraphCoroutine(coroutine::CoroutineHandler* handler,
 
   commit_ids.insert(heads.begin(), heads.end());
   to_explore.insert(to_explore.begin(), heads.begin(), heads.end());
+
+  std::string normalized_app_id(app_id_);
+  std::replace(normalized_app_id.begin(), normalized_app_id.end(), '/', '_');
+  std::replace(normalized_app_id.begin(), normalized_app_id.end(), ':', '_');
+
   std::string file_path =
-      "/tmp/" + app_id_ + "_" + convert::ToHex(page_id) + ".dot";
+      "/tmp/" + normalized_app_id + "_" + convert::ToHex(page_id) + ".dot";
   FileStreamWriter writer(file_path);
   writer << "digraph P_" << convert::ToHex(page_id) << " {\n";
   while (!to_explore.empty()) {
