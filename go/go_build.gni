@@ -89,11 +89,7 @@ template("go_build") {
       if (!defined(dep.source)) {
         dep.source = "."
       }
-      if (dep.source == "//lib/fidl/go/src/fidl") {
-        source = "//garnet/public/lib/fidl/go/src/fidl"
-      } else {
-        source = dep.source
-      }
+      source = dep.source
       args += [
         "--go-dependency",
         dep.package + "=" + rebase_path(source),
