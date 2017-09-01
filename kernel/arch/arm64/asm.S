@@ -8,6 +8,10 @@
 #include <asm.h>
 #include <arch/asm_macros.h>
 
+#define HCR_EL2_RW  (1 << 31)
+#define SCR_EL3_HCE (1 << 1)
+#define SCR_EL3_RW  (1 << 10)
+
 /* void arm64_context_switch(vaddr_t *old_sp, vaddr_t new_sp); */
 FUNCTION(arm64_context_switch)
     /* save old frame */
@@ -44,13 +48,14 @@ FUNCTION(arm64_context_switch)
 END_FUNCTION(arm64_context_switch)
 
 FUNCTION(arm64_el3_to_el1)
-    /* set EL2 to 64bit */
+    /* set EL2 to 64bit and enable HVC instruction */
     mrs x0, scr_el3
-    orr x0, x0, #(1<<10)
+    orr x0, x0, #SCR_EL3_HCE
+    orr x0, x0, #SCR_EL3_RW
     msr scr_el3, x0
 
     /* set EL1 to 64bit */
-    mov x0, #(1<<31)
+    mov x0, #HCR_EL2_RW
     msr hcr_el2, x0
 
     /* disable EL2 coprocessor traps */
@@ -87,9 +92,10 @@ FUNCTION(arm64_elX_to_el1)
     cmp x9, #(0b10 << 2)
     beq .inEL2
 
-    /* set EL2 to 64bit */
+    /* set EL2 to 64bit and enable HVC instruction */
     mrs x9, scr_el3
-    orr x9, x9, #(1<<10)
+    orr x9, x9, #SCR_EL3_HCE
+    orr x9, x9, #SCR_EL3_RW
     msr scr_el3, x9
 
 
@@ -123,7 +129,7 @@ FUNCTION(arm64_elX_to_el1)
     msr cptr_el2, x9
 
     /* set EL1 to 64bit */
-    mov x9, #(1<<31)
+    mov x9, #HCR_EL2_RW
     msr hcr_el2, x9
 
     /* disable EL1 FPU traps */
