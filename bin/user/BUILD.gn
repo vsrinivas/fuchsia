@@ -28,7 +28,7 @@ executable("maxwell_main") {
     ":user_intelligence_provider",
     "//application/lib/app",
     "//apps/maxwell/services/user",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]
 }

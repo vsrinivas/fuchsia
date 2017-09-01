@@ -31,7 +31,7 @@ executable("story_info") {
     "//apps/modular/services/agent",
     "//apps/modular/services/story",
     "//apps/modular/services/user",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/rapidjson",
   ]
 }

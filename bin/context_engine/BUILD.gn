@@ -58,7 +58,7 @@ executable("context_repository_unittest") {
     ":context_repository",
     "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 }
@@ -118,6 +118,6 @@ executable("context_engine") {
   deps = [
     ":context_engine_impl",
     "//application/lib/app",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }

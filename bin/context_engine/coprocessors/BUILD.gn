@@ -22,7 +22,7 @@ executable("coprocessors_unittest") {
     ":aggregate",
     ":focused_story",
     "//apps/maxwell/src/context_engine:scope_utils",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 }
