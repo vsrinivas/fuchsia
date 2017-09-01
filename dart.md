@@ -156,7 +156,7 @@ Include the `lib.logging` package in your BUILD.gn target as a dependency:
 ```
 deps = [
   ...
-  "//lib/widgets/packages/logging:lib.logging",
+  "//topaz/lib/widgets/packages/logging:lib.logging",
   ...
 ]
 ```
