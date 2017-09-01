@@ -21,7 +21,7 @@ go_test("trace_tests_go") {
     },
     {
       package = "fidl"
-      source = "//lib/fidl/go/src/fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
     },
   ]
   deps = [

@@ -44,8 +44,8 @@ source_set("trace_app") {
     "//apps/tracing/lib/trace:reader",
     "//apps/tracing/lib/trace_converters:chromium",
     "//apps/tracing/services",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
   ]
 
   deps = [
@@ -62,7 +62,7 @@ source_set("unittests") {
 
   deps = [
     ":trace_app",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
   ]
 }
