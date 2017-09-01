@@ -11,7 +11,7 @@ rust_binary("ledger_example") {
     "//application/services:service_provider_rust_library",
     "//apps/ledger/services/public:public_rust_library",
     "//apps/ledger/services/internal:internal_rust_library",
-    "//lib/fidl/rust/fidl",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//rust/magenta-rs:magenta",
     "//rust/magenta-rs/magenta-sys",
     "//rust/mxruntime",
