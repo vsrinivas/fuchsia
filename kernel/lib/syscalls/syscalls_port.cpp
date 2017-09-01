@@ -13,7 +13,6 @@
 #include <object/magenta.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <object/user_copy.h>
 
 #include <magenta/syscalls/policy.h>
 #include <mxtl/alloc_checker.h>

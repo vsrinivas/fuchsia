@@ -16,7 +16,6 @@
 #include <kernel/vm/fault.h>
 #include <kernel/vm/vm_address_region.h>
 #include <lib/console.h>
-#include <lib/user_copy.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_lock.h>
 #include <safeint/safe_math.h>

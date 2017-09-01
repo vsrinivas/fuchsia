@@ -11,13 +11,11 @@
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_address_region.h>
 
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <object/handle_owner.h>
 #include <object/magenta.h>
 #include <object/process_dispatcher.h>
-#include <object/user_copy.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 

@@ -7,11 +7,9 @@
 #include <object/futex_context.h>
 
 #include <assert.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <mxtl/auto_lock.h>
 #include <object/thread_dispatcher.h>
-#include <object/user_copy.h>
 #include <trace.h>
 
 using mxtl::AutoLock;

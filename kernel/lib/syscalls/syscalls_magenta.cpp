@@ -17,7 +17,6 @@
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <lib/crypto/global_prng.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/event_dispatcher.h>
 #include <object/event_pair_dispatcher.h>
@@ -26,7 +25,6 @@
 #include <object/magenta.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <object/user_copy.h>
 
 #include <magenta/syscalls/log.h>
 #include <magenta/syscalls/policy.h>

@@ -9,7 +9,6 @@
 #include <trace.h>
 
 #include <lib/ktrace.h>
-#include <lib/user_copy.h>
 
 #include <magenta/syscalls/policy.h>
 #include <object/channel_dispatcher.h>
@@ -17,7 +16,6 @@
 #include <object/magenta.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
-#include <object/user_copy.h>
 
 #include <mxtl/algorithm.h>
 #include <mxtl/auto_lock.h>

@@ -9,7 +9,6 @@
 #include <object/pci_device_dispatcher.h>
 
 #include <kernel/auto_lock.h>
-#include <lib/user_copy.h>
 #include <magenta/rights.h>
 #include <object/pci_interrupt_dispatcher.h>
 #include <object/process_dispatcher.h>

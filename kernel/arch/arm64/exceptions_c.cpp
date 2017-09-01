@@ -20,7 +20,7 @@
 #include <platform.h>
 
 #if WITH_OBJECT
-#include <lib/user_copy.h>
+#include <arch/user_copy.h>
 #include <object/exception.h>
 #endif
 
@@ -436,7 +436,7 @@ void arch_dump_exception_context(const arch_exception_context_t *context)
     // try to dump the user stack
     if (is_user_address(context->frame->usp)) {
         uint8_t buf[256];
-        if (copy_from_user_unsafe(buf, (void *)context->frame->usp, sizeof(buf)) == MX_OK) {
+        if (arch_copy_from_user(buf, (void *)context->frame->usp, sizeof(buf)) == MX_OK) {
             printf("bottom of user stack at 0x%lx:\n", (vaddr_t)context->frame->usp);
             hexdump_ex(buf, sizeof(buf), context->frame->usp);
         }

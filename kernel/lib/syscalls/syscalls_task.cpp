@@ -16,7 +16,6 @@
 #include <arch/arch_ops.h>
 
 #include <lib/ktrace.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>
 #include <object/job_dispatcher.h>
@@ -24,7 +23,6 @@
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
 #include <object/thread_dispatcher.h>
-#include <object/user_copy.h>
 #include <object/vm_address_region_dispatcher.h>
 
 #include <magenta/syscalls/debug.h>
@@ -71,6 +69,29 @@ LK_INIT_HOOK(thread_set_priority_experiment,
              LK_INIT_LEVEL_THREADING - 1);
 #endif
 
+// TODO(MG-1025): copy_user_string may truncate the incoming string,
+// and may copy extra data past the NUL.
+// TODO(dbort): If anyone else needs this, move it into user_ptr.
+static mx_status_t copy_user_string(const user_ptr<const char>& src,
+                                    size_t src_len,
+                                    char* buf, size_t buf_len,
+                                    mxtl::StringPiece* sp) {
+    if (!src || src_len > buf_len) {
+        return MX_ERR_INVALID_ARGS;
+    }
+    mx_status_t result = src.copy_array_from_user(buf, src_len);
+    if (result != MX_OK) {
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    // ensure zero termination
+    size_t str_len = (src_len == buf_len ? src_len - 1 : src_len);
+    buf[str_len] = 0;
+    *sp = mxtl::StringPiece(buf);
+
+    return MX_OK;
+}
+
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               user_ptr<const char> _name, uint32_t name_len,
                               uint32_t options, user_ptr<mx_handle_t> _out) {
@@ -86,8 +107,8 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
-    // TODO(andymutton): Change to use a user_ptr copy method.
-    mx_status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
+    mx_status_t result = copy_user_string(_name, name_len,
+                                          buf, sizeof(buf), &sp);
     if (result != MX_OK)
         return result;
     LTRACEF("name %s\n", buf);
@@ -267,8 +288,8 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
-    // TODO(andymutton): Change to use user_ptr copy methods
-    mx_status_t result = magenta_copy_user_string(_name.get(), name_len, buf, sizeof(buf), &sp);
+    mx_status_t result = copy_user_string(_name, name_len,
+                                          buf, sizeof(buf), &sp);
     if (result != MX_OK)
         return result;
     LTRACEF("name %s\n", buf);

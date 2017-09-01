@@ -19,7 +19,6 @@
 #include <magenta/types.h>
 #include <mexec.h>
 #include <object/process_dispatcher.h>
-#include <object/user_copy.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform.h>
 #include <string.h>

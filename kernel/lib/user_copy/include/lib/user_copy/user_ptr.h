@@ -4,8 +4,8 @@
 
 #pragma once
 
+#include <arch/user_copy.h>
 #include <kernel/vm.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/internal.h>
 #include <magenta/types.h>
 #include <mxtl/type_support.h>
@@ -43,27 +43,27 @@ public:
     template <typename S = T>
     mx_status_t copy_to_user(const S& src) const {
         static_assert(mxtl::is_same<S, T>::value, "Do not use the template parameter.");
-        return copy_to_user_unsafe(ptr_, &src, sizeof(S));
+        return arch_copy_to_user(ptr_, &src, sizeof(S));
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     mx_status_t copy_array_to_user(const T* src, size_t count) const {
-        return copy_to_user_unsafe(ptr_, src, count * internal::type_size<T>());
+        return arch_copy_to_user(ptr_, src, count * internal::type_size<T>());
     }
 
     // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     mx_status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
-        return copy_to_user_unsafe(ptr_ + offset, src, count * internal::type_size<T>());
+        return arch_copy_to_user(ptr_ + offset, src, count * internal::type_size<T>());
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
     mx_status_t copy_from_user(typename mxtl::remove_const<T>::type* dst) const {
         // Intentionally use sizeof(T) here, so *using* this method won't compile if T is |void|.
-        return copy_from_user_unsafe(dst, ptr_, sizeof(T));
+        return arch_copy_from_user(dst, ptr_, sizeof(T));
     }
 
     // Copies an array of T from user memory. Note: This takes a count not a size, unless T is
@@ -71,7 +71,7 @@ public:
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     mx_status_t copy_array_from_user(typename mxtl::remove_const<T>::type* dst, size_t count) const {
-        return copy_from_user_unsafe(dst, ptr_, count * internal::type_size<T>());
+        return arch_copy_from_user(dst, ptr_, count * internal::type_size<T>());
     }
 
     // Copies a sub-array of T from user memory. Note: This takes a count not a size, unless T is
@@ -79,7 +79,7 @@ public:
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     mx_status_t copy_array_from_user(typename mxtl::remove_const<T>::type* dst, size_t count, size_t offset) const {
-        return copy_from_user_unsafe(dst, ptr_ + offset, count * internal::type_size<T>());
+        return arch_copy_from_user(dst, ptr_ + offset, count * internal::type_size<T>());
     }
 
 private:

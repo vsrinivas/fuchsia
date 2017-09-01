@@ -15,12 +15,10 @@
 #include <dev/interrupt.h>
 #include <kernel/vm/vm_object_physical.h>
 #include <lib/pci/pio.h>
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>
 #include <object/magenta.h>
 #include <object/process_dispatcher.h>
-#include <object/user_copy.h>
 #include <object/vm_object_dispatcher.h>
 
 #include <magenta/syscalls/pci.h>
@@ -675,9 +673,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
     if (result != MX_OK)
         return result;
 
-    // TODO(andymutton): Change to use user_ptr copy
-    if (copy_to_user_unsafe(out_max_irqs.reinterpret<uint8_t>().get(),
-                            &max_irqs, sizeof(*(out_max_irqs).get())) != MX_OK)
+    if (out_max_irqs.copy_to_user(max_irqs) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
     return result;

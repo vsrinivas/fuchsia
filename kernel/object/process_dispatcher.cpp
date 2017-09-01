@@ -32,7 +32,6 @@
 #include <object/job_dispatcher.h>
 #include <object/magenta.h>
 #include <object/thread_dispatcher.h>
-#include <object/user_copy.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 

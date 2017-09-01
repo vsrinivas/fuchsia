@@ -10,7 +10,6 @@
 #include <dev/udisplay.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <lib/user_copy.h>
 #include <lib/io.h>
 #include <lib/version.h>
 #include <lk/init.h>

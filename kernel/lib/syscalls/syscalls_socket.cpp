@@ -13,7 +13,6 @@
 #include <string.h>
 #include <trace.h>
 
-#include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>
 #include <object/process_dispatcher.h>
