@@ -10,9 +10,9 @@ static_library("debugger-utils") {
   sources = [
     "build-ids.cc",
     "build-ids.h",
-    "byte-block.h",
     "byte-block-file.cc",
     "byte-block-file.h",
+    "byte-block.h",
     "elf-reader.cc",
     "elf-reader.h",
     "elf-symtab.cc",
@@ -43,17 +43,13 @@ static_library("debugger-utils") {
   }
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
   ]
 
   if (is_fuchsia) {
-    deps += [
-      "//magenta/system/ulib/mx",
-    ]
+    deps += [ "//magenta/system/ulib/mx" ]
   } else {
-    deps += [
-      "//magenta/system/public",
-    ]
+    deps += [ "//magenta/system/public" ]
   }
 }
 
@@ -70,18 +66,16 @@ executable("util-unittests") {
 
   sources = [
     "../../test/run-all-unittests.cc",
-    "util.cc",
-    "util.h",
     "util-mx.cc",
     "util-unittest.cc",
+    "util.cc",
+    "util.h",
   ]
 
   deps = [
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
   ]
 
-  libs = [
-    "magenta",
-  ]
+  libs = [ "magenta" ]
 }

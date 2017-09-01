@@ -19,14 +19,12 @@ executable("ipt-dump") {
     "//garnet/bin/gdbserver/lib/debugger-utils",
     "//garnet/bin/gdbserver/lib/intel-pt-decode",
     "//garnet/bin/gdbserver/third_party/simple-pt:printer",
-    "//lib/ftl",
-    "//third_party/processor-trace/libipt"
+    "//garnet/public/lib/ftl",
+    "//third_party/processor-trace/libipt",
   ]
 
   if (is_linux) {
-    libs = [
-      "pthread",
-    ]
+    libs = [ "pthread" ]
   }
 
   if (!is_fuchsia) {

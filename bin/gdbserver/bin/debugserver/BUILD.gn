@@ -26,14 +26,12 @@ executable("debugserver") {
   deps = [
     "../../lib/debugger-utils",
     "../../lib/inferior-control",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
 
-  include_dirs = [
-    "../../lib",
-  ]
+  include_dirs = [ "../../lib" ]
 
   libs = [
     "launchpad",
@@ -54,28 +52,24 @@ executable("debugserver-unittests") {
 
   sources = [
     "../../test/run-all-unittests.cc",
+    "stop-reply-packet-unittest.cc",
     "stop-reply-packet.cc",
     "stop-reply-packet.h",
-    "stop-reply-packet-unittest.cc",
+    "thread-action-list-unittest.cc",
     "thread-action-list.cc",
     "thread-action-list.h",
-    "thread-action-list-unittest.cc",
+    "util-unittest.cc",
     "util.cc",
     "util.h",
-    "util-unittest.cc",
   ]
 
   deps = [
     "../../lib/debugger-utils",
-    "//lib/ftl",
+    "//garnet/public/lib/ftl",
     "//third_party/gtest",
   ]
 
-  include_dirs = [
-    "../../lib",
-  ]
+  include_dirs = [ "../../lib" ]
 
-  libs = [
-    "magenta",
-  ]
+  libs = [ "magenta" ]
 }

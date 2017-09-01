@@ -53,12 +53,10 @@ static_library("inferior-control") {
 
   deps = [
     "../debugger-utils",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
 
-  include_dirs = [
-    "..",
-  ]
+  include_dirs = [ ".." ]
 }

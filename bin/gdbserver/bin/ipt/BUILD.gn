@@ -23,13 +23,11 @@ executable("ipt") {
   deps = [
     "../../lib/debugger-utils",
     "../../lib/inferior-control",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
   ]
 
-  include_dirs = [
-    "../../lib",
-  ]
+  include_dirs = [ "../../lib" ]
 
   libs = [
     "launchpad",
