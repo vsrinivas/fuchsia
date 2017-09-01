@@ -16,13 +16,13 @@ source_set("svc") {
     "//application/services",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxtl",
     "//magenta/system/ulib/svcfs",
   ]
 
   deps = [
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 }
