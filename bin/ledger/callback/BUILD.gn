@@ -26,7 +26,7 @@ source_set("callback") {
   deps = [
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

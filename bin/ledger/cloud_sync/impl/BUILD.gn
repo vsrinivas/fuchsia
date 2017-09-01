@@ -37,7 +37,7 @@ source_set("impl") {
 
   deps = [
     "//apps/tracing/lib/trace",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -65,7 +65,7 @@ source_set("unittests") {
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 

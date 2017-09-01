@@ -14,7 +14,7 @@ source_set("gcs") {
   ]
 
   deps = [
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   public_deps = [
@@ -40,7 +40,7 @@ source_set("unittests") {
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 

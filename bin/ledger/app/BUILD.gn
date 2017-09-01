@@ -23,7 +23,7 @@ executable("app") {
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -103,7 +103,7 @@ source_set("lib") {
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -140,7 +140,7 @@ source_set("unittests") {
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 

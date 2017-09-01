@@ -28,7 +28,7 @@ source_set("public") {
     "//apps/ledger/src/convert",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
 

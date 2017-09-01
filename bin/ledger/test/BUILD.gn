@@ -26,7 +26,7 @@ source_set("lib") {
     "//apps/modular/services/auth",
     "//garnet/public/lib/fidl/cpp/bindings:serialization",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 
@@ -35,7 +35,7 @@ source_set("lib") {
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]
@@ -57,7 +57,7 @@ source_set("app_test") {
   deps = [
     "//apps/test_runner/lib/reporting",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 

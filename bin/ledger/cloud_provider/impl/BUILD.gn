@@ -26,7 +26,7 @@ source_set("impl") {
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue/crypto",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
 
@@ -48,7 +48,7 @@ source_set("unittests") {
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/test:lib",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//third_party/gtest",
   ]
 

@@ -35,7 +35,7 @@ source_set("lib") {
   deps = [
     "//apps/ledger/src/glue/crypto",
     "//garnet/public/lib/fidl/cpp/bindings",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   configs += [ "//apps/ledger/src:ledger_config" ]

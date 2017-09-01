@@ -27,7 +27,7 @@ executable("ledger_benchmark_convergence") {
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
   ]
 
   sources = [
