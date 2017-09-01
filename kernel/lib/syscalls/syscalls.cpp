@@ -5,12 +5,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <kernel/thread.h>
 #include <kernel/stats.h>
+#include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <lib/vdso.h>
 #include <magenta/mx-syscall-numbers.h>
-#include <magenta/process_dispatcher.h>
+#include <object/process_dispatcher.h>
 #include <platform.h>
 #include <trace.h>
 

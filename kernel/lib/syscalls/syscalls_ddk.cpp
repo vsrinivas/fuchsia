@@ -19,19 +19,19 @@
 #include <kernel/vm/vm_object_physical.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
+#include <object/handle_owner.h>
+#include <object/interrupt_dispatcher.h>
+#include <object/interrupt_event_dispatcher.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/user_copy.h>
+#include <object/vm_object_dispatcher.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
 #endif
 
-#include <magenta/handle_owner.h>
-#include <magenta/interrupt_dispatcher.h>
-#include <magenta/interrupt_event_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
-#include <magenta/user_copy.h>
-#include <magenta/vm_object_dispatcher.h>
 
 #include "syscalls_priv.h"
 

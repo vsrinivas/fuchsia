@@ -18,18 +18,17 @@
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
+#include <object/handle_owner.h>
+#include <object/job_dispatcher.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/resource_dispatcher.h>
+#include <object/thread_dispatcher.h>
+#include <object/user_copy.h>
+#include <object/vm_address_region_dispatcher.h>
 
-#include <magenta/handle_owner.h>
-#include <magenta/job_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/resource_dispatcher.h>
 #include <magenta/syscalls/debug.h>
 #include <magenta/syscalls/policy.h>
-#include <magenta/thread_dispatcher.h>
-#include <magenta/user_copy.h>
-#include <magenta/vm_address_region_dispatcher.h>
-
 #include <mxtl/auto_lock.h>
 #include <mxtl/inline_array.h>
 #include <mxtl/ref_ptr.h>

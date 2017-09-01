@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
+#include <mxtl/macros.h>
 #include <stddef.h>
 
 __BEGIN_CDECLS

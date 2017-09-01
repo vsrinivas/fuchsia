@@ -10,11 +10,11 @@
 
 #include <lib/ktrace.h>
 
-#include <magenta/handle_owner.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/timer_dispatcher.h>
-#include <magenta/user_copy.h>
+#include <object/handle_owner.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/timer_dispatcher.h>
+#include <object/user_copy.h>
 
 #include <mxtl/alloc_checker.h>
 #include <mxtl/ref_ptr.h>

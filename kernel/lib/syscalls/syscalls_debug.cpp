@@ -18,13 +18,13 @@
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
 #include <lib/io.h>
+#include <object/handle_owner.h>
+#include <object/process_dispatcher.h>
+#include <object/user_copy.h>
 
 #include <platform/debug.h>
 
-#include <magenta/handle_owner.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/debug.h>
-#include <magenta/user_copy.h>
 
 #include "syscalls_priv.h"
 

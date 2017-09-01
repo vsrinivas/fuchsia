@@ -24,8 +24,8 @@
 #include <lib/ktrace.h>
 #include <lib/user_copy.h>
 
-#if WITH_LIB_MAGENTA
-#include <magenta/exception.h>
+#if WITH_OBJECT
+#include <object/exception.h>
 #endif
 
 static void dump_fault_frame(x86_iframe_t *frame)
@@ -72,7 +72,7 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
 
 static status_t call_magenta_exception_handler(uint kind,
                                                struct arch_exception_context *context,
@@ -106,7 +106,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
 
 static void x86_debug_handler(x86_iframe_t *frame)
 {
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_HW_BREAKPOINT))
         return;
 #endif
@@ -120,7 +120,7 @@ static void x86_nmi_handler(x86_iframe_t *frame)
 
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_SW_BREAKPOINT))
         return;
 #endif
@@ -143,7 +143,7 @@ static void x86_gpf_handler(x86_iframe_t *frame)
         return;
     }
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
 #endif
@@ -153,7 +153,7 @@ static void x86_gpf_handler(x86_iframe_t *frame)
 
 static void x86_invop_handler(x86_iframe_t *frame)
 {
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
         return;
 #endif
@@ -171,7 +171,7 @@ static void x86_df_handler(x86_iframe_t *frame)
 
 static void x86_unhandled_exception(x86_iframe_t *frame)
 {
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
 #endif
@@ -299,7 +299,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     }
 
     /* let high level code deal with this */
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         CPU_STATS_INC(exceptions);
@@ -468,7 +468,7 @@ void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs)
     x86_reset_suspended_general_regs(&thread->arch);
 }
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
 void arch_dump_exception_context(const arch_exception_context_t *context)
 {
     if (context->is_page_fault) {

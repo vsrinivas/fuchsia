@@ -13,14 +13,13 @@
 
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
+#include <object/fifo_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/user_copy.h>
 
-#include <magenta/fifo_dispatcher.h>
-#include <magenta/handle_owner.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/policy.h>
-#include <magenta/user_copy.h>
-
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"

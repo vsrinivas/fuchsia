@@ -12,12 +12,12 @@ MODULE := $(LOCAL_DIR)
 MODULE_DEPS := \
     kernel/lib/console \
     kernel/lib/crypto \
-    kernel/lib/magenta \
     kernel/lib/mxtl \
     kernel/lib/pci \
     kernel/lib/vdso \
     kernel/lib/user_copy \
     kernel/lib/vdso \
+    kernel/object \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls.cpp \

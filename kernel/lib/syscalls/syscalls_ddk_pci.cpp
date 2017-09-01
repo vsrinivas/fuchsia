@@ -13,17 +13,17 @@
 #include <trace.h>
 
 #include <dev/interrupt.h>
+#include <kernel/vm/vm_object_physical.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
-#include <kernel/vm/vm_object_physical.h>
+#include <object/handle_owner.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/user_copy.h>
+#include <object/vm_object_dispatcher.h>
 
-#include <magenta/handle_owner.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
-#include <magenta/user_copy.h>
-#include <magenta/vm_object_dispatcher.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/limits.h>
@@ -51,7 +51,7 @@ static inline void shutdown_early_init_console() {}
 #if WITH_DEV_PCIE
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_root.h>
-#include <magenta/pci_device_dispatcher.h>
+#include <object/pci_device_dispatcher.h>
 
 // Implementation of a PcieRoot with a look-up table based legacy IRQ swizzler
 // suitable for use with ACPI style swizzle definitions.

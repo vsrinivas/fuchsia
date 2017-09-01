@@ -10,9 +10,9 @@
 #include <kernel/vm/vm_address_region.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_object_paged.h>
-#include <magenta/handle_owner.h>
-#include <magenta/vm_address_region_dispatcher.h>
-#include <magenta/vm_object_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/vm_address_region_dispatcher.h>
+#include <object/vm_object_dispatcher.h>
 
 RoDso::RoDso(const char* name, const void* image, size_t size,
              uintptr_t code_start)

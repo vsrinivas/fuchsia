@@ -14,14 +14,14 @@
 #include <lib/heap.h>
 #include <platform.h>
 
-#include <magenta/diagnostics.h>
-#include <magenta/handle_owner.h>
-#include <magenta/job_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/resource_dispatcher.h>
-#include <magenta/thread_dispatcher.h>
-#include <magenta/vm_address_region_dispatcher.h>
+#include <object/diagnostics.h>
+#include <object/handle_owner.h>
+#include <object/job_dispatcher.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/resource_dispatcher.h>
+#include <object/thread_dispatcher.h>
+#include <object/vm_address_region_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
 

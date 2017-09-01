@@ -6,7 +6,7 @@
 
 #include <trace.h>
 
-#include <magenta/process_dispatcher.h>
+#include <object/process_dispatcher.h>
 
 #include "syscalls_priv.h"
 

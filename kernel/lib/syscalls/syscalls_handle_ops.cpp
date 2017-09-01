@@ -8,9 +8,9 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <magenta/handle_owner.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
 #include <mxtl/auto_lock.h>
 
 #include "syscalls_priv.h"

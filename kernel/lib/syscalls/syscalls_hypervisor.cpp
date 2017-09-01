@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <magenta/guest_dispatcher.h>
-#include <magenta/handle_owner.h>
-#include <magenta/port_dispatcher.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <magenta/vcpu_dispatcher.h>
-#include <magenta/vm_object_dispatcher.h>
+
+#include <object/guest_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/port_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/vcpu_dispatcher.h>
+#include <object/vm_object_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
 

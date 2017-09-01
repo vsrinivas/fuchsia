@@ -6,11 +6,11 @@
 
 #pragma once
 
-#include <magenta/port_dispatcher.h>
-#include <magenta/semaphore.h>
 #include <mxtl/arena.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
+#include <object/port_dispatcher.h>
+#include <object/semaphore.h>
 
 /* Reloads the hypervisor state. */
 struct StateReloader {

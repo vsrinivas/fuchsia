@@ -15,12 +15,11 @@
 
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
+#include <object/handle_owner.h>
+#include <object/process_dispatcher.h>
+#include <object/socket_dispatcher.h>
 
-#include <magenta/handle_owner.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/socket_dispatcher.h>
 #include <magenta/syscalls/policy.h>
-
 #include <mxtl/ref_ptr.h>
 
 #include "syscalls_priv.h"

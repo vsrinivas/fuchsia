@@ -16,23 +16,22 @@
 
 #include <kernel/cmdline.h>
 #include <kernel/vm/vm_object_paged.h>
-
 #include <lib/console.h>
 #include <lib/vdso.h>
 #include <lk/init.h>
+#include <object/channel_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/job_dispatcher.h>
+#include <object/magenta.h>
+#include <object/message_packet.h>
+#include <object/process_dispatcher.h>
+#include <object/resource_dispatcher.h>
+#include <object/thread_dispatcher.h>
+#include <object/vm_address_region_dispatcher.h>
+#include <object/vm_object_dispatcher.h>
 
-#include <magenta/channel_dispatcher.h>
-#include <magenta/handle_owner.h>
-#include <magenta/job_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/message_packet.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/processargs.h>
-#include <magenta/resource_dispatcher.h>
 #include <magenta/stack.h>
-#include <magenta/thread_dispatcher.h>
-#include <magenta/vm_address_region_dispatcher.h>
-#include <magenta/vm_object_dispatcher.h>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 #include <lib/crypto/entropy/quality_test.h>

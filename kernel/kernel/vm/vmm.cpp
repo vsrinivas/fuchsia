@@ -21,9 +21,9 @@
 #include <string.h>
 #include <trace.h>
 
-#if WITH_LIB_MAGENTA
-#include <magenta/diagnostics.h>
-#endif // WITH_LIB_MAGENTA
+#if WITH_OBJECT
+#include <object/diagnostics.h>
+#endif // WITH_OBJECT
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 #define TRACE_PAGE_FAULT 0
@@ -61,7 +61,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 
     // page fault it
     status_t status = aspace->PageFault(addr, flags);
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     // If it's a user fault, dump info about process memory usage.
     // If it's a kernel fault, the kernel could possibly already
     // hold locks on VMOs, Aspaces, etc, so we can't safely do

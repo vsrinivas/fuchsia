@@ -2,11 +2,11 @@
 
 ## Introduction
 
-The kernel manages a number of different types of Objects.  Those which are accessible
-directly via system calls are actual C++ objects which implement the Dispatcher
-interface.  These are implemented in the kernel's [libmagenta](../kernel/lib/magenta).
-Many are self-contained higher level Objects.  Some wrap lower level lk primitives.
-
+The kernel manages a number of different types of Objects. Those which are
+accessible directly via system calls are C++ classes which implement the
+Dispatcher interface. These are implemented in
+[kernel/object](../kernel/object). Many are self-contained higher-level Objects.
+Some wrap lower-level lk primitives.
 
 ## [System Calls](syscalls.md)
 

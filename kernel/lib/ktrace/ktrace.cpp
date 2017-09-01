@@ -16,7 +16,7 @@
 #include <lib/ktrace.h>
 #include <lk/init.h>
 #include <magenta/thread_annotations.h>
-#include <magenta/thread_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 #if __x86_64__
 #define ktrace_timestamp() rdtsc();

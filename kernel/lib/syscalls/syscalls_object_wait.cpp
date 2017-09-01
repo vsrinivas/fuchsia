@@ -14,10 +14,10 @@
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
 
-#include <magenta/magenta.h>
-#include <magenta/port_dispatcher.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/wait_state_observer.h>
+#include <object/magenta.h>
+#include <object/port_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/wait_state_observer.h>
 
 #include <mxtl/auto_lock.h>
 #include <mxtl/inline_array.h>

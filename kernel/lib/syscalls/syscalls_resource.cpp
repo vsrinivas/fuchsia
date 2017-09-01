@@ -7,12 +7,12 @@
 #include <err.h>
 #include <inttypes.h>
 
-#include <magenta/channel_dispatcher.h>
-#include <magenta/handle_owner.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/resource_dispatcher.h>
 #include <mxtl/ref_ptr.h>
+#include <object/channel_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/resource_dispatcher.h>
 
 #include "syscalls_priv.h"
 

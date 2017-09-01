@@ -16,8 +16,8 @@ MODULE_SRCS := \
 
 MODULE_DEPS := \
 	kernel/arch/$(ARCH)/hypervisor \
-	kernel/lib/magenta \
 	kernel/lib/mxtl \
 	kernel/lib/unittest \
+	kernel/object \
 
 include make/module.mk

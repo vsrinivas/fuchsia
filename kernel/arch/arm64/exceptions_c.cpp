@@ -19,9 +19,9 @@
 #include <kernel/vm/fault.h>
 #include <platform.h>
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
 #include <lib/user_copy.h>
-#include <magenta/exception.h>
+#include <object/exception.h>
 #endif
 
 #define LOCAL_TRACE 0
@@ -50,7 +50,7 @@ __WEAK void arm64_syscall(struct arm64_iframe_long *iframe, bool is_64bit, uint6
     panic("unhandled syscall vector\n");
 }
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
 
 static status_t call_magenta_data_fault_exception_handler(mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
 {
@@ -101,7 +101,7 @@ static void arm64_unknown_handler(struct arm64_iframe_long *iframe, uint excepti
         printf("unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
         exception_die(iframe, esr);
     }
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     call_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 #endif
 }
@@ -114,7 +114,7 @@ static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_f
         printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
         exception_die(iframe, esr);
     }
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     call_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr);
 #endif
 }
@@ -172,7 +172,7 @@ static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, ui
     if (err >= 0)
         return;
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     /* if this is from user space, let magenta get a shot at it */
     if (is_user) {
         CPU_STATS_INC(exceptions);
@@ -226,7 +226,7 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
         return;
     }
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
     /* if this is from user space, let magenta get a shot at it */
     if (is_user) {
         CPU_STATS_INC(exceptions);
@@ -302,7 +302,7 @@ extern "C" void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exce
                 printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
                 exception_die(iframe, esr);
             }
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
             /* let magenta get a shot at it */
             if (call_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == MX_OK)
                 break;
@@ -406,7 +406,7 @@ static void arm64_thread_process_pending_signals(struct arm64_iframe_long *ifram
     thread->arch.suspended_general_regs = nullptr;
 }
 
-#if WITH_LIB_MAGENTA
+#if WITH_OBJECT
 void arch_dump_exception_context(const arch_exception_context_t *context)
 {
     uint32_t ec = BITS_SHIFT(context->esr, 31, 26);

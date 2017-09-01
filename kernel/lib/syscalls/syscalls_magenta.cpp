@@ -13,25 +13,23 @@
 #include <string.h>
 #include <trace.h>
 
+#include <explicit-memory/bytes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
-
-#include <explicit-memory/bytes.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
+#include <object/event_dispatcher.h>
+#include <object/event_pair_dispatcher.h>
+#include <object/handle_owner.h>
+#include <object/log_dispatcher.h>
+#include <object/magenta.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
+#include <object/user_copy.h>
 
-#include <magenta/event_dispatcher.h>
-#include <magenta/event_pair_dispatcher.h>
-#include <magenta/handle_owner.h>
-#include <magenta/log_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/log.h>
 #include <magenta/syscalls/policy.h>
-#include <magenta/user_copy.h>
-#include <magenta/thread_dispatcher.h>
-
 #include <mxtl/alloc_checker.h>
 #include <mxtl/atomic.h>
 #include <mxtl/ref_ptr.h>

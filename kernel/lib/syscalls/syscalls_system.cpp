@@ -16,11 +16,11 @@
 #include <kernel/vm/vm_aspace.h>
 #include <magenta/boot/bootdata.h>
 #include <magenta/compiler.h>
-#include <magenta/process_dispatcher.h>
 #include <magenta/types.h>
-#include <magenta/user_copy.h>
-#include <magenta/vm_object_dispatcher.h>
 #include <mexec.h>
+#include <object/process_dispatcher.h>
+#include <object/user_copy.h>
+#include <object/vm_object_dispatcher.h>
 #include <platform.h>
 #include <string.h>
 #include <trace.h>

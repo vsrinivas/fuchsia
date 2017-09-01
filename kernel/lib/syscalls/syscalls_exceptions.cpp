@@ -12,11 +12,11 @@
 #include <string.h>
 #include <trace.h>
 
-#include <magenta/port_dispatcher.h>
-#include <magenta/magenta.h>
-#include <magenta/job_dispatcher.h>
-#include <magenta/process_dispatcher.h>
-#include <magenta/thread_dispatcher.h>
+#include <object/job_dispatcher.h>
+#include <object/magenta.h>
+#include <object/port_dispatcher.h>
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 
 #include "syscalls_priv.h"
 
