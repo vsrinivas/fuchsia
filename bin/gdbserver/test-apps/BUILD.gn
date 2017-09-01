@@ -1,0 +1,59 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test-apps") {
+  testonly = true
+
+  deps = [
+    ":crash-test",
+    ":exit-test",
+    ":loop-test",
+    ":syscall-test",
+    ":thread-test",
+  ]
+}
+
+executable("exit-test") {
+  testonly = true
+
+  sources = [
+    "exit-test.c",
+  ]
+}
+
+executable("crash-test") {
+  testonly = true
+
+  sources = [
+    "crash-test.c",
+  ]
+}
+
+executable("loop-test") {
+  testonly = true
+
+  sources = [
+    "loop-test.c",
+  ]
+}
+
+executable("syscall-test") {
+  testonly = true
+
+  sources = [
+    "syscall-test.c",
+  ]
+
+  libs = [
+    "magenta",
+  ]
+}
+
+executable("thread-test") {
+  testonly = true
+
+  sources = [
+    "thread-test.c",
+  ]
+}

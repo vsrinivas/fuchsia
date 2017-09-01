@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# To avoid breaking anything this follows convention and uses the name
+# gdbserver, the name of this directory.
+# TODO(dje): TO-127: Move this entire directory to better location.
+group("gdbserver") {
+  deps = [
+    "bin/debugserver",
+    "bin/ipt",
+    "bin/ipt-dump($host_toolchain)",
+    "lib/debugger-utils",
+    "lib/inferior-control",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "bin/debugserver:debugserver-unittests",
+    "test-apps",
+  ]
+}

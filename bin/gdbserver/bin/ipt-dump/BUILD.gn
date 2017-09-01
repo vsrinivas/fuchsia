@@ -1,0 +1,35 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.  Use of
+# this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: ipt-dump can run on the build host (e.g., linux or macos).
+# TODO(dje): At the moment it only runs on linux or macos.
+
+executable("ipt-dump") {
+  sources = [
+    "command-line-settings.cc",
+    "command-line-settings.h",
+    "main.cc",
+    "printer-config.h",
+    "raw-printer.cc",
+    "raw-printer.h",
+  ]
+
+  deps = [
+    "//bin/gdbserver/lib/debugger-utils",
+    "//bin/gdbserver/lib/intel-pt-decode",
+    "//bin/gdbserver/third_party/simple-pt:printer",
+    "//lib/ftl",
+    "//third_party/processor-trace/libipt"
+  ]
+
+  if (is_linux) {
+    libs = [
+      "pthread",
+    ]
+  }
+
+  if (!is_fuchsia) {
+    deps += [ "//magenta/system/public" ]
+  }
+}

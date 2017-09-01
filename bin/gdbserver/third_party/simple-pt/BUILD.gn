@@ -1,0 +1,40 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.  Use of
+# this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("reader") {
+  sources = [
+    "elf.cc",
+    "elf.h",
+    "symtab.cc",
+    "symtab.h",
+  ]
+
+  deps = [
+    "//bin/gdbserver/lib/debugger-utils",
+    "//lib/ftl",
+    "//third_party/processor-trace/libipt",
+  ]
+}
+
+source_set("printer") {
+  sources = [
+    "call-printer.cc",
+    "call-printer.h",
+    "instruction.cc",
+    "instruction.h",
+    "printer-util.cc",
+    "printer-util.h",
+  ]
+
+  deps = [
+    "//bin/gdbserver/lib/debugger-utils",
+    "//bin/gdbserver/lib/intel-pt-decode",
+    "//lib/ftl",
+    "//third_party/processor-trace/libipt",
+  ]
+
+  if (!is_fuchsia) {
+    deps += [ "//magenta/system/public" ]
+  }
+}
