@@ -310,7 +310,7 @@ Dart_Handle System::VmoRead(ftl::RefPtr<Handle> vmo,
   if (status == MX_OK) {
     FTL_DCHECK(actual <= size);
     return ConstructDartObject(kReadResult, ToDart(status), bytes.dart_handle(),
-                               ToDart(bytes.size()));
+                               ToDart(size));
   } else {
     return ConstructDartObject(kReadResult, ToDart(status));
   }
