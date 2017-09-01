@@ -12,7 +12,7 @@
 #include "lib/escher/examples/common/demo_harness.h"
 #include "lib/escher/examples/common/services/escher_demo.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "mtl/tasks/message_loop.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 class DemoHarnessFuchsia : public DemoHarness,
                            public escher_demo::EscherDemo,
