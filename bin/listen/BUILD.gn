@@ -9,7 +9,7 @@ executable("listen") {
   deps = [
     "//application/lib/app",
     "//garnet/public/lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
   ]
   libs = [ "launchpad" ]

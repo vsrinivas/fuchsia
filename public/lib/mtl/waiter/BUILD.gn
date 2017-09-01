@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("waiter") {
-  visibility = [ "//lib/mtl/*" ]
+  visibility = [ "//garnet/public/lib/mtl/*" ]
 
   sources = [
     "default.cc",
@@ -11,7 +11,7 @@ source_set("waiter") {
 
   deps = [
     "//garnet/public/lib/ftl",
-    "//lib/mtl/tasks",
+    "//garnet/public/lib/mtl/tasks",
     "//garnet/public/lib/fidl/cpp/waiter",
   ]
 }

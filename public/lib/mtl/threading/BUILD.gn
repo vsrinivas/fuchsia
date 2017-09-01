@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("threading") {
-  visibility = [ "//lib/mtl/*" ]
+  visibility = [ "//garnet/public/lib/mtl/*" ]
 
   sources = [
     "create_thread.cc",
@@ -13,7 +13,7 @@ source_set("threading") {
   ]
 
   deps = [
-    "//lib/mtl/tasks",
+    "//garnet/public/lib/mtl/tasks",
   ]
 
   public_deps = [

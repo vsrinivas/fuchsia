@@ -17,14 +17,14 @@ shared_library("mtl_lib") {
   output_name = "mtl"
 
   public_deps = [
-    "//lib/mtl/handles",
-    "//lib/mtl/io",
-    "//lib/mtl/socket",
-    "//lib/mtl/tasks",
-    "//lib/mtl/threading",
-    "//lib/mtl/vfs",
-    "//lib/mtl/vmo",
-    "//lib/mtl/waiter",
+    "//garnet/public/lib/mtl/handles",
+    "//garnet/public/lib/mtl/io",
+    "//garnet/public/lib/mtl/socket",
+    "//garnet/public/lib/mtl/tasks",
+    "//garnet/public/lib/mtl/threading",
+    "//garnet/public/lib/mtl/vfs",
+    "//garnet/public/lib/mtl/vmo",
+    "//garnet/public/lib/mtl/waiter",
   ]
 }
 
@@ -50,7 +50,7 @@ executable("mtl_unittests") {
 
   deps = [
     ":mtl",
-    "//lib/mtl/test",
+    "//garnet/public/lib/mtl/test",
     "//third_party/gtest",
   ]
 }

@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("vmo") {
-  visibility = [ "//lib/mtl/*" ]
+  visibility = [ "//garnet/public/lib/mtl/*" ]
 
   sources = [
     "file.cc",

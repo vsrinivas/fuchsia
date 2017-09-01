@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("vfs") {
-  visibility = [ "//lib/mtl/*" ]
+  visibility = [ "//garnet/public/lib/mtl/*" ]
 
   sources = [
     "vfs_dispatcher.cc",
@@ -18,7 +18,7 @@ source_set("vfs") {
 
   public_deps = [
     "//garnet/public/lib/ftl",
-    "//lib/mtl/tasks",
+    "//garnet/public/lib/mtl/tasks",
     "//magenta/system/ulib/fs",
     "//magenta/system/ulib/mx",
   ]
