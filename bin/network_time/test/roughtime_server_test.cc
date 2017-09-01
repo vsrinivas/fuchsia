@@ -59,7 +59,7 @@ void listen(int sock) {
 }
 
 // Checks that server recieves request from time-service
-TEST(DISABLED_RoughTimeServerTest, TestServerRequest) {
+TEST(RoughTimeServerTest, TestServerRequest) {
   uint8_t key[ED25519_PUBLIC_KEY_LEN] = {0};
   RoughTimeServer server("name", "127.0.0.1:" + std::to_string(PORT), key,
                          ED25519_PUBLIC_KEY_LEN);
