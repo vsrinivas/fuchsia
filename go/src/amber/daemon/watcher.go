@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"amber/pkg"
 )
 
 // Watcher implements a basic filesystem watcher that polls /pkgfs/needs for new
@@ -141,11 +143,11 @@ func (w *Watcher) getPackage(name string) error {
 		w.mu.Unlock()
 	}()
 
-	pkg := Package{Name: "/" + name}
-	ps := NewPackageSet()
-	ps.Add(&pkg)
+	pk := pkg.Package{Name: "/" + name}
+	ps := pkg.NewPackageSet()
+	ps.Add(&pk)
 	updates := w.d.GetUpdates(ps)
-	r, ok := updates[pkg]
+	r, ok := updates[pk]
 	if !ok {
 		return fmt.Errorf("Update result didn't contain requested update\n")
 	}

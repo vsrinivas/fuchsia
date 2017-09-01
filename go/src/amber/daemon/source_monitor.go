@@ -6,6 +6,9 @@ package daemon
 
 import (
 	"time"
+
+	"amber/lg"
+	"amber/pkg"
 )
 
 // SourceMonitor takes a Source and polls it for Package updates at the interval
@@ -17,16 +20,17 @@ type SourceMonitor struct {
 	done        chan struct{}
 	// takes an update Package, an original Package and a Source to get the
 	// update Package content from.
-	processor func(*GetResult, *PackageSet) error
+	processor func(*GetResult, *pkg.PackageSet) error
 	d         *Daemon
-	pkgs      *PackageSet
+	pkgs      *pkg.PackageSet
 	i         time.Duration
 }
 
 // NewSourceMonitr creates a new SourceMonitor object that manages periodic and
 // one-off update requests for a Source. The 'proc' func will be called when a
 // matching update is available from the source.
-func NewSourceMonitor(d *Daemon, pkgs *PackageSet, proc func(*GetResult, *PackageSet) error,
+func NewSourceMonitor(d *Daemon, pkgs *pkg.PackageSet,
+	proc func(*GetResult, *pkg.PackageSet) error,
 	interval time.Duration) *SourceMonitor {
 	return &SourceMonitor{
 		d:         d,
@@ -69,7 +73,7 @@ func (sm *SourceMonitor) Stop() {
 	sm.done <- struct{}{}
 }
 
-func (sm *SourceMonitor) check(t time.Time, ps *PackageSet) {
+func (sm *SourceMonitor) check(t time.Time, ps *pkg.PackageSet) {
 	if sm.LatestCheck.Sub(t) >= 0 {
 		return
 	}
@@ -77,7 +81,7 @@ func (sm *SourceMonitor) check(t time.Time, ps *PackageSet) {
 	updates := sm.d.GetUpdates(ps)
 	for _, up := range updates {
 		if err := sm.processor(up, ps); err != nil {
-			Log.Printf("error processing package %v\n", err)
+			lg.Log.Printf("error processing package %v\n", err)
 		}
 	}
 

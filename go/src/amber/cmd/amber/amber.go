@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"amber/daemon"
+	"amber/pkg"
 	"amber/source"
 
 	tuf "github.com/flynn/go-tuf/client"
@@ -97,8 +98,8 @@ func doDemo() {
 
 func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 	files := []string{
-		"/system/bin/amber"}
-	reqSet := daemon.NewPackageSet()
+		"/system/apps/amber"}
+	reqSet := pkg.NewPackageSet()
 
 	d := sha512.New()
 	// get the current SHA512 hash of the file
@@ -110,12 +111,12 @@ func startupDaemon(client *tuf.Client, srvAddr string) *daemon.Daemon {
 		}
 
 		hexStr := hex.EncodeToString(sha)
-		pkg := daemon.Package{Name: name, Version: hexStr}
+		pkg := pkg.Package{Name: name, Version: hexStr}
 		reqSet.Add(&pkg)
 	}
 
 	// create source with 5 qps rate limit
-	fetcher := &daemon.TUFSource{
+	fetcher := &source.TUFSource{
 		Client:   client,
 		Interval: time.Millisecond * 200,
 	}

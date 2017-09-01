@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package daemon
+package source
 
 import (
 	"errors"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"amber/lg"
+	"amber/pkg"
 
 	"github.com/flynn/go-tuf/client"
 )
@@ -24,7 +27,7 @@ type TUFSource struct {
 
 // AvailableUpdates takes a list of Packages and returns a map from those Packages
 // to any available update Package
-func (f *TUFSource) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
+func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	_, err := f.Client.Update()
 	if err != nil && !client.IsLatestSnapshot(err) {
 		return nil, err
@@ -38,7 +41,7 @@ func (f *TUFSource) AvailableUpdates(pkgs []*Package) (map[Package]Package, erro
 		return nil, err
 	}
 
-	updates := make(map[Package]Package)
+	updates := make(map[pkg.Package]pkg.Package)
 
 	for _, p := range pkgs {
 		meta, ok := m[p.Name]
@@ -52,9 +55,9 @@ func (f *TUFSource) AvailableUpdates(pkgs []*Package) (map[Package]Package, erro
 
 		hashStr := hash.String()
 		if hashStr != p.Version {
-			Log.Printf("tufsource: available update %s version %s\n",
+			lg.Log.Printf("tufsource: available update %s version %s\n",
 				p.Name, hashStr[:8])
-			updates[*p] = Package{Name: p.Name, Version: hashStr}
+			updates[*p] = pkg.Package{Name: p.Name, Version: hashStr}
 		}
 	}
 
@@ -73,8 +76,8 @@ func (f *delFile) Delete() error {
 }
 
 // FetchPkg gets the content for the requested Package
-func (f *TUFSource) FetchPkg(pkg *Package) (*os.File, error) {
-	Log.Printf("tufsource: requesting download for: %s\n", pkg.Name)
+func (f *TUFSource) FetchPkg(pkg *pkg.Package) (*os.File, error) {
+	lg.Log.Printf("tufsource: requesting download for: %s\n", pkg.Name)
 	tmp, err := ioutil.TempFile("", pkg.Version)
 	if err != nil {
 		return nil, err

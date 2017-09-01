@@ -14,6 +14,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"amber/pkg"
+	"amber/source"
 )
 
 var DstUpdate = "/pkgfs/incoming"
@@ -35,12 +38,12 @@ const CheckInterval = 5 * time.Minute
 // to all calls into the Daemon.
 type Daemon struct {
 	srcMons  []*SourceMonitor
-	srcs     []Source
-	pkgs     *PackageSet
+	srcs     []source.Source
+	pkgs     *pkg.PackageSet
 	runCount sync.WaitGroup
 	// takes an update Package, an original Package and a Source to get the
 	// update Package content from.
-	processor func(*GetResult, *PackageSet) error
+	processor func(*GetResult, *pkg.PackageSet) error
 
 	//blobSrc       *BlobFetcher
 	muBlobUpdates sync.Mutex
@@ -49,18 +52,18 @@ type Daemon struct {
 	repos   []BlobRepo
 
 	muInProg sync.Mutex
-	inProg   map[Package]*upRec
+	inProg   map[pkg.Package]*upRec
 }
 
 // NewDaemon creates a Daemon with the given SourceSet
-func NewDaemon(r *PackageSet, f func(*GetResult, *PackageSet) error) *Daemon {
+func NewDaemon(r *pkg.PackageSet, f func(*GetResult, *pkg.PackageSet) error) *Daemon {
 	d := &Daemon{pkgs: r,
 		runCount:  sync.WaitGroup{},
 		srcMons:   []*SourceMonitor{},
 		processor: f,
 		repos:     []BlobRepo{},
 		muInProg:  sync.Mutex{},
-		inProg:    make(map[Package]*upRec)}
+		inProg:    make(map[pkg.Package]*upRec)}
 	mon := NewSourceMonitor(d, r, f, CheckInterval)
 	d.runCount.Add(1)
 	d.srcMons = append(d.srcMons, mon)
@@ -74,7 +77,7 @@ func NewDaemon(r *PackageSet, f func(*GetResult, *PackageSet) error) *Daemon {
 // AddSource is called to add a Source that can be used to get updates. When the
 // Source is added, the Daemon will start polling it at the interval from
 // Source.GetInterval()
-func (d *Daemon) AddSource(s Source) {
+func (d *Daemon) AddSource(s source.Source) {
 	// TODO(jmatt) make GetUpdates thread-safe with respect to sources
 	s = NewSourceKeeper(s)
 	d.srcs = append(d.srcs, s)
@@ -112,8 +115,8 @@ func (d *Daemon) RemoveBlobRepo(r BlobRepo) {
 }
 
 type upRec struct {
-	pkgs []*Package
-	c    []chan<- map[Package]*GetResult
+	pkgs []*pkg.Package
+	c    []chan<- map[pkg.Package]*GetResult
 }
 
 // GetResult represents the result of a package update request. To read the
@@ -122,8 +125,8 @@ type upRec struct {
 // underlying file.
 type GetResult struct {
 	*os.File
-	Orig   Package
-	Update Package
+	Orig   pkg.Package
+	Update pkg.Package
 	MuFile sync.Mutex
 	Err    error
 }
@@ -146,12 +149,12 @@ func (g *GetResult) Close() error {
 }
 
 type pkgSrcPair struct {
-	pkgs map[Package]Package
-	src  Source
+	pkgs map[pkg.Package]pkg.Package
+	src  source.Source
 }
 
-func (d *Daemon) awaitResults(c chan map[Package]*GetResult, awaiting []*Package,
-	out map[Package]*GetResult, mu *sync.Mutex) {
+func (d *Daemon) awaitResults(c chan map[pkg.Package]*GetResult, awaiting []*pkg.Package,
+	out map[pkg.Package]*GetResult, mu *sync.Mutex) {
 	updates := <-c
 	mu.Lock()
 	for _, p := range awaiting {
@@ -168,7 +171,7 @@ func (d *Daemon) awaitResults(c chan map[Package]*GetResult, awaiting []*Package
 // retrieve the updates themselves. Updates whose files are not claimed in a
 // reasonable period will be automatically deleted. Callers should check the
 // GetResult's Err member to see if the update attempt was successful.
-func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
+func (d *Daemon) GetUpdates(pkgs *pkg.PackageSet) map[pkg.Package]*GetResult {
 	// GetUpdates provides safe concurrent fetching from multiple update
 	// sources. To do this we maintain a map in Daemon, inProg, which
 	// contains enties for any package which is currently being updated.
@@ -182,16 +185,16 @@ func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
 	// (including the one this call might start) we start a go routine to
 	// await those results. Calls to GetUpdates then block until all go
 	// routines terminate.
-	totalRes := make(map[Package]*GetResult)
+	totalRes := make(map[pkg.Package]*GetResult)
 	resLock := sync.Mutex{}
 	// LOCK ACQUIRE
 	d.muInProg.Lock()
-	toGet := []*Package{}
+	toGet := []*pkg.Package{}
 	wg := &sync.WaitGroup{}
 
 	// see which packages we might already be fetching and just subscribe
 	// to that result if we are
-	c := make(chan map[Package]*GetResult)
+	c := make(chan map[pkg.Package]*GetResult)
 	wanted := pkgs.Packages()
 	for _, pkg := range wanted {
 		if r, ok := d.inProg[*pkg]; ok {
@@ -229,7 +232,7 @@ func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
 	if len(toGet) > 0 {
 		rec = &upRec{
 			pkgs: toGet,
-			c:    make([]chan<- map[Package]*GetResult, 0, 0),
+			c:    make([]chan<- map[pkg.Package]*GetResult, 0, 0),
 		}
 		wg.Add(1)
 		go func() {
@@ -269,7 +272,7 @@ func (d *Daemon) GetUpdates(pkgs *PackageSet) map[Package]*GetResult {
 	return totalRes
 }
 
-func (d *Daemon) getUpdates(rec *upRec) map[Package]*GetResult {
+func (d *Daemon) getUpdates(rec *upRec) map[pkg.Package]*GetResult {
 	fetchRecs := []*pkgSrcPair{}
 
 	unfoundPkgs := rec.pkgs
@@ -284,12 +287,12 @@ func (d *Daemon) getUpdates(rec *upRec) map[Package]*GetResult {
 		}
 
 		pkgsToSrc := pkgSrcPair{
-			pkgs: make(map[Package]Package),
+			pkgs: make(map[pkg.Package]pkg.Package),
 			src:  d.srcs[i],
 		}
 		fetchRecs = append(fetchRecs, &pkgsToSrc)
 
-		remaining := make([]*Package, 0, len(unfoundPkgs)-len(updates))
+		remaining := make([]*pkg.Package, 0, len(unfoundPkgs)-len(updates))
 		for _, p := range unfoundPkgs {
 			if u, ok := updates[*p]; ok {
 				pkgsToSrc.pkgs[*p] = u
@@ -308,7 +311,7 @@ func (d *Daemon) getUpdates(rec *upRec) map[Package]*GetResult {
 			go cleanupFiles(files)
 		}
 	}()
-	results := make(map[Package]*GetResult)
+	results := make(map[pkg.Package]*GetResult)
 	for _, w := range fetchRecs {
 		for p, u := range w.pkgs {
 			res := GetResult{Orig: p, Update: u, MuFile: sync.Mutex{}}
@@ -348,7 +351,7 @@ func cleanupFiles(files []*os.File) {
 // AddSource. This method does not wait for any in-progress polling operation
 // on the Source to complete. This method returns ErrSrcNotFound if the supplied
 // Source is not know to this Daemon.
-func (d *Daemon) RemoveSource(src Source) error {
+func (d *Daemon) RemoveSource(src source.Source) error {
 	for i, m := range d.srcs {
 		if m.Equals(src) {
 			d.srcs = append(d.srcs[:i], d.srcs[i+1:]...)
@@ -386,7 +389,7 @@ func (e ErrProcessPackage) Error() string {
 // from the supplied Source. If retrieval from the Source fails, the Source's
 // error is returned. If there is a local I/O error when processing the package
 // an ErrProcPkgIO is returned.
-func ProcessPackage(data *GetResult, pkgs *PackageSet) error {
+func ProcessPackage(data *GetResult, pkgs *pkg.PackageSet) error {
 	if data.Err != nil {
 		return data.Err
 	}

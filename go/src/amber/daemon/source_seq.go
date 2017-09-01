@@ -10,13 +10,16 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"amber/pkg"
+	"amber/source"
 )
 
 // SourceKeeper wraps a Source and performs admission control for operations on
 // the Source. This prevents concurrent network operations from occurring in
 // some cases.
 type SourceKeeper struct {
-	src  Source
+	src  source.Source
 	mu   *sync.Mutex
 	last time.Time
 }
@@ -24,7 +27,7 @@ type SourceKeeper struct {
 // TODO(jmatt) include a notion of when we can retry
 var ErrRateExceeded = fmt.Errorf("Source rate limited exceeded, try back later")
 
-func NewSourceKeeper(src Source) *SourceKeeper {
+func NewSourceKeeper(src source.Source) *SourceKeeper {
 	return &SourceKeeper{
 		src:  src,
 		mu:   &sync.Mutex{},
@@ -32,7 +35,7 @@ func NewSourceKeeper(src Source) *SourceKeeper {
 	}
 }
 
-func (k *SourceKeeper) AvailableUpdates(pkgs []*Package) (map[Package]Package, error) {
+func (k *SourceKeeper) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.Package, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	n := time.Now().Sub(k.last)
@@ -45,7 +48,7 @@ func (k *SourceKeeper) AvailableUpdates(pkgs []*Package) (map[Package]Package, e
 	return r, e
 }
 
-func (k *SourceKeeper) FetchPkg(pkg *Package) (*os.File, error) {
+func (k *SourceKeeper) FetchPkg(pkg *pkg.Package) (*os.File, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	return k.src.FetchPkg(pkg)
@@ -55,6 +58,6 @@ func (k *SourceKeeper) CheckInterval() time.Duration {
 	return k.src.CheckInterval()
 }
 
-func (k *SourceKeeper) Equals(s Source) bool {
+func (k *SourceKeeper) Equals(s source.Source) bool {
 	return k.src.Equals(s)
 }

@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package daemon
+package source
 
 import (
 	"errors"
 	"os"
 	"time"
+
+	"amber/pkg"
 )
 
 // ErrNoUpdate is returned if no update is available
@@ -26,12 +28,12 @@ var ErrNoUpdateContent = errors.New("amber/source: update content not available"
 type Source interface {
 	// AvailableUpdates takes a list of packages and returns update metadata
 	// for any updates available for those packages.
-	AvailableUpdates(pkg []*Package) (map[Package]Package, error)
+	AvailableUpdates(pkg []*pkg.Package) (map[pkg.Package]pkg.Package, error)
 
 	// FetchUpdate retrieves the package content from this source, if it is available.
 	// The package content is written to a file and an open File to the content
 	// is returned, ready for reading.
-	FetchPkg(pkg *Package) (*os.File, error)
+	FetchPkg(pkg *pkg.Package) (*os.File, error)
 
 	// CheckInterval is minimum time between polls of this source
 	CheckInterval() time.Duration
