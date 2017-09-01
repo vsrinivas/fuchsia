@@ -13,7 +13,7 @@ executable("application_loader") {
     "//application/lib/app",
     "//application/services",
     "//apps/network/services",
-    "//lib/ftl",
-    "//lib/mtl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
   ]
 }
