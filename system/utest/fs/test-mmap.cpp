@@ -364,6 +364,81 @@ bool test_mmap_evil(void) {
     END_TEST;
 }
 
+enum RW {
+    Read,
+    Write,
+    ReadAfterUnmap,
+    WriteAfterUnmap,
+};
+
+bool mmap_crash(int prot, int flags, RW rw) {
+    BEGIN_HELPER;
+    int fd = open("::inaccessible", O_RDWR);
+    ASSERT_GT(fd, 0);
+    void* addr = mmap(NULL, PAGE_SIZE, prot, flags, fd, 0);
+    ASSERT_NE(addr, MAP_FAILED);
+    ASSERT_EQ(close(fd), 0);
+
+    if (rw == RW::Read || rw == RW::ReadAfterUnmap) {
+        // Read
+        if (rw == RW::ReadAfterUnmap) {
+            ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+        }
+
+        ASSERT_DEATH([](void* addr) {
+            __UNUSED volatile int i = *static_cast<int*>(addr);
+        }, addr, "");
+
+        if (rw == RW::Read) {
+            ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+        }
+    } else {
+        // Write
+        if (rw == RW::WriteAfterUnmap) {
+            ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+        }
+
+        ASSERT_DEATH([](void* addr) {
+            *static_cast<int*>(addr) = 5;
+        }, addr, "");
+
+        if (rw == RW::Write) {
+            ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
+        }
+    }
+    END_HELPER;
+}
+
+bool test_mmap_death(void) {
+    BEGIN_TEST;
+    if (!test_info->supports_mmap) {
+        return true;
+    }
+
+    int fd = open("::inaccessible", O_RDWR | O_CREAT);
+    ASSERT_GT(fd, 0);
+    char tmp[] = "this is a temporary buffer";
+    ASSERT_EQ(write(fd, tmp, sizeof(tmp)), sizeof(tmp));
+    ASSERT_EQ(close(fd), 0);
+
+    // Crashes while mapped
+    ASSERT_TRUE(mmap_crash(PROT_READ, MAP_PRIVATE, Write));
+    ASSERT_TRUE(mmap_crash(PROT_READ, MAP_SHARED, Write));
+    // Write-only is not possible
+    ASSERT_TRUE(mmap_crash(PROT_NONE, MAP_SHARED, Read));
+    ASSERT_TRUE(mmap_crash(PROT_NONE, MAP_SHARED, Write));
+
+    // Crashes after unmapped
+    ASSERT_TRUE(mmap_crash(PROT_READ, MAP_PRIVATE, ReadAfterUnmap));
+    ASSERT_TRUE(mmap_crash(PROT_READ, MAP_SHARED, ReadAfterUnmap));
+    ASSERT_TRUE(mmap_crash(PROT_WRITE | PROT_READ, MAP_PRIVATE, WriteAfterUnmap));
+    ASSERT_TRUE(mmap_crash(PROT_WRITE | PROT_READ, MAP_SHARED, WriteAfterUnmap));
+    ASSERT_TRUE(mmap_crash(PROT_NONE, MAP_SHARED, WriteAfterUnmap));
+
+    ASSERT_EQ(unlink("::inaccessible"), 0);
+    END_TEST;
+}
+
 RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(test_mmap_empty)
     RUN_TEST_MEDIUM(test_mmap_readable)
@@ -372,4 +447,5 @@ RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(test_mmap_shared)
     RUN_TEST_MEDIUM(test_mmap_private)
     RUN_TEST_MEDIUM(test_mmap_evil)
+    RUN_TEST_ENABLE_CRASH_HANDLER(test_mmap_death)
 )
