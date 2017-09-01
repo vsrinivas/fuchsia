@@ -20,6 +20,7 @@
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
+#include <object/handles.h>
 #include <object/job_dispatcher.h>
 #include <object/policy_manager.h>
 #include <object/port_dispatcher.h>

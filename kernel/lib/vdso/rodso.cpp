@@ -11,6 +11,7 @@
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 

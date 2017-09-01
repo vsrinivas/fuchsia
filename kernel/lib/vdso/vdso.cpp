@@ -14,6 +14,7 @@
 #include <vm/vm_object.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/type_support.h>
+#include <object/handles.h>
 #include <platform.h>
 
 #include "vdso-code.h"

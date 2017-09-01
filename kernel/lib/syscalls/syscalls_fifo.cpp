@@ -14,7 +14,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <object/fifo_dispatcher.h>
 #include <object/handle_owner.h>
-#include <object/magenta.h>
+#include <object/handles.h>
 #include <object/process_dispatcher.h>
 
 #include <magenta/syscalls/policy.h>

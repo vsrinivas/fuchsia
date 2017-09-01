@@ -11,7 +11,7 @@
 #include <lib/ktrace.h>
 
 #include <object/handle_owner.h>
-#include <object/magenta.h>
+#include <object/handles.h>
 #include <object/process_dispatcher.h>
 #include <object/timer_dispatcher.h>
 

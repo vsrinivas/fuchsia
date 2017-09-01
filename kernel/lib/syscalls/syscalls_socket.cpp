@@ -15,6 +15,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/process_dispatcher.h>
 #include <object/socket_dispatcher.h>
 

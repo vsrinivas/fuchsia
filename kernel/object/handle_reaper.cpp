@@ -12,7 +12,7 @@
 #include <mxtl/auto_lock.h>
 #include <mxtl/mutex.h>
 #include <object/dispatcher.h>
-#include <object/magenta.h>
+#include <object/handles.h>
 #include <trace.h>
 
 #define LOCAL_TRACE 0

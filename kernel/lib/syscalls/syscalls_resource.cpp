@@ -10,7 +10,7 @@
 #include <mxtl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle_owner.h>
-#include <object/magenta.h>
+#include <object/handles.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
 

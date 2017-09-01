@@ -14,7 +14,7 @@
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
 
-#include <object/magenta.h>
+#include <object/handles.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/wait_state_observer.h>

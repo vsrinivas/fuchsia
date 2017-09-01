@@ -29,8 +29,8 @@
 #include <object/futex_context.h>
 #include <object/handle_owner.h>
 #include <object/handle_reaper.h>
+#include <object/handles.h>
 #include <object/job_dispatcher.h>
-#include <object/magenta.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>

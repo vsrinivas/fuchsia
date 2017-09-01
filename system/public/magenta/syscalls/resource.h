@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <magenta/compiler.h>
+
 __BEGIN_CDECLS
 
 // The root resource

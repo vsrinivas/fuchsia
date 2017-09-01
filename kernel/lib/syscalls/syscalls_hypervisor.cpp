@@ -8,6 +8,7 @@
 
 #include <object/guest_dispatcher.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/vcpu_dispatcher.h>

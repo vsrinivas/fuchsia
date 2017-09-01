@@ -19,9 +19,9 @@
 #include <vm/vm_object_physical.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
-#include <object/magenta.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 

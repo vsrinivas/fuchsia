@@ -13,8 +13,8 @@
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <mxtl/auto_lock.h>
+#include <object/handles.h>
 #include <object/job_dispatcher.h>
-#include <object/magenta.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <pretty/sizes.h>

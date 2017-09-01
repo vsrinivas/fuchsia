@@ -16,8 +16,8 @@
 
 #include <object/diagnostics.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/job_dispatcher.h>
-#include <object/magenta.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
 #include <object/thread_dispatcher.h>

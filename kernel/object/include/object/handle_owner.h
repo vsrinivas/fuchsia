@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <object/delete_handle.h>
+#include <object/handles.h>
 
 class Handle;
 

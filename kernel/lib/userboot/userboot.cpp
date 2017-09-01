@@ -21,8 +21,8 @@
 #include <lk/init.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/job_dispatcher.h>
-#include <object/magenta.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>

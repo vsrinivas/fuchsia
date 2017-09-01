@@ -21,8 +21,8 @@
 #include <object/event_dispatcher.h>
 #include <object/event_pair_dispatcher.h>
 #include <object/handle_owner.h>
+#include <object/handles.h>
 #include <object/log_dispatcher.h>
-#include <object/magenta.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
