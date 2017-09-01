@@ -23,6 +23,7 @@
 #include "lib/tonic/dart_class_library.h"
 #include "lib/tonic/dart_class_provider.h"
 #include "lib/tonic/dart_library_natives.h"
+#include "lib/tonic/dart_state.h"
 #include "lib/tonic/logging/dart_invoke.h"
 #include "lib/tonic/typed_data/uint8_list.h"
 
@@ -60,7 +61,8 @@ void Initialize() {
   extern void name(Dart_NativeArguments args);
 
 #define FIDL_NATIVE_LIST(V)    \
-  V(MxTime_Get, 1)
+  V(MxTime_Get, 1)             \
+  V(SetReturnCode, 1)
 
 FIDL_NATIVE_LIST(DECLARE_FUNCTION);
 
@@ -126,6 +128,13 @@ void MxTime_Get(Dart_NativeArguments arguments) {
 
   mx_time_t time = mx_time_get(clock_id);
   Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(time));
+}
+
+void SetReturnCode(Dart_NativeArguments arguments) {
+  int64_t return_code;
+  CHECK_INTEGER_ARGUMENT(0, &return_code, InvalidArgument);
+
+  tonic::DartState::Current()->SetReturnCode(return_code);
 }
 
 }  // namespace dart
