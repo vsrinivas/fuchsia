@@ -3,8 +3,8 @@
         "cpp"
     ],
     "labels": [
-        "//bin/gdbserver",
-        "//bin/gdbserver:tests"
+        "//garnet/bin/gdbserver",
+        "//garnet/bin/gdbserver:tests"
     ],
     "binaries": [
         {
