@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "constants_priv.h"
+
 #define FUNCTION(x)     .global x; .type x,STT_FUNC; x:
-#define EXIT_TEST_PORT  0xff
-#define UART_PORT       0x03f8
 #define IA32_GS_BASE    0xc0000101
-#define VMO_SIZE        0x200000
+
 .text
 
 FUNCTION(vcpu_resume_start)
@@ -60,3 +60,8 @@ FUNCTION(guest_set_trap_start)
     mov $VMO_SIZE, %rdx
     mov -0x1000(%rdx), %rax
 FUNCTION(guest_set_trap_end)
+
+FUNCTION(guest_set_trap_with_port_start)
+    out %al, $TRAP_PORT
+    out %al, $EXIT_TEST_PORT
+FUNCTION(guest_set_trap_with_port_end)

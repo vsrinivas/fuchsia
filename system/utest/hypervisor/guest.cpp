@@ -14,10 +14,9 @@
 #include <magenta/types.h>
 #include <unittest/unittest.h>
 
-static const uint8_t kExitTestPort = 0xff;
-static const uint16_t kUartPort = 0x03f8;
+#include "constants_priv.h"
+
 static const uint32_t kMapFlags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-static const uint64_t kVmoSize = 2 << 20;
 
 extern const char vcpu_resume_start[];
 extern const char vcpu_resume_end[];
@@ -25,6 +24,8 @@ extern const char vcpu_read_write_state_start[];
 extern const char vcpu_read_write_state_end[];
 extern const char guest_set_trap_start[];
 extern const char guest_set_trap_end[];
+extern const char guest_set_trap_with_port_start[];
+extern const char guest_set_trap_with_port_end[];
 
 typedef struct test {
     bool supported;
@@ -49,7 +50,7 @@ static bool teardown(test_t *test) {
 
     if (test->guest != MX_HANDLE_INVALID)
         ASSERT_EQ(mx_handle_close(test->guest), MX_OK, "");
-    ASSERT_EQ(mx_vmar_unmap(mx_vmar_root_self(), test->guest_physaddr, kVmoSize), MX_OK, "");
+    ASSERT_EQ(mx_vmar_unmap(mx_vmar_root_self(), test->guest_physaddr, VMO_SIZE), MX_OK, "");
     ASSERT_EQ(mx_handle_close(test->guest_physmem), MX_OK, "");
 
     return true;
@@ -58,9 +59,9 @@ static bool teardown(test_t *test) {
 static bool setup(test_t *test, const char *start, const char *end) {
     memset(test, 0, sizeof(*test));
 
-    ASSERT_EQ(mx_vmo_create(kVmoSize, 0, &test->guest_physmem), MX_OK, "");
+    ASSERT_EQ(mx_vmo_create(VMO_SIZE, 0, &test->guest_physmem), MX_OK, "");
 
-    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, test->guest_physmem, 0, kVmoSize, kMapFlags,
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, test->guest_physmem, 0, VMO_SIZE, kMapFlags,
                           &test->guest_physaddr),
               MX_OK, "");
 
@@ -78,7 +79,7 @@ static bool setup(test_t *test, const char *start, const char *end) {
 
     // Setup the guest.
     uintptr_t guest_ip;
-    ASSERT_EQ(guest_create_page_table(test->guest_physaddr, kVmoSize, &guest_ip), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table(test->guest_physaddr, VMO_SIZE, &guest_ip), MX_OK, "");
 
 #if __x86_64__
     memcpy((void*)(test->guest_physaddr + guest_ip), start, end - start);
@@ -115,18 +116,18 @@ static bool vcpu_resume(void) {
     mx_port_packet_t packet = {};
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
     EXPECT_EQ(packet.type, MX_PKT_TYPE_GUEST_IO, "");
-    EXPECT_EQ(packet.guest_io.port, kUartPort, "");
+    EXPECT_EQ(packet.guest_io.port, UART_PORT, "");
     EXPECT_EQ(packet.guest_io.access_size, 1u, "");
     EXPECT_EQ(packet.guest_io.data[0], 'm', "");
 
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.guest_io.port, kUartPort, "");
+    EXPECT_EQ(packet.guest_io.port, UART_PORT, "");
     EXPECT_EQ(packet.type, MX_PKT_TYPE_GUEST_IO, "");
     EXPECT_EQ(packet.guest_io.access_size, 1u, "");
     EXPECT_EQ(packet.guest_io.data[0], 'x', "");
 
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.guest_io.port, kExitTestPort, "");
+    EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT, "");
 
     ASSERT_TRUE(teardown(&test), "");
 
@@ -170,7 +171,7 @@ static bool vcpu_read_write_state(void) {
 
     mx_port_packet_t packet = {};
     ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK, "");
-    EXPECT_EQ(packet.guest_io.port, kExitTestPort, "");
+    EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT, "");
 
     ASSERT_EQ(mx_vcpu_read_state(test.vcpu, MX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
               MX_OK, "");
@@ -210,8 +211,8 @@ static bool guest_set_trap(void) {
         return true;
     }
 
-    // Unmap the last page from the EPT.
-    ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_MEM, kVmoSize - PAGE_SIZE, PAGE_SIZE,
+    // Trap on access to the last page.
+    ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_MEM, VMO_SIZE - PAGE_SIZE, PAGE_SIZE,
                                 MX_HANDLE_INVALID, 0),
               MX_OK, "");
 
@@ -223,7 +224,7 @@ static bool guest_set_trap(void) {
     instruction_t inst;
     ASSERT_EQ(inst_decode(packet.guest_mem.inst_buf, packet.guest_mem.inst_len, &vcpu_state, &inst),
               MX_OK, "");
-    ASSERT_EQ(packet.guest_mem.addr, kVmoSize - PAGE_SIZE, "");
+    ASSERT_EQ(packet.guest_mem.addr, VMO_SIZE - PAGE_SIZE, "");
     ASSERT_EQ(inst.type, INST_MOV_READ, "");
     ASSERT_EQ(inst.mem, 8u, "");
     ASSERT_EQ(inst.imm, 0u, "");
@@ -236,10 +237,40 @@ static bool guest_set_trap(void) {
     END_TEST;
 }
 
+static bool guest_set_trap_with_port(void) {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, guest_set_trap_with_port_start, guest_set_trap_with_port_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    mx_handle_t port;
+    ASSERT_EQ(mx_port_create(0, &port), MX_OK);
+
+    // Trap on writes to TRAP_PORT.
+    ASSERT_EQ(mx_guest_set_trap(test.guest, MX_GUEST_TRAP_IO, TRAP_PORT, 1, port, 0), MX_OK);
+
+    mx_port_packet_t packet = {};
+    ASSERT_EQ(mx_vcpu_resume(test.vcpu, &packet), MX_OK);
+    EXPECT_EQ(packet.guest_io.port, EXIT_TEST_PORT);
+
+    ASSERT_EQ(mx_port_wait(port, MX_TIME_INFINITE, &packet, 0), MX_OK);
+    EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
+
+    mx_handle_close(port);
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
 RUN_TEST(vcpu_read_write_state)
 RUN_TEST(guest_set_trap)
+RUN_TEST(guest_set_trap_with_port)
 END_TEST_CASE(guest)
 
 #ifndef BUILD_COMBINED_TESTS
