@@ -1220,6 +1220,13 @@ static bool unbind_walkthrough_by_reset_test(void)
 // Set up every kind of handler (except the system, we can't touch it), and
 // verify closing an exception port walks through each handler in the search
 // list (except the system exception handler which we can't touch).
+//
+// This test has been disabled because is flaky:
+//
+//  Comparison failed: packet->type == expected_type is false
+//  Specifically, 32773 (0x8005) == 261 (0x105) is false
+//
+// See MG-1101 for current owner.
 
 static bool unbind_walkthrough_by_close_test(void)
 {
@@ -1485,7 +1492,7 @@ RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(trigger_test);
 RUN_TEST(unbind_walkthrough_by_reset_test);
-RUN_TEST(unbind_walkthrough_by_close_test);
+// Disabled: RUN_TEST(unbind_walkthrough_by_close_test);
 RUN_TEST(unbind_while_stopped_test);
 RUN_TEST(unbind_rebind_while_stopped_test);
 RUN_TEST(kill_while_stopped_at_start_test);
