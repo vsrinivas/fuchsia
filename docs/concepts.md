@@ -31,9 +31,11 @@ and [*mx_port_bind()*](syscalls/port_bind.md).
 [*mx_channel_create()*](syscalls/channel_create.md).  Access to these (and limitations
 upon them) is controlled by the Job in which the calling Process is contained.
 
-System calls are provided by libmagenta.so, which is a "virtual" shared library (VDSO)
-that the Magenta Kernel provides to userspace.  They are C ELF ABI functions of the
-form *mx_noun_verb()* or *mx_noun_verb_direct-object()*
+System calls are provided by libmagenta.so, which is a "virtual" shared
+library that the Magenta kernel provides to user-space, better known as the
+[*virtual Dynamic Shared Object* or vDSO](vdso.md).
+They are C ELF ABI functions of the form *mx_noun_verb()* or
+*mx_noun_verb_direct-object()*.
 
 The system calls are defined by [syscalls.sysgen](../system/public/magenta/syscalls.sysgen)
 and processed by the [sysgen](../system/host/sysgen/) tool into include files and glue
