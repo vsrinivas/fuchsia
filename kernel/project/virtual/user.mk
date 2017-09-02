@@ -15,6 +15,7 @@ MODULES += \
     kernel/lib/debuglog \
     kernel/lib/ktrace \
     kernel/lib/mtrace \
+    kernel/object
 
 # include all core, dev, uapp, ulib and utest from system/...
 MODULES += $(patsubst %/rules.mk,%,$(wildcard system/core/*/rules.mk))
