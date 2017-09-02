@@ -3,7 +3,7 @@
         "cpp"
     ],
     "packages": {
-        "netconnector_example": "//apps/netconnector/examples/netconnector_example",
-        "netconnector": "//apps/netconnector"
+        "netconnector_example": "//garnet/examples/netconnector:netconnector_example",
+        "netconnector": "//garnet/bin/netconnector:package"
     }
 }
