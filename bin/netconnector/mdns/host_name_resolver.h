@@ -7,9 +7,9 @@
 #include <memory>
 #include <string>
 
-#include "apps/netconnector/src/ip_address.h"
-#include "apps/netconnector/src/mdns/mdns.h"
-#include "apps/netconnector/src/mdns/mdns_agent.h"
+#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/bin/netconnector/mdns/mdns.h"
+#include "garnet/bin/netconnector/mdns/mdns_agent.h"
 #include "lib/ftl/time/time_point.h"
 
 namespace netconnector {

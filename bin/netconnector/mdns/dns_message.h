@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "apps/netconnector/src/ip_address.h"
-#include "apps/netconnector/src/ip_port.h"
+#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/bin/netconnector/ip_port.h"
 
 namespace netconnector {
 namespace mdns {

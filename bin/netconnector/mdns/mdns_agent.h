@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/netconnector/src/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/dns_message.h"
 #include "lib/ftl/time/time_point.h"
 
 namespace netconnector {

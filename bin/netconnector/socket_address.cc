@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/socket_address.h"
 
 #include <sstream>
 

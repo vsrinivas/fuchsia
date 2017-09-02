@@ -4,7 +4,7 @@
 
 #include <limits>
 
-#include "apps/netconnector/src/mdns/dns_writing.h"
+#include "garnet/bin/netconnector/mdns/dns_writing.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {

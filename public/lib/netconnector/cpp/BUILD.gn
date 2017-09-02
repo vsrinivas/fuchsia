@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("lib") {
+source_set("cpp") {
   sources = [
     "async_wait.cc",
     "async_wait.h",
@@ -14,10 +14,14 @@ source_set("lib") {
   deps = [
     "//application/lib/app",
     "//application/lib/svc",
-    "//apps/netconnector/services",
+    "//garnet/public/lib/netconnector/fidl",
     "//garnet/public/lib/fidl/cpp/waiter",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
+  ]
+
+  public_configs = [
+    "//garnet/public:config",
   ]
 }

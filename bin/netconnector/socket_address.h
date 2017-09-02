@@ -9,8 +9,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include "apps/netconnector/src/ip_address.h"
-#include "apps/netconnector/src/ip_port.h"
+#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/bin/netconnector/ip_port.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {

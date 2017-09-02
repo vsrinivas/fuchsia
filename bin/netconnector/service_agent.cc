@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/service_agent.h"
+#include "garnet/bin/netconnector/service_agent.h"
 
-#include "apps/netconnector/src/netconnector_impl.h"
+#include "garnet/bin/netconnector/netconnector_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {

@@ -6,11 +6,11 @@
 
 #include <mx/channel.h>
 
-#include "apps/netconnector/examples/netconnector_example/netconnector_example_params.h"
-#include "apps/netconnector/lib/message_relay.h"
 #include "application/lib/app/application_context.h"
+#include "garnet/examples/netconnector/netconnector_example_params.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
+#include "lib/netconnector/cpp/message_relay.h"
 
 namespace examples {
 

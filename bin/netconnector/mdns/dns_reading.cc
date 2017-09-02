@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-#include "apps/netconnector/src/mdns/dns_reading.h"
+#include "garnet/bin/netconnector/mdns/dns_reading.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {

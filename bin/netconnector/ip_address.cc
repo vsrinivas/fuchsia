@@ -9,7 +9,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 
-#include "apps/netconnector/src/ip_address.h"
+#include "garnet/bin/netconnector/ip_address.h"
 #include "apps/netstack/services/netstack.fidl.h"
 
 namespace netconnector {

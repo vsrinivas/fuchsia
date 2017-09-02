@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/examples/netconnector_example/netconnector_example_impl.h"
-#include "apps/netconnector/examples/netconnector_example/netconnector_example_params.h"
+#include "garnet/examples/netconnector/netconnector_example_impl.h"
+#include "garnet/examples/netconnector/netconnector_example_params.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"

@@ -7,9 +7,9 @@
 #include <memory>
 #include <vector>
 
-#include "apps/netconnector/src/ip_address.h"
-#include "apps/netconnector/src/mdns/dns_message.h"
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/ip_address.h"
+#include "garnet/bin/netconnector/mdns/dns_message.h"
+#include "garnet/bin/netconnector/socket_address.h"
 #include "apps/netstack/apps/include/netconfig.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"

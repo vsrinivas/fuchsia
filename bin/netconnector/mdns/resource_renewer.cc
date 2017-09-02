@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/mdns/resource_renewer.h"
+#include "garnet/bin/netconnector/mdns/resource_renewer.h"
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"

@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/socket_address.h"
 
 namespace netconnector {
 namespace mdns {

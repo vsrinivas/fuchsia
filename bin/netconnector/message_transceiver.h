@@ -9,7 +9,7 @@
 
 #include <mx/channel.h>
 
-#include "apps/netconnector/lib/message_relay.h"
+#include "lib/netconnector/cpp/message_relay.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"

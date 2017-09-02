@@ -9,7 +9,7 @@
 
 #include <mx/channel.h>
 
-#include "apps/netconnector/lib/async_wait.h"
+#include "lib/netconnector/cpp/async_wait.h"
 
 namespace netconnector {
 

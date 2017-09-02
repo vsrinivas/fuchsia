@@ -5,16 +5,16 @@
 #include <limits>
 #include <unordered_set>
 
-#include "apps/netconnector/src/mdns/mdns.h"
+#include "garnet/bin/netconnector/mdns/mdns.h"
 
-#include "apps/netconnector/src/mdns/address_responder.h"
-#include "apps/netconnector/src/mdns/dns_formatting.h"
-#include "apps/netconnector/src/mdns/host_name_resolver.h"
-#include "apps/netconnector/src/mdns/instance_publisher.h"
-#include "apps/netconnector/src/mdns/instance_subscriber.h"
-#include "apps/netconnector/src/mdns/mdns_addresses.h"
-#include "apps/netconnector/src/mdns/mdns_names.h"
-#include "apps/netconnector/src/mdns/resource_renewer.h"
+#include "garnet/bin/netconnector/mdns/address_responder.h"
+#include "garnet/bin/netconnector/mdns/dns_formatting.h"
+#include "garnet/bin/netconnector/mdns/host_name_resolver.h"
+#include "garnet/bin/netconnector/mdns/instance_publisher.h"
+#include "garnet/bin/netconnector/mdns/instance_subscriber.h"
+#include "garnet/bin/netconnector/mdns/mdns_addresses.h"
+#include "garnet/bin/netconnector/mdns/mdns_names.h"
+#include "garnet/bin/netconnector/mdns/resource_renewer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"

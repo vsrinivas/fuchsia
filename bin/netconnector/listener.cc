@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/listener.h"
+#include "garnet/bin/netconnector/listener.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
 #include <sys/socket.h>
 
-#include "apps/netconnector/src/ip_port.h"
+#include "garnet/bin/netconnector/ip_port.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"

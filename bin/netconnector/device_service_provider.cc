@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/device_service_provider.h"
+#include "garnet/bin/netconnector/device_service_provider.h"
 
 #include <memory>
 
-#include "apps/netconnector/src/netconnector_impl.h"
-#include "apps/netconnector/src/requestor_agent.h"
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/netconnector_impl.h"
+#include "garnet/bin/netconnector/requestor_agent.h"
+#include "garnet/bin/netconnector/socket_address.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {

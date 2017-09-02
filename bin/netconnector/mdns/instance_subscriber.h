@@ -8,8 +8,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "apps/netconnector/src/mdns/mdns_agent.h"
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/mdns/mdns_agent.h"
+#include "garnet/bin/netconnector/socket_address.h"
 #include "lib/ftl/time/time_delta.h"
 
 namespace netconnector {

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/host_name.h"
+#include "garnet/bin/netconnector/host_name.h"
 
 #include <limits.h>
 #include <unistd.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/netconnector/src/socket_address.h"
 #include "apps/netstack/apps/include/netconfig.h"
 #include "apps/netstack/services/netstack.fidl.h"
+#include "garnet/bin/netconnector/socket_address.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 

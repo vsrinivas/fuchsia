@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/mdns/mdns_service_impl.h"
+#include "garnet/bin/netconnector/mdns/mdns_service_impl.h"
 
-#include "apps/netconnector/src/mdns/mdns_fidl_util.h"
-#include "apps/netconnector/src/mdns/mdns_names.h"
+#include "garnet/bin/netconnector/mdns/mdns_fidl_util.h"
+#include "garnet/bin/netconnector/mdns/mdns_names.h"
 #include "lib/ftl/logging.h"
 
 namespace netconnector {

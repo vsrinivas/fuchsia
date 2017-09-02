@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "apps/netconnector/src/mdns/dns_message.h"
-#include "apps/netconnector/src/mdns/packet_reader.h"
+#include "garnet/bin/netconnector/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/packet_reader.h"
 
 namespace netconnector {
 namespace mdns {

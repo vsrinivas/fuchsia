@@ -10,11 +10,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/netconnector/src/mdns/dns_message.h"
-#include "apps/netconnector/src/mdns/mdns_agent.h"
-#include "apps/netconnector/src/mdns/mdns_transceiver.h"
-#include "apps/netconnector/src/mdns/resource_renewer.h"
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/mdns_agent.h"
+#include "garnet/bin/netconnector/mdns/mdns_transceiver.h"
+#include "garnet/bin/netconnector/mdns/resource_renewer.h"
+#include "garnet/bin/netconnector/socket_address.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_point.h"

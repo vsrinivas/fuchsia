@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/netconnector_params.h"
+#include "garnet/bin/netconnector/netconnector_params.h"
 
 #include <rapidjson/document.h>
 
 #include "application/services/application_launcher.fidl.h"
-#include "apps/netconnector/src/ip_address.h"
+#include "garnet/bin/netconnector/ip_address.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"

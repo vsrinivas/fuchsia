@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/dns_message.h"
 
 namespace netconnector {
 namespace mdns {

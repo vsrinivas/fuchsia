@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/netconnector/src/mdns/mdns_interface_transceiver.h"
+#include "garnet/bin/netconnector/mdns/mdns_interface_transceiver.h"
 
 namespace netconnector {
 namespace mdns {

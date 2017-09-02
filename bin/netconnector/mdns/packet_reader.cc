@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/mdns/packet_reader.h"
+#include "garnet/bin/netconnector/mdns/packet_reader.h"
 
 #include <endian.h>
 

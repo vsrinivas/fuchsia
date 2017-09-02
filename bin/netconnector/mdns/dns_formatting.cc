@@ -5,8 +5,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "apps/netconnector/src/mdns/dns_formatting.h"
-#include "apps/netconnector/src/mdns/dns_message.h"
+#include "garnet/bin/netconnector/mdns/dns_formatting.h"
+#include "garnet/bin/netconnector/mdns/dns_message.h"
 
 namespace netconnector {
 namespace mdns {

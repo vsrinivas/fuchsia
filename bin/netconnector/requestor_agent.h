@@ -8,8 +8,8 @@
 
 #include <memory>
 
-#include "apps/netconnector/src/message_transceiver.h"
-#include "apps/netconnector/src/socket_address.h"
+#include "garnet/bin/netconnector/message_transceiver.h"
+#include "garnet/bin/netconnector/socket_address.h"
 #include "lib/ftl/files/unique_fd.h"
 
 namespace netconnector {

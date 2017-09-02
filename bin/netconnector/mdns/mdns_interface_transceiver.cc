@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/netconnector/src/mdns/mdns_interface_transceiver.h"
+#include "garnet/bin/netconnector/mdns/mdns_interface_transceiver.h"
 
 #include <arpa/inet.h>
 #include <errno.h>
 #include <poll.h>
 #include <sys/socket.h>
 
-#include "apps/netconnector/src/mdns/dns_formatting.h"
-#include "apps/netconnector/src/mdns/dns_reading.h"
-#include "apps/netconnector/src/mdns/dns_writing.h"
-#include "apps/netconnector/src/mdns/mdns_addresses.h"
-#include "apps/netconnector/src/mdns/mdns_interface_transceiver_v4.h"
-#include "apps/netconnector/src/mdns/mdns_interface_transceiver_v6.h"
+#include "garnet/bin/netconnector/mdns/dns_formatting.h"
+#include "garnet/bin/netconnector/mdns/dns_reading.h"
+#include "garnet/bin/netconnector/mdns/dns_writing.h"
+#include "garnet/bin/netconnector/mdns/mdns_addresses.h"
+#include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v4.h"
+#include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v6.h"
 #include "apps/netstack/services/netstack.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
