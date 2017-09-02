@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -839,7 +840,7 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
         // Aligning distinct data areas to 8 block groups.
         uint32_t non_dat_blocks = (8 + mxtl::roundup(ibmblks, 8u) + inoblks);
         if (non_dat_blocks >= blocks) {
-            fprintf(stderr, "mkfs: Partition size (%lu bytes) is too small\n",
+            fprintf(stderr, "mkfs: Partition size (%" PRIu64 " bytes) is too small\n",
                     static_cast<uint64_t>(blocks) * kMinfsBlockSize);
             return MX_ERR_INVALID_ARGS;
         }
