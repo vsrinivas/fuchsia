@@ -4,9 +4,9 @@
 
 #include "garnet/examples/netconnector/netconnector_example_impl.h"
 #include "garnet/examples/netconnector/netconnector_example_params.h"
-#include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/netconnector/fidl/netconnector.fidl.h"
 
 int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);

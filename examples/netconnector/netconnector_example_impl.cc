@@ -7,9 +7,9 @@
 #include <mx/channel.h>
 
 #include "garnet/examples/netconnector/netconnector_example_params.h"
-#include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace examples {
 namespace {

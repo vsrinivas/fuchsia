@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/netconnector/services/mdns.fidl.h"
 #include "garnet/bin/netconnector/socket_address.h"
+#include "lib/netconnector/fidl/mdns.fidl.h"
 
 namespace netconnector {
 namespace mdns {

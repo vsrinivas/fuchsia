@@ -6,9 +6,9 @@
 
 #include <memory>
 
-#include "apps/netconnector/services/netconnector.fidl.h"
 #include "garnet/bin/netconnector/message_transceiver.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
 

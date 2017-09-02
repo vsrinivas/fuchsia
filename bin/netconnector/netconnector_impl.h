@@ -13,7 +13,6 @@
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/media/src/util/fidl_publisher.h"
-#include "apps/netconnector/services/netconnector.fidl.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/ip_port.h"
 #include "garnet/bin/netconnector/listener.h"
@@ -24,6 +23,7 @@
 #include "garnet/bin/netconnector/service_agent.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
+#include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
 

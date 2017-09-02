@@ -9,8 +9,8 @@
 
 #include "application/lib/app/application_context.h"
 #include "application/lib/svc/service_namespace.h"
-#include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/macros.h"
+#include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace netconnector {
 

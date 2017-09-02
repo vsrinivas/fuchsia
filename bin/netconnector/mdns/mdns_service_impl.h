@@ -5,10 +5,10 @@
 #pragma once
 
 #include "apps/media/src/util/fidl_publisher.h"
-#include "apps/netconnector/services/mdns.fidl.h"
 #include "garnet/bin/netconnector/mdns/mdns.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
+#include "lib/netconnector/fidl/mdns.fidl.h"
 
 namespace netconnector {
 namespace mdns {
