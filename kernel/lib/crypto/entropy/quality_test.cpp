@@ -8,7 +8,7 @@
 
 #include <dev/hw_rng.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm/vm_object_paged.h>
+#include <vm/vm_object_paged.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>

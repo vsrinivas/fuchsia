@@ -14,8 +14,8 @@
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/arch_vm_aspace.h>
-#include <kernel/vm/pmm.h>
+#include <vm/arch_vm_aspace.h>
+#include <vm/pmm.h>
 #include <lib/heap.h>
 #include <mxtl/atomic.h>
 #include <mxtl/auto_lock.h>

@@ -9,11 +9,11 @@
 
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
 #include <mxtl/algorithm.h>
 #include <mxtl/limits.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <vm/vm_aspace.h>
 
 #define VM_GLOBAL_TRACE 0
 

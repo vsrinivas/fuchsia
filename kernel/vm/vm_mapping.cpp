@@ -4,21 +4,21 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/vm/vm_address_region.h>
+#include <vm/vm_address_region.h>
 
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <kernel/vm/fault.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/auto_lock.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
+#include <vm/fault.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 using mxtl::AutoLock;
 

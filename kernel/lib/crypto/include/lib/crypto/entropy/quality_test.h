@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_object.h>
 #include <mxtl/ref_ptr.h>
 
 namespace crypto {

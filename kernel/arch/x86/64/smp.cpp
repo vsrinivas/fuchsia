@@ -20,7 +20,7 @@
 #include <lk/main.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 
 void x86_init_smp(uint32_t *apic_ids, uint32_t num_cpus)
 {

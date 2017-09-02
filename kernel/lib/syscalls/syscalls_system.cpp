@@ -12,8 +12,8 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 #include <magenta/boot/bootdata.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>

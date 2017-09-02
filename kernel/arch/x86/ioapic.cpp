@@ -11,8 +11,8 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/interrupts.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 
 #define IO_APIC_IND(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOREGSEL))
 #define IO_APIC_DAT(base) ((volatile uint32_t *)(((uint8_t *)(base)) + IO_APIC_IOWIN))

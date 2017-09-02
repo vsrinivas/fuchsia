@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 
 #include "vm_priv.h"
 #include <assert.h>
@@ -13,10 +13,6 @@
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_address_region.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_object_paged.h>
-#include <kernel/vm/vm_object_physical.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <mxtl/alloc_checker.h>
@@ -28,6 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
+#include <vm/vm_object_physical.h>
 
 #if WITH_LIB_VDSO
 #include <lib/vdso.h>

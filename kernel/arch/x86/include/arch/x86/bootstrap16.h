@@ -24,7 +24,7 @@
 #ifndef ASSEMBLY
 #include <assert.h>
 #include <magenta/compiler.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 
 __BEGIN_CDECLS
 

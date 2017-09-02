@@ -7,7 +7,7 @@
 #pragma once
 
 #include <arch/mmu.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 
 // page fault handler for second level address translation.
 mx_status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags, mxtl::RefPtr<VmAspace> paspace);

@@ -12,14 +12,14 @@
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/fault.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_address_region.h>
-#include <kernel/vm/vm_aspace.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/fault.h>
+#include <vm/pmm.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
 
 #if WITH_OBJECT
 #include <object/diagnostics.h>

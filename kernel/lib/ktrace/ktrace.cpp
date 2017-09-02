@@ -12,7 +12,7 @@
 #include <arch/ops.h>
 #include <arch/user_copy.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <lib/ktrace.h>
 #include <lk/init.h>
 #include <magenta/thread_annotations.h>

@@ -9,7 +9,7 @@
 #include <err.h>
 #include <stdio.h>
 #include <trace.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>

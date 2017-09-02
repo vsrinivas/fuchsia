@@ -15,9 +15,9 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_object_paged.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 #include <object/handle.h>
 
 #include <magenta/rights.h>

@@ -8,8 +8,8 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_address_region.h>
+#include <vm/vm_object.h>
+#include <vm/vm_address_region.h>
 
 #include <lib/user_copy/user_ptr.h>
 

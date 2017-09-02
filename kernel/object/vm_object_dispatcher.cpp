@@ -6,8 +6,8 @@
 
 #include <object/vm_object_dispatcher.h>
 
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 #include <magenta/rights.h>
 

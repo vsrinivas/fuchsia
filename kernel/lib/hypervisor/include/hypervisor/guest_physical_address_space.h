@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 #include <mxtl/unique_ptr.h>
 
 class GuestPhysicalAddressSpace {

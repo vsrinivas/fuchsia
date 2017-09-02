@@ -14,7 +14,7 @@
 #define JITTERENTROPY_MEM_SIZE (64u * 1024u)
 #endif
 
-// defined in kernel/vm/bootalloc.cpp
+// defined in vm/bootalloc.cpp
 extern "C" void* boot_alloc_mem(size_t len);
 
 namespace crypto {

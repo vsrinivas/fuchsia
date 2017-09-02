@@ -4,14 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <kernel/vm/vm_page_list.h>
+#include <vm/vm_page_list.h>
 
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <kernel/vm/pmm.h>
 #include <mxtl/alloc_checker.h>
 #include <trace.h>
+#include <vm/pmm.h>
 
 #include "vm_priv.h"
 

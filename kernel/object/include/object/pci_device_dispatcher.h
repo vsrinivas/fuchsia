@@ -10,7 +10,7 @@
 #include <dev/pci_common.h>
 #include <dev/pcie_device.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/types.h>
 #include <mxtl/canary.h>

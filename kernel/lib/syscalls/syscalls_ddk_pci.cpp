@@ -13,7 +13,7 @@
 #include <trace.h>
 
 #include <dev/interrupt.h>
-#include <kernel/vm/vm_object_physical.h>
+#include <vm/vm_object_physical.h>
 #include <lib/pci/pio.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>

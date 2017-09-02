@@ -11,7 +11,7 @@
 #include <lk/init.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <mxtl/algorithm.h>
 
 struct hpet_timer_registers {

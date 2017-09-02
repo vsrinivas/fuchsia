@@ -10,7 +10,7 @@
 
 #include <kernel/event.h>
 #include <kernel/thread.h>
-#include <kernel/vm/vm_address_region.h>
+#include <vm/vm_address_region.h>
 #include <lib/dpc.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>

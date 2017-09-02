@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_object.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <magenta/thread_annotations.h>
@@ -20,6 +19,7 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
+#include <vm/vm_object.h>
 
 // VMO representing a physical range of memory
 class VmObjectPhysical final : public VmObject {

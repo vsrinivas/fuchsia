@@ -17,7 +17,7 @@
 #include <arch/x86/mp.h>
 #include <debug.h>
 #include <err.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <dev/interrupt.h>
 
 #include <lib/console.h>

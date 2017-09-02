@@ -10,7 +10,7 @@
 
 #include <kernel/mp.h>
 #include <kernel/stats.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 #include <lib/heap.h>
 #include <platform.h>
 

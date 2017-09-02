@@ -10,7 +10,7 @@
 #include <arch/x86/ioport.h>
 #include <arch/x86/mmu.h>
 #include <kernel/atomic.h>
-#include <kernel/vm/arch_vm_aspace.h>
+#include <vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
 #include <mxtl/mutex.h>

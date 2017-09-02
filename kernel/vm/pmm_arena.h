@@ -8,8 +8,8 @@
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
 
-#include <kernel/vm/pmm.h>
 #include <trace.h>
+#include <vm/pmm.h>
 
 #define PMM_ENABLE_FREE_FILL 0
 #define PMM_FREE_FILL_BYTE 0x42

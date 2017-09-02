@@ -8,7 +8,7 @@
 
 #include <arch/hypervisor.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_object.h>
 #include <magenta/rights.h>
 #include <magenta/types.h>
 #include <mxtl/alloc_checker.h>

@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "kernel/vm/vm_object_physical.h"
+#include "vm/vm_object_physical.h"
 
 #include "vm_priv.h"
 

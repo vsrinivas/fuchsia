@@ -6,7 +6,7 @@
 
 #include <mxtl/arena.h>
 
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <mxtl/alloc_checker.h>
 #include <unittest.h>
 

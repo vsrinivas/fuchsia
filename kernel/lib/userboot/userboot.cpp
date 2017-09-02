@@ -15,7 +15,7 @@
 #include <string.h>
 
 #include <kernel/cmdline.h>
-#include <kernel/vm/vm_object_paged.h>
+#include <vm/vm_object_paged.h>
 #include <lib/console.h>
 #include <lib/vdso.h>
 #include <lk/init.h>

@@ -6,8 +6,8 @@
 
 #include <assert.h>
 #include <dev/udisplay.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 #include <lib/debuglog.h>
 #include <lib/gfxconsole.h>
 #include <lib/io.h>

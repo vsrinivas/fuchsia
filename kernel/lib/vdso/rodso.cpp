@@ -7,9 +7,9 @@
 #include <lib/rodso.h>
 
 #include <inttypes.h>
-#include <kernel/vm/vm_address_region.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_object_paged.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 #include <object/handle_owner.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>

@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include <kernel/vm/page.h>
 #include <magenta/compiler.h>
 #include <sys/types.h>
+#include <vm/page.h>
 
 // physical allocator
 typedef struct pmm_arena_info {

@@ -15,8 +15,8 @@
 #include <dev/interrupt.h>
 #include <dev/udisplay.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_object_paged.h>
-#include <kernel/vm/vm_object_physical.h>
+#include <vm/vm_object_paged.h>
+#include <vm/vm_object_physical.h>
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle_owner.h>
 #include <object/interrupt_dispatcher.h>

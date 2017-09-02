@@ -25,7 +25,7 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <lib/ktrace.h>
 #include <magenta/device/intel-pt.h>
 #include <magenta/ktrace.h>

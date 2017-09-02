@@ -10,7 +10,7 @@
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <arch/efi.h>
-#include <kernel/vm/initial_map.h>
+#include <vm/initial_map.h>
 #include <magenta/tls.h>
 
 #ifndef __has_feature

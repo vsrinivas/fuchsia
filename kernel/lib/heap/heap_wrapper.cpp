@@ -17,7 +17,7 @@
 #include <arch/ops.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>
 

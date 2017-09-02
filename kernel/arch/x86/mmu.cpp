@@ -18,8 +18,8 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <kernel/vm.h>
-#include <kernel/vm/arch_vm_aspace.h>
-#include <kernel/vm/pmm.h>
+#include <vm/arch_vm_aspace.h>
+#include <vm/pmm.h>
 #include <mxtl/auto_lock.h>
 
 #define LOCAL_TRACE 0

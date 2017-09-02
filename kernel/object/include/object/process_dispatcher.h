@@ -8,7 +8,7 @@
 
 #include <kernel/event.h>
 #include <kernel/thread.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <object/dispatcher.h>
 #include <object/futex_context.h>
 #include <object/handle_owner.h>

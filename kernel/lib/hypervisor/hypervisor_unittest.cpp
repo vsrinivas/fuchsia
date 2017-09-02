@@ -8,11 +8,11 @@
 #include <err.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/vm.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_address_region.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_object_paged.h>
+#include <vm/pmm.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 #include <unittest.h>
 
 static mx_status_t get_paddr(void* context, size_t offset, size_t index, paddr_t pa) {

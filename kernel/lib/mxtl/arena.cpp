@@ -13,8 +13,8 @@
 #include <trace.h>
 
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object_paged.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object_paged.h>
 #include <mxcpp/new.h>
 #include <mxtl/auto_call.h>
 

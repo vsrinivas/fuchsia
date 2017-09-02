@@ -17,8 +17,9 @@
 #include <kernel/thread.h>
 #include <kernel/stats.h>
 #include <kernel/vm.h>
-#include <kernel/vm/fault.h>
+#include <object/exception.h>
 #include <platform.h>
+#include <vm/fault.h>
 
 #include <mxtl/auto_call.h>
 

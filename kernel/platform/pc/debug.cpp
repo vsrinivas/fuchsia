@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 #include <lk/init.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>

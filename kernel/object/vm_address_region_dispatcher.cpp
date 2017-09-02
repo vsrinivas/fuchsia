@@ -6,9 +6,9 @@
 
 #include <object/vm_address_region_dispatcher.h>
 
-#include <kernel/vm/vm_address_region.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 #include <magenta/rights.h>
 

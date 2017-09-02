@@ -7,7 +7,7 @@
 #include <iovec.h>
 #include <magenta/types.h>
 #include <sys/types.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 
 __BEGIN_CDECLS
 

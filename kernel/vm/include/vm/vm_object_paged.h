@@ -9,9 +9,6 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_page_list.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <magenta/thread_annotations.h>
@@ -22,6 +19,9 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
+#include <vm/pmm.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page_list.h>
 
 // the main VM object type, holding a list of pages
 class VmObjectPaged final : public VmObject {

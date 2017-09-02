@@ -34,9 +34,9 @@
 #include <assert.h>
 #include <lk/init.h>
 #include <kernel/cmdline.h>
-#include <kernel/vm/initial_map.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/initial_map.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 
 #include <lib/cksum.h>
 

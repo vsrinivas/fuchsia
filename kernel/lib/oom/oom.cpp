@@ -7,7 +7,7 @@
 #include <lib/oom.h>
 
 #include <kernel/thread.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 #include <lib/console.h>
 #include <magenta/errors.h>
 #include <mxtl/auto_lock.h>

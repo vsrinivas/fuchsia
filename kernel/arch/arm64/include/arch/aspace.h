@@ -8,7 +8,7 @@
 #pragma once
 
 #include <arch/arm64/mmu.h>
-#include <kernel/vm/arch_vm_aspace.h>
+#include <vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
 #include <mxtl/canary.h>
 #include <mxtl/mutex.h>

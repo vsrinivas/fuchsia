@@ -7,7 +7,7 @@
 #pragma once
 
 #include <lib/rodso.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_object.h>
 
 class VmMapping;
 

@@ -10,7 +10,7 @@
 
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 
 #include <mxtl/mutex.h>
 

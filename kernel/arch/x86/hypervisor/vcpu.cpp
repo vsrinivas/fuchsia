@@ -10,9 +10,9 @@
 #include <arch/x86/feature.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/mp.h>
-#include <kernel/vm/fault.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/fault.h>
+#include <vm/pmm.h>
+#include <vm/vm_object.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <mxtl/auto_call.h>
 

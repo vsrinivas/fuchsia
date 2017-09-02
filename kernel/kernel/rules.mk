@@ -16,6 +16,7 @@ MODULE_DEPS := \
 	kernel/lib/heap \
 	kernel/lib/libc \
 	kernel/lib/mxtl \
+	kernel/vm
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/debug.c \
@@ -28,7 +29,5 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/timer.c \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/cmdline.c \
-
-MODULE_DEPS += kernel/kernel/vm
 
 include make/module.mk

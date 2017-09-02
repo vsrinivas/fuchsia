@@ -8,7 +8,7 @@
 
 #include <stddef.h>
 
-#include <kernel/vm/vm_address_region.h>
+#include <vm/vm_address_region.h>
 
 #include <mxcpp/new.h>
 #include <mxtl/intrusive_single_list.h>

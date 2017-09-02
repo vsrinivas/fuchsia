@@ -7,9 +7,9 @@
 #include <hypervisor/guest_physical_address_space.h>
 
 #include <arch/mmu.h>
-#include <kernel/vm/arch_vm_aspace.h>
-#include <kernel/vm/fault.h>
-#include <kernel/vm/vm_object_physical.h>
+#include <vm/arch_vm_aspace.h>
+#include <vm/fault.h>
+#include <vm/vm_object_physical.h>
 #include <mxtl/alloc_checker.h>
 
 static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;

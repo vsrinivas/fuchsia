@@ -17,8 +17,8 @@
 
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
 
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>

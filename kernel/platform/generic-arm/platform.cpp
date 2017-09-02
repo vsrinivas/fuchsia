@@ -35,8 +35,8 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 
-#include <kernel/vm/initial_map.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/initial_map.h>
+#include <vm/vm_aspace.h>
 
 #include <lib/console.h>
 #include <lib/memory_limit.h>

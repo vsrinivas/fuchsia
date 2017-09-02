@@ -17,7 +17,7 @@
 #include <platform/debug.h>
 #include <kernel/cmdline.h>
 #include <kernel/thread.h>
-#include <kernel/vm/pmm.h>
+#include <vm/pmm.h>
 #include <arch.h>
 
 #include <lib/console.h>

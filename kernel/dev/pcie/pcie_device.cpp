@@ -16,7 +16,7 @@
 #include <inttypes.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm.h>
-#include <kernel/vm/arch_vm_aspace.h>
+#include <vm/arch_vm_aspace.h>
 #include <list.h>
 #include <lk/init.h>
 #include <mxtl/algorithm.h>

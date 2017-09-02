@@ -14,8 +14,8 @@
 #include <arch.h>
 #include <arch/ops.h>
 #include <lib/console.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 #include <mxtl/algorithm.h>
 #include <platform.h>
 #include <debug.h>

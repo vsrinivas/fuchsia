@@ -11,8 +11,6 @@
 #include <assert.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
-#include <kernel/vm/arch_vm_aspace.h>
-#include <kernel/vm/vm_address_region.h>
 #include <lib/crypto/prng.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -20,6 +18,8 @@
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <vm/arch_vm_aspace.h>
+#include <vm/vm_address_region.h>
 
 class VmObject;
 

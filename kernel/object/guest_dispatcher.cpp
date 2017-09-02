@@ -7,7 +7,7 @@
 #include <object/guest_dispatcher.h>
 
 #include <arch/hypervisor.h>
-#include <kernel/vm/vm_object.h>
+#include <vm/vm_object.h>
 #include <magenta/rights.h>
 #include <mxtl/alloc_checker.h>
 

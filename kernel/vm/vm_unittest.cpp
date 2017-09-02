@@ -7,14 +7,14 @@
 #include <assert.h>
 #include <err.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_address_region.h>
-#include <kernel/vm/vm_aspace.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_object_paged.h>
-#include <kernel/vm/vm_object_physical.h>
 #include <mxtl/alloc_checker.h>
 #include <mxtl/array.h>
 #include <unittest.h>
+#include <vm/vm_address_region.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
+#include <vm/vm_object_physical.h>
 
 static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 

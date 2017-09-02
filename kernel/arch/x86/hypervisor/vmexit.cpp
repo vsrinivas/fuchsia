@@ -17,8 +17,8 @@
 #include <explicit-memory/bytes.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <kernel/auto_lock.h>
-#include <kernel/vm/fault.h>
-#include <kernel/vm/pmm.h>
+#include <vm/fault.h>
+#include <vm/pmm.h>
 #include <magenta/syscalls/hypervisor.h>
 #include <platform/pc/timer.h>
 

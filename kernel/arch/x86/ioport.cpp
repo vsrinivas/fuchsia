@@ -15,7 +15,7 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <malloc.h>
 #include <string.h>
 

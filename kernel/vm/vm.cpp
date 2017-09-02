@@ -13,15 +13,15 @@
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
-#include <kernel/vm/initial_map.h>
-#include <kernel/vm/pmm.h>
-#include <kernel/vm/vm_aspace.h>
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lk/init.h>
 #include <mxtl/algorithm.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/initial_map.h>
+#include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 

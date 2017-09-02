@@ -10,7 +10,7 @@
 #include <dev/pcie_device.h>
 #include <dev/pcie_root.h>
 #include <inttypes.h>
-#include <kernel/vm/vm_aspace.h>
+#include <vm/vm_aspace.h>
 #include <lib/pci/pio.h>
 #include <lk/init.h>
 #include <mxtl/algorithm.h>

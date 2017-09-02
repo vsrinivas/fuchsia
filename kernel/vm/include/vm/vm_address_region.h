@@ -7,8 +7,6 @@
 #pragma once
 
 #include <assert.h>
-#include <kernel/vm/vm_object.h>
-#include <kernel/vm/vm_page_list.h>
 #include <magenta/thread_annotations.h>
 #include <mxtl/canary.h>
 #include <mxtl/intrusive_double_list.h>
@@ -16,6 +14,8 @@
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <stdint.h>
+#include <vm/vm_object.h>
+#include <vm/vm_page_list.h>
 
 // Creation flags for VmAddressRegion and VmMappings
 

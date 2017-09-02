@@ -8,11 +8,11 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <kernel/vm/page.h>
-#include <kernel/vm/pmm.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <string.h>
+#include <vm/page.h>
+#include <vm/pmm.h>
 
 const char* page_state_to_string(unsigned int state) {
     switch (state) {
