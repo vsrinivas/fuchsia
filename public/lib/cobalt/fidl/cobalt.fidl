@@ -10,7 +10,7 @@ module cobalt;
 // To use Cobalt, you must have a project id, metric id and encoding id
 // registered with the Cobalt system. In the current verison of Cobalt
 // registration consists of entries in the files registered_encodings.txt
-// and registered_metrics.txt in //cobalt/config/production. Since
+// and registered_metrics.txt in //third_party/cobalt/config/production. Since
 // the Cobalt servers also read these files, for now it is necessary to
 // contact cobalt-hackers@google.com in order to register additional projects,
 // metrics and encodings. We plan to build an online self-registration system
