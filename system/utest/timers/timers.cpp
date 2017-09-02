@@ -117,6 +117,13 @@ static bool signals_asserted_immediately() {
     END_TEST;
 }
 
+// This test is disabled because is flaky. The system might have a timer
+// nearby |deadline_1| or |deadline_2| and as such the test will fire
+// either earlier or later than expected. The precise behavior is still
+// tested by the "k timer tests" command.
+//
+// See MG-1087 for the current owner.
+
 static bool coalesce_test(uint32_t mode) {
     BEGIN_TEST;
     // The second timer will coalesce to the first one for MX_TIMER_SLACK_LATE
@@ -153,10 +160,12 @@ static bool coalesce_test(uint32_t mode) {
     END_TEST;
 }
 
+// Test is disabled, see coalesce_test().
 static bool coalesce_test_early() {
     return coalesce_test(MX_TIMER_SLACK_EARLY);
 }
 
+// Test is disabled, see coalesce_test().
 static bool coalesce_test_late() {
     return coalesce_test(MX_TIMER_SLACK_LATE);
 }
@@ -164,8 +173,8 @@ static bool coalesce_test_late() {
 BEGIN_TEST_CASE(timers_test)
 RUN_TEST(invalid_calls)
 RUN_TEST(basic_test)
-RUN_TEST(coalesce_test_late)
-RUN_TEST(coalesce_test_early)
+// Disabled: RUN_TEST(coalesce_test_late)
+// Disabled: RUN_TEST(coalesce_test_early)
 RUN_TEST(restart_test)
 RUN_TEST(edge_cases)
 RUN_TEST(restart_race)
