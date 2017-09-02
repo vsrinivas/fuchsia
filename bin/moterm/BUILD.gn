@@ -1,0 +1,50 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("moterm") {
+  sources = [
+    "command.cc",
+    "command.h",
+    "history.cc",
+    "history.h",
+    "key_util.cc",
+    "key_util.h",
+    "ledger_helpers.cc",
+    "ledger_helpers.h",
+    "main.cc",
+    "moterm_model.cc",
+    "moterm_model.h",
+    "moterm_params.cc",
+    "moterm_params.h",
+    "moterm_view.cc",
+    "moterm_view.h",
+    "shell_controller.cc",
+    "shell_controller.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/ledger/services/public",
+    "//apps/modular/services/component",
+    "//apps/modular/services/module",
+    "//apps/modular/services/story",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/lib/skia:fonts",
+    "//apps/mozart/lib/view_framework:skia",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fonts/fidl",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//third_party/libteken",
+    "//third_party/skia",
+  ]
+
+  libs = [ "launchpad" ]
+}
