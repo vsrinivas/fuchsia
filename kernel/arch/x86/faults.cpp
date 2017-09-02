@@ -25,9 +25,6 @@
 
 #include <lib/ktrace.h>
 
-#if WITH_OBJECT
-#include <object/exception.h>
-#endif
 
 static void dump_fault_frame(x86_iframe_t *frame)
 {
@@ -73,8 +70,6 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-#if WITH_OBJECT
-
 static status_t call_magenta_exception_handler(uint kind,
                                                struct arch_exception_context *context,
                                                x86_iframe_t *frame)
@@ -103,14 +98,10 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
     return false;
 }
 
-#endif
-
 static void x86_debug_handler(x86_iframe_t *frame)
 {
-#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_HW_BREAKPOINT))
         return;
-#endif
 
     exception_die(frame, "unhandled hw breakpoint, halting\n");
 }
@@ -121,10 +112,8 @@ static void x86_nmi_handler(x86_iframe_t *frame)
 
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
-#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_SW_BREAKPOINT))
         return;
-#endif
 
     exception_die(frame, "unhandled sw breakpoint, halting\n");
 }
@@ -144,20 +133,16 @@ static void x86_gpf_handler(x86_iframe_t *frame)
         return;
     }
 
-#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
-#endif
 
     exception_die(frame, "unhandled gpf, halting\n");
 }
 
 static void x86_invop_handler(x86_iframe_t *frame)
 {
-#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
         return;
-#endif
 
     exception_die(frame, "invalid opcode, halting\n");
 }
@@ -172,10 +157,8 @@ static void x86_df_handler(x86_iframe_t *frame)
 
 static void x86_unhandled_exception(x86_iframe_t *frame)
 {
-#if WITH_OBJECT
     if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
         return;
-#endif
 
     exception_die(frame, "unhandled exception, halting\n");
 }
@@ -300,7 +283,6 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     }
 
     /* let high level code deal with this */
-#if WITH_OBJECT
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         CPU_STATS_INC(exceptions);
@@ -308,7 +290,6 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
         return call_magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT,
                                               &context, frame);
     }
-#endif
 
     /* fall through to fatal path */
     return MX_ERR_NOT_SUPPORTED;
@@ -469,7 +450,6 @@ void x86_syscall_process_pending_signals(x86_syscall_general_regs_t *gregs)
     x86_reset_suspended_general_regs(&thread->arch);
 }
 
-#if WITH_OBJECT
 void arch_dump_exception_context(const arch_exception_context_t *context)
 {
     if (context->is_page_fault) {
@@ -504,5 +484,3 @@ status_t magenta_report_policy_exception(void)
     context.frame = &frame;
     return magenta_exception_handler(MX_EXCP_POLICY_ERROR, &context);
 }
-
-#endif

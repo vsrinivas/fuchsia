@@ -31,15 +31,12 @@
 #include <lib/ktrace.h>
 #include <list.h>
 #include <malloc.h>
+#include <object/c_user_thread.h>
+#include <object/exception.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
 #include <target.h>
-
-#if WITH_OBJECT
-#include <object/c_user_thread.h>
-#include <object/exception.h>
-#endif
 
 /* global thread list */
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
@@ -681,13 +678,11 @@ void thread_process_pending_signals(void) {
     if (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION) {
         current_thread->signals &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
         THREAD_UNLOCK(state);
-#if WITH_OBJECT
         mx_status_t status = magenta_report_policy_exception();
         if (status != MX_OK) {
             panic("magenta_report_policy_exception() failed: status=%d\n",
                   status);
         }
-#endif
         return;
     }
 
@@ -1082,12 +1077,10 @@ thread_t* thread_create_idle_thread(uint cpu_num) {
  */
 
 void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]) {
-#if WITH_OBJECT
     if (t->user_thread) {
         magenta_thread_process_name(t->user_thread, out_name);
         return;
     }
-#endif
     memcpy(out_name, "kernel", 7);
 }
 

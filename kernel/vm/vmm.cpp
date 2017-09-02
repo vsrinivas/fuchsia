@@ -14,16 +14,13 @@
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
+#include <object/diagnostics.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
-
-#if WITH_OBJECT
-#include <object/diagnostics.h>
-#endif // WITH_OBJECT
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 #define TRACE_PAGE_FAULT 0
@@ -61,7 +58,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 
     // page fault it
     status_t status = aspace->PageFault(addr, flags);
-#if WITH_OBJECT
+
     // If it's a user fault, dump info about process memory usage.
     // If it's a kernel fault, the kernel could possibly already
     // hold locks on VMOs, Aspaces, etc, so we can't safely do
@@ -70,7 +67,7 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
         printf("PageFault: %zu free pages\n", pmm_count_free_pages());
         DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8 * 256);
     }
-#endif
+
     return status;
 }
 
