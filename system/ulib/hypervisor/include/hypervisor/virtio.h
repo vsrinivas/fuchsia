@@ -155,6 +155,15 @@ mx_status_t virtio_queue_next_avail(virtio_queue_t* queue, uint16_t* index);
 /* Blocking variant of virtio_queue_next_avail. */
 void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index);
 
+/* Notify waiting threads blocked on |virtio_queue_wait| that the avail ring
+ * has descriptors available. */
+void virtio_queue_signal(virtio_queue_t* queue);
+
+/* Set's the queues host pointers into the guest VMO based on the guest
+ * physical frame number of the queue.
+ */
+mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn);
+
 /* Callback for virtio_queue_poll.
  *
  * queue    - The queue being polled.
