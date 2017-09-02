@@ -6,13 +6,27 @@
 import string
 import sys
 
+_LAYER_PREFIX = [
+  "garnet/public/",
+  "peridot/public/",
+]
+
+
+# Strip the layer prefix from the given label, if necessary.
+def _remove_layer(label):
+  for prefix in _LAYER_PREFIX:
+    if label.startswith(prefix):
+      return label[len(prefix):]
+  return label
+
+
 # For target //foo/bar:blah, the package name will be foo.bar..blah.
 # For default targets //foo/bar:bar, the package name will be foo.bar.
 def convert(label):
   if not label.startswith("//"):
       sys.stderr.write("expected label to start with //, got %s\n" % label)
       return 1
-  base = label[2:]
+  base = _remove_layer(label[2:])
   separator_index = string.rfind(base, ":")
   if separator_index < 0:
       sys.stderr.write("could not find target name in label %s\n" % label)
