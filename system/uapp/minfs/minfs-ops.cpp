@@ -124,7 +124,7 @@ mx_status_t VnodeMinfs::BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, siz
 #ifdef __Fuchsia__
             txn->Enqueue(vmoid_indirect_, ib_vmo_offset + i, iarray[i] + fs_->info_.dat_block, 1);
 #else
-            fs_->bc_->Writeblk(iarray[i], entry);
+            fs_->bc_->Writeblk(iarray[i] + fs_->info_.dat_block, entry);
 #endif
         }
 
@@ -178,7 +178,7 @@ mx_status_t VnodeMinfs::BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibind
 #ifdef __Fuchsia__
             txn->Enqueue(vmoid_indirect_, dib_vmo_offset + i, diarray[i] + fs_->info_.dat_block, 1);
 #else
-            fs_->bc_->Writeblk(diarray[i] +  + fs_->info_.dat_block, dientry);
+            fs_->bc_->Writeblk(diarray[i] + fs_->info_.dat_block, dientry);
 #endif
         }
 
@@ -505,7 +505,7 @@ mx_status_t VnodeMinfs::GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t 
 #ifdef __Fuchsia__
         txn->Enqueue(vmoid_indirect_, ib_vmo_offset, *ibno + fs_->info_.dat_block, 1);
 #else
-        fs_->bc_->Writeblk(*ibno, ientry);
+        fs_->bc_->Writeblk(*ibno + fs_->info_.dat_block, ientry);
 #endif
         InodeSync(txn, kMxFsSyncDefault);
     }
@@ -587,13 +587,13 @@ void VnodeMinfs::ClearIndirectVmoBlock(uint32_t offset) {
 }
 #else
 void VnodeMinfs::ReadIndirectBlock(uint32_t bno, uint32_t* entry) {
-    fs_->bc_->Readblk(bno +  + fs_->info_.dat_block, entry);
+    fs_->bc_->Readblk(bno + fs_->info_.dat_block, entry);
 }
 
 void VnodeMinfs::ClearIndirectBlock(uint32_t bno) {
     uint32_t data[kMinfsBlockSize];
     memset(data, 0, kMinfsBlockSize);
-    fs_->bc_->Writeblk(bno +  + fs_->info_.dat_block, data);
+    fs_->bc_->Writeblk(bno + fs_->info_.dat_block, data);
 }
 #endif
 
