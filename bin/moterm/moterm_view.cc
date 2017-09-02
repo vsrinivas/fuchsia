@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/moterm/moterm_view.h"
+#include "garnet/bin/moterm/moterm_view.h"
 
 #include <unistd.h>
 
-#include "apps/moterm/command.h"
-#include "apps/moterm/key_util.h"
-#include "apps/moterm/moterm_model.h"
 #include "apps/mozart/services/input/cpp/formatting.h"
+#include "garnet/bin/moterm/command.h"
+#include "garnet/bin/moterm/key_util.h"
+#include "garnet/bin/moterm/moterm_model.h"
 #include "lib/fonts/fidl/font_provider.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"

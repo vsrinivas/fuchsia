@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/moterm/ledger_helpers.h"
+#include "garnet/bin/moterm/ledger_helpers.h"
 
 #include "lib/ftl/logging.h"
 

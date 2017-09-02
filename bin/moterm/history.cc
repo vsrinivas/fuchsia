@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/moterm/history.h"
+#include "garnet/bin/moterm/history.h"
 
 #include <magenta/syscalls.h>
 
@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "apps/moterm/ledger_helpers.h"
+#include "garnet/bin/moterm/ledger_helpers.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"

@@ -13,7 +13,7 @@
 #include <mx/channel.h>
 #include <mx/vmo.h>
 
-#include "apps/moterm/history.h"
+#include "garnet/bin/moterm/history.h"
 #include "lib/fidl/c/waiter/async_waiter.h"
 #include "lib/fidl/cpp/waiter/default.h"
 #include "lib/ftl/macros.h"
