@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/mozart/services/scene/events.fidl.h"
+#include "apps/mozart/services/scenic/events.fidl.h"
 
 namespace scene_manager {
 
