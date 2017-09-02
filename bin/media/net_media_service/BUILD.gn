@@ -26,13 +26,13 @@ executable("net_media_service") {
     "//apps/media/services",
     "//apps/media/src/media_service",
     "//apps/media/src/util",
-    "//apps/netconnector/lib",
-    "//apps/netconnector/services",
     "//apps/network/services",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//garnet/public/lib/url",
     "//garnet/public/lib/mtl",
+    "//garnet/public/lib/netconnector/cpp",
+    "//garnet/public/lib/netconnector/fidl",
+    "//garnet/public/lib/url",
   ]
 }
 

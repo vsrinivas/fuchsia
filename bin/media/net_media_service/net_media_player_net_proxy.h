@@ -11,7 +11,7 @@
 #include "apps/media/src/net_media_service/net_media_player_messages.h"
 #include "apps/media/src/net_media_service/net_media_service_impl.h"
 #include "apps/media/src/util/fidl_publisher.h"
-#include "apps/netconnector/lib/message_relay.h"
+#include "lib/netconnector/cpp/message_relay.h"
 
 namespace media {
 
