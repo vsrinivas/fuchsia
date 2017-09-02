@@ -1,0 +1,37 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("netconnector_example_bin") {
+  output_name = "netconnector_example"
+
+  sources = [
+    "main.cc",
+    "netconnector_example_impl.cc",
+    "netconnector_example_impl.h",
+    "netconnector_example_params.cc",
+    "netconnector_example_params.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/netconnector/lib",
+    "//apps/netconnector/services",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+}
+
+package("netconnector_example") {
+  app = true
+
+  deps = [
+    ":netconnector_example_bin",
+  ]
+
+  binaries = [ {
+        name = "netconnector_example"
+      } ]
+}

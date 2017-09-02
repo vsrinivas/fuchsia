@@ -1,0 +1,92 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "apps/netconnector/src/responding_service_host.h"
+
+#include "application/lib/app/connect.h"
+#include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
+
+namespace netconnector {
+
+RespondingServiceHost::RespondingServiceHost(
+    const app::ApplicationEnvironmentPtr& environment) {
+  FTL_DCHECK(environment);
+  environment->GetApplicationLauncher(launcher_.NewRequest());
+}
+
+RespondingServiceHost::~RespondingServiceHost() {}
+
+void RespondingServiceHost::RegisterSingleton(
+    const std::string& service_name,
+    app::ApplicationLaunchInfoPtr launch_info) {
+  service_namespace_.AddServiceForName(
+      ftl::MakeCopyable([
+        this, service_name, launch_info = std::move(launch_info),
+        controller = app::ApplicationControllerPtr()
+      ](mx::channel client_handle) mutable {
+        FTL_VLOG(2) << "Handling request for service " << service_name;
+
+        auto iter = service_providers_by_name_.find(service_name);
+
+        if (iter == service_providers_by_name_.end()) {
+          FTL_VLOG(1) << "Launching " << launch_info->url << " for service "
+                      << service_name;
+
+          // TODO(dalesat): Create application-specific environment.
+          // We're launching this application in the environment supplied to
+          // the constructor. Instead, we should be launching it in a new
+          // environment that is restricted based on app permissions.
+
+          auto dup_launch_info = app::ApplicationLaunchInfo::New();
+          dup_launch_info->url = launch_info->url;
+          dup_launch_info->arguments = launch_info->arguments.Clone();
+          app::ServiceProviderPtr service_provider;
+          dup_launch_info->services = service_provider.NewRequest();
+
+          launcher_->CreateApplication(std::move(dup_launch_info),
+                                       controller.NewRequest());
+
+          service_provider.set_connection_error_handler(
+              [this, service_name, &controller] {
+                FTL_LOG(INFO)
+                    << "Service " << service_name << " provider disconnected";
+                controller.reset();  // kills the singleton application
+                service_providers_by_name_.erase(service_name);
+              });
+
+          std::tie(iter, std::ignore) = service_providers_by_name_.emplace(
+              service_name, std::move(service_provider));
+        }
+
+        iter->second->ConnectToService(service_name, std::move(client_handle));
+      }),
+      service_name);
+}
+
+void RespondingServiceHost::RegisterProvider(
+    const std::string& service_name,
+    fidl::InterfaceHandle<app::ServiceProvider> handle) {
+  app::ServiceProviderPtr service_provider =
+      app::ServiceProviderPtr::Create(std::move(handle));
+
+  service_provider.set_connection_error_handler([this, service_name] {
+    FTL_LOG(INFO) << "Service " << service_name << " provider disconnected";
+    service_providers_by_name_.erase(service_name);
+  });
+
+  service_providers_by_name_.emplace(service_name, std::move(service_provider));
+
+  service_namespace_.AddServiceForName(
+      [this, service_name](mx::channel client_handle) {
+        FTL_VLOG(2) << "Servicing provided service request for "
+                    << service_name;
+        auto iter = service_providers_by_name_.find(service_name);
+        FTL_DCHECK(iter != service_providers_by_name_.end());
+        iter->second->ConnectToService(service_name, std::move(client_handle));
+      },
+      service_name);
+}
+
+}  // namespace netconnector
