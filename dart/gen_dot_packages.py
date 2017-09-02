@@ -71,10 +71,6 @@ def main():
     if not dep.startswith("//"):
       print "Error, expected dependency label to start with //"
       return 1
-    # TODO(pylaligand): remove this workaround once Flutter is using the right
-    # label.
-    if dep == "//lib/widgets/packages/widgets:lib.widgets":
-      dep = "//topaz/lib/widgets/packages/widgets:lib.widgets"
     target_base = dep[2:]
     target_sep = string.rfind(target_base, ":")
     if target_sep != -1:
