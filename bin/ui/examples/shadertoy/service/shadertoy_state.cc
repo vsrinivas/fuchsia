@@ -4,10 +4,10 @@
 
 #include "apps/mozart/examples/shadertoy/service/shadertoy_state.h"
 
-#include "apps/mozart/examples/shadertoy/service/pipeline.h"
-#include "apps/mozart/examples/shadertoy/service/renderer.h"
 #include "apps/mozart/examples/shadertoy/service/app.h"
 #include "apps/mozart/examples/shadertoy/service/imagepipe_shadertoy.h"
+#include "apps/mozart/examples/shadertoy/service/pipeline.h"
+#include "apps/mozart/examples/shadertoy/service/renderer.h"
 #include "apps/mozart/examples/shadertoy/service/view_shadertoy.h"
 
 namespace shadertoy {
@@ -116,8 +116,7 @@ void ShadertoyState::RequestFrame(uint64_t presentation_time) {
   DrawFrame(presentation_time, stopwatch_.GetElapsedSeconds());
 }
 
-void ShadertoyState::OnFramePresented(
-    const scenic::PresentationInfoPtr& info) {
+void ShadertoyState::OnFramePresented(const scenic::PresentationInfoPtr& info) {
   FTL_DCHECK(is_drawing_);
   is_drawing_ = false;
   RequestFrame(info->presentation_time + info->presentation_interval);

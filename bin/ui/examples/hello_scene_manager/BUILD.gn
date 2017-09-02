@@ -19,8 +19,8 @@ executable("hello_scene_manager") {
     "//apps/mozart/src/scene_manager/tests:util",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
-    "//lib/escher/escher",
     "//garnet/public/lib/mtl",
+    "//lib/escher/escher",
   ]
 
   include_dirs = [

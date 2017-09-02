@@ -28,8 +28,7 @@ class App {
 
   void ReleaseSessionResources();
 
-  void InitCheckerboardMaterial(
-      scenic_lib::Material* uninitialized_material);
+  void InitCheckerboardMaterial(scenic_lib::Material* uninitialized_material);
 
   std::unique_ptr<app::ApplicationContext> application_context_;
   mtl::MessageLoop* loop_;

@@ -426,14 +426,13 @@ bool Session::ApplyBindMeshBuffersOp(const scenic::BindMeshBuffersOpPtr& op) {
   auto mesh = resources_.FindResource<MeshShape>(op->mesh_id);
   auto index_buffer = resources_.FindResource<Buffer>(op->index_buffer_id);
   auto vertex_buffer = resources_.FindResource<Buffer>(op->vertex_buffer_id);
-  if (!mesh || !index_buffer || !vertex_buffer) {
-    return false;
+  if (mesh && index_buffer && vertex_buffer) {
+    return mesh->BindBuffers(
+        std::move(index_buffer), op->index_format, op->index_offset,
+        op->index_count, std::move(vertex_buffer), op->vertex_format,
+        op->vertex_offset, op->vertex_count, Unwrap(op->bounding_box));
   }
-
-  return mesh->BindBuffers(
-      std::move(index_buffer), op->index_format, op->index_offset,
-      op->index_count, std::move(vertex_buffer), op->vertex_format,
-      op->vertex_offset, op->vertex_count, Unwrap(op->bounding_box));
+  return false;
 }
 
 bool Session::ApplyAddLayerOp(const scenic::AddLayerOpPtr& op) {

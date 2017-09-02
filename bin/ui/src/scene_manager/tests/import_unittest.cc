@@ -45,7 +45,7 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaOp) {
   // Apply the import op.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
       1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
-      std::move(destination))                                /* endpoint */
+      std::move(destination))                               /* endpoint */
                     ));
 
   // Assert that the import node was correctly mapped in. It has not been linked
@@ -74,7 +74,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     // Apply the import op.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                               /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -161,7 +161,7 @@ TEST_F(ImportThreadedTest,
     // Apply the import op.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                               /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -207,7 +207,7 @@ TEST_F(ImportTest,
   // Apply the import op.
   ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
       1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
-      std::move(destination))                                /* endpoint */
+      std::move(destination))                               /* endpoint */
                     ));
 
   // Assert that the import node was correctly mapped in. It has not been
@@ -250,7 +250,7 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
     // Apply the import op.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                               /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -276,8 +276,8 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptOps) {
         Apply(scenic_lib::NewCreateEntityNodeOp(2 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1 /* unlinked import resource */,
-                                            2 /* child resource */)));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(
+        1 /* unlinked import resource */, 2 /* child resource */)));
   }
 }
 
@@ -291,7 +291,7 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
     // Apply the import op.
     ASSERT_TRUE(Apply(scenic_lib::NewImportResourceOp(
         1 /* import resource ID */, scenic::ImportSpec::NODE, /* spec */
-        std::move(destination))                                /* endpoint */
+        std::move(destination))                               /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -346,8 +346,8 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptOps) {
         Apply(scenic_lib::NewCreateEntityNodeOp(3 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(1 /* unlinked import resource */,
-                                            3 /* child resource */)));
+    ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(
+        1 /* unlinked import resource */, 3 /* child resource */)));
   }
 }
 
@@ -392,7 +392,8 @@ TEST_F(ImportTest, DISABLED_EmbedderCanEmbedNodesFromElsewhere) {
     ASSERT_TRUE(Apply(scenic_lib::NewAddChildOp(2, 3)));
 
     // Export.
-    ASSERT_TRUE(Apply(scenic_lib::NewExportResourceOp(1, std::move(export_token))));
+    ASSERT_TRUE(
+        Apply(scenic_lib::NewExportResourceOp(1, std::move(export_token))));
     ASSERT_EQ(1u, engine_->GetResourceLinker().NumExports());
   }
 

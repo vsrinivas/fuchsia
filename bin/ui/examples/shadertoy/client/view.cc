@@ -62,8 +62,8 @@ View::View(app::ApplicationContext* application_context,
   session()->ReleaseResource(image_pipe_id);
 
   // Create a rounded-rect shape to display the Shadertoy image on.
-  scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight,
-                                         80, 80, 80, 80);
+  scenic_lib::RoundedRectangle shape(session(), kShapeWidth, kShapeHeight, 80,
+                                     80, 80, 80);
 
   constexpr size_t kNodeCount = 16;
   for (size_t i = 0; i < kNodeCount; ++i) {

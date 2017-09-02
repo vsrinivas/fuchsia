@@ -14,13 +14,11 @@ class Scene {
  public:
   Scene(scenic_lib::Session* session, float width, float height);
 
-  scenic_lib::EntityNode& stroke_group_holder() {
-    return stroke_group_holder_;
-  }
+  scenic_lib::EntityNode& stroke_group_holder() { return stroke_group_holder_; }
 
  private:
   scenic_lib::DisplayCompositor compositor_;
   scenic_lib::EntityNode stroke_group_holder_;
 };
 
-}  // namespace sketchy_client
+}  // namespace sketchy_example

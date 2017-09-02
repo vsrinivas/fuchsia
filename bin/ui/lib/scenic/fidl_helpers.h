@@ -145,6 +145,7 @@ scenic::MeshVertexFormatPtr NewMeshVertexFormat(
     scenic::ValueType position_type,
     scenic::ValueType normal_type,
     scenic::ValueType tex_coord_type);
+// These arguments are documented in ops.fidl; see BindMeshBuffersOp.
 scenic::OpPtr NewBindMeshBuffersOp(uint32_t mesh_id,
                                    uint32_t index_buffer_id,
                                    scenic::MeshIndexFormat index_format,

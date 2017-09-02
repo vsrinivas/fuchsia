@@ -146,9 +146,9 @@ source_set("common") {
     "//apps/tracing/lib/trace:provider",
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
     "//lib/escher/escher",
     "//lib/escher/examples/common",
-    "//garnet/public/lib/mtl",
   ]
 
   public_configs = [ ":common_include_dirs" ]

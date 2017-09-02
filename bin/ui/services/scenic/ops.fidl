@@ -411,13 +411,26 @@ struct SetColorOp {
 // |vertex_offset| number of bytes from the start of the vertex Buffer.
 // |vertex_count| number of vertices.
 // |bounding_box| must contain all vertices within the specified range.
+//
+// The MeshVertexFormat defines which per-vertex attributes are provided by the
+// mesh, and the size of each attribute (and therefore the size of each vertex).
+// The attributes are ordered within the vertex in the same order that they
+// appear within the MeshVertexFormat struct.  For example, if the values are
+// kVector3, kNone and kVector2, then:
+//   - each vertex has a position and UV-coordinates, but no surface normal.
+//   - the 3D position occupies bytes 0-11 (3 dimensions * 4 bytes per float).
+//   - the UV coords occupy bytes 12-19, since no surface normal is provided.
 enum MeshIndexFormat {
+  // TODO(MZ-275): only kUint32 is currently supported.
   kUint16 = 1,
   kUint32,
 };
 struct MeshVertexFormat {
+  // kVector2 or kVector3.
   ValueType position_type;
+  // kVector2 or kVector3 (must match position_type), or kNone.
   ValueType normal_type;
+  // kVector2 or kNone.
   ValueType tex_coord_type;
 };
 struct BindMeshBuffersOp {

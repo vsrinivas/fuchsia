@@ -19,6 +19,7 @@ class MeshShape final : public Shape {
 
   MeshShape(Session* session, scenic::ResourceId id);
 
+  // These correspond to BindMeshBuffersOp in ops.fidl.
   bool BindBuffers(BufferPtr index_buffer,
                    scenic::MeshIndexFormat index_format,
                    uint64_t index_offset,

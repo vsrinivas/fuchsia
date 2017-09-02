@@ -37,8 +37,8 @@ StrokeGroup::StrokeGroup(scenic_lib::Session* session,
       escher_mesh->index_buffer_offset(), escher_mesh->num_indices(),
       vertex_buffer_->scenic_buffer(),
       scenic_lib::NewMeshVertexFormat(scenic::ValueType::kVector2,
-                                  scenic::ValueType::kNone,
-                                  scenic::ValueType::kVector2),
+                                      scenic::ValueType::kNone,
+                                      scenic::ValueType::kVector2),
       escher_mesh->vertex_buffer_offset(), escher_mesh->num_vertices(),
       bounding_box_min, bounding_box_max);
 

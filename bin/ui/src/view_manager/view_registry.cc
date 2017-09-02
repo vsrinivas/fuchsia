@@ -106,9 +106,8 @@ mozart::TransformPtr ToTransform(scenic::mat4Ptr matrix) {
 
 ViewRegistry::ViewRegistry(app::ApplicationContext* application_context)
     : application_context_(application_context),
-      scene_manager_(
-          application_context_
-              ->ConnectToEnvironmentService<scenic::SceneManager>()),
+      scene_manager_(application_context_
+                         ->ConnectToEnvironmentService<scenic::SceneManager>()),
       session_(scene_manager_.get()),
       weak_factory_(this) {
   // TODO(MZ-128): Register session listener and destroy views if their

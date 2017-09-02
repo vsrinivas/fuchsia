@@ -15,10 +15,10 @@
 namespace scene_manager {
 namespace test {
 namespace {
+using escher::ray4;
 using escher::vec2;
 using escher::vec3;
 using escher::vec4;
-using escher::ray4;
 
 constexpr float kSqrt2_2 = M_SQRT2 / 2.f;
 constexpr vec4 kDownVector{0.f, 0.f, -1.f, 0.f};
@@ -154,8 +154,8 @@ TEST_F(ShapeTest, Rectangle) {
 // not currently available in the engine for tests.
 TEST_F(ShapeTest, DISABLED_RoundedRectangle) {
   const scenic::ResourceId id = 1;
-  EXPECT_TRUE(Apply(
-      scenic_lib::NewCreateRoundedRectangleOp(id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
+  EXPECT_TRUE(Apply(scenic_lib::NewCreateRoundedRectangleOp(id, 30.f, 40.f, 2.f,
+                                                            4.f, 6.f, 8.f)));
 
   auto rounded_rectangle = FindResource<RoundedRectangleShape>(id);
   ASSERT_NE(nullptr, rounded_rectangle.get());

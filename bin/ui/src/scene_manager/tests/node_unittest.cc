@@ -34,7 +34,8 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
   EXPECT_TRUE(Apply(scenic_lib::NewCreateMaterialOp(kMaterialId)));
   EXPECT_TRUE(Apply(scenic_lib::NewSetTextureOp(kMaterialId, 0)));
-  EXPECT_TRUE(Apply(scenic_lib::NewSetColorOp(kMaterialId, 255, 100, 100, 255)));
+  EXPECT_TRUE(
+      Apply(scenic_lib::NewSetColorOp(kMaterialId, 255, 100, 100, 255)));
   EXPECT_TRUE(Apply(scenic_lib::NewCreateCircleOp(kShapeId, 50.f)));
   EXPECT_TRUE(Apply(scenic_lib::NewSetMaterialOp(kNodeId, kMaterialId)));
   EXPECT_TRUE(Apply(scenic_lib::NewSetShapeOp(kNodeId, kShapeId)));
@@ -88,8 +89,7 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
   EXPECT_TRUE(Apply(scenic_lib::NewCreateShapeNodeOp(kNodeId)));
 
   auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(scenic::HitTestBehavior::kDefault,
-            shape_node->hit_test_behavior());
+  EXPECT_EQ(scenic::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
 
   EXPECT_TRUE(Apply(scenic_lib::NewSetHitTestBehaviorOp(
       kNodeId, scenic::HitTestBehavior::kSuppress)));

@@ -30,6 +30,6 @@ struct Circle {
   Value radius;  // float
 };
 
-// A Mesh cannot be rendered until it has been updated for the first time; see
-// BindMeshBuffersOp.
+// A Mesh cannot be rendered until it has been bound to vertex/index buffers;
+// see BindMeshBuffersOp.
 struct Mesh {};

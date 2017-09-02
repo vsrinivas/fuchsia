@@ -7,9 +7,7 @@
 namespace sketchy_example {
 
 Scene::Scene(scenic_lib::Session* session, float width, float height)
-    : compositor_(session),
-      stroke_group_holder_(session) {
-
+    : compositor_(session), stroke_group_holder_(session) {
   scenic_lib::Scene scene(session);
   scenic_lib::Renderer renderer(session);
   renderer.SetCamera(scenic_lib::Camera(scene));

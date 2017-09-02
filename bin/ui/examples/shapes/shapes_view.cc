@@ -52,14 +52,14 @@ void ShapesView::OnSceneInvalidated(
   const float center_y = logical_size().height * .5f;
 
   scenic_lib::Rectangle background_shape(session(), logical_size().width,
-                                             logical_size().height);
+                                         logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(center_x, center_y, kBackgroundElevation);
 
-  scenic_lib::RoundedRectangle card_shape(
-      session(), logical_size().width * .9f, logical_size().height * .9f,
-      kCardCornerRadius, kCardCornerRadius, kCardCornerRadius,
-      kCardCornerRadius);
+  scenic_lib::RoundedRectangle card_shape(session(), logical_size().width * .9f,
+                                          logical_size().height * .9f,
+                                          kCardCornerRadius, kCardCornerRadius,
+                                          kCardCornerRadius, kCardCornerRadius);
   card_node_.SetShape(card_shape);
   card_node_.SetTranslation((float[]){center_x, center_y, kCardElevation});
 

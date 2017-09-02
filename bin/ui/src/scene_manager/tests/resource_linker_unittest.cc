@@ -58,8 +58,8 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   };
 
   linker.ImportResource(scenic::ImportSpec::NODE,  // import spec
-                        std::move(destination),     // import handle
-                        resolution_handler          // import resolution handler
+                        std::move(destination),    // import handle
+                        resolution_handler         // import resolution handler
   );
 
   // Make sure the closure and its assertions are not skipped.
@@ -185,8 +185,8 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
     ASSERT_EQ(ResourceLinker::ResolutionResult::kSuccess, cause);
   };
   linker.ImportResource(scenic::ImportSpec::NODE,  // import spec
-                        std::move(destination),     // import handle
-                        resolution_handler          // import resolution handler
+                        std::move(destination),    // import handle
+                        resolution_handler         // import resolution handler
   );
   ASSERT_FALSE(did_resolve);
   ASSERT_EQ(0u, linker.NumExports());
@@ -229,7 +229,7 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     ASSERT_EQ(
         destination.duplicate(MX_RIGHT_SAME_RIGHTS, &duplicate_destination),
         MX_OK);
-    linker.ImportResource(scenic::ImportSpec::NODE,         // import spec
+    linker.ImportResource(scenic::ImportSpec::NODE,          // import spec
                           std::move(duplicate_destination),  // import handle
                           resolution_handler  // import resolution handler
     );

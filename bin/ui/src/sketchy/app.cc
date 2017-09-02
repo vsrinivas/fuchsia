@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/provider.h"
 #include "apps/mozart/src/sketchy/app.h"
+#include "apps/tracing/lib/trace/provider.h"
 
 namespace sketchy_service {
 
-App::App(escher::Escher *escher)
+App::App(escher::Escher* escher)
     : loop_(mtl::MessageLoop::GetCurrent()),
       context_(app::ApplicationContext::CreateFromStartupInfo()),
       scene_manager_(

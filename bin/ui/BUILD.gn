@@ -279,6 +279,6 @@ package("mozart") {
     },
     {
       name = "sketchy_service"
-    }
+    },
   ]
 }

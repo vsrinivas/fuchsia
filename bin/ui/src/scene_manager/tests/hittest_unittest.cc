@@ -251,8 +251,8 @@ TEST_F(HitTestTest, HitBoth20And30FromNode1) {
 }
 
 TEST_F(HitTestTest, SuppressNode25FromNode1) {
-  Apply(
-      scenic_lib::NewSetHitTestBehaviorOp(3, scenic::HitTestBehavior::kSuppress));
+  Apply(scenic_lib::NewSetHitTestBehaviorOp(
+      3, scenic::HitTestBehavior::kSuppress));
 
   // While we would have hit 20 and 25, we suppressed node 3 so neither appears.
   ExpectHits(1, vec3(12.f, 6.f, 10.f), kDownVector,

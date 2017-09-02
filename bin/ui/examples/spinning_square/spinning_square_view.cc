@@ -58,7 +58,7 @@ void SpinningSquareView::OnSceneInvalidated(
   const float angle = t * M_PI * 2;
 
   scenic_lib::Rectangle background_shape(session(), logical_size().width,
-                                             logical_size().height);
+                                         logical_size().height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(
       (float[]){center_x, center_y, kBackgroundElevation});

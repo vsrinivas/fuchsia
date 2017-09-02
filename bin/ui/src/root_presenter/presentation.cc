@@ -399,16 +399,16 @@ void Presentation::PresentScene() {
     }
   }
 
-  session_.Present(0, [weak = weak_factory_.GetWeakPtr()](
-                          scenic::PresentationInfoPtr info) {
-    if (auto self = weak.get()) {
-      uint64_t next_presentation_time =
-          info->presentation_time + info->presentation_interval;
-      if (self->UpdateAnimation(next_presentation_time)) {
-        self->PresentScene();
-      }
-    }
-  });
+  session_.Present(
+      0, [weak = weak_factory_.GetWeakPtr()](scenic::PresentationInfoPtr info) {
+        if (auto self = weak.get()) {
+          uint64_t next_presentation_time =
+              info->presentation_time + info->presentation_interval;
+          if (self->UpdateAnimation(next_presentation_time)) {
+            self->PresentScene();
+          }
+        }
+      });
 }
 
 void Presentation::Shutdown() {

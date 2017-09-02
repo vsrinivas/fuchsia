@@ -171,13 +171,14 @@ class Buffer final : public Resource {
 };
 
 // Represents a mesh resource in a session.  Before it can be rendered, it
-// must be bound to index and vertex arrays by calling the Update() method.
+// must be bound to index and vertex arrays by calling the BindBuffers() method.
 class Mesh final : public Shape {
  public:
   Mesh(Session* session);
   Mesh(Mesh&& moved);
   ~Mesh();
 
+  // These arguments are documented in ops.fidl; see BindMeshBuffersOp.
   void BindBuffers(const Buffer& index_buffer,
                    scenic::MeshIndexFormat index_format,
                    uint64_t index_offset,
