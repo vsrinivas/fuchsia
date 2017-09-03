@@ -63,9 +63,8 @@ static bool read_bar_size(void) {
 
     // Set all bits in the BAR register. The device will ignore writes to the
     // LSBs which we can read out to determine the size.
-    EXPECT_EQ(
-        pci_device_write(device, PCI_CONFIG_BASE_ADDRESSES, 4, UINT32_MAX), MX_OK,
-        "Failed to write BAR0 to PCI config space");
+    EXPECT_EQ(pci_device_write(device, PCI_CONFIG_BASE_ADDRESSES, 4, UINT32_MAX), MX_OK,
+              "Failed to write BAR0 to PCI config space");
 
     // Read out BAR and compute size.
     uint32_t value = 0;

@@ -28,24 +28,29 @@ static void hexdump_result(void* actual, void* expected) {
     hexdump_ex(page_addr(expected, 3), 32, PAGE_SIZE * 3);
 }
 
-#define ASSERT_EPT_EQ(actual, expected, size, msg)            \
-    do {                                                      \
-      int cmp = memcmp(actual, expected, size);               \
-      if (cmp != 0)                                           \
-          hexdump_result(actual, expected);                   \
-      ASSERT_EQ(cmp, 0, msg);                                 \
+#define ASSERT_EPT_EQ(actual, expected, size, ...)                                                 \
+    do {                                                                                           \
+        int cmp = memcmp(actual, expected, size);                                                  \
+        if (cmp != 0)                                                                              \
+            hexdump_result(actual, expected);                                                      \
+        ASSERT_EQ(cmp, 0, ##__VA_ARGS__);                                                          \
     } while (0)
 
-#define INITIALIZE_PAGE_TABLE {{{ 0 }}}
+#define INITIALIZE_PAGE_TABLE                                                                      \
+    {                                                                                              \
+        {                                                                                          \
+            { 0 }                                                                                  \
+        }                                                                                          \
+    }
 
 typedef struct {
     uint64_t entries[512];
 } page_table;
 
 enum {
-    X86_PTE_P    = 0x01,    /* P    Valid           */
-    X86_PTE_RW   = 0x02,    /* R/W  Read/Write      */
-    X86_PTE_PS   = 0x80,    /* PS   Page size       */
+    X86_PTE_P = 0x01,  /* P    Valid           */
+    X86_PTE_RW = 0x02, /* R/W  Read/Write      */
+    X86_PTE_PS = 0x80, /* PS   Page size       */
 };
 
 static bool page_table_1gb(void) {
@@ -55,14 +60,14 @@ static bool page_table_1gb(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 1 << 30, &pte_off), MX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
     // pdp
     expected[1].entries[0] = X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 2u, "");
+    ASSERT_EPT_EQ(actual, expected, sizeof(actual));
+    ASSERT_EQ(pte_off, PAGE_SIZE * 2u);
 
     END_TEST;
 }
@@ -74,16 +79,16 @@ static bool page_table_2mb(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 2 << 20, &pte_off), MX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
     // pdp
-    expected[1].entries[0]  = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+    expected[1].entries[0] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
     // pd
     expected[2].entries[0] = X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 3u, "");
+    ASSERT_EPT_EQ(actual, expected, sizeof(actual));
+    ASSERT_EQ(pte_off, PAGE_SIZE * 3u);
 
     END_TEST;
 }
@@ -95,12 +100,12 @@ static bool page_table_4kb(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 4 * 4 << 10, &pte_off), MX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
     // pdp
-    expected[1].entries[0]  = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+    expected[1].entries[0] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
     // pd
     expected[2].entries[0] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
     // pt
@@ -108,8 +113,8 @@ static bool page_table_4kb(void) {
     expected[3].entries[1] = PAGE_SIZE * 1 | X86_PTE_P | X86_PTE_RW;
     expected[3].entries[2] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
     expected[3].entries[3] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
-    ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
+    ASSERT_EPT_EQ(actual, expected, sizeof(actual));
+    ASSERT_EQ(pte_off, PAGE_SIZE * 4u);
 
     END_TEST;
 }
@@ -121,12 +126,12 @@ static bool page_table_mixed_pages(void) {
     page_table actual[4] = INITIALIZE_PAGE_TABLE;
     page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20)  + (4 << 10), &pte_off), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, (2 << 20) + (4 << 10), &pte_off), MX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
     // pdp
-    expected[1].entries[0]  = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+    expected[1].entries[0] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
 
     // pd
     expected[2].entries[0] = X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
@@ -134,8 +139,8 @@ static bool page_table_mixed_pages(void) {
 
     // pt
     expected[3].entries[0] = (2 << 20) | X86_PTE_P | X86_PTE_RW;
-    ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
+    ASSERT_EPT_EQ(actual, expected, sizeof(actual));
+    ASSERT_EQ(pte_off, PAGE_SIZE * 4u);
 
     END_TEST;
 }
@@ -163,15 +168,15 @@ static bool page_table_complex(void) {
     //
     // PT
     // >  264 mapped pages
-    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 0x87B08000, &pte_off), MX_OK, "");
+    ASSERT_EQ(guest_create_page_table((uintptr_t)actual, 0x87B08000, &pte_off), MX_OK);
 
     // pml4
     expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
 
     // pdp
-    expected[1].entries[0]  = (0l << 30) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    expected[1].entries[1]  = (1l << 30) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
-    expected[1].entries[2]  = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
+    expected[1].entries[0] = (0l << 30) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[1].entries[1] = (1l << 30) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[1].entries[2] = PAGE_SIZE * 2 | X86_PTE_P | X86_PTE_RW;
 
     // pd - starts at 2GB
     const uint64_t pdp_offset = 2l << 30;
@@ -185,8 +190,8 @@ static bool page_table_complex(void) {
     for (int i = 0; i < 264; ++i) {
         expected[3].entries[i] = (pd_offset + (i << 12)) | X86_PTE_P | X86_PTE_RW;
     }
-    ASSERT_EPT_EQ(actual, expected, sizeof(actual), "");
-    ASSERT_EQ(pte_off, PAGE_SIZE * 4u, "");
+    ASSERT_EPT_EQ(actual, expected, sizeof(actual));
+    ASSERT_EQ(pte_off, PAGE_SIZE * 4u);
 
     END_TEST;
 }
