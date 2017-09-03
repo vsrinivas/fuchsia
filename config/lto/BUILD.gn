@@ -14,7 +14,7 @@ config("default") {
     if (use_thinlto) {
       configs = [ ":thinlto" ]
     } else {
-      configs = [ ":full" ]
+      configs = [ ":lto" ]
     }
   }
 }
