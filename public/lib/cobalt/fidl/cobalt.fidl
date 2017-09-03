@@ -4,21 +4,25 @@
 
 module cobalt;
 
-// Cobalt is a service to record and report on metrics. This file contains
-// interfaces that allow clients to send metrics to Cobalt.
+// Cobalt is the service used in Fuchsia to report metrics. This file contains
+// interfaces that allow clients to report metric Observations to Cobalt.
 
 // To use Cobalt, you must have a project id, metric id and encoding id
 // registered with the Cobalt system. In the current verison of Cobalt
-// registration consists of entries in the files registered_encodings.txt
-// and registered_metrics.txt in //third_party/cobalt/config/production. Since
+// registration consists of entries in the files "registered_encodings.txt"
+// and "registered_metrics.txt" in //third_party/cobalt/config/production. Since
 // the Cobalt servers also read these files, for now it is necessary to
 // contact cobalt-hackers@google.com in order to register additional projects,
-// metrics and encodings. We plan to build an online self-registration system
-// in the future.
+// metrics and encodings. We plan to build a self-registration system in the
+// future.
 
 // Usage: First use CobaltEncoderFactory to get a CobaltEncoder for your
-// project. Then, you can add observations. Observations are accumulated on the
-// CobaltEncoder until they are successfully sent via SendObservations().
+// project. Then you add Observations using the Add*Observation() methods.
+// Observations are accumulated by the CobaltEncoder and periodically sent
+// to the Cobalt server.
+
+// The maximum size of a single Observation is 100 KB.
+const int64 kMaxBytesPerObservation = 102400;
 
 // Response codes for Cobalt encoder operations.
 enum Status {
@@ -29,11 +33,26 @@ enum Status {
   INVALID_ARGUMENTS,
 
   // Sending observations failed too many times or with an unrecoverable error
-  // Try the send again later.
+  // Try the send again later. OBSOLETE: This status is never used.
   SEND_FAILED,
 
   // The attempted operation failed because some precondition was not met.
+  // OBSOLETE: This status is never used.
   FAILED_PRECONDITION,
+
+  // An attempt was made to add an Observation whose seralized size exceeds
+  // kMaxBytesPerObservation.
+  OBSERVATION_TOO_BIG,
+
+  // Cobalt's local cache is temporarily full and cannot handle any more
+  // Observations at this time. This condition should be rare because Cobalt
+  // will automatically send Observations to the server and clear the cache
+  // when it starts to get too full. In the current version of Cobalt,
+  // Observations are cached in memory so this error could possibly occur if the
+  // server is down for a long time. In the future Cobalt will store
+  // Observations in non-volatile storage making this condition much less
+  // likely.
+  TEMPORARILY_FULL,
 
   // Catch-all for unexpected errors.
   INTERNAL_ERROR = -1
@@ -47,10 +66,11 @@ interface CobaltEncoderFactory {
   GetEncoder(int32 project_id, CobaltEncoder& encoder);
 };
 
-// CobaltEncoder accumulates and sends observations. An instance of
-// CobaltEncoder is associated with a particular Cobalt project ID.
+// CobaltEncoder accumulates Observations in a local cache and periodically
+// sends them to the server. An instance of CobaltEncoder is associated with a
+// particular Cobalt project ID.
 interface CobaltEncoder {
-  // Adds a string observation.
+  // Adds a string observation. It will eventually be sent to the Cobalt server.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
   //             associated with this encoder's project ID. The specified
   //             metric must have type STRING.
@@ -66,6 +86,7 @@ interface CobaltEncoder {
 
   // Adds an observation specified by its index. This only makes sense if
   // the specified metric and encoding are consistent with values of type INDEX.
+  // The Observation will eventually be sent to the Cobalt server.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
   //             associated with this encoder's project ID. The specified
   //             metric must have type INDEX.
@@ -89,8 +110,7 @@ interface CobaltEncoder {
   AddIndexObservation(uint32 metric_id, uint32 encoding_id, uint32 index)
       => (Status status);
 
-  // Sends the observations that have been added to the encoder since the last
-  // send. Unless SendObservations returns OK, the observations remain enqueued.
-  // Will fail with FAILED_PRECONDITION if no observations are ready to be sent.
+
+  // Obsolete. This does nothing and always returns OK.
   SendObservations() => (Status status);
 };
