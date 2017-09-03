@@ -32,7 +32,7 @@ and [*mx_port_bind()*](syscalls/port_bind.md).
 upon them) is controlled by the Job in which the calling Process is contained.
 
 System calls are provided by libmagenta.so, which is a "virtual" shared
-library that the Magenta kernel provides to user-space, better known as the
+library that the Magenta kernel provides to userspace, better known as the
 [*virtual Dynamic Shared Object* or vDSO](vdso.md).
 They are C ELF ABI functions of the form *mx_noun_verb()* or
 *mx_noun_verb_direct-object()*.

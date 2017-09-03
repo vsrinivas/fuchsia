@@ -11,7 +11,7 @@ address space.
 
 ## DESCRIPTION
 
-VMARs are used by the kernel and user space to represent the allocation of an
+VMARs are used by the kernel and userspace to represent the allocation of an
 address space.
 
 Every process starts with a single VMAR (the root VMAR) that spans the entire

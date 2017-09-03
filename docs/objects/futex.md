@@ -76,7 +76,7 @@ from the kernel, which our current implementation does not require.
 
     An in-depth tour of the locking primitives in WebKit, complete with
     benchmarks and analysis. Contains a detailed explanation of the "parking
-    lot" concept, which allows very compact representation of user-space
+    lot" concept, which allows very compact representation of userspace
     mutexes.
 
 ## SYSCALLS

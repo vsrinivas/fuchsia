@@ -82,7 +82,7 @@ names and thus make system calls.
 ### **PA_VMO_VDSO** handle
 
 The vDSO image is embedded in the kernel at compile time.  The kernel
-exposes it to user-space as a read-only [VMO](objects/vm_object.md).
+exposes it to userspace as a read-only [VMO](objects/vm_object.md).
 
 When a program loader sets up a new process, the only way to make it
 possible for that process to make system calls is for the program loader to
@@ -192,7 +192,7 @@ as the system version string) are simply compiled into the vDSO.
 
 For the values determined at boot time, the kernel must modify the
 contents of the vDSO.  This is accomplished by the boot-time code that
-sets up the vDSO VMO, before it starts the first user-space process and
+sets up the vDSO VMO, before it starts the first userspace process and
 gives it the VMO handle.  At compile time, the offset into the vDSO
 image of
 the [`vdso_constants`](../kernel/lib/vdso/include/lib/vdso-constants.h)
@@ -210,11 +210,11 @@ calls.  The machine-specific instructions used to enter the kernel
 for user code to execute such instructions directly.  The interface
 between the kernel and the vDSO code is a private implementation detail.
 
-Because the vDSO is itself normal code that executes in user-space, the
+Because the vDSO is itself normal code that executes in userspace, the
 kernel must robustly handle all possible entries into kernel mode from
-user-space.  However, potential kernel bugs can be mitigated somewhat by
+userspace.  However, potential kernel bugs can be mitigated somewhat by
 enforcing that each kernel entry be made only from the proper vDSO code.
-This enforcement also avoids developers of user-space code circumventing
+This enforcement also avoids developers of userspace code circumventing
 the ABI rules (because of ignorance, malice, or misguided intent to work
 around some perceived limitation of the official ABI), which could lead
 to the private kernel-vDSO interface becoming a *de facto* ABI for
