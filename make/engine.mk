@@ -209,11 +209,10 @@ endif
 # can be removed when https://bugs.llvm.org/show_bug.cgi?id=33306 is fixed.
 KERNEL_LDFLAGS += -mllvm -code-model=kernel
 ifeq ($(call TOBOOL,$(USE_THINLTO)),true)
-USER_COMPILEFLAGS += -flto=thin
-USER_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(THINLTO_CACHE_DIR)
+GLOBAL_COMPILEFLAGS += -flto=thin
+GLOBAL_LDFLAGS += --thinlto-jobs=8 --thinlto-cache-dir=$(THINLTO_CACHE_DIR)
 else
-KERNEL_COMPILEFLAGS += -flto -fwhole-program-vtables
-USER_COMPILEFLAGS += -flto -fwhole-program-vtables
+GLOBAL_COMPILEFLAGS += -flto -fwhole-program-vtables
 # Full LTO doesn't require any special ld flags.
 endif
 endif
