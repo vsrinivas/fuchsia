@@ -68,11 +68,11 @@ the last one for that Object.
 
 ## Running Code: Jobs, Processes, and Threads.
 
-Threads represent threads of execution (CPU registers, stack, etc) within an address
-space which is owned by the Process in which they exist.  Processes are owned by Jobs,
-which define various resource limitations.  Jobs are owned by parent Jobs, all the way
-up to the Root Job which was created by the kernel at boot and passed to "userboot",
-the first userspace Process to begin execution.
+Threads represent threads of execution (CPU registers, stack, etc) within an
+address space which is owned by the Process in which they exist.  Processes are
+owned by Jobs, which define various resource limitations.  Jobs are owned by
+parent Jobs, all the way up to the Root Job which was created by the kernel at
+boot and passed to [`userboot`, the first userspace Process to begin execution](userboot.md).
 
 Without a Job Handle, it is not possible for a Thread within a Process to create another
 Process or another Job.
