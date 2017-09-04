@@ -68,12 +68,11 @@ starts it running at the `userboot` entry point.
 
 ## Kernel sends `processargs` message
 
-In normal program loading, a `mx_proc_args_t` bootstrap message is
-sent to each new process
-(see [`<magenta/processargs.h>`](../system/public/magenta/processargs.h)).
-The process's first thread receives a [channel](objects/channel.md)
-handle in a register.  It can then read data and handles sent by its
-creator.
+In normal [program loading](program_loading.md),
+a [*bootstrap message*](program_loading.md#the-processargs-protocol) is
+sent to each new process.  The process's first thread receives
+a [channel](objects/channel.md) handle in a register.  It can then read
+data and handles sent by its creator.
 
 The kernel uses the exact same protocol to start `userboot`.  The kernel
 command line is split into words that become the environment strings in the
@@ -135,9 +134,9 @@ named in `PT_INTERP` and loads that instead.
 Then `userboot` loads the vDSO at a random address.  It starts the new
 process with the standard conventions, passing it a channel handle and the
 vDSO base address.  On that channel, `userboot` sends the
-standard [`processargs`](../system/public/magenta/processargs.h) messages.
-It passes on all the important handles it received from the kernel
-(replacing specific handles such as the process-self and thread-self
+standard [`processargs`](program_loading.md#the-processargs-protocol)
+messages.  It passes on all the important handles it received from the
+kernel (replacing specific handles such as the process-self and thread-self
 handles with those for the new process rather than for `userboot` itself).
 
 ## userboot loader service
@@ -146,7 +145,8 @@ Following the standard program loading protocol, when `userboot` loads a
 program via `PT_INTERP`, it sends an additional `processargs` message
 before the main message, intended for the use of the dynamic linker.  This
 message includes a `PA_SVC_LOADER` handle for a channel on which `userboot`
-provides a minimal implementation of the standard loader service.
+provides a minimal implementation of the
+standard [loader service](program_loading.md#the-loader-service).
 
 `userboot` has only a single thread, which remains in a loop handling
 loader service requests until the channel is closed.  When it receives a

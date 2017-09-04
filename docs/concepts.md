@@ -77,6 +77,9 @@ boot and passed to [`userboot`, the first userspace Process to begin execution](
 Without a Job Handle, it is not possible for a Thread within a Process to create another
 Process or another Job.
 
+[Program loading](program_loading.md) is provided by userspace facilities and
+protocols above the kernel layer.
+
 See: [process_create](syscalls/process_create.md),
 [process_start](syscalls/process_start.md),
 [thread_create](syscalls/thread_create.md),
