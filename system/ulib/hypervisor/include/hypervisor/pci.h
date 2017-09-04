@@ -74,6 +74,8 @@ typedef struct pci_device {
 
     // Command register.
     uint16_t command;
+    // Revision ID register.
+    uint8_t revision_id;
     // Base address registers.
     uint32_t bar[PCI_MAX_BARS];
     uint16_t bar_size;

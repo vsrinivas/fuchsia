@@ -263,7 +263,7 @@ static mx_status_t pci_device_read_word(const pci_device_t* device, uint8_t reg,
     // |   class_code   |    prog_if   |    revision_id  |
     //  -------------------------------------------------
     case PCI_CONFIG_REVISION_ID:
-        *value = device->class_code << 16;
+        *value = device->class_code << 16 | device->revision_id;
         return MX_OK;
     //  ---------------------------------------------------------------
     // |   (31..24)  |   (23..16)    |    (15..8)    |      (7..0)     |
