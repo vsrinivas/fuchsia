@@ -34,11 +34,19 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 
 namespace minfs {
 
+// Type of a reference to block number, either absolute (able to index
+// into disk directly) or relative to some entity (such as a file).
+typedef uint32_t blk_t;
+
+// The type of an inode number, which may be used as an
+// index into the inode table.
+typedef uint32_t ino_t;
+
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
 constexpr uint32_t kMinfsVersion        = 0x00000005;
 
-constexpr uint32_t kMinfsRootIno        = 1;
+constexpr ino_t kMinfsRootIno           = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
 constexpr uint32_t kMinfsFlagFVM        = 0x00000002; // Mounted on FVM
 constexpr uint32_t kMinfsBlockSize      = 8192;
@@ -50,7 +58,7 @@ constexpr uint32_t kMinfsDirect         = 16;
 constexpr uint32_t kMinfsIndirect       = 31;
 constexpr uint32_t kMinfsDoublyIndirect = 1;
 
-constexpr uint32_t kMinfsDirectPerIndirect = (kMinfsBlockSize / sizeof(uint32_t));
+constexpr uint32_t kMinfsDirectPerIndirect = (kMinfsBlockSize / sizeof(blk_t));
 // not possible to have a block at or past this one
 // due to the limitations of the inode and indirect blocks
 constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + (kMinfsIndirect * kMinfsDirectPerIndirect)
@@ -82,10 +90,10 @@ typedef struct {
     uint32_t inode_count;   // total number of inodes
     uint32_t alloc_block_count; // total number of allocated data blocks
     uint32_t alloc_inode_count; // total number of allocated inodes
-    uint32_t ibm_block;     // first blockno of inode allocation bitmap
-    uint32_t abm_block;     // first blockno of block allocation bitmap
-    uint32_t ino_block;     // first blockno of inode table
-    uint32_t dat_block;     // first blockno available for file data
+    blk_t ibm_block;     // first blockno of inode allocation bitmap
+    blk_t abm_block;     // first blockno of block allocation bitmap
+    blk_t ino_block;     // first blockno of inode table
+    blk_t dat_block;     // first blockno available for file data
     // The following flags are only valid with (flags & kMinfsFlagFVM):
     uint64_t slice_size;    // Underlying slice size
     uint64_t vslice_count;  // Number of allocated underlying slices
@@ -120,16 +128,16 @@ typedef struct {
     uint32_t gen_num;               // bumped when deleted
     uint32_t dirent_count;          // for directories
     uint32_t rsvd[5];
-    uint32_t dnum[kMinfsDirect];    // direct blocks
-    uint32_t inum[kMinfsIndirect];  // indirect blocks
-    uint32_t dinum[kMinfsDoublyIndirect]; // doubly indirect blocks
+    blk_t dnum[kMinfsDirect];    // direct blocks
+    blk_t inum[kMinfsIndirect];  // indirect blocks
+    blk_t dinum[kMinfsDoublyIndirect]; // doubly indirect blocks
 } minfs_inode_t;
 
 static_assert(sizeof(minfs_inode_t) == kMinfsInodeSize,
               "minfs inode size is wrong");
 
 typedef struct {
-    uint32_t ino;                   // inode number
+    ino_t ino;                      // inode number
     uint32_t reclen;                // Low 28 bits: Length of record
                                     // High 4 bits: Flags
     uint8_t namelen;                // length of the filename
@@ -191,8 +199,8 @@ public:
 
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)
-    mx_status_t Readblk(uint32_t bno, void* data);
-    mx_status_t Writeblk(uint32_t bno, const void* data);
+    mx_status_t Readblk(blk_t bno, void* data);
+    mx_status_t Writeblk(blk_t bno, const void* data);
 
     // Returns the maximum number of available blocks,
     // assuming the filesystem is non-resizable.

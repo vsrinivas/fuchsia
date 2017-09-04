@@ -76,7 +76,7 @@ void VnodeMinfs::InodeSync(WriteTxn* txn, uint32_t flags) {
     fs_->InodeSync(txn, ino_, &inode_);
 }
 
-mx_status_t VnodeMinfs::BlocksShrinkDirect(WriteTxn *txn, size_t count, uint32_t* barray,
+mx_status_t VnodeMinfs::BlocksShrinkDirect(WriteTxn *txn, size_t count, blk_t* barray,
                                            bool* dirty) {
     // release direct blocks
     for (unsigned i = 0; i < count; i++) {
@@ -94,7 +94,7 @@ mx_status_t VnodeMinfs::BlocksShrinkDirect(WriteTxn *txn, size_t count, uint32_t
 }
 
 mx_status_t VnodeMinfs::BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, size_t count,
-                                             uint32_t ib_vmo_offset, uint32_t* iarray,
+                                             uint32_t ib_vmo_offset, blk_t* iarray,
                                              bool* dirty) {
     // release indirect blocks
     for (unsigned i = 0; i < count; i++) {
@@ -143,7 +143,7 @@ mx_status_t VnodeMinfs::BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, siz
 
 mx_status_t VnodeMinfs::BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibindex, uint32_t bindex,
                                                    size_t count, uint32_t dib_vmo_offset,
-                                                   uint32_t ib_vmo_offset, uint32_t* diarray,
+                                                   uint32_t ib_vmo_offset, blk_t* diarray,
                                                    bool* dirty) {
     // release doubly indirect blocks
     for (unsigned i = 0; i < count; i++) {
@@ -197,10 +197,10 @@ mx_status_t VnodeMinfs::BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibind
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
-mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
+mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, blk_t start) {
     bool dirty = false;
     mx_status_t status = MX_OK;
-    uint64_t size = (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
+    size_t size = (kMinfsIndirect + kMinfsDoublyIndirect) * kMinfsBlockSize;
 
     size_t count = start <= kMinfsDirect ? kMinfsDirect - start : 0;
     if ((status = BlocksShrinkDirect(txn, count, &inode_.dnum[start], &dirty))
@@ -265,7 +265,7 @@ mx_status_t VnodeMinfs::BlocksShrink(WriteTxn *txn, uint32_t start) {
 }
 
 #ifdef __Fuchsia__
-mx_status_t VnodeMinfs::LoadIndirectBlocks(uint32_t* iarray, uint32_t count, uint32_t offset,
+mx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32_t offset,
                                            uint64_t size) {
     mx_status_t status;
     if ((status = InitIndirectVmo()) != MX_OK) {
@@ -282,7 +282,7 @@ mx_status_t VnodeMinfs::LoadIndirectBlocks(uint32_t* iarray, uint32_t count, uin
     ReadTxn txn(fs_->bc_.get());
 
     for (uint32_t i = 0; i < count; i++) {
-        uint32_t ibno;
+        blk_t ibno;
         if ((ibno = iarray[i]) != 0) {
             fs_->ValidateBno(ibno);
             txn.Enqueue(vmoid_indirect_, offset + i, ibno + fs_->info_.dat_block, 1);
@@ -359,7 +359,7 @@ mx_status_t VnodeMinfs::InitVmo() {
     ReadTxn txn(fs_->bc_.get());
 
     // Initialize all direct blocks
-    uint32_t bno;
+    blk_t bno;
     for (uint32_t d = 0; d < kMinfsDirect; d++) {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
@@ -369,7 +369,7 @@ mx_status_t VnodeMinfs::InitVmo() {
 
     // Initialize all indirect blocks
     for (uint32_t i = 0; i < kMinfsIndirect; i++) {
-        uint32_t ibno;
+        blk_t ibno;
         if ((ibno = inode_.inum[i]) != 0) {
             fs_->ValidateBno(ibno);
 
@@ -394,7 +394,7 @@ mx_status_t VnodeMinfs::InitVmo() {
 
     // Initialize all doubly indirect blocks
     for (uint32_t i = 0; i < kMinfsDoublyIndirect; i++) {
-        uint32_t dibno;
+        blk_t dibno;
 
         if ((dibno = inode_.dinum[i]) != 0) {
             fs_->ValidateBno(dibno);
@@ -409,7 +409,7 @@ mx_status_t VnodeMinfs::InitVmo() {
             ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(i), &dientry);
 
             for (uint32_t j = 0; j < kMinfsDirectPerIndirect; j++) {
-                uint32_t ibno;
+                blk_t ibno;
                 if ((ibno = dientry[j]) != 0) {
                     fs_->ValidateBno(ibno);
 
@@ -439,9 +439,9 @@ mx_status_t VnodeMinfs::InitVmo() {
 }
 #endif
 
-mx_status_t VnodeMinfs::GetBnoDirect(WriteTxn* txn, uint32_t* bno, bool* dirty) {
+mx_status_t VnodeMinfs::GetBnoDirect(WriteTxn* txn, blk_t* bno, bool* dirty) {
     // direct blocks are simple... is there an entry in dnum[]?
-    uint32_t hint = 0;
+    blk_t hint = 0;
 
     if ((*bno == 0) && (txn != nullptr)) {
         // allocate a new block
@@ -458,7 +458,7 @@ mx_status_t VnodeMinfs::GetBnoDirect(WriteTxn* txn, uint32_t* bno, bool* dirty) 
 }
 
 mx_status_t VnodeMinfs::GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t ib_vmo_offset,
-                                       uint32_t* ibno, uint32_t* bno, bool* dirty) {
+                                       blk_t* ibno, blk_t* bno, bool* dirty) {
     // we should have initialized vmo before calling this method
     mx_status_t status;
 
@@ -515,7 +515,7 @@ mx_status_t VnodeMinfs::GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t 
 
 mx_status_t VnodeMinfs::GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, uint32_t bindex,
                                              uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
-                                             uint32_t* dibno, uint32_t* bno, bool* dirty) {
+                                             blk_t* dibno, blk_t* bno, bool* dirty) {
     mx_status_t status;
 #ifdef __Fuchsia__
     // If the vmo_indirect_ vmo has not been created, make it now.
@@ -586,11 +586,11 @@ void VnodeMinfs::ClearIndirectVmoBlock(uint32_t offset) {
     memset(reinterpret_cast<void*>(addr + kMinfsBlockSize * offset), 0, kMinfsBlockSize);
 }
 #else
-void VnodeMinfs::ReadIndirectBlock(uint32_t bno, uint32_t* entry) {
+void VnodeMinfs::ReadIndirectBlock(blk_t bno, uint32_t* entry) {
     fs_->bc_->Readblk(bno + fs_->info_.dat_block, entry);
 }
 
-void VnodeMinfs::ClearIndirectBlock(uint32_t bno) {
+void VnodeMinfs::ClearIndirectBlock(blk_t bno) {
     uint32_t data[kMinfsBlockSize];
     memset(data, 0, kMinfsBlockSize);
     fs_->bc_->Writeblk(bno + fs_->info_.dat_block, data);
@@ -598,7 +598,7 @@ void VnodeMinfs::ClearIndirectBlock(uint32_t bno) {
 #endif
 
 // Get the bno corresponding to the nth logical block within the file.
-mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno) {
+mx_status_t VnodeMinfs::GetBno(WriteTxn* txn, blk_t n, blk_t* bno) {
     bool dirty = false;
 
     if (n < kMinfsDirect) {
@@ -1119,7 +1119,7 @@ mx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
             xfer = len;
         }
 
-        uint32_t bno;
+        blk_t bno;
         if ((status = GetBno(nullptr, n, &bno)) != MX_OK) {
             return status;
         }
@@ -1203,14 +1203,14 @@ mx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         }
 
         // Update this block on-disk
-        uint32_t bno;
+        blk_t bno;
         if ((status = GetBno(txn, n, &bno)) != MX_OK) {
             return status;
         }
         MX_DEBUG_ASSERT(bno != 0);
         txn->Enqueue(vmoid_, n, bno + fs_->info_.dat_block, 1);
 #else
-        uint32_t bno;
+        blk_t bno;
         if ((status = GetBno(txn, n, &bno)) != MX_OK) {
             goto done;
         }
@@ -1571,13 +1571,13 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
 
     if (len < inode_.size) {
         // Truncate should make the file shorter
-        size_t bno = inode_.size / kMinfsBlockSize;
-        size_t trunc_bno = len / kMinfsBlockSize;
+        blk_t bno = inode_.size / kMinfsBlockSize;
+        blk_t trunc_bno = static_cast<blk_t>(len / kMinfsBlockSize);
 
         // Truncate to the nearest block
         if (trunc_bno <= bno) {
-            uint32_t start_bno = static_cast<uint32_t>((len % kMinfsBlockSize == 0) ?
-                                                       trunc_bno : trunc_bno + 1);
+            blk_t start_bno = static_cast<blk_t>((len % kMinfsBlockSize == 0) ?
+                                                 trunc_bno : trunc_bno + 1);
             if ((r = BlocksShrink(txn, start_bno)) < 0) {
                 return r;
             }
@@ -1590,8 +1590,7 @@ mx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
         // Write zeroes to the rest of the remaining block, if it exists
         if (len < inode_.size) {
             char bdata[kMinfsBlockSize];
-            uint32_t bno;
-            if (GetBno(nullptr, static_cast<uint32_t>(len / kMinfsBlockSize), &bno) != MX_OK) {
+            if (GetBno(nullptr, static_cast<blk_t>(len / kMinfsBlockSize), &bno) != MX_OK) {
                 return MX_ERR_IO;
             }
             if (bno != 0) {

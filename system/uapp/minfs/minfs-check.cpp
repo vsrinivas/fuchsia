@@ -12,13 +12,13 @@
 
 namespace minfs {
 
-mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
+mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, ino_t ino) {
     if (ino >= fs_->info_.inode_count) {
         FS_TRACE_ERROR("check: ino %u out of range (>=%u)\n",
               ino, fs_->info_.inode_count);
         return MX_ERR_OUT_OF_RANGE;
     }
-    uint32_t bno_of_ino = ino / kMinfsInodesPerBlock;
+    blk_t bno_of_ino = ino / kMinfsInodesPerBlock;
     uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
     uintptr_t iaddr = reinterpret_cast<uintptr_t>(fs_->inode_table_->GetData()) +
                       bno_of_ino * kMinfsBlockSize + off_of_ino;
@@ -33,8 +33,8 @@ mx_status_t MinfsChecker::GetInode(minfs_inode_t* inode, uint32_t ino) {
 #define CD_DUMP 1
 #define CD_RECURSE 2
 
-mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
-                                         uint32_t* next_n, uint32_t* bno_out) {
+mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, blk_t n,
+                                         blk_t* next_n, blk_t* bno_out) {
     // The default value for the "next n". It's easier to set it here anyway,
     // since we proceed to modify n in the code below.
     *next_n = n + 1;
@@ -48,7 +48,7 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
     uint32_t j = n % kMinfsDirectPerIndirect; // direct index
 
     if (i < kMinfsIndirect) {
-        uint32_t ibno;
+        blk_t ibno;
         if ((ibno = inode->inum[i]) == 0) {
             *bno_out = 0;
             *next_n = kMinfsDirect + (i + 1) * kMinfsDirectPerIndirect;
@@ -72,7 +72,7 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
     uint32_t k = n % kMinfsDirectPerIndirect; // direct index
 
     if (i < kMinfsDoublyIndirect) {
-        uint32_t dibno;
+        blk_t dibno;
         if ((dibno = inode->dinum[i]) == 0) {
             *bno_out = 0;
             *next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
@@ -89,7 +89,7 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
         }
 
         uint32_t* dientry = reinterpret_cast<uint32_t*>(doubly_indirect_cache_);
-        uint32_t ibno;
+        blk_t ibno;
         if ((ibno = dientry[j]) == 0) {
             *bno_out = 0;
             *next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
@@ -113,8 +113,8 @@ mx_status_t MinfsChecker::GetInodeNthBno(minfs_inode_t* inode, uint32_t n,
     return MX_ERR_OUT_OF_RANGE;
 }
 
-mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
-                                         uint32_t parent, uint32_t flags) {
+mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
+                                         ino_t parent, uint32_t flags) {
     unsigned eno = 0;
     bool dot = false;
     bool dotdot = false;
@@ -248,7 +248,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, uint32_t ino,
     return MX_OK;
 }
 
-const char* MinfsChecker::CheckDataBlock(uint32_t bno) {
+const char* MinfsChecker::CheckDataBlock(blk_t bno) {
     if (bno == 0) {
         return "reserved bno";
     }
@@ -266,7 +266,7 @@ const char* MinfsChecker::CheckDataBlock(uint32_t bno) {
     return nullptr;
 }
 
-mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
+mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
     FS_TRACE_INFO("Direct blocks: \n");
     for (unsigned n = 0; n < kMinfsDirect; n++) {
         FS_TRACE_INFO(" %d,", inode->dnum[n]);
@@ -327,11 +327,11 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
     cached_doubly_indirect_ = 0;
     cached_indirect_ = 0;
 
-    uint32_t n = 0;
+    blk_t n = 0;
     while (true) {
         mx_status_t status;
-        uint32_t bno;
-        uint32_t next_n;
+        blk_t bno;
+        blk_t next_n;
         if ((status = GetInodeNthBno(inode, n, &next_n, &bno)) < 0) {
             if (status == MX_ERR_OUT_OF_RANGE) {
                 break;
@@ -366,7 +366,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, uint32_t ino) {
     return MX_OK;
 }
 
-mx_status_t MinfsChecker::CheckInode(uint32_t ino, uint32_t parent, bool dot_or_dotdot) {
+mx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot) {
     minfs_inode_t inode;
     mx_status_t status;
 

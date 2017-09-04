@@ -20,7 +20,7 @@
 
 namespace minfs {
 
-mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
+mx_status_t Bcache::Readblk(blk_t bno, void* data) {
     off_t off = bno * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
@@ -35,7 +35,7 @@ mx_status_t Bcache::Readblk(uint32_t bno, void* data) {
     return MX_OK;
 }
 
-mx_status_t Bcache::Writeblk(uint32_t bno, const void* data) {
+mx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
     off_t off = bno * kMinfsBlockSize;
     assert(off / kMinfsBlockSize == bno); // Overflow
     FS_TRACE(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);

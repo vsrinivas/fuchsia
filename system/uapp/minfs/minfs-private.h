@@ -64,7 +64,7 @@ public:
 
     // instantiate a vnode from an inode
     // the inode must exist in the file system
-    mx_status_t VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, uint32_t ino);
+    mx_status_t VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, ino_t ino);
 
     // instantiate a vnode with a new inode
     mx_status_t VnodeNew(WriteTxn* txn, mxtl::RefPtr<VnodeMinfs>* out, uint32_t type);
@@ -73,24 +73,24 @@ public:
     void VnodeRelease(VnodeMinfs* vn);
 
     // Allocate a new data block.
-    mx_status_t BlockNew(WriteTxn* txn, uint32_t hint, uint32_t* out_bno);
+    mx_status_t BlockNew(WriteTxn* txn, blk_t hint, blk_t* out_bno);
 
     // free block in block bitmap
-    mx_status_t BlockFree(WriteTxn* txn, uint32_t bno);
+    mx_status_t BlockFree(WriteTxn* txn, blk_t bno);
 
     // free ino in inode bitmap, release all blocks held by inode
     mx_status_t InoFree(VnodeMinfs* vn);
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
-    mx_status_t InodeSync(WriteTxn* txn, uint32_t ino, const minfs_inode_t* inode);
+    mx_status_t InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
 
 #ifdef __Fuchsia__
     fs::Dispatcher* GetDispatcher() {
         return dispatcher_.get();
     }
 #endif
-    void ValidateBno(uint32_t bno) const {
+    void ValidateBno(blk_t bno) const {
         MX_DEBUG_ASSERT(bno != 0);
         MX_DEBUG_ASSERT(bno < info_.block_count);
     }
@@ -103,7 +103,7 @@ private:
     friend class MinfsChecker;
     Minfs(mxtl::unique_ptr<Bcache> bc_, const minfs_info_t* info_);
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
-    mx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, uint32_t* ino_out);
+    mx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* ino_out);
 
     // Enqueues an update for allocated inode/block counts
     mx_status_t CountUpdate(WriteTxn* txn);
@@ -130,14 +130,14 @@ private:
 
     // Vnodes exist in the hash table as long as one or more reference exists;
     // when the Vnode is deleted, it is immediately removed from the map.
-    using HashTable = mxtl::HashTable<uint32_t, VnodeMinfs*>;
+    using HashTable = mxtl::HashTable<ino_t, VnodeMinfs*>;
     HashTable vnode_hash_{};
 };
 
 struct DirArgs {
     const char* name;
     size_t len;
-    uint32_t ino;
+    ino_t ino;
     uint32_t type;
     uint32_t reclen;
     WriteTxn* txn;
@@ -169,8 +169,8 @@ public:
     bool IsDeletedDirectory() const { return flags_ & kMinfsFlagDeletedDirectory; }
     mx_status_t CanUnlink() const;
 
-    uint32_t GetKey() const { return ino_; }
-    static size_t GetHash(uint32_t key) { return INO_HASH(key); }
+    ino_t GetKey() const { return ino_; }
+    static size_t GetHash(ino_t key) { return INO_HASH(key); }
 
     mx_status_t UnlinkChild(WriteTxn* txn, mxtl::RefPtr<VnodeMinfs> child,
                             minfs_dirent_t* de, DirectoryOffset* offs);
@@ -191,7 +191,7 @@ public:
     mx_status_t LookupInternal(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len);
 
     Minfs* fs_{};
-    uint32_t ino_{};
+    ino_t ino_{};
     minfs_inode_t inode_{};
 
     ~VnodeMinfs();
@@ -229,20 +229,20 @@ private:
     mx_status_t LoadIndirectWithinDoublyIndirect(uint32_t index);
     // Initializes the indirect VMO, grows it to |size| bytes, and reads |count| indirect
     // blocks from |iarray| into the indirect VMO, starting at block offset |offset|.
-    mx_status_t LoadIndirectBlocks(uint32_t* iarray, uint32_t count, uint32_t offset,
+    mx_status_t LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32_t offset,
                                    uint64_t size);
 #endif
 
     // Get the disk block 'bno' corresponding to the 'nth' block relative to the start of the
     // current direct/indirect/doubly indirect block section.
     // Allocate the block if requested with a non-null "txn".
-    mx_status_t GetBno(WriteTxn* txn, uint32_t n, uint32_t* bno);
+    mx_status_t GetBno(WriteTxn* txn, blk_t n, blk_t* bno);
     // Acquire (or allocate) a direct block |*bno|. If allocation occurs,
     // |*dirty| is set to true, and the inode block is written to disk.
     //
     // Example call for accessing the 0th direct block in the inode:
     // GetBnoDirect(txn, &inode_.dnum[0], &dirty);
-    mx_status_t GetBnoDirect(WriteTxn* txn, uint32_t* bno, bool* dirty);
+    mx_status_t GetBnoDirect(WriteTxn* txn, blk_t* bno, bool* dirty);
     // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within an indirect
     // block |*ibno|, which is allocated if necessary. If allocation of the indirect block occurs,
     // |*dirty| is set to true, and the indirect and inode blocks are written to disk.
@@ -253,7 +253,7 @@ private:
     // Example call for accessing the 3rd direct block within the 2nd indirect block:
     // GetBnoIndirect(txn, 3, 2, &inode_.inum[2], &bno, &dirty);
     mx_status_t GetBnoIndirect(WriteTxn* txn, uint32_t bindex, uint32_t ib_vmo_offset,
-                               uint32_t* ibno, uint32_t* bno, bool* dirty);
+                               blk_t* ibno, blk_t* bno, bool* dirty);
     // Acquire (or allocate) a direct block |*bno| contained at index |bindex| within a doubly
     // indirect block |*dibno|, at index |ibindex| within that indirect block. If allocation occurs,
     // |*dirty| is set to true, and the doubly indirect, indirect, and inode blocks are written to
@@ -266,14 +266,14 @@ private:
     //                      &inode_.dinum[0], &bno, &dirty);
     mx_status_t GetBnoDoublyIndirect(WriteTxn* txn, uint32_t ibindex, uint32_t bindex,
                                      uint32_t dib_vmo_offset, uint32_t ib_vmo_offset,
-                                     uint32_t* dibno, uint32_t* bno, bool* dirty);
+                                     blk_t* dibno, blk_t* bno, bool* dirty);
 
-    // Deletes all blocks (relateive to a file) from "start" (inclusive) to the end
+    // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
-    mx_status_t BlocksShrink(WriteTxn* txn, uint32_t start);
+    mx_status_t BlocksShrink(WriteTxn* txn, blk_t start);
     // Shrink |count| direct blocks from the |barray| array of direct blocks. Sets |*dirty| to
     // true if anything is deleted.
-    mx_status_t BlocksShrinkDirect(WriteTxn *txn, size_t count, uint32_t* barray, bool* dirty);
+    mx_status_t BlocksShrinkDirect(WriteTxn *txn, size_t count, blk_t* barray, bool* dirty);
     // Shrink |count| indirect blocks from the |iarray| array of indirect blocks. Sets |*dirty| to
     // true if anything is deleted.
     //
@@ -283,7 +283,7 @@ private:
     // On Fuchsia |ib_vmo_offset| contains the block offset of the |iarray| buffer within the
     // cached indirect VMO. On other platforms, this argument may be ignored.
     mx_status_t BlocksShrinkIndirect(WriteTxn* txn, uint32_t bindex, size_t count,
-                                     uint32_t ib_vmo_offset, uint32_t* iarray, bool* dirty);
+                                     uint32_t ib_vmo_offset, blk_t* iarray, bool* dirty);
     // Shrink |count| doubly indirect blocks from the |diarray| array of doubly indirect blocks.
     // Sets |*dirty| to true if anything is deleted.
     //
@@ -298,7 +298,7 @@ private:
     // may be ignored.
     mx_status_t BlocksShrinkDoublyIndirect(WriteTxn *txn, uint32_t ibindex, uint32_t bindex,
                                            size_t count, uint32_t dib_vmo_offset,
-                                           uint32_t ib_vmo_offset, uint32_t* diarray, bool* dirty);
+                                           uint32_t ib_vmo_offset, blk_t* diarray, bool* dirty);
 
 #ifdef __Fuchsia__
     // Reads the block at |offset| in memory
@@ -307,9 +307,9 @@ private:
     void ClearIndirectVmoBlock(uint32_t offset);
 #else
     // Reads the block at |bno| on disk
-    void ReadIndirectBlock(uint32_t bno, uint32_t* entry);
+    void ReadIndirectBlock(blk_t bno, uint32_t* entry);
     // Clears the block at |bno| on disk
-    void ClearIndirectBlock(uint32_t bno);
+    void ClearIndirectBlock(blk_t bno);
 #endif
 
     // Update the vnode's inode and write it to disk
@@ -390,7 +390,7 @@ void minfs_sync_vnode(mxtl::RefPtr<VnodeMinfs> vn, uint32_t flags);
 
 mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max);
 void minfs_dump_info(const minfs_info_t* info);
-void minfs_dump_inode(const minfs_inode_t* inode, uint32_t ino);
+void minfs_dump_inode(const minfs_inode_t* inode, ino_t ino);
 
 int minfs_mkfs(mxtl::unique_ptr<Bcache> bc);
 
@@ -400,7 +400,7 @@ class MinfsChecker {
 public:
     MinfsChecker();
     mx_status_t Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info);
-    mx_status_t CheckInode(uint32_t ino, uint32_t parent, bool dot_or_dotdot);
+    mx_status_t CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot);
     mx_status_t CheckForUnusedBlocks() const;
     mx_status_t CheckForUnusedInodes() const;
     mx_status_t CheckLinkCounts() const;
@@ -413,19 +413,19 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MinfsChecker);
 
-    mx_status_t GetInode(minfs_inode_t* inode, uint32_t ino);
+    mx_status_t GetInode(minfs_inode_t* inode, ino_t ino);
 
     // Returns the nth block within an inode, relative to the start of the
     // file. Returns the "next_n" which might contain a bno. This "next_n"
     // is for performance reasons -- it allows fsck to avoid repeatedly checking
     // the same indirect / doubly indirect blocks with all internal
     // bno unallocated.
-    mx_status_t GetInodeNthBno(minfs_inode_t* inode, uint32_t n, uint32_t* next_n,
-                               uint32_t* bno_out);
-    mx_status_t CheckDirectory(minfs_inode_t* inode, uint32_t ino,
-                               uint32_t parent, uint32_t flags);
-    const char* CheckDataBlock(uint32_t bno);
-    mx_status_t CheckFile(minfs_inode_t* inode, uint32_t ino);
+    mx_status_t GetInodeNthBno(minfs_inode_t* inode, blk_t n, blk_t* next_n,
+                               blk_t* bno_out);
+    mx_status_t CheckDirectory(minfs_inode_t* inode, ino_t ino,
+                               ino_t parent, uint32_t flags);
+    const char* CheckDataBlock(blk_t bno);
+    mx_status_t CheckFile(minfs_inode_t* inode, ino_t ino);
 
     mxtl::unique_ptr<Minfs> fs_;
     RawBitmap checked_inodes_;
@@ -435,8 +435,8 @@ private:
     uint32_t alloc_blocks_;
     mxtl::Array<int32_t> links_;
 
-    uint32_t cached_doubly_indirect_;
-    uint32_t cached_indirect_;
+    blk_t cached_doubly_indirect_;
+    blk_t cached_indirect_;
     uint8_t doubly_indirect_cache_[kMinfsBlockSize];
     uint8_t indirect_cache_[kMinfsBlockSize];
 };
@@ -446,6 +446,6 @@ mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc);
 
 mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* root_out, mxtl::unique_ptr<Bcache> bc);
 
-void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);
+void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 } // namespace minfs
