@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fbl/auto_lock.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls.h>
@@ -15,6 +16,8 @@
 #include <virtio/balloon.h>
 #include <virtio/virtio.h>
 #include <virtio/virtio_ids.h>
+
+#include "virtio_priv.h"
 
 #define QUEUE_SIZE 128u
 
@@ -130,25 +133,17 @@ static mx_status_t balloon_queue_notify(virtio_device_t* device, uint16_t queue_
 static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
                                 mx_vcpu_io_t* vcpu_io) {
     balloon_t* balloon = virtio_device_to_balloon(device);
-    vcpu_io->access_size = 1;
-    mtx_lock(&balloon->mutex);
-    uint8_t* buf = (uint8_t*)&balloon->config;
-    vcpu_io->u8 = buf[port];
-    mtx_unlock(&balloon->mutex);
-    return MX_OK;
+
+    fbl::AutoLock lock(&balloon->mutex);
+    return virtio_device_config_read(device, &balloon->config, port, access_size, vcpu_io);
 }
 
 static mx_status_t balloon_write(virtio_device_t* device, uint16_t port,
                                  const mx_packet_guest_io_t* io) {
-    if (io->access_size != 1)
-        return MX_ERR_NOT_SUPPORTED;
-
     balloon_t* balloon = virtio_device_to_balloon(device);
-    mtx_lock(&balloon->mutex);
-    uint8_t* buf = (uint8_t*)&balloon->config;
-    buf[port] = io->u8;
-    mtx_unlock(&balloon->mutex);
-    return MX_OK;
+
+    fbl::AutoLock lock(&balloon->mutex);
+    return virtio_device_config_write(device, &balloon->config, port, io);
 }
 
 static const virtio_device_ops_t kBalloonVirtioDeviceOps = {

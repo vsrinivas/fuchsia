@@ -7,25 +7,19 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/unique_ptr.h>
 #include <hypervisor/bits.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls/port.h>
-#include <fbl/unique_ptr.h>
-
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
 
-// clang-format off
+#include "virtio_priv.h"
 
-/* PCI macros. */
-#define PCI_VENDOR_ID_VIRTIO            0x1af4u
-
-// clang-format on
-
-static constexpr uint16_t virtio_pci_legacy_id(uint16_t virtio_id) {
-    return static_cast<uint16_t>(virtio_id + 0xfffu);
-}
+/* Accesses to this range are device specific. */
+#define VIRTIO_PCI_DEVICE_CFG_BASE      VIRTIO_PCI_CONFIG_OFFSET_NOMSI
+#define VIRTIO_PCI_DEVICE_CFG_TOP(size) (VIRTIO_PCI_DEVICE_CFG_BASE + size - 1)
 
 static virtio_device_t* pci_device_to_virtio(const pci_device_t* device) {
     return static_cast<virtio_device_t*>(device->impl);
@@ -58,9 +52,8 @@ static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
 }
 
 
-static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar,
-                                          uint16_t port, uint8_t access_size,
-                                          mx_vcpu_io_t* vcpu_io) {
+mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar, uint16_t port,
+                                   uint8_t access_size, mx_vcpu_io_t* vcpu_io) {
     if (bar != 0)
         return MX_ERR_NOT_SUPPORTED;
 
@@ -111,8 +104,8 @@ static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_
     return MX_ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
-                                           const mx_packet_guest_io_t* io) {
+mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar, uint16_t port,
+                                    const mx_packet_guest_io_t* io) {
     if (bar != 0)
         return MX_ERR_NOT_SUPPORTED;
 
@@ -155,30 +148,7 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar
     case VIRTIO_PCI_QUEUE_NOTIFY: {
         if (io->access_size != 2)
             return MX_ERR_IO_DATA_INTEGRITY;
-        if (io->u16 >= device->num_queues) {
-            fprintf(stderr, "Notify queue does not exist.\n");
-            return MX_ERR_NOT_SUPPORTED;
-        }
-
-        // Invoke the device callback if one has been provided.
-        uint16_t queue_sel = io->u16;
-        if (device->ops->queue_notify != NULL) {
-            mx_status_t status = device->ops->queue_notify(device, queue_sel);
-            if (status != MX_OK) {
-                fprintf(stderr, "Failed to handle queue notify event. Error %d\n", status);
-                return status;
-            }
-
-            // Send an interrupt back to the guest if we've generated one while
-            // processing the queue.
-            if (device->isr_status > 0) {
-                return pci_interrupt(&device->pci_device);
-            }
-        }
-
-        // Notify threads waiting on a descriptor.
-        virtio_queue_signal(&device->queues[queue_sel]);
-        return MX_OK;
+        return virtio_device_kick(device, io->u16);
     }
     }
 
@@ -190,21 +160,4 @@ static mx_status_t virtio_pci_legacy_write(pci_device_t* pci_device, uint8_t bar
 
     fprintf(stderr, "Unhandled virtio device write %#x\n", port);
     return MX_ERR_NOT_SUPPORTED;
-}
-
-static const pci_device_ops_t kVirtioLegacyPciDeviceOps = {
-    .read_bar = &virtio_pci_legacy_read,
-    .write_bar = &virtio_pci_legacy_write,
-};
-
-void virtio_pci_init(virtio_device_t* device) {
-    device->pci_device.vendor_id = PCI_VENDOR_ID_VIRTIO;
-    device->pci_device.device_id = virtio_pci_legacy_id(device->device_id);
-    device->pci_device.subsystem_vendor_id = 0;
-    device->pci_device.subsystem_id = device->device_id;
-    device->pci_device.class_code = 0;
-    device->pci_device.bar[0].size = static_cast<uint16_t>(
-        sizeof(virtio_pci_legacy_config_t) + device->config_size);
-    device->pci_device.impl = device;
-    device->pci_device.ops = &kVirtioLegacyPciDeviceOps;
 }

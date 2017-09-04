@@ -7,24 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls/port.h>
-#include <fbl/unique_ptr.h>
 
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
-
-// clang-format off
-
-/* PCI macros. */
-#define PCI_ALIGN(n)                    ((((uintptr_t)n) + 4095) & ~4095)
-
-// clang-format on
-
-static constexpr uint16_t virtio_pci_legacy_id(uint16_t virtio_id) {
-    return static_cast<uint16_t>(virtio_id + 0xfffu);
-}
 
 // Convert guest-physical addresses to usable virtual addresses.
 #define guest_paddr_to_host_vaddr(device, addr) \
@@ -97,6 +87,32 @@ void virtio_queue_signal(virtio_queue_t* queue) {
 mx_status_t virtio_device_notify(virtio_device_t* device) {
     return pci_interrupt(&device->pci_device);
 }
+
+mx_status_t virtio_device_kick(virtio_device_t* device, uint16_t queue_sel) {
+    if (queue_sel >= device->num_queues)
+        return MX_ERR_OUT_OF_RANGE;
+
+    // Invoke the device callback if one has been provided.
+    if (device->ops->queue_notify != NULL) {
+        mx_status_t status = device->ops->queue_notify(device, queue_sel);
+        if (status != MX_OK) {
+            fprintf(stderr, "Failed to handle queue notify event.\n");
+            return status;
+        }
+
+        // Send an interrupt back to the guest if we've generated one while
+        // processing the queue.
+        fbl::AutoLock lock(&device->mutex);
+        if (device->isr_status > 0) {
+            return pci_interrupt(&device->pci_device);
+        }
+    }
+
+    // Notify threads waiting on a descriptor.
+    virtio_queue_signal(&device->queues[queue_sel]);
+    return MX_OK;
+}
+
 
 // This must not return any errors besides MX_ERR_NOT_FOUND.
 static mx_status_t virtio_queue_next_avail_locked(virtio_queue_t* queue, uint16_t* index) {
@@ -249,4 +265,49 @@ mx_status_t virtio_queue_handler(virtio_queue_t* queue, virtio_queue_fn_t handle
     virtio_queue_return(queue, head, used_len);
 
     return ring_avail_count(queue) > 0 ? MX_ERR_NEXT : MX_OK;
+}
+
+mx_status_t virtio_device_config_read(const virtio_device_t* device, void* config, uint16_t port,
+                                      uint8_t access_size, mx_vcpu_io_t* vcpu_io) {
+    vcpu_io->access_size = access_size;
+    switch (access_size) {
+    case 1: {
+        uint8_t* buf = reinterpret_cast<uint8_t*>(config);
+        vcpu_io->u8 = buf[port];
+        return MX_OK;
+    }
+    case 2: {
+        uint16_t* buf = reinterpret_cast<uint16_t*>(config);
+        vcpu_io->u16 = buf[port/2];
+        return MX_OK;
+    }
+    case 4: {
+        uint32_t* buf = reinterpret_cast<uint32_t*>(config);
+        vcpu_io->u32 = buf[port/4];
+        return MX_OK;
+    }
+    }
+    return MX_ERR_NOT_SUPPORTED;
+}
+
+mx_status_t virtio_device_config_write(const virtio_device_t* device, void* config, uint16_t port,
+                                       const mx_packet_guest_io_t* io) {
+    switch (io->access_size) {
+    case 1: {
+        uint8_t* buf = reinterpret_cast<uint8_t*>(config);
+        buf[port] = io->u8;
+        return MX_OK;
+    }
+    case 2: {
+        uint16_t* buf = reinterpret_cast<uint16_t*>(config);
+        buf[port/2] = io->u16;
+        return MX_OK;
+    }
+    case 4: {
+        uint32_t* buf = reinterpret_cast<uint32_t*>(config);
+        buf[port/4] = io->u32;
+        return MX_OK;
+    }
+    }
+    return MX_ERR_NOT_SUPPORTED;
 }

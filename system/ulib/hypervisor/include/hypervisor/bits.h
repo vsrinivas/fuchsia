@@ -46,3 +46,9 @@ static inline constexpr T align(T x, size_t alignment) {
     auto mask = static_cast<T>(alignment - 1);
     return static_cast<T>(x + mask) & static_cast<T>(~mask);
 }
+
+template <typename T>
+static inline constexpr bool is_aligned(T x, size_t alignment) {
+    auto mask = static_cast<T>(alignment - 1);
+    return (x & mask) == 0;
+}

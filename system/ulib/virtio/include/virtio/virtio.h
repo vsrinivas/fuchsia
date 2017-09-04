@@ -6,33 +6,54 @@
 
 #include <magenta/compiler.h>
 
-#define VIRTIO_STATUS_ACKNOWLEDGE           (1u << 0)
-#define VIRTIO_STATUS_DRIVER                (1u << 1)
-#define VIRTIO_STATUS_DRIVER_OK             (1u << 2)
-#define VIRTIO_STATUS_FEATURES_OK           (1u << 3)
-#define VIRTIO_STATUS_DEVICE_NEEDS_RESET    (1u << 6)
-#define VIRTIO_STATUS_FAILED                (1u << 7)
+#define VIRTIO_STATUS_ACKNOWLEDGE                   (1u << 0)
+#define VIRTIO_STATUS_DRIVER                        (1u << 1)
+#define VIRTIO_STATUS_DRIVER_OK                     (1u << 2)
+#define VIRTIO_STATUS_FEATURES_OK                   (1u << 3)
+#define VIRTIO_STATUS_DEVICE_NEEDS_RESET            (1u << 6)
+#define VIRTIO_STATUS_FAILED                        (1u << 7)
+
+// PCI config space for non-transitional devices.
+#define VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES_SEL   0x0
+#define VIRTIO_PCI_COMMON_CFG_DEVICE_FEATURES       0x4
+#define VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES_SEL   0x8
+#define VIRTIO_PCI_COMMON_CFG_DRIVER_FEATURES       0xc
+#define VIRTIO_PCI_COMMON_CFG_MSIX_CONFIG           0x10
+#define VIRTIO_PCI_COMMON_CFG_NUM_QUEUES            0x12
+#define VIRTIO_PCI_COMMON_CFG_DEVICE_STATUS         0x14
+#define VIRTIO_PCI_COMMON_CFG_CONFIG_GEN            0x15
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_SEL             0x16
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_SIZE            0x18
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_MSIX_VECTOR     0x1a
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_ENABLE          0x1c
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_NOTIFY_OFF      0x1e
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW        0x20
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_HIGH       0x24
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_AVAIL_LOW       0x28
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_AVAIL_HIGH      0x2c
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_USED_LOW        0x30
+#define VIRTIO_PCI_COMMON_CFG_QUEUE_USED_HIGH       0x34
 
 // PCI IO space for transitional virtio devices
-#define VIRTIO_PCI_DEVICE_FEATURES          0x0     // uint32_t
-#define VIRTIO_PCI_DRIVER_FEATURES          0x4     // uint32_t
-#define VIRTIO_PCI_QUEUE_PFN                0x8     // uint32_t
-#define VIRTIO_PCI_QUEUE_SIZE               0xc     // uint16_t
-#define VIRTIO_PCI_QUEUE_SELECT             0xe     // uint16_t
-#define VIRTIO_PCI_QUEUE_NOTIFY             0x10    // uint16_t
-#define VIRTIO_PCI_DEVICE_STATUS            0x12    // uint8_t
-#define VIRTIO_PCI_ISR_STATUS               0x13    // uint8_t
-#define VIRTIO_PCI_MSI_CONFIG_VECTOR        0x14    // uint16_t
-#define VIRTIO_PCI_MSI_QUEUE_VECTOR         0x16    // uint16_t
+#define VIRTIO_PCI_DEVICE_FEATURES                  0x0     // uint32_t
+#define VIRTIO_PCI_DRIVER_FEATURES                  0x4     // uint32_t
+#define VIRTIO_PCI_QUEUE_PFN                        0x8     // uint32_t
+#define VIRTIO_PCI_QUEUE_SIZE                       0xc     // uint16_t
+#define VIRTIO_PCI_QUEUE_SELECT                     0xe     // uint16_t
+#define VIRTIO_PCI_QUEUE_NOTIFY                     0x10    // uint16_t
+#define VIRTIO_PCI_DEVICE_STATUS                    0x12    // uint8_t
+#define VIRTIO_PCI_ISR_STATUS                       0x13    // uint8_t
+#define VIRTIO_PCI_MSI_CONFIG_VECTOR                0x14    // uint16_t
+#define VIRTIO_PCI_MSI_QUEUE_VECTOR                 0x16    // uint16_t
 
-#define VIRTIO_PCI_CONFIG_OFFSET_NOMSI      0x14    // uint16_t
-#define VIRTIO_PCI_CONFIG_OFFSET_MSI        0x18    // uint16_t
+#define VIRTIO_PCI_CONFIG_OFFSET_NOMSI              0x14    // uint16_t
+#define VIRTIO_PCI_CONFIG_OFFSET_MSI                0x18    // uint16_t
 
-#define VIRTIO_PCI_CAP_COMMON_CFG           1
-#define VIRTIO_PCI_CAP_NOTIFY_CFG           2
-#define VIRTIO_PCI_CAP_ISR_CFG              3
-#define VIRTIO_PCI_CAP_DEVICE_CFG           4
-#define VIRTIO_PCI_CAP_PCI_CFG              5
+#define VIRTIO_PCI_CAP_COMMON_CFG                   1
+#define VIRTIO_PCI_CAP_NOTIFY_CFG                   2
+#define VIRTIO_PCI_CAP_ISR_CFG                      3
+#define VIRTIO_PCI_CAP_DEVICE_CFG                   4
+#define VIRTIO_PCI_CAP_PCI_CFG                      5
 
 __BEGIN_CDECLS
 

@@ -5,17 +5,11 @@
 #pragma once
 
 #include <hypervisor/pci.h>
+#include <magenta/syscalls/hypervisor.h>
 #include <magenta/types.h>
+#include <virtio/virtio.h>
 
 // clang-format off
-
-/* Accesses to this range are common accross device types. */
-#define VIRTIO_PCI_COMMON_CFG_BASE      0
-#define VIRTIO_PCI_COMMON_CFG_TOP       (VIRTIO_PCI_CONFIG_OFFSET_NOMSI - 1)
-
-/* Accesses to this range are device specific. */
-#define VIRTIO_PCI_DEVICE_CFG_BASE      VIRTIO_PCI_CONFIG_OFFSET_NOMSI
-#define VIRTIO_PCI_DEVICE_CFG_TOP(size) (VIRTIO_PCI_DEVICE_CFG_BASE + size - 1)
 
 // Interrupt status bits.
 #define VIRTIO_ISR_QUEUE                0x1
@@ -48,11 +42,19 @@ typedef struct virtio_device_ops {
     mx_status_t (*queue_notify)(virtio_device_t* device, uint16_t queue_sel);
 } virtio_device_ops_t;
 
+static const size_t kVirtioPciNumCapabilities = 4;
+
 /* Common state shared by all virtio devices. */
 typedef struct virtio_device {
     mtx_t mutex;
-    // Virtio feature flags.
+
+    // Feature flags.
+    // See Virtio 1.0 Section 4.1.4.3 for more details.
     uint32_t features;
+    uint32_t features_sel;
+    uint32_t driver_features;
+    uint32_t driver_features_sel;
+
     // Virtio device id.
     uint8_t device_id;
     // Virtio status register for the device.
@@ -81,8 +83,18 @@ typedef struct virtio_device {
     const virtio_device_ops_t* ops;
     // Private pointer for use by the device implementation.
     void* impl;
+
     // PCI device for the virtio-pci transport.
     pci_device_t pci_device;
+
+    // We need one of these for every virtio_pci_cap_t structure we expose.
+    pci_cap_t capabilities[kVirtioPciNumCapabilities];
+
+    // Virtio PCI capabilities.
+    virtio_pci_cap_t common_cfg_cap;
+    virtio_pci_cap_t device_cfg_cap;
+    virtio_pci_notify_cap_t notify_cfg_cap;
+    virtio_pci_cap_t isr_cfg_cap;
 } virtio_device_t;
 
 /* Configures a device for Virtio PCI functionality.
@@ -96,6 +108,9 @@ void virtio_pci_init(virtio_device_t* device);
 /* Send an interrupt back to the guest for a device. */
 mx_status_t virtio_device_notify(virtio_device_t* device);
 
+/* Handle kicks from the guest to process a queue. */
+mx_status_t virtio_device_kick(virtio_device_t* device, uint16_t queue_sel);
+
 /* Stores the Virtio queue based on the ring provided by the guest.
  *
  * NOTE(abdulla): This structure points to guest-controlled memory.
@@ -106,10 +121,16 @@ typedef struct virtio_queue {
     cnd_t avail_ring_cnd;
 
     // Queue addresses as defined in Virtio 1.0 Section 4.1.4.3.
-    struct {
-        uint64_t desc;
-        uint64_t avail;
-        uint64_t used;
+    union {
+        struct {
+            uint64_t desc;
+            uint64_t avail;
+            uint64_t used;
+        };
+
+        // Software will access these using 32 bit operations. Provide a
+        // convenience interface for these use cases.
+        uint32_t words[6];
     } addr;
 
     // Number of entries in the descriptor table.

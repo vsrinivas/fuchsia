@@ -18,6 +18,8 @@
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
 
+#include "virtio_priv.h"
+
 /* Block configuration constants. */
 #define QUEUE_SIZE 128u
 
@@ -29,11 +31,7 @@ static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
 static mx_status_t block_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
                               mx_vcpu_io_t* vcpu_io) {
     block_t* block = virtio_device_to_block(device);
-
-    uint8_t* buf = (uint8_t*)&block->config;
-    vcpu_io->access_size = 1;
-    vcpu_io->u8 = buf[port];
-    return MX_OK;
+    return virtio_device_config_read(device, &block->config, port, access_size, vcpu_io);
 }
 
 static mx_status_t block_write(virtio_device_t* device, uint16_t port,
