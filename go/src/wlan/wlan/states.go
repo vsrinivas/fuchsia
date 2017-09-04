@@ -8,6 +8,7 @@ import (
 	mlme "apps/wlan/services/wlan_mlme"
 	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 	"apps/wlan/services/wlan_service"
+	"apps/wlan/wlan/elements"
 
 	"fmt"
 	"log"
@@ -308,11 +309,41 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 	req := &mlme.AssociateRequest{
 		PeerStaAddress: c.ap.BSSDesc.Bssid,
 	}
+
+	if c.ap.BSSDesc.Rsn != nil {
+		capabilityRSNE := s.createCapabilityRSNElement()
+		req.Rsn = &capabilityRSNE
+	}
 	if debug {
 		log.Printf("assoc req: %v", req)
 	}
 
 	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_AssociateRequest))
+}
+
+// Creates the RSNE used in Association.request to announce supported ciphers and AKMs to the AP.
+// Currently, only WPA2-PSK-CCMP-128 is supported.
+func (s *assocState) createCapabilityRSNElement() []byte {
+	rsne := elements.NewEmptyRSN()
+	rsne.GroupData = &elements.CipherSuite{
+		Type: elements.CipherSuiteType_CCMP128,
+		OUI: elements.DefaultCipherSuiteOUI,
+	}
+	rsne.PairwiseCiphers = []elements.CipherSuite{
+		{
+			Type: elements.CipherSuiteType_CCMP128,
+			OUI: elements.DefaultCipherSuiteOUI,
+		},
+	}
+	rsne.AKMs = []elements.AKMSuite{
+		{
+			Type: elements.AkmSuiteType_PSK,
+			OUI: elements.DefaultCipherSuiteOUI,
+		},
+	}
+	capabilities := uint16(0)
+	rsne.Caps = &capabilities
+	return rsne.Bytes()
 }
 
 func (s *assocState) commandIsDisabled() bool {

@@ -55,7 +55,7 @@ struct BSSDescription {
     uint32 dtim_period;
     uint64 timestamp;
     uint64 local_time;
-    bool rsn;
+    array<uint8>? rsn;
 
     uint8 channel;
 
@@ -167,6 +167,7 @@ struct DeauthenticateIndication {
 
 struct AssociateRequest {
     array<uint8, 6> peer_sta_address;
+    array<uint8>? rsn;
 
     // etc
 };
