@@ -216,6 +216,54 @@ struct DisassociateIndication {
     // VendorSpecificInfo
 };
 
+// MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
+
+enum KeyId {
+    WEP = 0,
+    TKIP = 1,
+    CCMP = 2,
+    GCMP = 3,
+    // Specs are unclear about values for 4 & 5.
+    BIP_CMAC = 4,
+    BIP_GMAC = 5
+    // 6 - 4095 Reserved
+};
+
+enum KeyType {
+    GROUP,
+    PAIRWISE,
+    PEER_KEY,
+    IGTK
+};
+
+struct SetKeyDescriptor {
+    // Specs specify a bit string, we use byte array.
+    array<uint8> key;
+    uint16 length;
+    KeyId key_id;
+    KeyType key_type;
+    array<uint8, 6> address;
+    array<uint8, 8> rsc;
+    array<uint8, 3> cipher_suite_oui;
+    uint8 cipher_suite_type;
+};
+
+struct SetKeysRequest {
+    array<SetKeyDescriptor> keylist;
+};
+
+// MLME-DELETEKEYS.request (IEEE Std 802.11-2016 6.3.20.1)
+
+struct DeleteKeyDescriptor {
+  KeyId key_id;
+  KeyType key_type;
+  array<uint8, 6> address;
+};
+
+struct DeleteKeysRequest {
+  array<DeleteKeyDescriptor> keylist;
+};
+
 // MLME-EAPOL.request (IEEE Std 802.11-2016 6.3.22.1)
 
 // IEEE Std 802.1X-2010, 11.3, Figure 11-1
@@ -230,6 +278,18 @@ struct EapolRequest {
     array<uint8, 6> src_addr;
     array<uint8, 6> dst_addr;
     EapolPdu data;
+};
+
+// MLME-EAPOL.confirm (IEEE Std 802.11-2016 6.3.22.2)
+
+enum EapolResultCodes {
+    SUCCESS,
+    TRANSMISSION_FAILURE,
+    LAST = TRANSMISSION_FAILURE
+};
+
+struct EapolResponse {
+    EapolResultCodes result_code;
 };
 
 // Method ordinals
@@ -291,9 +351,21 @@ enum Method {
     // Args: DisassociateIndication
     DISASSOCIATE_indication,
 
+    // MLME-SETKEYS.request
+    // Args: SetKeysRequest
+    SETKEYS_request,
+
+    // MLME-DELETEKEYS.request
+    // Args: DeleteKeysRequest
+    DELETEKEYS_request,
+
     // MLME-EAPOL.request
     // Args: EapolRequest
     EAPOL_request,
+
+    // MLME-EAPOL.confirm
+    // Args: EapolResponse
+    EAPOL_confirm,
 
 
     // Custom primitives extending 802.11 MLME SAP interface.
