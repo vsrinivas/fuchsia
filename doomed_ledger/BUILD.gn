@@ -4,6 +4,7 @@
 
 group("services") {
   deps = [
+    "//apps/ledger/services/cloud_provider",
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
   ]
