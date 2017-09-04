@@ -36,31 +36,28 @@ class LedgerStorageTest : public test::TestWithMessageLoop {
 
 TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   PageId page_id = "1234";
-  storage_.GetPageStorage(
-      page_id,
-      [this](Status status, std::unique_ptr<PageStorage> page_storage) {
-        EXPECT_EQ(Status::NOT_FOUND, status);
-        EXPECT_EQ(nullptr, page_storage);
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
-
-  std::unique_ptr<PageStorage> page_storage;
   Status status;
+  std::unique_ptr<PageStorage> page_storage;
+
+  storage_.GetPageStorage(
+      page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(nullptr, page_storage);
+
   storage_.CreatePageStorage(
       page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
+  ASSERT_NE(nullptr, page_storage);
   ASSERT_EQ(page_id, page_storage->GetId());
+
   page_storage.reset();
   storage_.GetPageStorage(
-      page_id,
-      [this](Status status, std::unique_ptr<PageStorage> page_storage) {
-        EXPECT_EQ(Status::OK, status);
-        EXPECT_NE(nullptr, page_storage);
-        message_loop_.PostQuitTask();
-      });
+      page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_NE(nullptr, page_storage);
 }
 
 TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
@@ -71,26 +68,22 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
       page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
+  ASSERT_NE(nullptr, page_storage);
   ASSERT_EQ(page_id, page_storage->GetId());
   page_storage.reset();
+
   storage_.GetPageStorage(
-      page_id,
-      [this](Status status, std::unique_ptr<PageStorage> page_storage) {
-        EXPECT_EQ(Status::OK, status);
-        EXPECT_NE(nullptr, page_storage);
-        message_loop_.PostQuitTask();
-      });
+      page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_NE(nullptr, page_storage);
 
   EXPECT_TRUE(storage_.DeletePageStorage(page_id));
   storage_.GetPageStorage(
-      page_id,
-      [this](Status status, std::unique_ptr<PageStorage> page_storage) {
-        EXPECT_EQ(Status::NOT_FOUND, status);
-        EXPECT_EQ(nullptr, page_storage);
-        message_loop_.PostQuitTask();
-      });
+      page_id, callback::Capture(MakeQuitTask(), &status, &page_storage));
   EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(nullptr, page_storage);
 }
 
 }  // namespace
