@@ -191,9 +191,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 };
 
 TEST_F(CloudProviderImplTest, AddCommit) {
-  Commit commit(
-      "commit_id", "some_content",
-      std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
+  Commit commit("commit_id", "some_content");
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(std::move(commit));
 
@@ -212,9 +210,6 @@ TEST_F(CloudProviderImplTest, AddCommit) {
   EXPECT_EQ(
       "{\"commit_idV\":{\"id\":\"commit_idV\","
       "\"content\":\"some_contentV\","
-      "\"objects\":{"
-      "\"object_aV\":\"data_aV\","
-      "\"object_bV\":\"data_bV\"},"
       "\"timestamp\":{\".sv\":\"timestamp\"},"
       "\"batch_position\":0,"
       "\"batch_size\":1"
@@ -225,8 +220,8 @@ TEST_F(CloudProviderImplTest, AddCommit) {
 }
 
 TEST_F(CloudProviderImplTest, AddMultipleCommits) {
-  Commit commit1("id1", "content1", std::map<ObjectId, Data>{});
-  Commit commit2("id2", "content2", std::map<ObjectId, Data>{});
+  Commit commit1("id1", "content1");
+  Commit commit2("id2", "content2");
   std::vector<cloud_provider::Commit> commits;
   commits.push_back(std::move(commit1));
   commits.push_back(std::move(commit2));
@@ -302,8 +297,8 @@ TEST_F(CloudProviderImplTest, WatchAndGetMultipleCommits) {
 
   watch_client_->OnPatch("/", document);
 
-  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
-  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  Commit expected_n1("id_1", "some_content");
+  Commit expected_n2("id_2", "some_other_content");
   EXPECT_EQ(2u, commits_.size());
   EXPECT_EQ(2u, server_timestamps_.size());
   EXPECT_EQ(expected_n1, commits_[0]);
@@ -340,8 +335,8 @@ TEST_F(CloudProviderImplTest, WatchAndGetCompleteBatch) {
   EXPECT_EQ(0u, on_remote_commits_calls_);
   watch_client_->OnPatch("/", document);
 
-  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
-  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  Commit expected_n1("id_1", "some_content");
+  Commit expected_n2("id_2", "some_other_content");
   EXPECT_EQ(1u, on_remote_commits_calls_);
   EXPECT_EQ(2u, commits_.size());
   EXPECT_EQ(2u, server_timestamps_.size());
@@ -388,8 +383,8 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunks) {
   watch_client_->OnPatch("/", document_2);
 
   EXPECT_EQ(1u, on_remote_commits_calls_);
-  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
-  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  Commit expected_n1("id_1", "some_content");
+  Commit expected_n2("id_2", "some_other_content");
   ASSERT_EQ(2u, commits_.size());
   EXPECT_EQ(expected_n1, commits_[0]);
   EXPECT_EQ(expected_n2, commits_[1]);
@@ -430,8 +425,8 @@ TEST_F(CloudProviderImplTest, WatchAndGetBatchInTwoChunksOutOfOrder) {
   ASSERT_FALSE(document_1.HasParseError());
   watch_client_->OnPatch("/", document_1);
 
-  Commit expected_n1("id_1", "some_content", std::map<ObjectId, Data>{});
-  Commit expected_n2("id_2", "some_other_content", std::map<ObjectId, Data>{});
+  Commit expected_n1("id_1", "some_content");
+  Commit expected_n2("id_2", "some_other_content");
   ASSERT_EQ(2u, commits_.size());
   EXPECT_EQ(expected_n1, commits_[0]);
   EXPECT_EQ(expected_n2, commits_[1]);
@@ -445,9 +440,6 @@ TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
   std::string put_content =
       "{\"id\":\"commit_idV\","
       "\"content\":\"some_contentV\","
-      "\"objects\":{"
-      "\"object_aV\":\"data_aV\","
-      "\"object_bV\":\"data_bV\"},"
       "\"timestamp\":1472722368296"
       "}";
   rapidjson::Document document;
@@ -456,9 +448,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetSingleCommit) {
 
   watch_client_->OnPut("/commits/commit_idV", document);
 
-  Commit expected_commit(
-      "commit_id", "some_content",
-      std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
+  Commit expected_commit("commit_id", "some_content");
   std::string expected_timestamp = ServerTimestampToBytes(1472722368296);
   EXPECT_EQ(1u, commits_.size());
   EXPECT_EQ(expected_commit, commits_[0]);
@@ -553,9 +543,6 @@ TEST_F(CloudProviderImplTest, GetCommits) {
       "{\"id1V\":"
       "{\"content\":\"xyzV\","
       "\"id\":\"id1V\","
-      "\"objects\":{"
-      "\"object_aV\":\"aV\","
-      "\"object_bV\":\"bV\"},"
       "\"timestamp\":1472722368296"
       "},"
       "\"id2V\":"
@@ -574,10 +561,8 @@ TEST_F(CloudProviderImplTest, GetCommits) {
       callback::Capture(MakeQuitTask(), &status, &records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  const Commit expected_commit_1(
-      "id1", "xyz",
-      std::map<ObjectId, Data>{{"object_a", "a"}, {"object_b", "b"}});
-  const Commit expected_commit_2("id2", "bazinga", std::map<ObjectId, Data>{});
+  const Commit expected_commit_1("id1", "xyz");
+  const Commit expected_commit_2("id2", "bazinga");
   EXPECT_EQ(2u, records.size());
   // Verify that commits are ordered by timestamp.
   EXPECT_EQ(expected_commit_2, records[0].commit);
@@ -623,10 +608,8 @@ TEST_F(CloudProviderImplTest, GetCommitsBatch) {
       callback::Capture(MakeQuitTask(), &status, &records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  const Commit expected_commit_0("id_0", "some_content",
-                                 std::map<ObjectId, Data>{});
-  const Commit expected_commit_1("id_1", "other_content",
-                                 std::map<ObjectId, Data>{});
+  const Commit expected_commit_0("id_0", "some_content");
+  const Commit expected_commit_1("id_1", "other_content");
   EXPECT_EQ(2u, records.size());
   // Verify that commits are ordered by the batch position.
   EXPECT_EQ(expected_commit_0, records[0].commit);

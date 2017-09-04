@@ -20,7 +20,6 @@ namespace {
 
 const char kIdKey[] = "id";
 const char kContentKey[] = "content";
-const char kObjectsKey[] = "objects";
 const char kTimestampKey[] = "timestamp";
 const char kBatchPositionKey[] = "batch_position";
 const char kBatchSizeKey[] = "batch_size";
@@ -38,20 +37,6 @@ void WriteCommit(rapidjson::Writer<rapidjson::StringBuffer>* writer,
     writer->Key(kContentKey);
     std::string content = firebase::EncodeValue(commit.content);
     writer->String(content.c_str(), content.size());
-
-    if (!commit.storage_objects.empty()) {
-      writer->Key(kObjectsKey);
-      writer->StartObject();
-      {
-        for (const auto& entry : commit.storage_objects) {
-          std::string key = firebase::EncodeKey(entry.first);
-          writer->Key(key.c_str(), key.size());
-          std::string value = firebase::EncodeValue(entry.second);
-          writer->String(value.c_str(), value.size());
-        }
-      }
-      writer->EndObject();
-    }
 
     writer->Key(kTimestampKey);
     // Placeholder that Firebase will replace with server timestamp. See
@@ -165,23 +150,6 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
     return false;
   }
 
-  std::map<ObjectId, Data> storage_objects;
-  if (value.HasMember(kObjectsKey)) {
-    for (auto& it : value[kObjectsKey].GetObject()) {
-      ObjectId storage_object_id;
-      if (!firebase::Decode(it.name, &storage_object_id)) {
-        return false;
-      }
-
-      Data storage_object_data;
-      if (!it.value.IsString() ||
-          !firebase::Decode(it.value, &storage_object_data)) {
-        return false;
-      }
-      storage_objects[storage_object_id] = storage_object_data;
-    }
-  }
-
   if (!value.HasMember(kTimestampKey) || !value[kTimestampKey].IsNumber()) {
     return false;
   }
@@ -197,8 +165,7 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
   }
 
   auto record = std::make_unique<Record>(
-      Commit(std::move(commit_id), std::move(commit_content),
-             std::move(storage_objects)),
+      Commit(std::move(commit_id), std::move(commit_content)),
       ServerTimestampToBytes(value[kTimestampKey].GetInt64()), batch_position,
       batch_size);
   output_record->swap(record);

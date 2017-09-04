@@ -522,7 +522,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
   std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "44");
+  records.emplace_back(cloud_provider::Commit("id1", "content1"), "44");
   page_sync_->OnRemoteCommits(std::move(records));
   page_sync_->OnNewCommits(storage_.NewCommit("id2", "content2")->AsList(),
                            storage::ChangeSource::LOCAL);
@@ -543,9 +543,9 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
   storage_.NewCommit("local2", "content2");
 
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("remote3", "content3", {}), "42");
+      cloud_provider::Commit("remote3", "content3"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("remote4", "content4", {}), "43");
+      cloud_provider::Commit("remote4", "content4"), "43");
   bool backlog_downloaded_called = false;
   page_sync_->SetOnBacklogDownloaded([this, &backlog_downloaded_called] {
     EXPECT_EQ(0u, cloud_provider_.received_commits.size());
@@ -750,9 +750,9 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id2", "content2", {}), "43");
+      cloud_provider::Commit("id2", "content2"), "43");
 
   int on_backlog_downloaded_calls = 0;
   page_sync_->SetOnBacklogDownloaded([this, &on_backlog_downloaded_calls] {
@@ -808,9 +808,9 @@ TEST_F(PageSyncImplTest, DownloadEmptyBacklog) {
 // recent commit downloaded from the backlog.
 TEST_F(PageSyncImplTest, RegisterWatcher) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id2", "content2", {}), "43");
+      cloud_provider::Commit("id2", "content2"), "43");
   auth_provider_.token_to_return = "some-token";
 
   page_sync_->SetOnIdle(MakeQuitTask());
@@ -841,9 +841,9 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id2", "content2", {}), "43");
+      cloud_provider::Commit("id2", "content2"), "43");
   StartPageSync();
 
   message_loop_.SetAfterTaskCallback([this] {
@@ -887,11 +887,11 @@ TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
   EXPECT_EQ(0u, storage_.received_commits.size());
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id2", "content2", {}), "43");
+      cloud_provider::Commit("id2", "content2"), "43");
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id3", "content3", {}), "44");
+      cloud_provider::Commit("id3", "content3"), "44");
 
   // Make the storage delay requests to add remote commits.
   storage_.should_delay_add_commit_confirmation = true;
@@ -934,7 +934,7 @@ TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
 // are retried.
 TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   cloud_provider_.should_fail_get_commits = true;
   StartPageSync();
 
@@ -967,7 +967,7 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   EXPECT_EQ(0, error_callback_calls_);
 
   cloud_provider_.notifications_to_deliver.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   storage_.should_fail_add_commit_from_sync = true;
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -980,9 +980,9 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
 // progress.
 TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id1", "content1", {}), "42");
+      cloud_provider::Commit("id1", "content1"), "42");
   cloud_provider_.records_to_return.emplace_back(
-      cloud_provider::Commit("id2", "content2", {}), "43");
+      cloud_provider::Commit("id2", "content2"), "43");
 
   int on_idle_calls = 0;
   page_sync_->SetOnIdle([this, &on_idle_calls] {
@@ -1002,7 +1002,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
   std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id3", "content3", {}), "44");
+  records.emplace_back(cloud_provider::Commit("id3", "content3"), "44");
   page_sync_->OnRemoteCommits(std::move(records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(3u, storage_.received_commits.size());
@@ -1181,7 +1181,7 @@ TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
 
   // Let's receive the same commit from the remote side.
   std::vector<cloud_provider::Record> records;
-  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "44");
+  records.emplace_back(cloud_provider::Commit("id1", "content1"), "44");
   page_sync_->OnRemoteCommits(std::move(records));
 
   EXPECT_TRUE(RunLoopUntil([this] { return page_sync_->IsIdle(); }));

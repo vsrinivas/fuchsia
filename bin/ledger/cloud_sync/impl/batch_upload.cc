@@ -178,9 +178,8 @@ void BatchUpload::UploadCommits() {
   std::vector<storage::CommitId> ids;
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
-    cloud_provider::Commit commit(
-        id, storage_commit->GetStorageBytes().ToString(),
-        std::map<cloud_provider::ObjectId, cloud_provider::Data>{});
+    cloud_provider::Commit commit(id,
+                                  storage_commit->GetStorageBytes().ToString());
     commits.push_back(std::move(commit));
     ids.push_back(std::move(id));
   }

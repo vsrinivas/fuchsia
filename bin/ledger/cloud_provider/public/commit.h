@@ -16,7 +16,7 @@ namespace cloud_provider {
 // Represents a commit.
 struct Commit {
   Commit();
-  Commit(CommitId id, Data content, std::map<ObjectId, Data> storage_objects);
+  Commit(CommitId id, Data content);
 
   ~Commit();
 
@@ -32,9 +32,6 @@ struct Commit {
 
   // The commit content.
   Data content;
-
-  // The inline storage objects.
-  std::map<ObjectId, Data> storage_objects;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Commit);
