@@ -36,6 +36,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-rw-workers.c \
     $(LOCAL_DIR)/test-sparse.cpp \
     $(LOCAL_DIR)/test-sync.c \
+    $(LOCAL_DIR)/test-threading.cpp \
     $(LOCAL_DIR)/test-truncate.cpp \
     $(LOCAL_DIR)/test-unlink.cpp \
     $(LOCAL_DIR)/test-utils.cpp \
