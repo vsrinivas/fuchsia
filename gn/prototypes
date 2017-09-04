@@ -3,6 +3,7 @@
         "dart"
     ],
     "packages": {
+        "geoip_agent": "//apps/modules/prototypes/agents/geoip_agent",
         "prototype_tests": "//apps/modules/prototypes:prototype_tests",
         "prototypes": "//apps/modules/prototypes"
     },
