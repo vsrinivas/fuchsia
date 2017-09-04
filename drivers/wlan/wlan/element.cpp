@@ -156,150 +156,16 @@ bool ExtendedSupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* act
 }
 
 
-bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, uint16_t version,
-                        CipherSuite* group_data_cipher_suite,
-                        const std::vector<CipherSuite>& pairwise_cipher_suite,
-                        const std::vector<AkmSuite>& akm_suite,
-                        RsnCapabilities* rsn_cap,
-                        const std::vector<__uint128_t>& pmkids,
-                        CipherSuite* group_mgmt_cipher_suite) {
-    uint16_t max_suite_entries = 255;
+bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, size_t raw_len) {
+    if (raw_len < sizeof(RsnElement)) return false;
+    if (raw_len > len) return false;
 
-    size_t elem_size = sizeof(RsnElement);
-    if (!group_data_cipher_suite) {
-        goto contd;
-    }
-    elem_size += sizeof(CipherSuite);
-
-    if  (pairwise_cipher_suite.empty()) {
-        goto contd;
-    }
-    if (pairwise_cipher_suite.size() > max_suite_entries) {
-        return false;
-    }
-    elem_size += 2 + pairwise_cipher_suite.size() * sizeof(CipherSuite);
-
-    if  (akm_suite.empty()) {
-        goto contd;
-    }
-    if (akm_suite.size() > max_suite_entries) {
-        return false;
-    }
-    elem_size += 2 + akm_suite.size() * sizeof(CipherSuite);
-
-    if  (!rsn_cap) {
-        goto contd;
-    }
-    elem_size += sizeof(RsnCapabilities);
-
-    if  (pmkids.empty()) {
-        goto contd;
-    }
-    if (pmkids.size() > max_suite_entries) {
-        return false;
-    }
-    elem_size += 2 + pmkids.size() * sizeof(__uint128_t);
-
-    if  (!group_mgmt_cipher_suite) goto contd;
-    elem_size += sizeof(CipherSuite);
-
-contd:
-    if (elem_size > len) {
-        return false;
-    }
     auto elem = reinterpret_cast<RsnElement*>(buf);
+    memcpy(elem, raw, raw_len);
     elem->hdr.id = element_id::kRsn;
-    elem->hdr.len = elem_size - sizeof(ElementHeader);
-    elem->version = version;
-
-    if (!group_data_cipher_suite) {
-        goto done;
-    } else {
-        *elem->group_data_cipher_suite() = *group_data_cipher_suite;
-    }
-
-    if  (pairwise_cipher_suite.empty()) {
-        goto done;
-    } else {
-        auto pairwise = elem->pairwise_cipher_suite();
-        pairwise->count = pairwise_cipher_suite.size();
-        std::copy(pairwise_cipher_suite.begin(), pairwise_cipher_suite.end(), pairwise->list);
-    }
-
-    if  (akm_suite.empty()) {
-        goto done;
-    } else {
-        auto akm = elem->akm_suite();
-        akm->count = akm_suite.size();
-        std::copy(akm_suite.begin(), akm_suite.end(), akm->list);
-    }
-
-    if  (!rsn_cap) {
-        goto done;
-    } else {
-        elem->rsn_cap()->set_val(rsn_cap->val());
-    }
-
-    if  (pmkids.empty()) {
-        goto done;
-    } else {
-        auto pmkid = elem->pmkid();
-        pmkid->count = pmkids.size();
-        std::copy(pmkids.begin(), pmkids.end(), pmkid->list);
-    }
-
-    if  (!group_mgmt_cipher_suite) {
-        goto done;
-    } else {
-        *elem->group_mgmt_cipher_suite() = *group_mgmt_cipher_suite;
-    }
-
-done:
-    *actual = elem_size;
+    elem->hdr.len = raw_len - sizeof(ElementHeader);
+    *actual = raw_len;
     return true;
-}
-
-namespace {
-
-template <typename T>
-size_t size(T* t) {
-    return sizeof(T);
-}
-
-template <typename U>
-size_t size(RsnOptionalList<U>* list) {
-    return list->size();
-}
-
-} // namespace
-
-// Explicit template instantiations
-// TODO(tkilbourn): decide whether to keep these or rework the definition of next_optional
-template CipherSuite* RsnElement::next_optional(const uint8_t*, size_t) const;
-template RsnOptionalList<CipherSuite>* RsnElement::next_optional(const CipherSuite*, size_t) const;
-template RsnOptionalList<AkmSuite>*
-RsnElement::next_optional(const RsnOptionalList<CipherSuite>*, size_t) const;
-template RsnCapabilities* RsnElement::next_optional(const RsnOptionalList<AkmSuite>*, size_t) const;
-template RsnOptionalList<__uint128_t>*
-RsnElement::next_optional(const RsnCapabilities*, size_t) const;
-template CipherSuite* RsnElement::next_optional(const RsnOptionalList<__uint128_t>*, size_t) const;
-
-template <typename T, typename U>
-T* RsnElement::next_optional(const U* previous, size_t len) const {
-  if (hdr.len < sizeof(version)) return nullptr;
-  if (!previous) return nullptr;
-
-  // First check if the object fits into the header.
-  auto start = (uint8_t*)previous + len;
-  auto end = fields + hdr.len - sizeof(version);
-  if (start + sizeof(T) > end) return nullptr;
-
-  // Then, resolve the object and check whether it also
-  // fits into the header if it's of dynamic size.
-  auto obj = reinterpret_cast<T*>(start);
-  if (start + size(obj) > end) return nullptr;
-
-  return obj;
 }
 
 }  // namespace wlan

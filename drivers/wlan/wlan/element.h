@@ -375,145 +375,19 @@ struct ExtendedSupportedRatesElement :
     uint8_t rates[];
 } __PACKED;
 
-// IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
-namespace cipher_suite_type {
-enum CipherSuiteType : uint8_t {
-    kGroupCipherSuite = 0,
-    kWep40 = 1,
-    kTkip = 2,
-    // 3 Reserved
-    kCcmp128 = 4,
-    kWep104 = 5,
-    kBipCmac128 = 6,
-    kGroupAddressedTrafficForbidden = 7,
-    kGcmp128 = 8,
-    kGcmp256 = 9,
-    kCcmp256 = 10,
-    kBipGmac128 = 11,
-    kBipGmac256 = 12,
-    kBipCmac256 = 13,
-    // 14 - 255 Reserved
-};
-} // namespace cipher_suite_type
 
-// IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-133
-namespace akm_suite_type {
-enum AkmSuiteType : uint8_t {
-    // 0 Reserved
-    k8021X_Pmksa = 1,
-    kPsk = 2,
-    k8021X_Ft = 3,
-    kPsk_Ft = 4,
-    k8021X_Pmksa_Sha256 = 5,
-    kPsk_Sha256 = 6,
-    kTdls = 7,
-    kSae = 8,
-    kSae_Ft = 9,
-    kApPeerKey = 10,
-    k8021X_Sha256 = 11,
-    k8021X_Sha384 = 12,
-    k8021X_Ft_Sha384 = 13,
-    // 14 - 255 Reserved
-};
-} // namespace cipher_suite_type
-
-const uint8_t kRsneSuiteOui[3] = { 0x00, 0x0F, 0xAC };
-const uint8_t kRsneVersion = 1;
 const uint16_t kEapolProtocolId = 0x888E;
 
-// IEEE Std 802.11-2016, 9.4.2.25.4, Figure 9-257
-class RsnCapabilities : public common::BitField<uint16_t> {
-  public:
-    WLAN_BIT_FIELD(preauthentication, 0, 1);
-    WLAN_BIT_FIELD(no_pairwise, 1, 1);
-    WLAN_BIT_FIELD(ptk_replay_counter, 2, 2);
-    WLAN_BIT_FIELD(gtksa_replay_counter, 4, 2);
-    WLAN_BIT_FIELD(mfpr, 6, 1);
-    WLAN_BIT_FIELD(mfpc, 7, 1);
-    WLAN_BIT_FIELD(joint_multiband_rsna, 8, 1);
-    WLAN_BIT_FIELD(peer_key_enabled, 9, 1);
-    WLAN_BIT_FIELD(spp_a_msdu_capable, 10, 1);
-    WLAN_BIT_FIELD(spp_a_msdu_required, 11, 1);
-    WLAN_BIT_FIELD(pbac, 12, 1);
-    WLAN_BIT_FIELD(ex_key_id_ind_addr_frames, 13, 1);
-    // 2-bit Reserved
-};
-
-// IEEE Std 802.11-2016, 9.4.2.25.2
-struct CipherSuite {
-    uint8_t oui[3];
-    cipher_suite_type::CipherSuiteType type;
-} __PACKED;
-
-// IEEE Std 802.11-2016, 9.4.2.25.3
-struct AkmSuite {
-    uint8_t oui[3];
-    akm_suite_type::AkmSuiteType type;
-} __PACKED;
-
-template <typename T>
-struct RsnOptionalList {
-    uint16_t count;
-    T list[];
-
-    size_t size() { return sizeof(RsnOptionalList) + count * sizeof(T); }
-} __PACKED;
-
 // IEEE Std 802.11-2016, 9.4.2.25.1
+// The MLME always forwards the RSNE and never requires to decode the element itself.
+// Hence, support for accessing optional fields is left out and implemented only by the SME.
 struct RsnElement : public Element<RsnElement, element_id::kRsn> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint16_t version,
-                     CipherSuite* group_data_cipher_suite = nullptr,
-                     const std::vector<CipherSuite>& pairwise_cipher_suite_list = {},
-                     const std::vector<AkmSuite>& akm_suite_list = {},
-                     RsnCapabilities* rsn_cap = nullptr,
-                     const std::vector<__uint128_t>& pmkid_list = {},
-                     CipherSuite* group_mgmt_cipher_suite = nullptr);
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t* raw, size_t raw_len);
     static const size_t kMaxLen = 255;
 
     ElementHeader hdr;
     uint16_t version;
     uint8_t fields[];
-
-    // All following fields are optional. If one optional field is absent, none of the subsequent
-    // ones is included.
-
-    CipherSuite* group_data_cipher_suite() const {
-        return next_optional<CipherSuite>(fields, 0);
-    }
-
-    RsnOptionalList<CipherSuite>* pairwise_cipher_suite() const {
-        auto prev = group_data_cipher_suite();
-        if (!prev) return nullptr;
-        return next_optional<RsnOptionalList<CipherSuite>>(prev, sizeof(CipherSuite));
-    }
-
-    RsnOptionalList<AkmSuite>* akm_suite() const {
-        auto prev = pairwise_cipher_suite();
-        if (!prev) return nullptr;
-        return next_optional<RsnOptionalList<AkmSuite>>(prev, prev->size());
-    }
-
-    RsnCapabilities* rsn_cap() const {
-        auto prev = akm_suite();
-        if (!prev) return nullptr;
-        return next_optional<RsnCapabilities>(prev, prev->size());
-    }
-
-    RsnOptionalList<__uint128_t>* pmkid() const {
-        auto prev = rsn_cap();
-        if (!prev) return nullptr;
-        return next_optional<RsnOptionalList<__uint128_t>>(prev, sizeof(RsnCapabilities));
-    }
-
-    CipherSuite* group_mgmt_cipher_suite() const {
-        auto prev = pmkid();
-        if (!prev) return nullptr;
-        return next_optional<CipherSuite>(prev, prev->size());
-    }
-
-  private:
-    template <typename T, typename U>
-    T* next_optional(const U* previous, size_t len) const;
 } __PACKED;
 
 }  // namespace wlan

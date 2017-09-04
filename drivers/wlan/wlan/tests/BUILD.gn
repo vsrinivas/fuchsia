@@ -34,7 +34,6 @@ executable("mac_tests") {
 
   sources = [
     "element_unittest.cpp",
-    "rsn_element_unittest.cpp",
     "mac_frame_unittest.cpp",
   ]
 

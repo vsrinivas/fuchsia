@@ -218,23 +218,9 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
         return MX_ERR_IO;
     }
 
-    // For now we only support WPA2-PSK which makes the cipher selection rather simple.
-    // The cipher selection will grow once other ciphers are supported and might move to
-    // its own component or even further up the stack.
-    // Announcing the cipher capabilities in the assocreq will initiate the 4 way handshake to
-    // exchange cryptographic keys.
-    if (bss_->rsn) {
-        CipherSuite group_cipher = {.type = cipher_suite_type::kCcmp128};
-        std::memcpy(group_cipher.oui, kRsneSuiteOui, sizeof(kRsneSuiteOui));
-        AkmSuite psk = {.type = akm_suite_type::kPsk};
-        std::memcpy(psk.oui, kRsneSuiteOui, sizeof(kRsneSuiteOui));
-        std::vector<CipherSuite> pairwise = {group_cipher};
-        std::vector<AkmSuite> akm = {psk};
-        RsnCapabilities rsn_caps;
-        std::vector<__uint128_t> pmkids = {};
-        if (!w.write<RsnElement>(kRsneVersion, &group_cipher, std::move(pairwise), std::move(akm),
-                                 &rsn_caps, std::move(pmkids), nullptr)) {
-            errorf("could not write RSNE\n");
+    // Write RSNE from MLME-Association.request if available.
+    if (req->rsn) {
+        if (!w.write<RsnElement>(req->rsn.data(), req->rsn.size())) {
             return MX_ERR_IO;
         }
     }

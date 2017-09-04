@@ -14,6 +14,8 @@
 #include "timer.h"
 #include "wlan.h"
 
+#include "lib/fidl/cpp/bindings/array.h"
+
 #include <magenta/assert.h>
 #include <mx/time.h>
 
@@ -178,6 +180,7 @@ mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
 
         bss->bssid = fidl::Array<uint8_t>::New(sizeof(hdr->addr3));
         std::memcpy(bss->bssid.data(), hdr->addr3, bss->bssid.size());
+        bss->rsn = fidl::Array<uint8_t>::New(RsnElement::kMaxLen);
     } else {
         bss = entry->second.get();
     }
@@ -249,7 +252,9 @@ mx_status_t Scanner::HandleBeaconOrProbeResponse(const Packet* packet) {
         case element_id::kRsn: {
             auto rsn = reader.read<RsnElement>();
             if (rsn == nullptr) goto done_iter;
-            bss->rsn = true;
+            size_t len = sizeof(ElementHeader) + rsn->hdr.len;
+            bss->rsn.resize(len);
+            memcpy(bss->rsn.data(), rsn, len);
             break;
         }
         default:
