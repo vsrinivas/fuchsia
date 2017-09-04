@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <hypervisor/bits.h>
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls/port.h>
@@ -34,6 +35,29 @@ static virtio_queue_t* selected_queue(const virtio_device_t* device) {
     return device->queue_sel < device->num_queues ? &device->queues[device->queue_sel] : nullptr;
 }
 
+// Virtio 1.0 Section 4.1.5.1.3:
+//
+// When using the legacy interface, the queue layout follows 2.4.2 Legacy
+// Interfaces: A Note on Virtqueue Layout with an alignment of 4096. Driver
+// writes the physical address, divided by 4096 to the Queue Address field 2.
+static mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
+    uintptr_t desc_paddr = pfn * PAGE_SIZE;
+    uintptr_t desc_size = queue->size * sizeof(queue->desc[0]);
+    virtio_queue_set_desc_addr(queue, desc_paddr);
+
+    uintptr_t avail_paddr = desc_paddr + desc_size;
+    uintptr_t avail_size = sizeof(*queue->avail)
+        + (queue->size * sizeof(queue->avail->ring[0]))
+        + sizeof(*queue->used_event);
+    virtio_queue_set_avail_addr(queue, avail_paddr);
+
+    uintptr_t used_paddr = align(avail_paddr + avail_size, 4096);
+    virtio_queue_set_used_addr(queue, used_paddr);
+
+    return MX_OK;
+}
+
+
 static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar,
                                           uint16_t port, uint8_t access_size,
                                           mx_vcpu_io_t* vcpu_io) {
@@ -51,7 +75,7 @@ static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_
         if (!queue)
             return MX_ERR_NOT_SUPPORTED;
         vcpu_io->access_size = 4;
-        vcpu_io->u32 = queue->pfn;
+        vcpu_io->u32 = static_cast<uint32_t>(queue->addr.desc / PAGE_SIZE);
         return MX_OK;
     case VIRTIO_PCI_QUEUE_SIZE:
         if (!queue)

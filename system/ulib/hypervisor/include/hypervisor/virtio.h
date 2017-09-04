@@ -105,8 +105,14 @@ typedef struct virtio_queue {
     // Allow threads to block on buffers in the avail ring.
     cnd_t avail_ring_cnd;
 
-    // Queue PFN used to locate this queue in guest physical address space.
-    uint32_t pfn;
+    // Queue addresses as defined in Virtio 1.0 Section 4.1.4.3.
+    struct {
+        uint64_t desc;
+        uint64_t avail;
+        uint64_t used;
+    } addr;
+
+    // Number of entries in the descriptor table.
     uint16_t size;
     uint16_t index;
 
@@ -160,10 +166,14 @@ void virtio_queue_wait(virtio_queue_t* queue, uint16_t* index);
  * has descriptors available. */
 void virtio_queue_signal(virtio_queue_t* queue);
 
-/* Set's the queues host pointers into the guest VMO based on the guest
- * physical frame number of the queue.
- */
-mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn);
+/* Sets the address of the descriptor table for this queue. */
+void virtio_queue_set_desc_addr(virtio_queue_t* queue, uint64_t desc_addr);
+
+/* Sets the address of the available ring for this queue. */
+void virtio_queue_set_avail_addr(virtio_queue_t* queue, uint64_t avail_addr);
+
+/* Sets the address of the used ring for this queue. */
+void virtio_queue_set_used_addr(virtio_queue_t* queue, uint64_t used_addr);
 
 /* Callback for virtio_queue_poll.
  *

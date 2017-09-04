@@ -41,51 +41,50 @@ static int ring_avail_count(virtio_queue_t* queue) {
     return queue->avail->idx - queue->index;
 }
 
-mx_status_t virtio_queue_set_pfn(virtio_queue_t* queue, uint32_t pfn) {
-    virtio_device_t* device = queue->virtio_device;
+static bool validate_queue_range(virtio_device_t* device, mx_vaddr_t addr, size_t size) {
     uintptr_t mem_addr = device->guest_physmem_addr;
     size_t mem_size = device->guest_physmem_size;
+    mx_vaddr_t range_end = addr + size;
+    mx_vaddr_t mem_end = mem_addr + mem_size;
 
-    queue->pfn = pfn;
+    return addr >= mem_addr && range_end <= mem_end;
+}
 
-    // Descriptor Table.
-    uintptr_t desc_paddr = queue->pfn * PAGE_SIZE;
+template <typename T>
+static void queue_set_segment_addr(virtio_queue_t* queue, uint64_t guest_paddr, size_t size,
+                                   T** ptr) {
+    virtio_device_t* device = queue->virtio_device;
+    mx_vaddr_t host_vaddr = guest_paddr_to_host_vaddr(device, guest_paddr);
+
+    *ptr = validate_queue_range(device, host_vaddr, size)
+               ? reinterpret_cast<T*>(host_vaddr)
+               : nullptr;
+}
+
+void virtio_queue_set_desc_addr(virtio_queue_t* queue, uint64_t desc_paddr) {
+    queue->addr.desc = desc_paddr;
     uintptr_t desc_size = queue->size * sizeof(queue->desc[0]);
-    mx_vaddr_t desc_host_vaddr = guest_paddr_to_host_vaddr(device, desc_paddr);
-    queue->desc = reinterpret_cast<decltype(queue->desc)>(desc_host_vaddr);
+    queue_set_segment_addr(queue, desc_paddr, desc_size, &queue->desc);
+}
 
-    // Avail Ring.
-    uintptr_t avail_paddr = desc_paddr + desc_size;
-    uintptr_t avail_size = sizeof(queue->avail) + (queue->size * sizeof(queue->avail->ring[0]));
-    mx_vaddr_t avail_host_vaddr = guest_paddr_to_host_vaddr(device, avail_paddr);
-    queue->avail = reinterpret_cast<decltype(queue->avail)>(avail_host_vaddr);
+void virtio_queue_set_avail_addr(virtio_queue_t* queue, uint64_t avail_paddr) {
+    queue->addr.avail = avail_paddr;
+    uintptr_t avail_size = sizeof(*queue->avail) + (queue->size * sizeof(queue->avail->ring[0]));
+    queue_set_segment_addr(queue, avail_paddr, avail_size, &queue->avail);
 
-    // Used Event.
     uintptr_t used_event_paddr = avail_paddr + avail_size;
-    uintptr_t used_event_size = sizeof(queue->used_event);
-    mx_vaddr_t used_event_host_vaddr = guest_paddr_to_host_vaddr(device, used_event_paddr);
-    queue->used_event = reinterpret_cast<decltype(queue->used_event)>(used_event_host_vaddr);
+    uintptr_t used_event_size = sizeof(*queue->used_event);
+    queue_set_segment_addr(queue, used_event_paddr, used_event_size, &queue->used_event);
+}
 
-    // Used Ring.
-    uintptr_t used_paddr = PCI_ALIGN(used_event_paddr + used_event_size);
-    uintptr_t used_size = sizeof(queue->used) + (queue->size * sizeof(queue->used->ring[0]));
-    mx_vaddr_t used_host_vaddr = guest_paddr_to_host_vaddr(device, used_paddr);
-    queue->used = reinterpret_cast<decltype(queue->used)>(used_host_vaddr);
+void virtio_queue_set_used_addr(virtio_queue_t* queue, uint64_t used_paddr) {
+    queue->addr.used = used_paddr;
+    uintptr_t used_size = sizeof(*queue->used) + (queue->size * sizeof(queue->used->ring[0]));
+    queue_set_segment_addr(queue, used_paddr, used_size, &queue->used);
 
-    // Avail Event.
     uintptr_t avail_event_paddr = used_paddr + used_size;
-    uintptr_t avail_event_size = sizeof(queue->avail_event);
-    mx_vaddr_t avail_event_host_paddr = guest_paddr_to_host_vaddr(device, avail_event_paddr);
-    queue->avail_event = reinterpret_cast<decltype(queue->avail_event)>(avail_event_host_paddr);
-
-    mx_vaddr_t end = avail_event_host_paddr + avail_event_size;
-    if (end < desc_paddr || end > mem_addr + mem_size) {
-        fprintf(stderr, "Ring is outside of guest memory\n");
-        memset(queue, 0, sizeof(*queue));
-        return MX_ERR_OUT_OF_RANGE;
-    }
-
-    return MX_OK;
+    uintptr_t avail_event_size = sizeof(*queue->avail_event);
+    queue_set_segment_addr(queue, avail_event_paddr, avail_event_size, &queue->avail_event);
 }
 
 void virtio_queue_signal(virtio_queue_t* queue) {
