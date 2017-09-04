@@ -45,7 +45,7 @@ static const uint8_t kPciCapNextOffset = 1;
 static const uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {32, 33, 34};
 
 static mx_status_t pci_bar_read_unsupported(const pci_device_t* device, uint8_t bar, uint16_t port,
-                                            mx_vcpu_io_t* vcpu_io) {
+                                            uint8_t access_size, mx_vcpu_io_t* vcpu_io) {
     return MX_ERR_NOT_SUPPORTED;
 }
 

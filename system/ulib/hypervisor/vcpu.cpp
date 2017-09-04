@@ -204,7 +204,8 @@ static mx_status_t handle_input(vcpu_ctx_t* vcpu_ctx, const mx_packet_guest_io_t
         pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_PIO, io->port, &bar,
                                                      &port_off);
         if (pci_device) {
-            status = pci_device->ops->read_bar(pci_device, bar, port_off, &vcpu_io);
+            status = pci_device->ops->read_bar(pci_device, bar, port_off, io->access_size,
+                                               &vcpu_io);
             break;
         }
         status = MX_ERR_NOT_SUPPORTED;

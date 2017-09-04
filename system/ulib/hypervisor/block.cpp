@@ -26,7 +26,7 @@ static block_t* virtio_device_to_block(const virtio_device_t* virtio_device) {
     return (block_t*)virtio_device->impl;
 }
 
-static mx_status_t block_read(const virtio_device_t* device, uint16_t port,
+static mx_status_t block_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
                               mx_vcpu_io_t* vcpu_io) {
     block_t* block = virtio_device_to_block(device);
 

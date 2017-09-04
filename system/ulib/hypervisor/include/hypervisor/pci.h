@@ -56,7 +56,7 @@ typedef struct pci_device pci_device_t;
 typedef struct pci_device_ops {
     // Read from a region mapped by a BAR register.
     mx_status_t (*read_bar)(const pci_device_t* device, uint8_t bar, uint16_t port,
-                            mx_vcpu_io_t* vcpu_io);
+                            uint8_t access_size, mx_vcpu_io_t* vcpu_io);
 
     // Write to a region mapped by a BAR register.
     mx_status_t (*write_bar)(pci_device_t* device, uint8_t bar, uint16_t port,

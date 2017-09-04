@@ -35,7 +35,8 @@ static virtio_queue_t* selected_queue(const virtio_device_t* device) {
 }
 
 static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_t bar,
-                                          uint16_t port, mx_vcpu_io_t* vcpu_io) {
+                                          uint16_t port, uint8_t access_size,
+                                          mx_vcpu_io_t* vcpu_io) {
     if (bar != 0)
         return MX_ERR_NOT_SUPPORTED;
 
@@ -79,7 +80,7 @@ static mx_status_t virtio_pci_legacy_read(const pci_device_t* pci_device, uint8_
     // Handle device-specific accesses.
     if (port >= VIRTIO_PCI_DEVICE_CFG_BASE) {
         uint16_t device_offset = static_cast<uint16_t>(port - VIRTIO_PCI_DEVICE_CFG_BASE);
-        return device->ops->read(device, device_offset, vcpu_io);
+        return device->ops->read(device, device_offset, access_size, vcpu_io);
     }
 
     fprintf(stderr, "Unhandled virtio device read %#x\n", port);

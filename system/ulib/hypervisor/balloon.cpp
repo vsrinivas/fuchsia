@@ -127,7 +127,7 @@ static mx_status_t balloon_queue_notify(virtio_device_t* device, uint16_t queue_
     return status;
 }
 
-static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port,
+static mx_status_t balloon_read(const virtio_device_t* device, uint16_t port, uint8_t access_size,
                                 mx_vcpu_io_t* vcpu_io) {
     balloon_t* balloon = virtio_device_to_balloon(device);
     vcpu_io->access_size = 1;
