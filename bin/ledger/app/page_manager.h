@@ -35,12 +35,20 @@ namespace ledger {
 // |on_empty_callback|.
 class PageManager {
  public:
+  // Whether the page storage was just created (|NEW|) or already present
+  // locally (|EXISTING|).
+  enum PageStorageState {
+    NEW,
+    EXISTING,
+  };
+
   // Both |page_storage| and |page_sync| are owned by PageManager and are
   // deleted when it goes away.
   PageManager(Environment* environment,
               std::unique_ptr<storage::PageStorage> page_storage,
               std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context,
               std::unique_ptr<MergeResolver> merge_resolver,
+              PageManager::PageStorageState state,
               ftl::TimeDelta sync_timeout = ftl::TimeDelta::FromSeconds(5));
   ~PageManager();
 

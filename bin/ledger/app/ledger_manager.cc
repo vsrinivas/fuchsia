@@ -129,8 +129,10 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
 
         // If the page was found locally, just use it and return.
         if (page_storage) {
-          container->SetPageManager(Status::OK,
-                                    NewPageManager(std::move(page_storage)));
+          container->SetPageManager(
+              Status::OK,
+              NewPageManager(std::move(page_storage),
+                             PageManager::PageStorageState::EXISTING));
           return;
         }
 
@@ -162,8 +164,9 @@ void LedgerManager::CreatePageStorage(storage::PageId page_id,
           container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
           return;
         }
-        container->SetPageManager(Status::OK,
-                                  NewPageManager(std::move(page_storage)));
+        container->SetPageManager(
+            Status::OK, NewPageManager(std::move(page_storage),
+                                       PageManager::PageStorageState::NEW));
       });
 }
 
@@ -177,7 +180,8 @@ LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
 }
 
 std::unique_ptr<PageManager> LedgerManager::NewPageManager(
-    std::unique_ptr<storage::PageStorage> page_storage) {
+    std::unique_ptr<storage::PageStorage> page_storage,
+    PageManager::PageStorageState state) {
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context;
   if (sync_) {
     page_sync_context = sync_->CreatePageContext(page_storage.get(), [] {
@@ -187,7 +191,7 @@ std::unique_ptr<PageManager> LedgerManager::NewPageManager(
   }
   return std::make_unique<PageManager>(
       environment_, std::move(page_storage), std::move(page_sync_context),
-      merge_manager_.GetMergeResolver(page_storage.get()));
+      merge_manager_.GetMergeResolver(page_storage.get()), state);
 }
 
 void LedgerManager::CheckEmpty() {

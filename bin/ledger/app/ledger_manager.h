@@ -12,6 +12,7 @@
 
 #include "apps/ledger/src/app/ledger_impl.h"
 #include "apps/ledger/src/app/merging/ledger_merge_manager.h"
+#include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/environment/environment.h"
@@ -64,7 +65,8 @@ class LedgerManager : public LedgerImpl::Delegate {
   PageManagerContainer* AddPageManagerContainer(storage::PageIdView page_id);
   // Creates a new page manager for the given storage.
   std::unique_ptr<PageManager> NewPageManager(
-      std::unique_ptr<storage::PageStorage> page_storage);
+      std::unique_ptr<storage::PageStorage> page_storage,
+      PageManager::PageStorageState state);
 
   void CheckEmpty();
 

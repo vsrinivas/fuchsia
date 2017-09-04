@@ -59,7 +59,8 @@ class PageImplTest : public test::TestWithMessageLoop {
             ftl::TimeDelta::FromSeconds(0)));
 
     manager_ = std::make_unique<PageManager>(
-        &environment_, std::move(fake_storage), nullptr, std::move(resolver));
+        &environment_, std::move(fake_storage), nullptr, std::move(resolver),
+        PageManager::PageStorageState::NEW);
     Status status;
     manager_->BindPage(page_ptr_.NewRequest(),
                        callback::Capture(MakeQuitTask(), &status));

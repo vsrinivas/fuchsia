@@ -50,7 +50,8 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
     merge_resolver_ = resolver.get();
 
     page_manager_ = std::make_unique<PageManager>(
-        &environment_, std::move(page_storage), nullptr, std::move(resolver));
+        &environment_, std::move(page_storage), nullptr, std::move(resolver),
+        PageManager::PageStorageState::NEW);
   }
 
   storage::CommitId CreateCommit(
@@ -58,8 +59,9 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
       std::function<void(storage::Journal*)> contents) {
     storage::Status status;
     std::unique_ptr<storage::Journal> journal;
-    page_storage_->StartCommit(parent_id.ToString(), storage::JournalType::IMPLICIT,
-                          callback::Capture(MakeQuitTask(), &status, &journal));
+    page_storage_->StartCommit(
+        parent_id.ToString(), storage::JournalType::IMPLICIT,
+        callback::Capture(MakeQuitTask(), &status, &journal));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
 
