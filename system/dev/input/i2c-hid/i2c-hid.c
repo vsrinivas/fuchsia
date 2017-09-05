@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
@@ -13,7 +14,6 @@
 
 #include <endian.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -119,7 +119,7 @@ static mx_status_t i2c_hid_get_descriptor(void* ctx, uint8_t desc_type,
     mx_status_t status = device_ioctl(hid->i2cdev, IOCTL_I2C_SLAVE_TRANSFER,
                                       buf, sizeof(buf), out, desc_len, &actual);
     if (status < 0) {
-        printf("i2c-hid: could not read HID report descriptor: %d\n", status);
+        dprintf(ERROR, "i2c-hid: could not read HID report descriptor: %d\n", status);
         free(out);
         return MX_ERR_NOT_SUPPORTED;
     }
@@ -201,16 +201,16 @@ static int i2c_hid_irq_thread(void* arg) {
             if (status == MX_ERR_TIMED_OUT) {
                 mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
                 if (now - last_timeout_warning > kMinTimeBetweenWarnings) {
-                    printf("i2c-hid: device_read timed out\n");
+                    dprintf(TRACE, "i2c-hid: device_read timed out\n");
                     last_timeout_warning = now;
                 }
                 continue;
             }
-            printf("i2c-hid: fatal device_read failure %d\n", status);
+            dprintf(ERROR, "i2c-hid: fatal device_read failure %d\n", status);
             return status;
         }
         if (actual < 2) {
-            printf("i2c-hid: short read (%zd < 2)!!!\n", actual);
+            dprintf(ERROR, "i2c-hid: short read (%zd < 2)!!!\n", actual);
             continue;
         }
 
@@ -220,7 +220,8 @@ static int i2c_hid_irq_thread(void* arg) {
             continue;
         }
         if ((report_len > actual) || (report_len < 2)) {
-            printf("i2c-hid: bad report len (rlen %hu, bytes read %zd)!!!\n", report_len, actual);
+            dprintf(ERROR, "i2c-hid: bad report len (rlen %hu, bytes read %zd)!!!\n",
+                    report_len, actual);
             continue;
         }
         mtx_lock(&dev->lock);
@@ -245,7 +246,7 @@ static mx_protocol_device_t i2c_hid_dev_ops = {
 };
 
 static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
-    printf("i2c_hid_bind\n");
+    dprintf(TRACE, "i2c_hid_bind\n");
 
     // Read the i2c HID descriptor
     // TODO: get the address out of ACPI
@@ -257,7 +258,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     size_t actual = 0;
     mx_status_t ret = device_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), out, sizeof(out), &actual);
     if (ret < 0 || actual != sizeof(out)) {
-        printf("i2c-hid: could not read HID descriptor: %d\n", ret);
+        dprintf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", ret);
         return MX_ERR_NOT_SUPPORTED;
     }
     i2c_hid_desc_t* i2c_hid_desc_hdr = (i2c_hid_desc_t*)out;
@@ -274,26 +275,24 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
     actual = 0;
     ret = device_ioctl(dev, IOCTL_I2C_SLAVE_TRANSFER, buf, sizeof(buf), i2chid->hiddesc, desc_len, &actual);
     if (ret < 0 || actual != desc_len) {
-        printf("i2c-hid: could not read HID descriptor: %d\n", ret);
+        dprintf(ERROR, "i2c-hid: could not read HID descriptor: %d\n", ret);
         free(i2chid->hiddesc);
         free(i2chid);
         return MX_ERR_NOT_SUPPORTED;
     }
 
-#if I2C_HID_DEBUG
-    printf("i2c-hid: desc:\n");
-    printf("  report desc len: %u\n", letoh16(i2chid->hiddesc->wReportDescLength));
-    printf("  report desc reg: %u\n", letoh16(i2chid->hiddesc->wReportDescRegister));
-    printf("  input reg:       %u\n", letoh16(i2chid->hiddesc->wInputRegister));
-    printf("  max input len:   %u\n", letoh16(i2chid->hiddesc->wMaxInputLength));
-    printf("  output reg:      %u\n", letoh16(i2chid->hiddesc->wOutputRegister));
-    printf("  max output len:  %u\n", letoh16(i2chid->hiddesc->wMaxOutputLength));
-    printf("  command reg:     %u\n", letoh16(i2chid->hiddesc->wCommandRegister));
-    printf("  data reg:        %u\n", letoh16(i2chid->hiddesc->wDataRegister));
-    printf("  vendor id:       %x\n", i2chid->hiddesc->wVendorID);
-    printf("  product id:      %x\n", i2chid->hiddesc->wProductID);
-    printf("  version id:      %x\n", i2chid->hiddesc->wVersionID);
-#endif
+    dprintf(TRACE, "i2c-hid: desc:\n");
+    dprintf(TRACE, "  report desc len: %u\n", letoh16(i2chid->hiddesc->wReportDescLength));
+    dprintf(TRACE, "  report desc reg: %u\n", letoh16(i2chid->hiddesc->wReportDescRegister));
+    dprintf(TRACE, "  input reg:       %u\n", letoh16(i2chid->hiddesc->wInputRegister));
+    dprintf(TRACE, "  max input len:   %u\n", letoh16(i2chid->hiddesc->wMaxInputLength));
+    dprintf(TRACE, "  output reg:      %u\n", letoh16(i2chid->hiddesc->wOutputRegister));
+    dprintf(TRACE, "  max output len:  %u\n", letoh16(i2chid->hiddesc->wMaxOutputLength));
+    dprintf(TRACE, "  command reg:     %u\n", letoh16(i2chid->hiddesc->wCommandRegister));
+    dprintf(TRACE, "  data reg:        %u\n", letoh16(i2chid->hiddesc->wDataRegister));
+    dprintf(TRACE, "  vendor id:       %x\n", i2chid->hiddesc->wVendorID);
+    dprintf(TRACE, "  product id:      %x\n", i2chid->hiddesc->wProductID);
+    dprintf(TRACE, "  version id:      %x\n", i2chid->hiddesc->wVersionID);
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
@@ -306,7 +305,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     mx_status_t status = device_add(i2chid->i2cdev, &args, NULL);
     if (status != MX_OK) {
-        printf("i2c-hid: could not add device: %d\n", status);
+        dprintf(ERROR, "i2c-hid: could not add device: %d\n", status);
         free(i2chid->hiddesc);
         free(i2chid);
         return status;
@@ -314,7 +313,7 @@ static mx_status_t i2c_hid_bind(void* ctx, mx_device_t* dev, void** cookie) {
 
     ret = thrd_create_with_name(&i2chid->irq_thread, i2c_hid_irq_thread, i2chid, "i2c-hid-irq");
     if (ret != thrd_success) {
-        printf("i2c-hid: could not create irq thread: %d\n", ret);
+        dprintf(ERROR, "i2c-hid: could not create irq thread: %d\n", ret);
         free(i2chid->hiddesc);
         free(i2chid);
         // TODO: map thrd_* status codes to MX_ERR_* status codes
