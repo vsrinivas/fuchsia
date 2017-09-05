@@ -192,13 +192,6 @@ __EXPORT mx_status_t load_firmware(mx_device_t* dev, const char* path,
     return r;
 }
 
-__EXPORT void driver_printf(const char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    vprintf(fmt, ap);
-    va_end(ap);
-}
-
 // Interface Used by DevHost RPC Layer
 
 mx_status_t device_bind(mx_device_t* dev, const char* drv_libname) {

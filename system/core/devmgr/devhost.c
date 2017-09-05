@@ -4,6 +4,7 @@
 
 #include <dlfcn.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -479,18 +480,70 @@ static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, u
     return r;
 }
 
+#define LOGBUF_MAX (MX_LOG_RECORD_MAX - sizeof(mx_log_record_t))
+
+static mx_handle_t devhost_log_handle;
+
+static ssize_t devhost_log_write(void* cookie, const void* _data, size_t len) {
+    static thread_local struct {
+        uint32_t next;
+        mx_handle_t handle;
+        char data[LOGBUF_MAX];
+    }* ctx = NULL;
+
+    if (ctx == NULL) {
+        if ((ctx = calloc(1, sizeof(*ctx))) == NULL) {
+            return len;
+        }
+        ctx->handle = devhost_log_handle;
+    }
+
+    const char* data = _data;
+    size_t r = len;
+
+    while (len-- > 0) {
+        char c = *data++;
+        if (c == '\n') {
+flush_ctx:
+            mx_log_write(ctx->handle, ctx->next, ctx->data, 0);
+            ctx->next = 0;
+            continue;
+        }
+        if (c < ' ') {
+            continue;
+        }
+        ctx->data[ctx->next++] = c;
+        if (ctx->next == LOGBUF_MAX) {
+            goto flush_ctx;
+        }
+    }
+    return r;
+}
+
+__EXPORT void driver_printf(const char* fmt, ...) {
+    char buffer[512];
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    va_end(ap);
+
+    if (r > (int)sizeof(buffer)) {
+        r = sizeof(buffer);
+    }
+
+    devhost_log_write(NULL, buffer, r);
+}
 
 static void devhost_io_init(void) {
-    mx_handle_t h;
-    if (mx_log_create(MX_LOG_FLAG_DEVICE, &h) < 0) {
+    if (mx_log_create(MX_LOG_FLAG_DEVICE, &devhost_log_handle) < 0) {
         return;
     }
-    mxio_t* logger;
-    if ((logger = mxio_logger_create(h)) == NULL) {
+    mxio_t* io;
+    if ((io = mxio_output_create(devhost_log_write, NULL)) == NULL) {
         return;
     }
     close(1);
-    mxio_bind_to_fd(logger, 1, 0);
+    mxio_bind_to_fd(io, 1, 0);
     dup2(1, 2);
 }
 
