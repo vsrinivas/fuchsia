@@ -1,0 +1,44 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//packages/package.gni")
+
+executable("icu_data_provider") {
+  sources = [
+    "icu_data_provider_impl.cc",
+    "icu_data_provider_impl.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "lib",
+    "services",
+    "//application/lib/app",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+
+  data = [
+    "//third_party/icu/common/icudtl.dat",
+  ]
+}
+
+package("icu_data") {
+  archive = true
+
+  deps = [ ":icu_data_provider" ]
+
+  binaries = [
+    {
+      name = "icu_data_provider"
+      dest = "app"
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}
