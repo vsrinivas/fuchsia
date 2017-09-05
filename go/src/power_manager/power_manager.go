@@ -18,7 +18,7 @@ import (
 	"syscall/mx/mxerror"
 	"time"
 
-	"apps/power-service/services/power_manager"
+	"garnet/public/lib/power/fidl/power_manager"
 )
 
 var (

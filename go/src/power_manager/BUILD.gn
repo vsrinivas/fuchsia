@@ -9,11 +9,11 @@ import("//packages/package.gni")
 go_binary("power_manager_bin") {
   output_name = "power_manager"
 
-  gopackage = "apps/power-service/power_manager"
+  gopackage = "power_manager"
 
   go_dependencies = [
     {
-      package = "apps/power-service/power_manager"
+      package = "power_manager"
     },
     {
       package = "fidl"
@@ -29,16 +29,16 @@ go_binary("power_manager_bin") {
     },
   ]
   deps = [
-    "//apps/power-service/services",
+    "//garnet/public/lib/power/fidl",
   ]
 }
 
 go_test("power_manager_test") {
-  gopackage = "apps/power-service/power_manager"
+  gopackage = "power_manager"
 
   go_dependencies = [
     {
-      package = "apps/power-service/power_manager"
+      package = "power_manager"
     },
     {
       package = "application/lib/app"
@@ -54,7 +54,7 @@ go_test("power_manager_test") {
     },
   ]
   deps = [
-    "//apps/power-service/services",
+    "//garnet/public/lib/power/fidl",
   ]
 }
 

@@ -15,7 +15,7 @@ import (
 	"application/lib/app/context"
 	"fidl/bindings"
 
-	"apps/power-service/services/power_manager"
+	"garnet/public/lib/power/fidl/power_manager"
 )
 
 type ClientMock struct {

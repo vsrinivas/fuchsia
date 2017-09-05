@@ -8,6 +8,7 @@ enum Status {
   OK,
   NotAvailable
 };
+
 // Provides battery status
 struct BatteryStatus {
   // Error status
@@ -30,11 +31,7 @@ interface PowerManager {
   Watch(PowerManagerWatcher watcher);
 };
 
-
 // Watcher on battery status
 interface PowerManagerWatcher {
   OnChangeBatteryStatus(BatteryStatus battery_status);
 };
-
-
-
