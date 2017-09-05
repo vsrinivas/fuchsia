@@ -8,7 +8,6 @@
 # common libraries for -test variants
 
 MODULES += \
-  kernel/app/stringtests \
   kernel/app/tests \
   kernel/lib/debugcommands \
   kernel/lib/version \
