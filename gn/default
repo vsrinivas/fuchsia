@@ -49,7 +49,7 @@
         "pm",
         "pmd",
         "pmd_tests",
-        "power-service",
+        "power_manager",
         "openssh",
         "openssh-keys",
         "re2",

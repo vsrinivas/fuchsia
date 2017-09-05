@@ -1,9 +1,0 @@
-{
-    "languages": [
-        "go"
-    ],
-    "packages": {
-        "power-service": "//apps/power-service",
-        "power-service_test": "//apps/power-service:power-service_test"
-    }
-}
