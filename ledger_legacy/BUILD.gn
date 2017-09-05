@@ -8,10 +8,14 @@ package("ledger") {
   app = true
 
   deps = [
+    "//apps/ledger/cloud_provider_firebase",
     "//apps/ledger/src",
   ]
 
   binaries = [
+    {
+      name = "cloud_provider_firebase"
+    },
     {
       name = "cloud_sync"
       source = "ledger_tool"
