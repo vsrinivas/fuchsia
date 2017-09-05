@@ -3,6 +3,6 @@
         "cpp"
     ],
     "packages": {
-        "icu_data": "//apps/icu_data"
+        "icu_data": "//garnet/bin/icu_data"
     }
 }
