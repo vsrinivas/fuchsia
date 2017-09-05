@@ -1,0 +1,9 @@
+Source: https://git.linaro.org/toolchain/cortex-strings.git
+Revision: eb80ac77a6cdb3509d885d23d1dd343803381176
+License: BSD 3-clause
+
+Modifications:
+- Kept only src/aarch64, removed everything else.
+- sed -i 's/\.2d\[/.d[/' src/aarch64/*.S
+  This works around https://bugs.llvm.org//show_bug.cgi?id=34488
+  by making the code use the official syntax, not a variant GAS accepts.
