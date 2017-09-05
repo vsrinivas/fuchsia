@@ -7,30 +7,28 @@
 
 #include "tests.h"
 
+#include <arch.h>
+#include <arch/ops.h>
+#include <debug.h>
+#include <err.h>
+#include <lib/console.h>
+#include <mxtl/algorithm.h>
+#include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <err.h>
-#include <arch.h>
-#include <arch/ops.h>
-#include <lib/console.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <mxtl/algorithm.h>
-#include <platform.h>
-#include <debug.h>
 
-static void mem_test_fail(void *ptr, uint32_t should, uint32_t is)
-{
+static void mem_test_fail(void* ptr, uint32_t should, uint32_t is) {
     printf("ERROR at %p: should be 0x%x, is 0x%x\n", ptr, should, is);
 
-    ptr = (void *)ROUNDDOWN((uintptr_t)ptr, 64);
+    ptr = (void*)ROUNDDOWN((uintptr_t)ptr, 64);
     hexdump(ptr, 128);
 }
 
-static status_t do_pattern_test(void *ptr, size_t len, uint32_t pat)
-{
-    volatile uint32_t *vbuf32 = reinterpret_cast<volatile uint32_t *>(ptr);
+static status_t do_pattern_test(void* ptr, size_t len, uint32_t pat) {
+    volatile uint32_t* vbuf32 = reinterpret_cast<volatile uint32_t*>(ptr);
     size_t i;
 
     printf("\tpattern 0x%08x\n", pat);
@@ -40,7 +38,7 @@ static status_t do_pattern_test(void *ptr, size_t len, uint32_t pat)
 
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != pat) {
-            mem_test_fail((void *)&vbuf32[i], pat, vbuf32[i]);
+            mem_test_fail((void*)&vbuf32[i], pat, vbuf32[i]);
             return MX_ERR_INTERNAL;
         }
     }
@@ -48,9 +46,8 @@ static status_t do_pattern_test(void *ptr, size_t len, uint32_t pat)
     return MX_OK;
 }
 
-static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
-{
-    volatile uint32_t *vbuf32 = reinterpret_cast<volatile uint32_t *>(ptr);
+static status_t do_moving_inversion_test(void* ptr, size_t len, uint32_t pat) {
+    volatile uint32_t* vbuf32 = reinterpret_cast<volatile uint32_t*>(ptr);
     size_t i;
 
     printf("\tpattern 0x%08x\n", pat);
@@ -64,7 +61,7 @@ static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
     //printf("\t\tbottom up invert\n");
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != pat) {
-            mem_test_fail((void *)&vbuf32[i], pat, vbuf32[i]);
+            mem_test_fail((void*)&vbuf32[i], pat, vbuf32[i]);
             return MX_ERR_INTERNAL;
         }
 
@@ -74,19 +71,19 @@ static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
     /* repeat, walking from top down */
     //printf("\t\ttop down invert\n");
     for (i = len / 4; i > 0; i--) {
-        if (vbuf32[i-1] != ~pat) {
-            mem_test_fail((void *)&vbuf32[i-1], ~pat, vbuf32[i-1]);
+        if (vbuf32[i - 1] != ~pat) {
+            mem_test_fail((void*)&vbuf32[i - 1], ~pat, vbuf32[i - 1]);
             return MX_ERR_INTERNAL;
         }
 
-        vbuf32[i-1] = pat;
+        vbuf32[i - 1] = pat;
     }
 
     /* verify that we have the original pattern */
     //printf("\t\tfinal test\n");
     for (i = 0; i < len / 4; i++) {
         if (vbuf32[i] != pat) {
-            mem_test_fail((void *)&vbuf32[i], pat, vbuf32[i]);
+            mem_test_fail((void*)&vbuf32[i], pat, vbuf32[i]);
             return MX_ERR_INTERNAL;
         }
     }
@@ -94,13 +91,12 @@ static status_t do_moving_inversion_test(void *ptr, size_t len, uint32_t pat)
     return MX_OK;
 }
 
-static void do_mem_tests(void *ptr, size_t len)
-{
+static void do_mem_tests(void* ptr, size_t len) {
     size_t i;
 
     /* test 1: simple write address to memory, read back */
     printf("test 1: simple address write, read back\n");
-    volatile uint32_t *vbuf32 = reinterpret_cast<volatile uint32_t *>(ptr);
+    volatile uint32_t* vbuf32 = reinterpret_cast<volatile uint32_t*>(ptr);
     for (i = 0; i < len / 4; i++) {
         vbuf32[i] = static_cast<uint32_t>(i);
     }
@@ -140,7 +136,6 @@ static void do_mem_tests(void *ptr, size_t len)
     for (size_t p = 0; p < mxtl::count_of(pat); p++) {
         if (do_moving_inversion_test(ptr, len, pat[p]) < 0)
             goto out;
-
     }
     // shift bits through 32bit word
     for (uint32_t p = 1; p != 0; p <<= 1) {
@@ -157,18 +152,17 @@ out:
     printf("done with tests\n");
 }
 
-static int mem_test(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int mem_test(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
         printf("not enough arguments\n");
-usage:
+    usage:
         printf("usage: %s <length>\n", argv[0].str);
         printf("usage: %s <base> <length>\n", argv[0].str);
         return -1;
     }
 
     if (argc == 2) {
-        void *ptr;
+        void* ptr;
         size_t len = argv[1].u;
 
         /* rounding up len to the next page */
@@ -180,8 +174,8 @@ usage:
 
         /* allocate a region to test in */
         status_t err = VmAspace::kernel_aspace()->AllocContiguous(
-                "memtest", len, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
-                ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+            "memtest", len, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
+            ARCH_MMU_FLAG_UNCACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
         if (err < 0) {
             printf("error %d allocating test region\n", err);
             return -1;
@@ -199,7 +193,7 @@ usage:
         /* free the test memory */
         VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
     } else if (argc == 3) {
-        void *ptr = argv[1].p;
+        void* ptr = argv[1].p;
         size_t len = argv[2].u;
 
         /* run the tests */

@@ -7,22 +7,22 @@
 
 #include "tests.h"
 
+#include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
-#include <stdio.h>
-#include <trace.h>
-#include <arch/ops.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <stdio.h>
+#include <trace.h>
 
 #define LOCAL_TRACE 0
 
 #define TEST_RUNS 1000
 
-static void inorder_count_task(void *raw_context) {
+static void inorder_count_task(void* raw_context) {
     ASSERT(arch_ints_disabled());
-    int *inorder_counter = (int *)raw_context;
+    int* inorder_counter = (int*)raw_context;
     uint cpu_num = arch_curr_cpu_num();
 
     int oldval = atomic_add(inorder_counter, 1);
@@ -30,14 +30,14 @@ static void inorder_count_task(void *raw_context) {
     LTRACEF("  CPU %u checked in\n", cpu_num);
 }
 
-static void counter_task(void *raw_context) {
+static void counter_task(void* raw_context) {
     ASSERT(arch_ints_disabled());
-    int *counter = (int *)raw_context;
+    int* counter = (int*)raw_context;
     atomic_add(counter, 1);
 }
 
-static int deadlock_test_thread(void *arg) {
-    event_t *gate = (event_t *)arg;
+static int deadlock_test_thread(void* arg) {
+    event_t* gate = (event_t*)arg;
     event_wait(gate);
 
     int counter = 0;
@@ -52,7 +52,7 @@ static void deadlock_test(void) {
 
     event_t gate = EVENT_INITIAL_VALUE(gate, false, 0);
 
-    thread_t *threads[5] = { 0 };
+    thread_t* threads[5] = {0};
     for (uint i = 0; i < countof(threads); ++i) {
         threads[i] = thread_create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
         if (!threads[i]) {
@@ -73,8 +73,7 @@ cleanup:
     event_destroy(&gate);
 };
 
-int sync_ipi_tests(int argc, const cmd_args *argv)
-{
+int sync_ipi_tests(int argc, const cmd_args* argv) {
     uint num_cpus = arch_max_num_cpus();
     uint online = mp_get_online_mask();
     if (online != (1U << num_cpus) - 1) {

@@ -5,20 +5,19 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <stdio.h>
 #include <app.h>
-#include <magenta/compiler.h>
 #include <kernel/thread.h>
+#include <magenta/compiler.h>
+#include <stdio.h>
 
 extern const struct app_descriptor __start_apps[] __WEAK;
 extern const struct app_descriptor __stop_apps[] __WEAK;
 
-static void start_app(const struct app_descriptor *app);
+static void start_app(const struct app_descriptor* app);
 
 /* one time setup */
-void apps_init()
-{
-    const struct app_descriptor *app;
+void apps_init() {
+    const struct app_descriptor* app;
 
     /* call all the init routines */
     for (app = __start_apps; app != __stop_apps; app++) {
@@ -34,22 +33,19 @@ void apps_init()
     }
 }
 
-static int app_thread_entry(void *arg)
-{
-    const struct app_descriptor *app = (const struct app_descriptor *)arg;
+static int app_thread_entry(void* arg) {
+    const struct app_descriptor* app = (const struct app_descriptor*)arg;
 
     app->entry(app, NULL);
 
     return 0;
 }
 
-static void start_app(const struct app_descriptor *app)
-{
+static void start_app(const struct app_descriptor* app) {
     size_t stack_size = (app->flags & APP_FLAG_CUSTOM_STACK_SIZE) ? app->stack_size : DEFAULT_STACK_SIZE;
 
     printf("starting app %s\n", app->name);
-    thread_t *t = thread_create(app->name, &app_thread_entry, (void *)app, DEFAULT_PRIORITY, stack_size);
+    thread_t* t = thread_create(app->name, &app_thread_entry, (void*)app, DEFAULT_PRIORITY, stack_size);
     thread_detach(t);
     thread_resume(t);
 }
-

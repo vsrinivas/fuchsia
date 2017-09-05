@@ -16,16 +16,14 @@
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 
-static enum handler_return timer_cb(struct timer* timer, lk_time_t now, void* arg)
-{
+static enum handler_return timer_cb(struct timer* timer, lk_time_t now, void* arg) {
     event_t* event = (event_t*)arg;
     event_signal(event, false);
 
     return INT_RESCHEDULE;
 }
 
-static int timer_do_one_thread(void* arg)
-{
+static int timer_do_one_thread(void* arg) {
     event_t event;
     timer_t timer;
 
@@ -42,9 +40,8 @@ static int timer_do_one_thread(void* arg)
     return 0;
 }
 
-static void timer_test_all_cpus(void)
-{
-    thread_t *timer_threads[SMP_MAX_CPUS];
+static void timer_test_all_cpus(void) {
+    thread_t* timer_threads[SMP_MAX_CPUS];
     uint max = arch_max_num_cpus();
 
     uint i;
@@ -53,8 +50,8 @@ static void timer_test_all_cpus(void)
         snprintf(name, sizeof(name), "timer %u\n", i);
 
         timer_threads[i] = thread_create_etc(
-                NULL, name, timer_do_one_thread, NULL,
-                DEFAULT_PRIORITY, NULL, NULL, DEFAULT_STACK_SIZE, NULL);
+            NULL, name, timer_do_one_thread, NULL,
+            DEFAULT_PRIORITY, NULL, NULL, DEFAULT_STACK_SIZE, NULL);
         if (timer_threads[i] == NULL) {
             printf("failed to create thread for cpu %d\n", i);
             return;
@@ -71,21 +68,19 @@ static void timer_test_all_cpus(void)
     printf("%u threads created, %u threads joined\n", max, joined);
 }
 
-static enum handler_return timer_cb2(struct timer* timer, lk_time_t now, void* arg)
-{
-    int* timer_count = (int*) arg;
+static enum handler_return timer_cb2(struct timer* timer, lk_time_t now, void* arg) {
+    int* timer_count = (int*)arg;
     atomic_add(timer_count, 1);
     return INT_RESCHEDULE;
 }
 
 static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
-    const lk_time_t* deadline, const int64_t* expected_adj, int count)
-{
+                                  const lk_time_t* deadline, const int64_t* expected_adj, int count) {
     printf("testing coalsecing mode %d\n", mode);
 
     int timer_count = 0;
 
-    timer_t* timer = (timer_t *)malloc(sizeof(timer_t) * count);
+    timer_t* timer = (timer_t*)malloc(sizeof(timer_t) * count);
 
     printf("       orig         new       adjustment\n");
     for (int ix = 0; ix != count; ++ix) {
@@ -93,7 +88,7 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
         lk_time_t dl = deadline[ix];
         timer_set(&timer[ix], dl, mode, slack, timer_cb2, &timer_count);
         printf("[%d] %" PRIu64 "  -> %" PRIu64 ", %" PRIi64 "\n",
-            ix, dl, timer[ix].scheduled_time, timer[ix].slack);
+               ix, dl, timer[ix].scheduled_time, timer[ix].slack);
 
         if (timer[ix].slack != expected_adj[ix]) {
             printf("\n!! unexpected adjustment! expected %" PRIi64 "\n", expected_adj[ix]);
@@ -101,85 +96,81 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
     }
 
     // Wait for the timers to fire.
-    while(atomic_load(&timer_count) != count) {
+    while (atomic_load(&timer_count) != count) {
         thread_sleep(current_time() + LK_MSEC(5));
     }
 
     free(timer);
 }
 
-static void timer_test_coalescing_center(void)
-{
+static void timer_test_coalescing_center(void) {
     lk_time_t when = current_time() + LK_MSEC(1);
     lk_time_t off = LK_USEC(10);
     lk_time_t slack = 2u * off;
 
     const lk_time_t deadline[] = {
-        when + (6u * off),          // non-coalesced, adjustment = 0
-        when,                       // non-coalesced, adjustment = 0
-        when - off,                 // coalesced with [1], adjustment = 10u
-        when - (3u * off),          // non-coalesced, adjustment = 0
-        when + off,                 // coalesced with [1], adjustment = -10u
-        when + (3u * off),          // non-coalesced, adjustment = 0
-        when + (5u * off),          // coalesced with [0], adjustment = 10u
-        when - (3u * off),          // non-coalesced, same as [3], adjustment = 0
-    } ;
+        when + (6u * off), // non-coalesced, adjustment = 0
+        when,              // non-coalesced, adjustment = 0
+        when - off,        // coalesced with [1], adjustment = 10u
+        when - (3u * off), // non-coalesced, adjustment = 0
+        when + off,        // coalesced with [1], adjustment = -10u
+        when + (3u * off), // non-coalesced, adjustment = 0
+        when + (5u * off), // coalesced with [0], adjustment = 10u
+        when - (3u * off), // non-coalesced, same as [3], adjustment = 0
+    };
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, 0, LK_USEC(10), 0, -(int64_t)LK_USEC(10), 0, LK_USEC(10), 0 };
+        0, 0, LK_USEC(10), 0, -(int64_t)LK_USEC(10), 0, LK_USEC(10), 0};
 
     timer_test_coalescing(
         TIMER_SLACK_CENTER, slack, deadline, expected_adj, countof(deadline));
 }
 
-static void timer_test_coalescing_late(void)
-{
+static void timer_test_coalescing_late(void) {
     lk_time_t when = current_time() + LK_MSEC(1);
     lk_time_t off = LK_USEC(10);
     lk_time_t slack = 3u * off;
 
     const lk_time_t deadline[] = {
-        when + off,                 // non-coalesced, adjustment = 0
-        when + (2u * off),          // non-coalesced, adjustment = 0
-        when - off,                 // coalesced with [0], adjustment = 20u
-        when - (3u * off),          // non-coalesced, adjustment = 0
-        when + (3u * off),          // non-coalesced, adjustment = 0
-        when + (2u * off),          // non-coalesced, same as [1]
-        when - (4u * off),          // coalesced with [3], adjustment = 10u
-    } ;
+        when + off,        // non-coalesced, adjustment = 0
+        when + (2u * off), // non-coalesced, adjustment = 0
+        when - off,        // coalesced with [0], adjustment = 20u
+        when - (3u * off), // non-coalesced, adjustment = 0
+        when + (3u * off), // non-coalesced, adjustment = 0
+        when + (2u * off), // non-coalesced, same as [1]
+        when - (4u * off), // coalesced with [3], adjustment = 10u
+    };
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, 0, LK_USEC(20), 0, 0, 0, LK_USEC(10) };
+        0, 0, LK_USEC(20), 0, 0, 0, LK_USEC(10)};
 
     timer_test_coalescing(
         TIMER_SLACK_LATE, slack, deadline, expected_adj, countof(deadline));
 }
 
-static void timer_test_coalescing_early(void)
-{
+static void timer_test_coalescing_early(void) {
     lk_time_t when = current_time() + LK_MSEC(1);
     lk_time_t off = LK_USEC(10);
     lk_time_t slack = 3u * off;
 
     const lk_time_t deadline[] = {
-        when,                       // non-coalesced, adjustment = 0
-        when + (2u * off),          // coalesced with [0], adjustment = -20u
-        when - off,                 // non-coalesced, adjustment = 0
-        when - (3u * off),          // non-coalesced, adjustment = 0
-        when + (4u * off),          // non-coalesced, adjustment = 0
-        when + (5u * off),          // coalesced with [4], adjustment = -10u
-        when - (2u * off),          // coalesced with [3], adjustment = -10u
-    } ;
+        when,              // non-coalesced, adjustment = 0
+        when + (2u * off), // coalesced with [0], adjustment = -20u
+        when - off,        // non-coalesced, adjustment = 0
+        when - (3u * off), // non-coalesced, adjustment = 0
+        when + (4u * off), // non-coalesced, adjustment = 0
+        when + (5u * off), // coalesced with [4], adjustment = -10u
+        when - (2u * off), // coalesced with [3], adjustment = -10u
+    };
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, -(int64_t)LK_USEC(20), 0, 0, 0, -(int64_t)LK_USEC(10), -(int64_t)LK_USEC(10) };
+        0, -(int64_t)LK_USEC(20), 0, 0, 0, -(int64_t)LK_USEC(10), -(int64_t)LK_USEC(10)};
 
     timer_test_coalescing(
         TIMER_SLACK_EARLY, slack, deadline, expected_adj, countof(deadline));
 }
 
-static void timer_far_deadline(void)
-{
+static void timer_far_deadline(void) {
     event_t event;
     timer_t timer;
 
@@ -197,8 +188,7 @@ static void timer_far_deadline(void)
     event_destroy(&event);
 }
 
-void timer_tests(void)
-{
+void timer_tests(void) {
     timer_test_coalescing_center();
     timer_test_coalescing_late();
     timer_test_coalescing_early();

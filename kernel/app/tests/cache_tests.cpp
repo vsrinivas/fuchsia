@@ -7,23 +7,22 @@
 
 #include "tests.h"
 
+#include <arch.h>
+#include <arch/ops.h>
 #include <inttypes.h>
+#include <lib/console.h>
+#include <platform.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arch.h>
-#include <arch/ops.h>
-#include <lib/console.h>
-#include <platform.h>
 
-static void bench_cache(size_t bufsize, uint8_t *buf)
-{
+static void bench_cache(size_t bufsize, uint8_t* buf) {
     lk_time_t t;
     bool do_free;
 
     if (buf == 0) {
-        buf = (uint8_t *)memalign(PAGE_SIZE, bufsize);
+        buf = (uint8_t*)memalign(PAGE_SIZE, bufsize);
         do_free = true;
     } else {
         do_free = false;
@@ -52,18 +51,17 @@ static void bench_cache(size_t bufsize, uint8_t *buf)
     printf("took %" PRIu64 " nsecs to clean %zu bytes (hot)\n", t, bufsize);
 }
 
-static int cache_tests(int argc, const cmd_args *argv, uint32_t flags)
-{
-    uint8_t *buf;
-    buf = (uint8_t *)((argc > 1) ? argv[1].u : 0UL);
+static int cache_tests(int argc, const cmd_args* argv, uint32_t flags) {
+    uint8_t* buf;
+    buf = (uint8_t*)((argc > 1) ? argv[1].u : 0UL);
 
     printf("testing cache\n");
 
-    bench_cache(2*1024, buf);
-    bench_cache(64*1024, buf);
-    bench_cache(256*1024, buf);
-    bench_cache(1*1024*1024, buf);
-    bench_cache(8*1024*1024, buf);
+    bench_cache(2 * 1024, buf);
+    bench_cache(64 * 1024, buf);
+    bench_cache(256 * 1024, buf);
+    bench_cache(1 * 1024 * 1024, buf);
+    bench_cache(8 * 1024 * 1024, buf);
     return 0;
 }
 

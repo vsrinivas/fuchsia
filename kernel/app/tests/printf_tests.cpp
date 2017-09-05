@@ -7,15 +7,14 @@
 
 #include "tests.h"
 
+#include <debug.h>
 #include <stdio.h>
 #include <string.h>
-#include <debug.h>
 
 #if !WITH_NO_FP
 #include "float_test_vec.c"
 
-static void printf_tests_float(void)
-{
+static void printf_tests_float(void) {
     printf("floating point printf tests\n");
 
     for (size_t i = 0; i < float_test_vec_size; i++) {
@@ -24,8 +23,7 @@ static void printf_tests_float(void)
 }
 #endif
 
-void printf_tests(void)
-{
+void printf_tests(void) {
     printf("printf tests\n");
 
     printf("numbers:\n");
@@ -120,4 +118,3 @@ void printf_tests(void)
     printf_tests_float();
 #endif
 }
-

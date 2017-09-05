@@ -13,22 +13,26 @@
 #include <stdio.h>
 #include <string.h>
 
-static uint8_t *src;
-static uint8_t *dst;
+static uint8_t* src;
+static uint8_t* dst;
 
-static uint8_t *src2;
-static uint8_t *dst2;
+static uint8_t* src2;
+static uint8_t* dst2;
 
-#define BUFFER_SIZE (2*1024*1024)
-#define ITERATIONS (256*1024*1024 / BUFFER_SIZE) // enough iterations to have to copy/set 256MB of memory
+#define BUFFER_SIZE (2 * 1024 * 1024)
+#define ITERATIONS (256 * 1024 * 1024 / BUFFER_SIZE) // enough iterations to have to copy/set 256MB of memory
 
 #if 1
-static inline void *mymemcpy(void *dst, const void *src, size_t len) { return memcpy(dst, src, len); }
-static inline void *mymemset(void *dst, int c, size_t len) { return memset(dst, c, len); }
+static inline void* mymemcpy(void* dst, const void* src, size_t len) {
+    return memcpy(dst, src, len);
+}
+static inline void* mymemset(void* dst, int c, size_t len) {
+    return memset(dst, c, len);
+}
 #else
 // if we're testing our own memcpy, use this
-extern void *mymemcpy(void *dst, const void *src, size_t len);
-extern void *mymemset(void *dst, int c, size_t len);
+extern void* mymemcpy(void* dst, const void* src, size_t len);
+extern void* mymemset(void* dst, int c, size_t len);
 #endif
 
 /* reference implementations of memmove/memcpy */
@@ -37,10 +41,9 @@ typedef long word;
 #define lsize sizeof(word)
 #define lmask (lsize - 1)
 
-static void *c_memmove(void *dest, void const *src, size_t count)
-{
-    char *d = (char *)dest;
-    const char *s = (const char *)src;
+static void* c_memmove(void* dest, void const* src, size_t count) {
+    char* d = (char*)dest;
+    const char* s = (const char*)src;
     int len;
 
     if (count == 0 || dest == src)
@@ -59,7 +62,7 @@ static void *c_memmove(void *dest, void const *src, size_t count)
                 *d++ = *s++;
         }
         for (len = count / lsize; len > 0; len--) {
-            *(word *)d = *(word *)s;
+            *(word*)d = *(word*)s;
             d += lsize;
             s += lsize;
         }
@@ -82,7 +85,7 @@ static void *c_memmove(void *dest, void const *src, size_t count)
         for (len = count / lsize; len > 0; len--) {
             d -= lsize;
             s -= lsize;
-            *(word *)d = *(word *)s;
+            *(word*)d = *(word*)s;
         }
         for (len = count & lmask; len > 0; len--)
             *--d = *--s;
@@ -91,13 +94,12 @@ static void *c_memmove(void *dest, void const *src, size_t count)
     return dest;
 }
 
-static void *c_memset(void *s, int c, size_t count)
-{
-    char *xs = (char *) s;
+static void* c_memset(void* s, int c, size_t count) {
+    char* xs = (char*)s;
     size_t len = (-(size_t)s) & lmask;
     word cc = c & 0xff;
 
-    if ( count > len ) {
+    if (count > len) {
         count -= len;
         cc |= cc << 8;
         cc |= cc << 16;
@@ -105,12 +107,12 @@ static void *c_memset(void *s, int c, size_t count)
             cc |= (uint64_t)cc << 32; // should be optimized out on 32 bit machines
 
         // write to non-aligned memory byte-wise
-        for ( ; len > 0; len-- )
+        for (; len > 0; len--)
             *xs++ = c;
 
         // write to aligned memory dword-wise
-        for ( len = count / lsize; len > 0; len-- ) {
-            *((word *)xs) = (word)cc;
+        for (len = count / lsize; len > 0; len--) {
+            *((word*)xs) = (word)cc;
             xs += lsize;
         }
 
@@ -118,39 +120,36 @@ static void *c_memset(void *s, int c, size_t count)
     }
 
     // write remaining bytes
-    for ( ; count > 0; count-- )
+    for (; count > 0; count--)
         *xs++ = c;
 
     return s;
 }
 
-static void *null_memcpy(void *dst, const void *src, size_t len)
-{
+static void* null_memcpy(void* dst, const void* src, size_t len) {
     return dst;
 }
 
-static lk_time_t bench_memcpy_routine(void *memcpy_routine(void *, const void *, size_t), size_t srcalign, size_t dstalign)
-{
+static lk_time_t bench_memcpy_routine(void* memcpy_routine(void*, const void*, size_t), size_t srcalign, size_t dstalign) {
     int i;
     lk_time_t t0;
 
     t0 = current_time();
-    for (i=0; i < ITERATIONS; i++) {
+    for (i = 0; i < ITERATIONS; i++) {
         memcpy_routine(dst + dstalign, src + srcalign, BUFFER_SIZE);
     }
     return current_time() - t0;
 }
 
-static void bench_memcpy(void)
-{
+static void bench_memcpy(void) {
     lk_time_t null, c, libc, mine;
     size_t srcalign, dstalign;
 
     printf("memcpy speed test\n");
     thread_sleep_relative(LK_MSEC(200)); // let the debug string clear the serial port
 
-    for (srcalign = 0; srcalign < 64; ) {
-        for (dstalign = 0; dstalign < 64; ) {
+    for (srcalign = 0; srcalign < 64;) {
+        for (dstalign = 0; dstalign < 64;) {
 
             null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / (1000 * 1000);
             c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / (1000 * 1000);
@@ -176,18 +175,16 @@ static void bench_memcpy(void)
     }
 }
 
-static void fillbuf(void *ptr, size_t len, uint32_t seed)
-{
+static void fillbuf(void* ptr, size_t len, uint32_t seed) {
     size_t i;
 
     for (i = 0; i < len; i++) {
-        ((char *)ptr)[i] = seed;
+        ((char*)ptr)[i] = seed;
         seed *= 0x1234567;
     }
 }
 
-static void validate_memcpy(void)
-{
+static void validate_memcpy(void) {
     size_t srcalign, dstalign, size;
     const size_t maxsize = 256;
 
@@ -222,20 +219,18 @@ static void validate_memcpy(void)
     }
 }
 
-static lk_time_t bench_memset_routine(void *memset_routine(void *, int, size_t), size_t dstalign, size_t len)
-{
+static lk_time_t bench_memset_routine(void* memset_routine(void*, int, size_t), size_t dstalign, size_t len) {
     int i;
     lk_time_t t0;
 
     t0 = current_time();
-    for (i=0; i < ITERATIONS; i++) {
+    for (i = 0; i < ITERATIONS; i++) {
         memset_routine(dst + dstalign, 0, len);
     }
     return current_time() - t0;
 }
 
-static void bench_memset(void)
-{
+static void bench_memset(void) {
     lk_time_t c, libc, mine;
     size_t dstalign;
 
@@ -256,8 +251,7 @@ static void bench_memset(void)
     }
 }
 
-static void validate_memset(void)
-{
+static void validate_memset(void) {
     size_t dstalign, size;
     int c;
     const size_t maxsize = 256;
@@ -288,8 +282,7 @@ static void validate_memset(void)
 #if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>
 
-static int string_tests(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int string_tests(int argc, const cmd_args* argv, uint32_t flags) {
     src = memalign(64, BUFFER_SIZE + 256);
     dst = memalign(64, BUFFER_SIZE + 256);
     src2 = memalign(64, BUFFER_SIZE + 256);
@@ -305,7 +298,7 @@ static int string_tests(int argc, const cmd_args *argv, uint32_t flags)
 
     if (argc < 3) {
         printf("not enough arguments:\n");
-usage:
+    usage:
         printf("%s validate <routine>\n", argv[0].str);
         printf("%s bench <routine>\n", argv[0].str);
         goto out;

@@ -7,18 +7,17 @@
 
 #include "tests.h"
 
-#include <stdio.h>
-#include <rand.h>
 #include <err.h>
 #include <inttypes.h>
-#include <kernel/thread.h>
-#include <kernel/mutex.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
+#include <kernel/mutex.h>
+#include <kernel/thread.h>
 #include <platform.h>
+#include <rand.h>
+#include <stdio.h>
 
-void clock_tests(void)
-{
+void clock_tests(void) {
     uint64_t c;
     lk_time_t t2;
 

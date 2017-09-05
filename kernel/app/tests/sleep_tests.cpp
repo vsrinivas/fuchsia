@@ -6,14 +6,13 @@
 
 #include "tests.h"
 
-#include <stdio.h>
 #include <inttypes.h>
 #include <kernel/thread.h>
 #include <platform.h>
+#include <stdio.h>
 
 // Tests that thread_sleep and current_time() are consistent.
-static int thread_sleep_test(void)
-{
+static int thread_sleep_test(void) {
     int early = 0;
     for (int i = 0; i < 5; i++) {
         lk_time_t now = current_time();
@@ -27,7 +26,6 @@ static int thread_sleep_test(void)
     return early;
 }
 
-int sleep_tests(void)
-{
+int sleep_tests(void) {
     return thread_sleep_test();
 }

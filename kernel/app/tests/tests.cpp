@@ -31,4 +31,3 @@ STATIC_COMMAND("timer_tests", "tests timers", (console_cmd)&timer_tests)
 STATIC_COMMAND_END(tests);
 
 #endif
-

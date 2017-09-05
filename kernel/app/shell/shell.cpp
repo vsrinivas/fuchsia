@@ -9,13 +9,11 @@
 #include <debug.h>
 #include <lib/console.h>
 
-static void shell_init(const struct app_descriptor *app)
-{
+static void shell_init(const struct app_descriptor* app) {
     console_init();
 }
 
-static void shell_entry(const struct app_descriptor *app, void *args)
-{
+static void shell_entry(const struct app_descriptor* app, void* args) {
     console_start();
 }
 

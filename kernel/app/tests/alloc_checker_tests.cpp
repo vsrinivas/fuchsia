@@ -44,7 +44,7 @@ static bool alloc_checker_basic(void* context) {
 
 static bool alloc_checker_panic(void* context) {
     BEGIN_TEST;
-    // Enable any of the blocks below to test the possible panics.
+// Enable any of the blocks below to test the possible panics.
 
 #if 0
     // Arm but not check should panic (true).
@@ -107,9 +107,9 @@ static bool alloc_checker_oom(void* context) {
 }
 
 UNITTEST_START_TESTCASE(alloc_checker)
-UNITTEST("alloc checker ctor & dtor",   alloc_checker_ctor)
-UNITTEST("alloc checker basic",         alloc_checker_basic)
-UNITTEST("alloc checker panic",         alloc_checker_panic)
-UNITTEST("alloc checker new",           alloc_checker_new)
-UNITTEST("alloc_checker out of mem",    alloc_checker_oom)
+UNITTEST("alloc checker ctor & dtor", alloc_checker_ctor)
+UNITTEST("alloc checker basic", alloc_checker_basic)
+UNITTEST("alloc checker panic", alloc_checker_panic)
+UNITTEST("alloc checker new", alloc_checker_new)
+UNITTEST("alloc_checker out of mem", alloc_checker_oom)
 UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker", nullptr, nullptr);
