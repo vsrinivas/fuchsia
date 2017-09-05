@@ -1,9 +1,6 @@
 #include "asm.h"
 
 ENTRY(memmove)
-ALIAS_ENTRY(__unsanitized_memmove)
-ASAN_ALIAS_ENTRY(memmove)
-
 	mov %rdi,%rax
 	sub %rsi,%rax
 	cmp %rdx,%rax
@@ -17,7 +14,7 @@ ASAN_ALIAS_ENTRY(memmove)
 	cld
 	lea 1(%rdi),%rax
 	ret
-
-ASAN_ALIAS_END(memmove)
-ALIAS_END(__unsanitized_memmove)
 END(memmove)
+
+ALIAS(memmove, __unsanitized_memmove)
+ASAN_WEAK_ALIAS(memmove)

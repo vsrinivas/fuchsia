@@ -8,29 +8,30 @@
 #define __has_feature(x) 0
 #endif
 
-#define ALIAS_ENTRY(name) \
+#define ENTRY(name) \
     .globl name; \
     .type name, %function; \
-name:
-
-#define ALIAS_END(name) \
-    .size name, . - name
-
-#define ENTRY(name) \
-    ALIAS_ENTRY(name) \
+name: \
     .cfi_startproc
 
 #define END(name) \
     .cfi_endproc; \
-    ALIAS_END(name)
+    .size name, . - name
+
+// This copies the .type and .size info as well as the value.
+#define ALIAS(old, new) \
+    new = old; \
+    .globl new
+
+#define WEAK_ALIAS(old, new) \
+    new = old; \
+    .weak new
 
 // See __asan_weak_alias in asan_impl.h.
 #if __has_feature(address_sanitizer)
-#define ASAN_ALIAS_ENTRY(name) ALIAS_ENTRY(__asan_##name) .weak __asan_##name
-#define ASAN_ALIAS_END(name) ALIAS_END(__asan_##name)
+#define ASAN_WEAK_ALIAS(name) WEAK_ALIAS(name, __asan_##name)
 #else // !__has_feature(address_sanitizer)
-#define ASAN_ALIAS_ENTRY(name) // Don't define __asan_##name.
-#define ASAN_ALIAS_END(name)
+#define ASAN_WEAK_ALIAS(name) // Don't define __asan_##name.
 #endif  // __has_feature(address_sanitizer)
 
 #ifdef __aarch64__

@@ -7,8 +7,6 @@
 #include <magenta/tls.h>
 
 ENTRY(setjmp)
-ALIAS_ENTRY(_setjmp)
-ALIAS_ENTRY(sigsetjmp)
 
     // Move the jmp_buf pointer to a temporary register.
     // We'll use x0 as a scratch register since we clobber it on return anyway.
@@ -56,7 +54,6 @@ ALIAS_ENTRY(sigsetjmp)
     ret
 
 END(setjmp)
-ALIAS_END(_setjmp)
-ALIAS_END(sigsetjmp)
 
-    .weak sigsetjmp
+ALIAS(setjmp, _setjmp)
+WEAK_ALIAS(setjmp, sigsetjmp)

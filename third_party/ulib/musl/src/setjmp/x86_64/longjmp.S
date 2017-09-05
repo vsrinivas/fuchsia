@@ -29,8 +29,6 @@
 .endm
 
 ENTRY(longjmp)
-ALIAS_ENTRY(_longjmp)
-ALIAS_ENTRY(siglongjmp)
 
     // The sanitizer runtime wants to be informed of non-local exits.
     // Call __asan_handle_no_return() before doing the actual longjmp.
@@ -110,7 +108,6 @@ ALIAS_ENTRY(siglongjmp)
     ret
 
 END(longjmp)
-ALIAS_END(_longjmp)
-ALIAS_END(siglongjmp)
 
-    .weak siglongjmp
+ALIAS(longjmp, _longjmp)
+WEAK_ALIAS(longjmp, siglongjmp)
