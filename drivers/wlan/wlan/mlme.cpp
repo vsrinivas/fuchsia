@@ -300,6 +300,19 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
         }
         break;
     }
+    case Method::EAPOL_request: {
+        EapolRequestPtr req;
+        status = DeserializeServiceMsg(*packet, Method::EAPOL_request, &req);
+        if (status != MX_OK) {
+            errorf("could not deserialize EapolRequest: %d\n", status);
+            break;
+        }
+
+        if (IsStaValid()) {
+            status = sta_->SendEapolRequest(std::move(req));
+        }
+        break;
+    }
     default:
         warnf("unknown MLME method %u\n", h->ordinal);
         status = MX_ERR_NOT_SUPPORTED;

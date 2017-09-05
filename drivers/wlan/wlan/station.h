@@ -72,6 +72,8 @@ class Station {
     mx_status_t HandleEth(const Packet* packet);
     mx_status_t HandleTimeout();
 
+    mx_status_t SendEapolRequest(EapolRequestPtr req);
+
     mx_status_t PreChannelChange(wlan_channel_t chan);
     mx_status_t PostChannelChange();
 
@@ -86,6 +88,7 @@ class Station {
     mx_status_t SendDisassociateIndication(uint16_t code);
 
     mx_status_t SendSignalReportIndication(uint8_t rssi);
+    mx_status_t SendEapolResponse(EapolResultCodes result_code);
     mx_status_t SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
                                     const uint8_t dst[]);
 

@@ -784,6 +784,82 @@ mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
     return status;
 }
 
+mx_status_t Station::SendEapolRequest(EapolRequestPtr req) {
+    debugfn();
+
+    MX_DEBUG_ASSERT(!req.is_null());
+    if (!bss_) {
+        return MX_ERR_BAD_STATE;
+    }
+    if (state_ != WlanState::kAssociated) {
+        debugf("dropping MLME-EAPOL.request while not being associated. STA in state %d\n", state_);
+        return MX_OK;
+    }
+
+    size_t len = sizeof(DataFrameHeader) + sizeof(LlcHeader) + req->data.size();
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    packet->clear();
+    packet->set_peer(Packet::Peer::kWlan);
+    auto hdr = packet->mut_field<DataFrameHeader>(0);
+    hdr->fc.set_type(kData);
+    hdr->fc.set_to_ds(1);
+
+    // TODO(hahnr): Address 1 should be the BSSID as well, however, our setup somehow is not able
+    // to send such packets. Sending 0xFF...FF is just a dirty work around until the actual problem
+    // is fixed.
+    std::memset(hdr->addr1, 0xFF, sizeof(hdr->addr1));
+    std::memcpy(hdr->addr2, req->src_addr.data(), sizeof(hdr->addr2));
+    std::memcpy(hdr->addr3, req->dst_addr.data(), sizeof(hdr->addr3));
+    hdr->sc.set_seq(device_->GetState()->next_seq());
+
+    auto llc = packet->mut_field<LlcHeader>(sizeof(DataFrameHeader));
+    llc->dsap = kLlcSnapExtension;
+    llc->ssap = kLlcSnapExtension;
+    llc->control = kLlcUnnumberedInformation;
+    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
+    llc->protocol_id = htobe16(kEapolProtocolId);
+    std::memcpy(llc->payload, req->data.data(), req->data.size());
+
+    mx_status_t status = device_->SendWlan(std::move(packet));
+    if (status != MX_OK) {
+        errorf("could not send eapol request packet: %d\n", status);
+        SendEapolResponse(EapolResultCodes::TRANSMISSION_FAILURE);
+        return status;
+    }
+
+    SendEapolResponse(EapolResultCodes::SUCCESS);
+
+    return status;
+}
+
+mx_status_t Station::SendEapolResponse(EapolResultCodes result_code) {
+    debugfn();
+
+    auto resp = EapolResponse::New();
+    resp->result_code = result_code;
+
+    size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    packet->set_peer(Packet::Peer::kService);
+    mx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_confirm, resp);
+    if (status != MX_OK) {
+        errorf("could not serialize EapolResponse: %d\n", status);
+    } else {
+        status = device_->SendService(std::move(packet));
+    }
+
+    return status;
+}
+
 mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
                                          const uint8_t dst[]) {
     debugfn();
