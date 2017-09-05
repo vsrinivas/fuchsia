@@ -22,9 +22,9 @@ source_set("cloud_server") {
 
   public_deps = [
     "//apps/ledger/src/glue/socket",
-    "//apps/netstack/services:net_address",
     "//apps/network/services",
     "//garnet/public/lib/ftl",
+    "//garnet/public/lib/netstack/fidl:net_address",
   ]
 
   deps = [

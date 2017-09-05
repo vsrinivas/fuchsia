@@ -11,7 +11,6 @@
 #include <mx/socket.h>
 
 #include "apps/ledger/src/test/test_with_message_loop.h"
-#include "apps/netstack/services/net_address.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -19,6 +18,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/netstack/fidl/net_address.fidl.h"
 
 namespace ledger {
 namespace {
