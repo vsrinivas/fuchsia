@@ -11,11 +11,19 @@
 #include "drivers/audio/dispatcher-pool/dispatcher-execution-domain.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-thread-pool.h"
 
-// Instantiate storage for the static allocator.
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::audio::dispatcher::ChannelAllocTraits, 0x100, true);
-
 namespace audio {
 namespace dispatcher {
+
+// static
+fbl::RefPtr<dispatcher::Channel> dispatcher::Channel::Create() {
+    fbl::AllocChecker ac;
+
+    auto ptr = new (&ac) dispatcher::Channel();
+    if (!ac.check())
+        return nullptr;
+
+    return fbl::AdoptRef(ptr);
+}
 
 zx_status_t Channel::Activate(zx::channel* client_channel_out,
                               fbl::RefPtr<ExecutionDomain> domain,
@@ -78,36 +86,6 @@ zx_status_t Channel::Activate(zx::channel channel,
         }
     }
     return ret;
-}
-
-zx_status_t Channel::Activate(fbl::RefPtr<Owner> owner, zx::channel* client_channel_out) {
-    ProcessHandler phandler([owner_ref = owner](Channel* channel) {
-        return owner_ref->ProcessChannel(channel);
-    });
-
-    ChannelClosedHandler chandler([owner_ref = owner](const Channel* channel) {
-        return owner_ref->NotifyChannelDeactivated(*channel);
-    });
-
-    return Activate(client_channel_out,
-                    owner->default_domain_,
-                    fbl::move(phandler),
-                    fbl::move(chandler));
-}
-
-zx_status_t Channel::Activate(fbl::RefPtr<Owner> owner, zx::channel channel) {
-    ProcessHandler phandler([owner_ref = owner](Channel* channel) {
-        return owner_ref->ProcessChannel(channel);
-    });
-
-    ChannelClosedHandler chandler([owner_ref = owner](const Channel* channel) {
-        return owner_ref->NotifyChannelDeactivated(*channel);
-    });
-
-    return Activate(fbl::move(channel),
-                    owner->default_domain_,
-                    fbl::move(phandler),
-                    fbl::move(chandler));
 }
 
 void Channel::Deactivate() {
@@ -230,7 +208,7 @@ void Channel::Dispatch(ExecutionDomain* domain) {
 zx_status_t Channel::Read(void*       buf,
                           uint32_t    buf_len,
                           uint32_t*   bytes_read_out,
-                          zx::handle* rxed_handle) const {
+                          zx::handle* rxed_handle) {
     if (!buf || !buf_len || !bytes_read_out ||
        ((rxed_handle != nullptr) && rxed_handle->is_valid()))
         return ZX_ERR_INVALID_ARGS;
@@ -253,7 +231,7 @@ zx_status_t Channel::Read(void*       buf,
 
 zx_status_t Channel::Write(const void*  buf,
                            uint32_t     buf_len,
-                           zx::handle&& tx_handle) const {
+                           zx::handle&& tx_handle) {
     zx_status_t res;
     if (!buf || !buf_len)
         return ZX_ERR_INVALID_ARGS;
