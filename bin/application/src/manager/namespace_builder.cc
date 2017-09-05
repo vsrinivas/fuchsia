@@ -132,6 +132,17 @@ mxio_flat_namespace_t* NamespaceBuilder::Build() {
   return &flat_ns_;
 }
 
+FlatNamespacePtr NamespaceBuilder::BuildForRunner() {
+  auto flat_namespace = FlatNamespace::New();
+  for (auto& path : paths_) {
+    flat_namespace->paths.push_back(std::move(path));
+  }
+  for (auto& handle : handle_pool_) {
+    flat_namespace->directories.push_back(std::move(handle));
+  }
+  return flat_namespace;
+}
+
 void NamespaceBuilder::Release() {
   for (auto& handle : handle_pool_)
     (void)handle.release();

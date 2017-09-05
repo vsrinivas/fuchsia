@@ -331,15 +331,23 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
     ApplicationLaunchInfoPtr launch_info,
     std::string runner,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  auto flat_namespace = FlatNamespace::New();
-  flat_namespace->paths.resize(1);
-  flat_namespace->paths[0] = "/svc";
-  flat_namespace->directories.resize(1);
-  flat_namespace->directories[0] = services_.OpenAsDirectory();
+  mx::channel svc = services_.OpenAsDirectory();
+  if (!svc)
+    return;
+
+  NamespaceBuilder builder;
+  builder.AddRoot();
+  builder.AddServices(std::move(svc));
+
+  // Add the custom namespace.
+  // Note that this must be the last |builder| step adding entries to the
+  // namespace so that we can filter out entries already added in previous
+  // steps.
+  builder.AddFlatNamespace(std::move(launch_info->flat_namespace));
 
   auto startup_info = ApplicationStartupInfo::New();
   startup_info->launch_info = std::move(launch_info);
-  startup_info->flat_namespace = std::move(flat_namespace);
+  startup_info->flat_namespace = builder.BuildForRunner();
 
   auto* runner_ptr = GetOrCreateRunner(runner);
   if (runner_ptr == nullptr) {

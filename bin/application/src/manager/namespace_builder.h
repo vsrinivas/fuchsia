@@ -40,6 +40,10 @@ class NamespaceBuilder {
   // can be called after Build().
   mxio_flat_namespace_t* Build();
 
+  // Similar to Build() but returns a FIDL struct with ownership of all
+  // mx:channel that are part of this namespace.
+  FlatNamespacePtr BuildForRunner();
+
  private:
   void PushDirectoryFromPath(std::string path, int oflags);
   void PushDirectoryFromChannel(std::string path, mx::channel channel);
@@ -49,7 +53,7 @@ class NamespaceBuilder {
   std::vector<mx_handle_t> handles_;
   std::vector<std::string> paths_;
 
-  std::vector<mx::handle> handle_pool_;
+  std::vector<mx::channel> handle_pool_;
   std::vector<const char*> path_data_;
   mxio_flat_namespace_t flat_ns_;
 
