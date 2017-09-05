@@ -18,6 +18,8 @@ typedef struct {
     usb_hci_protocol_t hci;
     uint32_t device_id;
 
+    // ID of the last interface in the descriptor list.
+    uint8_t last_interface_id;
     usb_descriptor_header_t* descriptor;
     size_t descriptor_length;
     // descriptors for currently active endpoints
@@ -56,6 +58,9 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
                                                  size_t assoc_desc_length);
 
 void usb_device_remove_interfaces(usb_device_t* device);
+
+// returns whether the interface with the given id was removed.
+bool usb_device_remove_interface_by_id_locked(usb_device_t* device, uint8_t interface_id);
 
 mx_status_t usb_interface_get_device_id(mx_device_t* device, uint32_t* id);
 

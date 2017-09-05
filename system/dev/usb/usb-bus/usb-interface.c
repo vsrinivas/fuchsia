@@ -337,6 +337,73 @@ static mx_status_t usb_interface_get_descriptor_list(void* ctx, void** out_descr
     return MX_OK;
 }
 
+static mx_status_t usb_interface_get_additional_descriptor_list(void* ctx, void** out_descriptors,
+                                                                size_t* out_length) {
+    usb_interface_t* intf = ctx;
+
+    usb_device_t* device = intf->device;
+    usb_configuration_descriptor_t* config = device->config_descs[device->current_config_index];
+    usb_descriptor_header_t* header = NEXT_DESCRIPTOR(config);
+    usb_descriptor_header_t* end = (usb_descriptor_header_t*)((void*)config + le16toh(config->wTotalLength));
+
+    usb_interface_descriptor_t* result = NULL;
+    while (header < end) {
+        if (header->bDescriptorType == USB_DT_INTERFACE) {
+            usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)header;
+            // We are only interested in descriptors past the last stored descriptor
+            // for the current interface.
+            if (test_intf->bAlternateSetting == 0 &&
+                test_intf->bInterfaceNumber > intf->last_interface_id) {
+                result = test_intf;
+                break;
+            }
+        }
+        header = NEXT_DESCRIPTOR(header);
+    }
+    if (!result) {
+        *out_descriptors = NULL;
+        *out_length = 0;
+        return MX_OK;
+    }
+    size_t length = (void*)end - (void*)result;
+    void* descriptors = malloc(length);
+    if (!descriptors) {
+        *out_descriptors = NULL;
+        *out_length = 0;
+        return MX_ERR_NO_MEMORY;
+    }
+    memcpy(descriptors, result, length);
+    *out_descriptors = descriptors;
+    *out_length = length;
+    return MX_OK;
+}
+
+static mx_status_t usb_interface_claim_device_interface(void* ctx,
+                                                        usb_interface_descriptor_t* claim_intf,
+                                                        size_t claim_length) {
+    usb_interface_t* intf = ctx;
+
+    mx_status_t status = usb_device_claim_interface(intf->device,
+                                                    claim_intf->bInterfaceNumber);
+    if (status != MX_OK) {
+        return status;
+    }
+    // Copy claimed interface descriptors to end of descriptor array.
+    void* descriptors = realloc(intf->descriptor,
+                                intf->descriptor_length + claim_length);
+    if (!descriptors) {
+        return MX_ERR_NO_MEMORY;
+    }
+    memcpy(descriptors + intf->descriptor_length, claim_intf, claim_length);
+    intf->descriptor = descriptors;
+    intf->descriptor_length += claim_length;
+
+    if (claim_intf->bInterfaceNumber > intf->last_interface_id) {
+        intf->last_interface_id = claim_intf->bInterfaceNumber;
+    }
+    return MX_OK;
+}
+
 static mx_status_t usb_interface_cancel_all(void* ctx, uint8_t ep_address) {
     usb_interface_t* intf = ctx;
     return usb_hci_cancel_all(&intf->hci, intf->device_id, ep_address);
@@ -352,6 +419,8 @@ static usb_protocol_ops_t _usb_protocol = {
     .get_max_transfer_size = usb_interface_get_max_transfer_size,
     .get_device_id = _usb_interface_get_device_id,
     .get_descriptor_list = usb_interface_get_descriptor_list,
+    .get_additional_descriptor_list = usb_interface_get_additional_descriptor_list,
+    .claim_interface = usb_interface_claim_device_interface,
     .cancel_all = usb_interface_cancel_all,
 };
 
@@ -371,6 +440,7 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
     intf->hci_mxdev = device->hci_mxdev;
     memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
+    intf->last_interface_id = interface_desc->bInterfaceNumber;
     intf->descriptor = (usb_descriptor_header_t *)interface_desc;
     intf->descriptor_length = interface_desc_length;
 
@@ -392,8 +462,10 @@ mx_status_t usb_device_add_interface(usb_device_t* device,
         return status;
     }
 
+    mtx_lock(&device->interface_mutex);
     // need to do this first so usb_device_set_interface() can be called from driver bind
     list_add_head(&device->children, &intf->node);
+    mtx_unlock(&device->interface_mutex);
 
     // callback thread must be started before device_add() since it will recursively
     // bind other drivers to us before it returns.
@@ -448,6 +520,8 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     intf->hci_mxdev = device->hci_mxdev;
     memcpy(&intf->hci, &device->hci, sizeof(usb_hci_protocol_t));
     intf->device_id = device->device_id;
+    // Interfaces in an IAD interface collection must be contiguous.
+    intf->last_interface_id = assoc_desc->bFirstInterface + assoc_desc->bInterfaceCount - 1;
     intf->descriptor = (usb_descriptor_header_t *)assoc_desc;
     intf->descriptor_length = assoc_desc_length;
 
@@ -480,8 +554,10 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
     // bind other drivers to us before it returns.
     start_callback_thread(intf);
 
+    mtx_lock(&device->interface_mutex);
     // need to do this first so usb_device_set_interface() can be called from driver bind
     list_add_head(&device->children, &intf->node);
+    mtx_unlock(&device->interface_mutex);
 
     char name[20];
     snprintf(name, sizeof(name), "asc-%03d", assoc_desc->iFunction);
@@ -518,10 +594,28 @@ mx_status_t usb_device_add_interface_association(usb_device_t* device,
 
 
 void usb_device_remove_interfaces(usb_device_t* device) {
+    mtx_lock(&device->interface_mutex);
+
     usb_interface_t* intf;
     while ((intf = list_remove_head_type(&device->children, usb_interface_t, node)) != NULL) {
         device_remove(intf->mxdev);
     }
+
+    mtx_unlock(&device->interface_mutex);
+}
+
+bool usb_device_remove_interface_by_id_locked(usb_device_t* device, uint8_t interface_id) {
+    usb_interface_t* intf;
+    usb_interface_t* tmp;
+
+    list_for_every_entry_safe(&device->children, intf, tmp, usb_interface_t, node) {
+        if (usb_interface_contains_interface(intf, interface_id)) {
+            list_delete(&intf->node);
+            device_remove(intf->mxdev);
+            return true;
+        }
+    }
+    return false;
 }
 
 mx_status_t usb_interface_get_device_id(mx_device_t* device, uint32_t* out) {

@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <driver/usb.h>
+
 #include "usb-device.h"
 #include "usb-interface.h"
 #include "util.h"
@@ -36,12 +38,15 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
 
 mx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id,
                                      uint8_t alt_setting) {
+    mtx_lock(&device->interface_mutex);
     usb_interface_t* intf;
     list_for_every_entry(&device->children, intf, usb_interface_t, node) {
         if (usb_interface_contains_interface(intf, interface_id)) {
+            mtx_unlock(&device->interface_mutex);
             return usb_interface_set_alt_setting(intf, interface_id, alt_setting);
         }
     }
+    mtx_unlock(&device->interface_mutex);
     return MX_ERR_INVALID_ARGS;
 }
 
@@ -54,6 +59,28 @@ static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int co
         }
     }
     return NULL;
+}
+
+mx_status_t usb_device_claim_interface(usb_device_t* device, uint8_t interface_id) {
+    mtx_lock(&device->interface_mutex);
+
+    interface_status_t status = device->interface_statuses[interface_id];
+    if (status == CLAIMED) {
+        // The interface has already been claimed by a different interface.
+        mtx_unlock(&device->interface_mutex);
+        return MX_ERR_ALREADY_BOUND;
+    } else if (status == CHILD_DEVICE) {
+        bool removed = usb_device_remove_interface_by_id_locked(device, interface_id);
+        if (!removed) {
+            mtx_unlock(&device->interface_mutex);
+            return MX_ERR_BAD_STATE;
+        }
+    }
+    device->interface_statuses[interface_id] = CLAIMED;
+
+    mtx_unlock(&device->interface_mutex);
+
+    return MX_OK;
 }
 
 mx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
@@ -86,6 +113,8 @@ mx_status_t usb_device_set_configuration(usb_device_t* dev, int config) {
 
     // tear down and recreate the subdevices for our interfaces
     usb_device_remove_interfaces(dev);
+    memset(dev->interface_statuses, 0,
+           config_desc->bNumInterfaces * sizeof(interface_status_t));
     return usb_device_add_interfaces(dev, config_desc);
 }
 
@@ -237,6 +266,7 @@ static void usb_device_release(void* ctx) {
         }
         free(dev->config_descs);
     }
+    free(dev->interface_statuses);
     free(dev);
 }
 
@@ -298,35 +328,45 @@ static mx_status_t usb_device_add_interfaces(usb_device_t* parent,
             while (next < end) {
                 if (next->bDescriptorType == USB_DT_INTERFACE) {
                     usb_interface_descriptor_t* test_intf = (usb_interface_descriptor_t*)next;
-
                     // Iterate until we find the next top-level interface
-                    if (
-                        // include alternate interfaces in the current interface
-                        (test_intf->bAlternateSetting == 0) &&
-                        // Only Audio Control interface should be considered top-level
-                        (test_intf->bInterfaceClass != USB_CLASS_AUDIO ||
-                            test_intf->bInterfaceSubClass == USB_SUBCLASS_AUDIO_CONTROL) &&
-                        // USB_CLASS_CDC interfaces should be grouped within a
-                        // USB_CLASS_COMM interface
-                        (test_intf->bInterfaceClass != USB_CLASS_CDC)
-                        ) {
-                        // found the next top level interface
+                    // Include alternate interfaces in the current interface
+                    if (test_intf->bAlternateSetting == 0) {
                         break;
                     }
                 }
                 next = NEXT_DESCRIPTOR(next);
             }
 
+            // Only create a child device if no child interface has claimed this interface.
+            mtx_lock(&parent->interface_mutex);
+            interface_status_t intf_status = parent->interface_statuses[intf_desc->bInterfaceNumber];
+            mtx_unlock(&parent->interface_mutex);
+
             size_t length = (void *)next - (void *)intf_desc;
-            usb_interface_descriptor_t* intf_copy = malloc(length);
-            if (!intf_copy) return MX_ERR_NO_MEMORY;
-            memcpy(intf_copy, intf_desc, length);
-
-            mx_status_t status = usb_device_add_interface(parent, device_desc, intf_copy, length);
-            if (status != MX_OK) {
-                result = status;
+            if (intf_status == AVAILABLE) {
+                usb_interface_descriptor_t* intf_copy = malloc(length);
+                if (!intf_copy) return MX_ERR_NO_MEMORY;
+                memcpy(intf_copy, intf_desc, length);
+                mx_status_t status = usb_device_add_interface(parent, device_desc,
+                                                              intf_copy, length);
+                if (status != MX_OK) {
+                    result = status;
+                }
+                // The interface may have been claimed in the meanwhile, so we need to
+                // check the interface status again.
+                mtx_lock(&parent->interface_mutex);
+                if (parent->interface_statuses[intf_desc->bInterfaceNumber] == CLAIMED) {
+                    bool removed = usb_device_remove_interface_by_id_locked(parent,
+                                                                            intf_desc->bInterfaceNumber);
+                    if (!removed) {
+                        mtx_unlock(&parent->interface_mutex);
+                        return MX_ERR_BAD_STATE;
+                    }
+                } else {
+                    parent->interface_statuses[intf_desc->bInterfaceNumber] = CHILD_DEVICE;
+                }
+                mtx_unlock(&parent->interface_mutex);
             }
-
             header = next;
         } else {
             header = NEXT_DESCRIPTOR(header);
@@ -426,6 +466,16 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
     dev->speed = speed;
     dev->config_descs = configs;
 
+    usb_configuration_descriptor_t* cur_config = configs[dev->current_config_index];
+
+    mtx_init(&dev->interface_mutex, mtx_plain);
+    dev->interface_statuses = calloc(cur_config->bNumInterfaces,
+                                     sizeof(interface_status_t));
+    if (!dev->interface_statuses) {
+        status = MX_ERR_NO_MEMORY;
+        goto error_exit;
+    }
+
     char name[16];
     snprintf(name, sizeof(name), "%03d", device_id);
 
@@ -447,7 +497,7 @@ mx_status_t usb_device_add(mx_device_t* hci_mxdev, usb_hci_protocol_t* hci_proto
         goto error_exit;
     }
 
-    return usb_device_add_interfaces(dev, configs[dev->current_config_index]);
+    return usb_device_add_interfaces(dev, cur_config);
 
 error_exit:
     if (configs) {
@@ -456,6 +506,7 @@ error_exit:
         }
         free(configs);
     }
+    free(dev->interface_statuses);
     free(dev);
     return status;
 }

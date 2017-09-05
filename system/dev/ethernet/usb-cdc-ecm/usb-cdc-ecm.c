@@ -442,6 +442,10 @@ static void copy_endpoint_info(ecm_endpoint_t* ep_info, usb_endpoint_descriptor_
     ep_info->max_packet_size = desc->wMaxPacketSize;
 }
 
+static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
+    return intf->bInterfaceClass == USB_CLASS_CDC;
+}
+
 static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
     xprintf("%s: starting ecm_bind\n", module_name);
 
@@ -458,6 +462,10 @@ static mx_status_t ecm_bind(void* ctx, mx_device_t* device, void** cookie) {
         return MX_ERR_NO_MEMORY;
     }
 
+    result = usb_claim_additional_interfaces(&usb, want_interface, NULL);
+    if (result != MX_OK) {
+        goto fail;
+    }
     // Initialize context
     ecm_ctx->usb_device = device;
     memcpy(&ecm_ctx->usb, &usb, sizeof(ecm_ctx->usb));

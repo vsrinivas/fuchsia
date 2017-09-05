@@ -26,6 +26,55 @@ __EXPORT iotxn_t* usb_alloc_iotxn(uint8_t ep_address, size_t data_size) {
     return txn;
 }
 
+// initializes a usb_desc_iter_t for iterating on descriptors past the
+// interface's existing descriptors.
+static mx_status_t usb_desc_iter_additional_init(usb_protocol_t* usb,
+                                                 usb_desc_iter_t* iter) {
+    memset(iter, 0, sizeof(*iter));
+
+    void* descriptors;
+    size_t length;
+    mx_status_t status = usb_get_additional_descriptor_list(usb, &descriptors, &length);
+    if (status != MX_OK) {
+        return status;
+    }
+
+    iter->desc = descriptors;
+    iter->desc_end = descriptors + length;
+    iter->current = descriptors;
+    return MX_OK;
+}
+
+// helper function for claiming additional interfaces that satisfy the want_interface predicate,
+// want_interface will be passed the supplied arg
+__EXPORT mx_status_t usb_claim_additional_interfaces(usb_protocol_t* usb,
+                                                     bool (*want_interface)(usb_interface_descriptor_t*, void*),
+                                                     void* arg) {
+    usb_desc_iter_t iter;
+    mx_status_t status = usb_desc_iter_additional_init(usb, &iter);
+    if (status != MX_OK) {
+        return status;
+    }
+
+    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
+    while (intf != NULL && want_interface(intf, arg)) {
+        // We need to find the start of the next interface to calculate the
+        // total length of the current one.
+        usb_interface_descriptor_t* next = usb_desc_iter_next_interface(&iter, true);
+        // If we're currently on the last interface, next will be NULL.
+        void* intf_end = next ? next : (void*)iter.desc_end;
+        size_t length = intf_end - (void*)intf;
+
+        status = usb_claim_interface(usb, intf, length);
+        if (status != MX_OK) {
+            break;
+        }
+        intf = next;
+    }
+    usb_desc_iter_release(&iter);
+    return status;
+}
+
 // initializes a usb_desc_iter_t
 __EXPORT mx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* iter) {
     memset(iter, 0, sizeof(*iter));

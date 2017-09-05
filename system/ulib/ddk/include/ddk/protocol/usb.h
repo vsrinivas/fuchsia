@@ -32,6 +32,9 @@ typedef struct usb_protocol_ops {
     size_t (*get_max_transfer_size)(void* ctx, uint8_t ep_address);
     uint32_t (*get_device_id)(void* ctx);
     mx_status_t (*get_descriptor_list)(void* ctx, void** out_descriptors, size_t* out_length);
+    mx_status_t (*get_additional_descriptor_list)(void* ctx, void** out_descriptors,
+                                                  size_t* out_length);
+    mx_status_t (*claim_interface)(void* ctx, usb_interface_descriptor_t* intf, size_t length);
     mx_status_t (*cancel_all)(void* ctx, uint8_t ep_address);
 } usb_protocol_ops_t;
 
@@ -114,6 +117,21 @@ static inline mx_status_t usb_get_device_id(usb_protocol_t* usb) {
 static inline mx_status_t usb_get_descriptor_list(usb_protocol_t* usb, void** out_descriptors,
                                                   size_t* out_length) {
     return usb->ops->get_descriptor_list(usb->ctx, out_descriptors, out_length);
+}
+
+// returns the USB descriptors following the interface's existing descriptors
+// the returned value is de-allocated with free()
+static inline mx_status_t usb_get_additional_descriptor_list(usb_protocol_t* usb,
+                                                             void** out_descriptors,
+                                                             size_t* out_length) {
+    return usb->ops->get_additional_descriptor_list(usb->ctx, out_descriptors, out_length);
+}
+
+// marks the interface as claimed and appends the interface descriptor to the
+// interface's existing descriptors.
+static inline mx_status_t usb_claim_interface(usb_protocol_t* usb,
+                                              usb_interface_descriptor_t* intf, size_t length) {
+    return usb->ops->claim_interface(usb->ctx, intf, length);
 }
 
 static inline mx_status_t usb_cancel_all(usb_protocol_t* usb, uint8_t ep_address) {
