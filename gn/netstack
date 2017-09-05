@@ -5,12 +5,12 @@
     ],
     "gopaths": [
         {
-            "apps/netstack": "apps/netstack",
+            "netstack": "garnet/go/src/netstack",
             "third_party/netstack": "github.com/google/netstack"
         }
     ],
     "packages": {
-        "netstack": "//apps/netstack",
-        "netstack_gotests" : "//apps/netstack:netstack_gotests"
+        "netstack": "//garnet/go/src/netstack",
+        "netstack_gotests" : "//garnet/go/src/netstack:netstack_gotests"
     }
 }
