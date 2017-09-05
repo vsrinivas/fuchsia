@@ -30,9 +30,9 @@ class MxStartupInfo {
   }
 }
 
-void _setReturnCode(int return_code) native "SetReturnCode";
+void _setReturnCode(int returnCode) native "SetReturnCode";
 
-void exit(int return_code) {
-  _setReturnCode(return_code);
+void exit(int returnCode) {
+  _setReturnCode(returnCode);
   Isolate.current.kill();
 }
