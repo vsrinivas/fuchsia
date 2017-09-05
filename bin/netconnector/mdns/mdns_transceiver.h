@@ -11,10 +11,10 @@
 
 #include "application/lib/app/application_context.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver.h"
-#include "apps/netstack/services/netstack.fidl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace netconnector {
 namespace mdns {

@@ -4,7 +4,7 @@
 
 module netconnector;
 
-import "apps/netstack/services/net_address.fidl";
+import "lib/netstack/fidl/net_address.fidl";
 
 // mDNS service interface.
 [ServiceName="netconnector::MdnsService"]

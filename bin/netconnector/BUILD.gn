@@ -81,7 +81,7 @@ executable("netconnector") {
     "//apps/media/src/util",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/netconnector/fidl",
-    "//apps/netstack/services",
+    "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//third_party/rapidjson",

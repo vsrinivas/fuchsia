@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
-#include "apps/netstack/apps/include/netconfig.h"
+#include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "application/services/application_launcher.fidl.h"
 #include "application/services/service_provider.fidl.h"
 #include "apps/media/src/util/fidl_publisher.h"

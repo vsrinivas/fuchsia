@@ -8,11 +8,11 @@
 #include <unistd.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/netstack/apps/include/netconfig.h"
-#include "apps/netstack/services/netstack.fidl.h"
 #include "garnet/bin/netconnector/socket_address.h"
+#include "garnet/go/src/netstack/apps/include/netconfig.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
+#include "lib/netstack/fidl/netstack.fidl.h"
 
 namespace netconnector {
 namespace {

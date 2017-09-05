@@ -15,7 +15,7 @@
 #include "garnet/bin/netconnector/mdns/mdns_addresses.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/netconnector/mdns/mdns_interface_transceiver_v6.h"
-#include "apps/netstack/services/netstack.fidl.h"
+#include "lib/netstack/fidl/netstack.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"

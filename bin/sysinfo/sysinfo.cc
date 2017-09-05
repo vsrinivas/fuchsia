@@ -12,7 +12,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
 
-#include "apps/netstack/apps/include/netconfig.h"
+#include "garnet/go/src/netstack/apps/include/netconfig.h"
 
 void PrintUsage() {
   // clang-format off
