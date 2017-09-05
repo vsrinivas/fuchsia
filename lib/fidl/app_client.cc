@@ -45,7 +45,8 @@ mx::channel CloneChannel(int fd) {
 
 AppClientBase::AppClientBase(app::ApplicationLauncher* const launcher,
                              AppConfigPtr config,
-                             std::string data_origin) {
+                             std::string data_origin)
+    : url_(config->url) {
   auto launch_info = app::ApplicationLaunchInfo::New();
   launch_info->services = services_.NewRequest();
   launch_info->url = config->url;
@@ -82,12 +83,16 @@ AppClientBase::~AppClientBase() = default;
 void AppClientBase::AppTerminate(const std::function<void()>& done,
                                  ftl::TimeDelta timeout) {
   auto called = std::make_shared<bool>(false);
-  auto cont = [this, called, done] {
+  auto cont = [this, called, done](const bool from_timeout) {
     if (*called) {
       return;
     }
 
     *called = true;
+
+    if (from_timeout) {
+      FTL_LOG(WARNING) << "AppTerminate() timed out for " << url_;
+    }
 
     app_.reset();
     services_.reset();
@@ -97,9 +102,16 @@ void AppClientBase::AppTerminate(const std::function<void()>& done,
     done();
   };
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont, timeout);
+  auto cont_timeout = [cont] {
+    cont(true);
+  };
 
-  ServiceTerminate(cont);
+  auto cont_normal = [cont] {
+    cont(false);
+  };
+
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout, timeout);
+  ServiceTerminate(cont_normal);
 }
 
 void AppClientBase::SetAppErrorHandler(

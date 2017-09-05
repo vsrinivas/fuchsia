@@ -72,6 +72,7 @@ class AppClientBase {
   virtual void ServiceTerminate(const std::function<void()>& done);
   virtual void ServiceReset();
 
+  const std::string url_;  // For logging only.
   app::ApplicationControllerPtr app_;
   app::ServiceProviderPtr services_;
   FTL_DISALLOW_COPY_AND_ASSIGN(AppClientBase);
