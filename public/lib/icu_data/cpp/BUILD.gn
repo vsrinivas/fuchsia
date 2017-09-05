@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 action("generate_icu_constants") {
-  visibility = [ ":lib" ]
+  visibility = [ ":cpp" ]
 
   script = "generate_icu_constants.py"
 
@@ -12,7 +12,7 @@ action("generate_icu_constants") {
   ]
 
   outputs = [
-    "$root_gen_dir/apps/icu_data/lib/constants.cc",
+    "$root_gen_dir/garnet/public/icu_data/cpp/constants.cc",
   ]
 
   args = rebase_path(inputs + outputs, root_build_dir)
@@ -22,9 +22,9 @@ action("generate_icu_constants") {
   ]
 }
 
-source_set("lib") {
+source_set("cpp") {
   sources = [
-    "$root_gen_dir/apps/icu_data/lib/constants.cc",
+    "$root_gen_dir/garnet/public/icu_data/cpp/constants.cc",
     "constants.h",
     "icu_data.cc",
     "icu_data.h",
@@ -34,7 +34,7 @@ source_set("lib") {
     ":generate_icu_constants",
     "//application/lib/app",
     "//application/services",
-    "//apps/icu_data/services",
+    "//garnet/public/lib/icu_data/fidl",
     "//third_party/icu",
   ]
 }

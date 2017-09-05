@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/icu_data/icu_data_provider_impl.h"
+#include "garnet/bin/icu_data/icu_data_provider_impl.h"
 
 #include <magenta/syscalls.h>
 #include <utility>
 
-#include "apps/icu_data/lib/constants.h"
+#include "lib/icu_data/cpp/constants.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/vmo/file.h"
 

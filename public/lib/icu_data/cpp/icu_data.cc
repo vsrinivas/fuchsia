@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/icu_data/lib/icu_data.h"
+#include "lib/icu_data/cpp/icu_data.h"
 
 #include <mx/vmar.h>
 
 #include "application/lib/app/application_context.h"
-#include "apps/icu_data/lib/constants.h"
-#include "apps/icu_data/services/icu_data.fidl.h"
+#include "lib/icu_data/cpp/constants.h"
+#include "lib/icu_data/fidl/icu_data.fidl.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 
 namespace icu_data {

@@ -22,7 +22,7 @@ if not os.path.exists(out_dir):
 sha1hash = hashlib.sha1(data).hexdigest()
 
 with open(out_file, "w") as f:
-    f.write('#include "apps/icu_data/lib/constants.h"\n')
+    f.write('#include "lib/icu_data/cpp/constants.h"\n')
     f.write("namespace icu_data {\n")
     f.write("const uint64_t kDataSize = %s;\n" % len(data))
     f.write("const char kDataHash[] = \"%s\";\n" % sha1hash)
