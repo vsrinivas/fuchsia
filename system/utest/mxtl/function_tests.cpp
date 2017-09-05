@@ -23,6 +23,8 @@ constexpr size_t HugeCallableSize = sizeof(Big) + sizeof(void*) * 4;
 
 template <typename ClosureFunction>
 bool closure() {
+    BEGIN_TEST;
+
     // default initialization
     ClosureFunction fdefault;
     EXPECT_FALSE(!!fdefault);
@@ -202,11 +204,13 @@ bool closure() {
     fcheckheap();
     EXPECT_EQ(12, fcheck_value);
 
-    return true;
+    END_TEST;
 }
 
 template <typename BinaryOpFunction>
 bool binary_op() {
+    BEGIN_TEST;
+
     // default initialization
     BinaryOpFunction fdefault;
     EXPECT_FALSE(!!fdefault);
@@ -416,10 +420,12 @@ bool binary_op() {
     EXPECT_EQ(10, fcheckheap(3, 7));
     EXPECT_EQ(12, fcheck_value);
 
-    return true;
+    END_TEST;
 }
 
 bool sized_function_size_bounds() {
+    BEGIN_TEST;
+
     auto empty = [] {};
     mxtl::SizedFunction<Closure, sizeof(empty)> fempty(mxtl::move(empty));
     static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
@@ -453,10 +459,12 @@ bool sized_function_size_bounds() {
         (void)y;
     };
 
-    return true;
+    END_TEST;
 }
 
 bool inline_function_size_bounds() {
+    BEGIN_TEST;
+
     auto empty = [] {};
     mxtl::InlineFunction<Closure, sizeof(empty)> fempty(mxtl::move(empty));
     static_assert(sizeof(fempty) >= sizeof(empty), "size bounds");
@@ -491,10 +499,12 @@ bool inline_function_size_bounds() {
     };
 #endif
 
-    return true;
+    END_TEST;
 }
 
 bool move_only_argument_and_result() {
+    BEGIN_TEST;
+
     mxtl::unique_ptr<int> arg(new int());
     mxtl::Function<MoveOp> f([](mxtl::unique_ptr<int> value) {
         *value += 1;
@@ -505,19 +515,60 @@ bool move_only_argument_and_result() {
     arg = f(mxtl::move(arg));
     EXPECT_EQ(2, *arg);
 
-    return true;
+    END_TEST;
 }
 
 void implicit_construction_helper(mxtl::Closure closure) {}
 
 bool implicit_construction() {
+    BEGIN_TEST;
+
     // ensure we can implicitly construct from nullptr
     implicit_construction_helper(nullptr);
 
     // ensure we can implicitly construct from a lambda
     implicit_construction_helper([] {});
 
-    return true;
+    END_TEST;
+}
+
+struct Obj {
+    void Call() {
+        calls++;
+    }
+
+    int AddOne(int x) {
+        calls++;
+        return x + 1;
+    }
+
+    int Sum(int a, int b, int c) {
+        calls++;
+        return a + b + c;
+    }
+
+    mxtl::unique_ptr<int> AddAndReturn(mxtl::unique_ptr<int> value) {
+        (*value)++;
+        return value;
+    }
+
+    uint32_t calls = 0;
+};
+
+bool bind_member() {
+    BEGIN_TEST;
+
+    Obj obj;
+    auto move_only_value = mxtl::make_unique<int>(4);
+
+    BindMember(&obj, &Obj::Call)();
+    EXPECT_EQ(23, BindMember(&obj, &Obj::AddOne)(22));
+    EXPECT_EQ(6, BindMember(&obj, &Obj::Sum)(1, 2, 3));
+    move_only_value = BindMember(&obj, &Obj::AddAndReturn)(mxtl::move(move_only_value));
+    EXPECT_EQ(5, *move_only_value);
+    EXPECT_EQ(3, obj.calls);
+
+    END_TEST;
 }
 
 // This is the code which is included in <function.h>.
@@ -551,9 +602,33 @@ int AlternatingSum(const mxtl::Vector<int>& in) {
     });
     return FoldVector(in, 0, alternating_sum);
 }
+
+class Accumulator {
+public:
+    void Add(int value) {
+        sum += value;
+    }
+
+    int sum = 0;
+};
+
+void CountToTen(mxtl::Function<void(int)> function) {
+    for (int i = 1; i <= 10; i++) {
+        function(i);
+    }
+}
+
+int SumToTen() {
+    Accumulator accum;
+    CountToTen(mxtl::BindMember(&accum, &Accumulator::Add));
+    return accum.sum;
+}
+
 } // namespace example
 
 bool example_code() {
+    BEGIN_TEST;
+
     mxtl::Vector<int> in;
     for (int i = 0; i < 10; i++) {
         mxtl::AllocChecker ac;
@@ -563,8 +638,9 @@ bool example_code() {
 
     EXPECT_EQ(45, example::Sum(in));
     EXPECT_EQ(-5, example::AlternatingSum(in));
+    EXPECT_EQ(55, example::SumToTen());
 
-    return true;
+    END_TEST;
 }
 
 } // namespace
@@ -582,6 +658,7 @@ RUN_TEST(sized_function_size_bounds);
 RUN_TEST(inline_function_size_bounds);
 RUN_TEST(move_only_argument_and_result);
 RUN_TEST(implicit_construction);
+RUN_TEST(bind_member);
 RUN_TEST(example_code);
 END_TEST_CASE(function_tests)
 

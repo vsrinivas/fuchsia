@@ -109,7 +109,7 @@ private:
 // If a callable object is small enough, it will be stored as an |InlineFunctionTarget|.
 // Otherwise it will be stored as a |HeapFunctionTarget|.
 template <size_t target_size, typename Result, typename... Args>
-struct FunctionTargetHolder {
+struct FunctionTargetHolder final {
     FunctionTargetHolder() = default;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(FunctionTargetHolder);
@@ -258,6 +258,24 @@ private:
     TargetHolder holder_;
 };
 
+// Helper used by |BindMember| to invoke a pointer to member function.
+template <typename R, typename T, typename... Args>
+class MemberInvoker final {
+public:
+    using MemFn = R (T::*)(Args...);
+
+    MemberInvoker(T* instance, MemFn fn)
+        : instance_(instance), fn_(fn) {}
+
+    R operator()(Args... args) const {
+        return (instance_->*fn_)(mxtl::forward<Args>(args)...);
+    }
+
+private:
+    T* const instance_;
+    MemFn const fn_;
+};
+
 } // namespace internal
 
 // The default size allowance for callable objects which can be inlined within
@@ -393,5 +411,34 @@ bool operator!=(decltype(nullptr),
 
 // A function which takes no arguments and produces no result.
 using Closure = mxtl::Function<void()>;
+
+// Returns a Callable object which invokes a member function of an object.
+//
+// EXAMPLE:
+//
+// class Accumulator {
+// public:
+//     void Add(int value) {
+//          sum += value;
+//     }
+//
+//     int sum = 0;
+// };
+//
+// void CountToTen(mxtl::Function<void(int)> function) {
+//     for (int i = 1; i <= 10; i++) {
+//         function(i);
+//     }
+// }
+//
+// int SumToTen() {
+//     Accumulator accum;
+//     CountToTen(mxtl::BindMember(&accum, &Accumulator::Add));
+//     return accum.sum;
+// }
+template <typename R, typename T, typename... Args>
+auto BindMember(T* instance, R (T::*fn)(Args...)) {
+    return internal::MemberInvoker<R, T, Args...>(instance, fn);
+}
 
 } // namespace mxtl
