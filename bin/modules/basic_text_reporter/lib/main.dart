@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
@@ -11,6 +12,7 @@ import 'package:apps.maxwell.services.context/context_publisher.fidl.dart';
 import 'package:apps.maxwell.services.context/context_reader.fidl.dart';
 import 'package:apps.maxwell.services.user/intelligence_services.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:lib.fidl.dart/bindings.dart';
@@ -25,7 +27,7 @@ final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final TextEditingController _controller = new TextEditingController();
 
 /// This is used for keeping the reference around.
-ModuleImpl _module;
+ModuleImpl _module = new ModuleImpl();
 
 void _log(String msg) {
   print('[Basic Text Reporter Module] $msg');
@@ -80,8 +82,9 @@ class ContextListenerForTopicsImpl extends ContextListenerForTopics {
 }
 
 /// An implementation of the [Module] interface.
-class ModuleImpl extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
+class ModuleImpl implements Module, Lifecycle {
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
 
   final ModuleContextProxy _moduleContext = new ModuleContextProxy();
   final LinkProxy _link = new LinkProxy();
@@ -94,8 +97,13 @@ class ModuleImpl extends Module {
   ContextListenerForTopicsImpl _contextListenerImpl;
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
-  void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+  void bindModule(InterfaceRequest<Module> request) {
+    _moduleBinding.bind(this, request);
+  }
+
+  /// Bind an [InterfaceRequest] for a [Lifecycle] interface to this object.
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   /// Implementation of the Initialize(ModuleContext story, Link link) method.
@@ -129,19 +137,18 @@ class ModuleImpl extends Module {
     _moduleContext.ready();
   }
 
-  /// Implementation of the Stop() => (); method.
+  /// Implementation of the Lifecycle.Terminate method.
   @override
-  void stop(void callback()) {
-    _log('ModuleImpl::stop call');
+  void terminate() {
+    _log('ModuleImpl::terminate call');
 
     // Do some clean up here.
     _moduleContext.ctrl.close();
     _link.ctrl.close();
+    _moduleBinding.close();
+    _lifecycleBinding.close();
 
-    // Invoke the callback to signal that the clean-up process is done.
-    callback();
-
-    _binding.close();
+    Isolate.current.kill();
   }
 
   void publishText(String text) {
@@ -173,12 +180,19 @@ void main() {
   _log('Module started with ApplicationContext: $_appContext');
 
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
-  _appContext.outgoingServices.addServiceForName(
+  _appContext.outgoingServices
+  ..addServiceForName(
     (request) {
       _log('Received binding request for Module');
-      _module = new ModuleImpl()..bind(request);
+      _module.bindModule(request);
     },
     Module.serviceName,
+  )
+  ..addServiceForName(
+    (request) {
+      _module.bindLifecycle(request);
+    },
+    Lifecycle.serviceName,
   );
 
   _controller.addListener(() {
