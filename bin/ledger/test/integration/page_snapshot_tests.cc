@@ -171,8 +171,10 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Add entries and grab a new snapshot.
   const size_t N = 4;
   fidl::Array<uint8_t> keys[N] = {
-      RandomArray(20, {0, 0, 0}), RandomArray(20, {0, 0, 1}),
-      RandomArray(20, {0, 1, 0}), RandomArray(20, {0, 1, 1}),
+      RandomArray(20, {0, 0, 0}),
+      RandomArray(20, {0, 0, 1}),
+      RandomArray(20, {0, 1, 0}),
+      RandomArray(20, {0, 1, 1}),
   };
   for (auto& key : keys) {
     page->Put(key.Clone(), RandomArray(50), [](ledger::Status status) {
@@ -283,11 +285,16 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   // Add entries and grab a new snapshot.
   const size_t N = 4;
   fidl::Array<uint8_t> keys[N] = {
-      RandomArray(20, {0, 0, 0}), RandomArray(20, {0, 0, 1}),
-      RandomArray(20, {0, 1, 0}), RandomArray(20, {0, 1, 1}),
+      RandomArray(20, {0, 0, 0}),
+      RandomArray(20, {0, 0, 1}),
+      RandomArray(20, {0, 1, 0}),
+      RandomArray(20, {0, 1, 1}),
   };
   fidl::Array<uint8_t> values[N] = {
-      RandomArray(50), RandomArray(50), RandomArray(50), RandomArray(50),
+      RandomArray(50),
+      RandomArray(50),
+      RandomArray(50),
+      RandomArray(50),
   };
   for (size_t i = 0; i < N; ++i) {
     page->Put(keys[i].Clone(), values[i].Clone(), [](ledger::Status status) {
@@ -442,11 +449,16 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
 
   const size_t N = 4;
   fidl::Array<uint8_t> keys[N] = {
-      RandomArray(20, {2}), RandomArray(20, {5}), RandomArray(20, {3}),
+      RandomArray(20, {2}),
+      RandomArray(20, {5}),
+      RandomArray(20, {3}),
       RandomArray(20, {0}),
   };
   fidl::Array<uint8_t> values[N] = {
-      RandomArray(20), RandomArray(20), RandomArray(20), RandomArray(20),
+      RandomArray(20),
+      RandomArray(20),
+      RandomArray(20),
+      RandomArray(20),
   };
   for (size_t i = 0; i < N; ++i) {
     page->Put(keys[i].Clone(), values[i].Clone(), [](ledger::Status status) {

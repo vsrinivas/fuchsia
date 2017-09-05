@@ -72,7 +72,7 @@ package("ledger_tests") {
     {
       name = "run_ledger_benchmarks.sh"
       disabled = true
-    }
+    },
   ]
 
   resources = [

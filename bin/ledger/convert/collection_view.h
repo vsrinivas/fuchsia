@@ -54,8 +54,10 @@ class CollectionView {
       return CollectionView<T>(collection_, end_, end_);
     }
     auto begin_it = std::next(begin_, begin);
-    size_t final_length = std::min(length, static_cast<size_t>(std::distance(begin_it, end_)));
-    return CollectionView(collection_, begin_it, std::next(begin_it, final_length));
+    size_t final_length =
+        std::min(length, static_cast<size_t>(std::distance(begin_it, end_)));
+    return CollectionView(collection_, begin_it,
+                          std::next(begin_it, final_length));
   }
 
   const auto& operator[](size_t pos) const {

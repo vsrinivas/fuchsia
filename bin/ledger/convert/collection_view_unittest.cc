@@ -54,8 +54,7 @@ template <typename T>
 }
 
 template <typename T>
-class CollectionViewTest : public ::testing::Test {
-};
+class CollectionViewTest : public ::testing::Test {};
 
 using CollectionTypes = ::testing::Types<std::vector<uint32_t>,
                                          std::unordered_set<uint32_t>,
@@ -64,12 +63,13 @@ using CollectionTypes = ::testing::Types<std::vector<uint32_t>,
 TYPED_TEST_CASE(CollectionViewTest, CollectionTypes);
 
 TYPED_TEST(CollectionViewTest, Views) {
-  TypeParam values = { 0, 1, 2, 3, 4, 5 };
+  TypeParam values = {0, 1, 2, 3, 4, 5};
   CollectionView<TypeParam> view = values;
 
   EXPECT_TRUE(Equals(values, 0, values.size(), view));
   EXPECT_TRUE(Equals(values, 1, values.size(), view.Tail()));
-  EXPECT_TRUE(Equals(values, 1, values.size() - 2, view.SubCollection(1, values.size() - 2)));
+  EXPECT_TRUE(Equals(values, 1, values.size() - 2,
+                     view.SubCollection(1, values.size() - 2)));
   EXPECT_EQ(*std::next(values.begin()), view.Tail()[0]);
 }
 

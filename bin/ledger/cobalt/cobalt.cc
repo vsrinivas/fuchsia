@@ -64,7 +64,7 @@ void CobaltContext::ReportEvent(CobaltEvent event) {
 
 void CobaltContext::ConnectToCobaltApplication() {
   auto encoder_factory =
-    app_context_->ConnectToEnvironmentService<cobalt::CobaltEncoderFactory>();
+      app_context_->ConnectToEnvironmentService<cobalt::CobaltEncoderFactory>();
   encoder_factory->GetEncoder(kLedgerCobaltProjectId, encoder_.NewRequest());
   encoder_.set_connection_error_handler([this] { OnConnectionError(); });
 
@@ -117,22 +117,24 @@ void CobaltContext::SendEvents() {
     }
 
     backoff_.Reset();
-    encoder_->SendObservations([this](cobalt::Status status) {
-      if (status != cobalt::Status::OK) {
-        // Do not show errors when cobalt fail to send observation, see LE-285.
-        if (status != cobalt::Status::SEND_FAILED) {
-          FTL_LOG(ERROR)
-              << "Error asking cobalt to send observation to server: "
-              << status;
-        }
-        OnConnectionError();
-        return;
-      }
+    encoder_->SendObservations(
+        [this](cobalt::Status status) {
+          if (status != cobalt::Status::OK) {
+            // Do not show errors when cobalt fail to send observation, see
+            // LE-285.
+            if (status != cobalt::Status::SEND_FAILED) {
+              FTL_LOG(ERROR)
+                  << "Error asking cobalt to send observation to server: "
+                  << status;
+            }
+            OnConnectionError();
+            return;
+          }
 
-      events_in_transit_.clear();
+          events_in_transit_.clear();
 
-      SendEvents();
-    });
+          SendEvents();
+        });
   });
 }
 
