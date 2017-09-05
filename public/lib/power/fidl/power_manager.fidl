@@ -1,0 +1,40 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module power;
+
+enum Status {
+  OK,
+  NotAvailable
+};
+// Provides battery status
+struct BatteryStatus {
+  // Error status
+  Status status;
+
+  // Battery level in percentage
+  uint16 level;
+
+  // If battery is charging
+  bool charging;
+};
+
+// Manager Interface used to manage power
+[ServiceName="power::PowerManager"]
+interface PowerManager {
+  // Gets battery status
+  GetBatteryStatus() => (BatteryStatus status);
+
+  // watcher called when battery status changes
+  Watch(PowerManagerWatcher watcher);
+};
+
+
+// Watcher on battery status
+interface PowerManagerWatcher {
+  OnChangeBatteryStatus(BatteryStatus battery_status);
+};
+
+
+

@@ -1,0 +1,79 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_test.gni")
+import("//packages/package.gni")
+
+go_binary("power_manager_bin") {
+  output_name = "power_manager"
+
+  gopackage = "apps/power-service/power_manager"
+
+  go_dependencies = [
+    {
+      package = "apps/power-service/power_manager"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/app"
+      source = "//application/lib/app/go/src/app"
+    },
+    {
+      package = "application/lib/svc"
+      source = "//application/lib/svc/go/src/svc"
+    },
+  ]
+  deps = [
+    "//apps/power-service/services",
+  ]
+}
+
+go_test("power_manager_test") {
+  gopackage = "apps/power-service/power_manager"
+
+  go_dependencies = [
+    {
+      package = "apps/power-service/power_manager"
+    },
+    {
+      package = "application/lib/app"
+      source = "//application/lib/app/go/src/app"
+    },
+    {
+      package = "fidl"
+      source = "//garnet/public/lib/fidl/go/src/fidl"
+    },
+    {
+      package = "application/lib/svc"
+      source = "//application/lib/svc/go/src/svc"
+    },
+  ]
+  deps = [
+    "//apps/power-service/services",
+  ]
+}
+
+package("power_manager") {
+  deps = [
+    ":power_manager_bin",
+  ]
+
+  binaries = [ {
+        name = "power_manager"
+      } ]
+}
+
+package("power_manager_gotests") {
+  testonly = true
+  deps = [
+    ":power_manager_test",
+  ]
+  tests = [ {
+        name = "power_manager_test"
+      } ]
+}
