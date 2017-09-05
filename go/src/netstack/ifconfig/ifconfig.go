@@ -12,8 +12,8 @@ import (
 	"application/lib/app/context"
 	"fidl/bindings"
 
-	"apps/netstack/services/net_address"
-	"apps/netstack/services/netstack"
+	"garnet/public/lib/netstack/fidl/net_address"
+	"garnet/public/lib/netstack/fidl/netstack"
 )
 
 type netstackClientApp struct {

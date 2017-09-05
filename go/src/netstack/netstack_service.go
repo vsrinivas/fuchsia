@@ -15,8 +15,8 @@ import (
 	"syscall/mx"
 	"syscall/mx/mxerror"
 
-	"apps/netstack/services/net_address"
-	nsfidl "apps/netstack/services/netstack"
+	"garnet/public/lib/netstack/fidl/net_address"
+	nsfidl "garnet/public/lib/netstack/fidl/netstack"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/transport/tcp"

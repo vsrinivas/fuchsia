@@ -12,9 +12,9 @@ import (
 	"strings"
 	"sync"
 
-	"apps/netstack/deviceid"
-	"apps/netstack/eth"
-	"apps/netstack/netiface"
+	"netstack/deviceid"
+	"netstack/eth"
+	"netstack/netiface"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"

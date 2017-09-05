@@ -9,7 +9,7 @@ import (
 	"syscall/mx"
 	"syscall/mx/mxerror"
 
-	"apps/netstack/eth"
+	"netstack/eth"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"

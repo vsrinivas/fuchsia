@@ -8,14 +8,14 @@ group("examples") {
   testonly = true
 
   public_deps = [
-    "//apps/netstack/examples/third_party/asio:async_client",
-    "//apps/netstack/examples/third_party/asio:async_https",
+    "//garnet/go/src/netstack/examples/third_party/asio:async_client",
+    "//garnet/go/src/netstack/examples/third_party/asio:async_https",
   ]
 }
 
 package("netstack_examples") {
   deps = [
-    "//apps/netstack/examples/third_party/openbsd-netcat:nc",
+    "//garnet/go/src/netstack/examples/third_party/openbsd-netcat:nc",
   ]
 
   binaries = [ {

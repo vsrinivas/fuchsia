@@ -10,8 +10,8 @@ import (
 
 	"application/lib/app/context"
 
-	"apps/netstack/eth"
-	"apps/netstack/watcher"
+	"netstack/eth"
+	"netstack/watcher"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"

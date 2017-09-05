@@ -9,9 +9,9 @@ import("//packages/package.gni")
 package("netstack") {
   deps = [
     ":netstack_bin",
-    "//apps/netstack/getaddrtest",
-    "//apps/netstack/ifconfig",
-    "//apps/netstack/services",
+    "//garnet/go/src/netstack/getaddrtest",
+    "//garnet/go/src/netstack/ifconfig",
+    "//garnet/public/lib/netstack/fidl",
   ]
 
   binaries = [
@@ -40,12 +40,12 @@ package("netstack_gotests") {
 go_binary("netstack_bin") {
   output_name = "netstack"
 
-  gopackage = "apps/netstack"
+  gopackage = "netstack"
 
   go_dependencies = [
     {
-      package = "apps/netstack"
-      source = "//apps/netstack"
+      package = "netstack"
+      source = "//garnet/go/src/netstack"
     },
     {
       package = "application/lib/app"
@@ -66,16 +66,16 @@ go_binary("netstack_bin") {
   ]
 
   deps = [
-    "//apps/netstack/services",
+    "//garnet/public/lib/netstack/fidl",
   ]
 }
 
 go_test("netstack_netiface_test") {
-  gopackage = "apps/netstack/netiface"
+  gopackage = "netstack/netiface"
   go_dependencies = [
     {
-      package = "apps/netstack"
-      source = "//apps/netstack"
+      package = "netstack"
+      source = "//garnet/go/src/netstack"
     },
     {
       package = "github.com/google/netstack"

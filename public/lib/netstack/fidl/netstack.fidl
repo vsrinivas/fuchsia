@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 module netstack;
-import "apps/netstack/services/net_address.fidl";
+
+import "lib/netstack/fidl/net_address.fidl";
 
 enum Protocol {
   UNSPECIFIED,

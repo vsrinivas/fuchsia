@@ -20,7 +20,7 @@ Netstack serves as a back-end for mxio socket API.
                       |
         +-------------v--------------+
         |         netstack           |
-        |     (//apps/netstack)      |
+        | (//garnet/go/src/netstack) |
         +-------------+--------------+
                       |
      +----------------v-----------------+

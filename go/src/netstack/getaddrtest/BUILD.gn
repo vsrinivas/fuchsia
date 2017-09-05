@@ -5,12 +5,12 @@
 import("//build/go/go_binary.gni")
 
 go_binary("getaddrtest") {
-  gopackage = "apps/netstack/getaddrtest"
+  gopackage = "netstack/getaddrtest"
 
   go_dependencies = [
     {
-      package = "apps/netstack"
-      source = "//apps/netstack"
+      package = "netstack"
+      source = "//garnet/go/src/netstack"
     },
     {
       package = "application/lib/app"
@@ -27,6 +27,6 @@ go_binary("getaddrtest") {
   ]
 
   deps = [
-    "//apps/netstack/services",
+    "//garnet/public/lib/netstack/fidl",
   ]
 }

@@ -12,7 +12,7 @@ import (
 	"application/lib/app/context"
 	"fidl/bindings"
 
-	"apps/netstack/services/netstack"
+	"garnet/public/lib/netstack/fidl/netstack"
 )
 
 type netstackClientApp struct {
