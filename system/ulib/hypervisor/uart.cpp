@@ -13,6 +13,7 @@
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
+#include <mxtl/auto_lock.h>
 
 /* UART configuration masks. */
 static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
@@ -80,7 +81,7 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
         break;
     case UART_RECEIVE_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->rx_buffer;
         uart->rx_buffer = 0;
         uart->line_status = static_cast<uint8_t>(uart->line_status & ~UART_LINE_STATUS_DATA_READY);
@@ -89,38 +90,36 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
         if (uart->interrupt_id & UART_INTERRUPT_ID_RDA)
             uart->interrupt_id = UART_INTERRUPT_ID_NONE;
 
-        mx_status_t status = raise_next_interrupt(uart);
-        mtx_unlock(&uart->mutex);
-        return status;
+        return raise_next_interrupt(uart);
     }
-    case UART_INTERRUPT_ENABLE_PORT:
+    case UART_INTERRUPT_ENABLE_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->interrupt_enable;
-        mtx_unlock(&uart->mutex);
         break;
-    case UART_INTERRUPT_ID_PORT:
+    }
+    case UART_INTERRUPT_ID_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = kUartInterruptIdNoFifoMask & uart->interrupt_id;
 
         // Reset THR empty interrupt on IIR read (or THR write).
         if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
             uart->interrupt_id = UART_INTERRUPT_ID_NONE;
-        mtx_unlock(&uart->mutex);
         break;
-    case UART_LINE_CONTROL_PORT:
+    }
+    case UART_LINE_CONTROL_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->line_control;
-        mtx_unlock(&uart->mutex);
         break;
-    case UART_LINE_STATUS_PORT:
+    }
+    case UART_LINE_STATUS_PORT: {
         vcpu_io->access_size = 1;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->line_status;
-        mtx_unlock(&uart->mutex);
         break;
+    }
     default:
         return MX_ERR_INTERNAL;
     }
@@ -136,55 +135,47 @@ static void flush_tx_buffer(uart_t* uart) {
 mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     switch (io->port) {
     case UART_RECEIVE_PORT: {
-        mx_status_t status;
-
-        mtx_lock(&uart->mutex);
-        if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH) {
+        mxtl::AutoLock lock(&uart->mutex);
+        if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
             // Ignore writes when divisor latch is enabled.
-            status = (io->access_size != 1) ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
-        } else {
-            for (int i = 0; i < io->access_size; i++) {
-                uart->tx_buffer[uart->tx_offset++] = io->data[i];
-                if (uart->tx_offset == UART_BUFFER_SIZE || io->data[i] == '\r') {
-                    flush_tx_buffer(uart);
-                }
-            }
-            uart->line_status |= UART_LINE_STATUS_THR_EMPTY;
+            return (io->access_size != 1) ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
 
-            // Reset THR empty interrupt on THR write.
-            if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
-                uart->interrupt_id = UART_INTERRUPT_ID_NONE;
-
-            // TODO(andymutton): Raise interrupts asynchronously so that we don't overrun Linux's
-            // interrupt flood check. Note: Implementing FIFOs will heavily mitigate this.
-            status = raise_next_interrupt(uart);
+        for (int i = 0; i < io->access_size; i++) {
+            uart->tx_buffer[uart->tx_offset++] = io->data[i];
+            if (uart->tx_offset == UART_BUFFER_SIZE || io->data[i] == '\r')
+                flush_tx_buffer(uart);
         }
-        mtx_unlock(&uart->mutex);
-        return status;
+        uart->line_status |= UART_LINE_STATUS_THR_EMPTY;
+
+        // Reset THR empty interrupt on THR write.
+        if (uart->interrupt_id & UART_INTERRUPT_ID_THR_EMPTY)
+            uart->interrupt_id = UART_INTERRUPT_ID_NONE;
+
+        // TODO(andymutton): Raise interrupts asynchronously so that we don't overrun Linux's
+        // interrupt flood check. Note: Implementing FIFOs will heavily mitigate this.
+        return raise_next_interrupt(uart);
     }
     case UART_INTERRUPT_ENABLE_PORT: {
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        mx_status_t status = MX_OK;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         // Ignore writes when divisor latch is enabled.
-        if (!(uart->line_control & UART_LINE_CONTROL_DIV_LATCH)) {
-            uart->interrupt_enable = io->u8;
-            // Flush output whenever RDA interrupt is enabled.
-            if (uart->interrupt_enable & UART_INTERRUPT_ENABLE_RDA)
-                flush_tx_buffer(uart);
-            status = raise_next_interrupt(uart);
-        }
-        mtx_unlock(&uart->mutex);
-        return status;
+        if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
+            return MX_OK;
+
+        uart->interrupt_enable = io->u8;
+        // Flush output whenever RDA interrupt is enabled.
+        if (uart->interrupt_enable & UART_INTERRUPT_ENABLE_RDA)
+            flush_tx_buffer(uart);
+        return raise_next_interrupt(uart);
     }
-    case UART_LINE_CONTROL_PORT:
+    case UART_LINE_CONTROL_PORT: {
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        mtx_lock(&uart->mutex);
+        mxtl::AutoLock lock(&uart->mutex);
         uart->line_control = io->u8;
-        mtx_unlock(&uart->mutex);
         return MX_OK;
+    }
     case UART_INTERRUPT_ID_PORT:
     case UART_MODEM_CONTROL_PORT ... UART_SCR_SCRATCH_PORT:
         return MX_OK;
