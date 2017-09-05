@@ -8,4 +8,10 @@ fidl("services") {
   sources = [
     "factory.fidl",
   ]
+
+  deps = [
+    "//apps/ledger/services/cloud_provider",
+    "//apps/ledger/services/public",
+    "//apps/modular/services/auth",
+  ]
 }
