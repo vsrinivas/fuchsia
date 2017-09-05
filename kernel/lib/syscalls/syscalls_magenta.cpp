@@ -157,9 +157,6 @@ mx_status_t sys_eventpair_create(uint32_t options,
 mx_status_t sys_log_create(uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("options 0x%x\n", options);
 
-    // kernel option is forbidden to userspace
-    options &= (~DLOG_FLAG_KERNEL);
-
     // create a Log dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
@@ -188,8 +185,17 @@ mx_status_t sys_log_create(uint32_t options, user_ptr<mx_handle_t> out) {
     return MX_OK;
 }
 
-mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const void> _ptr, uint32_t options) {
-    LTRACEF("log handle %x, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr.get());
+mx_status_t sys_debuglog_create(mx_handle_t rsrc, uint32_t options,
+                                user_ptr<mx_handle_t> out) {
+    mx_status_t status = validate_resource(rsrc, MX_RSRC_KIND_ROOT);
+    if (status != MX_OK)
+        return status;
+
+    return sys_log_create(options, out);
+}
+
+mx_status_t sys_debuglog_write(mx_handle_t log_handle, uint32_t options, user_ptr<const void> _ptr, size_t len) {
+    LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, _ptr.get(), len);
 
     if (len > DLOG_MAX_DATA)
         return MX_ERR_OUT_OF_RANGE;
@@ -208,11 +214,11 @@ mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const v
     return log->Write(options, buf, len);
 }
 
-mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> _ptr, uint32_t options) {
-    LTRACEF("log handle %x, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr.get());
+mx_status_t sys_debuglog_read(mx_handle_t log_handle, uint32_t options, user_ptr<void> _ptr, size_t len) {
+    LTRACEF("log handle %x, opt %x, ptr 0x%p, len %zu\n", log_handle, options, _ptr.get(), len);
 
-    if (len < DLOG_MAX_RECORD)
-        return MX_ERR_BUFFER_TOO_SMALL;
+    if (options != 0)
+        return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -230,6 +236,14 @@ mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> _p
         return MX_ERR_INVALID_ARGS;
 
     return static_cast<mx_status_t>(actual);
+}
+
+mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const void> _ptr, uint32_t options) {
+    return sys_debuglog_write(log_handle, options, _ptr, len);
+}
+
+mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> _ptr, uint32_t options) {
+    return sys_debuglog_read(log_handle, options, _ptr, len);
 }
 
 mx_status_t sys_cprng_draw(user_ptr<void> _buffer, size_t len, user_ptr<size_t> _actual) {

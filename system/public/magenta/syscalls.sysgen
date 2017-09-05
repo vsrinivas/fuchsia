@@ -465,6 +465,19 @@ syscall log_read
     (handle: mx_handle_t, len: uint32_t, buffer: any[len] OUT, options: uint32_t)
     returns (mx_status_t);
 
+
+syscall debuglog_create
+    (resource: mx_handle_t, options: uint32_t)
+    returns (mx_status_t, out: mx_handle_t);
+
+syscall debuglog_write
+    (handle: mx_handle_t, options: uint32_t, buffer: any[len] IN, len: size_t)
+    returns (mx_status_t);
+
+syscall debuglog_read
+    (handle: mx_handle_t, options: uint32_t, buffer: any[len] OUT, len: size_t)
+    returns (mx_status_t);
+
 # Tracing
 
 syscall ktrace_read

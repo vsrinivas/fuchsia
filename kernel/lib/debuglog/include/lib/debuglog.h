@@ -15,22 +15,6 @@
 
 __BEGIN_CDECLS
 
-// clang-format off
-#define DLOG_LEVEL_SPEW     0x0000
-#define DLOG_LEVEL_INFO     0x0002
-#define DLOG_LEVEL_WARN     0x0007
-#define DLOG_LEVEL_ERROR    0x000E
-#define DLOG_LEVEL_FATAL    0x000F
-#define DLOG_LEVEL(n)       ((n) & 15)
-
-#define DLOG_FLAG_KERNEL    0x0100
-#define DLOG_FLAG_DEVMGR    0x0200
-#define DLOG_FLAG_CONSOLE   0x0400
-#define DLOG_FLAG_DEVICE    0x0800
-#define DLOG_FLAG_MASK      0x0F00
-
-// clang-format on
-
 typedef struct dlog dlog_t;
 typedef struct dlog_header dlog_header_t;
 typedef struct dlog_record dlog_record_t;
