@@ -102,13 +102,17 @@ interface ImagePipe {
   // await before presenting the image.
   // The |release_fence|, if not null, specifies a fence which the consumer must
   // signal when it is safe for the producer to free or modify the image.
+  // |presentation_time| specifies the time on or after which the
+  // client would like the enqueued operations should take visible effect
+  // (light up pixels on the screen), expressed in nanoseconds in the
+  // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
+  // monotonically non-decreasing.
+  //
+  // The callback |presentation_info| returns timing information about the
+  // submitted and future frames (see presentation_info.fidl).
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| does not reference a currently registered image resource
-  //
-  // TODO(MZ-80): Specify the presentation time.
-  // TODO(MZ-88): Provide a callback when the presented image has been
-  // accepted, as is done for scene content in |Session.Present()|.
   PresentImage(uint32 image_id, uint64 presentation_time,
       handle<event>? acquire_fence, handle<event>? release_fence) =>
           (PresentationInfo presentation_info);
