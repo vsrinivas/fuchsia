@@ -166,6 +166,20 @@ class PageStorageImpl : public PageStorage {
     };
   }
 
+  // Synchronous versions of API methods using coroutines.
+  Status SynchronousInit(coroutine::CoroutineHandler* handler);
+
+  Status SynchronousAddCommits(
+      coroutine::CoroutineHandler* handler,
+      std::vector<std::unique_ptr<const Commit>> commits,
+      ChangeSource source,
+      std::vector<ObjectId> new_objects);
+
+  Status SynchronousAddPiece(coroutine::CoroutineHandler* handler,
+                             ObjectId object_id,
+                             std::unique_ptr<DataSource::DataChunk> data,
+                             ChangeSource source);
+
   coroutine::CoroutineService* const coroutine_service_;
   const PageId page_id_;
   PageDbImpl db_;
