@@ -200,6 +200,9 @@ mx_status_t sys_debuglog_write(mx_handle_t log_handle, uint32_t options, user_pt
     if (len > DLOG_MAX_DATA)
         return MX_ERR_OUT_OF_RANGE;
 
+    if (options & (~MX_LOG_FLAGS_MASK))
+        return MX_ERR_INVALID_ARGS;
+
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<LogDispatcher> log;

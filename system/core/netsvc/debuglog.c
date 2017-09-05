@@ -24,18 +24,24 @@ mx_time_t debuglog_next_timeout = MX_TIME_INFINITE;
 static int get_log_line(char* out) {
     char buf[MX_LOG_RECORD_MAX + 1];
     mx_log_record_t* rec = (mx_log_record_t*)buf;
-    if (mx_log_read(loghandle, MX_LOG_RECORD_MAX, rec, 0) > 0) {
-        if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
-            rec->datalen--;
+    for (;;) {
+        if (mx_log_read(loghandle, MX_LOG_RECORD_MAX, rec, 0) > 0) {
+            if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
+                rec->datalen--;
+            }
+            // records flagged for local display are ignored
+            if (rec->flags & MX_LOG_LOCAL) {
+                continue;
+            }
+            rec->data[rec->datalen] = 0;
+            snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
+                     (int)(rec->timestamp / 1000000000ULL),
+                     (int)((rec->timestamp / 1000000ULL) % 1000ULL),
+                     rec->pid, rec->tid, rec->data);
+            return strlen(out);
+        } else {
+            return 0;
         }
-        rec->data[rec->datalen] = 0;
-        snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                 (int)(rec->timestamp / 1000000000ULL),
-                 (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                 rec->pid, rec->tid, rec->data);
-        return strlen(out);
-    } else {
-        return 0;
     }
 }
 

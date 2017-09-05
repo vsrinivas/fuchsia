@@ -345,7 +345,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 // to run in user mode.
 noreturn void _start(void* start_arg) {
     mx_handle_t log = MX_HANDLE_INVALID;
-    mx_log_create(MX_LOG_FLAG_DEVMGR, &log);
+    mx_log_create(0, &log);
     if (log == MX_HANDLE_INVALID)
         print(log, "mx_log_create failed, using mx_debug_write instead\n",
               NULL);

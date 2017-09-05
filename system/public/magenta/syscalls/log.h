@@ -24,11 +24,28 @@ typedef struct mx_log_record {
 
 #define MX_LOG_RECORD_MAX     256
 
-#define MX_LOG_FLAG_KERNEL    0x0100
-#define MX_LOG_FLAG_DEVMGR    0x0200
-#define MX_LOG_FLAG_CONSOLE   0x0400
-#define MX_LOG_FLAG_DEVICE    0x0800
-#define MX_LOG_FLAG_MASK      0x0F00
+// Common Log Levels
+#define MX_LOG_ERROR          (0x0001)
+#define MX_LOG_INFO           (0x0002)
+#define MX_LOG_TRACE          (0x0004)
+#define MX_LOG_SPEW           (0x0008)
+
+// Custom Log Levels
+#define MX_LOG_DEBUG1         (0x0010)
+#define MX_LOG_DEBUG2         (0x0020)
+#define MX_LOG_DEBUG3         (0x0030)
+#define MX_LOG_DEBUG4         (0x0040)
+
+// Filter Flags
+
+// Do not forward this message via network
+// (for logging in network core and drivers)
+#define MX_LOG_LOCAL          (0x1000)
+
+#define MX_LOG_LEVEL_MASK     (0x00FF)
+#define MX_LOG_FLAGS_MASK     (0xFFFF)
+
+// Options
 
 #define MX_LOG_FLAG_READABLE  0x40000000
 

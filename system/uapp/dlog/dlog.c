@@ -80,10 +80,9 @@ int main(int argc, char** argv) {
         }
         if (!plain) {
             char tmp[32];
-            size_t len = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %c ",
+            size_t len = snprintf(tmp, sizeof(tmp), "[%05d.%03d] ",
                                   (int)(rec->timestamp / 1000000000ULL),
-                                  (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                                  (rec->flags & MX_LOG_FLAG_KERNEL) ? 'K' : 'U');
+                                  (int)((rec->timestamp / 1000000ULL) % 1000ULL));
             write(1, tmp, (len > sizeof(tmp) ? sizeof(tmp) : len));
         }
         write(1, rec->data, rec->datalen);

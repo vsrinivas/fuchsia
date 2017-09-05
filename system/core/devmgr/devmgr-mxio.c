@@ -34,7 +34,7 @@
 void devmgr_io_init(void) {
     // setup stdout
     mx_handle_t h;
-    if (mx_log_create(MX_LOG_FLAG_DEVMGR, &h) < 0) {
+    if (mx_log_create(0, &h) < 0) {
         return;
     }
     mxio_t* logger;

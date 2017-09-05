@@ -484,7 +484,7 @@ static mx_status_t dh_handle_rio_rpc(port_handler_t* ph, mx_signals_t signals, u
 
 static mx_handle_t devhost_log_handle;
 
-static ssize_t devhost_log_write(void* cookie, const void* _data, size_t len) {
+static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len) {
     static thread_local struct {
         uint32_t next;
         mx_handle_t handle;
@@ -505,7 +505,7 @@ static ssize_t devhost_log_write(void* cookie, const void* _data, size_t len) {
         char c = *data++;
         if (c == '\n') {
 flush_ctx:
-            mx_log_write(ctx->handle, ctx->next, ctx->data, 0);
+            mx_log_write(ctx->handle, ctx->next, ctx->data, flags);
             ctx->next = 0;
             continue;
         }
@@ -520,7 +520,7 @@ flush_ctx:
     return r;
 }
 
-__EXPORT void driver_printf(const char* fmt, ...) {
+__EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
     char buffer[512];
     va_list ap;
     va_start(ap, fmt);
@@ -531,11 +531,15 @@ __EXPORT void driver_printf(const char* fmt, ...) {
         r = sizeof(buffer);
     }
 
-    devhost_log_write(NULL, buffer, r);
+    _devhost_log_write(flags, buffer, r);
+}
+
+static ssize_t devhost_log_write(void* cookie, const void* data, size_t len) {
+    return _devhost_log_write(0, data, len);
 }
 
 static void devhost_io_init(void) {
-    if (mx_log_create(MX_LOG_FLAG_DEVICE, &devhost_log_handle) < 0) {
+    if (mx_log_create(0, &devhost_log_handle) < 0) {
         return;
     }
     mxio_t* io;
