@@ -7,6 +7,7 @@
 #include <magenta/types.h>
 #include <magenta/compiler.h>
 #include <stdint.h>
+#include <unistd.h>
 
 __BEGIN_CDECLS
 
@@ -76,6 +77,11 @@ mxio_t* mxio_service_create(mx_handle_t);
 // this will allocate a per-thread buffer (on demand) to assemble
 // entire log-lines and flush them on newline or buffer full.
 mxio_t* mxio_logger_create(mx_handle_t);
+
+// create a mxio that wraps a function
+// used for plumbing stdout/err to logging subsystems, etc
+mxio_t* mxio_output_create(ssize_t (*func)(void* cookie, const void* data, size_t len),
+                           void* cookie);
 
 // Attempt to connect a channel to a named service.
 // On success the channel is connected.  On failure
