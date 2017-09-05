@@ -16,7 +16,7 @@
 namespace scene_manager {
 namespace test {
 
-TEST(EventTimestamper, SmokeTest) {
+TEST(EventTimestamper, DISABLED_SmokeTest) {
   constexpr size_t kEventCount = 3;
   std::vector<mx::event> events;
   std::vector<EventTimestamper::Watch> watches;
