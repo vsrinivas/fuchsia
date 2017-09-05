@@ -5,13 +5,13 @@
 package wlan
 
 import (
-	"apps/netstack/eth"
 	mlme "apps/wlan/services/wlan_mlme"
 	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 	"apps/wlan/services/wlan_service"
 	bindings "fidl/bindings"
 	"fmt"
 	"log"
+	"netstack/eth"
 	"os"
 	"syscall"
 	"syscall/mx"

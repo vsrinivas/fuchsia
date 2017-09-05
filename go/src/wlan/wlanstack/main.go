@@ -11,9 +11,9 @@ import (
 	"syscall/mx"
 	"syscall/mx/mxerror"
 
-	"apps/netstack/watcher"
 	"apps/wlan/services/wlan_service"
 	"apps/wlan/wlan"
+	"netstack/watcher"
 
 	"log"
 	"sync"

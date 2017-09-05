@@ -21,12 +21,12 @@ wlan_go_dependencies = [
     source = "//garnet/public/lib/fidl/go/src/fidl"
   },
   {
-    package = "apps/netstack/eth"
-    source = "//apps/netstack/eth"
+    package = "netstack/eth"
+    source = "//garnet/go/src/netstack/eth"
   },
   {
-    package = "apps/netstack/watcher"
-    source = "//apps/netstack/watcher"
+    package = "netstack/watcher"
+    source = "//garnet/go/src/netstack/watcher"
   },
   {
     package = "application/lib/app"
