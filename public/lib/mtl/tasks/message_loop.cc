@@ -138,15 +138,7 @@ void MessageLoop::RemoveHandler(HandlerKey key) {
     current_handler_removed_ = true;  // defer cleanup
   } else {
     mx_status_t status = record->Cancel(loop_.async());
-    if (status == MX_ERR_BAD_HANDLE) {
-      // HACK(FW-256): This is caused by a bug in the Dart FIDL bindings.
-      // Fix in progress. Please remove this special case when fixed.
-      FTL_LOG(WARNING) << "Working around bug FW-256: encountered bad handle "
-                          "during mx_port_cancel().";
-    } else {
-      FTL_CHECK(status == MX_OK)
-          << "Failed to cancel handler: status=" << status;
-    }
+    FTL_CHECK(status == MX_OK) << "Failed to cancel handler: status=" << status;
     delete record;
   }
 }
