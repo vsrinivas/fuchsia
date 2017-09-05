@@ -124,6 +124,29 @@ class PageClientTest : public TestWithMessageLoop {
     };
   }
 
+  // Continues to run until all page watcher notifications are delivered. Uses
+  // the behavior of ledger that a transaction does not start before all watcher
+  // notifications are delivered and the watchers have returned. This must be
+  // called only when all transactions have finished, if there are any.
+  void Finish() {
+    page_client_->page()->StartTransaction([this](ledger::Status) {
+        page_->StartTransaction([this](ledger::Status) {
+            page_client_->page()->Rollback([this](ledger::Status) {
+                page_->Rollback([this](ledger::Status) {
+                    finished_ = true;
+                  });
+              });
+          });
+      });
+  }
+
+  // Runs the message loop until after Finish() completes.
+  void Run() {
+    RunLoopUntil([this] {
+        return finished_;
+      });
+  }
+
  private:
   const LedgerPageId page_id_;
 
@@ -142,15 +165,17 @@ class PageClientTest : public TestWithMessageLoop {
   // conflicts.
   ledger::PagePtr page_;
 
+  // Used by Finish() and Run();
+  bool finished_{};
+
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
 };
 
 TEST_F(PageClientTest, SimpleWrite) {
   page1()->Put(to_array("key"), to_array("value"), log("Put"));
+  Finish();
 
-  RunLoopUntil([this] {
-      return page_client()->change_count() >= 1;
-    });
+  Run();
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ("value", page_client()->value("key"));
@@ -159,10 +184,9 @@ TEST_F(PageClientTest, SimpleWrite) {
 TEST_F(PageClientTest, PrefixWrite) {
   page2()->Put(to_array("a/key"), to_array("value"), log("Put"));
   page2()->Put(to_array("b/key"), to_array("value"), log("Put"));
+  Finish();
 
-  RunLoopUntil([this] {
-      return page_client()->change_count() >= 2;
-    });
+  Run();
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ(0, page_client_a()->conflict_count());
@@ -174,10 +198,9 @@ TEST_F(PageClientTest, PrefixWrite) {
 TEST_F(PageClientTest, ConcurrentWrite) {
   page1()->Put(to_array("key1"), to_array("value1"), log("Put key1"));
   page2()->Put(to_array("key2"), to_array("value2"), log("Put key2"));
+  Finish();
 
-  RunLoopUntil([this] {
-      return page_client()->change_count() >= 2;
-    });
+  Run();
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ("value1", page_client()->value("key1"));
@@ -198,6 +221,7 @@ TEST_F(PageClientTest, ConflictWrite) {
                       EXPECT_EQ(ledger::Status::OK, status);
                       page1()->Commit([this](ledger::Status status) {
                           EXPECT_EQ(ledger::Status::OK, status);
+                          Finish();
                         });
                     });
                 });
@@ -205,9 +229,7 @@ TEST_F(PageClientTest, ConflictWrite) {
         });
     });
 
-  RunLoopUntil([this] {
-      return page_client()->change_count() >= 2;
-    });
+  Run();
 
   EXPECT_EQ(1, page_client()->conflict_count());
   EXPECT_EQ("value3", page_client()->value("key"));
@@ -226,6 +248,7 @@ TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
                       EXPECT_EQ(ledger::Status::OK, status);
                       page1()->Commit([this](ledger::Status status) {
                           EXPECT_EQ(ledger::Status::OK, status);
+                          Finish();
                         });
                     });
                 });
@@ -233,9 +256,7 @@ TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
         });
     });
 
-  RunLoopUntil([this] {
-      return page_client_a()->change_count() >= 2;
-    });
+  Run();
 
   EXPECT_EQ(1, page_client_a()->conflict_count());
   EXPECT_EQ(0, page_client_b()->conflict_count());
@@ -257,6 +278,7 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
                       EXPECT_EQ(ledger::Status::OK, status);
                       page1()->Commit([this](ledger::Status status) {
                           EXPECT_EQ(ledger::Status::OK, status);
+                          Finish();
                         });
                     });
                 });
@@ -264,9 +286,7 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
         });
     });
 
-  RunLoopUntil([this] {
-      return page_client()->change_count() >= 4;
-    });
+  Run();
 
   EXPECT_EQ(1, page_client()->conflict_count());
   EXPECT_EQ("value1", page_client()->value("key1"));
