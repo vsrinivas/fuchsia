@@ -16,7 +16,7 @@ extern const struct app_descriptor __stop_apps[] __WEAK;
 static void start_app(const struct app_descriptor *app);
 
 /* one time setup */
-void apps_init(void)
+void apps_init()
 {
     const struct app_descriptor *app;
 
@@ -45,7 +45,7 @@ static int app_thread_entry(void *arg)
 
 static void start_app(const struct app_descriptor *app)
 {
-    uint32_t stack_size = (app->flags & APP_FLAG_CUSTOM_STACK_SIZE) ? app->stack_size : DEFAULT_STACK_SIZE;
+    size_t stack_size = (app->flags & APP_FLAG_CUSTOM_STACK_SIZE) ? app->stack_size : DEFAULT_STACK_SIZE;
 
     printf("starting app %s\n", app->name);
     thread_t *t = thread_create(app->name, &app_thread_entry, (void *)app, DEFAULT_PRIORITY, stack_size);

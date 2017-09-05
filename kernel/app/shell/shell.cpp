@@ -19,8 +19,4 @@ static void shell_entry(const struct app_descriptor *app, void *args)
     console_start();
 }
 
-APP_START(shell)
-.init = shell_init,
- .entry = shell_entry,
-  APP_END
-
+APP(shell, shell_init, shell_entry);
