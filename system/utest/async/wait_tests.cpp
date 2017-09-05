@@ -34,24 +34,20 @@ public:
     }
 };
 
-class MockWait : public async::Wait {
-public:
-    MockWait() {}
-    MockWait(mx_handle_t object, mx_signals_t trigger, uint32_t flags)
-        : async::Wait(object, trigger, flags) {}
+struct Handler {
+    Handler(async::Wait* wait) {
+        wait->set_handler([this](async_t* async, mx_status_t status,
+                                 const mx_packet_signal_t* signal) {
+            handler_ran = true;
+            last_status = status;
+            last_signal = signal;
+            return ASYNC_WAIT_AGAIN;
+        });
+    }
 
     bool handler_ran = false;
     mx_status_t last_status = MX_ERR_INTERNAL;
     const mx_packet_signal_t* last_signal = nullptr;
-
-protected:
-    async_wait_result_t Handle(async_t* async, mx_status_t status,
-                               const mx_packet_signal_t* signal) override {
-        handler_ran = true;
-        last_status = status;
-        last_signal = signal;
-        return ASYNC_WAIT_AGAIN;
-    }
 };
 
 bool wrapper_test() {
@@ -67,38 +63,48 @@ bool wrapper_test() {
 
     BEGIN_TEST;
 
-    MockWait default_wait;
-    EXPECT_EQ(MX_HANDLE_INVALID, default_wait.object(), "default object");
-    EXPECT_EQ(MX_SIGNAL_NONE, default_wait.trigger(), "default trigger");
-    EXPECT_EQ(0u, default_wait.flags(), "default flags");
+    {
+        async::Wait default_wait;
+        EXPECT_EQ(MX_HANDLE_INVALID, default_wait.object(), "default object");
+        EXPECT_EQ(MX_SIGNAL_NONE, default_wait.trigger(), "default trigger");
+        EXPECT_EQ(0u, default_wait.flags(), "default flags");
 
-    default_wait.set_object(dummy_handle);
-    EXPECT_EQ(dummy_handle, default_wait.object(), "set object");
-    default_wait.set_trigger(dummy_trigger);
-    EXPECT_EQ(dummy_trigger, default_wait.trigger(), "set trigger");
-    default_wait.set_flags(dummy_flags);
-    EXPECT_EQ(dummy_flags, default_wait.flags(), "set flags");
+        default_wait.set_object(dummy_handle);
+        EXPECT_EQ(dummy_handle, default_wait.object(), "set object");
+        default_wait.set_trigger(dummy_trigger);
+        EXPECT_EQ(dummy_trigger, default_wait.trigger(), "set trigger");
+        default_wait.set_flags(dummy_flags);
+        EXPECT_EQ(dummy_flags, default_wait.flags(), "set flags");
 
-    MockWait explicit_wait(dummy_handle, dummy_trigger, dummy_flags);
-    EXPECT_EQ(dummy_handle, explicit_wait.object(), "explicit object");
-    EXPECT_EQ(dummy_trigger, explicit_wait.trigger(), "explicit trigger");
-    EXPECT_EQ(dummy_flags, explicit_wait.flags(), "explicit flags");
+        EXPECT_FALSE(!!default_wait.handler(), "handler");
+    }
 
-    MockAsync async;
-    EXPECT_EQ(MX_OK, explicit_wait.Begin(&async), "begin, valid args");
-    EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op, "op");
-    EXPECT_EQ(dummy_handle, async.last_wait->object, "handle");
-    EXPECT_EQ(dummy_trigger, async.last_wait->trigger, "trigger");
-    EXPECT_EQ(dummy_flags, async.last_wait->flags, "flags");
+    {
+        async::Wait explicit_wait(dummy_handle, dummy_trigger, dummy_flags);
+        EXPECT_EQ(dummy_handle, explicit_wait.object(), "explicit object");
+        EXPECT_EQ(dummy_trigger, explicit_wait.trigger(), "explicit trigger");
+        EXPECT_EQ(dummy_flags, explicit_wait.flags(), "explicit flags");
 
-    EXPECT_EQ(ASYNC_WAIT_AGAIN, async.last_wait->handler(&async, async.last_wait, MX_OK, &dummy_signal),
-              "invoke handler");
-    EXPECT_TRUE(explicit_wait.handler_ran, "handler ran");
-    EXPECT_EQ(MX_OK, explicit_wait.last_status, "status");
-    EXPECT_EQ(&dummy_signal, explicit_wait.last_signal, "signal");
+        EXPECT_FALSE(!!explicit_wait.handler(), "handler");
+        Handler handler(&explicit_wait);
+        EXPECT_TRUE(!!explicit_wait.handler());
 
-    EXPECT_EQ(MX_OK, explicit_wait.Cancel(&async), "cancel, valid args");
-    EXPECT_EQ(MockAsync::Op::CANCEL_WAIT, async.last_op, "op");
+        MockAsync async;
+        EXPECT_EQ(MX_OK, explicit_wait.Begin(&async), "begin, valid args");
+        EXPECT_EQ(MockAsync::Op::BEGIN_WAIT, async.last_op, "op");
+        EXPECT_EQ(dummy_handle, async.last_wait->object, "handle");
+        EXPECT_EQ(dummy_trigger, async.last_wait->trigger, "trigger");
+        EXPECT_EQ(dummy_flags, async.last_wait->flags, "flags");
+
+        EXPECT_EQ(ASYNC_WAIT_AGAIN, async.last_wait->handler(&async, async.last_wait, MX_OK, &dummy_signal),
+                  "invoke handler");
+        EXPECT_TRUE(handler.handler_ran, "handler ran");
+        EXPECT_EQ(MX_OK, handler.last_status, "status");
+        EXPECT_EQ(&dummy_signal, handler.last_signal, "signal");
+
+        EXPECT_EQ(MX_OK, explicit_wait.Cancel(&async), "cancel, valid args");
+        EXPECT_EQ(MockAsync::Op::CANCEL_WAIT, async.last_op, "op");
+    }
 
     END_TEST;
 }

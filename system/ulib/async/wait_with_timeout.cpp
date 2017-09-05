@@ -54,7 +54,7 @@ async_wait_result_t WaitWithTimeout::WaitHandler(async_t* async, async_wait_t* w
         }
     }
 
-    async_wait_result_t result = self->Handle(async, status, signal);
+    async_wait_result_t result = self->handler_(async, status, signal);
 
     // If the result is ASYNC_WAIT_FINISHED then it's possible that the handler has
     // already destroyed this object.  So take care to only dereference it if the wait
@@ -83,7 +83,7 @@ async_task_result_t WaitWithTimeout::TimeoutHandler(async_t* async, async_task_t
         return ASYNC_TASK_FINISHED;
     }
 
-    async_wait_result_t result = self->Handle(async, MX_ERR_TIMED_OUT, nullptr);
+    async_wait_result_t result = self->handler_(async, MX_ERR_TIMED_OUT, nullptr);
     MX_ASSERT(result == ASYNC_WAIT_FINISHED);
     return ASYNC_TASK_FINISHED;
 }

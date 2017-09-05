@@ -30,22 +30,19 @@ public:
     }
 };
 
-class MockReceiver : public async::Receiver {
-public:
-    MockReceiver() {}
-    MockReceiver(uint32_t flags)
-        : async::Receiver(flags) {}
+struct Handler {
+    Handler(async::Receiver* receiver) {
+        receiver->set_handler([this](async_t* async, mx_status_t status,
+                                     const mx_packet_user_t* data) {
+            handler_ran = true;
+            last_status = status;
+            last_data = data;
+        });
+    }
 
     bool handler_ran = false;
     mx_status_t last_status = MX_ERR_INTERNAL;
     const mx_packet_user_t* last_data = nullptr;
-
-protected:
-    void Handle(async_t* async, mx_status_t status, const mx_packet_user_t* data) override {
-        handler_ran = true;
-        last_status = status;
-        last_data = data;
-    }
 };
 
 bool wrapper_test() {
@@ -54,35 +51,46 @@ bool wrapper_test() {
 
     BEGIN_TEST;
 
-    MockReceiver default_receiver;
-    EXPECT_EQ(0u, default_receiver.flags(), "default flags");
+    {
+        async::Receiver default_receiver;
+        EXPECT_EQ(0u, default_receiver.flags(), "default flags");
 
-    default_receiver.set_flags(dummy_flags);
-    EXPECT_EQ(dummy_flags, default_receiver.flags(), "set flags");
+        default_receiver.set_flags(dummy_flags);
+        EXPECT_EQ(dummy_flags, default_receiver.flags(), "set flags");
 
-    MockReceiver explicit_receiver(dummy_flags);
-    EXPECT_EQ(dummy_flags, explicit_receiver.flags(), "explicit flags");
+        EXPECT_FALSE(!!default_receiver.handler(), "handler");
+    }
 
-    MockAsync async;
-    EXPECT_EQ(MX_OK, explicit_receiver.Queue(&async, nullptr), "queue, null data");
-    EXPECT_EQ(MockAsync::Op::QUEUE_PACKET, async.last_op, "op");
-    EXPECT_EQ(dummy_flags, async.last_receiver->flags, "flags");
-    EXPECT_NULL(async.last_data, "data");
+    {
+        async::Receiver explicit_receiver(dummy_flags);
+        EXPECT_EQ(dummy_flags, explicit_receiver.flags(), "explicit flags");
 
-    EXPECT_EQ(MX_OK, explicit_receiver.Queue(&async, &dummy_data), "queue, non-null data");
-    EXPECT_EQ(MockAsync::Op::QUEUE_PACKET, async.last_op, "op");
-    EXPECT_EQ(dummy_flags, async.last_receiver->flags, "flags");
-    EXPECT_EQ(&dummy_data, async.last_data, "data");
+        EXPECT_FALSE(!!explicit_receiver.handler(), "handler");
+        Handler handler(&explicit_receiver);
+        EXPECT_TRUE(!!explicit_receiver.handler());
 
-    async.last_receiver->handler(&async, async.last_receiver, MX_OK, nullptr);
-    EXPECT_TRUE(explicit_receiver.handler_ran, "handler ran");
-    EXPECT_EQ(MX_OK, explicit_receiver.last_status, "status");
-    EXPECT_NULL(explicit_receiver.last_data, "data");
+        MockAsync async;
 
-    async.last_receiver->handler(&async, async.last_receiver, MX_OK, &dummy_data);
-    EXPECT_TRUE(explicit_receiver.handler_ran, "handler ran");
-    EXPECT_EQ(MX_OK, explicit_receiver.last_status, "status");
-    EXPECT_EQ(&dummy_data, explicit_receiver.last_data, "data");
+        EXPECT_EQ(MX_OK, explicit_receiver.Queue(&async, nullptr), "queue, null data");
+        EXPECT_EQ(MockAsync::Op::QUEUE_PACKET, async.last_op, "op");
+        EXPECT_EQ(dummy_flags, async.last_receiver->flags, "flags");
+        EXPECT_NULL(async.last_data, "data");
+
+        EXPECT_EQ(MX_OK, explicit_receiver.Queue(&async, &dummy_data), "queue, non-null data");
+        EXPECT_EQ(MockAsync::Op::QUEUE_PACKET, async.last_op, "op");
+        EXPECT_EQ(dummy_flags, async.last_receiver->flags, "flags");
+        EXPECT_EQ(&dummy_data, async.last_data, "data");
+
+        async.last_receiver->handler(&async, async.last_receiver, MX_OK, nullptr);
+        EXPECT_TRUE(handler.handler_ran, "handler ran");
+        EXPECT_EQ(MX_OK, handler.last_status, "status");
+        EXPECT_NULL(handler.last_data, "data");
+
+        async.last_receiver->handler(&async, async.last_receiver, MX_OK, &dummy_data);
+        EXPECT_TRUE(handler.handler_ran, "handler ran");
+        EXPECT_EQ(MX_OK, handler.last_status, "status");
+        EXPECT_EQ(&dummy_data, handler.last_data, "data");
+    }
 
     END_TEST;
 }

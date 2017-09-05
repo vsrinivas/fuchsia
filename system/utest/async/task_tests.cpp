@@ -34,21 +34,17 @@ public:
     }
 };
 
-class MockTask : public async::Task {
-public:
-    MockTask() {}
-    MockTask(mx_time_t deadline, uint32_t flags)
-        : async::Task(deadline, flags) {}
+struct Handler {
+    Handler(async::Task* task) {
+        task->set_handler([this](async_t* async, mx_status_t status) {
+            handler_ran = true;
+            last_status = status;
+            return ASYNC_TASK_REPEAT;
+        });
+    }
 
     bool handler_ran = false;
     mx_status_t last_status = MX_ERR_INTERNAL;
-
-protected:
-    async_task_result_t Handle(async_t* async, mx_status_t status) override {
-        handler_ran = true;
-        last_status = status;
-        return ASYNC_TASK_REPEAT;
-    }
 };
 
 bool wrapper_test() {
@@ -57,32 +53,42 @@ bool wrapper_test() {
 
     BEGIN_TEST;
 
-    MockTask default_task;
-    EXPECT_EQ(MX_TIME_INFINITE, default_task.deadline(), "default deadline");
-    EXPECT_EQ(0u, default_task.flags(), "default flags");
+    {
+        async::Task default_task;
+        EXPECT_EQ(MX_TIME_INFINITE, default_task.deadline(), "default deadline");
+        EXPECT_EQ(0u, default_task.flags(), "default flags");
 
-    default_task.set_deadline(dummy_deadline);
-    EXPECT_EQ(dummy_deadline, default_task.deadline(), "set deadline");
-    default_task.set_flags(dummy_flags);
-    EXPECT_EQ(dummy_flags, default_task.flags(), "set flags");
+        default_task.set_deadline(dummy_deadline);
+        EXPECT_EQ(dummy_deadline, default_task.deadline(), "set deadline");
+        default_task.set_flags(dummy_flags);
+        EXPECT_EQ(dummy_flags, default_task.flags(), "set flags");
 
-    MockTask explicit_task(dummy_deadline, dummy_flags);
-    EXPECT_EQ(dummy_deadline, default_task.deadline(), "explicit deadline");
-    EXPECT_EQ(dummy_flags, explicit_task.flags(), "explicit flags");
+        EXPECT_FALSE(!!default_task.handler(), "handler");
+    }
 
-    MockAsync async;
-    EXPECT_EQ(MX_OK, explicit_task.Post(&async), "post, valid args");
-    EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op, "op");
-    EXPECT_EQ(dummy_deadline, async.last_task->deadline, "deadline");
-    EXPECT_EQ(dummy_flags, async.last_task->flags, "flags");
+    {
+        async::Task explicit_task(dummy_deadline, dummy_flags);
+        EXPECT_EQ(dummy_deadline, explicit_task.deadline(), "explicit deadline");
+        EXPECT_EQ(dummy_flags, explicit_task.flags(), "explicit flags");
 
-    EXPECT_EQ(ASYNC_TASK_REPEAT, async.last_task->handler(&async, async.last_task, MX_OK),
-              "invoke handler");
-    EXPECT_TRUE(explicit_task.handler_ran, "handler ran");
-    EXPECT_EQ(MX_OK, explicit_task.last_status, "status");
+        EXPECT_FALSE(!!explicit_task.handler(), "handler");
+        Handler handler(&explicit_task);
+        EXPECT_TRUE(!!explicit_task.handler(), "handler");
 
-    EXPECT_EQ(MX_OK, explicit_task.Cancel(&async), "cancel, valid args");
-    EXPECT_EQ(MockAsync::Op::CANCEL_TASK, async.last_op, "op");
+        MockAsync async;
+        EXPECT_EQ(MX_OK, explicit_task.Post(&async), "post, valid args");
+        EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op, "op");
+        EXPECT_EQ(dummy_deadline, async.last_task->deadline, "deadline");
+        EXPECT_EQ(dummy_flags, async.last_task->flags, "flags");
+
+        EXPECT_EQ(ASYNC_TASK_REPEAT, async.last_task->handler(&async, async.last_task, MX_OK),
+                  "invoke handler");
+        EXPECT_TRUE(handler.handler_ran, "handler ran");
+        EXPECT_EQ(MX_OK, handler.last_status, "status");
+
+        EXPECT_EQ(MX_OK, explicit_task.Cancel(&async), "cancel, valid args");
+        EXPECT_EQ(MockAsync::Op::CANCEL_TASK, async.last_op, "op");
+    }
 
     END_TEST;
 }

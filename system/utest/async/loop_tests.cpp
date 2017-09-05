@@ -24,18 +24,23 @@ inline mx_time_t now() {
     return mx_time_get(MX_CLOCK_MONOTONIC);
 }
 
-class TestWait : public async::Wait {
+class TestWait {
 public:
     TestWait(mx_handle_t object, mx_signals_t trigger)
-        : async::Wait(object, trigger) {}
+        : op(object, trigger) {
+        op.set_handler(mxtl::BindMember(this, &TestWait::Handle));
+    }
 
+    virtual ~TestWait() = default;
+
+    async::Wait op;
     uint32_t run_count = 0u;
     mx_status_t last_status = MX_ERR_INTERNAL;
     const mx_packet_signal_t* last_signal = nullptr;
 
 protected:
-    async_wait_result_t Handle(async_t* async, mx_status_t status,
-                               const mx_packet_signal_t* signal) override {
+    virtual async_wait_result_t Handle(async_t* async, mx_status_t status,
+                                       const mx_packet_signal_t* signal) {
         run_count++;
         last_status = status;
         if (signal) {
@@ -69,21 +74,26 @@ protected:
     async_wait_result_t Handle(async_t* async, mx_status_t status,
                                const mx_packet_signal_t* signal) override {
         TestWait::Handle(async, status, signal);
-        mx::unowned_event::wrap(object()).signal(signals_to_clear_, signals_to_set_);
+        mx::unowned_event::wrap(op.object()).signal(signals_to_clear_, signals_to_set_);
         return repeat_ && status == MX_OK ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
     }
 };
 
-class TestTask : public async::Task {
+class TestTask {
 public:
     TestTask(mx_time_t deadline)
-        : async::Task(deadline) {}
+        : op(deadline) {
+        op.set_handler(mxtl::BindMember(this, &TestTask::Handle));
+    }
 
+    virtual ~TestTask() = default;
+
+    async::Task op;
     uint32_t run_count = 0u;
     mx_status_t last_status = MX_ERR_INTERNAL;
 
 protected:
-    async_task_result_t Handle(async_t* async, mx_status_t status) override {
+    virtual async_task_result_t Handle(async_t* async, mx_status_t status) {
         run_count++;
         last_status = status;
         return ASYNC_TASK_FINISHED;
@@ -134,7 +144,7 @@ protected:
 
     async_task_result_t Handle(async_t* async, mx_status_t status) override {
         TestTask::Handle(async, status);
-        set_deadline(deadline() + interval_);
+        op.set_deadline(op.deadline() + interval_);
         if (repeat_count_ == 0) {
             if (finish_callback_)
                 finish_callback_();
@@ -145,16 +155,21 @@ protected:
     }
 };
 
-class TestReceiver : public async::Receiver {
+class TestReceiver {
 public:
-    TestReceiver() {}
+    TestReceiver() {
+        op.set_handler(mxtl::BindMember(this, &TestReceiver::Handle));
+    }
 
+    virtual ~TestReceiver() = default;
+
+    async::Receiver op;
     uint32_t run_count = 0u;
     mx_status_t last_status = MX_ERR_INTERNAL;
     const mx_packet_user_t* last_data;
 
 protected:
-    void Handle(async_t* async, mx_status_t status, const mx_packet_user_t* data) override {
+    virtual void Handle(async_t* async, mx_status_t status, const mx_packet_user_t* data) {
         run_count++;
         last_status = status;
         if (data) {
@@ -238,9 +253,9 @@ bool quit_test() {
     EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "still quitting");
 
     ResetQuitTask reset_quit_task;
-    EXPECT_EQ(MX_OK, reset_quit_task.Post(loop.async()), "can post tasks even after quit");
+    EXPECT_EQ(MX_OK, reset_quit_task.op.Post(loop.async()), "can post tasks even after quit");
     QuitTask quit_task;
-    EXPECT_EQ(MX_OK, quit_task.Post(loop.async()), "can post tasks even after quit");
+    EXPECT_EQ(MX_OK, quit_task.op.Post(loop.async()), "can post tasks even after quit");
 
     EXPECT_EQ(MX_OK, loop.ResetQuit());
     EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "not quitting after reset");
@@ -276,9 +291,9 @@ bool wait_test() {
                       MX_USER_SIGNAL_1 | MX_USER_SIGNAL_2, 0u, true);
     CascadeWait wait3(event.get(), MX_USER_SIGNAL_3,
                       MX_USER_SIGNAL_3, 0u, true);
-    EXPECT_EQ(MX_OK, wait1.Begin(loop.async()), "wait 1");
-    EXPECT_EQ(MX_OK, wait2.Begin(loop.async()), "wait 2");
-    EXPECT_EQ(MX_OK, wait3.Begin(loop.async()), "wait 3");
+    EXPECT_EQ(MX_OK, wait1.op.Begin(loop.async()), "wait 1");
+    EXPECT_EQ(MX_OK, wait2.op.Begin(loop.async()), "wait 2");
+    EXPECT_EQ(MX_OK, wait3.op.Begin(loop.async()), "wait 3");
 
     // Initially nothing is signaled.
     EXPECT_EQ(MX_ERR_TIMED_OUT, loop.Run(mx_deadline_after(MX_MSEC(1))), "run loop");
@@ -339,7 +354,7 @@ bool wait_test() {
     }
 
     // Cancel wait 3 then set signal 3 again: nothing happens this time.
-    EXPECT_EQ(MX_OK, wait3.Cancel(loop.async()), "cancel");
+    EXPECT_EQ(MX_OK, wait3.op.Cancel(loop.async()), "cancel");
     EXPECT_EQ(MX_OK, event.signal(0u, MX_USER_SIGNAL_3), "signal 3");
     EXPECT_EQ(MX_ERR_TIMED_OUT, loop.Run(mx_deadline_after(MX_MSEC(1))), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
@@ -347,7 +362,7 @@ bool wait_test() {
     EXPECT_EQ(3u, wait3.run_count, "run count 3");
 
     // Redundant cancel returns an error.
-    EXPECT_EQ(MX_ERR_NOT_FOUND, wait3.Cancel(loop.async()), "cancel again");
+    EXPECT_EQ(MX_ERR_NOT_FOUND, wait3.op.Cancel(loop.async()), "cancel again");
     EXPECT_EQ(MX_ERR_TIMED_OUT, loop.Run(mx_deadline_after(MX_MSEC(1))), "run loop");
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
@@ -362,8 +377,8 @@ bool wait_invalid_handle_test() {
     async::Loop loop;
 
     TestWait wait(MX_HANDLE_INVALID, MX_USER_SIGNAL_0);
-    EXPECT_EQ(MX_ERR_BAD_HANDLE, wait.Begin(loop.async()), "begin");
-    EXPECT_EQ(MX_ERR_BAD_HANDLE, wait.Cancel(loop.async()), "cancel");
+    EXPECT_EQ(MX_ERR_BAD_HANDLE, wait.op.Begin(loop.async()), "begin");
+    EXPECT_EQ(MX_ERR_BAD_HANDLE, wait.op.Cancel(loop.async()), "cancel");
     EXPECT_EQ(MX_ERR_TIMED_OUT, loop.Run(mx_deadline_after(MX_MSEC(1))), "run loop");
     EXPECT_EQ(0u, wait.run_count, "run count");
 
@@ -378,17 +393,17 @@ bool wait_shutdown_test() {
     EXPECT_EQ(MX_OK, mx::event::create(0u, &event), "create event");
 
     CascadeWait wait1(event.get(), MX_USER_SIGNAL_0, 0u, 0u, false);
-    wait1.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    wait1.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     CascadeWait wait2(event.get(), MX_USER_SIGNAL_0, MX_USER_SIGNAL_0, 0u, true);
-    wait2.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    wait2.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestWait wait3(event.get(), MX_USER_SIGNAL_1);
-    wait3.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    wait3.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestWait wait4(event.get(), MX_USER_SIGNAL_1);
 
-    EXPECT_EQ(MX_OK, wait1.Begin(loop.async()), "begin 1");
-    EXPECT_EQ(MX_OK, wait2.Begin(loop.async()), "begin 2");
-    EXPECT_EQ(MX_OK, wait3.Begin(loop.async()), "begin 3");
-    EXPECT_EQ(MX_OK, wait4.Begin(loop.async()), "begin 4");
+    EXPECT_EQ(MX_OK, wait1.op.Begin(loop.async()), "begin 1");
+    EXPECT_EQ(MX_OK, wait2.op.Begin(loop.async()), "begin 2");
+    EXPECT_EQ(MX_OK, wait3.op.Begin(loop.async()), "begin 3");
+    EXPECT_EQ(MX_OK, wait4.op.Begin(loop.async()), "begin 4");
 
     // Nothing signaled so nothing happens at first.
     EXPECT_EQ(MX_ERR_TIMED_OUT, loop.Run(mx_deadline_after(MX_MSEC(1))), "run loop");
@@ -432,8 +447,8 @@ bool wait_shutdown_test() {
 
     // Try to add or cancel work after shutdown.
     TestWait wait5(event.get(), MX_USER_SIGNAL_0);
-    EXPECT_EQ(MX_ERR_BAD_STATE, wait5.Begin(loop.async()), "begin after shutdown");
-    EXPECT_EQ(MX_ERR_NOT_FOUND, wait5.Cancel(loop.async()), "cancel after shutdown");
+    EXPECT_EQ(MX_ERR_BAD_STATE, wait5.op.Begin(loop.async()), "begin after shutdown");
+    EXPECT_EQ(MX_ERR_NOT_FOUND, wait5.op.Cancel(loop.async()), "cancel after shutdown");
     EXPECT_EQ(0u, wait5.run_count, "run count 5");
 
     END_TEST;
@@ -451,16 +466,16 @@ bool task_test() {
     QuitTask task4(start_time + MX_MSEC(10));
     TestTask task5(start_time + MX_MSEC(10)); // posted after quit
 
-    EXPECT_EQ(MX_OK, task1.Post(loop.async()), "post 1");
-    EXPECT_EQ(MX_OK, task2.Post(loop.async()), "post 2");
-    EXPECT_EQ(MX_OK, task3.Post(loop.async()), "post 3");
+    EXPECT_EQ(MX_OK, task1.op.Post(loop.async()), "post 1");
+    EXPECT_EQ(MX_OK, task2.op.Post(loop.async()), "post 2");
+    EXPECT_EQ(MX_OK, task3.op.Post(loop.async()), "post 3");
     task2.set_finish_callback([&loop, &task4, &task5] {
-        task4.Post(loop.async());
-        task5.Post(loop.async());
+        task4.op.Post(loop.async());
+        task5.op.Post(loop.async());
     });
 
     // Cancel task 3.
-    EXPECT_EQ(MX_OK, task3.Cancel(loop.async()), "cancel 3");
+    EXPECT_EQ(MX_OK, task3.op.Cancel(loop.async()), "cancel 3");
 
     // Run until quit.
     EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "run loop");
@@ -478,8 +493,8 @@ bool task_test() {
     // by any subsequently posted tasks even if they have earlier deadlines.
     QuitTask task6(start_time);
     TestTask task7(start_time);
-    EXPECT_EQ(MX_OK, task6.Post(loop.async()), "post 6");
-    EXPECT_EQ(MX_OK, task7.Post(loop.async()), "post 7");
+    EXPECT_EQ(MX_OK, task6.op.Post(loop.async()), "post 6");
+    EXPECT_EQ(MX_OK, task7.op.Post(loop.async()), "post 7");
     EXPECT_EQ(MX_OK, loop.ResetQuit());
     EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "run loop");
     EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitting");
@@ -500,22 +515,22 @@ bool task_shutdown_test() {
 
     mx_time_t start_time = now();
     TestTask task1(start_time + MX_MSEC(1));
-    task1.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    task1.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     RepeatingTask task2(start_time + MX_MSEC(1), MX_MSEC(1000), 1u);
-    task2.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    task2.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestTask task3(MX_TIME_INFINITE);
-    task3.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    task3.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestTask task4(MX_TIME_INFINITE);
-    task4.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
+    task4.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestTask task5(MX_TIME_INFINITE);
     QuitTask task6(start_time + MX_MSEC(1));
 
-    EXPECT_EQ(MX_OK, task1.Post(loop.async()), "post 1");
-    EXPECT_EQ(MX_OK, task2.Post(loop.async()), "post 2");
-    EXPECT_EQ(MX_OK, task3.Post(loop.async()), "post 3");
-    EXPECT_EQ(MX_OK, task4.Post(loop.async()), "post 4");
-    EXPECT_EQ(MX_OK, task5.Post(loop.async()), "post 5");
-    EXPECT_EQ(MX_OK, task6.Post(loop.async()), "post 6");
+    EXPECT_EQ(MX_OK, task1.op.Post(loop.async()), "post 1");
+    EXPECT_EQ(MX_OK, task2.op.Post(loop.async()), "post 2");
+    EXPECT_EQ(MX_OK, task3.op.Post(loop.async()), "post 3");
+    EXPECT_EQ(MX_OK, task4.op.Post(loop.async()), "post 4");
+    EXPECT_EQ(MX_OK, task5.op.Post(loop.async()), "post 5");
+    EXPECT_EQ(MX_OK, task6.op.Post(loop.async()), "post 6");
 
     // Run tasks which are due up to the time when the quit task runs.
     EXPECT_EQ(MX_ERR_CANCELED, loop.Run(), "run loop");
@@ -530,7 +545,7 @@ bool task_shutdown_test() {
     EXPECT_EQ(MX_OK, task6.last_status, "status 6");
 
     // Cancel task 4.
-    EXPECT_EQ(MX_OK, task4.Cancel(loop.async()), "cancel 4");
+    EXPECT_EQ(MX_OK, task4.op.Cancel(loop.async()), "cancel 4");
 
     // When the loop shuts down:
     //   |task1| not notified because it was serviced
@@ -551,8 +566,8 @@ bool task_shutdown_test() {
 
     // Try to add or cancel work after shutdown.
     TestTask task7(MX_TIME_INFINITE);
-    EXPECT_EQ(MX_ERR_BAD_STATE, task7.Post(loop.async()), "post after shutdown");
-    EXPECT_EQ(MX_ERR_NOT_FOUND, task7.Cancel(loop.async()), "cancel after shutdown");
+    EXPECT_EQ(MX_ERR_BAD_STATE, task7.op.Post(loop.async()), "post after shutdown");
+    EXPECT_EQ(MX_ERR_NOT_FOUND, task7.op.Cancel(loop.async()), "cancel after shutdown");
     EXPECT_EQ(0u, task7.run_count, "run count 7");
 
     END_TEST;
@@ -572,10 +587,10 @@ bool receiver_test() {
     TestReceiver receiver2;
     TestReceiver receiver3;
 
-    EXPECT_EQ(MX_OK, receiver1.Queue(loop.async(), &data1), "queue 1");
-    EXPECT_EQ(MX_OK, receiver1.Queue(loop.async(), &data3), "queue 1, again");
-    EXPECT_EQ(MX_OK, receiver2.Queue(loop.async(), &data2), "queue 2");
-    EXPECT_EQ(MX_OK, receiver3.Queue(loop.async()), "queue 3");
+    EXPECT_EQ(MX_OK, receiver1.op.Queue(loop.async(), &data1), "queue 1");
+    EXPECT_EQ(MX_OK, receiver1.op.Queue(loop.async(), &data3), "queue 1, again");
+    EXPECT_EQ(MX_OK, receiver2.op.Queue(loop.async(), &data2), "queue 2");
+    EXPECT_EQ(MX_OK, receiver3.op.Queue(loop.async()), "queue 3");
 
     EXPECT_EQ(MX_ERR_TIMED_OUT, loop.Run(mx_deadline_after(MX_MSEC(1))), "run loop");
     EXPECT_EQ(2u, receiver1.run_count, "run count 1");
@@ -601,9 +616,9 @@ bool receiver_shutdown_test() {
     loop.Shutdown();
 
     // Try to add work after shutdown.
-    TestReceiver receiver1;
-    EXPECT_EQ(MX_ERR_BAD_STATE, receiver1.Queue(loop.async()), "queue after shutdown");
-    EXPECT_EQ(0u, receiver1.run_count, "run count 1");
+    TestReceiver receiver;
+    EXPECT_EQ(MX_ERR_BAD_STATE, receiver.op.Queue(loop.async()), "queue after shutdown");
+    EXPECT_EQ(0u, receiver.run_count, "run count 1");
 
     END_TEST;
 }
@@ -717,7 +732,7 @@ bool threads_have_default_dispatcher() {
     EXPECT_EQ(MX_OK, loop.StartThread(), "start thread");
 
     GetDefaultDispatcherTask task;
-    EXPECT_EQ(MX_OK, task.Post(loop.async()), "post task");
+    EXPECT_EQ(MX_OK, task.op.Post(loop.async()), "post task");
     loop.JoinThreads();
 
     EXPECT_EQ(1u, task.run_count, "run count");
@@ -786,7 +801,7 @@ bool threads_waits_run_concurrently_test() {
     ThreadAssertWait* items[num_items];
     for (size_t i = 0; i < num_items; i++) {
         items[i] = new ThreadAssertWait(event.get(), MX_USER_SIGNAL_0, &measure);
-        EXPECT_EQ(MX_OK, items[i]->Begin(loop.async()), "begin wait");
+        EXPECT_EQ(MX_OK, items[i]->op.Begin(loop.async()), "begin wait");
     }
 
     // Wait until quitted.
@@ -828,7 +843,7 @@ bool threads_tasks_run_sequentially_test() {
     mx_time_t start_time = now();
     for (size_t i = 0; i < num_items; i++) {
         items[i] = new ThreadAssertTask(start_time + MX_MSEC(i), &measure);
-        EXPECT_EQ(MX_OK, items[i]->Post(loop.async()), "post task");
+        EXPECT_EQ(MX_OK, items[i]->op.Post(loop.async()), "post task");
     }
 
     // Wait until quitted.
@@ -867,7 +882,7 @@ bool threads_receivers_run_concurrently_test() {
     // Post a number of packets all at once.
     ThreadAssertReceiver receiver(&measure);
     for (size_t i = 0; i < num_items; i++) {
-        EXPECT_EQ(MX_OK, receiver.Queue(loop.async()), "queue packet");
+        EXPECT_EQ(MX_OK, receiver.op.Queue(loop.async()), "queue packet");
     }
 
     // Wait until quitted.

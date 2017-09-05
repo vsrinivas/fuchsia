@@ -29,6 +29,8 @@ typedef enum {
 // modify the task's properties (such as the deadline) before returning.
 //
 // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
+//
+// It is safe for the handler to destroy itself when returning |ASYNC_TASK_FINISHED|.
 typedef struct async_task async_task_t;
 typedef async_task_result_t(async_task_handler_t)(async_t* async,
                                                   async_task_t* task,
@@ -39,6 +41,8 @@ typedef async_task_result_t(async_task_handler_t)(async_t* async,
 //
 // It is customary to aggregate (in C) or subclass (in C++) this structure
 // to allow the handler to retain additional information about the task.
+//
+// See also |async::Task|.
 struct async_task {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
     async_state_t state;
@@ -96,6 +100,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <mxtl/function.h>
 #include <mxtl/macros.h>
 
 namespace async {
@@ -104,11 +109,30 @@ namespace async {
 // This object must not be destroyed until the task has completed or been
 // successfully canceled or the dispatcher itself has been destroyed.
 // A separate instance must be used for each task.
-class Task : private async_task_t {
+class Task final : private async_task_t {
 public:
+    // Handles execution of a posted task.
+    //
+    // Reports the |status| of the task.  If the status is |MX_OK| then the
+    // task ran, otherwise the task did not run.
+    //
+    // The result indicates whether the task should be repeated; it may
+    // modify the task's properties (such as the deadline) before returning.
+    //
+    // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
+    //
+    // It is safe for the handler to destroy itself when returning |ASYNC_TASK_FINISHED|.
+    using Handler = mxtl::Function<async_task_result_t(async_t* async,
+                                                       mx_status_t status)>;
+
     Task();
     explicit Task(mx_time_t deadline, uint32_t flags = 0u);
     virtual ~Task();
+
+    // Gets or sets the handler to invoke when a packet is received.
+    // Must be set before queuing any packets.
+    const Handler& handler() const { return handler_; }
+    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 
     // The time when the task should run.
     mx_time_t deadline() const { return async_task_t::deadline; }
@@ -129,21 +153,11 @@ public:
     // See |async_cancel_task()| for details.
     mx_status_t Cancel(async_t* async);
 
-protected:
-    // Override this method to handle execution of the posted task.
-    //
-    // Reports the |status| of the task.  If the status is |MX_OK| then the
-    // task ran, otherwise the task did not run.
-    //
-    // The result indicates whether the task should be repeated; it may
-    // modify the task's properties (such as the deadline) before returning.
-    //
-    // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
-    virtual async_task_result_t Handle(async_t* async, mx_status_t status) = 0;
-
 private:
     static async_task_result_t CallHandler(async_t* async, async_task_t* task,
                                            mx_status_t status);
+
+    Handler handler_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Task);
 };

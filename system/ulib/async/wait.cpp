@@ -24,7 +24,7 @@ mx_status_t Wait::Cancel(async_t* async) {
 
 async_wait_result_t Wait::CallHandler(async_t* async, async_wait_t* wait,
                                       mx_status_t status, const mx_packet_signal_t* signal) {
-    return static_cast<Wait*>(wait)->Handle(async, status, signal);
+    return static_cast<Wait*>(wait)->handler_(async, status, signal);
 }
 
 } // namespace async

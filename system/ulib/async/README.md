@@ -200,11 +200,9 @@ See [async/default.h](include/async/default.h) for details.
 
 ## Using the C++ helpers
 
-`libasync.a` includes a few helper classes for writing handlers in C++.
-They just wrap the C API with a more convenient interface.
-
-To use them, subclass `Wait`, `Task`, or `Receiver` and implement the
-`Handle` function to implement the callback.
+`libasync.a` includes `Wait`, `Task`, and `Receiver` helper classes which wrap
+the C API with a more convenient mxtl::Function<> callback based interface
+for use in C++.
 
 There is also a special `WaitWithTimeout` helper defined in
 [async/wait_with_timeout.h](include/async/wait_with_timeout.h)

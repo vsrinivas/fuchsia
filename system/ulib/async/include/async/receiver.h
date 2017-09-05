@@ -14,8 +14,8 @@ __BEGIN_CDECLS
 // describes the contents of the packet which was received, otherwise |data|
 // is null.
 //
-// The handler may destroy or reuse the |receiver| object for another purpose
-// as long as there are no more packets pending delivery to it.
+// It is safe for the handler to destroy itself when there are no remaining
+// packets pending delivery to it.
 typedef struct async_receiver async_receiver_t;
 typedef void(async_receiver_handler_t)(async_t* async,
                                        async_receiver_t* receiver,
@@ -27,6 +27,8 @@ typedef void(async_receiver_handler_t)(async_t* async,
 //
 // It is customary to aggregate (in C) or subclass (in C++) this structure
 // to allow the handler to retain additional information about the receiver.
+//
+// See also |async::Receiver|.
 struct async_receiver {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
     async_state_t state;
@@ -63,6 +65,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <mxtl/function.h>
 #include <mxtl/macros.h>
 
 namespace async {
@@ -71,10 +74,27 @@ namespace async {
 // This object must not be destroyed until all packets destined for it
 // have been delivered or the dispatcher itself has been destroyed.
 // The same instance may be used to receive arbitrarily many queued packets.
-class Receiver : private async_receiver_t {
+class Receiver final : private async_receiver_t {
 public:
+    // Receives packets containing user supplied data.
+    //
+    // Reports the |status| of the receiver.  If the status is |MX_OK| then |data|
+    // describes the contents of the packet which was received, otherwise |data|
+    // is null.
+    //
+    // It is safe for the handler to destroy itself when there are no remaining
+    // packets pending delivery to it.
+    using Handler = mxtl::Function<void(async_t* async,
+                                        mx_status_t status,
+                                        const mx_packet_user_t* data)>;
+
     explicit Receiver(uint32_t flags = 0u);
     virtual ~Receiver();
+
+    // Gets or sets the handler to invoke when a packet is received.
+    // Must be set before queuing any packets.
+    const Handler& handler() const { return handler_; }
+    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 
     // Valid flags: None, set to zero.
     uint32_t flags() const { return async_receiver_t::flags; }
@@ -85,21 +105,11 @@ public:
     // See |async_queue_packet()| for details.
     mx_status_t Queue(async_t* async, const mx_packet_user_t* data = nullptr);
 
-protected:
-    // Override this method to handle received packets.
-    //
-    // Reports the |status| of the receiver.  If the status is |MX_OK| then |data|
-    // describes the contents of the packet which was received, otherwise |data|
-    // is null.
-    //
-    // The handler may destroy or reuse this object for another purpose
-    // as long as there are no more packets pending delivery to it.
-    virtual void Handle(async_t* async, mx_status_t status,
-                        const mx_packet_user_t* data) = 0;
-
 private:
     static void CallHandler(async_t* async, async_receiver_t* receiver,
                             mx_status_t status, const mx_packet_user_t* data);
+
+    Handler handler_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Receiver);
 };

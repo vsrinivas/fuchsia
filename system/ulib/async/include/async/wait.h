@@ -27,6 +27,8 @@ typedef enum {
 // modify the wait's properties (such as the trigger) before returning.
 //
 // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
+//
+// It is safe for the handler to destroy itself when returning |ASYNC_WAIT_FINISHED|.
 typedef async_wait_result_t(async_wait_handler_t)(async_t* async,
                                                   async_wait_t* wait,
                                                   mx_status_t status,
@@ -37,6 +39,8 @@ typedef async_wait_result_t(async_wait_handler_t)(async_t* async,
 //
 // It is customary to aggregate (in C) or subclass (in C++) this structure
 // to allow the handler to retain additional information about the wait.
+//
+// See also |async::Task|.
 typedef struct async_wait async_wait_t;
 struct async_wait {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
@@ -95,6 +99,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <mxtl/function.h>
 #include <mxtl/macros.h>
 
 namespace async {
@@ -103,11 +108,31 @@ namespace async {
 // This object must not be destroyed until the wait has completed or been
 // successfully canceled or the dispatcher itself has been destroyed.
 // A separate instance must be used for each wait.
-class Wait : private async_wait_t {
+class Wait final : private async_wait_t {
 public:
+    // Handles completion of asynchronous wait operations.
+    //
+    // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
+    // describes the signal which was received, otherwise |signal| is null.
+    //
+    // The result indicates whether the wait should be repeated; it may
+    // modify the wait's properties (such as the trigger) before returning.
+    //
+    // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
+    //
+    // It is safe for the handler to destroy itself when returning |ASYNC_WAIT_FINISHED|.
+    using Handler = mxtl::Function<async_wait_result_t(async_t* async,
+                                                       mx_status_t status,
+                                                       const mx_packet_signal_t* signal)>;
+
     Wait();
     explicit Wait(mx_handle_t object, mx_signals_t trigger, uint32_t flags = 0u);
     virtual ~Wait();
+
+    // Gets or sets the handler to invoke when a packet is received.
+    // Must be set before queuing any packets.
+    const Handler& handler() const { return handler_; }
+    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 
     // The object to wait for signals on.
     mx_handle_t object() const { return async_wait_t::object; }
@@ -132,22 +157,11 @@ public:
     // See |async_cancel_wait()| for details.
     mx_status_t Cancel(async_t* async);
 
-protected:
-    // Override this method to handle completion of the asynchronous wait operation.
-    //
-    // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
-    // describes the signal which was received, otherwise |signal| is null.
-    //
-    // The result indicates whether the wait should be repeated; it may
-    // modify the wait's properties (such as the trigger) before returning.
-    //
-    // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
-    virtual async_wait_result_t Handle(async_t* async,
-                                       mx_status_t status, const mx_packet_signal_t* signal) = 0;
-
 private:
     static async_wait_result_t CallHandler(async_t* async, async_wait_t* wait,
                                            mx_status_t status, const mx_packet_signal_t* signal);
+
+    Handler handler_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Wait);
 };

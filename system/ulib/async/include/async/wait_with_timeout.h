@@ -9,6 +9,9 @@
 
 #ifdef __cplusplus
 
+#include <mxtl/function.h>
+#include <mxtl/macros.h>
+
 namespace async {
 
 // C++ wrapper for a pending wait operation with an associated timeout.
@@ -22,13 +25,35 @@ namespace async {
 //
 // Implementation note: The task's flags are managed internally by this object
 // so they are not exposed to the client unlike the wait flags.
-class WaitWithTimeout : private async_wait_t, private async_task_t {
+class WaitWithTimeout final : private async_wait_t, private async_task_t {
 public:
+    // Handles completion of asynchronous wait operations or a timeout.
+    //
+    // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
+    // describes the signal which was received, otherwise |signal| is null.
+    //
+    // Timeouts are indicated with status |MX_ERR_TIMED_OUT|.
+    //
+    // The result indicates whether the wait should be repeated; it may
+    // modify the wait's properties (such as the trigger) before returning.
+    //
+    // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
+    //
+    // It is safe for the handler to destroy itself when returning |ASYNC_WAIT_FINISHED|.
+    using Handler = mxtl::Function<async_wait_result_t(async_t* async,
+                                                       mx_status_t status,
+                                                       const mx_packet_signal_t* signal)>;
+
     WaitWithTimeout();
     explicit WaitWithTimeout(mx_handle_t object, mx_signals_t trigger,
                              mx_time_t deadline = MX_TIME_INFINITE,
                              uint32_t flags = 0u);
     virtual ~WaitWithTimeout();
+
+    // Gets or sets the handler to invoke when a packet is received.
+    // Must be set before queuing any packets.
+    const Handler& handler() const { return handler_; }
+    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 
     // The object to wait for signals on.
     mx_handle_t object() const { return async_wait_t::object; }
@@ -52,25 +77,10 @@ public:
     // See |async_begin_wait()| for details.
     mx_status_t Begin(async_t* async);
 
-    // Cancels the wait.
+    // Cancels the wait and its associated timeout.
     //
     // See |async_cancel_wait()| for details.
     mx_status_t Cancel(async_t* async);
-
-    // Override this method to handle completion of the asynchronous wait operation
-    // or a timeout.
-    //
-    // Reports the |status| of the wait.  If the status is |MX_OK| then |signal|
-    // describes the signal which was received, otherwise |signal| is null.
-    //
-    // Timeouts are indicated with status |MX_ERR_TIMED_OUT|.
-    //
-    // The result indicates whether the wait should be repeated; it may
-    // modify the wait's properties before returning.
-    //
-    // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
-    virtual async_wait_result_t Handle(async_t* async, mx_status_t status,
-                                       const mx_packet_signal_t* signal) = 0;
 
 private:
     static async_wait_result_t WaitHandler(async_t* async, async_wait_t* wait,
@@ -78,6 +88,8 @@ private:
                                            const mx_packet_signal_t* signal);
     static async_task_result_t TimeoutHandler(async_t* async, async_task_t* task,
                                               mx_status_t status);
+
+    Handler handler_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(WaitWithTimeout);
 };

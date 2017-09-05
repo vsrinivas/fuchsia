@@ -24,7 +24,7 @@ mx_status_t Task::Cancel(async_t* async) {
 
 async_task_result_t Task::CallHandler(async_t* async, async_task_t* task,
                                       mx_status_t status) {
-    return static_cast<Task*>(task)->Handle(async, status);
+    return static_cast<Task*>(task)->handler_(async, status);
 }
 
 } // namespace async
