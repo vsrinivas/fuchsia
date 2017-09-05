@@ -4,9 +4,9 @@
 
 module network;
 
-import "apps/netstack/services/net_address.fidl";
 import "apps/network/services/network_error.fidl";
 import "apps/network/services/url_loader.fidl";
+import "lib/netstack/fidl/net_address.fidl";
 
 [ServiceName="network::NetworkService"]
 interface NetworkService {

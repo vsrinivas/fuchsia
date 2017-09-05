@@ -16,6 +16,6 @@ fidl("services") {
   ]
 
   public_deps = [
-    "//apps/netstack/services:net_address",
+    "//garnet/public/lib/netstack/fidl:net_address",
   ]
 }

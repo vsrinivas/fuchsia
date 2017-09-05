@@ -5,8 +5,8 @@
 #ifndef APPS_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define APPS_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-#include "apps/netstack/services/net_address.fidl.h"
 #include "apps/network/services/network_service.fidl.h"
+#include "lib/netstack/fidl/net_address.fidl.h"
 
 #include <list>
 #include <memory>
