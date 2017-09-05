@@ -13,10 +13,8 @@
 namespace audio {
 namespace dispatcher {
 
-EventSource::EventSource(zx_signals_t process_signal_mask, uintptr_t owner_ctx)
-    : process_signal_mask_(process_signal_mask),
-      owner_ctx_(owner_ctx) {
-}
+EventSource::EventSource(zx_signals_t process_signal_mask)
+    : process_signal_mask_(process_signal_mask) { }
 
 EventSource::~EventSource() {
     ZX_DEBUG_ASSERT(domain_ == nullptr);
@@ -198,19 +196,6 @@ fbl::RefPtr<ExecutionDomain> EventSource::ScheduleDispatch(
     // jobs for this domain will handle this one when the time comes.
     pending_pkt_ = pkt;
     return domain_->AddPendingWork(this) ? domain_ : nullptr;
-}
-
-
-EventSource::Owner::Owner() {
-    default_domain_ = ExecutionDomain::Create();
-}
-
-EventSource::Owner::~Owner() {
-}
-
-void EventSource::Owner::ShutdownDispatcherChannels() {
-    default_domain_->Deactivate();
-    default_domain_ = nullptr;
 }
 
 }  // namespace dispatcher

@@ -43,37 +43,7 @@ class ThreadPool;
 //
 class EventSource : public fbl::RefCounted<EventSource> {
 public:
-    // TODO(johngro) : Remove this once users have been updated
-    class Owner : public fbl::RefCounted<Owner> {
-    protected:
-        friend class fbl::RefPtr<Owner>;
-        friend class Channel;
-
-        Owner();
-        virtual ~Owner();
-
-        void ShutdownDispatcherChannels();
-
-        // ProcessChannel
-        //
-        // Called by the thread pool infrastructure to notify an owner that
-        // there is a message pending on the channel.  Returning any error at
-        // this point in time will cause the channel to be deactivated and
-        // be released.
-        virtual zx_status_t ProcessChannel(Channel* channel) { return ZX_ERR_INTERNAL; }
-
-        // NotifyChannelDeactivated.
-        //
-        // Called by the thread pool infrastructure to notify an owner that a
-        // channel is has become deactivated.
-        virtual void NotifyChannelDeactivated(const Channel& channel) { }
-
-    private:
-        fbl::RefPtr<ExecutionDomain> default_domain_;
-    };
-
     zx_signals_t process_signal_mask()    const { return process_signal_mask_; }
-    uintptr_t    owner_ctx()              const { return owner_ctx_; }
     bool         InExecutionDomain()      const { return sources_node_state_.InContainer(); }
     bool         InPendingList()          const { return pending_work_node_state_.InContainer(); }
 
@@ -90,7 +60,7 @@ protected:
         Dispatching,
     };
 
-    EventSource(zx_signals_t process_signal_mask, uintptr_t owner_ctx_);
+    EventSource(zx_signals_t process_signal_mask);
     virtual ~EventSource();
 
     bool is_active() const __TA_REQUIRES(obj_lock_) { return domain_ != nullptr; }
@@ -113,7 +83,7 @@ protected:
 
     virtual void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) = 0;
 
-    mutable fbl::Mutex           obj_lock_;
+    fbl::Mutex                   obj_lock_;
     fbl::RefPtr<ExecutionDomain> domain_  __TA_GUARDED(obj_lock_);
     fbl::RefPtr<ThreadPool>      thread_pool_  __TA_GUARDED(obj_lock_);
     zx::handle                   handle_  __TA_GUARDED(obj_lock_);
@@ -139,7 +109,6 @@ private:
     };
 
     const zx_signals_t process_signal_mask_;
-    const uintptr_t    owner_ctx_;
 
     // Node state for existing on the domain's sources_ list.
     fbl::DoublyLinkedListNodeState<fbl::RefPtr<EventSource>> sources_node_state_;

@@ -12,18 +12,12 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/slab_allocator.h>
 #include <unistd.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-event-source.h"
 
 namespace audio {
 namespace dispatcher {
-
-class Channel;
-using ChannelAllocTraits =
-    fbl::StaticSlabAllocatorTraits<fbl::RefPtr<Channel>>;
-using ChannelAllocator = fbl::SlabAllocator<ChannelAllocTraits>;
 
 // class Channel
 //
@@ -101,8 +95,7 @@ using ChannelAllocator = fbl::SlabAllocator<ChannelAllocTraits>;
 //                       fbl::move(dhandler));
 // }
 //
-class Channel : public EventSource,
-                public fbl::SlabAllocated<ChannelAllocTraits> {
+class Channel : public EventSource {
 public:
     // Definitions of process and deactivation handlers.
     static constexpr size_t MAX_HANDLER_CAPTURE_SIZE = sizeof(void*) * 2;
@@ -111,9 +104,7 @@ public:
     using ChannelClosedHandler =
         fbl::InlineFunction<void(const Channel*), MAX_HANDLER_CAPTURE_SIZE>;
 
-    static fbl::RefPtr<Channel> Create(uintptr_t owner_ctx = 0) {
-        return ChannelAllocator::New(owner_ctx);
-    }
+    static fbl::RefPtr<Channel> Create();
 
     // Activate a channel, creating the channel pair and retuning the client's
     // channel endpoint in the process.
@@ -138,40 +129,23 @@ public:
 
     void Deactivate() __TA_EXCLUDES(obj_lock_) override;
 
-    // Depricated version of activate which register handlers that will target
-    // the Owner vtable.  Clients should be switching to version of activate
-    // which use the fbl::function form of registering handlers.  Once this has
-    // been completed for all clients, these versions will be removed.
-    zx_status_t Activate(fbl::RefPtr<Owner> owner, zx::channel* client_channel_out)
-        __TA_EXCLUDES(obj_lock_);
-
-    zx_status_t Activate(fbl::RefPtr<Owner> owner, zx::channel channel)
-        __TA_EXCLUDES(obj_lock_);
-
-    // Depricated version of deactivate
-    void Deactivate(bool do_notify) { Deactivate(); }
-
     zx_status_t Read(void* buf,
                      uint32_t buf_len,
                      uint32_t* bytes_read_out,
-                     zx::handle* rxed_handle = nullptr) const
+                     zx::handle* rxed_handle = nullptr)
         __TA_EXCLUDES(obj_lock_);
 
     zx_status_t Write(const void* buf,
                       uint32_t buf_len,
-                      zx::handle&& tx_handle = zx::handle()) const
+                      zx::handle&& tx_handle = zx::handle())
         __TA_EXCLUDES(obj_lock_);
 
 protected:
     void Dispatch(ExecutionDomain* domain) __TA_EXCLUDES(obj_lock_) override;
 
 private:
-    friend ChannelAllocator;
+    Channel() : EventSource(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) { }
     friend class fbl::RefPtr<Channel>;
-
-    Channel(uintptr_t owner_ctx = 0)
-        : EventSource(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                      owner_ctx) { }
 
     zx_status_t ActivateLocked(zx::channel channel, fbl::RefPtr<ExecutionDomain> domain)
         __TA_REQUIRES(obj_lock_);
@@ -181,12 +155,5 @@ private:
 };
 
 }  // namespace dispatcher
-
-// TODO(johngro) : remove these when existing API clients have been updated.
-using DispatcherChannel = ::audio::dispatcher::Channel;
-using DispatcherChannelAllocator = audio::dispatcher::ChannelAllocator;
-
 }  // namespace audio
-
-FWD_DECL_STATIC_SLAB_ALLOCATOR(::audio::dispatcher::ChannelAllocTraits);
 
