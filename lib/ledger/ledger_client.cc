@@ -206,10 +206,11 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
   void MergeDone(FlowToken flow) {
     if (--merge_count_ == 0) {
-      result_provider_->Done([flow](ledger::Status status) {
+      result_provider_->Done([this, flow](ledger::Status status) {
           if (status != ledger::Status::OK) {
             FTL_LOG(ERROR) << "ResultProvider.Done() " << status;
           }
+          impl_->NotifyWatchers();
         });
     }
   }
@@ -452,6 +453,12 @@ void LedgerClient::ConflictResolverImpl::GetPageClients(std::vector<PageClient*>
 
   FTL_CHECK(i != ledger_client_->pages_.end());
   *page_clients = (*i)->clients;
+}
+
+void LedgerClient::ConflictResolverImpl::NotifyWatchers() const {
+  for (auto& watcher : ledger_client_->watchers_) {
+    watcher();
+  }
 }
 
 }  // namespace modular

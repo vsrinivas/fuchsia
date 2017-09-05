@@ -72,6 +72,11 @@ class PageClientTest : public TestWithMessageLoop {
                                             ASSERT_TRUE(false);
                                           }));
 
+    // We only handle one conflict resolution per test case for now.
+    ledger_client_->add_watcher([this] {
+        resolved_ = true;
+      });
+
     // TODO(mesch): Registration order matters for overlapping prefixes. This
     // should not be like that.
     page_client_a_.reset(new PageClientImpl(ledger_client_.get(), page_id_.Clone(), "a/"));
@@ -124,26 +129,47 @@ class PageClientTest : public TestWithMessageLoop {
     };
   }
 
+  void Finish() {
+    finished_ = true;
+  }
+
   // Continues to run until all page watcher notifications are delivered. Uses
   // the behavior of ledger that a transaction does not start before all watcher
   // notifications are delivered and the watchers have returned. This must be
-  // called only when all transactions have finished, if there are any.
-  void Finish() {
+  // called only when all transactions have finished, if there are any, and
+  // after conflicts created by these transactions are merged. Otherwise conflit
+  // resolution is forced to be abandoned and unmerged values are sent to
+  // watchers.
+  void NotifyWatchers() {
     page_client_->page()->StartTransaction([this](ledger::Status) {
         page_->StartTransaction([this](ledger::Status) {
             page_client_->page()->Rollback([this](ledger::Status) {
                 page_->Rollback([this](ledger::Status) {
-                    finished_ = true;
+                    notify_done_ = true;
                   });
               });
           });
       });
   }
 
-  // Runs the message loop until after Finish() completes.
+  // Runs the message loop until after Finish() completes, then after the merge
+  // condition is true, and then again until after all watchers are notified.
   void Run() {
     RunLoopUntil([this] {
-        return finished_;
+        // First wait for Finish() to be called.
+        if (!finished_) {
+          return false;
+        }
+
+        // Then wait for conflict resolution to complete.
+        if (!notify_pending_ && resolved_) {
+          notify_pending_ = true;
+          NotifyWatchers();
+          return false;
+        }
+
+        // Finally, wait for watchers to be notified.
+        return notify_done_;
       });
   }
 
@@ -167,6 +193,9 @@ class PageClientTest : public TestWithMessageLoop {
 
   // Used by Finish() and Run();
   bool finished_{};
+  bool resolved_{};
+  bool notify_pending_{};
+  bool notify_done_{};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
 };
@@ -209,13 +238,13 @@ TEST_F(PageClientTest, ConcurrentWrite) {
 
 
 TEST_F(PageClientTest, ConflictWrite) {
-  page1()->StartTransaction([this](ledger::Status status) {
+  page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
-      page1()->Put(to_array("key"), to_array("value1"), [this](ledger::Status status) {
+      page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
           EXPECT_EQ(ledger::Status::OK, status);
-          page2()->StartTransaction([this](ledger::Status status) {
+          page1()->StartTransaction([this](ledger::Status status) {
               EXPECT_EQ(ledger::Status::OK, status);
-              page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
+              page1()->Put(to_array("key"), to_array("value1"), [this](ledger::Status status) {
                   EXPECT_EQ(ledger::Status::OK, status);
                   page2()->Commit([this](ledger::Status status) {
                       EXPECT_EQ(ledger::Status::OK, status);
@@ -235,14 +264,14 @@ TEST_F(PageClientTest, ConflictWrite) {
   EXPECT_EQ("value3", page_client()->value("key"));
 }
 
-TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
-  page1()->StartTransaction([this](ledger::Status status) {
+TEST_F(PageClientTest, ConflictPrefixWrite) {
+  page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
-      page1()->Put(to_array("a/key"), to_array("value1"), [this](ledger::Status status) {
+      page2()->Put(to_array("a/key"), to_array("value2"), [this](ledger::Status status) {
           EXPECT_EQ(ledger::Status::OK, status);
-          page2()->StartTransaction([this](ledger::Status status) {
+          page1()->StartTransaction([this](ledger::Status status) {
               EXPECT_EQ(ledger::Status::OK, status);
-              page2()->Put(to_array("a/key"), to_array("value2"), [this](ledger::Status status) {
+              page1()->Put(to_array("a/key"), to_array("value1"), [this](ledger::Status status) {
                   EXPECT_EQ(ledger::Status::OK, status);
                   page2()->Commit([this](ledger::Status status) {
                       EXPECT_EQ(ledger::Status::OK, status);
@@ -264,15 +293,15 @@ TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
 }
 
 TEST_F(PageClientTest, ConcurrentConflictWrite) {
-  page1()->StartTransaction([this](ledger::Status status) {
+  page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
-      page1()->Put(to_array("key1"), to_array("value1"), log("Put 1 key1"));
-      page1()->Put(to_array("key"), to_array("value1"), [this](ledger::Status status) {
+      page2()->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
+      page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
           EXPECT_EQ(ledger::Status::OK, status);
-          page2()->StartTransaction([this](ledger::Status status) {
+          page1()->StartTransaction([this](ledger::Status status) {
               EXPECT_EQ(ledger::Status::OK, status);
-              page2()->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
-              page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
+              page1()->Put(to_array("key1"), to_array("value1"), log("Put 1 key1"));
+              page1()->Put(to_array("key"), to_array("value1"), [this](ledger::Status status) {
                   EXPECT_EQ(ledger::Status::OK, status);
                   page2()->Commit([this](ledger::Status status) {
                       EXPECT_EQ(ledger::Status::OK, status);

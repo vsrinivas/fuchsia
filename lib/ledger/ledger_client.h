@@ -5,8 +5,9 @@
 #ifndef APPS_MODULAR_LIB_LEDGER_LEDGER_CLIENT_H_
 #define APPS_MODULAR_LIB_LEDGER_LEDGER_CLIENT_H_
 
-#include <vector>
+#include <functional>
 #include <memory>
+#include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
@@ -31,6 +32,12 @@ class LedgerClient : ledger::ConflictResolverFactory {
   ~LedgerClient() override;
 
   ledger::Ledger* ledger() const { return ledger_.get(); }
+
+  // A callback that is invoked every time one conflict resolution completes.
+  // Used only for testing so far.
+  void add_watcher(std::function<void()> watcher) {
+    watchers_.emplace_back(std::move(watcher));
+  }
 
  private:
   friend class PageClient;
@@ -67,6 +74,9 @@ class LedgerClient : ledger::ConflictResolverFactory {
   // to share a page connection.
   std::vector<std::unique_ptr<PageEntry>> pages_;
 
+  // Notified whenever a conflict resolution cycle finishes.
+  std::vector<std::function<void()>> watchers_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerClient);
 };
 
@@ -90,6 +100,8 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
                    result_provider) override;
 
   void GetPageClients(std::vector<PageClient*>* page_clients);
+
+  void NotifyWatchers() const;
 
   LedgerClient* const ledger_client_;
   const LedgerPageId page_id_;
