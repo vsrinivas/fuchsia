@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <trace-provider/provider.h>
+
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/view_framework/view_provider_service.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "garnet/bin/moterm/history.h"
 #include "garnet/bin/moterm/ledger_helpers.h"
 #include "garnet/bin/moterm/moterm_params.h"
@@ -29,8 +30,6 @@ class App : public modular::Module {
                                  return MakeView(std::move(view_context));
                                }),
         module_binding_(this) {
-    tracing::InitializeTracer(application_context_.get(), {});
-
     application_context_->outgoing_services()->AddService<modular::Module>(
         [this](fidl::InterfaceRequest<modular::Module> request) {
           FTL_DCHECK(!module_binding_.is_bound());
@@ -116,6 +115,8 @@ int main(int argc, const char** argv) {
   }
 
   mtl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
+
   moterm::App app(std::move(params));
   loop.Run();
   return 0;
