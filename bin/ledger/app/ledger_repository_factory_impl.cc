@@ -4,8 +4,8 @@
 
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
-#include "apps/ledger/src/app/auth_provider_impl.h"
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
@@ -25,11 +25,12 @@ constexpr ftl::StringView kContentPath = "/content";
 constexpr ftl::StringView kStagingPath = "/staging";
 
 namespace {
-cloud_sync::UserConfig GetUserConfig(Environment* environment,
-                                     const FirebaseConfigPtr& firebase_config,
-                                     ftl::StringView user_id,
-                                     ftl::StringView user_directory,
-                                     cloud_sync::AuthProvider* auth_provider) {
+cloud_sync::UserConfig GetUserConfig(
+    Environment* environment,
+    const FirebaseConfigPtr& firebase_config,
+    ftl::StringView user_id,
+    ftl::StringView user_directory,
+    auth_provider::AuthProvider* auth_provider) {
   FTL_DCHECK(firebase_config);
   cloud_sync::UserConfig user_config;
   user_config.server_id = firebase_config->server_id.get();
@@ -77,7 +78,7 @@ bool GetRepositoryName(const fidl::String& repository_path, std::string* name) {
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
   explicit LedgerRepositoryContainer(
-      std::unique_ptr<cloud_sync::AuthProvider> auth_provider)
+      std::unique_ptr<auth_provider::AuthProvider> auth_provider)
       : status_(Status::OK), auth_provider_(std::move(auth_provider)) {}
   ~LedgerRepositoryContainer() {
     for (const auto& request : requests_) {
@@ -151,7 +152,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  private:
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_;
-  std::unique_ptr<cloud_sync::AuthProvider> auth_provider_;
+  std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
   std::vector<std::pair<fidl::InterfaceRequest<LedgerRepository>,
                         std::function<void(Status)>>>
       requests_;
@@ -237,11 +238,11 @@ void LedgerRepositoryFactoryImpl::GetRepository(
         repositories_.erase(find_repository);
       });
 
-  auto auth_provider = std::make_unique<AuthProviderImpl>(
+  auto auth_provider = std::make_unique<auth_provider::AuthProviderImpl>(
       environment_->main_runner(), firebase_config->api_key,
       std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
-  cloud_sync::AuthProvider* auth_provider_ptr = auth_provider.get();
+  auth_provider::AuthProvider* auth_provider_ptr = auth_provider.get();
 
   auto ret =
       repositories_.emplace(std::piecewise_construct,
@@ -253,8 +254,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   auto request = auth_provider_ptr->GetFirebaseUserId(ftl::MakeCopyable([
     this, repository_information, firebase_config = std::move(firebase_config),
     auth_provider_ptr, container
-  ](cloud_sync::AuthStatus auth_status, std::string user_id) {
-    if (auth_status != cloud_sync::AuthStatus::OK) {
+  ](auth_provider::AuthStatus auth_status, std::string user_id) {
+    if (auth_status != auth_provider::AuthStatus::OK) {
       FTL_LOG(ERROR) << "Failed to retrieve Firebase user ID from the token "
                      << " manager, shutting down the repository.";
       container->SetRepository(Status::AUTHENTICATION_ERROR, nullptr);

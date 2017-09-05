@@ -6,10 +6,10 @@
 
 #include <utility>
 
+#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/backoff/test/test_backoff.h"
 #include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
-#include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "lib/ftl/files/file.h"
@@ -106,7 +106,7 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
   files::ScopedTempDir tmp_dir;
   ledger::FakeNetworkService network_service_;
   ledger::Environment environment_;
-  test::TestAuthProvider auth_provider_;
+  auth_provider::test::TestAuthProvider auth_provider_;
   std::unique_ptr<UserSyncImpl> user_sync_;
   TestSyncStateWatcher sync_state_watcher_;
   TestCloudDeviceSet* cloud_device_set_;

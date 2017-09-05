@@ -57,6 +57,7 @@ source_set("unittests") {
 
   deps = [
     ":impl",
+    "//apps/ledger/src/auth_provider/test",
     "//apps/ledger/src/backoff/test",
     "//apps/ledger/src/cloud_provider/test",
     "//apps/ledger/src/cloud_sync/test",

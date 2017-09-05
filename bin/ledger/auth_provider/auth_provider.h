@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_AUTH_PROVIDER_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_AUTH_PROVIDER_H_
+#ifndef APPS_LEDGER_SRC_AUTH_PROVIDER_AUTH_PROVIDER_H_
+#define APPS_LEDGER_SRC_AUTH_PROVIDER_AUTH_PROVIDER_H_
 
 #include <functional>
 #include <string>
@@ -11,7 +11,7 @@
 #include "apps/ledger/src/callback/cancellable.h"
 #include "lib/ftl/macros.h"
 
-namespace cloud_sync {
+namespace auth_provider {
 
 enum class AuthStatus {
   OK,
@@ -40,6 +40,6 @@ class AuthProvider {
   FTL_DISALLOW_COPY_AND_ASSIGN(AuthProvider);
 };
 
-}  // namespace cloud_sync
+}  // namespace auth_provider
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_AUTH_PROVIDER_H_
+#endif  // APPS_LEDGER_SRC_AUTH_PROVIDER_AUTH_PROVIDER_H_

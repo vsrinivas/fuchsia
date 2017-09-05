@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "apps/ledger/src/app/auth_provider_impl.h"
+#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
 
@@ -28,7 +28,7 @@ EraseRemoteRepositoryOperation::EraseRemoteRepositoryOperation(
     FTL_DCHECK(on_done_);
     on_done_(false);
   });
-  auth_provider_ = std::make_unique<AuthProviderImpl>(
+  auth_provider_ = std::make_unique<auth_provider::AuthProviderImpl>(
       task_runner, api_key_, std::move(token_provider),
       std::make_unique<backoff::ExponentialBackoff>());
 }
@@ -48,8 +48,8 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
 
   auto user_id_request =
       auth_provider_->GetFirebaseUserId(
-          [this](cloud_sync::AuthStatus auth_status, std::string user_id) {
-            if (auth_status != cloud_sync::AuthStatus::OK) {
+          [this](auth_provider::AuthStatus auth_status, std::string user_id) {
+            if (auth_status != auth_provider::AuthStatus::OK) {
               FTL_LOG(ERROR)
                   << "Failed to retrieve Firebase user id from token provider.";
               on_done_(false);
@@ -57,9 +57,9 @@ void EraseRemoteRepositoryOperation::Start(std::function<void(bool)> on_done) {
             }
             user_id_ = std::move(user_id);
             auto token_request = auth_provider_->GetFirebaseToken(
-                [this](cloud_sync::AuthStatus auth_status,
+                [this](auth_provider::AuthStatus auth_status,
                        std::string auth_token) {
-                  if (auth_status != cloud_sync::AuthStatus::OK) {
+                  if (auth_status != auth_provider::AuthStatus::OK) {
                     FTL_LOG(ERROR) << "Failed to retrieve the auth token to "
                                       "clean the remote state.";
                     on_done_(false);

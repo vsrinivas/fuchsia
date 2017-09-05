@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <utility>
 
+#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
-#include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -228,7 +228,7 @@ class BatchUploadTest : public ::test::TestWithMessageLoop {
  protected:
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
-  test::TestAuthProvider auth_provider_;
+  auth_provider::test::TestAuthProvider auth_provider_;
 
   unsigned int done_calls_ = 0u;
   unsigned int error_calls_ = 0u;
@@ -369,7 +369,7 @@ TEST_F(BatchUploadTest, AuthError) {
   storage_.unsynced_objects_to_return["obj_id2"] =
       std::make_unique<TestObject>("obj_id2", "obj_data2");
 
-  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
   auth_provider_.token_to_return = "";
 
   auto batch_upload = MakeBatchUpload(std::move(commits));

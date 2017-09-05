@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
-#define APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
+#ifndef APPS_LEDGER_SRC_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
+#define APPS_LEDGER_SRC_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_
 
 #include <functional>
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 
-namespace ledger {
+namespace auth_provider {
 
 // Source of the auth information for cloud sync to use, implemented using the
 // system token provider.
@@ -26,7 +26,7 @@ namespace ledger {
 // benchmarks).
 //
 // This is currently a placeholder that always returns an empty token.
-class AuthProviderImpl : public cloud_sync::AuthProvider {
+class AuthProviderImpl : public AuthProvider {
  public:
   AuthProviderImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                    std::string api_key,
@@ -35,17 +35,17 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
 
   // AuthProvider:
   ftl::RefPtr<callback::Cancellable> GetFirebaseToken(
-      std::function<void(cloud_sync::AuthStatus, std::string)> callback)
+      std::function<void(auth_provider::AuthStatus, std::string)> callback)
       override;
 
   ftl::RefPtr<callback::Cancellable> GetFirebaseUserId(
-      std::function<void(cloud_sync::AuthStatus, std::string)> callback)
+      std::function<void(auth_provider::AuthStatus, std::string)> callback)
       override;
 
  private:
   // Retrieves the Firebase token from the token provider, transparently
   // retrying the request until success.
-  void GetToken(std::function<void(cloud_sync::AuthStatus,
+  void GetToken(std::function<void(auth_provider::AuthStatus,
                                    modular::auth::FirebaseTokenPtr)> callback);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
@@ -57,6 +57,6 @@ class AuthProviderImpl : public cloud_sync::AuthProvider {
   ftl::WeakPtrFactory<AuthProviderImpl> weak_factory_;
 };
 
-}  // namespace ledger
+}  // namespace auth_provider
 
-#endif  // APPS_LEDGER_SRC_APP_AUTH_PROVIDER_IMPL_H_
+#endif  // APPS_LEDGER_SRC_AUTH_PROVIDER_AUTH_PROVIDER_IMPL_H_

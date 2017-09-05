@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_TEST_TEST_AUTH_PROVIDER_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_TEST_TEST_AUTH_PROVIDER_H_
+#ifndef APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
+#define APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_
 
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
+#include "apps/ledger/src/auth_provider/auth_provider.h"
 
 #include "lib/ftl/tasks/task_runner.h"
 
-namespace cloud_sync {
+namespace auth_provider {
 namespace test {
 
 class TestAuthProvider : public AuthProvider {
@@ -34,6 +34,6 @@ class TestAuthProvider : public AuthProvider {
 };
 
 }  // namespace test
-}  // namespace cloud_sync
+}  // namespace auth_provider
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_TEST_TEST_AUTH_PROVIDER_H_
+#endif  // APPS_LEDGER_SRC_AUTH_PROVIDER_TEST_TEST_AUTH_PROVIDER_H_

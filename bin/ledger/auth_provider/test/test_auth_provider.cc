@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
+#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 
 #include <utility>
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/ftl/functional/make_copyable.h"
 
-namespace cloud_sync {
+namespace auth_provider {
 namespace test {
 
 TestAuthProvider::TestAuthProvider(ftl::RefPtr<ftl::TaskRunner> task_runner)
@@ -36,4 +36,4 @@ ftl::RefPtr<callback::Cancellable> TestAuthProvider::GetFirebaseUserId(
 }
 
 }  // namespace test
-}  // namespace cloud_sync
+}  // namespace auth_provider

@@ -9,11 +9,11 @@
 #include <utility>
 #include <vector>
 
+#include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/constants.h"
-#include "apps/ledger/src/cloud_sync/test/test_auth_provider.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
@@ -407,7 +407,7 @@ class PageSyncImplTest : public ::test::TestWithMessageLoop {
 
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
-  test::TestAuthProvider auth_provider_;
+  auth_provider::test::TestAuthProvider auth_provider_;
   int backoff_get_next_calls_ = 0;
   TestSyncStateWatcher* state_watcher_;
   std::unique_ptr<PageSyncImpl> page_sync_;
@@ -776,7 +776,7 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
 // Verifies that if auth provider fails to provide the auth token, the error
 // callback is called.
 TEST_F(PageSyncImplTest, DownloadBacklogAuthError) {
-  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
   auth_provider_.token_to_return = "";
   EXPECT_EQ(0, error_callback_calls_);
   StartPageSync();
@@ -825,7 +825,7 @@ TEST_F(PageSyncImplTest, RegisterWatcher) {
 // Verifies that if auth provider fails to provide the auth token, the watcher
 // is not set and the error callback is called.
 TEST_F(PageSyncImplTest, RegisterWatcherAuthError) {
-  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
   auth_provider_.token_to_return = "";
   EXPECT_EQ(0, error_callback_calls_);
   StartPageSync();
@@ -1042,7 +1042,7 @@ TEST_F(PageSyncImplTest, GetObjectAuthError) {
   StartPageSync();
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  auth_provider_.status_to_return = AuthStatus::ERROR;
+  auth_provider_.status_to_return = auth_provider::AuthStatus::ERROR;
   auth_provider_.token_to_return = "";
   storage::Status status;
   uint64_t size;

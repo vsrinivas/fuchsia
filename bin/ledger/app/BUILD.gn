@@ -31,8 +31,6 @@ executable("app") {
 
 source_set("lib") {
   sources = [
-    "auth_provider_impl.cc",
-    "auth_provider_impl.h",
     "branch_tracker.cc",
     "branch_tracker.h",
     "constants.cc",
@@ -113,7 +111,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "auth_provider_impl_unittest.cc",
     "ledger_manager_unittest.cc",
     "merging/common_ancestor_unittest.cc",
     "merging/conflict_resolver_client_unittest.cc",

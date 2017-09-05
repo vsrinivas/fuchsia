@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/auth_provider_impl.h"
+#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 
 #include <utility>
 
@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"
 
-namespace ledger {
+namespace auth_provider {
 
 namespace {
 
@@ -98,19 +98,19 @@ class AuthProviderImplTest : public test::TestWithMessageLoop {
 TEST_F(AuthProviderImplTest, GetFirebaseToken) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
-  cloud_sync::AuthStatus auth_status;
+  AuthStatus auth_status;
   std::string firebase_token;
   auth_provider_.GetFirebaseToken(
       callback::Capture(MakeQuitTask(), &auth_status, &firebase_token));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("this is a token", firebase_token);
 }
 
 TEST_F(AuthProviderImplTest, GetFirebaseTokenRetryOnError) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
-  cloud_sync::AuthStatus auth_status;
+  AuthStatus auth_status;
   std::string firebase_token;
   token_provider_.error_to_return->status =
       modular::auth::Status::NETWORK_ERROR;
@@ -131,7 +131,7 @@ TEST_F(AuthProviderImplTest, GetFirebaseTokenRetryOnError) {
   token_provider_.error_to_return->status = modular::auth::Status::OK;
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
-  EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("this is a token", firebase_token);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
@@ -140,19 +140,19 @@ TEST_F(AuthProviderImplTest, GetFirebaseTokenRetryOnError) {
 TEST_F(AuthProviderImplTest, GetFirebaseUserId) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
-  cloud_sync::AuthStatus auth_status;
+  AuthStatus auth_status;
   std::string firebase_user_id;
   auth_provider_.GetFirebaseUserId(
       callback::Capture(MakeQuitTask(), &auth_status, &firebase_user_id));
   EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("some id", firebase_user_id);
 }
 
 TEST_F(AuthProviderImplTest, GetFirebaseUserIdRetryOnError) {
   token_provider_.Set("this is a token", "some id", "me@example.com");
 
-  cloud_sync::AuthStatus auth_status;
+  AuthStatus auth_status;
   std::string firebase_id;
   token_provider_.error_to_return->status =
       modular::auth::Status::NETWORK_ERROR;
@@ -173,7 +173,7 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserIdRetryOnError) {
   token_provider_.error_to_return->status = modular::auth::Status::OK;
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
-  EXPECT_EQ(cloud_sync::AuthStatus::OK, auth_status);
+  EXPECT_EQ(AuthStatus::OK, auth_status);
   EXPECT_EQ("some id", firebase_id);
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(1, backoff_->reset_count);
@@ -181,4 +181,4 @@ TEST_F(AuthProviderImplTest, GetFirebaseUserIdRetryOnError) {
 
 }  // namespace
 
-}  // namespace ledger
+}  // namespace auth_provider

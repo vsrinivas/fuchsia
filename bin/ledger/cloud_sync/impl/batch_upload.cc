@@ -19,7 +19,7 @@ namespace cloud_sync {
 BatchUpload::BatchUpload(
     storage::PageStorage* storage,
     cloud_provider::CloudProvider* cloud_provider,
-    AuthProvider* auth_provider,
+    auth_provider::AuthProvider* auth_provider,
     std::vector<std::unique_ptr<const storage::Commit>> commits,
     ftl::Closure on_done,
     ftl::Closure on_error,
@@ -207,8 +207,8 @@ void BatchUpload::UploadCommits() {
 void BatchUpload::RefreshAuthToken(ftl::Closure on_refreshed) {
   auth_token_requests_.emplace(auth_provider_->GetFirebaseToken([
     this, on_refreshed = std::move(on_refreshed)
-  ](AuthStatus auth_status, std::string auth_token) {
-    if (auth_status != AuthStatus::OK) {
+  ](auth_provider::AuthStatus auth_status, std::string auth_token) {
+    if (auth_status != auth_provider::AuthStatus::OK) {
       FTL_LOG(ERROR) << "Failed to retrieve the auth token for upload.";
       errored_ = true;
       on_error_();

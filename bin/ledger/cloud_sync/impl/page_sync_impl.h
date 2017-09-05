@@ -8,13 +8,13 @@
 #include <functional>
 #include <queue>
 
+#include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 #include "apps/ledger/src/cloud_sync/impl/batch_upload.h"
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/cloud_sync/public/sync_state_watcher.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
@@ -60,7 +60,7 @@ class PageSyncImpl : public PageSync,
   PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
-               AuthProvider* auth_provider,
+               auth_provider::AuthProvider* auth_provider,
                std::unique_ptr<backoff::Backoff> backoff,
                ftl::Closure on_error,
                std::unique_ptr<SyncStateWatcher> ledger_watcher = nullptr);
@@ -153,7 +153,7 @@ class PageSyncImpl : public PageSync,
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
-  AuthProvider* const auth_provider_;
+  auth_provider::AuthProvider* const auth_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const ftl::Closure on_error_;
   const std::string log_prefix_;

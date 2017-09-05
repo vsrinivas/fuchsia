@@ -20,7 +20,7 @@ namespace cloud_sync {
 PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                            storage::PageStorage* storage,
                            cloud_provider::CloudProvider* cloud_provider,
-                           AuthProvider* auth_provider,
+                           auth_provider::AuthProvider* auth_provider,
                            std::unique_ptr<backoff::Backoff> backoff,
                            ftl::Closure on_error,
                            std::unique_ptr<SyncStateWatcher> ledger_watcher)
@@ -502,8 +502,8 @@ void PageSyncImpl::GetAuthToken(std::function<void(std::string)> on_token_ready,
                                 ftl::Closure on_failed) {
   auto request = auth_provider_->GetFirebaseToken([
     on_token_ready = std::move(on_token_ready), on_failed = std::move(on_failed)
-  ](AuthStatus auth_status, std::string auth_token) {
-    if (auth_status != AuthStatus::OK) {
+  ](auth_provider::AuthStatus auth_status, std::string auth_token) {
+    if (auth_status != auth_provider::AuthStatus::OK) {
       on_failed();
       return;
     }

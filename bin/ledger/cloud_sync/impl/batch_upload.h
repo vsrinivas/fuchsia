@@ -9,9 +9,9 @@
 #include <memory>
 #include <queue>
 
+#include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
@@ -43,7 +43,7 @@ class BatchUpload {
  public:
   BatchUpload(storage::PageStorage* storage,
               cloud_provider::CloudProvider* cloud_provider,
-              AuthProvider* auth_provider,
+              auth_provider::AuthProvider* auth_provider,
               std::vector<std::unique_ptr<const storage::Commit>> commits,
               ftl::Closure on_done,
               ftl::Closure on_error,
@@ -76,7 +76,7 @@ class BatchUpload {
 
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
-  AuthProvider* const auth_provider_;
+  auth_provider::AuthProvider* const auth_provider_;
   std::vector<std::unique_ptr<const storage::Commit>> commits_;
   ftl::Closure on_done_;
   ftl::Closure on_error_;

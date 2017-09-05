@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/callback/cancellable.h"
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "lib/ftl/functional/closure.h"
@@ -46,7 +46,7 @@ class EraseRemoteRepositoryOperation {
   std::string repository_path_;
   std::string server_id_;
   std::string api_key_;
-  std::unique_ptr<cloud_sync::AuthProvider> auth_provider_;
+  std::unique_ptr<auth_provider::AuthProvider> auth_provider_;
 
   std::function<void(bool)> on_done_;
   std::string user_id_;

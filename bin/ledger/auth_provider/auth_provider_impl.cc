@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/auth_provider_impl.h"
+#include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 
 #include <utility>
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/ftl/functional/make_copyable.h"
 
-namespace ledger {
+namespace auth_provider {
 
 AuthProviderImpl::AuthProviderImpl(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
@@ -23,7 +23,7 @@ AuthProviderImpl::AuthProviderImpl(
       weak_factory_(this) {}
 
 ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
-    std::function<void(cloud_sync::AuthStatus, std::string)> callback) {
+    std::function<void(auth_provider::AuthStatus, std::string)> callback) {
   if (api_key_.empty()) {
     FTL_LOG(WARNING) << "No Firebase API key provided. Connection to Firebase "
                         "may be unauthenticated.";
@@ -35,7 +35,7 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseToken(
 }
 
 ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
-    std::function<void(cloud_sync::AuthStatus, std::string)> callback) {
+    std::function<void(auth_provider::AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
   GetToken([callback = cancellable->WrapCallback(callback)](
       auto status, auto token) { callback(status, token->local_id); });
@@ -43,8 +43,8 @@ ftl::RefPtr<callback::Cancellable> AuthProviderImpl::GetFirebaseUserId(
 }
 
 void AuthProviderImpl::GetToken(
-    std::function<void(cloud_sync::AuthStatus, modular::auth::FirebaseTokenPtr)>
-        callback) {
+    std::function<void(auth_provider::AuthStatus,
+                       modular::auth::FirebaseTokenPtr)> callback) {
   token_provider_->GetFirebaseAuthToken(
       api_key_, [ this, callback = std::move(callback) ](
                     modular::auth::FirebaseTokenPtr token,
@@ -76,8 +76,8 @@ void AuthProviderImpl::GetToken(
         }
 
         backoff_->Reset();
-        callback(cloud_sync::AuthStatus::OK, std::move(token));
+        callback(auth_provider::AuthStatus::OK, std::move(token));
       });
 }
 
-}  // namespace ledger
+}  // namespace auth_provider

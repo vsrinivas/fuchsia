@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/cloud_sync/public/auth_provider.h"
+#include "apps/ledger/src/auth_provider/auth_provider.h"
 #include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
 
 namespace cloud_sync {
@@ -22,7 +22,7 @@ struct UserConfig {
   // The directory for the user persistent data.
   std::string user_directory;
   // The provider of the auth data for the user.
-  AuthProvider* auth_provider;
+  auth_provider::AuthProvider* auth_provider;
   // Guard which checks that the cloud was not erased since the previous sync.
   std::unique_ptr<CloudDeviceSet> cloud_device_set;
 };
