@@ -118,6 +118,27 @@ func (ni *netstackImpl) GetNodeName() (out string, err error) {
 	return nodename, nil
 }
 
+func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, err error) {
+	// Pure reading of statistics. No critical section. No lock is needed.
+	if _, ok := ns.ifStates[tcpip.NICID(nicid)]; !ok {
+		return nsfidl.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
+	}
+
+	// Found the NIC.
+	// TODO (porce): Query the NIC to get stats.
+
+	// Fill up example stats.
+	stats = nsfidl.NetInterfaceStats{}
+	stats.UpSince = 1504135273 // August 30, 2017 at 11:21:24 PM GMT.
+
+	stats.RxPktsTotal = 1234
+	stats.RxBytesTotal = 9876
+
+	stats.TxPktsTotal = 23456
+	stats.TxBytesTotal = 1234567890
+	return stats, nil
+}
+
 type netstackDelegate struct {
 	stubs []*bindings.Stub
 }

@@ -12,8 +12,21 @@ enum Protocol {
   TCP,
 };
 
-// TODO: include other related stats. See
-// https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
+struct NetInterfaceStats {
+  // Placeholder for all statistics regarding the network interface,
+  // including, but not limited to traffic itself.
+
+  int64  up_since;  // Unix epoch.
+
+  // See network interface stats in Linux for future ideas:
+  // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
+  uint32 rx_pkts_total;
+  uint32 rx_bytes_total;
+
+  uint32 tx_pkts_total;
+  uint32 tx_bytes_total;
+};
+
 // https://linux.die.net/man/7/netdevice
 struct NetInterface {
   uint32 id;
@@ -46,4 +59,7 @@ interface Netstack {
 
   // Returns the netstack's node name.
   GetNodeName() => (string node_name);
+
+  // TODO (porce): Separate interfaces.
+  GetStats(uint32 nicid) => (NetInterfaceStats stats);
 };
