@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:io' as io;
+import 'dart:isolate';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
@@ -11,6 +12,7 @@ import 'package:apps.media.lib.flutter/media_player.dart';
 import 'package:apps.media.lib.flutter/media_player_controller.dart';
 import 'package:apps.media.services/media_metadata.fidl.dart';
 import 'package:apps.media.services/problem.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
 import 'package:flutter/material.dart';
@@ -24,19 +26,25 @@ final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 final MediaPlayerController _controller =
     new MediaPlayerController(_appContext.environmentServices);
 
-ModuleImpl _module;
+ModuleImpl _module = new ModuleImpl();
 
 void _log(String msg) {
   print('[media_player_flutter Module] $msg');
 }
 
 /// An implementation of the [Module] interface.
-class ModuleImpl extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
+class ModuleImpl implements Module, Lifecycle {
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
-  void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+  void bindModule(InterfaceRequest<Module> request) {
+    _moduleBinding.bind(this, request);
+  }
+
+  /// Bind an [InterfaceRequest] for a [Lifecycle] interface to this object.
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   /// Implementation of the Initialize(Story story, Link link) method.
@@ -48,12 +56,13 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::initialize call');
   }
 
-  /// Implementation of the Stop() => (); method.
+  /// Implementation of Lifecycle.Terminate method.
   @override
-  void stop(void callback()) {
-    _log('ModuleImpl::stop call');
-    callback();
-    _binding.close();
+  void terminate() {
+    _log('ModuleImpl::Terminate call');
+    _moduleBinding.close();
+    _lifecycleBinding.close();
+    Isolate.current.kill();
   }
 }
 
@@ -393,13 +402,18 @@ Future<Null> main() async {
   _log('Module started');
 
   /// Add [ModuleImpl] to this application's outgoing ServiceProvider.
-  _appContext.outgoingServices.addServiceForName(
+  _appContext.outgoingServices
+  ..addServiceForName(
     (InterfaceRequest<Module> request) {
       _log('Received binding request for Module');
-      _module ??= new ModuleImpl();
-      _module.bind(request);
+      _module.bindModule(request);
     },
     Module.serviceName,
+  )..addServiceForName(
+    (InterfaceRequest<Lifecycle> request) {
+      _module.bindLifecycle(request);
+    },
+    Lifecycle.serviceName,
   );
 
   await _readConfig();
