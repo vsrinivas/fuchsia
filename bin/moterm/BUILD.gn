@@ -27,6 +27,7 @@ executable("moterm") {
     "//application/lib/app",
     "//apps/ledger/services/public",
     "//apps/modular/services/component",
+    "//apps/modular/services/lifecycle",
     "//apps/modular/services/module",
     "//apps/modular/services/story",
     "//apps/mozart/lib/scenic:client",

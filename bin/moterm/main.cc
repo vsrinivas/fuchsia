@@ -5,6 +5,7 @@
 #include <trace-provider/provider.h>
 
 #include "apps/modular/services/component/component_context.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/story/story_marker.fidl.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
@@ -20,7 +21,7 @@
 
 namespace moterm {
 
-class App : public modular::Module {
+class App : modular::Module, modular::Lifecycle {
  public:
   App(MotermParams params)
       : params_(std::move(params)),
@@ -29,12 +30,18 @@ class App : public modular::Module {
                                [this](mozart::ViewContext view_context) {
                                  return MakeView(std::move(view_context));
                                }),
-        module_binding_(this) {
+        module_binding_(this),
+        lifecycle_binding_(this) {
     application_context_->outgoing_services()->AddService<modular::Module>(
         [this](fidl::InterfaceRequest<modular::Module> request) {
           FTL_DCHECK(!module_binding_.is_bound());
           module_binding_.Bind(std::move(request));
         });
+    application_context_->outgoing_services()->AddService<modular::Lifecycle>(
+      [this](fidl::InterfaceRequest<modular::Lifecycle> request) {
+        FTL_DCHECK(!lifecycle_binding_.is_bound());
+        lifecycle_binding_.Bind(std::move(request));
+      });
 
     // TODO(ppi): drop this once FW-97 is fixed or moterm no longer supports
     // view provider service.
@@ -48,7 +55,7 @@ class App : public modular::Module {
 
   ~App() {}
 
-  // modular::Module:
+  // |modular::Module|
   void Initialize(
       fidl::InterfaceHandle<modular::ModuleContext> module_context_handle,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
@@ -79,7 +86,10 @@ class App : public modular::Module {
     history_.Initialize(std::move(history_page));
   }
 
-  void Stop(const StopCallback& done) override { done(); }
+  // |modular::Lifecycle|
+  void Terminate() override {
+    mtl::MessageLoop::GetCurrent()->QuitNow();
+  }
 
  private:
   std::unique_ptr<moterm::MotermView> MakeView(
@@ -95,6 +105,7 @@ class App : public modular::Module {
   modular::StoryMarkerPtr story_marker_;
   mozart::ViewProviderService view_provider_service_;
   fidl::Binding<modular::Module> module_binding_;
+  fidl::Binding<modular::Lifecycle> lifecycle_binding_;
   // Ledger-backed store for terminal history.
   History history_;
 
