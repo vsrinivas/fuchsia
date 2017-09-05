@@ -85,7 +85,7 @@ class LedgerAppTest : public ::test::TestWithMessageLoop {
     ledger::Status status;
     ledger::LedgerPtr ledger;
     (*ledger_repository)
-        ->GetLedger(TestArray(), ledger.NewRequest(),
+        ->GetLedger(std::move(ledger_name), ledger.NewRequest(),
                     callback::Capture(MakeQuitTask(), &status));
     if (RunLoopWithTimeout()) {
       return ::testing::AssertionFailure()
