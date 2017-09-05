@@ -86,6 +86,8 @@ Guest::~Guest() {
 
 mx_status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
                            mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
+    if (len == 0)
+        return MX_ERR_INVALID_ARGS;
     if (SIZE_MAX - len < addr)
         return MX_ERR_OUT_OF_RANGE;
     switch (kind) {

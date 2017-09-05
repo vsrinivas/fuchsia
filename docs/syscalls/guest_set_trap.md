@@ -53,8 +53,8 @@ right.
 
 **MX_ERR_BAD_HANDLE** *guest* or *port* are invalid handles.
 
-**MX_ERR_INVALID_ARGS** *kind* is not a valid address space, or *addr* or
-*len* does not meet the requirements of *kind*.
+**MX_ERR_INVALID_ARGS** *kind* is not a valid address space, *addr* or *len*
+do not meet the requirements of *kind*, or *len* is 0.
 
 **MX_ERR_NO_MEMORY** Temporary failure due to lack of memory.
 
