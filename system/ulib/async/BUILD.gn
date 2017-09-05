@@ -9,13 +9,19 @@ config("async_config") {
 source_set("async") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
-    "async_wrapper.cpp",
-    "include/async/async.h",
-    "include/async/timeouts.h",
-    "timeouts.cpp",
+    "include/async/receiver.h",
+    "include/async/task.h",
+    "include/async/wait.h",
+    "include/async/wait_with_timeout.h",
+    "receiver.cpp",
+    "task.cpp",
+    "wait.cpp",
+    "wait_with_timeout.cpp",
   ]
 
   libs = [ "magenta" ]
+
+  public_deps = [ "//magenta/system/ulib/mxtl" ]
 
   public_configs = [ ":async_config" ]
 }

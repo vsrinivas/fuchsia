@@ -7,6 +7,10 @@
 #include <magenta/syscalls.h>
 
 #include <async/loop.h>
+#include <async/receiver.h>
+#include <async/task.h>
+#include <async/wait.h>
+
 #include <mx/event.h>
 #include <mxtl/atomic.h>
 #include <mxtl/auto_lock.h>
@@ -374,11 +378,11 @@ bool wait_shutdown_test() {
     EXPECT_EQ(MX_OK, mx::event::create(0u, &event), "create event");
 
     CascadeWait wait1(event.get(), MX_USER_SIGNAL_0, 0u, 0u, false);
-    wait1.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    wait1.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     CascadeWait wait2(event.get(), MX_USER_SIGNAL_0, MX_USER_SIGNAL_0, 0u, true);
-    wait2.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    wait2.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestWait wait3(event.get(), MX_USER_SIGNAL_1);
-    wait3.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    wait3.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestWait wait4(event.get(), MX_USER_SIGNAL_1);
 
     EXPECT_EQ(MX_OK, wait1.Begin(loop.async()), "begin 1");
@@ -496,13 +500,13 @@ bool task_shutdown_test() {
 
     mx_time_t start_time = now();
     TestTask task1(start_time + MX_MSEC(1));
-    task1.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    task1.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     RepeatingTask task2(start_time + MX_MSEC(1), MX_MSEC(1000), 1u);
-    task2.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    task2.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestTask task3(MX_TIME_INFINITE);
-    task3.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    task3.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestTask task4(MX_TIME_INFINITE);
-    task4.set_flags(ASYNC_HANDLE_SHUTDOWN);
+    task4.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
     TestTask task5(MX_TIME_INFINITE);
     QuitTask task6(start_time + MX_MSEC(1));
 

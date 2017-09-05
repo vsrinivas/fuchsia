@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <async/timeouts.h>
+#include <async/wait_with_timeout.h>
+
 #include <unittest/unittest.h>
 
 #include "async_stub.h"
@@ -62,7 +63,7 @@ protected:
     }
 };
 
-bool wait_with_timeout_test() {
+bool timeout_test() {
     const mx_handle_t dummy_handle = 1;
     const mx_signals_t dummy_trigger = MX_USER_SIGNAL_0;
     const mx_packet_signal_t dummy_signal{
@@ -72,7 +73,7 @@ bool wait_with_timeout_test() {
         .reserved0 = 0u,
         .reserved1 = 0u};
     const mx_time_t dummy_deadline = 100u;
-    const uint32_t dummy_flags = ASYNC_HANDLE_SHUTDOWN;
+    const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;
 
@@ -160,7 +161,7 @@ bool begin_wait_cleans_up() {
     const mx_handle_t dummy_handle = 1;
     const mx_signals_t dummy_trigger = MX_USER_SIGNAL_0;
     const mx_time_t dummy_deadline = 100u;
-    const uint32_t dummy_flags = ASYNC_HANDLE_SHUTDOWN;
+    const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;
 
@@ -179,7 +180,7 @@ bool begin_wait_cleans_up() {
 
 } // namespace
 
-BEGIN_TEST_CASE(timeout_tests)
-RUN_TEST(wait_with_timeout_test)
+BEGIN_TEST_CASE(wait_with_timeout_tests)
+RUN_TEST(timeout_test)
 RUN_TEST(begin_wait_cleans_up)
-END_TEST_CASE(timeout_tests)
+END_TEST_CASE(wait_with_timeout_tests)

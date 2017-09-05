@@ -14,8 +14,13 @@ MODULE_NAME := async
 MODULE_TYPE := userlib
 
 MODULE_SRCS = \
-    $(LOCAL_DIR)/async_wrapper.cpp \
-    $(LOCAL_DIR)/timeouts.cpp
+    $(LOCAL_DIR)/receiver.cpp \
+    $(LOCAL_DIR)/task.cpp \
+    $(LOCAL_DIR)/wait.cpp \
+    $(LOCAL_DIR)/wait_with_timeout.cpp
+
+MODULE_STATIC_LIBS := \
+    system/ulib/mxtl
 
 MODULE_LIBS := \
     system/ulib/c \
@@ -37,7 +42,8 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/loop_wrapper.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/async
+    system/ulib/async \
+    system/ulib/mxtl
 
 MODULE_LIBS := \
     system/ulib/async.default \
@@ -63,5 +69,8 @@ MODULE_EXPORT := so
 
 MODULE_LIBS := \
     system/ulib/c
+
+MODULE_STATIC_LIBS := \
+    system/ulib/mxtl
 
 include make/module.mk

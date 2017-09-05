@@ -20,8 +20,8 @@
 
 #include <magenta/compiler.h>
 
-#include <async/async.h>
 #include <async/default.h>
+#include <async/dispatcher.h>
 
 __BEGIN_CDECLS
 
@@ -139,6 +139,8 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <mxtl/macros.h>
+
 namespace async {
 
 // C++ wrapper for an asynchronous dispatch loop.
@@ -224,7 +226,7 @@ public:
 private:
     async_t* async_;
 
-    ASYNC_DISALLOW_COPY_ASSIGN_AND_MOVE(Loop);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Loop);
 };
 
 } // namespace async

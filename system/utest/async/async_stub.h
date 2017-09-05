@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/async.h>
+#include <async/dispatcher.h>
 
 struct AsyncStub : public async_t {
 public:

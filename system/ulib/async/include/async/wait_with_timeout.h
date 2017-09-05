@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <async/async.h>
+#include <async/task.h>
+#include <async/wait.h>
 
 #ifdef __cplusplus
 
@@ -41,7 +42,7 @@ public:
     mx_time_t deadline() const { return async_task_t::deadline; }
     void set_deadline(mx_time_t deadline) { async_task_t::deadline = deadline; }
 
-    // Valid flags: |ASYNC_HANDLE_SHUTDOWN|.
+    // Valid flags: |ASYNC_FLAG_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_wait_t::flags; }
     void set_flags(uint32_t flags) { async_wait_t::flags = flags; }
 
@@ -78,7 +79,7 @@ private:
     static async_task_result_t TimeoutHandler(async_t* async, async_task_t* task,
                                               mx_status_t status);
 
-    ASYNC_DISALLOW_COPY_ASSIGN_AND_MOVE(WaitWithTimeout);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(WaitWithTimeout);
 };
 
 } // namespace async

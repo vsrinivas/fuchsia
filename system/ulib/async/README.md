@@ -13,9 +13,10 @@ for other abstractions such as the FIDL bindings.
 The async package consists of three libraries:
 
 - `libasync.a` provides the client API which includes all of the functions
-declared in [async/async.h](include/async/async.h) and
-[async/timeouts.h](include/async/timeouts.h).  This library must be statically
-linked into all clients.
+declared in [async/wait.h](include/async/wait.h),
+[async/wait_with_timeout.h](include/async/wait_with_timeout.h),
+[async/task.h](include/async/task.h), and [async/receiver.h](include/async/receiver.h).
+This library must be statically linked into clients.
 
 - `libasync-loop.a` provides a general-purpose thread-safe message loop
 implementation declared in [async/loop.h](include/async/loop.h).  This library
@@ -45,10 +46,10 @@ The client is responsible for ensuring that the wait structure remains in
 memory until the wait's handler runs or the wait is successfully canceled using
 `async_cancel_wait()`.
 
-See [async/async.h](include/async/async.h) for details.
+See [async/wait.h](include/async/wait.h) for details.
 
 ```c
-#include <async/async.h>
+#include <async/wait.h>
 
 async_wait_result_t handler(async_t* async, async_wait_t* wait,
                             mx_status_t status, const mx_packet_signal_t* signal) {
@@ -62,7 +63,7 @@ mx_status_t await(mx_handle_t object, mx_signals_t trigger, void* data) {
     wait->handler = handler;
     wait->object = object;
     wait->trigger = trigger;
-    wait->flags = ASYNC_HANDLE_SHUTDOWN;
+    wait->flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     return async_begin_wait(async_get_default(), handle, wait);
 }
 ```
@@ -80,10 +81,10 @@ The client is responsible for ensuring that the task structure remains in
 memory until the task's handler runs or the task is successfully canceled using
 `async_cancel_task()`.
 
-See [async/async.h](include/async/async.h) for details.
+See [async/task.h](include/async/task.h) for details.
 
 ```c
-#include <async/async.h>
+#include <async/task.h>
 
 typedef struct {
     async_task_t task;
@@ -101,7 +102,7 @@ mx_status_t schedule_work(void* data) {
     task_data_t* task_data = calloc(1, sizeof(task_data_t));
     task_data->task.handler = handler;
     task_data->task.deadline = mx_deadline_after(MX_SEC(2));
-    task_data->task.flags = ASYNC_HANDLE_SHUTDOWN;
+    task_data->task.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     task_data->data = data;
     return async_post_task(async_get_default(), &task_data->task);
 }
@@ -120,10 +121,10 @@ on a thread of the dispatcher's choosing depending on its implementation.
 The client is responsible for ensuring that the receiver structure remains in
 memory until all queued packets have been delivered.
 
-See [async/async.h](include/async/async.h) for details.
+See [async/receiver.h](include/async/receiver.h) for details.
 
 ```c
-#include <async/async.h>
+#include <async/receiver.h>
 
 void handler(async_t* async, async_receiver_t* receiver, mx_status_t status,
              const mx_packet_user_t* data) {
@@ -205,12 +206,10 @@ They just wrap the C API with a more convenient interface.
 To use them, subclass `Wait`, `Task`, or `Receiver` and implement the
 `Handle` function to implement the callback.
 
-There is also a special `WaitWithTimeout` helper which combines a wait operation
-together with a pending task which invokes the handler when the specified deadline
-has been exceeded.
-
-See [async/async.h](include/async/async.h) and [async/timeouts.h](include/async/timeouts.h)
-for details.
+There is also a special `WaitWithTimeout` helper defined in
+[async/wait_with_timeout.h](include/async/wait_with_timeout.h)
+which combines a wait operation together with a pending task that invokes the
+handler when the specified deadline has been exceeded.
 
 ## Implementing a dispatcher
 
@@ -221,4 +220,4 @@ integrate clients of this library with your own dispatcher.
 It is possible to implement only some of the operations but this may cause
 incompatibilities with certain clients.
 
-See [async/async.h](include/async/async.h) for details.
+See [async/dispatcher.h](include/async/dispatcher.h) for details.

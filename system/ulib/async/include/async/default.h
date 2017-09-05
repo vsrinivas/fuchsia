@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <async/async.h>
+#include <async/dispatcher.h>
 
 __BEGIN_CDECLS
 

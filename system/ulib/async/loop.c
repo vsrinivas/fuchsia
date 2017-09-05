@@ -12,6 +12,10 @@
 #include <magenta/listnode.h>
 #include <magenta/syscalls.h>
 
+#include <async/receiver.h>
+#include <async/task.h>
+#include <async/wait.h>
+
 // The port wait key associated with the dispatcher's control messages.
 #define KEY_CONTROL (0u)
 
@@ -157,17 +161,17 @@ void async_loop_shutdown(async_t* async) {
     list_node_t* node;
     while ((node = list_remove_head(&loop->wait_list))) {
         async_wait_t* wait = node_to_wait(node);
-        MX_DEBUG_ASSERT(wait->flags & ASYNC_HANDLE_SHUTDOWN);
+        MX_DEBUG_ASSERT(wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN);
         async_loop_invoke_wait_handler(loop, wait, MX_ERR_CANCELED, NULL);
     }
     while ((node = list_remove_head(&loop->due_list))) {
         async_task_t* task = node_to_task(node);
-        if (task->flags & ASYNC_HANDLE_SHUTDOWN)
+        if (task->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)
             async_loop_invoke_task_handler(loop, task, MX_ERR_CANCELED);
     }
     while ((node = list_remove_head(&loop->task_list))) {
         async_task_t* task = node_to_task(node);
-        if (task->flags & ASYNC_HANDLE_SHUTDOWN)
+        if (task->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)
             async_loop_invoke_task_handler(loop, task, MX_ERR_CANCELED);
     }
 
@@ -233,7 +237,7 @@ static mx_status_t async_loop_run_once(async_loop_t* loop, mx_time_t deadline) {
 static mx_status_t async_loop_dispatch_wait(async_loop_t* loop, async_wait_t* wait,
                                             mx_status_t status, const mx_packet_signal_t* signal) {
     // We must dequeue the handler before invoking it since it might destroy itself.
-    if (wait->flags & ASYNC_HANDLE_SHUTDOWN) {
+    if (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN) {
         mtx_lock(&loop->lock);
         list_delete(wait_to_node(wait));
         mtx_unlock(&loop->lock);
@@ -250,7 +254,7 @@ static mx_status_t async_loop_dispatch_wait(async_loop_t* loop, async_wait_t* wa
     }
 
     // Requeue the handler if it still wants to observe shutdown.
-    if (result == ASYNC_WAIT_AGAIN && (wait->flags & ASYNC_HANDLE_SHUTDOWN)) {
+    if (result == ASYNC_WAIT_AGAIN && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
         mtx_lock(&loop->lock);
         list_add_head(&loop->wait_list, wait_to_node(wait));
         mtx_unlock(&loop->lock);
@@ -394,7 +398,7 @@ static mx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait) {
         return MX_ERR_BAD_STATE;
 
     mx_status_t status = async_loop_wait_async(loop, wait);
-    if (status == MX_OK && (wait->flags & ASYNC_HANDLE_SHUTDOWN)) {
+    if (status == MX_OK && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
         mtx_lock(&loop->lock);
         list_add_head(&loop->wait_list, wait_to_node(wait));
         mtx_unlock(&loop->lock);
@@ -412,7 +416,7 @@ static mx_status_t async_loop_cancel_wait(async_t* async, async_wait_t* wait) {
     // invoked again past this point.
     mx_status_t status = mx_port_cancel(loop->port, wait->object,
                                         (uintptr_t)wait);
-    if (status == MX_OK && (wait->flags & ASYNC_HANDLE_SHUTDOWN)) {
+    if (status == MX_OK && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
         mtx_lock(&loop->lock);
         list_delete(wait_to_node(wait));
         mtx_unlock(&loop->lock);
@@ -477,7 +481,7 @@ static mx_status_t async_loop_queue_packet(async_t* async, async_receiver_t* rec
     async_loop_t* loop = (async_loop_t*)async;
     MX_DEBUG_ASSERT(loop);
     MX_DEBUG_ASSERT(receiver);
-    MX_DEBUG_ASSERT(!(receiver->flags & ASYNC_HANDLE_SHUTDOWN));
+    MX_DEBUG_ASSERT(!(receiver->flags & ASYNC_FLAG_HANDLE_SHUTDOWN));
 
     if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
         return MX_ERR_BAD_STATE;

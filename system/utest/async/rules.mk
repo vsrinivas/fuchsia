@@ -10,12 +10,13 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/async_stub.cpp \
-    $(LOCAL_DIR)/async_tests.cpp \
-    $(LOCAL_DIR)/async_wrapper_tests.cpp \
     $(LOCAL_DIR)/default_tests.cpp \
     $(LOCAL_DIR)/loop_tests.cpp \
     $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/timeout_tests.cpp
+    $(LOCAL_DIR)/receiver_tests.cpp \
+    $(LOCAL_DIR)/task_tests.cpp \
+    $(LOCAL_DIR)/wait_tests.cpp \
+    $(LOCAL_DIR)/wait_with_timeout_tests.cpp
 
 MODULE_NAME := async-test
 
