@@ -44,7 +44,7 @@ static mx_status_t handle_dup_replace(
             return MX_ERR_BAD_HANDLE;
 
         if (!is_replace) {
-            if (!magenta_rights_check(source, MX_RIGHT_DUPLICATE))
+            if (!source->HasRights(MX_RIGHT_DUPLICATE))
                 return MX_ERR_ACCESS_DENIED;
         }
 

@@ -383,7 +383,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
         auto handle = up->GetHandleLocked(arg_handle_value);
         if (!handle)
             return MX_ERR_BAD_HANDLE;
-        if (!magenta_rights_check(handle, MX_RIGHT_TRANSFER))
+        if (!handle->HasRights(MX_RIGHT_TRANSFER))
             return MX_ERR_ACCESS_DENIED;
         arg_handle = up->RemoveHandleLocked(arg_handle_value);
     }

@@ -125,7 +125,7 @@ mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key
         Handle* watched = up->GetHandleLocked(source);
         if (!watched)
             return MX_ERR_BAD_HANDLE;
-        if (!magenta_rights_check(watched, MX_RIGHT_READ))
+        if (!watched->HasRights(MX_RIGHT_READ))
             return MX_ERR_ACCESS_DENIED;
 
         auto state_tracker = watched->dispatcher()->get_state_tracker();

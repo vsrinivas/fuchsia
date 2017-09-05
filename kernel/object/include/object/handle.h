@@ -43,6 +43,11 @@ public:
         return rights_;
     }
 
+    // Returns true if this handle has all of the desired rights bits set.
+    bool HasRights(mx_rights_t desired) const {
+        return (rights_ & desired) == desired;
+    }
+
     // Returns a value that can be decoded by MapU32ToHandle() to derive
     // a pointer to this instance. ProcessDispatcher will XOR this with
     // its |handle_rand_| to create the mx_handle_t value that user

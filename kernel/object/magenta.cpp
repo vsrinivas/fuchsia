@@ -310,14 +310,6 @@ PolicyManager* GetSystemPolicyManager() {
     return policy_manager;
 }
 
-bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {
-    auto actual = handle->rights();
-    if ((actual & desired) == desired)
-        return true;
-    LTRACEF("rights check fail!! has 0x%x, needs 0x%x\n", actual, desired);
-    return false;
-}
-
 mx_status_t magenta_sleep(mx_time_t deadline) {
     /* sleep with interruptable flag set */
     return thread_sleep_etc(deadline, true);

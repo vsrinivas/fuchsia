@@ -52,7 +52,7 @@ mx_status_t sys_object_wait_one(mx_handle_t handle_value,
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return MX_ERR_BAD_HANDLE;
-        if (!magenta_rights_check(handle, MX_RIGHT_READ))
+        if (!handle->HasRights(MX_RIGHT_READ))
             return MX_ERR_ACCESS_DENIED;
 
         result = wait_state_observer.Begin(&event, handle, signals);
@@ -130,7 +130,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
                 result = MX_ERR_BAD_HANDLE;
                 break;
             }
-            if (!magenta_rights_check(handle, MX_RIGHT_READ)) {
+            if (!handle->HasRights(MX_RIGHT_READ)) {
                 result = MX_ERR_ACCESS_DENIED;
                 break;
             }
@@ -183,7 +183,7 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return MX_ERR_BAD_HANDLE;
-        if (!magenta_rights_check(handle, MX_RIGHT_READ))
+        if (!handle->HasRights(MX_RIGHT_READ))
             return MX_ERR_ACCESS_DENIED;
 
         return port->MakeObservers(options, handle, key, signals);

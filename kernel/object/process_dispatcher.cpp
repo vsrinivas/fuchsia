@@ -472,7 +472,7 @@ mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handl
     if (!handle)
         return MX_ERR_BAD_HANDLE;
 
-    if (!magenta_rights_check(handle, desired_rights))
+    if (!handle->HasRights(desired_rights))
         return MX_ERR_ACCESS_DENIED;
 
     *dispatcher_out = handle->dispatcher();
