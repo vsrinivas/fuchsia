@@ -5,21 +5,20 @@ in progress.
 
 ## Running a guest
 
-To run a guest using the hypervisor, you must create a bootfs image
-containing the guest, and use the `guest` app to launch it.
+To run a guest using the hypervisor, you must create a bootfs image containing
+the guest and use the `guest` app to launch it.
 
-`guest` currently supports Magenta and Linux kernels.
+Note: `guest` only supports the Magenta and Linux kernels.
 
 On your host device, from the Magenta directory, run:
-
 ```
 scripts/build-magenta-x86-64
 
-# Optional Linux steps to build the kernel and a simple userspace.
+# Optional: Build Linux, an initial RAM disk, and an EXT2 file-system.
 system/uapp/guest/scripts/mklinux.sh
 system/uapp/guest/scripts/mktoybox.sh -ri
 
-# Build a GPT disk image for Magenta guests.
+# Optional: Build a GPT disk image for Magenta guests.
 system/uapp/guest/scripts/mkgpt.sh
 
 system/uapp/guest/scripts/mkbootfs.sh
@@ -28,38 +27,42 @@ build-magenta-pc-x86-64/tools/bootserver \
     build-magenta-pc-x86-64/bootdata-with-guest.bin
 ```
 
-After netbooting the target device, to run Magenta:
+### Magenta guest
 
+After netbooting the target device, to run Magenta:
 ```
 /boot/bin/guest -r /boot/data/bootdata.bin /boot/data/magenta.bin
 ```
-To run Magenta using a system partition image:
 
+To run Magenta using a GPT disk image:
 ```
-/boot/bin/guest -b /boot/data/magenta.gpt \
-                -c 'magenta.autorun.system=/system/bin/guest-autorun' \
-                -r /boot/data/bootdata.bin \
-                /boot/data/magenta.bin
+/boot/bin/guest \
+    -b /boot/data/magenta.gpt \
+    -r /boot/data/bootdata.bin \
+    /boot/data/magenta.bin
 ```
 
-To run Linux using an initrd:
+### Linux guest
 
+After netbooting the target device, to run Linux using an initial RAM disk:
 ```
 /boot/bin/guest -r /boot/data/initrd /boot/data/bzImage
 ```
 
-To run Linux using a *read-only* Virtio-block root file-system:
-
+To run Linux using a **read-only** EXT2 root file-system:
 ```
-/boot/bin/guest -b /boot/data/rootfs.ext2 -c 'root=/dev/vda ro init=/init' /boot/data/bzImage
+/boot/bin/guest \
+    -b /boot/data/rootfs.ext2 \
+    -c 'root=/dev/vda ro init=/init' \
+    /boot/data/bzImage
 ```
 
-To run Linux using a *writable* Virtio-block root file-system:
-
+To run Linux using a **writable** EXT2 root file-system:
 ```
 cp /boot/data/rootfs.ext2 /boot/data/rootfs-rw.ext2
 
-/boot/bin/guest -b /boot/data/rootfs-rw.ext2 -c 'root=/dev/vda rw init=/init' /boot/data/bzImage
+/boot/bin/guest \
+    -b /boot/data/rootfs-rw.ext2 \
+    -c 'root=/dev/vda rw init=/init' \
+    /boot/data/bzImage
 ```
-
-You should then see the serial output of the guest operating system.
