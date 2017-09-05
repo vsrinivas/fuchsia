@@ -17,8 +17,26 @@ struct BatteryStatus {
   // Battery level in percentage
   uint16 level;
 
+  // Remaining Battery life in hours. It is negative when battery is not discharging
+  float remainingBatteryLife;
+
+  // If battery is present
+  bool batteryPresent;
+
   // If battery is charging
   bool charging;
+
+  // If battery is dis-charging
+  bool discharging;
+
+  // If battery is at critical level
+  bool critical;
+
+  // If power cable is plugged in
+  bool powerAdapterOnline;
+
+  // To distinguish between latest and stale status
+  int64 timestamp;
 };
 
 // Manager Interface used to manage power

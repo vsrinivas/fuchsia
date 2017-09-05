@@ -6,16 +6,19 @@ package main
 
 import (
 	"app/context"
-	"bufio"
+	"bytes"
+	"encoding/binary"
 	"fidl/bindings"
 	"flag"
+	"fmt"
 	"log"
 	"os"
-	"regexp"
-	"strconv"
+	"path/filepath"
 	"sync"
+	"syscall"
 	"syscall/mx"
 	"syscall/mx/mxerror"
+	"syscall/mx/mxio"
 	"time"
 
 	"garnet/public/lib/power/fidl/power_manager"
@@ -24,18 +27,22 @@ import (
 var (
 	updateWaitTimeFlag uint
 	logger             = log.New(os.Stdout, "power_manager: ", log.Lshortfile)
-	re                 = regexp.MustCompile("^(c?)([0-9][0-9]?[0-9]?)%$")
+)
+
+const (
+	powerDevice = "/dev/class/power"
 )
 
 func init() {
-	// TODO: Make is interrupt based, tracking BUG: MG-996.
-	flag.UintVar(&updateWaitTimeFlag, "update-wait-time", 60, "Time to sleep between status update in seconds.")
+	flag.UintVar(&updateWaitTimeFlag, "update-wait-time", 180, "Time to sleep between status update in seconds.")
 }
 
 type PowerManager struct {
-	mu             sync.Mutex
-	battery_status power_manager.BatteryStatus
-	watchers       []*power_manager.PowerManagerWatcher_Proxy
+	mu                     sync.Mutex
+	batteryStatus          power_manager.BatteryStatus
+	watchers               []*power_manager.PowerManagerWatcher_Proxy
+	powerAdapterTimeStamp  int64
+	batteryStatusTimeStamp int64
 }
 
 func (pm *PowerManager) GetBatteryStatus() (power_manager.BatteryStatus, error) {
@@ -43,7 +50,7 @@ func (pm *PowerManager) GetBatteryStatus() (power_manager.BatteryStatus, error) 
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
-	return pm.battery_status, nil
+	return pm.batteryStatus, nil
 }
 
 func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcher_Pointer) error {
@@ -51,58 +58,141 @@ func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcher_Pointer)
 	pm.mu.Lock()
 	pm.watchers = append(pm.watchers, pmw)
 	pm.mu.Unlock()
-	go pmw.OnChangeBatteryStatus(pm.battery_status)
+	go pmw.OnChangeBatteryStatus(pm.batteryStatus)
 	return nil
 }
 
-// Updates the status and returns false if battery status
-// cannot be updated in future.
-func (pm *PowerManager) updateStatus() bool {
-
-	f, err := os.Open("/dev/class/battery/000")
+func getPowerInfo(m mxio.MXIO) (*mxio.PowerInfoResult, error) {
+	var pi mxio.PowerInfoResult
+	buf := new(bytes.Buffer)
+	// LE for our arm64 and amd64 archs
+	err := binary.Write(buf, binary.LittleEndian, pi)
 	if err != nil {
-		logger.Printf("Error while getting status: %s\n", err)
-		return false
+		return nil, fmt.Errorf("binary.Write failed: %s", err)
 	}
-	defer f.Close()
-	r := bufio.NewReader(f)
-	b := make([]byte, 10)
-	n, err := r.Read(b)
+	b := buf.Bytes()
+
+	_, err = m.Ioctl(mxio.IoctlPowerGetInfo, nil, b)
 	if err != nil {
-		logger.Printf("Warning: Error while getting status: %s\n", err)
-		// Not fatal
-		return true
+		return nil, fmt.Errorf("ioctl err: %s", err)
 	}
-	if n == 0 {
-		logger.Printf("Warning: Battery status format blank.")
-		// Not fatal
-		return true
+	buf = bytes.NewBuffer(b)
+	err = binary.Read(buf, binary.LittleEndian, &pi)
+	if err != nil {
+		return nil, fmt.Errorf("binary.Read failed: %s", err)
 	}
+	return &pi, nil
+}
 
-	m := re.FindStringSubmatch(string(b[:n-1]))
-	if len(m) != 3 {
-		logger.Printf("Warning: Battery status format wrong, text: %q, submatch: %v\n", string(b[:n-1]), m)
-		// Not fatal
-		return true
+func getBatteryInfo(m mxio.MXIO) (*mxio.BatteryInfoResult, error) {
+	var bi mxio.BatteryInfoResult
+	buf := new(bytes.Buffer)
+	// LE for our arm64 and amd64 archs
+	err := binary.Write(buf, binary.LittleEndian, bi)
+	if err != nil {
+		return nil, fmt.Errorf("binary.Write failed: %s", err)
 	}
+	b := buf.Bytes()
 
+	_, err = m.Ioctl(mxio.IoctlPowerGetBatteryInfo, nil, b)
+	if err != nil {
+		return nil, fmt.Errorf("ioctl err: %s", err)
+	}
+	buf = bytes.NewBuffer(b)
+	err = binary.Read(buf, binary.LittleEndian, &bi)
+	if err != nil {
+		return nil, fmt.Errorf("binary.Read failed: %s", err)
+	}
+	return &bi, nil
+}
+
+func addListener(m mxio.MXIO, callback func(mxio.MXIO)) error {
+	handles, err := m.Ioctl(mxio.IoctlPowerGetStateChangeEvent, nil, nil)
+	if err != nil {
+		return fmt.Errorf("ioctl err: %s", err)
+	}
+	if len(handles) != 1 {
+		return fmt.Errorf("Ioctl did not return correct number of handles, expected 1 got %d", len(handles))
+	}
+	go func() {
+		for {
+			wi := []mx.WaitItem{
+				mx.WaitItem{
+					Handle:  handles[0],
+					WaitFor: mx.SignalUser0,
+					Pending: 0,
+				},
+			}
+			if err := mx.WaitMany(wi, mx.TimensecInfinite); err != nil {
+				logger.Printf("Error while waiting: %s\n", err)
+				break
+			} else {
+				callback(m)
+			}
+		}
+	}()
+	return nil
+}
+
+// Updates the status
+func (pm *PowerManager) updateStatus(m mxio.MXIO) error {
+	pi, err := getPowerInfo(m)
+	if err != nil {
+		return fmt.Errorf("Failed to get power info: %s\n", err)
+	}
+	var bi *mxio.BatteryInfoResult
+	if pi.PowerType == 1 {
+		bi, err = getBatteryInfo(m)
+		if err != nil {
+			return fmt.Errorf("Failed to get battery info: %s\n", err)
+		}
+	}
+	now := time.Now().UnixNano()
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
-	oldStatus := pm.battery_status
+	oldStatus := pm.batteryStatus
+	t := pm.powerAdapterTimeStamp
+	if pi.PowerType == 1 {
+		t = pm.batteryStatusTimeStamp
+	}
+	if t > now {
+		// stale no need to update, return
+		return nil
+	}
 
-	pm.battery_status.Charging = m[1] == "c"
-	i, _ := strconv.Atoi(m[2])
-	pm.battery_status.Level = uint16(i)
-	pm.battery_status.Status = power_manager.Status_Ok
+	if pi.PowerType == 1 {
+		pm.batteryStatusTimeStamp = now
+		pm.batteryStatus.BatteryPresent = pi.State&mxio.PowerStateOnline > 0
+		pm.batteryStatus.Charging = pi.State&mxio.PowerStateCharging > 0
+		pm.batteryStatus.Discharging = pi.State&mxio.PowerStateDischarging > 0
+		pm.batteryStatus.Critical = pi.State&mxio.PowerStateCritical > 0
+		if pm.batteryStatus.BatteryPresent {
+			pm.batteryStatus.Level = uint16(bi.RemainingCapacity * 100 / bi.LastFullCapacity)
+			if bi.PresentRate < 0 {
+				pm.batteryStatus.RemainingBatteryLife = float32(bi.RemainingCapacity) / float32(bi.PresentRate*-1)
+			} else {
+				pm.batteryStatus.RemainingBatteryLife = -1
+			}
+		}
+	} else {
+		pm.powerAdapterTimeStamp = now
+		pm.batteryStatus.PowerAdapterOnline = pi.State&mxio.PowerStateOnline > 0
+	}
 
-	if oldStatus != pm.battery_status {
-		logger.Printf("Battery status changed from %v to %v", oldStatus, pm.battery_status)
+	pm.batteryStatus.Status = power_manager.Status_Ok
+
+	if oldStatus != pm.batteryStatus {
+		// Only update time stamp when status changes
+		pm.batteryStatus.Timestamp = time.Now().UnixNano()
+
+		// uncomment for debugging
+		// logger.Printf("Battery status changed from %v to %v", oldStatus, pm.batteryStatus)
 		for _, pmw := range pm.watchers {
-			go pmw.OnChangeBatteryStatus(pm.battery_status)
+			go pmw.OnChangeBatteryStatus(pm.batteryStatus)
 		}
 	}
 
-	return true
+	return nil
 }
 
 func (pm *PowerManager) Bind(r power_manager.PowerManager_Request) {
@@ -111,7 +201,7 @@ func (pm *PowerManager) Bind(r power_manager.PowerManager_Request) {
 	s := r.NewStub(pm, bindings.GetAsyncWaiter())
 
 	go func() {
-		defer logger.Println("bye Bind")
+		defer logger.Println("Bye Bind")
 		for {
 			if err := s.ServeRequest(); err != nil {
 				if mxerror.Status(err) != mx.ErrPeerClosed {
@@ -126,41 +216,79 @@ func (pm *PowerManager) Bind(r power_manager.PowerManager_Request) {
 func main() {
 	logger.Println("start")
 	defer logger.Println("stop")
-
-	watcher, err := NewWatcher("/dev/class/battery")
+	watcher, err := NewWatcher(powerDevice)
 	if err != nil {
-		logger.Printf("Error while watching device: %s\n", err)
+		logger.Printf("Error while watching device %q: %s\n", powerDevice, err)
 		return
 	}
+	now := time.Now().UnixNano()
 	pm := &PowerManager{
-		battery_status: power_manager.BatteryStatus{
-			Status:   power_manager.Status_NotAvailable,
-			Level:    uint16(0),
-			Charging: false,
+		batteryStatus: power_manager.BatteryStatus{
+			Status:    power_manager.Status_NotAvailable,
+			Level:     uint16(0),
+			Timestamp: now,
 		},
+		batteryStatusTimeStamp: now,
+		powerAdapterTimeStamp:  now,
 	}
 
 	c := context.CreateFromStartupInfo()
 	c.OutgoingService.AddService(&power_manager.PowerManager_ServiceBinder{pm})
 	c.Serve()
 
+	adapterDeviceFound := false
+	batteryDeviceFound := false
 	for file := range watcher.C {
-		if file == "000" {
-			// File found, get status
+		f := filepath.Join(powerDevice, file)
+		m, err := syscall.OpenPath(f, syscall.O_RDONLY, 0)
+		if err != nil {
+			logger.Printf("Error while opening device %q: %s\n", f, err)
+			return
+		}
+
+		pi, err := getPowerInfo(m)
+		if err != nil {
+			logger.Printf("Failed to get power info from %q: %s\n", f, err)
+			return
+		}
+		if pi.PowerType == 1 && batteryDeviceFound {
+			logger.Println("Skip %q as battery device already found", f)
+			continue
+		} else if pi.PowerType == 0 && adapterDeviceFound {
+			logger.Println("Skip %q as adapter device already found", f)
+			continue
+		}
+
+		if err := addListener(m, func(m mxio.MXIO) {
+			if err := pm.updateStatus(m); err != nil {
+				logger.Printf("Error while updating battery status: %s", err)
+			}
+		}); err != nil {
+			logger.Printf("Not able to add listener to %q: %s\n", f, err)
+		}
+
+		if err := pm.updateStatus(m); err != nil {
+			logger.Printf("Error while updating battery status: %s", err)
+		}
+
+		if pi.PowerType == 1 {
+			batteryDeviceFound = true
+			go func(m mxio.MXIO) {
+				for {
+					time.Sleep(time.Duration(updateWaitTimeFlag) * time.Second)
+					if err := pm.updateStatus(m); err != nil {
+						logger.Printf("Error while updating battery status: %s", err)
+					}
+				}
+			}(m)
+		} else {
+			adapterDeviceFound = true
+		}
+
+		if batteryDeviceFound && adapterDeviceFound {
 			watcher.Stop()
 			break
 		}
 	}
-
-	go func() {
-		logger.Println("update status")
-		for {
-			if !pm.updateStatus() {
-				break
-			}
-			time.Sleep(time.Duration(updateWaitTimeFlag) * time.Second)
-		}
-	}()
-
 	select {}
 }
