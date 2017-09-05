@@ -85,7 +85,7 @@ static void timer_test_coalescing(enum slack_mode mode, uint64_t slack,
 
     int timer_count = 0;
 
-    timer_t* timer = malloc(sizeof(timer_t) * count);
+    timer_t* timer = (timer_t *)malloc(sizeof(timer_t) * count);
 
     printf("       orig         new       adjustment\n");
     for (int ix = 0; ix != count; ++ix) {
@@ -126,7 +126,7 @@ static void timer_test_coalescing_center(void)
     } ;
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, 0, LK_USEC(10), 0, -LK_USEC(10), 0, LK_USEC(10), 0 };
+        0, 0, LK_USEC(10), 0, -(int64_t)LK_USEC(10), 0, LK_USEC(10), 0 };
 
     timer_test_coalescing(
         TIMER_SLACK_CENTER, slack, deadline, expected_adj, countof(deadline));
@@ -172,7 +172,7 @@ static void timer_test_coalescing_early(void)
     } ;
 
     const int64_t expected_adj[countof(deadline)] = {
-        0, -LK_USEC(20), 0, 0, 0, -LK_USEC(10), -LK_USEC(10) };
+        0, -(int64_t)LK_USEC(20), 0, 0, 0, -(int64_t)LK_USEC(10), -(int64_t)LK_USEC(10) };
 
     timer_test_coalescing(
         TIMER_SLACK_EARLY, slack, deadline, expected_adj, countof(deadline));

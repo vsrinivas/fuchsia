@@ -42,7 +42,7 @@ static int mutex_thread(void *arg)
     const int iterations = 1000000;
     int count = 0;
 
-    static volatile int shared = 0;
+    static volatile uintptr_t shared = 0;
 
     mutex_t *m = (mutex_t *)arg;
 
@@ -119,7 +119,7 @@ static int event_signaler(void *arg)
 
 static int event_waiter(void *arg)
 {
-    int count = (intptr_t)arg;
+    uintptr_t count = (uintptr_t)arg;
 
     while (count > 0) {
         printf("thread %p: waiting on event...\n", get_current_thread());
@@ -216,7 +216,7 @@ static int context_switch_tester(void *arg)
     int i;
     uint64_t total_count = 0;
     const int iter = 100000;
-    int thread_count = (intptr_t)arg;
+    uintptr_t thread_count = (uintptr_t)arg;
 
     event_wait(&context_switch_event);
 
@@ -271,7 +271,7 @@ static volatile int atomic_count;
 
 static int atomic_tester(void *arg)
 {
-    int add = (intptr_t)arg;
+    int add = (int)(uintptr_t)arg;
     int i;
 
     const int iter = 10000000;
@@ -373,11 +373,11 @@ static void preempt_test(void)
 
 static int join_tester(void *arg)
 {
-    long val = (long)arg;
+    int val = (int)(uintptr_t)arg;
 
     printf("\t\tjoin tester starting\n");
     thread_sleep_relative(LK_MSEC(500));
-    printf("\t\tjoin tester exiting with result %ld\n", val);
+    printf("\t\tjoin tester exiting with result %d\n", val);
 
     return val;
 }
@@ -626,7 +626,7 @@ int spinner(int argc, const cmd_args *argv)
         return -1;
     }
 
-    thread_t *t = thread_create("spinner", spinner_thread, NULL, argv[1].u, DEFAULT_STACK_SIZE);
+    thread_t *t = thread_create("spinner", spinner_thread, NULL, (int)argv[1].u, DEFAULT_STACK_SIZE);
     if (!t)
         return MX_ERR_NO_MEMORY;
 

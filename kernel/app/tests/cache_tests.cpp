@@ -23,7 +23,7 @@ static void bench_cache(size_t bufsize, uint8_t *buf)
     bool do_free;
 
     if (buf == 0) {
-        buf = memalign(PAGE_SIZE, bufsize);
+        buf = (uint8_t *)memalign(PAGE_SIZE, bufsize);
         do_free = true;
     } else {
         do_free = false;

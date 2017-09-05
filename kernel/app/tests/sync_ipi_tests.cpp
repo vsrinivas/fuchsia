@@ -22,7 +22,7 @@
 
 static void inorder_count_task(void *raw_context) {
     ASSERT(arch_ints_disabled());
-    int *inorder_counter = raw_context;
+    int *inorder_counter = (int *)raw_context;
     uint cpu_num = arch_curr_cpu_num();
 
     int oldval = atomic_add(inorder_counter, 1);
@@ -32,12 +32,12 @@ static void inorder_count_task(void *raw_context) {
 
 static void counter_task(void *raw_context) {
     ASSERT(arch_ints_disabled());
-    int *counter = raw_context;
+    int *counter = (int *)raw_context;
     atomic_add(counter, 1);
 }
 
 static int deadlock_test_thread(void *arg) {
-    event_t *gate = arg;
+    event_t *gate = (event_t *)arg;
     event_wait(gate);
 
     int counter = 0;
@@ -84,7 +84,7 @@ int sync_ipi_tests(int argc, const cmd_args *argv)
 
     uint runs = TEST_RUNS;
     if (argc > 1) {
-        runs = argv[1].u;
+        runs = (uint)argv[1].u;
     }
 
     /* Test that we're actually blocking and only signaling the ones we target */

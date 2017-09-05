@@ -21,14 +21,14 @@
 #include <inttypes.h>
 
 const size_t BUFSIZE = (1024*1024);
-const uint ITER = 1024;
+const size_t ITER = 1024;
 
 __NO_INLINE static void bench_set_overhead(void)
 {
-    uint32_t *buf = malloc(BUFSIZE);
+    uint32_t *buf = (uint32_t *)malloc(BUFSIZE);
 
     uint64_t count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
+    for (size_t i = 0; i < ITER; i++) {
         __asm__ volatile("");
     }
     count = arch_cycle_count() - count;
@@ -41,10 +41,10 @@ __NO_INLINE static void bench_set_overhead(void)
 
 __NO_INLINE static void bench_memset(void)
 {
-    uint8_t *buf = memalign(PAGE_SIZE, BUFSIZE);
+    uint8_t *buf = (uint8_t *)memalign(PAGE_SIZE, BUFSIZE);
 
     uint64_t count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
+    for (size_t i = 0; i < ITER; i++) {
         memset(buf, 0, BUFSIZE);
     }
     count = arch_cycle_count() - count;
@@ -58,11 +58,11 @@ __NO_INLINE static void bench_memset(void)
 
 __NO_INLINE static void bench_memset_per_page(void)
 {
-    uint8_t *buf = memalign(PAGE_SIZE, BUFSIZE);
+    uint8_t *buf = (uint8_t *)memalign(PAGE_SIZE, BUFSIZE);
 
     uint64_t count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
-        for (uint j = 0; j < BUFSIZE; j += PAGE_SIZE) {
+    for (size_t i = 0; i < ITER; i++) {
+        for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
             memset(buf + j, 0, PAGE_SIZE);
         }
     }
@@ -77,11 +77,11 @@ __NO_INLINE static void bench_memset_per_page(void)
 
 __NO_INLINE static void bench_zero_page(void)
 {
-    uint8_t *buf = memalign(PAGE_SIZE, BUFSIZE);
+    uint8_t *buf = (uint8_t *)memalign(PAGE_SIZE, BUFSIZE);
 
     uint64_t count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
-        for (uint j = 0; j < BUFSIZE; j += PAGE_SIZE) {
+    for (size_t i = 0; i < ITER; i++) {
+        for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
             arch_zero_page(buf + j);
         }
     }
@@ -97,11 +97,11 @@ __NO_INLINE static void bench_zero_page(void)
 #define bench_cset(type) \
 __NO_INLINE static void bench_cset_##type(void) \
 { \
-    type *buf = malloc(BUFSIZE); \
+    type *buf = (type *)malloc(BUFSIZE); \
  \
     uint64_t count = arch_cycle_count(); \
-    for (uint i = 0; i < ITER; i++) { \
-        for (uint j = 0; j < BUFSIZE / sizeof(*buf); j++) { \
+    for (size_t i = 0; i < ITER; i++) { \
+        for (size_t j = 0; j < BUFSIZE / sizeof(*buf); j++) { \
             buf[j] = 0; \
         } \
     } \
@@ -121,11 +121,11 @@ bench_cset(uint64_t)
 
 __NO_INLINE static void bench_cset_wide(void)
 {
-    uint32_t *buf = malloc(BUFSIZE);
+    uint32_t *buf = (uint32_t *)malloc(BUFSIZE);
 
     uint64_t count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
-        for (uint j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
+    for (size_t i = 0; i < ITER; i++) {
+        for (size_t j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
             buf[j*8] = 0;
             buf[j*8+1] = 0;
             buf[j*8+2] = 0;
@@ -147,10 +147,10 @@ __NO_INLINE static void bench_cset_wide(void)
 
 __NO_INLINE static void bench_memcpy(void)
 {
-    uint8_t *buf = calloc(1, BUFSIZE);
+    uint8_t *buf = (uint8_t *)calloc(1, BUFSIZE);
 
     uint64_t count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
+    for (size_t i = 0; i < ITER; i++) {
         memcpy(buf, buf + BUFSIZE / 2, BUFSIZE / 2);
     }
     count = arch_cycle_count() - count;
@@ -175,7 +175,7 @@ __NO_INLINE static void bench_spinlock(void)
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     uint64_t c = arch_cycle_count();
-    for (uint i = 0; i < COUNT; i++) {
+    for (size_t i = 0; i < COUNT; i++) {
         spin_lock(&lock);
         spin_unlock(&lock);
     }
@@ -189,7 +189,7 @@ __NO_INLINE static void bench_spinlock(void)
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     c = arch_cycle_count();
-    for (uint i = 0; i < COUNT; i++) {
+    for (size_t i = 0; i < COUNT; i++) {
         spin_lock_irqsave(&lock, state2);
         spin_unlock_irqrestore(&lock, state2);
     }
@@ -201,7 +201,7 @@ __NO_INLINE static void bench_spinlock(void)
 
     // test 2: acquire/release a spinlock with irq save and irqs enabled
     c = arch_cycle_count();
-    for (uint i = 0; i < COUNT; i++) {
+    for (size_t i = 0; i < COUNT; i++) {
         spin_lock_irqsave(&lock, state2);
         spin_unlock_irqrestore(&lock, state2);
     }
@@ -218,7 +218,7 @@ __NO_INLINE static void bench_mutex(void)
 
     static const uint count = 128*1024*1024;
     uint64_t c = arch_cycle_count();
-    for (uint i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         mutex_acquire(&m);
         mutex_release(&m);
     }

@@ -10,19 +10,19 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/benchmarks.c \
-    $(LOCAL_DIR)/cache_tests.c \
-    $(LOCAL_DIR)/clock_tests.c \
-    $(LOCAL_DIR)/fibo.c \
+    $(LOCAL_DIR)/benchmarks.cpp \
+    $(LOCAL_DIR)/cache_tests.cpp \
+    $(LOCAL_DIR)/clock_tests.cpp \
+    $(LOCAL_DIR)/fibo.cpp \
     $(LOCAL_DIR)/mem_tests.cpp \
-    $(LOCAL_DIR)/printf_tests.c \
-    $(LOCAL_DIR)/sync_ipi_tests.c \
-    $(LOCAL_DIR)/sleep_tests.c \
+    $(LOCAL_DIR)/printf_tests.cpp \
+    $(LOCAL_DIR)/sync_ipi_tests.cpp \
+    $(LOCAL_DIR)/sleep_tests.cpp \
     $(LOCAL_DIR)/string_tests.c \
-    $(LOCAL_DIR)/tests.c \
-    $(LOCAL_DIR)/thread_tests.c \
+    $(LOCAL_DIR)/tests.cpp \
+    $(LOCAL_DIR)/thread_tests.cpp \
     $(LOCAL_DIR)/alloc_checker_tests.cpp \
-    $(LOCAL_DIR)/timer_tests.c \
+    $(LOCAL_DIR)/timer_tests.cpp \
 
 
 MODULE_DEPS += \
