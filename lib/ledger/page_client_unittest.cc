@@ -213,7 +213,7 @@ TEST_F(PageClientTest, ConflictWrite) {
   EXPECT_EQ("value3", page_client()->value("key"));
 }
 
-TEST_F(PageClientTest, ConflictPrefixWrite) {
+TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
   page1()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page1()->Put(to_array("a/key"), to_array("value1"), [this](ledger::Status status) {
