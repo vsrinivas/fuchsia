@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:fidl.internal';
+import 'dart:zircon';
 import 'dart:typed_data';
 import 'dart:convert';
 

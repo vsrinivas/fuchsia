@@ -11,6 +11,5 @@ group("fidl") {
     #"fuzz:fidl-fuzzer(//build/toolchain:host_x64)",
     "compiler/interfaces",
     "cpp/bindings/tests:lib_fidl_cpp_tests",
-    "dart/test",
   ]
 }

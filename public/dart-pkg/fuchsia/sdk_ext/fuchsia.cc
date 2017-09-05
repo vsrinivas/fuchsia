@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/dart/sdk_ext/src/natives.h"
+#include "dart-pkg/fuchsia/sdk_ext/fuchsia.h"
 
 #include <magenta/syscalls.h>
 
@@ -13,9 +13,9 @@
 #include <vector>
 
 #include "dart/runtime/include/dart_api.h"
-#include "lib/fidl/dart/sdk_ext/src/handle.h"
-#include "lib/fidl/dart/sdk_ext/src/handle_waiter.h"
-#include "lib/fidl/dart/sdk_ext/src/system.h"
+#include "dart-pkg/zircon/sdk_ext/handle.h"
+#include "dart-pkg/zircon/sdk_ext/natives.h"
+#include "dart-pkg/zircon/sdk_ext/system.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -29,7 +29,7 @@
 
 using tonic::ToDart;
 
-namespace fidl {
+namespace fuchsia {
 namespace dart {
 namespace {
 
@@ -37,21 +37,8 @@ static tonic::DartLibraryNatives* g_natives;
 
 tonic::DartLibraryNatives* InitNatives() {
   tonic::DartLibraryNatives* natives = new tonic::DartLibraryNatives();
-  HandleWaiter::RegisterNatives(natives);
-  Handle::RegisterNatives(natives);
-  System::RegisterNatives(natives);
 
   return natives;
-}
-
-}  // namespace
-
-void Initialize() {
-  auto dart_state = tonic::DartState::Current();
-  std::unique_ptr<tonic::DartClassProvider> fidl_class_provider(
-      new tonic::DartClassProvider(dart_state, "dart:fidl.internal"));
-  dart_state->class_library().add_provider("fidl.internal",
-                                           std::move(fidl_class_provider));
 }
 
 #define REGISTER_FUNCTION(name, count) \
@@ -61,7 +48,6 @@ void Initialize() {
   extern void name(Dart_NativeArguments args);
 
 #define FIDL_NATIVE_LIST(V)    \
-  V(MxTime_Get, 1)             \
   V(SetReturnCode, 1)
 
 FIDL_NATIVE_LIST(DECLARE_FUNCTION);
@@ -107,35 +93,42 @@ const uint8_t* NativeSymbol(Dart_NativeFunction native_function) {
   return g_natives->GetSymbol(native_function);
 }
 
-static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
-  Dart_SetIntegerReturnValue(arguments,
-                             static_cast<int64_t>(MX_ERR_INVALID_ARGS));
-}
-
-#define CHECK_INTEGER_ARGUMENT(num, result, failure)                  \
-  {                                                                   \
-    Dart_Handle __status;                                             \
-    __status = Dart_GetNativeIntegerArgument(arguments, num, result); \
-    if (Dart_IsError(__status)) {                                     \
-      Set##failure##Return(arguments);                                \
-      return;                                                         \
-    }                                                                 \
-  }
-
-void MxTime_Get(Dart_NativeArguments arguments) {
-  int64_t clock_id;
-  CHECK_INTEGER_ARGUMENT(0, &clock_id, InvalidArgument);
-
-  mx_time_t time = mx_time_get(clock_id);
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(time));
-}
-
 void SetReturnCode(Dart_NativeArguments arguments) {
   int64_t return_code;
-  CHECK_INTEGER_ARGUMENT(0, &return_code, InvalidArgument);
+  Dart_Handle status = Dart_GetNativeIntegerArgument(arguments, 0, &return_code);
+  if (!tonic::LogIfError(status)) {
+    tonic::DartState::Current()->SetReturnCode(return_code);
+  }
+}
 
-  tonic::DartState::Current()->SetReturnCode(return_code);
+}  // namespace
+
+void Initialize(
+    fidl::InterfaceHandle<app::ApplicationEnvironment> environment,
+    fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) {
+  zircon::dart::Initialize();
+
+  Dart_Handle library = Dart_LookupLibrary(ToDart("dart:fuchsia"));
+  DART_CHECK_VALID(library);
+  DART_CHECK_VALID(Dart_SetNativeResolver(library, fuchsia::dart::NativeLookup,
+                                          fuchsia::dart::NativeSymbol));
+
+  auto dart_state = tonic::DartState::Current();
+  std::unique_ptr<tonic::DartClassProvider> fuchsia_class_provider(
+      new tonic::DartClassProvider(dart_state, "dart:fuchsia"));
+  dart_state->class_library().add_provider("fuchsia",
+                                           std::move(fuchsia_class_provider));
+
+  DART_CHECK_VALID(Dart_SetField(
+      library, ToDart("_environment"),
+      ToDart(zircon::dart::Handle::Create(environment.PassHandle()))));
+
+  if (outgoing_services) {
+    DART_CHECK_VALID(Dart_SetField(
+        library, ToDart("_outgoingServices"),
+        ToDart(zircon::dart::Handle::Create(outgoing_services.PassChannel()))));
+  }
 }
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace fuchsia

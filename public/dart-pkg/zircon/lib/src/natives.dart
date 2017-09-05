@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of internal;
+part of zircon;
 
 // ignore_for_file: native_function_body_in_non_sdk_code
 
-typedef void AsyncWaitCallback(int status, int pending);
+class MxTime {
+  static int _get(int clockId) native "MxTime_Get";
 
-class HandleWaiter extends NativeFieldWrapperClass2 {
-  // Private constructor.
-  HandleWaiter._();
-
-  void cancel() native "HandleWaiter_Cancel";
+  // Clock ID zero is MX_CLOCK_MONOTONIC.
+  static int timerMillisecondClock() => _get(0) ~/ (1000 * 1000);
 }
+

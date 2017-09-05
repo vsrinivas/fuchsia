@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/dart/sdk_ext/src/handle_waiter.h"
+#include "dart-pkg/zircon/sdk_ext/handle_waiter.h"
 
 #include "lib/fidl/cpp/waiter/default.h"
-#include "lib/fidl/dart/sdk_ext/src/handle.h"
+#include "dart-pkg/zircon/sdk_ext/handle.h"
 #include "lib/tonic/converter/dart_converter.h"
 #include "lib/tonic/dart_args.h"
 #include "lib/tonic/dart_binding_macros.h"
@@ -16,10 +16,10 @@ using tonic::DartInvokeField;
 using tonic::DartState;
 using tonic::ToDart;
 
-namespace fidl {
+namespace zircon {
 namespace dart {
 
-IMPLEMENT_WRAPPERTYPEINFO(fidl.internal, HandleWaiter);
+IMPLEMENT_WRAPPERTYPEINFO(zircon, HandleWaiter);
 
 #define FOR_EACH_BINDING(V) \
   V(HandleWaiter, Cancel)
@@ -41,7 +41,7 @@ HandleWaiter::HandleWaiter(Handle* handle,
                            mx_signals_t signals,
                            mx_time_t timeout,
                            Dart_Handle callback)
-    : waiter_(GetDefaultAsyncWaiter()),
+    : waiter_(fidl::GetDefaultAsyncWaiter()),
       handle_(handle),
       callback_(DartState::Current(), callback) {
   FTL_CHECK(handle_ != nullptr);
@@ -112,4 +112,4 @@ void HandleWaiter::CallOnWaitComplete(mx_status_t status,
 }
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace zircon

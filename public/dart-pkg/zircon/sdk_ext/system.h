@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_DART_SDK_EXT_SRC_SYSTEM_H_
-#define LIB_FIDL_DART_SDK_EXT_SRC_SYSTEM_H_
+#ifndef DART_PKG_ZIRCON_SDK_EXT_SYSTEM_H_
+#define DART_PKG_ZIRCON_SDK_EXT_SYSTEM_H_
 
 #include <magenta/syscalls.h>
 
 #include "dart/runtime/include/dart_api.h"
-#include "lib/fidl/dart/sdk_ext/src/handle.h"
+#include "dart-pkg/zircon/sdk_ext/handle.h"
 #include "lib/tonic/dart_library_natives.h"
 #include "lib/tonic/dart_wrappable.h"
 #include "lib/tonic/typed_data/dart_byte_data.h"
 
-namespace fidl {
+namespace zircon {
 namespace dart {
 
 class System : public ftl::RefCountedThreadSafe<System>,
@@ -52,6 +52,6 @@ class System : public ftl::RefCountedThreadSafe<System>,
 };
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace zircon
 
-#endif  // LIB_FIDL_DART_SDK_EXT_SRC_SYSTEM_H_
+#endif  // DART_PKG_ZIRCON_SDK_EXT_SYSTEM_H_

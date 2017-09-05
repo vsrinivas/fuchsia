@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_DART_SDK_EXT_SRC_HANDLE_H_
-#define LIB_FIDL_DART_SDK_EXT_SRC_HANDLE_H_
+#ifndef DART_PKG_ZIRCON_SDK_EXT_HANDLE_H_
+#define DART_PKG_ZIRCON_SDK_EXT_HANDLE_H_
 
 #include <magenta/syscalls.h>
 
 #include <vector>
 
 #include "dart/runtime/include/dart_api.h"
-#include "lib/fidl/dart/sdk_ext/src/handle_waiter.h"
+#include "dart-pkg/zircon/sdk_ext/handle_waiter.h"
 #include "lib/tonic/dart_library_natives.h"
 #include "lib/tonic/dart_wrappable.h"
 #include "lib/tonic/typed_data/dart_byte_data.h"
 
-namespace fidl {
+namespace zircon {
 namespace dart {
 /**
- * Handle is the native peer of a Dart object (Handle in dart:fidl.internal)
+ * Handle is the native peer of a Dart object (Handle in dart:zircon)
  * that holds an mx_handle_t. It tracks active waiters on handle too.
  */
 class Handle : public ftl::RefCountedThreadSafe<Handle>,
@@ -33,10 +33,13 @@ class Handle : public ftl::RefCountedThreadSafe<Handle>,
   static void RegisterNatives(tonic::DartLibraryNatives* natives);
 
   static ftl::RefPtr<Handle> Create(mx_handle_t handle);
+  static ftl::RefPtr<Handle> Create(mx::handle handle) {
+    return Create(handle.release());
+  }
 
   static ftl::RefPtr<Handle> Unwrap(Dart_Handle handle) {
     return ftl::RefPtr<Handle>(
-        tonic::DartConverter<fidl::dart::Handle*>::FromDart(handle));
+        tonic::DartConverter<zircon::dart::Handle*>::FromDart(handle));
   }
 
   static Dart_Handle CreateInvalid();
@@ -64,6 +67,6 @@ class Handle : public ftl::RefCountedThreadSafe<Handle>,
 };
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace zircon
 
-#endif  // LIB_FIDL_DART_SDK_EXT_SRC_HANDLE_H_
+#endif  // DART_PKG_ZIRCON_SDK_EXT_HANDLE_H_

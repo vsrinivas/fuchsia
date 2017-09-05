@@ -3,23 +3,33 @@
 # found in the LICENSE file.
 
 import("//build/dart/dart_package.gni")
+import("//build/dart/dart_fuchsia_test.gni")
 
 # NOTE: You must add any Dart files to sdk_ext.gni.
 
+group("zircon") {
+  public_deps = [
+    ":sdk_ext",
+  ]
+  deps = [
+    ":package_for_analysis",
+    ":dart_zircon_test",
+  ]
+}
+
 source_set("sdk_ext") {
   sources = [
-    "src/handle.cc",
-    "src/handle.h",
-    "src/handle_waiter.cc",
-    "src/handle_waiter.h",
-    "src/natives.cc",
-    "src/natives.h",
-    "src/system.cc",
-    "src/system.h",
+    "sdk_ext/handle.cc",
+    "sdk_ext/handle.h",
+    "sdk_ext/handle_waiter.cc",
+    "sdk_ext/handle_waiter.h",
+    "sdk_ext/natives.cc",
+    "sdk_ext/natives.h",
+    "sdk_ext/system.cc",
+    "sdk_ext/system.h",
   ]
 
   deps = [
-    ":package_for_analysis",
     "//dart/runtime:dart_api",
     "//garnet/public/lib/fidl/c/waiter",
     "//garnet/public/lib/fidl/cpp/waiter",
@@ -32,5 +42,11 @@ source_set("sdk_ext") {
 # This is just so that we can run dart analysis on these files.
 dart_package("package_for_analysis") {
   infer_package_name = true
-  source_dir = "."
+  source_dir = "lib"
+}
+
+dart_fuchsia_test("dart_zircon_test") {
+  deps = [
+    "//garnet/public/lib/fidl/dart",
+  ]
 }

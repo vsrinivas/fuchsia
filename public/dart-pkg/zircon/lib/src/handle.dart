@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of internal;
+part of zircon;
 
 // ignore_for_file: native_function_body_in_non_sdk_code
 

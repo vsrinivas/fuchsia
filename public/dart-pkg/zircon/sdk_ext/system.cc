@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/dart/sdk_ext/src/system.h"
+#include "dart-pkg/zircon/sdk_ext/system.h"
 
 #include <array>
 
@@ -11,7 +11,7 @@
 
 using tonic::ToDart;
 
-namespace fidl {
+namespace zircon {
 namespace dart {
 
 namespace {
@@ -98,7 +98,7 @@ Dart_Handle ConstructDartObject(const char* class_name, Args&&... args) {
   tonic::DartClassLibrary& class_library =
       tonic::DartState::Current()->class_library();
   Dart_Handle type = Dart_HandleFromPersistent(
-      class_library.GetClass("fidl.internal", class_name));
+      class_library.GetClass("zircon", class_name));
   FTL_DCHECK(!tonic::LogIfError(type));
 
   const char* cstr;
@@ -114,7 +114,7 @@ Dart_Handle ConstructDartObject(const char* class_name, Args&&... args) {
 
 }  // namespace
 
-IMPLEMENT_WRAPPERTYPEINFO(fidl.internal, System);
+IMPLEMENT_WRAPPERTYPEINFO(zircon, System);
 
 Dart_Handle System::ChannelCreate(uint32_t options) {
   mx_handle_t out0 = 0, out1 = 0;
@@ -345,4 +345,4 @@ void System::RegisterNatives(tonic::DartLibraryNatives* natives) {
 }
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace zircon

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_DART_SDK_EXT_SRC_HANDLE_WAITER_H_
-#define LIB_FIDL_DART_SDK_EXT_SRC_HANDLE_WAITER_H_
+#ifndef DART_PKG_ZIRCON_SDK_EXT_HANDLE_WAITER_H_
+#define DART_PKG_ZIRCON_SDK_EXT_HANDLE_WAITER_H_
 
 #include <mx/handle.h>
 
@@ -16,7 +16,7 @@ namespace tonic {
 class DartLibraryNatives;
 }  // namespace tonic
 
-namespace fidl {
+namespace zircon {
 namespace dart {
 
 class Handle;
@@ -59,6 +59,6 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
 };
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace zircon
 
-#endif  // LIB_FIDL_DART_SDK_EXT_SRC_HANDLE_WAITER_H_
+#endif  // DART_PKG_ZIRCON_SDK_EXT_HANDLE_WAITER_H_

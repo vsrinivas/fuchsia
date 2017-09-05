@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/dart/sdk_ext/src/handle.h"
+#include "dart-pkg/zircon/sdk_ext/handle.h"
 
 #include <algorithm>
 
@@ -11,10 +11,10 @@
 
 using tonic::ToDart;
 
-namespace fidl {
+namespace zircon {
 namespace dart {
 
-IMPLEMENT_WRAPPERTYPEINFO(fidl.internal, Handle);
+IMPLEMENT_WRAPPERTYPEINFO(zircon, Handle);
 
 Handle::Handle(mx_handle_t handle) : handle_(handle) {}
 
@@ -107,4 +107,4 @@ void Handle::RegisterNatives(tonic::DartLibraryNatives* natives) {
 }
 
 }  // namespace dart
-}  // namespace fidl
+}  // namespace zircon
