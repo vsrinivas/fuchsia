@@ -38,9 +38,18 @@ typedef struct {
     usb_audio_ac_feature_unit_desc* desc;
 } feature_unit_node_t;
 
+static bool want_interface(usb_interface_descriptor_t* intf, void* arg) {
+    return (intf->bInterfaceClass == USB_CLASS_AUDIO &&
+            intf->bInterfaceSubClass != USB_SUBCLASS_AUDIO_CONTROL);
+}
+
 static mx_status_t usb_audio_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_protocol_t usb;
     mx_status_t status = device_get_protocol(device, MX_PROTOCOL_USB, &usb);
+    if (status != MX_OK) {
+        return status;
+    }
+    status = usb_claim_additional_interfaces(&usb, want_interface, NULL);
     if (status != MX_OK) {
         return status;
     }
