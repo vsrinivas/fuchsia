@@ -21,7 +21,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-append.c \
     $(LOCAL_DIR)/test-basic.c \
-    $(LOCAL_DIR)/test-directory.c \
+    $(LOCAL_DIR)/test-directory.cpp \
     $(LOCAL_DIR)/test-dot-dot.c \
     $(LOCAL_DIR)/test-link.c \
     $(LOCAL_DIR)/test-fcntl.cpp \

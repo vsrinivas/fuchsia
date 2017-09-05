@@ -152,6 +152,9 @@ constexpr uint32_t DirentSize(uint8_t namelen) {
 }
 
 constexpr uint8_t kMinfsMaxNameSize       = 255;
+// The largest acceptable value of DirentSize(dirent->namelen).
+// The 'dirent->reclen' field may be larger after coalescing
+// entries.
 constexpr uint32_t kMinfsMaxDirentSize    = DirentSize(kMinfsMaxNameSize);
 constexpr uint32_t kMinfsMaxDirectorySize = (((1 << 20) - 1) & (~3));
 

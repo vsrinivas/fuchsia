@@ -105,6 +105,7 @@ bool test_directory_max(void) {
 }
 
 bool test_directory_coalesce_helper(const int* unlink_order) {
+    BEGIN_HELPER;
     const char* files[] = {
         "::coalesce/aaaaaaaa",
         "::coalesce/bbbbbbbb",
@@ -129,7 +130,8 @@ bool test_directory_coalesce_helper(const int* unlink_order) {
     }
 
     ASSERT_EQ(rmdir("::coalesce"), 0, "");
-    return true;
+
+    END_HELPER;
 }
 
 bool test_directory_coalesce(void) {
@@ -152,6 +154,57 @@ bool test_directory_coalesce(void) {
     // Case 3: Test merge-with-both
     const int merge_with_both[] = {1, 3, 2, 0, 4};
     ASSERT_TRUE(test_directory_coalesce_helper(merge_with_both), "");
+
+    END_TEST;
+}
+
+// This test prevents the regression of an fsck bug, which could also
+// occur in a filesystem which does similar checks at runtime.
+//
+// This test ensures that if multiple large direntries are created
+// and coalesced, the 'last remaining entry' still has a valid size,
+// even though it may be quite large.
+bool test_directory_coalesce_large_record(void) {
+    BEGIN_TEST;
+
+    char buf[NAME_MAX + 1];
+    ASSERT_EQ(mkdir("::coalesce_lr", 0666), 0);
+    int dirfd = open("::coalesce_lr", O_RDONLY | O_DIRECTORY);
+    ASSERT_GT(dirfd, 0);
+
+    const int kNumEntries = 20;
+
+    // Make the entries
+    for (int i = 0; i < kNumEntries; i++) {
+        memset(buf, 'a' + i, 50);
+        buf[50] = '\0';
+        ASSERT_EQ(mkdirat(dirfd, buf, 0666), 0);
+    }
+
+    // Unlink all the entries except the last one
+    for (int i = 0; i < kNumEntries - 1; i++) {
+        memset(buf, 'a' + i, 50);
+        buf[50] = '\0';
+        ASSERT_EQ(unlinkat(dirfd, buf, AT_REMOVEDIR), 0);
+    }
+
+    // Check that the 'large remaining entry', which may
+    // have a fairly large size, isn't marked as 'invalid' by
+    // fsck.
+    if (test_info->can_be_mounted) {
+        ASSERT_EQ(close(dirfd), 0);
+        ASSERT_TRUE(check_remount());
+        dirfd = open("::coalesce_lr", O_RDONLY | O_DIRECTORY);
+        ASSERT_GT(dirfd, 0);
+    }
+
+    // Unlink the final entry
+    memset(buf, 'a' + kNumEntries - 1, 50);
+    buf[50] = '\0';
+    ASSERT_EQ(unlinkat(dirfd, buf, AT_REMOVEDIR), 0);
+
+    ASSERT_EQ(close(dirfd), 0);
+    ASSERT_EQ(rmdir("::coalesce_lr"), 0);
 
     END_TEST;
 }
@@ -325,7 +378,7 @@ bool test_directory_rewind(void) {
     };
 
     DIR* dir = opendir("::a");
-    ASSERT_NE(dir, NULL, "");
+    ASSERT_NONNULL(dir);
 
     // We should be able to repeatedly access the directory without
     // re-opening it.
@@ -367,7 +420,7 @@ bool test_directory_after_rmdir(void) {
     // Make a directory...
     ASSERT_EQ(mkdir("::dir", 0755), 0, "");
     DIR* dir = opendir("::dir");
-    ASSERT_NE(dir, NULL, "");
+    ASSERT_NONNULL(dir);
     // We can make and delete subdirectories, since "::dir" exists...
     ASSERT_EQ(mkdir("::dir/subdir", 0755), 0, "");
     ASSERT_EQ(rmdir("::dir/subdir"), 0, "");
@@ -401,6 +454,7 @@ bool test_directory_after_rmdir(void) {
 
 RUN_FOR_ALL_FILESYSTEMS(directory_tests,
     RUN_TEST_MEDIUM(test_directory_coalesce)
+    RUN_TEST_MEDIUM(test_directory_coalesce_large_record)
     RUN_TEST_MEDIUM(test_directory_filename_max)
     RUN_TEST_LARGE(test_directory_large)
     RUN_TEST_MEDIUM(test_directory_trailing_slash)
