@@ -16,6 +16,7 @@
 #include <ddk/protocol/usb-function.h>
 #include <magenta/listnode.h>
 #include <magenta/device/usb-device.h>
+#include <magenta/hw/usb-cdc.h>
 #include <magenta/hw/usb.h>
 
 typedef struct {
@@ -53,6 +54,25 @@ typedef struct usb_device {
 #define IN_EP_START     17
 #define IN_EP_END       31
 
+static mx_status_t usb_device_alloc_string_desc(usb_device_t* dev, const char* string,
+                                                uint8_t* out_index) {
+    unsigned i;
+    for (i = 1; i < countof(dev->strings); i++) {
+        if (!dev->strings[i]) {
+            break;
+        }
+    }
+    if (i == countof(dev->strings)) {
+        return MX_ERR_NO_RESOURCES;
+    }
+
+    dev->strings[i] = strdup(string);
+    if (!dev->strings[i]) {
+        return MX_ERR_NO_MEMORY;
+    }
+    *out_index = i;
+    return MX_OK;
+}
 
 static void usb_function_iotxn_queue(void* ctx, iotxn_t* txn) {
     usb_function_t* function = ctx;
@@ -386,24 +406,18 @@ static mx_status_t usb_dev_alloc_string_desc(usb_device_t* dev, const void* in_b
     if (in_len < 2 || out_len < sizeof(uint8_t)) {
         return MX_ERR_INVALID_ARGS;
     }
-    unsigned i;
-    for (i = 1; i < countof(dev->strings); i++) {
-        if (!dev->strings[i]) {
-            break;
-        }
-    }
-    if (i == countof(dev->strings)) {
-        return MX_ERR_NO_RESOURCES;
-    }
 
     // make sure string is zero terminated
     *((char *)in_buf + in_len - 1) = 0;
-    dev->strings[i] = strdup((char *)in_buf);
-    if (!dev->strings[i]) {
-        return MX_ERR_NO_MEMORY;
-    }
-    *((uint8_t *)out_buf) = i;
-    *out_actual = sizeof(uint8_t);
+
+    uint8_t index;
+    mx_status_t status = usb_device_alloc_string_desc(dev, in_buf, &index);
+    if (status != MX_OK) {
+        return status;
+     }
+
+    *((uint8_t *)out_buf) = index;
+    *out_actual = sizeof(index);
     return MX_OK;
 }
 
@@ -553,6 +567,61 @@ static mx_protocol_device_t device_proto = {
     .release = usb_dev_release,
 };
 
+#if defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
+static mx_status_t usb_dev_set_default_config(usb_device_t* dev) {
+    usb_device_descriptor_t device_desc = {
+        .bLength = sizeof(usb_device_descriptor_t),
+        .bDescriptorType = USB_DT_DEVICE,
+        .bcdUSB = htole16(0x0200),
+        .bDeviceClass = 0,
+        .bDeviceSubClass = 0,
+        .bDeviceProtocol = 0,
+        .bMaxPacketSize0 = 64,
+        .idVendor = htole16(USB_DEVICE_VID),
+        .idProduct = htole16(USB_DEVICE_PID),
+        .bcdDevice = htole16(0x0100),
+        .bNumConfigurations = 1,
+    };
+
+    mx_status_t status = MX_OK;
+
+#ifdef USB_DEVICE_MANUFACTURER
+    status = usb_device_alloc_string_desc(dev, USB_DEVICE_MANUFACTURER, &device_desc.iManufacturer);
+    if (status != MX_OK) return status;
+#endif
+#ifdef USB_DEVICE_PRODUCT
+    usb_device_alloc_string_desc(dev, USB_DEVICE_PRODUCT, &device_desc.iProduct);
+    if (status != MX_OK) return status;
+#endif
+#ifdef USB_DEVICE_SERIAL
+    usb_device_alloc_string_desc(dev, USB_DEVICE_SERIAL, &device_desc.iSerialNumber);
+    if (status != MX_OK) return status;
+#endif
+
+    status = usb_dev_set_device_desc(dev, &device_desc, sizeof(device_desc));
+    if (status != MX_OK) return status;
+
+    usb_function_descriptor_t function_desc;
+    if (strcasecmp(USB_DEVICE_FUNCTIONS, "cdc") == 0) {
+        function_desc.interface_class = USB_CLASS_COMM;
+        function_desc.interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
+        function_desc.interface_protocol = 0;
+    } else if (strcasecmp(USB_DEVICE_FUNCTIONS, "ums") == 0) {
+        function_desc.interface_class = USB_CLASS_MSC;
+        function_desc.interface_subclass = USB_SUBCLASS_MSC_SCSI;
+        function_desc.interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY;
+    } else {
+        printf("usb_dev_set_default_config: unknown function %s\n", USB_DEVICE_FUNCTIONS);
+        return MX_ERR_INVALID_ARGS;
+    }
+
+    status = usb_dev_add_function(dev, &function_desc, sizeof(function_desc));
+    if (status != MX_OK) return status;
+
+    return usb_dev_bind_functions(dev);
+}
+#endif // defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
+
 mx_status_t usb_dev_bind(void* ctx, mx_device_t* parent, void** cookie) {
     printf("usb_dev_bind\n");
 
@@ -590,6 +659,11 @@ mx_status_t usb_dev_bind(void* ctx, mx_device_t* parent, void** cookie) {
         .ctx = dev,
     };
     usb_dci_set_interface(&dev->usb_dci, &intf);
+
+#if defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
+    // set compile time configuration, if we have one
+    usb_dev_set_default_config(dev);
+#endif
 
     return MX_OK;
 }
