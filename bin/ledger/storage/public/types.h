@@ -58,14 +58,15 @@ enum class Status {
   NOT_FOUND,
 
   // Internal status.
-  NO_SUCH_CHILD,
   FORMAT_ERROR,
   ILLEGAL_STATE,
   INTERNAL_IO_ERROR,
-  OBJECT_ID_MISMATCH,
+  INTERRUPTED,
   NOT_CONNECTED_ERROR,
+  NO_SUCH_CHILD,
+  OBJECT_ID_MISMATCH,
 
-  // Temporary status.
+  // Temporary status or status for tests.
   NOT_IMPLEMENTED,
 };
 

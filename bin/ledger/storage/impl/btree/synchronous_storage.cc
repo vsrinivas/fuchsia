@@ -23,7 +23,7 @@ Status SynchronousStorage::TreeNodeFromId(
             TreeNode::FromId(page_storage_, object_id, std::move(callback));
           },
           &status, result)) {
-    return Status::ILLEGAL_STATE;
+    return Status::INTERRUPTED;
   }
   return status;
 }
@@ -44,7 +44,7 @@ Status SynchronousStorage::TreeNodesFromIds(
                        Status, std::vector<std::unique_ptr<const TreeNode>>)>
                        callback) { waiter->Finalize(std::move(callback)); },
           &status, result)) {
-    return Status::ILLEGAL_STATE;
+    return Status::INTERRUPTED;
   }
   return status;
 }
@@ -63,7 +63,7 @@ Status SynchronousStorage::TreeNodeFromEntries(
                                                   std::move(callback));
                           },
                           &status, result)) {
-    return Status::ILLEGAL_STATE;
+    return Status::INTERRUPTED;
   }
   return status;
 }
