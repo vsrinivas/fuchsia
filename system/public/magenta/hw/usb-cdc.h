@@ -52,9 +52,16 @@
 #define USB_CDC_DST_OBEX_SERVICE_ID           0x19
 #define USB_CDC_DST_NCM                       0x1A
 
-/* CDC Class-Specific Notificaiton Codes */
+/* CDC Class-Specific Notification Codes */
 #define USB_CDC_NC_NETWORK_CONNECTION       0x00
 #define USB_CDC_NC_CONNECTION_SPEED_CHANGE  0x2A
+
+/* CDC Ethernet Class-Specific Request Codes */
+#define USB_CDC_SET_ETHERNET_MULTICAST_FILTERS  0x40
+#define USB_CDC_SET_ETHERNET_PM_PATTERN_FILTER  0x41
+#define USB_CDC_GET_ETHERNET_PM_PATTERN_FILTER  0x42
+#define USB_CDC_SET_ETHERNET_PACKET_FILTER      0x43
+#define USB_CDC_GET_ETHERNET_STATISTIC          0x44
 
 typedef struct {
     uint8_t bLength;
@@ -86,6 +93,15 @@ typedef struct {
     uint8_t bSubordinateInterface[];
 } __attribute__ ((packed)) usb_cs_union_interface_descriptor_t;
 
+// fixed size version of usb_cs_union_interface_descriptor_t
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_CS_INTERFACE
+    uint8_t bDescriptorSubType; // USB_CDC_DST_UNION
+    uint8_t bControlInterface;
+    uint8_t bSubordinateInterface;
+} __attribute__ ((packed)) usb_cs_union_interface_descriptor_1_t;
+
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;    // USB_DT_CS_INTERFACE
@@ -104,5 +120,11 @@ typedef struct {
     uint16_t wIndex;
     uint16_t wLength;
 } __attribute__ ((packed)) usb_cdc_notification_t;
+
+typedef struct {
+    usb_cdc_notification_t notification;
+    uint32_t downlink_br;
+    uint32_t uplink_br;
+ } __attribute__ ((packed)) usb_cdc_speed_change_notification_t;
 
 __BEGIN_CDECLS;
