@@ -67,21 +67,25 @@ LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/wmemmove.c \
     $(GET_LOCAL_DIR)/wmemset.c \
 
-ifeq ($(ARCH),arm64)
-LOCAL_SRCS += \
-    $(GET_LOCAL_DIR)/memcpy.c \
-    $(GET_LOCAL_DIR)/memmove.c \
-    $(GET_LOCAL_DIR)/mempcpy.c \
-    $(GET_LOCAL_DIR)/memset.c \
+ifeq ($(SUBARCH),x86-64)
 
-else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
     $(GET_LOCAL_DIR)/x86_64/memcpy.S \
     $(GET_LOCAL_DIR)/x86_64/memmove.S \
-    $(GET_LOCAL_DIR)/x86_64/mempcpy.S \
     $(GET_LOCAL_DIR)/x86_64/memset.S \
 
 else
-error Unsupported architecture for musl build!
 
+LOCAL_SRCS += \
+    $(GET_LOCAL_DIR)/memcpy.c \
+    $(GET_LOCAL_DIR)/memmove.c \
+    $(GET_LOCAL_DIR)/memset.c \
+
+endif
+
+# Only use the assembly version if x86-64 and not ASan.
+ifeq ($(SUBARCH):$(call TOBOOL,$(USE_ASAN)),x86-64:false)
+LOCAL_SRCS += $(GET_LOCAL_DIR)/x86_64/mempcpy.S
+else
+LOCAL_SRCS += $(GET_LOCAL_DIR)/mempcpy.c
 endif
