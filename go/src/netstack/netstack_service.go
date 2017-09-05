@@ -120,23 +120,25 @@ func (ni *netstackImpl) GetNodeName() (out string, err error) {
 
 func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, err error) {
 	// Pure reading of statistics. No critical section. No lock is needed.
-	if _, ok := ns.ifStates[tcpip.NICID(nicid)]; !ok {
+	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]
+
+	if !ok {
 		return nsfidl.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
 	}
 
-	// Found the NIC.
-	// TODO (porce): Query the NIC to get stats.
+	// Found the ifState.
+	if ifState.eth == nil {
+		// TODO (porce): Some interfaces do not have its
+		// underlying Ethernet Client. eg. Loopback interface.
+		// The stats should be stored in the Loopback device.
+		// This discrepancy is due to the structure discrepancy between
+		// a loopback device and the other; both have NIC data structures,
+		// but the loopback does not have a valid eth.
+		return nsfidl.NetInterfaceStats{}, nil
+	}
 
-	// Fill up example stats.
-	stats = nsfidl.NetInterfaceStats{}
-	stats.UpSince = 1504135273 // August 30, 2017 at 11:21:24 PM GMT.
-
-	stats.RxPktsTotal = 1234
-	stats.RxBytesTotal = 9876
-
-	stats.TxPktsTotal = 23456
-	stats.TxBytesTotal = 1234567890
-	return stats, nil
+	// Read from the underlying Ethernet Client's stats.
+	return ifState.eth.Stats, nil	// TODO (porce): A wrapper function.
 }
 
 type netstackDelegate struct {

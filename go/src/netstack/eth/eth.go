@@ -46,7 +46,10 @@ import (
 	"sync"
 	"syscall"
 	"syscall/mx"
+	"time"
 	"unsafe"
+
+	nsfidl "garnet/public/lib/netstack/fidl/netstack"
 )
 
 // A Client is an ethernet client.
@@ -69,6 +72,11 @@ type Client struct {
 	tmpbuf     []bufferEntry // used to fill rx and drain tx
 	recvbuf    []bufferEntry // packets received
 	sendbuf    []bufferEntry // packets ready to send
+
+	// Stats are informational purpose, to be reported to upper layers.
+	Stats nsfidl.NetInterfaceStats
+
+	// These are counters for buffer management purpose.
 	txTotal    int
 	rxTotal    int
 	txInFlight int // number of buffers in tx fifo
@@ -121,6 +129,10 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 		tmpbuf:    make([]bufferEntry, 0, maxDepth),
 		recvbuf:   make([]bufferEntry, 0, rxDepth),
 		sendbuf:   make([]bufferEntry, 0, txDepth),
+
+		Stats:     nsfidl.NetInterfaceStats{
+			UpSince: time.Now().Unix(),
+		},
 	}
 	copy(c.MAC[:], info.MAC[:])
 
@@ -248,6 +260,11 @@ func (c *Client) txCompleteLocked() (bool, error) {
 	var count uint32
 	status := mx.Sys_fifo_read(c.tx, entries, entriesSize, &count)
 	n := int(count)
+
+	// Stats for report purpose
+	c.Stats.TxPktsTotal++
+	c.Stats.TxBytesTotal += uint32(n)
+
 	c.txInFlight -= n
 	c.txTotal += n
 	for i := 0; i < n; i++ {
@@ -261,6 +278,10 @@ func (c *Client) txCompleteLocked() (bool, error) {
 }
 
 func (c *Client) popRecvLocked() Buffer {
+	// Stats for informational purpose.
+	c.Stats.RxPktsTotal++
+	c.Stats.RxBytesTotal += uint32(len(c.recvbuf))
+
 	c.rxTotal++
 	b := c.recvbuf[0]
 	copy(c.recvbuf, c.recvbuf[1:])

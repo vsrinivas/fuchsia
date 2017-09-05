@@ -33,8 +33,8 @@ func (a *netstackClientApp) start() {
 	}
 
 	for _, iface := range ifaces {
-		// TODO (porce): netstack.GetInterfaces() does not guarantee the order of the return elements.
-		// Fix in netstack to return in an orderly manner.
+		// TODO (porec): Both Watcher(), Golang map[] do no sort the network interfaces.
+		// Sort them.
 		nicid := iface.Id
 		stats, err := a.netstack.GetStats(uint32(nicid))
 		if err != nil {
