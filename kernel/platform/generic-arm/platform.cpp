@@ -320,10 +320,8 @@ void platform_halt_secondary_cpus(void) {
 }
 
 static void platform_start_cpu(uint cluster, uint cpu) {
-    if (cluster == 0) {
-        uint32_t ret = psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
-        printf("Trying to start cpu%u returned: %x\n", cpu, ret);
-    }
+    uint32_t ret = psci_cpu_on(cluster, cpu, MEMBASE + KERNEL_LOAD_OFFSET);
+    dprintf(INFO, "Trying to start cpu %u:%u returned: %d\n", cluster, cpu, (int)ret);
 }
 
 static void* allocate_one_stack(void) {
