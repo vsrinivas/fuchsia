@@ -315,8 +315,8 @@ class ConvergenceTest
   test::DataGenerator data_generator_;
 };
 
-// Verify that the Ledger converges for a non-associative, non-commutative (but
-// deterministic) merge function.
+// Verify that the Ledger converges over different settings of merging functions
+// and number of ledger instances.
 TEST_P(ConvergenceTest, NLedgersConverge) {
   std::vector<std::unique_ptr<PageWatcherImpl>> watchers;
   std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
