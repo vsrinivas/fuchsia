@@ -14,6 +14,7 @@
 #include "apps/maxwell/src/acquirers/story_info/initializer.fidl.h"
 #include "apps/maxwell/src/user/intelligence_services_impl.h"
 #include "lib/network/fidl/network_service.fidl.h"
+#include "apps/bluetooth/service/interfaces/low_energy.fidl.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
 
@@ -209,7 +210,10 @@ void UserIntelligenceProviderImpl::AddStandardServices(
       [this](fidl::InterfaceRequest<network::NetworkService> request) {
         app_context_->ConnectToEnvironmentService(std::move(request));
       });
-
+  agent_host->AddService<bluetooth::low_energy::Central>(
+      [this](fidl::InterfaceRequest<bluetooth::low_energy::Central> request) {
+        app_context_->ConnectToEnvironmentService(std::move(request));
+      });
   agent_host->AddService<resolver::Resolver>(std::bind(
       &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
 }

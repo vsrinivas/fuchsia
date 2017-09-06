@@ -64,6 +64,7 @@ source_set("user_intelligence_provider") {
     "//apps/maxwell/services/user:scope",
     "//apps/maxwell/src/acquirers/story_info:initializer",
     "//garnet/public/lib/network/fidl",
+    "//apps/bluetooth/service/interfaces",
   ]
 
   defines = []

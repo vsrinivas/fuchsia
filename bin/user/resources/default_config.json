@@ -5,6 +5,7 @@
     "file:///system/apps/music_artist_agent",
     "file:///system/apps/last_fm_agent",
     "file:///system/apps/location_agent",
+    "file:///system/apps/agents/eddystone_agent",
     "file:///system/apps/agents/geoip_agent.dartx",
     "file:///system/apps/agents/maxwell_btl",
     "file:///system/apps/agents/maxwell_entity_selector",
