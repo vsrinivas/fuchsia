@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <hid/acer12.h>
+#include <hid/paradise.h>
 #include <hid/usages.h>
 
 #include <magenta/device/console.h>
@@ -27,8 +28,14 @@
 #define CLEAR_BTN_SIZE 50
 #define I2C_HID_DEBUG 0
 
+enum touch_panel_type {
+    TOUCH_PANEL_UNKNOWN,
+    TOUCH_PANEL_ACER12,
+    TOUCH_PANEL_PARADISE,
+};
+
 // Array of colors for each finger
-uint32_t colors[] = {
+static uint32_t colors[] = {
     0x00ff0000,
     0x0000ff00,
     0x000000ff,
@@ -41,7 +48,7 @@ uint32_t colors[] = {
     0x000ff000,
 };
 
-void acer12_touch_dump(acer12_touch_t* rpt) {
+static void acer12_touch_dump(acer12_touch_t* rpt) {
     printf("report id: %u\n", rpt->rpt_id);
     for (int i = 0; i < 5; i++) {
         printf("finger %d\n", i);
@@ -57,11 +64,27 @@ void acer12_touch_dump(acer12_touch_t* rpt) {
     printf("contact count: %u\n", rpt->contact_count);
 }
 
+static void paradise_touch_dump(paradise_touch_t* rpt) {
+    printf("report id: %u\n", rpt->rpt_id);
+    printf("pad: %#02x\n", rpt->pad);
+    printf("contact count: %u\n", rpt->contact_count);
+    for (int i = 0; i < 5; i++) {
+        printf("finger %d\n", i);
+        printf("  flags: %#02x\n", rpt->fingers[i].flags);
+        printf("    tswitch: %u\n", paradise_finger_flags_tswitch(rpt->fingers[i].flags));
+        printf("    confidence: %u\n", paradise_finger_flags_confidence(rpt->fingers[i].flags));
+        printf("  finger_id: %u\n", rpt->fingers[i].finger_id);
+        printf("  x:      %u\n", rpt->fingers[i].x);
+        printf("  y:      %u\n", rpt->fingers[i].y);
+    }
+    printf("scan_time: %u\n", rpt->scan_time);
+}
+
 static uint32_t scale32(uint32_t z, uint32_t screen_dim, uint32_t rpt_dim) {
     return (z * screen_dim) / rpt_dim;
 }
 
-void draw_points(uint32_t* pixels, uint32_t color, uint32_t x, uint32_t y, uint8_t width, uint8_t height, uint32_t fbwidth, uint32_t fbheight) {
+static void draw_points(uint32_t* pixels, uint32_t color, uint32_t x, uint32_t y, uint8_t width, uint8_t height, uint32_t fbwidth, uint32_t fbheight) {
     uint32_t xrad = (width + 1) / 2;
     uint32_t yrad = (height + 1) / 2;
 
@@ -81,13 +104,13 @@ static uint32_t get_color(uint8_t c) {
     return colors[c];
 }
 
-void clear_screen(void* buf, ioctl_display_get_fb_t* fb) {
+static void clear_screen(void* buf, ioctl_display_get_fb_t* fb) {
     memset(buf, 0xff, fb->info.pixelsize * fb->info.stride * fb->info.height);
     draw_points((uint32_t*)buf, 0xff00ff, fb->info.stride - (CLEAR_BTN_SIZE / 2), (CLEAR_BTN_SIZE / 2),
             CLEAR_BTN_SIZE, CLEAR_BTN_SIZE, fb->info.stride, fb->info.height);
 }
 
-void process_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+static void process_acer12_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
         ioctl_display_get_fb_t* fb) {
     acer12_touch_t* rpt = buf;
     if (len < sizeof(*rpt)) {
@@ -98,7 +121,7 @@ void process_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels
     acer12_touch_dump(rpt);
 #endif
     for (uint8_t c = 0; c < 5; c++) {
-        if (!acer12_finger_id_tswitch(rpt->fingers[c].finger_id)) continue;
+        if (!acer12_finger_id_tswitch(rpt->fingers[c].finger_id % 10)) continue;
         uint32_t x = scale32(rpt->fingers[c].x, fb->info.width, ACER12_X_MAX);
         uint32_t y = scale32(rpt->fingers[c].y, fb->info.height, ACER12_Y_MAX);
         uint32_t width = 2 * rpt->fingers[c].width;
@@ -120,7 +143,40 @@ void process_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels
     }
 }
 
-void process_stylus_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+static void process_paradise_touchscreen_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
+        ioctl_display_get_fb_t* fb) {
+    paradise_touch_t* rpt = buf;
+    if (len < sizeof(*rpt)) {
+        printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
+        return;
+    }
+#if I2C_HID_DEBUG
+    paradise_touch_dump(rpt);
+#endif
+    for (uint8_t c = 0; c < 5; c++) {
+        if (!paradise_finger_flags_tswitch(rpt->fingers[c].flags)) continue;
+        uint32_t x = scale32(rpt->fingers[c].x, fb->info.width, PARADISE_X_MAX);
+        uint32_t y = scale32(rpt->fingers[c].y, fb->info.height, PARADISE_Y_MAX);
+        uint32_t width = 10;
+        uint32_t height = 10;
+        uint32_t color = get_color(c);
+        draw_points(pixels, color, x, y, width, height, fb->info.stride, fb->info.height);
+    }
+
+    if (paradise_finger_flags_tswitch(rpt->fingers[0].flags)) {
+        uint32_t x = scale32(rpt->fingers[0].x, fb->info.width, PARADISE_X_MAX);
+        uint32_t y = scale32(rpt->fingers[0].y, fb->info.height, PARADISE_Y_MAX);
+        if (x + CLEAR_BTN_SIZE > fb->info.width && y < CLEAR_BTN_SIZE) {
+            clear_screen(pixels, fb);
+        }
+    }
+    ssize_t ret = ioctl_display_flush_fb(vcfd);
+    if (ret < 0) {
+        printf("failed to flush: %zd\n", ret);
+    }
+}
+
+static void process_acer12_stylus_input(void* buf, size_t len, int vcfd, uint32_t* pixels,
         ioctl_display_get_fb_t* fb) {
     acer12_stylus_t* rpt = buf;
     if (len < sizeof(*rpt)) {
@@ -221,6 +277,7 @@ int main(int argc, char* argv[]) {
     int touchfd = -1;
     size_t rpt_desc_len = 0;
     uint8_t* rpt_desc = NULL;
+    enum touch_panel_type panel = TOUCH_PANEL_UNKNOWN;
     while ((de = readdir(dir)) != NULL) {
         char devname[128];
 
@@ -254,6 +311,14 @@ int main(int argc, char* argv[]) {
         }
 
         if (is_acer12_touch_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_ACER12;
+            // Found the touchscreen
+            printf("touchscreen: %s\n", devname);
+            break;
+        }
+
+        if (is_paradise_touch_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_PARADISE;
             // Found the touchscreen
             printf("touchscreen: %s\n", devname);
             break;
@@ -307,10 +372,16 @@ next_node:
             printf("touchscreen read error: %zd (errno=%d)\n", r, errno);
             break;
         }
-        if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
-            process_touchscreen_input(buf, r, vcfd, pixels32, &fb);
-        } else if (*(uint8_t*)buf == ACER12_RPT_ID_STYLUS) {
-            process_stylus_input(buf, r, vcfd, pixels32, &fb);
+        if (panel == TOUCH_PANEL_ACER12) {
+            if (*(uint8_t*)buf == ACER12_RPT_ID_TOUCH) {
+                process_acer12_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+            } else if (*(uint8_t*)buf == ACER12_RPT_ID_STYLUS) {
+                process_acer12_stylus_input(buf, r, vcfd, pixels32, &fb);
+            }
+        } else if (panel == TOUCH_PANEL_PARADISE) {
+            if (*(uint8_t*)buf == PARADISE_RPT_ID_TOUCH) {
+                process_paradise_touchscreen_input(buf, r, vcfd, pixels32, &fb);
+            }
         }
     }
 
