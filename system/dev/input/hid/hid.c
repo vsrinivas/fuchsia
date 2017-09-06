@@ -510,6 +510,7 @@ static mx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
     mx_status_t status = MX_OK;
     hid_item_t item;
 
+    bool has_rpt_id = false;
     hid_global_state_t state;
     memset(&state, 0, sizeof(state));
     list_node_t global_stack;
@@ -557,6 +558,7 @@ static mx_status_t hid_process_hid_report_desc(hid_device_t* dev) {
                 break;
             case HID_ITEM_GLOBAL_TAG_REPORT_ID:
                 state.rpt_id = (input_report_id_t)item.data;
+                has_rpt_id = true;
                 break;
             case HID_ITEM_GLOBAL_TAG_REPORT_COUNT:
                 state.rpt_count = (uint32_t)item.data;
@@ -603,6 +605,7 @@ done:
                 dev->sizes[0].in_size = 24;
                 dev->sizes[0].out_size = 0;
                 dev->sizes[0].feat_size = 0;
+                has_rpt_id = false;
             } else {
                 dprintf(INFO,
                     "hid: boot mouse hack skipped for \"%s\": does not support protocol.\n",
@@ -610,11 +613,10 @@ done:
             }
         }
 #endif
-        // If we have more than one defined report ID, adjust the expected
-        // report sizes to reflect the fact that we expect a report ID to be
-        // prepended to each report.
+        // If we saw a report ID, adjust the expected report sizes to reflect
+        // the fact that we expect a report ID to be prepended to each report.
         MX_DEBUG_ASSERT(dev->num_reports <= countof(dev->sizes));
-        if (dev->num_reports > 1) {
+        if (has_rpt_id) {
             for (size_t i = 0; i < dev->num_reports; ++i) {
                 if (dev->sizes[i].in_size)   dev->sizes[i].in_size   += 8;
                 if (dev->sizes[i].out_size)  dev->sizes[i].out_size  += 8;
