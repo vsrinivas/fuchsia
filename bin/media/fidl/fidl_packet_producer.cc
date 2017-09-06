@@ -55,6 +55,15 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
     return end_of_stream ? Demand::kNegative : CurrentDemand();
   }
 
+  // We sample demand before posting the task that will SendPacket. By passing
+  // 1 to CurrentDemand, we're asking what demand would be assuming we've
+  // already sent the packet. Doing this before we post the task prevents a
+  // race between this thread and the task_runner_ (FIDL) thread. Also, we're
+  // potentially reporting demand on two different threads (the calling thread
+  // and the FIDL thread via SetDemand), so the stage has to deal with the
+  // possible races (it does).
+  Demand demand = end_of_stream ? Demand::kNegative : CurrentDemand(1);
+
   task_runner_->PostTask(ftl::MakeCopyable([
     weak_this = std::weak_ptr<FidlPacketProducer>(shared_from_this()),
     packet = std::move(packet)
@@ -65,7 +74,7 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
     }
   }));
 
-  return end_of_stream ? Demand::kNegative : CurrentDemand(1);
+  return demand;
 }
 
 void FidlPacketProducer::Connect(
