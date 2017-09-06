@@ -10,19 +10,17 @@ import (
 
 	"syscall/mx"
 	"syscall/mx/mxio"
-	"syscall/mx/mxio/dispatcher"
-	"syscall/mx/mxio/rio"
 )
 
 type Provider func(name string, h mx.Handle)
 
 type Namespace struct {
 	Provider   Provider
-	Dispatcher *dispatcher.Dispatcher
+	Dispatcher *mxio.Dispatcher
 }
 
 func (n *Namespace) Serve(h mx.Handle) error {
-	if err := n.Dispatcher.AddHandler(h, rio.ServerHandler(n.handler), 0); err != nil {
+	if err := n.Dispatcher.AddHandler(h, mxio.ServerHandler(n.handler), 0); err != nil {
 		return err
 	}
 
@@ -40,16 +38,16 @@ func errStatus(err error) mx.Status {
 }
 
 // TODO(abarth): Switch to msg.Pipelined() once that exists.
-func pipelined(msg *rio.Msg) bool {
+func pipelined(msg *mxio.Msg) bool {
 	return msg.Arg&0x10000000 != 0
 }
 
-func (n *Namespace) opClone(msg *rio.Msg, h mx.Handle) mx.Status {
+func (n *Namespace) opClone(msg *mxio.Msg, h mx.Handle) mx.Status {
 	err := n.Serve(h)
 
 	if !pipelined(msg) {
-		ro := rio.RioObject{
-			RioObjectHeader: rio.RioObjectHeader{
+		ro := mxio.RioObject{
+			RioObjectHeader: mxio.RioObjectHeader{
 				Status: errStatus(err),
 				Type:   uint32(mxio.ProtocolRemote),
 			},
@@ -61,14 +59,14 @@ func (n *Namespace) opClone(msg *rio.Msg, h mx.Handle) mx.Status {
 		h.Close()
 	}
 
-	return dispatcher.ErrIndirect.Status
+	return mxio.ErrIndirect.Status
 }
 
-func (n *Namespace) handler(msg *rio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
+func (n *Namespace) handler(msg *mxio.Msg, rh mx.Handle, cookieVal int64) mx.Status {
 	op := msg.Op()
 
 	switch op {
-	case rio.OpOpen:
+	case mxio.OpOpen:
 		h := msg.Handle[0]
 		if h == mx.HANDLE_INVALID {
 			return mx.ErrBadState
@@ -86,8 +84,8 @@ func (n *Namespace) handler(msg *rio.Msg, rh mx.Handle, cookieVal int64) mx.Stat
 		}
 
 		if !pipelined(msg) {
-			ro := rio.RioObject{
-				RioObjectHeader: rio.RioObjectHeader{
+			ro := mxio.RioObject{
+				RioObjectHeader: mxio.RioObjectHeader{
 					Status: mx.ErrOk,
 					Type:   uint32(mxio.ProtocolService),
 				},
@@ -96,9 +94,9 @@ func (n *Namespace) handler(msg *rio.Msg, rh mx.Handle, cookieVal int64) mx.Stat
 		}
 
 		n.Provider(path, h)
-		return dispatcher.ErrIndirect.Status
+		return mxio.ErrIndirect.Status
 
-	case rio.OpClone:
+	case mxio.OpClone:
 		h := msg.Handle[0]
 		if h == mx.HANDLE_INVALID {
 			return mx.ErrBadState
