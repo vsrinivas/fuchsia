@@ -26,10 +26,10 @@ func (a *netstackClientApp) start(name string) {
 	a.ctx.ConnectToEnvService(r)
 
 	fmt.Printf("looking up %v...\n", name)
-	port, err := a.netstack.GetPortForService("http", netstack.Protocol_Tcp)
-	resp, err := a.netstack.GetAddress(name, port)
-	if err != nil {
-		log.Println(err)
+	port, _ := a.netstack.GetPortForService("http", netstack.Protocol_Tcp)
+	resp, netErr, _ := a.netstack.GetAddress(name, port)
+	if netErr.Status != netstack.Status_Ok {
+		log.Printf("failed: %v\n", netErr)
 	} else {
 		for _, addr := range resp {
 			if addr.Addr.Ipv4 != nil {

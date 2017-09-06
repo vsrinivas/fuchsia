@@ -64,12 +64,13 @@ func (ni *netstackImpl) GetPortForService(service string, protocol nsfidl.Protoc
 	return port, err
 }
 
-func (ni *netstackImpl) GetAddress(name string, port uint16) (out []net_address.SocketAddress, err error) {
+func (ni *netstackImpl) GetAddress(name string, port uint16) (out []net_address.SocketAddress, netErr nsfidl.NetErr, retErr error) {
 	// TODO: This should handle IP address strings, empty strings, "localhost", etc. Pull the logic from
 	// mxio's getaddrinfo into here.
 	addrs, err := ns.dispatcher.dnsClient.LookupIP(name)
 	if err == nil {
 		out = make([]net_address.SocketAddress, len(addrs))
+		netErr = nsfidl.NetErr{Status: nsfidl.Status_Ok}
 		for i, addr := range addrs {
 			switch len(addr) {
 			case 4, 16:
@@ -77,8 +78,10 @@ func (ni *netstackImpl) GetAddress(name string, port uint16) (out []net_address.
 				out[i].Port = port
 			}
 		}
+	} else {
+		netErr = nsfidl.NetErr{Status: nsfidl.Status_DnsError, Message: err.Error()}
 	}
-	return out, err
+	return out, netErr, nil
 }
 
 func (ni *netstackImpl) GetInterfaces() (out []nsfidl.NetInterface, err error) {
@@ -138,7 +141,7 @@ func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, 
 	}
 
 	// Read from the underlying Ethernet Client's stats.
-	return ifState.eth.Stats, nil	// TODO (porce): A wrapper function.
+	return ifState.eth.Stats, nil // TODO (porce): A wrapper function.
 }
 
 type netstackDelegate struct {
