@@ -776,6 +776,10 @@ VnodeDir* vfs_create_global_root() {
         memfs_create_directory_unsafe("/data", 0);
         memfs_create_directory_unsafe("/volume", 0);
         memfs_create_directory_unsafe("/dev/socket", 0);
+
+        fs::MxioDispatcher::Create(&memfs::global_dispatcher);
+        memfs::global_dispatcher->StartThread();
+        memfs::vfs.SetDispatcher(memfs::global_dispatcher.get());
     }
     return memfs::vfs_root.get();
 }
@@ -796,9 +800,6 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     if ((r = mx::channel::create(0, &h1, &h2)) != MX_OK) {
         return r;
     }
-    fs::MxioDispatcher::Create(&memfs::global_dispatcher);
-    memfs::global_dispatcher->StartThread();
-    memfs::vfs.SetDispatcher(memfs::global_dispatcher.get());
     if ((r = memfs::vfs.ServeDirectory(mxtl::RefPtr<fs::Vnode>(vn),
                                        mxtl::move(h1))) != MX_OK) {
         return r;
