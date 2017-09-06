@@ -105,11 +105,6 @@ int access(const char* path, int mode) {
     return checkfile(path, 0);
 }
 
-// TODO(kulakowski) No symlinks to ignore yet.
-int lstat(const char* path, struct stat* buf) {
-    return stat(path, buf);
-}
-
 void sync(void) {
 }
 

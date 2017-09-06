@@ -1383,6 +1383,10 @@ int stat(const char* fn, struct stat* s) {
     return fstatat(AT_FDCWD, fn, s, 0);
 }
 
+int lstat(const char* path, struct stat* buf) {
+    return stat(path, buf);
+}
+
 char* realpath(const char* restrict filename, char* restrict resolved) {
     ssize_t r;
     struct stat st;
