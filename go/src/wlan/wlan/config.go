@@ -12,6 +12,7 @@ import (
 type Config struct {
 	SSID         string
 	ScanInterval int
+	Password     string
 }
 
 func NewConfig() *Config {
