@@ -111,7 +111,7 @@ void ChannelManager::OnACLDataReceived(hci::ACLDataPacketPtr packet) {
 
   if (iter == ll_map_.end()) {
     pp_iter =
-        pending_packets_.emplace(handle, mxtl::DoublyLinkedList<hci::ACLDataPacketPtr>()).first;
+        pending_packets_.emplace(handle, fbl::DoublyLinkedList<hci::ACLDataPacketPtr>()).first;
   } else {
     pp_iter = pending_packets_.find(handle);
   }

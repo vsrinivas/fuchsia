@@ -33,7 +33,7 @@ TEST(SlabAllocatorsTest, CommandPacket) {
 
 TEST(SlabAllocatorsTest, CommandPacketFallBack) {
   size_t num_packets = 0;
-  mxtl::DoublyLinkedList<std::unique_ptr<Packet<CommandHeader>>> packets;
+  fbl::DoublyLinkedList<std::unique_ptr<Packet<CommandHeader>>> packets;
 
   // Allocate a lot of small packets. We should be able to allocate two allocators' worth of
   // packets until we fail.
@@ -65,7 +65,7 @@ TEST(SlabAllocatorsTest, ACLDataPacket) {
 
 TEST(SlabAllocatorsTest, ACLDataPacketFallBack) {
   size_t num_packets = 0;
-  mxtl::DoublyLinkedList<std::unique_ptr<Packet<ACLDataHeader>>> packets;
+  fbl::DoublyLinkedList<std::unique_ptr<Packet<ACLDataHeader>>> packets;
 
   // Allocate a lot of small packets. We should be able to allocate three allocators' worth of
   // packets until we fail.

@@ -24,7 +24,7 @@ class TestBuffer;
 
 using TestTraits = SlabAllocatorTraits<TestBuffer, kBufferSize, kNumBuffers>;
 
-class TestBuffer : public mxtl::SlabAllocated<TestTraits> {
+class TestBuffer : public fbl::SlabAllocated<TestTraits> {
  public:
   char data[kBufferSize];
 };
@@ -33,7 +33,7 @@ class TestBuffer : public mxtl::SlabAllocated<TestTraits> {
 
 namespace {
 
-using TestAllocator = mxtl::SlabAllocator<test::TestTraits>;
+using TestAllocator = fbl::SlabAllocator<test::TestTraits>;
 
 // This tests that allocation/deallocation via std::unique_ptr works as expected.
 TEST(SlabAllocatedBufferTest, Basic) {

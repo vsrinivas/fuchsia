@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <mxtl/slab_allocator.h>
+#include <fbl/slab_allocator.h>
 
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -17,17 +17,17 @@ namespace internal {
 constexpr size_t kSlabOverhead = 16;
 }  // namespace internal
 
-// SlabAllocatorTraits is a simple alias over mxtl::StaticSlabAllocatorTraits which enforces the use
+// SlabAllocatorTraits is a simple alias over fbl::StaticSlabAllocatorTraits which enforces the use
 // of std::unique_ptr.
 template <typename T, size_t ObjectSize, size_t NumBuffers>
 using SlabAllocatorTraits =
-    mxtl::StaticSlabAllocatorTraits<std::unique_ptr<T>,
+    fbl::StaticSlabAllocatorTraits<std::unique_ptr<T>,
                                     ObjectSize * NumBuffers + internal::kSlabOverhead>;
 
 }  // namespace common
 }  // namespace bluetooth
 
-namespace mxtl {
+namespace fbl {
 namespace internal {
 
 // SlabAllocatorPtrTraits specialization for std::unique_ptr.
@@ -41,4 +41,4 @@ struct SlabAllocatorPtrTraits<std::unique_ptr<T>> {
 };
 
 }  // namespace internal
-}  // namespace mxtl
+}  // namespace fbl

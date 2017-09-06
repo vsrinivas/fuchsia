@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <mxtl/intrusive_double_list.h>
+#include <fbl/intrusive_double_list.h>
 
 #include "apps/bluetooth/lib/common/byte_buffer.h"
 #include "apps/bluetooth/lib/common/intrusive_pointer_traits.h"
@@ -85,10 +85,10 @@ namespace hci {
 //
 //   Packet is NOT thread-safe without external locking.
 
-// PacketBase provides the basic view and mxtl::DoublyLinkedList functionality of a Packet. Intended
+// PacketBase provides the basic view and fbl::DoublyLinkedList functionality of a Packet. Intended
 // to be inherited by the Packet template and all of its specializations.
 template <typename HeaderType, typename T>
-class PacketBase : public mxtl::DoublyLinkedListable<std::unique_ptr<T>> {
+class PacketBase : public fbl::DoublyLinkedListable<std::unique_ptr<T>> {
  public:
   virtual ~PacketBase() = default;
 

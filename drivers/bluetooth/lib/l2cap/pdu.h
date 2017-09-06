@@ -5,7 +5,7 @@
 #pragma once
 
 #include <endian.h>
-#include <mxtl/intrusive_double_list.h>
+#include <fbl/intrusive_double_list.h>
 
 #include "apps/bluetooth/lib/hci/acl_data_packet.h"
 #include "apps/bluetooth/lib/l2cap/l2cap.h"
@@ -21,7 +21,7 @@ namespace l2cap {
 // A PDU is composed of one or more fragments, each contained in a HCI ACL data packet. A PDU cannot
 // be populated directly and must be obtained from a Recombiner or Fragmenter.
 //
-// A PDU instance is light-weight (it consists of a single unique_ptr via mxtl::DoublyLinkedList and
+// A PDU instance is light-weight (it consists of a single unique_ptr via fbl::DoublyLinkedList and
 // a size_t field)
 // and can be passed around by value. As the PDU uniquely owns its chain of fragments, a PDU is
 // move-only.
@@ -32,7 +32,7 @@ namespace l2cap {
 // accessed on multiple threads.
 class PDU final {
  public:
-  using FragmentList = mxtl::DoublyLinkedList<hci::ACLDataPacketPtr>;
+  using FragmentList = fbl::DoublyLinkedList<hci::ACLDataPacketPtr>;
 
   PDU();
   ~PDU() = default;

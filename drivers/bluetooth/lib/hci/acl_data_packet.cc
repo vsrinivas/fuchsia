@@ -22,9 +22,9 @@ using MediumACLTraits =
 using SmallACLTraits =
     PacketTraits<ACLDataHeader, kSmallACLDataPacketSize, kNumSmallACLDataPackets>;
 
-using LargeACLAllocator = mxtl::SlabAllocator<LargeACLTraits>;
-using MediumACLAllocator = mxtl::SlabAllocator<MediumACLTraits>;
-using SmallACLAllocator = mxtl::SlabAllocator<SmallACLTraits>;
+using LargeACLAllocator = fbl::SlabAllocator<LargeACLTraits>;
+using MediumACLAllocator = fbl::SlabAllocator<MediumACLTraits>;
+using SmallACLAllocator = fbl::SlabAllocator<SmallACLTraits>;
 
 }  // namespace slab_allocators
 

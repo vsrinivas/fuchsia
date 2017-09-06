@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <mxtl/slab_allocator.h>
+#include <fbl/slab_allocator.h>
 
 #include "apps/bluetooth/lib/common/slab_allocator_traits.h"
 #include "apps/bluetooth/lib/hci/hci.h"
@@ -14,7 +14,7 @@
 #include "apps/bluetooth/lib/hci/packet.h"
 #include "lib/ftl/macros.h"
 
-// This file defines a mxtl::SlabAllocator trait template that can be used to slab-allocate
+// This file defines a fbl::SlabAllocator trait template that can be used to slab-allocate
 // instances of hci::Packet. It's signature is as follows:
 //
 //   template <typename HeaderType, size_t BufferSize, size_t NumBuffers>
@@ -39,7 +39,7 @@
 // foo.cc:
 //   #include "my_packet.h"
 //
-//   std::unique_ptr<MyPacket> packet = mxtl::SlabAllocator<MyPacketTraits>::New(my_payload_size);
+//   std::unique_ptr<MyPacket> packet = fbl::SlabAllocator<MyPacketTraits>::New(my_payload_size);
 //
 // If the header type provided to PacketTraits would correspond to an explicit specialization of the
 // Packet template, then the specialization MUST provide a default constructor that is visible to
@@ -113,7 +113,7 @@ namespace internal {
 
 template <typename HeaderType, size_t BufferSize, size_t NumBuffers>
 class SlabPacket : public FixedSizePacket<HeaderType, BufferSize>,
-                   public mxtl::SlabAllocated<PacketTraits<HeaderType, BufferSize, NumBuffers>> {
+                   public fbl::SlabAllocated<PacketTraits<HeaderType, BufferSize, NumBuffers>> {
  public:
   explicit SlabPacket(size_t payload_size = 0u)
       : FixedSizePacket<HeaderType, BufferSize>(payload_size) {}

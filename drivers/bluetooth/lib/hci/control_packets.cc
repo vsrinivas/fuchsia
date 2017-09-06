@@ -24,9 +24,9 @@ using SmallCommandTraits =
 // buffer allocator is not needed.
 using EventTraits = PacketTraits<EventHeader, kLargeControlPacketSize, kNumLargeControlPackets>;
 
-using LargeCommandAllocator = mxtl::SlabAllocator<LargeCommandTraits>;
-using SmallCommandAllocator = mxtl::SlabAllocator<SmallCommandTraits>;
-using EventAllocator = mxtl::SlabAllocator<EventTraits>;
+using LargeCommandAllocator = fbl::SlabAllocator<LargeCommandTraits>;
+using SmallCommandAllocator = fbl::SlabAllocator<SmallCommandTraits>;
+using EventAllocator = fbl::SlabAllocator<EventTraits>;
 
 }  // namespace slab_allocators
 

@@ -445,11 +445,11 @@ TEST_F(ACLDataChannelTest, SendPacketsFailure) {
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, 100), DataBufferInfo());
 
   // Empty packet list.
-  EXPECT_FALSE(acl_data_channel()->SendPackets(mxtl::DoublyLinkedList<ACLDataPacketPtr>(),
+  EXPECT_FALSE(acl_data_channel()->SendPackets(fbl::DoublyLinkedList<ACLDataPacketPtr>(),
                                                Connection::LinkType::kACL));
 
   // Packet exceeds MTU
-  mxtl::DoublyLinkedList<ACLDataPacketPtr> packets;
+  fbl::DoublyLinkedList<ACLDataPacketPtr> packets;
   packets.push_back(ACLDataPacket::New(0x0001, ACLPacketBoundaryFlag::kFirstNonFlushable,
                                        ACLBroadcastFlag::kPointToPoint, kMaxMTU + 1));
   EXPECT_FALSE(acl_data_channel()->SendPackets(std::move(packets), Connection::LinkType::kACL));
@@ -483,7 +483,7 @@ TEST_F(ACLDataChannelTest, SendPackets) {
   };
   test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
 
-  mxtl::DoublyLinkedList<ACLDataPacketPtr> packets;
+  fbl::DoublyLinkedList<ACLDataPacketPtr> packets;
   for (int i = 1; i <= kExpectedPacketCount; ++i) {
     auto packet = ACLDataPacket::New(1, ACLPacketBoundaryFlag::kFirstNonFlushable,
                                      ACLBroadcastFlag::kPointToPoint, 1);
@@ -517,7 +517,7 @@ TEST_F(ACLDataChannelTest, SendPacketsAtomically) {
 
   // Each thread will send a sequence of kPacketsPerThread packets. The payload of each packet
   // encodes an integer
-  mxtl::DoublyLinkedList<ACLDataPacketPtr> packets[kThreadCount];
+  fbl::DoublyLinkedList<ACLDataPacketPtr> packets[kThreadCount];
   for (size_t i = 0; i < kThreadCount; ++i) {
     for (size_t j = 1; j <= kPacketsPerThread; ++j) {
       auto packet = ACLDataPacket::New(1, ACLPacketBoundaryFlag::kFirstNonFlushable,

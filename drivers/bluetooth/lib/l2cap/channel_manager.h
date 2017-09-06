@@ -88,7 +88,7 @@ class ChannelManager final {
 
   // Stores packets received on a connection handle before a link for it has been created.
   using PendingPacketMap =
-      std::unordered_map<hci::ConnectionHandle, mxtl::DoublyLinkedList<hci::ACLDataPacketPtr>>;
+      std::unordered_map<hci::ConnectionHandle, fbl::DoublyLinkedList<hci::ACLDataPacketPtr>>;
   PendingPacketMap pending_packets_ __TA_GUARDED(mtx_);
 
   common::CancelableCallbackFactory<void()> cancelable_callback_factory_;

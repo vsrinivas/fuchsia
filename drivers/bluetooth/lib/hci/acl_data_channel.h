@@ -108,7 +108,7 @@ class ACLDataChannel final : public ::mtl::MessageLoopHandler {
   //
   // Takes ownership of the contents of |packets|. Returns false if |packets| contains an element
   // that exceeds the MTU for |ll_type| or it is empty.
-  bool SendPackets(mxtl::DoublyLinkedList<ACLDataPacketPtr> packets, Connection::LinkType ll_type);
+  bool SendPackets(fbl::DoublyLinkedList<ACLDataPacketPtr> packets, Connection::LinkType ll_type);
 
   // Returns the underlying channel handle.
   const mx::channel& channel() const { return channel_; }

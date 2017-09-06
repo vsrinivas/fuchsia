@@ -6,14 +6,14 @@
 
 #include "lib/ftl/logging.h"
 
-namespace mxtl {
+namespace fbl {
 namespace internal {
 
-// ContainerPtrTraits specialization for std::unique_ptr. This allows mxtl intrusive containers
-// (mxtl::DoublyLinkedList and mxtl::SinglyLinkedList) to be used with std::unique_ptr.
+// ContainerPtrTraits specialization for std::unique_ptr. This allows fbl intrusive containers
+// (fbl::DoublyLinkedList and fbl::SinglyLinkedList) to be used with std::unique_ptr.
 //
 // See:
-// https://fuchsia.googlesource.com/magenta/+/master/system/ulib/mxtl/include/mxtl/intrusive_pointer_traits.h
+// https://fuchsia.googlesource.com/magenta/+/master/system/ulib/fbl/include/fbl/intrusive_pointer_traits.h
 template <typename T>
 struct ContainerPtrTraits<::std::unique_ptr<T>> {
   using ValueType = T;
@@ -28,7 +28,7 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
 
   static inline T* GetRaw(const PtrType& ptr) { return ptr.get(); }
   static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }
-  static inline PtrType Take(PtrType& ptr) { return PtrType(mxtl::move(ptr)); }
+  static inline PtrType Take(PtrType& ptr) { return PtrType(fbl::move(ptr)); }
   static inline void Swap(PtrType& first, PtrType& second) { first.swap(second); }
 
   static constexpr PtrType MakeSentinel(void* sentinel) {
@@ -51,4 +51,4 @@ struct ContainerPtrTraits<::std::unique_ptr<T>> {
 };
 
 }  // namespace internal
-}  // namespace mxtl
+}  // namespace fbl
