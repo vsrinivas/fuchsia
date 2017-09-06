@@ -13,6 +13,6 @@ MODULE_SRCS += \
 
 MODULE_HEADER_DEPS += system/ulib/c system/ulib/mxtl
 
-MODULE_EXPORT := explicit-memory
+MODULE_EXPORT := a
 
 include make/module.mk
