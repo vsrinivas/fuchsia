@@ -50,9 +50,7 @@ class ChannelReader {
 
   void _asyncWait() {
     _waiter = _channel.handle.asyncWait(
-        MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
-        MX_TIME_INFINITE,
-        _handleWaitComplete);
+        MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, _handleWaitComplete);
   }
 
   void _errorSoon(ChannelReaderError error) {

@@ -53,7 +53,6 @@ class Handle : public ftl::RefCountedThreadSafe<Handle>,
   mx_status_t Close();
 
   ftl::RefPtr<HandleWaiter> AsyncWait(mx_signals_t signals,
-                                      mx_time_t timeout,
                                       Dart_Handle callback);
 
   void ReleaseWaiter(HandleWaiter* waiter);

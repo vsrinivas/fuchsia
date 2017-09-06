@@ -30,7 +30,6 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
  public:
   static ftl::RefPtr<HandleWaiter> Create(Handle* handle,
                                           mx_signals_t signals,
-                                          mx_time_t timeout,
                                           Dart_Handle callback);
 
   void Cancel();
@@ -42,7 +41,6 @@ class HandleWaiter : public ftl::RefCountedThreadSafe<HandleWaiter>,
  private:
   explicit HandleWaiter(Handle* handle,
                         mx_signals_t signals,
-                        mx_time_t timeout,
                         Dart_Handle callback);
   ~HandleWaiter();
 

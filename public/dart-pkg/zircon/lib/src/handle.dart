@@ -31,6 +31,6 @@ class Handle extends NativeFieldWrapperClass2 {
   // Common handle operations.
   bool get isValid native "Handle_is_valid";
   int close() native "Handle_Close";
-  HandleWaiter asyncWait(int signals, int timeout, AsyncWaitCallback callback)
+  HandleWaiter asyncWait(int signals, AsyncWaitCallback callback)
       native "Handle_AsyncWait";
 }

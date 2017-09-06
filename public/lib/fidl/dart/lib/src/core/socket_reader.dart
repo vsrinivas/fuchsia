@@ -53,10 +53,7 @@ class SocketReader {
 
   void _asyncWait() {
     _waiter = _socket.handle.asyncWait(
-      MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
-      MX_TIME_INFINITE,
-      _handleWaitComplete
-    );
+        MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED, _handleWaitComplete);
   }
 
   void _errorSoon(SocketReaderError error) {

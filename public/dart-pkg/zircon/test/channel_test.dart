@@ -75,8 +75,7 @@ void main() {
   test('async wait channel read', () async {
     final pair = System.channelCreate();
     final Completer<List<int>> completer = new Completer();
-    pair.first.asyncWait(core.MX_CHANNEL_READABLE, core.MX_TIME_INFINITE,
-        (int status, int pending) {
+    pair.first.asyncWait(core.MX_CHANNEL_READABLE, (int status, int pending) {
       completer.complete([status, pending]);
     });
 
@@ -93,7 +92,7 @@ void main() {
   test('async wait channel closed', () async {
     final pair = System.channelCreate();
     final Completer<int> completer = new Completer();
-    pair.first.asyncWait(core.MX_CHANNEL_PEER_CLOSED, core.MX_TIME_INFINITE,
+    pair.first.asyncWait(core.MX_CHANNEL_PEER_CLOSED,
         (int status, int pending) {
       completer.complete(status);
     });

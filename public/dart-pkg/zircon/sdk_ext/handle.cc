@@ -58,7 +58,6 @@ mx_status_t Handle::Close() {
 }
 
 ftl::RefPtr<HandleWaiter> Handle::AsyncWait(mx_signals_t signals,
-                                            mx_time_t timeout,
                                             Dart_Handle callback) {
   if (!is_valid()) {
     FTL_LOG(WARNING) << "Attempt to wait on an invalid handle.";
@@ -66,7 +65,7 @@ ftl::RefPtr<HandleWaiter> Handle::AsyncWait(mx_signals_t signals,
   }
 
   ftl::RefPtr<HandleWaiter> waiter =
-      HandleWaiter::Create(this, signals, timeout, callback);
+      HandleWaiter::Create(this, signals, callback);
   waiters_.push_back(waiter.get());
 
   return waiter;

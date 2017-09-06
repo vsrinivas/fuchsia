@@ -32,14 +32,12 @@ void HandleWaiter::RegisterNatives(tonic::DartLibraryNatives* natives) {
 
 ftl::RefPtr<HandleWaiter> HandleWaiter::Create(Handle* handle,
                                                mx_signals_t signals,
-                                               mx_time_t timeout,
                                                Dart_Handle callback) {
-  return ftl::MakeRefCounted<HandleWaiter>(handle, signals, timeout, callback);
+  return ftl::MakeRefCounted<HandleWaiter>(handle, signals, callback);
 }
 
 HandleWaiter::HandleWaiter(Handle* handle,
                            mx_signals_t signals,
-                           mx_time_t timeout,
                            Dart_Handle callback)
     : waiter_(fidl::GetDefaultAsyncWaiter()),
       handle_(handle),
@@ -47,7 +45,7 @@ HandleWaiter::HandleWaiter(Handle* handle,
   FTL_CHECK(handle_ != nullptr);
   FTL_CHECK(handle_->is_valid());
 
-  wait_id_ = waiter_->AsyncWait(handle_->handle(), signals, timeout,
+  wait_id_ = waiter_->AsyncWait(handle_->handle(), signals, MX_TIME_INFINITE,
                                 HandleWaiter::CallOnWaitComplete, this);
   FTL_DCHECK(wait_id_ != 0);
 }

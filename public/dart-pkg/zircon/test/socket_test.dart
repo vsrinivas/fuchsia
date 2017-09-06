@@ -95,8 +95,7 @@ void main() {
   test('async wait socket read', () async {
     final pair = System.socketCreate();
     final Completer<int> completer = new Completer();
-    pair.first.asyncWait(core.MX_SOCKET_READABLE, core.MX_TIME_INFINITE,
-        (int status, int pending) {
+    pair.first.asyncWait(core.MX_SOCKET_READABLE, (int status, int pending) {
       completer.complete(status);
     });
 
@@ -111,8 +110,7 @@ void main() {
   test('async wait socket closed', () async {
     final pair = System.socketCreate();
     final Completer<int> completer = new Completer();
-    pair.first.asyncWait(core.MX_SOCKET_PEER_CLOSED, core.MX_TIME_INFINITE,
-        (int status, int pending) {
+    pair.first.asyncWait(core.MX_SOCKET_PEER_CLOSED, (int status, int pending) {
       completer.complete(status);
     });
 
