@@ -439,8 +439,9 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
     // The key is already present in the current entries of the node. The
     // value must be replaced.
 
-    // Values is identical, the change is a no-op.
-    if (entries_[split_index].object_id == entry.object_id) {
+    // Entries are identical, the change is a no-op.
+    if (entries_[split_index].object_id == entry.object_id &&
+        entries_[split_index].priority == entry.priority) {
       *did_mutate = false;
       return Status::OK;
     }
@@ -448,6 +449,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
     type_ = BuilderType::NEW_NODE;
     *did_mutate = true;
     entries_[split_index].object_id = std::move(entry.object_id);
+    entries_[split_index].priority = entry.priority;
     return Status::OK;
   }
 

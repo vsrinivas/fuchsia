@@ -965,6 +965,47 @@ TEST_F(BTreeUtilsTest, ForEachDiffWithMinKeySkipNodes) {
   ASSERT_EQ(Status::OK, status);
 }
 
+TEST_F(BTreeUtilsTest, ForEachDiffPriorityChange) {
+  std::vector<EntryChange> changes;
+  ASSERT_TRUE(CreateEntryChanges(50, &changes));
+  ObjectId base_root_id = CreateTree(changes);
+  Entry base_entry = changes[10].entry;
+  changes.clear();
+  // Update priority for a key.
+  changes.push_back(EntryChange{
+      Entry{base_entry.key, base_entry.object_id, KeyPriority::LAZY}, false});
+
+  Status status;
+  ObjectId other_root_id;
+  std::unordered_set<ObjectId> new_nodes;
+  ApplyChanges(
+      &coroutine_service_, &fake_storage_, base_root_id,
+      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
+      callback::Capture(MakeQuitTask(), &status, &other_root_id, &new_nodes),
+      &kTestNodeLevelCalculator);
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+
+  // ForEachDiff should return all changes just applied.
+  size_t change_count = 0;
+  EntryChange actual_change;
+  ForEachDiff(&coroutine_service_, &fake_storage_, base_root_id, other_root_id,
+              "",
+              [&actual_change, &change_count](EntryChange e) {
+                actual_change = e;
+                ++change_count;
+                return true;
+              },
+              callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, change_count);
+  EXPECT_FALSE(actual_change.deleted);
+  EXPECT_EQ(base_entry.key, actual_change.entry.key);
+  EXPECT_EQ(base_entry.object_id, actual_change.entry.object_id);
+  EXPECT_EQ(KeyPriority::LAZY, actual_change.entry.priority);
+}
+
 }  // namespace
 }  // namespace btree
 }  // namespace storage
