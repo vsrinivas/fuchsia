@@ -29,7 +29,7 @@ mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::MxioDispatcher>* out) {
 }
 
 mx_status_t MxioDispatcher::StartThread() {
-    return mxio_dispatcher_start(dispatcher_, "mxio-dispatcher");
+    return mxio_dispatcher_start(dispatcher_, "libfs-mxio-dispatcher");
 }
 
 void MxioDispatcher::RunOnCurrentThread() {
