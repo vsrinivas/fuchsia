@@ -24,6 +24,6 @@ source_set("vfs") {
   ]
 
   deps = [
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 }

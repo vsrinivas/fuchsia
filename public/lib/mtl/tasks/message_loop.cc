@@ -230,7 +230,7 @@ MessageLoop::HandlerRecord::HandlerRecord(mx_handle_t object,
       handler_(handler),
       key_(key) {
   wait_.set_handler(
-      mxtl::BindMember(this, &MessageLoop::HandlerRecord::Handle));
+      fbl::BindMember(this, &MessageLoop::HandlerRecord::Handle));
 }
 
 MessageLoop::HandlerRecord::~HandlerRecord() = default;
