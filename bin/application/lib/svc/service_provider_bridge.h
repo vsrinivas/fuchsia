@@ -6,7 +6,7 @@
 #define APPLICATION_LIB_SVC_SERVICE_PROVIDER_BRIDGE_H_
 
 #include <mx/channel.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 #include <svcfs/svcfs.h>
 
 #include <functional>
@@ -73,7 +73,7 @@ class ServiceProviderBridge : public svcfs::ServiceProvider,
   fs::Vfs vfs_;
   mtl::VFSDispatcher dispatcher_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
-  mxtl::RefPtr<svcfs::VnodeProviderDir> directory_;
+  fbl::RefPtr<svcfs::VnodeProviderDir> directory_;
 
   std::map<std::string, ServiceConnector> name_to_service_connector_;
   app::ServiceProviderPtr backend_;

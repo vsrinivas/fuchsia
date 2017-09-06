@@ -50,7 +50,7 @@ class FileSystem {
   fs::Vfs vfs_;
   mtl::VFSDispatcher dispatcher_;
   std::unique_ptr<ArchiveReader> reader_;
-  mxtl::RefPtr<vmofs::VnodeDir> directory_;
+  fbl::RefPtr<vmofs::VnodeDir> directory_;
 };
 
 }  // namespace archive

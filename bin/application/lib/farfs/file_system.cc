@@ -20,23 +20,23 @@ struct DirRecord {
     children.swap(other.children);
   }
 
-  mxtl::RefPtr<vmofs::VnodeDir> CreateDirectory() {
+  fbl::RefPtr<vmofs::VnodeDir> CreateDirectory() {
     size_t count = names.size();
-    mxtl::Array<mxtl::StringPiece> names_array(new mxtl::StringPiece[count],
+    fbl::Array<fbl::StringPiece> names_array(new fbl::StringPiece[count],
                                                count);
-    mxtl::Array<mxtl::RefPtr<vmofs::Vnode>> children_array(
-        new mxtl::RefPtr<vmofs::Vnode>[count], count);
+    fbl::Array<fbl::RefPtr<vmofs::Vnode>> children_array(
+        new fbl::RefPtr<vmofs::Vnode>[count], count);
     for (size_t i = 0; i < count; ++i) {
       names_array[i] = names[i];
       children_array[i] = std::move(children[i]);
     }
 
-    return mxtl::AdoptRef(
+    return fbl::AdoptRef(
         new vmofs::VnodeDir(std::move(names_array), std::move(children_array)));
   }
 
-  std::vector<mxtl::StringPiece> names;
-  std::vector<mxtl::RefPtr<vmofs::Vnode>> children;
+  std::vector<fbl::StringPiece> names;
+  std::vector<fbl::RefPtr<vmofs::Vnode>> children;
 };
 
 ftl::StringView PopLastDirectory(ftl::StringView* path) {
@@ -63,13 +63,13 @@ bool PopFirstDirectory(ftl::StringView* path) {
   return true;
 }
 
-mxtl::StringPiece ToStringPiece(ftl::StringView view) {
-  return mxtl::StringPiece(view.data(), view.size());
+fbl::StringPiece ToStringPiece(ftl::StringView view) {
+  return fbl::StringPiece(view.data(), view.size());
 }
 
-mxtl::RefPtr<vmofs::VnodeFile> CreateFile(mx_handle_t vmo,
+fbl::RefPtr<vmofs::VnodeFile> CreateFile(mx_handle_t vmo,
                                           const DirectoryTableEntry& entry) {
-  return mxtl::AdoptRef(
+  return fbl::AdoptRef(
       new vmofs::VnodeFile(vmo, entry.data_offset, entry.data_length));
 }
 

@@ -13,7 +13,7 @@
 namespace app {
 
 ServiceProviderBridge::ServiceProviderBridge()
-    : vfs_(&dispatcher_), directory_(mxtl::AdoptRef(new svcfs::VnodeProviderDir())) {
+    : vfs_(&dispatcher_), directory_(fbl::AdoptRef(new svcfs::VnodeProviderDir())) {
   directory_->SetServiceProvider(this);
 }
 

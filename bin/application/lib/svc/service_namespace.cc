@@ -15,11 +15,11 @@
 namespace app {
 
 ServiceNamespace::ServiceNamespace()
-    : directory_(mxtl::AdoptRef(new svcfs::VnodeDir())) {}
+    : directory_(fbl::AdoptRef(new svcfs::VnodeDir())) {}
 
 ServiceNamespace::ServiceNamespace(
     fidl::InterfaceRequest<app::ServiceProvider> request)
-    : vfs_(&dispatcher_), directory_(mxtl::AdoptRef(new svcfs::VnodeDir())) {
+    : vfs_(&dispatcher_), directory_(fbl::AdoptRef(new svcfs::VnodeDir())) {
   AddBinding(std::move(request));
 }
 

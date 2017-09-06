@@ -6,7 +6,7 @@
 #define APPLICATION_LIB_SVC_SERVICE_NAMESPACE_H_
 
 #include <mx/channel.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 #include <svcfs/svcfs.h>
 
 #include <functional>
@@ -122,7 +122,7 @@ class ServiceNamespace : public svcfs::ServiceProvider,
 
   fs::Vfs vfs_;
   mtl::VFSDispatcher dispatcher_;
-  mxtl::RefPtr<svcfs::VnodeDir> directory_;
+  fbl::RefPtr<svcfs::VnodeDir> directory_;
   fidl::BindingSet<app::ServiceProvider> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ServiceNamespace);
