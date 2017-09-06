@@ -9,6 +9,8 @@ import (
 	mlme_ext "apps/wlan/services/wlan_mlme_ext"
 	"apps/wlan/services/wlan_service"
 	"apps/wlan/wlan/elements"
+	"apps/wlan/eapol"
+	"apps/wlan/eapol/handshake"
 
 	"fmt"
 	"log"
@@ -89,7 +91,7 @@ func (s *scanState) run(c *Client) (time.Duration, error) {
 		if debug {
 			log.Printf("scan req: %v timeout: %v", req, timeout)
 		}
-		err := c.sendMessage(req, int32(mlme.Method_ScanRequest))
+		err := c.SendMessage(req, int32(mlme.Method_ScanRequest))
 		if err != nil {
 			return 0, err
 		}
@@ -218,7 +220,7 @@ func (s *joinState) run(c *Client) (time.Duration, error) {
 		log.Printf("join req: %v", req)
 	}
 
-	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_JoinRequest))
+	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_JoinRequest))
 }
 
 func (s *joinState) commandIsDisabled() bool {
@@ -281,7 +283,7 @@ func (s *authState) run(c *Client) (time.Duration, error) {
 		log.Printf("auth req: %v", req)
 	}
 
-	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_AuthenticateRequest))
+	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_AuthenticateRequest))
 }
 
 func (s *authState) commandIsDisabled() bool {
@@ -339,20 +341,29 @@ func (s *assocState) run(c *Client) (time.Duration, error) {
 		PeerStaAddress: c.ap.BSSDesc.Bssid,
 	}
 
+	// If the network is an RSN, announce own cipher and authentication capabilities and configure
+	// EAPOL client to process incoming EAPOL frames.
 	if c.ap.BSSDesc.Rsn != nil {
 		capabilityRSNE := s.createCapabilityRSNElement()
-		req.Rsn = &capabilityRSNE
+		rawRSNE := capabilityRSNE.Bytes()
+		req.Rsn = &rawRSNE
+
+		handshake := s.createHandshake(c, capabilityRSNE)
+		c.eapolC = s.createEAPOLClient(c, capabilityRSNE, handshake)
+	} else {
+		c.eapolC = nil
 	}
+
 	if debug {
 		log.Printf("assoc req: %v", req)
 	}
 
-	return InfiniteTimeout, c.sendMessage(req, int32(mlme.Method_AssociateRequest))
+	return InfiniteTimeout, c.SendMessage(req, int32(mlme.Method_AssociateRequest))
 }
 
-// Creates the RSNE used in Association.request to announce supported ciphers and AKMs to the AP.
-// Currently, only WPA2-PSK-CCMP-128 is supported.
-func (s *assocState) createCapabilityRSNElement() []byte {
+// Creates the RSNE used in MLME-Association.request to announce supported ciphers and AKMs to the
+// AP. Currently, only WPA2-PSK-CCMP-128 is supported.
+func (s *assocState) createCapabilityRSNElement() *elements.RSN {
 	rsne := elements.NewEmptyRSN()
 	rsne.GroupData = &elements.CipherSuite{
 		Type: elements.CipherSuiteType_CCMP128,
@@ -372,7 +383,35 @@ func (s *assocState) createCapabilityRSNElement() []byte {
 	}
 	capabilities := uint16(0)
 	rsne.Caps = &capabilities
-	return rsne.Bytes()
+	return rsne
+}
+
+func (s *assocState) createHandshake(c *Client, assocRSNE *elements.RSN) eapol.KeyExchange {
+	beaconRSNE, err := elements.ParseRSN(*c.ap.BSSDesc.Rsn)
+	if err != nil {
+		return nil
+	}
+
+	password := ""
+	if c.cfg != nil {
+		password = c.cfg.Password
+	}
+	// TODO(hahnr): Add support for authentication selection once we support other AKMs.
+	config := handshake.FourWayConfig{
+		Transport:  &eapol.SMETransport{SME: c},
+		PassPhrase: password,
+		SSID:       c.ap.SSID,
+		PeerAddr:   c.ap.BSSID,
+		StaAddr:    c.staAddr,
+		AssocRSNE:  assocRSNE,
+		BeaconRSNE: beaconRSNE,
+	}
+	return handshake.NewFourWay(config)
+}
+
+func (s *assocState) createEAPOLClient(c *Client, assocRSNE *elements.RSN, keyExchange eapol.KeyExchange) *eapol.Client {
+	// TODO(hahnr): Derive MIC size from AKM.
+	return eapol.NewClient(eapol.Config{128, keyExchange})
 }
 
 func (s *assocState) commandIsDisabled() bool {
@@ -461,7 +500,9 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 		}
 		return s, nil
 	case *mlme_ext.EapolIndication:
-		// TODO(hahnr): Handle EAPOL frame.
+		if c.eapolC != nil {
+			c.eapolC.HandleEAPOLFrame(v.Data)
+		}
 		return s, nil
 	default:
 		return s, fmt.Errorf("unexpected message type: %T", v)

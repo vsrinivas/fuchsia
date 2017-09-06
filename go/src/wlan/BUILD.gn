@@ -21,6 +21,10 @@ wlan_go_dependencies = [
     source = "keywrap"
   },
   {
+    package = "apps/wlan/eapol"
+    source = "eapol"
+  },
+  {
     package = "fidl"
     source = "//garnet/public/lib/fidl/go/src/fidl"
   },

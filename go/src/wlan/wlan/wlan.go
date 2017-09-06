@@ -7,8 +7,9 @@ package wlan
 import (
 	mlme "apps/wlan/services/wlan_mlme"
 	mlme_ext "apps/wlan/services/wlan_mlme_ext"
+	"apps/wlan/eapol"
 	"apps/wlan/services/wlan_service"
-	bindings "fidl/bindings"
+	"fidl/bindings"
 	"fmt"
 	"log"
 	"netstack/link/eth"
@@ -47,7 +48,9 @@ type Client struct {
 	mlmeChan mx.Channel
 	cfg      *Config
 	ap       *AP
+	staAddr  [6]byte
 	txid     uint64
+	eapolC   *eapol.Client
 
 	state state
 }
@@ -89,6 +92,7 @@ func NewClient(path string, config *Config) (*Client, error) {
 		mlmeChan: mx.Channel{ch},
 		cfg:      config,
 		state:    nil,
+		staAddr:  info.MAC,
 	}
 	success = true
 	return c, nil
@@ -191,7 +195,7 @@ event_loop:
 	log.Printf("exiting event loop for %v", c.path)
 }
 
-func (c *Client) sendMessage(msg bindings.Payload, ordinal int32) error {
+func (c *Client) SendMessage(msg bindings.Payload, ordinal int32) error {
 	h := &APIHeader{
 		txid:    c.nextTxid(),
 		flags:   0,
