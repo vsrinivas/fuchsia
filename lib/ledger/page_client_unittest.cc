@@ -237,7 +237,7 @@ TEST_F(PageClientTest, ConcurrentWrite) {
 }
 
 
-TEST_F(PageClientTest, ConflictWrite) {
+TEST_F(PageClientTest, DISABLED_ConflictWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
@@ -264,7 +264,7 @@ TEST_F(PageClientTest, ConflictWrite) {
   EXPECT_EQ("value3", page_client()->value("key"));
 }
 
-TEST_F(PageClientTest, ConflictPrefixWrite) {
+TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page2()->Put(to_array("a/key"), to_array("value2"), [this](ledger::Status status) {
@@ -292,7 +292,7 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
   EXPECT_EQ("value3", page_client_a()->value("a/key"));
 }
 
-TEST_F(PageClientTest, ConcurrentConflictWrite) {
+TEST_F(PageClientTest, DISABLED_ConcurrentConflictWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page2()->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
