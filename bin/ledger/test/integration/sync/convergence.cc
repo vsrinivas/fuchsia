@@ -216,15 +216,22 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   fidl::Binding<ledger::ConflictResolverFactory> binding_;
 };
 
-class ConvergenceTest : public SyncTest,
-                        public ::testing::WithParamInterface<int> {
+enum class MergeType {
+  LAST_ONE_WINS,
+  NON_ASSOCIATIVE_CUSTOM,
+};
+
+class ConvergenceTest
+    : public SyncTest,
+      public ::testing::WithParamInterface<std::tuple<MergeType, int>> {
  public:
   ConvergenceTest(){};
   ~ConvergenceTest() override{};
 
   void SetUp() override {
     SyncTest::SetUp();
-    num_ledgers_ = GetParam();
+    std::tie(merge_function_type_, num_ledgers_) = GetParam();
+
     ASSERT_GT(num_ledgers_, 1);
 
     fidl::Array<uint8_t> page_id;
@@ -300,97 +307,39 @@ class ConvergenceTest : public SyncTest,
   }
 
   int num_ledgers_;
+  MergeType merge_function_type_;
+
   std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>>
       ledger_instances_;
   std::vector<ledger::PagePtr> pages_;
   test::DataGenerator data_generator_;
 };
 
+// Verify that the Ledger converges for a non-associative, non-commutative (but
+// deterministic) merge function.
 TEST_P(ConvergenceTest, NLedgersConverge) {
   std::vector<std::unique_ptr<PageWatcherImpl>> watchers;
   std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
-  for (int i = 0; i < num_ledgers_; i++) {
-    watchers.push_back(WatchPageContents(&pages_[i]));
-    sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
-    ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    pages_[i]->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(ledger::Status::OK, status);
-
-    pages_[i]->Put(convert::ToArray("value"), data_generator_.MakeValue(50),
-                   callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(ledger::Status::OK, status);
-  }
-
-  for (int i = 0; i < num_ledgers_; i++) {
-    ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    pages_[i]->Commit(callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(ledger::Status::OK, status);
-  }
-
-  std::function<bool()> until = [this, &watchers, &sync_watchers]() {
-    // At least one change was propagated, and all synchronization is idle.
-    int num_changes = 0;
-    for (int i = 0; i < num_ledgers_; i++) {
-      num_changes += watchers[i]->changes;
-    }
-    // All ledgers should see their own change (num_ledgers_). Then, at least
-    // all but one should receive a change with the "final" value. There might
-    // be more changes seen, though.
-    if (num_changes < 2 * num_ledgers_ - 1) {
-      return false;
-    }
-
-    // All synchronization must be idle.
-    for (int i = 0; i < num_ledgers_; i++) {
-      if (sync_watchers[i]->download != ledger::SyncState::IDLE ||
-          sync_watchers[i]->upload != ledger::SyncState::IDLE) {
-        return false;
-      }
-    }
-    return AreValuesIdentical(watchers, "value");
-  };
-
-  // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
-  // converged. There is no need for additional tests.
-  EXPECT_TRUE(RunLoopUntil(until, ftl::TimeDelta::FromSeconds(60)));
-  int num_changes = 0;
-  for (int i = 0; i < num_ledgers_; i++) {
-    num_changes += watchers[i]->changes;
-  }
-  EXPECT_GE(num_changes, 2 * num_ledgers_ - 1);
-
-  // Don't check whether all upload/download states are IDLE: maybe they were in
-  // some intermediate state of sync and they are not any more. This should not
-  // cause the test to fail. See also LE-262.
-
-  EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
-}
-
-// Verify that the Ledger converges for a non-associative, non-commutative (but
-// deterministic) merge function.
-TEST_P(ConvergenceTest, NLedgersConvergeNonAssociativeCustom) {
-  std::vector<std::unique_ptr<PageWatcherImpl>> watchers;
-  std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
   std::vector<std::unique_ptr<TestConflictResolverFactory>> resolver_factories;
-
   std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
       generator;
   std::uniform_real_distribution<> distribution(1, 100);
+
   for (int i = 0; i < num_ledgers_; i++) {
     ledger::Status status = ledger::Status::UNKNOWN_ERROR;
-    ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
-    resolver_factories.push_back(std::make_unique<TestConflictResolverFactory>(
-        resolver_factory_ptr.NewRequest()));
-    ledger::LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
-    ledger->SetConflictResolverFactory(
-        std::move(resolver_factory_ptr),
-        callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
-    EXPECT_EQ(ledger::Status::OK, status);
+    if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
+      ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
+      resolver_factories.push_back(
+          std::make_unique<TestConflictResolverFactory>(
+              resolver_factory_ptr.NewRequest()));
+      ledger::LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
+      ledger->SetConflictResolverFactory(
+          std::move(resolver_factory_ptr),
+          callback::Capture(MakeQuitTask(), &status));
+      EXPECT_FALSE(RunLoopWithTimeout(ftl::TimeDelta::FromSeconds(10)));
+      EXPECT_EQ(ledger::Status::OK, status);
+    }
 
     watchers.push_back(WatchPageContents(&pages_[i]));
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
@@ -399,9 +348,14 @@ TEST_P(ConvergenceTest, NLedgersConvergeNonAssociativeCustom) {
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(ledger::Status::OK, status);
 
-    pages_[i]->Put(convert::ToArray("value"),
-                   DoubleToArray(distribution(generator)),
-                   callback::Capture(MakeQuitTask(), &status));
+    if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
+      pages_[i]->Put(convert::ToArray("value"),
+                     DoubleToArray(distribution(generator)),
+                     callback::Capture(MakeQuitTask(), &status));
+    } else {
+      pages_[i]->Put(convert::ToArray("value"), data_generator_.MakeValue(50),
+                     callback::Capture(MakeQuitTask(), &status));
+    }
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(ledger::Status::OK, status);
   }
@@ -453,9 +407,12 @@ TEST_P(ConvergenceTest, NLedgersConvergeNonAssociativeCustom) {
   EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
 }
 
-INSTANTIATE_TEST_CASE_P(ManyLedgersConvergenceTest,
-                        ConvergenceTest,
-                        ::testing::Range(2, 6));
+INSTANTIATE_TEST_CASE_P(
+    ManyLedgersConvergenceTest,
+    ConvergenceTest,
+    ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
+                                         MergeType::NON_ASSOCIATIVE_CUSTOM),
+                       ::testing::Range(2, 6)));
 
 }  // namespace
 }  // namespace sync
