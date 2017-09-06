@@ -45,7 +45,7 @@ exercising real cloud services, and as integration tests using fake services.
 All local application tests in the Ledger tree are built into a single
 `ledger_e2e_local` binary, that by default can be executed on Fuchsia by running
 `/system/test/ledger_e2e_local`. Synchronization tests are built into a single `ledger_e2e_sync`
-binary, that by default can be executed on Fuchsia by running `/system/test/ledger_e2e_sync`
+binary, that by default can be executed on Fuchsia by running `/system/test/disabled/ledger_e2e_sync`
 
 [Google Test]: https://github.com/google/googletest
 [TestWithMessageLoop]: https://fuchsia.googlesource.com/ledger/+/master/src/test/test_with_message_loop.h

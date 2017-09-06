@@ -75,6 +75,7 @@ package("ledger_tests") {
 
     {
       name = "ledger_e2e_sync"
+      # This puts ledger_e2e_sync in /system/test/disabled/.
       disabled = true
     },
     {
