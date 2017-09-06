@@ -4,7 +4,7 @@
 
 library dart_mozart;
 
-import 'dart:fidl.internal' show Handle;
+import 'dart:zircon' show Handle;
 
 // Should be set to a |mozart::NativesDelegate*| by the embedder.
 int _context;

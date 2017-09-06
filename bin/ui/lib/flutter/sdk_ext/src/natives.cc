@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "apps/mozart/services/views/view_manager.fidl.h"
-#include "lib/fidl/dart/sdk_ext/src/handle.h"
+#include "dart-pkg/zircon/sdk_ext/handle.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
@@ -97,8 +97,8 @@ NativesDelegate::~NativesDelegate() {}
 void Mozart_offerServiceProvider(Dart_NativeArguments args) {
   intptr_t context = 0;
   CHECK_INTEGER_ARGUMENT(args, 0, &context);
-  ftl::RefPtr<fidl::dart::Handle> handle =
-      fidl::dart::Handle::Unwrap(Dart_GetNativeArgument(args, 1));
+  ftl::RefPtr<zircon::dart::Handle> handle =
+      zircon::dart::Handle::Unwrap(Dart_GetNativeArgument(args, 1));
 
   if (!context || !handle)
     return;
