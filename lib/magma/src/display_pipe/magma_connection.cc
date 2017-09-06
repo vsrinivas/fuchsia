@@ -16,7 +16,7 @@ MagmaConnection::MagmaConnection() : fd_(-1), conn_(nullptr) {
 
 MagmaConnection::~MagmaConnection() {
     if (conn_ != nullptr) {
-        magma_close(conn_);
+        magma_release_connection(conn_);
     }
 
     if (fd_ >= 0) {
@@ -32,7 +32,7 @@ bool MagmaConnection::Open() {
         return false;
     }
 
-    conn_ = magma_open(fd_, MAGMA_CAPABILITY_DISPLAY);
+    conn_ = magma_create_connection(fd_, MAGMA_CAPABILITY_DISPLAY);
     if (conn_ == nullptr) {
         FTL_LOG(ERROR) << "Failed to open magma connection";
         close(fd_);
@@ -64,7 +64,7 @@ bool MagmaConnection::ImportBuffer(const mx::vmo &vmo_handle,
 }
 
 void MagmaConnection::FreeBuffer(magma_buffer_t buffer) {
-    magma_free(conn_, buffer);
+    magma_release_buffer(conn_, buffer);
 }
 
 bool MagmaConnection::CreateSemaphore(magma_semaphore_t *sem) {
@@ -81,7 +81,7 @@ bool MagmaConnection::ImportSemaphore(const mx::event &event,
 }
 
 void MagmaConnection::ReleaseSemaphore(magma_semaphore_t sem) {
-    magma_destroy_semaphore(conn_, sem);
+    magma_release_semaphore(conn_, sem);
 }
 
 void MagmaConnection::SignalSemaphore(magma_semaphore_t sem) {

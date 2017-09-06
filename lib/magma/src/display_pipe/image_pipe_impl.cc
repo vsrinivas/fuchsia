@@ -41,13 +41,22 @@ void ImagePipeImpl::PresentImage(uint32_t image_id, uint64_t presentation_time,
         return;
     }
 
+    magma_semaphore_t buffer_presented_semaphore;
+    if (!conn_->CreateSemaphore(&buffer_presented_semaphore)) {
+        FTL_LOG(ERROR) << "Can't present unknown image id " << image_id << ".";
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+        return;
+    }
+
     magma_semaphore_t wait_semaphore;
     magma_semaphore_t signal_semaphore;
     conn_->ImportSemaphore(acquire_fence, &wait_semaphore);
     conn_->ImportSemaphore(release_fence, &signal_semaphore);
 
-    conn_->DisplayPageFlip(i->second->buffer(), 1, &wait_semaphore, 1, &signal_semaphore);
+    conn_->DisplayPageFlip(i->second->buffer(), 1, &wait_semaphore, 1, &signal_semaphore,
+                           buffer_presented_semaphore);
 
+    conn_->ReleaseSemaphore(buffer_presented_semaphore);
     conn_->ReleaseSemaphore(wait_semaphore);
     conn_->ReleaseSemaphore(signal_semaphore);
     auto info = scenic::PresentationInfo::New();
