@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <trace.h>
 
+#include <object/excp_port.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>

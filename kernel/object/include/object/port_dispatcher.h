@@ -74,6 +74,7 @@
 //   when cancellation happens and the port still owns the packet.
 //
 
+class ExceptionPort;
 class PortDispatcher;
 class PortObserver;
 struct PortPacket;

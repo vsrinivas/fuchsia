@@ -115,3 +115,10 @@ private:
     // and should only be touched using port_->LinkExceptionPort()
     // or port_->UnlinkExceptionPort(). This goes for ::InContainer(), too.
 };
+
+// Sets the system exception port. |eport| must be non-null; use
+// ResetSystemExceptionPort() to remove the currently-set port.
+mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
+
+// Removes the system exception port. Returns true if a port had been set.
+bool ResetSystemExceptionPort();

@@ -12,7 +12,6 @@
 
 #include <object/exception.h>
 #include <object/job_dispatcher.h>
-#include <object/magenta.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>

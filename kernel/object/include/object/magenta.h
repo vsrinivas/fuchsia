@@ -10,15 +10,9 @@
 #include <magenta/types.h>
 #include <mxtl/ref_ptr.h>
 
-class ExceptionPort;
 class JobDispatcher;
 class PolicyManager;
 class ProcessDispatcher;
-
-// Set/get the system exception port.
-mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
-// Returns true if a port had been set.
-bool ResetSystemExceptionPort();
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 
