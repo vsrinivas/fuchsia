@@ -308,7 +308,8 @@ static bool GenerateBlob(size_t size_data, mxtl::unique_ptr<blob_info_t>* out) {
     EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[size_data]);
     EXPECT_EQ(ac.check(), true);
-    unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+    static unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
+
     for (size_t i = 0; i < size_data; i++) {
         info->data[i] = (char)rand_r(&seed);
     }
@@ -1399,7 +1400,7 @@ static bool ResizePartition(void) {
         }
 
         mxtl::unique_ptr<blob_info_t> info;
-        ASSERT_TRUE(GenerateBlob(10, &info));
+        ASSERT_TRUE(GenerateBlob(64, &info));
 
         int fd;
         ASSERT_TRUE(MakeBlob(info->path, info->merkle.get(), info->size_merkle,
