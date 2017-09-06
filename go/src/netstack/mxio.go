@@ -504,7 +504,13 @@ func (s *socketServer) newIostate(h mx.Handle, iosOrig *iostate, netProto tcpip.
 		if ep != nil {
 			switch transProto {
 			case tcp.ProtocolNumber, udp.ProtocolNumber:
-				s0, s1, err := mx.NewSocket(0)
+				var t uint32;
+				if transProto == tcp.ProtocolNumber {
+					t = mx.SocketStream;
+				} else {
+					t = mx.SocketDatagram
+				}
+				s0, s1, err := mx.NewSocket(t)
 				if err != nil {
 					return nil, err
 				}
