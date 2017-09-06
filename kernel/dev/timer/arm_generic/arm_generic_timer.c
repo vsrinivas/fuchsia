@@ -310,8 +310,8 @@ static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq)
 {
     fp_32_64_div_32_32(&cntpct_per_ns, cntfrq, LK_SEC(1));
     fp_32_64_div_32_32(&ns_per_cntpct, LK_SEC(1), cntfrq);
-    LTRACEF("cntpct_per_ns: %08x.%08x%08x\n", cntpct_per_ns.l0, cntpct_per_ns.l32, cntpct_per_ns.l64);
-    LTRACEF("ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
+    dprintf(SPEW, "cntpct_per_ns: %08x.%08x%08x\n", cntpct_per_ns.l0, cntpct_per_ns.l32, cntpct_per_ns.l64);
+    dprintf(SPEW, "ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32, ns_per_cntpct.l64);
 }
 
 void arm_generic_timer_init(int irq, uint32_t freq_override)
@@ -328,6 +328,8 @@ void arm_generic_timer_init(int irq, uint32_t freq_override)
     } else {
         cntfrq = freq_override;
     }
+
+    dprintf(INFO, "arm generic timer freq %u Hz\n", cntfrq);
 
 #if LOCAL_TRACE
     LTRACEF("Test min cntfrq\n");
