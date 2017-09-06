@@ -55,7 +55,7 @@ void LogDispatcher::Notify(void* cookie) {
 mx_status_t LogDispatcher::Write(uint32_t flags, const void* ptr, size_t len) {
     canary_.Assert();
 
-    return dlog_write(flags_, ptr, len);
+    return dlog_write(flags_ | flags, ptr, len);
 }
 
 mx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* actual) {
