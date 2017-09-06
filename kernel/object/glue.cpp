@@ -4,7 +4,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/magenta.h>
+// This file defines:
+// * Initialization code for kernel/object module
+// * Singleton instances and global locks
+// * Helper functions
+//
+// TODO(dbort): Split this file into self-consistent pieces.
 
 #include <pow2.h>
 #include <trace.h>
@@ -324,12 +329,6 @@ mx_status_t validate_ranged_resource(mx_handle_t handle, uint32_t kind, uint64_t
     }
 
     return MX_ERR_ACCESS_DENIED;
-}
-
-mx_status_t get_process(ProcessDispatcher* up,
-                        mx_handle_t proc_handle,
-                        mxtl::RefPtr<ProcessDispatcher>* proc) {
-    return up->GetDispatcherWithRights(proc_handle, MX_RIGHT_WRITE, proc);
 }
 
 // Counts and optionally prints all job/process descendants of a job.

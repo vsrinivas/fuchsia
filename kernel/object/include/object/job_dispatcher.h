@@ -204,3 +204,6 @@ private:
     // Jobs, ordered by importance, with the least-important job at the front.
     static JobImportanceList importance_list_ TA_GUARDED(importance_lock_);
 };
+
+// Returns the job that is the ancestor of all other tasks.
+mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();

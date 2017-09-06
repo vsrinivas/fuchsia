@@ -9,14 +9,12 @@
 #include <err.h>
 #include <stdint.h>
 
-#include <object/handle.h>
-#include <object/magenta.h>
-
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
+#include <object/handle.h>
 
 template <typename T> struct DispatchTag;
 

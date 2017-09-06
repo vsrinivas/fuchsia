@@ -30,7 +30,6 @@
 #include <object/exception.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
-#include <object/magenta.h>
 #include <object/process_dispatcher.h>
 
 #include <mxtl/algorithm.h>

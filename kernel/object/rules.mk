@@ -20,13 +20,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/fifo_dispatcher.cpp \
     $(LOCAL_DIR)/futex_context.cpp \
     $(LOCAL_DIR)/futex_node.cpp \
+    $(LOCAL_DIR)/glue.cpp \
     $(LOCAL_DIR)/guest_dispatcher.cpp \
     $(LOCAL_DIR)/handle.cpp \
     $(LOCAL_DIR)/handle_reaper.cpp \
     $(LOCAL_DIR)/interrupt_event_dispatcher.cpp \
     $(LOCAL_DIR)/job_dispatcher.cpp \
     $(LOCAL_DIR)/log_dispatcher.cpp \
-    $(LOCAL_DIR)/magenta.cpp \
     $(LOCAL_DIR)/mbuf.cpp \
     $(LOCAL_DIR)/message_packet.cpp \
     $(LOCAL_DIR)/pci_device_dispatcher.cpp \

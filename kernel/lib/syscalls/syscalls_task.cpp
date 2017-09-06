@@ -92,6 +92,13 @@ static mx_status_t copy_user_string(const user_ptr<const char>& src,
     return MX_OK;
 }
 
+// Convenience function to go from process handle to process.
+static mx_status_t get_process(ProcessDispatcher* up,
+                               mx_handle_t proc_handle,
+                               mxtl::RefPtr<ProcessDispatcher>* proc) {
+    return up->GetDispatcherWithRights(proc_handle, MX_RIGHT_WRITE, proc);
+}
+
 mx_status_t sys_thread_create(mx_handle_t process_handle,
                               user_ptr<const char> _name, uint32_t name_len,
                               uint32_t options, user_ptr<mx_handle_t> _out) {

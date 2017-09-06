@@ -83,3 +83,6 @@ private:
 
     const uint32_t default_action_;
 };
+
+// Returns the singleton policy manager for jobs and processes.
+PolicyManager* GetSystemPolicyManager();

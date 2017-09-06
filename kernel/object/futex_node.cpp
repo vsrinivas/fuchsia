@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <err.h>
 #include <mxtl/mutex.h>
-#include <object/magenta.h>
 #include <platform.h>
 #include <trace.h>
 

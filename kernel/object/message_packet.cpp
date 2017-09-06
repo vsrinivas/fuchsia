@@ -12,7 +12,6 @@
 
 #include <mxcpp/new.h>
 #include <object/handle_reaper.h>
-#include <object/magenta.h>
 
 // static
 mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
