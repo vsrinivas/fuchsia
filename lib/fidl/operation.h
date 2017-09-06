@@ -351,6 +351,23 @@ class Operation<Args...>::FlowToken : OperationBase::FlowTokenBase {
 // The flow token holder is a simple wrapper of a shared ptr to a unique ptr. We
 // define it because such a nested smart pointer is rather unwieldy to write
 // every time.
+//
+// Example use:
+//
+//   FlowTokenHolder branch{flow};
+//
+//   auto kill_agent = [this, branch] {
+//     std::unique_ptr<FlowToken> flow = branch.Continue();
+//     if (!flow) {
+//       return;
+//     }
+//
+//     stopped_ = true;
+//   };
+//
+//   StopAgent(kill_agent);
+//   SetTimeout(kill_agent, 1);
+//
 template <typename... Args>
 class Operation<Args...>::FlowTokenHolder {
  public:

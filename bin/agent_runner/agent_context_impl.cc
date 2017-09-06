@@ -107,23 +107,14 @@ class AgentContextImpl::StopCall : Operation<bool> {
 
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
+    agent_context_impl_->app_client_.AppTerminate(
+        [this, flow] { Kill(flow); }, kKillTimeout);
+  }
 
-    // This flow exlusively branches below, so we need to put it in a shared
-    // container from which it can be removed once for all branches.
-    FlowTokenHolder branch{flow};
-
-    auto kill_agent = [this, branch] {
-      std::unique_ptr<FlowToken> flow = branch.Continue();
-      if (!flow) {
-        return;
-      }
-
-      stopped_ = true;
-      agent_context_impl_->agent_.reset();
-      agent_context_impl_->agent_context_binding_.Close();
-    };
-
-    agent_context_impl_->app_client_.AppTerminate(kill_agent, kKillTimeout);
+  void Kill(FlowToken flow) {
+    stopped_ = true;
+    agent_context_impl_->agent_.reset();
+    agent_context_impl_->agent_context_binding_.Close();
   }
 
   bool stopped_ = false;
