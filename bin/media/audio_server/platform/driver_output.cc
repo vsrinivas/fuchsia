@@ -8,9 +8,9 @@
 #include <magenta/device/audio.h>
 #include <magenta/process.h>
 #include <mxio/io.h>
-#include <mxtl/atomic.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/limits.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_call.h>
+#include <fbl/limits.h>
 #include <iomanip>
 
 #include "apps/media/src/audio_server/audio_output_manager.h"
@@ -37,7 +37,7 @@ static constexpr int64_t kDefaultLowWaterNsec = 15000000;   // 15 msec for now
 static constexpr int64_t kDefaultHighWaterNsec = 20000000;  // 20 msec for now
 static constexpr mx_duration_t kUnderflowCooldown = MX_SEC(1);
 
-static mxtl::atomic<mx_txid_t> TXID_GEN(1);
+static fbl::atomic<mx_txid_t> TXID_GEN(1);
 static thread_local mx_txid_t TXID = TXID_GEN.fetch_add(1);
 
 AudioOutputPtr DriverOutput::Create(mx::channel channel,
@@ -111,7 +111,7 @@ MediaResult DriverOutput::Init() {
   // TODO(johngro): Actually do format negotiation here.  Don't depend on on
   // 48KHz 16-bit stereo.
   mx_status_t res;
-  auto cleanup = mxtl::MakeAutoCall([&]() { Cleanup(); });
+  auto cleanup = fbl::MakeAutoCall([&]() { Cleanup(); });
 
   {
     audio_stream_cmd_set_format_req_t req;
@@ -154,7 +154,7 @@ MediaResult DriverOutput::Init() {
     reflector_ = EventReflector::Create(manager_, weak_self_);
     FTL_DCHECK(reflector_ != nullptr);
 
-    res = reflector_->Activate(mxtl::move(stream_channel_));
+    res = reflector_->Activate(fbl::move(stream_channel_));
     if (res != MX_OK) {
       FTL_LOG(ERROR) << "Failed to activate event reflector (res "
                      << res << ")";
@@ -326,7 +326,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     // CLOCK_MONOTONIC.  Eventually, we need to work clock recovery into this
     // mix, so this may all become a moot point.
     uint64_t ticks_per_sec = mx_ticks_per_second();
-    FTL_DCHECK(ticks_per_sec <= mxtl::numeric_limits<uint32_t>::max());
+    FTL_DCHECK(ticks_per_sec <= fbl::numeric_limits<uint32_t>::max());
     int64_t local_start =
         TimelineRate::Scale(resp.start_ticks, 1000000000u, ticks_per_sec);
 
@@ -435,7 +435,7 @@ bool DriverOutput::StartMixJob(MixJob* job, ftl::TimePoint process_start) {
     }
 
     frames_to_mix_ =
-        static_cast<uint32_t>(mxtl::min<int64_t>(rb_space, desired_frames));
+        static_cast<uint32_t>(fbl::min<int64_t>(rb_space, desired_frames));
   }
 
   uint32_t to_mix = frames_to_mix_;
@@ -505,7 +505,7 @@ mx_status_t DriverOutput::EventReflector::Activate(
   // reference to it while it is active.  There is no (current) reason for us
   // to hold a reference to it as we are only using it to listen for events,
   // never to send commands.
-  return ch->Activate(mxtl::WrapRefPtr(this), mxtl::move(stream_channel));
+  return ch->Activate(fbl::WrapRefPtr(this), fbl::move(stream_channel));
 }
 
 mx_status_t DriverOutput::EventReflector::ProcessChannel(

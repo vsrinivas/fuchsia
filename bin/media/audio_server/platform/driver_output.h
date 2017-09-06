@@ -45,11 +45,11 @@ class DriverOutput : public StandardOutputBase {
   // directly, but there are some architectural issues which prevent this at the
   // moment.  In specific...
   //
-  // The lifecycle of a DispatcherChannel::Owner is controlled using mxtl
-  // intrusive ref counting and mxtl::RefPtrs.  Currently, audio server outputs
+  // The lifecycle of a DispatcherChannel::Owner is controlled using fbl
+  // intrusive ref counting and fbl::RefPtrs.  Currently, audio server outputs
   // have their lifecycles managed using std:: weak and shared pointers.  These
   // two mechanisms are not compatible and should not be mixed.  Eventually, we
-  // will convert the outputs to use mxtl intrusive primitives (for lists, sets,
+  // will convert the outputs to use fbl intrusive primitives (for lists, sets,
   // ref counts, etc...), but until then, we need a separate object owned by the
   // DriverOutput to serve as bridge between the two worlds.
   //
@@ -67,7 +67,7 @@ class DriverOutput : public StandardOutputBase {
   // this functionality arrives, we can...
   //
   // 1) Add support to the dispatcher for timers in addition to channels.
-  // 2) Transition mixer outputs to use mxtl intrusive ref counting.
+  // 2) Transition mixer outputs to use fbl intrusive ref counting.
   // 3) Move event processing for the stream and ring-buffer channels into the
   //    DriverOutput itself.
   // 4) Convert all communications between the mixer output and the driver to be
@@ -76,9 +76,9 @@ class DriverOutput : public StandardOutputBase {
   using DispatcherChannel = ::audio::DispatcherChannel;
   class EventReflector : public DispatcherChannel::Owner {
    public:
-     static mxtl::RefPtr<EventReflector> Create(AudioOutputManager* manager,
+     static fbl::RefPtr<EventReflector> Create(AudioOutputManager* manager,
                                                 AudioOutputWeakPtr output) {
-       return mxtl::AdoptRef(new EventReflector(manager, output));
+       return fbl::AdoptRef(new EventReflector(manager, output));
      }
      mx_status_t Activate(mx::channel channel);
 
@@ -109,7 +109,7 @@ class DriverOutput : public StandardOutputBase {
   mx::channel stream_channel_;
   mx::channel rb_channel_;
   mx::vmo rb_vmo_;
-  mxtl::RefPtr<EventReflector> reflector_;
+  fbl::RefPtr<EventReflector> reflector_;
   uint64_t rb_size_ = 0;
   uint32_t rb_frames_ = 0;
   uint64_t rb_fifo_depth_ = 0;

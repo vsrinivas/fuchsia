@@ -128,11 +128,11 @@ class AudioRendererToOutputLink {
   void ReleaseQueue(const PacketQueuePtr& queue);
 
   AudioRendererToOutputLink(AudioRendererImplWeakPtr renderer,
-                            mxtl::RefPtr<AudioRendererFormatInfo> format_info,
+                            fbl::RefPtr<AudioRendererFormatInfo> format_info,
                             AudioOutputWeakPtr output);
 
   AudioRendererImplWeakPtr renderer_;
-  mxtl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
   AudioOutputWeakPtr output_;
   BookkeepingPtr output_bookkeeping_;
 

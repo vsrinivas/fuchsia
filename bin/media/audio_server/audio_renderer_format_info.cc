@@ -52,9 +52,9 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
 
 
 // static
-mxtl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
+fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
     AudioMediaTypeDetailsPtr format) {
-  return mxtl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
+  return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
 }
 
 }  // namespace audio

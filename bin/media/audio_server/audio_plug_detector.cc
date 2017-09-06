@@ -11,9 +11,9 @@
 #include <magenta/device/device.h>
 #include <magenta/device/vfs.h>
 #include <mx/channel.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/macros.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/macros.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -36,7 +36,7 @@ MediaResult AudioPlugDetector::Start(AudioOutputManager* manager) {
 
   // If we fail to set up monitoring for any of our target directories,
   // automatically stop monitoring all sources of device nodes.
-  auto error_cleanup = mxtl::MakeAutoCall([this]() { Stop(); });
+  auto error_cleanup = fbl::MakeAutoCall([this]() { Stop(); });
 
   // If we are already running, we cannot start again.  Cancel the cleanup
   // operation and report that things are successfully started.

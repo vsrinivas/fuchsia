@@ -53,7 +53,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   // should never access format_info() directly from a renderer.  Instead, they
   // should use the format_info which was assigned to the RendererToOutput link
   // at the time the link was created.
-  const mxtl::RefPtr<AudioRendererFormatInfo>& format_info() const {
+  const fbl::RefPtr<AudioRendererFormatInfo>& format_info() const {
     return format_info_;
   }
   bool format_info_valid() const { return (format_info_ != nullptr); }
@@ -100,7 +100,7 @@ class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
   fidl::Binding<MediaRenderer> media_renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
-  mxtl::RefPtr<AudioRendererFormatInfo> format_info_;
+  fbl::RefPtr<AudioRendererFormatInfo> format_info_;
   AudioRendererToOutputLinkSet output_links_;
   AudioRendererToOutputLinkPtr throttle_output_link_;
   float db_gain_ = 0.0;

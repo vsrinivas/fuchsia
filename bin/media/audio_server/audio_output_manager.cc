@@ -4,7 +4,7 @@
 
 #include "apps/media/src/audio_server/audio_output_manager.h"
 
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <string>
 
 #include "apps/media/src/audio_server/audio_output.h"
@@ -135,7 +135,7 @@ void AudioOutputManager::HandlePlugStateChange(AudioOutputPtr output,
 }
 
 void AudioOutputManager::SetMasterGain(float db_gain) {
-  master_gain_ = mxtl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
+  master_gain_ = fbl::clamp(db_gain, AudioRenderer::kMutedGain, 0.0f);
   for (auto output : outputs_) {
     output->SetGain(master_gain_);
   }

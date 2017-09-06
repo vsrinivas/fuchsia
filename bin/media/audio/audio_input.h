@@ -10,7 +10,7 @@
 
 #include <magenta/device/audio.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "apps/media/src/framework/models/active_source.h"
 #include "apps/media/src/framework/types/audio_stream_type.h"
@@ -66,7 +66,7 @@ class AudioInput : public ActiveSource {
   }
 
   // The fields below need to be stable while the worker thread is operating.
-  mxtl::unique_ptr<audio::utils::AudioInput> audio_input_;
+  fbl::unique_ptr<audio::utils::AudioInput> audio_input_;
   std::vector<std::unique_ptr<media::StreamTypeSet>> supported_stream_types_;
   bool config_valid_ = false;
   uint32_t configured_frames_per_second_;

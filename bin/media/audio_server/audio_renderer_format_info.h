@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mxtl/ref_counted.h>
+#include <fbl/ref_counted.h>
 #include <stdint.h>
 
 #include "apps/media/src/audio_server/fwd_decls.h"
@@ -15,9 +15,9 @@ namespace media {
 namespace audio {
 
 class AudioRendererFormatInfo :
-  public mxtl::RefCounted<AudioRendererFormatInfo> {
+  public fbl::RefCounted<AudioRendererFormatInfo> {
  public:
-  static mxtl::RefPtr<AudioRendererFormatInfo> Create(
+  static fbl::RefPtr<AudioRendererFormatInfo> Create(
       AudioMediaTypeDetailsPtr format);
 
   const AudioMediaTypeDetailsPtr& format() const { return format_; }

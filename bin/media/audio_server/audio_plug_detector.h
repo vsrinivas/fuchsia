@@ -7,8 +7,8 @@
 #include <magenta/compiler.h>
 #include <magenta/device/vfs.h>
 #include <magenta/types.h>
-#include <mxtl/macros.h>
-#include <mxtl/mutex.h>
+#include <fbl/macros.h>
+#include <fbl/mutex.h>
 
 #include "apps/media/services/media_result.fidl.h"
 #include "lib/ftl/files/unique_fd.h"

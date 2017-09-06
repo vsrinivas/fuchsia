@@ -16,7 +16,7 @@ AudioRendererToOutputLink::Bookkeeping::~Bookkeeping() {}
 
 AudioRendererToOutputLink::AudioRendererToOutputLink(
     AudioRendererImplWeakPtr renderer,
-    mxtl::RefPtr<AudioRendererFormatInfo> format_info,
+    fbl::RefPtr<AudioRendererFormatInfo> format_info,
     AudioOutputWeakPtr output)
     : renderer_(renderer),
       format_info_(std::move(format_info)),

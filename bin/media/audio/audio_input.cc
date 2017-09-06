@@ -8,8 +8,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <magenta/device/audio.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/vector.h>
+#include <fbl/auto_call.h>
+#include <fbl/vector.h>
 
 #include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/lib/timeline/timeline_rate.h"
@@ -55,7 +55,7 @@ mx_status_t AudioInput::Initalize() {
     return res;
   }
 
-  mxtl::Vector<audio_stream_format_range_t> formats;
+  fbl::Vector<audio_stream_format_range_t> formats;
   res = audio_input_->GetSupportedFormats(&formats);
   if (res != MX_OK) {
     return res;
@@ -181,7 +181,7 @@ void AudioInput::Worker() {
   uint32_t cached_frames_per_packet = frames_per_packet();
   uint32_t cached_packet_size = packet_size();
 
-  auto cleanup = mxtl::MakeAutoCall([this]() {
+  auto cleanup = fbl::MakeAutoCall([this]() {
     audio_input_->ResetRingBuffer();
     state_ = State::kStopped;
   });

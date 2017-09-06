@@ -39,6 +39,6 @@ executable("audio_server") {
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 }
