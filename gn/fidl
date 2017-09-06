@@ -16,10 +16,6 @@
         {
             "binary": "lib_fidl_cpp_tests",
             "bootfs_path": "test/lib_fidl_cpp_tests"
-        },
-        {
-            "binary": "fidl_dart_core_test.dartx",
-            "bootfs_path": "apps/fidl_dart_core_test.dartx"
         }
     ]
 }
