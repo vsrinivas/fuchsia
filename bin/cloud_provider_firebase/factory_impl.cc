@@ -8,17 +8,19 @@
 
 namespace cloud_provider_firebase {
 
-FactoryImpl::FactoryImpl() {}
+FactoryImpl::FactoryImpl(ftl::RefPtr<ftl::TaskRunner> main_runner)
+    : main_runner_(std::move(main_runner)) {}
 
 FactoryImpl::~FactoryImpl() {}
 
 void FactoryImpl::GetCloudProvider(
-    ConfigPtr /*config*/,
-    fidl::InterfaceHandle<modular::auth::TokenProvider> /*token_provider*/,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> /*cloud_provider*/,
+    ConfigPtr config,
+    fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
     const GetCloudProviderCallback& callback) {
-  FTL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  providers_.emplace(main_runner_, std::move(cloud_provider), std::move(config),
+                     std::move(token_provider));
+  callback(cloud_provider::Status::OK);
 }
 
 }  // namespace cloud_provider_firebase

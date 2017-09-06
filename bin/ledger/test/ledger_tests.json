@@ -1,6 +1,10 @@
 {
   "tests": [
     {
+      "name": "cloud_provider_firebase",
+      "exec": "/system/test/cloud_provider_firebase_unittests"
+    },
+    {
       "name": "ledger_e2e_local",
       "exec": "/system/test/ledger_e2e_local"
     },

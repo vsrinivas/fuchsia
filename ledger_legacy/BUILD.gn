@@ -36,6 +36,7 @@ package("ledger_tests") {
   app = true
 
   deps = [
+    "//apps/ledger/cloud_provider_firebase:tests",
     "//apps/ledger/src:tests",
   ]
 
@@ -57,6 +58,9 @@ package("ledger_tests") {
     },
   ]
   tests = [
+    {
+      name = "cloud_provider_firebase_unittests"
+    },
     {
       name = "ledger_integration_tests"
     },

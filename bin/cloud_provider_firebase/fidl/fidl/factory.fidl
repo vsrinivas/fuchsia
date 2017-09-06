@@ -25,13 +25,10 @@ interface Factory {
   // Parameters:
   // |config| configuration
   // |token_provider| is used to get the appropriate auth tokens
-  //     associated with user for whom the cloud provider is running. Passing
-  //     null only allows syncing with a cloud instance that doesn't require
-  //     authentication. If the |token_provider| sent here is disconnected, the
-  //     cloud provider is shut down.
+  //     associated with user for whom the cloud provider is running.
   GetCloudProvider(
                 Config config,
-                modular.auth.TokenProvider? token_provider,
+                modular.auth.TokenProvider token_provider,
                 cloud_provider.CloudProvider& cloud_provider)
       => (cloud_provider.Status status);
 };

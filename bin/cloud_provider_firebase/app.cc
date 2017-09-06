@@ -16,10 +16,13 @@ namespace {
 class App : public modular::Lifecycle {
  public:
   App()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()) {
+      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        factory_impl_(loop_.task_runner()) {
     FTL_DCHECK(application_context_);
     tracing::InitializeTracer(application_context_.get(),
                               {"cloud_provider_firebase"});
+
+    factory_impl_.set_on_empty([this] { loop_.PostQuitTask(); });
   }
 
   void Run() {

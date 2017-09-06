@@ -4,7 +4,10 @@
 
 import("//third_party/flatbuffers/flatbuffer.gni")
 
-visibility = [ "//apps/ledger/src/*" ]
+visibility = [
+  "//apps/ledger/src/*",
+  "//apps/ledger/cloud_provider_firebase/*",
+]
 
 source_set("convert") {
   sources = [

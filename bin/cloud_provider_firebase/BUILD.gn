@@ -14,6 +14,7 @@ executable("cloud_provider_firebase") {
     "//application/lib/app",
     "//apps/modular/services/lifecycle",
     "//apps/tracing/lib/trace:provider",
+    "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]
@@ -21,16 +22,51 @@ executable("cloud_provider_firebase") {
 
 source_set("lib") {
   sources = [
+    "cloud_provider_impl.cc",
+    "cloud_provider_impl.h",
     "factory_impl.cc",
     "factory_impl.h",
   ]
 
   public_deps = [
+    "//apps/ledger/cloud_provider_firebase/services",
+    "//apps/ledger/services/cloud_provider",
+    "//apps/ledger/src/auth_provider",
+    "//apps/modular/services/auth",
+    "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
   ]
 
   deps = [
+    "//apps/ledger/src/backoff",
+    "//apps/ledger/src/callback",
+    "//apps/ledger/src/convert",
+  ]
+}
+
+executable("cloud_provider_firebase_unittests") {
+  testonly = true
+
+  sources = [
+    "factory_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
     "//apps/ledger/cloud_provider_firebase/services",
     "//apps/ledger/services/cloud_provider",
+    "//apps/ledger/src/test:lib",
+    "//apps/modular/services/auth",
+    "//apps/test_runner/src:gtest_main",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl:ftl_printers",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":cloud_provider_firebase_unittests",
   ]
 }
