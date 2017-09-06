@@ -53,6 +53,8 @@
 #include <trace-provider/provider.h>
 #endif
 
+#include "lib/ftl/log_settings_command_line.h"
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #if defined(NDEBUG) && defined(__GNUC__)
