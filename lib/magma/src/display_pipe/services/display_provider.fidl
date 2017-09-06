@@ -14,5 +14,5 @@ struct DisplayInfo {
 [ServiceName="display_pipe::DisplayProvider"]
 interface DisplayProvider {
   GetInfo() => (DisplayInfo info);
-  BindPipe(mozart.ImagePipe &pipe);
+  BindPipe(scenic.ImagePipe &pipe);
 };
