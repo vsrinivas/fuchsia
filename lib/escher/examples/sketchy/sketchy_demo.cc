@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/examples/sketchy/sketchy_demo.h"
+#include "examples/sketchy/sketchy_demo.h"
 
 #include "escher/renderer/paper_renderer.h"
 #include "escher/scene/camera.h"

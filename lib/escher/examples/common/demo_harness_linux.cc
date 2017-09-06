@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/examples/common/demo_harness_linux.h"
+#include "examples/common/demo_harness_linux.h"
 
 #include <GLFW/glfw3.h>
 
-#include "escher/examples/common/demo.h"
+#include "examples/common/demo.h"
 #include "lib/ftl/logging.h"
 
 static DemoHarness* g_harness = nullptr;

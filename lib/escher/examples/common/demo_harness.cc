@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/examples/common/demo_harness.h"
+#include "examples/common/demo_harness.h"
 
 #include "escher/escher_process_init.h"
-#include "escher/examples/common/demo.h"
+#include "examples/common/demo.h"
 #include "escher/renderer/image.h"
 #include "escher/vk/gpu_mem.h"
 #include "escher/vk/vulkan_instance.h"

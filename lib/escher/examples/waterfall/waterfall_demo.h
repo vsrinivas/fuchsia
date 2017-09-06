@@ -8,8 +8,8 @@
 #include <cmath>
 #include <iostream>
 
-#include "escher/examples/common/demo.h"
-#include "escher/examples/waterfall/scenes/scene.h"
+#include "examples/common/demo.h"
+#include "examples/waterfall/scenes/scene.h"
 
 #include "escher/escher.h"
 

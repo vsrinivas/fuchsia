@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "escher/examples/common/demo.h"
+#include "examples/common/demo.h"
 #include "escher/scene/stage.h"
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_swapchain_helper.h"

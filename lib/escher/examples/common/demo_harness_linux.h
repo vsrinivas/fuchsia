@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "escher/examples/common/demo_harness.h"
+#include "examples/common/demo_harness.h"
 
 class DemoHarnessLinux : public DemoHarness {
  public:

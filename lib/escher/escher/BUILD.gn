@@ -4,7 +4,7 @@
 
 config("public_includes") {
   include_dirs = [
-    "//lib/escher",
+    "//garnet/lib/escher",
     "//third_party/glm",
   ]
 }
@@ -43,7 +43,7 @@ static_library("escher") {
   ]
 
   public_deps = [
-    "//lib/escher/escher/base:escher_base",
+    "//garnet/lib/escher/escher/base:escher_base",
     "//garnet/public/lib/ftl",
   ]
 
@@ -228,13 +228,13 @@ static_library("escher") {
   }
 
   if (is_linux) {
-    public_configs += [ "//lib/escher:vulkan_linux" ]
+    public_configs += [ "//garnet/lib/escher:vulkan_linux" ]
   }
 }
 
 group("unittests") {
   testonly = true
   deps = [
-    "//lib/escher/test:escher_unittests",
+    "//garnet/lib/escher/test:escher_unittests",
   ]
 }

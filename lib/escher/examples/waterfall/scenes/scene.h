@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/escher.h"
-#include "escher/examples/common/demo.h"
+#include "examples/common/demo.h"
 
 namespace escher {
 class Stopwatch;

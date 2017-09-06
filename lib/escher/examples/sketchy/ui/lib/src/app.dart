@@ -7,7 +7,7 @@ import 'package:application.services/service_provider.fidl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lib.escher.examples.common.services/escher_demo.fidl.dart';
+import 'package:garnet.lib.escher.examples.common.services/escher_demo.fidl.dart';
 
 typedef ServiceProvider AppLauncher(String msg);
 

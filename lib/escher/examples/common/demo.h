@@ -5,7 +5,7 @@
 #pragma once
 
 #include "escher/escher.h"
-#include "escher/examples/common/demo_harness.h"
+#include "examples/common/demo_harness.h"
 #include "escher/vk/vulkan_context.h"
 
 // Base class for Escher demos.

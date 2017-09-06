@@ -19,12 +19,12 @@ executable("waterfall") {
     "waterfall_main.cc",
   ]
   deps = [
-    "//lib/escher/examples/common",
+    "//garnet/lib/escher/examples/common",
   ]
 
   include_dirs = [
     "//lib",
-    "//lib/escher",
+    "//garnet/lib/escher",
     "//third_party/glm",
   ]
 
@@ -33,6 +33,6 @@ executable("waterfall") {
   }
 
   if (is_linux) {
-    configs += [ "//lib/escher:vulkan_linux" ]
+    configs += [ "//garnet/lib/escher:vulkan_linux" ]
   }
 }

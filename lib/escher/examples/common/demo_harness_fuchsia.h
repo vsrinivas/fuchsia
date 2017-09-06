@@ -9,8 +9,8 @@
 #include "application/lib/app/application_context.h"
 #include "apps/modular/services/module/module.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
-#include "lib/escher/examples/common/demo_harness.h"
-#include "lib/escher/examples/common/services/escher_demo.fidl.h"
+#include "examples/common/demo_harness.h"
+#include "garnet/lib/escher/examples/common/services/escher_demo.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/mtl/tasks/message_loop.h"
 

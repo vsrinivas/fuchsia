@@ -1,3 +1,0 @@
-[submodule "examples/waterfall/third_party/glfw"]
-	path = examples/common/third_party/glfw
-	url = https://github.com/glfw/glfw.git

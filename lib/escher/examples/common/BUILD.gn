@@ -16,7 +16,7 @@ static_library("common") {
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
   ]
   public_deps = [
-    "//lib/escher/escher",
+    "//garnet/lib/escher/escher",
   ]
   libs = [
     "dl",
@@ -24,7 +24,7 @@ static_library("common") {
   ]
   include_dirs = [
     "//lib",
-    "//lib/escher",
+    "//garnet/lib/escher",
     "//third_party/glm",
   ]
 
@@ -32,7 +32,7 @@ static_library("common") {
     deps += [
       "//application/lib/app:app",
       "//apps/modular/services/module:module_cpp_sources",
-      "//lib/escher/examples/common/services",
+      "//garnet/lib/escher/examples/common/services",
       "//garnet/public/lib/mtl",
     ]
     sources += [

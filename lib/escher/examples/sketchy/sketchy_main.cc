@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <cmath>
 
-#include "escher/examples/common/demo_harness.h"
-#include "escher/examples/sketchy/sketchy_demo.h"
+#include "examples/common/demo_harness.h"
+#include "examples/sketchy/sketchy_demo.h"
 
 std::unique_ptr<DemoHarness> CreateHarnessDemo(std::string demo_name,
                                                uint32_t width,

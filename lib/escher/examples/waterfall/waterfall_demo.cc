@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/examples/waterfall/waterfall_demo.h"
+#include "examples/waterfall/waterfall_demo.h"
 
-#include "escher/examples/waterfall/scenes/demo_scene.h"
-#include "escher/examples/waterfall/scenes/ring_tricks1.h"
-#include "escher/examples/waterfall/scenes/ring_tricks2.h"
-#include "escher/examples/waterfall/scenes/ring_tricks3.h"
-#include "escher/examples/waterfall/scenes/uber_scene.h"
-#include "escher/examples/waterfall/scenes/uber_scene2.h"
-#include "escher/examples/waterfall/scenes/uber_scene3.h"
-#include "escher/examples/waterfall/scenes/wobbly_ocean_scene.h"
-#include "escher/examples/waterfall/scenes/wobbly_rings_scene.h"
+#include "examples/waterfall/scenes/demo_scene.h"
+#include "examples/waterfall/scenes/ring_tricks1.h"
+#include "examples/waterfall/scenes/ring_tricks2.h"
+#include "examples/waterfall/scenes/ring_tricks3.h"
+#include "examples/waterfall/scenes/uber_scene.h"
+#include "examples/waterfall/scenes/uber_scene2.h"
+#include "examples/waterfall/scenes/uber_scene3.h"
+#include "examples/waterfall/scenes/wobbly_ocean_scene.h"
+#include "examples/waterfall/scenes/wobbly_rings_scene.h"
 #include "escher/scene/camera.h"
 
 // Material design places objects from 0.0f to 24.0f.

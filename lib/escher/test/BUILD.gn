@@ -22,7 +22,7 @@ executable("escher_unittests") {
 
   deps = [
     "base:base_unittests",
-    "//lib/escher/escher",
+    "//garnet/lib/escher/escher",
     "//garnet/public/lib/ftl",
     "//third_party/gtest",
     "//third_party/shaderc/third_party/glslang",
@@ -34,7 +34,7 @@ executable("escher_unittests") {
 
   include_dirs = [
     "//lib",
-    "//lib/escher",
+    "//garnet/lib/escher",
     "//third_party/glm",
   ]
 
@@ -43,6 +43,6 @@ executable("escher_unittests") {
   }
 
   if (is_linux) {
-    configs += [ "//lib/escher:vulkan_linux" ]
+    configs += [ "//garnet/lib/escher:vulkan_linux" ]
   }
 }

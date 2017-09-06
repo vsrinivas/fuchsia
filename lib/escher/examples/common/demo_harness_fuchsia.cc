@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "escher/examples/common/demo_harness_fuchsia.h"
+#include "examples/common/demo_harness_fuchsia.h"
 
-#include "escher/examples/common/demo.h"
+#include "examples/common/demo.h"
 
 // When running on Fuchsia, New() instantiates a DemoHarnessFuchsia.
 std::unique_ptr<DemoHarness> DemoHarness::New(
