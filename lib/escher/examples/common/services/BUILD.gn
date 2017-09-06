@@ -1,0 +1,15 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("services") {
+  sources = [
+    "escher_demo.fidl",
+  ]
+
+  public_deps = [
+    "//application/services:service_provider",
+  ]
+}

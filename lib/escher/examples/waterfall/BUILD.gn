@@ -1,0 +1,38 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("waterfall") {
+  sources = [
+    "scenes/demo_scene.cc",
+    "scenes/ring_tricks1.cc",
+    "scenes/ring_tricks2.cc",
+    "scenes/ring_tricks3.cc",
+    "scenes/scene.cc",
+    "scenes/uber_scene.cc",
+    "scenes/uber_scene2.cc",
+    "scenes/uber_scene3.cc",
+    "scenes/wobbly_ocean_scene.cc",
+    "scenes/wobbly_rings_scene.cc",
+    "waterfall_demo.cc",
+    "waterfall_demo.h",
+    "waterfall_main.cc",
+  ]
+  deps = [
+    "//lib/escher/examples/common",
+  ]
+
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//magma:vulkan" ]
+  }
+
+  if (is_linux) {
+    configs += [ "//lib/escher:vulkan_linux" ]
+  }
+}

@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This file contains two main functions (install_vulkansdk and install_glslang),
+# which are called at the end of the script, as well as a number of helper functions.
+
+# Only Linux x86_64 supported for now.
+readonly PLATFORM="linux"
+readonly ARCH="x86_64"
+if [ "$(uname)" != "Linux" ]; then
+  exit 0
+fi
+
+readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+readonly VULKANSDK_INSTALL_DIR="${SCRIPT_DIR}/../third_party/vulkansdk"
+readonly SHA_DIR="${SCRIPT_DIR}/../third_party/SHAs"
+SHA=""  # This is written to by sha_to_install()
+
+readonly TEMP_DIR=$(mktemp -d /tmp/escher-download-vulkan-sdk.XXXXXX)
+if [ $? -ne 0 ]; then
+  echo "ERROR: Escher download-vulkan-sdk: failed to create TEMP_DIR !!"
+  exit 99
+fi
+
+# Called when something goes wrong.
+panic () {
+  echo "ERROR: Escher download-vulkan-sdk: $1"
+  rm -fr "${TEMP_DIR}"
+  exit 99
+}
+
+# Download URL to file.  Panic if HTTP status != 200.
+download_url () {
+  if [ $# -ne 2 ]; then
+    panic "download_url() takes two arguments: the source URL, and destination file."
+  fi
+  local HTTP_STATUS=$(curl -w "%{http_code}" --progress-bar -continue-at= --location "$1" --output "$2")
+  if [ ${HTTP_STATUS} -ne 200 ]; then
+    panic "download_url() failed with HTTP status ${HTTP_STATUS} when downloading $1"
+  fi
+}
+
+# Download the resource with the specified bucket-name and SHA,
+# to ${TEMP_DIR}/${SHA}.  Panic upon failure.
+download_from_google_storage () {
+  if [ $# -ne 2 ]; then
+    panic "download_from_google_storage() takes two arguments: the bucket name, and the SHA."
+  fi
+  local GS_ROOT="https://fuchsia-build.storage.googleapis.com/lib/escher/third_party"
+  local GS_URL="${GS_ROOT}/${1}/${PLATFORM}/${ARCH}/${2}"
+  download_url "${GS_URL}" "${TEMP_DIR}/${2}"
+}
+
+# Return 0 if the required and installed SHAs match, otherwise return 1 and
+# store the required SHA in ${SHA}.  Panic if the required SHA is invalid (e.g. file is missing, or
+# doesn't contain a Base-64 encoded SHA-256 hash).
+sha_to_install () {
+  if [ $# -ne 1 ]; then
+    panic "sha_to_install takes one argument: the name of the file containing the required SHA."
+  fi
+
+  # Obtain and validate the required SHA.
+  local REQUIRED_SHA_FILE="${SHA_DIR}/required/${1}"
+  if [ ! -f "${REQUIRED_SHA_FILE}" ]; then
+    panic "Required SHA file does not exist ${REQUIRED_SHA_FILE}"
+  fi
+  local REQUIRED_SHA=$(cat "${REQUIRED_SHA_FILE}" | tr -d '[[:space:]]')
+  if [ ${#REQUIRED_SHA} != 64 ]; then
+    panic "Required SHA file does not contain Base-64 encoded SHA-256 (hash: ${REQUIRED_SHA} file: ${REQUIRED_SHA_FILE})"
+  fi
+
+  # Check to see if there is a corresponding SHA already installed.
+  local INSTALLED_SHA_FILE="${SHA_DIR}/installed/${1}"
+  if [ -f "${INSTALLED_SHA_FILE}" ]; then
+    local INSTALLED_SHA=$(cat "${INSTALLED_SHA_FILE}" | tr -d '[[:space:]]')
+    if [ "${REQUIRED_SHA}" = "${INSTALLED_SHA}" ]; then
+      # The SHA is already installed.
+      return 0
+    fi
+  fi
+  # The SHA is not already installed; stash the return value.
+  SHA=${REQUIRED_SHA}
+  return 1
+}
+
+# Copy the required-SHA file to the installed-SHA directory.  Panic upon failure.
+install_sha () {
+  if [ $# -ne 1 ]; then
+    panic "install_sha() takes one argument: the name of the file containing the required SHA."
+  fi
+  mkdir -p "${SHA_DIR}/installed"
+  cp -f "${SHA_DIR}/required/${1}" "${SHA_DIR}/installed/${1}"
+  if [ $? -ne 0 ]; then
+    panic "Failed to copy SHA file after installation: ${1}"
+  fi
+}
+
+# If necessary, download and install the Vulkan SDK.
+install_vulkansdk () {
+  local -r RESOURCE_NAME=vulkansdk
+  sha_to_install ${RESOURCE_NAME}
+  if [ $? -eq 0 ]; then
+    # Installed SHA is up-to-date.
+    return 0;
+  fi
+
+  echo "Escher: Downloading Vulkan SDK from Google Storage."
+  download_from_google_storage ${RESOURCE_NAME} ${SHA}
+
+  echo "Escher: Running Vulkan SDK installer."
+  cd "${TEMP_DIR}"
+  chmod a+x "${SHA}"
+  ./"${SHA}" --quiet --noprogress
+  if [ $? -ne 0 ]; then
+    panic "Vulkan SDK installion failed !!"
+  fi
+
+  echo "Escher: Moving Vulkan SDK to final location."
+  # The installed VulkanSDK/ folder contains a top-level directory named with the
+  # version number.  This is inconvenient, so get rid of it.
+  readonly ACTUAL_SDK_DIR=$(dirname $(find VulkanSDK/ -name Getting_Started.html))
+  if [ ! -d "${ACTUAL_SDK_DIR}" ]; then
+    panic "Failed to strip version-number directory from VulkanSDK !!"
+  fi
+  rm -fr "${VULKANSDK_INSTALL_DIR}"
+  mv "${ACTUAL_SDK_DIR}" "${VULKANSDK_INSTALL_DIR}"
+
+  # Mark this resource as installed.
+  install_sha ${RESOURCE_NAME}
+}
+
+# Install the Vulkan SDK and binary glslang libraries, if necessary.
+install_vulkansdk
+rm -fr "${TEMP_DIR}"

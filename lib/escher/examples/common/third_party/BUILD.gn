@@ -1,0 +1,72 @@
+config("glfw_config") {
+  include_dirs = [
+    "glfw/include",
+    "glfw/deps",
+  ]
+  cflags = [ "-Wall", "-Wno-deprecated" ]
+
+  # add flags to avoid compiler warnings
+  cflags += [ "-Wno-int-conversion", "-Wno-implicit-function-declaration", "-Wno-sign-compare"]
+}
+
+static_library("glfw") {
+  defines = [
+    "_GLFW_BUILD_DLL",
+    "__GLFW_USE_HYBRID_HPG",
+  ]
+
+  sources = [
+    "glfw/src/context.c",
+    "glfw/src/init.c",
+    "glfw/src/input.c",
+    "glfw/src/monitor.c",
+    "glfw/src/vulkan.c",
+    "glfw/src/window.c",
+
+    "glfw/deps/glad.c",
+    "glfw/deps/getopt.c",
+  ]
+
+  if (is_mac) {
+    defines += [
+      "_GLFW_COCOA",
+      "_GLFW_USE_RETINA",
+    ]
+
+    libs = [
+      "Cocoa.framework",
+      "CoreFoundation.framework",
+      "CoreGraphics.framework",
+      "CoreVideo.framework",
+      "IOKit.framework",
+      "OpenGL.framework",
+    ]
+
+    sources += [
+      "glfw/src/cocoa_init.m",
+      "glfw/src/cocoa_joystick.m",
+      "glfw/src/cocoa_monitor.m",
+      "glfw/src/cocoa_window.m",
+      "glfw/src/cocoa_time.c",
+      "glfw/src/posix_tls.c",
+      "glfw/src/nsgl_context.m",
+    ]
+  } else if (is_linux) {
+    defines += [
+      "_GLFW_X11",
+    ]
+    sources += [
+      "glfw/src/x11_init.c",
+      "glfw/src/x11_monitor.c",
+      "glfw/src/x11_window.c",
+      "glfw/src/xkb_unicode.c",
+      "glfw/src/linux_joystick.c",
+      "glfw/src/posix_time.c",
+      "glfw/src/posix_tls.c",
+      "glfw/src/glx_context.c",
+      "glfw/src/egl_context.c",
+    ]
+  }
+
+  configs += [ ":glfw_config" ]
+}

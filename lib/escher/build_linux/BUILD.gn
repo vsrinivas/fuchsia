@@ -1,0 +1,21 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Escher can be developed for a Linux target only on a Linux host.  Putting
+# the following targets in //lib/escher/BUILD.gn caused problems on OS X hosts,
+# so they were moved into a separate file.
+
+group("examples") {
+  deps = [
+    "//lib/escher/examples/waterfall($host_toolchain)",
+    "//lib/escher/examples/sketchy($host_toolchain)",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//lib/escher/test:escher_unittests($host_toolchain)",
+  ]
+}

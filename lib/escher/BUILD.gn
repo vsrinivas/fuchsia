@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples") {
+  deps = [
+    "//lib/escher/examples/sketchy",
+    "//lib/escher/examples/waterfall",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "//lib/escher/test:escher_unittests",
+  ]
+}
+
+# When targeting Linux, we use a LunarG Vulkan SDK that we download from
+# Google storage (see //lib/escher/scripts/).
+if (is_linux) {
+  config("vulkan_linux") {
+    vulkan_sdk = "//lib/escher/third_party/vulkansdk/x86_64"
+    include_dirs = [ "$vulkan_sdk/include" ]
+    lib_dirs = [ "$vulkan_sdk/lib" ]
+    libs = [ "vulkan" ]
+  }
+}

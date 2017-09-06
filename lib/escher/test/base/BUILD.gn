@@ -1,0 +1,17 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("base_unittests") {
+  testonly = true
+
+  sources = [
+    "ownable_unittest.cc",
+    "typed_reffable_unittest.cc",
+  ]
+
+  deps = [
+    "//lib/escher/escher/base:escher_base",
+    "//third_party/gtest",
+  ]
+}

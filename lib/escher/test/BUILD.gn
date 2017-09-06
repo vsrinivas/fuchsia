@@ -1,0 +1,48 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("escher_unittests") {
+  testonly = true
+
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+
+  sources = [
+    "geometry/bounding_box_unittest.cc",
+    "gpu_mem_unittest.cc",
+    "hash_unittest.cc",
+    "impl/glsl_compiler_unittest.cc",
+    "impl/pipeline_cache_unittest.cc",
+    "mesh_spec_unittest.cc",
+    "object_unittest.cc",
+    "run_all_unittests.cc",
+    "shape/rounded_rect_unittest.cc",
+    "transform_unittest.cc",
+  ]
+
+  deps = [
+    "base:base_unittests",
+    "//lib/escher/escher",
+    "//garnet/public/lib/ftl",
+    "//third_party/gtest",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
+
+  libs = [ "pthread" ]
+
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//magma:vulkan" ]
+  }
+
+  if (is_linux) {
+    configs += [ "//lib/escher:vulkan_linux" ]
+  }
+}

@@ -1,0 +1,39 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("sketchy") {
+  deps = [
+    ":sketchy_demo",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "ui" ]
+  }
+}
+
+executable("sketchy_demo") {
+  sources = [
+    "sketchy_demo.cc",
+    "sketchy_demo.h",
+    "sketchy_main.cc",
+  ]
+  deps = [
+    "//lib/escher/examples/common",
+    "//lib/escher/examples/sketchy/sketchy",
+  ]
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+    "//lib/escher/examples/sketchy",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//magma:vulkan" ]
+  }
+
+  if (is_linux) {
+    configs += [ "//lib/escher:vulkan_linux" ]
+  }
+}

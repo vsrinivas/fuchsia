@@ -1,0 +1,59 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("common") {
+  sources = [
+    "demo.cc",
+    "demo.h",
+    "demo_harness.cc",
+    "demo_harness.h",
+  ]
+  deps = [
+    "//garnet/public/lib/ftl",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
+  public_deps = [
+    "//lib/escher/escher",
+  ]
+  libs = [
+    "dl",
+    "pthread",
+  ]
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//application/lib/app:app",
+      "//apps/modular/services/module:module_cpp_sources",
+      "//lib/escher/examples/common/services",
+      "//garnet/public/lib/mtl",
+    ]
+    sources += [
+      "demo_harness_fuchsia.cc",
+      "demo_harness_fuchsia.h",
+    ]
+  }
+
+  if (is_linux) {
+    deps += [ "third_party:glfw" ]
+    sources += [
+      "demo_harness_linux.cc",
+      "demo_harness_linux.h",
+    ]
+    libs += [
+      "X11",
+      "Xinerama",
+      "Xcursor",
+      "Xrandr",
+    ]
+
+    include_dirs += [ "third_party/glfw/include" ]
+  }
+}

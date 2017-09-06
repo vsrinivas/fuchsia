@@ -1,0 +1,16 @@
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module escher_demo;
+
+import "application/services/service_provider.fidl";
+
+[ServiceName="escher_demo::EscherDemo"]
+interface EscherDemo {
+  // GetCurrentFrameNumber() => (uint64 frame_number);
+  HandleKeyPress(uint8 key);
+  HandleTouchBegin(uint64 touch_id, double xpos, double ypos);
+  HandleTouchContinue(uint64 touch_id, double xpos, double ypos);
+  HandleTouchEnd(uint64 touch_id, double xpos, double ypos);
+};

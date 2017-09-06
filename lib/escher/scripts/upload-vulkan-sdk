@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This script uploads the Vulkan SDK to Google Storage.
+
+readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Expect a name like "vulkansdk-linux-x86_64-1.0.26.0.run"
+readonly BASENAME=$(echo $1 | cut -d '-' -f 1)
+readonly PLATFORM=$(echo $1 | cut -d '-' -f 2)
+readonly ARCH=$(echo $1 | cut -d '-' -f 3)
+readonly VERSION=$(echo $1 | cut -d '-' -f 4)
+readonly SHA=$(sha256sum $1 | cut -d ' ' -f 1)
+
+if [[ "${BASENAME}" != "vulkansdk" ]] || [[ ${PLATFORM} != "linux" ]]; then
+  echo "Expecting a name like 'vulkansdk-linux-x86_64-1.0.26.0.run', not $1"
+  exit 99
+fi
+
+readonly GS_BUCKET="gs://fuchsia-build/lib/escher/third_party/vulkansdk/$PLATFORM/$ARCH"
+readonly GS_PATH="${GS_BUCKET}/${SHA}"
+echo "Uploading ${1} to ${GS_PATH}."
+gsutil cp "${1}" ${GS_PATH}

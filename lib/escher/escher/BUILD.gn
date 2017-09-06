@@ -1,0 +1,240 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("public_includes") {
+  include_dirs = [
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+}
+
+config("public_preprocessor_definitions") {
+  defines = [
+    "VULKAN_HPP_NO_EXCEPTIONS",
+    "GLM_ENABLE_EXPERIMENTAL",
+
+    # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
+    "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+
+    # Disable SIMD code paths that seem unstable on Fuchsia.
+    "GLM_FORCE_PURE",
+  ]
+}
+
+config("thread_safety_warning") {
+  cflags = [
+    "-Wthread-safety",
+    "-fcolor-diagnostics",
+  ]
+}
+
+static_library("escher") {
+  defines = [
+    # Currently necessary on Fuchsia, but not Linux.
+    "ESCHER_DISABLE_BACKGROUND_COMPILATION",
+  ]
+
+  deps = [
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+    "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
+  ]
+
+  public_deps = [
+    "//lib/escher/escher/base:escher_base",
+    "//garnet/public/lib/ftl",
+  ]
+
+  sources = [
+    "escher.cc",
+    "escher.h",
+    "escher_process_init.cc",
+    "escher_process_init.h",
+    "forward_declarations.h",
+    "geometry/bounding_box.cc",
+    "geometry/bounding_box.h",
+    "geometry/quad.cc",
+    "geometry/quad.h",
+    "geometry/tessellation.cc",
+    "geometry/tessellation.h",
+    "geometry/transform.h",
+    "geometry/types.h",
+    "impl/command_buffer.cc",
+    "impl/command_buffer.h",
+    "impl/command_buffer_pool.cc",
+    "impl/command_buffer_pool.h",
+    "impl/command_buffer_sequencer.cc",
+    "impl/command_buffer_sequencer.h",
+    "impl/compute_shader.cc",
+    "impl/compute_shader.h",
+    "impl/debug_print.cc",
+    "impl/descriptor_set_pool.cc",
+    "impl/descriptor_set_pool.h",
+    "impl/escher_impl.cc",
+    "impl/escher_impl.h",
+    "impl/glsl_compiler.cc",
+    "impl/glsl_compiler.h",
+    "impl/gpu_mem_slab.cc",
+    "impl/gpu_mem_slab.h",
+    "impl/gpu_mem_suballocation.cc",
+    "impl/gpu_mem_suballocation.h",
+    "impl/gpu_uploader.cc",
+    "impl/gpu_uploader.h",
+    "impl/image_cache.cc",
+    "impl/image_cache.h",
+    "impl/mesh_manager.cc",
+    "impl/mesh_manager.h",
+    "impl/mesh_shader_binding.cc",
+    "impl/mesh_shader_binding.h",
+    "impl/model_data.cc",
+    "impl/model_data.h",
+    "impl/model_display_list.cc",
+    "impl/model_display_list.h",
+    "impl/model_display_list_builder.cc",
+    "impl/model_display_list_builder.h",
+    "impl/model_display_list_flags.h",
+    "impl/model_pipeline.cc",
+    "impl/model_pipeline.h",
+    "impl/model_pipeline_cache.cc",
+    "impl/model_pipeline_cache.h",
+    "impl/model_pipeline_spec.h",
+    "impl/model_renderer.cc",
+    "impl/model_renderer.h",
+    "impl/ssdo_accelerator.cc",
+    "impl/ssdo_accelerator.h",
+    "impl/ssdo_sampler.cc",
+    "impl/ssdo_sampler.h",
+    "impl/uniform_buffer_pool.cc",
+    "impl/uniform_buffer_pool.h",
+    "impl/vk/pipeline.cc",
+    "impl/vk/pipeline.h",
+    "impl/vk/pipeline_cache.cc",
+    "impl/vk/pipeline_cache.h",
+    "impl/vk/pipeline_factory.h",
+    "impl/vk/pipeline_layout.cc",
+    "impl/vk/pipeline_layout.h",
+    "impl/vk/pipeline_spec.cc",
+    "impl/vk/pipeline_spec.h",
+    "impl/vulkan_utils.cc",
+    "impl/vulkan_utils.h",
+    "impl/wobble_modifier_absorber.cc",
+    "impl/wobble_modifier_absorber.h",
+    "material/color_utils.cc",
+    "material/color_utils.h",
+    "material/material.cc",
+    "material/material.h",
+    "profiling/timestamp_profiler.cc",
+    "profiling/timestamp_profiler.h",
+    "renderer/framebuffer.cc",
+    "renderer/framebuffer.h",
+    "renderer/image.cc",
+    "renderer/image.h",
+    "renderer/paper_renderer.cc",
+    "renderer/paper_renderer.h",
+    "renderer/renderer.cc",
+    "renderer/renderer.h",
+    "renderer/semaphore_wait.cc",
+    "renderer/semaphore_wait.h",
+    "renderer/simple_image_factory.cc",
+    "renderer/simple_image_factory.h",
+    "renderer/texture.cc",
+    "renderer/texture.h",
+    "resources/resource.cc",
+    "resources/resource.h",
+    "resources/resource_manager.cc",
+    "resources/resource_manager.h",
+    "resources/resource_recycler.cc",
+    "resources/resource_recycler.h",
+    "resources/resource_type_info.h",
+    "resources/waitable_resource.cc",
+    "resources/waitable_resource.h",
+    "scene/ambient_light.cc",
+    "scene/ambient_light.h",
+    "scene/binding.h",
+    "scene/camera.cc",
+    "scene/camera.h",
+    "scene/directional_light.cc",
+    "scene/directional_light.h",
+    "scene/displacement.cc",
+    "scene/displacement.h",
+    "scene/model.cc",
+    "scene/model.h",
+    "scene/object.cc",
+    "scene/object.h",
+    "scene/shape.cc",
+    "scene/shape.h",
+    "scene/shape_modifier.h",
+    "scene/stage.cc",
+    "scene/stage.h",
+    "scene/viewing_volume.cc",
+    "scene/viewing_volume.h",
+    "shape/mesh.cc",
+    "shape/mesh.h",
+    "shape/mesh_builder.cc",
+    "shape/mesh_builder.h",
+    "shape/mesh_builder_factory.h",
+    "shape/mesh_spec.cc",
+    "shape/mesh_spec.h",
+    "shape/modifier_wobble.cc",
+    "shape/modifier_wobble.h",
+    "shape/rounded_rect.cc",
+    "shape/rounded_rect.h",
+    "shape/rounded_rect_factory.cc",
+    "shape/rounded_rect_factory.h",
+    "status.h",
+    "util/align.h",
+    "util/depth_to_color.cc",
+    "util/depth_to_color.h",
+    "util/image_utils.cc",
+    "util/image_utils.h",
+    "util/stopwatch.h",
+    "util/trace_macros.h",
+    "vk/buffer.cc",
+    "vk/buffer.h",
+    "vk/buffer_factory.cc",
+    "vk/buffer_factory.h",
+    "vk/gpu_allocator.cc",
+    "vk/gpu_allocator.h",
+    "vk/gpu_mem.cc",
+    "vk/gpu_mem.h",
+    "vk/naive_gpu_allocator.cc",
+    "vk/naive_gpu_allocator.h",
+    "vk/vulkan_context.h",
+    "vk/vulkan_device_queues.cc",
+    "vk/vulkan_device_queues.h",
+    "vk/vulkan_instance.cc",
+    "vk/vulkan_instance.h",
+    "vk/vulkan_swapchain.h",
+    "vk/vulkan_swapchain_helper.cc",
+    "vk/vulkan_swapchain_helper.h",
+  ]
+
+  include_dirs = [
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/spirv-tools/include",
+  ]
+
+  public_configs = [
+    ":public_includes",
+    ":public_preprocessor_definitions",
+    ":thread_safety_warning",
+  ]
+
+  if (is_fuchsia) {
+    public_deps += [ "//magma:vulkan" ]
+    deps += [ "//apps/tracing/lib/trace" ]
+  }
+
+  if (is_linux) {
+    public_configs += [ "//lib/escher:vulkan_linux" ]
+  }
+}
+
+group("unittests") {
+  testonly = true
+  deps = [
+    "//lib/escher/test:escher_unittests",
+  ]
+}
