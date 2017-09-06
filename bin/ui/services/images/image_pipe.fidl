@@ -108,8 +108,8 @@ interface ImagePipe {
   // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
   // monotonically non-decreasing.
   //
-  // The callback |presentation_info| returns timing information about the
-  // submitted and future frames (see presentation_info.fidl).
+  // |presentation_info| returns timing information about the submitted frame
+  // and future frames (see presentation_info.fidl).
   //
   // The following errors will cause the connection to be closed:
   // - |image_id| does not reference a currently registered image resource
