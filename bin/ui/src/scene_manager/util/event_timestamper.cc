@@ -10,9 +10,14 @@
 namespace scene_manager {
 
 EventTimestamper::EventTimestamper()
-    : main_loop_(mtl::MessageLoop::GetCurrent()) {
+    : main_loop_(mtl::MessageLoop::GetCurrent()), task_(0u) {
   FTL_DCHECK(main_loop_);
   background_loop_.StartThread();
+  task_.set_handler([](async_t*, mx_status_t) {
+    mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+    return ASYNC_TASK_FINISHED;
+  });
+
   IncreaseBackgroundThreadPriority();
 }
 
@@ -24,13 +29,7 @@ EventTimestamper::~EventTimestamper() {
 }
 
 void EventTimestamper::IncreaseBackgroundThreadPriority() {
-  Post(background_loop_.async());
-}
-
-async_task_result_t EventTimestamper::Handle(async_t* async,
-                                             mx_status_t status) {
-  mx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-  return ASYNC_TASK_FINISHED;
+  task_.Post(background_loop_.async());
 }
 
 EventTimestamper::Watch::Watch() : wait_(nullptr), timestamper_(nullptr) {}
@@ -70,7 +69,8 @@ EventTimestamper::Watch::~Watch() {
       delete wait_;
       break;
     case Wait::State::STARTED:
-      if (MX_OK == wait_->Cancel(timestamper_->background_loop_.async())) {
+      if (MX_OK ==
+          wait_->wait().Cancel(timestamper_->background_loop_.async())) {
         delete wait_;
       } else {
         wait_->set_state(Wait::State::ABANDONED);
@@ -87,17 +87,19 @@ void EventTimestamper::Watch::Start() {
   FTL_DCHECK(wait_->state() == Wait::State::STOPPED)
       << "illegal to call Start() again before callback has been received.";
   wait_->set_state(Wait::State::STARTED);
-  wait_->Begin(timestamper_->background_loop_.async());
+  wait_->wait().Begin(timestamper_->background_loop_.async());
 }
 
 EventTimestamper::Wait::Wait(const ftl::RefPtr<ftl::TaskRunner>& task_runner,
                              mx::event event,
                              mx_status_t trigger,
                              Callback callback)
-    : async::Wait(event.get(), trigger),
-      task_runner_(task_runner),
+    : task_runner_(task_runner),
       event_(std::move(event)),
-      callback_(std::move(callback)) {}
+      callback_(std::move(callback)),
+      wait_(event_.get(), trigger) {
+  wait_.set_handler(mxtl::BindMember(this, &EventTimestamper::Wait::Handle));
+}
 
 EventTimestamper::Wait::~Wait() {
   FTL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);

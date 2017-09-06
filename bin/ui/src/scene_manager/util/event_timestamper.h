@@ -4,10 +4,12 @@
 
 #pragma once
 
-#include <async/async.h>
-#include <async/loop.h>
-#include <mx/event.h>
 #include <functional>
+
+#include <async/loop.h>
+#include <async/task.h>
+#include <async/wait.h>
+#include <mx/event.h>
 
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -20,7 +22,7 @@ namespace scene_manager {
 //
 // A program typically needs/wants a single EventTimestamper, which is shared
 // by everyone who needs event-timestamps.
-class EventTimestamper : private async::Task {
+class EventTimestamper {
  private:
   class Wait;
 
@@ -64,7 +66,7 @@ class EventTimestamper : private async::Task {
   // Invariants:
   // - |state_| only changes on the main thread.
   // - instances of Wait are only destroyed on the main thread.
-  class Wait : public async::Wait {
+  class Wait {
    public:
     enum class State { STARTED, STOPPED, ABANDONED };
 
@@ -77,16 +79,18 @@ class EventTimestamper : private async::Task {
     void set_state(State state) { state_ = state; }
     State state() const { return state_; }
 
+    async::Wait& wait() { return wait_; }
+
    private:
-    // |async::Wait|
     async_wait_result_t Handle(async_t* async,
                                mx_status_t status,
-                               const mx_packet_signal_t* signal) override;
+                               const mx_packet_signal_t* signal);
 
     ftl::RefPtr<ftl::TaskRunner> task_runner_;
     mx::event event_;
     Callback callback_;
     State state_ = State::STOPPED;
+    async::Wait wait_;
   };
 
   // Posts this EventTimestamper as a task on the background thread; when the
@@ -98,11 +102,9 @@ class EventTimestamper : private async::Task {
   // Also see MG-940 and MG-1032.
   void IncreaseBackgroundThreadPriority();
 
-  // |async::Task|
-  async_task_result_t Handle(async_t* async, mx_status_t status) override;
-
   mtl::MessageLoop* const main_loop_;
   async::Loop background_loop_;
+  async::Task task_;
 #ifndef NDEBUG
   size_t watch_count_ = 0;
 #endif
