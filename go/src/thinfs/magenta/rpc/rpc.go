@@ -19,8 +19,6 @@ import (
 
 	"syscall/mx"
 	"syscall/mx/mxio"
-	"syscall/mx/mxio/dispatcher"
-	"syscall/mx/mxio/rio"
 )
 
 type directoryWrapper struct {
@@ -32,7 +30,7 @@ type directoryWrapper struct {
 
 type ThinVFS struct {
 	sync.Mutex
-	dispatcher *dispatcher.Dispatcher
+	dispatcher *mxio.Dispatcher
 	fs         fs.FileSystem
 	files      map[int64]interface{}
 	nextCookie int64
@@ -51,13 +49,13 @@ func NewServer(filesys fs.FileSystem, h mx.Handle) (*ThinVFS, error) {
 		files: make(map[int64]interface{}),
 		fs:    filesys,
 	}
-	d, err := dispatcher.New(rio.Handler)
+	d, err := mxio.NewDispatcher(mxio.Handler)
 	if err != nil {
 		println("Failed to create dispatcher")
 		return vfs, err
 	}
 
-	var serverHandler rio.ServerHandler = vfs.mxioServer
+	var serverHandler mxio.ServerHandler = vfs.mxioServer
 	cookie := vfs.allocateCookie(&directoryWrapper{d: filesys.RootDirectory()})
 	if err := d.AddHandler(h, serverHandler, int64(cookie)); err != nil {
 		h.Close()
@@ -83,7 +81,7 @@ func (vfs *ThinVFS) Serve() {
 // object, and returns any additional handles required to interact with the object.  (at the moment,
 // no additional handles are supported).
 func (vfs *ThinVFS) AddHandler(h mx.Handle, obj interface{}) error {
-	var serverHandler rio.ServerHandler = vfs.mxioServer
+	var serverHandler mxio.ServerHandler = vfs.mxioServer
 	cookie := vfs.allocateCookie(obj)
 	if err := vfs.dispatcher.AddHandler(h, serverHandler, int64(cookie)); err != nil {
 		vfs.freeCookie(cookie)
@@ -225,17 +223,17 @@ func openFlagsFromRIO(arg int32, mode uint32) fs.OpenFlags {
 	return res
 }
 
-func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Status {
+func (vfs *ThinVFS) processOpFile(msg *mxio.Msg, f fs.File, cookie int64) mx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
 	switch msg.Op() {
-	case rio.OpClone:
+	case mxio.OpClone:
 		f2, err := f.Dup()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
-			return rio.IndirectError(msg.Handle[0], mxErr)
+			return mxio.IndirectError(msg.Handle[0], mxErr)
 		}
-		ro := &rio.RioObject{
-			RioObjectHeader: rio.RioObjectHeader{
+		ro := &mxio.RioObject{
+			RioObjectHeader: mxio.RioObjectHeader{
 				Status: mx.ErrOk,
 				Type:   uint32(mxio.ProtocolRemote),
 			},
@@ -246,67 +244,67 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		if err := vfs.AddHandler(msg.Handle[0], f2); err != nil {
 			f2.Close()
 		}
-		return dispatcher.ErrIndirect.Status
-	case rio.OpClose:
+		return mxio.ErrIndirect.Status
+	case mxio.OpClose:
 		err := f.Close()
 		vfs.freeCookie(cookie)
 		return errorToRIO(err)
-	case rio.OpRead:
+	case mxio.OpRead:
 		r, err := f.Read(msg.Data[:msg.Arg], 0, fs.WhenceFromCurrent)
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		msg.Datalen = uint32(r)
 		return mx.Status(r)
-	case rio.OpReadAt:
+	case mxio.OpReadAt:
 		r, err := f.Read(msg.Data[:msg.Arg], msg.Off(), fs.WhenceFromStart)
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		msg.Datalen = uint32(r)
 		return mx.Status(r)
-	case rio.OpWrite:
+	case mxio.OpWrite:
 		r, err := f.Write(inputData, 0, fs.WhenceFromCurrent)
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		return mx.Status(r)
-	case rio.OpWriteAt:
+	case mxio.OpWriteAt:
 		r, err := f.Write(inputData, msg.Off(), fs.WhenceFromStart)
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		return mx.Status(r)
-	case rio.OpSeek:
+	case mxio.OpSeek:
 		r, err := f.Seek(msg.Off(), int(msg.Arg))
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		msg.SetOff(r)
 		return mx.ErrOk
-	case rio.OpStat:
+	case mxio.OpStat:
 		size, _, mtime, err := f.Stat()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		return statShared(msg, size, mtime, false)
-	case rio.OpTruncate:
+	case mxio.OpTruncate:
 		off := msg.Off()
 		if off < 0 {
 			return mx.ErrInvalidArgs
 		}
 		err := f.Truncate(uint64(off))
 		return errorToRIO(err)
-	case rio.OpSync:
+	case mxio.OpSync:
 		return errorToRIO(f.Sync())
-	case rio.OpSetAttr:
+	case mxio.OpSetAttr:
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(f.Touch(atime, mtime))
-	case rio.OpFcntl:
+	case mxio.OpFcntl:
 		flags := openFlagsFromRIO(int32(msg.FcntlFlags()), 0)
 		statusFlags := fs.OpenFlagAppend
 		switch uint32(msg.Arg) {
-		case rio.OpFcntlCmdGetFL:
+		case mxio.OpFcntlCmdGetFL:
 			var cflags uint32
 			oflags := f.GetOpenFlags()
 			if oflags.Append() {
@@ -319,7 +317,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 			}
 			msg.SetFcntlFlags(cflags)
 			return mx.ErrOk
-		case rio.OpFcntlCmdSetFL:
+		case mxio.OpFcntlCmdSetFL:
 			err := f.SetOpenFlags((f.GetOpenFlags() & ^statusFlags) | (flags & statusFlags))
 			return errorToRIO(err)
 		default:
@@ -334,7 +332,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 	return mx.ErrNotSupported
 }
 
-func getTimeShared(msg *rio.Msg) (time.Time, time.Time) {
+func getTimeShared(msg *mxio.Msg) (time.Time, time.Time) {
 	var mtime time.Time
 	attr := *(*mxio.Vnattr)(unsafe.Pointer(&msg.Data[0]))
 	if (attr.Valid & mxio.AttrMtime) != 0 {
@@ -345,7 +343,7 @@ func getTimeShared(msg *rio.Msg) (time.Time, time.Time) {
 
 const pageSize = 4096
 
-func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
+func statShared(msg *mxio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 	r := mxio.Vnattr{}
 	if dir {
 		r.Mode = syscall.S_IFDIR
@@ -366,20 +364,20 @@ func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 	return mx.Status(msg.Datalen)
 }
 
-func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directoryWrapper, cookie int64) mx.Status {
+func (vfs *ThinVFS) processOpDirectory(msg *mxio.Msg, rh mx.Handle, dw *directoryWrapper, cookie int64) mx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
 	dir := dw.d
 	switch msg.Op() {
-	case rio.OpOpen:
+	case mxio.OpOpen:
 		if len(inputData) < 1 {
-			return rio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
+			return mxio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
 		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
 		f, d, err := dir.Open(path, flags)
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
-			return rio.IndirectError(msg.Handle[0], mxErr)
+			return mxio.IndirectError(msg.Handle[0], mxErr)
 		}
 		var obj interface{}
 		if f != nil {
@@ -389,8 +387,8 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		}
 
 		if !flags.Pipeline() {
-			ro := &rio.RioObject{
-				RioObjectHeader: rio.RioObjectHeader{
+			ro := &mxio.RioObject{
+				RioObjectHeader: mxio.RioObjectHeader{
 					Status: mx.ErrOk,
 					Type:   uint32(mxio.ProtocolRemote),
 				},
@@ -407,14 +405,14 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 				d.Close()
 			}
 		}
-		return dispatcher.ErrIndirect.Status
-	case rio.OpClone:
+		return mxio.ErrIndirect.Status
+	case mxio.OpClone:
 		d2, err := dir.Dup()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
-			return rio.IndirectError(msg.Handle[0], mxErr)
+			return mxio.IndirectError(msg.Handle[0], mxErr)
 		}
-		ro := &rio.RioObject{
-			RioObjectHeader: rio.RioObjectHeader{
+		ro := &mxio.RioObject{
+			RioObjectHeader: mxio.RioObjectHeader{
 				Status: mx.ErrOk,
 				Type:   uint32(mxio.ProtocolRemote),
 			},
@@ -425,8 +423,8 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
 			d2.Close()
 		}
-		return dispatcher.ErrIndirect.Status
-	case rio.OpClose:
+		return mxio.ErrIndirect.Status
+	case mxio.OpClose:
 		err := dir.Close()
 		vfs.Lock()
 		if dw.e != 0 {
@@ -435,13 +433,13 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		vfs.Unlock()
 		vfs.freeCookie(cookie)
 		return errorToRIO(err)
-	case rio.OpStat:
+	case mxio.OpStat:
 		size, _, mtime, err := dir.Stat()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
 			return mxErr
 		}
 		return statShared(msg, size, mtime, true)
-	case rio.OpReaddir:
+	case mxio.OpReaddir:
 		maxlen := uint32(msg.Arg)
 		if maxlen > mxio.ChunkSize {
 			return mx.ErrInvalidArgs
@@ -492,12 +490,12 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		msg.Datalen = bytesWritten
 		dw.reading = true
 		return mx.Status(msg.Datalen)
-	case rio.OpUnlink:
+	case mxio.OpUnlink:
 		path := strings.TrimRight(string(inputData), "\x00")
 		err := dir.Unlink(path)
 		msg.Datalen = 0
 		return errorToRIO(err)
-	case rio.OpRename:
+	case mxio.OpRename:
 		defer msg.DiscardHandles()
 		if len(inputData) < 4 { // Src + null + dst + null
 			return mx.ErrInvalidArgs
@@ -520,9 +518,9 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		default:
 			return mx.ErrInvalidArgs
 		}
-	case rio.OpSync:
+	case mxio.OpSync:
 		return errorToRIO(dir.Sync())
-	case rio.OpIoctl:
+	case mxio.OpIoctl:
 		switch msg.IoctlOp() {
 		case mxio.IoctlVFSGetTokenFS:
 			vfs.Lock()
@@ -576,7 +574,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		default:
 			return mx.ErrNotSupported
 		}
-	case rio.OpSetAttr:
+	case mxio.OpSetAttr:
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(dir.Touch(atime, mtime))
 	default:
@@ -587,7 +585,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 	return mx.ErrNotSupported
 }
 
-func (vfs *ThinVFS) mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
+func (vfs *ThinVFS) mxioServer(msg *mxio.Msg, rh mx.Handle, cookie int64) mx.Status {
 	if msg.Hcount != msg.OpHandleCount() {
 		// Incoming number of handles must match message type
 		msg.DiscardHandles()
@@ -598,7 +596,7 @@ func (vfs *ThinVFS) mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Stat
 	vfs.Lock()
 	obj := vfs.files[int64(cookie)]
 	vfs.Unlock()
-	if obj == nil && msg.Op() == rio.OpClose {
+	if obj == nil && msg.Op() == mxio.OpClose {
 		// Removing object that has already been removed
 		return mx.ErrOk
 	}
