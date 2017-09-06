@@ -15,9 +15,9 @@ static_library("vmofs") {
   public_configs = [ ":vmofs_config" ]
 
   public_deps = [
-      "//magenta/system/ulib/fs",
-      "//magenta/system/ulib/mx",
-      "//magenta/system/ulib/mxcpp",
-      "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fs",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxcpp",
+    "//magenta/system/ulib/mxtl",
   ]
 }

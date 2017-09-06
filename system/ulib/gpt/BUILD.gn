@@ -7,10 +7,14 @@ config("gpt_config") {
 }
 
 static_library("gpt") {
-  sources = [ "gpt.c" ]
-  public = [ "include/gpt/gpt.h" ]
+  sources = [
+    "gpt.c",
+  ]
+  public = [
+    "include/gpt/gpt.h",
+  ]
   deps = [
-    "//magenta/third_party/ulib/cksum"
+    "//magenta/third_party/ulib/cksum",
   ]
   public_configs = [ ":gpt_config" ]
 }

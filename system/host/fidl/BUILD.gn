@@ -20,8 +20,8 @@ source_set("compiler") {
     "source_manager.cpp",
     "source_manager.h",
     "string_view.h",
-    "token_definitions.h",
     "token.h",
+    "token_definitions.h",
   ]
 }
 

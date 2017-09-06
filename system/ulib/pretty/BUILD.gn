@@ -8,13 +8,15 @@ config("pretty_config") {
 
 static_library("pretty") {
   sources = [
-      "hexdump.c",
-      "sizes.c",
+    "hexdump.c",
+    "sizes.c",
   ]
   public = [
-      "include/pretty/hexdump.h",
-      "include/pretty/sizes.h",
+    "include/pretty/hexdump.h",
+    "include/pretty/sizes.h",
   ]
-  deps = [ "//magenta/system/public" ]
+  deps = [
+    "//magenta/system/public",
+  ]
   public_configs = [ ":pretty_config" ]
 }

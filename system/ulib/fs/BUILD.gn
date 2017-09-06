@@ -19,12 +19,12 @@ static_library("fs") {
     "include/fs/vfs.h",
     "mapped-vmo.cpp",
     "mxio-dispatcher.cpp",
-    "vfs.cpp",
-    "vfs-mount.cpp",
-    "vfs-unmount.cpp",
-    "vfs-rpc.cpp",
     "vfs-dispatcher.cpp",
+    "vfs-mount.cpp",
+    "vfs-rpc.cpp",
+    "vfs-unmount.cpp",
     "vfs-watcher.cpp",
+    "vfs.cpp",
   ]
 
   public_configs = [ ":fs_config" ]
@@ -34,9 +34,7 @@ static_library("fs") {
     "_ALL_SOURCE=1",
   ]
 
-  include_dirs = [
-    "//magenta/system/private",
-  ]
+  include_dirs = [ "//magenta/system/private" ]
 
   deps = [
     "//magenta/system/ulib/mx",

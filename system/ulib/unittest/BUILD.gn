@@ -13,10 +13,12 @@ static_library("unittest") {
     "crash-list.c",
     "unittest.c",
   ]
-  public = [ "include/unittest/unittest.h" ]
+  public = [
+    "include/unittest/unittest.h",
+  ]
   deps = [
+    "//magenta/system/public",
     "//magenta/system/ulib/pretty",
-    "//magenta/system/public"
   ]
   public_configs = [ ":unittest_config" ]
 }

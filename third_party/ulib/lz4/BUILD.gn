@@ -1,7 +1,7 @@
 config("lz4_config") {
   include_dirs = [
     "include",
-    "include/lz4"
+    "include/lz4",
   ]
 }
 
@@ -17,7 +17,7 @@ static_library("lz4") {
     "include/lz4/lz4frame_static.h",
     "include/lz4/lz4.h",
     "include/lz4/lz4hc.h",
-    "include/lz4/xxhash.h"
+    "include/lz4/xxhash.h",
   ]
   public_configs = [ ":lz4_config" ]
 }

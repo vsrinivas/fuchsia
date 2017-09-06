@@ -3,26 +3,26 @@
 # found in the LICENSE file.
 
 config("audio-utils-config") {
-    include_dirs = [ "include" ]
+  include_dirs = [ "include" ]
 }
 
 source_set("audio-utils") {
-    # Don't forget to update rules.mk as well for the Magenta build.
-    sources = [
-        "include/audio-utils/audio-device-stream.h",
-        "include/audio-utils/audio-input.h",
-        "include/audio-utils/audio-output.h",
-        "include/audio-utils/audio-stream.h",
-        "audio-device-stream.cpp",
-        "audio-input.cpp",
-        "audio-output.cpp",
-    ]
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "audio-device-stream.cpp",
+    "audio-input.cpp",
+    "audio-output.cpp",
+    "include/audio-utils/audio-device-stream.h",
+    "include/audio-utils/audio-input.h",
+    "include/audio-utils/audio-output.h",
+    "include/audio-utils/audio-stream.h",
+  ]
 
-    public_deps = [
-        "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxcpp",
-        "//magenta/system/ulib/mxtl",
-    ]
+  public_deps = [
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/mxcpp",
+    "//magenta/system/ulib/mxtl",
+  ]
 
-    public_configs = [ ":audio-utils-config" ]
+  public_configs = [ ":audio-utils-config" ]
 }

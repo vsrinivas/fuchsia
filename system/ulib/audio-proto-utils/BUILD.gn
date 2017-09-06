@@ -3,19 +3,19 @@
 # found in the LICENSE file.
 
 config("audio-proto-utils-config") {
-    include_dirs = [ "include" ]
+  include_dirs = [ "include" ]
 }
 
 source_set("audio-proto-utils") {
-    # Don't forget to update rules.mk as well for the Magenta build.
-    sources = [
-        "include/audio-proto-utils/format-utils.h",
-        "format-utils.cpp",
-    ]
+  # Don't forget to update rules.mk as well for the Magenta build.
+  sources = [
+    "format-utils.cpp",
+    "include/audio-proto-utils/format-utils.h",
+  ]
 
-    public_deps = [
-        "//magenta/system/ulib/mxtl",
-    ]
+  public_deps = [
+    "//magenta/system/ulib/mxtl",
+  ]
 
-    public_configs = [ ":audio-proto-utils-config" ]
+  public_configs = [ ":audio-proto-utils-config" ]
 }

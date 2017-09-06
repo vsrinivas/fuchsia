@@ -16,8 +16,10 @@ static_library("linenoise") {
 
 executable("linenoise_example") {
   sources = [
-    "example.c"
+    "example.c",
   ]
 
-  deps = [ ":linenoise" ]
+  deps = [
+    ":linenoise",
+  ]
 }

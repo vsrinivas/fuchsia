@@ -10,6 +10,8 @@ static_library("cksum") {
     "crc32.h",
     "zutil.h",
   ]
-  public = [ "include/lib/cksum.h" ]
+  public = [
+    "include/lib/cksum.h",
+  ]
   public_configs = [ ":cksum_config" ]
 }

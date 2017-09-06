@@ -21,7 +21,9 @@ source_set("async") {
 
   libs = [ "magenta" ]
 
-  public_deps = [ "//magenta/system/ulib/mxtl" ]
+  public_deps = [
+    "//magenta/system/ulib/mxtl",
+  ]
 
   public_configs = [ ":async_config" ]
 }
@@ -34,7 +36,9 @@ source_set("default") {
 
   libs = [ "async-default" ]
 
-  public_deps = [ ":async" ]
+  public_deps = [
+    ":async",
+  ]
 }
 
 source_set("loop") {
@@ -47,5 +51,7 @@ source_set("loop") {
 
   defines = [ "_ALL_SOURCE=1" ]
 
-  public_deps = [ ":default" ]
+  public_deps = [
+    ":default",
+  ]
 }

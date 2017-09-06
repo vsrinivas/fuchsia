@@ -46,9 +46,9 @@ source_set("mxtl") {
     "include/mxtl/unique_free_ptr.h",
     "include/mxtl/unique_ptr.h",
     "include/mxtl/vector.h",
+    "string.cpp",
     "string_piece.cpp",
     "string_printf.cpp",
-    "string.cpp",
   ]
 
   public_configs = [ ":mxtl_config" ]
