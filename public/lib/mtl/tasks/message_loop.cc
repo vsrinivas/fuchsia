@@ -4,8 +4,11 @@
 
 #include "lib/mtl/tasks/message_loop.h"
 
-#include <magenta/syscalls.h>
 #include <utility>
+
+#include <async/task.h>
+#include <async/wait_with_timeout.h>
+#include <magenta/syscalls.h>
 
 #include "lib/ftl/logging.h"
 
@@ -16,18 +19,18 @@ thread_local MessageLoop* g_current;
 
 }  // namespace
 
-class MessageLoop::TaskRecord : public async::Task {
+class MessageLoop::TaskRecord {
  public:
-  TaskRecord(mx_time_t deadline, ftl::Closure task);
-  ~TaskRecord() override;
+  TaskRecord(mx_time_t deadline, ftl::Closure closure);
+  ~TaskRecord();
 
-  async_task_result_t Handle(async_t* async, mx_status_t status) override;
+  async::Task& task() { return task_; }
 
  private:
-  ftl::Closure task_;
+  async::Task task_;
 };
 
-class MessageLoop::HandlerRecord : public async::WaitWithTimeout {
+class MessageLoop::HandlerRecord {
  public:
   HandlerRecord(mx_handle_t object,
                 mx_signals_t trigger,
@@ -35,13 +38,16 @@ class MessageLoop::HandlerRecord : public async::WaitWithTimeout {
                 MessageLoop* loop,
                 MessageLoopHandler* handler,
                 HandlerKey key);
-  ~HandlerRecord() override;
+  ~HandlerRecord();
 
-  async_wait_result_t Handle(async_t* async,
-                             mx_status_t status,
-                             const mx_packet_signal_t* signal) override;
+  async::WaitWithTimeout& wait() { return wait_; }
 
  private:
+  async_wait_result_t Handle(async_t* async,
+                             mx_status_t status,
+                             const mx_packet_signal_t* signal);
+
+  async::WaitWithTimeout wait_;
   MessageLoop* loop_;
   MessageLoopHandler* handler_;
   HandlerKey key_;
@@ -84,7 +90,7 @@ void MessageLoop::PostTask(ftl::Closure task, ftl::TimePoint target_time) {
   auto record = new TaskRecord(target_time.ToEpochDelta().ToNanoseconds(),
                                std::move(task));
 
-  mx_status_t status = record->Post(loop_.async());
+  mx_status_t status = record->task().Post(loop_.async());
   if (status == MX_ERR_BAD_STATE) {
     // Suppress request when shutting down.
     delete record;
@@ -111,7 +117,7 @@ MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
                             ? MX_TIME_INFINITE
                             : mx_deadline_after(timeout.ToNanoseconds()),
                         this, handler, key);
-  mx_status_t status = record->Begin(loop_.async());
+  mx_status_t status = record->wait().Begin(loop_.async());
   if (status == MX_ERR_BAD_STATE) {
     // Suppress request when shutting down.
     delete record;
@@ -137,7 +143,7 @@ void MessageLoop::RemoveHandler(HandlerKey key) {
   if (current_handler_ == record) {
     current_handler_removed_ = true;  // defer cleanup
   } else {
-    mx_status_t status = record->Cancel(loop_.async());
+    mx_status_t status = record->wait().Cancel(loop_.async());
     FTL_CHECK(status == MX_OK) << "Failed to cancel handler: status=" << status;
     delete record;
   }
@@ -200,18 +206,18 @@ void MessageLoop::Epilogue(async_t* async, void* data) {
     loop->after_task_callback_();
 }
 
-MessageLoop::TaskRecord::TaskRecord(mx_time_t deadline, ftl::Closure task)
-    : async::Task(deadline, ASYNC_HANDLE_SHUTDOWN), task_(std::move(task)) {}
-
-MessageLoop::TaskRecord::~TaskRecord() {}
-
-async_task_result_t MessageLoop::TaskRecord::Handle(async_t* async,
-                                                    mx_status_t status) {
-  if (status == MX_OK)
-    task_();
-  delete this;
-  return ASYNC_TASK_FINISHED;
+MessageLoop::TaskRecord::TaskRecord(mx_time_t deadline, ftl::Closure closure)
+    : task_(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN) {
+  task_.set_handler(
+      [ this, closure = std::move(closure) ](async_t*, mx_status_t status) {
+        if (status == MX_OK)
+          closure();
+        delete this;
+        return ASYNC_TASK_FINISHED;
+      });
 }
+
+MessageLoop::TaskRecord::~TaskRecord() = default;
 
 MessageLoop::HandlerRecord::HandlerRecord(mx_handle_t object,
                                           mx_signals_t trigger,
@@ -219,12 +225,15 @@ MessageLoop::HandlerRecord::HandlerRecord(mx_handle_t object,
                                           MessageLoop* loop,
                                           MessageLoopHandler* handler,
                                           HandlerKey key)
-    : async::WaitWithTimeout(object, trigger, deadline, ASYNC_HANDLE_SHUTDOWN),
+    : wait_(object, trigger, deadline, ASYNC_FLAG_HANDLE_SHUTDOWN),
       loop_(loop),
       handler_(handler),
-      key_(key) {}
+      key_(key) {
+  wait_.set_handler(
+      mxtl::BindMember(this, &MessageLoop::HandlerRecord::Handle));
+}
 
-MessageLoop::HandlerRecord::~HandlerRecord() {}
+MessageLoop::HandlerRecord::~HandlerRecord() = default;
 
 async_wait_result_t MessageLoop::HandlerRecord::Handle(
     async_t* async,
@@ -234,9 +243,9 @@ async_wait_result_t MessageLoop::HandlerRecord::Handle(
   loop_->current_handler_ = this;
 
   if (status == MX_OK) {
-    handler_->OnHandleReady(object(), signal->observed, signal->count);
+    handler_->OnHandleReady(wait_.object(), signal->observed, signal->count);
   } else {
-    handler_->OnHandleError(object(), status);
+    handler_->OnHandleError(wait_.object(), status);
 
     if (!loop_->current_handler_removed_) {
       auto it = loop_->handlers_.find(key_);

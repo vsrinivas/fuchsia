@@ -8,7 +8,6 @@
 #include <map>
 
 #include <async/loop.h>
-#include <async/timeouts.h>
 
 #include "lib/ftl/ftl_export.h"
 #include "lib/ftl/macros.h"
@@ -38,7 +37,7 @@ class FTL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   static MessageLoop* GetCurrent();
 
   // Gets the underlying libasync dispatcher.
-  // See <async/async.h> for details on how to use this.
+  // See <async/dispatcher.h> for details on how to use this.
   async_t* async() const { return loop_.async(); }
 
   // Return an interface for posting tasks to this message loop.
