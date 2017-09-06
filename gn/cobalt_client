@@ -10,6 +10,7 @@
         "netconnector",
         "netstack",
         "network",
+        "runtime",
         "runtime_config"
     ],
     "packages": {
