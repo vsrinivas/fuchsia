@@ -683,17 +683,18 @@ TEST_F(PageSyncImplTest, RetryUpload) {
   StartPageSync();
 
   // Test cloud provider logs every commit, even if it reports that upload
-  // failed for each. Here we loop through five attempts to upload the commit.
-  message_loop_.SetAfterTaskCallback([this] {
-    if (cloud_provider_.add_commits_calls == 5u) {
-      message_loop_.PostQuitTask();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  // failed for each. Here we loop through at least five attempts to upload the
+  // commit.
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return cloud_provider_.add_commits_calls >= 5u &&
+           // We need to wait for the callback to be executed on the PageSync
+           // side.
+           backoff_get_next_calls_ >= 5;
+  }));
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
-  EXPECT_EQ(5, backoff_get_next_calls_);
+  EXPECT_GE(backoff_get_next_calls_, 5);
 }
 
 // Verifies that the on idle callback is called when there is no pending upload
@@ -1163,9 +1164,7 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
 // to upload it. The upload will then fail. However, we should stop retrying to
 // upload the commit once we received a notification for it through the cloud
 // sync watcher.
-//
-// Disabled for flakiness. https://fuchsia.atlassian.net/browse/LE-310
-TEST_F(PageSyncImplTest, DISABLED_UploadCommitAlreadyInCloud) {
+TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
   // Create a local commit.
   storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
 
@@ -1174,8 +1173,12 @@ TEST_F(PageSyncImplTest, DISABLED_UploadCommitAlreadyInCloud) {
       cloud_provider::Status::SERVER_ERROR;
   StartPageSync();
 
-  EXPECT_TRUE(
-      RunLoopUntil([this] { return cloud_provider_.add_commits_calls == 1u; }));
+  EXPECT_TRUE(RunLoopUntil([this] {
+    return cloud_provider_.add_commits_calls == 1u &&
+           // We need to wait for the callback to be executed on the PageSync
+           // side.
+           backoff_get_next_calls_ == 1;
+  }));
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
