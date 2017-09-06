@@ -1163,7 +1163,9 @@ TEST_F(PageSyncImplTest, DoNotUploadSyncedCommitsOnRetry) {
 // to upload it. The upload will then fail. However, we should stop retrying to
 // upload the commit once we received a notification for it through the cloud
 // sync watcher.
-TEST_F(PageSyncImplTest, UploadCommitAlreadyInCloud) {
+//
+// Disabled for flakiness. https://fuchsia.atlassian.net/browse/LE-310
+TEST_F(PageSyncImplTest, DISABLED_UploadCommitAlreadyInCloud) {
   // Create a local commit.
   storage_.new_commits_to_return["id1"] = storage_.NewCommit("id1", "content1");
 
