@@ -10,28 +10,43 @@ namespace modular {
 
 ContextHandler::ContextHandler(
     maxwell::IntelligenceServices* const intelligence_services)
-    : value_(maxwell::ContextUpdateForTopics::New()), binding_(this) {
+    : binding_(this) {
   intelligence_services->GetContextReader(context_reader_.NewRequest());
-  query_.topics.resize(0);
 }
 
 ContextHandler::~ContextHandler() = default;
 
-void ContextHandler::Select(const fidl::String& topic) {
+void ContextHandler::SelectTopics(const std::vector<fidl::String>& topics) {
   if (binding_.is_bound()) {
     binding_.Close();
   }
 
-  query_.topics.push_back(topic);
-  context_reader_->SubscribeToTopics(query_.Clone(), binding_.NewBinding());
+  auto query = maxwell::ContextQuery::New();
+  for (const auto& topic : topics) {
+    auto selector = maxwell::ContextSelector::New();
+    selector->type = maxwell::ContextValueType::ENTITY;
+    selector->meta = maxwell::ContextMetadata::New();;
+    selector->meta->entity = maxwell::EntityMetadata::New();
+    selector->meta->entity->topic = topic;
+    query->selector[topic] = std::move(selector);
+  }
+
+  context_reader_->Subscribe(std::move(query), binding_.NewBinding());
 }
 
 void ContextHandler::Watch(const std::function<void()>& watcher) {
   watchers_.push_back(watcher);
 }
 
-void ContextHandler::OnUpdate(maxwell::ContextUpdateForTopicsPtr value) {
-  value_ = std::move(value);
+void ContextHandler::OnContextUpdate(maxwell::ContextUpdatePtr update) {
+  state_ = fidl::Map<fidl::String, fidl::String>();
+  for (const auto& it : update->values) {
+    if (it.GetValue().empty()) continue;
+    // HACK(thatguy): It is possible to have more than one value come back per
+    // ContextSelector. Use just the first value, as that will at least be
+    // deterministically the first until the value is deleted.
+    state_[it.GetKey()] = it.GetValue()[0]->content;
+  }
 
   for (auto& watcher : watchers_) {
     watcher();

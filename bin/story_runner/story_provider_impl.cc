@@ -533,7 +533,7 @@ StoryProviderImpl::StoryProviderImpl(
       focus_watcher_binding_(this) {
   focus_provider_->Watch(focus_watcher_binding_.NewBinding());
   context_handler_.Watch([this] { OnContextChange(); });
-  context_handler_.Select(kStoryImportanceContext);
+  context_handler_.SelectTopics({kStoryImportanceContext});
   LoadStoryShell();
 }
 

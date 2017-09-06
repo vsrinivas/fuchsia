@@ -362,9 +362,9 @@ void UserRunnerImpl::GetContextReader(
   intelligence_services_->GetContextReader(std::move(request));
 }
 
-void UserRunnerImpl::GetContextPublisher(
-    fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
-  intelligence_services_->GetContextPublisher(std::move(request));
+void UserRunnerImpl::GetContextWriter(
+    fidl::InterfaceRequest<maxwell::ContextWriter> request) {
+  intelligence_services_->GetContextWriter(std::move(request));
 }
 
 void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {

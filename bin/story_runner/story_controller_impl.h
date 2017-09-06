@@ -55,7 +55,7 @@ constexpr char kRootModuleName[] = "root";
 // HACK(mesch): The context topics that influence story importance is hardcoded
 // to a single one right now. This will be generalized, but we cannot simply
 // look at the whole context, because it's too big.
-constexpr char kStoryImportanceContext[] = "/location/home_work";
+constexpr char kStoryImportanceContext[] = "location/home_work";
 
 // The story runner, which holds all the links and runs all the modules as well
 // as the story shell. It also implements the StoryController service to give

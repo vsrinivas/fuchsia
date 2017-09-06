@@ -8,7 +8,8 @@
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/lib/context/formatting.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
@@ -38,25 +39,30 @@ constexpr char kTopic[] = "context_link_test";
 constexpr char kLink[] = "context_link";
 
 // A context reader watcher implementation.
-class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
+class ContextListenerImpl : maxwell::ContextListener {
  public:
-  ContextListenerForTopicsImpl() : binding_(this) {
-    handler_ = [](fidl::String, fidl::String) {};
+  ContextListenerImpl() : binding_(this) {
+    handler_ = [](const maxwell::ContextValuePtr&) {};
   }
 
-  ~ContextListenerForTopicsImpl() override = default;
+  ~ContextListenerImpl() override = default;
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
   void Listen(maxwell::ContextReader* const context_reader) {
-    auto query = maxwell::ContextQueryForTopics::New();
-    query->topics.resize(0);
-    context_reader->SubscribeToTopics(std::move(query), binding_.NewBinding());
+    // Subscribe to all entity values.
+    auto selector = maxwell::ContextSelector::New();
+    selector->type = maxwell::ContextValueType::ENTITY;
+
+    auto query = maxwell::ContextQuery::New();
+    query->selector["all"] = std::move(selector);
+
+    context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
-        [] { FTL_LOG(WARNING) << "Lost connection to ContextReader."; });
+        [] { FTL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
 
-  using Handler = std::function<void(fidl::String, fidl::String)>;
+  using Handler = std::function<void(const maxwell::ContextValuePtr&)>;
 
   void Handle(const Handler& handler) { handler_ = handler; }
 
@@ -64,17 +70,19 @@ class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
   void Reset() { binding_.Close(); }
 
  private:
-  // |ContextListenerForTopics|
-  void OnUpdate(maxwell::ContextUpdateForTopicsPtr update) override {
-    const auto& values = update->values;
-    for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      handler_(i.GetKey(), i.GetValue());
+  // |ContextListener|
+  void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
+    FTL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
+    const auto& values = update->values["all"];
+    for (const auto& value : values) {
+      FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
+      handler_(value);
     }
   }
 
-  fidl::Binding<maxwell::ContextListenerForTopics> binding_;
+  fidl::Binding<maxwell::ContextListener> binding_;
   Handler handler_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerForTopicsImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
 // Tests the context links machinery. We start a module that writes a context
@@ -133,8 +141,8 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
     context_listener_.Handle(
-        [this](const fidl::String& key, const fidl::String& value) {
-          GetContextTopic(key, value);
+        [this](const maxwell::ContextValuePtr& value) {
+          GetContextTopic(value);
         });
 
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
@@ -151,19 +159,24 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_context_topic_2_{"GetContextTopic() value=2"};
   int get_context_topic_2_called_{};
 
-  void GetContextTopic(const fidl::String& topic, const fidl::String& value) {
-    // The context link topic is derived from the story id in which it was
-    // published.
-    std::ostringstream expected_topic;
-    expected_topic << "/story/id/" << story_id_ << "/link/" << kTopic;
-    if (topic != expected_topic.str()) {
+  void GetContextTopic(const maxwell::ContextValuePtr& value) {
+    // The context link value has metadata that is derived from the story id in
+    // which it was published.
+    if (!value->meta || !value->meta->story || !value->meta->entity) {
+      FTL_LOG(ERROR) << "ContextValue missing story or entity metadata: " << value;
+      return;
+    }
+
+    if (value->meta->story->id != story_id_ ||
+        value->meta->entity->topic != kTopic) {
+      FTL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
       return;
     }
 
     FTL_LOG(INFO) << "Context value for topic " << kTopic << " is: " << value;
 
     modular::JsonDoc doc;
-    doc.Parse(value);
+    doc.Parse(value->content);
 
     if (doc.HasParseError()) {
       FTL_LOG(ERROR) << "JSON Parse Error";
@@ -238,8 +251,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
         get_context_topic_2_.Pass();
 
         context_listener_.Reset();
-        context_listener_.Handle(
-            [this](const fidl::String& key, const fidl::String& value) {});
+        context_listener_.Handle([this](const maxwell::ContextValuePtr&) {});
 
         Logout();
       }
@@ -263,7 +275,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::StoryControllerPtr story_controller_;
 
   maxwell::ContextReaderPtr context_reader_;
-  ContextListenerForTopicsImpl context_listener_;
+  ContextListenerImpl context_listener_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

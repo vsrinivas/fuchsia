@@ -18,6 +18,7 @@ executable("context_link_user_shell") {
     "context_link_user_shell.cc",
   ]
   deps = [
+    "//apps/maxwell/lib/context:formatting",
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/fidl:array_to_string",

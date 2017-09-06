@@ -7,7 +7,8 @@
 
 #include "application/lib/app/connect.h"
 #include "application/services/service_provider.fidl.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/lib/context/formatting.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_app.h"
@@ -31,7 +32,7 @@
 namespace {
 
 constexpr char kModuleUrl[] = "file:///system/apps/modular_tests/null_module";
-constexpr char kTopic[] = "/location/home_work";
+constexpr char kTopic[] = "location/home_work";
 
 // A simple story watcher implementation that invokes a "continue" callback when
 // it sees the watched story transition to RUNNING state. Used to push the test
@@ -104,20 +105,25 @@ class FocusWatcherImpl : modular::FocusWatcher {
 };
 
 // A context reader watcher implementation.
-class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
+class ContextListenerImpl : maxwell::ContextListener {
  public:
-  ContextListenerForTopicsImpl() : binding_(this) {
+  ContextListenerImpl() : binding_(this) {
     handler_ = [](fidl::String, fidl::String) {};
   }
 
-  ~ContextListenerForTopicsImpl() override = default;
+  ~ContextListenerImpl() override = default;
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
   void Listen(maxwell::ContextReader* const context_reader) {
-    auto query = maxwell::ContextQueryForTopics::New();
-    query->topics.resize(0);
-    context_reader->SubscribeToTopics(std::move(query), binding_.NewBinding());
+    // Subscribe to all entity values.
+    auto selector = maxwell::ContextSelector::New();
+    selector->type = maxwell::ContextValueType::ENTITY;
+
+    auto query = maxwell::ContextQuery::New();
+    query->selector["all"] = std::move(selector);
+
+    context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_connection_error_handler(
         [] { FTL_LOG(ERROR) << "Lost connection to ContextReader."; });
   }
@@ -130,20 +136,21 @@ class ContextListenerForTopicsImpl : maxwell::ContextListenerForTopics {
   void Reset() { binding_.Close(); }
 
  private:
-  // |ContextListenerForTopics|
-  void OnUpdate(maxwell::ContextUpdateForTopicsPtr update) override {
-    FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate()";
-    const auto& values = update->values;
-    for (auto i = values.cbegin(); i != values.cend(); ++i) {
-      FTL_VLOG(4) << "ContextListenerForTopicsImpl::OnUpdate() " << i.GetKey()
-                  << " " << i.GetValue();
-      handler_(i.GetKey(), i.GetValue());
+  // |ContextListener|
+  void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
+    FTL_VLOG(4) << "ContextListenerImpl::OnUpdate()";
+    const auto& values = update->values["all"];
+    for (const auto& value : values) {
+      FTL_VLOG(4) << "ContextListenerImpl::OnUpdate() " << value;
+      if (value->meta && value->meta->entity) {
+        handler_(value->meta->entity->topic, value->content);
+      }
     }
   }
 
-  fidl::Binding<maxwell::ContextListenerForTopics> binding_;
+  fidl::Binding<maxwell::ContextListener> binding_;
   Handler handler_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerForTopicsImpl);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
 // Tests the story importance machinery. We set context to home, start one
@@ -181,7 +188,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetFocusProvider(focus_provider_.NewRequest());
     focus_watcher_.Watch(focus_provider_.get());
 
-    user_shell_context_->GetContextPublisher(context_publisher_.NewRequest());
+    user_shell_context_->GetContextWriter(context_writer_.NewRequest());
     user_shell_context_->GetContextReader(context_reader_.NewRequest());
     context_listener_.Listen(context_reader_.get());
 
@@ -195,7 +202,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
         [this](const fidl::String& key, const fidl::String& value) {
           GetContextHome(key, value);
         });
-    context_publisher_->Publish(kTopic, "\"home\"");
+    context_writer_->WriteEntityTopic(kTopic, "\"home\"");
     set_context_home_.Pass();
   }
 
@@ -244,7 +251,7 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
         [this](const fidl::String& key, const fidl::String& value) {
           GetContextWork(key, value);
         });
-    context_publisher_->Publish(kTopic, "\"work\"");
+    context_writer_->WriteEntityTopic(kTopic, "\"work\"");
     set_context_work_.Pass();
   }
 
@@ -380,9 +387,9 @@ class TestApp : modular::testing::ComponentBase<modular::UserShell> {
   modular::StoryControllerPtr story2_controller_;
   StoryWatcherImpl story2_watcher_;
 
-  maxwell::ContextPublisherPtr context_publisher_;
+  maxwell::ContextWriterPtr context_writer_;
   maxwell::ContextReaderPtr context_reader_;
-  ContextListenerForTopicsImpl context_listener_;
+  ContextListenerImpl context_listener_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

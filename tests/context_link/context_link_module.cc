@@ -46,7 +46,7 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
 
   void Set1() {
     link_->Set(nullptr,
-               "{\"link_value\":\"1\",\"@context\":{\"topic\":\"/"
+               "{\"link_value\":\"1\",\"@context\":{\"topic\":\""
                "context_link_test\"}}");
 
     // TODO(mesch): If we set values on a Link too fast, they get swallowed by
@@ -59,7 +59,7 @@ class TestApp : modular::testing::ComponentBase<modular::Module> {
 
   void Set2() {
     link_->Set(nullptr,
-               "{\"link_value\":\"2\",\"@context\":{\"topic\":\"/"
+               "{\"link_value\":\"2\",\"@context\":{\"topic\":\""
                "context_link_test\"}}");
   }
 

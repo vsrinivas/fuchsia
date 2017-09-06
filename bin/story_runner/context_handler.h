@@ -6,6 +6,7 @@
 #define APPS_MODULAR_SRC_STORY_RUNNER_CONTEXT_HANDLER_H_
 
 #include <string>
+#include <vector>
 
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/user/intelligence_services.fidl.h"
@@ -23,36 +24,31 @@ namespace modular {
 // importance. Therefore, it watches only selected topics. This will be revised
 // later. The dimensions of context and their current values are available form
 // values().
-class ContextHandler : maxwell::ContextListenerForTopics {
+class ContextHandler : maxwell::ContextListener {
  public:
   explicit ContextHandler(maxwell::IntelligenceServices* intelligence_services);
   ~ContextHandler() override;
 
-  // Selects a topic to watch for. No notifications are received until Select()
-  // was called at least once, i.e. ContextHandler does never listen for changes
-  // in *all* topics, only for changes in explicitly selected topics.
+  // Selects topics to watch for and subscribes to the context engine for updates.
   //
-  // The client may call Select() multiple times with different topics in order
-  // to add multiple topics to the watched set.
-  void Select(const fidl::String& topic);
+  // To be notified of updates, register a listener by calling Watch() before
+  // calling SelectTopics().
+  void SelectTopics(const std::vector<fidl::String>& topics);
 
   void Watch(const std::function<void()>& watcher);
 
-  const ContextState& values() const { return value_->values; }
+  const ContextState& values() const { return state_; }
 
  private:
-  // |ContextListenerForTopics|
-  void OnUpdate(maxwell::ContextUpdateForTopicsPtr value) override;
+  // |ContextListener|
+  void OnContextUpdate(maxwell::ContextUpdatePtr update) override;
 
   fidl::InterfacePtr<maxwell::ContextReader> context_reader_;
 
-  // Current set of watched topics.
-  maxwell::ContextQueryForTopics query_;
-
   // Current value of the context.
-  maxwell::ContextUpdateForTopicsPtr value_;
+  ContextState state_;
 
-  fidl::Binding<maxwell::ContextListenerForTopics> binding_;
+  fidl::Binding<maxwell::ContextListener> binding_;
   std::vector<std::function<void()>> watchers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ContextHandler);

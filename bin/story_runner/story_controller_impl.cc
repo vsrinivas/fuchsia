@@ -816,9 +816,9 @@ StoryControllerImpl::StoryControllerImpl(
       ->GetComponentIntelligenceServices(std::move(scope),
                                          intelligence_services_.NewRequest());
 
-  story_scope_.AddService<maxwell::ContextPublisher>(
-      [this](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
-        intelligence_services_->GetContextPublisher(std::move(request));
+  story_scope_.AddService<maxwell::ContextWriter>(
+      [this](fidl::InterfaceRequest<maxwell::ContextWriter> request) {
+        intelligence_services_->GetContextWriter(std::move(request));
       });
 }
 

@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/maxwell/services/context/context_publisher.fidl.h"
+#include "apps/maxwell/services/context/context_writer.fidl.h"
 #include "apps/maxwell/services/context/context_reader.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
@@ -72,8 +72,8 @@ class UserRunnerImpl : UserRunner, UserShellContext {
   void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
   void GetContextReader(
       fidl::InterfaceRequest<maxwell::ContextReader> request) override;
-  void GetContextPublisher(
-      fidl::InterfaceRequest<maxwell::ContextPublisher> request) override;
+  void GetContextWriter(
+      fidl::InterfaceRequest<maxwell::ContextWriter> request) override;
   void GetDeviceName(const GetDeviceNameCallback& callback) override;
   void GetFocusController(
       fidl::InterfaceRequest<FocusController> request) override;
