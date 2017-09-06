@@ -47,39 +47,6 @@ FUNCTION(arm64_context_switch)
     ret
 END_FUNCTION(arm64_context_switch)
 
-FUNCTION(arm64_el3_to_el1)
-    /* set EL2 to 64bit and enable HVC instruction */
-    mrs x0, scr_el3
-    orr x0, x0, #SCR_EL3_HCE
-    orr x0, x0, #SCR_EL3_RW
-    msr scr_el3, x0
-
-    /* set EL1 to 64bit */
-    mov x0, #HCR_EL2_RW
-    msr hcr_el2, x0
-
-    /* disable EL2 coprocessor traps */
-    mov x0, #0x33ff
-    msr cptr_el2, x0
-
-    /* disable EL1 FPU traps */
-    mov x0, #(0b11<<20)
-    msr cpacr_el1, x0
-
-    /* set up the EL1 bounce interrupt */
-    mov x0, sp
-    msr sp_el1, x0
-
-    adr x0, .Ltarget
-    msr elr_el3, x0
-
-    mov x0, #((0b1111 << 6) | (0b0101)) /* EL1h runlevel */
-    msr spsr_el3, x0
-    isb
-
-    eret
-END_FUNCTION(arm64_el3_to_el1)
-
 FUNCTION(arm64_elX_to_el1)
     mrs x9, CurrentEL
 
