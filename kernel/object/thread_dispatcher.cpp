@@ -14,6 +14,7 @@
 #include <trace.h>
 
 #include <arch/debugger.h>
+#include <arch/exception.h>
 
 #include <lib/dpc.h>
 
@@ -27,7 +28,6 @@
 #include <magenta/syscalls/debug.h>
 
 #include <object/c_user_thread.h>
-#include <object/exception.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>

@@ -8,9 +8,9 @@
 
 #include <stdint.h>
 
+#include <arch/exception.h>
 #include <kernel/mutex.h>
 #include <object/dispatcher.h>
-#include <object/exception.h>
 
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>

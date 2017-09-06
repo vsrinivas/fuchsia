@@ -8,6 +8,7 @@
 
 #include <debug.h>
 #include <trace.h>
+#include <arch/exception.h>
 #include <arch/user_copy.h>
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
@@ -17,11 +18,11 @@
 #include <kernel/thread.h>
 #include <kernel/stats.h>
 #include <kernel/vm.h>
-#include <object/exception.h>
 #include <platform.h>
 #include <vm/fault.h>
 
 #include <fbl/auto_call.h>
+#include <magenta/syscalls/exception.h>
 
 #include <lib/ktrace.h>
 
@@ -70,25 +71,25 @@ __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
 }
 
-static status_t call_magenta_exception_handler(uint kind,
-                                               struct arch_exception_context *context,
-                                               x86_iframe_t *frame)
+static status_t call_dispatch_user_exception(uint kind,
+                                             struct arch_exception_context *context,
+                                             x86_iframe_t *frame)
 {
     thread_t *thread = get_current_thread();
     x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, frame);
-    status_t status = magenta_exception_handler(kind, context);
+    status_t status = dispatch_user_exception(kind, context);
     x86_reset_suspended_general_regs(&thread->arch);
     return status;
 }
 
-static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
+static bool try_dispatch_user_exception(x86_iframe_t *frame, uint kind)
 {
     bool from_user = SELECTOR_PL(frame->cs) != 0;
     if (from_user) {
         struct arch_exception_context context = { false, frame, 0 };
         arch_set_in_int_handler(false);
         arch_enable_ints();
-        status_t erc = call_magenta_exception_handler(kind, &context, frame);
+        status_t erc = call_dispatch_user_exception(kind, &context, frame);
         arch_disable_ints();
         arch_set_in_int_handler(true);
         if (erc == MX_OK)
@@ -100,7 +101,7 @@ static bool handle_magenta_exception(x86_iframe_t *frame, uint kind)
 
 static void x86_debug_handler(x86_iframe_t *frame)
 {
-    if (handle_magenta_exception(frame, MX_EXCP_HW_BREAKPOINT))
+    if (try_dispatch_user_exception(frame, MX_EXCP_HW_BREAKPOINT))
         return;
 
     exception_die(frame, "unhandled hw breakpoint, halting\n");
@@ -112,7 +113,7 @@ static void x86_nmi_handler(x86_iframe_t *frame)
 
 static void x86_breakpoint_handler(x86_iframe_t *frame)
 {
-    if (handle_magenta_exception(frame, MX_EXCP_SW_BREAKPOINT))
+    if (try_dispatch_user_exception(frame, MX_EXCP_SW_BREAKPOINT))
         return;
 
     exception_die(frame, "unhandled sw breakpoint, halting\n");
@@ -133,7 +134,7 @@ static void x86_gpf_handler(x86_iframe_t *frame)
         return;
     }
 
-    if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
+    if (try_dispatch_user_exception(frame, MX_EXCP_GENERAL))
         return;
 
     exception_die(frame, "unhandled gpf, halting\n");
@@ -141,7 +142,7 @@ static void x86_gpf_handler(x86_iframe_t *frame)
 
 static void x86_invop_handler(x86_iframe_t *frame)
 {
-    if (handle_magenta_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
+    if (try_dispatch_user_exception(frame, MX_EXCP_UNDEFINED_INSTRUCTION))
         return;
 
     exception_die(frame, "invalid opcode, halting\n");
@@ -149,15 +150,15 @@ static void x86_invop_handler(x86_iframe_t *frame)
 
 static void x86_df_handler(x86_iframe_t *frame)
 {
-    // Do not give Magenta the opportunity to handle double faults,
-    // since they indicate an unexpected system state and cannot be
+    // Do not give the user exception handler the opportunity to handle double
+    // faults, since they indicate an unexpected system state and cannot be
     // recovered from.
     exception_die(frame, "double fault, halting\n");
 }
 
 static void x86_unhandled_exception(x86_iframe_t *frame)
 {
-    if (handle_magenta_exception(frame, MX_EXCP_GENERAL))
+    if (try_dispatch_user_exception(frame, MX_EXCP_GENERAL))
         return;
 
     exception_die(frame, "unhandled exception, halting\n");
@@ -287,8 +288,8 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     if (from_user) {
         CPU_STATS_INC(exceptions);
         struct arch_exception_context context = { true, frame, va };
-        return call_magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT,
-                                              &context, frame);
+        return call_dispatch_user_exception(MX_EXCP_FATAL_PAGE_FAULT,
+                                            &context, frame);
     }
 
     /* fall through to fatal path */
@@ -477,10 +478,10 @@ void arch_fill_in_exception_context(const arch_exception_context_t *arch_context
     mx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
-status_t magenta_report_policy_exception(void)
+status_t arch_dispatch_user_policy_exception(void)
 {
     x86_iframe_t frame = {};
     arch_exception_context_t context = {};
     context.frame = &frame;
-    return magenta_exception_handler(MX_EXCP_POLICY_ERROR, &context);
+    return dispatch_user_exception(MX_EXCP_POLICY_ERROR, &context);
 }

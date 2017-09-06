@@ -10,7 +10,8 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include <object/exception.h>
+#include <arch/exception.h>
+
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>

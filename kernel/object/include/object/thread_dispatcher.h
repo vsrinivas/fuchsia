@@ -8,13 +8,13 @@
 
 #include <sys/types.h>
 
+#include <arch/exception.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <vm/vm_address_region.h>
 #include <lib/dpc.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
-#include <object/exception.h>
 #include <object/excp_port.h>
 #include <object/futex_node.h>
 #include <object/state_tracker.h>

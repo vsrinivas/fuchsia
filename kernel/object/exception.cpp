@@ -4,9 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/exception.h>
-
 #include <arch.h>
+#include <arch/exception.h>
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
@@ -138,7 +137,7 @@ enum handler_status_t {
     HS_NOT_HANDLED
 };
 
-// Subroutine of magenta_exception_handler to simplify the code.
+// Subroutine of dispatch_user_exception to simplify the code.
 // One useful thing this does is guarantee ExceptionPortIterator is properly
 // destructed.
 // |*out_processed| is set to a boolean indicating if at least one
@@ -188,7 +187,8 @@ static handler_status_t exception_handler_worker(uint exception_type,
     return HS_NOT_HANDLED;
 }
 
-// exception handler from low level architecturally-specific code
+// Dispatches an exception to the appropriate handler.
+// Called by arch code when it cannot handle an exception.
 //
 // If we return MX_OK, the caller is expected to resume the thread "as if"
 // nothing happened, the handler is expected to have modified state such that
@@ -198,9 +198,8 @@ static handler_status_t exception_handler_worker(uint exception_type,
 //
 // TODO(dje): Support unwinding from this exception and introducing a
 // different exception?
-
-mx_status_t magenta_exception_handler(uint exception_type,
-                                      arch_exception_context_t* context) {
+status_t dispatch_user_exception(uint exception_type,
+                                 arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
     ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
@@ -249,6 +248,6 @@ mx_status_t magenta_exception_handler(uint exception_type,
     thread->Exit();
 
     // should not get here
-    panic("arch_exception_handler: fell out of thread exit somehow!\n");
+    panic("fell out of thread exit somehow!\n");
     __UNREACHABLE;
 }

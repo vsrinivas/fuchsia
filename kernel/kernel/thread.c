@@ -14,6 +14,7 @@
  * @defgroup thread Threads
  * @{
  */
+#include <arch/exception.h>
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
@@ -32,7 +33,6 @@
 #include <list.h>
 #include <malloc.h>
 #include <object/c_user_thread.h>
-#include <object/exception.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
@@ -678,9 +678,9 @@ void thread_process_pending_signals(void) {
     if (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION) {
         current_thread->signals &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
         THREAD_UNLOCK(state);
-        mx_status_t status = magenta_report_policy_exception();
+        mx_status_t status = arch_dispatch_user_policy_exception();
         if (status != MX_OK) {
-            panic("magenta_report_policy_exception() failed: status=%d\n",
+            panic("arch_dispatch_user_policy_exception() failed: status=%d\n",
                   status);
         }
         return;
