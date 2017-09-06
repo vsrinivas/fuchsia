@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/acer12.c \
     $(LOCAL_DIR)/hid.c \
     $(LOCAL_DIR)/keymaps.c \
+    $(LOCAL_DIR)/paradise.c \
     $(LOCAL_DIR)/samsung.c \
 
 MODULE_EXPORT := so
