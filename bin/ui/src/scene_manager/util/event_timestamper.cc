@@ -98,7 +98,7 @@ EventTimestamper::Wait::Wait(const ftl::RefPtr<ftl::TaskRunner>& task_runner,
       event_(std::move(event)),
       callback_(std::move(callback)),
       wait_(event_.get(), trigger) {
-  wait_.set_handler(mxtl::BindMember(this, &EventTimestamper::Wait::Handle));
+  wait_.set_handler(fbl::BindMember(this, &EventTimestamper::Wait::Handle));
 }
 
 EventTimestamper::Wait::~Wait() {
