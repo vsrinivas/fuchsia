@@ -45,7 +45,7 @@ namespace modular {
 
 // Maxwell doesn't yet implement lifecycle or has a lifecycle method, so we just
 // let AppClient close the controller connection immediately. (The controller
-// connection is closed once te ServiceTerminate() call invokes its done
+// connection is closed once the ServiceTerminate() call invokes its done
 // callback.)
 template <>
 void AppClient<maxwell::UserIntelligenceProviderFactory>::ServiceTerminate(
