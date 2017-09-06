@@ -12,6 +12,13 @@
 
 namespace modular {
 
+// This timeout needs to be 5x larger than the default, because UserRunner
+// termination involves 5 sequential steps, all with the default timeout.
+//
+// TODO(mesch): Obviously, this should adjust, be negotiated, or be set
+// automatically as needed rather than hardcoded.
+constexpr int kUserRunnerTimeoutSeconds = kAppClientTimeoutSeconds * 5;
+
 UserControllerImpl::UserControllerImpl(
     app::ApplicationLauncher* const application_launcher,
     AppConfigPtr user_runner,
@@ -76,7 +83,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
     user_watchers_.ForAllPtrs(
         [](UserWatcher* watcher) { watcher->OnLogout(); });
     done_(this);
-  });
+  }, ftl::TimeDelta::FromSeconds(kUserRunnerTimeoutSeconds));
 }
 
 // |UserController|
