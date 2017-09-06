@@ -5,7 +5,7 @@
 #include <magenta/assert.h>
 #include <ddk/binding.h>
 #include <magenta/process.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <string.h>
 
 #include "utils.h"
@@ -73,7 +73,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
     uint32_t region = 0;
 
     while ((offset < vmo_size) && (region < num_regions)) {
-        uint64_t todo = mxtl::min(vmo_size - offset, BYTES_PER_VMO_OP);
+        uint64_t todo = fbl::min(vmo_size - offset, BYTES_PER_VMO_OP);
         uint32_t todo_pages = static_cast<uint32_t>((todo + IHDA_PAGE_MASK) >> IHDA_PAGE_SHIFT);
 
         memset(page_addrs, 0, sizeof(page_addrs));
@@ -89,7 +89,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
                 return MX_ERR_INTERNAL;
 
             bool     merged = false;
-            uint64_t region_size = mxtl::min(vmo_size - offset, IHDA_PAGE_SIZE);
+            uint64_t region_size = fbl::min(vmo_size - offset, IHDA_PAGE_SIZE);
 
             if (region > 0) {
                 auto& prev = regions_out[region - 1];
@@ -125,7 +125,7 @@ mx_status_t GetVMORegionInfo(const mx::vmo& vmo,
 }
 
 mx_status_t ContigPhysMem::Allocate(size_t size) {
-    static_assert(mxtl::is_pow2(IHDA_PAGE_SIZE),
+    static_assert(fbl::is_pow2(IHDA_PAGE_SIZE),
                   "In what universe is your page size not a power of 2?  Seriously!?");
 
     if (!size)
@@ -140,7 +140,7 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
     MX_DEBUG_ASSERT(!phys_);
 
     size_ = size;
-    actual_size_ = mxtl::roundup(size_, IHDA_PAGE_SIZE);
+    actual_size_ = fbl::roundup(size_, IHDA_PAGE_SIZE);
 
     // Allocate a page aligned contiguous buffer.
     mx::vmo     vmo;
@@ -155,7 +155,7 @@ mx_status_t ContigPhysMem::Allocate(size_t size) {
 
     // Now fetch its physical address, so we can tell hardware about it.
     res = vmo.op_range(MX_VMO_OP_LOOKUP, 0,
-                       mxtl::min(actual_size(), IHDA_PAGE_SIZE),
+                       fbl::min(actual_size(), IHDA_PAGE_SIZE),
                        &phys_, sizeof(phys_));
 
 finished:
@@ -164,7 +164,7 @@ finished:
         size_ = 0;
         actual_size_ = 0;
     } else {
-        vmo_ = mxtl::move(vmo);
+        vmo_ = fbl::move(vmo);
     }
 
     return res;

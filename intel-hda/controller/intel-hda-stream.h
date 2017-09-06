@@ -6,10 +6,10 @@
 
 #include <mx/handle.h>
 #include <mx/vmo.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -20,11 +20,11 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelHDAStream : public mxtl::RefCounted<IntelHDAStream>,
-                       public mxtl::WAVLTreeContainable<mxtl::RefPtr<IntelHDAStream>> {
+class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
+                       public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStream>> {
 public:
-    using RefPtr = mxtl::RefPtr<IntelHDAStream>;
-    using Tree   = mxtl::WAVLTree<uint16_t, RefPtr>;
+    using RefPtr = fbl::RefPtr<IntelHDAStream>;
+    using Tree   = fbl::WAVLTree<uint16_t, RefPtr>;
     enum class Type { INVALID, INPUT, OUTPUT, BIDIR };
 
     union RequestBufferType {
@@ -60,7 +60,7 @@ public:
     uint16_t GetKey()          const { return id(); }
 
     mx_status_t SetStreamFormat(uint16_t encoded_fmt,
-                                const mxtl::RefPtr<DispatcherChannel>& channel)
+                                const fbl::RefPtr<DispatcherChannel>& channel)
         TA_EXCL(channel_lock_);
     void Deactivate() TA_EXCL(channel_lock_);
     void OnChannelClosed(const DispatcherChannel& channel) TA_EXCL(channel_lock_);
@@ -74,7 +74,7 @@ public:
 
 private:
     friend class IntelHDAController;            // Only controller may construct us.
-    friend class mxtl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
+    friend class fbl::RefPtr<IntelHDAStream>;  // Only our ref ptrs may destruct us.
 
     IntelHDAStream(Type                    type,
                    uint16_t                id,
@@ -130,8 +130,8 @@ private:
 
     // The channel used by the application to talk to us once our format has
     // been set by the codec.
-    mxtl::Mutex channel_lock_;
-    mxtl::RefPtr<DispatcherChannel> channel_ TA_GUARDED(channel_lock_);
+    fbl::Mutex channel_lock_;
+    fbl::RefPtr<DispatcherChannel> channel_ TA_GUARDED(channel_lock_);
     mx::vmo ring_buffer_vmo_ TA_GUARDED(channel_lock_);
 
     // Paramters determined after stream format configuration.
@@ -147,8 +147,8 @@ private:
     bool running_ TA_GUARDED(channel_lock_) = false;
 
     // State used by the IRQ thread to deliver position update notifications.
-    mxtl::Mutex notif_lock_ TA_ACQ_AFTER(channel_lock_);
-    mxtl::RefPtr<DispatcherChannel> irq_channel_ TA_GUARDED(notif_lock_);
+    fbl::Mutex notif_lock_ TA_ACQ_AFTER(channel_lock_);
+    fbl::RefPtr<DispatcherChannel> irq_channel_ TA_GUARDED(notif_lock_);
 };
 
 }  // namespace intel_hda

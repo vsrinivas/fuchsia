@@ -5,9 +5,9 @@
 #include <string.h>
 
 #include <audio-proto-utils/format-utils.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/limits.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
@@ -57,11 +57,11 @@ void IntelHDAStreamBase::PrintDebugPrefix() const {
     printf("[%s] ", dev_name_);
 }
 
-mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
-                                         const mxtl::RefPtr<DispatcherChannel>& codec_channel) {
+mx_status_t IntelHDAStreamBase::Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
+                                         const fbl::RefPtr<DispatcherChannel>& codec_channel) {
     MX_DEBUG_ASSERT(codec_channel != nullptr);
 
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
     if (is_active() || (codec_channel_ != nullptr))
         return MX_ERR_BAD_STATE;
 
@@ -74,11 +74,11 @@ mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&&
     // the compiler is not quite smart enough to figure out that the obj_lock
     // AutoLock will destruct (and release the lock) after the AutoCall runs,
     // and that the AutoCall will never leave this scope.
-    auto cleanup = mxtl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    auto cleanup = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
         parent_codec_.reset();
         codec_channel_.reset();
     });
-    parent_codec_  = mxtl::move(parent_codec);
+    parent_codec_  = fbl::move(parent_codec);
     codec_channel_ = codec_channel;
 
     // Allow our implementation to send its initial stream setup commands to the
@@ -104,7 +104,7 @@ mx_status_t IntelHDAStreamBase::Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&&
 
 void IntelHDAStreamBase::Deactivate() {
     {
-        mxtl::AutoLock obj_lock(&obj_lock_);
+        fbl::AutoLock obj_lock(&obj_lock_);
         DEBUG_LOG("Deactivating stream\n");
 
         // Let go of any unsolicited stream tags we may be holding.
@@ -128,7 +128,7 @@ void IntelHDAStreamBase::Deactivate() {
     ShutdownDispatcherChannels();
 
     {
-        mxtl::AutoLock obj_lock(&obj_lock_);
+        fbl::AutoLock obj_lock(&obj_lock_);
         MX_DEBUG_ASSERT(stream_channel_ == nullptr);
 
         // Allow our implementation to send the commands needed to tear down the
@@ -189,7 +189,7 @@ mx_status_t IntelHDAStreamBase::PublishDeviceLocked() {
 }
 
 mx_status_t IntelHDAStreamBase::ProcessResponse(const CodecResponse& resp) {
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
 
     if (!is_active()) {
         DEBUG_LOG("Ignoring codec response (0x%08x, 0x%08x) for inactive stream id %u\n",
@@ -203,7 +203,7 @@ mx_status_t IntelHDAStreamBase::ProcessResponse(const CodecResponse& resp) {
 }
 
 mx_status_t IntelHDAStreamBase::ProcessRequestStream(const ihda_proto::RequestStreamResp& resp) {
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
     mx_status_t res;
 
     if (!is_active()) return MX_ERR_BAD_STATE;
@@ -231,7 +231,7 @@ mx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
                                                     mx::channel&& ring_buffer_channel) {
     MX_DEBUG_ASSERT(ring_buffer_channel.is_valid());
 
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
     audio_proto::StreamSetFmtResp resp;
     mx_status_t res = MX_OK;
 
@@ -258,7 +258,7 @@ mx_status_t IntelHDAStreamBase::ProcessSetStreamFmt(const ihda_proto::SetStreamF
     resp.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
     resp.hdr.transaction_id = set_format_tid_;
     resp.result = MX_OK;
-    res = stream_channel_->Write(&resp, sizeof(resp), mxtl::move(ring_buffer_channel));
+    res = stream_channel_->Write(&resp, sizeof(resp), fbl::move(ring_buffer_channel));
 
 finished:
     // Something went fatally wrong when trying to send the result back to the
@@ -325,7 +325,7 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
 
     // Do not allow any new connections if we are in the process of shutting down
     if (!is_active())
@@ -362,7 +362,7 @@ mx_status_t IntelHDAStreamBase::DeviceIoctl(uint32_t op,
         return MX_ERR_NO_MEMORY;
 
     mx::channel client_endpoint;
-    mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &client_endpoint);
+    mx_status_t res = channel->Activate(fbl::WrapRefPtr(this), &client_endpoint);
     if (res == MX_OK) {
         if (ctx) {
             MX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -382,7 +382,7 @@ mx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(DispatcherChannel* chan
     size_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp;
 
-    if (supported_formats_.size() > mxtl::numeric_limits<uint16_t>::max()) {
+    if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
         LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
             supported_formats_.size());
         return MX_ERR_INTERNAL;
@@ -395,7 +395,7 @@ mx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(DispatcherChannel* chan
         uint16_t todo, payload_sz, to_send;
         mx_status_t res;
 
-        todo = mxtl::min<uint16_t>(supported_formats_.size() - formats_sent,
+        todo = fbl::min<uint16_t>(supported_formats_.size() - formats_sent,
                                    AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
         payload_sz = sizeof(resp.format_ranges[0]) * todo;
         to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
@@ -577,7 +577,7 @@ case _ioctl:                                                    \
     return _handler(channel, req._payload);
 mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
     MX_DEBUG_ASSERT(channel != nullptr);
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
 
     // If we have lost our connection to the codec device, or are in the process
     // of shutting down, there is nothing further we can do.  Fail the request
@@ -623,7 +623,7 @@ mx_status_t IntelHDAStreamBase::ProcessChannel(DispatcherChannel* channel) {
 #undef HANDLE_REQ
 
 void IntelHDAStreamBase::NotifyChannelDeactivated(const DispatcherChannel& channel) {
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
 
     // Let our subclass know that this channel is going away.
     OnChannelDeactivateLocked(channel);

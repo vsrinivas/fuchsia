@@ -6,7 +6,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,11 +18,11 @@ namespace audio {
 namespace intel_hda {
 
 struct AudioWidgetState;
-using  AudioWidgetStatePtr = mxtl::unique_ptr<AudioWidgetState>;
+using  AudioWidgetStatePtr = fbl::unique_ptr<AudioWidgetState>;
 
 struct FunctionGroupState;
 struct AudioFunctionGroupState;
-using  FunctionGroupStatePtr = mxtl::unique_ptr<FunctionGroupState>;
+using  FunctionGroupStatePtr = fbl::unique_ptr<FunctionGroupState>;
 
 struct PowerState {
     // Section 7.3.4.12 : Supported Power States
@@ -117,7 +117,7 @@ struct AudioWidgetState {
     // Sections 7.3.3.2, 7.3.3.3 & 7.3.4.11 : Connection List
     bool    long_form_conn_list_;
     uint8_t conn_list_len_;
-    mxtl::unique_ptr<ConnListEntry[]> conn_list_;
+    fbl::unique_ptr<ConnListEntry[]> conn_list_;
     uint16_t connected_nid_;
     uint8_t  connected_nid_ndx_;
 
@@ -206,7 +206,7 @@ struct AudioFunctionGroupState : public FunctionGroupState {
 
     uint8_t widget_count_ = 0;
     uint8_t widget_starting_id_ = 0;
-    mxtl::unique_ptr<AudioWidgetStatePtr[]> widgets_;
+    fbl::unique_ptr<AudioWidgetStatePtr[]> widgets_;
 };
 
 struct ModemFunctionGroupState : public FunctionGroupState {
@@ -234,7 +234,7 @@ struct CodecState {
 
     uint8_t  fn_group_count_;
     uint8_t  fn_group_starting_id_;
-    mxtl::unique_ptr<FunctionGroupStatePtr[]> fn_groups_;
+    fbl::unique_ptr<FunctionGroupStatePtr[]> fn_groups_;
 };
 
 }  // namespace audio

@@ -8,10 +8,10 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <magenta/types.h>
-#include <mxtl/atomic.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/recycler.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/atomic.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/recycler.h>
+#include <fbl/unique_ptr.h>
 #include <threads.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -47,12 +47,12 @@ public:
     unsigned int id() const { return id_; }
 
     // CORB/RIRB
-    mx_status_t QueueCodecCmd(mxtl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
+    mx_status_t QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
 
     // DMA Streams
-    mxtl::RefPtr<IntelHDAStream> AllocateStream(IntelHDAStream::Type type)
+    fbl::RefPtr<IntelHDAStream> AllocateStream(IntelHDAStream::Type type)
         TA_EXCL(stream_pool_lock_);
-    void ReturnStream(mxtl::RefPtr<IntelHDAStream>&& stream)
+    void ReturnStream(fbl::RefPtr<IntelHDAStream>&& stream)
         TA_EXCL(stream_pool_lock_);
 
     static mx_status_t DriverInit(void** out_ctx);
@@ -76,7 +76,7 @@ private:
     void ShutdownIRQThread();
 
     // Internal stream bookkeeping.
-    void    ReturnStreamLocked(mxtl::RefPtr<IntelHDAStream>&& stream) TA_REQ (stream_pool_lock_);
+    void    ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& stream) TA_REQ (stream_pool_lock_);
     uint8_t AllocateStreamTagLocked(bool input)                       TA_REQ (stream_pool_lock_);
     void    ReleaseStreamTagLocked (bool input, uint8_t tag_num)      TA_REQ (stream_pool_lock_);
 
@@ -85,12 +85,12 @@ private:
     mx_status_t DeviceRelease();
 
     // State control
-    // TODO(johngro) : extend mxtl::atomic to support enum classes as well.
+    // TODO(johngro) : extend fbl::atomic to support enum classes as well.
     void  SetState(State state) { state_.store(static_cast<StateStorage>(state)); }
     State GetState()            { return static_cast<State>(state_.load()); }
 
     // Codec lifetime maanagement
-    mxtl::RefPtr<IntelHDACodec> GetCodec(uint id);
+    fbl::RefPtr<IntelHDACodec> GetCodec(uint id);
 
     // Methods used during initialization
     mx_status_t InitInternal(mx_device_t* pci_dev);
@@ -130,7 +130,7 @@ private:
         TA_REQ(process_lock());
 
     // IRQ thread and state machine.
-    mxtl::atomic<StateStorage> state_;
+    fbl::atomic<StateStorage> state_;
     thrd_t                     irq_thread_;
     bool                       irq_thread_started_ = false;
 
@@ -158,7 +158,7 @@ private:
     ContigPhysMem  cmd_buf_mem_ TA_GUARDED(corb_lock_);
 
     // Stream state
-    mxtl::Mutex          stream_pool_lock_;
+    fbl::Mutex          stream_pool_lock_;
     IntelHDAStream::Tree free_input_streams_  TA_GUARDED(stream_pool_lock_);
     IntelHDAStream::Tree free_output_streams_ TA_GUARDED(stream_pool_lock_);
     IntelHDAStream::Tree free_bidir_streams_  TA_GUARDED(stream_pool_lock_);
@@ -166,10 +166,10 @@ private:
     uint16_t             free_output_tags_    TA_GUARDED(stream_pool_lock_) = 0xFFFEu;
 
     // Array of pointers to all possible streams (used for O(1) lookup during IRQ dispatch)
-    mxtl::RefPtr<IntelHDAStream> all_streams_[IntelHDAStream::MAX_STREAMS_PER_CONTROLLER];
+    fbl::RefPtr<IntelHDAStream> all_streams_[IntelHDAStream::MAX_STREAMS_PER_CONTROLLER];
 
     // Codec bus command ring-buffer state (CORB/RIRB)
-    mxtl::Mutex    corb_lock_;
+    fbl::Mutex    corb_lock_;
     CodecCommand*  corb_               TA_GUARDED(corb_lock_) = nullptr;
     unsigned int   corb_entry_count_   TA_GUARDED(corb_lock_) = 0;
     unsigned int   corb_mask_          TA_GUARDED(corb_lock_) = 0;
@@ -177,7 +177,7 @@ private:
     unsigned int   corb_space_         TA_GUARDED(corb_lock_) = 0;
     unsigned int   corb_max_in_flight_ TA_GUARDED(corb_lock_) = 0;
 
-    mxtl::Mutex    rirb_lock_          TA_ACQ_BEFORE(corb_lock_);
+    fbl::Mutex    rirb_lock_          TA_ACQ_BEFORE(corb_lock_);
     CodecResponse* rirb_               TA_GUARDED(rirb_lock_) = nullptr;
     unsigned int   rirb_entry_count_   TA_GUARDED(rirb_lock_) = 0;
     unsigned int   rirb_mask_          TA_GUARDED(rirb_lock_) = 0;
@@ -185,15 +185,15 @@ private:
     unsigned int   rirb_snapshot_cnt_  TA_GUARDED(rirb_lock_) = 0;
     CodecResponse  rirb_snapshot_[HDA_RIRB_MAX_ENTRIES] TA_GUARDED(rirb_lock_);
 
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<CodecCmdJob>> in_flight_corb_jobs_
+    fbl::DoublyLinkedList<fbl::unique_ptr<CodecCmdJob>> in_flight_corb_jobs_
         TA_GUARDED(corb_lock_);
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<CodecCmdJob>> pending_corb_jobs_
+    fbl::DoublyLinkedList<fbl::unique_ptr<CodecCmdJob>> pending_corb_jobs_
         TA_GUARDED(corb_lock_);
 
-    mxtl::Mutex codec_lock_;
-    mxtl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
+    fbl::Mutex codec_lock_;
+    fbl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
 
-    static mxtl::atomic_uint32_t device_id_gen_;
+    static fbl::atomic_uint32_t device_id_gen_;
     static mx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
 };
 

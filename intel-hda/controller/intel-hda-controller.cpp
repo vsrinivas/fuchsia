@@ -7,7 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/protocol/pci.h>
 #include <magenta/assert.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
@@ -26,7 +26,7 @@ namespace intel_hda {
 
 // static member variable declaration
 constexpr uint        IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
-mxtl::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
+fbl::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 // Device interface thunks
 #define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
@@ -105,8 +105,8 @@ IntelHDAController::~IntelHDAController() {
     }
 }
 
-mxtl::RefPtr<IntelHDAStream> IntelHDAController::AllocateStream(IntelHDAStream::Type type) {
-    mxtl::AutoLock lock(&stream_pool_lock_);
+fbl::RefPtr<IntelHDAStream> IntelHDAController::AllocateStream(IntelHDAStream::Type type) {
+    fbl::AutoLock lock(&stream_pool_lock_);
     IntelHDAStream::Tree* src;
 
     switch (type) {
@@ -137,12 +137,12 @@ mxtl::RefPtr<IntelHDAStream> IntelHDAController::AllocateStream(IntelHDAStream::
     return ret;
 }
 
-void IntelHDAController::ReturnStream(mxtl::RefPtr<IntelHDAStream>&& ptr) {
-    mxtl::AutoLock lock(&stream_pool_lock_);
-    ReturnStreamLocked(mxtl::move(ptr));
+void IntelHDAController::ReturnStream(fbl::RefPtr<IntelHDAStream>&& ptr) {
+    fbl::AutoLock lock(&stream_pool_lock_);
+    ReturnStreamLocked(fbl::move(ptr));
 }
 
-void IntelHDAController::ReturnStreamLocked(mxtl::RefPtr<IntelHDAStream>&& ptr) {
+void IntelHDAController::ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& ptr) {
     IntelHDAStream::Tree* dst;
 
     MX_DEBUG_ASSERT(ptr);
@@ -155,7 +155,7 @@ void IntelHDAController::ReturnStreamLocked(mxtl::RefPtr<IntelHDAStream>&& ptr) 
     }
 
     ptr->Configure(IntelHDAStream::Type::INVALID, 0);
-    dst->insert(mxtl::move(ptr));
+    dst->insert(fbl::move(ptr));
 }
 
 uint8_t IntelHDAController::AllocateStreamTagLocked(bool input) {
@@ -201,7 +201,7 @@ void IntelHDAController::DeviceShutdown() {
 
 mx_status_t IntelHDAController::DeviceRelease() {
     // Take our unmanaged reference back from our published device node.
-    auto thiz = mxtl::internal::MakeRefPtrNoAdopt(this);
+    auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
 
     // ASSERT that we have been properly shut down, then release the DDK's
     // reference to our state as we allow thiz to go out of scope.
@@ -280,7 +280,7 @@ mx_status_t IntelHDAController::DriverBind(void* ctx,
                                            void** cookie) {
     if (cookie == nullptr) return MX_ERR_INVALID_ARGS;
 
-    mxtl::RefPtr<IntelHDAController> controller(mxtl::AdoptRef(new IntelHDAController()));
+    fbl::RefPtr<IntelHDAController> controller(fbl::AdoptRef(new IntelHDAController()));
 
     // If we successfully initialize, transfer our reference into the unmanaged
     // world.  We will re-claim it later when unbind is called.
@@ -298,7 +298,7 @@ void IntelHDAController::DriverUnbind(void* ctx,
 
     // Reclaim our reference from the cookie.
     auto controller =
-        mxtl::internal::MakeRefPtrNoAdopt(reinterpret_cast<IntelHDAController*>(cookie));
+        fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<IntelHDAController*>(cookie));
 
     // Now let go of it.
     controller.reset();

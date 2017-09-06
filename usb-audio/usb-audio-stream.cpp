@@ -10,8 +10,8 @@
 #include <magenta/process.h>
 #include <magenta/types.h>
 #include <mx/vmar.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/limits.h>
 #include <string.h>
 
 #include "debug-logging.h"
@@ -47,7 +47,7 @@ mx_status_t UsbAudioStream::Create(bool is_input,
                                    usb_interface_descriptor_t* usb_interface,
                                    usb_endpoint_descriptor_t* usb_endpoint,
                                    usb_audio_ac_format_type_i_desc* format_desc) {
-    auto stream = mxtl::AdoptRef(new UsbAudioStream(parent, usb, is_input, index));
+    auto stream = fbl::AdoptRef(new UsbAudioStream(parent, usb, is_input, index));
     char name[64];
     snprintf(name, sizeof(name), "usb-audio-%s-%03d", is_input ? "input" : "output", index);
 
@@ -90,7 +90,7 @@ mx_status_t UsbAudioStream::Bind(const char* devname,
     // transactions to a USB isochronous endpoint and can have the bus driver
     // DMA directly from the ring buffer we have set up with our user.
     {
-        mxtl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock txn_lock(&txn_lock_);
 
         list_initialize(&free_iotxn_);
         free_iotxn_cnt_ = 0;
@@ -138,7 +138,7 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
 
 mx_status_t UsbAudioStream::AddFormats(
         const usb_audio_ac_format_type_i_desc& format_desc,
-        mxtl::Vector<audio_stream_format_range_t>* supported_formats) {
+        fbl::Vector<audio_stream_format_range_t>* supported_formats) {
     if (!supported_formats)
         return MX_ERR_INVALID_ARGS;
 
@@ -207,7 +207,7 @@ mx_status_t UsbAudioStream::AddFormats(
     // See Universal Serial Bus Device Class Definition for Audio Data Formats
     // Release 1.0 Tables 2-2 and 2-3.
     if (format_desc.bSamFreqType) {
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         supported_formats->reserve(format_desc.bSamFreqType, &ac);
         if (!ac.check()) {
             LOG("Out of memory attempting to reserve %u format ranges\n",
@@ -236,7 +236,7 @@ mx_status_t UsbAudioStream::AddFormats(
             supported_formats->push_back(range);
         }
     } else {
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         supported_formats->reserve(1, &ac);
         if (!ac.check()) {
             LOG("Out of memory attempting to reserve 1 format range\n");
@@ -265,7 +265,7 @@ void UsbAudioStream::DdkRelease() {
     // Reclaim our reference from the driver framework and let it go out of
     // scope.  If this is our last reference (it should be), we will destruct
     // immediately afterwards.
-    auto thiz = mxtl::internal::MakeRefPtrNoAdopt(this);
+    auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
 }
 
 mx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
@@ -282,7 +282,7 @@ mx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
     // Attempt to allocate a new driver channel and bind it to us.  If we don't
     // already have an stream_channel_, flag this channel is the privileged
@@ -294,7 +294,7 @@ mx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
         return MX_ERR_NO_MEMORY;
 
     mx::channel client_endpoint;
-    mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &client_endpoint);
+    mx_status_t res = channel->Activate(fbl::WrapRefPtr(this), &client_endpoint);
     if (res == MX_OK) {
         if (ctx) {
             MX_DEBUG_ASSERT(stream_channel_ == nullptr);
@@ -310,7 +310,7 @@ mx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
 
 mx_status_t UsbAudioStream::ProcessChannel(DispatcherChannel* channel) {
     MX_DEBUG_ASSERT(channel != nullptr);
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
     return (rb_channel_.get() != channel)
         ? ProcessStreamChannelLocked(channel)
@@ -418,7 +418,7 @@ mx_status_t UsbAudioStream::OnGetStreamFormatsLocked(DispatcherChannel* channel,
     size_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp;
 
-    if (supported_formats_.size() > mxtl::numeric_limits<uint16_t>::max()) {
+    if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
         LOG("Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
             supported_formats_.size());
         return MX_ERR_INTERNAL;
@@ -431,7 +431,7 @@ mx_status_t UsbAudioStream::OnGetStreamFormatsLocked(DispatcherChannel* channel,
         uint16_t todo, payload_sz, to_send;
         mx_status_t res;
 
-        todo = mxtl::min<uint16_t>(supported_formats_.size() - formats_sent,
+        todo = fbl::min<uint16_t>(supported_formats_.size() - formats_sent,
                                    AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
         payload_sz = sizeof(resp.format_ranges[0]) * todo;
         to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
@@ -487,7 +487,7 @@ mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
     {
         // TODO(johngro) : If the ring buffer is running, should we automatically
         // stop it instead of returning bad state?
-        mxtl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock txn_lock(&txn_lock_);
         if (ring_buffer_state_ != RingBufferState::STOPPED) {
             resp.result = MX_ERR_BAD_STATE;
             goto finished;
@@ -575,12 +575,12 @@ mx_status_t UsbAudioStream::OnSetStreamFormatLocked(DispatcherChannel* channel,
         goto finished;
     }
 
-    resp.result = rb_channel_->Activate(mxtl::WrapRefPtr(this), &client_rb_channel);
+    resp.result = rb_channel_->Activate(fbl::WrapRefPtr(this), &client_rb_channel);
     if (resp.result != MX_OK) rb_channel_.reset();
 
 finished:
     if (resp.result == MX_OK) {
-        return channel->Write(&resp, sizeof(resp), mxtl::move(client_rb_channel));
+        return channel->Write(&resp, sizeof(resp), fbl::move(client_rb_channel));
     } else {
         return channel->Write(&resp, sizeof(resp));
     }
@@ -659,7 +659,7 @@ mx_status_t UsbAudioStream::OnGetBufferLocked(DispatcherChannel* channel,
 
     {
         // We cannot create a new ring buffer if we are not currently stopped.
-        mxtl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock txn_lock(&txn_lock_);
         if (ring_buffer_state_ != RingBufferState::STOPPED) {
             resp.result = MX_ERR_BAD_STATE;
             goto finished;
@@ -724,7 +724,7 @@ finished:
     mx_status_t res;
     if (resp.result == MX_OK) {
         MX_DEBUG_ASSERT(client_rb_handle.is_valid());
-        res = channel->Write(&resp, sizeof(resp), mxtl::move(client_rb_handle));
+        res = channel->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
     } else {
         res = channel->Write(&resp, sizeof(resp));
     }
@@ -741,7 +741,7 @@ mx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
     resp.hdr = req.hdr;
     resp.start_ticks = 0;
 
-    mxtl::AutoLock txn_lock(&txn_lock_);
+    fbl::AutoLock txn_lock(&txn_lock_);
 
     if (ring_buffer_state_ != RingBufferState::STOPPED) {
         // The ring buffer is running, do not linger in the lock while we send
@@ -809,7 +809,7 @@ mx_status_t UsbAudioStream::OnStartLocked(DispatcherChannel* channel,
 
 mx_status_t UsbAudioStream::OnStopLocked(DispatcherChannel* channel,
                                          const audio_proto::RingBufStopReq& req) {
-    mxtl::AutoLock txn_lock(&txn_lock_);
+    fbl::AutoLock txn_lock(&txn_lock_);
 
     // TODO(johngro): We currently cannot cancel USB transactions once queued.
     // When we can, we can come back and simply cancel the in-flight
@@ -863,7 +863,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     }
 
     {
-        mxtl::AutoLock txn_lock(&txn_lock_);
+        fbl::AutoLock txn_lock(&txn_lock_);
 
         // Cache the status and lenght of this io transaction.
         mx_status_t txn_status = txn->status;
@@ -930,7 +930,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
     }
 
     if (when_finished != Action::NONE) {
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         switch (when_finished) {
         case Action::SIGNAL_STARTED:
             if (rb_channel_ != nullptr) {
@@ -946,7 +946,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
                 rb_channel_->Write(&resp.start, sizeof(resp.start));
             }
             {
-                mxtl::AutoLock txn_lock(&txn_lock_);
+                fbl::AutoLock txn_lock(&txn_lock_);
                 ring_buffer_state_ = RingBufferState::STARTED;
             }
             break;
@@ -963,7 +963,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
             }
 
             {
-                mxtl::AutoLock txn_lock(&txn_lock_);
+                fbl::AutoLock txn_lock(&txn_lock_);
                 ring_buffer_state_ = RingBufferState::STOPPED;
             }
             break;
@@ -974,7 +974,7 @@ void UsbAudioStream::IotxnComplete(iotxn_t* txn) {
                 rb_channel_->Write(&resp.stop, sizeof(resp.stop));
             }
             {
-                mxtl::AutoLock txn_lock(&txn_lock_);
+                fbl::AutoLock txn_lock(&txn_lock_);
                 ring_buffer_state_ = RingBufferState::STOPPED;
             }
             break;
@@ -1019,7 +1019,7 @@ void UsbAudioStream::QueueIotxnLocked() {
         uint32_t avail = ring_buffer_size_ - ring_buffer_offset_;
         MX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
         MX_DEBUG_ASSERT((avail % frame_size_) == 0);
-        uint32_t amt = mxtl::min(avail, todo);
+        uint32_t amt = fbl::min(avail, todo);
 
         const uint8_t* src = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
         iotxn_copyto(txn, src, amt, 0);
@@ -1049,7 +1049,7 @@ void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
         MX_DEBUG_ASSERT(ring_buffer_offset_ < ring_buffer_size_);
         MX_DEBUG_ASSERT((avail % frame_size_) == 0);
 
-        uint32_t amt = mxtl::min(avail, todo);
+        uint32_t amt = fbl::min(avail, todo);
         uint8_t* dst = reinterpret_cast<uint8_t*>(ring_buffer_virt_) + ring_buffer_offset_;
 
         if (txn->status == MX_OK) {
@@ -1089,7 +1089,7 @@ void UsbAudioStream::CompleteIotxnLocked(iotxn_t* txn) {
 }
 
 void UsbAudioStream::NotifyChannelDeactivated(const DispatcherChannel& channel) {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
     if (channel.owner_ctx() == PRIVILEGED_CONNECTION_CTX) {
         MX_DEBUG_ASSERT(stream_channel_.get() == &channel);
@@ -1100,7 +1100,7 @@ void UsbAudioStream::NotifyChannelDeactivated(const DispatcherChannel& channel) 
         MX_DEBUG_ASSERT(stream_channel_.get() != &channel);
 
         {
-            mxtl::AutoLock txn_lock(&txn_lock_);
+            fbl::AutoLock txn_lock(&txn_lock_);
             if (ring_buffer_state_ != RingBufferState::STOPPED) {
                 ring_buffer_state_ = RingBufferState::STOPPING;
             }

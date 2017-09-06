@@ -7,7 +7,7 @@
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -265,7 +265,7 @@ static inline T REG_RD(const T* reg) {
 
 template <typename T, typename U>
 static inline void REG_WR(T* reg, U val) {
-    static_assert(mxtl::is_unsigned_integer<T>::value, "");
+    static_assert(fbl::is_unsigned_integer<T>::value, "");
     MX_DEBUG_ASSERT(static_cast<T>(-1) >= val);
     *(reinterpret_cast<volatile T*>(reg)) = static_cast<T>(val);
 }

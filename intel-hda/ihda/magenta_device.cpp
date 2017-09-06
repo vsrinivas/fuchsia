@@ -8,7 +8,7 @@
 
 #include <magenta/device/intel-hda.h>
 #include <mxio/io.h>
-#include <mxtl/limits.h>
+#include <fbl/limits.h>
 
 #include "magenta_device.h"
 
@@ -57,7 +57,7 @@ mx_status_t MagentaDevice::CallDevice(const mx_channel_call_args_t& args, uint64
 
     if (timeout_msec == MX_TIME_INFINITE) {
         deadline = MX_TIME_INFINITE;
-    } else if (timeout_msec >= mxtl::numeric_limits<mx_time_t>::max() / MX_MSEC(1)) {
+    } else if (timeout_msec >= fbl::numeric_limits<mx_time_t>::max() / MX_MSEC(1)) {
         return MX_ERR_INVALID_ARGS;
     } else {
         deadline = mx_deadline_after(MX_MSEC(timeout_msec));

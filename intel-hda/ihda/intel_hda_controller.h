@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/unique_ptr.h>
 
 #include "intel_hda_codec.h"
 #include "intel_hda_device.h"
@@ -14,9 +14,9 @@ namespace audio {
 namespace intel_hda {
 
 class IntelHDAController : public IntelHDADevice,
-                           public mxtl::WAVLTreeContainable<mxtl::unique_ptr<IntelHDAController>> {
+                           public fbl::WAVLTreeContainable<fbl::unique_ptr<IntelHDAController>> {
 public:
-    using ControllerTree = mxtl::WAVLTree<uint32_t, mxtl::unique_ptr<IntelHDAController>>;
+    using ControllerTree = fbl::WAVLTree<uint32_t, fbl::unique_ptr<IntelHDAController>>;
 
     mx_status_t DumpRegs(int argc, const char** argv);
 
@@ -27,7 +27,7 @@ public:
     static ControllerTree& controllers() { return controllers_; }
 
 private:
-    friend class mxtl::unique_ptr<IntelHDAController>;
+    friend class fbl::unique_ptr<IntelHDAController>;
 
     IntelHDAController(uint32_t id, const char* const dev_name)
         : IntelHDADevice(dev_name),

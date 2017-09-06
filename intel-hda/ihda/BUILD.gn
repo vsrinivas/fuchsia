@@ -18,7 +18,7 @@ executable("ihda_bin") {
   deps = [
     "//drivers/audio/intel-hda/utils:ihda-utils",
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   cflags = [ "-Wno-address-of-packed-member" ]

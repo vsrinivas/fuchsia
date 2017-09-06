@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 
@@ -16,14 +16,14 @@ namespace intel_hda {
 template <typename DeviceType>
 class IntelHDADevice : public DispatcherChannel::Owner {
 protected:
-    friend class mxtl::RefPtr<IntelHDADevice>;
+    friend class fbl::RefPtr<IntelHDADevice>;
     IntelHDADevice() { }
     virtual ~IntelHDADevice() { }
 
     mx_status_t ProcessChannel(DispatcherChannel* channel) final TA_EXCL(process_lock());
 
     // Exported for thread analysis purposes.
-    const mxtl::Mutex& process_lock() const TA_RET_CAP(process_lock_) { return process_lock_; }
+    const fbl::Mutex& process_lock() const TA_RET_CAP(process_lock_) { return process_lock_; }
 
     void Shutdown() TA_EXCL(process_lock());
 
@@ -38,7 +38,7 @@ private:
     // reader/writer lock instead, we could allow multiple callbacks from
     // different channels in parallel and still be able to synchronize with all
     // callback in flight by obtaining the lock exclusively.
-    mxtl::Mutex process_lock_;
+    fbl::Mutex process_lock_;
     bool is_shutdown_ TA_GUARDED(process_lock_) = false;
 };
 

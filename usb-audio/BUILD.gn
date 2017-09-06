@@ -24,7 +24,7 @@ driver_module("usb-audio") {
     "//magenta/system/ulib/audio-proto-utils",
     "//magenta/system/ulib/ddktl",
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   libs = [

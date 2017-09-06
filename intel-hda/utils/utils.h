@@ -9,8 +9,8 @@
 #include <mx/channel.h>
 #include <mx/handle.h>
 #include <mx/vmo.h>
-#include <mxtl/type_support.h>
-#include <mxtl/vector.h>
+#include <fbl/type_support.h>
+#include <fbl/vector.h>
 
 #include "drivers/audio/intel-hda/utils/codec-caps.h"
 
@@ -21,7 +21,7 @@ mx_obj_type_t GetHandleType(const mx::handle& handle);
 
 template <typename T>
 mx_status_t ConvertHandle(mx::handle* abstract_handle, T* concrete_handle) {
-    static_assert(mxtl::is_base_of<mx::object<T>, T>::value,
+    static_assert(fbl::is_base_of<mx::object<T>, T>::value,
                   "Target of ConvertHandle must be a concrete mx:: handle wrapper type!");
 
     if ((abstract_handle == nullptr) ||
@@ -40,7 +40,7 @@ mx_status_t ConvertHandle(mx::handle* abstract_handle, T* concrete_handle) {
 // capabilities and max channels.
 mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                                 uint32_t max_channels,
-                                mxtl::Vector<audio_stream_format_range_t>* ranges);
+                                fbl::Vector<audio_stream_format_range_t>* ranges);
 
 
 }  // namespace intel_hda

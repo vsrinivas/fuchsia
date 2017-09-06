@@ -4,7 +4,7 @@
 
 #include "qemu-stream.h"
 
-#include <mxtl/vector.h>
+#include <fbl/vector.h>
 
 namespace audio {
 namespace intel_hda {
@@ -40,7 +40,7 @@ mx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bo
 }
 
 mx_status_t QemuStream::OnActivateLocked() {
-    mxtl::Vector<audio_proto::FormatRange> supported_formats;
+    fbl::Vector<audio_proto::FormatRange> supported_formats;
 
     audio_proto::FormatRange range;
     range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
@@ -50,12 +50,12 @@ mx_status_t QemuStream::OnActivateLocked() {
     range.min_frames_per_second = 96000;
     range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     supported_formats.push_back(range, &ac);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    SetSupportedFormatsLocked(mxtl::move(supported_formats));
+    SetSupportedFormatsLocked(fbl::move(supported_formats));
 
     return DisableConverterLocked();
 }

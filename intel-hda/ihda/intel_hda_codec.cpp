@@ -412,12 +412,12 @@ mx_status_t IntelHDACodec::Enumerate() {
 
     mx_status_t res = MagentaDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
     [](void*, uint32_t id, const char* const dev_name) -> mx_status_t {
-        auto codec = mxtl::unique_ptr<IntelHDACodec>(new IntelHDACodec(id, dev_name));
+        auto codec = fbl::unique_ptr<IntelHDACodec>(new IntelHDACodec(id, dev_name));
 
         if (codec == nullptr)
             return MX_ERR_NO_MEMORY;
 
-        if (!codecs_.insert_or_find(mxtl::move(codec)))
+        if (!codecs_.insert_or_find(fbl::move(codec)))
             return MX_ERR_INTERNAL;
 
         return MX_OK;

@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/slab_allocator.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/slab_allocator.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
 #include "drivers/audio/intel-hda/utils/codec-caps.h"
@@ -27,7 +27,7 @@ public:
           props_(props) { }
 
 protected:
-    friend class mxtl::RefPtr<RealtekStream>;
+    friend class fbl::RefPtr<RealtekStream>;
 
     virtual ~RealtekStream() { }
 
@@ -88,12 +88,12 @@ private:
     // our friend in order to see the definition of the PendingCommand private
     // inner class.
     class  PendingCommand;
-    using  PCAT = mxtl::StaticSlabAllocatorTraits<mxtl::unique_ptr<PendingCommand>, 4096>;
-    using  PendingCommandAllocator = mxtl::SlabAllocator<PCAT>;
+    using  PCAT = fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<PendingCommand>, 4096>;
+    using  PendingCommandAllocator = fbl::SlabAllocator<PCAT>;
     friend PendingCommandAllocator;
 
-    class PendingCommand : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<PendingCommand>>,
-                           public mxtl::SlabAllocated<PCAT> {
+    class PendingCommand : public fbl::DoublyLinkedListable<fbl::unique_ptr<PendingCommand>>,
+                           public fbl::SlabAllocated<PCAT> {
     public:
         const Command& cmd() const { return cmd_; }
 
@@ -114,11 +114,11 @@ private:
     // TODO(johngro) : Elminiate this complexity if/when we get to the point
     // that audio streams have a 1:1 relationship with their clients (instead of
     // 1:many)
-    struct NotifyTarget : mxtl::DoublyLinkedListable<mxtl::unique_ptr<NotifyTarget>> {
-        explicit NotifyTarget(mxtl::RefPtr<DispatcherChannel>&& ch) : channel(ch) { }
-        mxtl::RefPtr<DispatcherChannel> channel;
+    struct NotifyTarget : fbl::DoublyLinkedListable<fbl::unique_ptr<NotifyTarget>> {
+        explicit NotifyTarget(fbl::RefPtr<DispatcherChannel>&& ch) : channel(ch) { }
+        fbl::RefPtr<DispatcherChannel> channel;
     };
-    using NotifyTargetList = mxtl::DoublyLinkedList<mxtl::unique_ptr<NotifyTarget>>;
+    using NotifyTargetList = fbl::DoublyLinkedList<fbl::unique_ptr<NotifyTarget>>;
 
     // Bits used to track setup state machine progress.
     static constexpr uint32_t PIN_COMPLEX_SETUP_COMPLETE = (1u << 0);
@@ -168,7 +168,7 @@ private:
     }
 
     const StreamProperties props_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<PendingCommand>> pending_cmds_ __TA_GUARDED(obj_lock());
+    fbl::DoublyLinkedList<fbl::unique_ptr<PendingCommand>> pending_cmds_ __TA_GUARDED(obj_lock());
 
     // Setup state machine progress.
     uint32_t setup_progress_ __TA_GUARDED(obj_lock()) = 0;

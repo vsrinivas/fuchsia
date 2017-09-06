@@ -4,8 +4,8 @@
 
 #include <endian.h>
 #include <magenta/assert.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <string.h>
 
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
@@ -24,9 +24,9 @@ void IntelHDAController::WakeupIRQThread() {
     mx_interrupt_signal(irq_handle_);
 }
 
-mxtl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
+fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
     MX_DEBUG_ASSERT(id < countof(codecs_));
-    mxtl::AutoLock codec_lock(&codec_lock_);
+    fbl::AutoLock codec_lock(&codec_lock_);
     return codecs_[id];
 }
 
@@ -52,7 +52,7 @@ void IntelHDAController::WaitForIrqOrWakeup() {
 }
 
 void IntelHDAController::SnapshotRIRB() {
-    mxtl::AutoLock rirb_lock(&rirb_lock_);
+    fbl::AutoLock rirb_lock(&rirb_lock_);
 
     MX_DEBUG_ASSERT(rirb_ && rirb_entry_count_ && rirb_mask_);
     uint8_t rirbsts = REG_RD(&regs_->rirbsts);
@@ -74,7 +74,7 @@ void IntelHDAController::SnapshotRIRB() {
          /* Intel HDA ring buffers are strange, see comments in
           * intel_hda_codec_send_cmd. */
         unsigned int tmp_rd = (rirb_rd_ptr_ + 1) & rirb_mask_;
-        unsigned int todo   = mxtl::min(pending, (rirb_entry_count_ - tmp_rd));
+        unsigned int todo   = fbl::min(pending, (rirb_entry_count_ - tmp_rd));
 
         memcpy(rirb_snapshot_ + rirb_snapshot_cnt_,
                rirb_ + tmp_rd,
@@ -121,7 +121,7 @@ void IntelHDAController::SnapshotRIRB() {
 }
 
 void IntelHDAController::ProcessRIRB() {
-    mxtl::AutoLock rirb_lock(&rirb_lock_);
+    fbl::AutoLock rirb_lock(&rirb_lock_);
     MX_DEBUG_ASSERT(rirb_snapshot_cnt_ < HDA_RIRB_MAX_ENTRIES);
     MX_DEBUG_ASSERT(rirb_snapshot_cnt_ < rirb_entry_count_);
 
@@ -152,10 +152,10 @@ void IntelHDAController::ProcessRIRB() {
                   caddr, resp.data, resp.unsolicited() ? " (unsolicited)" : "");
 
         if (!resp.unsolicited()) {
-            mxtl::unique_ptr<CodecCmdJob> job;
+            fbl::unique_ptr<CodecCmdJob> job;
 
             {
-                mxtl::AutoLock corb_lock(&corb_lock_);
+                fbl::AutoLock corb_lock(&corb_lock_);
 
                 // If this was a solicited response, there needs to be an in-flight
                 // job waiting at the head of the in-flight queue which triggered
@@ -173,7 +173,7 @@ void IntelHDAController::ProcessRIRB() {
 
             // Sanity checks complete.  Pass the response and the job which
             // triggered it on to the codec.
-            codec->ProcessSolicitedResponse(resp, mxtl::move(job));
+            codec->ProcessSolicitedResponse(resp, fbl::move(job));
         } else {
             auto codec = GetCodec(caddr);
             if (!codec) {
@@ -208,7 +208,7 @@ void IntelHDAController::SendCodecCmdLocked(CodecCommand cmd) {
     corb_space_--;
 }
 
-mx_status_t IntelHDAController::QueueCodecCmd(mxtl::unique_ptr<CodecCmdJob>&& job) {
+mx_status_t IntelHDAController::QueueCodecCmd(fbl::unique_ptr<CodecCmdJob>&& job) {
     MX_DEBUG_ASSERT(job != nullptr);
     DEBUG_LOG("TX: Codec ID %u Node ID %hu Verb 0x%05x\n",
               job->codec_id(), job->nid(), job->verb().val);
@@ -219,7 +219,7 @@ mx_status_t IntelHDAController::QueueCodecCmd(mxtl::unique_ptr<CodecCmdJob>&& jo
     // Otherwise, actually write the command into the CORB, add the job to the
     // end of the in-flight queue, and wakeup the IRQ thread.
     //
-    mxtl::AutoLock corb_lock(&corb_lock_);
+    fbl::AutoLock corb_lock(&corb_lock_);
     MX_DEBUG_ASSERT(corb_wr_ptr_ < corb_entry_count_);
     MX_DEBUG_ASSERT(corb_);
 
@@ -227,13 +227,13 @@ mx_status_t IntelHDAController::QueueCodecCmd(mxtl::unique_ptr<CodecCmdJob>&& jo
         // If we have no space in the CORB, there must be some jobs which are
         // currently in-flight.
         MX_DEBUG_ASSERT(!in_flight_corb_jobs_.is_empty());
-        pending_corb_jobs_.push_back(mxtl::move(job));
+        pending_corb_jobs_.push_back(fbl::move(job));
     } else {
         // Alternatively, if there is space in the CORB, the pending job queue
         // had better be empty.
         MX_DEBUG_ASSERT(pending_corb_jobs_.is_empty());
         SendCodecCmdLocked(job->command());
-        in_flight_corb_jobs_.push_back(mxtl::move(job));
+        in_flight_corb_jobs_.push_back(fbl::move(job));
     }
 
     CommitCORBLocked();
@@ -242,7 +242,7 @@ mx_status_t IntelHDAController::QueueCodecCmd(mxtl::unique_ptr<CodecCmdJob>&& jo
 }
 
 void IntelHDAController::ProcessCORB() {
-    mxtl::AutoLock corb_lock(&corb_lock_);
+    fbl::AutoLock corb_lock(&corb_lock_);
 
     // Check IRQ status for the CORB
     uint8_t corbsts = REG_RD(&regs_->corbsts);
@@ -278,7 +278,7 @@ void IntelHDAController::ProcessCORB() {
 
         SendCodecCmdLocked(job->command());
 
-        in_flight_corb_jobs_.push_back(mxtl::move(job));
+        in_flight_corb_jobs_.push_back(fbl::move(job));
     }
     VERBOSE_LOG("Update CORB WP; WP is @%u\n", corb_wr_ptr_);
 
@@ -419,7 +419,7 @@ int IntelHDAController::IRQThread() {
 
     // Any CORB jobs we may have had in progress may be discarded.
     {
-        mxtl::AutoLock corb_lock(&corb_lock_);
+        fbl::AutoLock corb_lock(&corb_lock_);
         in_flight_corb_jobs_.clear();
         pending_corb_jobs_.clear();
     }

@@ -4,7 +4,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <mxtl/auto_call.h>
+#include <fbl/auto_call.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
@@ -15,12 +15,12 @@ DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(::audio::DispatcherChannelAllocTraits, 0x1
 namespace audio {
 
 // Static storage
-mxtl::Mutex DispatcherChannel::active_channels_lock_;
-mxtl::WAVLTree<uint64_t, mxtl::RefPtr<DispatcherChannel>> DispatcherChannel::active_channels_;
+fbl::Mutex DispatcherChannel::active_channels_lock_;
+fbl::WAVLTree<uint64_t, fbl::RefPtr<DispatcherChannel>> DispatcherChannel::active_channels_;
 
 // Translation unit local vars (hidden in an anon namespace)
 namespace {
-static mxtl::atomic_uint64_t driver_channel_id_gen(1u);
+static fbl::atomic_uint64_t driver_channel_id_gen(1u);
 }
 
 DispatcherChannel::DispatcherChannel(uintptr_t owner_ctx)
@@ -38,7 +38,7 @@ DispatcherChannel::~DispatcherChannel() {
     MX_DEBUG_ASSERT(!InActiveChannelSet());
 }
 
-mx_status_t DispatcherChannel::Activate(mxtl::RefPtr<Owner>&& owner,
+mx_status_t DispatcherChannel::Activate(fbl::RefPtr<Owner>&& owner,
                                         mx::channel* client_channel_out) {
     // Arg and constant state checks first
     if ((client_channel_out == nullptr) || client_channel_out->is_valid())
@@ -57,8 +57,8 @@ mx_status_t DispatcherChannel::Activate(mxtl::RefPtr<Owner>&& owner,
 
     // Lock and attempt to activate.
     {
-        mxtl::AutoLock obj_lock(&obj_lock_);
-        res = ActivateLocked(mxtl::move(owner), mxtl::move(channel));
+        fbl::AutoLock obj_lock(&obj_lock_);
+        res = ActivateLocked(fbl::move(owner), fbl::move(channel));
     }
     MX_DEBUG_ASSERT(channel == MX_HANDLE_INVALID);
 
@@ -77,7 +77,7 @@ mx_status_t DispatcherChannel::WaitOnPortLocked(const mx::port& port) {
                                MX_WAIT_ASYNC_ONCE);
 }
 
-mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::channel&& channel) {
+mx_status_t DispatcherChannel::ActivateLocked(fbl::RefPtr<Owner>&& owner, mx::channel&& channel) {
     if (!channel.is_valid())
         return MX_ERR_INVALID_ARGS;
 
@@ -89,14 +89,14 @@ mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::c
     // Add ourselves to the set of active channels so that users can fetch
     // references to us.
     {
-        mxtl::AutoLock channels_lock(&active_channels_lock_);
-        if (!active_channels_.insert_or_find(mxtl::WrapRefPtr(this)))
+        fbl::AutoLock channels_lock(&active_channels_lock_);
+        if (!active_channels_.insert_or_find(fbl::WrapRefPtr(this)))
             return MX_ERR_BAD_STATE;
 
     }
 
     // Take ownership of the channel reference given to us.
-    channel_ = mxtl::move(channel);
+    channel_ = fbl::move(channel);
 
     // Make sure we remove ourselves from the active channel set and release our
     // channel reference if anything goes wrong.
@@ -113,9 +113,9 @@ mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::c
     // introduced by AutoCall::~AutoCall() --> Lambda().)
     //
     // For now, just disable thread analysis for this lambda.
-    auto cleanup = mxtl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    auto cleanup = fbl::MakeAutoCall([this]() __TA_NO_THREAD_SAFETY_ANALYSIS {
         channel_.reset();
-        mxtl::AutoLock channels_lock(&active_channels_lock_);
+        fbl::AutoLock channels_lock(&active_channels_lock_);
         MX_DEBUG_ASSERT(InActiveChannelSet());
         active_channels_.erase(*this);
     });
@@ -129,25 +129,25 @@ mx_status_t DispatcherChannel::ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::c
     // operation fails, leaving the active channels set will be handle by the
     // cleanup AutoCall and canceling the async wait operation should occur as a
     // side effect of channel being auto closed as it goes out of scope.
-    res = owner->AddChannel(mxtl::WrapRefPtr(this));
+    res = owner->AddChannel(fbl::WrapRefPtr(this));
     if (res != MX_OK)
         return res;
 
     // Success, take ownership of our owner reference and cancel our
     // cleanup routine.
-    owner_   = mxtl::move(owner);
+    owner_   = fbl::move(owner);
     cleanup.cancel();
     return res;
 }
 
 void DispatcherChannel::Deactivate(bool do_notify) {
-    mxtl::RefPtr<Owner> old_owner;
+    fbl::RefPtr<Owner> old_owner;
 
     {
-        mxtl::AutoLock obj_lock(&obj_lock_);
+        fbl::AutoLock obj_lock(&obj_lock_);
 
         {
-            mxtl::AutoLock channels_lock(&active_channels_lock_);
+            fbl::AutoLock channels_lock(&active_channels_lock_);
             if (InActiveChannelSet()) {
                 active_channels_.erase(*this);
             } else {
@@ -169,7 +169,7 @@ void DispatcherChannel::Deactivate(bool do_notify) {
 
         if (owner_ != nullptr) {
             owner_->RemoveChannel(this);
-            old_owner = mxtl::move(owner_);
+            old_owner = fbl::move(owner_);
         }
 
         channel_.reset();
@@ -192,9 +192,9 @@ mx_status_t DispatcherChannel::Process(const mx_port_packet_t& port_packet) {
     // If the owner has gone away, then we should already be in the process
     // of shutting down.  Don't bother to report an error, we are already
     // being cleaned up.
-    mxtl::RefPtr<Owner> owner;
+    fbl::RefPtr<Owner> owner;
     {
-        mxtl::AutoLock obj_lock(&obj_lock_);
+        fbl::AutoLock obj_lock(&obj_lock_);
         if (owner_ == nullptr)
             return MX_OK;
         owner = owner_;
@@ -225,7 +225,7 @@ mx_status_t DispatcherChannel::Read(void*       buf,
        ((rxed_handle != nullptr) && rxed_handle->is_valid()))
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
 
     uint32_t rxed_handle_count = 0;
     return channel_.read(0,
@@ -242,7 +242,7 @@ mx_status_t DispatcherChannel::Write(const void*  buf,
     if (!buf || !buf_len)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AutoLock obj_lock(&obj_lock_);
+    fbl::AutoLock obj_lock(&obj_lock_);
     if (!tx_handle.is_valid())
         return channel_.write(0, buf, buf_len, nullptr, 0);
 
@@ -259,10 +259,10 @@ void DispatcherChannel::Owner::ShutdownDispatcherChannels() {
     // being added to the channels_ list.  We can then swap the contents of the
     // channels_ list with a temp list, leave the lock and deactivate all of the
     // channels at our leisure.
-    mxtl::DoublyLinkedList<mxtl::RefPtr<DispatcherChannel>> to_deactivate;
+    fbl::DoublyLinkedList<fbl::RefPtr<DispatcherChannel>> to_deactivate;
 
     {
-        mxtl::AutoLock activation_lock(&channels_lock_);
+        fbl::AutoLock activation_lock(&channels_lock_);
         if (deactivated_) {
             MX_DEBUG_ASSERT(channels_.is_empty());
             return;
@@ -280,7 +280,7 @@ void DispatcherChannel::Owner::ShutdownDispatcherChannels() {
     to_deactivate.clear();
 }
 
-mx_status_t DispatcherChannel::Owner::AddChannel(mxtl::RefPtr<DispatcherChannel>&& channel) {
+mx_status_t DispatcherChannel::Owner::AddChannel(fbl::RefPtr<DispatcherChannel>&& channel) {
     if (channel == nullptr)
         return MX_ERR_INVALID_ARGS;
 
@@ -294,18 +294,18 @@ mx_status_t DispatcherChannel::Owner::AddChannel(mxtl::RefPtr<DispatcherChannel>
 
     // If this Owner has become deactivated, then it is not accepting any new
     // channels.  Fail the request to add this channel.
-    mxtl::AutoLock channels_lock(&channels_lock_);
+    fbl::AutoLock channels_lock(&channels_lock_);
     if (deactivated_)
         return MX_ERR_BAD_STATE;
 
     // We are still active.  Transfer the reference to this channel to our set
     // of channels.
-    channels_.push_front(mxtl::move(channel));
+    channels_.push_front(fbl::move(channel));
     return MX_OK;
 }
 
 void DispatcherChannel::Owner::RemoveChannel(DispatcherChannel* channel) {
-    mxtl::AutoLock channels_lock(&channels_lock_);
+    fbl::AutoLock channels_lock(&channels_lock_);
 
     // Has this DispatcherChannel::Owner become deactivated?  If so, then this
     // channel may still be on a list (the local 'to_deactivate' list in

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
 
@@ -32,8 +32,8 @@ void QemuCodec::PrintDebugPrefix() const {
     printf("QEMUCodec : ");
 }
 
-mxtl::RefPtr<QemuCodec> QemuCodec::Create() {
-    return mxtl::AdoptRef(new QemuCodec);
+fbl::RefPtr<QemuCodec> QemuCodec::Create() {
+    return fbl::AdoptRef(new QemuCodec);
 }
 
 mx_status_t QemuCodec::Init(mx_device_t* codec_dev) {
@@ -53,14 +53,14 @@ mx_status_t QemuCodec::Init(mx_device_t* codec_dev) {
 mx_status_t QemuCodec::Start() {
     mx_status_t res;
 
-    auto output = mxtl::AdoptRef<QemuStream>(new QemuOutputStream());
+    auto output = fbl::AdoptRef<QemuStream>(new QemuOutputStream());
     res = ActivateStream(output);
     if (res != MX_OK) {
         LOG("Failed to activate output stream (res %d)!", res);
         return res;
     }
 
-    auto input = mxtl::AdoptRef<QemuStream>(new QemuInputStream());
+    auto input = fbl::AdoptRef<QemuStream>(new QemuInputStream());
     res = ActivateStream(input);
     if (res != MX_OK) {
         LOG("Failed to activate input stream (res %d)!", res);
@@ -94,7 +94,7 @@ extern "C" void qemu_ihda_codec_unbind_hook(void* ctx,
     MX_DEBUG_ASSERT(cookie != nullptr);
 
     // Reclaim our reference from the cookie.
-    auto codec = mxtl::internal::MakeRefPtrNoAdopt(reinterpret_cast<QemuCodec*>(cookie));
+    auto codec = fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<QemuCodec*>(cookie));
 
     // Shut the codec down.
     codec->Shutdown();

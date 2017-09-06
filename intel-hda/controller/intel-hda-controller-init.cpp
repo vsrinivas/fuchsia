@@ -243,7 +243,7 @@ mx_status_t IntelHDAController::SetupPCIInterrupts() {
 }
 
 mx_status_t IntelHDAController::SetupStreamDescriptors() {
-    mxtl::AutoLock stream_pool_lock(&stream_pool_lock_);
+    fbl::AutoLock stream_pool_lock(&stream_pool_lock_);
 
     // Sanity check our stream counts.
     uint16_t gcap;
@@ -296,7 +296,7 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
                   ? IntelHDAStream::Type::OUTPUT
                   : IntelHDAStream::Type::BIDIR);
 
-        auto stream = mxtl::AdoptRef(new IntelHDAStream(type,
+        auto stream = fbl::AdoptRef(new IntelHDAStream(type,
                                                         stream_id,
                                                         &regs_->stream_desc[i],
                                                         bdl_mem_.phys() + bdl_off,
@@ -306,7 +306,7 @@ mx_status_t IntelHDAController::SetupStreamDescriptors() {
         MX_DEBUG_ASSERT(all_streams_[i] == nullptr);
         all_streams_[i] = stream;
 
-        ReturnStreamLocked(mxtl::move(stream));
+        ReturnStreamLocked(fbl::move(stream));
     }
 
     return MX_OK;
@@ -338,8 +338,8 @@ mx_status_t IntelHDAController::SetupCommandBufferSize(uint8_t* size_reg,
 }
 
 mx_status_t IntelHDAController::SetupCommandBuffer() {
-    mxtl::AutoLock corb_lock(&corb_lock_);
-    mxtl::AutoLock rirb_lock(&rirb_lock_);
+    fbl::AutoLock corb_lock(&corb_lock_);
+    fbl::AutoLock rirb_lock(&rirb_lock_);
     mx_status_t res;
 
     // Allocate our command buffer memory and map it into our address space.
@@ -396,7 +396,7 @@ mx_status_t IntelHDAController::SetupCommandBuffer() {
     corb_max_in_flight_ = rirb_mask_ > RIRB_RESERVED_RESPONSE_SLOTS
                         ? rirb_mask_ - RIRB_RESERVED_RESPONSE_SLOTS
                         : 1;
-    corb_max_in_flight_ = mxtl::min(corb_max_in_flight_, corb_mask_);
+    corb_max_in_flight_ = fbl::min(corb_max_in_flight_, corb_mask_);
 
     // Program the base address registers for the TX/RX ring buffers, and set up
     // the virtual pointers to the ring buffer entries.

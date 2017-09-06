@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <magenta/types.h>
 #include <mx/vmo.h>
-#include <mxtl/macros.h>
+#include <fbl/macros.h>
 
 namespace audio {
 namespace intel_hda {

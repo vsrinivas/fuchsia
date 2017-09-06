@@ -8,11 +8,11 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-hda-codec.h>
 #include <mx/channel.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/vector.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -26,10 +26,10 @@ namespace codecs {
 class IntelHDACodecDriverBase;
 
 class IntelHDAStreamBase : public DispatcherChannel::Owner,
-                           public mxtl::WAVLTreeContainable<mxtl::RefPtr<IntelHDAStreamBase>> {
+                           public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>> {
 public:
-    mx_status_t Activate(mxtl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
-                         const mxtl::RefPtr<DispatcherChannel>& codec_channel)
+    mx_status_t Activate(fbl::RefPtr<IntelHDACodecDriverBase>&& parent_codec,
+                         const fbl::RefPtr<DispatcherChannel>& codec_channel)
         __TA_EXCLUDES(obj_lock_);
 
     void Deactivate() __TA_EXCLUDES(obj_lock_);
@@ -45,7 +45,7 @@ public:
     uint32_t GetKey()   const { return id(); }
 
 protected:
-    friend class mxtl::RefPtr<IntelHDAStreamBase>;
+    friend class fbl::RefPtr<IntelHDAStreamBase>;
 
     enum class Ack {
         NO,
@@ -60,7 +60,7 @@ protected:
         return dma_stream_tag_;
     }
 
-    const mxtl::RefPtr<IntelHDACodecDriverBase>& parent_codec() const __TA_REQUIRES(obj_lock_) {
+    const fbl::RefPtr<IntelHDACodecDriverBase>& parent_codec() const __TA_REQUIRES(obj_lock_) {
         return parent_codec_;
     }
 
@@ -70,9 +70,9 @@ protected:
 
     // Methods callable from subclasses
     mx_status_t PublishDeviceLocked() __TA_REQUIRES(obj_lock_);
-    void SetSupportedFormatsLocked(mxtl::Vector<audio_proto::FormatRange>&& formats)
+    void SetSupportedFormatsLocked(fbl::Vector<audio_proto::FormatRange>&& formats)
         __TA_REQUIRES(obj_lock_) {
-        supported_formats_ = mxtl::move(formats);
+        supported_formats_ = fbl::move(formats);
     }
 
     // Overloads to control stream behavior.
@@ -105,12 +105,12 @@ protected:
 
     mx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, Ack do_ack)
         __TA_EXCLUDES(obj_lock_) {
-        mxtl::AutoLock obj_lock(&obj_lock_);
+        fbl::AutoLock obj_lock(&obj_lock_);
         return SendCodecCommandLocked(nid, verb, do_ack);
     }
 
     // Exposed to derived class for thread annotations.
-    const mxtl::Mutex& obj_lock() const __TA_RETURN_CAPABILITY(obj_lock_) { return obj_lock_; }
+    const fbl::Mutex& obj_lock() const __TA_RETURN_CAPABILITY(obj_lock_) { return obj_lock_; }
 
     // DispatcherChannel::Owner implementation
     mx_status_t ProcessChannel(DispatcherChannel* channel) final;
@@ -146,10 +146,10 @@ private:
     const bool     is_input_;
     char           dev_name_[MX_DEVICE_NAME_MAX] = { 0 };
 
-    mxtl::Mutex obj_lock_;
+    fbl::Mutex obj_lock_;
 
-    mxtl::RefPtr<IntelHDACodecDriverBase> parent_codec_  __TA_GUARDED(obj_lock_);
-    mxtl::RefPtr<DispatcherChannel>       codec_channel_ __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<IntelHDACodecDriverBase> parent_codec_  __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<DispatcherChannel>       codec_channel_ __TA_GUARDED(obj_lock_);
 
     uint16_t dma_stream_id_  __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_ID;
     uint8_t  dma_stream_tag_ __TA_GUARDED(obj_lock_) = IHDA_INVALID_STREAM_TAG;
@@ -157,8 +157,8 @@ private:
     mx_device_t* parent_device_ __TA_GUARDED(obj_lock_) = nullptr;
     mx_device_t* stream_device_ __TA_GUARDED(obj_lock_) = nullptr;
 
-    mxtl::RefPtr<DispatcherChannel>         stream_channel_    __TA_GUARDED(obj_lock_);
-    mxtl::Vector<audio_proto::FormatRange>  supported_formats_ __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<DispatcherChannel>         stream_channel_    __TA_GUARDED(obj_lock_);
+    fbl::Vector<audio_proto::FormatRange>  supported_formats_ __TA_GUARDED(obj_lock_);
 
     uint32_t set_format_tid_  __TA_GUARDED(obj_lock_) = AUDIO_INVALID_TRANSACTION_ID;
     uint16_t encoded_fmt_     __TA_GUARDED(obj_lock_);

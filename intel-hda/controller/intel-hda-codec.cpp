@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <magenta/assert.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
 #include <stdio.h>
 
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
@@ -30,7 +30,7 @@ constexpr size_t IntelHDACodec::PROP_COUNT;
 
 // Special ID we use to distinguish the codec driver channel from all of the
 // other channels we manage.
-constexpr uintptr_t DRIVER_CHANNEL_ID = mxtl::numeric_limits<uintptr_t>::max();
+constexpr uintptr_t DRIVER_CHANNEL_ID = fbl::numeric_limits<uintptr_t>::max();
 
 #define SET_DEVICE_PROP(_prop, _value) do { \
     static_assert(PROP_##_prop < countof(dev_props_), "Invalid Device Property ID"); \
@@ -91,10 +91,10 @@ IntelHDACodec::IntelHDACodec(IntelHDAController& controller, uint8_t codec_id)
     dev_props_[PROP_PROTOCOL].value = MX_PROTOCOL_IHDA_CODEC;
 }
 
-mxtl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
+fbl::RefPtr<IntelHDACodec> IntelHDACodec::Create(IntelHDAController& controller,
                                                       uint8_t codec_id) {
     MX_DEBUG_ASSERT(codec_id < HDA_MAX_CODECS);
-    return mxtl::AdoptRef(new IntelHDACodec(controller, codec_id));
+    return fbl::AdoptRef(new IntelHDACodec(controller, codec_id));
 }
 
 mx_status_t IntelHDACodec::Startup() {
@@ -109,7 +109,7 @@ mx_status_t IntelHDACodec::Startup() {
             return MX_ERR_NO_MEMORY;
         }
 
-        mx_status_t res = controller_.QueueCodecCmd(mxtl::move(job));
+        mx_status_t res = controller_.QueueCodecCmd(fbl::move(job));
         if (res != MX_OK) {
             LOG("Failed to queue job (res = %d) during initial codec probe!\n", res);
             return res;
@@ -119,7 +119,7 @@ mx_status_t IntelHDACodec::Startup() {
     return MX_OK;
 }
 
-void IntelHDACodec::SendCORBResponse(const mxtl::RefPtr<DispatcherChannel>& channel,
+void IntelHDACodec::SendCORBResponse(const fbl::RefPtr<DispatcherChannel>& channel,
                                      const CodecResponse& resp,
                                      uint32_t transaction_id) {
     MX_DEBUG_ASSERT(channel != nullptr);
@@ -139,7 +139,7 @@ void IntelHDACodec::SendCORBResponse(const mxtl::RefPtr<DispatcherChannel>& chan
 }
 
 void IntelHDACodec::ProcessSolicitedResponse(const CodecResponse& resp,
-                                             mxtl::unique_ptr<CodecCmdJob>&& job) {
+                                             fbl::unique_ptr<CodecCmdJob>&& job) {
     if (state_ == State::PROBING) {
         // Are we still in the PROBING stage of things?  If so, this job should
         // have no response channel assigned to it, and we should still be
@@ -171,9 +171,9 @@ void IntelHDACodec::ProcessSolicitedResponse(const CodecResponse& resp,
 void IntelHDACodec::ProcessUnsolicitedResponse(const CodecResponse& resp) {
     // If we still have a channel to our codec driver, grab a reference to it
     // and send the unsolicited response to it.
-    mxtl::RefPtr<DispatcherChannel> codec_driver_channel;
+    fbl::RefPtr<DispatcherChannel> codec_driver_channel;
     {
-        mxtl::AutoLock codec_driver_channel_lock(&codec_driver_channel_lock_);
+        fbl::AutoLock codec_driver_channel_lock(&codec_driver_channel_lock_);
         codec_driver_channel = codec_driver_channel_;
     }
 
@@ -203,7 +203,7 @@ void IntelHDACodec::BeginShutdown() {
     // Give any active streams we had back to our controller.
     IntelHDAStream::Tree streams;
     {
-        mxtl::AutoLock lock(&active_streams_lock_);
+        fbl::AutoLock lock(&active_streams_lock_);
         streams.swap(active_streams_);
     }
 
@@ -300,7 +300,7 @@ mx_status_t IntelHDACodec::ProcessClientRequest(DispatcherChannel* channel,
             return stream->ProcessClientRequest(channel,
                                                 full_req.stream_requests,
                                                 req_size,
-                                                mxtl::move(rxed_handle));
+                                                fbl::move(rxed_handle));
         } else {
             return MX_ERR_BAD_STATE;
         }
@@ -382,18 +382,18 @@ mx_status_t IntelHDACodec::ProcessSendCORBCmd(DispatcherChannel* channel,
         return MX_ERR_ACCESS_DENIED;
     }
 
-    mxtl::RefPtr<DispatcherChannel> chan_ref = (req.hdr.cmd & IHDA_NOACK_FLAG)
+    fbl::RefPtr<DispatcherChannel> chan_ref = (req.hdr.cmd & IHDA_NOACK_FLAG)
                                              ? nullptr
-                                             : mxtl::WrapRefPtr(channel);
+                                             : fbl::WrapRefPtr(channel);
 
-    auto job = CodecCmdJobAllocator::New(mxtl::move(chan_ref),
+    auto job = CodecCmdJobAllocator::New(fbl::move(chan_ref),
                                          req.hdr.transaction_id,
                                          CodecCommand(id(), req.nid, verb));
 
     if (job == nullptr)
         return MX_ERR_NO_MEMORY;
 
-    mx_status_t res = controller_.QueueCodecCmd(mxtl::move(job));
+    mx_status_t res = controller_.QueueCodecCmd(fbl::move(job));
     if (res != MX_OK) {
         DEBUG_LOG("Failed to queue CORB command [%u, %hu, 0x%05x] (res %d)\n",
                 id(), req.nid, verb.val, res);
@@ -428,8 +428,8 @@ mx_status_t IntelHDACodec::ProcessRequestStream(DispatcherChannel* channel,
         resp.stream_id  = stream->id();
         resp.stream_tag = stream->tag();
 
-        mxtl::AutoLock lock(&active_streams_lock_);
-        active_streams_.insert(mxtl::move(stream));
+        fbl::AutoLock lock(&active_streams_lock_);
+        active_streams_.insert(fbl::move(stream));
     } else {
         // Failure; tell the codec that we are out of streams.
         resp.result     = MX_ERR_NO_MEMORY;
@@ -451,9 +451,9 @@ mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
     }
 
     // Remove the stream from the active set.
-    mxtl::RefPtr<IntelHDAStream> stream;
+    fbl::RefPtr<IntelHDAStream> stream;
     {
-        mxtl::AutoLock lock(&active_streams_lock_);
+        fbl::AutoLock lock(&active_streams_lock_);
         stream = active_streams_.erase(req.stream_id);
     }
 
@@ -465,7 +465,7 @@ mx_status_t IntelHDACodec::ProcessReleaseStream(DispatcherChannel* channel,
     // Give the stream back to the controller and (if an ack was requested) tell
     // our codec driver that things went well.
     stream->Deactivate();
-    controller_.ReturnStream(mxtl::move(stream));
+    controller_.ReturnStream(fbl::move(stream));
 
     if (req.hdr.cmd & IHDA_NOACK_FLAG)
         return MX_OK;
@@ -492,9 +492,9 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     }
 
     // Grab a reference to the stream from the active set.
-    mxtl::RefPtr<IntelHDAStream> stream;
+    fbl::RefPtr<IntelHDAStream> stream;
     {
-        mxtl::AutoLock lock(&active_streams_lock_);
+        fbl::AutoLock lock(&active_streams_lock_);
         auto iter = active_streams_.find(req.stream_id);
         if (iter.IsValid())
             stream = iter.CopyPointer();
@@ -527,7 +527,7 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     // has the effect of serializing all of the requests targeted at this codec,
     // or any of the DMA streams it is managing.
     mx::channel client_channel;
-    res = stream_channel->Activate(mxtl::WrapRefPtr(this), &client_channel);
+    res = stream_channel->Activate(fbl::WrapRefPtr(this), &client_channel);
     if (res != MX_OK) {
         DEBUG_LOG("Failed to activate stream channel (res %d)\n", res);
         stream->Deactivate();
@@ -538,7 +538,7 @@ mx_status_t IntelHDACodec::ProcessSetStreamFmt(DispatcherChannel* channel,
     MX_DEBUG_ASSERT(client_channel.is_valid());
     ihda_proto::SetStreamFmtResp resp;
     resp.hdr = req.hdr;
-    res = channel->Write(&resp, sizeof(resp), mxtl::move(client_channel));
+    res = channel->Write(&resp, sizeof(resp), fbl::move(client_channel));
 
     if (res != MX_OK)
         DEBUG_LOG("Failed to send stream channel back to codec driver (res %d)\n", res);
@@ -551,7 +551,7 @@ void IntelHDACodec::NotifyChannelDeactivated(const DispatcherChannel& channel) {
     // reference from within the codec_driver_channel_lock.
     if (channel.owner_ctx() == DRIVER_CHANNEL_ID) {
         {
-            mxtl::AutoLock lock(&codec_driver_channel_lock_);
+            fbl::AutoLock lock(&codec_driver_channel_lock_);
             MX_DEBUG_ASSERT(&channel == codec_driver_channel_.get());
             codec_driver_channel_.reset();
         }
@@ -559,14 +559,14 @@ void IntelHDACodec::NotifyChannelDeactivated(const DispatcherChannel& channel) {
         // Return any DMA streams the codec driver had owned back to the controller.
         IntelHDAStream::Tree tmp;
         {
-            mxtl::AutoLock lock(&active_streams_lock_);
-            tmp = mxtl::move(active_streams_);
+            fbl::AutoLock lock(&active_streams_lock_);
+            tmp = fbl::move(active_streams_);
         }
 
         while (!tmp.is_empty()) {
             auto stream = tmp.pop_front();
             stream->Deactivate();
-            controller_.ReturnStream(mxtl::move(stream));
+            controller_.ReturnStream(fbl::move(stream));
         }
 
         return;
@@ -590,9 +590,9 @@ mx_status_t IntelHDACodec::CodecGetDispatcherChannel(mx_handle_t* channel_out) {
     // Enter the driver channel lock.  If we have already connected to a codec
     // driver, simply fail the request.  Otherwise, attempt to build a driver channel
     // and activate it.
-    mxtl::RefPtr<DispatcherChannel> activate_me;
+    fbl::RefPtr<DispatcherChannel> activate_me;
     {
-        mxtl::AutoLock lock(&codec_driver_channel_lock_);
+        fbl::AutoLock lock(&codec_driver_channel_lock_);
 
         if (codec_driver_channel_ != nullptr)
             return MX_ERR_BAD_STATE;
@@ -614,12 +614,12 @@ mx_status_t IntelHDACodec::CodecGetDispatcherChannel(mx_handle_t* channel_out) {
 
     MX_DEBUG_ASSERT(activate_me != nullptr);
     mx::channel client_channel;
-    mx_status_t activate_result = activate_me->Activate(mxtl::WrapRefPtr(this), &client_channel);
+    mx_status_t activate_result = activate_me->Activate(fbl::WrapRefPtr(this), &client_channel);
 
     // If we failed to activate the channel, release the internal reference we
     // were holding from inside of the codec_driver_channel_lock.
     if (activate_result != MX_OK) {
-        mxtl::AutoLock lock(&codec_driver_channel_lock_);
+        fbl::AutoLock lock(&codec_driver_channel_lock_);
         codec_driver_channel_ = nullptr;
     } else {
         *channel_out = client_channel.release();
@@ -629,10 +629,10 @@ mx_status_t IntelHDACodec::CodecGetDispatcherChannel(mx_handle_t* channel_out) {
 }
 
 // Get a reference to the active stream (if any) associated with the specified channel.
-mxtl::RefPtr<IntelHDAStream> IntelHDACodec::GetStreamForChannel(const DispatcherChannel& channel,
+fbl::RefPtr<IntelHDAStream> IntelHDACodec::GetStreamForChannel(const DispatcherChannel& channel,
                                                                 bool* is_stream_channel_out) {
     bool stream_chan = ((channel.owner_ctx() > 0) &&
-                        (channel.owner_ctx() <= mxtl::numeric_limits<uint16_t>::max()));
+                        (channel.owner_ctx() <= fbl::numeric_limits<uint16_t>::max()));
 
     if (is_stream_channel_out != nullptr)
         *is_stream_channel_out = stream_chan;
@@ -641,7 +641,7 @@ mxtl::RefPtr<IntelHDAStream> IntelHDACodec::GetStreamForChannel(const Dispatcher
         auto stream_id = static_cast<uint16_t>(channel.owner_ctx());
 
         {
-            mxtl::AutoLock lock(&active_streams_lock_);
+            fbl::AutoLock lock(&active_streams_lock_);
             auto iter = active_streams_.find(stream_id);
             if (iter.IsValid())
                 return iter.CopyPointer();
