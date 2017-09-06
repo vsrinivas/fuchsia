@@ -2765,7 +2765,10 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
     }
 
     mtl::MessageLoop loop;
+
+#ifdef MAGMA_ENABLE_TRACING
     trace::TraceProvider trace_provider(loop.async());
+#endif
 
     auto application_context_ = app::ApplicationContext::CreateFromStartupInfo();
     app::ServiceProviderPtr services;
