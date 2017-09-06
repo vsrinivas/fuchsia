@@ -18,8 +18,6 @@ mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 
 PolicyManager* GetSystemPolicyManager();
 
-mx_status_t magenta_sleep(mx_time_t deadline);
-
 // Resource constants (MX_RSRC_KIND_..., etc) are located
 // in system/public/magenta/syscalls/resource.h
 

@@ -49,7 +49,7 @@ mx_status_t sys_nanosleep(mx_time_t deadline) {
 
     // This syscall is declared as "blocking" in syscalls.sysgen, so a higher
     // layer will automatically retry if we return MX_ERR_INTERNAL_INTR_RETRY.
-    return magenta_sleep(deadline);
+    return thread_sleep_etc(deadline, /*interruptable=*/true);
 }
 
 // This must be accessed atomically from any given thread.

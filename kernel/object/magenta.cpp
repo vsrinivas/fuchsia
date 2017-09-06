@@ -289,11 +289,6 @@ PolicyManager* GetSystemPolicyManager() {
     return policy_manager;
 }
 
-mx_status_t magenta_sleep(mx_time_t deadline) {
-    /* sleep with interruptable flag set */
-    return thread_sleep_etc(deadline, true);
-}
-
 mx_status_t validate_resource(mx_handle_t handle, uint32_t kind) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<ResourceDispatcher> resource;

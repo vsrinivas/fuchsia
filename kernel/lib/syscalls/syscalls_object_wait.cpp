@@ -9,6 +9,7 @@
 #include <trace.h>
 
 #include <kernel/event.h>
+#include <kernel/thread.h>
 #include <platform.h>
 
 #include <lib/ktrace.h>
@@ -93,7 +94,7 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
     LTRACEF("count %u\n", count);
 
     if (!count) {
-        mx_status_t result = magenta_sleep(deadline);
+        mx_status_t result = thread_sleep_etc(deadline, /*interruptable=*/true);
         if (result != MX_OK)
             return result;
         return MX_ERR_TIMED_OUT;
