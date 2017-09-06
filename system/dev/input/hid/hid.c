@@ -5,6 +5,7 @@
 #include "hid-fifo.h"
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/hidbus.h>
@@ -14,14 +15,11 @@
 #include <magenta/listnode.h>
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define HID_FLAGS_DEAD         (1 << 0)
 #define HID_FLAGS_WRITE_FAILED (1 << 1)
-
-#define USB_HID_DEBUG 0
 
 // TODO(johngro) : Get this from a standard header instead of defining our own.
 #ifndef MIN
@@ -294,13 +292,13 @@ static mx_status_t hid_read_instance(void* ctx, void* buf, size_t count, mx_off_
 
     xfer = hid_get_report_size_by_id(hid->base, rpt_id, INPUT_REPORT_INPUT);
     if (xfer == 0) {
-        printf("error reading hid device: unknown report id (%u)!\n", rpt_id);
+        dprintf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
         mtx_unlock(&hid->fifo.lock);
         return MX_ERR_BAD_STATE;
     }
 
     if (xfer > count) {
-        printf("next report: %zd, read count: %zd\n", xfer, count);
+        dprintf(SPEW, "next report: %zd, read count: %zd\n", xfer, count);
         mtx_unlock(&hid->fifo.lock);
         return MX_ERR_BUFFER_TOO_SMALL;
     }
@@ -394,15 +392,15 @@ enum {
 };
 
 static void hid_dump_hid_report_desc(hid_device_t* dev) {
-    printf("hid: dev %p HID report descriptor\n", dev);
+    dprintf(TRACE, "hid: dev %p HID report descriptor\n", dev);
     for (size_t c = 0; c < dev->hid_report_desc_len; c++) {
-        printf("%02x ", dev->hid_report_desc[c]);
-        if (c % 16 == 15) printf("\n");
+        dprintf(TRACE, "%02x ", dev->hid_report_desc[c]);
+        if (c % 16 == 15) dprintf(ERROR, "\n");
     }
-    printf("\n");
-    printf("hid: num reports: %zd\n", dev->num_reports);
+    dprintf(TRACE, "\n");
+    dprintf(TRACE, "hid: num reports: %zd\n", dev->num_reports);
     for (size_t i = 0; i < dev->num_reports; i++) {
-        printf("  report id: %u  sizes: in %u out %u feat %u\n",
+        dprintf(TRACE, "  report id: %u  sizes: in %u out %u feat %u\n",
                 dev->sizes[i].id, dev->sizes[i].in_size, dev->sizes[i].out_size,
                 dev->sizes[i].feat_size);
     }
@@ -593,7 +591,7 @@ done:
         // the device into boot protocol mode.
         if (dev->info.dev_class == HID_DEV_CLASS_POINTER) {
             if (dev->info.boot_device) {
-                printf("hid: boot mouse hack for \"%s\":  "
+                dprintf(INFO, "hid: boot mouse hack for \"%s\":  "
                        "report count (%zu->1), "
                        "inp sz (%d->24), "
                        "out sz (%d->0), "
@@ -606,7 +604,7 @@ done:
                 dev->sizes[0].out_size = 0;
                 dev->sizes[0].feat_size = 0;
             } else {
-                printf(
+                dprintf(INFO,
                     "hid: boot mouse hack skipped for \"%s\": does not support protocol.\n",
                     dev->name);
             }
@@ -701,7 +699,7 @@ static mx_status_t hid_open_device(void* ctx, mx_device_t** dev_out, uint32_t fl
 
     mx_status_t status = status = device_add(hid->mxdev, &args, &inst->mxdev);
     if (status != MX_OK) {
-        printf("hid: error creating instance %d\n", status);
+        dprintf(ERROR, "hid: error creating instance %d\n", status);
         free(inst);
         return status;
     }
@@ -778,7 +776,7 @@ void hid_io_queue(void* cookie, const uint8_t* buf, size_t len) {
             // the rest of this payload and hope that the next one gets us back
             // on track.
             if (!rpt_sz) {
-                printf("%s: failed to find input report size (report id %u)\n",
+                dprintf(ERROR, "%s: failed to find input report size (report id %u)\n",
                         hid->name, buf[0]);
                 break;
             }
@@ -813,7 +811,7 @@ void hid_io_queue(void* cookie, const uint8_t* buf, size_t len) {
 
             if (wrote <= 0) {
                 if (!(instance->flags & HID_FLAGS_WRITE_FAILED)) {
-                    printf("%s: could not write to hid fifo (ret=%zd)\n",
+                    dprintf(ERROR, "%s: could not write to hid fifo (ret=%zd)\n",
                             hid->name, wrote);
                     instance->flags |= HID_FLAGS_WRITE_FAILED;
                 }
@@ -842,13 +840,13 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     mx_status_t status;
     if (device_get_protocol(parent, MX_PROTOCOL_HIDBUS, &hiddev->hid)) {
-        printf("hid: bind: no hidbus protocol\n");
+        dprintf(ERROR, "hid: bind: no hidbus protocol\n");
         status = MX_ERR_INTERNAL;
         goto fail;
     }
 
     if ((status = hid_op_query(hiddev, 0, &hiddev->info)) < 0) {
-        printf("hid: bind: hidbus query failed: %d\n", status);
+        dprintf(ERROR, "hid: bind: hidbus query failed: %d\n", status);
         goto fail;
     }
 
@@ -861,7 +859,7 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
     if (hiddev->info.boot_device) {
         status = hid_op_set_protocol(hiddev, HID_PROTOCOL_BOOT);
         if (status != MX_OK) {
-            printf("hid: could not put HID device into boot protocol: %d\n", status);
+            dprintf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
             goto fail;
         }
 
@@ -876,22 +874,20 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
     status = hid_op_get_descriptor(hiddev, HID_DESC_TYPE_REPORT,
             (void**)&hiddev->hid_report_desc, &hiddev->hid_report_desc_len);
     if (status != MX_OK) {
-        printf("hid: could not retrieve HID report descriptor: %d\n", status);
+        dprintf(ERROR, "hid: could not retrieve HID report descriptor: %d\n", status);
         goto fail;
     }
 
     status = hid_process_hid_report_desc(hiddev);
     if (status != MX_OK) {
-        printf("hid: could not parse hid report descriptor: %d\n", status);
+        dprintf(ERROR, "hid: could not parse hid report descriptor: %d\n", status);
         goto fail;
     }
-#if USB_HID_DEBUG
     hid_dump_hid_report_desc(hiddev);
-#endif
 
     status = hid_init_reassembly_buffer(hiddev);
     if (status != MX_OK) {
-        printf("hid: failed to initialize reassembly buffer: %d\n", status);
+        dprintf(ERROR, "hid: failed to initialize reassembly buffer: %d\n", status);
         goto fail;
     }
 
@@ -905,14 +901,14 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     status = device_add(parent, &args, &hiddev->mxdev);
     if (status != MX_OK) {
-        printf("hid: device_add failed for HID device: %d\n", status);
+        dprintf(ERROR, "hid: device_add failed for HID device: %d\n", status);
         goto fail;
     }
 
     // TODO: delay calling start until we've been opened by someone
     status = hid_op_start(hiddev, &hid_ifc, hiddev);
     if (status != MX_OK) {
-        printf("hid: could not start hid device: %d\n", status);
+        dprintf(ERROR, "hid: could not start hid device: %d\n", status);
         device_remove(hiddev->mxdev);
         // Don't fail, since we've been added. Need to let devmgr clean us up.
         return status;
@@ -920,7 +916,7 @@ static mx_status_t hid_bind(void* ctx, mx_device_t* parent, void** cookie) {
 
     status = hid_op_set_idle(hiddev, 0, 0);
     if (status != MX_OK) {
-        printf("hid: [W] set_idle failed for %s: %d\n", hiddev->name, status);
+        dprintf(TRACE, "hid: [W] set_idle failed for %s: %d\n", hiddev->name, status);
         // continue anyway
     }
     return MX_OK;
