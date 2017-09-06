@@ -471,7 +471,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
     case IOCTL_VFS_UNMOUNT_FS: {
         Vfs::UninstallAll(MX_TIME_INFINITE);
         vn->Ioctl(op, in_buf, in_len, out_buf, out_len);
-        exit(0);
+        return MX_OK;
     }
 #endif
     default:

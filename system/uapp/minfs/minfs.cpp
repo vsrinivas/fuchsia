@@ -726,6 +726,9 @@ mx_status_t Minfs::Unmount() {
     // the process exits) to ensure that the block device's fifo has been
     // closed.
     delete this;
+    // TODO(smklein): To not bind filesystem lifecycle to a process, shut
+    // down (closing dispatcher) rather than calling exit.
+    exit(0);
     return MX_OK;
 }
 

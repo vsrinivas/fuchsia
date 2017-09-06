@@ -446,6 +446,9 @@ void Blobstore::FreeNode(size_t node_index) {
 
 mx_status_t Blobstore::Unmount() {
     close(blockfd_);
+    // TODO(smklein): To not bind filesystem lifecycle to a process, shut
+    // down (closing dispatcher) rather than calling exit.
+    exit(0);
     return MX_OK;
 }
 
