@@ -106,9 +106,6 @@ __END_CDECLS
 namespace async {
 
 // C++ wrapper for a pending task.
-// This object must not be destroyed until the task has completed or been
-// successfully canceled or the dispatcher itself has been destroyed.
-// A separate instance must be used for each task.
 class Task final : private async_task_t {
 public:
     // Handles execution of a posted task.
@@ -125,12 +122,18 @@ public:
     using Handler = mxtl::Function<async_task_result_t(async_t* async,
                                                        mx_status_t status)>;
 
-    Task();
-    explicit Task(mx_time_t deadline, uint32_t flags = 0u);
-    virtual ~Task();
+    // Initializes the properties of the task.
+    explicit Task(mx_time_t deadline = MX_TIME_INFINITE, uint32_t flags = 0u);
 
-    // Gets or sets the handler to invoke when a packet is received.
-    // Must be set before queuing any packets.
+    // Destroys the task.
+    //
+    // This object must not be destroyed until the task has completed, been
+    // successfully canceled, or the asynchronous dispatcher itself has been
+    // destroyed.
+    ~Task();
+
+    // Gets or sets the handler to invoke when the task becomes due.
+    // Must be set before posting the task.
     const Handler& handler() const { return handler_; }
     void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 

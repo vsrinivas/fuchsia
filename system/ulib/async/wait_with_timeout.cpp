@@ -8,9 +8,6 @@
 
 namespace async {
 
-WaitWithTimeout::WaitWithTimeout()
-    : WaitWithTimeout(MX_HANDLE_INVALID, MX_SIGNAL_NONE) {}
-
 WaitWithTimeout::WaitWithTimeout(mx_handle_t object, mx_signals_t trigger,
                                  mx_time_t deadline, uint32_t flags)
     : async_wait_t{{ASYNC_STATE_INIT}, &WaitWithTimeout::WaitHandler, object, trigger, flags, {}},
@@ -24,7 +21,8 @@ mx_status_t WaitWithTimeout::Begin(async_t* async) {
         status = async_post_task(async, this);
         if (status != MX_OK) {
             mx_status_t cancel_status = async_cancel_wait(async, this);
-            MX_DEBUG_ASSERT(cancel_status == MX_OK);
+            MX_DEBUG_ASSERT_MSG(cancel_status == MX_OK,
+                                "cancel_status=%d", cancel_status);
         }
     }
     return status;
@@ -49,7 +47,8 @@ async_wait_result_t WaitWithTimeout::WaitHandler(async_t* async, async_wait_t* w
         mx_status_t cancel_status = async_cancel_task(async, self);
         if (cancel_status != MX_OK) {
             // The loop is being destroyed.
-            MX_DEBUG_ASSERT(cancel_status == MX_ERR_BAD_STATE);
+            MX_DEBUG_ASSERT_MSG(cancel_status == MX_ERR_BAD_STATE,
+                                "cancel_status=%d", cancel_status);
             return ASYNC_WAIT_FINISHED;
         }
     }
@@ -64,7 +63,8 @@ async_wait_result_t WaitWithTimeout::WaitHandler(async_t* async, async_wait_t* w
         mx_status_t post_status = async_post_task(async, self);
         if (post_status != MX_OK) {
             // The loop is being destroyed.
-            MX_DEBUG_ASSERT(post_status == MX_ERR_BAD_STATE);
+            MX_DEBUG_ASSERT_MSG(post_status == MX_ERR_BAD_STATE,
+                                "post_status=%d", post_status);
             return ASYNC_WAIT_FINISHED;
         }
     }
@@ -79,12 +79,13 @@ async_task_result_t WaitWithTimeout::TimeoutHandler(async_t* async, async_task_t
     mx_status_t cancel_status = async_cancel_wait(async, self);
     if (cancel_status != MX_OK) {
         // The loop is being destroyed.
-        MX_DEBUG_ASSERT(cancel_status == MX_ERR_BAD_STATE);
+        MX_DEBUG_ASSERT_MSG(cancel_status == MX_ERR_BAD_STATE,
+                            "cancel_status=%d", cancel_status);
         return ASYNC_TASK_FINISHED;
     }
 
     async_wait_result_t result = self->handler_(async, MX_ERR_TIMED_OUT, nullptr);
-    MX_ASSERT(result == ASYNC_WAIT_FINISHED);
+    MX_DEBUG_ASSERT(result == ASYNC_WAIT_FINISHED);
     return ASYNC_TASK_FINISHED;
 }
 

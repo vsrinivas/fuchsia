@@ -10,7 +10,7 @@ namespace async {
 
 Loop::Loop(const async_loop_config_t* config) {
     mx_status_t status = async_loop_create(config, &async_);
-    MX_ASSERT(status == MX_OK);
+    MX_ASSERT_MSG(status == MX_OK, "status=%d", status);
 }
 
 Loop::~Loop() {

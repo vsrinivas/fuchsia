@@ -15,9 +15,6 @@
 namespace async {
 
 // C++ wrapper for a pending wait operation with an associated timeout.
-// This object must not be destroyed until the wait has completed or been
-// successfully canceled or the dispatcher itself has been destroyed.
-// A separate instance must be used for each wait.
 //
 // Use |MX_TIME_INFINITE| as the deadline to wait indefinitely.
 //
@@ -44,14 +41,21 @@ public:
                                                        mx_status_t status,
                                                        const mx_packet_signal_t* signal)>;
 
-    WaitWithTimeout();
-    explicit WaitWithTimeout(mx_handle_t object, mx_signals_t trigger,
+    // Initializes the properties of the wait with timeout operation.
+    explicit WaitWithTimeout(mx_handle_t object = MX_HANDLE_INVALID,
+                             mx_signals_t trigger = MX_SIGNAL_NONE,
                              mx_time_t deadline = MX_TIME_INFINITE,
                              uint32_t flags = 0u);
-    virtual ~WaitWithTimeout();
 
-    // Gets or sets the handler to invoke when a packet is received.
-    // Must be set before queuing any packets.
+    // Destroys the wait with timeout operation.
+    //
+    // This object must not be destroyed until the wait has completed, been
+    // successfully canceled, timed out, or the asynchronous dispatcher itself
+    // has been destroyed.
+    ~WaitWithTimeout();
+
+    // Gets or sets the handler to invoke when the wait completes.
+    // Must be set before beginning the wait.
     const Handler& handler() const { return handler_; }
     void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 

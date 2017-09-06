@@ -105,9 +105,6 @@ __END_CDECLS
 namespace async {
 
 // C++ wrapper for a pending wait operation.
-// This object must not be destroyed until the wait has completed or been
-// successfully canceled or the dispatcher itself has been destroyed.
-// A separate instance must be used for each wait.
 class Wait final : private async_wait_t {
 public:
     // Handles completion of asynchronous wait operations.
@@ -125,12 +122,19 @@ public:
                                                        mx_status_t status,
                                                        const mx_packet_signal_t* signal)>;
 
-    Wait();
-    explicit Wait(mx_handle_t object, mx_signals_t trigger, uint32_t flags = 0u);
-    virtual ~Wait();
+    // Initializes the properties of the wait operation.
+    explicit Wait(mx_handle_t object = MX_HANDLE_INVALID,
+                  mx_signals_t trigger = MX_SIGNAL_NONE, uint32_t flags = 0u);
 
-    // Gets or sets the handler to invoke when a packet is received.
-    // Must be set before queuing any packets.
+    // Destroys the wait operation.
+    //
+    // This object must not be destroyed until the wait has completed, been
+    // successfully canceled, or the asynchronous dispatcher itself has
+    // been destroyed.
+    ~Wait();
+
+    // Gets or sets the handler to invoke when the wait completes.
+    // Must be set before beginning the wait.
     const Handler& handler() const { return handler_; }
     void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
 

@@ -6,9 +6,6 @@
 
 namespace async {
 
-Task::Task()
-    : Task(MX_TIME_INFINITE, 0u) {}
-
 Task::Task(mx_time_t deadline, uint32_t flags)
     : async_task_t{{ASYNC_STATE_INIT}, &Task::CallHandler, deadline, flags, {}} {}
 

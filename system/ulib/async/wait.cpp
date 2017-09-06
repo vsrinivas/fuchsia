@@ -6,9 +6,6 @@
 
 namespace async {
 
-Wait::Wait()
-    : Wait(MX_HANDLE_INVALID, MX_SIGNAL_NONE) {}
-
 Wait::Wait(mx_handle_t object, mx_signals_t trigger, uint32_t flags)
     : async_wait_t{{ASYNC_STATE_INIT}, &Wait::CallHandler, object, trigger, flags, {}} {}
 

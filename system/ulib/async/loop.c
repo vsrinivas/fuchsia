@@ -353,7 +353,7 @@ static void async_loop_wake_threads(async_loop_t* loop) {
             .type = MX_PKT_TYPE_USER,
             .status = MX_OK};
         mx_status_t status = mx_port_queue(loop->port, &packet, 0u);
-        MX_DEBUG_ASSERT(status == MX_OK);
+        MX_DEBUG_ASSERT_MSG(status == MX_OK, "status=%d", status);
     }
 }
 
@@ -529,7 +529,7 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
     }
 
     mx_status_t status = mx_timer_set(loop->timer, deadline, 0);
-    MX_ASSERT(status == MX_OK);
+    MX_ASSERT_MSG(status == MX_OK, "status=%d", status);
 }
 
 static void async_loop_invoke_prologue(async_loop_t* loop) {
@@ -542,28 +542,37 @@ static void async_loop_invoke_epilogue(async_loop_t* loop) {
         loop->config.epilogue((async_t*)loop, loop->config.data);
 }
 
-static async_wait_result_t async_loop_invoke_wait_handler(async_loop_t* loop, async_wait_t* wait,
-                                                          mx_status_t status, const mx_packet_signal_t* signal) {
+static async_wait_result_t async_loop_invoke_wait_handler(async_loop_t* loop,
+                                                          async_wait_t* wait,
+                                                          mx_status_t status,
+                                                          const mx_packet_signal_t* signal) {
     async_loop_invoke_prologue(loop);
     async_wait_result_t result = wait->handler((async_t*)loop, wait, status, signal);
     async_loop_invoke_epilogue(loop);
-    MX_ASSERT(result == ASYNC_WAIT_FINISHED ||
-              (result == ASYNC_WAIT_AGAIN && status == MX_OK));
+
+    MX_ASSERT_MSG(result == ASYNC_WAIT_FINISHED ||
+                      (result == ASYNC_WAIT_AGAIN && status == MX_OK),
+                  "result=%d, status=%d", result, status);
     return result;
 }
 
-static async_task_result_t async_loop_invoke_task_handler(async_loop_t* loop, async_task_t* task,
+static async_task_result_t async_loop_invoke_task_handler(async_loop_t* loop,
+                                                          async_task_t* task,
                                                           mx_status_t status) {
     async_loop_invoke_prologue(loop);
     async_task_result_t result = task->handler((async_t*)loop, task, status);
     async_loop_invoke_epilogue(loop);
-    MX_ASSERT(result == ASYNC_TASK_FINISHED ||
-              (result == ASYNC_TASK_REPEAT && status == MX_OK));
+
+    MX_ASSERT_MSG(result == ASYNC_TASK_FINISHED ||
+                      (result == ASYNC_TASK_REPEAT && status == MX_OK),
+                  "result=%d, status=%d", result, status);
     return result;
 }
 
-static void async_loop_invoke_receiver_handler(async_loop_t* loop, async_receiver_t* receiver,
-                                               mx_status_t status, const mx_packet_user_t* data) {
+static void async_loop_invoke_receiver_handler(async_loop_t* loop,
+                                               async_receiver_t* receiver,
+                                               mx_status_t status,
+                                               const mx_packet_user_t* data) {
     async_loop_invoke_prologue(loop);
     receiver->handler((async_t*)loop, receiver, status, data);
     async_loop_invoke_epilogue(loop);
@@ -618,7 +627,7 @@ void async_loop_join_threads(async_t* async) {
         thrd_t thread = rec->thread;
         free(rec);
         int result = thrd_join(thread, NULL);
-        MX_ASSERT(result == thrd_success);
+        MX_DEBUG_ASSERT(result == thrd_success);
         mtx_lock(&loop->lock);
     }
     mtx_unlock(&loop->lock);

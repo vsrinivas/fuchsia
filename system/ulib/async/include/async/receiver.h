@@ -71,8 +71,6 @@ __END_CDECLS
 namespace async {
 
 // C++ wrapper for a packet receiver.
-// This object must not be destroyed until all packets destined for it
-// have been delivered or the dispatcher itself has been destroyed.
 // The same instance may be used to receive arbitrarily many queued packets.
 class Receiver final : private async_receiver_t {
 public:
@@ -88,8 +86,15 @@ public:
                                         mx_status_t status,
                                         const mx_packet_user_t* data)>;
 
+    // Initializes the properties of the receiver.
     explicit Receiver(uint32_t flags = 0u);
-    virtual ~Receiver();
+
+    // Destroys the receiver.
+    //
+    // This object must not be destroyed until all packets destined for it
+    // have been delivered or the asynchronous dispatcher itself has been
+    // destroyed.
+    ~Receiver();
 
     // Gets or sets the handler to invoke when a packet is received.
     // Must be set before queuing any packets.
