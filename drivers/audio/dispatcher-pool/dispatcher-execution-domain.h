@@ -115,6 +115,7 @@ private:
     friend class Thread;
     friend class ThreadPool;
     friend class Timer;
+    friend class WakeupEvent;
     using DispatchState = EventSource::DispatchState;
 
     struct ThreadPoolListTraits {
