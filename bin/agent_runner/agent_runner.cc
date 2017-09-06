@@ -4,8 +4,8 @@
 
 #include "apps/modular/src/agent_runner/agent_runner.h"
 
-#include <mutex>
 #include <unordered_set>
+#include <unordered_map>
 #include <utility>
 
 #include "apps/modular/lib/fidl/array_to_string.h"
@@ -13,7 +13,6 @@
 #include "apps/modular/lib/ledger/storage.h"
 #include "apps/modular/src/agent_runner/agent_context_impl.h"
 #include "apps/modular/src/agent_runner/agent_runner_storage_impl.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -48,18 +47,33 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
   // No new agents will be scheduled to run.
   *terminating_ = true;
 
+  FTL_LOG(INFO) << "AgentRunner::Teardown() " << running_agents_.size() << " agents";
+
   // No agents were running, we are good to go.
   if (running_agents_.empty()) {
     callback();
     return;
   }
 
-  auto once = std::make_unique<std::once_flag>();
   // This is called when agents are done being removed
-  termination_callback_ =
-      ftl::MakeCopyable([ this, callback, once = std::move(once) ]() {
-        std::call_once(*once, callback);
-      });
+  auto called = std::make_shared<bool>(false);
+  auto cont = [this, called, callback](const bool from_timeout) {
+    if (*called) {
+      return;
+    }
+
+    *called = true;
+
+    if (from_timeout) {
+      FTL_LOG(ERROR) << "AgentRunner::Teardown() timed out";
+    }
+
+    callback();
+  };
+
+  termination_callback_ = [cont] {
+    cont(false);
+  };
 
   for (auto& it : running_agents_) {
     // The running agent will call |AgentRunner::RemoveAgent()| to remove itself
@@ -68,8 +82,12 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     it.second->StopForTeardown();
   }
 
+  auto cont_timeout = [cont] {
+    cont(true);
+  };
+
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      termination_callback_, kTeardownTimeout);
+      std::move(cont_timeout), kTeardownTimeout);
 }
 
 void AgentRunner::MaybeRunAgent(const std::string& agent_url,
