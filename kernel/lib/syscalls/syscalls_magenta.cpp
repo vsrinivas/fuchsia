@@ -24,6 +24,7 @@
 #include <object/handles.h>
 #include <object/log_dispatcher.h>
 #include <object/process_dispatcher.h>
+#include <object/resources.h>
 #include <object/thread_dispatcher.h>
 
 #include <magenta/syscalls/log.h>

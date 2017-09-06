@@ -19,6 +19,7 @@
 #include <object/handle_owner.h>
 #include <object/handles.h>
 #include <object/process_dispatcher.h>
+#include <object/resources.h>
 #include <object/vm_object_dispatcher.h>
 
 #include <magenta/syscalls/pci.h>

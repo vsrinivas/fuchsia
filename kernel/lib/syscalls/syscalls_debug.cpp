@@ -19,6 +19,7 @@
 #include <lib/io.h>
 #include <object/handle_owner.h>
 #include <object/process_dispatcher.h>
+#include <object/resources.h>
 
 #include <platform/debug.h>
 

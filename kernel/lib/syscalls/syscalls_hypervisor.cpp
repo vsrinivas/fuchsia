@@ -11,6 +11,7 @@
 #include <object/handles.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
+#include <object/resources.h>
 #include <object/vcpu_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 

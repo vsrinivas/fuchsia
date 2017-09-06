@@ -23,6 +23,7 @@
 #include <object/interrupt_dispatcher.h>
 #include <object/interrupt_event_dispatcher.h>
 #include <object/process_dispatcher.h>
+#include <object/resources.h>
 #include <object/vm_object_dispatcher.h>
 
 #if ARCH_X86
