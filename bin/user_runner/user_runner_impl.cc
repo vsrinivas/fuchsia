@@ -43,6 +43,16 @@
 
 namespace modular {
 
+// Maxwell doesn't yet implement lifecycle or has a lifecycle method, so we just
+// let AppClient close the controller connection immediately. (The controller
+// connection is closed once te ServiceTerminate() call invokes its done
+// callback.)
+template <>
+void AppClient<maxwell::UserIntelligenceProviderFactory>::ServiceTerminate(
+    const std::function<void()>& done) {
+  done();
+}
+
 namespace {
 
 constexpr char kAppId[] = "modular_user_runner";
@@ -210,13 +220,10 @@ void UserRunnerImpl::Initialize(
         "--config=/system/data/maxwell/test_config.json");
   }
 
-  maxwell_ = std::make_unique<AppClientBase>(user_scope_->GetLauncher(),
-                                             std::move(maxwell_config));
+  maxwell_ = std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
+      user_scope_->GetLauncher(), std::move(maxwell_config));
 
-  maxwell::UserIntelligenceProviderFactoryPtr maxwell_factory;
-  app::ConnectToService(maxwell_->services(), maxwell_factory.NewRequest());
-
-  maxwell_factory->GetUserIntelligenceProvider(
+  maxwell_->primary_service()->GetUserIntelligenceProvider(
       maxwell_component_context_binding_->NewBinding(),
       std::move(story_provider), std::move(focus_provider_maxwell),
       std::move(visible_stories_provider),

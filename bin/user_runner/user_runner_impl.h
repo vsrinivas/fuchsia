@@ -111,7 +111,7 @@ class UserRunnerImpl : UserRunner, UserShellContext {
 
   auth::AccountPtr account_;
 
-  std::unique_ptr<AppClientBase> maxwell_;
+  std::unique_ptr<AppClient<maxwell::UserIntelligenceProviderFactory>> maxwell_;
   std::unique_ptr<AppClient<UserShell>> user_shell_;
 
   std::unique_ptr<StoryProviderImpl> story_provider_impl_;
