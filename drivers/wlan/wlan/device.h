@@ -15,10 +15,10 @@
 #include <magenta/compiler.h>
 #include <mx/channel.h>
 #include <mx/port.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/slab_allocator.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/slab_allocator.h>
+#include <fbl/unique_ptr.h>
 
 #include <mutex>
 #include <thread>
@@ -54,18 +54,18 @@ class Device : public WlanBaseDevice,
 
     // ddk::EthmacProtocol methods
     mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
-    mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
+    mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) __TA_EXCLUDES(lock_);
     void EthmacStop() __TA_EXCLUDES(lock_);
     void EthmacSend(uint32_t options, void* data, size_t length);
 
     // DeviceInterface methods
-    mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) override final;
-    mx_status_t SendEthernet(mxtl::unique_ptr<Packet> packet) override final;
-    mx_status_t SendWlan(mxtl::unique_ptr<Packet> packet) override final;
-    mx_status_t SendService(mxtl::unique_ptr<Packet> packet) override final;
+    mx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final;
+    mx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final;
+    mx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final;
+    mx_status_t SendService(fbl::unique_ptr<Packet> packet) override final;
     mx_status_t SetChannel(wlan_channel_t chan) override final;
     mx_status_t SetStatus(uint32_t status) override final;
-    mxtl::RefPtr<DeviceState> GetState() override final;
+    fbl::RefPtr<DeviceState> GetState() override final;
 
   private:
     enum class DevicePacket : uint64_t {
@@ -73,9 +73,9 @@ class Device : public WlanBaseDevice,
         kPacketQueued,
     };
 
-    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
+    fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer);
     template <typename T>
-    mxtl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
+    fbl::unique_ptr<Packet> PreparePacket(const void* data, size_t length, Packet::Peer peer,
                                            const T& ctrl_data) {
         auto packet = PreparePacket(data, length, peer);
         if (packet != nullptr) {
@@ -84,7 +84,7 @@ class Device : public WlanBaseDevice,
         return packet;
     }
 
-    mx_status_t QueuePacket(mxtl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
+    mx_status_t QueuePacket(fbl::unique_ptr<Packet> packet) __TA_EXCLUDES(packet_queue_lock_);
 
     void MainLoop();
     void ProcessChannelPacketLocked(const mx_port_packet_t& pkt) __TA_REQUIRES(lock_);
@@ -95,10 +95,10 @@ class Device : public WlanBaseDevice,
     void SetStatusLocked(uint32_t status);
 
     ddk::WlanmacProtocolProxy wlanmac_proxy_;
-    mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
+    fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_;
 
     ethmac_info_t ethmac_info_ = {};
-    mxtl::RefPtr<DeviceState> state_;
+    fbl::RefPtr<DeviceState> state_;
 
     std::mutex lock_;
     std::thread work_thread_;

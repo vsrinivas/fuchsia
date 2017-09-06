@@ -55,7 +55,7 @@ void Device::WlanmacStop() {
     wlanmac_proxy_.reset();
 }
 
-mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::printf("wlan::testing::Device::WlanmacStart()\n");
     std::lock_guard<std::mutex> lock(lock_);
     SetState(DEV_STATE_READABLE | DEV_STATE_WRITABLE);

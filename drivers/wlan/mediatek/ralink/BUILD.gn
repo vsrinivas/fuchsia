@@ -23,7 +23,7 @@ driver_module("ralink_driver") {
     "//drivers/wifi/common",
     "//magenta/system/ulib/ddktl",
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   libs = [

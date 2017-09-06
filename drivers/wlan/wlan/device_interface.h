@@ -8,9 +8,9 @@
 
 #include <ddk/protocol/wlan.h>
 #include <magenta/types.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <cstdint>
 #include <cstring>
@@ -59,7 +59,7 @@ inline bool operator!=(const uint8_t a[DeviceAddress::kSize], const DeviceAddres
 
 // DeviceState represents the common runtime state of a device needed for interacting with external
 // systems.
-class DeviceState : public mxtl::RefCounted<DeviceState> {
+class DeviceState : public fbl::RefCounted<DeviceState> {
   public:
     const DeviceAddress& address() const {
         return addr_;
@@ -98,16 +98,16 @@ class DeviceInterface {
   public:
     virtual ~DeviceInterface() {}
 
-    virtual mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) = 0;
+    virtual mx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) = 0;
 
-    virtual mx_status_t SendEthernet(mxtl::unique_ptr<Packet> packet) = 0;
-    virtual mx_status_t SendWlan(mxtl::unique_ptr<Packet> packet) = 0;
-    virtual mx_status_t SendService(mxtl::unique_ptr<Packet> packet) = 0;
+    virtual mx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) = 0;
+    virtual mx_status_t SendWlan(fbl::unique_ptr<Packet> packet) = 0;
+    virtual mx_status_t SendService(fbl::unique_ptr<Packet> packet) = 0;
 
     virtual mx_status_t SetChannel(wlan_channel_t chan) = 0;
     virtual mx_status_t SetStatus(uint32_t status) = 0;
 
-    virtual mxtl::RefPtr<DeviceState> GetState() = 0;
+    virtual fbl::RefPtr<DeviceState> GetState() = 0;
 };
 
 }  // namespace wlan

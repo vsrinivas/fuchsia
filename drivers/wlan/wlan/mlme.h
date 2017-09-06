@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/wlan.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace wlan {
 
@@ -53,9 +53,9 @@ class Mlme {
 
     DeviceInterface* const device_;
 
-    mxtl::unique_ptr<Scanner> scanner_;
+    fbl::unique_ptr<Scanner> scanner_;
     // TODO(tkilbourn): track other STAs
-    mxtl::unique_ptr<Station> sta_;
+    fbl::unique_ptr<Station> sta_;
 };
 
 }  // namespace wlan

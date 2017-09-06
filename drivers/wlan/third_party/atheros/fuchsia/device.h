@@ -20,7 +20,7 @@
 #include <ddktl/protocol/pci.h>
 #include <ddktl/protocol/wlan.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <cstdint>
 #include <mutex>
@@ -43,14 +43,14 @@ class Device : public BaseDevice,
 
     // ddk::WlanmacProtocol methods
     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
-    mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
     void WlanmacTx(uint32_t options, const void* data, size_t len);
     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
   private:
     ddk::PciProtocolProxy pci_;
-    mxtl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     uint8_t mac_addr_[ETH_MAC_SIZE] = {};
 

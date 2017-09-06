@@ -41,7 +41,7 @@ mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     return MX_OK;
 }
 
-mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     std::lock_guard<std::mutex> guard(lock_);
     if (wlanmac_proxy_ != nullptr) {
         return MX_ERR_ALREADY_BOUND;

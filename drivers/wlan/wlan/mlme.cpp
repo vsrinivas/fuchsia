@@ -62,7 +62,7 @@ Mlme::~Mlme() {}
 mx_status_t Mlme::Init() {
     debugfn();
 
-    mxtl::unique_ptr<Timer> timer;
+    fbl::unique_ptr<Timer> timer;
     ObjectId timer_id;
     timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
     timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
@@ -258,7 +258,7 @@ mx_status_t Mlme::HandleSvcPacket(const Packet* packet) {
             break;
         }
 
-        mxtl::unique_ptr<Timer> timer;
+        fbl::unique_ptr<Timer> timer;
         ObjectId timer_id;
         timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
         timer_id.set_target(to_enum_type(ObjectTarget::kStation));

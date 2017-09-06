@@ -22,7 +22,7 @@
 
 namespace wlan {
 
-Scanner::Scanner(DeviceInterface* device, mxtl::unique_ptr<Timer> timer)
+Scanner::Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
     MX_DEBUG_ASSERT(timer_.get());
 }
@@ -350,14 +350,14 @@ mx_status_t Scanner::SendProbeRequest() {
 
     // TODO(hahnr): better size management; for now reserve 128 bytes for Probe elements
     size_t probe_len = sizeof(MgmtFrameHeader) + sizeof(ProbeRequest) + 128;
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(probe_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), probe_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), probe_len));
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
     auto hdr = packet->mut_field<MgmtFrameHeader>(0);
@@ -422,12 +422,12 @@ mx_status_t Scanner::SendScanResponse() {
     }
 
     size_t buf_len = sizeof(ServiceHeader) + resp_->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::SCAN_confirm, resp_);
     if (status != MX_OK) {

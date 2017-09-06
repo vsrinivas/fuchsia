@@ -9,7 +9,7 @@
 #include <drivers/wifi/common/bitfield.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 #include <cstdint>
 
@@ -18,7 +18,7 @@ namespace wlan {
 static constexpr mx_duration_t TimeUnit = MX_USEC(1024);
 template <typename T>
 static inline constexpr mx_duration_t WLAN_TU(T n) {
-    static_assert(mxtl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
+    static_assert(fbl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
     return TimeUnit * n;
 }
 

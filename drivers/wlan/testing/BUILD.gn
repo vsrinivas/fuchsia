@@ -32,7 +32,7 @@ driver_module("wlan-testdev") {
   deps = [
     "//magenta/system/ulib/ddktl",
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   libs = [
@@ -48,6 +48,6 @@ executable("wlan-testutil") {
 
   deps = [
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 }

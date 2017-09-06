@@ -14,8 +14,8 @@
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <cstring>
 #include <gtest/gtest.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace wlan {
 namespace {
@@ -29,25 +29,25 @@ const uint8_t kBeacon[] = {
 struct MockDevice : public DeviceInterface {
   public:
     MockDevice() {
-        state = mxtl::AdoptRef(new DeviceState);
+        state = fbl::AdoptRef(new DeviceState);
     }
 
-    mx_status_t GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) override final {
+    mx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
         // Should not be used by Scanner at this time.
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mx_status_t SendEthernet(mxtl::unique_ptr<Packet> packet) override final {
+    mx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
         eth_queue.Enqueue(std::move(packet));
         return MX_OK;
     }
 
-    mx_status_t SendWlan(mxtl::unique_ptr<Packet> packet) override final {
+    mx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final {
         wlan_queue.Enqueue(std::move(packet));
         return MX_OK;
     }
 
-    mx_status_t SendService(mxtl::unique_ptr<Packet> packet) override final {
+    mx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
         svc_queue.Enqueue(std::move(packet));
         return MX_OK;
     }
@@ -62,11 +62,11 @@ struct MockDevice : public DeviceInterface {
         return MX_OK;
     }
 
-    mxtl::RefPtr<DeviceState> GetState() override final {
+    fbl::RefPtr<DeviceState> GetState() override final {
         return state;
     }
 
-    mxtl::RefPtr<DeviceState> state;
+    fbl::RefPtr<DeviceState> state;
     PacketQueue eth_queue;
     PacketQueue wlan_queue;
     PacketQueue svc_queue;
@@ -75,7 +75,7 @@ struct MockDevice : public DeviceInterface {
 class ScannerTest : public ::testing::Test {
   public:
     ScannerTest()
-      : scanner_(&mock_dev_, mxtl::unique_ptr<Timer>(new TestTimer(1u, &clock_))) {
+      : scanner_(&mock_dev_, fbl::unique_ptr<Timer>(new TestTimer(1u, &clock_))) {
         SetupMessages();
     }
 

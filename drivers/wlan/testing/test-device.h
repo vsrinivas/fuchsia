@@ -10,7 +10,7 @@
 #include <ddktl/protocol/wlan.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <mutex>
 
@@ -34,7 +34,7 @@ class Device : public TestBaseDevice,
 
     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
     void WlanmacStop();
-    mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacTx(uint32_t options, const void* data, size_t length);
     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
 
@@ -42,7 +42,7 @@ class Device : public TestBaseDevice,
     ddk::TestProtocolProxy test_proxy_;
 
     std::mutex lock_;
-    mxtl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 };
 
 }  // namespace testing

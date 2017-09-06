@@ -12,7 +12,7 @@
 #include <ddk/protocol/wlan.h>
 #include <drivers/wifi/common/moving_average.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace wlan {
 
@@ -21,7 +21,7 @@ class Timer;
 
 class Station {
   public:
-    Station(DeviceInterface* device, mxtl::unique_ptr<Timer> timer);
+    Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
 
     enum class PortState : bool {
       kBlocked = false,
@@ -96,7 +96,7 @@ class Station {
     uint16_t next_seq();
 
     DeviceInterface* device_;
-    mxtl::unique_ptr<Timer> timer_;
+    fbl::unique_ptr<Timer> timer_;
     BSSDescriptionPtr bss_;
     DeviceAddress address_;
     uint16_t last_seq_ = kMaxSequenceNumber;

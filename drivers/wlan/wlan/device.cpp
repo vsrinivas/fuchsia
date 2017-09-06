@@ -31,7 +31,7 @@ Device::Device(mx_device_t* device, wlanmac_protocol_t* wlanmac_proto)
     wlanmac_proxy_(wlanmac_proto),
     mlme_(this) {
     debugfn();
-    state_ = mxtl::AdoptRef(new DeviceState);
+    state_ = fbl::AdoptRef(new DeviceState);
 }
 
 Device::~Device() {
@@ -83,18 +83,18 @@ mx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
 }
 
-mxtl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length,
+fbl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length,
                                                Packet::Peer peer) {
     if (length > kLargeBufferSize) {
         return nullptr;
     }
 
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(length);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(length);
     if (buffer == nullptr) {
         return nullptr;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), length));
     packet->set_peer(peer);
     mx_status_t status = packet->CopyFrom(data, length, 0);
     if (status != MX_OK) {
@@ -104,7 +104,7 @@ mxtl::unique_ptr<Packet> Device::PreparePacket(const void* data, size_t length,
     return packet;
 }
 
-mx_status_t Device::QueuePacket(mxtl::unique_ptr<Packet> packet) {
+mx_status_t Device::QueuePacket(fbl::unique_ptr<Packet> packet) {
     if (packet == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
@@ -176,7 +176,7 @@ mx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     return MX_OK;
 }
 
-mx_status_t Device::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+mx_status_t Device::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     debugfn();
     MX_DEBUG_ASSERT(proxy != nullptr);
 
@@ -228,7 +228,7 @@ void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_r
     }
 }
 
-mx_status_t Device::GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) {
+mx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
     MX_DEBUG_ASSERT(timer != nullptr);
     MX_DEBUG_ASSERT(timer->get() == nullptr);
     mx::timer t;
@@ -246,14 +246,14 @@ mx_status_t Device::GetTimer(uint64_t id, mxtl::unique_ptr<Timer>* timer) {
     return MX_OK;
 }
 
-mx_status_t Device::SendEthernet(mxtl::unique_ptr<Packet> packet) {
+mx_status_t Device::SendEthernet(fbl::unique_ptr<Packet> packet) {
     if (ethmac_proxy_ != nullptr) {
         ethmac_proxy_->Recv(packet->mut_data(), packet->len(), 0u);
     }
     return MX_OK;
 }
 
-mx_status_t Device::SendWlan(mxtl::unique_ptr<Packet> packet) {
+mx_status_t Device::SendWlan(fbl::unique_ptr<Packet> packet) {
     wlanmac_proxy_.Tx(0u, packet->data(), packet->len());
     return MX_OK;
 }
@@ -265,7 +265,7 @@ mx_status_t Device::SendWlan(mxtl::unique_ptr<Packet> packet) {
 // This *should* be safe, since the worst case is that
 // the syscall fails, and we return an error.
 // TODO(tkilbourn): consider refactoring this so we don't have to abandon the safety analysis.
-mx_status_t Device::SendService(mxtl::unique_ptr<Packet> packet) __TA_NO_THREAD_SAFETY_ANALYSIS {
+mx_status_t Device::SendService(fbl::unique_ptr<Packet> packet) __TA_NO_THREAD_SAFETY_ANALYSIS {
     return channel_.write(0u, packet->data(), packet->len(), nullptr, 0);
 }
 
@@ -305,7 +305,7 @@ void Device::SetStatusLocked(uint32_t status) {
     }
 }
 
-mxtl::RefPtr<DeviceState> Device::GetState() {
+fbl::RefPtr<DeviceState> Device::GetState() {
     return state_;
 }
 
@@ -341,7 +341,7 @@ void Device::MainLoop() {
                 running = false;
                 continue;
             case to_enum_type(DevicePacket::kPacketQueued): {
-                mxtl::unique_ptr<Packet> packet;
+                fbl::unique_ptr<Packet> packet;
                 {
                     std::lock_guard<std::mutex> lock(packet_queue_lock_);
                     packet = packet_queue_.Dequeue();
@@ -410,7 +410,7 @@ void Device::ProcessChannelPacketLocked(const mx_port_packet_t& pkt) {
         }
         debugf("read %u bytes from channel_\n", read);
 
-        auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
+        auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), read));
         packet->set_peer(Packet::Peer::kService);
         {
             std::lock_guard<std::mutex> lock(packet_queue_lock_);

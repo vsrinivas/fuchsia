@@ -19,7 +19,7 @@ namespace wlan {
 static constexpr mx_duration_t kAssocTimeoutTu = 20;
 static constexpr mx_duration_t kSignalReportTimeoutTu = 10;
 
-Station::Station(DeviceInterface* device, mxtl::unique_ptr<Timer> timer)
+Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
   : device_(device), timer_(std::move(timer)) {
     (void)assoc_timeout_;
 }
@@ -104,14 +104,14 @@ mx_status_t Station::Authenticate(AuthenticateRequestPtr req) {
 
     // TODO(tkilbourn): better size management
     size_t auth_len = sizeof(MgmtFrameHeader) + sizeof(Authentication);
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(auth_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), auth_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), auth_len));
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
     auto hdr = packet->mut_field<MgmtFrameHeader>(0);
@@ -173,14 +173,14 @@ mx_status_t Station::Associate(AssociateRequestPtr req) {
 
     // TODO(tkilbourn): better size management; for now reserve 128 bytes for Association elements
     size_t assoc_len = sizeof(MgmtFrameHeader) + sizeof(AssociationRequest) + 128;
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(assoc_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
     const DeviceAddress& mymac = device_->GetState()->address();
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), assoc_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), assoc_len));
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
     auto hdr = packet->mut_field<MgmtFrameHeader>(0);
@@ -542,7 +542,7 @@ mx_status_t Station::HandleData(const Packet* packet) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto eth_packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
+    auto eth_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
     // no need to clear the packet since every byte is overwritten
     eth_packet->set_peer(Packet::Peer::kEthernet);
     auto eth = eth_packet->mut_field<EthernetII>(0);
@@ -577,7 +577,7 @@ mx_status_t Station::HandleEth(const Packet* packet) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto wlan_packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
+    auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), wlan_len));
     // no need to clear the whole packet; we memset the headers instead and copy over all bytes in
     // the payload
     wlan_packet->set_peer(Packet::Peer::kWlan);
@@ -653,12 +653,12 @@ mx_status_t Station::SendJoinResponse() {
                         JoinResultCodes::SUCCESS;
 
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::JOIN_confirm, resp);
     if (status != MX_OK) {
@@ -680,12 +680,12 @@ mx_status_t Station::SendAuthResponse(AuthenticateResultCodes code) {
     resp->result_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::AUTHENTICATE_confirm, resp);
     if (status != MX_OK) {
@@ -705,12 +705,12 @@ mx_status_t Station::SendDeauthIndication(uint16_t code) {
     ind->reason_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::DEAUTHENTICATE_indication, ind);
     if (status != MX_OK) {
@@ -729,12 +729,12 @@ mx_status_t Station::SendAssocResponse(AssociateResultCodes code) {
     resp->association_id = aid_;
 
     size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::ASSOCIATE_confirm, resp);
     if (status != MX_OK) {
@@ -754,12 +754,12 @@ mx_status_t Station::SendDisassociateIndication(uint16_t code) {
     ind->reason_code = code;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::DISASSOCIATE_indication, ind);
     if (status != MX_OK) {
@@ -781,12 +781,12 @@ mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
     ind->rssi = rssi;
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::SIGNAL_REPORT_indication, ind);
     if (status != MX_OK) {
@@ -824,12 +824,12 @@ mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t 
     std::memcpy(ind->dst_addr.data(), dst, DeviceAddress::kSize);
 
     size_t buf_len = sizeof(ServiceHeader) + ind->GetSerializedSize();
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
 
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     mx_status_t status = SerializeServiceMsg(packet.get(), Method::EAPOL_indication, ind);
     if (status != MX_OK) {
@@ -878,11 +878,11 @@ mx_status_t Station::SetPowerManagementMode(bool ps_mode) {
 
     const DeviceAddress& mymac = device_->GetState()->address();
     size_t len = sizeof(DataFrameHeader);
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
     auto hdr = packet->mut_field<DataFrameHeader>(0);
@@ -915,11 +915,11 @@ mx_status_t Station::SendPsPoll() {
 
     const DeviceAddress& mymac = device_->GetState()->address();
     size_t len = sizeof(PsPollFrame);
-    mxtl::unique_ptr<Buffer> buffer = GetBuffer(len);
+    fbl::unique_ptr<Buffer> buffer = GetBuffer(len);
     if (buffer == nullptr) {
         return MX_ERR_NO_RESOURCES;
     }
-    auto packet = mxtl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
+    auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), len));
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
     auto frame = packet->mut_field<PsPollFrame>(0);

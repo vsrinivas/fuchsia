@@ -4,7 +4,7 @@
 
 #include "mac_frame.h"
 
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 namespace wlan {
 
@@ -85,13 +85,13 @@ bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, El
 
 bool ProbeRequest::Validate(size_t len) {
     ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = mxtl::count_of(kValidProbeRequestIds);
+    constexpr size_t kValidIdSize = fbl::count_of(kValidProbeRequestIds);
     return ValidateElements(len, kValidProbeRequestIds, kValidIdSize, &reader);
 }
 
 bool AssociationRequest::Validate(size_t len) {
     ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = mxtl::count_of(kValidAssociationRequestIds);
+    constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationRequestIds);
     return ValidateElements(len, kValidAssociationRequestIds, kValidIdSize, &reader);
 }
 

@@ -7,7 +7,7 @@
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 #include <drivers/wifi/common/bitfield.h>
 
@@ -48,7 +48,7 @@ class ElementReader {
 
     template <typename E>
     const E* read() {
-        static_assert(mxtl::is_base_of<Element<E, E::element_id()>, E>::value,
+        static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
                       "Only Elements may be retrieved.");
         if (!is_valid()) return nullptr;
         if (offset_ + sizeof(E) > len_) return nullptr;
@@ -74,7 +74,7 @@ class ElementWriter {
 
     template <typename E, typename... Args>
     bool write(Args&&... args) {
-        static_assert(mxtl::is_base_of<Element<E, E::element_id()>, E>::value,
+        static_assert(fbl::is_base_of<Element<E, E::element_id()>, E>::value,
                       "Only Elements may be inserted.");
         if (offset_ >= len_) return false;
 

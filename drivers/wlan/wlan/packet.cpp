@@ -11,7 +11,7 @@
 
 namespace wlan {
 
-Packet::Packet(mxtl::unique_ptr<Buffer> buffer, size_t len)
+Packet::Packet(fbl::unique_ptr<Buffer> buffer, size_t len)
   : buffer_(std::move(buffer)), len_(len) {
     MX_ASSERT(buffer_.get());
     MX_DEBUG_ASSERT(len <= buffer_->capacity());
@@ -26,8 +26,8 @@ mx_status_t Packet::CopyFrom(const void* src, size_t len, size_t offset) {
     return MX_OK;
 }
 
-mxtl::unique_ptr<Buffer> GetBuffer(size_t len) {
-    mxtl::unique_ptr<Buffer> buffer;
+fbl::unique_ptr<Buffer> GetBuffer(size_t len) {
+    fbl::unique_ptr<Buffer> buffer;
     if (len > kSmallBufferSize) {
         buffer = LargeBufferAllocator::New();
     } else {

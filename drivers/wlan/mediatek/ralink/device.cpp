@@ -11,8 +11,8 @@
 #include <magenta/assert.h>
 #include <magenta/hw/usb.h>
 #include <mx/vmo.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_call.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 
 #include <endian.h>
 #include <inttypes.h>
@@ -56,7 +56,7 @@ constexpr T abs(T t) {
 
 uint16_t extract_tx_power(int hw_index, uint16_t txpower) {
     uint16_t val = (hw_index % 2) ? (txpower >> 8) & 0xff : txpower & 0xff;
-    return mxtl::clamp(val, ralink::kMinTxPower, ralink::kMaxTxPower);
+    return fbl::clamp(val, ralink::kMinTxPower, ralink::kMaxTxPower);
 }
 }  // namespace
 
@@ -2088,7 +2088,7 @@ static void fill_rx_info(wlan_rx_info_t* info, Rxwi1 rxwi1, Rxwi2 rxwi2, Rxwi3 r
     if (rxwi1.phy_mode() == PhyMode::kLegacyCck && mcs > 8) {
         mcs -= 8;
     }
-    if (rxwi1.phy_mode() < mxtl::count_of(kDataRates) && mcs < mxtl::count_of(kDataRates[0])) {
+    if (rxwi1.phy_mode() < fbl::count_of(kDataRates) && mcs < fbl::count_of(kDataRates[0])) {
         uint8_t rate = kDataRates[rxwi1.phy_mode()][mcs];
         if (rate > 0) {
             info->flags |= WLAN_RX_INFO_DATA_RATE_PRESENT;
@@ -2134,7 +2134,7 @@ void Device::HandleRxComplete(iotxn_t* request) {
         usb_reset_endpoint(&usb_, rx_endpt_);
     }
     std::lock_guard<std::mutex> guard(lock_);
-    auto ac = mxtl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
+    auto ac = fbl::MakeAutoCall([&]() { iotxn_queue(parent(), request); });
 
     if (request->status == MX_OK) {
         // Handle completed rx
@@ -2201,7 +2201,7 @@ mx_status_t Device::WlanmacQuery(uint32_t options, ethmac_info_t* info) {
     return MX_OK;
 }
 
-mx_status_t Device::WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+mx_status_t Device::WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 

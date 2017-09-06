@@ -7,7 +7,7 @@
 #include <apps/wlan/services/wlan_mlme.fidl-common.h>
 #include <ddk/protocol/wlan.h>
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <unordered_map>
 
@@ -21,7 +21,7 @@ class Timer;
 
 class Scanner {
   public:
-    Scanner(DeviceInterface* device, mxtl::unique_ptr<Timer> timer);
+    Scanner(DeviceInterface* device, fbl::unique_ptr<Timer> timer);
 
     enum class Type {
         kPassive,
@@ -48,7 +48,7 @@ class Scanner {
     mx_status_t SendProbeRequest();
 
     DeviceInterface* device_;
-    mxtl::unique_ptr<Timer> timer_;
+    fbl::unique_ptr<Timer> timer_;
     ScanRequestPtr req_ = nullptr;
     ScanResponsePtr resp_ = nullptr;
 

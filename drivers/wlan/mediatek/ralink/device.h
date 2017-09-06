@@ -11,7 +11,7 @@
 #include <driver/usb.h>
 #include <magenta/compiler.h>
 #include <mx/time.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <array>
 #include <cstddef>
@@ -42,7 +42,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
 
     // ddk::WlanmacProtocol methods
     mx_status_t WlanmacQuery(uint32_t options, ethmac_info_t* info);
-    mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
+    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy);
     void WlanmacStop();
     void WlanmacTx(uint32_t options, const void* data, size_t len);
     mx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
@@ -124,7 +124,7 @@ class Device : public ddk::Device<Device, ddk::Unbindable>, public ddk::WlanmacP
     static void WriteIotxnComplete(iotxn_t* request, void* cookie);
 
     usb_protocol_t usb_;
-    mxtl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<ddk::WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     uint8_t rx_endpt_ = 0;
     std::vector<uint8_t> tx_endpts_;

@@ -7,9 +7,9 @@
 #include "wlan.h"
 
 #include <magenta/types.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/slab_allocator.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/slab_allocator.h>
+#include <fbl/unique_ptr.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -57,15 +57,15 @@ template <size_t NumBuffers, size_t BufferSize>
 class SlabBuffer;
 template <size_t NumBuffers, size_t BufferSize>
 using SlabBufferTraits =
-    mxtl::StaticSlabAllocatorTraits<mxtl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
+    fbl::StaticSlabAllocatorTraits<fbl::unique_ptr<SlabBuffer<NumBuffers, BufferSize>>,
         sizeof(internal::FixedBuffer<BufferSize>) * NumBuffers + kSlabOverhead>;
 
-// A SlabBuffer is an implementation of a Buffer that comes from a mxtl::SlabAllocator. The size of
+// A SlabBuffer is an implementation of a Buffer that comes from a fbl::SlabAllocator. The size of
 // the internal::FixedBuffer and the number of buffers is part of the typename of the SlabAllocator,
 // so the SlabBuffer itself is also templated on these parameters.
 template <size_t NumBuffers, size_t BufferSize>
 class SlabBuffer final : public internal::FixedBuffer<BufferSize>,
-                         public mxtl::SlabAllocated<SlabBufferTraits<NumBuffers, BufferSize>> {};
+                         public fbl::SlabAllocated<SlabBufferTraits<NumBuffers, BufferSize>> {};
 
 // Large buffers can hold the largest 802.11 MSDU or standard Ethernet MTU.
 constexpr size_t kLargeBuffers = 32;
@@ -77,15 +77,15 @@ constexpr size_t kSmallBufferSize = 64;
 
 using LargeBufferTraits = SlabBufferTraits<kLargeBuffers, kLargeBufferSize>;
 using SmallBufferTraits = SlabBufferTraits<kSmallBuffers, kSmallBufferSize>;
-using LargeBufferAllocator = mxtl::SlabAllocator<LargeBufferTraits>;
-using SmallBufferAllocator = mxtl::SlabAllocator<SmallBufferTraits>;
+using LargeBufferAllocator = fbl::SlabAllocator<LargeBufferTraits>;
+using SmallBufferAllocator = fbl::SlabAllocator<SmallBufferTraits>;
 
 // Gets a (slab allocated) Buffer with at least |len| bytes capacity.
-mxtl::unique_ptr<Buffer> GetBuffer(size_t len);
+fbl::unique_ptr<Buffer> GetBuffer(size_t len);
 
 // A Packet wraps a buffer with information about the recipient/sender and length of the data
 // within the buffer.
-class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
+class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
   public:
     enum class Peer {
         kUnknown,
@@ -95,7 +95,7 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
         kService,
     };
 
-    Packet(mxtl::unique_ptr<Buffer> buffer, size_t len);
+    Packet(fbl::unique_ptr<Buffer> buffer, size_t len);
     size_t Capacity() const { return buffer_->capacity(); }
     void clear() {
         buffer_->clear(len_);
@@ -133,7 +133,7 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
 
     template <typename T>
     const T* ctrl_data() const {
-        static_assert(mxtl::is_standard_layout<T>::value, "Control data must have standard layout");
+        static_assert(fbl::is_standard_layout<T>::value, "Control data must have standard layout");
         static_assert(kCtrlSize >= sizeof(T),
                       "Control data type too large for Buffer ctrl_data field");
         return FromBytes<T>(buffer_->ctrl(), ctrl_len_);
@@ -141,7 +141,7 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
 
     template <typename T>
     void CopyCtrlFrom(const T& t) {
-        static_assert(mxtl::is_standard_layout<T>::value, "Control data must have standard layout");
+        static_assert(fbl::is_standard_layout<T>::value, "Control data must have standard layout");
         static_assert(kCtrlSize >= sizeof(T),
                       "Control data type too large for Buffer ctrl_data field");
         std::memcpy(buffer_->ctrl(), &t, sizeof(T));
@@ -151,7 +151,7 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
     mx_status_t CopyFrom(const void* src, size_t len, size_t offset);
 
   private:
-    mxtl::unique_ptr<Buffer> buffer_;
+    fbl::unique_ptr<Buffer> buffer_;
     size_t len_ = 0;
     size_t ctrl_len_ = 0;
     Peer peer_ = Peer::kUnknown;
@@ -159,7 +159,7 @@ class Packet : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Packet>> {
 
 class PacketQueue {
   public:
-    using PacketPtr = mxtl::unique_ptr<Packet>;
+    using PacketPtr = fbl::unique_ptr<Packet>;
 
     bool is_empty() const { return queue_.is_empty(); }
     size_t size() const { return size_; }
@@ -186,7 +186,7 @@ class PacketQueue {
     }
 
   private:
-    mxtl::DoublyLinkedList<PacketPtr> queue_;
+    fbl::DoublyLinkedList<PacketPtr> queue_;
     size_t size_ = 0;
 };
 
