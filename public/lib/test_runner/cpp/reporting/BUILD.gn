@@ -14,7 +14,6 @@ source_set("reporting") {
 
   deps = [
     "//apps/test_runner/services:test_runner_sync",
-    "//apps/tracing/lib/trace:provider",
   ]
 
   public_deps = [
