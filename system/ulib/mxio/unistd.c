@@ -306,7 +306,7 @@ mx_status_t __mxio_open_at(mxio_t** io, int dirfd, const char* path, int flags, 
         return MX_ERR_INVALID_ARGS;
     }
     if (path[0] == 0) {
-        return MX_ERR_INVALID_ARGS;
+        return MX_ERR_NOT_FOUND;
     }
     mxio_t* iodir = mxio_iodir(&path, dirfd);
     if (iodir == NULL) {
