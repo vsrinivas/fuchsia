@@ -449,7 +449,7 @@ bool TraceReader::ReadArguments(Chunk& record,
             break;
         }
         case ArgumentType::kPointer: {
-            uintptr_t value;
+            uint64_t value;
             if (!arg.ReadUint64(&value)) {
                 ReportError("Failed to read pointer argument value");
                 return false;

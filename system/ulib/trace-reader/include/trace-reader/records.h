@@ -89,7 +89,7 @@ public:
         return ArgumentValue(mxtl::move(value));
     }
 
-    static ArgumentValue MakePointer(uintptr_t value) {
+    static ArgumentValue MakePointer(uint64_t value) {
         return ArgumentValue(PointerTag(), value);
     }
 
@@ -139,7 +139,7 @@ public:
         return string_;
     }
 
-    uintptr_t GetPointer() const {
+    uint64_t GetPointer() const {
         MX_DEBUG_ASSERT(type_ == ArgumentType::kPointer);
         return pointer_;
     }
@@ -178,7 +178,7 @@ private:
         new (&string_) mxtl::String(mxtl::move(string));
     }
 
-    explicit ArgumentValue(PointerTag, uintptr_t pointer)
+    explicit ArgumentValue(PointerTag, uint64_t pointer)
         : type_(ArgumentType::kPointer), pointer_(pointer) {}
 
     explicit ArgumentValue(KoidTag, mx_koid_t koid)
@@ -195,7 +195,7 @@ private:
         uint64_t uint64_;
         double double_;
         mxtl::String string_;
-        uintptr_t pointer_;
+        uint64_t pointer_;
         mx_koid_t koid_;
     };
 
