@@ -9,7 +9,9 @@
 #include <mxtl/function.h>
 #include <mxtl/intrusive_hash_table.h>
 #include <mxtl/macros.h>
+#include <mxtl/string.h>
 #include <mxtl/string_piece.h>
+#include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 
 namespace trace {

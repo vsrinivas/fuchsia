@@ -14,6 +14,7 @@
 #include <mxtl/macros.h>
 #include <mxtl/new.h>
 #include <mxtl/string.h>
+#include <mxtl/type_support.h>
 #include <mxtl/vector.h>
 #include <trace-engine/types.h>
 

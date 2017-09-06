@@ -320,8 +320,6 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <mxtl/type_support.h>
-
 namespace trace {
 
 // Enumerates all known record types.

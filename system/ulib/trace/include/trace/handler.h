@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 //
-// Helper for implementing trace handlers in C++.
-// See <trace-engine/handler.h> for details and documentation.
+// Trace handlers manage the configuration, lifecycle, and external communication
+// of the trace engine.
+//
+// See <trace-engine/handler.h> for the C API and more detailed documentation.
 //
 
 #pragma once

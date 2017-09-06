@@ -3,18 +3,22 @@
 // found in the LICENSE file.
 
 //
-// Helper for implementing trace observers in C++.
+// Trace observers allow components to observe when tracing is starting or
+// stopping so they can prepare themselves to capture data accordingly.
+//
+// See <trace-engine/instrumentation.h> for the C API and more detailed
+// documentation.
 //
 
 #pragma once
 
 #include <trace-engine/instrumentation.h>
 
+#ifdef __cplusplus
+
 #include <async/wait.h>
 #include <mx/event.h>
 #include <mxtl/function.h>
-
-#ifdef __cplusplus
 
 namespace trace {
 
