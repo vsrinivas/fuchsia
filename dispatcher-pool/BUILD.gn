@@ -8,6 +8,7 @@ shared_library("audio-dispatcher-pool") {
     "dispatcher-event-source.h",
     "dispatcher-execution-domain.h",
     "dispatcher-thread-pool.h",
+    "dispatcher-timer.h",
   ]
 
   sources = [
@@ -16,6 +17,7 @@ shared_library("audio-dispatcher-pool") {
     "dispatcher-event-source.cpp",
     "dispatcher-execution-domain.cpp",
     "dispatcher-thread-pool.cpp",
+    "dispatcher-timer.cpp",
   ]
 
   deps = [
