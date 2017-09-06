@@ -10,6 +10,7 @@
 #include <arch/ops.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
@@ -20,17 +21,20 @@
 #include <string.h>
 #include <sys/types.h>
 
-const size_t BUFSIZE = (1024 * 1024);
-const size_t ITER = 1024;
+const size_t BUFSIZE = (8 * 1024 * 1024);
+const size_t ITER = (1UL * 1024 * 1024 * 1024 / BUFSIZE); // enough iterations to have to copy/set 1GB of memory
 
-__NO_INLINE static void bench_set_overhead(void) {
+__NO_INLINE static void bench_set_overhead() {
     uint32_t* buf = (uint32_t*)malloc(BUFSIZE);
 
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
     uint64_t count = arch_cycle_count();
     for (size_t i = 0; i < ITER; i++) {
         __asm__ volatile("");
     }
     count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     printf("took %" PRIu64 " cycles overhead to loop %u times\n",
            count, ITER);
@@ -38,14 +42,17 @@ __NO_INLINE static void bench_set_overhead(void) {
     free(buf);
 }
 
-__NO_INLINE static void bench_memset(void) {
+__NO_INLINE static void bench_memset() {
     uint8_t* buf = (uint8_t*)memalign(PAGE_SIZE, BUFSIZE);
 
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
     uint64_t count = arch_cycle_count();
     for (size_t i = 0; i < ITER; i++) {
         memset(buf, 0, BUFSIZE);
     }
     count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
     printf("took %" PRIu64 " cycles to memset a buffer of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
@@ -54,9 +61,11 @@ __NO_INLINE static void bench_memset(void) {
     free(buf);
 }
 
-__NO_INLINE static void bench_memset_per_page(void) {
+__NO_INLINE static void bench_memset_per_page() {
     uint8_t* buf = (uint8_t*)memalign(PAGE_SIZE, BUFSIZE);
 
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
     uint64_t count = arch_cycle_count();
     for (size_t i = 0; i < ITER; i++) {
         for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
@@ -64,6 +73,7 @@ __NO_INLINE static void bench_memset_per_page(void) {
         }
     }
     count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
     printf("took %" PRIu64 " cycles to per-page memset a buffer of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
@@ -72,9 +82,11 @@ __NO_INLINE static void bench_memset_per_page(void) {
     free(buf);
 }
 
-__NO_INLINE static void bench_zero_page(void) {
+__NO_INLINE static void bench_zero_page() {
     uint8_t* buf = (uint8_t*)memalign(PAGE_SIZE, BUFSIZE);
 
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
     uint64_t count = arch_cycle_count();
     for (size_t i = 0; i < ITER; i++) {
         for (size_t j = 0; j < BUFSIZE; j += PAGE_SIZE) {
@@ -82,6 +94,7 @@ __NO_INLINE static void bench_zero_page(void) {
         }
     }
     count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
     printf("took %" PRIu64 " cycles to arch_zero_page a buffer of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
@@ -90,33 +103,33 @@ __NO_INLINE static void bench_zero_page(void) {
     free(buf);
 }
 
-#define bench_cset(type)                                                                                                                  \
-    __NO_INLINE static void bench_cset_##type(void) {                                                                                     \
-        type* buf = (type*)malloc(BUFSIZE);                                                                                               \
-                                                                                                                                          \
-        uint64_t count = arch_cycle_count();                                                                                              \
-        for (size_t i = 0; i < ITER; i++) {                                                                                               \
-            for (size_t j = 0; j < BUFSIZE / sizeof(*buf); j++) {                                                                         \
-                buf[j] = 0;                                                                                                               \
-            }                                                                                                                             \
-        }                                                                                                                                 \
-        count = arch_cycle_count() - count;                                                                                               \
-                                                                                                                                          \
-        uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;                                                                        \
-        printf("took %" PRIu64 " cycles to clear a buffer using wordsize %d of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n", \
-               count, sizeof(*buf), BUFSIZE, ITER, BUFSIZE* ITER, bytes_cycle / 1000, bytes_cycle % 1000);                                \
-                                                                                                                                          \
-        free(buf);                                                                                                                        \
+template <typename T>
+__NO_INLINE static void bench_cset() {
+    T* buf = (T*)malloc(BUFSIZE);
+
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
+    uint64_t count = arch_cycle_count();
+    for (size_t i = 0; i < ITER; i++) {
+        for (size_t j = 0; j < BUFSIZE / sizeof(T); j++) {
+            buf[j] = 0;
+        }
     }
+    count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
-bench_cset(uint8_t)
-    bench_cset(uint16_t)
-        bench_cset(uint32_t)
-            bench_cset(uint64_t)
+    uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
+    printf("took %" PRIu64 " cycles to clear a buffer using wordsize %d of size %zu %d times (%zu bytes), %llu.%03llu bytes/cycle\n",
+           count, sizeof(*buf), BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
 
-                __NO_INLINE static void bench_cset_wide(void) {
+    free(buf);
+}
+
+__NO_INLINE static void bench_cset_wide() {
     uint32_t* buf = (uint32_t*)malloc(BUFSIZE);
 
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
     uint64_t count = arch_cycle_count();
     for (size_t i = 0; i < ITER; i++) {
         for (size_t j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
@@ -131,6 +144,7 @@ bench_cset(uint8_t)
         }
     }
     count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
     printf("took %" PRIu64 " cycles to clear a buffer of size %zu %d times 8 words at a time (%zu bytes), %llu.%03llu bytes/cycle\n",
@@ -139,14 +153,17 @@ bench_cset(uint8_t)
     free(buf);
 }
 
-__NO_INLINE static void bench_memcpy(void) {
+__NO_INLINE static void bench_memcpy() {
     uint8_t* buf = (uint8_t*)calloc(1, BUFSIZE);
 
+    spin_lock_saved_state_t state;
+    arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
     uint64_t count = arch_cycle_count();
     for (size_t i = 0; i < ITER; i++) {
         memcpy(buf, buf + BUFSIZE / 2, BUFSIZE / 2);
     }
     count = arch_cycle_count() - count;
+    arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
     uint64_t bytes_cycle = (BUFSIZE / 2 * ITER * 1000ULL) / count;
     printf("took %" PRIu64 " cycles to memcpy a buffer of size %zu %d times (%zu source bytes), %llu.%03llu source bytes/cycle\n",
@@ -155,7 +172,7 @@ __NO_INLINE static void bench_memcpy(void) {
     free(buf);
 }
 
-__NO_INLINE static void bench_spinlock(void) {
+__NO_INLINE static void bench_spinlock() {
     spin_lock_saved_state_t state;
     spin_lock_saved_state_t state2;
     spin_lock_t lock;
@@ -203,7 +220,7 @@ __NO_INLINE static void bench_spinlock(void) {
 #undef COUNT
 }
 
-__NO_INLINE static void bench_mutex(void) {
+__NO_INLINE static void bench_mutex() {
     mutex_t m;
     mutex_init(&m);
 
@@ -218,7 +235,7 @@ __NO_INLINE static void bench_mutex(void) {
     printf("%" PRIu64 " cycles to acquire/release uncontended mutex %u times (%" PRIu64 " cycles per)\n", c, count, c / count);
 }
 
-void benchmarks(void) {
+void benchmarks() {
     bench_set_overhead();
     bench_memcpy();
     bench_memset();
@@ -226,10 +243,10 @@ void benchmarks(void) {
     bench_memset_per_page();
     bench_zero_page();
 
-    bench_cset_uint8_t();
-    bench_cset_uint16_t();
-    bench_cset_uint32_t();
-    bench_cset_uint64_t();
+    bench_cset<uint8_t>();
+    bench_cset<uint16_t>();
+    bench_cset<uint32_t>();
+    bench_cset<uint64_t>();
     bench_cset_wide();
 
     bench_spinlock();

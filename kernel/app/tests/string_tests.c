@@ -19,8 +19,8 @@ static uint8_t* dst;
 static uint8_t* src2;
 static uint8_t* dst2;
 
-#define BUFFER_SIZE (2 * 1024 * 1024)
-#define ITERATIONS (256 * 1024 * 1024 / BUFFER_SIZE) // enough iterations to have to copy/set 256MB of memory
+#define BUFFER_SIZE (8 * 1024 * 1024)
+#define ITERATIONS (1024 * 1024 * 1024 / BUFFER_SIZE) // enough iterations to have to copy/set 1GB of memory
 
 #if 1
 static inline void* mymemcpy(void* dst, const void* src, size_t len) {
@@ -151,16 +151,19 @@ static void bench_memcpy(void) {
     for (srcalign = 0; srcalign < 64;) {
         for (dstalign = 0; dstalign < 64;) {
 
+            spin_lock_saved_state_t state;
+            arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
             null = bench_memcpy_routine(&null_memcpy, srcalign, dstalign) / (1000 * 1000);
             c = bench_memcpy_routine(&c_memmove, srcalign, dstalign) / (1000 * 1000);
             libc = bench_memcpy_routine(&memcpy, srcalign, dstalign) / (1000 * 1000);
             mine = bench_memcpy_routine(&mymemcpy, srcalign, dstalign) / (1000 * 1000);
+            arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
             printf("srcalign %zu, dstalign %zu: ", srcalign, dstalign);
             printf("   null memcpy %" PRIu64 " msecs\n", null);
-            printf("c memcpy %" PRIu64 " msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
-            printf("libc memcpy %" PRIu64 " msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
-            printf("my memcpy %" PRIu64 " msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
+            printf("c %" PRIu64 " msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
+            printf("libc %" PRIu64 " msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
+            printf("my %" PRIu64 " msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
             printf("\n");
 
             if (dstalign < 8)
@@ -239,14 +242,17 @@ static void bench_memset(void) {
 
     for (dstalign = 0; dstalign < 64; dstalign++) {
 
+        spin_lock_saved_state_t state;
+        arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
         c = bench_memset_routine(&c_memset, dstalign, BUFFER_SIZE) / (1000 * 1000);
         libc = bench_memset_routine(&memset, dstalign, BUFFER_SIZE) / (1000 * 1000);
         mine = bench_memset_routine(&mymemset, dstalign, BUFFER_SIZE) / (1000 * 1000);
+        arch_interrupt_restore(state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
 
         printf("dstalign %zu: ", dstalign);
-        printf("c memset %" PRIu64 " msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
-        printf("libc memset %" PRIu64 " msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
-        printf("my memset %" PRIu64 " msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
+        printf("c %" PRIu64 " msecs, %llu bytes/sec; ", c, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / c);
+        printf("libc %" PRIu64 " msecs, %llu bytes/sec; ", libc, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / libc);
+        printf("my %" PRIu64 " msecs, %llu bytes/sec; ", mine, (uint64_t)BUFFER_SIZE * ITERATIONS * 1000ULL / mine);
         printf("\n");
     }
 }
