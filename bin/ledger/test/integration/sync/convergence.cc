@@ -357,6 +357,17 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
   // converged. There is no need for additional tests.
   EXPECT_TRUE(RunLoopUntil(until, ftl::TimeDelta::FromSeconds(60)));
+  int num_changes = 0;
+  for (int i = 0; i < num_ledgers_; i++) {
+    num_changes += watchers[i]->changes;
+  }
+  EXPECT_GE(num_changes, 2 * num_ledgers_ - 1);
+
+  // Don't check whether all upload/download states are IDLE: maybe they were in
+  // some intermediate state of sync and they are not any more. This should not
+  // cause the test to fail. See also LE-262.
+
+  EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
 }
 
 // Verify that the Ledger converges for a non-associative, non-commutative (but
@@ -429,6 +440,17 @@ TEST_P(ConvergenceTest, NLedgersConvergeNonAssociativeCustom) {
   // If |RunLoopUntil| returns true, the condition is met, thus the ledgers have
   // converged. There is no need for additional tests.
   EXPECT_TRUE(RunLoopUntil(until, ftl::TimeDelta::FromSeconds(60)));
+  int num_changes = 0;
+  for (int i = 0; i < num_ledgers_; i++) {
+    num_changes += watchers[i]->changes;
+  }
+  EXPECT_GE(num_changes, 2 * num_ledgers_ - 1);
+
+  // Don't check whether all upload/download states are IDLE: maybe they were in
+  // some intermediate state of sync and they are not any more. This should not
+  // cause the test to fail. See also LE-262.
+
+  EXPECT_TRUE(AreValuesIdentical(watchers, "value"));
 }
 
 INSTANTIATE_TEST_CASE_P(ManyLedgersConvergenceTest,
