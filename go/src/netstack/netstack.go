@@ -11,10 +11,13 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"netstack/deviceid"
 	"netstack/eth"
 	"netstack/netiface"
+
+	nsfidl "garnet/public/lib/netstack/fidl/netstack"
 
 	"github.com/google/netstack/dhcp"
 	"github.com/google/netstack/tcpip"
@@ -48,6 +51,8 @@ type ifState struct {
 
 	// guarded by ns.mu
 	nic *netiface.NIC
+
+	Stats nsfidl.NetInterfaceStats
 }
 
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
@@ -167,6 +172,10 @@ func (ns *netstack) addLoopback() error {
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    nic,
+
+		Stats: nsfidl.NetInterfaceStats{
+			UpSince: time.Now().Unix(),
+		},
 	}
 
 	ns.mu.Lock()
@@ -204,6 +213,10 @@ func (ns *netstack) addEth(path string) error {
 		ctx:    ctx,
 		cancel: cancel,
 		nic:    &netiface.NIC{},
+
+		Stats: nsfidl.NetInterfaceStats{
+			UpSince: time.Now().Unix(),
+		},
 	}
 
 	client, err := eth.NewClient("netstack", path, ns.arena, ifs.stateChange)

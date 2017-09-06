@@ -65,16 +65,16 @@ type Client struct {
 	txDepth int
 	rxDepth int
 
-	mu         sync.Mutex
-	state      State
-	stateFunc  func(State)
-	arena      *Arena
-	tmpbuf     []bufferEntry // used to fill rx and drain tx
-	recvbuf    []bufferEntry // packets received
-	sendbuf    []bufferEntry // packets ready to send
+	mu        sync.Mutex
+	state     State
+	stateFunc func(State)
+	arena     *Arena
+	tmpbuf    []bufferEntry // used to fill rx and drain tx
+	recvbuf   []bufferEntry // packets received
+	sendbuf   []bufferEntry // packets ready to send
 
 	// Stats are informational purpose, to be reported to upper layers.
-	Stats nsfidl.NetInterfaceStats
+	Stats nsfidl.NetInterfaceStats // TODO (porce): Replace with ifState.
 
 	// These are counters for buffer management purpose.
 	txTotal    int
@@ -130,7 +130,7 @@ func NewClient(clientName, path string, arena *Arena, stateFunc func(State)) (*C
 		recvbuf:   make([]bufferEntry, 0, rxDepth),
 		sendbuf:   make([]bufferEntry, 0, txDepth),
 
-		Stats:     nsfidl.NetInterfaceStats{
+		Stats: nsfidl.NetInterfaceStats{
 			UpSince: time.Now().Unix(),
 		},
 	}
@@ -263,7 +263,7 @@ func (c *Client) txCompleteLocked() (bool, error) {
 
 	// Stats for report purpose
 	c.Stats.TxPktsTotal++
-	c.Stats.TxBytesTotal += uint32(n)
+	c.Stats.TxBytesTotal += uint64(n)
 
 	c.txInFlight -= n
 	c.txTotal += n
@@ -280,7 +280,7 @@ func (c *Client) txCompleteLocked() (bool, error) {
 func (c *Client) popRecvLocked() Buffer {
 	// Stats for informational purpose.
 	c.Stats.RxPktsTotal++
-	c.Stats.RxBytesTotal += uint32(len(c.recvbuf))
+	c.Stats.RxBytesTotal += uint64(len(c.recvbuf))
 
 	c.rxTotal++
 	b := c.recvbuf[0]

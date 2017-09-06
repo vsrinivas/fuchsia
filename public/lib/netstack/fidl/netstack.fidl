@@ -31,11 +31,11 @@ struct NetInterfaceStats {
 
   // See network interface stats in Linux for future ideas:
   // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
-  uint32 rx_pkts_total;
-  uint32 rx_bytes_total;
+  uint64 rx_pkts_total;
+  uint64 rx_bytes_total;
 
-  uint32 tx_pkts_total;
-  uint32 tx_bytes_total;
+  uint64 tx_pkts_total;
+  uint64 tx_bytes_total;
 };
 
 // https://linux.die.net/man/7/netdevice
