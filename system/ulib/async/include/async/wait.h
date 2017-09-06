@@ -38,7 +38,7 @@ typedef async_wait_result_t(async_wait_handler_t)(async_t* async,
 // A separate instance must be used for each wait.
 //
 // It is customary to aggregate (in C) or subclass (in C++) this structure
-// to allow the handler to retain additional information about the wait.
+// to allow the wait context to retain additional state for its handler.
 //
 // See also |async::Task|.
 typedef struct async_wait async_wait_t;
@@ -105,6 +105,8 @@ __END_CDECLS
 namespace async {
 
 // C++ wrapper for a pending wait operation.
+//
+// This class is thread-safe.
 class Wait final : private async_wait_t {
 public:
     // Handles completion of asynchronous wait operations.
@@ -119,8 +121,8 @@ public:
     //
     // It is safe for the handler to destroy itself when returning |ASYNC_WAIT_FINISHED|.
     using Handler = fbl::Function<async_wait_result_t(async_t* async,
-                                                       mx_status_t status,
-                                                       const mx_packet_signal_t* signal)>;
+                                                      mx_status_t status,
+                                                      const mx_packet_signal_t* signal)>;
 
     // Initializes the properties of the wait operation.
     explicit Wait(mx_handle_t object = MX_HANDLE_INVALID,

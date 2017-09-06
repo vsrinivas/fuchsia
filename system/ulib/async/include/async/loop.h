@@ -144,6 +144,8 @@ __END_CDECLS
 namespace async {
 
 // C++ wrapper for an asynchronous dispatch loop.
+//
+// This class is thread-safe.
 class Loop {
 public:
     // Creates a message loop.

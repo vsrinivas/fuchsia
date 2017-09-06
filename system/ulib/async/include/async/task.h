@@ -40,7 +40,7 @@ typedef async_task_result_t(async_task_handler_t)(async_t* async,
 // A separate instance must be used for each task.
 //
 // It is customary to aggregate (in C) or subclass (in C++) this structure
-// to allow the handler to retain additional information about the task.
+// to allow the task context to retain additional state for its handler.
 //
 // See also |async::Task|.
 struct async_task {
@@ -106,6 +106,8 @@ __END_CDECLS
 namespace async {
 
 // C++ wrapper for a pending task.
+//
+// This class is thread-safe.
 class Task final : private async_task_t {
 public:
     // Handles execution of a posted task.
@@ -120,7 +122,7 @@ public:
     //
     // It is safe for the handler to destroy itself when returning |ASYNC_TASK_FINISHED|.
     using Handler = fbl::Function<async_task_result_t(async_t* async,
-                                                       mx_status_t status)>;
+                                                      mx_status_t status)>;
 
     // Initializes the properties of the task.
     explicit Task(mx_time_t deadline = MX_TIME_INFINITE, uint32_t flags = 0u);

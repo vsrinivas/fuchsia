@@ -204,6 +204,12 @@ See [async/default.h](include/async/default.h) for details.
 the C API with a more convenient fbl::Function<> callback based interface
 for use in C++.
 
+`AutoWait` in [async/auto_wait.h](include/async/auto_wait.h) is an RAII helper
+which cancels the wait when it goes out of scope.
+
+`AutoTask` in [async/auto_task.h](include/async/auto_task.h) is an RAII helper
+which cancels the task when it goes out of scope.
+
 There is also a special `WaitWithTimeout` helper defined in
 [async/wait_with_timeout.h](include/async/wait_with_timeout.h)
 which combines a wait operation together with a pending task that invokes the

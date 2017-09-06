@@ -26,7 +26,7 @@ typedef void(async_receiver_handler_t)(async_t* async,
 // The same instance may be used to receive arbitrarily many queued packets.
 //
 // It is customary to aggregate (in C) or subclass (in C++) this structure
-// to allow the handler to retain additional information about the receiver.
+// to allow the receiver context to retain additional state for its handler.
 //
 // See also |async::Receiver|.
 struct async_receiver {
@@ -72,6 +72,8 @@ namespace async {
 
 // C++ wrapper for a packet receiver.
 // The same instance may be used to receive arbitrarily many queued packets.
+//
+// This class is thread-safe.
 class Receiver final : private async_receiver_t {
 public:
     // Receives packets containing user supplied data.
@@ -83,8 +85,8 @@ public:
     // It is safe for the handler to destroy itself when there are no remaining
     // packets pending delivery to it.
     using Handler = fbl::Function<void(async_t* async,
-                                        mx_status_t status,
-                                        const mx_packet_user_t* data)>;
+                                       mx_status_t status,
+                                       const mx_packet_user_t* data)>;
 
     // Initializes the properties of the receiver.
     explicit Receiver(uint32_t flags = 0u);

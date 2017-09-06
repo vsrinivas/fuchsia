@@ -14,6 +14,8 @@ MODULE_NAME := async
 MODULE_TYPE := userlib
 
 MODULE_SRCS = \
+    $(LOCAL_DIR)/auto_task.cpp \
+    $(LOCAL_DIR)/auto_wait.cpp \
     $(LOCAL_DIR)/receiver.cpp \
     $(LOCAL_DIR)/task.cpp \
     $(LOCAL_DIR)/wait.cpp \

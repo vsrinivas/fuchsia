@@ -45,12 +45,8 @@ async_wait_result_t WaitWithTimeout::WaitHandler(async_t* async, async_wait_t* w
     // could make timeouts on waits a first class API.
     if (self->deadline() != MX_TIME_INFINITE) {
         mx_status_t cancel_status = async_cancel_task(async, self);
-        if (cancel_status != MX_OK) {
-            // The loop is being destroyed.
-            MX_DEBUG_ASSERT_MSG(cancel_status == MX_ERR_BAD_STATE,
-                                "cancel_status=%d", cancel_status);
-            return ASYNC_WAIT_FINISHED;
-        }
+        MX_DEBUG_ASSERT_MSG(cancel_status == MX_OK,
+                            "cancel_status=%d", cancel_status);
     }
 
     async_wait_result_t result = self->handler_(async, status, signal);
@@ -77,12 +73,8 @@ async_task_result_t WaitWithTimeout::TimeoutHandler(async_t* async, async_task_t
 
     auto self = static_cast<WaitWithTimeout*>(task);
     mx_status_t cancel_status = async_cancel_wait(async, self);
-    if (cancel_status != MX_OK) {
-        // The loop is being destroyed.
-        MX_DEBUG_ASSERT_MSG(cancel_status == MX_ERR_BAD_STATE,
-                            "cancel_status=%d", cancel_status);
-        return ASYNC_TASK_FINISHED;
-    }
+    MX_DEBUG_ASSERT_MSG(cancel_status == MX_OK,
+                        "cancel_status=%d", cancel_status);
 
     async_wait_result_t result = self->handler_(async, MX_ERR_TIMED_OUT, nullptr);
     MX_DEBUG_ASSERT(result == ASYNC_WAIT_FINISHED);
