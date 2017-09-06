@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <trace-provider/provider.h>
+
 #include "application/lib/app/application_context.h"
 #include "apps/ledger/cloud_provider_firebase/factory_impl.h"
 #include "apps/modular/services/lifecycle/lifecycle.fidl.h"
-#include "apps/tracing/lib/trace/provider.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
+#include "garnet/public/lib/ftl/command_line.h"
 #include "garnet/public/lib/ftl/log_settings_command_line.h"
 #include "garnet/public/lib/mtl/tasks/message_loop.h"
 
@@ -17,11 +19,9 @@ class App : public modular::Lifecycle {
  public:
   App()
       : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+        trace_provider_(loop_.async()),
         factory_impl_(loop_.task_runner()) {
     FTL_DCHECK(application_context_);
-    tracing::InitializeTracer(application_context_.get(),
-                              {"cloud_provider_firebase"});
-
     factory_impl_.set_on_empty([this] { loop_.PostQuitTask(); });
   }
 
@@ -42,6 +42,7 @@ class App : public modular::Lifecycle {
  private:
   std::unique_ptr<app::ApplicationContext> application_context_;
   mtl::MessageLoop loop_;
+  trace::TraceProvider trace_provider_;
   FactoryImpl factory_impl_;
   fidl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<Factory> factory_bindings_;
