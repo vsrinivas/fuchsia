@@ -296,6 +296,7 @@ void UserRunnerImpl::Terminate() {
   // This list is the reverse from the initialization order executed in
   // Initialize() above.
   user_shell_->AppTerminate([this] {
+      FTL_DLOG(INFO) << "- UserShell down";
       user_shell_.reset();
 
       visible_stories_handler_.reset();
@@ -306,15 +307,18 @@ void UserRunnerImpl::Terminate() {
       // to go away while they are still running. On the other hand agents are
       // meant to outlive story lifetimes.
       story_provider_impl_->Teardown([this] {
+          FTL_DLOG(INFO) << "- StoryProvider down";
           story_provider_impl_.reset();
 
           user_intelligence_provider_.reset();
           maxwell_->AppTerminate([this] {
+              FTL_DLOG(INFO) << "- Maxwell down";
               maxwell_.reset();
               maxwell_component_context_binding_.reset();
               maxwell_component_context_impl_.reset();
 
               agent_runner_->Teardown([this] {
+                  FTL_DLOG(INFO) << "- AgentRunner down";
                   agent_runner_.reset();
                   agent_runner_storage_.reset();
 
@@ -327,6 +331,7 @@ void UserRunnerImpl::Terminate() {
                   ledger_repository_factory_.reset();
 
                   ledger_app_client_->AppTerminate([this] {
+                      FTL_DLOG(INFO) << "- Ledger down";
                       ledger_app_client_.reset();
                       user_shell_.reset();
                       user_scope_.reset();

@@ -217,6 +217,7 @@ void AgentContextImpl::MaybeStopAgent() {
 }
 
 void AgentContextImpl::StopForTeardown() {
+  FTL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
   new StopCall(&operation_queue_, true /* is agent runner terminating? */, this,
                [this](bool stopped) {
                  FTL_DCHECK(stopped);
