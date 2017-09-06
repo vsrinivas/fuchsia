@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/scene_manager/tests/escher_test_environment.h"
 
-#include "escher/examples/common/demo_harness.h"
+#include "lib/escher/examples/common/demo_harness.h"
 
 static constexpr uint32_t kScreenWidth = 2160;
 static constexpr uint32_t kScreenHeight = 1440;

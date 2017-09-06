@@ -7,12 +7,12 @@
 #include <set>
 #include <vector>
 
-#include "escher/escher.h"
-#include "escher/examples/common/demo_harness.h"
-#include "escher/impl/gpu_uploader.h"
-#include "escher/resources/resource_recycler.h"
+#include "lib/escher/escher/escher.h"
 #include "lib/escher/escher/renderer/simple_image_factory.h"
 #include "lib/escher/escher/shape/rounded_rect_factory.h"
+#include "lib/escher/escher/impl/gpu_uploader.h"
+#include "lib/escher/escher/resources/resource_recycler.h"
+#include "lib/escher/examples/common/demo_harness.h"
 
 #include "apps/mozart/src/scene_manager/displays/display_manager.h"
 #include "apps/mozart/src/scene_manager/engine/display_swapchain.h"

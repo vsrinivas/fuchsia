@@ -28,7 +28,7 @@ executable("sketchy") {
     "//application/lib/app",
     "//apps/mozart/lib/scenic:client",
     "//apps/mozart/services/fun/sketchy",
-    "//lib/escher/escher",
+    "//garnet/lib/escher/escher",
     "//magenta/system/ulib/trace-provider",
   ]
 }

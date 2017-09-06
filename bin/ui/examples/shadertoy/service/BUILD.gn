@@ -38,15 +38,15 @@ executable("service") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
-    "//lib/escher/escher",
-    "//lib/escher/examples/common",
+    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher/examples/common",
     "//magenta/system/ulib/trace-provider",
     "//magma:vulkan",
   ]
 
   include_dirs = [
     "//lib",
-    "//lib/escher",
+    "//garnet/lib/escher",
     "//third_party/glm",
   ]
 }

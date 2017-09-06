@@ -15,16 +15,15 @@ executable("scene_manager") {
 
   deps = [
     ":common",
-    "//lib/escher/examples/common",
+    "//garnet/lib/escher/examples/common",
     "//magenta/system/ulib/trace-provider",
   ]
 }
 
 config("common_include_dirs") {
   include_dirs = [
-    "//lib/escher",
+    "//garnet",
     "//third_party/glm",
-    "//lib",
   ]
 }
 
@@ -148,8 +147,8 @@ source_set("common") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
-    "//lib/escher/escher",
-    "//lib/escher/examples/common",
+    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher/examples/common",
   ]
 
   public_configs = [ ":common_include_dirs" ]

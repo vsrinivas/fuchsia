@@ -20,11 +20,11 @@ executable("hello_scene_manager") {
     "//garnet/public/lib/fidl/cpp/bindings",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
-    "//lib/escher/escher",
+    "//garnet/lib/escher/escher",
   ]
 
   include_dirs = [
-    "//lib/escher",
+    "//garnet/lib/escher",
     "//third_party/glm",
     "//lib",
   ]
