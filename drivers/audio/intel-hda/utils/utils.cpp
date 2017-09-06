@@ -64,7 +64,7 @@ mx_obj_type_t GetHandleType(const mx::handle& handle) {
 
 mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                                 uint32_t max_channels,
-                                mxtl::Vector<audio_stream_format_range_t>* ranges) {
+                                fbl::Vector<audio_stream_format_range_t>* ranges) {
     if (ranges == nullptr || ranges->size()) return MX_ERR_INVALID_ARGS;
     if (!max_channels) return MX_ERR_INVALID_ARGS;
 
@@ -152,7 +152,7 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                 if (signed_formats) {
                     range.sample_formats = signed_formats;
 
-                    mxtl::AllocChecker ac;
+                    fbl::AllocChecker ac;
                     ranges->push_back(range, &ac);
                     if (!ac.check())
                         return MX_ERR_NO_MEMORY;
@@ -161,7 +161,7 @@ mx_status_t MakeFormatRangeList(const SampleCaps& sample_caps,
                 if (unsigned_8bit_supported) {
                     range.sample_formats = AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT;
 
-                    mxtl::AllocChecker ac;
+                    fbl::AllocChecker ac;
                     ranges->push_back(range, &ac);
                     if (!ac.check())
                         return MX_ERR_NO_MEMORY;

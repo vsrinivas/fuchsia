@@ -8,10 +8,10 @@
 #include <ddk/device.h>
 #include <ddk/protocol/intel-hda-codec.h>
 #include <mx/handle.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -56,11 +56,11 @@ public:
         FATAL_ERROR,
     };
 
-    static mxtl::RefPtr<IntelHDACodec> Create(IntelHDAController& controller, uint8_t codec_id);
+    static fbl::RefPtr<IntelHDACodec> Create(IntelHDAController& controller, uint8_t codec_id);
 
     void PrintDebugPrefix() const;
     mx_status_t Startup();
-    void ProcessSolicitedResponse(const CodecResponse& resp, mxtl::unique_ptr<CodecCmdJob>&& job);
+    void ProcessSolicitedResponse(const CodecResponse& resp, fbl::unique_ptr<CodecCmdJob>&& job);
     void ProcessUnsolicitedResponse(const CodecResponse& resp);
     void ProcessWakeupEvt();
 
@@ -82,7 +82,7 @@ protected:
     void NotifyChannelDeactivated(const DispatcherChannel& channel) final;
 
 private:
-    friend class mxtl::RefPtr<IntelHDACodec>;
+    friend class fbl::RefPtr<IntelHDACodec>;
 
     using ProbeParseCbk = mx_status_t (IntelHDACodec::*)(const CodecResponse& resp);
     struct ProbeCommandListEntry {
@@ -107,7 +107,7 @@ private:
 
     mx_status_t PublishDevice();
 
-    void SendCORBResponse(const mxtl::RefPtr<DispatcherChannel>& channel,
+    void SendCORBResponse(const fbl::RefPtr<DispatcherChannel>& channel,
                           const CodecResponse& resp,
                           uint32_t transaction_id = IHDA_INVALID_TRANSACTION_ID);
 
@@ -119,7 +119,7 @@ private:
     mx_status_t CodecGetDispatcherChannel(mx_handle_t* channel_out);
 
     // Get a reference to the active stream (if any) associated with the specified channel.
-    mxtl::RefPtr<IntelHDAStream> GetStreamForChannel(const DispatcherChannel& channel,
+    fbl::RefPtr<IntelHDAStream> GetStreamForChannel(const DispatcherChannel& channel,
                                                      bool* is_stream_channel_out = nullptr);
 
     // Implementation of IntelHDADevice<> callback and codec specific request
@@ -155,8 +155,8 @@ private:
     uint probe_rx_ndx_ = 0;
 
     // Driver connection state
-    mxtl::Mutex codec_driver_channel_lock_;
-    mxtl::RefPtr<DispatcherChannel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
+    fbl::Mutex codec_driver_channel_lock_;
+    fbl::RefPtr<DispatcherChannel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
 
     // Device properties.
     const uint8_t codec_id_;
@@ -172,7 +172,7 @@ private:
     } props_;
 
     // Active DMA streams
-    mxtl::Mutex          active_streams_lock_;
+    fbl::Mutex          active_streams_lock_;
     IntelHDAStream::Tree active_streams_ TA_GUARDED(active_streams_lock_);
 
     static ProbeCommandListEntry PROBE_COMMANDS[];

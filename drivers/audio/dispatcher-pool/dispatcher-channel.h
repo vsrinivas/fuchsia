@@ -9,20 +9,20 @@
 #include <magenta/types.h>
 #include <mx/channel.h>
 #include <mx/handle.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/slab_allocator.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/slab_allocator.h>
 #include <unistd.h>
 
 namespace audio {
 
 class DispatcherChannel;
 using DispatcherChannelAllocTraits =
-    mxtl::StaticSlabAllocatorTraits<mxtl::RefPtr<DispatcherChannel>>;
-using DispatcherChannelAllocator = mxtl::SlabAllocator<DispatcherChannelAllocTraits>;
+    fbl::StaticSlabAllocatorTraits<fbl::RefPtr<DispatcherChannel>>;
+using DispatcherChannelAllocator = fbl::SlabAllocator<DispatcherChannelAllocTraits>;
 
 // class DispatcherChannel
 //
@@ -109,8 +109,8 @@ using DispatcherChannelAllocator = mxtl::SlabAllocator<DispatcherChannelAllocTra
 // DispatcherChannels are one-time-activation only so that users cannot make
 // this mistake.
 //
-class DispatcherChannel : public mxtl::RefCounted<DispatcherChannel>,
-                          public mxtl::SlabAllocated<DispatcherChannelAllocTraits> {
+class DispatcherChannel : public fbl::RefCounted<DispatcherChannel>,
+                          public fbl::SlabAllocated<DispatcherChannelAllocTraits> {
 public:
     // class DispatcherChannel::Owner
     //
@@ -126,9 +126,9 @@ public:
     // ## DispatcherChannel::Owners *must* implement ProcessChannel.
     // ## DispatcherChannel::Owners *may* implement NotifyChannelDeactivated,
     //    but are not required to.
-    class Owner : public mxtl::RefCounted<Owner> {
+    class Owner : public fbl::RefCounted<Owner> {
     protected:
-        friend class mxtl::RefPtr<Owner>;
+        friend class fbl::RefPtr<Owner>;
         friend class DispatcherChannel;
 
         virtual ~Owner() {
@@ -161,7 +161,7 @@ public:
             __TA_EXCLUDES(channels_lock_) { }
 
     private:
-        mx_status_t AddChannel(mxtl::RefPtr<DispatcherChannel>&& channel)
+        mx_status_t AddChannel(fbl::RefPtr<DispatcherChannel>&& channel)
             __TA_EXCLUDES(channels_lock_);
         void RemoveChannel(DispatcherChannel* channel)
             __TA_EXCLUDES(channels_lock_);
@@ -180,15 +180,15 @@ public:
             return static_cast<volatile bool>(deactivated_);
         }
 
-        mxtl::Mutex channels_lock_;
+        fbl::Mutex channels_lock_;
         bool deactivated_ __TA_GUARDED(channels_lock_) = false;
-        mxtl::DoublyLinkedList<mxtl::RefPtr<DispatcherChannel>> channels_
+        fbl::DoublyLinkedList<fbl::RefPtr<DispatcherChannel>> channels_
             __TA_GUARDED(channels_lock_);
     };
 
-    static mxtl::RefPtr<DispatcherChannel> GetActiveChannel(uint64_t id)
+    static fbl::RefPtr<DispatcherChannel> GetActiveChannel(uint64_t id)
         __TA_EXCLUDES(active_channels_lock_) {
-        mxtl::AutoLock channels_lock(&active_channels_lock_);
+        fbl::AutoLock channels_lock(&active_channels_lock_);
         return GetActiveChannelLocked(id);
     }
 
@@ -199,17 +199,17 @@ public:
     bool      InActiveChannelSet() const { return wavl_node_state_.InContainer(); }
 
     mx_status_t WaitOnPort(const mx::port& port) __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
-        mxtl::AutoLock obj_lock(&obj_lock_);
+        fbl::AutoLock obj_lock(&obj_lock_);
         return WaitOnPortLocked(port);
     }
 
-    mx_status_t Activate(mxtl::RefPtr<Owner>&& owner, mx::channel* client_channel_out)
+    mx_status_t Activate(fbl::RefPtr<Owner>&& owner, mx::channel* client_channel_out)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_);
 
-    mx_status_t Activate(mxtl::RefPtr<Owner>&& owner, mx::channel&& client_channel)
+    mx_status_t Activate(fbl::RefPtr<Owner>&& owner, mx::channel&& client_channel)
         __TA_EXCLUDES(obj_lock_, active_channels_lock_) {
-        mxtl::AutoLock obj_lock(&obj_lock_);
-        return ActivateLocked(mxtl::move(owner), mxtl::move(client_channel));
+        fbl::AutoLock obj_lock(&obj_lock_);
+        return ActivateLocked(fbl::move(owner), fbl::move(client_channel));
     }
 
     void Deactivate(bool do_notify) __TA_EXCLUDES(obj_lock_, active_channels_lock_);
@@ -227,11 +227,11 @@ public:
 
 private:
     friend DispatcherChannelAllocator;
-    friend class  mxtl::RefPtr<DispatcherChannel>;
-    friend struct mxtl::DefaultDoublyLinkedListTraits<mxtl::RefPtr<DispatcherChannel>>;
-    friend struct mxtl::DefaultWAVLTreeTraits<mxtl::RefPtr<DispatcherChannel>>;
+    friend class  fbl::RefPtr<DispatcherChannel>;
+    friend struct fbl::DefaultDoublyLinkedListTraits<fbl::RefPtr<DispatcherChannel>>;
+    friend struct fbl::DefaultWAVLTreeTraits<fbl::RefPtr<DispatcherChannel>>;
 
-    static mxtl::RefPtr<DispatcherChannel> GetActiveChannelLocked(uint64_t id)
+    static fbl::RefPtr<DispatcherChannel> GetActiveChannelLocked(uint64_t id)
         __TA_REQUIRES(active_channels_lock_) {
         auto iter = active_channels_.find(id);
         return iter.IsValid() ? iter.CopyPointer() : nullptr;
@@ -243,25 +243,25 @@ private:
     mx_status_t WaitOnPortLocked(const mx::port& port)
         __TA_REQUIRES(obj_lock_);
 
-    mx_status_t ActivateLocked(mxtl::RefPtr<Owner>&& owner, mx::channel&& channel)
+    mx_status_t ActivateLocked(fbl::RefPtr<Owner>&& owner, mx::channel&& channel)
         __TA_REQUIRES(obj_lock_);
 
-    mxtl::RefPtr<Owner>  owner_    __TA_GUARDED(obj_lock_);
+    fbl::RefPtr<Owner>  owner_    __TA_GUARDED(obj_lock_);
     mx::channel          channel_  __TA_GUARDED(obj_lock_);
-    mutable mxtl::Mutex  obj_lock_ __TA_ACQUIRED_BEFORE(active_channels_lock_,
+    mutable fbl::Mutex  obj_lock_ __TA_ACQUIRED_BEFORE(active_channels_lock_,
                                                         owner_->channels_lock_);
     const bool           client_thread_active_;
     const uint64_t       bind_id_;
     const uintptr_t      owner_ctx_;
 
     // Node state for existing on the Owner's channels_ list.
-    mxtl::DoublyLinkedListNodeState<mxtl::RefPtr<DispatcherChannel>> dll_node_state_;
+    fbl::DoublyLinkedListNodeState<fbl::RefPtr<DispatcherChannel>> dll_node_state_;
 
     // Node state for in the active_channels_ set.
-    mxtl::WAVLTreeNodeState<mxtl::RefPtr<DispatcherChannel>> wavl_node_state_;
+    fbl::WAVLTreeNodeState<fbl::RefPtr<DispatcherChannel>> wavl_node_state_;
 
-    static mxtl::Mutex active_channels_lock_;
-    static mxtl::WAVLTree<uint64_t, mxtl::RefPtr<DispatcherChannel>>
+    static fbl::Mutex active_channels_lock_;
+    static fbl::WAVLTree<uint64_t, fbl::RefPtr<DispatcherChannel>>
         active_channels_ __TA_GUARDED(active_channels_lock_);
 };
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-thread.h"
 
@@ -21,8 +21,8 @@ void RealtekCodec::PrintDebugPrefix() const {
     printf("RealtekCodec : ");
 }
 
-mxtl::RefPtr<RealtekCodec> RealtekCodec::Create() {
-    return mxtl::AdoptRef(new RealtekCodec);
+fbl::RefPtr<RealtekCodec> RealtekCodec::Create() {
+    return fbl::AdoptRef(new RealtekCodec);
 }
 
 mx_status_t RealtekCodec::Init(mx_device_t* codec_dev) {
@@ -355,7 +355,7 @@ mx_status_t RealtekCodec::CreateAndStartStreams(const StreamProperties* streams,
 
     for (size_t i = 0; i < stream_cnt; ++i) {
         const auto& stream_def = streams[i];
-        auto stream = mxtl::AdoptRef(new RealtekStream(stream_def));
+        auto stream = fbl::AdoptRef(new RealtekStream(stream_def));
 
         res = ActivateStream(stream);
         if (res != MX_OK) {
@@ -392,7 +392,7 @@ extern "C" void realtek_ihda_codec_unbind_hook(void* ctx,
     MX_DEBUG_ASSERT(cookie != nullptr);
 
     // Reclaim our reference from the cookie.
-    auto codec = mxtl::internal::MakeRefPtrNoAdopt(reinterpret_cast<RealtekCodec*>(cookie));
+    auto codec = fbl::internal::MakeRefPtrNoAdopt(reinterpret_cast<RealtekCodec*>(cookie));
 
     // Shut the codec down.
     codec->Shutdown();

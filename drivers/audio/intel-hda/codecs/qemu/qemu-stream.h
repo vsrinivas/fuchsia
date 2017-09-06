@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/stream-base.h"
 
@@ -19,7 +19,7 @@ public:
           converter_nid_(converter_nid) { }
 
 protected:
-    friend class mxtl::RefPtr<QemuStream>;
+    friend class fbl::RefPtr<QemuStream>;
 
     virtual ~QemuStream() { }
 

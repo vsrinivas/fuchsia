@@ -5,8 +5,8 @@
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
 #include <mx/channel.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
 #include <string.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
@@ -43,7 +43,7 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
         return MX_ERR_NOT_SUPPORTED;
 
     // Allocate a DispatcherChannel object which we will use to talk to the codec device
-    mxtl::RefPtr<DispatcherChannel> device_channel = DispatcherChannelAllocator::New(1);
+    fbl::RefPtr<DispatcherChannel> device_channel = DispatcherChannelAllocator::New(1);
     if (device_channel == nullptr)
         return MX_ERR_NO_MEMORY;
 
@@ -56,15 +56,15 @@ mx_status_t IntelHDACodecDriverBase::Bind(mx_device_t* codec_dev) {
     // Stash our reference to our device channel.  If activate succeeds, we
     // could start to receive messages from the codec device immediately.
     {
-        mxtl::AutoLock device_channel_lock(&device_channel_lock_);
+        fbl::AutoLock device_channel_lock(&device_channel_lock_);
         device_channel_ = device_channel;
     }
 
     // Activate our device channel.  If something goes wrong, clear out the
     // internal device_channel_ reference.
-    res = device_channel->Activate(mxtl::WrapRefPtr(this), mxtl::move(channel));
+    res = device_channel->Activate(fbl::WrapRefPtr(this), fbl::move(channel));
     if (res != MX_OK) {
-        mxtl::AutoLock device_channel_lock(&device_channel_lock_);
+        fbl::AutoLock device_channel_lock(&device_channel_lock_);
         device_channel_.reset();
         return res;
     }
@@ -79,7 +79,7 @@ void IntelHDACodecDriverBase::Shutdown() {
     // Flag the fact that we are shutting down.  This will prevent any new
     // streams from becoming activated.
     {
-        mxtl::AutoLock shutdown_lock(&shutdown_lock_);
+        fbl::AutoLock shutdown_lock(&shutdown_lock_);
         shutting_down_ = true;
     }
 
@@ -151,7 +151,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
                       resp.hdr.transaction_id);
             return MX_ERR_BAD_STATE;
         } else {
-            return ProcessStreamResponse(stream, resp, resp_size, mxtl::move(rxed_handle));
+            return ProcessStreamResponse(stream, resp, resp_size, fbl::move(rxed_handle));
         }
     } else {
         switch(resp.hdr.cmd) {
@@ -195,7 +195,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessChannel(DispatcherChannel* channel) 
 }
 
 mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
-        const mxtl::RefPtr<IntelHDAStreamBase>& stream,
+        const fbl::RefPtr<IntelHDAStreamBase>& stream,
         const CodecChannelResponses& resp,
         uint32_t resp_size,
         mx::handle&& rxed_handle) {
@@ -231,7 +231,7 @@ mx_status_t IntelHDACodecDriverBase::ProcessStreamResponse(
             return res;
         }
 
-        return stream->ProcessSetStreamFmt(resp.set_stream_fmt, mxtl::move(channel));
+        return stream->ProcessSetStreamFmt(resp.set_stream_fmt, fbl::move(channel));
     }
 
     default:
@@ -248,7 +248,7 @@ void IntelHDACodecDriverBase::NotifyChannelDeactivated(const DispatcherChannel& 
     bool do_shutdown = false;
 
     {
-        mxtl::AutoLock device_channel_lock(&device_channel_lock_);
+        fbl::AutoLock device_channel_lock(&device_channel_lock_);
 
         // If the channel we use to talk to our device is closing, clear out our
         // internal bookkeeping.
@@ -265,7 +265,7 @@ void IntelHDACodecDriverBase::NotifyChannelDeactivated(const DispatcherChannel& 
 }
 
 void IntelHDACodecDriverBase::UnlinkFromController() {
-    mxtl::AutoLock device_channel_lock(&device_channel_lock_);
+    fbl::AutoLock device_channel_lock(&device_channel_lock_);
     if (device_channel_ != nullptr) {
         device_channel_->Deactivate(false);
         device_channel_ = nullptr;
@@ -275,9 +275,9 @@ void IntelHDACodecDriverBase::UnlinkFromController() {
 mx_status_t IntelHDACodecDriverBase::SendCodecCommand(uint16_t  nid,
                                                       CodecVerb verb,
                                                       bool      no_ack) {
-    mxtl::RefPtr<DispatcherChannel> device_channel;
+    fbl::RefPtr<DispatcherChannel> device_channel;
     {
-        mxtl::AutoLock device_channel_lock(&device_channel_lock_);
+        fbl::AutoLock device_channel_lock(&device_channel_lock_);
         device_channel = device_channel_;
     }
 
@@ -294,28 +294,28 @@ mx_status_t IntelHDACodecDriverBase::SendCodecCommand(uint16_t  nid,
     return device_channel->Write(&cmd, sizeof(cmd));
 }
 
-mxtl::RefPtr<IntelHDAStreamBase> IntelHDACodecDriverBase::GetActiveStream(uint32_t stream_id) {
-    mxtl::AutoLock active_streams_lock(&active_streams_lock_);
+fbl::RefPtr<IntelHDAStreamBase> IntelHDACodecDriverBase::GetActiveStream(uint32_t stream_id) {
+    fbl::AutoLock active_streams_lock(&active_streams_lock_);
     auto iter = active_streams_.find(stream_id);
     return iter.IsValid() ? iter.CopyPointer() : nullptr;
 }
 
 mx_status_t IntelHDACodecDriverBase::ActivateStream(
-        const mxtl::RefPtr<IntelHDAStreamBase>& stream) {
+        const fbl::RefPtr<IntelHDAStreamBase>& stream) {
     if ((stream == nullptr) ||
         (stream->id() == IHDA_INVALID_TRANSACTION_ID) ||
         (stream->id() == CODEC_TID))
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AutoLock shutdown_lock(&shutdown_lock_);
+    fbl::AutoLock shutdown_lock(&shutdown_lock_);
     if (shutting_down_)
         return MX_ERR_BAD_STATE;
 
     // Grab a reference to the channel we use to talk to the codec device.  If
     // the channel has already been closed, we cannot activate this stream.
-    mxtl::RefPtr<DispatcherChannel> device_channel;
+    fbl::RefPtr<DispatcherChannel> device_channel;
     {
-        mxtl::AutoLock device_channel_lock(&device_channel_lock_);
+        fbl::AutoLock device_channel_lock(&device_channel_lock_);
         if (device_channel_ == nullptr)
             return MX_ERR_BAD_STATE;
         device_channel = device_channel_;
@@ -325,13 +325,13 @@ mx_status_t IntelHDACodecDriverBase::ActivateStream(
     // collision, then something is wrong with our codec driver implementation.
     // Fail the activation.
     {
-        mxtl::AutoLock active_streams_lock(&active_streams_lock_);
+        fbl::AutoLock active_streams_lock(&active_streams_lock_);
         if (!active_streams_.insert_or_find(stream))
             return MX_ERR_BAD_STATE;
     }
 
     // Go ahead and activate the stream.
-    return stream->Activate(mxtl::WrapRefPtr(this), device_channel);
+    return stream->Activate(fbl::WrapRefPtr(this), device_channel);
 }
 
 mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(const IntelHDAStreamBase& stream,
@@ -348,9 +348,9 @@ void IntelHDACodecDriverBase::ReleaseAllUnsolTags(const IntelHDAStreamBase& stre
 }
 
 mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
-    mxtl::RefPtr<IntelHDAStreamBase> stream;
+    fbl::RefPtr<IntelHDAStreamBase> stream;
     {
-        mxtl::AutoLock active_streams_lock(&active_streams_lock_);
+        fbl::AutoLock active_streams_lock(&active_streams_lock_);
         stream = active_streams_.erase(stream_id);
     }
 
@@ -364,7 +364,7 @@ mx_status_t IntelHDACodecDriverBase::DeactivateStream(uint32_t stream_id) {
 
 mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_t* out_tag) {
     MX_DEBUG_ASSERT(out_tag != nullptr);
-    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+    fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
 
     static_assert(sizeof(free_unsol_tags_) == sizeof(long long int),
                   "free_unsol_tags_ is not the same size as a long long int.  "
@@ -384,7 +384,7 @@ mx_status_t IntelHDACodecDriverBase::AllocateUnsolTag(uint32_t stream_id, uint8_
 }
 
 void IntelHDACodecDriverBase::ReleaseUnsolTag(uint32_t stream_id, uint8_t tag) {
-    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+    fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
     uint64_t mask = uint64_t(1u) << tag;
 
     MX_DEBUG_ASSERT(mask != 0);
@@ -396,7 +396,7 @@ void IntelHDACodecDriverBase::ReleaseUnsolTag(uint32_t stream_id, uint8_t tag) {
 }
 
 void IntelHDACodecDriverBase::ReleaseAllUnsolTags(uint32_t stream_id) {
-    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+    fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
 
     for (uint32_t tmp = 0u; tmp < countof(unsol_tag_to_stream_id_map_); ++tmp) {
         uint64_t mask = uint64_t(1u) << tmp;
@@ -409,7 +409,7 @@ void IntelHDACodecDriverBase::ReleaseAllUnsolTags(uint32_t stream_id) {
 mx_status_t IntelHDACodecDriverBase::MapUnsolTagToStreamId(uint8_t tag, uint32_t* out_stream_id) {
     MX_DEBUG_ASSERT(out_stream_id != nullptr);
 
-    mxtl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
+    fbl::AutoLock unsol_tag_lock(&unsol_tag_lock_);
     uint64_t mask = uint64_t(1u) << tag;
 
     if ((!mask) || (free_unsol_tags_ & mask))

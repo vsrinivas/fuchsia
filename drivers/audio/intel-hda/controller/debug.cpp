@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <magenta/assert.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #include <string.h>
 
 #include "drivers/audio/intel-hda/utils/intel-hda-registers.h"
@@ -17,7 +17,7 @@ namespace audio {
 namespace intel_hda {
 
 namespace {
-mxtl::Mutex snapshot_regs_buffer_lock;
+fbl::Mutex snapshot_regs_buffer_lock;
 ihda_controller_snapshot_regs_resp_t snapshot_regs_buffer TA_GUARDED(snapshot_regs_buffer_lock);
 }  // anon namespace
 
@@ -30,7 +30,7 @@ mx_status_t IntelHDAController::SnapshotRegs(const DispatcherChannel& channel,
     // VMO (reducing its rights to read-only in the process) and sending it back
     // to the calling process.  The diagnostic util can then put their own
     // cycles on the PCI bus.
-    mxtl::AutoLock lock(&snapshot_regs_buffer_lock);
+    fbl::AutoLock lock(&snapshot_regs_buffer_lock);
 
     auto  regs_ptr = reinterpret_cast<hda_registers_t*>(snapshot_regs_buffer.snapshot);
     auto& regs     = *regs_ptr;

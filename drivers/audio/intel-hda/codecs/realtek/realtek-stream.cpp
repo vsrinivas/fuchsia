@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxtl/vector.h>
+#include <fbl/vector.h>
 
 #include "drivers/audio/intel-hda/utils/codec-caps.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
@@ -93,9 +93,9 @@ void RealtekStream::AddPDNotificationTgtLocked(DispatcherChannel* channel) {
     }
 
     if (!duplicate) {
-        mxtl::RefPtr<DispatcherChannel> c(channel);
-        mxtl::unique_ptr<NotifyTarget> tgt(new NotifyTarget(mxtl::move(c)));
-        plug_notify_targets_.push_back(mxtl::move(tgt));
+        fbl::RefPtr<DispatcherChannel> c(channel);
+        fbl::unique_ptr<NotifyTarget> tgt(new NotifyTarget(fbl::move(c)));
+        plug_notify_targets_.push_back(fbl::move(tgt));
     }
 }
 
@@ -127,7 +127,7 @@ uint8_t RealtekStream::ComputeGainSteps(const CommonCaps& caps, float target_gai
 }
 
 mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
-    mxtl::unique_ptr<PendingCommand> pending_cmd;
+    fbl::unique_ptr<PendingCommand> pending_cmd;
     bool want_response = (cmd.thunk != nullptr);
 
     if (want_response) {
@@ -142,7 +142,7 @@ mx_status_t RealtekStream::RunCmdLocked(const Command& cmd) {
     VERBOSE_LOG("SEND: nid %2hu verb 0x%05x%s\n", cmd.nid, cmd.verb.val, want_response ? "*" : "");
 
     if ((res == MX_OK) && want_response)
-        pending_cmds_.push_back(mxtl::move(pending_cmd));
+        pending_cmds_.push_back(fbl::move(pending_cmd));
 
     return res;
 }
@@ -431,7 +431,7 @@ mx_status_t RealtekStream::FinalizeSetupLocked() {
     cur_pc_gain_steps_ = ComputeGainSteps(pc_, props_.default_pc_gain);
 
     // Compute the list of formats we support.
-    mxtl::Vector<audio_proto::FormatRange> supported_formats;
+    fbl::Vector<audio_proto::FormatRange> supported_formats;
     mx_status_t res =  MakeFormatRangeList(conv_.sample_caps,
                                            conv_.widget_caps.ch_count(),
                                            &supported_formats);
@@ -461,7 +461,7 @@ mx_status_t RealtekStream::FinalizeSetupLocked() {
     for (auto& format : supported_formats)
         format.min_channels = format.max_channels;
 
-    SetSupportedFormatsLocked(mxtl::move(supported_formats));
+    SetSupportedFormatsLocked(fbl::move(supported_formats));
 
     return MX_OK;
 }
@@ -707,7 +707,7 @@ mx_status_t RealtekStream::ProcessConverterAmpCaps(const Command& cmd, const Cod
     conv_.min_gain  = conv_.amp_caps.min_gain_db();
     conv_.max_gain  = conv_.amp_caps.max_gain_db();
 
-    return UpdateConverterGainLocked(mxtl::max(props_.default_conv_gain, conv_.min_gain));
+    return UpdateConverterGainLocked(fbl::max(props_.default_conv_gain, conv_.min_gain));
 }
 
 mx_status_t RealtekStream::ProcessConverterSampleSizeRate(const Command& cmd,

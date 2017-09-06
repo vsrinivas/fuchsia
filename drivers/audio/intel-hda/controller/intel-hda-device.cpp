@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <mx/handle.h>
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "drivers/audio/intel-hda/utils/intel-hda-proto.h"
@@ -34,7 +34,7 @@ mx_status_t IntelHDADevice<DeviceType>::DeviceIoctl(uint32_t op,
         return MX_ERR_NO_MEMORY;
 
     mx::channel out_channel;
-    mx_status_t res = channel->Activate(mxtl::WrapRefPtr(this), &out_channel);
+    mx_status_t res = channel->Activate(fbl::WrapRefPtr(this), &out_channel);
     if (res == MX_OK) {
         *(reinterpret_cast<mx_handle_t*>(out_buf)) = out_channel.release();
         *out_actual = sizeof(mx_handle_t);
@@ -47,7 +47,7 @@ template <typename DeviceType>
 void IntelHDADevice<DeviceType>::Shutdown() {
     // Prevent new callbacks from starting and synchronize with callbacks in flight.
     {
-        mxtl::AutoLock process_lock(&process_lock_);
+        fbl::AutoLock process_lock(&process_lock_);
         if (is_shutdown_)
             return;
 
@@ -85,16 +85,16 @@ mx_status_t IntelHDADevice<DeviceType>::ProcessChannel(DispatcherChannel* channe
     // is_shutdown_ flag has been set, just abort.  No need to propagate an
     // error, the channel is already being shutdown.
     {
-        mxtl::AutoLock process_lock(&process_lock_);
+        fbl::AutoLock process_lock(&process_lock_);
         if (!is_shutdown_) {
             // Downcast ourselves and process the request.
-            static_assert(mxtl::is_base_of<IntelHDADevice<DeviceType>, DeviceType>::value,
+            static_assert(fbl::is_base_of<IntelHDADevice<DeviceType>, DeviceType>::value,
                           "DeviceType must derive from IntelHDADevice<DeviceType>");
 
             res = static_cast<DeviceType*>(this)->ProcessClientRequest(channel,
                                                                        request_buffer,
                                                                        bytes,
-                                                                       mxtl::move(handle));
+                                                                       fbl::move(handle));
         }
     }
 

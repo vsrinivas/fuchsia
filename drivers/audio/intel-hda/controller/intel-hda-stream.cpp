@@ -4,7 +4,7 @@
 
 #include <hw/arch_ops.h>
 #include <magenta/syscalls.h>
-#include <mxtl/limits.h>
+#include <fbl/limits.h>
 #include <string.h>
 
 #include "drivers/audio/intel-hda/utils/utils.h"
@@ -131,7 +131,7 @@ void IntelHDAStream::Configure(Type type, uint8_t tag) {
 }
 
 mx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
-                                            const mxtl::RefPtr<DispatcherChannel>& channel) {
+                                            const fbl::RefPtr<DispatcherChannel>& channel) {
     if (channel == nullptr)
         return MX_ERR_INVALID_ARGS;
 
@@ -149,7 +149,7 @@ mx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
     DEBUG_LOG("Stream format set 0x%04hx; fifo is %hu bytes deep\n", encoded_fmt_, fifo_depth_);
 
     // Record our new client channel
-    mxtl::AutoLock channel_lock(&channel_lock_);
+    fbl::AutoLock channel_lock(&channel_lock_);
     channel_ = channel;
     bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
 
@@ -157,7 +157,7 @@ mx_status_t IntelHDAStream::SetStreamFormat(uint16_t encoded_fmt,
 }
 
 void IntelHDAStream::Deactivate() {
-    mxtl::AutoLock channel_lock(&channel_lock_);
+    fbl::AutoLock channel_lock(&channel_lock_);
     DeactivateLocked();
 }
 
@@ -165,7 +165,7 @@ void IntelHDAStream::OnChannelClosed(const DispatcherChannel& channel) {
     // Is the channel being closed our currently active channel?  If so, go
     // ahead and deactivate this DMA stream.  Otherwise, just ignore this
     // request.
-    mxtl::AutoLock channel_lock(&channel_lock_);
+    fbl::AutoLock channel_lock(&channel_lock_);
 
     if (&channel == channel_.get()) {
         DEBUG_LOG("Client closed channel to stream\n");
@@ -194,7 +194,7 @@ mx_status_t IntelHDAStream::ProcessClientRequest(DispatcherChannel* channel,
 
     // Is this request from our currently active channel?  If not, make sure the
     // channel has been de-activated and ignore the request.
-    mxtl::AutoLock channel_lock(&channel_lock_);
+    fbl::AutoLock channel_lock(&channel_lock_);
 
     if (channel_.get() != channel) {
         channel->Deactivate(false);
@@ -240,7 +240,7 @@ void IntelHDAStream::ProcessStreamIRQ() {
     // notifications.  If our channel has been nulled out, then this stream was
     // were stopped after the IRQ fired but before it was handled.  Don't send
     // any notifications in this case.
-    mxtl::AutoLock notif_lock(&notif_lock_);
+    fbl::AutoLock notif_lock(&notif_lock_);
 
     // TODO(johngro):  Deal with FIFO errors or descriptor errors.  There is no
     // good way to recover from such a thing.  If it happens, we need to shut
@@ -267,7 +267,7 @@ void IntelHDAStream::DeactivateLocked() {
     // Prevent the IRQ thread from sending channel notifications by making sure
     // the irq_channel_ reference has been cleared.
     {
-        mxtl::AutoLock notif_lock(&notif_lock_);
+        fbl::AutoLock notif_lock(&notif_lock_);
         irq_channel_ = nullptr;
     }
 
@@ -342,7 +342,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
     // 3) The user wants more notifications per ring than we have BDL entries.
     tmp = static_cast<uint64_t>(req.min_ring_buffer_frames) * bytes_per_frame_;
     if ((req.min_ring_buffer_frames == 0) ||
-        (tmp > mxtl::numeric_limits<uint32_t>::max()) ||
+        (tmp > fbl::numeric_limits<uint32_t>::max()) ||
         (req.notifications_per_ring > MAX_BDL_LENGTH)) {
         DEBUG_LOG("Invalid client args while setting buffer "
                   "(min frames %u, notif/ring %u)\n",
@@ -438,7 +438,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         MX_DEBUG_ASSERT(region_num < num_regions);
         const auto& r = regions[region_num];
 
-        if (r.size > mxtl::numeric_limits<uint32_t>::max()) {
+        if (r.size > fbl::numeric_limits<uint32_t>::max()) {
             DEBUG_LOG("VMO region too large! (%" PRIu64" bytes)", r.size);
             resp.result = MX_ERR_INTERNAL;
             goto finished;
@@ -447,7 +447,7 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         MX_DEBUG_ASSERT(region_offset < r.size);
         uint32_t amt_left    = rb_size - amt_done;
         uint32_t region_left = static_cast<uint32_t>(r.size) - region_offset;
-        uint32_t todo        = mxtl::min(amt_left, region_left);
+        uint32_t todo        = fbl::min(amt_left, region_left);
 
         MX_DEBUG_ASSERT(region_left >= DMA_ALIGN);
         bdl_[entry].flags = 0;
@@ -461,9 +461,9 @@ mx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
                 ++irqs_inserted;
 
                 if (ipos <= amt_done)
-                    todo = mxtl::min(todo, DMA_ALIGN);
+                    todo = fbl::min(todo, DMA_ALIGN);
                 else
-                    todo = mxtl::min(todo, ipos - amt_done);
+                    todo = fbl::min(todo, ipos - amt_done);
             }
         }
 
@@ -522,9 +522,9 @@ finished:
         // Success.  DMA is set up and ready to go.  If we manage to send the
         // client their copy of the VMO handle, keep a hold of our handle.
         // Otherwise, just let it go out of scope and be closed.
-        mx_status_t res = channel_->Write(&resp, sizeof(resp), mxtl::move(client_rb_handle));
+        mx_status_t res = channel_->Write(&resp, sizeof(resp), fbl::move(client_rb_handle));
         if (res == MX_OK)
-            ring_buffer_vmo_ = mxtl::move(ring_buffer_vmo);
+            ring_buffer_vmo_ = fbl::move(ring_buffer_vmo);
         return res;
     } else {
         return channel_->Write(&resp, sizeof(resp));
@@ -569,7 +569,7 @@ mx_status_t IntelHDAStream::ProcessStartLocked(const audio_proto::RingBufStartRe
     // Make a copy of our reference to our channel which can be used by the IRQ
     // thread to deliver notifications to the application.
     {
-        mxtl::AutoLock notif_lock(&notif_lock_);
+        fbl::AutoLock notif_lock(&notif_lock_);
         MX_DEBUG_ASSERT(irq_channel_ == nullptr);
         irq_channel_ = channel_;
 
@@ -615,7 +615,7 @@ mx_status_t IntelHDAStream::ProcessStopLocked(const audio_proto::RingBufStopReq&
         // After we have done this, it should be safe to manipulate the ctl/sts
         // register.
         {
-            mxtl::AutoLock notif_lock(&notif_lock_);
+            fbl::AutoLock notif_lock(&notif_lock_);
             MX_DEBUG_ASSERT(irq_channel_ != nullptr);
             irq_channel_ = nullptr;
         }

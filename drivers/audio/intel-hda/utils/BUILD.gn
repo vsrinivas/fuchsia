@@ -15,6 +15,6 @@ source_set("ihda-utils") {
 
     deps = [
         "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxtl",
+        "//magenta/system/ulib/fbl",
     ]
 }

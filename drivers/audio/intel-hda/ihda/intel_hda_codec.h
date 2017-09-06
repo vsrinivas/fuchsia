@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/unique_ptr.h>
 
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
 
@@ -19,9 +19,9 @@ struct CodecVerb;
 struct CodecResponse;
 
 class IntelHDACodec : public IntelHDADevice,
-                      public mxtl::WAVLTreeContainable<mxtl::unique_ptr<IntelHDACodec>> {
+                      public fbl::WAVLTreeContainable<fbl::unique_ptr<IntelHDACodec>> {
 public:
-    using CodecTree = mxtl::WAVLTree<uint32_t, mxtl::unique_ptr<IntelHDACodec>>;
+    using CodecTree = fbl::WAVLTree<uint32_t, fbl::unique_ptr<IntelHDACodec>>;
 
     template <typename TARGET_TYPE>
     struct CommandListEntry {
@@ -38,7 +38,7 @@ public:
     static CodecTree& codecs() { return codecs_; }
 
 private:
-    friend class mxtl::unique_ptr<IntelHDACodec>;
+    friend class fbl::unique_ptr<IntelHDACodec>;
 
     mx_status_t DoCodecCmd(uint16_t nid, const CodecVerb& verb, CodecResponse* resp_out);
     mx_status_t ReadCodecState();

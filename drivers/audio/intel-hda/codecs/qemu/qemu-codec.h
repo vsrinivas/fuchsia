@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
 
@@ -15,7 +15,7 @@ namespace codecs {
 
 class QemuCodec : public IntelHDACodecDriverBase {
 public:
-    static mxtl::RefPtr<QemuCodec> Create();
+    static fbl::RefPtr<QemuCodec> Create();
 
     mx_status_t Init(mx_device_t* codec_dev);
     mx_status_t Start() override;
@@ -24,7 +24,7 @@ protected:
     void PrintDebugPrefix() const override;
 
 private:
-    friend class mxtl::RefPtr<QemuCodec>;
+    friend class fbl::RefPtr<QemuCodec>;
     QemuCodec() { }
     virtual ~QemuCodec() { }
 };

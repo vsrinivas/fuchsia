@@ -16,7 +16,7 @@ shared_library("audio-dispatcher-pool") {
 
   deps = [
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   configs -= [ "//build/config:symbol_visibility_hidden" ]

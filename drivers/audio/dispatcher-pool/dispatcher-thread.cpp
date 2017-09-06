@@ -13,11 +13,11 @@
 
 namespace audio {
 
-mxtl::Mutex DispatcherThread::pool_lock_;
+fbl::Mutex DispatcherThread::pool_lock_;
 mx::port    DispatcherThread::port_;
 uint32_t    DispatcherThread::active_client_count_ = 0;
 uint32_t    DispatcherThread::active_thread_count_ = 0;
-mxtl::SinglyLinkedList<mxtl::unique_ptr<DispatcherThread>> DispatcherThread::thread_pool_;
+fbl::SinglyLinkedList<fbl::unique_ptr<DispatcherThread>> DispatcherThread::thread_pool_;
 
 DispatcherThread::DispatcherThread(uint32_t id) {
     // TODO(johngro) : add the process ID as part of the thread name
@@ -51,7 +51,7 @@ mx_status_t DispatcherThread::AddClientLocked() {
     while ((active_thread_count_ < active_client_count_) &&
            (active_thread_count_ < mx_system_get_num_cpus())) {
 
-        mxtl::unique_ptr<DispatcherThread> thread(new DispatcherThread(active_thread_count_));
+        fbl::unique_ptr<DispatcherThread> thread(new DispatcherThread(active_thread_count_));
 
         int c11_res = thrd_create(
                 &thread->thread_,
@@ -66,7 +66,7 @@ mx_status_t DispatcherThread::AddClientLocked() {
         }
 
         active_thread_count_++;
-        thread_pool_.push_front(mxtl::move(thread));
+        thread_pool_.push_front(fbl::move(thread));
     }
 
     return MX_OK;

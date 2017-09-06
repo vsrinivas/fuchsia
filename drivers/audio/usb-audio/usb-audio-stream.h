@@ -9,8 +9,8 @@
 #include <driver/usb.h>
 #include <magenta/listnode.h>
 #include <mx/vmo.h>
-#include <mxtl/mutex.h>
-#include <mxtl/vector.h>
+#include <fbl/mutex.h>
+#include <fbl/vector.h>
 
 #include "drivers/audio/audio-proto/audio-proto.h"
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
@@ -59,7 +59,7 @@ protected:
     void NotifyChannelDeactivated(const DispatcherChannel& channel) override;
 
 private:
-    friend class mxtl::RefPtr<UsbAudioStream>;
+    friend class fbl::RefPtr<UsbAudioStream>;
 
     enum class RingBufferState {
         STOPPED,
@@ -86,7 +86,7 @@ private:
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
 
     mx_status_t AddFormats(const usb_audio_ac_format_type_i_desc& format_desc,
-                           mxtl::Vector<audio_stream_format_range_t>* supported_formats);
+                           fbl::Vector<audio_stream_format_range_t>* supported_formats);
 
     mx_status_t ProcessStreamChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
     mx_status_t ProcessRingBufChannelLocked(DispatcherChannel* channel) __TA_REQUIRES(lock_);
@@ -120,16 +120,16 @@ private:
     void CompleteIotxnLocked(iotxn_t* txn) __TA_REQUIRES(txn_lock_);
 
     usb_protocol_t                  usb_;
-    mxtl::Mutex lock_;
-    mxtl::Mutex txn_lock_ __TA_ACQUIRED_AFTER(lock_);
+    fbl::Mutex lock_;
+    fbl::Mutex txn_lock_ __TA_ACQUIRED_AFTER(lock_);
 
-    mxtl::RefPtr<DispatcherChannel> stream_channel_ __TA_GUARDED(lock_);
-    mxtl::RefPtr<DispatcherChannel> rb_channel_     __TA_GUARDED(lock_);
+    fbl::RefPtr<DispatcherChannel> stream_channel_ __TA_GUARDED(lock_);
+    fbl::RefPtr<DispatcherChannel> rb_channel_     __TA_GUARDED(lock_);
 
     // TODO(johngro) : support parsing and selecting from all of the format
     // descriptors present for a stream, not just a single format (with multiple
     // sample rates).
-    mxtl::Vector<audio_stream_format_range_t> supported_formats_;
+    fbl::Vector<audio_stream_format_range_t> supported_formats_;
 
     uint32_t                        frame_size_;
     uint32_t                        iso_packet_rate_;

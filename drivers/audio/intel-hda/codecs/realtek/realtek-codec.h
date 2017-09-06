@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "drivers/audio/intel-hda/codecs/utils/codec-driver-base.h"
 
@@ -17,7 +17,7 @@ namespace codecs {
 
 class RealtekCodec : public IntelHDACodecDriverBase {
 public:
-    static mxtl::RefPtr<RealtekCodec> Create();
+    static fbl::RefPtr<RealtekCodec> Create();
 
     mx_status_t Init(mx_device_t* codec_dev);
     mx_status_t Start() override;
@@ -33,7 +33,7 @@ protected:
     mx_status_t CreateAndStartStreams(const StreamProperties* streams, size_t stream_cnt);
 
 private:
-    friend class mxtl::RefPtr<RealtekCodec>;
+    friend class fbl::RefPtr<RealtekCodec>;
     RealtekCodec() { }
     virtual ~RealtekCodec() { }
 

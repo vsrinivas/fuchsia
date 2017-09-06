@@ -103,9 +103,9 @@ mx_status_t IntelHDAController::Enumerate() {
 
     mx_status_t res = MagentaDevice::Enumerate(nullptr, DEV_PATH, DEV_FMT,
     [](void*, uint32_t id, const char* const dev_name) -> mx_status_t {
-        mxtl::unique_ptr<IntelHDAController> dev(new IntelHDAController(id, dev_name));
+        fbl::unique_ptr<IntelHDAController> dev(new IntelHDAController(id, dev_name));
 
-        if (!controllers_.insert_or_find(mxtl::move(dev)))
+        if (!controllers_.insert_or_find(fbl::move(dev)))
             return MX_ERR_INTERNAL;
 
         return MX_OK;

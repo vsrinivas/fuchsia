@@ -8,9 +8,9 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-hda-codec.h>
 #include <mx/handle.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_ptr.h>
 
 #include "drivers/audio/dispatcher-pool/dispatcher-channel.h"
 #include "drivers/audio/intel-hda/utils/codec-commands.h"
@@ -66,9 +66,9 @@ protected:
     mx_status_t AllocateUnsolTag(uint8_t* out_tag) { return AllocateUnsolTag(CODEC_TID, out_tag); }
     void ReleaseUnsolTag(uint8_t tag) { ReleaseUnsolTag(CODEC_TID, tag); }
 
-    mxtl::RefPtr<IntelHDAStreamBase> GetActiveStream(uint32_t stream_id)
+    fbl::RefPtr<IntelHDAStreamBase> GetActiveStream(uint32_t stream_id)
         __TA_EXCLUDES(active_streams_lock_);
-    mx_status_t ActivateStream(const mxtl::RefPtr<IntelHDAStreamBase>& stream)
+    mx_status_t ActivateStream(const fbl::RefPtr<IntelHDAStreamBase>& stream)
         __TA_EXCLUDES(active_streams_lock_);
     mx_status_t DeactivateStream(uint32_t stream_id)
         __TA_EXCLUDES(active_streams_lock_);
@@ -77,7 +77,7 @@ protected:
     virtual void PrintDebugPrefix() const;
 
 private:
-    friend class mxtl::RefPtr<IntelHDACodecDriverBase>;
+    friend class fbl::RefPtr<IntelHDACodecDriverBase>;
 
     union CodecChannelResponses {
         ihda_proto::CmdHdr            hdr;
@@ -100,7 +100,7 @@ private:
     // return an error code from the callback.
     void UnlinkFromController();
 
-    mx_status_t ProcessStreamResponse(const mxtl::RefPtr<IntelHDAStreamBase>& stream,
+    mx_status_t ProcessStreamResponse(const fbl::RefPtr<IntelHDAStreamBase>& stream,
                                       const CodecChannelResponses& resp,
                                       uint32_t resp_size,
                                       mx::handle&& rxed_handle);
@@ -108,14 +108,14 @@ private:
     mx_device_t* codec_device_ = nullptr;
     mx_time_t    create_time_  = mx_time_get(MX_CLOCK_MONOTONIC);
 
-    mxtl::Mutex device_channel_lock_;
-    mxtl::RefPtr<DispatcherChannel> device_channel_ __TA_GUARDED(device_channel_lock_);
+    fbl::Mutex device_channel_lock_;
+    fbl::RefPtr<DispatcherChannel> device_channel_ __TA_GUARDED(device_channel_lock_);
 
-    using ActiveStreams = mxtl::WAVLTree<uint32_t, mxtl::RefPtr<IntelHDAStreamBase>>;
-    mxtl::Mutex   active_streams_lock_;
+    using ActiveStreams = fbl::WAVLTree<uint32_t, fbl::RefPtr<IntelHDAStreamBase>>;
+    fbl::Mutex   active_streams_lock_;
     ActiveStreams active_streams_ __TA_GUARDED(active_streams_lock_);
 
-    mxtl::Mutex shutdown_lock_ __TA_ACQUIRED_BEFORE(device_channel_lock_, active_streams_lock_);
+    fbl::Mutex shutdown_lock_ __TA_ACQUIRED_BEFORE(device_channel_lock_, active_streams_lock_);
     bool        shutting_down_ __TA_GUARDED(shutdown_lock_) = false;
 
     // State for tracking unsolicited response tag allocations.
@@ -123,7 +123,7 @@ private:
     // Note: If we wanted to save a bit of RAM, we could move this to a
     // dynamically allocated list/tree based system.  For now, however, this LUT
     // is dirt simple and does the job.
-    mxtl::Mutex unsol_tag_lock_;
+    fbl::Mutex unsol_tag_lock_;
     uint64_t free_unsol_tags_ __TA_GUARDED(unsol_tag_lock_) = 0xFFFFFFFFFFFFFFFEu;
     uint32_t unsol_tag_to_stream_id_map_[sizeof(free_unsol_tags_) << 3]
         __TA_GUARDED(unsol_tag_lock_);

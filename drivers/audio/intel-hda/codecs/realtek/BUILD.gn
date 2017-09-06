@@ -20,6 +20,6 @@ driver_module("realtek-ihda-codec") {
         "//drivers/audio/intel-hda/codecs/utils:ihda-codec-utils",
         "//drivers/audio/intel-hda/utils:ihda-utils",
         "//magenta/system/ulib/mx",
-        "//magenta/system/ulib/mxtl",
+        "//magenta/system/ulib/fbl",
     ]
 }
