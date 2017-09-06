@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "apps/mozart/src/sketchy/app.h"
-#include "apps/tracing/lib/trace/provider.h"
 
 namespace sketchy_service {
 
@@ -14,7 +13,6 @@ App::App(escher::Escher* escher)
           context_->ConnectToEnvironmentService<scenic::SceneManager>()),
       session_(std::make_unique<scenic_lib::Session>(scene_manager_.get())),
       canvas_(std::make_unique<CanvasImpl>(session_.get(), escher)) {
-  tracing::InitializeTracer(context_.get(), {"sketchy"});
   context_->outgoing_services()->AddService<sketchy::Canvas>(
       [this](fidl::InterfaceRequest<sketchy::Canvas> request) {
         FTL_LOG(INFO) << "Sketchy service: accepting connection to Canvas.";
