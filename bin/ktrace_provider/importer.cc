@@ -4,9 +4,9 @@
 
 #include "apps/tracing/src/ktrace_provider/importer.h"
 
+#include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
 #include <magenta/syscalls.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/string_printf.h>
 
 #include "apps/tracing/src/ktrace_provider/reader.h"
 #include "lib/ftl/logging.h"
@@ -221,10 +221,10 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
 
 bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
                                 const TagInfo& tag_info) {
-  mxtl::StringPiece name(record->name, strnlen(record->name, KTRACE_NAMESIZE));
+  fbl::StringPiece name(record->name, strnlen(record->name, KTRACE_NAMESIZE));
   FTL_VLOG(2) << "NAME: tag=0x" << std::hex << record->tag << " ("
               << tag_info.name << "), id=0x" << record->id << ", arg=0x"
-              << record->arg << ", name='" << mxtl::String(name).c_str() << "'";
+              << record->arg << ", name='" << fbl::String(name).c_str() << "'";
 
   switch (KTRACE_EVENT(record->tag)) {
     case KTRACE_EVENT(TAG_KTHREAD_NAME):
@@ -271,7 +271,7 @@ bool Importer::ImportUnknownRecord(const ktrace_header_t* record,
 }
 
 bool Importer::HandleKernelThreadName(KernelThread kernel_thread,
-                                      const mxtl::StringPiece& name) {
+                                      const fbl::StringPiece& name) {
   trace_string_ref name_ref =
       trace_make_inline_string_ref(name.data(), name.length());
   trace_context_write_thread_info_record(
@@ -285,7 +285,7 @@ bool Importer::HandleKernelThreadName(KernelThread kernel_thread,
 
 bool Importer::HandleThreadName(mx_koid_t thread,
                                 mx_koid_t process,
-                                const mxtl::StringPiece& name) {
+                                const fbl::StringPiece& name) {
   trace_string_ref name_ref =
       trace_make_inline_string_ref(name.data(), name.length());
   trace_context_write_thread_info_record(context_, process, thread, &name_ref);
@@ -295,7 +295,7 @@ bool Importer::HandleThreadName(mx_koid_t thread,
 }
 
 bool Importer::HandleProcessName(mx_koid_t process,
-                                 const mxtl::StringPiece& name) {
+                                 const fbl::StringPiece& name) {
   trace_string_ref name_ref =
       trace_make_inline_string_ref(name.data(), name.length());
   trace_context_write_process_info_record(context_, process, &name_ref);
@@ -303,19 +303,19 @@ bool Importer::HandleProcessName(mx_koid_t process,
 }
 
 bool Importer::HandleSyscallName(uint32_t syscall,
-                                 const mxtl::StringPiece& name) {
+                                 const fbl::StringPiece& name) {
   syscall_names_.emplace(syscall, trace_context_make_registered_string_copy(
                                       context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleIRQName(uint32_t irq, const mxtl::StringPiece& name) {
+bool Importer::HandleIRQName(uint32_t irq, const fbl::StringPiece& name) {
   irq_names_.emplace(irq, trace_context_make_registered_string_copy(
                               context_, name.data(), name.length()));
   return true;
 }
 
-bool Importer::HandleProbeName(uint32_t probe, const mxtl::StringPiece& name) {
+bool Importer::HandleProbeName(uint32_t probe, const fbl::StringPiece& name) {
   probe_names_.emplace(probe, trace_context_make_registered_string_copy(
                                   context_, name.data(), name.length()));
   return true;
@@ -387,7 +387,7 @@ bool Importer::HandlePageFault(trace_ticks_t event_time,
         trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
     trace_context_write_instant_event_record(
         context_, event_time, &thread_ref, &irq_category_ref_,
-        &page_fault_name_ref_, TRACE_SCOPE_THREAD, args, mxtl::count_of(args));
+        &page_fault_name_ref_, TRACE_SCOPE_THREAD, args, fbl::count_of(args));
   }
   return true;
 }
@@ -497,7 +497,7 @@ bool Importer::HandleChannelWrite(trace_ticks_t event_time,
                      trace_make_uint32_arg_value(num_handles))};
   trace_context_write_flow_begin_event_record(
       context_, event_time, &thread_ref, &channel_category_ref_,
-      &channel_write_name_ref_, counter, args, mxtl::count_of(args));
+      &channel_write_name_ref_, counter, args, fbl::count_of(args));
   return true;
 }
 
@@ -521,7 +521,7 @@ bool Importer::HandleChannelRead(trace_ticks_t event_time,
                      trace_make_uint32_arg_value(num_handles))};
   trace_context_write_flow_end_event_record(
       context_, event_time, &thread_ref, &channel_category_ref_,
-      &channel_read_name_ref_, counter, args, mxtl::count_of(args));
+      &channel_read_name_ref_, counter, args, fbl::count_of(args));
   return true;
 }
 
@@ -590,7 +590,7 @@ bool Importer::HandleProbe(trace_ticks_t event_time,
       trace_make_arg(arg1_name_ref_, trace_make_uint32_arg_value(arg1))};
   trace_context_write_instant_event_record(
       context_, event_time, &thread_ref, &probe_category_ref_, &name_ref,
-      TRACE_SCOPE_THREAD, args, mxtl::count_of(args));
+      TRACE_SCOPE_THREAD, args, fbl::count_of(args));
   return true;
 }
 
@@ -623,7 +623,7 @@ const trace_string_ref_t& Importer::GetNameRef(
     uint32_t id) {
   auto it = table.find(id);
   if (it == table.end()) {
-    mxtl::String name = mxtl::StringPrintf("%s 0x%d", kind, id);
+    fbl::String name = fbl::StringPrintf("%s 0x%d", kind, id);
     std::tie(it, std::ignore) =
         table.emplace(id, trace_context_make_registered_string_copy(
                               context_, name.data(), name.length()));

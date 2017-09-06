@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <mxtl/string.h>
-#include <mxtl/string_piece.h>
+#include <fbl/string.h>
+#include <fbl/string_piece.h>
 #include <trace-engine/context.h>
 
 #include "apps/tracing/src/ktrace_provider/tags.h"
@@ -44,14 +44,14 @@ class Importer {
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
   bool HandleKernelThreadName(KernelThread kernel_thread,
-                              const mxtl::StringPiece& name);
+                              const fbl::StringPiece& name);
   bool HandleThreadName(mx_koid_t thread,
                         mx_koid_t process,
-                        const mxtl::StringPiece& name);
-  bool HandleProcessName(mx_koid_t process, const mxtl::StringPiece& name);
-  bool HandleSyscallName(uint32_t syscall, const mxtl::StringPiece& name);
-  bool HandleIRQName(uint32_t irq, const mxtl::StringPiece& name);
-  bool HandleProbeName(uint32_t probe, const mxtl::StringPiece& name);
+                        const fbl::StringPiece& name);
+  bool HandleProcessName(mx_koid_t process, const fbl::StringPiece& name);
+  bool HandleSyscallName(uint32_t syscall, const fbl::StringPiece& name);
+  bool HandleIRQName(uint32_t irq, const fbl::StringPiece& name);
+  bool HandleProbeName(uint32_t probe, const fbl::StringPiece& name);
 
   bool HandleIRQEnter(trace_ticks_t event_time,
                       trace_cpu_number_t cpu_number,

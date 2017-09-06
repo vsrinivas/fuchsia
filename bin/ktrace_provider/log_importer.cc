@@ -14,7 +14,7 @@
 namespace ktrace_provider {
 
 LogImporter::LogImporter() {
-  wait_.set_handler(mxtl::BindMember(this, &LogImporter::Handle));
+  wait_.set_handler(fbl::BindMember(this, &LogImporter::Handle));
 }
 
 LogImporter::~LogImporter() {
