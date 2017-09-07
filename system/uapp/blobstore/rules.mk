@@ -21,8 +21,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/rpc.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/block-client \
     system/ulib/fs \
+    system/ulib/async \
+    system/ulib/async.loop \
+    system/ulib/block-client \
     system/ulib/digest \
     third_party/ulib/cryptolib \
     system/ulib/mx \
@@ -31,6 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/magenta \
     system/ulib/mxio \

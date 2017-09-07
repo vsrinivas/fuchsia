@@ -16,10 +16,11 @@
 #include <fbl/ref_ptr.h>
 
 #include "blobstore-private.h"
-#include "fs/vfs.h"
+#include <fs/vfs.h>
 
 #ifdef __Fuchsia__
-#include "fs/mxio-dispatcher.h"
+#include <async/loop.h>
+#include <fs/async-dispatcher.h>
 #endif
 
 namespace {
@@ -37,16 +38,14 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
         return h;
     }
 
-    fbl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    async::Loop loop;
+    fs::AsyncDispatcher dispatcher(loop.async());
+    fs::Vfs vfs(&dispatcher);
     mx_status_t status;
-    if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
-        return status;
-    }
-    fs::Vfs vfs(dispatcher.get());
     if ((status = vfs.ServeDirectory(fbl::move(vn), mx::channel(h))) != MX_OK) {
         return status;
     }
-    dispatcher->RunOnCurrentThread(); // blocks
+    loop.Run();
     return 0;
 }
 
