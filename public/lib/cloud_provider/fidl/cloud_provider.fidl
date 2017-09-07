@@ -22,6 +22,9 @@ enum Status {
 
 // Cloud service that powers cloud sync for a single user. Top-level interface
 // of this file.
+//
+// Closing the client connection to CloudProvider shuts down all controllers
+// (DeviceSets, PageClouds) that were produced by it.
 interface CloudProvider {
   // Retrieves the controller for the user device set.
   GetDeviceSet(DeviceSet& device_set) => (Status status);
@@ -32,6 +35,9 @@ interface CloudProvider {
 };
 
 // Cloud registry of devices participating in cloud sync.
+//
+// Closing the client connection to DeviceSet disconnects all watchers set on
+// it.
 interface DeviceSet {
   // Verifies that the device fingerprint in the cloud is still in the list of
   // devices, ensuring that the cloud was not erased since the last sync.
@@ -69,6 +75,9 @@ struct Commit {
 // page. Position of commits within the log are references using position
 // tokens, allowing the caller to retrieve only commits not older than the given
 // position token.
+//
+// Closing the client connection to PageCloud disconnects all watchers set on
+// it.
 interface PageCloud {
   // Adds the given commits to the commit log in the cloud.
   //
