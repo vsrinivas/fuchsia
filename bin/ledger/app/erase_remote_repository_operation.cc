@@ -8,7 +8,7 @@
 
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
+#include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 
 namespace ledger {
@@ -85,7 +85,7 @@ void EraseRemoteRepositoryOperation::ClearDeviceMap() {
 
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_, server_id_,
-      cloud_sync::GetFirebasePathForUser(user_id_));
+      cloud_provider::GetFirebasePathForUser(user_id_));
   std::vector<std::string> query_params;
   if (!auth_token_.empty()) {
     query_params = {"auth=" + auth_token_};

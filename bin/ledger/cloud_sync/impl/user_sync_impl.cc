@@ -6,8 +6,8 @@
 
 #include <utility>
 
+#include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"

@@ -9,7 +9,7 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
+#include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/user_sync_impl.h"
 #include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 #include "lib/ftl/files/directory.h"
@@ -40,7 +40,7 @@ cloud_sync::UserConfig GetUserConfig(
   user_config.auth_provider = auth_provider;
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
       environment->network_service(), user_config.server_id,
-      cloud_sync::GetFirebasePathForUser(user_config.user_id));
+      cloud_provider::GetFirebasePathForUser(user_config.user_id));
   user_config.cloud_device_set =
       std::make_unique<cloud_provider_firebase::CloudDeviceSetImpl>(
           std::move(user_firebase));

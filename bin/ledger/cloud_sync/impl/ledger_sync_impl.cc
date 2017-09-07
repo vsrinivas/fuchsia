@@ -6,8 +6,8 @@
 
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
+#include "apps/ledger/src/cloud_provider/impl/paths.h"
 #include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/gcs/cloud_storage_impl.h"
@@ -20,8 +20,10 @@ LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                std::unique_ptr<SyncStateWatcher> watcher)
     : environment_(environment),
       user_config_(user_config),
-      app_gcs_prefix_(GetGcsPrefixForApp(user_config->user_id, app_id)),
-      app_firebase_path_(GetFirebasePathForApp(user_config->user_id, app_id)),
+      app_gcs_prefix_(
+          cloud_provider::GetGcsPrefixForApp(user_config->user_id, app_id)),
+      app_firebase_path_(
+          cloud_provider::GetFirebasePathForApp(user_config->user_id, app_id)),
       app_firebase_(std::make_unique<firebase::FirebaseImpl>(
           environment_->network_service(),
           user_config->server_id,
@@ -47,11 +49,13 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   auto result = std::make_unique<PageSyncContext>();
   result->firebase = std::make_unique<firebase::FirebaseImpl>(
       environment_->network_service(), user_config_->server_id,
-      GetFirebasePathForPage(app_firebase_path_, page_storage->GetId()));
+      cloud_provider::GetFirebasePathForPage(app_firebase_path_,
+                                             page_storage->GetId()));
   result->cloud_storage = std::make_unique<gcs::CloudStorageImpl>(
       environment_->main_runner(), environment_->network_service(),
       user_config_->server_id,
-      GetGcsPrefixForPage(app_gcs_prefix_, page_storage->GetId()));
+      cloud_provider::GetGcsPrefixForPage(app_gcs_prefix_,
+                                          page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get(), result->cloud_storage.get());
   auto page_sync = std::make_unique<PageSyncImpl>(

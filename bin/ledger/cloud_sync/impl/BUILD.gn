@@ -17,8 +17,6 @@ source_set("impl") {
     "ledger_sync_impl.h",
     "page_sync_impl.cc",
     "page_sync_impl.h",
-    "paths.cc",
-    "paths.h",
     "user_sync_impl.cc",
     "user_sync_impl.h",
   ]

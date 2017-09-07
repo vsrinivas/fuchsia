@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
+#include "apps/ledger/src/cloud_provider/impl/paths.h"
 
 #include <string>
 
@@ -10,7 +10,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/strings/concatenate.h"
 
-namespace cloud_sync {
+namespace cloud_provider {
 
 namespace {
 constexpr char kGcsSeparator[] = "%2F";
@@ -64,4 +64,4 @@ std::string GetFirebasePathForPage(ftl::StringView app_path,
       {app_path, kFirebaseSeparator, firebase::EncodeKey(page_id)});
 }
 
-}  // namespace cloud_sync
+}  // namespace cloud_provider

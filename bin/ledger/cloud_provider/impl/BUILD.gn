@@ -10,6 +10,8 @@ source_set("impl") {
     "cloud_provider_impl.h",
     "encoding.cc",
     "encoding.h",
+    "paths.cc",
+    "paths.h",
     "timestamp_conversions.cc",
     "timestamp_conversions.h",
     "watch_client_impl.cc",
@@ -25,6 +27,7 @@ source_set("impl") {
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/public",  # For serialization version constant.
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
     "//magenta/system/ulib/mx",
