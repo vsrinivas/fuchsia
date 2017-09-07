@@ -17,7 +17,6 @@ status_t _x86_copy_to_or_from_user(
         void *dst,
         const void *src,
         size_t len,
-        bool smap_avail,
         void **fault_return);
 
 __END_CDECLS

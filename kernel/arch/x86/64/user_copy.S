@@ -12,25 +12,24 @@
  * %rsi = argument 2, const void* src
  * %rdx = argument 3, size_t len
  *   - moved to %rcx
- * %rcx = argument 4, bool smap_avail
+ * %rcx = argument 4, void** fault_return
  *   - moved to %r10
- * %r8 = argument 5, void** fault_return
  */
 
-# status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, bool smap, void **fault_return)
+# status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return)
 FUNCTION(_x86_copy_to_or_from_user)
-    # Copy smap_avail out of %rcx, because %rcx is used by "rep movsb" later.
-    movl %ecx, %r10d
+    # Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
+    movq %rcx, %r10
 
     # Check if SMAP is enabled
-    cmpl $0, %r10d
+    cmpb $0, g_x86_feature_smap(%rip)
     # Disable SMAP protection if SMAP is enabled
     jz 0f
     stac
 0:
 
     # Setup page fault return
-    movq $.Lfault_copy, (%r8)
+    movq $.Lfault_copy, (%r10)
 
     # Between now and the reset of the fault return, we cannot make a function
     # call or manipulate the stack.  We need to be able to restore all callee
@@ -47,10 +46,10 @@ FUNCTION(_x86_copy_to_or_from_user)
 
 .Lcleanup_copy:
     # Reset fault return
-    movq $0, (%r8)
+    movq $0, (%r10)
 
     # Re-enable SMAP protection
-    cmpl $0, %r10d
+    cmpb $0, g_x86_feature_smap(%rip)
     jz 0f
     clac
 0:

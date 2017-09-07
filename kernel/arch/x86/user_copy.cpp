@@ -40,9 +40,8 @@ status_t arch_copy_from_user(void *dst, const void *src, size_t len)
     if (!can_access(src, len))
         return MX_ERR_INVALID_ARGS;
 
-    bool smap_avail = x86_feature_test(X86_FEATURE_SMAP);
     thread_t *thr = get_current_thread();
-    status_t status = _x86_copy_to_or_from_user(dst, src, len, smap_avail,
+    status_t status = _x86_copy_to_or_from_user(dst, src, len,
                                                 &thr->arch.page_fault_resume);
 
     DEBUG_ASSERT(!ac_flag());
@@ -56,9 +55,8 @@ status_t arch_copy_to_user(void *dst, const void *src, size_t len)
     if (!can_access(dst, len))
         return MX_ERR_INVALID_ARGS;
 
-    bool smap_avail = x86_feature_test(X86_FEATURE_SMAP);
     thread_t *thr = get_current_thread();
-    status_t status = _x86_copy_to_or_from_user(dst, src, len, smap_avail,
+    status_t status = _x86_copy_to_or_from_user(dst, src, len,
                                                 &thr->arch.page_fault_resume);
 
     DEBUG_ASSERT(!ac_flag());
