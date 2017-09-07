@@ -129,6 +129,8 @@ mx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     control_.Init("control", control_mapping, sizeof(Node));
     data_.Init("data", data_mapping, ob_size);
 
+    count_ = 0u;
+
     vmar_ = vmar;
     destroy_vmar.cancel();
 
@@ -235,16 +237,21 @@ void* Arena::Alloc() {
     DEBUG_ASSERT(vmar_ != nullptr);
     // Prefers to return the most-recently-freed slot in the hopes that
     // it is still hot in the cache.
+    void* allocation;
     if (!free_.is_empty()) {
         // TODO(dbort): Replace this linked list with a stack of offsets into
         // the data pool; simpler, and uses less memory.
         Node* node = free_.pop_front();
         auto slot = node->slot;
         control_.Push(node);
-        return slot;
+        allocation = slot;
     } else {
-        return data_.Pop();
+        allocation = data_.Pop();
     }
+    if (allocation != nullptr) {
+        ++count_;
+    }
+    return allocation;
 }
 
 void Arena::Free(void* addr) {
@@ -252,6 +259,7 @@ void Arena::Free(void* addr) {
     if (addr == nullptr) {
         return;
     }
+    --count_;
     DEBUG_ASSERT(data_.InRange(addr));
     Node* node = new (reinterpret_cast<void*>(control_.Pop())) Node{addr};
     free_.push_front(node);

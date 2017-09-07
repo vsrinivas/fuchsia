@@ -88,6 +88,9 @@ static bool in_range_tests(void* context) {
         // FRAGILE: assumes that objects are allocated in increasing order.
         EXPECT_FALSE(
             arena.in_range(reinterpret_cast<TestObj*>(objs[i]) + 1), msg);
+        // The count should correspond to the number of times we have
+        // allocated.
+        EXPECT_EQ(static_cast<size_t>(i + 1), arena.DiagnosticCount(), msg);
     }
 
     // Deallocate the objects and check whether they're in range.
@@ -103,6 +106,10 @@ static bool in_range_tests(void* context) {
         // NOTE: If Arena ever learns to coalesce and decommit whole pages of
         // free objects, this test will need to change.
         EXPECT_TRUE(arena.in_range(objs[i]), msg);
+
+        // The count should correspond to the number of times we have
+        // deallocated.
+        EXPECT_EQ(static_cast<size_t>(i), arena.DiagnosticCount(), msg);
     }
     END_TEST;
 }

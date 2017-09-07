@@ -45,6 +45,11 @@ public:
     // TIP: Use "k mx htinfo" to dump the handle table at runtime.
     void Dump() const;
 
+    // Returns the number of outstanding allocations from this arena.
+    size_t DiagnosticCount() const {
+        return count_;
+    }
+
 private:
     Arena(const Arena&) = delete;
     Arena& operator=(const Arena&) = delete;
@@ -111,6 +116,9 @@ private:
     // Parent VMAR of our memory.
     fbl::RefPtr<VmAddressRegion> vmar_;
 
+    // Outstanding allocation count.
+    size_t count_;
+
     friend class ArenaTestFriend;
 };
 
@@ -146,8 +154,16 @@ public:
         mutex_.Release();
     }
 
+    // Returns the number of outstanding allocations from this arena.
+    size_t DiagnosticCount() const {
+        mutex_.Acquire();
+        auto count = arena_.DiagnosticCount();
+        mutex_.Release();
+        return count;
+    }
+
 private:
-    Mtx mutex_;
+    mutable Mtx mutex_;
     Arena arena_ TA_GUARDED(mutex_);
 };
 } // namespace fbl
