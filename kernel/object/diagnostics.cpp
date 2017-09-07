@@ -840,5 +840,5 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-STATIC_COMMAND("mx", "magenta diagnostics", &cmd_diagnostics)
+STATIC_COMMAND("mx", "kernel object diagnostics", &cmd_diagnostics)
 STATIC_COMMAND_END(mx);

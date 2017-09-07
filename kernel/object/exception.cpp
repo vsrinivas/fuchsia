@@ -187,24 +187,27 @@ static handler_status_t exception_handler_worker(uint exception_type,
     return HS_NOT_HANDLED;
 }
 
-// Dispatches an exception to the appropriate handler.
-// Called by arch code when it cannot handle an exception.
+// Dispatches an exception to the appropriate handler. Called by arch code
+// when it cannot handle an exception.
 //
 // If we return MX_OK, the caller is expected to resume the thread "as if"
 // nothing happened, the handler is expected to have modified state such that
 // resumption is possible.
-// Otherwise, if we return, the result is MX_ERR_BAD_STATE meaning the thread is
-// not a magenta thread.
 //
-// TODO(dje): Support unwinding from this exception and introducing a
-// different exception?
+// If we return MX_ERR_BAD_STATE, the current thread is not a user thread
+// (i.e., not associated with a ThreadDispatcher).
+//
+// Otherwise, we cause the current thread to exit and do not return at all.
+//
+// TODO(dje): Support unwinding from this exception and introducing a different
+// exception?
 status_t dispatch_user_exception(uint exception_type,
                                  arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
     ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
     if (unlikely(!thread)) {
-        // we're not in magenta thread context, bail
+        // The current thread is not a user thread; bail.
         return MX_ERR_BAD_STATE;
     }
 
@@ -234,7 +237,7 @@ status_t dispatch_user_exception(uint exception_type,
         process->get_name(pname);
         char tname[MX_MAX_NAME_LEN];
         thread->get_name(tname);
-        printf("KERN: %s in magenta thread '%s' in process '%s'\n",
+        printf("KERN: %s in user thread '%s' in process '%s'\n",
                excp_type_to_string(exception_type), tname, pname);
 
         arch_dump_exception_context(context);

@@ -66,7 +66,7 @@ size_t internal::OutstandingHandles() {
 static fbl::RefPtr<JobDispatcher> root_job;
 
 // The singleton policy manager, for jobs and processes. This is
-// a magenta internal class (not a dispatcher-derived).
+// not a Dispatcher, just a plain class.
 static PolicyManager* policy_manager;
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
@@ -453,7 +453,7 @@ static void oom_lowmem(size_t shortfall_bytes) {
     });
 }
 
-void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
+static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
     handle_arena.Init("handles", sizeof(Handle), kMaxHandleCount);
     root_job = JobDispatcher::CreateRootJob();
     policy_manager = PolicyManager::Create();
@@ -465,4 +465,4 @@ void magenta_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
              oom_lowmem);
 }
 
-LK_INIT_HOOK(magenta, magenta_init, LK_INIT_LEVEL_THREADING);
+LK_INIT_HOOK(libobject, object_glue_init, LK_INIT_LEVEL_THREADING);

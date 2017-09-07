@@ -56,7 +56,7 @@ public:
 
     mx_koid_t get_koid() const { return koid_; }
 
-    // Updating |handle_count_| is done at the magenta handle management layer.
+    // Updating |handle_count_| is done at the Handle management layer.
     uint32_t* get_handle_count_ptr() { return &handle_count_; }
 
     // Interface for derived classes.

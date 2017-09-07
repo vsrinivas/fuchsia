@@ -64,7 +64,7 @@ public:
         // segfault. In linux the signal would be delivered to the thread,
         // which would either terminate the process or run a signal handler if
         // defined. In magenta this gives the next signal handler in the list
-        // a crack at // the exception.
+        // a crack at the exception.
         TRY_NEXT,
 
         // The exception has been handled, resume the thread.
@@ -107,7 +107,7 @@ public:
     mx_status_t Resume();
 
     // accessors
-    ProcessDispatcher* process() { return process_.get(); }
+    ProcessDispatcher* process() const { return process_.get(); }
 
     FutexNode* futex_node() { return &futex_node_; }
     mx_status_t set_name(const char* name, size_t len) final;

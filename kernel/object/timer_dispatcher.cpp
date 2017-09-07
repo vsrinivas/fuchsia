@@ -187,9 +187,9 @@ void TimerDispatcher::OnTimerFired() {
         }
     }
 
-
-    // This could be the last reference so we might need to destroy ourselves.
-    // In Magenta RefPtrs, the 'delete' is called by the holder of the object.
+    // Drop the RefCounted reference that was added in Set(). If this was the
+    // last reference, the RefCounted contract requires that we delete
+    // ourselves.
     if (Release())
         delete this;
 }

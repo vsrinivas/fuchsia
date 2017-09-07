@@ -949,8 +949,10 @@ mx_status_t ThreadDispatcher::WriteState(uint32_t state_kind, const void* buffer
     }
 }
 
-void magenta_thread_process_name(void* user_thread, char out_name[MX_MAX_NAME_LEN]) {
-    ThreadDispatcher* ut = reinterpret_cast<ThreadDispatcher*>(user_thread);
+void get_user_thread_process_name(const void* user_thread,
+                                  char out_name[MX_MAX_NAME_LEN]) {
+    const ThreadDispatcher* ut =
+        reinterpret_cast<const ThreadDispatcher*>(user_thread);
     ut->process()->get_name(out_name);
 }
 

@@ -1078,7 +1078,7 @@ thread_t* thread_create_idle_thread(uint cpu_num) {
 
 void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]) {
     if (t->user_thread) {
-        magenta_thread_process_name(t->user_thread, out_name);
+        get_user_thread_process_name(t->user_thread, out_name);
         return;
     }
     memcpy(out_name, "kernel", 7);
