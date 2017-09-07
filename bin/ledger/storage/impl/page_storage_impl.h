@@ -73,7 +73,8 @@ class PageStorageImpl : public PageStorage {
   void GetUnsyncedCommits(
       std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) override;
-  Status MarkCommitSynced(const CommitId& commit_id) override;
+  void MarkCommitSynced(const CommitId& commit_id,
+                        std::function<void(Status)> callback) override;
   void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
   void MarkPieceSynced(ObjectIdView object_id,
@@ -176,6 +177,13 @@ class PageStorageImpl : public PageStorage {
       coroutine::CoroutineHandler* handler,
       std::vector<CommitIdAndBytes> ids_and_bytes,
       bool* notify_watchers);
+
+  Status SynchronousGetUnsyncedCommits(
+      coroutine::CoroutineHandler* handler,
+      std::vector<std::unique_ptr<const Commit>>* unsynced_commits);
+
+  Status SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
+                                     const CommitId& commit_id);
 
   Status SynchronousAddCommits(
       coroutine::CoroutineHandler* handler,

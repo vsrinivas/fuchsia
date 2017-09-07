@@ -56,10 +56,12 @@ Status PageDbEmptyImpl::GetObjectStatus(ObjectIdView /*object_id*/,
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(
+    coroutine::CoroutineHandler* /*handler*/,
     std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::IsCommitSynced(const CommitId& /*commit_id*/,
+Status PageDbEmptyImpl::IsCommitSynced(coroutine::CoroutineHandler* /*handler*/,
+                                       const CommitId& /*commit_id*/,
                                        bool* /*is_synced*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -138,11 +140,15 @@ Status PageDbEmptyImpl::SetObjectStatus(
     PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::MarkCommitIdSynced(const CommitId& /*commit_id*/) {
+Status PageDbEmptyImpl::MarkCommitIdSynced(
+    coroutine::CoroutineHandler* /*handler*/,
+    const CommitId& /*commit_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::MarkCommitIdUnsynced(const CommitId& /*commit_id*/,
-                                             uint64_t /*generation*/) {
+Status PageDbEmptyImpl::MarkCommitIdUnsynced(
+    coroutine::CoroutineHandler* /*handler*/,
+    const CommitId& /*commit_id*/,
+    uint64_t /*generation*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::SetSyncMetadata(

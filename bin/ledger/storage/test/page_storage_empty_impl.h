@@ -61,7 +61,8 @@ class PageStorageEmptyImpl : public PageStorage {
       std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) override;
 
-  Status MarkCommitSynced(const CommitId& commit_id) override;
+  void MarkCommitSynced(const CommitId& commit_id,
+                        std::function<void(Status)> callback) override;
 
   void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;

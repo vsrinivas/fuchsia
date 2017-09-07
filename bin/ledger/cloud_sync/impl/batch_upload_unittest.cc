@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
+#include "apps/ledger/src/callback/capture.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/test/cloud_provider_empty_impl.h"
 #include "apps/ledger/src/storage/public/commit.h"
@@ -118,8 +119,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK);
   }
 
-  storage::Status MarkCommitSynced(
-      const storage::CommitId& commit_id) override {
+  void MarkCommitSynced(
+      const storage::CommitId& commit_id,
+      std::function<void(storage::Status)> callback) override {
     commits_marked_as_synced.insert(commit_id);
     unsynced_commits.erase(
         std::remove_if(
@@ -128,7 +130,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
               return commit->GetId() == commit_id;
             }),
         unsynced_commits.end());
-    return storage::Status::OK;
+    callback(storage::Status::OK);
   }
 
   std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content) {
@@ -615,7 +617,10 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
   EXPECT_EQ(0u, cloud_provider_.received_commits.size());
 
   // Mark commit as synced.
-  storage_.MarkCommitSynced("id");
+  storage::Status status;
+  storage_.MarkCommitSynced("id", callback::Capture(MakeQuitTask(), &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ(0u, storage_.unsynced_commits.size());
 
   // Retry

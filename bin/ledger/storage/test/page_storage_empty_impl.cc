@@ -85,9 +85,11 @@ void PageStorageEmptyImpl::GetUnsyncedCommits(
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
-Status PageStorageEmptyImpl::MarkCommitSynced(const CommitId& /*commit_id*/) {
+void PageStorageEmptyImpl::MarkCommitSynced(
+    const CommitId& /*commit_id*/,
+    std::function<void(Status)> callback) {
   FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::GetUnsyncedPieces(

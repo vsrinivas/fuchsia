@@ -10,6 +10,7 @@
 
 #include <trace/event.h>
 
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/cloud_provider/public/commit.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "lib/ftl/logging.h"
@@ -195,13 +196,19 @@ void BatchUpload::UploadCommits() {
       on_error_();
       return;
     }
+    auto waiter =
+        callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
+
     for (auto& id : commit_ids) {
-      auto ret = storage_->MarkCommitSynced(id);
-      FTL_DCHECK(ret == storage::Status::OK);
+      storage_->MarkCommitSynced(id, waiter->NewCallback());
     }
-    // This object can be deleted in the on_done_() callback, don't do
-    // anything after the call.
-    on_done_();
+    waiter->Finalize([this](storage::Status status) {
+      // TODO(nellyv): Handle IO errors. See LE-225.
+      FTL_DCHECK(status == storage::Status::OK);
+      // This object can be deleted in the on_done_() callback, don't do
+      // anything after the call.
+      on_done_();
+    });
   });
 }
 

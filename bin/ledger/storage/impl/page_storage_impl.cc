@@ -264,30 +264,27 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
 void PageStorageImpl::GetUnsyncedCommits(
     std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
         callback) {
-  std::vector<CommitId> commit_ids;
-  Status s = db_.GetUnsyncedCommitIds(&commit_ids);
-  if (s != Status::OK) {
-    callback(s, {});
-    return;
-  }
-
-  auto waiter = callback::Waiter<Status, std::unique_ptr<const Commit>>::Create(
-      Status::OK);
-  for (const auto& commit_id : commit_ids) {
-    GetCommit(commit_id, waiter->NewCallback());
-  }
-  waiter->Finalize([callback = std::move(callback)](
-      Status s, std::vector<std::unique_ptr<const Commit>> commits) {
-    if (s != Status::OK) {
-      callback(s, {});
-      return;
-    }
-    callback(Status::OK, std::move(commits));
+  coroutine_service_->StartCoroutine([
+    this, final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+    std::vector<std::unique_ptr<const Commit>> unsynced_commits;
+    Status s = SynchronousGetUnsyncedCommits(handler, &unsynced_commits);
+    callback(s, std::move(unsynced_commits));
   });
 }
 
-Status PageStorageImpl::MarkCommitSynced(const CommitId& commit_id) {
-  return db_.MarkCommitIdSynced(commit_id);
+void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
+                                       std::function<void(Status)> callback) {
+  coroutine_service_->StartCoroutine([
+    this, commit_id, final_callback = std::move(callback)
+  ](coroutine::CoroutineHandler * handler) {
+    auto callback =
+        UpdateActiveHandlersCallback(handler, std::move(final_callback));
+
+    callback(db_.MarkCommitIdSynced(handler, commit_id));
+  });
 }
 
 void PageStorageImpl::GetUnsyncedPieces(
@@ -980,7 +977,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     ObjectId id = std::move(id_and_bytes.id);
     std::string storage_bytes = std::move(id_and_bytes.bytes);
     if (ContainsCommit(handler, id) == Status::OK) {
-      MarkCommitSynced(id);
+      SynchronousMarkCommitSynced(handler, id);
       continue;
     }
 
@@ -1028,6 +1025,44 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
 
   return SynchronousAddCommits(handler, std::move(commits), ChangeSource::SYNC,
                                std::vector<ObjectId>(), notify_watchers);
+}
+
+Status PageStorageImpl::SynchronousGetUnsyncedCommits(
+    coroutine::CoroutineHandler* handler,
+    std::vector<std::unique_ptr<const Commit>>* unsynced_commits) {
+  std::vector<CommitId> commit_ids;
+  Status s = db_.GetUnsyncedCommitIds(handler, &commit_ids);
+  if (s != Status::OK) {
+    return s;
+  }
+
+  auto waiter = callback::Waiter<Status, std::unique_ptr<const Commit>>::Create(
+      Status::OK);
+  for (const auto& commit_id : commit_ids) {
+    GetCommit(commit_id, waiter->NewCallback());
+  }
+
+  std::vector<std::unique_ptr<const Commit>> result;
+  if (coroutine::SyncCall(
+          handler,
+          [waiter = std::move(waiter)](
+              std::function<void(Status,
+                                 std::vector<std::unique_ptr<const Commit>>)>
+                  callback) { waiter->Finalize(std::move(callback)); },
+          &s, &result)) {
+    return Status::INTERRUPTED;
+  }
+  if (s != Status::OK) {
+    return s;
+  }
+  unsynced_commits->swap(result);
+  return Status::OK;
+}
+
+Status PageStorageImpl::SynchronousMarkCommitSynced(
+    coroutine::CoroutineHandler* handler,
+    const CommitId& commit_id) {
+  return db_.MarkCommitIdSynced(handler, commit_id);
 }
 
 Status PageStorageImpl::SynchronousAddCommits(
@@ -1105,7 +1140,7 @@ Status PageStorageImpl::SynchronousAddCommits(
         }
 
         if (source == ChangeSource::LOCAL) {
-          s = db_.MarkCommitIdUnsynced(commit->GetId(),
+          s = db_.MarkCommitIdUnsynced(handler, commit->GetId(),
                                        commit->GetGeneration());
           if (s != Status::OK) {
             return s;
@@ -1125,7 +1160,7 @@ Status PageStorageImpl::SynchronousAddCommits(
         // same commit at roughly the same time. As commit writing is
         // asynchronous, the previous check in AddCommitsFromSync may have not
         // matched any commit, while a commit got added in between.
-        s = batch->MarkCommitIdSynced(commit->GetId());
+        s = batch->MarkCommitIdSynced(handler, commit->GetId());
         if (s != Status::OK) {
           return s;
         }

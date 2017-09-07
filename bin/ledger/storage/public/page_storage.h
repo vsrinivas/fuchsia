@@ -105,7 +105,8 @@ class PageStorage {
           callback) = 0;
 
   // Marks the given commit as synced.
-  virtual Status MarkCommitSynced(const CommitId& commit_id) = 0;
+  virtual void MarkCommitSynced(const CommitId& commit_id,
+                                std::function<void(Status)> callback) = 0;
 
   // Finds all objects in the storage that are not yet synced, and calls
   // |callback| with the operation status and the corresponding |ObjectId|s

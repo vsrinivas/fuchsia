@@ -409,7 +409,10 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   EXPECT_EQ(1u, commits.size());
   EXPECT_EQ(id, commits[0]->GetId());
 
-  storage_->MarkCommitSynced(id);
+  Status status;
+  storage_->MarkCommitSynced(id, callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
 
   // Add the commit again.
   storage_->AddCommitFromLocal(commit->Clone(), {}, [](Status status) {
@@ -594,7 +597,11 @@ TEST_F(PageStorageTest, SyncCommits) {
   EXPECT_EQ(storage_bytes, commits[0]->GetStorageBytes());
 
   // Mark it as synced.
-  EXPECT_EQ(Status::OK, storage_->MarkCommitSynced(id));
+  Status status;
+  storage_->MarkCommitSynced(id, callback::Capture(MakeQuitTask(), &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
   commits = GetUnsyncedCommits();
   EXPECT_TRUE(commits.empty());
 }

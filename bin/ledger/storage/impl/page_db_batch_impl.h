@@ -65,8 +65,10 @@ class PageDbBatchImpl : public PageDb::Batch {
                          PageDbObjectStatus object_status) override;
 
   // Commit sync metadata.
-  Status MarkCommitIdSynced(const CommitId& commit_id) override;
-  Status MarkCommitIdUnsynced(const CommitId& commit_id,
+  Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
+                            const CommitId& commit_id) override;
+  Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
+                              const CommitId& commit_id,
                               uint64_t generation) override;
 
   // Object sync metadata.

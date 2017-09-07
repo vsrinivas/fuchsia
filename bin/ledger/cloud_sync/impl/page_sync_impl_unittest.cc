@@ -173,8 +173,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     callback(storage::Status::OK, std::move(results));
   }
 
-  storage::Status MarkCommitSynced(
-      const storage::CommitId& commit_id) override {
+  void MarkCommitSynced(
+      const storage::CommitId& commit_id,
+      std::function<void(storage::Status)> callback) override {
     unsynced_commits_to_return.erase(
         std::remove_if(
             unsynced_commits_to_return.begin(),
@@ -184,7 +185,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
             }),
         unsynced_commits_to_return.end());
     commits_marked_as_synced.insert(commit_id);
-    return storage::Status::OK;
+    callback(storage::Status::OK);
   }
 
   void SetSyncMetadata(ftl::StringView key,

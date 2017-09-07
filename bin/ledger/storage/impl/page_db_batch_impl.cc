@@ -186,12 +186,16 @@ Status PageDbBatchImpl::SetObjectStatus(
   return Status::OK;
 }
 
-Status PageDbBatchImpl::MarkCommitIdSynced(const CommitId& commit_id) {
+Status PageDbBatchImpl::MarkCommitIdSynced(
+    coroutine::CoroutineHandler* /*handler*/,
+    const CommitId& commit_id) {
   return batch_->Delete(UnsyncedCommitRow::GetKeyFor(commit_id));
 }
 
-Status PageDbBatchImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
-                                             uint64_t generation) {
+Status PageDbBatchImpl::MarkCommitIdUnsynced(
+    coroutine::CoroutineHandler* /*handler*/,
+    const CommitId& commit_id,
+    uint64_t generation) {
   return batch_->Put(UnsyncedCommitRow::GetKeyFor(commit_id),
                      SerializeNumber(generation));
 }

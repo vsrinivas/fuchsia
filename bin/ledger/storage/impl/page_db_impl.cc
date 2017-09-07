@@ -224,7 +224,9 @@ Status PageDbImpl::GetObjectStatus(ObjectIdView object_id,
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
+Status PageDbImpl::GetUnsyncedCommitIds(
+    coroutine::CoroutineHandler* /*handler*/,
+    std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
   RETURN_ON_ERROR(db_.GetEntriesByPrefix(
       convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
@@ -232,7 +234,9 @@ Status PageDbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
   return Status::OK;
 }
 
-Status PageDbImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
+Status PageDbImpl::IsCommitSynced(coroutine::CoroutineHandler* /*handler*/,
+                                  const CommitId& commit_id,
+                                  bool* is_synced) {
   bool has_key;
   RETURN_ON_ERROR(
       db_.HasKey(UnsyncedCommitRow::GetKeyFor(commit_id), &has_key));
@@ -349,16 +353,18 @@ Status PageDbImpl::SetObjectStatus(coroutine::CoroutineHandler* handler,
   return batch->Execute();
 }
 
-Status PageDbImpl::MarkCommitIdSynced(const CommitId& commit_id) {
+Status PageDbImpl::MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
+                                      const CommitId& commit_id) {
   auto batch = StartBatch();
-  batch->MarkCommitIdSynced(commit_id);
+  batch->MarkCommitIdSynced(handler, commit_id);
   return batch->Execute();
 }
 
-Status PageDbImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
+Status PageDbImpl::MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
+                                        const CommitId& commit_id,
                                         uint64_t generation) {
   auto batch = StartBatch();
-  batch->MarkCommitIdUnsynced(commit_id, generation);
+  batch->MarkCommitIdUnsynced(handler, commit_id, generation);
   return batch->Execute();
 }
 

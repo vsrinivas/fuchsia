@@ -231,41 +231,50 @@ TEST_F(PageDbTest, ObjectStorage) {
 }
 
 TEST_F(PageDbTest, UnsyncedCommits) {
-  CommitId commit_id = RandomCommitId();
-  std::vector<CommitId> commit_ids;
-  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&commit_ids));
-  EXPECT_TRUE(commit_ids.empty());
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    CommitId commit_id = RandomCommitId();
+    std::vector<CommitId> commit_ids;
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
+    EXPECT_TRUE(commit_ids.empty());
 
-  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_id, 0));
-  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&commit_ids));
-  EXPECT_EQ(1u, commit_ids.size());
-  EXPECT_EQ(commit_id, commit_ids[0]);
-  bool is_synced;
-  EXPECT_EQ(Status::OK, page_db_.IsCommitSynced(commit_id, &is_synced));
-  EXPECT_FALSE(is_synced);
+    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(handler, commit_id, 0));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
+    EXPECT_EQ(1u, commit_ids.size());
+    EXPECT_EQ(commit_id, commit_ids[0]);
+    bool is_synced;
+    EXPECT_EQ(Status::OK,
+              page_db_.IsCommitSynced(handler, commit_id, &is_synced));
+    EXPECT_FALSE(is_synced);
 
-  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdSynced(commit_id));
-  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&commit_ids));
-  EXPECT_TRUE(commit_ids.empty());
-  EXPECT_EQ(Status::OK, page_db_.IsCommitSynced(commit_id, &is_synced));
-  EXPECT_TRUE(is_synced);
+    EXPECT_EQ(Status::OK, page_db_.MarkCommitIdSynced(handler, commit_id));
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &commit_ids));
+    EXPECT_TRUE(commit_ids.empty());
+    EXPECT_EQ(Status::OK,
+              page_db_.IsCommitSynced(handler, commit_id, &is_synced));
+    EXPECT_TRUE(is_synced);
+  }));
 }
 
 TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
-  CommitId commit_ids[] = {RandomCommitId(), RandomCommitId(),
-                           RandomCommitId()};
-  // Add three unsynced commits with timestamps 200, 300 and 100.
-  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_ids[0], 200));
-  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_ids[1], 300));
-  EXPECT_EQ(Status::OK, page_db_.MarkCommitIdUnsynced(commit_ids[2], 100));
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    CommitId commit_ids[] = {RandomCommitId(), RandomCommitId(),
+                             RandomCommitId()};
+    // Add three unsynced commits with timestamps 200, 300 and 100.
+    EXPECT_EQ(Status::OK,
+              page_db_.MarkCommitIdUnsynced(handler, commit_ids[0], 200));
+    EXPECT_EQ(Status::OK,
+              page_db_.MarkCommitIdUnsynced(handler, commit_ids[1], 300));
+    EXPECT_EQ(Status::OK,
+              page_db_.MarkCommitIdUnsynced(handler, commit_ids[2], 100));
 
-  // The result should be ordered by the given timestamps.
-  std::vector<CommitId> found_ids;
-  EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(&found_ids));
-  EXPECT_EQ(3u, found_ids.size());
-  EXPECT_EQ(found_ids[0], commit_ids[2]);
-  EXPECT_EQ(found_ids[1], commit_ids[0]);
-  EXPECT_EQ(found_ids[2], commit_ids[1]);
+    // The result should be ordered by the given timestamps.
+    std::vector<CommitId> found_ids;
+    EXPECT_EQ(Status::OK, page_db_.GetUnsyncedCommitIds(handler, &found_ids));
+    EXPECT_EQ(3u, found_ids.size());
+    EXPECT_EQ(found_ids[0], commit_ids[2]);
+    EXPECT_EQ(found_ids[1], commit_ids[0]);
+    EXPECT_EQ(found_ids[2], commit_ids[1]);
+  }));
 }
 
 TEST_F(PageDbTest, UnsyncedPieces) {

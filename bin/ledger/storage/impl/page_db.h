@@ -115,10 +115,12 @@ class PageDbMutator {
 
   // Commit sync metadata.
   // Marks the given |commit_id| as synced.
-  virtual Status MarkCommitIdSynced(const CommitId& commit_id) = 0;
+  virtual Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
+                                    const CommitId& commit_id) = 0;
 
   // Marks the given |commit_id| as unsynced.
-  virtual Status MarkCommitIdUnsynced(const CommitId& commit_id,
+  virtual Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
+                                      const CommitId& commit_id,
                                       uint64_t generation) = 0;
 
   // Sets the opaque sync metadata associated with this page for the given key.
@@ -219,10 +221,13 @@ class PageDb : public PageDbMutator {
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|
   // with their ids. The result is ordered by the timestamps given when calling
   // |MarkCommitIdUnsynced|.
-  virtual Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) = 0;
+  virtual Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
+                                      std::vector<CommitId>* commit_ids) = 0;
 
   // Checks if the commit with the given |commit_id| is synced.
-  virtual Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) = 0;
+  virtual Status IsCommitSynced(coroutine::CoroutineHandler* handler,
+                                const CommitId& commit_id,
+                                bool* is_synced) = 0;
 
   // Object sync metadata.
   // Finds the set of unsynced pieces and replaces the contents of |object_ids|

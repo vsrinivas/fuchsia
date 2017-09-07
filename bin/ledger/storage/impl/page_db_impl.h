@@ -48,8 +48,11 @@ class PageDbImpl : public PageDb {
   Status ReadObject(ObjectId object_id,
                     std::unique_ptr<const Object>* object) override;
   Status HasObject(ObjectIdView object_id, bool* has_object) override;
-  Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
-  Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
+  Status GetUnsyncedCommitIds(coroutine::CoroutineHandler* handler,
+                              std::vector<CommitId>* commit_ids) override;
+  Status IsCommitSynced(coroutine::CoroutineHandler* handler,
+                        const CommitId& commit_id,
+                        bool* is_synced) override;
   Status GetUnsyncedPieces(std::vector<ObjectId>* object_ids) override;
   Status GetObjectStatus(ObjectIdView object_id,
                          PageDbObjectStatus* object_status) override;
@@ -87,8 +90,10 @@ class PageDbImpl : public PageDb {
                      PageDbObjectStatus object_status) override;
   Status DeleteObject(coroutine::CoroutineHandler* handler,
                       ObjectIdView object_id) override;
-  Status MarkCommitIdSynced(const CommitId& commit_id) override;
-  Status MarkCommitIdUnsynced(const CommitId& commit_id,
+  Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
+                            const CommitId& commit_id) override;
+  Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
+                              const CommitId& commit_id,
                               uint64_t generation) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
                          ObjectIdView object_id,
