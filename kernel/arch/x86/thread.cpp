@@ -44,7 +44,6 @@ void arch_thread_initialize(thread_t *t, vaddr_t entry_point)
     memset(frame, 0, sizeof(*frame));
 
     frame->rip = entry_point;
-    frame->rflags = 0x3002; /* IF = 0, NT = 0, IOPL = 3 */
 
     // initialize the saved extended register state
     vaddr_t buf = ROUNDUP(((vaddr_t)t->arch.extended_register_buffer), 64);

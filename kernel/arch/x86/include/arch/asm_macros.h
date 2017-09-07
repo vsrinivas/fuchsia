@@ -21,24 +21,6 @@ popq \reg
 .cfi_same_value \reg
 .endm
 
-// Use these when pushing the flags register.
-
-.macro push_flags
-pushf
-.cfi_adjust_cfa_offset 8
-#ifndef __clang__ // https://bugs.llvm.org/show_bug.cgi?id=33633
-.cfi_rel_offset %rflags, 0
-#endif
-.endm
-
-.macro pop_flags
-popf
-.cfi_adjust_cfa_offset -8
-#ifndef __clang__ // https://bugs.llvm.org/show_bug.cgi?id=33633
-.cfi_same_value %rflags
-#endif
-.endm
-
 // Use these when pushing a value other than the above, or when pushing
 // a register that is not from the calling frame.
 // Here we just punt on trying to describe the value pushed, the caller

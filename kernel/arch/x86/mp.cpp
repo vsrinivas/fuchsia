@@ -139,7 +139,8 @@ void x86_init_percpu(uint cpu_num)
      */
     write_msr(X86_MSR_IA32_STAR, (uint64_t)USER_CODE_SELECTOR << 48 | (uint64_t)CODE_64_SELECTOR << 32);
 
-    /* set the FMASK register to mask off certain bits in RFLAGS on syscall entry */
+    // Set the FMASK register to mask off certain bits in RFLAGS on syscall
+    // entry.  See docs/kernel_invariants.md.
     uint64_t mask =
         X86_FLAGS_AC |         /* disable alignment check/access control (this
                                 * prevents ring 0 from performing data access
@@ -148,6 +149,12 @@ void x86_init_percpu(uint cpu_num)
         X86_FLAGS_IOPL_MASK |  /* set iopl to 0 */
         X86_FLAGS_STATUS_MASK; /* clear all status flags, interrupt disabled, trap flag */
     write_msr(X86_MSR_IA32_FMASK, mask);
+
+    // Apply the same mask to our current flags, to ensure that flags are
+    // set to known-good values, because some flags may be inherited by
+    // later kernel threads.  We do this just in case any bad values were
+    // left behind by firmware or the bootloader.
+    x86_restore_flags(x86_save_flags() & ~mask);
 
     /* enable syscall instruction */
     uint64_t efer_msr = read_msr(X86_MSR_IA32_EFER);

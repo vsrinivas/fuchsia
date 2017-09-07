@@ -46,7 +46,6 @@ struct x86_64_context_switch_frame {
     uint64_t r15, r14, r13, r12;
     uint64_t rbp;
     uint64_t rbx;
-    uint64_t rflags;
     uint64_t rip;
 };
 

@@ -12,7 +12,6 @@
 FUNCTION(x86_64_context_switch)
     /* save the old context and restore the new */
     /* This layout should match struct x86_64_context_switch_frame */
-    push_flags
     push_reg %rbx
     push_reg %rbp
     push_reg %r12
@@ -29,7 +28,6 @@ FUNCTION(x86_64_context_switch)
     pop_reg %r12
     pop_reg %rbp
     pop_reg %rbx
-    pop_flags
 
     retq
 END_FUNCTION(x86_64_context_switch)
