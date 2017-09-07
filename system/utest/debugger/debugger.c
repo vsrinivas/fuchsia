@@ -25,7 +25,8 @@
 #include "utils.h"
 
 typedef bool (wait_inferior_exception_handler_t)(mx_handle_t inferior,
-                                                 const mx_port_packet_t* packet);
+                                                 const mx_port_packet_t* packet,
+                                                 void* handler_arg);
 
 // Sleep interval in the watchdog thread. Make this short so we don't need to
 // wait too long when tearing down in the success case.  This is especially
@@ -63,8 +64,6 @@ static const char test_swbreak_child_name[] = "swbreak";
 static volatile atomic_bool done_tests;
 
 static atomic_int extra_thread_count = ATOMIC_VAR_INIT(0);
-
-static atomic_int segv_count = ATOMIC_VAR_INIT(0);
 
 static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
 {
@@ -135,81 +134,36 @@ static bool test_segv_pc(mx_handle_t thread)
 }
 
 // A simpler exception handler.
-// Synthetic exceptions are handled internally. Architectural exceptions
-// are passed on to |handler|.
+// All exceptions are passed on to |handler|.
 // Returns false if a test fails.
 // Otherwise waits for the inferior to exit and returns true.
 
 static bool wait_inferior_thread_worker(mx_handle_t inferior,
                                         mx_handle_t eport,
-                                        wait_inferior_exception_handler_t* handler)
+                                        wait_inferior_exception_handler_t* handler,
+                                        void* handler_arg)
 {
-    BEGIN_HELPER;
-
     while (true) {
-        unittest_printf("wait-inf: waiting on inferior\n");
-
         mx_port_packet_t packet;
-        mx_exception_report_t report;
-        if (!read_exception(eport, inferior, &packet, &report))
+        if (!read_exception(eport, inferior, &packet))
             return false;
-        mx_koid_t tid = packet.exception.tid;
 
-        if (packet.type == MX_EXCP_THREAD_STARTING) {
-            unittest_printf("wait-inf: inferior started\n");
-            if (!resume_inferior(inferior, tid))
-                return false;
-            continue;
-        } else if (packet.type == MX_EXCP_THREAD_EXITING) {
-            mx_handle_t thread;
-            mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
-            // If the process has exited then the kernel may have reaped the
-            // thread already. Check.
-            if (status != MX_ERR_NOT_FOUND) {
-                mx_info_thread_t info = tu_thread_get_info(thread);
-                // The thread could still transition to DEAD here (if the
-                // process exits), so check for either DYING or DEAD.
-                EXPECT_TRUE(info.state == MX_THREAD_STATE_DYING ||
-                            info.state == MX_THREAD_STATE_DEAD, "");
-                // If the state is DYING it would be nice to check that the value of
-                // |info.wait_exception_port_type| is DEBUGGER. Alas if the process has
-                // exited then the thread will get THREAD_SIGNAL_KILL which will cause
-                // UserThread::ExceptionHandlerExchange to exit before we've told the
-                // thread to "resume" from MX_EXCP_THREAD_EXITING. The thread is still
-                // in the DYING state but it is no longer in an exception. Thus
-                // |info.wait_exception_port_type| can either be DEBUGGER or NONE.
-                EXPECT_TRUE(info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_NONE ||
-                            info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
-                tu_handle_close(thread);
-            } else {
-                EXPECT_TRUE(tu_process_has_exited(inferior), "");
-            }
-            unittest_printf("wait-inf: thread %" PRId64 " exited\n", tid);
-            // A thread is gone, but we only care about the process.
-            if (!resume_inferior(inferior, tid))
-                return false;
-            continue;
-        } else if (packet.type == MX_EXCP_GONE) {
-            if (tid == 0) {
-                // process is gone
-                unittest_printf("wait-inf: inferior gone\n");
-                break;
-            }
-            // A thread is gone, but we only care about the process.
-            continue;
+        // Is the inferior gone?
+        if (packet.type == MX_EXCP_GONE && packet.exception.tid == 0) {
+            unittest_printf("wait-inf: inferior gone\n");
+            return true;
         }
 
-        if (!handler(inferior, &packet))
+        if (!handler(inferior, &packet, handler_arg))
             return false;
     }
-
-    END_HELPER;
 }
 
 typedef struct {
     mx_handle_t inferior;
     mx_handle_t eport;
     wait_inferior_exception_handler_t* handler;
+    void* handler_arg;
 } wait_inf_args_t;
 
 static int wait_inferior_thread_func(void* arg)
@@ -218,9 +172,10 @@ static int wait_inferior_thread_func(void* arg)
     mx_handle_t inferior = args->inferior;
     mx_handle_t eport = args->eport;
     wait_inferior_exception_handler_t* handler = args->handler;
+    void* handler_arg = args->handler_arg;
     free(args);
 
-    bool pass = wait_inferior_thread_worker(inferior, eport, handler);
+    bool pass = wait_inferior_thread_worker(inferior, eport, handler, handler_arg);
     return pass ? 0 : -1;
 }
 
@@ -240,7 +195,8 @@ static int watchdog_thread_func(void* arg)
 
 static thrd_t start_wait_inf_thread(mx_handle_t inferior,
                                     mx_handle_t* out_eport,
-                                    wait_inferior_exception_handler_t* handler)
+                                    wait_inferior_exception_handler_t* handler,
+                                    void* handler_arg)
 {
     mx_handle_t eport = attach_inferior(inferior);
     wait_inf_args_t* args = calloc(1, sizeof(*args));
@@ -250,6 +206,7 @@ static thrd_t start_wait_inf_thread(mx_handle_t inferior,
     args->inferior = inferior;
     args->eport = eport;
     args->handler = handler;
+    args->handler_arg = handler_arg;
 
     thrd_t wait_inferior_thread;
     tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func,
@@ -269,7 +226,8 @@ static void join_wait_inf_thread(thrd_t wait_inf_thread)
 }
 
 static bool expect_debugger_attached_eq(
-        mx_handle_t inferior, bool expected, const char* msg) {
+        mx_handle_t inferior, bool expected, const char* msg)
+{
     mx_info_process_t info;
     // MX_ASSERT returns false if the check fails.
     ASSERT_EQ(mx_object_get_info(
@@ -278,14 +236,56 @@ static bool expect_debugger_attached_eq(
     return true;
 }
 
-// This returns a bool as it calls ASSERT_*.
+// This returns a bool as it's a unittest "helper" routine.
 // N.B. This runs on the wait-inferior thread.
 
-static bool debugger_test_exception_handler(mx_handle_t inferior,
-                                            const mx_port_packet_t* packet)
+static bool handle_thread_exiting(mx_handle_t inferior,
+                                  const mx_port_packet_t* packet)
 {
-    ASSERT_EQ(packet->type, (unsigned) MX_EXCP_FATAL_PAGE_FAULT,
-              "wait-inf: unexpected exception type");
+    BEGIN_HELPER;
+
+    mx_koid_t tid = packet->exception.tid;
+    mx_handle_t thread;
+    mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    // If the process has exited then the kernel may have reaped the
+    // thread already. Check.
+    if (status != MX_ERR_NOT_FOUND) {
+        mx_info_thread_t info = tu_thread_get_info(thread);
+        // The thread could still transition to DEAD here (if the
+        // process exits), so check for either DYING or DEAD.
+        EXPECT_TRUE(info.state == MX_THREAD_STATE_DYING ||
+                    info.state == MX_THREAD_STATE_DEAD, "");
+        // If the state is DYING it would be nice to check that the
+        // value of |info.wait_exception_port_type| is DEBUGGER. Alas
+        // if the process has exited then the thread will get
+        // THREAD_SIGNAL_KILL which will cause
+        // UserThread::ExceptionHandlerExchange to exit before we've
+        // told the thread to "resume" from MX_EXCP_THREAD_EXITING.
+        // The thread is still in the DYING state but it is no longer
+        // in an exception. Thus |info.wait_exception_port_type| can
+        // either be DEBUGGER or NONE.
+        EXPECT_TRUE(info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_NONE ||
+                    info.wait_exception_port_type == MX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
+        tu_handle_close(thread);
+    } else {
+        EXPECT_TRUE(tu_process_has_exited(inferior), "");
+    }
+    unittest_printf("wait-inf: thread %" PRId64 " exited\n", tid);
+    // A thread is gone, but we only care about the process.
+    if (!resume_inferior(inferior, tid))
+        return false;
+
+    END_HELPER;
+}
+
+// This returns a bool as it's a unittest "helper" routine.
+// N.B. This runs on the wait-inferior thread.
+
+static bool handle_expected_page_fault(mx_handle_t inferior,
+                                       const mx_port_packet_t* packet,
+                                       atomic_int* segv_count)
+{
+    BEGIN_HELPER;
 
     unittest_printf("wait-inf: got page fault exception\n");
 
@@ -308,13 +308,59 @@ static bool debugger_test_exception_handler(mx_handle_t inferior,
     // Increment this before resuming the inferior in case the inferior
     // sends MSG_RECOVERED_FROM_CRASH and the testcase processes the message
     // before we can increment it.
-    atomic_fetch_add(&segv_count, 1);
+    atomic_fetch_add(segv_count, 1);
 
     mx_status_t status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
     tu_handle_close(thread);
     ASSERT_EQ(status, MX_OK, "");
 
-    return true;
+    END_HELPER;
+}
+
+// N.B. This runs on the wait-inferior thread.
+
+static bool debugger_test_exception_handler(mx_handle_t inferior,
+                                            const mx_port_packet_t* packet,
+                                            void* handler_arg)
+{
+    BEGIN_HELPER;
+
+    // Note: This may be NULL if the test is not expecting a page fault.
+    atomic_int* segv_count = handler_arg;
+
+    mx_koid_t tid = packet->exception.tid;
+
+    switch (packet->type) {
+        case MX_EXCP_THREAD_STARTING:
+            unittest_printf("wait-inf: inferior started\n");
+            if (!resume_inferior(inferior, tid))
+                return false;
+            break;
+
+        case MX_EXCP_THREAD_EXITING:
+            EXPECT_TRUE(handle_thread_exiting(inferior, packet), "");
+            break;
+
+        case MX_EXCP_GONE:
+            // A thread is gone, but we only care about the process which is
+            // handled by the caller.
+            break;
+
+        case MX_EXCP_FATAL_PAGE_FAULT:
+            ASSERT_NONNULL(segv_count, "");
+            ASSERT_TRUE(handle_expected_page_fault(inferior, packet, segv_count), "");
+            break;
+
+        default: {
+            char msg[128];
+            snprintf(msg, sizeof(msg), "unexpected packet type: 0x%x",
+                     packet->type);
+            ASSERT_TRUE(false, msg);
+            __UNREACHABLE;
+        }
+    }
+
+    END_HELPER;
 }
 
 static bool debugger_test(void)
@@ -326,11 +372,13 @@ static bool debugger_test(void)
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
+    atomic_int segv_count;
+
     expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
     mx_handle_t eport = MX_HANDLE_INVALID;
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
-                              debugger_test_exception_handler);
+                              debugger_test_exception_handler, &segv_count);
     EXPECT_NE(eport, MX_HANDLE_INVALID, "");
     expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
@@ -375,7 +423,7 @@ static bool debugger_thread_list_test(void)
     mx_handle_t eport = MX_HANDLE_INVALID;
     thrd_t wait_inf_thread =
         start_wait_inf_thread(inferior, &eport,
-                              debugger_test_exception_handler);
+                              debugger_test_exception_handler, NULL);
     EXPECT_NE(eport, MX_HANDLE_INVALID, "");
 
     if (!start_inferior(lp))
@@ -588,7 +636,7 @@ static int extra_thread_func(void* arg)
     return 0;
 }
 
-// This returns "bool" because it uses ASSERT_*.
+// This returns a bool as it's a unittest "helper" routine.
 
 static bool msg_loop(mx_handle_t channel)
 {
