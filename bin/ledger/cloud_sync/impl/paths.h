@@ -11,10 +11,6 @@
 
 namespace cloud_sync {
 
-// Path under which the device map is stored in the cloud, relative to the root
-// of the user storage.
-constexpr char kDeviceMapRelpath[] = "__metadata/devices";
-
 // Returns the common object name prefix used for all objects stored on behalf
 // of the given user and app.
 std::string GetGcsPrefixForApp(ftl::StringView user_id, ftl::StringView app_id);

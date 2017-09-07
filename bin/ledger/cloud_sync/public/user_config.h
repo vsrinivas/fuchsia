@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/auth_provider/auth_provider.h"
-#include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
+#include "apps/ledger/src/device_set/cloud_device_set.h"
 
 namespace cloud_sync {
 
@@ -24,7 +24,7 @@ struct UserConfig {
   // The provider of the auth data for the user.
   auth_provider::AuthProvider* auth_provider;
   // Guard which checks that the cloud was not erased since the previous sync.
-  std::unique_ptr<CloudDeviceSet> cloud_device_set;
+  std::unique_ptr<cloud_provider_firebase::CloudDeviceSet> cloud_device_set;
 };
 
 }  // namespace cloud_sync

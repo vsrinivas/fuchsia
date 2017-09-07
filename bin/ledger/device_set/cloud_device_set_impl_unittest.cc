@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
+#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 
 #include <unordered_map>
 
@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
 
-namespace cloud_sync {
+namespace cloud_provider_firebase {
 namespace {
 class FakeFirebase : public firebase::Firebase {
  public:
@@ -187,4 +187,4 @@ TEST_F(CloudDeviceSetImplTest, WatchUnwatchOnDelete) {
 }
 
 }  // namespace
-}  // namespace cloud_sync
+}  // namespace cloud_provider_firebase

@@ -96,7 +96,7 @@ void UserSyncImpl::CheckCloudNotErased() {
 
             user_config_.cloud_device_set->CheckFingerprint(
                 std::move(auth_token), fingerprint_,
-                [this](CloudDeviceSet::Status status) {
+                [this](cloud_provider_firebase::CloudDeviceSet::Status status) {
                   HandleCheckCloudResult(status);
                 });
           });
@@ -121,8 +121,9 @@ void UserSyncImpl::CreateFingerprint() {
 
         user_config_.cloud_device_set->SetFingerprint(
             std::move(auth_token), fingerprint_,
-            [this](CloudDeviceSet::Status status) {
-              if (status == CloudDeviceSet::Status::OK) {
+            [this](cloud_provider_firebase::CloudDeviceSet::Status status) {
+              if (status ==
+                  cloud_provider_firebase::CloudDeviceSet::Status::OK) {
                 // Persist the new fingerprint.
                 FTL_DCHECK(!fingerprint_.empty());
                 if (!files::WriteFile(GetFingerprintPath(), fingerprint_.data(),
@@ -138,7 +139,8 @@ void UserSyncImpl::CreateFingerprint() {
   auth_token_requests_.emplace(request);
 }
 
-void UserSyncImpl::HandleCheckCloudResult(CloudDeviceSet::Status status) {
+void UserSyncImpl::HandleCheckCloudResult(
+    cloud_provider_firebase::CloudDeviceSet::Status status) {
   // HACK: in order to test this codepath in an apptest, we expose a hook
   // that forces the cloud erased recovery closure to run.
   if (environment_->TriggerCloudErasedForTesting()) {
@@ -147,12 +149,12 @@ void UserSyncImpl::HandleCheckCloudResult(CloudDeviceSet::Status status) {
   }
 
   switch (status) {
-    case CloudDeviceSet::Status::OK:
+    case cloud_provider_firebase::CloudDeviceSet::Status::OK:
       backoff_->Reset();
       SetCloudErasedWatcher();
       EnableUpload();
       return;
-    case CloudDeviceSet::Status::NETWORK_ERROR:
+    case cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR:
       // Retry after some backoff time.
       environment_->main_runner()->PostDelayedTask(
           [weak_this = weak_ptr_factory_.GetWeakPtr()] {
@@ -162,7 +164,7 @@ void UserSyncImpl::HandleCheckCloudResult(CloudDeviceSet::Status status) {
           },
           backoff_->GetNext());
       return;
-    case CloudDeviceSet::Status::ERASED:
+    case cloud_provider_firebase::CloudDeviceSet::Status::ERASED:
       // |this| can be deleted within on_version_mismatch_() - don't
       // access member variables afterwards.
       on_version_mismatch_();
@@ -181,19 +183,20 @@ void UserSyncImpl::SetCloudErasedWatcher() {
 
         user_config_.cloud_device_set->WatchFingerprint(
             std::move(auth_token), fingerprint_,
-            [this](CloudDeviceSet::Status status) {
+            [this](cloud_provider_firebase::CloudDeviceSet::Status status) {
               HandleWatcherResult(status);
             });
       });
   auth_token_requests_.emplace(request);
 }
 
-void UserSyncImpl::HandleWatcherResult(CloudDeviceSet::Status status) {
+void UserSyncImpl::HandleWatcherResult(
+    cloud_provider_firebase::CloudDeviceSet::Status status) {
   switch (status) {
-    case CloudDeviceSet::Status::OK:
+    case cloud_provider_firebase::CloudDeviceSet::Status::OK:
       backoff_->Reset();
       return;
-    case CloudDeviceSet::Status::NETWORK_ERROR:
+    case cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR:
       environment_->main_runner()->PostDelayedTask(
           [weak_this = weak_ptr_factory_.GetWeakPtr()] {
             if (weak_this) {
@@ -202,7 +205,7 @@ void UserSyncImpl::HandleWatcherResult(CloudDeviceSet::Status status) {
           },
           backoff_->GetNext());
       return;
-    case CloudDeviceSet::Status::ERASED:
+    case cloud_provider_firebase::CloudDeviceSet::Status::ERASED:
       // |this| can be deleted within on_version_mismatch_() - don't
       // access member variables afterwards.
       on_version_mismatch_();

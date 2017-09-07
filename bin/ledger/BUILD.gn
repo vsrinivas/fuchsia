@@ -72,6 +72,7 @@ executable("ledger_unittests") {
     "//apps/ledger/src/convert:unittests",
     "//apps/ledger/src/coroutine:unittests",
     "//apps/ledger/src/coroutine/context:unittests",
+    "//apps/ledger/src/device_set:unittests",
     "//apps/ledger/src/environment:unittests",
     "//apps/ledger/src/firebase:unittests",
     "//apps/ledger/src/gcs:unittests",

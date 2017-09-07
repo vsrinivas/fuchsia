@@ -9,6 +9,7 @@
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_sync/impl/paths.h"
+#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 
 namespace ledger {
 
@@ -91,7 +92,7 @@ void EraseRemoteRepositoryOperation::ClearDeviceMap() {
   }
 
   firebase_->Delete(
-      cloud_sync::kDeviceMapRelpath, query_params,
+      cloud_provider_firebase::kDeviceMapRelpath, query_params,
       [this](firebase::Status status) {
         if (status != firebase::Status::OK) {
           FTL_LOG(ERROR) << "Failed to erase the device map: " << status;

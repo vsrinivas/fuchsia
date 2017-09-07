@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
+#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 
-#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/concatenate.h"
 
-namespace cloud_sync {
+namespace cloud_provider_firebase {
 
 namespace {
 std::string GetDeviceMapKey(ftl::StringView fingerprint) {
@@ -148,4 +147,4 @@ void CloudDeviceSetImpl::ResetWatcher() {
   watch_callback_ = nullptr;
 }
 
-}  // namespace cloud_sync
+}  // namespace cloud_provider_firebase

@@ -10,7 +10,7 @@
 
 #include "apps/ledger/src/firebase/firebase.h"
 
-namespace cloud_sync {
+namespace cloud_provider_firebase {
 
 // Keeps track of the different devices syncing through the cloud by maintaining
 // a set of device fingerprints in the cloud.
@@ -61,6 +61,6 @@ class CloudDeviceSet {
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudDeviceSet);
 };
 
-}  // namespace cloud_sync
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_CLOUD_DEVICE_SET_H_

@@ -9,7 +9,7 @@
 #include "apps/ledger/src/auth_provider/test/test_auth_provider.h"
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/backoff/test/test_backoff.h"
-#include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
+#include "apps/ledger/src/device_set/cloud_device_set.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "lib/ftl/files/file.h"
@@ -28,7 +28,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
-class TestCloudDeviceSet : public CloudDeviceSet {
+class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
  public:
   explicit TestCloudDeviceSet(ftl::RefPtr<ftl::TaskRunner> task_runner)
       : task_runner_(std::move(task_runner)) {}
@@ -121,7 +121,8 @@ class UserSyncImplTest : public ::test::TestWithMessageLoop {
 // be erased from the cloud.
 TEST_F(UserSyncImplTest, CloudCheckErased) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return = CloudDeviceSet::Status::ERASED;
+  cloud_device_set_->status_to_return =
+      cloud_provider_firebase::CloudDeviceSet::Status::ERASED;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -132,7 +133,8 @@ TEST_F(UserSyncImplTest, CloudCheckErased) {
 // is enabled in LedgerSync.
 TEST_F(UserSyncImplTest, CloudCheckOk) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
+  cloud_device_set_->status_to_return =
+      cloud_provider_firebase::CloudDeviceSet::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
@@ -154,7 +156,8 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
 // cloud.
 TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_FALSE(files::IsFile(user_sync_->GetFingerprintPath()));
-  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
+  cloud_device_set_->status_to_return =
+      cloud_provider_firebase::CloudDeviceSet::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
 
@@ -174,7 +177,8 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
 // mismatch callback if cloud erase is detected.
 TEST_F(UserSyncImplTest, WatchErase) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
+  cloud_device_set_->status_to_return =
+      cloud_provider_firebase::CloudDeviceSet::Status::OK;
   user_sync_->Start();
 
   EXPECT_TRUE(RunLoopUntil(
@@ -182,14 +186,16 @@ TEST_F(UserSyncImplTest, WatchErase) {
   EXPECT_EQ("some-value", cloud_device_set_->watched_fingerprint);
   EXPECT_EQ(0, on_version_mismatch_calls_);
 
-  cloud_device_set_->watch_callback(CloudDeviceSet::Status::ERASED);
+  cloud_device_set_->watch_callback(
+      cloud_provider_firebase::CloudDeviceSet::Status::ERASED);
   EXPECT_EQ(1, on_version_mismatch_calls_);
 }
 
 // Verifies that setting the cloud watcher for is retried on network errors.
 TEST_F(UserSyncImplTest, WatchRetry) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_device_set_->status_to_return = CloudDeviceSet::Status::OK;
+  cloud_device_set_->status_to_return =
+      cloud_provider_firebase::CloudDeviceSet::Status::OK;
   user_sync_->Start();
 
   EXPECT_TRUE(RunLoopUntil(
@@ -197,7 +203,8 @@ TEST_F(UserSyncImplTest, WatchRetry) {
 
   auto copied_callback = cloud_device_set_->watch_callback;
   cloud_device_set_->watch_callback = nullptr;
-  copied_callback(CloudDeviceSet::Status::NETWORK_ERROR);
+  copied_callback(
+      cloud_provider_firebase::CloudDeviceSet::Status::NETWORK_ERROR);
 
   EXPECT_TRUE(RunLoopUntil(
       [this] { return cloud_device_set_->watch_callback != nullptr; }));

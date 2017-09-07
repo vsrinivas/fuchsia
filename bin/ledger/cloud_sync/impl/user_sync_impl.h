@@ -13,8 +13,8 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/cloud_sync/impl/aggregator.h"
-#include "apps/ledger/src/cloud_sync/impl/cloud_device_set_impl.h"
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
+#include "apps/ledger/src/device_set/cloud_device_set_impl.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -47,11 +47,13 @@ class UserSyncImpl : public UserSync {
   // fingerprint.
   void CheckCloudNotErased();
   void CreateFingerprint();
-  void HandleCheckCloudResult(CloudDeviceSet::Status status);
+  void HandleCheckCloudResult(
+      cloud_provider_firebase::CloudDeviceSet::Status status);
 
   // Sets a watcher to detect that the cloud is cleared while sync is running.
   void SetCloudErasedWatcher();
-  void HandleWatcherResult(CloudDeviceSet::Status status);
+  void HandleWatcherResult(
+      cloud_provider_firebase::CloudDeviceSet::Status status);
 
   // Enables sync upload.
   void EnableUpload();

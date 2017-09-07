@@ -79,6 +79,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//apps/ledger/src/device_set",
     "//apps/ledger/src/firebase",
   ]
 

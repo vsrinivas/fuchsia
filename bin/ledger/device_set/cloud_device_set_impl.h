@@ -9,13 +9,17 @@
 #include <string>
 
 #include "apps/ledger/src/callback/destruction_sentinel.h"
-#include "apps/ledger/src/cloud_sync/public/cloud_device_set.h"
+#include "apps/ledger/src/device_set/cloud_device_set.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
 
 #include <rapidjson/document.h>
 
-namespace cloud_sync {
+namespace cloud_provider_firebase {
+
+// Path under which the device map is stored in the cloud, relative to the root
+// of the user storage.
+constexpr char kDeviceMapRelpath[] = "__metadata/devices";
 
 class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
  public:
@@ -52,6 +56,6 @@ class CloudDeviceSetImpl : public CloudDeviceSet, public firebase::WatchClient {
   callback::DestructionSentinel destruction_sentinel_;
 };
 
-}  // namespace cloud_sync
+}  // namespace cloud_provider_firebase
 
 #endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_CLOUD_DEVICE_SET_IMPL_H_
