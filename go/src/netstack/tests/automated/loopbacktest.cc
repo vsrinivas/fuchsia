@@ -264,6 +264,40 @@ TEST_F(NetDatagramTest, LoopbackDatagramConnectWrite) {
   EXPECT_STREQ(msg, out.c_str());
 }
 
+TEST_F(NetDatagramTest, PartialRecv) {
+  const char kTestMsg[] = "hello";
+  const int kTestMsgSize = sizeof(kTestMsg);
+
+  int sendfd = socket(AF_INET, SOCK_DGRAM, 0);
+  ASSERT_GE(sendfd, 0) << "socket failed: " << errno;
+  ASSERT_EQ(sendto(sendfd, kTestMsg, kTestMsgSize, 0,
+                   reinterpret_cast<sockaddr*>(&addr_), addrlen_),
+            kTestMsgSize);
+
+  char recv_buf[kTestMsgSize];
+
+  // Read only first 2 bytes of the message. recv() is expected to discard the
+  // rest.
+  const int kPartialReadSize = 2;
+  int recv_result = recv(recvfd_, &recv_buf, kPartialReadSize, 0);
+  ASSERT_EQ(recv_result, kPartialReadSize);
+  ASSERT_EQ(std::string(kTestMsg, kPartialReadSize),
+            std::string(recv_buf, kPartialReadSize));
+
+  // Send the second packet.
+  ASSERT_EQ(sendto(sendfd, kTestMsg, kTestMsgSize, 0,
+                   reinterpret_cast<sockaddr*>(&addr_), addrlen_),
+            kTestMsgSize);
+
+  // Read the whole packet now.
+  recv_result = recv(recvfd_, &recv_buf, kTestMsgSize, 0);
+  ASSERT_EQ(recv_result, kTestMsgSize);
+  ASSERT_EQ(std::string(kTestMsg, kTestMsgSize),
+            std::string(recv_buf, kTestMsgSize));
+
+  ASSERT_EQ(close(sendfd), 0);
+}
+
 // TODO port reuse
 
 }  // namespace
