@@ -44,6 +44,7 @@ class InputInterpreter {
   enum class TouchDeviceType {
     NONE,
     ACER12,
+    PARADISE,
     SAMSUNG,
   };
 
@@ -64,6 +65,7 @@ class InputInterpreter {
   bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
+  bool ParseParadiseTouchscreenReport(uint8_t* report, size_t len);
 
   const int fd_;
   const std::string name_;
