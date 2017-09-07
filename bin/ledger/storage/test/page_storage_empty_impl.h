@@ -63,9 +63,6 @@ class PageStorageEmptyImpl : public PageStorage {
 
   Status MarkCommitSynced(const CommitId& commit_id) override;
 
-  Status GetDeltaObjects(const CommitId& commit_id,
-                         std::vector<ObjectId>* objects) override;
-
   void GetUnsyncedPieces(
       std::function<void(Status, std::vector<ObjectId>)> callback) override;
 

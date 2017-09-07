@@ -320,11 +320,6 @@ Status PageStorageImpl::MarkCommitSynced(const CommitId& commit_id) {
   return db_.MarkCommitIdSynced(commit_id);
 }
 
-Status PageStorageImpl::GetDeltaObjects(const CommitId& /*commit_id*/,
-                                        std::vector<ObjectId>* /*objects*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-
 void PageStorageImpl::GetUnsyncedPieces(
     std::function<void(Status, std::vector<ObjectId>)> callback) {
   std::vector<ObjectId> unsynced_object_ids;

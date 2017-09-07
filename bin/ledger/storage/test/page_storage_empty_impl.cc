@@ -90,13 +90,6 @@ Status PageStorageEmptyImpl::MarkCommitSynced(const CommitId& /*commit_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::GetDeltaObjects(
-    const CommitId& /*commit_id*/,
-    std::vector<ObjectId>* /*objects*/) {
-  FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
-}
-
 void PageStorageEmptyImpl::GetUnsyncedPieces(
     std::function<void(Status, std::vector<ObjectId>)> callback) {
   FTL_NOTIMPLEMENTED();

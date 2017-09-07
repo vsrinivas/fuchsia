@@ -107,12 +107,6 @@ class PageStorage {
   // Marks the given commit as synced.
   virtual Status MarkCommitSynced(const CommitId& commit_id) = 0;
 
-  // Finds all objects introduced by the commit with the given |commit_id| and
-  // adds them in the given |objects| vector. This includes all objects present
-  // in the storage tree of the commit that were not in storage tree of its
-  // parent(s).
-  virtual Status GetDeltaObjects(const CommitId& commit_id,
-                                 std::vector<ObjectId>* objects) = 0;
   // Finds all objects in the storage that are not yet synced, and calls
   // |callback| with the operation status and the corresponding |ObjectId|s
   // vector.
