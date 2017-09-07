@@ -36,9 +36,10 @@ mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* 
 // closes them on failure.
 mx_status_t mxio_create_fd(mx_handle_t* handles, uint32_t* types, size_t hcount, int* fd_out);
 
-void bootfs_parse(mx_handle_t vmo, size_t len,
-                  void (*cb)(void*, const char* fn, size_t off, size_t len),
-                  void* cb_arg);
+typedef struct bootfs_entry bootfs_entry_t;
+mx_status_t bootfs_parse(mx_handle_t vmo, size_t len,
+                         mx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
+                         void* cookie);
 
 // used for bootstrap
 void mxio_install_root(mxio_t* root);

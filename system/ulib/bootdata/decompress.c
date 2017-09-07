@@ -85,36 +85,26 @@ static mx_status_t check_lz4_frame(const lz4_frame_desc* fd,
     return MX_OK;
 }
 
-static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
-                                         const uint8_t* data, mx_handle_t* out,
+static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar, const uint8_t* data,
+                                         size_t _outsize, mx_handle_t* out,
                                          const char** err) {
-    const bootdata_t* hdr = (bootdata_t*)data;
-
-    // Skip past the bootdata header
-    data += sizeof(bootdata_t);
-
-    if (hdr->flags & BOOTDATA_FLAG_EXTRA) {
-        data += sizeof(bootextra_t);
-    }
-
     if (*(const uint32_t*)data != MX_LZ4_MAGIC) {
         *err = "bad magic number for compressed bootfs";
         return MX_ERR_INVALID_ARGS;
     }
     data += sizeof(uint32_t);
 
-    size_t newsize = hdr->extra;
-    check_lz4_frame((const lz4_frame_desc*)data, newsize - sizeof(bootdata_t), err);
+    check_lz4_frame((const lz4_frame_desc*)data, _outsize, err);
     data += sizeof(lz4_frame_desc);
 
-    newsize = (newsize + 4095) & ~4095;
-    if (newsize < hdr->extra) {
+    size_t outsize = (_outsize + 4095) & ~4095;
+    if (outsize < _outsize) {
         // newsize wrapped, which means the outsize was too large
         *err = "lz4 output size too large";
         return MX_ERR_NO_MEMORY;
     }
     mx_handle_t dst_vmo;
-    mx_status_t status = mx_vmo_create((uint64_t)newsize, 0, &dst_vmo);
+    mx_status_t status = mx_vmo_create((uint64_t)outsize, 0, &dst_vmo);
     if (status < 0) {
         *err = "mx_vmo_create failed for decompressing bootfs";
         return status;
@@ -122,34 +112,15 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
     mx_object_set_property(dst_vmo, MX_PROP_NAME, "bootfs", 6);
 
     uintptr_t dst_addr = 0;
-    status = mx_vmar_map(vmar, 0, dst_vmo, 0, newsize,
+    status = mx_vmar_map(vmar, 0, dst_vmo, 0, outsize,
             MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &dst_addr);
     if (status < 0) {
         *err = "mx_vmar_map failed on bootfs vmo during decompression";
         return status;
     }
 
-    size_t remaining = newsize;
+    size_t remaining = outsize;
     uint8_t* dst = (uint8_t*)dst_addr;
-
-    bootdata_t* boothdr = (bootdata_t*)dst;
-    // Copy the bootdata header but mark it as not compressed
-    *boothdr = *hdr;
-    boothdr->length = hdr->extra;
-    boothdr->flags &= ~BOOTDATA_BOOTFS_FLAG_COMPRESSED;
-    boothdr->flags &= ~BOOTDATA_FLAG_CRC32;
-    dst += sizeof(bootdata_t);
-    remaining -= sizeof(bootdata_t);
-
-    if (boothdr->flags & BOOTDATA_FLAG_EXTRA) {
-        bootextra_t* extra = (bootextra_t*)dst;
-        extra->reserved0 = 0;
-        extra->reserved1 = 0;
-        extra->magic = BOOTITEM_MAGIC;
-        extra->crc32 = BOOTITEM_NO_CRC32;
-        dst += sizeof(bootextra_t);
-        remaining -= sizeof(bootextra_t);
-    }
 
     // Read each LZ4 block and decompress it. Block sizes are 32 bits.
     uint32_t blocksize = *(const uint32_t*)data;
@@ -195,7 +166,7 @@ static mx_status_t decompress_bootfs_vmo(mx_handle_t vmar,
         return MX_ERR_INVALID_ARGS;
     }
 
-    status = mx_vmar_unmap(vmar, dst_addr, newsize);
+    status = mx_vmar_unmap(vmar, dst_addr, outsize);
     if (status < 0) {
         *err = "mx_vmar_unmap after decompress failed";
         return status;
@@ -226,11 +197,15 @@ mx_status_t decompress_bootdata(mx_handle_t vmar, mx_handle_t vmo,
     uintptr_t bootdata_addr = addr + align_shift;
 
     const bootdata_t* hdr = (bootdata_t*)bootdata_addr;
+    bootdata_addr += sizeof(bootdata_t);
+    if (hdr->flags & BOOTDATA_FLAG_EXTRA)
+        bootdata_addr += sizeof(bootextra_t);
+
     switch (hdr->type) {
     case BOOTDATA_BOOTFS_BOOT:
     case BOOTDATA_BOOTFS_SYSTEM:
         if (hdr->flags & BOOTDATA_BOOTFS_FLAG_COMPRESSED) {
-            status = decompress_bootfs_vmo(vmar, (const uint8_t*)bootdata_addr, out, err);
+            status = decompress_bootfs_vmo(vmar, (const uint8_t*)bootdata_addr, hdr->extra, out, err);
         }
         break;
     default:

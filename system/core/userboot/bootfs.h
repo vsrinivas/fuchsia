@@ -12,7 +12,7 @@
 
 struct bootfs {
     mx_handle_t vmo;
-    const uint8_t* contents;
+    const void* contents;
     size_t len;
 };
 

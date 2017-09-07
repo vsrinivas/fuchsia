@@ -191,5 +191,49 @@ typedef struct {
     (EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS)
 
 __END_CDECLS;
+
+
+// BOOTFS is a trivial "filesystem" format
+//
+// It consists of a bootfs_header_t
+//
+// Followed by a series of bootfs_entry_t's of:
+//   name length (32bit le)
+//   data size   (32bit le)
+//   data offset (32bit le)
+//   namedata   (namelength bytes, includes \0)
+//
+// - data offsets must be page aligned (multiple of 4096)
+// - entries start on uint32 boundaries
+
+//lsw of sha256("bootfs")
+#define BOOTFS_MAGIC (0xa56d3ff9)
+
+#define BOOTFS_MAX_NAME_LEN 256
+
+typedef struct bootfs_header {
+    // magic value BOOTFS_MAGIC
+    uint32_t magic;
+
+    // total size of all bootfs_entry_t's
+    // does not include the size of the bootfs_header_t
+    uint32_t dirsize;
+
+    // 0, 0
+    uint32_t reserved0;
+    uint32_t reserved1;
+} bootfs_header_t;
+
+typedef struct bootfs_entry {
+    uint32_t name_len;
+    uint32_t data_len;
+    uint32_t data_off;
+    char name[];
+} bootfs_entry_t;
+
+#define BOOTFS_ALIGN(nlen) (((nlen) + 3) & (~3))
+#define BOOTFS_RECSIZE(entry) \
+    (sizeof(bootfs_entry_t) + BOOTFS_ALIGN(entry->name_len))
+
 #endif
 

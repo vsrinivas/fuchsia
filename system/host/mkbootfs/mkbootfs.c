@@ -27,19 +27,6 @@
 
 int verbose = 0;
 
-// BOOTFS is a trivial "filesystem" format
-//
-// It has a bootdata section header
-// Followed by a series of records of:
-//   namelength (32bit le)
-//   filesize   (32bit le)
-//   fileoffset (32bit le)
-//   namedata   (namelength bytes, includes \0)
-//
-// - fileoffsets must be page aligned (multiple of 4096)
-
-#define FSENTRYSZ 12
-
 typedef struct fsentry fsentry_t;
 
 struct fsentry {
@@ -193,7 +180,7 @@ void add_entry(item_t* fs, fsentry_t* e) {
         fs->first = e;
     }
     fs->last = e;
-    fs->hdrsize += e->namelen + FSENTRYSZ;
+    fs->hdrsize += sizeof(bootfs_entry_t) + BOOTFS_ALIGN(e->namelen);
 }
 
 int import_manifest(FILE* fp, const char* fn, item_t* fs) {
@@ -652,9 +639,8 @@ fail:
     }
 
     if (compressed) {
-        // Update the LZ4 content size to be original size without the bootdata
-        // header which isn't being compressed.
-        lz4_prefs.frameInfo.contentSize = item->outsize - hdrsize;
+        // Set the LZ4 content size to be original size
+        lz4_prefs.frameInfo.contentSize = item->outsize;
     }
 
     // Increment past the bootdata header which will be filled out later.
@@ -668,21 +654,30 @@ fail:
         CHECK(op->setup(fd, &cookie, crc));
     }
 
+    // write directory size entry
+    {
+        bootfs_header_t hdr = {
+            .magic = BOOTFS_MAGIC,
+            .dirsize = item->hdrsize - sizeof(bootfs_header_t),
+        };
+        CHECK(op->write(fd, &hdr, sizeof(hdr), cookie, crc));
+    }
     fsentry_t* last_entry = NULL;
     for (e = item->first; e != NULL; e = e->next) {
-        uint32_t hdr[3];
-        hdr[0] = e->namelen;
-        hdr[1] = e->length;
-        hdr[2] = e->offset;
-        CHECK(op->write(fd, hdr, sizeof(hdr), cookie, crc));
+        bootfs_entry_t entry = {
+            .name_len = e->namelen,
+            .data_len = e->length,
+            .data_off = e->offset,
+        };
+        CHECK(op->write(fd, &entry, sizeof(entry), cookie, crc));
         CHECK(op->write(fd, e->name, e->namelen, cookie, crc));
+        if ((n = BOOTFS_ALIGN(e->namelen) - e->namelen) > 0) {
+            CHECK(op->write(fd, fill, n, cookie, crc));
+        }
         last_entry = e;
     }
     // Record length of last file
     uint32_t last_length = last_entry ? last_entry->length : 0;
-
-    // null terminator record
-    CHECK(op->write(fd, fill, 12, cookie, crc));
 
     if ((n = PAGEFILL(item->hdrsize))) {
         CHECK(op->write(fd, fill, n, cookie, crc));
@@ -1206,11 +1201,8 @@ int main(int argc, char **argv) {
         switch (item->type) {
         case ITEM_BOOTFS_BOOT:
         case ITEM_BOOTFS_SYSTEM:
-            // account for bootdata plus the end record
-            item->hdrsize += sizeof(bootdata_t) + 12;
-            if (extra) {
-                item->hdrsize += sizeof(bootextra_t);
-            }
+            // account for the bootfs header record
+            item->hdrsize += sizeof(bootfs_header_t);
             size_t off = PAGEALIGN(item->hdrsize);
             fsentry_t* last_entry = NULL;
             for (fsentry_t* e = item->first; e != NULL; e = e->next) {

@@ -11,100 +11,52 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
-#define BOOTFS_MAX_NAME_LEN 256
-
-
-// BOOTFS is a trivial "filesystem" format
-//
-// It has a bootdata item header
-// Followed by a series of records of:
-//   namelength (32bit le)
-//   filesize   (32bit le)
-//   fileoffset (32bit le)
-//   namedata   (namelength bytes, includes \0)
-//
-// - fileoffsets must be page aligned (multiple of 4096)
-
-#define NLEN 0
-#define FSIZ 1
-#define FOFF 2
-
-void bootfs_parse(mx_handle_t vmo, size_t len,
-                  void (*cb)(void*, const char* fn, size_t off, size_t len),
-                  void* cb_arg) {
+mx_status_t bootfs_parse(mx_handle_t vmo, size_t len,
+                         mx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
+                         void* cookie) {
+    bootfs_header_t hdr;
     size_t rlen;
-    bootdata_t hdr;
-    size_t off = 0;
-    mx_status_t r = mx_vmo_read(vmo, &hdr, off, sizeof(hdr), &rlen);
-    if (r < 0 || rlen < sizeof(hdr)) {
+
+    mx_status_t r = mx_vmo_read(vmo, &hdr, 0, sizeof(hdr), &rlen);
+    if ((r < 0) || (rlen < sizeof(hdr))) {
         printf("bootfs_parse: couldn't read boot_data - %#zx\n", rlen);
-        return;
+        return MX_ERR_IO;
     }
 
-    if ((hdr.type & BOOTDATA_BOOTFS_MASK) != BOOTDATA_BOOTFS_TYPE) {
-        printf("bootfs_parse: incorrect bootdata header: %08x\n", hdr.type);
-        return;
+    if (hdr.magic != BOOTFS_MAGIC) {
+        printf("bootfs_parse: incorrect bootdata header: %08x\n", hdr.magic);
+        return MX_ERR_IO;
     }
 
-    uint8_t _buffer[4096];
-    uint8_t* data = _buffer;
-    uint8_t* end = data; // force initial read
-
-    char name[BOOTFS_MAX_NAME_LEN];
-    uint32_t header[3];
-
-    off += sizeof(hdr);
-    if (hdr.flags & BOOTDATA_FLAG_EXTRA) {
-        off += sizeof(bootextra_t);
+    //TODO: mmap instead
+    if (hdr.dirsize > 65536) {
+        printf("bootfs_parse: directory too large\n");
+        return MX_ERR_OUT_OF_RANGE;
     }
 
-    for (;;) {
-        if ((end - data) < (int)sizeof(header)) {
-            // read in another xxx headers
-            off += data - _buffer; // advance past processed headers
-            r = mx_vmo_read(vmo, _buffer, off, sizeof(_buffer), &rlen);
-            if (r < 0) {
-                break;
-            }
-            data = _buffer;
-            end = data+rlen;
-            if ((end - data) < (int)sizeof(header)) {
-                break;
-            }
-        }
-        memcpy(header, data, sizeof(header));
-
-        // check for end marker
-        if (header[NLEN] == 0)
-            break;
-
-        // require reasonable filename size
-        if ((header[NLEN] < 2) || (header[NLEN] > BOOTFS_MAX_NAME_LEN)) {
-            printf("bootfs_parse: bogus filename\n");
-            break;
-        }
-
-        // require correct alignment
-        if (header[FOFF] & 4095) {
-            printf("bootfs_parse: unaligned item\n");
-            break;
-        }
-
-
-        if (data + sizeof(header) + header[NLEN] > end) {
-            // read only part of the last file name:
-            // back up end and induce a fresh, new read
-            end = data;
-            continue;
-        }
-        data += sizeof(header);
-        if ((end - data) < (off_t)header[NLEN]) {
-            break;
-        }
-        memcpy(name, data, header[NLEN]);
-        data += header[NLEN];
-        name[header[NLEN] - 1] = 0;
-
-        (*cb)(cb_arg, name, header[FOFF], header[FSIZ]);
+    char buffer[hdr.dirsize];
+    r = mx_vmo_read(vmo, buffer, sizeof(bootfs_header_t), hdr.dirsize, &rlen);
+    if ((r < 0) || (rlen < hdr.dirsize)) {
+        printf("bootfs_parse: could not read directory\n");
     }
+
+    size_t avail = hdr.dirsize;
+    void* p = buffer;
+    while (avail > sizeof(bootfs_entry_t)) {
+        bootfs_entry_t* e = p;
+
+        size_t sz = BOOTFS_RECSIZE(e);
+        if ((e->name_len < 1) || (e->name_len > BOOTFS_MAX_NAME_LEN) || (sz > avail)) {
+            return MX_ERR_IO;
+        }
+
+        e->name[e->name_len - 1] = 0;
+        if ((r = cb(cookie, e)) != MX_OK) {
+            return r;
+        }
+
+        p += sz;
+        avail -= sz;
+    }
+    return MX_OK;
 }

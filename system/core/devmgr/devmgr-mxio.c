@@ -45,25 +45,18 @@ void devmgr_io_init(void) {
     mxio_bind_to_fd(logger, 1, 0);
 }
 
-typedef struct bootfile bootfile_t;
-struct bootfile {
-    bootfile_t* next;
-    const char* name;
-    void* data;
-    size_t len;
-};
-
 struct callback_data {
     mx_handle_t vmo;
     unsigned int file_count;
     mx_status_t (*add_file)(const char* path, mx_handle_t vmo, mx_off_t off, size_t len);
 };
 
-static void callback(void* arg, const char* path, size_t off, size_t len) {
+static mx_status_t callback(void* arg, const bootfs_entry_t* entry) {
     struct callback_data* cd = arg;
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    cd->add_file(path, cd->vmo, off, len);
+    cd->add_file(entry->name, cd->vmo, entry->data_off, entry->data_len);
     ++cd->file_count;
+    return MX_OK;
 }
 
 #define USER_MAX_HANDLES 4
@@ -167,7 +160,7 @@ static ssize_t setup_bootfs_vmo(uint32_t n, uint32_t type, mx_handle_t vmo) {
         has_secondary_bootfs = true;
         memfs_mount(vfs_create_global_root(), systemfs_get_root());
     }
-    bootfs_parse(vmo, size, &callback, &cd);
+    bootfs_parse(vmo, size, callback, &cd);
     return cd.file_count;
 }
 
