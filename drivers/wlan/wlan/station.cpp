@@ -801,23 +801,19 @@ mx_status_t Station::SendSignalReportIndication(uint8_t rssi) {
 mx_status_t Station::SendEapolIndication(const EapolFrame* eapol, const uint8_t src[],
                                          const uint8_t dst[]) {
     debugfn();
-    size_t payload_len = be16toh(eapol->packet_body_length);
-    auto ind = EapolIndication::New();
-    ind->data = EapolPdu::New();
-    ind->data->version = eapol->version;
-    ind->data->packet_type = eapol->packet_type;
-    ind->data->packet_body_length = payload_len;
 
     // Limit EAPOL packet size. The EAPOL packet's size depends on the link transport protocol and
-    // can exceed 255 octets. However, we don't support EAP yet and EAPOL Key frames are always
+    // might exceed 255 octets. However, we don't support EAP yet and EAPOL Key frames are always
     // shorter.
     // TODO(hahnr): If necessary, find a better upper bound once we support EAP.
-    if (payload_len > 255) {
+    size_t len = sizeof(EapolFrame) + be16toh(eapol->packet_body_length);
+    if (len > 255) {
         return MX_OK;
     }
 
-    ind->data->packet_body = fidl::Array<uint8_t>::New(payload_len);
-    std::memcpy(ind->data->packet_body.data(), eapol->packet_body, payload_len);
+    auto ind = EapolIndication::New();
+    ind->data = ::fidl::Array<uint8_t>::New(len);
+    std::memcpy(ind->data.data(), eapol, len);
     ind->src_addr = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
     std::memcpy(ind->src_addr.data(), src, DeviceAddress::kSize);
     ind->dst_addr = fidl::Array<uint8_t>::New(DeviceAddress::kSize);
