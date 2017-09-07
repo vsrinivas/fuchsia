@@ -71,12 +71,12 @@ void driver_printf(uint32_t flags, const char* fmt, ...);
 //
 // By default drivers have ERROR and INFO debug levels enabled.
 // The kernel commandline option driver.NAME.log may be used to override
-// this.  Its value is one or more numeric values or words "error", "info",
-// "trace", "spew", separated by ':', which will be ORed together and the
-// log level set to that.
+// this.  Its value is a comma-separated list of log levels to enable (prefixed
+// with '+') or disable (prefixed with '-').  The levels are the strings
+// "error", "info", "trace", "spew", "debug1", "debug2", "debug3", and "debug4",
+// or an integer mask in decimal, octal, or hex.
 //
-// Example driver.floppydisk.log=error:info:trace
-// Example driver.floppydisk.log=error:0x178
+// Example driver.floppydisk.log=-info,+trace,+0x10
 //
 #define dprintf(flag, fmt...) \
     do { \
