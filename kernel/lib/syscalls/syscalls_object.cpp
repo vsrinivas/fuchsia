@@ -24,7 +24,7 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -124,7 +124,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // TODO(MG-458): Handle forward/backward compatibility issues
             // with changes to the struct.
 
-            mxtl::RefPtr<Dispatcher> dispatcher;
+            fbl::RefPtr<Dispatcher> dispatcher;
             mx_rights_t rights;
             auto status = up->GetDispatcherAndRights(handle, &dispatcher, &rights);
             if (status != MX_OK)
@@ -149,7 +149,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // with changes to the struct.
 
             // grab a reference to the dispatcher
-            mxtl::RefPtr<ProcessDispatcher> process;
+            fbl::RefPtr<ProcessDispatcher> process;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &process);
             if (error < 0)
                 return error;
@@ -166,7 +166,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         }
         case MX_INFO_PROCESS_THREADS: {
             // grab a reference to the dispatcher
-            mxtl::RefPtr<ProcessDispatcher> process;
+            fbl::RefPtr<ProcessDispatcher> process;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_ENUMERATE, &process);
             if (error < 0)
                 return error;
@@ -178,7 +178,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // more threads exist than what we computed at that same point in
             // time.
 
-            mxtl::Array<mx_koid_t> threads;
+            fbl::Array<mx_koid_t> threads;
             mx_status_t status = process->GetThreads(&threads);
             if (status != MX_OK)
                 return status;
@@ -199,7 +199,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         }
         case MX_INFO_JOB_CHILDREN:
         case MX_INFO_JOB_PROCESSES: {
-            mxtl::RefPtr<JobDispatcher> job;
+            fbl::RefPtr<JobDispatcher> job;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_ENUMERATE, &job);
             if (error < 0)
                 return error;
@@ -225,7 +225,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // with changes to the struct.
 
             // grab a reference to the dispatcher
-            mxtl::RefPtr<ThreadDispatcher> thread;
+            fbl::RefPtr<ThreadDispatcher> thread;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
             if (error < 0)
                 return error;
@@ -245,7 +245,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // with changes to the struct.
 
             // grab a reference to the dispatcher
-            mxtl::RefPtr<ThreadDispatcher> thread;
+            fbl::RefPtr<ThreadDispatcher> thread;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
             if (error < 0)
                 return error;
@@ -265,7 +265,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             // with changes to the struct.
 
             // grab a reference to the dispatcher
-            mxtl::RefPtr<ThreadDispatcher> thread;
+            fbl::RefPtr<ThreadDispatcher> thread;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
             if (error < 0)
                 return error;
@@ -286,7 +286,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 
             // Grab a reference to the dispatcher. Only supports processes for
             // now, but could support jobs or threads in the future.
-            mxtl::RefPtr<ProcessDispatcher> process;
+            fbl::RefPtr<ProcessDispatcher> process;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ,
                                                      &process);
             if (error < 0)
@@ -303,7 +303,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
         case MX_INFO_PROCESS_MAPS: {
-            mxtl::RefPtr<ProcessDispatcher> process;
+            fbl::RefPtr<ProcessDispatcher> process;
             mx_status_t status =
                 up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &process);
             if (status < 0)
@@ -327,7 +327,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return status;
         }
         case MX_INFO_PROCESS_VMOS: {
-            mxtl::RefPtr<ProcessDispatcher> process;
+            fbl::RefPtr<ProcessDispatcher> process;
             mx_status_t status =
                 up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &process);
             if (status < 0)
@@ -351,7 +351,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return status;
         }
         case MX_INFO_VMAR: {
-            mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+            fbl::RefPtr<VmAddressRegionDispatcher> vmar;
             mx_status_t status = up->GetDispatcher(handle, &vmar);
             if (status < 0)
                 return status;
@@ -479,7 +479,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         }
         case MX_INFO_RESOURCE: {
             // grab a reference to the dispatcher
-            mxtl::RefPtr<ResourceDispatcher> resource;
+            fbl::RefPtr<ResourceDispatcher> resource;
             auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_NONE, &resource);
             if (error < 0)
                 return error;
@@ -503,7 +503,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
         return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_GET_PROPERTY, &dispatcher);
     if (status != MX_OK)
         return status;
@@ -575,7 +575,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     __UNREACHABLE;
 }
 
-static mx_status_t is_current_thread(mxtl::RefPtr<Dispatcher>* dispatcher) {
+static mx_status_t is_current_thread(fbl::RefPtr<Dispatcher>* dispatcher) {
     auto thread_dispatcher = DownCastDispatcher<ThreadDispatcher>(dispatcher);
     if (!thread_dispatcher)
         return MX_ERR_WRONG_TYPE;
@@ -590,7 +590,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
         return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
 
     auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_SET_PROPERTY, &dispatcher);
     if (status != MX_OK)
@@ -655,7 +655,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
 
     auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_SIGNAL, &dispatcher);
     if (status != MX_OK)
@@ -668,7 +668,7 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
 
     auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_SIGNAL_PEER, &dispatcher);
     if (status != MX_OK)
@@ -703,17 +703,17 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
             return MX_ERR_NOT_FOUND;
 
         HandleOwner process_h(
-            MakeHandle(mxtl::RefPtr<Dispatcher>(process.get()), rights));
+            MakeHandle(fbl::RefPtr<Dispatcher>(process.get()), rights));
         if (!process_h)
             return MX_ERR_NO_MEMORY;
 
         if (_out.copy_to_user(up->MapHandleToValue(process_h)))
             return MX_ERR_INVALID_ARGS;
-        up->AddHandle(mxtl::move(process_h));
+        up->AddHandle(fbl::move(process_h));
         return MX_OK;
     }
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     uint32_t parent_rights;
     auto status = up->GetDispatcherAndRights(handle, &dispatcher, &parent_rights);
     if (status != MX_OK)
@@ -739,7 +739,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
         if (_out.copy_to_user(up->MapHandleToValue(thread_h)) != MX_OK)
             return MX_ERR_INVALID_ARGS;
-        up->AddHandle(mxtl::move(thread_h));
+        up->AddHandle(fbl::move(thread_h));
         return MX_OK;
     }
 
@@ -753,7 +753,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
             if (_out.copy_to_user(up->MapHandleToValue(child_h)) != MX_OK)
                 return MX_ERR_INVALID_ARGS;
-            up->AddHandle(mxtl::move(child_h));
+            up->AddHandle(fbl::move(child_h));
             return MX_OK;
         }
         auto proc = job->LookupProcessById(koid);
@@ -764,7 +764,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
             if (_out.copy_to_user(up->MapHandleToValue(child_h)) != MX_OK)
                 return MX_ERR_INVALID_ARGS;
-            up->AddHandle(mxtl::move(child_h));
+            up->AddHandle(fbl::move(child_h));
             return MX_OK;
         }
         return MX_ERR_NOT_FOUND;
@@ -781,7 +781,7 @@ mx_status_t sys_object_set_cookie(mx_handle_t handle, mx_handle_t hscope, uint64
     if (scope == MX_KOID_INVALID)
         return MX_ERR_BAD_HANDLE;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != MX_OK)
         return status;
@@ -800,7 +800,7 @@ mx_status_t sys_object_get_cookie(mx_handle_t handle, mx_handle_t hscope, user_p
     if (scope == MX_KOID_INVALID)
         return MX_ERR_BAD_HANDLE;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != MX_OK)
         return status;

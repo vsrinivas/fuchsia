@@ -13,8 +13,8 @@
 #include <mxio/debug.h>
 #include <mxio/io.h>
 #include <mxio/vfs.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "dnode.h"
 #include "memfs-private.h"
@@ -23,7 +23,7 @@
 
 namespace memfs {
 
-static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_handle_t vmo,
+static mx_status_t add_file(fbl::RefPtr<VnodeDir> vnb, const char* path, mx_handle_t vmo,
                             mx_off_t off, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
@@ -41,7 +41,7 @@ static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_han
                 return MX_ERR_INVALID_ARGS;
             }
 
-            mxtl::RefPtr<fs::Vnode> out;
+            fbl::RefPtr<fs::Vnode> out;
             r = vnb->Lookup(&out, path, nextpath - path);
             if (r == MX_ERR_NOT_FOUND) {
                 r = vnb->Create(&out, path, nextpath - path, S_IFDIR);
@@ -50,7 +50,7 @@ static mx_status_t add_file(mxtl::RefPtr<VnodeDir> vnb, const char* path, mx_han
             if (r < 0) {
                 return r;
             }
-            vnb = mxtl::RefPtr<VnodeDir>::Downcast(mxtl::move(out));
+            vnb = fbl::RefPtr<VnodeDir>::Downcast(fbl::move(out));
             path = nextpath + 1;
         }
     }

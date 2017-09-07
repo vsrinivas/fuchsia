@@ -12,13 +12,13 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <magenta/thread_annotations.h>
-#include <mxtl/array.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
-#include <mxtl/name.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/array.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
+#include <fbl/name.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <stdint.h>
 #include <vm/page.h>
 #include <vm/vm_page_list.h>
@@ -31,8 +31,8 @@ typedef status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, 
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAddressRegion::CreateVmMapping
-class VmObject : public mxtl::RefCounted<VmObject>,
-                 public mxtl::DoublyLinkedListable<VmObject*> {
+class VmObject : public fbl::RefCounted<VmObject>,
+                 public fbl::DoublyLinkedListable<VmObject*> {
 public:
     // public API
     virtual status_t Resize(uint64_t size) { return MX_ERR_NOT_SUPPORTED; }
@@ -158,7 +158,7 @@ public:
     // create a copy-on-write clone vmo at the page-aligned offset and length
     // note: it's okay to start or extend past the size of the parent
     virtual status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
-                              mxtl::RefPtr<VmObject>* clone_vmo) {
+                              fbl::RefPtr<VmObject>* clone_vmo) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -174,8 +174,8 @@ public:
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mxtl::Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
-    mxtl::Mutex& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+    fbl::Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
+    fbl::Mutex& lock_ref() TA_RET_CAP(lock_) { return lock_; }
 
     void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
@@ -198,7 +198,7 @@ public:
     // error value.
     template <typename T>
     static status_t ForEach(T func) {
-        mxtl::AutoLock a(&all_vmos_lock_);
+        fbl::AutoLock a(&all_vmos_lock_);
         for (const auto& iter : all_vmos_) {
             status_t s = func(iter);
             if (s != MX_OK) {
@@ -210,13 +210,13 @@ public:
 
 protected:
     // private constructor (use Create())
-    explicit VmObject(mxtl::RefPtr<VmObject> parent);
+    explicit VmObject(fbl::RefPtr<VmObject> parent);
     VmObject()
         : VmObject(nullptr) {}
 
     // private destructor, only called from refptr
     virtual ~VmObject();
-    friend mxtl::RefPtr<VmObject>;
+    friend fbl::RefPtr<VmObject>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObject);
 
@@ -229,26 +229,26 @@ protected:
         TA_NO_THREAD_SAFETY_ANALYSIS { RangeChangeUpdateLocked(offset, len); }
 
     // magic value
-    mxtl::Canary<mxtl::magic("VMO_")> canary_;
+    fbl::Canary<fbl::magic("VMO_")> canary_;
 
     // members
 
     // declare a local mutex and default to pointing at it
     // if constructed with a parent vmo, point lock_ at the parent's lock
 private:
-    mxtl::Mutex local_lock_;
+    fbl::Mutex local_lock_;
 
 protected:
-    mxtl::Mutex& lock_;
+    fbl::Mutex& lock_;
 
     // list of every mapping
-    mxtl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
 
     // list of every child
-    mxtl::DoublyLinkedList<VmObject*> children_list_ TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<VmObject*> children_list_ TA_GUARDED(lock_);
 
     // parent pointer (may be null)
-    mxtl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
+    fbl::RefPtr<VmObject> parent_ TA_GUARDED(lock_);
 
     // lengths of corresponding lists
     uint32_t mapping_list_len_ TA_GUARDED(lock_) = 0;
@@ -258,11 +258,11 @@ protected:
 
     // The user-friendly VMO name. For debug purposes only. That
     // is, there is no mechanism to get access to a VMO via this name.
-    mxtl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<MX_MAX_NAME_LEN> name_;
 
 private:
     // Per-node state for the global VMO list.
-    using NodeState = mxtl::DoublyLinkedListNodeState<VmObject*>;
+    using NodeState = fbl::DoublyLinkedListNodeState<VmObject*>;
     NodeState global_list_state_;
 
     // The global VMO list.
@@ -271,7 +271,7 @@ private:
             return vmo.global_list_state_;
         }
     };
-    using GlobalList = mxtl::DoublyLinkedList<VmObject*, GlobalListTraits>;
-    static mxtl::Mutex all_vmos_lock_;
+    using GlobalList = fbl::DoublyLinkedList<VmObject*, GlobalListTraits>;
+    static fbl::Mutex all_vmos_lock_;
     static GlobalList all_vmos_ TA_GUARDED(all_vmos_lock_);
 };

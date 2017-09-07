@@ -9,14 +9,14 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 class Dispatcher;
 class Handle;
 
 // Creates a handle attached to |dispatcher| and with |rights| from a
 // specific arena which makes their addresses come from a fixed range.
-Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
+Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
 
 // Duplicate a handle created by MakeHandle(). If |is_replace| is true
 // then the logic to triger MX_SIGNAL_LAST_HANDLE is not executed.

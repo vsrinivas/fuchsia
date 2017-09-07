@@ -9,8 +9,8 @@
 #include <kernel/timer.h>
 #include <lib/dpc.h>
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/mutex.h>
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
 #include <object/dispatcher.h>
 #include <object/state_tracker.h>
 
@@ -19,7 +19,7 @@
 class TimerDispatcher final : public Dispatcher {
 public:
     static mx_status_t Create(uint32_t options,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~TimerDispatcher() final;
@@ -39,10 +39,10 @@ private:
     void SetTimerLocked(bool cancel_first) TA_REQ(lock_);
     bool CancelTimerLocked() TA_REQ(lock_);
 
-    mxtl::Canary<mxtl::magic("TIMR")> canary_;
+    fbl::Canary<fbl::magic("TIMR")> canary_;
     const slack_mode slack_mode_;
     dpc_t timer_dpc_;
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
     mx_time_t deadline_ TA_GUARDED(lock_);
     mx_duration_t slack_ TA_GUARDED(lock_);
     bool cancel_pending_ TA_GUARDED(lock_);

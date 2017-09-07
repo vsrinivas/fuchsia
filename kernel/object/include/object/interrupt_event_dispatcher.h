@@ -7,9 +7,9 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/mutex.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
 #include <object/interrupt_dispatcher.h>
 #include <sys/types.h>
 
@@ -17,7 +17,7 @@ class InterruptEventDispatcher final : public InterruptDispatcher {
 public:
     static mx_status_t Create(uint32_t vector,
                               uint32_t flags,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     InterruptEventDispatcher(const InterruptDispatcher &) = delete;
@@ -31,17 +31,17 @@ public:
     uint32_t GetKey() const { return vector_; }
 
 private:
-    using VectorCollection = mxtl::WAVLTree<uint32_t, InterruptEventDispatcher*>;
-    friend mxtl::DefaultWAVLTreeTraits<InterruptEventDispatcher*>;
+    using VectorCollection = fbl::WAVLTree<uint32_t, InterruptEventDispatcher*>;
+    friend fbl::DefaultWAVLTreeTraits<InterruptEventDispatcher*>;
 
     explicit InterruptEventDispatcher(uint32_t vector) : vector_(vector) { }
 
     static enum handler_return IrqHandler(void* ctx);
 
-    mxtl::Canary<mxtl::magic("INED")> canary_;
+    fbl::Canary<fbl::magic("INED")> canary_;
     const uint32_t vector_;
-    mxtl::WAVLTreeNodeState<InterruptEventDispatcher*> wavl_node_state_;
+    fbl::WAVLTreeNodeState<InterruptEventDispatcher*> wavl_node_state_;
 
-    static mxtl::Mutex vectors_lock_;
+    static fbl::Mutex vectors_lock_;
     static VectorCollection vectors_ TA_GUARDED(vectors_lock_);
 };

@@ -15,9 +15,9 @@
 #include <magenta/device/vfs.h>
 #include <magenta/device/rtc.h>
 #include <magenta/syscalls.h>
-#include <mxtl/new.h>
-#include <mxtl/unique_ptr.h>
-#include <mxtl/vector.h>
+#include <fbl/new.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <unittest/unittest.h>
 
 #include "blobstore-bench.h"
@@ -65,10 +65,10 @@ static int GetStartTime() {
 
 // Creates, writes, reads (to verify) and operates on a blob.
 // Returns the result of the post-processing 'func' (true == success).
-static bool GenerateBlob(mxtl::unique_ptr<blob_info_t>* out, size_t blob_size) {
+static bool GenerateBlob(fbl::unique_ptr<blob_info_t>* out, size_t blob_size) {
     // Generate a Blob of random data
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<blob_info_t> info(new (&ac) blob_info_t);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<blob_info_t> info(new (&ac) blob_info_t);
     EXPECT_EQ(ac.check(), true);
     info->data.reset(new (&ac) char[blob_size]);
     EXPECT_EQ(ac.check(), true);
@@ -99,7 +99,7 @@ static bool GenerateBlob(mxtl::unique_ptr<blob_info_t>* out, size_t blob_size) {
                                  info->size_merkle, 0, info->size_data, digest),
               MX_OK, "Failed to validate Merkle Tree");
 
-    *out = mxtl::move(info);
+    *out = fbl::move(info);
     return true;
 }
 
@@ -346,7 +346,7 @@ bool TestData::create_blobs() {
         record |= (order == FIRST && i < END_COUNT);
         record |= (order == LAST && i >= blob_count - END_COUNT);
 
-        mxtl::unique_ptr<blob_info_t> info;
+        fbl::unique_ptr<blob_info_t> info;
         ASSERT_TRUE(GenerateBlob(&info, blob_size));
         strcpy(paths[i], info->path);
 
@@ -392,8 +392,8 @@ bool TestData::read_blobs() {
         sample_end(start, OPEN, i);
         ASSERT_GT(fd, 0, "Failed to open blob");
 
-        mxtl::AllocChecker ac;
-        mxtl::unique_ptr<char[]> buf(new (&ac) char[blob_size]);
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<char[]> buf(new (&ac) char[blob_size]);
         EXPECT_EQ(ac.check(), true);
         ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
 

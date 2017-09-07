@@ -10,7 +10,7 @@
 #include <vm/arch_vm_aspace.h>
 #include <vm/fault.h>
 #include <vm/vm_object_physical.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 static const uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
 static const uint kMmuFlags =
@@ -35,16 +35,16 @@ struct AspaceVmoLocator final : public VmEnumerator {
         return false;
     }
 
-    mxtl::RefPtr<VmObject> vmo = nullptr;
+    fbl::RefPtr<VmObject> vmo = nullptr;
     vaddr_t base = 0;
     const vaddr_t vaddr;
 };
 } // namespace
 
-mx_status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_mem,
-                                              mxtl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas(new (&ac)
+mx_status_t GuestPhysicalAddressSpace::Create(fbl::RefPtr<VmObject> guest_phys_mem,
+                                              fbl::unique_ptr<GuestPhysicalAddressSpace>* _gpas) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<GuestPhysicalAddressSpace> gpas(new (&ac)
                                                          GuestPhysicalAddressSpace(guest_phys_mem));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -54,18 +54,18 @@ mx_status_t GuestPhysicalAddressSpace::Create(mxtl::RefPtr<VmObject> guest_phys_
         return MX_ERR_NO_MEMORY;
 
     // Initialize our VMAR with the provided VMO, mapped at address 0.
-    mxtl::RefPtr<VmMapping> mapping;
+    fbl::RefPtr<VmMapping> mapping;
     mx_status_t result = gpas->paspace_->RootVmar()->CreateVmMapping(
         0 /* mapping_offset */, guest_phys_mem->size(), /* align_pow2*/ 0, VMAR_FLAG_SPECIFIC,
         guest_phys_mem, /* vmo_offset */ 0, kMmuFlags, "guest_phys_mem_vmo", &mapping);
     if (result != MX_OK)
         return result;
 
-    *_gpas = mxtl::move(gpas);
+    *_gpas = fbl::move(gpas);
     return MX_OK;
 }
 
-GuestPhysicalAddressSpace::GuestPhysicalAddressSpace(mxtl::RefPtr<VmObject> guest_phys_mem)
+GuestPhysicalAddressSpace::GuestPhysicalAddressSpace(fbl::RefPtr<VmObject> guest_phys_mem)
     : guest_phys_mem_(guest_phys_mem) {}
 
 GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
@@ -78,7 +78,7 @@ GuestPhysicalAddressSpace::~GuestPhysicalAddressSpace() {
 
 #if ARCH_X86_64
 mx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t host_paddr) {
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t result = VmObjectPhysical::Create(host_paddr, PAGE_SIZE, &vmo);
     if (result != MX_OK)
         return result;
@@ -89,7 +89,7 @@ mx_status_t GuestPhysicalAddressSpace::MapApicPage(vaddr_t guest_paddr, paddr_t 
 
     // The root VMAR will maintain a reference to the VmMapping internally so
     // we don't need to maintain a long-lived reference to the mapping here.
-    mxtl::RefPtr<VmMapping> mapping;
+    fbl::RefPtr<VmMapping> mapping;
     result = paspace_->RootVmar()->CreateVmMapping(guest_paddr, vmo->size(), /* align_pow2*/ 0,
                                                    VMAR_FLAG_SPECIFIC, vmo, /* vmo_offset */ 0,
                                                    kApicMmuFlags, "guest_apic_vmo", &mapping);
@@ -114,7 +114,7 @@ mx_status_t GuestPhysicalAddressSpace::GetPage(vaddr_t guest_paddr, paddr_t* hos
     // Locate the VMO for the guest physical address (if present).
     AspaceVmoLocator vmo_locator(guest_paddr);
     paspace_->EnumerateChildren(&vmo_locator);
-    mxtl::RefPtr<VmObject> vmo = vmo_locator.vmo;
+    fbl::RefPtr<VmObject> vmo = vmo_locator.vmo;
     if (!vmo)
         return MX_ERR_NOT_FOUND;
 

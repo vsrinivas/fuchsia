@@ -22,6 +22,6 @@ MODULE_LIBS := \
     system/ulib/mxio \
     system/ulib/unittest \
 
-MODULE_STATIC_LIBS := system/ulib/mxtl
+MODULE_STATIC_LIBS := system/ulib/fbl
 
 include make/module.mk

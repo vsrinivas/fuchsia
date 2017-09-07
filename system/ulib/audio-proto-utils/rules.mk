@@ -12,6 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/format-utils.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 include make/module.mk

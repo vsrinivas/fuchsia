@@ -11,7 +11,7 @@
 
 #include <kernel/event.h>
 #include <lib/crypto/cryptolib.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 
 namespace crypto {
 
@@ -96,7 +96,7 @@ private:
     } nonce_;
 
     bool is_thread_safe_;
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
     uint64_t total_entropy_added_;
     event_t ready_;
 };

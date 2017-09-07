@@ -10,8 +10,8 @@
 #include <arch/arm64/mmu.h>
 #include <vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
-#include <mxtl/canary.h>
-#include <mxtl/mutex.h>
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
 public:
@@ -81,9 +81,9 @@ private:
                           uint top_index_shift, uint page_size_shift,
                           volatile pte_t* top_page_table, uint asid) TA_REQ(lock_);
 
-    mxtl::Canary<mxtl::magic("VAAS")> canary_;
+    fbl::Canary<fbl::magic("VAAS")> canary_;
 
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 
     uint16_t asid_ = 0;
 

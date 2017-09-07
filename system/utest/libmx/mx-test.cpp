@@ -17,7 +17,7 @@
 #include <mx/time.h>
 #include <mx/vmar.h>
 
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
@@ -56,7 +56,7 @@ static bool handle_move_test() {
     mx::event event;
     // Check move semantics.
     ASSERT_EQ(mx::event::create(0u, &event), MX_OK);
-    mx::handle handle(mxtl::move(event));
+    mx::handle handle(fbl::move(event));
     ASSERT_EQ(event.release(), MX_HANDLE_INVALID);
     ASSERT_EQ(validate_handle(handle.get()), MX_OK);
     END_TEST;

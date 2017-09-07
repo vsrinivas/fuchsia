@@ -12,7 +12,7 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -156,16 +156,16 @@ void PciMmioConfig::Write(PciReg32 addr, uint32_t val) const {
 
 } // anon namespace
 
-mxtl::RefPtr<PciConfig> PciConfig::Create(uintptr_t base, PciAddrSpace addr_type) {
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<PciConfig> cfg = nullptr;
+fbl::RefPtr<PciConfig> PciConfig::Create(uintptr_t base, PciAddrSpace addr_type) {
+    fbl::AllocChecker ac;
+    fbl::RefPtr<PciConfig> cfg = nullptr;
 
     LTRACEF("base %#" PRIxPTR ", type %s\n", base, (addr_type == PciAddrSpace::PIO) ? "PIO" : "MIO");
 
     if (addr_type == PciAddrSpace::PIO) {
-        cfg = mxtl::AdoptRef(new (&ac) PciPioConfig(base));
+        cfg = fbl::AdoptRef(new (&ac) PciPioConfig(base));
     } else {
-        cfg = mxtl::AdoptRef(new (&ac) PciMmioConfig(base));
+        cfg = fbl::AdoptRef(new (&ac) PciMmioConfig(base));
     }
 
     if (!ac.check()) {

@@ -14,10 +14,10 @@
 #include <magenta/types.h>
 #include <math.h>
 #include <mxio/io.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/array.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_ptr.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,8 +37,8 @@ namespace {
 
 static const char* kBinName = "/boot/bin/aslr-analysis";
 
-int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports);
-unsigned int AnalyzeField(const mxtl::Array<ReportInfo>& reports,
+int GatherReports(const char* test_bin, fbl::Array<ReportInfo>* reports);
+unsigned int AnalyzeField(const fbl::Array<ReportInfo>& reports,
                           uintptr_t ReportInfo::*field);
 double ApproxBinomialCdf(double p, double N, double n);
 int TestRunMain(int argc, char** argv);
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    mxtl::Array<ReportInfo> reports(new ReportInfo[kNumRuns], kNumRuns);
+    fbl::Array<ReportInfo> reports(new ReportInfo[kNumRuns], kNumRuns);
     if (!reports) {
         printf("Failed to allocate reports\n");
         return 1;
@@ -110,7 +110,7 @@ double ApproxBinomialCdf(double p, double N, double n) {
 // TODO: Investigate if there are better approaches than the two-sided binomial
 // test.
 // TODO: Do further analysis to account for potential non-independence of bits
-unsigned int AnalyzeField(const mxtl::Array<ReportInfo>& reports,
+unsigned int AnalyzeField(const fbl::Array<ReportInfo>& reports,
                           uintptr_t ReportInfo::*field) {
     int good_bits = 0;
 
@@ -152,7 +152,7 @@ unsigned int AnalyzeField(const mxtl::Array<ReportInfo>& reports,
     return good_bits;
 }
 
-int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
+int GatherReports(const char* test_bin, fbl::Array<ReportInfo>* reports) {
     const size_t count = reports->size();
     for (unsigned int run = 0; run < count; ++run) {
         mx_handle_t handles[2];
@@ -235,8 +235,8 @@ mx_status_t LaunchTestRun(const char* bin, mx_handle_t h, mx_handle_t* out) {
     hnd[0] = h;
     launchpad_create(job, "testrun", &lp);
     launchpad_load_from_file(lp, bin);
-    launchpad_set_args(lp, mxtl::count_of(args), args);
-    launchpad_add_handles(lp, mxtl::count_of(hnd), hnd, ids);
+    launchpad_set_args(lp, fbl::count_of(args), args);
+    launchpad_add_handles(lp, fbl::count_of(hnd), hnd, ids);
 
     status = launchpad_go(lp, &proc, &errmsg);
     if (status != MX_OK) {

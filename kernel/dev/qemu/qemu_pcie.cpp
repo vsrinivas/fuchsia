@@ -12,8 +12,8 @@
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <inttypes.h>
 #include <lk/init.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
 #include <dev/qemu-virt.h>
 #include <trace.h>
 #include <mdi/mdi.h>
@@ -54,9 +54,9 @@ public:
 
 class QemuPcieRoot : public PcieRoot {
 public:
-    static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv, uint managed_bus_id) {
-        mxtl::AllocChecker ac;
-        auto root = mxtl::AdoptRef(new (&ac) QemuPcieRoot(bus_drv, managed_bus_id));
+    static fbl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv, uint managed_bus_id) {
+        fbl::AllocChecker ac;
+        auto root = fbl::AdoptRef(new (&ac) QemuPcieRoot(bus_drv, managed_bus_id));
         if (!ac.check()) {
             TRACEF("Out of memory attemping to create PCIe root to manage bus ID 0x%02x\n",
                     managed_bus_id);
@@ -140,7 +140,7 @@ static void arm_qemu_pcie_init(mdi_node_ref_t* node, uint level) {
         if (root == nullptr)
             return;
 
-        res = pcie->AddRoot(mxtl::move(root));
+        res = pcie->AddRoot(fbl::move(root));
         if (res != MX_OK) {
             TRACEF("Failed to add PCIe root complex for bus 0! (res %d)\n", res);
             return;

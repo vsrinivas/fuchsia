@@ -17,7 +17,7 @@ MODULE_SRCS = \
 MODULE_STATIC_LIBS := \
     system/ulib/trace-engine \
     system/ulib/mxcpp \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/c
@@ -36,9 +36,9 @@ MODULE_SRCS = \
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/trace-engine/include \
-    -Isystem/ulib/mxtl/include
+    -Isystem/ulib/fbl/include
 
 MODULE_HOST_LIBS := \
-    system/ulib/mxtl.hostlib
+    system/ulib/fbl.hostlib
 
 include make/module.mk

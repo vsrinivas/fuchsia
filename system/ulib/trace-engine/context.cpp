@@ -9,10 +9,10 @@
 
 #include <mx/process.h>
 #include <mx/thread.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/atomic.h>
-#include <mxtl/intrusive_hash_table.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/atomic.h>
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/unique_ptr.h>
 #include <trace-engine/fields.h>
 
 namespace trace {
@@ -20,7 +20,7 @@ namespace {
 
 // The cached koid of this process.
 // Initialized on first use.
-mxtl::atomic<uint64_t> g_process_koid{MX_KOID_INVALID};
+fbl::atomic<uint64_t> g_process_koid{MX_KOID_INVALID};
 
 // This thread's koid.
 // Initialized on first use.
@@ -34,10 +34,10 @@ mx_koid_t GetKoid(mx_handle_t handle) {
 }
 
 mx_koid_t GetCurrentProcessKoid() {
-    mx_koid_t koid = g_process_koid.load(mxtl::memory_order_relaxed);
+    mx_koid_t koid = g_process_koid.load(fbl::memory_order_relaxed);
     if (unlikely(koid == MX_KOID_INVALID)) {
         koid = GetKoid(mx::process::self().get());
-        g_process_koid.store(koid, mxtl::memory_order_relaxed); // idempotent
+        g_process_koid.store(koid, fbl::memory_order_relaxed); // idempotent
     }
     return koid;
 }
@@ -62,10 +62,10 @@ void GetObjectName(mx_handle_t handle, char* name_buf, size_t name_buf_size,
 }
 
 // The next context generation number.
-mxtl::atomic<uint32_t> g_next_generation{1u};
+fbl::atomic<uint32_t> g_next_generation{1u};
 
 // A string table entry.
-struct StringEntry : public mxtl::SinglyLinkedListable<StringEntry*> {
+struct StringEntry : public fbl::SinglyLinkedListable<StringEntry*> {
     // Attempted to assign an index.
     static constexpr uint32_t kAllocIndexAttempted = 1u << 0;
     // Successfully assigned an index.
@@ -109,12 +109,12 @@ struct ContextCache {
     // String table.
     // Provides a limited amount of storage for rapidly looking up string literals
     // registered by this thread.
-    mxtl::HashTable<const char*, StringEntry*> string_table;
+    fbl::HashTable<const char*, StringEntry*> string_table;
 
     // Storage for the string entries.
     StringEntry string_entries[kMaxStringEntries];
 };
-thread_local mxtl::unique_ptr<ContextCache> tls_cache{};
+thread_local fbl::unique_ptr<ContextCache> tls_cache{};
 
 ContextCache* GetCurrentContextCache(uint32_t generation) {
     ContextCache* cache = tls_cache.get();
@@ -651,7 +651,7 @@ void trace_context_write_log_record(
         return;
 
     log_message_length =
-        mxtl::min(log_message_length, size_t(trace::LogRecordFields::kMaxMessageLength));
+        fbl::min(log_message_length, size_t(trace::LogRecordFields::kMaxMessageLength));
     const size_t record_size = sizeof(trace::RecordHeader) +
                                trace::SizeOfEncodedThreadRef(thread_ref) +
                                trace::WordsToBytes(1) +
@@ -918,7 +918,7 @@ void* trace_context_alloc_record(trace_context_t* context, size_t num_bytes) {
 
 trace_context::trace_context(void* buffer, size_t buffer_num_bytes,
                              trace_handler_t* handler)
-    : generation_(trace::g_next_generation.fetch_add(1u, mxtl::memory_order_relaxed) + 1u),
+    : generation_(trace::g_next_generation.fetch_add(1u, fbl::memory_order_relaxed) + 1u),
       buffer_start_(static_cast<uint8_t*>(buffer)),
       buffer_end_(buffer_start_ + buffer_num_bytes),
       buffer_current_(reinterpret_cast<uintptr_t>(buffer_start_)),
@@ -936,7 +936,7 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
 
     uint8_t* ptr = reinterpret_cast<uint8_t*>(
         buffer_current_.fetch_add(num_bytes,
-                                  mxtl::memory_order_relaxed));
+                                  fbl::memory_order_relaxed));
     if (likely(ptr + num_bytes <= buffer_end_)) {
         MX_DEBUG_ASSERT(ptr + num_bytes >= buffer_start_);
         return reinterpret_cast<uint64_t*>(ptr); // success!
@@ -945,22 +945,22 @@ uint64_t* trace_context::AllocRecord(size_t num_bytes) {
     // Buffer is full!
     // Snap to the endpoint to reduce likelihood of pointer wrap-around.
     buffer_current_.store(reinterpret_cast<uintptr_t>(buffer_end_),
-                          mxtl::memory_order_relaxed);
+                          fbl::memory_order_relaxed);
 
     // Mark the end point if not already marked.
     if (unlikely(ptr != buffer_end_)) {
         buffer_full_mark_.store(reinterpret_cast<uintptr_t>(ptr),
-                                mxtl::memory_order_relaxed);
+                                fbl::memory_order_relaxed);
     }
     return nullptr;
 }
 
 bool trace_context::AllocThreadIndex(trace_thread_index_t* out_index) {
-    trace_thread_index_t index = next_thread_index_.fetch_add(1u, mxtl::memory_order_relaxed);
+    trace_thread_index_t index = next_thread_index_.fetch_add(1u, fbl::memory_order_relaxed);
     if (unlikely(index > TRACE_ENCODED_THREAD_REF_MAX_INDEX)) {
         // Guard again possible wrapping.
         next_thread_index_.store(TRACE_ENCODED_THREAD_REF_MAX_INDEX + 1u,
-                                 mxtl::memory_order_relaxed);
+                                 fbl::memory_order_relaxed);
         return false;
     }
     *out_index = index;
@@ -968,11 +968,11 @@ bool trace_context::AllocThreadIndex(trace_thread_index_t* out_index) {
 }
 
 bool trace_context::AllocStringIndex(trace_string_index_t* out_index) {
-    trace_string_index_t index = next_string_index_.fetch_add(1u, mxtl::memory_order_relaxed);
+    trace_string_index_t index = next_string_index_.fetch_add(1u, fbl::memory_order_relaxed);
     if (unlikely(index > TRACE_ENCODED_STRING_REF_MAX_INDEX)) {
         // Guard again possible wrapping.
         next_string_index_.store(TRACE_ENCODED_STRING_REF_MAX_INDEX + 1u,
-                                 mxtl::memory_order_relaxed);
+                                 fbl::memory_order_relaxed);
         return false;
     }
     *out_index = index;

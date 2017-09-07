@@ -13,7 +13,7 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <pretty/hexdump.h>
 #include <unittest/unittest.h>
 
@@ -26,12 +26,12 @@ bool vmo_create_test() {
     mx_handle_t vmo[16];
 
     // allocate a bunch of vmos then free them
-    for (size_t i = 0; i < mxtl::count_of(vmo); i++) {
+    for (size_t i = 0; i < fbl::count_of(vmo); i++) {
         status = mx_vmo_create(i * PAGE_SIZE, 0, &vmo[i]);
         EXPECT_EQ(MX_OK, status, "vm_object_create");
     }
 
-    for (size_t i = 0; i < mxtl::count_of(vmo); i++) {
+    for (size_t i = 0; i < fbl::count_of(vmo); i++) {
         status = mx_handle_close(vmo[i]);
         EXPECT_EQ(MX_OK, status, "handle_close");
     }

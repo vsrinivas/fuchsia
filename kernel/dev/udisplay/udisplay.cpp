@@ -117,15 +117,15 @@ status_t udisplay_set_framebuffer(paddr_t fb_phys, size_t fb_size) {
     return MX_OK;
 }
 
-status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo) {
+status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo) {
     g_udisplay.framebuffer_size = 0;
     g_udisplay.framebuffer_virt = 0;
 
     const size_t size = vmo->size();
-    mxtl::RefPtr<VmMapping> mapping;
+    fbl::RefPtr<VmMapping> mapping;
     status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
             0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
-            mxtl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
+            fbl::move(vmo), 0, kFramebufferArchMmuFlags, "framebuffer_vmo", &mapping);
     if (status != MX_OK)
         return status;
 

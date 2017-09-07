@@ -16,7 +16,7 @@ MODULE_TYPE := hostapp
 MODULE_COMPILEFLAGS += \
 	-Isystem/ulib/digest/include \
 	-Isystem/ulib/mxcpp/include \
-	-Isystem/ulib/mxtl/include
+	-Isystem/ulib/fbl/include
 
 MODULE_SRCS += \
 	system/ulib/digest/digest.cpp \
@@ -24,7 +24,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/merkleroot.cpp
 
 MODULE_HOST_LIBS := \
-	system/ulib/mxtl.hostlib
+	system/ulib/fbl.hostlib
 
 ifneq (,$(wildcard $(OPENSSL_DIR)/sha.h))
 MODULE_DEFINES += USE_LIBCRYPTO=1

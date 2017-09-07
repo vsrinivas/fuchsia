@@ -21,29 +21,29 @@
 #include <object/handle.h>
 
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
 // static
 mx_status_t SocketDispatcher::Create(uint32_t flags,
-                                     mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                     mxtl::RefPtr<Dispatcher>* dispatcher1,
+                                     fbl::RefPtr<Dispatcher>* dispatcher0,
+                                     fbl::RefPtr<Dispatcher>* dispatcher1,
                                      mx_rights_t* rights) {
     LTRACE_ENTRY;
 
     if (flags & ~MX_SOCKET_CREATE_MASK)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    auto socket0 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
+    fbl::AllocChecker ac;
+    auto socket0 = fbl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto socket1 = mxtl::AdoptRef(new (&ac) SocketDispatcher(flags));
+    auto socket1 = fbl::AdoptRef(new (&ac) SocketDispatcher(flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -69,8 +69,8 @@ mx_status_t SocketDispatcher::Create(uint32_t flags,
     }
 
     *rights = MX_DEFAULT_SOCKET_RIGHTS;
-    *dispatcher0 = mxtl::move(socket0);
-    *dispatcher1 = mxtl::move(socket1);
+    *dispatcher0 = fbl::move(socket0);
+    *dispatcher1 = fbl::move(socket1);
     return MX_OK;
 }
 
@@ -87,18 +87,18 @@ SocketDispatcher::~SocketDispatcher() {
 
 // This is called before either SocketDispatcher is accessible from threads other than the one
 // initializing the socket, so it does not need locking.
-void SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    other_ = mxtl::move(other);
+void SocketDispatcher::Init(fbl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
+    other_ = fbl::move(other);
     peer_koid_ = other_->get_koid();
 }
 
 void SocketDispatcher::on_zero_handles() {
     canary_.Assert();
 
-    mxtl::RefPtr<SocketDispatcher> socket;
+    fbl::RefPtr<SocketDispatcher> socket;
     {
         AutoLock lock(&lock_);
-        socket = mxtl::move(other_);
+        socket = fbl::move(other_);
     }
     if (!socket)
         return;
@@ -125,7 +125,7 @@ mx_status_t SocketDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask
         return MX_OK;
     }
 
-    mxtl::RefPtr<SocketDispatcher> other;
+    fbl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
@@ -150,7 +150,7 @@ mx_status_t SocketDispatcher::Shutdown(uint32_t how) {
     const bool shutdown_read = how & MX_SOCKET_SHUTDOWN_READ;
     const bool shutdown_write = how & MX_SOCKET_SHUTDOWN_WRITE;
 
-    mxtl::RefPtr<SocketDispatcher> other;
+    fbl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
         mx_signals_t signals = state_tracker_.GetSignalsState();
@@ -218,7 +218,7 @@ mx_status_t SocketDispatcher::Write(user_ptr<const void> src, size_t len,
 
     LTRACE_ENTRY;
 
-    mxtl::RefPtr<SocketDispatcher> other;
+    fbl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
@@ -251,7 +251,7 @@ mx_status_t SocketDispatcher::WriteControl(user_ptr<const void> src, size_t len)
     if (len > kControlMsgSize)
         return MX_ERR_OUT_OF_RANGE;
 
-    mxtl::RefPtr<SocketDispatcher> other;
+    fbl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)

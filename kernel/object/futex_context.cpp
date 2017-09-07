@@ -8,11 +8,11 @@
 
 #include <assert.h>
 #include <lib/user_copy/user_ptr.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #include <object/thread_dispatcher.h>
 #include <trace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 

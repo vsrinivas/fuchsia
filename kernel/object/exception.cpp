@@ -60,8 +60,8 @@ public:
 
     // Returns true with |out_eport| filled in for the next one to try.
     // Returns false if there are no more to try.
-    bool Next(mxtl::RefPtr<ExceptionPort>* out_eport) {
-        mxtl::RefPtr<ExceptionPort> eport;
+    bool Next(fbl::RefPtr<ExceptionPort>* out_eport) {
+        fbl::RefPtr<ExceptionPort> eport;
         ExceptionPort::Type expected_type = ExceptionPort::Type::NONE;
 
         while (true) {
@@ -101,7 +101,7 @@ public:
             previous_type_ = expected_type;
             if (eport) {
                 DEBUG_ASSERT(eport->type() == expected_type);
-                *out_eport = mxtl::move(eport);
+                *out_eport = fbl::move(eport);
                 return true;
             }
         }
@@ -112,12 +112,12 @@ private:
     ThreadDispatcher* thread_;
     ExceptionPort::Type previous_type_;
     // Jobs are traversed up their hierarchy. This is the previous one.
-    mxtl::RefPtr<JobDispatcher> previous_job_;
+    fbl::RefPtr<JobDispatcher> previous_job_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(ExceptionPortIterator);
 };
 
-static mx_status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
+static mx_status_t try_exception_handler(fbl::RefPtr<ExceptionPort> eport,
                                          ThreadDispatcher* thread,
                                          const mx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context,
@@ -154,7 +154,7 @@ static handler_status_t exception_handler_worker(uint exception_type,
     ExceptionPort::BuildArchReport(&report, exception_type, context);
 
     ExceptionPortIterator iter(thread);
-    mxtl::RefPtr<ExceptionPort> eport;
+    fbl::RefPtr<ExceptionPort> eport;
 
     while (iter.Next(&eport)) {
         // Initialize for paranoia's sake.

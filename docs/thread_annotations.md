@@ -62,7 +62,7 @@ private:
 int Example::IncreaseFoo(int by) {
     int new_value;
     {
-        AutoLock lock(&lock_);  // mxtl::AutoLock is annotated
+        AutoLock lock(&lock_);  // fbl::AutoLock is annotated
         new_value = IncreaseFooLocked(by);
     }
     return new_value;

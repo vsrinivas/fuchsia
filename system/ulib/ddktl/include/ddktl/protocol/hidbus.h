@@ -7,8 +7,8 @@
 #include <ddk/protocol/hidbus.h>
 #include <ddktl/protocol/hidbus-internal.h>
 #include <magenta/assert.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 
 // DDK hidbus protocol support
 //

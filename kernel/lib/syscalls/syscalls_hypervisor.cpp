@@ -15,7 +15,7 @@
 #include <object/vcpu_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -29,25 +29,25 @@ mx_status_t sys_guest_create(mx_handle_t resource, uint32_t options, mx_handle_t
         return status;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<VmObjectDispatcher> physmem;
+    fbl::RefPtr<VmObjectDispatcher> physmem;
     mx_rights_t rights = MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE;
     status = up->GetDispatcherWithRights(physmem_vmo, rights, &physmem);
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     status = GuestDispatcher::Create(physmem->vmo(), &dispatcher, &rights);
     if (status != MX_OK)
         return status;
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
     status = out.copy_to_user(up->MapHandleToValue(handle));
     if (status != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -55,19 +55,19 @@ mx_status_t sys_guest_set_trap(mx_handle_t guest_handle, uint32_t kind, mx_vaddr
                                mx_handle_t port_handle, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<GuestDispatcher> guest;
+    fbl::RefPtr<GuestDispatcher> guest;
     mx_status_t status = up->GetDispatcherWithRights(guest_handle, MX_RIGHT_WRITE, &guest);
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     if (port_handle != MX_HANDLE_INVALID) {
         status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
         if (status != MX_OK)
             return status;
     }
 
-    return guest->SetTrap(kind, addr, len, mxtl::move(port), key);
+    return guest->SetTrap(kind, addr, len, fbl::move(port), key);
 }
 
 mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
@@ -77,7 +77,7 @@ mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
         return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<GuestDispatcher> guest;
+    fbl::RefPtr<GuestDispatcher> guest;
     mx_status_t status = up->GetDispatcherWithRights(guest_handle, MX_RIGHT_WRITE, &guest);
     if (status != MX_OK)
         return status;
@@ -88,25 +88,25 @@ mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
         return status;
 
 #if ARCH_X86_64
-    mxtl::RefPtr<VmObjectDispatcher> apic;
+    fbl::RefPtr<VmObjectDispatcher> apic;
     status = up->GetDispatcherWithRights(args.apic_vmo, MX_RIGHT_READ | MX_RIGHT_WRITE, &apic);
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     status = VcpuDispatcher::Create(guest, args.ip, args.cr3, apic->vmo(), &dispatcher, &rights);
     if (status != MX_OK)
         return status;
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
     status = out.copy_to_user(up->MapHandleToValue(handle));
     if (status != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 #else // ARCH_X86_64
     return MX_ERR_NOT_SUPPORTED;
@@ -116,7 +116,7 @@ mx_status_t sys_vcpu_create(mx_handle_t guest_handle, uint32_t options,
 mx_status_t sys_vcpu_resume(mx_handle_t vcpu_handle, user_ptr<mx_port_packet_t> _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<VcpuDispatcher> vcpu;
+    fbl::RefPtr<VcpuDispatcher> vcpu;
     mx_status_t status = up->GetDispatcherWithRights(vcpu_handle, MX_RIGHT_EXECUTE, &vcpu);
     if (status != MX_OK)
         return status;
@@ -136,7 +136,7 @@ mx_status_t sys_vcpu_resume(mx_handle_t vcpu_handle, user_ptr<mx_port_packet_t> 
 mx_status_t sys_vcpu_interrupt(mx_handle_t vcpu_handle, uint32_t vector) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<VcpuDispatcher> vcpu;
+    fbl::RefPtr<VcpuDispatcher> vcpu;
     mx_status_t status = up->GetDispatcherWithRights(vcpu_handle, MX_RIGHT_SIGNAL, &vcpu);
     if (status != MX_OK)
         return status;
@@ -148,7 +148,7 @@ mx_status_t sys_vcpu_read_state(mx_handle_t vcpu_handle, uint32_t kind,
                                 user_ptr<void> _buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<VcpuDispatcher> vcpu;
+    fbl::RefPtr<VcpuDispatcher> vcpu;
     mx_status_t status = up->GetDispatcherWithRights(vcpu_handle, MX_RIGHT_READ, &vcpu);
     if (status != MX_OK)
         return status;
@@ -169,7 +169,7 @@ mx_status_t sys_vcpu_write_state(mx_handle_t vcpu_handle, uint32_t kind,
                                  user_ptr<const void> _buffer, uint32_t len) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<VcpuDispatcher> vcpu;
+    fbl::RefPtr<VcpuDispatcher> vcpu;
     mx_status_t status = up->GetDispatcherWithRights(vcpu_handle, MX_RIGHT_WRITE, &vcpu);
     if (status != MX_OK)
         return status;

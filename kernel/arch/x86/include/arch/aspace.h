@@ -12,8 +12,8 @@
 #include <kernel/atomic.h>
 #include <vm/arch_vm_aspace.h>
 #include <magenta/compiler.h>
-#include <mxtl/canary.h>
-#include <mxtl/mutex.h>
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
 
 struct MappingCursor;
 
@@ -124,11 +124,11 @@ private:
     template <typename PageTable>
     status_t SplitLargePage(vaddr_t vaddr, volatile pt_entry_t* pte) TA_REQ(lock_);
 
-    mxtl::Canary<mxtl::magic("VAAS")> canary_;
+    fbl::Canary<fbl::magic("VAAS")> canary_;
     IoBitmap io_bitmap_;
 
     // low lock to protect the mmu code
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 
     // Pointer to the translation table.
     paddr_t pt_phys_ = 0;

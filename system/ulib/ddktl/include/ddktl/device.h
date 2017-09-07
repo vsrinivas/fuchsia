@@ -7,7 +7,7 @@
 #include <ddk/device.h>
 #include <ddktl/device-internal.h>
 #include <magenta/assert.h>
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 // ddk::Device<D, ...>
 //
@@ -359,12 +359,12 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     }
 
     template <typename T>
-    using is_protocol = mxtl::is_base_of<internal::base_protocol, T>;
+    using is_protocol = fbl::is_base_of<internal::base_protocol, T>;
 
     // Add the protocol id and ops if D inherits from a base_protocol implementation.
     template <typename T = D>
     void AddProtocol(device_add_args_t* args,
-                     typename mxtl::enable_if<is_protocol<T>::value, T>::type* dummy = 0) {
+                     typename fbl::enable_if<is_protocol<T>::value, T>::type* dummy = 0) {
         auto dev = static_cast<D*>(this);
         MX_ASSERT(dev->ddk_proto_id_ > 0);
         args->proto_id = dev->ddk_proto_id_;
@@ -374,7 +374,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     // If D does not inherit from a base_protocol implementation, do nothing.
     template <typename T = D>
     void AddProtocol(device_add_args_t* args,
-                     typename mxtl::enable_if<!is_protocol<T>::value, T>::type* dummy = 0) {}
+                     typename fbl::enable_if<!is_protocol<T>::value, T>::type* dummy = 0) {}
 };
 
 // Convenience type for implementations that would like to override all

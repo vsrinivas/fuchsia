@@ -17,7 +17,7 @@
 #include <magenta/types.h>
 #include <mxio/debug.h>
 #include <mxio/watcher.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "fvm/fvm.h"
 
@@ -144,7 +144,7 @@ mx_status_t fvm_init(int fd, size_t slice_size) {
     size_t disk_size = block_info.block_count * block_info.block_size;
     size_t metadata_size = fvm::MetadataSize(disk_size, slice_size);
 
-    mxtl::unique_ptr<MappedVmo> mvmo;
+    fbl::unique_ptr<MappedVmo> mvmo;
     mx_status_t status = MappedVmo::Create(metadata_size * 2, "fvm-meta", &mvmo);
     if (status != MX_OK) {
         return status;

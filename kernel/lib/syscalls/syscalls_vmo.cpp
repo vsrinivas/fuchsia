@@ -18,7 +18,7 @@
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -36,27 +36,27 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
         return res;
 
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     res = VmObjectPaged::Create(0, size, &vmo);
     if (res != MX_OK)
         return res;
 
     // create a Vm Object dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
+    mx_status_t result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
 
     return MX_OK;
 }
@@ -69,7 +69,7 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> _data,
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &vmo);
     if (status != MX_OK)
         return status;
@@ -111,7 +111,7 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> _data,
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
     if (status != MX_OK)
         return status;
@@ -151,7 +151,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcher(handle, &vmo);
     if (status != MX_OK)
         return status;
@@ -175,7 +175,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
     if (status != MX_OK)
         return status;
@@ -194,7 +194,7 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
 
     // lookup the dispatcher from handle
     // TODO(MG-967): test rights on the handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = up->GetDispatcher(handle, &vmo);
     if (status != MX_OK)
         return status;
@@ -203,7 +203,7 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
 }
 
 mx_status_t sys_vmo_set_cache_policy(mx_handle_t handle, uint32_t cache_policy) {
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_status_t status = MX_OK;
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -229,12 +229,12 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
     auto up = ProcessDispatcher::GetCurrent();
 
     mx_status_t status;
-    mxtl::RefPtr<VmObject> clone_vmo;
+    fbl::RefPtr<VmObject> clone_vmo;
     mx_rights_t in_rights;
 
     {
         // lookup the dispatcher from handle, save a copy of the rights for later
-        mxtl::RefPtr<VmObjectDispatcher> vmo;
+        fbl::RefPtr<VmObjectDispatcher> vmo;
         status = up->GetDispatcherWithRights(handle, MX_RIGHT_DUPLICATE | MX_RIGHT_READ, &vmo, &in_rights);
         if (status != MX_OK)
             return status;
@@ -248,9 +248,9 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
     }
 
     // create a Vm Object dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t default_rights;
-    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(clone_vmo), &dispatcher, &default_rights);
+    mx_status_t result = VmObjectDispatcher::Create(fbl::move(clone_vmo), &dispatcher, &default_rights);
     if (result != MX_OK)
         return result;
 
@@ -266,14 +266,14 @@ mx_status_t sys_vmo_clone(mx_handle_t handle, uint32_t options, uint64_t offset,
     DEBUG_ASSERT((default_rights & rights) == rights);
 
     // create a handle and attach the dispatcher to it
-    HandleOwner clone_handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner clone_handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!clone_handle)
         return MX_ERR_NO_MEMORY;
 
     if (_out_handle.copy_to_user(up->MapHandleToValue(clone_handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(clone_handle));
+    up->AddHandle(fbl::move(clone_handle));
 
     return MX_OK;
 }

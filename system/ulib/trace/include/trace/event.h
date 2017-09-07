@@ -72,7 +72,7 @@
 //     char* chars = ...;
 //     size_t length = ...;
 //     const char* c_string = ...;
-//     mxtl::String mxtl_string = ...;
+//     fbl::String fbl_string = ...;
 //     std::string std_string = ...;
 //     void* ptr = ...;
 //     mx_koid_t koid = ...;
@@ -85,7 +85,7 @@
 //     TRACE_DURATION("category", "name", "arg", 3.14);
 //     TRACE_DURATION("category", "name", "arg", TA_CHAR_ARRAY(chars, length));
 //     TRACE_DURATION("category", "name", "arg", c_string);
-//     TRACE_DURATION("category", "name", "arg", mxtl_string);
+//     TRACE_DURATION("category", "name", "arg", fbl_string);
 //     TRACE_DURATION("category", "name", "arg", std_string);
 //     TRACE_DURATION("category", "name", "arg", TA_STRING_LITERAL("Hi!"));
 //     TRACE_DURATION("category", "name", "arg", ptr);

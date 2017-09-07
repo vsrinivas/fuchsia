@@ -17,8 +17,8 @@
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 
 class PcieDebugConsole {
 public:
@@ -255,7 +255,7 @@ static const char* pci_device_type(const PcieDevice& dev)
         default: break;
     }
 
-    for (size_t i = 0; i < mxtl::count_of(PCI_DEV_TYPE_LUT); ++i) {
+    for (size_t i = 0; i < fbl::count_of(PCI_DEV_TYPE_LUT); ++i) {
         const pci_dev_type_lut_entry_t* entry = PCI_DEV_TYPE_LUT + i;
 
         if ((dev.class_id() == entry->class_code)    &&
@@ -436,7 +436,7 @@ static inline const char* get_cap_str(uint8_t id) {
     return "<Unknown>";
 }
 
-static void dump_pcie_capabilities(mxtl::RefPtr<PcieDevice> dev, void *ctx)
+static void dump_pcie_capabilities(fbl::RefPtr<PcieDevice> dev, void *ctx)
 {
     bool is_first = true;
     lspci_params_t* params = static_cast<lspci_params_t*>(ctx);
@@ -459,7 +459,7 @@ static void dump_pcie_capabilities(mxtl::RefPtr<PcieDevice> dev, void *ctx)
     params->indent_level = initial_indent;
 }
 
-static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level)
+static bool dump_pcie_device(const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level)
 {
     DEBUG_ASSERT(dev && ctx);
     lspci_params_t* params = (lspci_params_t*)ctx;
@@ -468,7 +468,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
 
     /* Grab the device's lock so it cannot be unplugged out from under us while
      * we print details. */
-    mxtl::AutoLock lock(dev->dev_lock());
+    fbl::AutoLock lock(dev->dev_lock());
 
     /* If the device has already been unplugged, just skip it */
     if (!dev->plugged_in())
@@ -672,7 +672,7 @@ int PcieDebugConsole::CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flag
     if (bus_drv == nullptr)
         return MX_ERR_BAD_STATE;
 
-    mxtl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
+    fbl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);
@@ -713,7 +713,7 @@ int PcieDebugConsole::CmdPciReset(int argc, const cmd_args *argv, uint32_t flags
     if (bus_drv == nullptr)
         return MX_ERR_BAD_STATE;
 
-    mxtl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
+    fbl::RefPtr<PcieDevice> dev = bus_drv->GetRefedDevice(bus_id, dev_id, func_id);
 
     if (!dev) {
         printf("Failed to find PCI device %02x:%02x.%01x\n", bus_id, dev_id, func_id);

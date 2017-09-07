@@ -10,7 +10,7 @@
 
 #include <kernel/auto_lock.h>
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 #include <object/pci_device_dispatcher.h>
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
@@ -41,20 +41,20 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
 }
 
 mx_status_t PciInterruptDispatcher::Create(
-        const mxtl::RefPtr<PcieDevice>& device,
+        const fbl::RefPtr<PcieDevice>& device,
         uint32_t irq_id,
         bool maskable,
         mx_rights_t* out_rights,
-        mxtl::RefPtr<Dispatcher>* out_interrupt) {
+        fbl::RefPtr<Dispatcher>* out_interrupt) {
     // Sanity check our args
     if (!device || !out_rights || !out_interrupt) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     // Attempt to allocate a new dispatcher wrapper.
     auto interrupt_dispatcher = new (&ac) PciInterruptDispatcher(irq_id, maskable);
-    mxtl::RefPtr<Dispatcher> dispatcher = mxtl::AdoptRef<Dispatcher>(interrupt_dispatcher);
+    fbl::RefPtr<Dispatcher> dispatcher = fbl::AdoptRef<Dispatcher>(interrupt_dispatcher);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -76,7 +76,7 @@ mx_status_t PciInterruptDispatcher::Create(
     if (maskable) {
         device->UnmaskIrq(irq_id);
     }
-    *out_interrupt = mxtl::move(dispatcher);
+    *out_interrupt = fbl::move(dispatcher);
     *out_rights    = MX_DEFAULT_PCI_INTERRUPT_RIGHTS;
     return MX_OK;
 }

@@ -19,24 +19,24 @@
 #include <vm/arch_vm_aspace.h>
 #include <list.h>
 #include <lk/init.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
 #include <platform.h>
 
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
 namespace {  // anon namespace.  Externals do not need to know about PcieDeviceImpl
 class PcieDeviceImpl : public PcieDevice {
 public:
-    static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
+    static fbl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
 
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieDeviceImpl);
@@ -49,9 +49,9 @@ protected:
         : PcieDevice(bus_drv, bus_id, dev_id, func_id, false) { }
 };
 
-mxtl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
+fbl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
                                                 uint dev_id, uint func_id) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto raw_dev = new (&ac) PcieDeviceImpl(upstream.driver(),
                                             upstream.managed_bus_id(),
                                             dev_id,
@@ -62,7 +62,7 @@ mxtl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
         return nullptr;
     }
 
-    auto dev = mxtl::AdoptRef(static_cast<PcieDevice*>(raw_dev));
+    auto dev = fbl::AdoptRef(static_cast<PcieDevice*>(raw_dev));
     status_t res = raw_dev->Init(upstream);
     if (res != MX_OK) {
         TRACEF("Failed to initialize PCIe device %02x:%02x.%01x. (res %d)\n",
@@ -98,7 +98,7 @@ PcieDevice::~PcieDevice() {
         cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
 }
 
-mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id) {
+fbl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id) {
     return PcieDeviceImpl::Create(upstream, dev_id, func_id);
 }
 
@@ -156,7 +156,7 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
     return MX_OK;
 }
 
-mxtl::RefPtr<PcieUpstreamNode> PcieDevice::GetUpstream() {
+fbl::RefPtr<PcieUpstreamNode> PcieDevice::GetUpstream() {
     return bus_drv_.GetUpstream(*this);
 }
 
@@ -377,7 +377,7 @@ status_t PcieDevice::ProbeBarsLocked() {
 
     DEBUG_ASSERT((header_type == PCI_HEADER_TYPE_STANDARD) ||
                  (header_type == PCI_HEADER_TYPE_PCI_BRIDGE));
-    DEBUG_ASSERT(bar_count_ <= mxtl::count_of(bars_));
+    DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
 
     for (uint i = 0; i < bar_count_; ++i) {
         /* If this is a re-scan of the bus, We should not be re-enumerating BARs. */
@@ -409,7 +409,7 @@ status_t PcieDevice::ProbeBarsLocked() {
 status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     DEBUG_ASSERT(cfg_);
     DEBUG_ASSERT(bar_id < bar_count_);
-    DEBUG_ASSERT(bar_id < mxtl::count_of(bars_));
+    DEBUG_ASSERT(bar_id < fbl::count_of(bars_));
 
     /* Determine the type of BAR this is.  Make sure that it is one of the types we understand */
     pcie_bar_info_t& bar_info  = bars_[bar_id];
@@ -508,7 +508,7 @@ status_t PcieDevice::AllocateBarsLocked() {
         return MX_ERR_UNAVAILABLE;
 
     /* Allocate BARs for the device */
-    DEBUG_ASSERT(bar_count_ <= mxtl::count_of(bars_));
+    DEBUG_ASSERT(bar_count_ <= fbl::count_of(bars_));
     for (size_t i = 0; i < bar_count_; ++i) {
         if (bars_[i].size) {
             status_t ret = AllocateBarLocked(bars_[i]);
@@ -545,10 +545,10 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
              * the 4GB mark.  If we encounter such a thing, clear out the
              * allocation and attempt to re-allocate. */
             uint64_t inclusive_end = info.bus_addr + info.size - 1;
-            if (inclusive_end <= mxtl::numeric_limits<uint32_t>::max()) {
+            if (inclusive_end <= fbl::numeric_limits<uint32_t>::max()) {
                 alloc = &upstream->mmio_lo_regions();
             } else
-            if (info.bus_addr > mxtl::numeric_limits<uint32_t>::max()) {
+            if (info.bus_addr > fbl::numeric_limits<uint32_t>::max()) {
                 alloc = &upstream->mmio_hi_regions();
             }
         } else {

@@ -11,11 +11,11 @@
 #include <dev/pcie_ref_counted.h>
 #include <dev/pcie_upstream_node.h>
 #include <magenta/compiler.h>
-#include <mxtl/macros.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/macros.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/ref_ptr.h>
 
-class PcieRoot : public mxtl::WAVLTreeContainable<mxtl::RefPtr<PcieRoot>>,
+class PcieRoot : public fbl::WAVLTreeContainable<fbl::RefPtr<PcieRoot>>,
                  public PcieUpstreamNode
 {
 public:

@@ -9,8 +9,8 @@
 #include <stddef.h>
 
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/macros.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
 
 namespace {
 
@@ -70,7 +70,7 @@ mx_status_t RawBitmapBase::Shrink(size_t size) {
 }
 
 size_t RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
-    bitmax = mxtl::min(bitmax, size_);
+    bitmax = fbl::min(bitmax, size_);
     if (bitoff >= bitmax) {
         return bitmax;
     }
@@ -93,7 +93,7 @@ size_t RawBitmapBase::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
             break;
         }
     }
-    return mxtl::min(bitmax, CountZeros(i, value));
+    return fbl::min(bitmax, CountZeros(i, value));
 }
 
 mx_status_t RawBitmapBase::Find(bool is_set, size_t bitoff, size_t bitmax,
@@ -115,7 +115,7 @@ mx_status_t RawBitmapBase::Find(bool is_set, size_t bitoff, size_t bitmax,
 }
 
 bool RawBitmapBase::Get(size_t bitoff, size_t bitmax, size_t* first) const {
-    bitmax = mxtl::min(bitmax, size_);
+    bitmax = fbl::min(bitmax, size_);
     size_t result = Scan(bitoff, bitmax, true);
     if (first) {
         *first = result;

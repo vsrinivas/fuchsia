@@ -22,6 +22,6 @@ MODULE_LIBS := \
     system/ulib/unittest \
 
 MODULE_STATIC_LIBS := \
-	system/ulib/mxtl \
+	system/ulib/fbl \
 
 include make/module.mk

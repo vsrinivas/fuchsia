@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 #define PROVIDE_NUMERIC_LIMITS_UNSPECIALIZED
-#include <mxtl/limits.h>
-#include <mxtl/type_support.h>
+#include <fbl/limits.h>
+#include <fbl/type_support.h>
 
 #include <unittest.h>
 
@@ -18,7 +18,7 @@
 #include <mmintrin.h>
 #endif
 
-using mxtl::numeric_limits;
+using fbl::numeric_limits;
 using safeint::CheckedNumeric;
 using safeint::checked_cast;
 using safeint::IsValueInRangeForNumericType;
@@ -62,7 +62,7 @@ using safeint::internal::SignedIntegerForSize;
 // Signed integer arithmetic.
 template <typename Dst>
 static bool TestSpecializedArithmetic(
-    typename mxtl::enable_if<numeric_limits<Dst>::is_integer &&
+    typename fbl::enable_if<numeric_limits<Dst>::is_integer &&
                                 numeric_limits<Dst>::is_signed,
                             int>::type = 0) {
   typedef numeric_limits<Dst> DstLimits;
@@ -118,7 +118,7 @@ static bool TestSpecializedArithmetic(
 // Unsigned integer arithmetic.
 template <typename Dst>
 static bool TestSpecializedArithmetic(
-    typename mxtl::enable_if<numeric_limits<Dst>::is_integer &&
+    typename fbl::enable_if<numeric_limits<Dst>::is_integer &&
                                 !numeric_limits<Dst>::is_signed,
                             int>::type = 0) {
   typedef numeric_limits<Dst> DstLimits;
@@ -137,7 +137,7 @@ static bool TestSpecializedArithmetic(
   TEST_EXPECTED_VALIDITY(
       RANGE_VALID,
       CheckedNumeric<typename SignedIntegerForSize<Dst>::type>(
-          mxtl::numeric_limits<typename SignedIntegerForSize<Dst>::type>::min())
+          fbl::numeric_limits<typename SignedIntegerForSize<Dst>::type>::min())
           .UnsignedAbs());
 
   // Modulus is legal only for integers.
@@ -582,9 +582,9 @@ bool SafeNumerics_IsValueInRangeForNumericType(void*) {
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint32_t>(UINT64_C(0x100000000)));
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint32_t>(UINT64_C(0x100000001)));
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint32_t>(
-      mxtl::numeric_limits<int32_t>::min()));
+      fbl::numeric_limits<int32_t>::min()));
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint32_t>(
-      mxtl::numeric_limits<int64_t>::min()));
+      fbl::numeric_limits<int64_t>::min()));
 
   EXPECT_TRUE1(IsValueInRangeForNumericType<int32_t>(0));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int32_t>(1));
@@ -598,13 +598,13 @@ bool SafeNumerics_IsValueInRangeForNumericType(void*) {
   EXPECT_FALSE1(IsValueInRangeForNumericType<int32_t>(INT64_C(0xffffffff)));
   EXPECT_FALSE1(IsValueInRangeForNumericType<int32_t>(INT64_C(0x100000000)));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int32_t>(
-      mxtl::numeric_limits<int32_t>::min()));
+      fbl::numeric_limits<int32_t>::min()));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int32_t>(
-      static_cast<int64_t>(mxtl::numeric_limits<int32_t>::min())));
+      static_cast<int64_t>(fbl::numeric_limits<int32_t>::min())));
   EXPECT_FALSE1(IsValueInRangeForNumericType<int32_t>(
-      static_cast<int64_t>(mxtl::numeric_limits<int32_t>::min()) - 1));
+      static_cast<int64_t>(fbl::numeric_limits<int32_t>::min()) - 1));
   EXPECT_FALSE1(IsValueInRangeForNumericType<int32_t>(
-      mxtl::numeric_limits<int64_t>::min()));
+      fbl::numeric_limits<int64_t>::min()));
 
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint64_t>(0));
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint64_t>(1));
@@ -615,10 +615,10 @@ bool SafeNumerics_IsValueInRangeForNumericType(void*) {
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint64_t>(UINT64_C(0x100000000)));
   EXPECT_TRUE1(IsValueInRangeForNumericType<uint64_t>(UINT64_C(0x100000001)));
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint64_t>(
-      mxtl::numeric_limits<int32_t>::min()));
+      fbl::numeric_limits<int32_t>::min()));
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint64_t>(INT64_C(-1)));
   EXPECT_FALSE1(IsValueInRangeForNumericType<uint64_t>(
-      mxtl::numeric_limits<int64_t>::min()));
+      fbl::numeric_limits<int64_t>::min()));
 
   EXPECT_TRUE1(IsValueInRangeForNumericType<int64_t>(0));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int64_t>(1));
@@ -640,11 +640,11 @@ bool SafeNumerics_IsValueInRangeForNumericType(void*) {
   EXPECT_FALSE1(
       IsValueInRangeForNumericType<int64_t>(UINT64_C(0xffffffffffffffff)));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int64_t>(
-      mxtl::numeric_limits<int32_t>::min()));
+      fbl::numeric_limits<int32_t>::min()));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int64_t>(
-      static_cast<int64_t>(mxtl::numeric_limits<int32_t>::min())));
+      static_cast<int64_t>(fbl::numeric_limits<int32_t>::min())));
   EXPECT_TRUE1(IsValueInRangeForNumericType<int64_t>(
-      mxtl::numeric_limits<int64_t>::min()));
+      fbl::numeric_limits<int64_t>::min()));
   END_TEST;
 }
 
@@ -663,7 +663,7 @@ bool SafeNumerics_CompoundNumericOperations(void*) {
   d *= d;
   EXPECT_EQ2(4, d.ValueOrDie());
 
-  CheckedNumeric<int> too_large = mxtl::numeric_limits<int>::max();
+  CheckedNumeric<int> too_large = fbl::numeric_limits<int>::max();
   EXPECT_TRUE1(too_large.IsValid());
   too_large += d;
   EXPECT_FALSE1(too_large.IsValid());

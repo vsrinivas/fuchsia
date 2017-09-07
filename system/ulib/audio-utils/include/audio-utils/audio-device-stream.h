@@ -8,8 +8,8 @@
 #include <magenta/types.h>
 #include <mx/channel.h>
 #include <mx/vmo.h>
-#include <mxtl/unique_ptr.h>
-#include <mxtl/vector.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 namespace audio {
 namespace utils {
@@ -17,7 +17,7 @@ namespace utils {
 class AudioDeviceStream {
 public:
     mx_status_t Open();
-    mx_status_t GetSupportedFormats(mxtl::Vector<audio_stream_format_range_t>* out_formats) const;
+    mx_status_t GetSupportedFormats(fbl::Vector<audio_stream_format_range_t>* out_formats) const;
     mx_status_t SetMute(bool mute);
     mx_status_t SetGain(float gain);
     mx_status_t GetGain(audio_stream_cmd_get_gain_resp_t* out_gain) const;
@@ -49,7 +49,7 @@ public:
     void*       ring_buffer()       const { return rb_virt_; }
 
 protected:
-    friend class mxtl::unique_ptr<AudioDeviceStream>;
+    friend class fbl::unique_ptr<AudioDeviceStream>;
 
     static bool IsChannelConnected(const mx::channel& ch);
     mx_status_t GetPlugState(audio_stream_cmd_plug_detect_resp_t* out_state,

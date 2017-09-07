@@ -454,7 +454,7 @@ static mx_status_t fetch_data(const AutoVmcs& vmcs, GuestPhysicalAddressSpace* g
 
     size_t page_offset = guest_vaddr & PAGE_OFFSET_MASK_4KB;
     uint8_t* page = static_cast<uint8_t*>(paddr_to_kvaddr(pa));
-    size_t from_page = mxtl::min(size, PAGE_SIZE - page_offset);
+    size_t from_page = fbl::min(size, PAGE_SIZE - page_offset);
     mandatory_memcpy(data, page + page_offset, from_page);
 
     // If the fetch is not split across pages, return.

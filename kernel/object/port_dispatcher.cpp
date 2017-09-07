@@ -14,13 +14,13 @@
 #include <magenta/compiler.h>
 #include <magenta/rights.h>
 #include <magenta/syscalls/port.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/arena.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/arena.h>
+#include <fbl/auto_lock.h>
 #include <object/excp_port.h>
 #include <object/state_tracker.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 static_assert(sizeof(mx_packet_signal_t) == sizeof(mx_packet_user_t),
               "size of mx_packet_signal_t must match mx_packet_user_t");
@@ -40,7 +40,7 @@ public:
     virtual void Free(PortPacket* port_packet);
 
 private:
-    mxtl::TypedArena<PortPacket, mxtl::Mutex> arena_;
+    fbl::TypedArena<PortPacket, fbl::Mutex> arena_;
 };
 
 namespace {
@@ -75,12 +75,12 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
     }
 }
 
-PortObserver::PortObserver(uint32_t type, const Handle* handle, mxtl::RefPtr<PortDispatcher> port,
+PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
                            uint64_t key, mx_signals_t signals)
     : type_(type),
       trigger_(signals),
       packet_(handle, nullptr),
-      port_(mxtl::move(port)) {
+      port_(fbl::move(port)) {
 
     DEBUG_ASSERT(handle != nullptr);
 
@@ -152,16 +152,16 @@ PortAllocator* PortDispatcher::DefaultPortAllocator() {
     return &port_allocator;
 }
 
-mx_status_t PortDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
+mx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                                    mx_rights_t* rights) {
     DEBUG_ASSERT(options == 0);
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     *rights = MX_DEFAULT_PORT_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 
@@ -293,11 +293,11 @@ mx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     if (!dispatcher->get_state_tracker())
         return MX_ERR_NOT_SUPPORTED;
 
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto type = (options == MX_WAIT_ASYNC_ONCE) ?
         MX_PKT_TYPE_SIGNAL_ONE : MX_PKT_TYPE_SIGNAL_REP;
 
-    auto observer = new (&ac) PortObserver(type, handle, mxtl::RefPtr<PortDispatcher>(this), key,
+    auto observer = new (&ac) PortObserver(type, handle, fbl::RefPtr<PortDispatcher>(this), key,
                                            signals);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -358,7 +358,7 @@ void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     AutoLock al(&lock_);
     DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
-    eports_.push_back(mxtl::move(AdoptRef(eport)));
+    eports_.push_back(fbl::move(AdoptRef(eport)));
 }
 
 void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {

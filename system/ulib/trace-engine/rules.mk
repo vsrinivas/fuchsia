@@ -20,7 +20,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/mx \
     system/ulib/mxcpp \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/c \

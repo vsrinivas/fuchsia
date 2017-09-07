@@ -13,14 +13,14 @@
 #include <vm/vm_aspace.h>
 #include <lib/pci/pio.h>
 #include <lk/init.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
-#include <mxtl/mutex.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
+#include <fbl/mutex.h>
 #include <trace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 /* TODO(johngro) : figure this out someday.
  *
@@ -41,8 +41,8 @@ using mxtl::AutoLock;
 constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_SLAB_SIZE;
 constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_MAX_MEM;
 
-mxtl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
-mxtl::Mutex PcieBusDriver::driver_lock_;
+fbl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
+fbl::Mutex PcieBusDriver::driver_lock_;
 
 PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
@@ -51,7 +51,7 @@ PcieBusDriver::~PcieBusDriver() {
     // long run, we need to gracefully handle disconnecting from all user mode
     // drivers (probably using a simulated hot-unplug) if we unload the bus
     // driver.
-    ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+    ForeachDevice([](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
                       DEBUG_ASSERT(dev);
                       return true;
                   }, nullptr);
@@ -60,7 +60,7 @@ PcieBusDriver::~PcieBusDriver() {
     ShutdownIrqs();
 
     // Free the device tree
-    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+    ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
                      root->UnplugDownstream();
                      return true;
                    }, nullptr);
@@ -73,7 +73,7 @@ PcieBusDriver::~PcieBusDriver() {
     ecam_regions_.clear();
 }
 
-status_t PcieBusDriver::AddRoot(mxtl::RefPtr<PcieRoot>&& root) {
+status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
     if (root == nullptr)
         return MX_ERR_INVALID_ARGS;
 
@@ -86,7 +86,7 @@ status_t PcieBusDriver::AddRoot(mxtl::RefPtr<PcieRoot>&& root) {
     // Attempt to add it to the collection of roots.
     {
         AutoLock bus_topology_lock(&bus_topology_lock_);
-        if (!roots_.insert_or_find(mxtl::move(root))) {
+        if (!roots_.insert_or_find(fbl::move(root))) {
             TRACEF("Failed to add PCIe root for bus %u, root already exists!\n",
                     root->managed_bus_id());
             return MX_ERR_ALREADY_EXISTS;
@@ -105,13 +105,13 @@ status_t PcieBusDriver::RescanDevices() {
     AutoLock lock(&bus_rescan_lock_);
 
     // Scan each root looking for for devices and other bridges.
-    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+    ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
                      root->ScanDownstream();
                      return true;
                    }, nullptr);
 
     // Attempt to allocate any unallocated BARs
-    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+    ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
                      root->AllocateDownstreamBars();
                      return true;
                    }, nullptr);
@@ -153,7 +153,7 @@ status_t PcieBusDriver::StartBusDriver() {
         AutoLock lock(&bus_rescan_lock_);
 
         // Scan each root looking for for devices and other bridges.
-        ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+        ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
                          root->ScanDownstream();
                          return true;
                        }, nullptr);
@@ -162,7 +162,7 @@ status_t PcieBusDriver::StartBusDriver() {
             return MX_ERR_BAD_STATE;
 
         // Run registered quirk handlers for any newly discovered devices.
-        ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+        ForeachDevice([](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
             PcieBusDriver::RunQuirks(dev);
             return true;
         }, nullptr);
@@ -175,7 +175,7 @@ status_t PcieBusDriver::StartBusDriver() {
             return MX_ERR_BAD_STATE;
 
         // Attempt to allocate any unallocated BARs
-        ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+        ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
                          root->AllocateDownstreamBars();
                          return true;
                        }, nullptr);
@@ -187,16 +187,16 @@ status_t PcieBusDriver::StartBusDriver() {
     return MX_OK;
 }
 
-mxtl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
+fbl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
     struct GetNthDeviceState {
         uint32_t index;
-        mxtl::RefPtr<PcieDevice> ret;
+        fbl::RefPtr<PcieDevice> ret;
     } state;
 
     state.index = index;
 
     ForeachDevice(
-        [](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+        [](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
             DEBUG_ASSERT(dev && ctx);
 
             auto state = reinterpret_cast<GetNthDeviceState*>(ctx);
@@ -209,7 +209,7 @@ mxtl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
             return true;
         }, &state);
 
-    return mxtl::move(state.ret);
+    return fbl::move(state.ret);
 }
 
 void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upstream) {
@@ -217,13 +217,13 @@ void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upst
 
     // Have the device hold a reference to its upstream bridge.
     DEBUG_ASSERT(dev.upstream_ == nullptr);
-    dev.upstream_ = mxtl::WrapRefPtr(&upstream);
+    dev.upstream_ = fbl::WrapRefPtr(&upstream);
 
     // Have the bridge hold a reference to the device
     uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
-    DEBUG_ASSERT(ndx < mxtl::count_of(upstream.downstream_));
+    DEBUG_ASSERT(ndx < fbl::count_of(upstream.downstream_));
     DEBUG_ASSERT(upstream.downstream_[ndx] == nullptr);
-    upstream.downstream_[ndx] = mxtl::WrapRefPtr(&dev);
+    upstream.downstream_[ndx] = fbl::WrapRefPtr(&dev);
 }
 
 void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
@@ -231,7 +231,7 @@ void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
 
     if (dev.upstream_ != nullptr) {
         uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
-        DEBUG_ASSERT(ndx < mxtl::count_of(dev.upstream_->downstream_));
+        DEBUG_ASSERT(ndx < fbl::count_of(dev.upstream_->downstream_));
         DEBUG_ASSERT(&dev == dev.upstream_->downstream_[ndx].get());
 
         // Let go of the upstream's reference to the device
@@ -242,27 +242,27 @@ void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
     }
 }
 
-mxtl::RefPtr<PcieUpstreamNode> PcieBusDriver::GetUpstream(PcieDevice& dev) {
+fbl::RefPtr<PcieUpstreamNode> PcieBusDriver::GetUpstream(PcieDevice& dev) {
     AutoLock lock(&bus_topology_lock_);
     auto ret = dev.upstream_;
     return ret;
 }
 
-mxtl::RefPtr<PcieDevice> PcieBusDriver::GetDownstream(PcieUpstreamNode& upstream, uint ndx) {
-    DEBUG_ASSERT(ndx <= mxtl::count_of(upstream.downstream_));
+fbl::RefPtr<PcieDevice> PcieBusDriver::GetDownstream(PcieUpstreamNode& upstream, uint ndx) {
+    DEBUG_ASSERT(ndx <= fbl::count_of(upstream.downstream_));
     AutoLock lock(&bus_topology_lock_);
     auto ret = upstream.downstream_[ndx];
     return ret;
 }
 
-mxtl::RefPtr<PcieDevice> PcieBusDriver::GetRefedDevice(uint bus_id,
+fbl::RefPtr<PcieDevice> PcieBusDriver::GetRefedDevice(uint bus_id,
                                                        uint dev_id,
                                                        uint func_id) {
     struct GetRefedDeviceState {
         uint bus_id;
         uint dev_id;
         uint func_id;
-        mxtl::RefPtr<PcieDevice> ret;
+        fbl::RefPtr<PcieDevice> ret;
     } state;
 
     state.bus_id  = bus_id,
@@ -270,7 +270,7 @@ mxtl::RefPtr<PcieDevice> PcieBusDriver::GetRefedDevice(uint bus_id,
     state.func_id = func_id,
 
     ForeachDevice(
-            [](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+            [](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
                 DEBUG_ASSERT(dev && ctx);
                 auto state = reinterpret_cast<GetRefedDeviceState*>(ctx);
 
@@ -284,7 +284,7 @@ mxtl::RefPtr<PcieDevice> PcieBusDriver::GetRefedDevice(uint bus_id,
                 return true;
             }, &state);
 
-    return mxtl::move(state.ret);
+    return fbl::move(state.ret);
 }
 
 void PcieBusDriver::ForeachRoot(ForeachRootCallback cbk, void* ctx) {
@@ -338,7 +338,7 @@ void PcieBusDriver::ForeachDevice(ForeachDeviceCallback cbk, void* ctx) {
         .dev_ctx = ctx,
     };
 
-    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx_) -> bool {
+    ForeachRoot([](const fbl::RefPtr<PcieRoot>& root, void* ctx_) -> bool {
                      auto ctx = static_cast<ForeachDeviceCtx*>(ctx_);
                      return ctx->driver->ForeachDownstreamDevice(
                              root, 0, ctx->dev_cbk, ctx->dev_ctx);
@@ -362,14 +362,14 @@ status_t PcieBusDriver::AllocBookkeeping() {
     return MX_OK;
 }
 
-bool PcieBusDriver::ForeachDownstreamDevice(const mxtl::RefPtr<PcieUpstreamNode>& upstream,
+bool PcieBusDriver::ForeachDownstreamDevice(const fbl::RefPtr<PcieUpstreamNode>& upstream,
                                             uint                                  level,
                                             ForeachDeviceCallback                 cbk,
                                             void*                                 ctx) {
     DEBUG_ASSERT(upstream && cbk);
     bool keep_going = true;
 
-    for (uint i = 0; keep_going && (i < mxtl::count_of(upstream->downstream_)); ++i) {
+    for (uint i = 0; keep_going && (i < fbl::count_of(upstream->downstream_)); ++i) {
         auto dev = upstream->GetDownstream(i);
 
         if (!dev)
@@ -383,9 +383,9 @@ bool PcieBusDriver::ForeachDownstreamDevice(const mxtl::RefPtr<PcieUpstreamNode>
             if (dev->is_bridge()) {
                 // TODO(johngro): eliminate the need to hold this extra ref.  If
                 // we had the ability to up and downcast when moving RefPtrs, we
-                // could just mxtl::move dev into a PcieBridge pointer and then
+                // could just fbl::move dev into a PcieBridge pointer and then
                 // down into a PcieUpstreamNode pointer.
-                mxtl::RefPtr<PcieUpstreamNode> downstream_bridge(
+                fbl::RefPtr<PcieUpstreamNode> downstream_bridge(
                         static_cast<PcieUpstreamNode*>(
                         static_cast<PcieBridge*>(dev.get())));
                 keep_going = ForeachDownstreamDevice(downstream_bridge, level + 1, cbk, ctx);
@@ -414,7 +414,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
     if (aspace == PciAddrSpace::MMIO) {
         // Figure out if this goes in the low region, the high region, or needs
         // to be split into two regions.
-        constexpr uint64_t U32_MAX = mxtl::numeric_limits<uint32_t>::max();
+        constexpr uint64_t U32_MAX = fbl::numeric_limits<uint32_t>::max();
         auto& mmio_lo = mmio_lo_regions_;
         auto& mmio_hi = mmio_hi_regions_;
 
@@ -454,8 +454,8 @@ status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
         return MX_ERR_BAD_STATE;
     }
 
-    mxtl::AllocChecker ac;
-    driver_ = mxtl::AdoptRef(new (&ac) PcieBusDriver(platform));
+    fbl::AllocChecker ac;
+    driver_ = fbl::AdoptRef(new (&ac) PcieBusDriver(platform));
     if (!ac.check()) {
         TRACEF("Failed to allocate PCIe bus driver\n");
         return MX_ERR_NO_MEMORY;
@@ -469,11 +469,11 @@ status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
 }
 
 void PcieBusDriver::ShutdownDriver() {
-    mxtl::RefPtr<PcieBusDriver> driver;
+    fbl::RefPtr<PcieBusDriver> driver;
 
     {
         AutoLock lock(&driver_lock_);
-        driver = mxtl::move(driver_);
+        driver = fbl::move(driver_);
     }
 
     driver.reset();
@@ -579,8 +579,8 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
     }
 
     // Looks good.  Attempt to allocate and map this ECAM region.
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<MappedEcamRegion> region(new (&ac) MappedEcamRegion(ecam));
     if (!ac.check()) {
         TRACEF("Failed to allocate ECAM region for bus range [0x%02x, 0x%02x]\n",
                ecam.bus_start, ecam.bus_end);
@@ -595,7 +595,7 @@ status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
     }
 
     // Everything checks out.  Add the new region to our set of regions and we are done.
-    ecam_regions_.insert(mxtl::move(region));
+    ecam_regions_.insert(fbl::move(region));
     return MX_OK;
 }
 
@@ -632,7 +632,7 @@ status_t PcieBusDriver::MappedEcamRegion::MapEcam() {
 // External references to the quirks handler table.
 extern PcieBusDriver::QuirkHandler __start_pcie_quirk_handlers[] __WEAK;
 extern PcieBusDriver::QuirkHandler __stop_pcie_quirk_handlers[] __WEAK;
-void PcieBusDriver::RunQuirks(const mxtl::RefPtr<PcieDevice>& dev) {
+void PcieBusDriver::RunQuirks(const fbl::RefPtr<PcieDevice>& dev) {
     if (dev && dev->quirks_done())
         return;
 
@@ -650,9 +650,9 @@ void PcieBusDriver::RunQuirks(const mxtl::RefPtr<PcieDevice>& dev) {
 // used for any other reason due to it intentionally leaving drivers in a bad
 // state (some may crash).
 void PcieBusDriver::DisableBus() {
-    mxtl::AutoLock lock(&driver_lock_);
+    fbl::AutoLock lock(&driver_lock_);
     ForeachDevice(
-        [](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+        [](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
             TRACEF("Disabling device %#02x:%#02x.%01x - VID %#04x DID %#04x\n",
                     dev->dev_id(), dev->bus_id(), dev->func_id(), dev->vendor_id(),
                     dev->device_id());

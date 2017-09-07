@@ -12,7 +12,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <vm/vm_aspace.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 struct hpet_timer_registers {
     volatile uint64_t conf_caps;
@@ -137,7 +137,7 @@ uint64_t hpet_get_value(void)
      * reads the low 32-bits first, so the result is a large jump when it
      * wraps 32 bits.  To work around this, we return the lesser of two reads.
      */
-    return mxtl::min(v, v2);
+    return fbl::min(v, v2);
 }
 
 status_t hpet_set_value(uint64_t v)

@@ -35,10 +35,10 @@
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -59,12 +59,12 @@ static Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
 }
 
 mx_status_t ProcessDispatcher::Create(
-    mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags,
-    mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
-    mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
+    fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
+    fbl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
+    fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
     mx_rights_t* root_vmar_rights) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<ProcessDispatcher> process(new (&ac) ProcessDispatcher(job, name, flags));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<ProcessDispatcher> process(new (&ac) ProcessDispatcher(job, name, flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -75,10 +75,10 @@ mx_status_t ProcessDispatcher::Create(
     if (result != MX_OK)
         return result;
 
-    mxtl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
+    fbl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
 
     // Create a dispatcher for the root VMAR.
-    mxtl::RefPtr<Dispatcher> new_vmar_dispatcher;
+    fbl::RefPtr<Dispatcher> new_vmar_dispatcher;
     result = VmAddressRegionDispatcher::Create(vmar, &new_vmar_dispatcher, root_vmar_rights);
     if (result != MX_OK) {
         process->aspace_->Destroy();
@@ -86,17 +86,17 @@ mx_status_t ProcessDispatcher::Create(
     }
 
     *rights = MX_DEFAULT_PROCESS_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(process.release());
+    *dispatcher = fbl::AdoptRef<Dispatcher>(process.release());
     *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             &new_vmar_dispatcher);
 
     return MX_OK;
 }
 
-ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
-                                     mxtl::StringPiece name,
+ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
+                                     fbl::StringPiece name,
                                      uint32_t flags)
-  : job_(mxtl::move(job)), policy_(job_->GetPolicy()), state_tracker_(0u),
+  : job_(fbl::move(job)), policy_(job_->GetPolicy()), state_tracker_(0u),
     name_(name.data(), name.length()) {
     LTRACE_ENTRY_OBJ;
 
@@ -296,7 +296,7 @@ ProcessDispatcher::State ProcessDispatcher::state() const {
     return state_;
 }
 
-mxtl::RefPtr<JobDispatcher> ProcessDispatcher::job() {
+fbl::RefPtr<JobDispatcher> ProcessDispatcher::job() {
     return job_;
 }
 
@@ -355,13 +355,13 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // does. If it blocks the exception port could get removed out from
         // underneath us, so make a copy.
         {
-            mxtl::RefPtr<ExceptionPort> eport(exception_port());
+            fbl::RefPtr<ExceptionPort> eport(exception_port());
             if (eport) {
                 eport->OnProcessExit(this);
             }
         }
         {
-            mxtl::RefPtr<ExceptionPort> debugger_eport(debugger_exception_port());
+            fbl::RefPtr<ExceptionPort> debugger_eport(debugger_exception_port());
             if (debugger_eport) {
                 debugger_eport->OnProcessExit(this);
             }
@@ -412,7 +412,7 @@ Handle* ProcessDispatcher::GetHandleLocked(mx_handle_t handle_value) {
 
 void ProcessDispatcher::AddHandle(HandleOwner handle) {
     AutoLock lock(&handle_table_lock_);
-    AddHandleLocked(mxtl::move(handle));
+    AddHandleLocked(fbl::move(handle));
 }
 
 void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
@@ -450,7 +450,7 @@ mx_koid_t ProcessDispatcher::GetKoidForHandle(mx_handle_t handle_value) {
 }
 
 mx_status_t ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
-                                                     mxtl::RefPtr<Dispatcher>* dispatcher,
+                                                     fbl::RefPtr<Dispatcher>* dispatcher,
                                                      mx_rights_t* rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
@@ -465,7 +465,7 @@ mx_status_t ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
 
 mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handle_value,
                                                                mx_rights_t desired_rights,
-                                                               mxtl::RefPtr<Dispatcher>* dispatcher_out,
+                                                               fbl::RefPtr<Dispatcher>* dispatcher_out,
                                                                mx_rights_t* out_rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
@@ -565,11 +565,11 @@ mx_status_t ProcessDispatcher::GetVmos(
     return MX_OK;
 }
 
-mx_status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
+mx_status_t ProcessDispatcher::GetThreads(fbl::Array<mx_koid_t>* out_threads) {
     AutoLock lock(&state_lock_);
     size_t n = thread_list_.size_slow();
-    mxtl::Array<mx_koid_t> threads;
-    mxtl::AllocChecker ac;
+    fbl::Array<mx_koid_t> threads;
+    fbl::AllocChecker ac;
     threads.reset(new (&ac) mx_koid_t[n], n);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -579,11 +579,11 @@ mx_status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
         ++i;
     }
     DEBUG_ASSERT(i == n);
-    *out_threads = mxtl::move(threads);
+    *out_threads = fbl::move(threads);
     return MX_OK;
 }
 
-mx_status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+mx_status_t ProcessDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     LTRACE_ENTRY_OBJ;
     bool debugger = false;
     switch (eport->type()) {
@@ -619,7 +619,7 @@ mx_status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> epor
 
 bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
     LTRACE_ENTRY_OBJ;
-    mxtl::RefPtr<ExceptionPort> eport;
+    fbl::RefPtr<ExceptionPort> eport;
 
     // Remove the exception handler first. As we resume threads we don't
     // want them to hit another exception and get back into
@@ -662,18 +662,18 @@ bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
     return true;
 }
 
-mxtl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
+fbl::RefPtr<ExceptionPort> ProcessDispatcher::exception_port() {
     AutoLock lock(&exception_lock_);
     return exception_port_;
 }
 
-mxtl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
+fbl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
     AutoLock lock(&exception_lock_);
     return debugger_exception_port_;
 }
 
 void ProcessDispatcher::OnExceptionPortRemoval(
-        const mxtl::RefPtr<ExceptionPort>& eport) {
+        const fbl::RefPtr<ExceptionPort>& eport) {
     AutoLock lock(&state_lock_);
     for (auto& thread : thread_list_) {
         thread.OnExceptionPortRemoval(eport);
@@ -686,12 +686,12 @@ public:
     FindProcessByKoid(const FindProcessByKoid&) = delete;
 
     // To be called after enumeration.
-    mxtl::RefPtr<ProcessDispatcher> get_pd() { return pd_; }
+    fbl::RefPtr<ProcessDispatcher> get_pd() { return pd_; }
 
 private:
     bool OnProcess(ProcessDispatcher* process) final {
         if (process->get_koid() == koid_) {
-            pd_ = mxtl::WrapRefPtr(process);
+            pd_ = fbl::WrapRefPtr(process);
             // Stop the enumeration.
             return false;
         }
@@ -700,22 +700,22 @@ private:
     }
 
     const mx_koid_t koid_;
-    mxtl::RefPtr<ProcessDispatcher> pd_ = nullptr;
+    fbl::RefPtr<ProcessDispatcher> pd_ = nullptr;
 };
 
 // static
-mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
+fbl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
     FindProcessByKoid finder(koid);
     GetRootJobDispatcher()->EnumerateChildren(&finder, /* recurse */ true);
     return finder.get_pd();
 }
 
-mxtl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
+fbl::RefPtr<ThreadDispatcher> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(&state_lock_);
 
     auto iter = thread_list_.find_if([koid](const ThreadDispatcher& t) { return t.get_koid() == koid; });
-    return mxtl::WrapRefPtr(iter.CopyPointer());
+    return fbl::WrapRefPtr(iter.CopyPointer());
 }
 
 uintptr_t ProcessDispatcher::get_debug_addr() const {

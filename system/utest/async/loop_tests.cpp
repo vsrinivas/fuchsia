@@ -12,10 +12,10 @@
 #include <async/wait.h>
 
 #include <mx/event.h>
-#include <mxtl/atomic.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/function.h>
-#include <mxtl/mutex.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_lock.h>
+#include <fbl/function.h>
+#include <fbl/mutex.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -28,7 +28,7 @@ class TestWait {
 public:
     TestWait(mx_handle_t object, mx_signals_t trigger)
         : op(object, trigger) {
-        op.set_handler(mxtl::BindMember(this, &TestWait::Handle));
+        op.set_handler(fbl::BindMember(this, &TestWait::Handle));
     }
 
     virtual ~TestWait() = default;
@@ -83,7 +83,7 @@ class TestTask {
 public:
     TestTask(mx_time_t deadline)
         : op(deadline) {
-        op.set_handler(mxtl::BindMember(this, &TestTask::Handle));
+        op.set_handler(fbl::BindMember(this, &TestTask::Handle));
     }
 
     virtual ~TestTask() = default;
@@ -133,14 +133,14 @@ public:
     RepeatingTask(mx_time_t deadline, mx_duration_t interval, uint32_t repeat_count)
         : TestTask(deadline), interval_(interval), repeat_count_(repeat_count) {}
 
-    void set_finish_callback(mxtl::Closure callback) {
-        finish_callback_ = mxtl::move(callback);
+    void set_finish_callback(fbl::Closure callback) {
+        finish_callback_ = fbl::move(callback);
     }
 
 protected:
     mx_duration_t interval_;
     uint32_t repeat_count_;
-    mxtl::Closure finish_callback_;
+    fbl::Closure finish_callback_;
 
     async_task_result_t Handle(async_t* async, mx_status_t status) override {
         TestTask::Handle(async, status);
@@ -158,7 +158,7 @@ protected:
 class TestReceiver {
 public:
     TestReceiver() {
-        op.set_handler(mxtl::BindMember(this, &TestReceiver::Handle));
+        op.set_handler(fbl::BindMember(this, &TestReceiver::Handle));
     }
 
     virtual ~TestReceiver() = default;
@@ -640,37 +640,37 @@ public:
     ConcurrencyMeasure(uint32_t end)
         : end_(end) {}
 
-    uint32_t max_threads() const { return mxtl::atomic_load(&max_threads_, mxtl::memory_order_acquire); }
-    uint32_t count() const { return mxtl::atomic_load(&count_, mxtl::memory_order_acquire); }
+    uint32_t max_threads() const { return fbl::atomic_load(&max_threads_, fbl::memory_order_acquire); }
+    uint32_t count() const { return fbl::atomic_load(&count_, fbl::memory_order_acquire); }
 
     void Tally(async_t* async) {
         // Increment count of concurrently active threads.  Update maximum if needed.
-        uint32_t active = 1u + mxtl::atomic_fetch_add(&active_threads_, 1u,
-                                                      mxtl::memory_order_acq_rel);
+        uint32_t active = 1u + fbl::atomic_fetch_add(&active_threads_, 1u,
+                                                      fbl::memory_order_acq_rel);
         uint32_t old_max;
         do {
-            old_max = mxtl::atomic_load(&max_threads_, mxtl::memory_order_acquire);
+            old_max = fbl::atomic_load(&max_threads_, fbl::memory_order_acquire);
         } while (active > old_max &&
-                 !mxtl::atomic_compare_exchange_weak(&max_threads_, &old_max, active,
-                                                     mxtl::memory_order_acq_rel,
-                                                     mxtl::memory_order_acquire));
+                 !fbl::atomic_compare_exchange_weak(&max_threads_, &old_max, active,
+                                                     fbl::memory_order_acq_rel,
+                                                     fbl::memory_order_acquire));
 
         // Pretend to do work.
         mx_nanosleep(mx_deadline_after(MX_MSEC(1)));
 
         // Decrement count of active threads.
-        mxtl::atomic_fetch_sub(&active_threads_, 1u, mxtl::memory_order_acq_rel);
+        fbl::atomic_fetch_sub(&active_threads_, 1u, fbl::memory_order_acq_rel);
 
         // Quit when last item processed.
-        if (1u + mxtl::atomic_fetch_add(&count_, 1u, mxtl::memory_order_acq_rel) == end_)
+        if (1u + fbl::atomic_fetch_add(&count_, 1u, fbl::memory_order_acq_rel) == end_)
             async_loop_quit(async);
     }
 
 private:
     const uint32_t end_;
-    mxtl::atomic_uint32_t count_{};
-    mxtl::atomic_uint32_t active_threads_{};
-    mxtl::atomic_uint32_t max_threads_{};
+    fbl::atomic_uint32_t count_{};
+    fbl::atomic_uint32_t active_threads_{};
+    fbl::atomic_uint32_t max_threads_{};
 };
 
 class ThreadAssertWait : public TestWait {
@@ -714,11 +714,11 @@ protected:
 
     // This receiver's handler will run concurrently on multiple threads
     // (unlike the Waits and Tasks) so we must guard its state.
-    mxtl::Mutex mutex_;
+    fbl::Mutex mutex_;
 
     void Handle(async_t* async, mx_status_t status, const mx_packet_user_t* data) override {
         {
-            mxtl::AutoLock lock(&mutex_);
+            fbl::AutoLock lock(&mutex_);
             TestReceiver::Handle(async, status, data);
         }
         measure_->Tally(async);

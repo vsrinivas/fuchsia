@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <magenta/assert.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/limits.h>
+#include <fbl/auto_call.h>
+#include <fbl/algorithm.h>
+#include <fbl/limits.h>
 #include <mxio/io.h>
 #include <stdio.h>
 
@@ -127,9 +127,9 @@ mx_status_t WAVSink::Finalize() {
     }
 
     constexpr size_t riff_overhead = sizeof(RIFFChunkHeader) + sizeof(WAVHeader);
-    auto riff_size = mxtl::min<uint64_t>(mxtl::numeric_limits<uint32_t>::max(),
+    auto riff_size = fbl::min<uint64_t>(fbl::numeric_limits<uint32_t>::max(),
                                          bytes_written_ + riff_overhead);
-    auto data_size = mxtl::min<uint64_t>(mxtl::numeric_limits<uint32_t>::max(),
+    auto data_size = fbl::min<uint64_t>(fbl::numeric_limits<uint32_t>::max(),
                                          bytes_written_);
 
     mx_status_t res;

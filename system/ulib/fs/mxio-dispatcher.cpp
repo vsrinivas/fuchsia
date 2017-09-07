@@ -6,17 +6,17 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 #include <mxio/dispatcher.h>
 #include <fs/mxio-dispatcher.h>
 #include <fs/vfs.h>
 
 namespace fs {
 
-mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::MxioDispatcher>* out) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<MxioDispatcher> d(new (&ac) MxioDispatcher());
+mx_status_t MxioDispatcher::Create(fbl::unique_ptr<fs::MxioDispatcher>* out) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<MxioDispatcher> d(new (&ac) MxioDispatcher());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -24,7 +24,7 @@ mx_status_t MxioDispatcher::Create(mxtl::unique_ptr<fs::MxioDispatcher>* out) {
     if (status != MX_OK) {
         return status;
     }
-    *out = mxtl::move(d);
+    *out = fbl::move(d);
     return MX_OK;
 }
 

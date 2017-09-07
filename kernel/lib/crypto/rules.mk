@@ -20,7 +20,7 @@ MODULE_SRCS += \
 MODULE_DEPS += third_party/lib/uboringssl
 MODULE_DEPS += third_party/lib/cryptolib
 MODULE_DEPS += kernel/lib/explicit-memory
-MODULE_DEPS += kernel/lib/mxtl
+MODULE_DEPS += kernel/lib/fbl
 MODULE_DEPS += kernel/lib/unittest
 
 include $(LOCAL_DIR)/entropy/rules.mk

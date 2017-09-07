@@ -7,8 +7,8 @@
 #include <audio-utils/audio-output.h>
 #include <audio-proto-utils/format-utils.h>
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_call.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -189,7 +189,7 @@ mx_status_t dump_stream_info(const audio::utils::AudioDeviceStream& stream) {
                                         : "dynamic (synchronous)"));
 
     // Fetch and print the currently supported audio formats for this audio stream.
-    mxtl::Vector<audio_stream_format_range_t> fmts;
+    fbl::Vector<audio_stream_format_range_t> fmts;
     res = stream.GetSupportedFormats(&fmts);
     if (res != MX_OK) {
         printf("Failed to fetch supported formats! (res %d)\n", res);
@@ -210,7 +210,7 @@ int main(int argc, const char** argv) {
     uint32_t bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
     uint32_t channels = DEFAULT_CHANNELS;
     Command cmd = Command::INVALID;
-    auto print_usage = mxtl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
+    auto print_usage = fbl::MakeAutoCall([prog_name = argv[0]]() { usage(prog_name); });
     int arg = 1;
 
     if (arg >= argc) return -1;
@@ -345,7 +345,7 @@ int main(int argc, const char** argv) {
                 return -1;
             }
             arg++;
-            duration = mxtl::max(duration, MIN_PLUG_MONITOR_DURATION);
+            duration = fbl::max(duration, MIN_PLUG_MONITOR_DURATION);
         }
         break;
 
@@ -366,8 +366,8 @@ int main(int argc, const char** argv) {
                 arg++;
             }
 
-            tone_freq = mxtl::clamp(tone_freq, 15.0f, 20000.0f);
-            duration = mxtl::max(duration, MIN_TONE_DURATION);
+            tone_freq = fbl::clamp(tone_freq, 15.0f, 20000.0f);
+            duration = fbl::max(duration, MIN_TONE_DURATION);
         }
         break;
 
@@ -403,7 +403,7 @@ int main(int argc, const char** argv) {
     print_usage.cancel();
 
     // Open the selected stream.
-    mxtl::unique_ptr<audio::utils::AudioDeviceStream> stream;
+    fbl::unique_ptr<audio::utils::AudioDeviceStream> stream;
     if (input) stream = audio::utils::AudioInput::Create(dev_id);
     else       stream = audio::utils::AudioOutput::Create(dev_id);
     if (stream == nullptr) {

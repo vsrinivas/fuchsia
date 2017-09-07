@@ -15,8 +15,8 @@
 #include <kernel/vm.h>
 #include <list.h>
 #include <lk/init.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
@@ -31,7 +31,7 @@ PcieUpstreamNode::~PcieUpstreamNode() {
 #if LK_DEBUGLEVEL > 0
      // Sanity check to make sure that all child devices have been released as
      // well.
-    for (size_t i = 0; i < mxtl::count_of(downstream_); ++i)
+    for (size_t i = 0; i < fbl::count_of(downstream_); ++i)
         DEBUG_ASSERT(!downstream_[i]);
 #endif
 }
@@ -41,7 +41,7 @@ void PcieUpstreamNode::AllocateDownstreamBars() {
      * to not access our downstream devices directly.  Instead, hold references
      * to downstream devices we obtain while holding bus driver's topology lock.
      * */
-    for (uint i = 0; i < mxtl::count_of(downstream_); ++i) {
+    for (uint i = 0; i < fbl::count_of(downstream_); ++i) {
         auto device = GetDownstream(i);
         if (device != nullptr) {
             status_t res = device->AllocateBars();
@@ -52,7 +52,7 @@ void PcieUpstreamNode::AllocateDownstreamBars() {
 }
 
 void PcieUpstreamNode::DisableDownstream() {
-    for (uint i = 0; i < mxtl::count_of(downstream_); ++i) {
+    for (uint i = 0; i < fbl::count_of(downstream_); ++i) {
         auto downstream_device = GetDownstream(i);
         if (downstream_device)
             downstream_device->Disable();
@@ -60,7 +60,7 @@ void PcieUpstreamNode::DisableDownstream() {
 }
 
 void PcieUpstreamNode::UnplugDownstream() {
-    for (uint i = 0; i < mxtl::count_of(downstream_); ++i) {
+    for (uint i = 0; i < fbl::count_of(downstream_); ++i) {
         auto downstream_device = GetDownstream(i);
         if (downstream_device)
             downstream_device->Unplug();
@@ -90,7 +90,7 @@ void PcieUpstreamNode::ScanDownstream() {
                  * it.  If this function happens to be a bridge, go ahead and
                  * look under it for new devices. */
                 uint ndx    = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
-                DEBUG_ASSERT(ndx < mxtl::count_of(downstream_));
+                DEBUG_ASSERT(ndx < fbl::count_of(downstream_));
 
                 auto downstream_device = GetDownstream(ndx);
                 if (!downstream_device) {
@@ -119,7 +119,7 @@ void PcieUpstreamNode::ScanDownstream() {
     }
 }
 
-mxtl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(const PciConfig* cfg,
+fbl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(const PciConfig* cfg,
                                                       uint dev_id,
                                                       uint func_id) {
     DEBUG_ASSERT(cfg);
@@ -128,7 +128,7 @@ mxtl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(const PciConfig* cfg,
     DEBUG_ASSERT(driver().RescanLockIsHeld());
 
     __UNUSED uint ndx = (dev_id * PCIE_MAX_FUNCTIONS_PER_DEVICE) + func_id;
-    DEBUG_ASSERT(ndx < mxtl::count_of(downstream_));
+    DEBUG_ASSERT(ndx < fbl::count_of(downstream_));
     DEBUG_ASSERT(downstream_[ndx] == nullptr);
 
     LTRACEF("Scanning new function at %02x:%02x.%01x\n", managed_bus_id_, dev_id, func_id);

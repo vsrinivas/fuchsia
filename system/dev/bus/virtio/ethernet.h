@@ -17,8 +17,8 @@
 #include <magenta/device/ethernet.h>
 #include <magenta/thread_annotations.h>
 #include <magenta/types.h>
-#include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
 #include <virtio/net.h>
 
 namespace virtio {
@@ -57,7 +57,7 @@ private:
     // each direction.
     Ring rx_;
     Ring tx_;
-    mxtl::unique_ptr<io_buffer_t[]> bufs_;
+    fbl::unique_ptr<io_buffer_t[]> bufs_;
     size_t unkicked_ TA_GUARDED(tx_lock_);
 
     // Saved net device configuration out of the pci config BAR

@@ -11,7 +11,7 @@
 #include <object/handle_owner.h>
 #include <object/handles.h>
 #include <object/process_dispatcher.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 
 #include "syscalls_priv.h"
 
@@ -38,7 +38,7 @@ static mx_status_t handle_dup_replace(
     auto up = ProcessDispatcher::GetCurrent();
 
     {
-        mxtl::AutoLock lock(up->handle_table_lock());
+        fbl::AutoLock lock(up->handle_table_lock());
         auto source = up->GetHandleLocked(handle_value);
         if (!source)
             return MX_ERR_BAD_HANDLE;
@@ -64,7 +64,7 @@ static mx_status_t handle_dup_replace(
         if (is_replace)
             up->RemoveHandleLocked(handle_value);
 
-        up->AddHandleLocked(mxtl::move(dest));
+        up->AddHandleLocked(fbl::move(dest));
     }
 
     return MX_OK;

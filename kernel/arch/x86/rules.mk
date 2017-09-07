@@ -79,7 +79,7 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
 	kernel/lib/bitmap \
-	kernel/lib/mxtl \
+	kernel/lib/fbl \
 	kernel/object
 
 include $(LOCAL_DIR)/toolchain.mk

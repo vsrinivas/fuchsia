@@ -28,7 +28,7 @@ namespace entropy {
 #endif
 
 static uint8_t entropy_buf[ENTROPY_COLLECTOR_TEST_MAXLEN];
-mxtl::RefPtr<VmObject> entropy_vmo;
+fbl::RefPtr<VmObject> entropy_vmo;
 bool entropy_was_lost = false;
 
 static void SetupEntropyVmo(uint level) {

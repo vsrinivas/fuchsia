@@ -35,6 +35,6 @@ MODULE_SRCS += \
 MODULE_HOST_LIBS := system/ulib/pretty
 
 MODULE_COMPILEFLAGS := \
-    -Isystem/ulib/mxtl/include
+    -Isystem/ulib/fbl/include
 
 include make/module.mk

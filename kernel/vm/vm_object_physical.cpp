@@ -13,14 +13,14 @@
 #include <inttypes.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -34,7 +34,7 @@ VmObjectPhysical::~VmObjectPhysical() {
     LTRACEF("%p\n", this);
 }
 
-status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, mxtl::RefPtr<VmObject>* obj) {
+status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* obj) {
     if (!IS_PAGE_ALIGNED(base) || !IS_PAGE_ALIGNED(size) || size == 0)
         return MX_ERR_INVALID_ARGS;
 
@@ -44,15 +44,15 @@ status_t VmObjectPhysical::Create(paddr_t base, uint64_t size, mxtl::RefPtr<VmOb
     if (!safe_base.IsValid())
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    auto vmo = mxtl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
+    fbl::AllocChecker ac;
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPhysical(base, size));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     // Physical VMOs should default to uncached access.
     vmo->SetMappingCachePolicy(ARCH_MMU_FLAG_UNCACHED);
 
-    *obj = mxtl::move(vmo);
+    *obj = fbl::move(vmo);
 
     return MX_OK;
 }

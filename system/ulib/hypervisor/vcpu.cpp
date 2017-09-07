@@ -17,7 +17,7 @@
 #include <hypervisor/vcpu.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "acpi_priv.h"
 
@@ -307,7 +307,7 @@ typedef struct device {
 } device_t;
 
 static int device_loop(void* ctx) {
-    mxtl::unique_ptr<device_t> device(static_cast<device_t*>(ctx));
+    fbl::unique_ptr<device_t> device(static_cast<device_t*>(ctx));
 
     while (true) {
         mx_port_packet_t packet;

@@ -13,25 +13,25 @@
 #include <inttypes.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_ptr.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm_address_region.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-mxtl::Mutex VmObject::all_vmos_lock_ = {};
+fbl::Mutex VmObject::all_vmos_lock_ = {};
 VmObject::GlobalList VmObject::all_vmos_ = {};
 
-VmObject::VmObject(mxtl::RefPtr<VmObject> parent)
+VmObject::VmObject(fbl::RefPtr<VmObject> parent)
     : lock_(parent ? parent->lock_ref() : local_lock_),
-      parent_(mxtl::move(parent)) {
+      parent_(fbl::move(parent)) {
     LTRACEF("%p\n", this);
 
     // Add ourself to the global VMO list, newer VMOs at the end.
@@ -98,7 +98,7 @@ uint64_t VmObject::parent_user_id() const {
     canary_.Assert();
     // Don't hold both our lock and our parent's lock at the same time, because
     // it's probably the same lock.
-    mxtl::RefPtr<VmObject> parent;
+    fbl::RefPtr<VmObject> parent;
     {
         AutoLock a(&lock_);
         if (parent_ == nullptr) {

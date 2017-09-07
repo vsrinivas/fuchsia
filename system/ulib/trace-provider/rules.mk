@@ -16,7 +16,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace \
     system/ulib/async \
     system/ulib/mx \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \

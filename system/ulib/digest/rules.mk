@@ -21,6 +21,6 @@ MODULE_LIBS := system/ulib/c
 MODULE_STATIC_LIBS := \
     third_party/ulib/cryptolib \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 include make/module.mk

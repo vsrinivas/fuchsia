@@ -18,11 +18,11 @@
 #include <dev/pcie_ref_counted.h>
 #include <dev/pci_config.h>
 #include <kernel/spinlock.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/macros.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <sys/types.h>
 
 /* Fwd decls */
@@ -60,8 +60,8 @@ struct pcie_bar_info_t {
  */
 class PcieDevice {
 public:
-    using CapabilityList = mxtl::SinglyLinkedList<mxtl::unique_ptr<PciStdCapability>>;
-    static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
+    using CapabilityList = fbl::SinglyLinkedList<fbl::unique_ptr<PciStdCapability>>;
+    static fbl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
     virtual ~PcieDevice();
 
     // Disallow copying, assigning and moving.
@@ -70,7 +70,7 @@ public:
     // Require that derived classes implement ref counting.
     PCIE_REQUIRE_REFCOUNTED;
 
-    mxtl::RefPtr<PcieUpstreamNode> GetUpstream();
+    fbl::RefPtr<PcieUpstreamNode> GetUpstream();
 
     status_t     Claim();
     void         Unclaim();
@@ -152,7 +152,7 @@ public:
         if (bar_ndx >= bar_count_)
             return nullptr;
 
-        DEBUG_ASSERT(bar_ndx < mxtl::count_of(bars_));
+        DEBUG_ASSERT(bar_ndx < fbl::count_of(bars_));
 
         const pcie_bar_info_t* ret = &bars_[bar_ndx];
         return (!disabled_ && (ret->allocation != nullptr)) ? ret : nullptr;
@@ -322,7 +322,7 @@ public:
 
     // TODO(johngro) : make these protected.  They are currently only visibile
     // because of debug code.
-    mxtl::Mutex* dev_lock() { return &dev_lock_; }
+    fbl::Mutex* dev_lock() { return &dev_lock_; }
 
 protected:
     friend class PcieUpstreamNode;
@@ -340,7 +340,7 @@ protected:
     status_t ProbeCapabilitiesLocked();
     status_t ParseStdCapabilitiesLocked();
     status_t ParseExtCapabilitiesLocked();
-    status_t MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream);
+    status_t MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream);
     status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
 
     // BAR allocation
@@ -370,10 +370,10 @@ protected:
     uint8_t        prog_if_;        // The device's programming interface (from cfg)
     uint8_t        rev_id_;         // The device's revision ID (from cfg)
 
-    mxtl::RefPtr<PcieUpstreamNode> upstream_;  // The upstream node in the device graph.
+    fbl::RefPtr<PcieUpstreamNode> upstream_;  // The upstream node in the device graph.
 
     /* State related to lifetime management */
-    mutable mxtl::Mutex dev_lock_;
+    mutable fbl::Mutex dev_lock_;
     bool          plugged_in_  = false;
     bool          disabled_    = false;
     bool          quirks_done_ = false;
@@ -445,11 +445,11 @@ private:
         /* Legacy IRQ state */
         struct {
             // TODO(johngro): clean up the messy list_node initialization below
-            // by converting to mxtl intrusive lists.
+            // by converting to fbl intrusive lists.
             uint8_t pin = 0;
             uint    irq_id = static_cast<uint>(-1);
             struct list_node shared_handler_node = { nullptr, nullptr};
-            mxtl::RefPtr<SharedLegacyIrqHandler> shared_handler;
+            fbl::RefPtr<SharedLegacyIrqHandler> shared_handler;
         } legacy;
 
         PciCapMsi* msi = nullptr;

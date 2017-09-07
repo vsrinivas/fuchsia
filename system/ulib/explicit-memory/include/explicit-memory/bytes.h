@@ -5,7 +5,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <mxtl/macros.h>
+#include <fbl/macros.h>
 #include <stddef.h>
 
 __BEGIN_CDECLS
@@ -28,14 +28,14 @@ void* mandatory_memset(void* dst, int c, size_t n);
 __END_CDECLS
 
 #ifdef __cplusplus
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 namespace explicit_memory {
 
 // This class guarantees that the wrapped array will be filled with zeroes when
 // the wrapping ZeroDtor object goes out of scope.  See mandatory_memset() for
 // discussion on what this guarantee entails.
-template <typename T, typename = typename mxtl::enable_if<mxtl::is_pod<T>::value>::type>
+template <typename T, typename = typename fbl::enable_if<fbl::is_pod<T>::value>::type>
 class ZeroDtor {
 public:
     ZeroDtor(T* array, size_t len) : array_(array), len_(len) { }

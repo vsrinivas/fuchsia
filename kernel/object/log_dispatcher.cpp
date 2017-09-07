@@ -11,12 +11,12 @@
 
 #include <err.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
-mx_status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
+mx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
                                   mx_rights_t* rights) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto disp = new (&ac) LogDispatcher(flags);
     if (!ac.check()) return MX_ERR_NO_MEMORY;
 
@@ -25,7 +25,7 @@ mx_status_t LogDispatcher::Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* disp
     }
 
     *rights = MX_DEFAULT_LOG_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 
@@ -42,7 +42,7 @@ LogDispatcher::~LogDispatcher() {
 void LogDispatcher::Signal() {
     canary_.Assert();
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     state_tracker_.UpdateState(0, MX_CHANNEL_READABLE);
 }
 
@@ -64,7 +64,7 @@ mx_status_t LogDispatcher::Read(uint32_t flags, void* ptr, size_t len, size_t* a
     if (!(flags_ & MX_LOG_FLAG_READABLE))
         return MX_ERR_BAD_STATE;
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
     mx_status_t status = dlog_read(&reader_, 0, ptr, len, actual);
     if (status == MX_ERR_SHOULD_WAIT) {

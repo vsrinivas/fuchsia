@@ -13,18 +13,18 @@
 #include <object/pci_interrupt_dispatcher.h>
 #include <object/process_dispatcher.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
 #include <assert.h>
 #include <err.h>
 #include <trace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 mx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                         mx_pcie_device_info_t*    out_info,
-                                        mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                                        fbl::RefPtr<Dispatcher>* out_dispatcher,
                                         mx_rights_t*              out_rights) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
@@ -34,17 +34,17 @@ mx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
     if (device == nullptr)
         return MX_ERR_OUT_OF_RANGE;
 
-    mxtl::AllocChecker ac;
-    auto disp = new (&ac) PciDeviceDispatcher(mxtl::move(device), out_info);
+    fbl::AllocChecker ac;
+    auto disp = new (&ac) PciDeviceDispatcher(fbl::move(device), out_info);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    *out_dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *out_dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     *out_rights     = MX_DEFAULT_PCI_DEVICE_RIGHTS;
     return MX_OK;
 }
 
-PciDeviceDispatcher::PciDeviceDispatcher(mxtl::RefPtr<PcieDevice> device,
+PciDeviceDispatcher::PciDeviceDispatcher(fbl::RefPtr<PcieDevice> device,
                                          mx_pcie_device_info_t* out_info)
     : device_(device) {
 
@@ -152,7 +152,7 @@ mx_status_t PciDeviceDispatcher::ResetDevice() {
 }
 
 mx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
-                                              mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
+                                              fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
                                               mx_rights_t* rights) {
     canary_.Assert();
 

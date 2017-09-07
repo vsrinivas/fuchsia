@@ -16,6 +16,6 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/ulib/mx \
     system/ulib/mxio \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 include make/module.mk

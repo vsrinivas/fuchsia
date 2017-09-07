@@ -7,8 +7,8 @@
 #include <ddk/protocol/wlan.h>
 #include <ddktl/protocol/wlan-internal.h>
 #include <magenta/assert.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 
 // DDK wlan protocol support
 //
@@ -66,7 +66,7 @@
 //
 //   private:
 //     mx_device_t* parent_;
-//     mxtl::unique_ptr<ddk::WlanmacProtocolProxy> proxy_;
+//     fbl::unique_ptr<ddk::WlanmacProtocolProxy> proxy_;
 // };
 //
 //
@@ -98,7 +98,7 @@
 //         // Device should stop
 //     }
 //
-//     mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+//     mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
 //         // Start wlanmac operation
 //         proxy_.swap(proxy);
 //         return MX_OK;
@@ -115,7 +115,7 @@
 //
 //   private:
 //     mx_device_t* parent_;
-//     mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
+//     fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
 // };
 
 namespace ddk {
@@ -189,8 +189,8 @@ class WlanmacProtocol : public internal::base_protocol {
     }
 
     static mx_status_t Start(void* ctx, wlanmac_ifc_t* ifc, void* cookie) {
-        auto ifc_proxy = mxtl::unique_ptr<WlanmacIfcProxy>(new WlanmacIfcProxy(ifc, cookie));
-        return static_cast<D*>(ctx)->WlanmacStart(mxtl::move(ifc_proxy));
+        auto ifc_proxy = fbl::unique_ptr<WlanmacIfcProxy>(new WlanmacIfcProxy(ifc, cookie));
+        return static_cast<D*>(ctx)->WlanmacStart(fbl::move(ifc_proxy));
     }
 
     static void Tx(void* ctx, uint32_t options, const void* data, size_t length) {
@@ -215,7 +215,7 @@ class WlanmacProtocolProxy {
 
     template <typename D>
     mx_status_t Start(D* ifc) {
-        static_assert(mxtl::is_base_of<WlanmacIfc<D>, D>::value,
+        static_assert(fbl::is_base_of<WlanmacIfc<D>, D>::value,
                       "Start must be called with a subclass of WlanmacIfc");
         return ops_->start(ctx_, ifc->wlanmac_ifc(), ifc);
     }

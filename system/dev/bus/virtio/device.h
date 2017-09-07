@@ -9,7 +9,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <mx/handle.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 #include <threads.h>
 #include <virtio/virtio.h>
 
@@ -56,7 +56,7 @@ protected:
 
     // members
     mx_device_t* bus_device_ = nullptr;
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 
     // handles to pci bits
     pci_protocol_t pci_ = { nullptr, nullptr };

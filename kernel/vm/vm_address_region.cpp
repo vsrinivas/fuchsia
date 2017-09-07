@@ -11,8 +11,8 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <pow2.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
@@ -23,7 +23,7 @@
 #include <lib/vdso.h>
 #endif
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -63,25 +63,25 @@ VmAddressRegion::VmAddressRegion()
 }
 
 status_t VmAddressRegion::CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
-                                     mxtl::RefPtr<VmAddressRegion>* out) {
+                                     fbl::RefPtr<VmAddressRegion>* out) {
     DEBUG_ASSERT(out);
 
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto vmar = new (&ac) VmAddressRegion(aspace, aspace.base(), aspace.size(), vmar_flags);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
 
     vmar->state_ = LifeCycleState::ALIVE;
-    *out = mxtl::AdoptRef(vmar);
+    *out = fbl::AdoptRef(vmar);
     return MX_OK;
 }
 
 status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
-                                                uint32_t vmar_flags, mxtl::RefPtr<VmObject> vmo,
+                                                uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
                                                 uint64_t vmo_offset, uint arch_mmu_flags,
                                                 const char* name,
-                                                mxtl::RefPtr<VmAddressRegionOrMapping>* out) {
+                                                fbl::RefPtr<VmAddressRegionOrMapping>* out) {
     DEBUG_ASSERT(out);
 
     AutoLock guard(aspace_->lock());
@@ -163,21 +163,21 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
     }
 
 // Notice if this is an executable mapping from the vDSO VMO
-// before we lose the VMO reference via mxtl::move(vmo).
+// before we lose the VMO reference via fbl::move(vmo).
 #if WITH_LIB_VDSO
     const bool is_vdso_code = (vmo &&
                                (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) &&
                                VDso::vmo_is_vdso(vmo));
 #endif
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VmAddressRegionOrMapping> vmar;
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VmAddressRegionOrMapping> vmar;
     if (vmo) {
-        vmar = mxtl::AdoptRef(new (&ac)
+        vmar = fbl::AdoptRef(new (&ac)
                                   VmMapping(*this, new_base, size, vmar_flags,
-                                            mxtl::move(vmo), vmo_offset, arch_mmu_flags));
+                                            fbl::move(vmo), vmo_offset, arch_mmu_flags));
     } else {
-        vmar = mxtl::AdoptRef(new (&ac)
+        vmar = fbl::AdoptRef(new (&ac)
                                   VmAddressRegion(*this, new_base, size, vmar_flags, name));
     }
 
@@ -193,18 +193,18 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
             !VDso::valid_code_mapping(vmo_offset, size)) {
             return MX_ERR_ACCESS_DENIED;
         }
-        aspace_->vdso_code_mapping_ = mxtl::RefPtr<VmMapping>::Downcast(vmar);
+        aspace_->vdso_code_mapping_ = fbl::RefPtr<VmMapping>::Downcast(vmar);
     }
 #endif
 
     vmar->Activate();
-    *out = mxtl::move(vmar);
+    *out = fbl::move(vmar);
     return MX_OK;
 }
 
 status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
                                         uint32_t vmar_flags, const char* name,
-                                        mxtl::RefPtr<VmAddressRegion>* out) {
+                                        fbl::RefPtr<VmAddressRegion>* out) {
     DEBUG_ASSERT(out);
 
     if (!IS_PAGE_ALIGNED(size)) {
@@ -216,7 +216,7 @@ status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t alig
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::RefPtr<VmAddressRegionOrMapping> res;
+    fbl::RefPtr<VmAddressRegionOrMapping> res;
     status_t status = CreateSubVmarInternal(offset, size, align_pow2, vmar_flags, nullptr, 0,
                                             ARCH_MMU_FLAG_INVALID, name, &res);
     if (status != MX_OK) {
@@ -228,9 +228,9 @@ status_t VmAddressRegion::CreateSubVmar(size_t offset, size_t size, uint8_t alig
 }
 
 status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                                          uint32_t vmar_flags, mxtl::RefPtr<VmObject> vmo,
+                                          uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
                                           uint64_t vmo_offset, uint arch_mmu_flags, const char* name,
-                                          mxtl::RefPtr<VmMapping>* out) {
+                                          fbl::RefPtr<VmMapping>* out) {
     DEBUG_ASSERT(out);
     LTRACEF("%p %#zx %#zx %x\n", this, mapping_offset, size, vmar_flags);
 
@@ -266,9 +266,9 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
         vmar_flags |= VMAR_FLAG_CAN_MAP_EXECUTE;
     }
 
-    mxtl::RefPtr<VmAddressRegionOrMapping> res;
+    fbl::RefPtr<VmAddressRegionOrMapping> res;
     status_t status =
-        CreateSubVmarInternal(mapping_offset, size, align_pow2, vmar_flags, mxtl::move(vmo),
+        CreateSubVmarInternal(mapping_offset, size, align_pow2, vmar_flags, fbl::move(vmo),
                               vmo_offset, arch_mmu_flags, name, &res);
     if (status != MX_OK) {
         return status;
@@ -280,19 +280,19 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
 
 status_t VmAddressRegion::OverwriteVmMapping(
     vaddr_t base, size_t size, uint32_t vmar_flags,
-    mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-    uint arch_mmu_flags, mxtl::RefPtr<VmAddressRegionOrMapping>* out) {
+    fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+    uint arch_mmu_flags, fbl::RefPtr<VmAddressRegionOrMapping>* out) {
 
     canary_.Assert();
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(vmo);
     DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VmAddressRegionOrMapping> vmar;
-    vmar = mxtl::AdoptRef(new (&ac)
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VmAddressRegionOrMapping> vmar;
+    vmar = fbl::AdoptRef(new (&ac)
                               VmMapping(*this, base, size, vmar_flags,
-                                        mxtl::move(vmo), vmo_offset, arch_mmu_flags));
+                                        fbl::move(vmo), vmo_offset, arch_mmu_flags));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -303,7 +303,7 @@ status_t VmAddressRegion::OverwriteVmMapping(
     }
 
     vmar->Activate();
-    *out = mxtl::move(vmar);
+    *out = fbl::move(vmar);
     return MX_OK;
 }
 
@@ -315,10 +315,10 @@ status_t VmAddressRegion::DestroyLocked() {
     // Take a reference to ourself, so that we do not get destructed after
     // dropping our last reference in this method (e.g. when calling
     // subregions_.erase below).
-    mxtl::RefPtr<VmAddressRegion> self(this);
+    fbl::RefPtr<VmAddressRegion> self(this);
 
     while (!subregions_.is_empty()) {
-        mxtl::RefPtr<VmAddressRegionOrMapping> child(&subregions_.front());
+        fbl::RefPtr<VmAddressRegionOrMapping> child(&subregions_.front());
 
         // DestroyLocked should remove this child from our list on success
         status_t status = child->DestroyLocked();
@@ -343,7 +343,7 @@ void VmAddressRegion::RemoveSubregion(VmAddressRegionOrMapping* region) {
     subregions_.erase(*region);
 }
 
-mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) {
+fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) {
     AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
         return nullptr;
@@ -351,7 +351,7 @@ mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr)
     return FindRegionLocked(addr);
 }
 
-mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t addr) {
+fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t addr) {
     canary_.Assert();
 
     // Find the first region with a base greather than *addr*.  If a region
@@ -361,7 +361,7 @@ mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t
         return nullptr;
     }
 
-    return mxtl::RefPtr<VmAddressRegionOrMapping>(&*itr);
+    return fbl::RefPtr<VmAddressRegionOrMapping>(&*itr);
 }
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
@@ -571,7 +571,7 @@ void VmAddressRegion::Activate() {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     state_ = LifeCycleState::ALIVE;
-    parent_->subregions_.insert(mxtl::RefPtr<VmAddressRegionOrMapping>(this));
+    parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
 status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
@@ -639,8 +639,8 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
 
         const vaddr_t curr_end = curr->base() + curr->size();
         if (curr->is_mapping()) {
-            const vaddr_t unmap_base = mxtl::max(curr->base(), base);
-            const vaddr_t unmap_end = mxtl::min(curr_end, end_addr);
+            const vaddr_t unmap_base = fbl::max(curr->base(), base);
+            const vaddr_t unmap_end = fbl::min(curr_end, end_addr);
             const size_t unmap_size = unmap_end - unmap_base;
 
             // If we're unmapping the entire region, just call Destroy
@@ -736,8 +736,8 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
         ++next;
 
         const vaddr_t curr_end = itr->base() + itr->size();
-        const vaddr_t protect_base = mxtl::max(itr->base(), base);
-        const vaddr_t protect_end = mxtl::min(curr_end, end_addr);
+        const vaddr_t protect_base = fbl::max(itr->base(), base);
+        const vaddr_t protect_end = fbl::min(curr_end, end_addr);
         const size_t protect_size = protect_end - protect_base;
 
         status_t status = itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size,
@@ -748,7 +748,7 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
             return status;
         }
 
-        itr = mxtl::move(next);
+        itr = fbl::move(next);
     }
 
     return MX_OK;
@@ -831,7 +831,7 @@ status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size,
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
     DEBUG_ASSERT(spot);
 
-    align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
+    align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;
 
     // Calculate the number of spaces that we can fit this allocation in.
@@ -901,7 +901,7 @@ status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, ui
                                                                  vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
-    align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
+    align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;
 
     if (unlikely(subregions_.size() == 0)) {

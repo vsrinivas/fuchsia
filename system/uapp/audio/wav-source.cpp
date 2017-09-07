@@ -8,8 +8,8 @@
 #include <stdio.h>
 
 #include <magenta/assert.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/algorithm.h>
 #include <mxio/io.h>
 
 mx_status_t WAVSource::Initialize(const char* filename) {
@@ -19,7 +19,7 @@ mx_status_t WAVSource::Initialize(const char* filename) {
     RIFFChunkHeader riff_hdr;
     WAVHeader wav_info;
 
-    auto cleanup = mxtl::MakeAutoCall([&]() {
+    auto cleanup = fbl::MakeAutoCall([&]() {
             Close();
             payload_len_ = 0;
         });
@@ -149,7 +149,7 @@ mx_status_t WAVSource::GetFrames(void* buffer, uint32_t buf_space, uint32_t* out
         return MX_ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(payload_played_ < payload_len_);
-    uint32_t todo = mxtl::min(buf_space, payload_len_ - payload_played_);
+    uint32_t todo = fbl::min(buf_space, payload_len_ - payload_played_);
     mx_status_t res = Read(buffer, todo);
     if (res == MX_OK) {
         payload_played_ += todo;

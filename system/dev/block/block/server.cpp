@@ -11,11 +11,11 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <mx/fifo.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
+#include <fbl/ref_ptr.h>
 
 #include "server.h"
 
@@ -50,7 +50,7 @@ BlockTransaction::BlockTransaction(mx_handle_t fifo, txnid_t txnid) :
 BlockTransaction::~BlockTransaction() {}
 
 mx_status_t BlockTransaction::Enqueue(bool do_respond, block_msg_t** msg_out) {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (flags_ & kTxnFlagRespond) {
         // Can't get more than one response for a txn
         goto fail;
@@ -73,7 +73,7 @@ fail:
 }
 
 void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     response_.count++;
     MX_DEBUG_ASSERT(goal_ != 0);
     MX_DEBUG_ASSERT(response_.count <= goal_);
@@ -100,7 +100,7 @@ void BlockTransaction::Complete(block_msg_t* msg, mx_status_t status) {
     msg->iobuf.reset();
 }
 
-IoBuffer::IoBuffer(mx::vmo vmo, vmoid_t id) : io_vmo_(mxtl::move(vmo)), vmoid_(id) {}
+IoBuffer::IoBuffer(mx::vmo vmo, vmoid_t id) : io_vmo_(fbl::move(vmo)), vmoid_(id) {}
 
 IoBuffer::~IoBuffer() {}
 
@@ -137,7 +137,7 @@ mx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
 }
 
 mx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
-    for (vmoid_t i = last_id; i < mxtl::numeric_limits<vmoid_t>::max(); i++) {
+    for (vmoid_t i = last_id; i < fbl::numeric_limits<vmoid_t>::max(); i++) {
         if (!tree_.find(i).IsValid()) {
             *out = i;
             last_id = static_cast<vmoid_t>(i + 1);
@@ -157,28 +157,28 @@ mx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
 mx_status_t BlockServer::AttachVmo(mx::vmo vmo, vmoid_t* out) {
     mx_status_t status;
     vmoid_t id;
-    mxtl::AutoLock server_lock(&server_lock_);
+    fbl::AutoLock server_lock(&server_lock_);
     if ((status = FindVmoIDLocked(&id)) != MX_OK) {
         return status;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<IoBuffer> ibuf = mxtl::AdoptRef(new (&ac) IoBuffer(mxtl::move(vmo), id));
+    fbl::AllocChecker ac;
+    fbl::RefPtr<IoBuffer> ibuf = fbl::AdoptRef(new (&ac) IoBuffer(fbl::move(vmo), id));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
-    tree_.insert(mxtl::move(ibuf));
+    tree_.insert(fbl::move(ibuf));
     *out = id;
     return MX_OK;
 }
 
 mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
-    mxtl::AutoLock server_lock(&server_lock_);
-    for (size_t i = 0; i < mxtl::count_of(txns_); i++) {
+    fbl::AutoLock server_lock(&server_lock_);
+    for (size_t i = 0; i < fbl::count_of(txns_); i++) {
         if (txns_[i] == nullptr) {
             txnid_t txnid = static_cast<txnid_t>(i);
-            mxtl::AllocChecker ac;
-            txns_[i] = mxtl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
+            fbl::AllocChecker ac;
+            txns_[i] = fbl::AdoptRef(new (&ac) BlockTransaction(fifo_.get(), txnid));
             if (!ac.check()) {
                 return MX_ERR_NO_MEMORY;
             }
@@ -190,8 +190,8 @@ mx_status_t BlockServer::AllocateTxn(txnid_t* out) {
 }
 
 void BlockServer::FreeTxn(txnid_t txnid) {
-    mxtl::AutoLock server_lock(&server_lock_);
-    if (txnid >= mxtl::count_of(txns_)) {
+    fbl::AutoLock server_lock(&server_lock_);
+    if (txnid >= fbl::count_of(txns_)) {
         return;
     }
     MX_DEBUG_ASSERT(txns_[txnid] != nullptr);
@@ -199,7 +199,7 @@ void BlockServer::FreeTxn(txnid_t txnid) {
 }
 
 mx_status_t BlockServer::Create(mx::fifo* fifo_out, BlockServer** out) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     BlockServer* bs = new (&ac) BlockServer();
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -251,7 +251,7 @@ mx_status_t BlockServer::Serve(block_protocol_t* proto) {
             txnid_t txnid = requests[i].txnid;
             vmoid_t vmoid = requests[i].vmoid;
 
-            mxtl::AutoLock server_lock(&server_lock_);
+            fbl::AutoLock server_lock(&server_lock_);
             auto iobuf = tree_.find(vmoid);
             if (!iobuf.IsValid()) {
                 // Operation which is not accessing a valid vmo
@@ -349,7 +349,7 @@ mx_status_t blockserver_serve(BlockServer* bs, block_protocol_t* proto) {
 }
 mx_status_t blockserver_attach_vmo(BlockServer* bs, mx_handle_t raw_vmo, vmoid_t* out) {
     mx::vmo vmo(raw_vmo);
-    return bs->AttachVmo(mxtl::move(vmo), out);
+    return bs->AttachVmo(fbl::move(vmo), out);
 }
 mx_status_t blockserver_allocate_txn(BlockServer* bs, txnid_t* out) {
     return bs->AllocateTxn(out);

@@ -13,8 +13,8 @@
 #include <magenta/types.h>
 #include <magenta/device/ethertap.h>
 #include <mx/socket.h>
-#include <mxtl/mutex.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 #include <threads.h>
 
 namespace eth {
@@ -38,7 +38,7 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
 
     mx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     void EthmacStop();
-    mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy);
+    mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy);
     void EthmacSend(uint32_t options, void* data, size_t length);
 
     int Thread();
@@ -55,8 +55,8 @@ class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
     uint32_t mtu_ = 0;
     uint8_t mac_[6] = {};
 
-    mxtl::Mutex lock_;
-    mxtl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);
+    fbl::Mutex lock_;
+    fbl::unique_ptr<ddk::EthmacIfcProxy> ethmac_proxy_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;

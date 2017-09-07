@@ -14,12 +14,12 @@ class AudioSource;
 
 class AudioOutput : public AudioDeviceStream {
 public:
-    static mxtl::unique_ptr<AudioOutput> Create(uint32_t dev_id);
-    static mxtl::unique_ptr<AudioOutput> Create(const char* dev_path);
+    static fbl::unique_ptr<AudioOutput> Create(uint32_t dev_id);
+    static fbl::unique_ptr<AudioOutput> Create(const char* dev_path);
     mx_status_t Play(AudioSource& source);
 
 private:
-    friend class mxtl::unique_ptr<AudioOutput>;
+    friend class fbl::unique_ptr<AudioOutput>;
     friend class AudioDeviceStream;
 
     explicit AudioOutput(uint32_t dev_id) : AudioDeviceStream(false, dev_id) { }

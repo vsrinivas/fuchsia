@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <audio-proto-utils/format-utils.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <string.h>
 
 namespace audio {
@@ -12,18 +12,18 @@ namespace utils {
 // Note: these sets must be kept in monotonically increasing order.
 static const uint32_t RATES_48000_FAMILY[] = { 8000,16000,32000,48000,96000,192000,384000,768000 };
 static const uint32_t RATES_44100_FAMILY[] = { 11025,22050,44100,88200,176400 };
-static const uint32_t* RATES_48000_FAMILY_LAST = RATES_48000_FAMILY + mxtl::count_of(RATES_48000_FAMILY);
-static const uint32_t* RATES_44100_FAMILY_LAST = RATES_44100_FAMILY + mxtl::count_of(RATES_44100_FAMILY);
+static const uint32_t* RATES_48000_FAMILY_LAST = RATES_48000_FAMILY + fbl::count_of(RATES_48000_FAMILY);
+static const uint32_t* RATES_44100_FAMILY_LAST = RATES_44100_FAMILY + fbl::count_of(RATES_44100_FAMILY);
 static constexpr auto DISCRETE_FLAGS = ASF_RANGE_FLAG_FPS_48000_FAMILY
                                      | ASF_RANGE_FLAG_FPS_44100_FAMILY;
 
 bool FrameRateIn48kFamily(uint32_t rate) {
-    const uint32_t* found = mxtl::lower_bound(RATES_48000_FAMILY, RATES_48000_FAMILY_LAST, rate);
+    const uint32_t* found = fbl::lower_bound(RATES_48000_FAMILY, RATES_48000_FAMILY_LAST, rate);
     return ((found < RATES_48000_FAMILY_LAST) && (*found == rate));
 }
 
 bool FrameRateIn441kFamily(uint32_t rate) {
-    const uint32_t* found = mxtl::lower_bound(RATES_44100_FAMILY, RATES_44100_FAMILY_LAST, rate);
+    const uint32_t* found = fbl::lower_bound(RATES_44100_FAMILY, RATES_44100_FAMILY_LAST, rate);
     return ((found < RATES_44100_FAMILY_LAST) && (*found == rate));
 }
 
@@ -74,12 +74,12 @@ bool FormatIsCompatible(uint32_t frame_rate,
 
     // Requirement #2.  If this format is unique and PCM, then there is exactly
     // 1 bit set in it and that bit is not AUDIO_SAMPLE_FORMAT_BITSTREAM.  We
-    // can use mxtl::is_pow2 to check if there is exactly 1 bit set.  (note,
-    // mxtl::is_pow2 does not consider 0 to be a power of 2, so it's perfect for
+    // can use fbl::is_pow2 to check if there is exactly 1 bit set.  (note,
+    // fbl::is_pow2 does not consider 0 to be a power of 2, so it's perfect for
     // this)
     uint32_t requested_noflags = sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK;
     if ((requested_noflags == AUDIO_SAMPLE_FORMAT_BITSTREAM) ||
-        (!mxtl::is_pow2(requested_noflags)))
+        (!fbl::is_pow2(requested_noflags)))
         return false;
 
     // Requirement #3.  Testing intersection is easy, just and the two.  No need

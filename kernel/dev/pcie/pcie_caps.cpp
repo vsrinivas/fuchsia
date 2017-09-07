@@ -10,11 +10,11 @@
 #include <err.h>
 #include <string.h>
 #include <trace.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -32,7 +32,7 @@ static bool quirk_should_force_pcie(const PcieDevice& dev) {
         { .vendor_id = 0x8086, .device_id = 0x1616 },  // Wildcat Point GPU
     };
 
-    for (size_t i = 0; i < mxtl::count_of(QUIRK_LIST); ++i) {
+    for (size_t i = 0; i < fbl::count_of(QUIRK_LIST); ++i) {
         if ((QUIRK_LIST[i].vendor_id == dev.vendor_id()) &&
             (QUIRK_LIST[i].device_id == dev.device_id()))
             return true;
@@ -278,7 +278,7 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
     status_t res = MX_OK;
     uint8_t cap_offset = cfg_->Read(PciConfig::kCapabilitiesPtr);
     uint8_t caps_found = 0;
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
 
     /*
      * Walk the pointer list for the standard capabilities table. As a safety,
@@ -330,7 +330,7 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
             return MX_ERR_NO_MEMORY;
         }
 
-        caps_.detected.push_front(mxtl::unique_ptr<PciStdCapability>(cap));
+        caps_.detected.push_front(fbl::unique_ptr<PciStdCapability>(cap));
         cap_offset  = cfg_->Read(PciReg8(static_cast<uint16_t>(cap_offset + 0x1))) & 0xFC;
         caps_found++;
     }

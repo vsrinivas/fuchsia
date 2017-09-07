@@ -11,21 +11,21 @@
 #include <magenta/device/block.h>
 #include <magenta/syscalls.h>
 #include <magenta/thread_annotations.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
-#include <mxtl/new.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
+#include <fbl/new.h>
 #include <threads.h>
 
 #include "fvm-private.h"
 
 namespace fvm {
 
-mxtl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
+fbl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
     MX_DEBUG_ASSERT(start() <= vslice);
     MX_DEBUG_ASSERT(vslice < end());
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice + 1));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice + 1));
     if (!ac.check()) {
         return nullptr;
     }
@@ -39,13 +39,13 @@ mxtl::unique_ptr<SliceExtent> SliceExtent::Split(size_t vslice) {
     while (!is_empty() && vslice + 1 != end()) {
         pop_back();
     }
-    return mxtl::move(new_extent);
+    return fbl::move(new_extent);
 }
 
 
 bool SliceExtent::Merge(const SliceExtent& other) {
     MX_DEBUG_ASSERT(end() == other.start());
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     pslices_.reserve(other.size(), &ac);
     if (!ac.check()) {
         return false;
@@ -63,7 +63,7 @@ VPartitionManager::VPartitionManager(mx_device_t* parent, const block_info_t& in
 
 VPartitionManager::~VPartitionManager() = default;
 
-mx_status_t VPartitionManager::Create(mx_device_t* dev, mxtl::unique_ptr<VPartitionManager>* out) {
+mx_status_t VPartitionManager::Create(mx_device_t* dev, fbl::unique_ptr<VPartitionManager>* out) {
     block_info_t block_info;
     size_t actual = 0;
     ssize_t rc = device_ioctl(dev, IOCTL_BLOCK_GET_INFO, nullptr, 0, &block_info,
@@ -76,16 +76,16 @@ mx_status_t VPartitionManager::Create(mx_device_t* dev, mxtl::unique_ptr<VPartit
         return MX_ERR_BAD_STATE;
     }
 
-    mxtl::AllocChecker ac;
-    auto vpm = mxtl::make_unique_checked<VPartitionManager>(&ac, dev, block_info);
+    fbl::AllocChecker ac;
+    auto vpm = fbl::make_unique_checked<VPartitionManager>(&ac, dev, block_info);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
-    *out = mxtl::move(vpm);
+    *out = fbl::move(vpm);
     return MX_OK;
 }
 
-mx_status_t VPartitionManager::AddPartition(mxtl::unique_ptr<VPartition> vp) const {
+mx_status_t VPartitionManager::AddPartition(fbl::unique_ptr<VPartition> vp) const {
     auto ename = reinterpret_cast<const char*>(GetAllocatedVPartEntry(vp->GetEntryIndex())->name);
     char name[FVM_NAME_LEN + 32];
     snprintf(name, sizeof(name), "%.*s-p-%zu", FVM_NAME_LEN, ename, vp->GetEntryIndex());
@@ -99,9 +99,9 @@ mx_status_t VPartitionManager::AddPartition(mxtl::unique_ptr<VPartition> vp) con
 }
 
 mx_status_t VPartitionManager::Load() {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
-    auto auto_detach = mxtl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+    auto auto_detach = fbl::MakeAutoCall([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         // "Load" is running in a background thread called by bind.
         // This thread will be joined when the fvm_device is released,
         // but it must be added to be released.
@@ -149,7 +149,7 @@ mx_status_t VPartitionManager::Load() {
     metadata_size_ = fvm::MetadataSize(DiskSize(), SliceSize());
     // Now that the slice size is known, read the rest of the metadata
     size_t dual_metadata_size = 2 * MetadataSize();
-    mxtl::unique_ptr<MappedVmo> mvmo;
+    fbl::unique_ptr<MappedVmo> mvmo;
     status = MappedVmo::Create(dual_metadata_size, "fvm-meta", &mvmo);
     if (status != MX_OK) {
         return status;
@@ -188,7 +188,7 @@ mx_status_t VPartitionManager::Load() {
     }
 
     // Begin initializing the underlying partitions
-    metadata_ = mxtl::move(mvmo);
+    metadata_ = fbl::move(mvmo);
 
     if ((status = DdkAdd("fvm")) != MX_OK) {
         return status;
@@ -196,7 +196,7 @@ mx_status_t VPartitionManager::Load() {
     auto_detach.cancel();
 
     // 0th vpartition is invalid
-    mxtl::unique_ptr<VPartition> vpartitions[FVM_MAX_ENTRIES] = {};
+    fbl::unique_ptr<VPartition> vpartitions[FVM_MAX_ENTRIES] = {};
 
     // Iterate through FVM Entry table, allocating the VPartitions which
     // claim to have slices.
@@ -232,7 +232,7 @@ mx_status_t VPartitionManager::Load() {
         if (vpartitions[i] == nullptr) {
             continue;
         }
-        if (AddPartition(mxtl::move(vpartitions[i]))) {
+        if (AddPartition(fbl::move(vpartitions[i]))) {
             continue;
         }
         device_count++;
@@ -284,7 +284,7 @@ mx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
 
 mx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) const {
     const size_t maxSlices = UsableSlicesCount(DiskSize(), SliceSize());
-    hint = mxtl::max(hint, 1lu);
+    hint = fbl::max(hint, 1lu);
     for (size_t i = hint; i <= maxSlices; i++) {
         if (GetSliceEntryLocked(i)->vpart == 0) {
             *out = i;
@@ -302,7 +302,7 @@ mx_status_t VPartitionManager::FindFreeSliceLocked(size_t* out, size_t hint) con
 
 mx_status_t VPartitionManager::AllocateSlices(VPartition* vp, size_t vslice_start,
                                               size_t count) {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     return AllocateSlicesLocked(vp, vslice_start, count);
 }
 
@@ -316,7 +316,7 @@ mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
     size_t hint = 0;
 
     {
-        mxtl::AutoLock lock(&vp->lock_);
+        fbl::AutoLock lock(&vp->lock_);
         if (vp->IsKilledLocked())
             return MX_ERR_BAD_STATE;
         for (size_t i = 0; i < count; i++) {
@@ -349,7 +349,7 @@ mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
     if ((status = WriteFvmLocked()) != MX_OK) {
         // Undo allocation in the event of failure; avoid holding VPartition
         // lock while writing to fvm.
-        mxtl::AutoLock lock(&vp->lock_);
+        fbl::AutoLock lock(&vp->lock_);
         for (int j = static_cast<int>(count - 1); j >= 0; j--) {
             auto vslice = vslice_start + j;
             GetSliceEntryLocked(vp->SliceGetLocked(vslice))->vpart = PSLICE_UNALLOCATED;
@@ -361,7 +361,7 @@ mx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
 
 mx_status_t VPartitionManager::FreeSlices(VPartition* vp, size_t vslice_start,
                                           size_t count) {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     return FreeSlicesLocked(vp, vslice_start, count);
 }
 
@@ -373,7 +373,7 @@ mx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
 
     bool freed_something = false;
     {
-        mxtl::AutoLock lock(&vp->lock_);
+        fbl::AutoLock lock(&vp->lock_);
         if (vp->IsKilledLocked())
             return MX_ERR_BAD_STATE;
 
@@ -440,16 +440,16 @@ mx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
             return MX_ERR_BUFFER_TOO_SMALL;
         const alloc_req_t* request = static_cast<const alloc_req_t*>(cmd);
 
-        if (request->slice_count >= mxtl::numeric_limits<uint32_t>::max()) {
+        if (request->slice_count >= fbl::numeric_limits<uint32_t>::max()) {
             return MX_ERR_OUT_OF_RANGE;
         } else if (request->slice_count == 0) {
             return MX_ERR_OUT_OF_RANGE;
         }
 
         mx_status_t status;
-        mxtl::unique_ptr<VPartition> vpart;
+        fbl::unique_ptr<VPartition> vpart;
         {
-            mxtl::AutoLock lock(&lock_);
+            fbl::AutoLock lock(&lock_);
             size_t vpart_entry;
             if ((status = FindFreeVPartEntryLocked(&vpart_entry)) != MX_OK) {
                 return status;
@@ -470,7 +470,7 @@ mx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd,
                 return status;
             }
         }
-        if ((status = AddPartition(mxtl::move(vpart))) != MX_OK) {
+        if ((status = AddPartition(fbl::move(vpart))) != MX_OK) {
             return status;
         }
         return MX_OK;
@@ -510,16 +510,16 @@ VPartition::VPartition(VPartitionManager* vpm, size_t entry_index)
 VPartition::~VPartition() = default;
 
 mx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
-                               mxtl::unique_ptr<VPartition>* out) {
+                               fbl::unique_ptr<VPartition>* out) {
     MX_DEBUG_ASSERT(entry_index != 0);
 
-    mxtl::AllocChecker ac;
-    auto vp = mxtl::make_unique_checked<VPartition>(&ac, vpm, entry_index);
+    fbl::AllocChecker ac;
+    auto vp = fbl::make_unique_checked<VPartition>(&ac, vpm, entry_index);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
 
-    *out = mxtl::move(vp);
+    *out = fbl::move(vp);
     return MX_OK;
 }
 
@@ -556,8 +556,8 @@ mx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
 
     // Longer case: there is no extent for this vslice, so we should make
     // one.
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     } else if (!new_extent->push_back(pslice)) {
@@ -565,7 +565,7 @@ mx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
     }
     MX_DEBUG_ASSERT(new_extent->GetKey() == vslice);
     MX_DEBUG_ASSERT(new_extent->get(vslice) == pslice);
-    slice_map_.insert(mxtl::move(new_extent));
+    slice_map_.insert(fbl::move(new_extent));
 
     auto nextExtent = --slice_map_.upper_bound(vslice + 1);
     if (nextExtent.IsValid() && (vslice + 1 == nextExtent->start())) {
@@ -592,7 +592,7 @@ bool VPartition::SliceFreeLocked(size_t vslice) TA_REQ(lock_) {
         if (new_extent == nullptr) {
             return false;
         }
-        slice_map_.insert(mxtl::move(new_extent));
+        slice_map_.insert(fbl::move(new_extent));
     }
     // Removing from end of extent
     extent->pop_back();
@@ -643,7 +643,7 @@ mx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         block_info_t* info = static_cast<block_info_t*>(reply);
         if (max < sizeof(*info))
             return MX_ERR_BUFFER_TOO_SMALL;
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         if (IsKilledLocked())
             return MX_ERR_BAD_STATE;
         memcpy(info, &info_, sizeof(*info));
@@ -663,7 +663,7 @@ mx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         char* guid = static_cast<char*>(reply);
         if (max < FVM_GUID_LEN)
             return MX_ERR_BUFFER_TOO_SMALL;
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         if (IsKilledLocked())
             return MX_ERR_BAD_STATE;
         memcpy(guid, mgr_->GetAllocatedVPartEntry(entry_index_)->type, FVM_GUID_LEN);
@@ -674,7 +674,7 @@ mx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         char* guid = static_cast<char*>(reply);
         if (max < FVM_GUID_LEN)
             return MX_ERR_BUFFER_TOO_SMALL;
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         if (IsKilledLocked())
             return MX_ERR_BAD_STATE;
         memcpy(guid, mgr_->GetAllocatedVPartEntry(entry_index_)->guid, FVM_GUID_LEN);
@@ -685,7 +685,7 @@ mx_status_t VPartition::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
         char* name = static_cast<char*>(reply);
         if (max < FVM_NAME_LEN + 1)
             return MX_ERR_BUFFER_TOO_SMALL;
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         if (IsKilledLocked())
             return MX_ERR_BAD_STATE;
         memcpy(name, mgr_->GetAllocatedVPartEntry(entry_index_)->name, FVM_NAME_LEN);
@@ -733,7 +733,7 @@ typedef struct multi_iotxn_state {
     multi_iotxn_state(size_t total, iotxn_t* txn)
         : txns_completed(0), txns_total(total), status(MX_OK), original(txn) {}
 
-    mxtl::Mutex lock;
+    fbl::Mutex lock;
     size_t txns_completed TA_GUARDED(lock);
     size_t txns_total TA_GUARDED(lock);
     mx_status_t status TA_GUARDED(lock);
@@ -744,7 +744,7 @@ static void multi_iotxn_completion(iotxn_t* txn, void* cookie) {
     multi_iotxn_state_t* state = static_cast<multi_iotxn_state_t*>(cookie);
     bool last_iotxn = false;
     {
-        mxtl::AutoLock lock(&state->lock);
+        fbl::AutoLock lock(&state->lock);
         state->txns_completed++;
         if (state->status == MX_OK && txn->status != MX_OK) {
             state->status = txn->status;
@@ -778,7 +778,7 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
     size_t vslice_start = txn->offset / slice_size;
     size_t vslice_end = (txn->offset + txn->length - 1) / slice_size;
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (vslice_start == vslice_end) {
         // Common case: iotxn occurs within one slice
         uint32_t pslice = SliceGetLocked(vslice_start);
@@ -825,8 +825,8 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
         return;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<multi_iotxn_state_t> state(new (&ac) multi_iotxn_state_t(txn_count, txn));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<multi_iotxn_state_t> state(new (&ac) multi_iotxn_state_t(txn_count, txn));
     if (!ac.check()) {
         iotxn_complete(txn, MX_ERR_NO_MEMORY, 0);
         return;
@@ -840,7 +840,7 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
         uint64_t vmo_offset;
         mx_off_t length;
         if (vslice == vslice_start) {
-            length = mxtl::roundup(txn->offset + 1, slice_size) - txn->offset;
+            length = fbl::roundup(txn->offset + 1, slice_size) - txn->offset;
             vmo_offset = 0;
         } else if (vslice == vslice_end) {
             length = length_remaining;
@@ -879,7 +879,7 @@ void VPartition::DdkIotxnQueue(iotxn_t* txn) {
 mx_off_t VPartition::DdkGetSize() {
     const mx_off_t size = mgr_->DiskSize() * mgr_->SliceSize();
     if (size / mgr_->SliceSize() != size) {
-        return mxtl::numeric_limits<mx_off_t>::max();
+        return fbl::numeric_limits<mx_off_t>::max();
     }
     return size;
 }
@@ -899,7 +899,7 @@ void VPartition::BlockSetCallbacks(block_callbacks_t* cb) {
 }
 
 void VPartition::BlockGetInfo(block_info_t* info) {
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     *info = info_;
 }
 
@@ -922,7 +922,7 @@ static mx_status_t fvm_load_thread(void* arg) {
 }
 
 mx_status_t fvm_bind(mx_device_t* parent) {
-    mxtl::unique_ptr<fvm::VPartitionManager> vpm;
+    fbl::unique_ptr<fvm::VPartitionManager> vpm;
     mx_status_t status = fvm::VPartitionManager::Create(parent, &vpm);
     if (status != MX_OK) {
         return status;

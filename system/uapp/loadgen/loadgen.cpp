@@ -9,12 +9,12 @@
 #include <magenta/errors.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/limits.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/limits.h>
+#include <fbl/unique_ptr.h>
 
 static constexpr uint32_t kDefaultNumThreads = 4;
 static constexpr float kDefaultMinWorkMsec = 5.0f;
@@ -23,7 +23,7 @@ static constexpr float kDefaultMinSleepMsec = 1.0f;
 static constexpr float kDefaultMaxSleepMsec = 2.5f;
 
 class LoadGeneratorThread :
-    public mxtl::SinglyLinkedListable<mxtl::unique_ptr<LoadGeneratorThread>> {
+    public fbl::SinglyLinkedListable<fbl::unique_ptr<LoadGeneratorThread>> {
 public:
     LoadGeneratorThread(unsigned int seed) : seed_(seed) { }
     ~LoadGeneratorThread();
@@ -103,7 +103,7 @@ int LoadGeneratorThread::Run() {
             accumulator_ /= MakeRandomDouble(kMinNum, kMaxNum);
 
             double tmp = accumulator_;
-            accumulator_  = mxtl::clamp<double>(tmp, 0.0, kMaxNum);
+            accumulator_  = fbl::clamp<double>(tmp, 0.0, kMaxNum);
         }
 
         if (quit_)
@@ -134,7 +134,7 @@ int LoadGeneratorThread::Run() {
 
 double LoadGeneratorThread::MakeRandomDouble(double min, double max) {
     double norm(rand_r(&seed_));
-    norm /= mxtl::numeric_limits<int>::max();
+    norm /= fbl::numeric_limits<int>::max();
     return min + (norm * (max - min));
 }
 
@@ -154,7 +154,7 @@ void usage(const char* program_name) {
 }
 
 int main(int argc, char** argv) {
-    auto show_usage = mxtl::MakeAutoCall([argv]() { usage(argv[0]); });
+    auto show_usage = fbl::MakeAutoCall([argv]() { usage(argv[0]); });
 
     // 0, 1, 3, 5 and 6 arguments are the only legal number of args.
     switch (argc) {
@@ -213,17 +213,17 @@ int main(int argc, char** argv) {
            LoadGeneratorThread::max_sleep_msec(),
            seed);
 
-    mxtl::SinglyLinkedList<mxtl::unique_ptr<LoadGeneratorThread>> threads;
+    fbl::SinglyLinkedList<fbl::unique_ptr<LoadGeneratorThread>> threads;
     for (uint32_t i = 0; i < num_threads; ++i) {
-        mxtl::AllocChecker ac;
-        mxtl::unique_ptr<LoadGeneratorThread> t(new (&ac) LoadGeneratorThread(rand_r(&seed)));
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<LoadGeneratorThread> t(new (&ac) LoadGeneratorThread(rand_r(&seed)));
 
         if (!ac.check()) {
             printf("Failed to create thread %u/%u\n", i + 1, num_threads);
             return -1;
         }
 
-        threads.push_front(mxtl::move(t));
+        threads.push_front(fbl::move(t));
     }
 
     for (auto& t : threads) {

@@ -12,12 +12,12 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <magenta/thread_annotations.h>
-#include <mxtl/array.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/array.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <stdint.h>
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
@@ -26,9 +26,9 @@
 // the main VM object type, holding a list of pages
 class VmObjectPaged final : public VmObject {
 public:
-    static status_t Create(uint32_t pmm_alloc_flags, uint64_t size, mxtl::RefPtr<VmObject>* vmo);
+    static status_t Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
-    static status_t CreateFromROData(const void* data, size_t size, mxtl::RefPtr<VmObject>* vmo);
+    static status_t CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* vmo);
 
     status_t Resize(uint64_t size) override;
     status_t ResizeLocked(uint64_t size) override TA_REQ(lock_);
@@ -74,7 +74,7 @@ public:
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
     status_t CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
-                      mxtl::RefPtr<VmObject>* clone_vmo) override
+                      fbl::RefPtr<VmObject>* clone_vmo) override
         // Calls a Locked method of the child, which confuses analysis.
         TA_NO_THREAD_SAFETY_ANALYSIS;
 
@@ -84,11 +84,11 @@ public:
 
 private:
     // private constructor (use Create())
-    explicit VmObjectPaged(uint32_t pmm_alloc_flags, mxtl::RefPtr<VmObject> parent);
+    explicit VmObjectPaged(uint32_t pmm_alloc_flags, fbl::RefPtr<VmObject> parent);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;
-    friend mxtl::RefPtr<VmObjectPaged>;
+    friend fbl::RefPtr<VmObjectPaged>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPaged);
 

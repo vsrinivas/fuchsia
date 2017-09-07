@@ -17,8 +17,8 @@
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
 #include <lib/heap.h>
-#include <mxtl/atomic.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_lock.h>
 #include <rand.h>
 #include <stdlib.h>
 #include <string.h>
@@ -395,7 +395,7 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel,
         } else if (pte) {
             LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
             page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
-            mxtl::atomic_signal_fence();
+            fbl::atomic_signal_fence();
             if (asid == MMU_ARM64_GLOBAL_ASID)
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             else
@@ -548,7 +548,7 @@ int ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                     page_table, index, pte);
             page_table[index] = pte;
 
-            mxtl::atomic_signal_fence();
+            fbl::atomic_signal_fence();
             if (asid == MMU_ARM64_GLOBAL_ASID) {
                 ARM64_TLBI(vaae1is, vaddr >> 12);
             } else {
@@ -688,7 +688,7 @@ status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t paddr, size_t count,
 
     ssize_t ret;
     {
-        mxtl::AutoLock a(&lock_);
+        fbl::AutoLock a(&lock_);
 
         if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
             ret = MapPages(vaddr, paddr, count * PAGE_SIZE,
@@ -728,7 +728,7 @@ status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
     if (!IS_PAGE_ALIGNED(vaddr))
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AutoLock a(&lock_);
+    fbl::AutoLock a(&lock_);
 
     ssize_t ret;
     if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
@@ -765,7 +765,7 @@ status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
     if (!(mmu_flags & ARCH_MMU_FLAG_PERM_READ))
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AutoLock a(&lock_);
+    fbl::AutoLock a(&lock_);
 
     int ret;
     if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
@@ -790,7 +790,7 @@ status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
     LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n",
             this, base, size, flags);
 
-    mxtl::AutoLock a(&lock_);
+    fbl::AutoLock a(&lock_);
 
     // Validate that the base + size is sane and doesn't wrap.
     DEBUG_ASSERT(size > PAGE_SIZE);
@@ -840,7 +840,7 @@ status_t ArmArchVmAspace::Destroy() {
     canary_.Assert();
     LTRACEF("aspace %p\n", this);
 
-    mxtl::AutoLock a(&lock_);
+    fbl::AutoLock a(&lock_);
 
     DEBUG_ASSERT((flags_ & ARCH_ASPACE_FLAG_KERNEL) == 0);
 

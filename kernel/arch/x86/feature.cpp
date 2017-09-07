@@ -14,7 +14,7 @@
 
 #include <arch/ops.h>
 
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 #define LOCAL_TRACE 0
 
@@ -247,7 +247,7 @@ void x86_feature_debug(void)
 
     printf("Features: ");
     uint col = 0;
-    for (uint i = 0; i < mxtl::count_of(features); ++i) {
+    for (uint i = 0; i < fbl::count_of(features); ++i) {
         if (x86_feature_test(features[i].bit))
             col += printf("%s ", features[i].name);
         if (col >= 80) {

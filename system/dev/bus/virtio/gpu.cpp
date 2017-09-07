@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <magenta/compiler.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -136,7 +136,7 @@ mx_status_t GpuDevice::get_display_info() {
     LTRACEF("dev %p\n", this);
 
     /* grab a lock to keep this single message at a time */
-    mxtl::AutoLock lock(&request_lock_);
+    fbl::AutoLock lock(&request_lock_);
 
     /* construct the get display info message */
     virtio_gpu_ctrl_hdr req;
@@ -178,7 +178,7 @@ mx_status_t GpuDevice::allocate_2d_resource(uint32_t* resource_id, uint32_t widt
     assert(resource_id);
 
     /* grab a lock to keep this single message at a time */
-    mxtl::AutoLock lock(&request_lock_);
+    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     virtio_gpu_resource_create_2d req;
@@ -209,7 +209,7 @@ mx_status_t GpuDevice::attach_backing(uint32_t resource_id, mx_paddr_t ptr, size
     assert(ptr);
 
     /* grab a lock to keep this single message at a time */
-    mxtl::AutoLock lock(&request_lock_);
+    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     struct {
@@ -241,7 +241,7 @@ mx_status_t GpuDevice::set_scanout(uint32_t scanout_id, uint32_t resource_id, ui
     LTRACEF("dev %p, scanout_id %u, resource_id %u, width %u, height %u\n", this, scanout_id, resource_id, width, height);
 
     /* grab a lock to keep this single message at a time */
-    mxtl::AutoLock lock(&request_lock_);
+    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     virtio_gpu_set_scanout req;
@@ -270,7 +270,7 @@ mx_status_t GpuDevice::flush_resource(uint32_t resource_id, uint32_t width, uint
     LTRACEF("dev %p, resource_id %u, width %u, height %u\n", this, resource_id, width, height);
 
     /* grab a lock to keep this single message at a time */
-    mxtl::AutoLock lock(&request_lock_);
+    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     virtio_gpu_resource_flush req;
@@ -298,7 +298,7 @@ mx_status_t GpuDevice::transfer_to_host_2d(uint32_t resource_id, uint32_t width,
     LTRACEF("dev %p, resource_id %u, width %u, height %u\n", this, resource_id, width, height);
 
     /* grab a lock to keep this single message at a time */
-    mxtl::AutoLock lock(&request_lock_);
+    fbl::AutoLock lock(&request_lock_);
 
     /* construct the request */
     virtio_gpu_transfer_to_host_2d req;
@@ -324,7 +324,7 @@ mx_status_t GpuDevice::transfer_to_host_2d(uint32_t resource_id, uint32_t width,
 }
 
 void GpuDevice::Flush() {
-    mxtl::AutoLock al(&flush_lock_);
+    fbl::AutoLock al(&flush_lock_);
     flush_pending_ = true;
     cnd_signal(&flush_cond_);
 }
@@ -333,7 +333,7 @@ void GpuDevice::virtio_gpu_flusher() {
     LTRACE_ENTRY;
     for (;;) {
         {
-            mxtl::AutoLock al(&flush_lock_);
+            fbl::AutoLock al(&flush_lock_);
             if (!flush_pending_)
                 cnd_wait(&flush_cond_, flush_lock_.GetInternal());
             flush_pending_ = false;

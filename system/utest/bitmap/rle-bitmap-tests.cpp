@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <bitmap/rle-bitmap.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <unittest/unittest.h>
 
 namespace bitmap {
@@ -258,7 +258,7 @@ static bool SplitRanges(void) {
             EXPECT_EQ(range.bitlen, 1U, "bitlen");
         } else {
             size_t offset = 4 * count - 2;
-            size_t len = mxtl::min(size_t(3), kMaxVal - offset);
+            size_t len = fbl::min(size_t(3), kMaxVal - offset);
             EXPECT_EQ(range.bitoff, offset, "bitoff");
             EXPECT_EQ(range.bitlen, len, "bitlen");
         }
@@ -314,8 +314,8 @@ static bool NoAlloc(void) {
     RleBitmap::FreeList free_list;
     EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), MX_ERR_NO_MEMORY, "set bits with empty freelist");
 
-    mxtl::AllocChecker ac;
-    free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
+    fbl::AllocChecker ac;
+    free_list.push_back(fbl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
     EXPECT_EQ(bitmap.SetNoAlloc(0, 65536, &free_list), MX_OK, "set bits");
     EXPECT_TRUE(bitmap.Get(0, 65536), "get bit after setting");
@@ -323,7 +323,7 @@ static bool NoAlloc(void) {
 
     EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), MX_ERR_NO_MEMORY, "clear bits with empty freelist and alloc needed");
 
-    free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
+    free_list.push_back(fbl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
     EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), MX_OK, "clear bits");
     size_t first_unset = 0;
@@ -331,7 +331,7 @@ static bool NoAlloc(void) {
     EXPECT_EQ(first_unset, 1U, "check first_unset");
     EXPECT_EQ(free_list.size_slow(), 0U, "free list empty after alloc");
 
-    free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
+    free_list.push_back(fbl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
     EXPECT_EQ(bitmap.SetNoAlloc(1, 65535, &free_list), MX_OK, "add range back in");
     EXPECT_EQ(free_list.size_slow(), 2U, "free list has two entries after starting with one and merging two existing ranges");

@@ -4,9 +4,9 @@
 
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-stream.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/limits.h>
 
 namespace audio {
 namespace utils {
@@ -15,17 +15,17 @@ static constexpr mx_time_t CHUNK_TIME = MX_MSEC(100);
 static constexpr float MIN_DURATION = 0.100f;
 static constexpr float MAX_DURATION = 86400.0f;
 
-mxtl::unique_ptr<AudioInput> AudioInput::Create(uint32_t dev_id) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_id));
+fbl::unique_ptr<AudioInput> AudioInput::Create(uint32_t dev_id) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_id));
     if (!ac.check())
         return nullptr;
     return res;
 }
 
-mxtl::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_path));
+fbl::unique_ptr<AudioInput> AudioInput::Create(const char* dev_path) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<AudioInput> res(new (&ac) AudioInput(dev_path));
     if (!ac.check())
         return nullptr;
     return res;
@@ -38,7 +38,7 @@ mx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
         .sample_format = sample_format_,
     };
 
-    duration_seconds = mxtl::clamp(duration_seconds, MIN_DURATION, MAX_DURATION);
+    duration_seconds = fbl::clamp(duration_seconds, MIN_DURATION, MAX_DURATION);
 
     mx_status_t res = sink.SetFormat(fmt);
     if (res != MX_OK) {
@@ -48,7 +48,7 @@ mx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
     }
 
     uint64_t ring_bytes_64 = ((CHUNK_TIME * frame_rate_) / MX_SEC(1)) * frame_sz_;
-    if (ring_bytes_64 > mxtl::numeric_limits<uint32_t>::max()) {
+    if (ring_bytes_64 > fbl::numeric_limits<uint32_t>::max()) {
         printf("Invalid frame rate %u\n", frame_rate_);
         return res;
     }
@@ -129,7 +129,7 @@ mx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
         MX_DEBUG_ASSERT(rd_ptr < rb_sz_);
 
         uint32_t space = rb_sz_ - rd_ptr;
-        uint32_t amt = mxtl::min(space, todo);
+        uint32_t amt = fbl::min(space, todo);
         auto data = static_cast<const uint8_t*>(rb_virt_) + rd_ptr;
 
         res = sink.PutFrames(data, amt);

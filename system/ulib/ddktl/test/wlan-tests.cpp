@@ -4,8 +4,8 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/wlan.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -86,7 +86,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
         stop_called_ = true;
     }
 
-    mx_status_t WlanmacStart(mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
+    mx_status_t WlanmacStart(fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy) {
         start_this_ = get_this();
         proxy_.swap(proxy);
         start_called_ = true;
@@ -140,7 +140,7 @@ class TestWlanmacProtocol : public ddk::Device<TestWlanmacProtocol, ddk::GetProt
     bool tx_called_ = false;
     bool set_channel_called_ = false;
 
-    mxtl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
+    fbl::unique_ptr<ddk::WlanmacIfcProxy> proxy_;
 };
 
 static bool test_wlanmac_ifc() {

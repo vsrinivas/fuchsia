@@ -20,7 +20,7 @@
 #include <object/socket_dispatcher.h>
 
 #include <magenta/syscalls/policy.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -34,17 +34,17 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
     if (res != MX_OK)
         return res;
 
-    mxtl::RefPtr<Dispatcher> socket0, socket1;
+    fbl::RefPtr<Dispatcher> socket0, socket1;
     mx_rights_t rights;
     mx_status_t result = SocketDispatcher::Create(options, &socket0, &socket1, &rights);
     if (result != MX_OK)
         return result;
 
-    HandleOwner h0(MakeHandle(mxtl::move(socket0), rights));
+    HandleOwner h0(MakeHandle(fbl::move(socket0), rights));
     if (!h0)
         return MX_ERR_NO_MEMORY;
 
-    HandleOwner h1(MakeHandle(mxtl::move(socket1), rights));
+    HandleOwner h1(MakeHandle(fbl::move(socket1), rights));
     if (!h1)
         return MX_ERR_NO_MEMORY;
 
@@ -54,8 +54,8 @@ mx_status_t sys_socket_create(uint32_t options, user_ptr<mx_handle_t> _out0, use
     if (_out1.copy_to_user(up->MapHandleToValue(h1)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(h0));
-    up->AddHandle(mxtl::move(h1));
+    up->AddHandle(fbl::move(h0));
+    up->AddHandle(fbl::move(h1));
 
     return MX_OK;
 }
@@ -70,7 +70,7 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<SocketDispatcher> socket;
+    fbl::RefPtr<SocketDispatcher> socket;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &socket);
     if (status != MX_OK)
         return status;
@@ -114,7 +114,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<SocketDispatcher> socket;
+    fbl::RefPtr<SocketDispatcher> socket;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &socket);
     if (status != MX_OK)
         return status;

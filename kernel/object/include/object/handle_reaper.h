@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include <mxtl/intrusive_double_list.h>
+#include <fbl/intrusive_double_list.h>
 #include <object/handle.h>
 
 // Delete handles out-of-band, using a deferred procedure call.
-void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles);
+void ReapHandles(fbl::DoublyLinkedList<Handle*>* handles);
 void ReapHandles(Handle** handles, uint32_t num_handles);

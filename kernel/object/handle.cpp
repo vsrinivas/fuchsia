@@ -8,10 +8,10 @@
 
 #include <object/dispatcher.h>
 
-Handle::Handle(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t rights,
+Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, uint32_t rights,
                uint32_t base_value)
     : process_id_(0u),
-      dispatcher_(mxtl::move(dispatcher)),
+      dispatcher_(fbl::move(dispatcher)),
       rights_(rights),
       base_value_(base_value) {
 }
@@ -23,4 +23,4 @@ Handle::Handle(const Handle* rhs, mx_rights_t rights, uint32_t base_value)
       base_value_(base_value) {
 }
 
-mxtl::RefPtr<Dispatcher> Handle::dispatcher() const { return dispatcher_; }
+fbl::RefPtr<Dispatcher> Handle::dispatcher() const { return dispatcher_; }

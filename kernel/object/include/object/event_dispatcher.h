@@ -7,7 +7,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
+#include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <object/state_tracker.h>
 
@@ -15,7 +15,7 @@
 
 class EventDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~EventDispatcher() final;
@@ -26,7 +26,7 @@ public:
 
 private:
     explicit EventDispatcher(uint32_t options);
-    mxtl::Canary<mxtl::magic("EVTD")> canary_;
+    fbl::Canary<fbl::magic("EVTD")> canary_;
     StateTracker state_tracker_;
     CookieJar cookie_jar_;
 };

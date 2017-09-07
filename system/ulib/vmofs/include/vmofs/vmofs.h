@@ -7,9 +7,9 @@
 #include <fs/dispatcher.h>
 #include <fs/vfs.h>
 #include <magenta/types.h>
-#include <mxtl/array.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/string_piece.h>
+#include <fbl/array.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 
 namespace vmofs {
 
@@ -51,20 +51,20 @@ class VnodeDir : public Vnode {
 public:
     // |names| must be sorted in ascending order and must have the same length
     // as |children|.
-    VnodeDir(mxtl::Array<mxtl::StringPiece> names,
-             mxtl::Array<mxtl::RefPtr<Vnode>> children);
+    VnodeDir(fbl::Array<fbl::StringPiece> names,
+             fbl::Array<fbl::RefPtr<Vnode>> children);
     ~VnodeDir() override;
 
     mx_status_t Open(uint32_t flags) final;
-    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    mx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t Readdir(void* cookie, void* dirents, size_t len) final;
 
     uint32_t GetVType() final;
 
 private:
-    mxtl::Array<mxtl::StringPiece> names_;
-    mxtl::Array<mxtl::RefPtr<Vnode>> children_;
+    fbl::Array<fbl::StringPiece> names_;
+    fbl::Array<fbl::RefPtr<Vnode>> children_;
 };
 
 } // namespace vmofs

@@ -15,7 +15,7 @@ MODULE_DEPS := \
 	kernel/lib/explicit-memory \
 	kernel/lib/heap \
 	kernel/lib/libc \
-	kernel/lib/mxtl \
+	kernel/lib/fbl \
 	kernel/vm
 
 MODULE_SRCS := \

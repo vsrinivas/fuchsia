@@ -27,7 +27,7 @@ source_set("trace") {
   public_deps = [
     "//magenta/system/ulib/async",
     "//magenta/system/ulib/mx",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   public_configs = [ ":trace_config" ]

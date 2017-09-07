@@ -100,8 +100,8 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <mxtl/function.h>
-#include <mxtl/macros.h>
+#include <fbl/function.h>
+#include <fbl/macros.h>
 
 namespace async {
 
@@ -119,7 +119,7 @@ public:
     // The result must be |ASYNC_TASK_FINISHED| if |status| was not |MX_OK|.
     //
     // It is safe for the handler to destroy itself when returning |ASYNC_TASK_FINISHED|.
-    using Handler = mxtl::Function<async_task_result_t(async_t* async,
+    using Handler = fbl::Function<async_task_result_t(async_t* async,
                                                        mx_status_t status)>;
 
     // Initializes the properties of the task.
@@ -135,7 +135,7 @@ public:
     // Gets or sets the handler to invoke when the task becomes due.
     // Must be set before posting the task.
     const Handler& handler() const { return handler_; }
-    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
+    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
 
     // The time when the task should run.
     mx_time_t deadline() const { return async_task_t::deadline; }

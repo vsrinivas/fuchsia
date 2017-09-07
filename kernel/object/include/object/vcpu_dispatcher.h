@@ -16,9 +16,9 @@ typedef struct mx_port_packet mx_port_packet_t;
 
 class VcpuDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
-                              mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
-                              mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
+    static mx_status_t Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
+                              mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+                              fbl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights);
     ~VcpuDispatcher();
 
     mx_obj_type_t get_type() const { return MX_OBJ_TYPE_VCPU; }
@@ -29,9 +29,9 @@ public:
     mx_status_t WriteState(uint32_t kind, const void* buffer, uint32_t len);
 
 private:
-    mxtl::Canary<mxtl::magic("VCPD")> canary_;
-    mxtl::RefPtr<GuestDispatcher> guest_;
-    mxtl::unique_ptr<Vcpu> vcpu_;
+    fbl::Canary<fbl::magic("VCPD")> canary_;
+    fbl::RefPtr<GuestDispatcher> guest_;
+    fbl::unique_ptr<Vcpu> vcpu_;
 
-    explicit VcpuDispatcher(mxtl::RefPtr<GuestDispatcher> guest, mxtl::unique_ptr<Vcpu> vcpu);
+    explicit VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, fbl::unique_ptr<Vcpu> vcpu);
 };

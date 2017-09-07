@@ -14,7 +14,7 @@
 #include <vm/pmm.h>
 #include <vm/vm_object.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <mxtl/auto_call.h>
+#include <fbl/auto_call.h>
 
 #include "vcpu_priv.h"
 #include "vmexit_priv.h"
@@ -561,15 +561,15 @@ mx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t ip, uintptr
 }
 
 // static
-mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                          GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                         mxtl::unique_ptr<Vcpu>* out) {
+                         fbl::unique_ptr<Vcpu>* out) {
     uint16_t vpid;
     mx_status_t status = alloc_vpid(&vpid);
     if (status != MX_OK)
         return status;
-    auto auto_call = mxtl::MakeAutoCall([=]() { release_vpid(vpid); });
+    auto auto_call = fbl::MakeAutoCall([=]() { release_vpid(vpid); });
 
     // When we create a VCPU, we bind it to the current thread and a CPU based
     // on the VPID. The VCPU must always be run on the current thread and the
@@ -584,8 +584,8 @@ mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> a
     thread_t* thread = get_current_thread();
     pin_thread(thread, vpid);
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, mux));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(thread, vpid, apic_vmo, gpas, mux));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -624,11 +624,11 @@ mx_status_t Vcpu::Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> a
         return status;
 
     auto_call.cancel();
-    *out = mxtl::move(vcpu);
+    *out = fbl::move(vcpu);
     return MX_OK;
 }
 
-Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
+Vcpu::Vcpu(const thread_t* thread, uint16_t vpid, fbl::RefPtr<VmObject> apic_vmo,
            GuestPhysicalAddressSpace* gpas, PacketMux& mux)
     : thread_(thread), vpid_(vpid), apic_vmo_(apic_vmo), gpas_(gpas), mux_(mux),
       vmx_state_(/* zero-init */) {}
@@ -766,10 +766,10 @@ mx_status_t Vcpu::WriteState(uint32_t kind, const void* buffer, uint32_t len) {
     return MX_ERR_INVALID_ARGS;
 }
 
-mx_status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+mx_status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                             paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                             GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                            mxtl::unique_ptr<Vcpu>* out) {
+                            fbl::unique_ptr<Vcpu>* out) {
     return Vcpu::Create(ip, cr3, apic_vmo, apic_access_address, msr_bitmaps_address, gpas, mux,
                         out);
 }

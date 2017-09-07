@@ -8,7 +8,7 @@
 
 #include <assert.h>
 #include <err.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 #include <platform.h>
 #include <trace.h>
 
@@ -148,7 +148,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // This blocks the current thread.  This releases the given mutex (which
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
-mx_status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
+mx_status_t FutexNode::BlockThread(fbl::Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
     AutoThreadLock lock;
 
     // We specifically want reschedule=false here, otherwise the

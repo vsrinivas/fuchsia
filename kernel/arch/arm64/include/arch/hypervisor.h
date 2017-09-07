@@ -7,8 +7,8 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 class GuestPhysicalAddressSpace;
 class PacketMux;
@@ -19,7 +19,7 @@ typedef struct mx_port_packet mx_port_packet_t;
 
 class Guest {
 public:
-    static status_t Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out);
+    static status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
     ~Guest() = default;
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
@@ -33,11 +33,11 @@ private:
 class Vcpu {};
 
 /* Create a guest. */
-mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* guest);
+mx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest);
 
 /* Set a trap within a guest. */
 mx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                                mxtl::RefPtr<PortDispatcher> port, uint64_t key);
+                                fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Resume execution of a VCPU. */
 mx_status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet);

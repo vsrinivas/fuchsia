@@ -17,15 +17,15 @@
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #include "vfs-internal.h"
 
 #define MXDEBUG 0
 
 typedef struct vfs_iostate {
-    mxtl::RefPtr<fs::Vnode> vn;
+    fbl::RefPtr<fs::Vnode> vn;
     // The VFS state & dispatcher associated with this handle.
     fs::Vfs* vfs;
     // Handle to event which allows client to refer to open vnodes in multi-patt
@@ -62,7 +62,7 @@ static void txn_handoff_open(mx_handle_t srv, mx::channel channel,
 }
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
-void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, mxtl::RefPtr<Vnode> vn,
+void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, fbl::RefPtr<Vnode> vn,
                   vfs_iostate_t* ios, const char* path, uint32_t flags, uint32_t mode) {
     mx_status_t r;
 
@@ -72,7 +72,7 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, mxtl::RefPtr<Vnode> vn,
     bool pipeline = flags & O_PIPELINE;
     uint32_t open_flags = flags & (~O_PIPELINE);
 
-    r = ios->vfs->Open(mxtl::move(vn), &vn, path, &path, open_flags, mode);
+    r = ios->vfs->Open(fbl::move(vn), &vn, path, &path, open_flags, mode);
 
     mxrio_object_t obj;
     memset(&obj, 0, sizeof(obj));
@@ -81,7 +81,7 @@ void vfs_rpc_open(mxrio_msg_t* msg, mx::channel channel, mxtl::RefPtr<Vnode> vn,
         goto done;
     } else if (r > 0) {
         // Remote handoff, either to a remote device or a remote filesystem node.
-        txn_handoff_open(r, mxtl::move(channel), path, flags, mode);
+        txn_handoff_open(r, fbl::move(channel), path, flags, mode);
         return;
     }
 
@@ -117,7 +117,7 @@ done:
         return;
     }
 
-    vn->Serve(ios->vfs, mxtl::move(channel), open_flags);
+    vn->Serve(ios->vfs, fbl::move(channel), open_flags);
 }
 
 void mxrio_reply_channel_status(mx::channel channel, mx_status_t status) {
@@ -137,11 +137,11 @@ mx_status_t Vnode::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
     if ((ios = static_cast<vfs_iostate_t*>(calloc(1, sizeof(vfs_iostate_t)))) == nullptr) {
         return MX_ERR_NO_MEMORY;
     }
-    ios->vn = mxtl::RefPtr<fs::Vnode>(this);
+    ios->vn = fbl::RefPtr<fs::Vnode>(this);
     ios->io_flags = flags;
     ios->vfs = vfs;
 
-    if ((r = vfs->Serve(mxtl::move(channel), ios)) < 0) {
+    if ((r = vfs->Serve(fbl::move(channel), ios)) < 0) {
         free(ios);
         return r;
     }
@@ -149,10 +149,10 @@ mx_status_t Vnode::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
 }
 
 mx_status_t Vfs::Serve(mx::channel channel, void* ios) {
-    return dispatcher_->AddVFSHandler(mxtl::move(channel), vfs_handler, ios);
+    return dispatcher_->AddVFSHandler(fbl::move(channel), vfs_handler, ios);
 }
 
-mx_status_t Vfs::ServeDirectory(mxtl::RefPtr<fs::Vnode> vn,
+mx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
                                 mx::channel channel) {
     // Make sure the Vnode really is a directory.
     mx_status_t r;
@@ -165,12 +165,12 @@ mx_status_t Vfs::ServeDirectory(mxtl::RefPtr<fs::Vnode> vn,
         return r;
     }
 
-    return vn->Serve(this, mxtl::move(channel), O_ADMIN);
+    return vn->Serve(this, fbl::move(channel), O_ADMIN);
 }
 
 } // namespace fs
 
-static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
+static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, fbl::RefPtr<fs::Vnode> vn, vfs_iostate* ios) {
     uint32_t len = msg->datalen;
     int32_t arg = msg->arg;
     msg->datalen = 0;
@@ -189,13 +189,13 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         char* path = (char*)msg->data;
         mx::channel channel(msg->handle[0]); // take ownership
         if ((len < 1) || (len > PATH_MAX)) {
-            fs::mxrio_reply_channel_status(mxtl::move(channel), MX_ERR_INVALID_ARGS);
+            fs::mxrio_reply_channel_status(fbl::move(channel), MX_ERR_INVALID_ARGS);
         } else if ((arg & O_ADMIN) && !(ios->io_flags & O_ADMIN)) {
-            fs::mxrio_reply_channel_status(mxtl::move(channel), MX_ERR_ACCESS_DENIED);
+            fs::mxrio_reply_channel_status(fbl::move(channel), MX_ERR_ACCESS_DENIED);
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-            fs::vfs_rpc_open(msg, mxtl::move(channel), vn, ios, path, arg, msg->arg2.mode);
+            fs::vfs_rpc_open(msg, fbl::move(channel), vn, ios, path, arg, msg->arg2.mode);
         }
         return ERR_DISPATCHER_INDIRECT;
     }
@@ -215,7 +215,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
             obj.type = MXIO_PROTOCOL_REMOTE;
             channel.write(0, &obj, MXRIO_OBJECT_MINSIZE, 0, 0);
         }
-        vn->Serve(ios->vfs, mxtl::move(channel), ios->io_flags);
+        vn->Serve(ios->vfs, fbl::move(channel), ios->io_flags);
         return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {
@@ -360,7 +360,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         }
         mx_status_t r;
         {
-            mxtl::AutoLock lock(&ios->vfs->vfs_lock_);
+            fbl::AutoLock lock(&ios->vfs->vfs_lock_);
             r = vn->Readdir(&ios->dircookie, msg->data, arg);
         }
         if (r >= 0) {
@@ -399,7 +399,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
             }
             // If our permissions validate, fall through to the VFS ioctl
         }
-        ssize_t r = ios->vfs->Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len,
+        ssize_t r = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op, in_buf, len,
                                     msg->data, arg);
 
         if (r == MX_ERR_NOT_SUPPORTED) {
@@ -425,7 +425,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
                 r = MX_ERR_INVALID_ARGS;
             } else {
                 mx::event token;
-                r = ios->vfs->VnodeToToken(mxtl::move(vn), &ios->token, &token);
+                r = ios->vfs->VnodeToToken(fbl::move(vn), &ios->token, &token);
                 if (r == MX_OK) {
                     r = sizeof(mx_handle_t);
                     mx_handle_t* out = reinterpret_cast<mx_handle_t*>(msg->data);
@@ -444,7 +444,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
             }
             // If our permissions validate, fall through to the VFS ioctl
         default:
-            r = ios->vfs->Ioctl(mxtl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
+            r = ios->vfs->Ioctl(fbl::move(vn), msg->arg2.op, in_buf, len, msg->data, arg);
         }
         if (r >= 0) {
             switch (IOCTL_KIND(msg->arg2.op)) {
@@ -499,10 +499,10 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
 
         switch (MXRIO_OP(msg->op)) {
         case MXRIO_RENAME:
-            return ios->vfs->Rename(mxtl::move(token), mxtl::move(vn),
+            return ios->vfs->Rename(fbl::move(token), fbl::move(vn),
                                     oldname, newname);
         case MXRIO_LINK:
-            return ios->vfs->Link(mxtl::move(token), mxtl::move(vn),
+            return ios->vfs->Link(fbl::move(token), fbl::move(vn),
                                   oldname, newname);
         }
         assert(false);
@@ -531,7 +531,7 @@ static mx_status_t vfs_handler_vn(mxrio_msg_t* msg, mxtl::RefPtr<fs::Vnode> vn, 
         return vn->Sync();
     }
     case MXRIO_UNLINK:
-        return ios->vfs->Unlink(mxtl::move(vn), (const char*)msg->data, len);
+        return ios->vfs->Unlink(fbl::move(vn), (const char*)msg->data, len);
     default:
         // close inbound handles so they do not leak
         for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
@@ -548,8 +548,8 @@ static mtx_t vfs_big_lock = MTX_INIT;
 mx_status_t vfs_handler(mxrio_msg_t* msg, void* cookie) {
     vfs_iostate_t* ios = static_cast<vfs_iostate_t*>(cookie);
 
-    mxtl::AutoLock lock(&vfs_big_lock);
-    mxtl::RefPtr<fs::Vnode> vn = ios->vn;
-    mx_status_t status = vfs_handler_vn(msg, mxtl::move(vn), ios);
+    fbl::AutoLock lock(&vfs_big_lock);
+    fbl::RefPtr<fs::Vnode> vn = ios->vn;
+    mx_status_t status = vfs_handler_vn(msg, fbl::move(vn), ios);
     return status;
 }

@@ -9,20 +9,20 @@
 namespace trace {
 
 TraceObserver::TraceObserver() {
-    wait_.set_handler(mxtl::BindMember(this, &TraceObserver::Handle));
+    wait_.set_handler(fbl::BindMember(this, &TraceObserver::Handle));
 }
 
 TraceObserver::~TraceObserver() {
     Stop();
 }
 
-void TraceObserver::Start(async_t* async, mxtl::Closure callback) {
+void TraceObserver::Start(async_t* async, fbl::Closure callback) {
     MX_DEBUG_ASSERT(async);
     MX_DEBUG_ASSERT(callback);
 
     Stop();
     async_ = async;
-    callback_ = mxtl::move(callback);
+    callback_ = fbl::move(callback);
 
     mx_status_t status = mx::event::create(0u, &event_);
     MX_ASSERT(status == MX_OK);

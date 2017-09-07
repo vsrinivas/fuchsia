@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <gfx/gfx.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <sys/param.h>
 #include <unittest/unittest.h>
 
@@ -106,7 +106,7 @@ public:
                           helper_->vc_surface->len) != 0;
         }
 
-        mxtl::unique_ptr<char[]> ComparisonString() {
+        fbl::unique_ptr<char[]> ComparisonString() {
             vc_t* vc_dev = helper_->vc_dev;
             gfx_surface* vc_surface = helper_->vc_surface;
             // Add 1 to these sizes to account for the margins.
@@ -114,7 +114,7 @@ public:
             uint32_t cmp_size_y = vc_dev->rows + 1;
             uint32_t size_in_chars = cmp_size_x * cmp_size_y;
 
-            mxtl::unique_ptr<bool[]> diffs(new bool[size_in_chars]);
+            fbl::unique_ptr<bool[]> diffs(new bool[size_in_chars]);
             for (uint32_t i = 0; i < size_in_chars; ++i)
                 diffs[i] = false;
 
@@ -134,7 +134,7 @@ public:
             // Build a string showing the differences.  If we had
             // std::string or equivalent, we'd use that here.
             size_t string_size = (cmp_size_x + 3) * cmp_size_y + 1;
-            mxtl::unique_ptr<char[]> string(new char[string_size]);
+            fbl::unique_ptr<char[]> string(new char[string_size]);
             char* ptr = string.get();
             for (uint32_t y = 0; y < cmp_size_y; ++y) {
                 *ptr++ = '|';
@@ -158,7 +158,7 @@ public:
 
     private:
         TextconHelper* helper_;
-        mxtl::unique_ptr<uint8_t[]> snapshot_;
+        fbl::unique_ptr<uint8_t[]> snapshot_;
     };
 
     void InvalidateAllGraphics() {

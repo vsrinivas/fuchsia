@@ -7,7 +7,7 @@
 #pragma once
 
 #include <vm/vm_object.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 namespace crypto {
 
@@ -17,7 +17,7 @@ namespace entropy {
 
 // These fields are read in kernel/lib/userboot/userboot.cpp, in order to pass
 // the VmObject on to devmgr (where it's added to the filesystem).
-extern mxtl::RefPtr<VmObject> entropy_vmo;
+extern fbl::RefPtr<VmObject> entropy_vmo;
 extern bool entropy_was_lost;
 #endif
 

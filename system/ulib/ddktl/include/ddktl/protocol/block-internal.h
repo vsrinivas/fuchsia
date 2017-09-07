@@ -6,8 +6,8 @@
 
 #include <ddktl/device-internal.h>
 #include <magenta/types.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 
 #include <stdint.h>
 
@@ -23,7 +23,7 @@ template <typename D>
 constexpr void CheckBlockProtocolSubclass() {
     static_assert(internal::has_block_set_callbacks<D>::value,
                   "BlockProtocol subclasses must implement BlockSetCallbacks");
-    static_assert(mxtl::is_same<decltype(&D::BlockSetCallbacks),
+    static_assert(fbl::is_same<decltype(&D::BlockSetCallbacks),
                                 void (D::*)(block_callbacks_t*)>::value,
                   "BlockSetCallbacks must be a non-static member function with signature "
                   "'void BlockSetCallbacks(block_callbacks_t* cb)', and be visible to "
@@ -31,7 +31,7 @@ constexpr void CheckBlockProtocolSubclass() {
                   "friendship).");
     static_assert(internal::has_block_get_info<D>::value,
                   "BlockProtocol subclasses must implement BlockGetInfo");
-    static_assert(mxtl::is_same<decltype(&D::BlockGetInfo),
+    static_assert(fbl::is_same<decltype(&D::BlockGetInfo),
                                 void (D::*)(block_info_t*)>::value,
                   "BlockStop must be a non-static member function with signature "
                   "'void BlockGetInfo(block_info_t* info)', and be visible to "
@@ -39,7 +39,7 @@ constexpr void CheckBlockProtocolSubclass() {
                   "of friendship).");
     static_assert(internal::has_block_read<D>::value,
                   "BlockProtocol subclasses must implement BlockRead");
-    static_assert(mxtl::is_same<decltype(&D::BlockRead),
+    static_assert(fbl::is_same<decltype(&D::BlockRead),
                                 void (D::*)(mx_handle_t, uint64_t, uint64_t, uint64_t, void*)>::value,
                   "BlockRead must be a non-static member function with signature "
                   "'void BlockRead(mx_handle_t, uint64_t, uint64_t, uint64_t, void*)', and be "
@@ -47,7 +47,7 @@ constexpr void CheckBlockProtocolSubclass() {
                   "friendship).");
     static_assert(internal::has_block_write<D>::value,
                   "BlockProtocol subclasses must implement BlockWrite");
-    static_assert(mxtl::is_same<decltype(&D::BlockWrite),
+    static_assert(fbl::is_same<decltype(&D::BlockWrite),
                                 void (D::*)(mx_handle_t, uint64_t, uint64_t, uint64_t, void*)>::value,
                   "BlockWrite must be a non-static member function with signature "
                   "'void BlockWrite(mx_handle_t, uint64_t, uint64_t, uint64_t, void*)', and be "

@@ -18,28 +18,28 @@
 
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
-#include <mxtl/array.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/mutex.h>
-#include <mxtl/name.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/string_piece.h>
+#include <fbl/array.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
+#include <fbl/name.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 
 class JobDispatcher;
 
 class ProcessDispatcher final : public Dispatcher {
 public:
     static mx_status_t Create(
-        mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags,
-        mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
-        mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
+        fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags,
+        fbl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
+        fbl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
         mx_rights_t* root_vmar_rights);
 
     // Traits to belong in the parent job's raw list.
     struct JobListTraitsRaw {
-        static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
+        static fbl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
             ProcessDispatcher& obj) {
             return obj.dll_job_raw_;
         }
@@ -47,7 +47,7 @@ public:
 
     // Traits to belong in the parent job's list.
     struct JobListTraits {
-        static mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>>& node_state(
+        static fbl::SinglyLinkedListNodeState<fbl::RefPtr<ProcessDispatcher>>& node_state(
             ProcessDispatcher& obj) {
             return obj.dll_job_;
         }
@@ -105,16 +105,16 @@ public:
     // Get the dispatcher corresponding to this handle value.
     template <typename T>
     mx_status_t GetDispatcher(mx_handle_t handle_value,
-                              mxtl::RefPtr<T>* dispatcher) {
+                              fbl::RefPtr<T>* dispatcher) {
         return GetDispatcherAndRights(handle_value, dispatcher, nullptr);
     }
 
     // Get the dispatcher and the rights corresponding to this handle value.
     template <typename T>
     mx_status_t GetDispatcherAndRights(mx_handle_t handle_value,
-                                       mxtl::RefPtr<T>* dispatcher,
+                                       fbl::RefPtr<T>* dispatcher,
                                        mx_rights_t* out_rights) {
-        mxtl::RefPtr<Dispatcher> generic_dispatcher;
+        fbl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights);
         if (status != MX_OK)
             return status;
@@ -130,9 +130,9 @@ public:
     template <typename T>
     mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
                                         mx_rights_t desired_rights,
-                                        mxtl::RefPtr<T>* dispatcher,
+                                        fbl::RefPtr<T>* dispatcher,
                                         mx_rights_t* out_rights) {
-        mxtl::RefPtr<Dispatcher> generic_dispatcher;
+        fbl::RefPtr<Dispatcher> generic_dispatcher;
         auto status = GetDispatcherWithRightsInternal(handle_value,
                                                       desired_rights,
                                                       &generic_dispatcher,
@@ -150,7 +150,7 @@ public:
     template <typename T>
     mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
                                         mx_rights_t desired_rights,
-                                        mxtl::RefPtr<T>* dispatcher) {
+                                        fbl::RefPtr<T>* dispatcher) {
         return GetDispatcherWithRights(handle_value, desired_rights, dispatcher, nullptr);
     }
 
@@ -159,18 +159,18 @@ public:
     bool IsHandleValid(mx_handle_t handle_value);
 
     // Calls the provided
-    // |mx_status_t func(mx_handle_t, mx_rights_t, mxtl::RefPtr<Dispatcher>)|
+    // |mx_status_t func(mx_handle_t, mx_rights_t, fbl::RefPtr<Dispatcher>)|
     // on every handle owned by the process. Stops if |func| returns an error,
     // returning the error value.
     template <typename T>
     mx_status_t ForEachHandle(T func) const {
-        mxtl::AutoLock lock(&handle_table_lock_);
+        fbl::AutoLock lock(&handle_table_lock_);
         for (const auto& handle : handles_) {
             // It would be nice to only pass a const Dispatcher* to the
             // callback, but many callers will use DownCastDispatcher()
             // which requires a (necessarily non-const) RefPtr<Dispatcher>.
             mx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
-                                 mxtl::move(handle.dispatcher()));
+                                 fbl::move(handle.dispatcher()));
             if (s != MX_OK) {
                 return s;
             }
@@ -179,11 +179,11 @@ public:
     }
 
     // accessors
-    mxtl::Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
+    fbl::Mutex* handle_table_lock() TA_RET_CAP(handle_table_lock_) { return &handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
     State state() const;
-    mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
-    mxtl::RefPtr<JobDispatcher> job();
+    fbl::RefPtr<VmAspace> aspace() { return aspace_; }
+    fbl::RefPtr<JobDispatcher> job();
 
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     mx_status_t set_name(const char* name, size_t len) final;
@@ -201,16 +201,16 @@ public:
     mx_status_t GetVmos(user_ptr<mx_info_vmo_t> vmos, size_t max,
                      size_t* actual, size_t* available);
 
-    mx_status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
+    mx_status_t GetThreads(fbl::Array<mx_koid_t>* threads);
 
     // exception handling support
-    mx_status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
+    mx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool debugger, bool quietly);
-    mxtl::RefPtr<ExceptionPort> exception_port();
-    mxtl::RefPtr<ExceptionPort> debugger_exception_port();
+    fbl::RefPtr<ExceptionPort> exception_port();
+    fbl::RefPtr<ExceptionPort> debugger_exception_port();
     // |eport| can either be the process's eport or that of any parent job.
-    void OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport);
+    void OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport);
 
     // The following two methods can be slow and inaccurate and should only be
     // called from diagnostics code.
@@ -219,11 +219,11 @@ public:
 
     // Look up a process given its koid.
     // Returns nullptr if not found.
-    static mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
+    static fbl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
 
     // Look up a thread in this process given its koid.
     // Returns nullptr if not found.
-    mxtl::RefPtr<ThreadDispatcher> LookupThreadById(mx_koid_t koid);
+    fbl::RefPtr<ThreadDispatcher> LookupThreadById(mx_koid_t koid);
 
     uintptr_t get_debug_addr() const;
     mx_status_t set_debug_addr(uintptr_t addr);
@@ -264,17 +264,17 @@ private:
     friend void KillProcess(mx_koid_t id);
     friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
-    ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags);
+    ProcessDispatcher(fbl::RefPtr<JobDispatcher> job, fbl::StringPiece name, uint32_t flags);
 
     ProcessDispatcher(const ProcessDispatcher&) = delete;
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
 
 
-    mx_status_t GetDispatcherInternal(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
+    mx_status_t GetDispatcherInternal(mx_handle_t handle_value, fbl::RefPtr<Dispatcher>* dispatcher,
                                       mx_rights_t* rights);
 
     mx_status_t GetDispatcherWithRightsInternal(mx_handle_t handle_value, mx_rights_t desired_rights,
-                                                mxtl::RefPtr<Dispatcher>* dispatcher_out,
+                                                fbl::RefPtr<Dispatcher>* dispatcher_out,
                                                 mx_rights_t* out_rights);
 
     // Thread lifecycle support
@@ -287,30 +287,30 @@ private:
     // Kill all threads
     void KillAllThreadsLocked() TA_REQ(state_lock_);
 
-    mxtl::Canary<mxtl::magic("PROC")> canary_;
+    fbl::Canary<fbl::magic("PROC")> canary_;
 
     // the enclosing job
-    const mxtl::RefPtr<JobDispatcher> job_;
+    const fbl::RefPtr<JobDispatcher> job_;
 
     // Policy set by the Job during Create().
     const pol_cookie_t policy_;
 
     // The process can belong to either of these lists independently.
-    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
-    mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>> dll_job_;
+    fbl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_raw_;
+    fbl::SinglyLinkedListNodeState<fbl::RefPtr<ProcessDispatcher>> dll_job_;
 
     mx_handle_t handle_rand_ = 0;
 
     // list of threads in this process
-    using ThreadList = mxtl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;
+    using ThreadList = fbl::DoublyLinkedList<ThreadDispatcher*, ThreadDispatcher::ThreadListTraits>;
     ThreadList thread_list_ TA_GUARDED(state_lock_);
 
     // our address space
-    mxtl::RefPtr<VmAspace> aspace_;
+    fbl::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutable mxtl::Mutex handle_table_lock_; // protects |handles_|.
-    mxtl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
+    mutable fbl::Mutex handle_table_lock_; // protects |handles_|.
+    fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
     StateTracker state_tracker_;
 
@@ -318,15 +318,15 @@ private:
 
     // our state
     State state_ TA_GUARDED(state_lock_) = State::INITIAL;
-    mutable mxtl::Mutex state_lock_;
+    mutable fbl::Mutex state_lock_;
 
     // process return code
     int retcode_ = 0;
 
     // Exception ports bound to the process.
-    mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
-    mxtl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
-    mxtl::Mutex exception_lock_;
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
+    fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
+    fbl::Mutex exception_lock_;
 
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.
@@ -337,7 +337,7 @@ private:
 
     // The user-friendly process name. For debug purposes only. That
     // is, there is no mechanism to mint a handle to a process via this name.
-    mxtl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<MX_MAX_NAME_LEN> name_;
 };
 
 const char* StateToString(ProcessDispatcher::State state);

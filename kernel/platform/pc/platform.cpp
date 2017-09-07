@@ -370,7 +370,7 @@ LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM
 static efi_guid magenta_guid = MAGENTA_VENDOR_GUID;
 static char16_t crashlog_name[] = MAGENTA_CRASHLOG_EFIVAR;
 
-static mxtl::RefPtr<VmAspace> efi_aspace;
+static fbl::RefPtr<VmAspace> efi_aspace;
 
 typedef struct {
     uint64_t magic;
@@ -649,7 +649,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
     static_assert(kNumL4PageTables == 1, "Only 1 L4 page table is supported at this time.");
 
     // Identity map the first 4GiB of RAM
-    mxtl::RefPtr<VmAspace> identity_aspace =
+    fbl::RefPtr<VmAspace> identity_aspace =
             VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "x86-64 mexec 1:1");
     DEBUG_ASSERT(identity_aspace);
 

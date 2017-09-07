@@ -10,8 +10,8 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/types.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/unique_ptr.h>
 
 constexpr uint32_t kMaxMessageSize = 65536u;
 constexpr uint32_t kMaxMessageHandles = 64u;
@@ -22,17 +22,17 @@ static_assert(MX_CHANNEL_MAX_MSG_HANDLES == kMaxMessageHandles, "");
 
 class Handle;
 
-class MessagePacket : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MessagePacket>> {
+class MessagePacket : public fbl::DoublyLinkedListable<fbl::unique_ptr<MessagePacket>> {
 public:
     // Creates a message packet containing the provided data and space for
     // |num_handles| handles. The handles array is uninitialized and must
     // be completely overwritten by clients.
     static mx_status_t Create(user_ptr<const void> data, uint32_t data_size,
                               uint32_t num_handles,
-                              mxtl::unique_ptr<MessagePacket>* msg);
+                              fbl::unique_ptr<MessagePacket>* msg);
     static mx_status_t Create(const void* data, uint32_t data_size,
                               uint32_t num_handles,
-                              mxtl::unique_ptr<MessagePacket>* msg);
+                              fbl::unique_ptr<MessagePacket>* msg);
 
     uint32_t data_size() const { return data_size_; }
 
@@ -65,13 +65,13 @@ private:
     // Allocates a new packet that can hold the specified amount of
     // data/handles.
     static mx_status_t NewPacket(uint32_t data_size, uint32_t num_handles,
-                                 mxtl::unique_ptr<MessagePacket>* msg);
+                                 fbl::unique_ptr<MessagePacket>* msg);
 
     // Create() uses malloc(), so we must delete using free().
     static void operator delete(void* ptr) {
         free(ptr);
     }
-    friend class mxtl::unique_ptr<MessagePacket>;
+    friend class fbl::unique_ptr<MessagePacket>;
 
     // Handles and data are stored in the same buffer: num_handles_ Handle*
     // entries first, then the data buffer.

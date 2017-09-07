@@ -31,9 +31,9 @@ typedef enum {
 // An in-memory representation of a blob.
 typedef struct blob_info {
     char path[PATH_MAX];
-    mxtl::unique_ptr<char[]> merkle;
+    fbl::unique_ptr<char[]> merkle;
     size_t size_merkle;
-    mxtl::unique_ptr<char[]> data;
+    fbl::unique_ptr<char[]> data;
     size_t size_data;
 } blob_info_t;
 

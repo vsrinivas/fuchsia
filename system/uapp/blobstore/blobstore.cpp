@@ -16,9 +16,9 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/limits.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/limits.h>
+#include <fbl/ref_ptr.h>
 
 #define MXDEBUG 0
 
@@ -92,15 +92,15 @@ uint64_t VnodeBlob::SizeData() const {
     return 0;
 }
 
-VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs, const Digest& digest)
-    : blobstore_(mxtl::move(bs)),
+VnodeBlob::VnodeBlob(fbl::RefPtr<Blobstore> bs, const Digest& digest)
+    : blobstore_(fbl::move(bs)),
       flags_(kBlobStateEmpty) {
 
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
-VnodeBlob::VnodeBlob(mxtl::RefPtr<Blobstore> bs)
-    : blobstore_(mxtl::move(bs)),
+VnodeBlob::VnodeBlob(fbl::RefPtr<Blobstore> bs)
+    : blobstore_(fbl::move(bs)),
       flags_(kBlobStateEmpty | kBlobFlagDirectory) {}
 
 void VnodeBlob::BlobCloseHandles() {
@@ -225,7 +225,7 @@ mx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
     auto inode = blobstore_->GetNode(map_index_);
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobstoreBlockSize;
     if (GetState() == kBlobStateDataWrite) {
-        size_t to_write = mxtl::min(len, inode->blob_size - bytes_written_);
+        size_t to_write = fbl::min(len, inode->blob_size - bytes_written_);
         size_t offset = bytes_written_ + data_start;
         mx_status_t status = vmo_write_exact(blob_->GetVmo(), data, offset, to_write);
         if (status != MX_OK) {
@@ -454,7 +454,7 @@ mx_status_t Blobstore::Unmount() {
 
 mx_status_t Blobstore::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
     uint64_t bbm_start_block = (start_block - DataStartBlock(info_)) / kBlobstoreBlockBits;
-    uint64_t bbm_end_block = mxtl::roundup(start_block - DataStartBlock(info_) + nblocks,
+    uint64_t bbm_end_block = fbl::roundup(start_block - DataStartBlock(info_) + nblocks,
                                            kBlobstoreBlockBits) / kBlobstoreBlockBits;
 
     // Write back the block allocation bitmap
@@ -469,7 +469,7 @@ mx_status_t Blobstore::WriteNode(WriteTxn* txn, size_t map_index) {
     return txn->Flush();
 }
 
-mx_status_t Blobstore::NewBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
+mx_status_t Blobstore::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
     mx_status_t status;
     // If the blob already exists (or we're having trouble looking up the blob),
     // return an error.
@@ -477,8 +477,8 @@ mx_status_t Blobstore::NewBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* ou
         return (status == MX_OK) ? MX_ERR_ALREADY_EXISTS : status;
     }
 
-    mxtl::AllocChecker ac;
-    *out = mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this), digest));
+    fbl::AllocChecker ac;
+    *out = fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobstore>(this), digest));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -567,13 +567,13 @@ mx_status_t Blobstore::Readdir(void* cookie, void* dirents, size_t len) {
     return df.BytesFilled();
 }
 
-mx_status_t Blobstore::LookupBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>* out) {
+mx_status_t Blobstore::LookupBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
     // Look up blob in the fast map (is the blob open elsewhere?)
-    mxtl::RefPtr<VnodeBlob> vn = mxtl::RefPtr<VnodeBlob>(hash_.find(digest.AcquireBytes()).CopyPointer());
+    fbl::RefPtr<VnodeBlob> vn = fbl::RefPtr<VnodeBlob>(hash_.find(digest.AcquireBytes()).CopyPointer());
     digest.ReleaseBytes();
     if (vn != nullptr) {
         if (out != nullptr) {
-            *out = mxtl::move(vn);
+            *out = fbl::move(vn);
         }
         return MX_OK;
     }
@@ -584,9 +584,9 @@ mx_status_t Blobstore::LookupBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>*
             if (digest == GetNode(i)->merkle_root_hash) {
                 if (out != nullptr) {
                     // Found it. Attempt to wrap the blob in a vnode.
-                    mxtl::AllocChecker ac;
-                    mxtl::RefPtr<VnodeBlob> vn =
-                        mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this), digest));
+                    fbl::AllocChecker ac;
+                    fbl::RefPtr<VnodeBlob> vn =
+                        fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobstore>(this), digest));
                     if (!ac.check()) {
                         return MX_ERR_NO_MEMORY;
                     }
@@ -594,7 +594,7 @@ mx_status_t Blobstore::LookupBlob(const Digest& digest, mxtl::RefPtr<VnodeBlob>*
                     vn->SetMapIndex(i);
                     // Delay reading any data from disk until read.
                     hash_.insert(vn.get());
-                    *out = mxtl::move(vn);
+                    *out = fbl::move(vn);
                 }
                 return MX_OK;
             }
@@ -634,10 +634,10 @@ mx_status_t Blobstore::AddInodes() {
     const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size / kBlobstoreInodeSize);
     uint64_t inodes64 = (info_.ino_slices + static_cast<uint32_t>(request.length))
                         * kInodesPerSlice;
-    MX_DEBUG_ASSERT(inodes64 <= mxtl::numeric_limits<uint32_t>::max());
+    MX_DEBUG_ASSERT(inodes64 <= fbl::numeric_limits<uint32_t>::max());
     uint32_t inodes = static_cast<uint32_t>(inodes64);
     uint32_t inoblks = (inodes + kBlobstoreInodesPerBlock - 1) / kBlobstoreInodesPerBlock;
-    MX_DEBUG_ASSERT(info_.inode_count <= mxtl::numeric_limits<uint32_t>::max());
+    MX_DEBUG_ASSERT(info_.inode_count <= fbl::numeric_limits<uint32_t>::max());
     uint32_t inoblks_old = (static_cast<uint32_t>(info_.inode_count) + kBlobstoreInodesPerBlock - 1)
                            / kBlobstoreInodesPerBlock;
     MX_DEBUG_ASSERT(inoblks_old <= inoblks);
@@ -674,7 +674,7 @@ mx_status_t Blobstore::AddBlocks(size_t nblocks) {
     request.offset = (kFVMDataStart / kBlocksPerSlice) + info_.dat_slices;
 
     uint64_t blocks64 = (info_.dat_slices + request.length) * kBlocksPerSlice;
-    MX_DEBUG_ASSERT(blocks64 <= mxtl::numeric_limits<uint32_t>::max());
+    MX_DEBUG_ASSERT(blocks64 <= fbl::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     uint32_t abmblks = (blocks + kBlobstoreBlockBits - 1) / kBlobstoreBlockBits;
     uint64_t abmblks_old = (info_.block_count + kBlobstoreBlockBits - 1) / kBlobstoreBlockBits;
@@ -692,7 +692,7 @@ mx_status_t Blobstore::AddBlocks(size_t nblocks) {
     }
 
     // Grow the block bitmap to hold new number of blocks
-    if (block_map_.Grow(mxtl::roundup(blocks, kBlobstoreBlockBits)) != MX_OK) {
+    if (block_map_.Grow(fbl::roundup(blocks, kBlobstoreBlockBits)) != MX_OK) {
         return MX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -728,15 +728,15 @@ Blobstore::~Blobstore() {
     }
 }
 
-mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr<Blobstore>* out) {
+mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, fbl::RefPtr<Blobstore>* out) {
     mx_status_t status = blobstore_check_info(info, TotalBlocks(*info));
     if (status < 0) {
         fprintf(stderr, "blobstore: Check info failure\n");
         return status;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<Blobstore> fs = mxtl::AdoptRef(new (&ac) Blobstore(fd, info));
+    fbl::AllocChecker ac;
+    fbl::RefPtr<Blobstore> fs = fbl::AdoptRef(new (&ac) Blobstore(fd, info));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -764,7 +764,7 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
     }
 
     size_t nodemap_size = kBlobstoreInodeSize * fs->info_.inode_count;
-    MX_DEBUG_ASSERT(mxtl::roundup(nodemap_size, kBlobstoreBlockSize) == nodemap_size);
+    MX_DEBUG_ASSERT(fbl::roundup(nodemap_size, kBlobstoreBlockSize) == nodemap_size);
     MX_DEBUG_ASSERT(nodemap_size / kBlobstoreBlockSize == NodeMapBlocks(fs->info_));
     if ((status = MappedVmo::Create(nodemap_size, "nodemap", &fs->node_map_)) != MX_OK) {
         return status;
@@ -791,16 +791,16 @@ mx_status_t Blobstore::Create(int fd, const blobstore_info_t* info, mxtl::RefPtr
     return MX_OK;
 }
 
-mx_status_t Blobstore::GetRootBlob(mxtl::RefPtr<VnodeBlob>* out) {
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VnodeBlob> vn =
-        mxtl::AdoptRef(new (&ac) VnodeBlob(mxtl::RefPtr<Blobstore>(this)));
+mx_status_t Blobstore::GetRootBlob(fbl::RefPtr<VnodeBlob>* out) {
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VnodeBlob> vn =
+        fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobstore>(this)));
 
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
 
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
 
     return MX_OK;
 }
@@ -812,7 +812,7 @@ mx_status_t Blobstore::LoadBitmaps() {
     return txn.Flush();
 }
 
-mx_status_t blobstore_create(mxtl::RefPtr<Blobstore>* out, int blockfd) {
+mx_status_t blobstore_create(fbl::RefPtr<Blobstore>* out, int blockfd) {
     mx_status_t status;
 
     char block[kBlobstoreBlockSize];
@@ -840,9 +840,9 @@ mx_status_t blobstore_create(mxtl::RefPtr<Blobstore>* out, int blockfd) {
     return MX_OK;
 }
 
-mx_status_t blobstore_mount(mxtl::RefPtr<VnodeBlob>* out, int blockfd) {
+mx_status_t blobstore_mount(fbl::RefPtr<VnodeBlob>* out, int blockfd) {
     mx_status_t status;
-    mxtl::RefPtr<Blobstore> fs;
+    fbl::RefPtr<Blobstore> fs;
 
     if ((status = blobstore_create(&fs, blockfd)) != MX_OK) {
         return status;

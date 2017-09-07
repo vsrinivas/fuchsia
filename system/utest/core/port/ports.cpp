@@ -7,7 +7,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 #include <unittest/unittest.h>
 
@@ -373,7 +373,7 @@ static bool cancel_event(uint32_t wait_mode) {
     // Notice repeated key below.
     const uint64_t keys[] = {128u, 13u, 7u, 13u};
 
-    for (uint32_t ix = 0; ix != mxtl::count_of(keys); ++ix) {
+    for (uint32_t ix = 0; ix != fbl::count_of(keys); ++ix) {
         EXPECT_EQ(mx_object_wait_async(
             ev, port, keys[ix], MX_EVENT_SIGNALED, wait_mode), MX_OK);
     }
@@ -432,7 +432,7 @@ static bool cancel_event_after(uint32_t wait_mode) {
     mx_handle_t ev[3];
     const uint64_t keys[] = {128u, 3u, 3u};
 
-    for (uint32_t ix = 0; ix != mxtl::count_of(keys); ++ix) {
+    for (uint32_t ix = 0; ix != fbl::count_of(keys); ++ix) {
 
         EXPECT_EQ(mx_event_create(0u, &ev[ix]), MX_OK);
         EXPECT_EQ(mx_object_wait_async(
@@ -509,7 +509,7 @@ static bool threads_event(uint32_t wait_mode) {
 
     thrd_t threads[3];
     test_context ctx[3];
-    for (size_t ix = 0; ix != mxtl::count_of(threads); ++ix) {
+    for (size_t ix = 0; ix != fbl::count_of(threads); ++ix) {
         // |count| is one so each thread is going to pick one packet each
         // and exit. See bug MG-648 for the case this is testing.
         ctx[ix] = { port, 1u };
@@ -522,7 +522,7 @@ static bool threads_event(uint32_t wait_mode) {
 
     EXPECT_EQ(mx_object_signal(ev, 0u, MX_EVENT_SIGNALED), MX_OK);
 
-    for (size_t ix = 0; ix != mxtl::count_of(threads); ++ix) {
+    for (size_t ix = 0; ix != fbl::count_of(threads); ++ix) {
         int res;
         EXPECT_EQ(thrd_join(threads[ix], &res), thrd_success);
         EXPECT_EQ(res, 0);
@@ -556,7 +556,7 @@ static int signaler_thread(void* arg) {
         auto st = mx_object_signal(ev, 0u, MX_EVENT_SIGNALED);
         if (st != MX_OK)
             return 1;
-        auto duration = kSleeps[count % mxtl::count_of(kSleeps)];
+        auto duration = kSleeps[count % fbl::count_of(kSleeps)];
         if (duration > 0)
             mx_nanosleep(mx_deadline_after(duration));
         st = mx_object_signal(ev, MX_EVENT_SIGNALED, 0u);

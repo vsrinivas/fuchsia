@@ -10,10 +10,10 @@
 
 #include <magenta/process.h>
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/array.h>
-#include <mxtl/macros.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/array.h>
+#include <fbl/macros.h>
 
 #if !defined _KERNEL && defined __Fuchsia__
 #include <mx/vmo.h>
@@ -28,7 +28,7 @@ public:
     DefaultStorage() = default;
 
     mx_status_t Allocate(size_t size) {
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         auto arr = new (&ac) uint8_t[size];
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;
@@ -39,7 +39,7 @@ public:
     void* GetData() { return storage_.get(); }
     const void* GetData() const { return storage_.get(); }
 private:
-    mxtl::Array<uint8_t> storage_;
+    fbl::Array<uint8_t> storage_;
 };
 
 template <size_t N>
@@ -73,7 +73,7 @@ public:
 
     mx_status_t Allocate(size_t size) {
         Release();
-        size_ = mxtl::roundup(size, static_cast<size_t>(PAGE_SIZE));
+        size_ = fbl::roundup(size, static_cast<size_t>(PAGE_SIZE));
         mx_status_t status;
         if ((status = mx::vmo::create(size_, 0, &vmo_)) != MX_OK) {
             return status;
@@ -91,7 +91,7 @@ public:
             return MX_OK;
         }
 
-        size = mxtl::roundup(size, static_cast<size_t>(PAGE_SIZE));
+        size = fbl::roundup(size, static_cast<size_t>(PAGE_SIZE));
         mx_status_t status;
         if ((status = vmo_.set_size(size)) != MX_OK) {
             return status;

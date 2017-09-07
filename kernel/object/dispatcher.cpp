@@ -8,12 +8,12 @@
 
 #include <arch/ops.h>
 #include <lib/ktrace.h>
-#include <mxtl/atomic.h>
+#include <fbl/atomic.h>
 #include <object/state_tracker.h>
 
 namespace {
 // The first 1K koids are reserved.
-mxtl::atomic<mx_koid_t> global_koid(1024ULL);
+fbl::atomic<mx_koid_t> global_koid(1024ULL);
 
 mx_koid_t GenerateKernelObjectId() {
     return global_koid.fetch_add(1ULL);

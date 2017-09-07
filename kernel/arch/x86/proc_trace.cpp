@@ -31,15 +31,15 @@
 #include <magenta/ktrace.h>
 #include <magenta/mtrace.h>
 #include <magenta/thread_annotations.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/macros.h>
-#include <mxtl/mutex.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/auto_lock.h>
+#include <fbl/macros.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -86,7 +86,7 @@ struct ipt_cpu_state_t {
     } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
 };
 
-static mxtl::Mutex ipt_lock;
+static fbl::Mutex ipt_lock;
 
 static ipt_cpu_state_t* ipt_cpu_state TA_GUARDED(ipt_lock);
 

@@ -19,7 +19,7 @@ LOCAL_STATIC_LIBS := \
     system/ulib/hid \
     system/ulib/port \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 LOCAL_LIBS := \
     system/ulib/mxio \

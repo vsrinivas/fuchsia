@@ -12,7 +12,7 @@
 
 #ifdef __cplusplus
 
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 namespace trace {
 
@@ -30,8 +30,8 @@ inline constexpr size_t WordsToBytes(size_t num_words) {
 
 // Casts an enum's value to its underlying type.
 template <typename T>
-inline constexpr typename mxtl::underlying_type<T>::type ToUnderlyingType(T value) {
-    return static_cast<typename mxtl::underlying_type<T>::type>(value);
+inline constexpr typename fbl::underlying_type<T>::type ToUnderlyingType(T value) {
+    return static_cast<typename fbl::underlying_type<T>::type>(value);
 }
 
 // Describes the layout of a bit-field packed into a 64-bit word.

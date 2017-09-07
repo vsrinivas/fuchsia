@@ -11,8 +11,8 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
@@ -52,7 +52,7 @@ extern "C" mx_status_t virtio_bind(void* ctx, mx_device_t* device, void** cookie
     LTRACEF("0x%x:0x%x\n", config->vendor_id, config->device_id);
 
     // TODO: Make symbols for these constants and reuse in the BIND protocol.
-    mxtl::unique_ptr<virtio::Device> vd = nullptr;
+    fbl::unique_ptr<virtio::Device> vd = nullptr;
     switch (config->device_id) {
     case 0x1000:
         LTRACEF("found net device\n");

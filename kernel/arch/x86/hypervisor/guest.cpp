@@ -32,13 +32,13 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, uint32_t msr) {
 }
 
 // static
-mx_status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<Guest> guest(new (&ac) Guest);
+mx_status_t Guest::Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Guest> guest(new (&ac) Guest);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    mx_status_t status = GuestPhysicalAddressSpace::Create(mxtl::move(physmem), &guest->gpas_);
+    mx_status_t status = GuestPhysicalAddressSpace::Create(fbl::move(physmem), &guest->gpas_);
     if (status != MX_OK)
         return status;
 
@@ -75,7 +75,7 @@ mx_status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest
     ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
     ignore_msr(&guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
 
-    *out = mxtl::move(guest);
+    *out = fbl::move(guest);
     return MX_OK;
 }
 
@@ -85,7 +85,7 @@ Guest::~Guest() {
 }
 
 mx_status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                           mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
+                           fbl::RefPtr<PortDispatcher> port, uint64_t key) {
     if (len == 0)
         return MX_ERR_INVALID_ARGS;
     if (SIZE_MAX - len < addr)
@@ -98,21 +98,21 @@ mx_status_t Guest::SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
     case MX_GUEST_TRAP_IO:
         if (addr + len > UINT16_MAX)
             return MX_ERR_OUT_OF_RANGE;
-        return mux_.AddPortRange(addr, len, mxtl::move(port), key);
+        return mux_.AddPortRange(addr, len, fbl::move(port), key);
     default:
         return MX_ERR_INVALID_ARGS;
     }
 }
 
-mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* guest) {
+mx_status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest) {
     // Check that the CPU supports VMX.
     if (!x86_feature_test(X86_FEATURE_VMX))
         return MX_ERR_NOT_SUPPORTED;
 
-    return Guest::Create(mxtl::move(physmem), guest);
+    return Guest::Create(fbl::move(physmem), guest);
 }
 
 mx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                                mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
+                                fbl::RefPtr<PortDispatcher> port, uint64_t key) {
     return guest->SetTrap(kind, addr, len, port, key);
 }

@@ -12,19 +12,19 @@
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
 #include <magenta/thread_annotations.h>
-#include <mxtl/array.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/array.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <stdint.h>
 #include <vm/vm_object.h>
 
 // VMO representing a physical range of memory
 class VmObjectPhysical final : public VmObject {
 public:
-    static status_t Create(paddr_t base, uint64_t size, mxtl::RefPtr<VmObject>* vmo);
+    static status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     uint64_t size() const override
         // TODO: Figure out whether it's safe to lock here without causing
@@ -48,7 +48,7 @@ private:
 
     // private destructor, only called from refptr
     ~VmObjectPhysical() override;
-    friend mxtl::RefPtr<VmObjectPhysical>;
+    friend fbl::RefPtr<VmObjectPhysical>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPhysical);
 

@@ -29,9 +29,9 @@
 
 #include <magenta/syscalls/log.h>
 #include <magenta/syscalls/policy.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/atomic.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/atomic.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -54,7 +54,7 @@ mx_status_t sys_nanosleep(mx_time_t deadline) {
 }
 
 // This must be accessed atomically from any given thread.
-static mxtl::atomic<int64_t> utc_offset;
+static fbl::atomic<int64_t> utc_offset;
 
 uint64_t sys_time_get(uint32_t clock_id) {
     switch (clock_id) {
@@ -99,21 +99,21 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     if (res != MX_OK)
         return res;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
     mx_status_t result = EventDispatcher::Create(options, &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -129,17 +129,17 @@ mx_status_t sys_eventpair_create(uint32_t options,
     if (res != MX_OK)
         return res;
 
-    mxtl::RefPtr<Dispatcher> epd0, epd1;
+    fbl::RefPtr<Dispatcher> epd0, epd1;
     mx_rights_t rights;
     mx_status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
     if (result != MX_OK)
         return result;
 
-    HandleOwner h0(MakeHandle(mxtl::move(epd0), rights));
+    HandleOwner h0(MakeHandle(fbl::move(epd0), rights));
     if (!h0)
         return MX_ERR_NO_MEMORY;
 
-    HandleOwner h1(MakeHandle(mxtl::move(epd1), rights));
+    HandleOwner h1(MakeHandle(fbl::move(epd1), rights));
     if (!h1)
         return MX_ERR_NO_MEMORY;
 
@@ -149,8 +149,8 @@ mx_status_t sys_eventpair_create(uint32_t options,
     if (_out1.copy_to_user(up->MapHandleToValue(h1)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(h0));
-    up->AddHandle(mxtl::move(h1));
+    up->AddHandle(fbl::move(h0));
+    up->AddHandle(fbl::move(h1));
 
     return MX_OK;
 }
@@ -159,7 +159,7 @@ mx_status_t sys_log_create(uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("options 0x%x\n", options);
 
     // create a Log dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t result = LogDispatcher::Create(options, &dispatcher, &rights);
     if (result != MX_OK)
@@ -172,7 +172,7 @@ mx_status_t sys_log_create(uint32_t options, user_ptr<mx_handle_t> out) {
     }
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -181,7 +181,7 @@ mx_status_t sys_log_create(uint32_t options, user_ptr<mx_handle_t> out) {
     if (out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
 
     return MX_OK;
 }
@@ -206,7 +206,7 @@ mx_status_t sys_debuglog_write(mx_handle_t log_handle, uint32_t options, user_pt
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<LogDispatcher> log;
+    fbl::RefPtr<LogDispatcher> log;
     mx_status_t status = up->GetDispatcherWithRights(log_handle, MX_RIGHT_WRITE, &log);
     if (status != MX_OK)
         return status;
@@ -226,7 +226,7 @@ mx_status_t sys_debuglog_read(mx_handle_t log_handle, uint32_t options, user_ptr
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<LogDispatcher> log;
+    fbl::RefPtr<LogDispatcher> log;
     mx_status_t status = up->GetDispatcherWithRights(log_handle, MX_RIGHT_READ, &log);
     if (status != MX_OK)
         return status;

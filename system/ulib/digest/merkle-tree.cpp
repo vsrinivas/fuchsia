@@ -10,9 +10,9 @@
 #include <digest/digest.h>
 #include <magenta/assert.h>
 #include <magenta/errors.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
 namespace digest {
 
@@ -44,7 +44,7 @@ void DigestInit(Digest* digest, uint64_t locality, size_t length) {
     digest->Init();
     digest->Update(&locality, sizeof(locality));
     uint32_t len32 =
-        static_cast<uint32_t>(mxtl::min(length, MerkleTree::kNodeSize));
+        static_cast<uint32_t>(fbl::min(length, MerkleTree::kNodeSize));
     digest->Update(&len32, sizeof(len32));
 }
 
@@ -55,7 +55,7 @@ size_t DigestUpdate(Digest* digest, const uint8_t* in, size_t offset,
                     size_t length) {
     MX_DEBUG_ASSERT(digest);
     // Check if length crosses a node boundary
-    length = mxtl::min(length, MerkleTree::kNodeSize -
+    length = fbl::min(length, MerkleTree::kNodeSize -
                                    (offset % MerkleTree::kNodeSize));
     digest->Update(in, length);
     return length;
@@ -81,7 +81,7 @@ void DigestFinal(Digest* digest, size_t offset) {
 // next level up.
 size_t NextLength(size_t length) {
     if (length > MerkleTree::kNodeSize) {
-        return mxtl::roundup(length, MerkleTree::kNodeSize) / kDigestsPerNode;
+        return fbl::roundup(length, MerkleTree::kNodeSize) / kDigestsPerNode;
     } else {
         return 0;
     }
@@ -90,7 +90,7 @@ size_t NextLength(size_t length) {
 // Helper function to transform a length in the current level to a node-aligned
 // length in the next level up.
 size_t NextAligned(size_t length) {
-    return mxtl::roundup(NextLength(length), MerkleTree::kNodeSize);
+    return fbl::roundup(NextLength(length), MerkleTree::kNodeSize);
 }
 
 } // namespace
@@ -128,7 +128,7 @@ mx_status_t MerkleTree::CreateInit(size_t data_len, size_t tree_len) {
     if (data_len <= kNodeSize) {
         return MX_OK;
     }
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     next_.reset(new (&ac) MerkleTree());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -299,8 +299,8 @@ mx_status_t MerkleTree::VerifyLevel(const void* data, size_t data_len,
     }
     // Align parameters to node boundaries, but don't exceed data_len
     offset -= offset % kNodeSize;
-    size_t finish = mxtl::roundup(offset + length, kNodeSize);
-    length = mxtl::min(finish, data_len) - offset;
+    size_t finish = fbl::roundup(offset + length, kNodeSize);
+    length = fbl::min(finish, data_len) - offset;
     const uint8_t* in = static_cast<const uint8_t*>(data) + offset;
     // The digests are in the next level up.
     Digest actual;
@@ -347,8 +347,8 @@ mx_status_t merkle_tree_create_init(size_t data_len, size_t tree_len,
     }
     // Allocate the wrapper object using a unique_ptr.  That way, if we hit an
     // error we'll clean up automatically.
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<merkle_tree_t> mt_uniq(new (&ac) merkle_tree_t());
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<merkle_tree_t> mt_uniq(new (&ac) merkle_tree_t());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -383,7 +383,7 @@ mx_status_t merkle_tree_create_final(merkle_tree_t* mt, void* tree, void* out,
     }
     // Take possession of the wrapper object. That way, we'll clean up
     // automatically.
-    mxtl::unique_ptr<merkle_tree_t> mt_uniq(mt);
+    fbl::unique_ptr<merkle_tree_t> mt_uniq(mt);
     // Call the C++ function.
     mx_status_t rc;
     Digest digest;

@@ -8,7 +8,7 @@
 
 #include <mx/eventpair.h>
 #include <mx/vmo.h>
-#include <mxtl/macros.h>
+#include <fbl/macros.h>
 
 namespace trace {
 namespace internal {

@@ -6,7 +6,7 @@
 
 #include <magenta/assert.h>
 
-#include <mxtl/atomic.h>
+#include <fbl/atomic.h>
 
 #include <trace-engine/context.h>
 #include <trace-engine/handler.h>
@@ -25,13 +25,13 @@ struct trace_context {
     trace_handler_t* handler() const { return handler_; }
 
     bool is_buffer_full() const {
-        return buffer_full_mark_.load(mxtl::memory_order_relaxed) != 0u;
+        return buffer_full_mark_.load(fbl::memory_order_relaxed) != 0u;
     }
 
     size_t bytes_allocated() const {
-        uintptr_t tail = buffer_full_mark_.load(mxtl::memory_order_relaxed);
+        uintptr_t tail = buffer_full_mark_.load(fbl::memory_order_relaxed);
         if (!tail)
-            tail = buffer_current_.load(mxtl::memory_order_relaxed);
+            tail = buffer_current_.load(fbl::memory_order_relaxed);
         return reinterpret_cast<uint8_t*>(tail) - buffer_start_;
     }
 
@@ -51,20 +51,20 @@ private:
     // Current allocation pointer.
     // Starts at |buffer_start| and grows from there.
     // May exceed |buffer_end| when the buffer is full.
-    mxtl::atomic<uintptr_t> buffer_current_;
+    fbl::atomic<uintptr_t> buffer_current_;
 
     // Pointer beyond the last successful allocation, or null if not full.
     // Only ever set to non-null once in the lifetime of the trace context.
-    mxtl::atomic<uintptr_t> buffer_full_mark_;
+    fbl::atomic<uintptr_t> buffer_full_mark_;
 
     // Handler associated with the trace session.
     trace_handler_t* const handler_;
 
     // The next thread index to be assigned.
-    mxtl::atomic<trace_thread_index_t> next_thread_index_{
+    fbl::atomic<trace_thread_index_t> next_thread_index_{
         TRACE_ENCODED_THREAD_REF_MIN_INDEX};
 
     // The next string table index to be assigned.
-    mxtl::atomic<trace_string_index_t> next_string_index_{
+    fbl::atomic<trace_string_index_t> next_string_index_{
         TRACE_ENCODED_STRING_REF_MIN_INDEX};
 };

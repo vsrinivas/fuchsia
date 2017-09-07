@@ -15,8 +15,8 @@ bool test_mapped_vmo() {
     size_t min_size = 256 * (1 << 10);
     size_t max_size = 1 << 20;
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[max_size]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[max_size]);
     ASSERT_TRUE(ac.check());
 
     unsigned seed = static_cast<unsigned>(mx_ticks_get());
@@ -26,7 +26,7 @@ bool test_mapped_vmo() {
     }
 
     // Create MappedVmo
-    mxtl::unique_ptr<MappedVmo> mvmo;
+    fbl::unique_ptr<MappedVmo> mvmo;
     ASSERT_EQ(MappedVmo::Create(init_size, "test-vmo", &mvmo), MX_OK);
 
     // Verify size & data

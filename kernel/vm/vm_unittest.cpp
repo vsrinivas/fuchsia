@@ -7,8 +7,8 @@
 #include <assert.h>
 #include <err.h>
 #include <kernel/vm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/array.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <unittest.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -195,7 +195,7 @@ static bool multiple_regions_test(void* context) {
     void* ptr;
     static const size_t alloc_size = 16 * 1024;
 
-    mxtl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+    fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
     EXPECT_NE(nullptr, aspace, "VmAspace::Create pointer");
 
     vmm_aspace_t* old_aspace = get_current_thread()->aspace;
@@ -317,7 +317,7 @@ static bool dump_all_aspaces(void* context) {
 // Creates a vm object.
 static bool vmo_create_test(void* context) {
     BEGIN_TEST;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE, &vmo);
     EXPECT_EQ(status, MX_OK, "");
     EXPECT_TRUE(vmo, "");
@@ -328,7 +328,7 @@ static bool vmo_create_test(void* context) {
 static bool vmo_commit_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -346,7 +346,7 @@ static bool vmo_pin_test(void* context) {
     BEGIN_TEST;
 
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -410,7 +410,7 @@ static bool vmo_multiple_pin_test(void* context) {
     BEGIN_TEST;
 
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -458,7 +458,7 @@ static bool vmo_multiple_pin_test(void* context) {
 static bool vmo_odd_size_commit_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = 15;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -475,7 +475,7 @@ static bool vmo_odd_size_commit_test(void* context) {
 static bool vmo_contiguous_commit_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -492,7 +492,7 @@ static bool vmo_contiguous_commit_test(void* context) {
 static bool vmo_precommitted_map_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -516,7 +516,7 @@ static bool vmo_precommitted_map_test(void* context) {
 static bool vmo_demand_paged_map_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -540,14 +540,14 @@ static bool vmo_demand_paged_map_test(void* context) {
 static bool vmo_dropped_ref_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     auto ka = VmAspace::kernel_aspace();
     void* ptr;
-    auto ret = ka->MapObjectInternal(mxtl::move(vmo), "test", 0, alloc_size, &ptr,
+    auto ret = ka->MapObjectInternal(fbl::move(vmo), "test", 0, alloc_size, &ptr,
                                      0, VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
     EXPECT_EQ(ret, MX_OK, "mapping object");
 
@@ -567,7 +567,7 @@ static bool vmo_dropped_ref_test(void* context) {
 static bool vmo_remap_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -604,7 +604,7 @@ static bool vmo_remap_test(void* context) {
 static bool vmo_double_remap_test(void* context) {
     BEGIN_TEST;
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
@@ -660,14 +660,14 @@ static bool vmo_read_write_smoke_test(void* context) {
     static const size_t alloc_size = PAGE_SIZE * 16;
 
     // create object
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(0, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");
 
     // create test buffer
-    mxtl::AllocChecker ac;
-    mxtl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
+    fbl::AllocChecker ac;
+    fbl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
     EXPECT_TRUE(ac.check(), "");
     fill_region(99, a.get(), alloc_size);
 
@@ -732,7 +732,7 @@ static bool vmo_read_write_smoke_test(void* context) {
     ka->FreeRegion((vaddr_t)ptr);
 
     // test that we can read from it
-    mxtl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
+    fbl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
     EXPECT_TRUE(ac.check(), "can't allocate buffer");
 
     size_t bytes_read = -1;
@@ -767,7 +767,7 @@ static bool vmo_cache_test(void* context) {
     EXPECT_TRUE(vm_page, "");
     // Test that the flags set/get properly
     {
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         EXPECT_EQ(status, MX_OK, "vmobject creation\n");
         EXPECT_TRUE(vmo, "vmobject creation\n");
@@ -780,7 +780,7 @@ static bool vmo_cache_test(void* context) {
 
     // Test valid flags
     for (uint32_t i = 0; i <= ARCH_MMU_FLAG_CACHE_MASK; i++) {
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         EXPECT_EQ(status, MX_OK, "vmobject creation\n");
         EXPECT_TRUE(vmo, "vmobject creation\n");
@@ -789,7 +789,7 @@ static bool vmo_cache_test(void* context) {
 
     // Test invalid flags
     for (uint32_t i = ARCH_MMU_FLAG_CACHE_MASK + 1; i < 32; i++) {
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         EXPECT_EQ(status, MX_OK, "vmobject creation\n");
         EXPECT_TRUE(vmo, "vmobject creation\n");
@@ -798,7 +798,7 @@ static bool vmo_cache_test(void* context) {
 
     // Test valid flags with invalid flags
     {
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         EXPECT_EQ(status, MX_OK, "vmobject creation\n");
         EXPECT_TRUE(vmo, "vmobject creation\n");
@@ -810,7 +810,7 @@ static bool vmo_cache_test(void* context) {
 
     // Test that changing policy while mapped is blocked
     {
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
         EXPECT_EQ(status, MX_OK, "vmobject creation\n");
         EXPECT_TRUE(vmo, "vmobject creation\n");
@@ -835,7 +835,7 @@ static bool vmo_lookup_test(void* context) {
     BEGIN_TEST;
 
     static const size_t alloc_size = PAGE_SIZE * 16;
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, alloc_size, &vmo);
     REQUIRE_EQ(status, MX_OK, "vmobject creation\n");
     REQUIRE_TRUE(vmo, "vmobject creation\n");

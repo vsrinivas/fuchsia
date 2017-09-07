@@ -12,8 +12,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
 
 namespace {
 
@@ -49,13 +49,13 @@ void do_test(uint32_t duration, const TestArgs& test_args) {
     assert(mx_event_create(0u, &event) == MX_OK);
 
     // Storage space for our messages' stuff.
-    mxtl::unique_ptr<uint8_t[]> data;
+    fbl::unique_ptr<uint8_t[]> data;
     if (test_args.size) {
         data.reset(new uint8_t[test_args.size]);
         for (uint32_t i = 0; i < test_args.size; i++)
             data[i] = static_cast<uint8_t>(i);
     }
-    mxtl::unique_ptr<mx_handle_t[]> handles;
+    fbl::unique_ptr<mx_handle_t[]> handles;
     if (test_args.handles)
         handles.reset(new mx_handle_t[test_args.handles]);
 
@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
                 {100, 0, 1},
                 {1000, 0, 1},
             };
-            for (size_t i = 0; i < mxtl::count_of(suite); i++)
+            for (size_t i = 0; i < fbl::count_of(suite); i++)
                 do_test(duration, suite[i]);
         } else {
             do_test(duration, test_args);

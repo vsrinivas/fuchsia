@@ -12,8 +12,8 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -115,8 +115,8 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
         fd = open(filename, O_RDWR, 0644);
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> readbuf(new (&ac) uint8_t[new_len]);
     ASSERT_TRUE(ac.check());
     if (new_len > old_len) { // Expanded the file
         // Verify that the file is unchanged up to old_len
@@ -155,8 +155,8 @@ bool test_truncate_large(void) {
     }
 
     // Fill a test buffer with data
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[BufSize]);
     ASSERT_TRUE(ac.check());
 
     unsigned seed = static_cast<unsigned>(mx_ticks_get());

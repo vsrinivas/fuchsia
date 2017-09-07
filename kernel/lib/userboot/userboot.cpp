@@ -69,10 +69,10 @@ public:
         return RoDso::size() + vdso_->size();
     }
 
-    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> root_vmar,
+    mx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> root_vmar,
                     uintptr_t* vdso_base, uintptr_t* entry) {
         // Create a VMAR (placed anywhere) to hold the combined image.
-        mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+        fbl::RefPtr<VmAddressRegionDispatcher> vmar;
         mx_rights_t vmar_rights;
         mx_status_t status = root_vmar->Allocate(0, size(),
                                                  MX_VM_FLAG_CAN_MAP_READ |
@@ -90,7 +90,7 @@ public:
 
             // Map the vDSO right after it.
             *vdso_base = vmar->vmar()->base() + RoDso::size();
-            status = vdso_->Map(mxtl::move(vmar), RoDso::size());
+            status = vdso_->Map(fbl::move(vmar), RoDso::size());
         }
         return status;
     }
@@ -103,71 +103,71 @@ private:
 
 
 // Get a handle to a VM object, with full rights except perhaps for writing.
-static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
-                                  mxtl::RefPtr<VmObjectDispatcher>* disp_ptr,
+static mx_status_t get_vmo_handle(fbl::RefPtr<VmObject> vmo, bool readonly,
+                                  fbl::RefPtr<VmObjectDispatcher>* disp_ptr,
                                   Handle** ptr) {
     if (!vmo)
         return MX_ERR_NO_MEMORY;
     mx_rights_t rights;
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = VmObjectDispatcher::Create(
-        mxtl::move(vmo), &dispatcher, &rights);
+        fbl::move(vmo), &dispatcher, &rights);
     if (result == MX_OK) {
         if (disp_ptr)
-            *disp_ptr = mxtl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
+            *disp_ptr = fbl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
         if (ptr)
-            *ptr = MakeHandle(mxtl::move(dispatcher), rights);
+            *ptr = MakeHandle(fbl::move(dispatcher), rights);
     }
     return result;
 }
 
 static mx_status_t get_job_handle(Handle** ptr) {
     mx_rights_t rights;
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_status_t result = JobDispatcher::Create(
         0u, GetRootJobDispatcher(), &dispatcher, &rights);
     if (result == MX_OK)
-        *ptr = MakeHandle(mxtl::move(dispatcher), rights);
+        *ptr = MakeHandle(fbl::move(dispatcher), rights);
     return result;
 }
 
 static mx_status_t get_resource_handle(Handle** ptr) {
     mx_rights_t rights;
-    mxtl::RefPtr<ResourceDispatcher> root;
+    fbl::RefPtr<ResourceDispatcher> root;
     mx_status_t result = ResourceDispatcher::Create(&root, &rights, MX_RSRC_KIND_ROOT, 0, 0);
     if (result == MX_OK)
-        *ptr = MakeHandle(mxtl::RefPtr<Dispatcher>(root.get()), rights);
+        *ptr = MakeHandle(fbl::RefPtr<Dispatcher>(root.get()), rights);
     return result;
 }
 
 // Create a channel and write the bootstrap message down one side of
 // it, returning the handle to the other side.
 static mx_status_t make_bootstrap_channel(
-    mxtl::RefPtr<ProcessDispatcher> process,
-    mxtl::unique_ptr<MessagePacket> msg,
+    fbl::RefPtr<ProcessDispatcher> process,
+    fbl::unique_ptr<MessagePacket> msg,
     mx_handle_t* out) {
     HandleOwner user_channel_handle;
-    mxtl::RefPtr<ChannelDispatcher> kernel_channel;
+    fbl::RefPtr<ChannelDispatcher> kernel_channel;
     *out = MX_HANDLE_INVALID;
     {
-        mxtl::RefPtr<Dispatcher> mpd0, mpd1;
+        fbl::RefPtr<Dispatcher> mpd0, mpd1;
         mx_rights_t rights;
         mx_status_t status = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
         if (status != MX_OK)
             return status;
-        user_channel_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
+        user_channel_handle.reset(MakeHandle(fbl::move(mpd0), rights));
         kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
     }
 
     // Here it goes!
-    mx_status_t status = kernel_channel->Write(mxtl::move(msg));
+    mx_status_t status = kernel_channel->Write(fbl::move(msg));
     if (status != MX_OK)
         return status;
 
     mx_handle_t hv = process->MapHandleToValue(user_channel_handle);
-    process->AddHandle(mxtl::move(user_channel_handle));
+    process->AddHandle(fbl::move(user_channel_handle));
 
     *out = hv;
     return MX_OK;
@@ -196,7 +196,7 @@ struct bootstrap_message {
     char cmdline[CMDLINE_MAX];
 };
 
-static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
+static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     const uint32_t data_size =
         static_cast<uint32_t>(offsetof(struct bootstrap_message, cmdline)) +
         __kernel_cmdline_size;
@@ -255,7 +255,7 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
     }
     memcpy(msg->cmdline, __kernel_cmdline, __kernel_cmdline_size);
 
-    mxtl::unique_ptr<MessagePacket> packet;
+    fbl::unique_ptr<MessagePacket> packet;
     uint32_t num_handles = BOOTSTRAP_HANDLES;
     mx_status_t status =
         MessagePacket::Create(msg, data_size, num_handles, &packet);
@@ -278,20 +278,20 @@ static mx_status_t attempt_userboot() {
     if (rbase)
         dprintf(INFO, "userboot: ramdisk %#15zx @ %p\n", rsize, rbase);
 
-    mxtl::RefPtr<VmObject> stack_vmo;
+    fbl::RefPtr<VmObject> stack_vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, stack_size, &stack_vmo);
     if (status != MX_OK)
         return status;
     stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
 
-    mxtl::RefPtr<VmObject> rootfs_vmo;
+    fbl::RefPtr<VmObject> rootfs_vmo;
     status = VmObjectPaged::CreateFromROData(rbase, rsize, &rootfs_vmo);
     if (status != MX_OK)
         return status;
     rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
 
     size_t size = platform_recover_crashlog(0, NULL, NULL);
-    mxtl::RefPtr<VmObject> crashlog_vmo;
+    fbl::RefPtr<VmObject> crashlog_vmo;
     status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &crashlog_vmo);
     if (status != MX_OK)
         return status;
@@ -301,7 +301,7 @@ static mx_status_t attempt_userboot() {
     // Prepare the bootstrap message packet.  This puts its data (the
     // kernel command line) in place, and allocates space for its handles.
     // We'll fill in the handles as we create things.
-    mxtl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
+    fbl::unique_ptr<MessagePacket> msg = prepare_bootstrap_message();
     if (!msg)
         return MX_ERR_NO_MEMORY;
 
@@ -309,7 +309,7 @@ static mx_status_t attempt_userboot() {
     DEBUG_ASSERT(msg->num_handles() == BOOTSTRAP_HANDLES);
     status = get_vmo_handle(rootfs_vmo, false, nullptr,
                             &handles[BOOTSTRAP_RAMDISK]);
-    mxtl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
+    fbl::RefPtr<VmObjectDispatcher> stack_vmo_dispatcher;
     if (status == MX_OK)
         status = get_vmo_handle(stack_vmo, false, &stack_vmo_dispatcher,
                                 &handles[BOOTSTRAP_STACK]);
@@ -337,8 +337,8 @@ static mx_status_t attempt_userboot() {
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<Dispatcher> proc_disp;
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    fbl::RefPtr<Dispatcher> proc_disp;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t rights, vmar_rights;
     status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0,
                                        &proc_disp, &rights,
@@ -368,9 +368,9 @@ static mx_status_t attempt_userboot() {
         return status;
 
     // Map the stack anywhere.
-    mxtl::RefPtr<VmMapping> stack_mapping;
+    fbl::RefPtr<VmMapping> stack_mapping;
     status = vmar->Map(0,
-                       mxtl::move(stack_vmo), 0, stack_size,
+                       fbl::move(stack_vmo), 0, stack_size,
                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                        &stack_mapping);
     if (status != MX_OK)
@@ -380,9 +380,9 @@ static mx_status_t attempt_userboot() {
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
 
     // Create the user thread and stash its handle for the bootstrap message.
-    mxtl::RefPtr<ThreadDispatcher> thread;
+    fbl::RefPtr<ThreadDispatcher> thread;
     {
-        mxtl::RefPtr<Dispatcher> ut_disp;
+        fbl::RefPtr<Dispatcher> ut_disp;
         // Make a copy of proc, as we need to a keep a copy for the
         // bootstrap message.
         status = ThreadDispatcher::Create(proc, 0, "userboot", &ut_disp, &rights);
@@ -395,7 +395,7 @@ static mx_status_t attempt_userboot() {
 
     // All the handles are in place, so we can send the bootstrap message.
     mx_handle_t hv;
-    status = make_bootstrap_channel(proc, mxtl::move(msg), &hv);
+    status = make_bootstrap_channel(proc, fbl::move(msg), &hv);
     if (status != MX_OK)
         return status;
 

@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/vector.h>
+#include <fbl/algorithm.h>
+#include <fbl/vector.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -18,15 +18,15 @@ uint64_t ToWord(const T& value) {
 }
 
 trace::TraceReader::RecordConsumer MakeRecordConsumer(
-    mxtl::Vector<trace::Record>* out_records) {
+    fbl::Vector<trace::Record>* out_records) {
     return [out_records](trace::Record record) {
-        out_records->push_back(mxtl::move(record));
+        out_records->push_back(fbl::move(record));
     };
 }
 
-trace::TraceReader::ErrorHandler MakeErrorHandler(mxtl::String* out_error) {
-    return [out_error](mxtl::String error) {
-        *out_error = mxtl::move(error);
+trace::TraceReader::ErrorHandler MakeErrorHandler(fbl::String* out_error) {
+    return [out_error](fbl::String error) {
+        *out_error = fbl::move(error);
     };
 }
 
@@ -36,7 +36,7 @@ bool empty_chunk_test() {
     uint64_t value;
     int64_t int64_value;
     double double_value;
-    mxtl::StringPiece string_value;
+    fbl::StringPiece string_value;
     trace::Chunk subchunk;
 
     trace::Chunk empty;
@@ -65,7 +65,7 @@ bool non_empty_chunk_test() {
     uint64_t value;
     int64_t int64_value;
     double double_value;
-    mxtl::StringPiece string_value;
+    fbl::StringPiece string_value;
     trace::Chunk subchunk;
 
     uint64_t kData[] = {
@@ -89,8 +89,8 @@ bool non_empty_chunk_test() {
     };
     memcpy(kData + 6, "Hello World!----", 16);
 
-    trace::Chunk chunk(kData, mxtl::count_of(kData));
-    EXPECT_EQ(mxtl::count_of(kData), chunk.remaining_words());
+    trace::Chunk chunk(kData, fbl::count_of(kData));
+    EXPECT_EQ(fbl::count_of(kData), chunk.remaining_words());
 
     EXPECT_TRUE(chunk.ReadUint64(&value));
     EXPECT_EQ(0, value);
@@ -123,7 +123,7 @@ bool non_empty_chunk_test() {
     EXPECT_TRUE(chunk.ReadString(12u, &string_value));
     EXPECT_EQ(12u, string_value.length());
     EXPECT_EQ(reinterpret_cast<const char*>(kData + 6), string_value.data());
-    EXPECT_TRUE(mxtl::String(string_value) == "Hello World!");
+    EXPECT_TRUE(fbl::String(string_value) == "Hello World!");
     EXPECT_EQ(3u, chunk.remaining_words());
 
     EXPECT_TRUE(chunk.ReadChunk(2u, &subchunk));
@@ -150,8 +150,8 @@ bool non_empty_chunk_test() {
 bool initial_state_test() {
     BEGIN_TEST;
 
-    mxtl::Vector<trace::Record> records;
-    mxtl::String error;
+    fbl::Vector<trace::Record> records;
+    fbl::String error;
     trace::TraceReader reader(MakeRecordConsumer(&records), MakeErrorHandler(&error));
 
     EXPECT_EQ(0, reader.current_provider_id());
@@ -166,8 +166,8 @@ bool initial_state_test() {
 bool empty_buffer_test() {
     BEGIN_TEST;
 
-    mxtl::Vector<trace::Record> records;
-    mxtl::String error;
+    fbl::Vector<trace::Record> records;
+    fbl::String error;
     trace::TraceReader reader(MakeRecordConsumer(&records), MakeErrorHandler(&error));
 
     trace::Chunk empty;

@@ -36,7 +36,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(obj_handle, &dispatcher);
     if (status != MX_OK)
         return status;
@@ -73,26 +73,26 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
     // TODO(MG-968): check rights once appropriate right is determined
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcher(eport_handle, &port);
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<ExceptionPort> eport;
+    fbl::RefPtr<ExceptionPort> eport;
 
     if (obj_handle == MX_HANDLE_INVALID) {
         // TODO(MG-987): handle for system exception
         if (debugger)
             return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::JOB,
-                                       mxtl::move(port), key, &eport);
+                                       fbl::move(port), key, &eport);
         if (status != MX_OK)
             return status;
 
         return SetSystemExceptionPort(eport);
     }
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     status = up->GetDispatcher(obj_handle, &dispatcher);
     if (status != MX_OK)
         return status;
@@ -102,7 +102,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
         if (debugger)
             return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::JOB,
-                                       mxtl::move(port), key, &eport);
+                                       fbl::move(port), key, &eport);
         if (status != MX_OK)
             return status;
         status = job->SetExceptionPort(eport);
@@ -120,7 +120,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
             type = ExceptionPort::Type::DEBUGGER;
         else
             type = ExceptionPort::Type::PROCESS;
-        status = ExceptionPort::Create(type, mxtl::move(port), key, &eport);
+        status = ExceptionPort::Create(type, fbl::move(port), key, &eport);
         if (status != MX_OK)
             return status;
         status = process->SetExceptionPort(eport);
@@ -136,7 +136,7 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
         if (debugger)
             return MX_ERR_INVALID_ARGS;
         status = ExceptionPort::Create(ExceptionPort::Type::THREAD,
-                                       mxtl::move(port), key, &eport);
+                                       fbl::move(port), key, &eport);
         if (status != MX_OK)
             return status;
         status = thread->SetExceptionPort(eport);
@@ -186,7 +186,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // TODO(MG-968): Rights checking here
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcher(handle, &dispatcher);
     if (status != MX_OK)
         return status;

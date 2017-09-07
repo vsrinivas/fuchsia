@@ -11,12 +11,12 @@
 #include <vm/vm_object.h>
 #include <magenta/rights.h>
 #include <magenta/types.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 #include <object/guest_dispatcher.h>
 
-mx_status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
-                                   mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
-                                   mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
+mx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, mx_vaddr_t ip,
+                                   mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
+                                   fbl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights) {
     Guest* guest = guest_dispatcher->guest();
     GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
     if (ip >= gpas->size())
@@ -24,7 +24,7 @@ mx_status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatche
     if (cr3 >= gpas->size() - PAGE_SIZE)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::unique_ptr<Vcpu> vcpu;
+    fbl::unique_ptr<Vcpu> vcpu;
 #if ARCH_X86_64
     mx_status_t status = x86_vcpu_create(ip, cr3, apic_vmo, guest->ApicAccessAddress(),
                                       guest->MsrBitmapsAddress(), gpas, guest->Mux(), &vcpu);
@@ -34,18 +34,18 @@ mx_status_t VcpuDispatcher::Create(mxtl::RefPtr<GuestDispatcher> guest_dispatche
     if (status != MX_OK)
         return status;
 
-    mxtl::AllocChecker ac;
-    auto disp = new (&ac) VcpuDispatcher(guest_dispatcher, mxtl::move(vcpu));
+    fbl::AllocChecker ac;
+    auto disp = new (&ac) VcpuDispatcher(guest_dispatcher, fbl::move(vcpu));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     *rights = MX_DEFAULT_VCPU_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 
-VcpuDispatcher::VcpuDispatcher(mxtl::RefPtr<GuestDispatcher> guest, mxtl::unique_ptr<Vcpu> vcpu)
-    : guest_(guest), vcpu_(mxtl::move(vcpu)) {}
+VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, fbl::unique_ptr<Vcpu> vcpu)
+    : guest_(guest), vcpu_(fbl::move(vcpu)) {}
 
 VcpuDispatcher::~VcpuDispatcher() {}
 

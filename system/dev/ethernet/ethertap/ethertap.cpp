@@ -6,8 +6,8 @@
 
 #include <ddk/debug.h>
 #include <magenta/compiler.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/type_support.h>
+#include <fbl/auto_lock.h>
+#include <fbl/type_support.h>
 #include <pretty/hexdump.h>
 
 #include <stdio.h>
@@ -45,8 +45,8 @@ mx_status_t TapCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, voi
         memcpy(&config, in_buf, in_len);
         config.name[ETHERTAP_MAX_NAME_LEN] = '\0';
 
-        auto tap = mxtl::unique_ptr<eth::TapDevice>(
-                new eth::TapDevice(mxdev(), &config, mxtl::move(local)));
+        auto tap = fbl::unique_ptr<eth::TapDevice>(
+                new eth::TapDevice(mxdev(), &config, fbl::move(local)));
 
         status = tap->DdkAdd(config.name);
         if (status != MX_OK) {
@@ -79,7 +79,7 @@ TapDevice::TapDevice(mx_device_t* device, const ethertap_ioctl_config* config, m
     options_(config->options),
     features_(config->features | ETHMAC_FEATURE_SYNTH),
     mtu_(config->mtu),
-    data_(mxtl::move(data)) {
+    data_(fbl::move(data)) {
     MX_DEBUG_ASSERT(data_.is_valid());
     memcpy(mac_, config->mac, 6);
     int ret = thrd_create_with_name(&thread_, tap_device_thread, reinterpret_cast<void*>(this),
@@ -96,7 +96,7 @@ void TapDevice::DdkRelease() {
 
 void TapDevice::DdkUnbind() {
     ethertap_trace("DdkUnbind\n");
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     mx_status_t status = data_.signal(0, TAP_SHUTDOWN);
     MX_DEBUG_ASSERT(status == MX_OK);
     // When the thread exits after the channel is closed, it will call DdkRemove.
@@ -112,13 +112,13 @@ mx_status_t TapDevice::EthmacQuery(uint32_t options, ethmac_info_t* info) {
 
 void TapDevice::EthmacStop() {
     ethertap_trace("EthmacStop\n");
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     ethmac_proxy_.reset();
 }
 
-mx_status_t TapDevice::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+mx_status_t TapDevice::EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
     ethertap_trace("EthmacStart\n");
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (ethmac_proxy_ != nullptr) {
         return MX_ERR_ALREADY_BOUND;
     } else {
@@ -131,7 +131,7 @@ mx_status_t TapDevice::EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) 
 void TapDevice::EthmacSend(uint32_t options, void* data, size_t length) {
     MX_DEBUG_ASSERT(length <= mtu_);
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         ethertap_trace("sending %zu bytes\n", length);
         hexdump8_ex(data, length, 0);
     }
@@ -144,7 +144,7 @@ void TapDevice::EthmacSend(uint32_t options, void* data, size_t length) {
 int TapDevice::Thread() {
     ethertap_trace("starting main thread\n");
     mx_signals_t pending;
-    mxtl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
+    fbl::unique_ptr<uint8_t[]> buf(new uint8_t[mtu_]);
 
     mx_status_t status = MX_OK;
     const mx_signals_t wait = MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | ETHERTAP_SIGNAL_ONLINE
@@ -215,7 +215,7 @@ mx_status_t TapDevice::UpdateLinkStatus(mx_signals_t observed) {
     }
 
     if (was_online != online_) {
-        mxtl::AutoLock lock(&lock_);
+        fbl::AutoLock lock(&lock_);
         if (ethmac_proxy_ != nullptr) {
             ethmac_proxy_->Status(online_ ? ETH_STATUS_ONLINE : 0u);
         }
@@ -239,7 +239,7 @@ mx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
         return status;
     }
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
     if (unlikely(options_ & ETHERTAP_OPT_TRACE_PACKETS)) {
         ethertap_trace("received %zu bytes\n", actual);
         hexdump8_ex(buffer, actual, 0);
@@ -253,7 +253,7 @@ mx_status_t TapDevice::Recv(uint8_t* buffer, uint32_t capacity) {
 }  // namespace eth
 
 extern "C" mx_status_t tapctl_bind(void* ctx, mx_device_t* device, void** cookie) {
-    auto dev = mxtl::unique_ptr<eth::TapCtl>(new eth::TapCtl(device));
+    auto dev = fbl::unique_ptr<eth::TapCtl>(new eth::TapCtl(device));
     mx_status_t status = dev->DdkAdd("tapctl");
     if (status != MX_OK) {
         dprintf(ERROR, "%s: could not add device: %d\n", __func__, status);

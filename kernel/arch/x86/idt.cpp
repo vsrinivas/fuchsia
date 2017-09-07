@@ -11,7 +11,7 @@
 #include <kernel/mp.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <arch/ops.h>
 
 #include <arch/x86.h>
@@ -107,7 +107,7 @@ void idt_setup(struct idt *idt)
     enum idt_entry_type typ;
     sel = CODE_64_SELECTOR;
     typ = IDT_INTERRUPT_GATE64;
-    for (size_t i = 0; i < mxtl::count_of(idt->entries); ++i) {
+    for (size_t i = 0; i < fbl::count_of(idt->entries); ++i) {
         uintptr_t offset = _isr_table[i] + clac_shift;
         enum idt_dpl dpl;
         switch (i) {

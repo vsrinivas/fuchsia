@@ -41,6 +41,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/virtio \
     third_party/ulib/acpica \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 include make/module.mk

@@ -15,8 +15,8 @@ class VmObject;
 
 class GuestDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<VmObject> physmem,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(fbl::RefPtr<VmObject> physmem,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
     ~GuestDispatcher();
 
@@ -24,11 +24,11 @@ public:
     Guest* guest() const { return guest_.get(); }
 
     mx_status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                        mxtl::RefPtr<PortDispatcher> port, uint64_t key);
+                        fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 private:
-    mxtl::Canary<mxtl::magic("GSTD")> canary_;
-    mxtl::unique_ptr<Guest> guest_;
+    fbl::Canary<fbl::magic("GSTD")> canary_;
+    fbl::unique_ptr<Guest> guest_;
 
-    explicit GuestDispatcher(mxtl::unique_ptr<Guest> guest);
+    explicit GuestDispatcher(fbl::unique_ptr<Guest> guest);
 };

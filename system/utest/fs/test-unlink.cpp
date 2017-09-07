@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 #include <magenta/compiler.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 #include "filesystems.h"
 
@@ -22,12 +22,12 @@
 bool test_unlink_simple(void) {
     BEGIN_TEST;
     const char* const paths[] = {"::abc", "::def", "::ghi", "::jkl", "::mnopqrstuvxyz"};
-    for (size_t i = 0; i < mxtl::count_of(paths); i++) {
+    for (size_t i = 0; i < fbl::count_of(paths); i++) {
         int fd = open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644);
         ASSERT_GT(fd, 0);
         ASSERT_EQ(close(fd), 0);
     }
-    for (size_t i = 0; i < mxtl::count_of(paths); i++) {
+    for (size_t i = 0; i < fbl::count_of(paths); i++) {
         ASSERT_EQ(unlink(paths[i]), 0);
     }
     END_TEST;

@@ -10,21 +10,21 @@
 
 #include <magenta/rights.h>
 #include <magenta/syscalls/policy.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <object/process_dispatcher.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 // The starting max_height value of the root job.
 static constexpr uint32_t kRootJobMaxHeight = 32;
 
 static constexpr char kRootJobName[] = "<superroot>";
 
-mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
-    mxtl::AllocChecker ac;
-    auto job = mxtl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, kPolicyEmpty));
+fbl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
+    fbl::AllocChecker ac;
+    auto job = fbl::AdoptRef(new (&ac) JobDispatcher(0u, nullptr, kPolicyEmpty));
     if (!ac.check())
         return nullptr;
     job->set_name(kRootJobName, sizeof(kRootJobName));
@@ -32,17 +32,17 @@ mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
 }
 
 mx_status_t JobDispatcher::Create(uint32_t flags,
-                                  mxtl::RefPtr<JobDispatcher> parent,
-                                  mxtl::RefPtr<Dispatcher>* dispatcher,
+                                  fbl::RefPtr<JobDispatcher> parent,
+                                  fbl::RefPtr<Dispatcher>* dispatcher,
                                   mx_rights_t* rights) {
     if (parent != nullptr && parent->max_height() == 0) {
         // The parent job cannot have children.
         return MX_ERR_OUT_OF_RANGE;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<JobDispatcher> job =
-        mxtl::AdoptRef(new (&ac) JobDispatcher(flags, parent, parent->GetPolicy()));
+    fbl::AllocChecker ac;
+    fbl::RefPtr<JobDispatcher> job =
+        fbl::AdoptRef(new (&ac) JobDispatcher(flags, parent, parent->GetPolicy()));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -51,14 +51,14 @@ mx_status_t JobDispatcher::Create(uint32_t flags,
     }
 
     *rights = MX_DEFAULT_JOB_RIGHTS;
-    *dispatcher = mxtl::move(job);
+    *dispatcher = fbl::move(job);
     return MX_OK;
 }
 
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
-                             mxtl::RefPtr<JobDispatcher> parent,
+                             fbl::RefPtr<JobDispatcher> parent,
                              pol_cookie_t policy)
-    : parent_(mxtl::move(parent)),
+    : parent_(fbl::move(parent)),
       max_height_(parent_ ? parent_->max_height() - 1 : kRootJobMaxHeight),
       state_(State::READY),
       process_count_(0u),
@@ -250,15 +250,15 @@ void JobDispatcher::Kill() {
         //   - in destruction process but blocked, refcount == 0
         //
         for (auto& j : jobs_) {
-            auto jd = ::mxtl::internal::MakeRefPtrUpgradeFromRaw(&j, lock_);
+            auto jd = ::fbl::internal::MakeRefPtrUpgradeFromRaw(&j, lock_);
             if (jd)
-                jobs_to_kill.push_front(mxtl::move(jd));
+                jobs_to_kill.push_front(fbl::move(jd));
         }
 
         for (auto& p : procs_) {
-            auto pd = ::mxtl::internal::MakeRefPtrUpgradeFromRaw(&p, lock_);
+            auto pd = ::fbl::internal::MakeRefPtrUpgradeFromRaw(&p, lock_);
             if (pd)
-                procs_to_kill.push_front(mxtl::move(pd));
+                procs_to_kill.push_front(fbl::move(pd));
         }
     }
 
@@ -317,24 +317,24 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
     return true;
 }
 
-mxtl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) {
+fbl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
     for (auto& proc : procs_) {
         if (proc.get_koid() == koid)
-            return mxtl::RefPtr<ProcessDispatcher>(&proc);
+            return fbl::RefPtr<ProcessDispatcher>(&proc);
     }
     return nullptr;
 }
 
-mxtl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
+fbl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
     for (auto& job : jobs_) {
         if (job.get_koid() == koid) {
-            return mxtl::RefPtr<JobDispatcher>(&job);
+            return fbl::RefPtr<JobDispatcher>(&job);
         }
     }
     return nullptr;
@@ -405,11 +405,11 @@ mx_status_t JobDispatcher::set_importance(mx_job_importance_t importance) {
 // Global importance ranking. Note that this is independent of
 // mx_task_importance_t-style importance as far as JobDispatcher is concerned;
 // some other entity will choose how to order importance_list_.
-mxtl::Mutex JobDispatcher::importance_lock_;
+fbl::Mutex JobDispatcher::importance_lock_;
 JobDispatcher::JobImportanceList JobDispatcher::importance_list_;
 
 mx_status_t JobDispatcher::MakeMoreImportantThan(
-    mxtl::RefPtr<JobDispatcher> other) {
+    fbl::RefPtr<JobDispatcher> other) {
 
     canary_.Assert();
     if (other != nullptr)
@@ -435,7 +435,7 @@ mx_status_t JobDispatcher::MakeMoreImportantThan(
     return MX_OK;
 }
 
-mx_status_t JobDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+mx_status_t JobDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
@@ -443,15 +443,15 @@ mx_status_t JobDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     AutoLock lock(&lock_);
     if (exception_port_)
         return MX_ERR_BAD_STATE;
-    exception_port_ = mxtl::move(eport);
+    exception_port_ = fbl::move(eport);
 
     return MX_OK;
 }
 
 class OnExceptionPortRemovalEnumerator final : public JobEnumerator {
 public:
-    OnExceptionPortRemovalEnumerator(mxtl::RefPtr<ExceptionPort> eport)
-        : eport_(mxtl::move(eport)) {}
+    OnExceptionPortRemovalEnumerator(fbl::RefPtr<ExceptionPort> eport)
+        : eport_(fbl::move(eport)) {}
     OnExceptionPortRemovalEnumerator(const OnExceptionPortRemovalEnumerator&) = delete;
 
 private:
@@ -461,13 +461,13 @@ private:
         return true;
     }
 
-    mxtl::RefPtr<ExceptionPort> eport_;
+    fbl::RefPtr<ExceptionPort> eport_;
 };
 
 bool JobDispatcher::ResetExceptionPort(bool quietly) {
     canary_.Assert();
 
-    mxtl::RefPtr<ExceptionPort> eport;
+    fbl::RefPtr<ExceptionPort> eport;
     {
         AutoLock lock(&lock_);
         exception_port_.swap(eport);
@@ -505,7 +505,7 @@ bool JobDispatcher::ResetExceptionPort(bool quietly) {
     return true;
 }
 
-mxtl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
+fbl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
     AutoLock lock(&lock_);
     return exception_port_;
 }

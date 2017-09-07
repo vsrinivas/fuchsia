@@ -8,11 +8,11 @@
 
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/macros.h>
+#include <fbl/auto_lock.h>
+#include <fbl/macros.h>
 
 // Various lock guard wrappers for kernel only locks
-// NOTE: wrapper for mutex_t is in mxtl/auto_lock.h
+// NOTE: wrapper for mutex_t is in fbl/auto_lock.h
 
 class TA_SCOPED_CAP AutoSpinLock {
 public:

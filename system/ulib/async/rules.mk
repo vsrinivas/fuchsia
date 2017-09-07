@@ -20,7 +20,7 @@ MODULE_SRCS = \
     $(LOCAL_DIR)/wait_with_timeout.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/c \
@@ -43,7 +43,7 @@ MODULE_SRCS = \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/async.default \
@@ -71,6 +71,6 @@ MODULE_LIBS := \
     system/ulib/c
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 include make/module.mk

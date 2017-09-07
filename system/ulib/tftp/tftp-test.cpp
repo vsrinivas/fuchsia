@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 // For inspecting session state
@@ -40,9 +40,9 @@ struct test_state {
     size_t sess_size = 0;
     size_t msg_size = 0;
     size_t out_size = 0;
-    mxtl::unique_ptr<uint8_t[]> sess_buf;
-    mxtl::unique_ptr<uint8_t[]> msg_data;
-    mxtl::unique_ptr<uint8_t[]> out_scratch;
+    fbl::unique_ptr<uint8_t[]> sess_buf;
+    fbl::unique_ptr<uint8_t[]> msg_data;
+    fbl::unique_ptr<uint8_t[]> out_scratch;
     void* data = nullptr;
     void* out = nullptr;
     size_t outlen = 0;

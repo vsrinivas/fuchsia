@@ -14,9 +14,9 @@
 #include <mx/channel.h>
 #include <mx/handle.h>
 #include <mx/vmo.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/limits.h>
 #include <mxio/io.h>
 #include <stdio.h>
 #include <string.h>
@@ -129,7 +129,7 @@ mx_status_t AudioDeviceStream::Open() {
 }
 
 mx_status_t AudioDeviceStream::GetSupportedFormats(
-        mxtl::Vector<audio_stream_format_range_t>* out_formats) const {
+        fbl::Vector<audio_stream_format_range_t>* out_formats) const {
     constexpr uint32_t MIN_RESP_SIZE = offsetof(audio_stream_cmd_get_formats_resp_t, format_ranges);
     audio_stream_cmd_get_formats_req req;
     audio_stream_cmd_get_formats_resp resp;
@@ -154,7 +154,7 @@ mx_status_t AudioDeviceStream::GetSupportedFormats(
         return MX_OK;
 
     out_formats->reset();
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     out_formats->reserve(expected_formats, &ac);
     if (!ac.check()) {
         printf("Failed to allocated %u entries for format ranges\n", expected_formats);
@@ -184,7 +184,7 @@ mx_status_t AudioDeviceStream::GetSupportedFormats(
             return MX_ERR_INTERNAL;
         }
 
-        uint32_t todo = mxtl::min(static_cast<uint32_t>(expected_formats - processed_formats),
+        uint32_t todo = fbl::min(static_cast<uint32_t>(expected_formats - processed_formats),
                                   AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
         size_t min_size = MIN_RESP_SIZE + (todo * sizeof(audio_stream_format_range_t));
         if (rxed < min_size) {
@@ -328,7 +328,7 @@ mx_status_t AudioDeviceStream::PlugMonitor(float duration) {
         printf("Stream is capable of async notification.  Monitoring for %.2f seconds\n",
                 duration);
 
-        auto cleanup = mxtl::MakeAutoCall([this]() { DisablePlugNotifications(); });
+        auto cleanup = fbl::MakeAutoCall([this]() { DisablePlugNotifications(); });
         while (true) {
             mx_signals_t pending;
             res = stream_ch_.wait_one(MX_CHANNEL_PEER_CLOSED | MX_CHANNEL_READABLE,
@@ -375,7 +375,7 @@ mx_status_t AudioDeviceStream::PlugMonitor(float duration) {
             if (now >= deadline)
                 break;
 
-            mx_time_t next_wake = mxtl::min(deadline, now + MX_MSEC(100u));
+            mx_time_t next_wake = fbl::min(deadline, now + MX_MSEC(100u));
 
             mx_signals_t sigs;
             mx_status_t res = stream_ch_.wait_one(MX_CHANNEL_PEER_CLOSED, next_wake, &sigs);
@@ -513,7 +513,7 @@ mx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
     }
 
     // Sanity check the size and stash it if it checks out.
-    if ((rb_sz > mxtl::numeric_limits<decltype(rb_sz_)>::max()) || ((rb_sz % frame_sz_) != 0)) {
+    if ((rb_sz > fbl::numeric_limits<decltype(rb_sz_)>::max()) || ((rb_sz % frame_sz_) != 0)) {
         printf("Bad VMO size returned by audio driver! (size = %" PRIu64 " frame_sz = %u)\n",
                 rb_sz, frame_sz_);
         return MX_ERR_INVALID_ARGS;

@@ -39,7 +39,7 @@ static_library("fs") {
   deps = [
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxcpp",
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   libs = [

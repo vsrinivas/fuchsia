@@ -24,7 +24,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/trace-engine \
     system/ulib/mx \
     system/ulib/mxcpp \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/c \
@@ -46,14 +46,14 @@ MODULE_NAME := trace-reader-test
 
 MODULE_HOST_LIBS := \
     system/ulib/trace-reader.hostlib \
-    system/ulib/mxtl.hostlib \
+    system/ulib/fbl.hostlib \
     system/ulib/unittest.hostlib \
     system/ulib/pretty.hostlib
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/trace-engine/include \
     -Isystem/ulib/trace-reader/include \
-    -Isystem/ulib/mxtl/include \
+    -Isystem/ulib/fbl/include \
     -Isystem/ulib/unittest/include \
 
 include make/module.mk

@@ -16,7 +16,7 @@ public:
     // This is called only once, at boot time.
     static const VDso* Create();
 
-    static bool vmo_is_vdso(const mxtl::RefPtr<VmObject>& vmo) {
+    static bool vmo_is_vdso(const fbl::RefPtr<VmObject>& vmo) {
         return likely(instance_) && instance_->vmo_is_vdso_impl(vmo);
     }
 
@@ -25,7 +25,7 @@ public:
     }
 
     // Given VmAspace::vdso_code_mapping_, return the vDSO base address or 0.
-    static uintptr_t base_address(const mxtl::RefPtr<VmMapping>& code_mapping);
+    static uintptr_t base_address(const fbl::RefPtr<VmMapping>& code_mapping);
 
     // Forward declaration of generated class.
     // This class is defined in the file vdso-valid-sysret.h,
@@ -54,7 +54,7 @@ private:
     VDso();
     void CreateVariant(Variant);
 
-    bool vmo_is_vdso_impl(const mxtl::RefPtr<VmObject>& vmo_ref) const {
+    bool vmo_is_vdso_impl(const fbl::RefPtr<VmObject>& vmo_ref) const {
         if (vmo_ref == vmo()->vmo())
             return true;
         for (const auto& v : variant_vmo_) {
@@ -69,7 +69,7 @@ private:
         return static_cast<size_t>(v) - 1;
     }
 
-    mxtl::RefPtr<VmObjectDispatcher> variant_vmo_[
+    fbl::RefPtr<VmObjectDispatcher> variant_vmo_[
         static_cast<size_t>(Variant::COUNT) - 1];
 
     static const VDso* instance_;

@@ -15,9 +15,9 @@
 #include <object/process_dispatcher.h>
 
 #include <magenta/syscalls/policy.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -35,7 +35,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
     if (res != MX_OK)
         return res;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
     mx_status_t result = PortDispatcher::Create(options, &dispatcher, &rights);
@@ -45,7 +45,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -53,7 +53,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> _out) {
 
     if (_out.copy_to_user(hv) != MX_OK)
         return MX_ERR_INVALID_ARGS;
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
     return MX_OK;
@@ -67,7 +67,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> _packet, siz
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != MX_OK)
         return status;
@@ -88,7 +88,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &port);
     if (status != MX_OK)
         return status;
@@ -115,13 +115,13 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t deadline,
 mx_status_t sys_port_cancel(mx_handle_t handle, mx_handle_t source, uint64_t key) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != MX_OK)
         return status;
 
     {
-        mxtl::AutoLock lock(up->handle_table_lock());
+        fbl::AutoLock lock(up->handle_table_lock());
         Handle* watched = up->GetHandleLocked(source);
         if (!watched)
             return MX_ERR_BAD_HANDLE;

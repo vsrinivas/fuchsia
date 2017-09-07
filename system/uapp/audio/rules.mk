@@ -19,7 +19,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/audio-proto-utils \
     system/ulib/mx \
     system/ulib/mxcpp \
-    system/ulib/mxtl
+    system/ulib/fbl
 
 MODULE_LIBS := \
     system/ulib/mxio \

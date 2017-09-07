@@ -13,8 +13,8 @@
 #include <object/state_observer.h>
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/ref_ptr.h>
 
 class Event;
 
@@ -41,11 +41,11 @@ private:
     Flags OnStateChange(mx_signals_t new_state) final;
     Flags OnCancel(Handle* handle) final;
 
-    mxtl::Canary<mxtl::magic("WTSO")> canary_;
+    fbl::Canary<fbl::magic("WTSO")> canary_;
 
     Event* event_ = nullptr;
     Handle* handle_ = nullptr;
     mx_signals_t watched_signals_ = 0u;
     mx_signals_t wakeup_reasons_;
-    mxtl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
+    fbl::RefPtr<Dispatcher> dispatcher_;  // Non-null only between Begin() and End().
 };

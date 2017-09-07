@@ -21,7 +21,7 @@
 #include <platform.h>
 #include <vm/fault.h>
 
-#include <mxtl/auto_call.h>
+#include <fbl/auto_call.h>
 
 #include <lib/ktrace.h>
 
@@ -237,7 +237,7 @@ static status_t x86_pfe_handler(x86_iframe_t *frame)
     arch_enable_ints();
 
     /* make sure we put interrupts back as we exit */
-    auto ac = mxtl::MakeAutoCall([]() {
+    auto ac = fbl::MakeAutoCall([]() {
         arch_disable_ints();
         arch_set_in_int_handler(true);
     });

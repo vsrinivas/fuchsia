@@ -11,7 +11,7 @@
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls/port.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>

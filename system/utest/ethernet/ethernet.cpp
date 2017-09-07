@@ -14,11 +14,11 @@
 #include <mx/vmar.h>
 #include <mx/vmo.h>
 #include <mxio/watcher.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_ptr.h>
-#include <mxtl/vector.h>
+#include <fbl/auto_call.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <unittest/unittest.h>
 
 #include <errno.h>
@@ -50,7 +50,7 @@ mx_status_t CreateEthertap(uint32_t mtu, mx::socket* sock) {
         fprintf(stderr, "could not open %s: %s\n", kTapctl, strerror(errno));
         return MX_ERR_IO;
     }
-    auto closer = mxtl::MakeAutoCall([ctlfd]() { close(ctlfd); });
+    auto closer = fbl::MakeAutoCall([ctlfd]() { close(ctlfd); });
 
     ethertap_ioctl_config_t config = {};
     strlcpy(config.name, kTapDevName, ETHERTAP_MAX_NAME_LEN);
@@ -76,7 +76,7 @@ mx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
     if (devfd < 0) {
         return MX_OK;
     }
-    auto closer = mxtl::MakeAutoCall([devfd]() { close(devfd); });
+    auto closer = fbl::MakeAutoCall([devfd]() { close(devfd); });
 
     // See if this device is our ethertap device
     eth_info_t info;
@@ -123,7 +123,7 @@ mx_status_t OpenEthertapDev(int* fd) {
     }
 }
 
-struct FifoEntry : public mxtl::SinglyLinkedListable<mxtl::unique_ptr<FifoEntry>> {
+struct FifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<FifoEntry>> {
     eth_fifo_entry_t e;
 };
 
@@ -198,12 +198,12 @@ class EthernetClient {
         }
 
         for (; idx < 2 * nbufs; idx++) {
-            auto entry = mxtl::unique_ptr<FifoEntry>(new FifoEntry);
+            auto entry = fbl::unique_ptr<FifoEntry>(new FifoEntry);
             entry->e.offset = idx * bufsize_;
             entry->e.length = bufsize_;
             entry->e.flags = 0;
             entry->e.cookie = reinterpret_cast<uint8_t*>(mapped_) + entry->e.offset;
-            tx_available_.push_front(mxtl::move(entry));
+            tx_available_.push_front(fbl::move(entry));
         }
 
         return MX_OK;
@@ -238,7 +238,7 @@ class EthernetClient {
         eth_fifo_entry_t* entry = nullptr;
         if (entry_ptr != nullptr) {
             entry = &entry_ptr->e;
-            tx_pending_.push_front(mxtl::move(entry_ptr));
+            tx_pending_.push_front(fbl::move(entry_ptr));
         }
         return entry;
     }
@@ -247,7 +247,7 @@ class EthernetClient {
         auto entry_ptr = tx_pending_.erase_if(
                 [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
         if (entry_ptr != nullptr) {
-            tx_available_.push_front(mxtl::move(entry_ptr));
+            tx_available_.push_front(fbl::move(entry_ptr));
         }
     }
 
@@ -265,9 +265,9 @@ class EthernetClient {
     uint32_t tx_depth_ = 0;
     uint32_t rx_depth_ = 0;
 
-    using FifoEntryPtr = mxtl::unique_ptr<FifoEntry>;
-    mxtl::SinglyLinkedList<FifoEntryPtr> tx_available_;
-    mxtl::SinglyLinkedList<FifoEntryPtr> tx_pending_;
+    using FifoEntryPtr = fbl::unique_ptr<FifoEntry>;
+    fbl::SinglyLinkedList<FifoEntryPtr> tx_available_;
+    fbl::SinglyLinkedList<FifoEntryPtr> tx_pending_;
 };
 
 }  // namespace

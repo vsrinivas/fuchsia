@@ -15,7 +15,7 @@
 #include <kernel/mutex.h>
 #include <lk/init.h>
 #include <magenta/syscalls/pci.h>
-#include <mxtl/limits.h>
+#include <fbl/limits.h>
 #include <string.h>
 #include <trace.h>
 
@@ -54,7 +54,7 @@ static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
     res = pcie.SubtractBusRegion(0x0, 0x10000, PciAddrSpace::PIO);
     ASSERT(res == MX_OK);
 
-    res = pcie.SubtractBusRegion(0x0, mxtl::numeric_limits<uint64_t>::max(), PciAddrSpace::MMIO);
+    res = pcie.SubtractBusRegion(0x0, fbl::numeric_limits<uint64_t>::max(), PciAddrSpace::MMIO);
     ASSERT(res == MX_OK);
 }
 

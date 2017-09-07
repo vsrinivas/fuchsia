@@ -21,7 +21,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/digest \
     system/ulib/mx \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/sync \
     third_party/ulib/cryptolib \
 

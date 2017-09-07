@@ -58,7 +58,7 @@ status_t x86_bringup_aps(uint32_t *apic_ids, uint32_t count)
     }
 
     struct x86_ap_bootstrap_data *bootstrap_data = NULL;
-    mxtl::RefPtr<VmAspace> bootstrap_aspace;
+    fbl::RefPtr<VmAspace> bootstrap_aspace;
 
     status = x86_bootstrap16_prep(
             PHYS_BOOTSTRAP_PAGE,

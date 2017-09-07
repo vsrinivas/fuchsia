@@ -15,6 +15,6 @@ MODULE_SRCS += \
 
 MODULE_DEPS += \
     kernel/dev/hw_rng \
-    kernel/lib/mxtl \
+    kernel/lib/fbl \
     kernel/lib/unittest \
     third_party/lib/jitterentropy

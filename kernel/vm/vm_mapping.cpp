@@ -11,24 +11,24 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <safeint/safe_math.h>
 #include <trace.h>
 #include <vm/fault.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-                     mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
+                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
     : VmAddressRegionOrMapping(base, size, vmar_flags,
                                parent.aspace_.get(), &parent),
-      object_(mxtl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
+      object_(fbl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
 
     LTRACEF("%p aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n",
             this, aspace_.get(), base_, size_, vmo_offset);
@@ -96,7 +96,7 @@ status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) 
 namespace {
 
 // Implementation helper for ProtectLocked
-status_t ProtectOrUnmap(const mxtl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
+status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
                         uint new_arch_mmu_flags) {
     if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
         return aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
@@ -145,8 +145,8 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     // Handle changing from the left
     if (base_ == base) {
         // Create a new mapping for the right half (has old perms)
-        mxtl::AllocChecker ac;
-        mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
+        fbl::AllocChecker ac;
+        fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
             new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_,
                                 object_, object_offset_ + size, arch_mmu_flags_)));
         if (!ac.check()) {
@@ -165,9 +165,9 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     // Handle changing from the right
     if (base_ + size_ == base + size) {
         // Create a new mapping for the right half (has new perms)
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
 
-        mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
+        fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
             new (&ac) VmMapping(*parent_, base, size, flags_,
                                 object_, object_offset_ + base - base_,
                                 new_arch_mmu_flags)));
@@ -189,14 +189,14 @@ status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_f
     const uint64_t center_vmo_offset = object_offset_ + base - base_;
     const uint64_t right_vmo_offset = center_vmo_offset + size;
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VmMapping> center_mapping(mxtl::AdoptRef(
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VmMapping> center_mapping(fbl::AdoptRef(
         new (&ac) VmMapping(*parent_, base, size, flags_,
                             object_, center_vmo_offset, new_arch_mmu_flags)));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
-    mxtl::RefPtr<VmMapping> right_mapping(mxtl::AdoptRef(
+    fbl::RefPtr<VmMapping> right_mapping(fbl::AdoptRef(
         new (&ac) VmMapping(*parent_, base + size, right_size, flags_,
                             object_, right_vmo_offset, arch_mmu_flags_)));
     if (!ac.check()) {
@@ -223,7 +223,7 @@ status_t VmMapping::Unmap(vaddr_t base, size_t size) {
 
     size = ROUNDUP(size, PAGE_SIZE);
 
-    mxtl::RefPtr<VmAspace> aspace(aspace_);
+    fbl::RefPtr<VmAspace> aspace(aspace_);
     if (!aspace) {
         return MX_ERR_BAD_STATE;
     }
@@ -277,10 +277,10 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
         if (base_ == base && size_ != size) {
             // We need to remove ourselves from tree before updating base_,
             // since base_ is the tree key.
-            mxtl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.erase(*this));
+            fbl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.erase(*this));
             base_ += size;
             object_offset_ += size;
-            parent_->subregions_.insert(mxtl::move(ref));
+            parent_->subregions_.insert(fbl::move(ref));
         }
         size_ -= size;
 
@@ -294,8 +294,8 @@ status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     const vaddr_t new_base = base + size;
     const size_t new_size = (base_ + size_) - new_base;
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
         new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
                             arch_mmu_flags_)));
     if (!ac.check()) {
@@ -414,7 +414,7 @@ status_t VmMapping::MapRange(size_t offset, size_t len, bool commit) {
     // set the currently faulting flag for any recursive calls the vmo may make back into us.
     DEBUG_ASSERT(!currently_faulting_);
     currently_faulting_ = true;
-    auto ac = mxtl::MakeAutoCall([&]() { currently_faulting_ = false; });
+    auto ac = fbl::MakeAutoCall([&]() { currently_faulting_ = false; });
 
     // iterate through the range, grabbing a page from the underlying object and
     // mapping it in
@@ -479,7 +479,7 @@ status_t VmMapping::DestroyLocked() {
     // Take a reference to ourself, so that we do not get destructed after
     // dropping our last reference in this method (e.g. when calling
     // subregions_.erase below).
-    mxtl::RefPtr<VmMapping> self(this);
+    fbl::RefPtr<VmMapping> self(this);
 
 #if WITH_LIB_VDSO
     // The vDSO code mapping can never be unmapped, not even
@@ -566,7 +566,7 @@ status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags) {
     // the unmap operation.
     DEBUG_ASSERT(!currently_faulting_);
     currently_faulting_ = true;
-    auto ac = mxtl::MakeAutoCall([&]() { currently_faulting_ = false; });
+    auto ac = fbl::MakeAutoCall([&]() { currently_faulting_ = false; });
 
     // fault in or grab an existing page
     paddr_t new_pa;
@@ -678,7 +678,7 @@ void VmMapping::ActivateLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
 
     state_ = LifeCycleState::ALIVE;
     object_->AddMappingLocked(this);
-    parent_->subregions_.insert(mxtl::RefPtr<VmAddressRegionOrMapping>(this));
+    parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
 void VmMapping::Activate() {

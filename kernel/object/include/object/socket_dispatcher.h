@@ -14,17 +14,17 @@
 #include <object/state_tracker.h>
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
 
 constexpr int kControlMsgSize = 1024;
 
 class SocketDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher0,
-                              mxtl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
+    static mx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher0,
+                              fbl::RefPtr<Dispatcher>* dispatcher1, mx_rights_t* rights);
 
     ~SocketDispatcher() final;
 
@@ -53,7 +53,7 @@ public:
 
 private:
     explicit SocketDispatcher(uint32_t flags);
-    void Init(mxtl::RefPtr<SocketDispatcher> other);
+    void Init(fbl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(user_ptr<const void> src, size_t len, size_t* nwritten);
     mx_status_t WriteControlSelf(user_ptr<const void> src, size_t len);
     mx_status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
@@ -62,17 +62,17 @@ private:
     bool is_full() const TA_REQ(lock_) { return data_.is_full(); }
     bool is_empty() const TA_REQ(lock_) { return data_.is_empty(); }
 
-    mxtl::Canary<mxtl::magic("SOCK")> canary_;
+    fbl::Canary<fbl::magic("SOCK")> canary_;
 
     uint32_t flags_;
     mx_koid_t peer_koid_;
     StateTracker state_tracker_;
 
     // The |lock_| protects all members below.
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
     MBufChain data_ TA_GUARDED(lock_);
-    mxtl::unique_ptr<char[]> control_msg_ TA_GUARDED(lock_);
+    fbl::unique_ptr<char[]> control_msg_ TA_GUARDED(lock_);
     size_t control_msg_len_ TA_GUARDED(lock_);
-    mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
+    fbl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
     bool read_disabled_ TA_GUARDED(lock_);
 };

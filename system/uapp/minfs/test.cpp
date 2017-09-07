@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 #include "host.h"
 #include "misc.h"
@@ -227,7 +227,7 @@ struct {
 
 int test_rw1() {
     const char* where = "::";
-    for (unsigned n = 0; n < mxtl::count_of(WORK); n++) {
+    for (unsigned n = 0; n < fbl::count_of(WORK); n++) {
         if (worker_new(where, WORK[n].name, WORK[n].work, WORK[n].size, WORK[n].flags) < 0) {
             return -1;
         }

@@ -11,11 +11,11 @@
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 
-#include <mxtl/macros.h>
-#include <mxtl/new.h>
-#include <mxtl/string.h>
-#include <mxtl/type_support.h>
-#include <mxtl/vector.h>
+#include <fbl/macros.h>
+#include <fbl/new.h>
+#include <fbl/string.h>
+#include <fbl/type_support.h>
+#include <fbl/vector.h>
 #include <trace-engine/types.h>
 
 namespace trace {
@@ -60,7 +60,7 @@ public:
         return *this;
     }
 
-    mxtl::String ToString() const;
+    fbl::String ToString() const;
 
 private:
     mx_koid_t process_koid_;
@@ -86,8 +86,8 @@ public:
 
     static ArgumentValue MakeDouble(double value) { return ArgumentValue(value); }
 
-    static ArgumentValue MakeString(mxtl::String value) {
-        return ArgumentValue(mxtl::move(value));
+    static ArgumentValue MakeString(fbl::String value) {
+        return ArgumentValue(fbl::move(value));
     }
 
     static ArgumentValue MakePointer(uint64_t value) {
@@ -98,13 +98,13 @@ public:
         return ArgumentValue(KoidTag(), value);
     }
 
-    ArgumentValue(ArgumentValue&& other) { MoveFrom(mxtl::move(other)); }
+    ArgumentValue(ArgumentValue&& other) { MoveFrom(fbl::move(other)); }
 
     ~ArgumentValue() { Destroy(); }
 
     ArgumentValue& operator=(ArgumentValue&& other) {
         Destroy();
-        MoveFrom(mxtl::move(other));
+        MoveFrom(fbl::move(other));
         return *this;
     }
 
@@ -135,7 +135,7 @@ public:
         return double_;
     }
 
-    const mxtl::String& GetString() const {
+    const fbl::String& GetString() const {
         MX_DEBUG_ASSERT(type_ == ArgumentType::kString);
         return string_;
     }
@@ -150,7 +150,7 @@ public:
         return koid_;
     }
 
-    mxtl::String ToString() const;
+    fbl::String ToString() const;
 
 private:
     struct PointerTag {};
@@ -174,9 +174,9 @@ private:
     explicit ArgumentValue(double d)
         : type_(ArgumentType::kDouble), double_(d) {}
 
-    explicit ArgumentValue(mxtl::String string)
+    explicit ArgumentValue(fbl::String string)
         : type_(ArgumentType::kString) {
-        new (&string_) mxtl::String(mxtl::move(string));
+        new (&string_) fbl::String(fbl::move(string));
     }
 
     explicit ArgumentValue(PointerTag, uint64_t pointer)
@@ -195,7 +195,7 @@ private:
         int64_t int64_;
         uint64_t uint64_;
         double double_;
-        mxtl::String string_;
+        fbl::String string_;
         uint64_t pointer_;
         mx_koid_t koid_;
     };
@@ -206,25 +206,25 @@ private:
 // Named argument and value.
 class Argument final {
 public:
-    explicit Argument(mxtl::String name, ArgumentValue value)
-        : name_(mxtl::move(name)), value_(mxtl::move(value)) {}
+    explicit Argument(fbl::String name, ArgumentValue value)
+        : name_(fbl::move(name)), value_(fbl::move(value)) {}
 
     Argument(Argument&& other)
-        : name_(mxtl::move(other.name_)), value_(mxtl::move(other.value_)) {}
+        : name_(fbl::move(other.name_)), value_(fbl::move(other.value_)) {}
 
     Argument& operator=(Argument&& other) {
-        name_ = mxtl::move(other.name_);
-        value_ = mxtl::move(other.value_);
+        name_ = fbl::move(other.name_);
+        value_ = fbl::move(other.value_);
         return *this;
     }
 
-    const mxtl::String& name() const { return name_; }
+    const fbl::String& name() const { return name_; }
     const ArgumentValue& value() const { return value_; }
 
-    mxtl::String ToString() const;
+    fbl::String ToString() const;
 
 private:
-    mxtl::String name_;
+    fbl::String name_;
     ArgumentValue value_;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Argument);
@@ -236,7 +236,7 @@ public:
     // Provider info event data.
     struct ProviderInfo {
         ProviderId id;
-        mxtl::String name;
+        fbl::String name;
     };
 
     // Provider section event data.
@@ -245,11 +245,11 @@ public:
     };
 
     explicit MetadataContent(ProviderInfo provider_info)
-        : type_(MetadataType::kProviderInfo), provider_info_(mxtl::move(provider_info)) {}
+        : type_(MetadataType::kProviderInfo), provider_info_(fbl::move(provider_info)) {}
 
     explicit MetadataContent(ProviderSection provider_section)
         : type_(MetadataType::kProviderSection),
-          provider_section_(mxtl::move(provider_section)) {}
+          provider_section_(fbl::move(provider_section)) {}
 
     const ProviderInfo& GetProviderInfo() const {
         MX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
@@ -262,19 +262,19 @@ public:
     }
 
     MetadataContent(MetadataContent&& other)
-        : type_(other.type_) { MoveFrom(mxtl::move(other)); }
+        : type_(other.type_) { MoveFrom(fbl::move(other)); }
 
     ~MetadataContent() { Destroy(); }
 
     MetadataContent& operator=(MetadataContent&& other) {
         Destroy();
-        MoveFrom(mxtl::move(other));
+        MoveFrom(fbl::move(other));
         return *this;
     }
 
     MetadataType type() const { return type_; }
 
-    mxtl::String ToString() const;
+    fbl::String ToString() const;
 
 private:
     void Destroy();
@@ -339,40 +339,40 @@ public:
     };
 
     explicit EventData(Instant instant)
-        : type_(EventType::kInstant), instant_(mxtl::move(instant)) {}
+        : type_(EventType::kInstant), instant_(fbl::move(instant)) {}
 
     explicit EventData(Counter counter)
-        : type_(EventType::kCounter), counter_(mxtl::move(counter)) {}
+        : type_(EventType::kCounter), counter_(fbl::move(counter)) {}
 
     explicit EventData(DurationBegin duration_begin)
-        : type_(EventType::kDurationBegin), duration_begin_(mxtl::move(duration_begin)) {}
+        : type_(EventType::kDurationBegin), duration_begin_(fbl::move(duration_begin)) {}
 
     explicit EventData(DurationEnd duration_end)
-        : type_(EventType::kDurationEnd), duration_end_(mxtl::move(duration_end)) {}
+        : type_(EventType::kDurationEnd), duration_end_(fbl::move(duration_end)) {}
 
     explicit EventData(AsyncBegin async_begin)
-        : type_(EventType::kAsyncBegin), async_begin_(mxtl::move(async_begin)) {}
+        : type_(EventType::kAsyncBegin), async_begin_(fbl::move(async_begin)) {}
 
     explicit EventData(AsyncInstant async_instant)
-        : type_(EventType::kAsyncInstant), async_instant_(mxtl::move(async_instant)) {}
+        : type_(EventType::kAsyncInstant), async_instant_(fbl::move(async_instant)) {}
 
     explicit EventData(AsyncEnd async_end)
-        : type_(EventType::kAsyncEnd), async_end_(mxtl::move(async_end)) {}
+        : type_(EventType::kAsyncEnd), async_end_(fbl::move(async_end)) {}
 
     explicit EventData(FlowBegin flow_begin)
-        : type_(EventType::kFlowBegin), flow_begin_(mxtl::move(flow_begin)) {}
+        : type_(EventType::kFlowBegin), flow_begin_(fbl::move(flow_begin)) {}
 
     explicit EventData(FlowStep flow_step)
-        : type_(EventType::kFlowStep), flow_step_(mxtl::move(flow_step)) {}
+        : type_(EventType::kFlowStep), flow_step_(fbl::move(flow_step)) {}
 
     explicit EventData(FlowEnd flow_end)
-        : type_(EventType::kFlowEnd), flow_end_(mxtl::move(flow_end)) {}
+        : type_(EventType::kFlowEnd), flow_end_(fbl::move(flow_end)) {}
 
-    EventData(EventData&& other) { MoveFrom(mxtl::move(other)); }
+    EventData(EventData&& other) { MoveFrom(fbl::move(other)); }
 
     EventData& operator=(EventData&& other) {
         Destroy();
-        MoveFrom(mxtl::move(other));
+        MoveFrom(fbl::move(other));
         return *this;
     }
 
@@ -428,7 +428,7 @@ public:
 
     EventType type() const { return type_; }
 
-    mxtl::String ToString() const;
+    fbl::String ToString() const;
 
 private:
     void Destroy();
@@ -468,7 +468,7 @@ public:
     // String record data.
     struct String {
         trace_string_index_t index;
-        mxtl::String string;
+        fbl::String string;
     };
 
     // Thread record data.
@@ -482,9 +482,9 @@ public:
         EventType type() const { return data.type(); }
         trace_ticks_t timestamp;
         ProcessThread process_thread;
-        mxtl::String category;
-        mxtl::String name;
-        mxtl::Vector<Argument> arguments;
+        fbl::String category;
+        fbl::String name;
+        fbl::Vector<Argument> arguments;
         EventData data;
     };
 
@@ -492,8 +492,8 @@ public:
     struct KernelObject {
         mx_koid_t koid;
         mx_obj_type_t object_type;
-        mxtl::String name;
-        mxtl::Vector<Argument> arguments;
+        fbl::String name;
+        fbl::Vector<Argument> arguments;
     };
 
     // Context Switch record data.
@@ -509,52 +509,52 @@ public:
     struct Log {
         trace_ticks_t timestamp;
         ProcessThread process_thread;
-        mxtl::String message;
+        fbl::String message;
     };
 
     explicit Record(Metadata record)
-        : type_(RecordType::kMetadata), metadata_(mxtl::move(record)) {}
+        : type_(RecordType::kMetadata), metadata_(fbl::move(record)) {}
 
     explicit Record(Initialization record)
-        : type_(RecordType::kInitialization), initialization_(mxtl::move(record)) {}
+        : type_(RecordType::kInitialization), initialization_(fbl::move(record)) {}
 
     explicit Record(String record)
         : type_(RecordType::kString) {
-        new (&string_) String(mxtl::move(record));
+        new (&string_) String(fbl::move(record));
     }
 
     explicit Record(Thread record)
         : type_(RecordType::kThread) {
-        new (&thread_) Thread(mxtl::move(record));
+        new (&thread_) Thread(fbl::move(record));
     }
 
     explicit Record(Event record)
         : type_(RecordType::kEvent) {
-        new (&event_) Event(mxtl::move(record));
+        new (&event_) Event(fbl::move(record));
     }
 
     explicit Record(KernelObject record)
         : type_(RecordType::kKernelObject) {
-        new (&kernel_object_) KernelObject(mxtl::move(record));
+        new (&kernel_object_) KernelObject(fbl::move(record));
     }
 
     explicit Record(ContextSwitch record)
         : type_(RecordType::kContextSwitch) {
-        new (&context_switch_) ContextSwitch(mxtl::move(record));
+        new (&context_switch_) ContextSwitch(fbl::move(record));
     }
 
     explicit Record(Log record)
         : type_(RecordType::kLog) {
-        new (&log_) Log(mxtl::move(record));
+        new (&log_) Log(fbl::move(record));
     }
 
-    Record(Record&& other) { MoveFrom(mxtl::move(other)); }
+    Record(Record&& other) { MoveFrom(fbl::move(other)); }
 
     ~Record() { Destroy(); }
 
     Record& operator=(Record&& other) {
         Destroy();
-        MoveFrom(mxtl::move(other));
+        MoveFrom(fbl::move(other));
         return *this;
     }
 
@@ -600,7 +600,7 @@ public:
 
     RecordType type() const { return type_; }
 
-    mxtl::String ToString() const;
+    fbl::String ToString() const;
 
 private:
     void Destroy();

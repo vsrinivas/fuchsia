@@ -20,7 +20,7 @@
 #include <arch/x86/feature.h>
 #include <lib/fixed_point.h>
 #include <lk/init.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
@@ -63,7 +63,7 @@ const char *clock_name[] = {
     [CLOCK_HPET] = "HPET",
     [CLOCK_TSC] = "TSC",
 };
-static_assert(mxtl::count_of(clock_name) == CLOCK_COUNT, "");
+static_assert(fbl::count_of(clock_name) == CLOCK_COUNT, "");
 
 
 // PIT time accounting info

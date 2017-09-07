@@ -14,9 +14,9 @@
 #include <dev/pci_common.h>
 #include <endian.h>
 #include <err.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/ref_counted.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/ref_counted.h>
 #include <sys/types.h>
 
 /**
@@ -183,7 +183,7 @@ constexpr uint16_t PCIE_EXT_CAP_ID_DESIGNATED_VENDOR_SPECIFIC              = 0x0
  * for config corresponds to cfg's base plus cap's base along with
  * the specific register's offset.
  */
-class PciStdCapability : public mxtl::SinglyLinkedListable<mxtl::unique_ptr<PciStdCapability>> {
+class PciStdCapability : public fbl::SinglyLinkedListable<fbl::unique_ptr<PciStdCapability>> {
 public:
     PciStdCapability(const PcieDevice& dev, uint16_t base, uint8_t id)
         : dev_(dev), base_(base), id_(id) {}

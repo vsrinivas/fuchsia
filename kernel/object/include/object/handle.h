@@ -9,8 +9,8 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
 
 class Dispatcher;
 class Handle;
@@ -21,10 +21,10 @@ void TearDownHandle(Handle* handle);
 } // namespace internal
 
 // A Handle is how a specific process refers to a specific Dispatcher.
-class Handle final : public mxtl::DoublyLinkedListable<Handle*> {
+class Handle final : public fbl::DoublyLinkedListable<Handle*> {
 public:
     // Returns the Dispatcher to which this instance points.
-    mxtl::RefPtr<Dispatcher> dispatcher() const;
+    fbl::RefPtr<Dispatcher> dispatcher() const;
 
     // Returns the process that owns this instance. Used to guarantee
     // that one process may not access a handle owned by a different process.
@@ -59,11 +59,11 @@ public:
 private:
     // Handle should never be created by anything other than
     // MakeHandle or DupHandle.
-    friend Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher,
+    friend Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher,
                               mx_rights_t rights);
     friend Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace);
     Handle(const Handle&) = delete;
-    Handle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights,
+    Handle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights,
            uint32_t base_value);
     Handle(const Handle* rhs, mx_rights_t rights, uint32_t base_value);
 
@@ -75,7 +75,7 @@ private:
     ~Handle() = default;
 
     mx_koid_t process_id_;
-    mxtl::RefPtr<Dispatcher> dispatcher_;
+    fbl::RefPtr<Dispatcher> dispatcher_;
     const mx_rights_t rights_;
     const uint32_t base_value_;
 };

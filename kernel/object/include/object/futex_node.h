@@ -10,14 +10,14 @@
 #include <kernel/wait.h>
 #include <list.h>
 #include <magenta/types.h>
-#include <mxtl/intrusive_hash_table.h>
-#include <mxtl/mutex.h>
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/mutex.h>
 
 // Node for linked list of threads blocked on a futex
 // Intended to be embedded within a ThreadDispatcher Instance
-class FutexNode : public mxtl::SinglyLinkedListable<FutexNode*> {
+class FutexNode : public fbl::SinglyLinkedListable<FutexNode*> {
 public:
-    using HashTable = mxtl::HashTable<uintptr_t, FutexNode*>;
+    using HashTable = fbl::HashTable<uintptr_t, FutexNode*>;
 
     FutexNode();
     ~FutexNode();
@@ -42,13 +42,13 @@ public:
                                      uintptr_t new_hash_key);
 
     // This must be called with |mutex| held and returns without |mutex| held.
-    mx_status_t BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
+    mx_status_t BlockThread(fbl::Mutex* mutex, mx_time_t deadline) TA_REL(mutex);
 
     void set_hash_key(uintptr_t key) {
         hash_key_ = key;
     }
 
-    // Trait implementation for mxtl::HashTable
+    // Trait implementation for fbl::HashTable
     uintptr_t GetKey() const { return hash_key_; }
     static size_t GetHash(uintptr_t key) { return (key >> 3); }
 

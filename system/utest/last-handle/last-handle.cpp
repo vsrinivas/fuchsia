@@ -11,7 +11,7 @@
 #include <mx/handle.h>
 #include <mx/port.h>
 
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 #include <magenta/syscalls/port.h>
 

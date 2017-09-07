@@ -7,7 +7,7 @@
 #include <err.h>
 #include <inttypes.h>
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle_owner.h>
 #include <object/handles.h>
@@ -41,7 +41,7 @@ mx_status_t sys_resource_create(mx_handle_t handle, uint32_t kind,
     // Obtain the parent Resource
     // WRITE access is required to create a child resource
     mx_status_t result;
-    mxtl::RefPtr<ResourceDispatcher> parent;
+    fbl::RefPtr<ResourceDispatcher> parent;
     result = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &parent);
     if (result)
         return result;
@@ -60,20 +60,20 @@ mx_status_t sys_resource_create(mx_handle_t handle, uint32_t kind,
 
     // Create a new Resource
     mx_rights_t rights;
-    mxtl::RefPtr<ResourceDispatcher> child;
+    fbl::RefPtr<ResourceDispatcher> child;
     result = ResourceDispatcher::Create(&child, &rights, kind, low, high);
     if (result != MX_OK)
         return result;
 
     // Create a handle for the child
-    HandleOwner child_h(MakeHandle(mxtl::RefPtr<Dispatcher>(child.get()), rights));
+    HandleOwner child_h(MakeHandle(fbl::RefPtr<Dispatcher>(child.get()), rights));
     if (!child_h)
         return MX_ERR_NO_MEMORY;
 
     if (_rsrc_out.copy_to_user(up->MapHandleToValue(child_h)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(child_h));
+    up->AddHandle(fbl::move(child_h));
 
     return MX_OK;
 }

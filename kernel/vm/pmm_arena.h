@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 #pragma once
 
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
 
 #include <trace.h>
 #include <vm/pmm.h>
@@ -14,7 +14,7 @@
 #define PMM_ENABLE_FREE_FILL 0
 #define PMM_FREE_FILL_BYTE 0x42
 
-class PmmArena : public mxtl::DoublyLinkedListable<PmmArena*> {
+class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
 public:
     PmmArena(const pmm_arena_info_t* info);
     ~PmmArena();

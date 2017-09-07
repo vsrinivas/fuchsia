@@ -9,7 +9,7 @@
 
 #include <assert.h>
 #include <magenta/compiler.h>
-#include <mxtl/ref_counted.h>
+#include <fbl/ref_counted.h>
 
 /**
  * Notes on class hierarchy and RefCounting
@@ -66,22 +66,22 @@
  *
  * ==== RefCounting ====
  *
- * Object lifetimes are managed using mxtl::RefPtr<>.  Because of this, all
+ * Object lifetimes are managed using fbl::RefPtr<>.  Because of this, all
  * objects must provide an implementation of AddRef/Release/Adopt which is
- * compatible with mxtl::RefPtr<>.  The bus driver holds RefPtr<Root>s,
+ * compatible with fbl::RefPtr<>.  The bus driver holds RefPtr<Root>s,
  * UpstreamNodes hold RefPtr<Device>s and Devices hold RefPtr<UpstreamNode>s
  * back to their owners.
  *
  * RefPtr to both Devices and UpstreamNodes exist in the system, so both object
  * must expose an interface to reference counting which is compatible with
- * mxtl::RefPtr<>.  Because a Bridge is both an UpstreamNode and a Device,
- * simply having Device and UpstreamNode derive from mxtl::RefCounted<> (which
+ * fbl::RefPtr<>.  Because a Bridge is both an UpstreamNode and a Device,
+ * simply having Device and UpstreamNode derive from fbl::RefCounted<> (which
  * would be standard practice) will not work.  The Bridge object which results
  * from this would have two different ref counts which would end up being
  * manipulated independently.
  *
  * A simple solution to this would be to have all of the objects in the system
- * inherit virtually from an implementation of mxtl::RefCounted<>.
+ * inherit virtually from an implementation of fbl::RefCounted<>.
  * Unfortunately, the power that be strictly prohibit the use of virtual
  * inheritance in this codebase.  Because of this, a different solution needs to
  * be provided.  Here is how this system works.
@@ -92,14 +92,14 @@
  * ++ PCIE_REQUIRE_REFCOUNTED
  * Any class which is a base class of any other class in this hierarchy *must*
  * include this macro.  It defines pure virtual AddRef/Release/Adopt members
- * whose signatures are compatible with mxtl::RefPtr.  This requires an
+ * whose signatures are compatible with fbl::RefPtr.  This requires an
  * implementation to exist in derived classes, redirects ref counting behavior
  * to this implementation, and prevents accidental instantiation of the base
  * class.  UpstreamNode and Device REQUIRE_REFCOUNTED.
  *
  * ++ PCIE_IMPLEMENT_REFCOUNTED
  * Any class which is a child of one or more of the base classes *must* include
- * this macro.  This macro wraps an implementation of mxtl::RefCounted<> (so
+ * this macro.  This macro wraps an implementation of fbl::RefCounted<> (so
  * that code duplication is minimized, and atomic ref count access is consistent
  * throughout the system), and marks the virtual AddRef/Release/Adopt methods as
  * being final, which helps to prevent a different implementation accidentally
@@ -114,7 +114,7 @@
  * does nothing but derive from Device and implement the ref counting.  Its
  * implementation exists inside of an anonymous namespace inside
  * pcie_device.cpp so none of the rest of the system ever sees it.
- * PcieDevice::Create returns a mxtl::RefPtr<PcieDevice> which actually points
+ * PcieDevice::Create returns a fbl::RefPtr<PcieDevice> which actually points
  * to an instance of DeviceImpl created by the Create method.
  */
 
@@ -139,7 +139,7 @@
 
 #define PCIE_IMPLEMENT_REFCOUNTED \
 private: \
-    mxtl::RefCounted<void> ref_count_impl_; \
+    fbl::RefCounted<void> ref_count_impl_; \
 public: \
     __PCIE_IMPLEMENT_ADOPT; \
     void AddRef() final { ref_count_impl_.AddRef(); } \

@@ -29,14 +29,14 @@
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
 #include <mx/vmo.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/limits.h>
-#include <mxtl/new.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
-#include <mxtl/vector.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/limits.h>
+#include <fbl/new.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <unittest/unittest.h>
 
 /////////////////////// Helper functions for creating FVM:
@@ -179,9 +179,9 @@ constexpr uint8_t kTestPartGUIDSys[] = GUID_SYSTEM_VALUE;
 
 class VmoBuf;
 
-class VmoClient : public mxtl::RefCounted<VmoClient> {
+class VmoClient : public fbl::RefCounted<VmoClient> {
 public:
-    static bool Create(int fd, mxtl::RefPtr<VmoClient>* out);
+    static bool Create(int fd, fbl::RefPtr<VmoClient>* out);
     bool CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
     bool Txn(block_fifo_request_t* requests, size_t count) {
@@ -202,12 +202,12 @@ private:
 
 class VmoBuf {
 public:
-    static bool Create(mxtl::RefPtr<VmoClient> client, size_t size,
-                       mxtl::unique_ptr<VmoBuf>* out) {
+    static bool Create(fbl::RefPtr<VmoClient> client, size_t size,
+                       fbl::unique_ptr<VmoBuf>* out) {
         BEGIN_HELPER;
 
-        mxtl::AllocChecker ac;
-        mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[size]);
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[size]);
         ASSERT_TRUE(ac.check());
 
         mx::vmo vmo;
@@ -220,12 +220,12 @@ public:
         vmoid_t vmoid;
         ASSERT_GT(ioctl_block_attach_vmo(client->fd(), &xfer_vmo, &vmoid), 0);
 
-        mxtl::unique_ptr<VmoBuf> vb(new (&ac) VmoBuf(mxtl::move(client),
-                                                     mxtl::move(vmo),
-                                                     mxtl::move(buf),
+        fbl::unique_ptr<VmoBuf> vb(new (&ac) VmoBuf(fbl::move(client),
+                                                     fbl::move(vmo),
+                                                     fbl::move(buf),
                                                      vmoid));
         ASSERT_TRUE(ac.check());
-        *out = mxtl::move(vb);
+        *out = fbl::move(vb);
         END_HELPER;
     }
 
@@ -242,28 +242,28 @@ public:
 private:
     friend VmoClient;
 
-    VmoBuf(mxtl::RefPtr<VmoClient> client, mx::vmo vmo,
-           mxtl::unique_ptr<uint8_t[]> buf, vmoid_t vmoid) :
-        client_(mxtl::move(client)), vmo_(mxtl::move(vmo)),
-        buf_(mxtl::move(buf)), vmoid_(vmoid) {}
+    VmoBuf(fbl::RefPtr<VmoClient> client, mx::vmo vmo,
+           fbl::unique_ptr<uint8_t[]> buf, vmoid_t vmoid) :
+        client_(fbl::move(client)), vmo_(fbl::move(vmo)),
+        buf_(fbl::move(buf)), vmoid_(vmoid) {}
 
-    mxtl::RefPtr<VmoClient> client_;
+    fbl::RefPtr<VmoClient> client_;
     mx::vmo vmo_;
-    mxtl::unique_ptr<uint8_t[]> buf_;
+    fbl::unique_ptr<uint8_t[]> buf_;
     vmoid_t vmoid_;
 };
 
-bool VmoClient::Create(int fd, mxtl::RefPtr<VmoClient>* out) {
+bool VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
     BEGIN_HELPER;
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VmoClient> vc = mxtl::AdoptRef(new (&ac) VmoClient());
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new (&ac) VmoClient());
     ASSERT_TRUE(ac.check());
     mx_handle_t fifo;
     ASSERT_GT(ioctl_block_get_fifos(fd, &fifo), 0, "Failed to get FIFO");
     ASSERT_GT(ioctl_block_alloc_txn(fd, &vc->txnid_), 0, "Failed to alloc txn");
     ASSERT_EQ(block_fifo_create_client(fifo, &vc->client_), MX_OK);
     vc->fd_ = fd;
-    *out = mxtl::move(vc);
+    *out = fbl::move(vc);
     END_HELPER;
 }
 
@@ -294,8 +294,8 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
     BEGIN_HELPER;
 
     // Create a comparison buffer
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
     ASSERT_TRUE(ac.check());
     memset(out.get(), 0, len);
 
@@ -330,8 +330,8 @@ static bool CheckWrite(int fd, size_t off, size_t len, uint8_t* buf) {
 
 static bool CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
     BEGIN_HELPER;
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[len]);
     ASSERT_TRUE(ac.check());
     memset(out.get(), 0, len);
     ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
@@ -342,8 +342,8 @@ static bool CheckRead(int fd, size_t off, size_t len, const uint8_t* in) {
 
 static bool CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
     BEGIN_HELPER;
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
     ASSERT_TRUE(ac.check());
     memset(buf.get(), color, len);
     ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
@@ -353,8 +353,8 @@ static bool CheckWriteColor(int fd, size_t off, size_t len, uint8_t color) {
 
 static bool CheckReadColor(int fd, size_t off, size_t len, uint8_t color) {
     BEGIN_HELPER;
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[len]);
     ASSERT_TRUE(ac.check());
     ASSERT_EQ(lseek(fd, off, SEEK_SET), static_cast<ssize_t>(off));
     ASSERT_EQ(read(fd, buf.get(), len), static_cast<ssize_t>(len));
@@ -370,8 +370,8 @@ static bool CheckWriteReadBlock(int fd, size_t block, size_t count) {
     ASSERT_GE(ioctl_block_get_info(fd, &info), 0);
     size_t len = info.block_size * count;
     size_t off = info.block_size * block;
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> in(new (&ac) uint8_t[len]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> in(new (&ac) uint8_t[len]);
     ASSERT_TRUE(ac.check());
     ASSERT_TRUE(CheckWrite(fd, off, len, in.get()));
     ASSERT_TRUE(CheckRead(fd, off, len, in.get()));
@@ -382,8 +382,8 @@ static bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
     BEGIN_HELPER;
     block_info_t info;
     ASSERT_GE(ioctl_block_get_info(fd, &info), 0);
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * count]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * count]);
     ASSERT_TRUE(ac.check());
     size_t len = info.block_size * count;
     size_t off = info.block_size * block;
@@ -400,9 +400,9 @@ static bool CheckDeadBlock(int fd) {
     BEGIN_HELPER;
     block_info_t info;
     ASSERT_LT(ioctl_block_get_info(fd, &info), 0);
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     constexpr size_t kBlksize = 8192;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlksize]);
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlksize]);
     ASSERT_TRUE(ac.check());
     ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
     ASSERT_EQ(write(fd, buf.get(), kBlksize), -1);
@@ -685,11 +685,11 @@ static bool TestVPartitionExtend(void) {
 
     // Allocate OBSCENELY too many slices
     erequest.offset = slice_count;
-    erequest.length = mxtl::numeric_limits<size_t>::max();
+    erequest.length = fbl::numeric_limits<size_t>::max();
     ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
 
     // Allocate slices at a too-large offset
-    erequest.offset = mxtl::numeric_limits<size_t>::max();
+    erequest.offset = fbl::numeric_limits<size_t>::max();
     erequest.length = 1;
     ASSERT_LT(ioctl_block_fvm_extend(vp_fd, &erequest), 0, "Expected request failure");
 
@@ -1106,9 +1106,9 @@ static bool TestSliceAccessContiguous(void) {
     size_t last_block = (slice_size / info.block_size) - 1;
 
     {
-        mxtl::RefPtr<VmoClient> vc;
+        fbl::RefPtr<VmoClient> vc;
         ASSERT_TRUE(VmoClient::Create(vp_fd, &vc));
-        mxtl::unique_ptr<VmoBuf> vb;
+        fbl::unique_ptr<VmoBuf> vb;
         ASSERT_TRUE(VmoBuf::Create(vc, info.block_size * 2, &vb));
         ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, info.block_size * last_block, info.block_size));
         ASSERT_TRUE(vc->CheckRead(vb.get(), 0, info.block_size * last_block, info.block_size));
@@ -1174,9 +1174,9 @@ static bool TestSliceAccessMany(void) {
     ASSERT_EQ(info.block_size, kBlockSize);
 
     {
-        mxtl::RefPtr<VmoClient> vc;
+        fbl::RefPtr<VmoClient> vc;
         ASSERT_TRUE(VmoClient::Create(vp_fd, &vc));
-        mxtl::unique_ptr<VmoBuf> vb;
+        fbl::unique_ptr<VmoBuf> vb;
         ASSERT_TRUE(VmoBuf::Create(vc, kSliceSize * 3, &vb));
 
         // Access the first slice
@@ -1268,9 +1268,9 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
         int vfd = vparts[i].fd;
         // This is the last 'accessible' block.
         size_t last_block = (vparts[i].slices_used * (slice_size / info.block_size)) - 1;
-        mxtl::RefPtr<VmoClient> vc;
+        fbl::RefPtr<VmoClient> vc;
         ASSERT_TRUE(VmoClient::Create(vfd, &vc));
-        mxtl::unique_ptr<VmoBuf> vb;
+        fbl::unique_ptr<VmoBuf> vb;
         ASSERT_TRUE(VmoBuf::Create(vc, info.block_size * 2, &vb));
 
         ASSERT_TRUE(vc->CheckWrite(vb.get(), 0, info.block_size * last_block, info.block_size));
@@ -1310,9 +1310,9 @@ static bool TestSliceAccessNonContiguousPhysical(void) {
         ASSERT_GE(vparts[i].slices_used, 5, "");
 
         {
-            mxtl::RefPtr<VmoClient> vc;
+            fbl::RefPtr<VmoClient> vc;
             ASSERT_TRUE(VmoClient::Create(vparts[i].fd, &vc));
-            mxtl::unique_ptr<VmoBuf> vb;
+            fbl::unique_ptr<VmoBuf> vb;
             ASSERT_TRUE(VmoBuf::Create(vc, slice_size * 4, &vb));
 
             // Try accessing 3 noncontiguous slices at once, with the
@@ -1449,8 +1449,8 @@ static bool TestPersistenceSimple(void) {
     ASSERT_EQ(memcmp(name, kTestPartName1, strlen(kTestPartName1)), 0);
     block_info_t info;
     ASSERT_GE(ioctl_block_get_info(vp_fd, &info), 0);
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * 2]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[info.block_size * 2]);
     ASSERT_TRUE(ac.check());
 
     // Check that we can read from / write to it
@@ -1786,7 +1786,7 @@ typedef struct {
 
 typedef struct {
     int vp_fd;
-    mxtl::Vector<fvm_extent_t> extents;
+    fbl::Vector<fvm_extent_t> extents;
     thrd_t thr;
 } fvm_thread_state_t;
 
@@ -1797,7 +1797,7 @@ struct fvm_test_state_t {
     size_t slices_total;
     fvm_thread_state_t thread_states[ThreadCount];
 
-    mxtl::Mutex lock;
+    fbl::Mutex lock;
     size_t slices_left;
     size_t thread_count;
 };
@@ -1811,7 +1811,7 @@ int random_access_thread(void* arg) {
     uint8_t color = 0;
     fvm_thread_state_t* self;
     {
-        mxtl::AutoLock al(&st->lock);
+        fbl::AutoLock al(&st->lock);
         self = &st->thread_states[st->thread_count];
         color = (uint8_t)st->thread_count;
         st->thread_count++;
@@ -1831,11 +1831,11 @@ int random_access_thread(void* arg) {
             size_t extent_index = rand_r(&seed) % self->extents.size();
             size_t extension_length = 0;
             {
-                mxtl::AutoLock al(&st->lock);
+                fbl::AutoLock al(&st->lock);
                 if (!st->slices_left) {
                     continue;
                 }
-                extension_length = mxtl::min((rand_r(&seed) % st->slices_left) + 1, 5lu);
+                extension_length = fbl::min((rand_r(&seed) % st->slices_left) + 1, 5lu);
                 st->slices_left -= extension_length;
             }
             extend_request_t erequest;
@@ -1860,11 +1860,11 @@ int random_access_thread(void* arg) {
             // is no risk of collision between fvm extents
             extent.start = (self->extents.end() - 1)->start + st->slices_total;
             {
-                mxtl::AutoLock al(&st->lock);
+                fbl::AutoLock al(&st->lock);
                 if (!st->slices_left) {
                     continue;
                 }
-                extent.len = mxtl::min((rand_r(&seed) % st->slices_left) + 1, 5lu);
+                extent.len = fbl::min((rand_r(&seed) % st->slices_left) + 1, 5lu);
                 st->slices_left -= extent.len;
             }
             extend_request_t erequest;
@@ -1878,8 +1878,8 @@ int random_access_thread(void* arg) {
             ASSERT_EQ(ioctl_block_fvm_extend(self->vp_fd, &erequest), 0);
             ASSERT_TRUE(CheckWriteColor(self->vp_fd, off, len, color));
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
-            mxtl::AllocChecker ac;
-            self->extents.push_back(mxtl::move(extent), &ac);
+            fbl::AllocChecker ac;
+            self->extents.push_back(fbl::move(extent), &ac);
             ASSERT_TRUE(ac.check());
             break;
         }
@@ -1903,7 +1903,7 @@ int random_access_thread(void* arg) {
             len = self->extents[extent_index].len * st->slice_size;
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             {
-                mxtl::AutoLock al(&st->lock);
+                fbl::AutoLock al(&st->lock);
                 st->slices_left += shrink_length;
             }
             break;
@@ -1949,7 +1949,7 @@ int random_access_thread(void* arg) {
             len = self->extents[extent_index].len * st->slice_size;
             ASSERT_TRUE(CheckReadColor(self->vp_fd, off, len, color));
             {
-                mxtl::AutoLock al(&st->lock);
+                fbl::AutoLock al(&st->lock);
                 st->slices_left += shrink_length;
             }
             break;
@@ -1972,11 +1972,11 @@ int random_access_thread(void* arg) {
                                            len / st->block_size),
                         "");
             {
-                mxtl::AutoLock al(&st->lock);
+                fbl::AutoLock al(&st->lock);
                 st->slices_left += self->extents[extent_index].len;
             }
             for (size_t i = extent_index; i < self->extents.size() - 1; i++) {
-                self->extents[i] = mxtl::move(self->extents[i + 1]);
+                self->extents[i] = fbl::move(self->extents[i + 1]);
             }
             self->extents.pop_back();
             break;
@@ -2036,8 +2036,8 @@ static bool TestRandomOpMultithreaded(void) {
         fvm_extent_t extent;
         extent.start = 0;
         extent.len = 1;
-        mxtl::AllocChecker ac;
-        s.thread_states[i].extents.push_back(mxtl::move(extent), &ac);
+        fbl::AllocChecker ac;
+        s.thread_states[i].extents.push_back(fbl::move(extent), &ac);
         EXPECT_TRUE(ac.check());
         EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd, 0, kBlocksPerSlice));
         EXPECT_EQ(thrd_create(&s.thread_states[i].thr,
@@ -2059,7 +2059,7 @@ static bool TestRandomOpMultithreaded(void) {
         }
 
         // Rebind the FVM (simulating rebooting)
-        fd = FVMRebind(fd, ramdisk_path, entries, mxtl::count_of(entries));
+        fd = FVMRebind(fd, ramdisk_path, entries, fbl::count_of(entries));
         ASSERT_GT(fd, 0);
         s.thread_count = 0;
 

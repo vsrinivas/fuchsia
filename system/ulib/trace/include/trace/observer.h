@@ -18,7 +18,7 @@
 
 #include <async/wait.h>
 #include <mx/event.h>
-#include <mxtl/function.h>
+#include <fbl/function.h>
 
 namespace trace {
 
@@ -35,7 +35,7 @@ public:
     //
     // |async| the asynchronous dispatcher, must not be null.
     // |callback| the callback which is invoked whenever a state change is observed.
-    void Start(async_t* async, mxtl::Closure callback);
+    void Start(async_t* async, fbl::Closure callback);
 
     // Stops watching for state changes.
     void Stop();
@@ -45,7 +45,7 @@ private:
                                const mx_packet_signal_t* signal);
 
     async_t* async_ = nullptr;
-    mxtl::Closure callback_;
+    fbl::Closure callback_;
     mx::event event_;
     async::Wait wait_;
 };

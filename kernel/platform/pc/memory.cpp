@@ -12,7 +12,7 @@
 #include <kernel/vm.h>
 #include <lib/memory_limit.h>
 #include <magenta/boot/multiboot.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <platform.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/memory.h>
@@ -447,7 +447,7 @@ status_t enumerate_e820(enumerate_e820_callback callback, void* ctx) {
     if(!cached_e820_entry_count)
         return MX_ERR_BAD_STATE;
 
-    DEBUG_ASSERT(cached_e820_entry_count <= mxtl::count_of(cached_e820_entries));
+    DEBUG_ASSERT(cached_e820_entry_count <= fbl::count_of(cached_e820_entries));
     for (size_t i = 0; i < cached_e820_entry_count; ++i)
         callback(cached_e820_entries[i].base, cached_e820_entries[i].size,
                  cached_e820_entries[i].is_mem, ctx);
@@ -480,7 +480,7 @@ void platform_mem_init(void)
         for (range.reset(&range),
              range.advance(&range);
              !range.is_reset; range.advance(&range)) {
-            if (cached_e820_entry_count >= mxtl::count_of(cached_e820_entries)) {
+            if (cached_e820_entry_count >= fbl::count_of(cached_e820_entries)) {
                 TRACEF("ERROR - Too many e820 entries to hold in the cache!\n");
                 cached_e820_entry_count = 0;
                 break;

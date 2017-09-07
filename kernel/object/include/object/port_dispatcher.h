@@ -12,10 +12,10 @@
 
 #include <magenta/syscalls/port.h>
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/mutex.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
 
 #include <sys/types.h>
 
@@ -89,7 +89,7 @@ struct PortAllocator {
     virtual void Free(PortPacket* port_packet) = 0;
 };
 
-struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
+struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
     mx_port_packet_t packet;
     const void* const handle;
     PortObserver* observer;
@@ -109,7 +109,7 @@ struct PortPacket final : public mxtl::DoublyLinkedListable<PortPacket*> {
 // callbacks.
 class PortObserver final : public StateObserver {
 public:
-    PortObserver(uint32_t type, const Handle* handle, mxtl::RefPtr<PortDispatcher> port,
+    PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
                  uint64_t key, mx_signals_t signals);
     ~PortObserver() = default;
 
@@ -132,14 +132,14 @@ private:
     const mx_signals_t trigger_;
     PortPacket packet_;
 
-    mxtl::RefPtr<PortDispatcher> const port_;
+    fbl::RefPtr<PortDispatcher> const port_;
 };
 
 class PortDispatcher final : public Dispatcher {
 public:
     static void Init();
     static PortAllocator* DefaultPortAllocator();
-    static mx_status_t Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~PortDispatcher() final;
@@ -176,10 +176,10 @@ private:
     // Called by ExceptionPort.
     void UnlinkExceptionPort(ExceptionPort* eport);
 
-    mxtl::Canary<mxtl::magic("PORT")> canary_;
-    mxtl::Mutex lock_;
+    fbl::Canary<fbl::magic("PORT")> canary_;
+    fbl::Mutex lock_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(lock_);
-    mxtl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
-    mxtl::DoublyLinkedList<mxtl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(lock_);
 };

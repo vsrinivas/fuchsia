@@ -8,8 +8,8 @@
 
 #include <magenta/errors.h>
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 
 namespace bitmap {
 
@@ -17,12 +17,12 @@ namespace {
 
 // Allocate a new bitmap element.  If *free_list* is null, allocate one using
 // new.  If *free_list* is not null, take one from *free_list*.
-mxtl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_list) {
+fbl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_list) {
     if (!free_list) {
-        mxtl::AllocChecker ac;
-        mxtl::unique_ptr<RleBitmapElement> new_elem(new (&ac) RleBitmapElement());
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<RleBitmapElement> new_elem(new (&ac) RleBitmapElement());
         if (!ac.check()) {
-            return mxtl::unique_ptr<RleBitmapElement>();
+            return fbl::unique_ptr<RleBitmapElement>();
         }
         return new_elem;
     } else {
@@ -32,9 +32,9 @@ mxtl::unique_ptr<RleBitmapElement> AllocateElement(RleBitmap::FreeList* free_lis
 
 // Release the element *elem*.  If *free_list* is null, release the element
 // with delete.  If *free_list* is not null, append it to *free_list*.
-void ReleaseElement(RleBitmap::FreeList* free_list, mxtl::unique_ptr<RleBitmapElement>&& elem) {
+void ReleaseElement(RleBitmap::FreeList* free_list, fbl::unique_ptr<RleBitmapElement>&& elem) {
     if (free_list) {
-        free_list->push_back(mxtl::move(elem));
+        free_list->push_back(fbl::move(elem));
     }
 }
 
@@ -98,7 +98,7 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
         return MX_OK;
     }
 
-    mxtl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
+    fbl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
     if (!new_elem) {
         return MX_ERR_NO_MEMORY;
     }
@@ -112,7 +112,7 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
 
     // Insert the new element before the first node that ends at a point >=
     // when we begin.
-    elems_.insert(ends_after, mxtl::move(new_elem));
+    elems_.insert(ends_after, fbl::move(new_elem));
 
     // If ends_after was the end of the list, there is no merging to do.
     if (ends_after == elems_.end()) {
@@ -137,7 +137,7 @@ mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_
             break;
         }
 
-        max = mxtl::max(max, itr->bitoff + itr->bitlen);
+        max = fbl::max(max, itr->bitoff + itr->bitlen);
         elem.bitlen = max - elem.bitoff;
 
         auto to_erase = itr;
@@ -175,7 +175,7 @@ mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
                 continue;
             } else {
                 // '*itr' contains [bitoff, bitmax), and we need to split it.
-                mxtl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
+                fbl::unique_ptr<RleBitmapElement> new_elem = AllocateElement(free_list);
                 if (!new_elem) {
                     return MX_ERR_NO_MEMORY;
                 }
@@ -183,7 +183,7 @@ mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* fre
                 new_elem->bitoff = bitmax;
                 new_elem->bitlen = itr->bitoff + itr->bitlen - bitmax;
 
-                elems_.insert_after(itr, mxtl::move(new_elem));
+                elems_.insert_after(itr, fbl::move(new_elem));
                 itr->bitlen = bitoff - itr->bitoff;
                 break;
             }

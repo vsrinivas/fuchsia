@@ -12,15 +12,15 @@
 #include <kernel/mp.h>
 #include <vm/pmm.h>
 
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 
 #include "vmx_cpu_state_priv.h"
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
-static mxtl::Mutex vmx_mutex;
+static fbl::Mutex vmx_mutex;
 static size_t vcpus TA_GUARDED(vmx_mutex) = 0;
-static mxtl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
+static fbl::unique_ptr<VmxCpuState> vmx_cpu_state TA_GUARDED(vmx_mutex);
 
 static mx_status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -119,10 +119,10 @@ VmxPage::~VmxPage() {
 }
 
 struct vmxon_context {
-    mxtl::Array<VmxPage>* vmxon_pages;
-    mxtl::atomic<mp_cpu_mask_t> cpu_mask;
+    fbl::Array<VmxPage>* vmxon_pages;
+    fbl::atomic<mp_cpu_mask_t> cpu_mask;
 
-    vmxon_context(mxtl::Array<VmxPage>* vp)
+    vmxon_context(fbl::Array<VmxPage>* vp)
         : vmxon_pages(vp), cpu_mask(0) {}
 };
 
@@ -213,14 +213,14 @@ static void vmxoff_task(void* arg) {
 }
 
 // static
-mx_status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
+mx_status_t VmxCpuState::Create(fbl::unique_ptr<VmxCpuState>* out) {
     // Allocate a VMXON page for each CPU.
     size_t num_cpus = arch_max_num_cpus();
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     VmxPage* pages = new (&ac) VmxPage[num_cpus];
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
-    mxtl::Array<VmxPage> vmxon_pages(pages, num_cpus);
+    fbl::Array<VmxPage> vmxon_pages(pages, num_cpus);
     VmxInfo vmx_info;
     for (auto& page : vmxon_pages) {
         mx_status_t status = page.Alloc(vmx_info, 0);
@@ -238,19 +238,19 @@ mx_status_t VmxCpuState::Create(mxtl::unique_ptr<VmxCpuState>* out) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
-    mxtl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState(mxtl::move(vmxon_pages)));
+    fbl::unique_ptr<VmxCpuState> vmx_cpu_state(new (&ac) VmxCpuState(fbl::move(vmxon_pages)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
     mx_status_t status = vmx_cpu_state->vpid_bitmap_.Reset(kNumVpids);
     if (status != MX_OK)
         return status;
 
-    *out = mxtl::move(vmx_cpu_state);
+    *out = fbl::move(vmx_cpu_state);
     return MX_OK;
 }
 
-VmxCpuState::VmxCpuState(mxtl::Array<VmxPage> vmxon_pages)
-    : vmxon_pages_(mxtl::move(vmxon_pages)) {}
+VmxCpuState::VmxCpuState(fbl::Array<VmxPage> vmxon_pages)
+    : vmxon_pages_(fbl::move(vmxon_pages)) {}
 
 VmxCpuState::~VmxCpuState() {
     mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);

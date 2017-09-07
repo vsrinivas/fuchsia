@@ -8,12 +8,12 @@
 #include <string.h>
 
 #include <fs/dispatcher.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 namespace svcfs {
 
-static void CopyToArray(const char* string, size_t len, mxtl::Array<char>* result) {
-    mxtl::Array<char> array(new char[len + 1], len);
+static void CopyToArray(const char* string, size_t len, fbl::Array<char>* result) {
+    fbl::Array<char> array(new char[len + 1], len);
     memcpy(array.get(), string, len);
     array[len] = '\0';
     result->swap(array);
@@ -46,9 +46,9 @@ ServiceProvider::~ServiceProvider() = default;
 // VnodeSvc --------------------------------------------------------------------
 
 VnodeSvc::VnodeSvc(uint64_t node_id,
-                   mxtl::Array<char> name,
+                   fbl::Array<char> name,
                    ServiceProvider* provider)
-    : node_id_(node_id), name_(mxtl::move(name)), provider_(provider) {
+    : node_id_(node_id), name_(fbl::move(name)), provider_(provider) {
 }
 
 VnodeSvc::~VnodeSvc() = default;
@@ -65,7 +65,7 @@ mx_status_t VnodeSvc::Serve(fs::Vfs* vfs, mx::channel channel, uint32_t flags) {
         return MX_ERR_UNAVAILABLE;
     }
 
-    provider_->Connect(name_.get(), name_.size(), mxtl::move(channel));
+    provider_->Connect(name_.get(), name_.size(), fbl::move(channel));
 
     // If node_id_ is zero, this vnode was created during |Lookup| and doesn't
     // have a parent. Without a parent, there isn't anyone to clean up the raw
@@ -95,11 +95,11 @@ mx_status_t VnodeDir::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    mxtl::RefPtr<VnodeSvc> vn = nullptr;
+mx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+    fbl::RefPtr<VnodeSvc> vn = nullptr;
     for (auto& child : services_) {
         if (child.NameMatch(name, len)) {
-            *out = mxtl::RefPtr<VnodeSvc>(&child);
+            *out = fbl::RefPtr<VnodeSvc>(&child);
             return MX_OK;
         }
     }
@@ -151,13 +151,13 @@ bool VnodeDir::AddService(const char* name, size_t len, ServiceProvider* provide
         return false;
     }
 
-    mxtl::Array<char> array;
+    fbl::Array<char> array;
     CopyToArray(name, len, &array);
 
-    mxtl::RefPtr<VnodeSvc> vn = mxtl::AdoptRef(new VnodeSvc(
-        next_node_id_++, mxtl::move(array), provider));
+    fbl::RefPtr<VnodeSvc> vn = fbl::AdoptRef(new VnodeSvc(
+        next_node_id_++, fbl::move(array), provider));
 
-    services_.push_back(mxtl::move(vn));
+    services_.push_back(fbl::move(vn));
     Notify(name, len, VFS_WATCH_EVT_ADDED);
     return true;
 }
@@ -191,15 +191,15 @@ mx_status_t VnodeProviderDir::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeProviderDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+mx_status_t VnodeProviderDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (!IsValidServiceName(name, len)) {
         return MX_ERR_NOT_FOUND;
     }
 
-    mxtl::Array<char> array;
+    fbl::Array<char> array;
     CopyToArray(name, len, &array);
 
-    *out = mxtl::AdoptRef(new VnodeSvc(0, mxtl::move(array), provider_));
+    *out = fbl::AdoptRef(new VnodeSvc(0, fbl::move(array), provider_));
     return MX_OK;
 }
 

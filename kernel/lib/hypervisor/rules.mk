@@ -16,7 +16,7 @@ MODULE_SRCS := \
 
 MODULE_DEPS := \
 	kernel/arch/$(ARCH)/hypervisor \
-	kernel/lib/mxtl \
+	kernel/lib/fbl \
 	kernel/lib/unittest \
 	kernel/object \
 

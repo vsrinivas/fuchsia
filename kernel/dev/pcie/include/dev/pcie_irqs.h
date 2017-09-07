@@ -13,10 +13,10 @@
 #include <dev/pcie_platform.h>
 #include <err.h>
 #include <kernel/spinlock.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <region-alloc/region-alloc.h>
 #include <sys/types.h>
 
@@ -139,10 +139,10 @@ struct pcie_irq_handler_state_t {
  * TODO(johngro): Make this an inner class of PcieDevice
  */
 class SharedLegacyIrqHandler
-    : public mxtl::SinglyLinkedListable<mxtl::RefPtr<SharedLegacyIrqHandler>>,
-      public mxtl::RefCounted<SharedLegacyIrqHandler> {
+    : public fbl::SinglyLinkedListable<fbl::RefPtr<SharedLegacyIrqHandler>>,
+      public fbl::RefCounted<SharedLegacyIrqHandler> {
 public:
-    static mxtl::RefPtr<SharedLegacyIrqHandler> Create(uint irq_id);
+    static fbl::RefPtr<SharedLegacyIrqHandler> Create(uint irq_id);
     ~SharedLegacyIrqHandler();
 
     void AddDevice(PcieDevice& dev);

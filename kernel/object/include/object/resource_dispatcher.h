@@ -10,9 +10,9 @@
 #include <magenta/syscalls/resource.h>
 #include <magenta/thread_annotations.h>
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/name.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/name.h>
 #include <object/dispatcher.h>
 #include <object/handle_owner.h>
 #include <object/state_tracker.h>
@@ -21,9 +21,9 @@
 class ResourceRecord;
 
 class ResourceDispatcher final : public Dispatcher,
-    public mxtl::DoublyLinkedListable<mxtl::RefPtr<ResourceDispatcher>> {
+    public fbl::DoublyLinkedListable<fbl::RefPtr<ResourceDispatcher>> {
 public:
-    static mx_status_t Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
+    static mx_status_t Create(fbl::RefPtr<ResourceDispatcher>* dispatcher,
                            mx_rights_t* rights, uint32_t kind,
                            uint64_t low, uint64_t hight);
 
@@ -38,7 +38,7 @@ public:
 private:
     ResourceDispatcher(uint32_t kind, uint64_t low, uint64_t high);
 
-    mxtl::Canary<mxtl::magic("RSRD")> canary_;
+    fbl::Canary<fbl::magic("RSRD")> canary_;
 
     const uint32_t kind_;
     const uint64_t low_;

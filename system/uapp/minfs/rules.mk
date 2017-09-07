@@ -28,7 +28,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs \
     system/ulib/mx \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/sync \
 
 MODULE_LIBS := \
@@ -65,11 +65,11 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/mxcpp/include \
     -Isystem/ulib/mxio/include \
-    -Isystem/ulib/mxtl/include \
+    -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
 
 MODULE_HOST_LIBS := \
-    system/ulib/mxtl.hostlib
+    system/ulib/fbl.hostlib
 
 ifeq ($(HOST_PLATFORM),darwin)
 MODULE_DEFINES := O_DIRECTORY=0200000

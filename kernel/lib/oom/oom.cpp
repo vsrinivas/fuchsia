@@ -10,8 +10,8 @@
 #include <vm/pmm.h>
 #include <lib/console.h>
 #include <magenta/errors.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <platform.h>
 #include <pretty/sizes.h>
 
@@ -19,10 +19,10 @@
 #include <string.h>
 #include <sys/types.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 // Guards the oom_* values below.
-static mxtl::Mutex oom_mutex;
+static fbl::Mutex oom_mutex;
 
 // Function to call when we hit a low-memory condition.
 static oom_lowmem_callback_t* oom_lowmem_callback TA_GUARDED(oom_mutex);

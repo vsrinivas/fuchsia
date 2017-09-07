@@ -5,8 +5,8 @@
 #pragma once
 
 #include <magenta/device/block.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/macros.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
 
 #include <fs/vfs.h>
 

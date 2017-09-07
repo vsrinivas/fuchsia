@@ -11,7 +11,7 @@
 
 #include <magenta/rights.h>
 
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 #include <assert.h>
 #include <err.h>
@@ -20,21 +20,21 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
-                                       mxtl::RefPtr<Dispatcher>* dispatcher,
+mx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
+                                       fbl::RefPtr<Dispatcher>* dispatcher,
                                        mx_rights_t* rights) {
-    mxtl::AllocChecker ac;
-    auto disp = new (&ac) VmObjectDispatcher(mxtl::move(vmo));
+    fbl::AllocChecker ac;
+    auto disp = new (&ac) VmObjectDispatcher(fbl::move(vmo));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     disp->vmo()->set_user_id(disp->get_koid());
     *rights = MX_DEFAULT_VMO_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 
-VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
+VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo)
     : vmo_(vmo), state_tracker_(0u) {}
 
 VmObjectDispatcher::~VmObjectDispatcher() {
@@ -135,7 +135,7 @@ mx_status_t VmObjectDispatcher::SetMappingCachePolicy(uint32_t cache_policy) {
 }
 
 mx_status_t VmObjectDispatcher::Clone(uint32_t options, uint64_t offset, uint64_t size,
-        bool copy_name, mxtl::RefPtr<VmObject>* clone_vmo) {
+        bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
     canary_.Assert();
 
     LTRACEF("options 0x%x offset %#" PRIx64 " size %#" PRIx64 "\n",

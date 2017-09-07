@@ -8,11 +8,11 @@
 
 #include <assert.h>
 #include <magenta/thread_annotations.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <stdint.h>
 #include <vm/vm_object.h>
 #include <vm/vm_page_list.h>
@@ -89,7 +89,7 @@ protected:
 // DEAD, then the VmAddressRegion is invalid and has no meaning.
 //
 // All VmAddressRegion and VmMapping state is protected by the aspace lock.
-class VmAddressRegionOrMapping : public mxtl::RefCounted<VmAddressRegionOrMapping> {
+class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping> {
 public:
     // If a VMO-mapping, unmap all pages and remove dependency on vm object it has a ref to.
     // Otherwise recursively destroy child VMARs and transition to the DEAD state.
@@ -102,15 +102,15 @@ public:
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
     uint32_t flags() const { return flags_; }
-    const mxtl::RefPtr<VmAspace>& aspace() const { return aspace_; }
+    const fbl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
     // Recursively compute the number of allocated pages within this region
     virtual size_t AllocatedPages() const;
 
     // Subtype information and safe down-casting
     virtual bool is_mapping() const = 0;
-    mxtl::RefPtr<VmAddressRegion> as_vm_address_region();
-    mxtl::RefPtr<VmMapping> as_vm_mapping();
+    fbl::RefPtr<VmAddressRegion> as_vm_address_region();
+    fbl::RefPtr<VmMapping> as_vm_mapping();
 
     // Page fault in an address within the region.  Recursively traverses
     // the regions to find the target mapping, if it exists.
@@ -123,7 +123,7 @@ public:
     virtual void Dump(uint depth, bool verbose) const = 0;
 
 private:
-    mxtl::Canary<mxtl::magic("VMRM")> canary_;
+    fbl::Canary<fbl::magic("VMRM")> canary_;
 
 protected:
     // friend VmAddressRegion so it can access DestroyLocked
@@ -131,7 +131,7 @@ protected:
 
     // destructor, should only be invoked from RefPtr
     virtual ~VmAddressRegionOrMapping();
-    friend mxtl::RefPtr<VmAddressRegionOrMapping>;
+    friend fbl::RefPtr<VmAddressRegionOrMapping>;
 
     enum class LifeCycleState {
         // Initial state: if NOT_READY, then do not invoke Destroy() in the
@@ -182,20 +182,20 @@ protected:
 
     // pointer back to our member address space.  The aspace's lock is used
     // to serialize all modifications.
-    const mxtl::RefPtr<VmAspace> aspace_;
+    const fbl::RefPtr<VmAspace> aspace_;
 
     // pointer back to our parent region (nullptr if root or destroyed)
     VmAddressRegion* parent_;
 
     // utility so WAVL tree can find the intrusive node for the child list
     struct WAVLTreeTraits {
-        static mxtl::WAVLTreeNodeState<mxtl::RefPtr<VmAddressRegionOrMapping>, bool>& node_state(VmAddressRegionOrMapping& obj) {
+        static fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool>& node_state(VmAddressRegionOrMapping& obj) {
             return obj.subregion_list_node_;
         }
     };
 
     // node for element in list of parent's children.
-    mxtl::WAVLTreeNodeState<mxtl::RefPtr<VmAddressRegionOrMapping>, bool> subregion_list_node_;
+    fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool> subregion_list_node_;
 };
 
 // A representation of a contiguous range of virtual address space
@@ -203,21 +203,21 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
 public:
     // Create a root region.  This will span the entire aspace
     static status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
-                               mxtl::RefPtr<VmAddressRegion>* out);
+                               fbl::RefPtr<VmAddressRegion>* out);
     // Create a subregion of this region
     virtual status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
                                    uint32_t vmar_flags, const char* name,
-                                   mxtl::RefPtr<VmAddressRegion>* out);
+                                   fbl::RefPtr<VmAddressRegion>* out);
     // Create a VmMapping within this region
     virtual status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
                                      uint32_t vmar_flags,
-                                     mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                                      uint arch_mmu_flags, const char* name,
-                                     mxtl::RefPtr<VmMapping>* out);
+                                     fbl::RefPtr<VmMapping>* out);
 
     // Find the child region that contains the given addr.  If addr is in a gap,
     // returns nullptr.  This is a non-recursive search.
-    virtual mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
+    virtual fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
     // Unmap a subset of the region of memory in the containing address space,
     // returning it to this region to allocate.  If a subregion is entirely in
@@ -253,23 +253,23 @@ protected:
     // Remove *region* from the subregion list
     void RemoveSubregion(VmAddressRegionOrMapping* region);
 
-    friend mxtl::RefPtr<VmAddressRegion>;
+    friend fbl::RefPtr<VmAddressRegion>;
 
 private:
-    using ChildList = mxtl::WAVLTree<vaddr_t, mxtl::RefPtr<VmAddressRegionOrMapping>,
-                                     mxtl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
+    using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>,
+                                     fbl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
                                      WAVLTreeTraits>;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmAddressRegion);
 
-    mxtl::Canary<mxtl::magic("VMAR")> canary_;
+    fbl::Canary<fbl::magic("VMAR")> canary_;
 
     // private constructors, use Create...() instead
     VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags);
     VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags, const char* name);
 
     // Version of FindRegion() that does not acquire the aspace lock
-    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegionLocked(vaddr_t addr);
+    fbl::RefPtr<VmAddressRegionOrMapping> FindRegionLocked(vaddr_t addr);
 
     // Version of Destroy() that does not acquire the aspace lock
     status_t DestroyLocked() override;
@@ -279,17 +279,17 @@ private:
     // Helper to share code between CreateSubVmar and CreateVmMapping
     status_t CreateSubVmarInternal(size_t offset, size_t size, uint8_t align_pow2,
                                    uint32_t vmar_flags,
-                                   mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                   fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                                    uint arch_mmu_flags, const char* name,
-                                   mxtl::RefPtr<VmAddressRegionOrMapping>* out);
+                                   fbl::RefPtr<VmAddressRegionOrMapping>* out);
 
     // Create a new VmMapping within this region, overwriting any existing
     // mappings that are in the way.  If the range crosses a subregion, the call
     // fails.
     status_t OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
-                                mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                                 uint arch_mmu_flags,
-                                mxtl::RefPtr<VmAddressRegionOrMapping>* out);
+                                fbl::RefPtr<VmAddressRegionOrMapping>* out);
 
     // Implementation for Unmap() and OverwriteVmMapping() that does not hold
     // the aspace lock.
@@ -340,18 +340,18 @@ public:
 
     status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
                            uint32_t vmar_flags, const char* name,
-                           mxtl::RefPtr<VmAddressRegion>* out) override {
+                           fbl::RefPtr<VmAddressRegion>* out) override {
         return MX_ERR_BAD_STATE;
     }
     status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
                              uint32_t vmar_flags,
-                             mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                             fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                              uint arch_mmu_flags, const char* name,
-                             mxtl::RefPtr<VmMapping>* out) override {
+                             fbl::RefPtr<VmMapping>* out) override {
         return MX_ERR_BAD_STATE;
     }
 
-    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) override {
+    fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) override {
         return nullptr;
     }
 
@@ -402,12 +402,12 @@ public:
 
 // A representation of the mapping of a VMO into the address space
 class VmMapping final : public VmAddressRegionOrMapping,
-                        public mxtl::DoublyLinkedListable<VmMapping *> {
+                        public fbl::DoublyLinkedListable<VmMapping *> {
 public:
     // Accessors for VMO-mapping state
     uint arch_mmu_flags() const { return arch_mmu_flags_; }
     uint64_t object_offset() const { return object_offset_; }
-    mxtl::RefPtr<VmObject> vmo() const { return object_; };
+    fbl::RefPtr<VmObject> vmo() const { return object_; };
 
     // Convenience wrapper for vmo()->DecommitRange() with the necessary
     // offset modification and locking.
@@ -435,7 +435,7 @@ public:
 
 protected:
     ~VmMapping() override;
-    friend mxtl::RefPtr<VmMapping>;
+    friend fbl::RefPtr<VmMapping>;
 
     // private apis from VmObject land
     friend class VmObject;
@@ -446,7 +446,7 @@ protected:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmMapping);
 
-    mxtl::Canary<mxtl::magic("VMAP")> canary_;
+    fbl::Canary<fbl::magic("VMAP")> canary_;
 
     // allow VmAddressRegion to manipulate VmMapping internals for construction
     // and bookkeeping
@@ -454,7 +454,7 @@ private:
 
     // private constructors, use VmAddressRegion::Create...() instead
     VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-              mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
+              fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
 
     // Version of Destroy() that does not acquire the aspace lock
     status_t DestroyLocked() override;
@@ -477,7 +477,7 @@ private:
     void ActivateLocked();
 
     // pointer and region of the object we are mapping
-    mxtl::RefPtr<VmObject> object_;
+    fbl::RefPtr<VmObject> object_;
     uint64_t object_offset_ = 0;
 
     // cached mapping flags (read/write/user/etc)

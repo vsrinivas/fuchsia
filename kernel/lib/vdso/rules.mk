@@ -14,7 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/vdso-image.S \
 
 MODULE_DEPS := \
-    kernel/lib/mxtl \
+    kernel/lib/fbl \
 
 vdso-filename := $(BUILDDIR)/system/ulib/magenta/libmagenta.so
 

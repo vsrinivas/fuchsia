@@ -28,7 +28,7 @@ void ralloc_release_pool(ralloc_pool_t* pool) {
     // Relclaim our reference back from the land of C by turning the pointer
     // back into a RefPtr, then deliberately let it go out of scope, dropping
     // its reference and destructing the RegionPool if need be.
-    auto release_me = mxtl::internal::MakeRefPtrNoAdopt(
+    auto release_me = fbl::internal::MakeRefPtrNoAdopt(
             reinterpret_cast<RegionAllocator::RegionPool*>(pool));
 }
 
@@ -54,7 +54,7 @@ mx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool* p
     // then use it to call the RegionAllocator::SetRegionPool method.  Finally,
     // deliberately leak the reference again so we are not accidentally removing
     // the unmanaged reference held by our C user.
-    auto pool_ref = mxtl::internal::MakeRefPtrNoAdopt(
+    auto pool_ref = fbl::internal::MakeRefPtrNoAdopt(
             reinterpret_cast<RegionAllocator::RegionPool*>(pool));
     mx_status_t ret = alloc.SetRegionPool(pool_ref);
     __UNUSED auto leak = pool_ref.leak_ref();

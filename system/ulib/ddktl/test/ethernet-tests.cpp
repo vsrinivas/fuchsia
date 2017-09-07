@@ -4,8 +4,8 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -86,7 +86,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
         stop_called_ = true;
     }
 
-    mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+    mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
         start_this_ = get_this();
         proxy_.swap(proxy);
         start_called_ = true;
@@ -130,7 +130,7 @@ class TestEthmacProtocol : public ddk::Device<TestEthmacProtocol, ddk::GetProtoc
     bool start_called_ = false;
     bool send_called_ = false;
 
-    mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
+    fbl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
 };
 
 static bool test_ethmac_ifc() {

@@ -308,7 +308,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <mxtl/macros.h>
+#include <fbl/macros.h>
 
 class AutoThreadLock {
 public:

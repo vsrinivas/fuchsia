@@ -6,8 +6,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -54,9 +54,9 @@
 //
 // == APIs and Object lifecycle management ==
 // Both C and C++ APIs are provided for using the RegionAllocator.  The C++ API
-// makes use of mxtl managed pointer types in order to simplify lifecycle
-// management.  RegionPools are managed with mxtl::RefPtr while Regions are
-// handed out via mxtl::unique_ptr.  RegionAllocators themselves impose no
+// makes use of fbl managed pointer types in order to simplify lifecycle
+// management.  RegionPools are managed with fbl::RefPtr while Regions are
+// handed out via fbl::unique_ptr.  RegionAllocators themselves impose no
 // lifecycle restrictions and may be heap allocated, stack allocated, or
 // embedded directly in objects as the user sees fit.  It is an error to allow a
 // RegionAllocator to destruct while there are allocations in flight.
@@ -71,13 +71,13 @@
 // allocation is the only option.
 //
 // == Dependencies ==
-// The RegionAllocator depends only on malloc/free and mxtl.  The mxtl
+// The RegionAllocator depends only on malloc/free and fbl.  The fbl
 // dependency is not visible to users of the C API.  new/delete implementations
 // are provided internally, no global new/delete behavior needs to be defined by
 // the user.
 //
 // == Thread Safety ==
-// RegionAllocator and RegionPools use mxtl::Mutex objects to provide thread
+// RegionAllocator and RegionPools use fbl::Mutex objects to provide thread
 // safety in multi-threaded environments.  As such, RegionAllocators are not
 // currently suitable for use in code which may run at IRQ context, or which
 // must never block.
@@ -230,28 +230,28 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/slab_allocator.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/slab_allocator.h>
+#include <fbl/unique_ptr.h>
 
 // C++ API
 class RegionAllocator {
 public:
     class Region;
-    using RegionSlabTraits = mxtl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
+    using RegionSlabTraits = fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
 
     class Region : public ralloc_region_t,
-                   public mxtl::SlabAllocated<RegionSlabTraits>,
-                   public mxtl::Recyclable<Region> {
+                   public fbl::SlabAllocated<RegionSlabTraits>,
+                   public fbl::Recyclable<Region> {
     public:
-        using UPtr = mxtl::unique_ptr<const Region>;
+        using UPtr = fbl::unique_ptr<const Region>;
 
     private:
-        using WAVLTreeNodeState   = mxtl::WAVLTreeNodeState<Region*>;
-        using KeyTraitsSortByBase = mxtl::DefaultKeyedObjectTraits<uint64_t, Region>;
+        using WAVLTreeNodeState   = fbl::WAVLTreeNodeState<Region*>;
+        using KeyTraitsSortByBase = fbl::DefaultKeyedObjectTraits<uint64_t, Region>;
 
         struct WAVLTreeNodeTraitsSortByBase {
             static WAVLTreeNodeState& node_state(Region& r) { return r.ns_tree_sort_by_base_; }
@@ -273,10 +273,10 @@ public:
             }
         };
 
-        using WAVLTreeSortByBase = mxtl::WAVLTree<uint64_t, Region*,
+        using WAVLTreeSortByBase = fbl::WAVLTree<uint64_t, Region*,
                                                   KeyTraitsSortByBase,
                                                   WAVLTreeNodeTraitsSortByBase>;
-        using WAVLTreeSortBySize = mxtl::WAVLTree<ralloc_region_t, Region*,
+        using WAVLTreeSortBySize = fbl::WAVLTree<ralloc_region_t, Region*,
                                                   KeyTraitsSortBySize,
                                                   WAVLTreeNodeTraitsSortBySize>;
 
@@ -286,8 +286,8 @@ public:
         // So many friends!  I'm the most popular class in the build!!
         friend class  RegionAllocator;
         friend class  RegionPool;
-        friend class  mxtl::unique_ptr<const Region>;
-        friend class  mxtl::Recyclable<Region>;
+        friend class  fbl::unique_ptr<const Region>;
+        friend class  fbl::Recyclable<Region>;
         friend        KeyTraitsSortByBase;
         friend struct KeyTraitsSortBySize;
         friend struct WAVLTreeNodeTraitsSortByBase;
@@ -297,7 +297,7 @@ public:
         // allocator.  They cannot be copied, assigned, or deleted.  Externally,
         // they should only be handled by their unique_ptr<>s.
         explicit Region(RegionAllocator* owner) : owner_(owner) { }
-        friend class  mxtl::SlabAllocator<RegionSlabTraits>;
+        friend class  fbl::SlabAllocator<RegionSlabTraits>;
         DISALLOW_COPY_ASSIGN_AND_MOVE(Region);
 
         // When a user's unique_ptr<> reference to this region goes out of
@@ -306,7 +306,7 @@ public:
         // memory for the bookkeeping will eventually be deleted when it merges
         // with another available region, or when the allocator finally shuts
         // down.
-        void mxtl_recycle() {
+        void fbl_recycle() {
             MX_DEBUG_ASSERT(owner_ != nullptr);
             owner_->ReleaseRegion(this);
         }
@@ -316,10 +316,10 @@ public:
         WAVLTreeNodeState ns_tree_sort_by_size_;
     };
 
-    class RegionPool : public mxtl::RefCounted<RegionPool>,
-                       public mxtl::SlabAllocator<RegionSlabTraits> {
+    class RegionPool : public fbl::RefCounted<RegionPool>,
+                       public fbl::SlabAllocator<RegionSlabTraits> {
     public:
-        using RefPtr = mxtl::RefPtr<RegionPool>;
+        using RefPtr = fbl::RefPtr<RegionPool>;
 
         static constexpr size_t SLAB_SIZE = RegionSlabTraits::SLAB_SIZE;
 
@@ -327,11 +327,11 @@ public:
 
     private:
         // Only our RefPtr's are allowed to destroy us.
-        friend mxtl::RefPtr<RegionPool>;
+        friend fbl::RefPtr<RegionPool>;
 
         // Attempt to allocate at least one slab up front when we are created.
         explicit RegionPool(size_t num_slabs)
-            : mxtl::SlabAllocator<RegionSlabTraits>(num_slabs, true) { }
+            : fbl::SlabAllocator<RegionSlabTraits>(num_slabs, true) { }
 
         ~RegionPool() { }
 
@@ -346,7 +346,7 @@ public:
     explicit RegionAllocator(const RegionPool::RefPtr& region_pool)
         : region_pool_(region_pool) { }
     explicit RegionAllocator(RegionPool::RefPtr&& region_pool)
-        : region_pool_(mxtl::move(region_pool)) { }
+        : region_pool_(fbl::move(region_pool)) { }
     RegionAllocator(const RegionAllocator& c) = delete;
     RegionAllocator& operator=(const RegionAllocator& c) = delete;
 
@@ -359,7 +359,7 @@ public:
     // assigned and currently has allocations from this pool.
     mx_status_t SetRegionPool(const RegionPool::RefPtr& region_pool);
     mx_status_t SetRegionPool(RegionPool::RefPtr&& region_pool) {
-        RegionPool::RefPtr ref(mxtl::move(region_pool));
+        RegionPool::RefPtr ref(fbl::move(region_pool));
         return SetRegionPool(ref);
     }
 
@@ -464,12 +464,12 @@ public:
     }
 
     size_t AllocatedRegionCount() const {
-        mxtl::AutoLock alloc_lock(&alloc_lock_);
+        fbl::AutoLock alloc_lock(&alloc_lock_);
         return allocated_regions_by_base_.size();
     }
 
     size_t AvailableRegionCount() const {
-        mxtl::AutoLock alloc_lock(&alloc_lock_);
+        fbl::AutoLock alloc_lock(&alloc_lock_);
         return avail_regions_by_base_.size();
     }
 
@@ -496,7 +496,7 @@ private:
      * assigned RegionPool, but code from the RegionPool will never call into
      * the RegionAllocator.
      */
-    mutable mxtl::Mutex alloc_lock_;
+    mutable fbl::Mutex alloc_lock_;
     Region::WAVLTreeSortByBase allocated_regions_by_base_;
     Region::WAVLTreeSortByBase avail_regions_by_base_;
     Region::WAVLTreeSortBySize avail_regions_by_size_;

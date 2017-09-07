@@ -27,7 +27,7 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/cryptolib \
     system/ulib/mx \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/sync \
 
 MODULE_LIBS := \
@@ -56,7 +56,7 @@ MODULE_SRCS := \
     third_party/ulib/cryptolib/cryptolib.c \
 
 MODULE_HOST_LIBS := \
-    system/ulib/mxtl.hostlib
+    system/ulib/fbl.hostlib
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -67,7 +67,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/digest/include \
     -Isystem/ulib/mxcpp/include \
     -Isystem/ulib/mxio/include \
-    -Isystem/ulib/mxtl/include \
+    -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
 
 MODULE_DEFINES := DISABLE_THREAD_ANNOTATIONS

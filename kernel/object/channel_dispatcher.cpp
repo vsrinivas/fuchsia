@@ -20,24 +20,24 @@
 #include <object/thread_dispatcher.h>
 
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/type_support.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/type_support.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
 // static
-mx_status_t ChannelDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                      mxtl::RefPtr<Dispatcher>* dispatcher1,
+mx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
+                                      fbl::RefPtr<Dispatcher>* dispatcher1,
                                       mx_rights_t* rights) {
-    mxtl::AllocChecker ac;
-    auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher());
+    fbl::AllocChecker ac;
+    auto ch0 = fbl::AdoptRef(new (&ac) ChannelDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto ch1 = mxtl::AdoptRef(new (&ac) ChannelDispatcher());
+    auto ch1 = fbl::AdoptRef(new (&ac) ChannelDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -45,8 +45,8 @@ mx_status_t ChannelDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
     ch1->Init(ch0);
 
     *rights = MX_DEFAULT_CHANNEL_RIGHTS;
-    *dispatcher0 = mxtl::move(ch0);
-    *dispatcher1 = mxtl::move(ch1);
+    *dispatcher0 = fbl::move(ch0);
+    *dispatcher1 = fbl::move(ch1);
     return MX_OK;
 }
 
@@ -56,8 +56,8 @@ ChannelDispatcher::ChannelDispatcher()
 
 // This is called before either ChannelDispatcher is accessible from threads other than the one
 // initializing the channel, so it does not need locking.
-void ChannelDispatcher::Init(mxtl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    other_ = mxtl::move(other);
+void ChannelDispatcher::Init(fbl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
+    other_ = fbl::move(other);
     other_koid_ = other_->get_koid();
 }
 
@@ -93,10 +93,10 @@ void ChannelDispatcher::on_zero_handles() {
     canary_.Assert();
 
     // Detach other endpoint
-    mxtl::RefPtr<ChannelDispatcher> other;
+    fbl::RefPtr<ChannelDispatcher> other;
     {
         AutoLock lock(&lock_);
-        other = mxtl::move(other_);
+        other = fbl::move(other_);
 
         // (3A) Abort any waiting Call operations
         // because we've been canceled by reason
@@ -131,7 +131,7 @@ void ChannelDispatcher::OnPeerZeroHandles() {
 
 mx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
                                     uint32_t* msg_handle_count,
-                                    mxtl::unique_ptr<MessagePacket>* msg,
+                                    fbl::unique_ptr<MessagePacket>* msg,
                                     bool may_discard) {
     canary_.Assert();
 
@@ -160,10 +160,10 @@ mx_status_t ChannelDispatcher::Read(uint32_t* msg_size,
     return rv;
 }
 
-mx_status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
+mx_status_t ChannelDispatcher::Write(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
-    mxtl::RefPtr<ChannelDispatcher> other;
+    fbl::RefPtr<ChannelDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_) {
@@ -175,27 +175,27 @@ mx_status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
         other = other_;
     }
 
-    if (other->WriteSelf(mxtl::move(msg)) > 0)
+    if (other->WriteSelf(fbl::move(msg)) > 0)
         thread_reschedule();
 
     return MX_OK;
 }
 
-mx_status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
+mx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
                                     mx_time_t deadline, bool* return_handles,
-                                    mxtl::unique_ptr<MessagePacket>* reply) {
+                                    fbl::unique_ptr<MessagePacket>* reply) {
 
     canary_.Assert();
 
     auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
-    if (unlikely(waiter->BeginWait(mxtl::WrapRefPtr(this), msg->get_txid()) != MX_OK)) {
+    if (unlikely(waiter->BeginWait(fbl::WrapRefPtr(this), msg->get_txid()) != MX_OK)) {
         // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
         // channel calls has been violated.  Shoot the misbehaving process.
         ProcessDispatcher::GetCurrent()->Kill();
         return MX_ERR_BAD_STATE;
     }
 
-    mxtl::RefPtr<ChannelDispatcher> other;
+    fbl::RefPtr<ChannelDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_) {
@@ -214,7 +214,7 @@ mx_status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
     }
 
     // (1) Write outbound message to opposing endpoint.
-    other->WriteSelf(mxtl::move(msg));
+    other->WriteSelf(fbl::move(msg));
 
     // Reuse the code from the half-call used for retrying a Call after thread
     // suspend.
@@ -223,7 +223,7 @@ mx_status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
 
 mx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
                                                      mx_time_t deadline,
-                                                     mxtl::unique_ptr<MessagePacket>* reply) {
+                                                     fbl::unique_ptr<MessagePacket>* reply) {
     canary_.Assert();
 
     // (2) Wait for notification via waiter's event or for the
@@ -256,7 +256,7 @@ mx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
     return status;
 }
 
-int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
+int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     canary_.Assert();
 
     AutoLock lock(&lock_);
@@ -272,11 +272,11 @@ int ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
             if (waiter.get_txid() == txid) {
                 waiters_.erase(waiter);
                 // we return how many threads have been woken up, or zero.
-                return waiter.Deliver(mxtl::move(msg));
+                return waiter.Deliver(fbl::move(msg));
             }
         }
     }
-    messages_.push_back(mxtl::move(msg));
+    messages_.push_back(fbl::move(msg));
 
     state_tracker_.UpdateState(0u, MX_CHANNEL_READABLE);
     return 0;
@@ -293,7 +293,7 @@ mx_status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mas
         return MX_OK;
     }
 
-    mxtl::RefPtr<ChannelDispatcher> other;
+    fbl::RefPtr<ChannelDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
@@ -317,7 +317,7 @@ ChannelDispatcher::MessageWaiter::~MessageWaiter() {
     DEBUG_ASSERT(!InContainer());
 }
 
-mx_status_t ChannelDispatcher::MessageWaiter::BeginWait(mxtl::RefPtr<ChannelDispatcher> channel,
+mx_status_t ChannelDispatcher::MessageWaiter::BeginWait(fbl::RefPtr<ChannelDispatcher> channel,
                                                         mx_txid_t txid) {
     if (unlikely(channel_)) {
         return MX_ERR_BAD_STATE;
@@ -326,15 +326,15 @@ mx_status_t ChannelDispatcher::MessageWaiter::BeginWait(mxtl::RefPtr<ChannelDisp
 
     txid_ = txid;
     status_ = MX_ERR_TIMED_OUT;
-    channel_ = mxtl::move(channel);
+    channel_ = fbl::move(channel);
     event_.Unsignal();
     return MX_OK;
 }
 
-int ChannelDispatcher::MessageWaiter::Deliver(mxtl::unique_ptr<MessagePacket> msg) {
+int ChannelDispatcher::MessageWaiter::Deliver(fbl::unique_ptr<MessagePacket> msg) {
     DEBUG_ASSERT(channel_);
 
-    msg_ = mxtl::move(msg);
+    msg_ = fbl::move(msg);
     status_ = MX_OK;
     return event_.Signal(MX_OK);
 }
@@ -354,11 +354,11 @@ mx_status_t ChannelDispatcher::MessageWaiter::Wait(lk_time_t deadline) {
 }
 
 // Returns any delivered message via out and the status.
-mx_status_t ChannelDispatcher::MessageWaiter::EndWait(mxtl::unique_ptr<MessagePacket>* out) {
+mx_status_t ChannelDispatcher::MessageWaiter::EndWait(fbl::unique_ptr<MessagePacket>* out) {
     if (unlikely(!channel_)) {
         return MX_ERR_BAD_STATE;
     }
-    *out = mxtl::move(msg_);
+    *out = fbl::move(msg_);
     channel_ = nullptr;
     return status_;
 }

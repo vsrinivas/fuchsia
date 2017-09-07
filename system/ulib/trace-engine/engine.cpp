@@ -10,10 +10,10 @@
 
 #include <async/wait.h>
 #include <mx/event.h>
-#include <mxtl/atomic.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
-#include <mxtl/vector.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fbl/vector.h>
 #include <trace-engine/instrumentation.h>
 
 #include "context_impl.h"
@@ -26,13 +26,13 @@ constexpr unsigned int kSynchronousShutdownTimeoutMilliseconds = 1000;
 
 // Trace engine lock.
 // See rules below for how this is used.
-mxtl::Mutex g_engine_mutex;
+fbl::Mutex g_engine_mutex;
 
 // Trace instrumentation state.
 // Rules:
 //   - can only be modified while holding g_engine_mutex
 //   - can be read atomically at any time
-mxtl::atomic<int> g_state{TRACE_STOPPED};
+fbl::atomic<int> g_state{TRACE_STOPPED};
 
 // Trace disposition.
 // This is the status that will be reported to the trace handler when the
@@ -56,7 +56,7 @@ trace_handler_t* g_handler{nullptr};
 // Trace observer table.
 // Rules:
 //   - can only be accessed or modified while holding g_engine_mutex
-mxtl::Vector<mx_handle_t> g_observers;
+fbl::Vector<mx_handle_t> g_observers;
 
 // Trace context reference count.
 // This functions as a non-exclusive lock for the engine's trace context.
@@ -67,7 +67,7 @@ mxtl::Vector<mx_handle_t> g_observers;
 //   - transition from 0 to 1 only happens when engine is started
 //   - the engine stops when the reference count goes to 0
 //     (in other words, holding a context reference prevents the engine from stopping)
-mxtl::atomic_uint32_t g_context_refs{0u};
+fbl::atomic_uint32_t g_context_refs{0u};
 
 // Trace context released event.
 // Used by |trace_release_context()| to signal (with MX_EVENT_SIGNALED) when
@@ -117,12 +117,12 @@ mx_status_t trace_start_engine(async_t* async,
     MX_DEBUG_ASSERT(handler);
     MX_DEBUG_ASSERT(buffer);
 
-    mxtl::AutoLock lock(&g_engine_mutex);
+    fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have fully stopped a prior tracing session before starting a new one.
-    if (g_state.load(mxtl::memory_order_relaxed) != TRACE_STOPPED)
+    if (g_state.load(fbl::memory_order_relaxed) != TRACE_STOPPED)
         return MX_ERR_BAD_STATE;
-    MX_DEBUG_ASSERT(g_context_refs.load(mxtl::memory_order_relaxed) == 0u);
+    MX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) == 0u);
 
     mx::event context_released_event;
     mx_status_t status = mx::event::create(0u, &context_released_event);
@@ -142,19 +142,19 @@ mx_status_t trace_start_engine(async_t* async,
         return status;
 
     // Initialize the trace engine state and context.
-    g_state.store(TRACE_STARTED, mxtl::memory_order_relaxed);
+    g_state.store(TRACE_STARTED, fbl::memory_order_relaxed);
     g_async = async;
     g_handler = handler;
     g_disposition = MX_OK;
     g_context = new trace_context(buffer, buffer_num_bytes, handler);
-    g_context_released_event = mxtl::move(context_released_event);
+    g_context_released_event = fbl::move(context_released_event);
 
     // Write the trace initialization record first before allowing clients to
     // get in and write their own trace records.
     trace_context_write_initialization_record(g_context, mx_ticks_per_second());
 
     // After this point clients can acquire references to the trace context.
-    g_context_refs.store(1u, mxtl::memory_order_release);
+    g_context_refs.store(1u, fbl::memory_order_release);
 
     // Notify observers that the state changed.
     notify_observers_locked();
@@ -163,10 +163,10 @@ mx_status_t trace_start_engine(async_t* async,
 
 // thread-safe
 mx_status_t trace_stop_engine(mx_status_t disposition) {
-    mxtl::AutoLock lock(&g_engine_mutex);
+    fbl::AutoLock lock(&g_engine_mutex);
 
     // We must have have an active trace in order to stop it.
-    int state = g_state.load(mxtl::memory_order_relaxed);
+    int state = g_state.load(fbl::memory_order_relaxed);
     if (state == TRACE_STOPPED)
         return MX_ERR_BAD_STATE;
 
@@ -175,10 +175,10 @@ mx_status_t trace_stop_engine(mx_status_t disposition) {
         return MX_OK; // already stopping
 
     MX_DEBUG_ASSERT(state == TRACE_STARTED);
-    MX_DEBUG_ASSERT(g_context_refs.load(mxtl::memory_order_relaxed) != 0u);
+    MX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) != 0u);
 
     // Begin stopping the trace.
-    g_state.store(TRACE_STOPPING, mxtl::memory_order_relaxed);
+    g_state.store(TRACE_STOPPING, fbl::memory_order_relaxed);
 
     // Notify observers that the state changed.
     notify_observers_locked();
@@ -219,7 +219,7 @@ async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
             printf("Timed out waiting for %u trace context references to be released "
                    "after %u ms while the asynchronous dispatcher was shutting down.\n"
                    "Tracing will no longer be available in this process.",
-                   g_context_refs.load(mxtl::memory_order_relaxed),
+                   g_context_refs.load(fbl::memory_order_relaxed),
                    kSynchronousShutdownTimeoutMilliseconds);
             return ASYNC_WAIT_FINISHED;
         }
@@ -231,10 +231,10 @@ async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
     trace_handler_t* handler;
     size_t buffer_bytes_written;
     {
-        mxtl::AutoLock lock(&g_engine_mutex);
+        fbl::AutoLock lock(&g_engine_mutex);
 
-        MX_DEBUG_ASSERT(g_state.load(mxtl::memory_order_relaxed) == TRACE_STOPPING);
-        MX_DEBUG_ASSERT(g_context_refs.load(mxtl::memory_order_relaxed) == 0u);
+        MX_DEBUG_ASSERT(g_state.load(fbl::memory_order_relaxed) == TRACE_STOPPING);
+        MX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) == 0u);
         MX_DEBUG_ASSERT(g_context != nullptr);
 
         // Get final disposition.
@@ -253,7 +253,7 @@ async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
         g_context = nullptr;
 
         // After this point, it's possible for the engine to be restarted.
-        g_state.store(TRACE_STOPPED, mxtl::memory_order_relaxed);
+        g_state.store(TRACE_STOPPED, fbl::memory_order_relaxed);
     }
 
     // Notify the handler about the final disposition.
@@ -267,7 +267,7 @@ async_wait_result_t handle_context_released(async_t* async, async_wait_t* wait,
 
 // thread-safe, lock-free
 trace_state_t trace_state() {
-    return static_cast<trace_state_t>(g_state.load(mxtl::memory_order_relaxed));
+    return static_cast<trace_state_t>(g_state.load(fbl::memory_order_relaxed));
 }
 
 // thread-safe
@@ -286,7 +286,7 @@ trace_context_t* trace_acquire_context() {
     // The count must be at least 1 to indicate that the buffer is initialized.
     // This is marked likely because tracing is usually disabled and we want
     // to return as quickly as possible from this function.
-    uint32_t count = g_context_refs.load(mxtl::memory_order_relaxed);
+    uint32_t count = g_context_refs.load(fbl::memory_order_relaxed);
     if (likely(count == 0u))
         return nullptr;
 
@@ -296,8 +296,8 @@ trace_context_t* trace_acquire_context() {
     // Note the ACQUIRE fence here since the trace context may have changed
     // from the perspective of this thread.
     while (!g_context_refs.compare_exchange_weak(&count, count + 1,
-                                                 mxtl::memory_order_acquire,
-                                                 mxtl::memory_order_relaxed)) {
+                                                 fbl::memory_order_acquire,
+                                                 fbl::memory_order_relaxed)) {
         if (unlikely(count == 0u))
             return nullptr;
     }
@@ -323,11 +323,11 @@ trace_context_t* trace_acquire_context_for_category(const char* category_literal
 // thread-safe, never-fail, lock-free
 void trace_release_context(trace_context_t* context) {
     MX_DEBUG_ASSERT(context == g_context);
-    MX_DEBUG_ASSERT(g_context_refs.load(mxtl::memory_order_relaxed) != 0u);
+    MX_DEBUG_ASSERT(g_context_refs.load(fbl::memory_order_relaxed) != 0u);
 
     // Note the RELEASE fence here since the trace context and trace buffer
     // contents may have changes from the perspective of other threads.
-    if (unlikely(g_context_refs.fetch_sub(1u, mxtl::memory_order_release) == 1u)) {
+    if (unlikely(g_context_refs.fetch_sub(1u, fbl::memory_order_release) == 1u)) {
         // Notify the engine that the last reference was released.
         mx_status_t status = g_context_released_event.signal(0u, MX_EVENT_SIGNALED);
         MX_DEBUG_ASSERT(status == MX_OK);
@@ -335,7 +335,7 @@ void trace_release_context(trace_context_t* context) {
 }
 
 mx_status_t trace_register_observer(mx_handle_t event) {
-    mxtl::AutoLock lock(&g_engine_mutex);
+    fbl::AutoLock lock(&g_engine_mutex);
 
     for (auto item : g_observers) {
         if (item == event)
@@ -347,7 +347,7 @@ mx_status_t trace_register_observer(mx_handle_t event) {
 }
 
 mx_status_t trace_unregister_observer(mx_handle_t event) {
-    mxtl::AutoLock lock(&g_engine_mutex);
+    fbl::AutoLock lock(&g_engine_mutex);
 
     for (size_t i = 0; i < g_observers.size(); i++) {
         if (g_observers[i] == event) {

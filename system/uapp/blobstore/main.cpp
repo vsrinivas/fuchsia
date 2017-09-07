@@ -13,7 +13,7 @@
 
 #include <magenta/process.h>
 #include <magenta/processargs.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #include "blobstore-private.h"
 #include "fs/vfs.h"
@@ -27,7 +27,7 @@ namespace {
 #ifdef __Fuchsia__
 
 int do_blobstore_mount(int fd, int argc, char** argv) {
-    mxtl::RefPtr<blobstore::VnodeBlob> vn;
+    fbl::RefPtr<blobstore::VnodeBlob> vn;
     if (blobstore::blobstore_mount(&vn, fd) < 0) {
         return -1;
     }
@@ -37,13 +37,13 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
         return h;
     }
 
-    mxtl::unique_ptr<fs::MxioDispatcher> dispatcher;
+    fbl::unique_ptr<fs::MxioDispatcher> dispatcher;
     mx_status_t status;
     if ((status = fs::MxioDispatcher::Create(&dispatcher)) != MX_OK) {
         return status;
     }
     fs::Vfs vfs(dispatcher.get());
-    if ((status = vfs.ServeDirectory(mxtl::move(vn), mx::channel(h))) != MX_OK) {
+    if ((status = vfs.ServeDirectory(fbl::move(vn), mx::channel(h))) != MX_OK) {
         return status;
     }
     dispatcher->RunOnCurrentThread(); // blocks
@@ -51,7 +51,7 @@ int do_blobstore_mount(int fd, int argc, char** argv) {
 }
 
 int do_blobstore_check(int fd, int argc, char** argv) {
-    mxtl::RefPtr<blobstore::Blobstore> vn;
+    fbl::RefPtr<blobstore::Blobstore> vn;
     if (blobstore::blobstore_create(&vn, fd) < 0) {
         return -1;
     }

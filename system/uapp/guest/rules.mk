@@ -22,7 +22,7 @@ MODULE_LIBS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/virtio \
 
 include make/module.mk

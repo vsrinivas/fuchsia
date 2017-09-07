@@ -9,9 +9,9 @@
 #include <stddef.h>
 
 #include <magenta/types.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
 
 namespace bitmap {
 
@@ -22,7 +22,7 @@ class RleBitmap final : public Bitmap {
 private:
     // Private forward-declaration to share the type between the iterator type
     // and the internal list.
-    using ListType = mxtl::DoublyLinkedList<mxtl::unique_ptr<RleBitmapElement>>;
+    using ListType = fbl::DoublyLinkedList<fbl::unique_ptr<RleBitmapElement>>;
 
 public:
     using const_iterator = ListType::const_iterator;
@@ -95,7 +95,7 @@ private:
 };
 
 // Elements of the bitmap list
-struct RleBitmapElement : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<RleBitmapElement>> {
+struct RleBitmapElement : public fbl::DoublyLinkedListable<fbl::unique_ptr<RleBitmapElement>> {
     // The start of this run of 1-bits.
     size_t bitoff;
     // The number of 1-bits in this run.

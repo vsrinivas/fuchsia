@@ -29,7 +29,7 @@
 #include <magenta/compiler.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <mxtl/auto_call.h>
+#include <fbl/auto_call.h>
 #include <string.h>
 #include <trace.h>
 
@@ -349,7 +349,7 @@ static void read_xsave_state_info(void)
     }
 
     /* if we bail, set everything to unsupported */
-    auto ac = mxtl::MakeAutoCall([]() {
+    auto ac = fbl::MakeAutoCall([]() {
         xsave_supported = false;
         xsaves_supported = false;
         xsaveopt_supported = false;

@@ -27,10 +27,10 @@
 
 #include <magenta/syscalls/debug.h>
 #include <magenta/syscalls/policy.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/inline_array.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/string_piece.h>
+#include <fbl/auto_lock.h>
+#include <fbl/inline_array.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
 
 #include "syscalls_priv.h"
 
@@ -75,7 +75,7 @@ LK_INIT_HOOK(thread_set_priority_experiment,
 static mx_status_t copy_user_string(const user_ptr<const char>& src,
                                     size_t src_len,
                                     char* buf, size_t buf_len,
-                                    mxtl::StringPiece* sp) {
+                                    fbl::StringPiece* sp) {
     if (!src || src_len > buf_len) {
         return MX_ERR_INVALID_ARGS;
     }
@@ -87,7 +87,7 @@ static mx_status_t copy_user_string(const user_ptr<const char>& src,
     // ensure zero termination
     size_t str_len = (src_len == buf_len ? src_len - 1 : src_len);
     buf[str_len] = 0;
-    *sp = mxtl::StringPiece(buf);
+    *sp = fbl::StringPiece(buf);
 
     return MX_OK;
 }
@@ -95,7 +95,7 @@ static mx_status_t copy_user_string(const user_ptr<const char>& src,
 // Convenience function to go from process handle to process.
 static mx_status_t get_process(ProcessDispatcher* up,
                                mx_handle_t proc_handle,
-                               mxtl::RefPtr<ProcessDispatcher>* proc) {
+                               fbl::RefPtr<ProcessDispatcher>* proc) {
     return up->GetDispatcherWithRights(proc_handle, MX_RIGHT_WRITE, proc);
 }
 
@@ -110,7 +110,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
 
     // copy out the name
     char buf[MX_MAX_NAME_LEN];
-    mxtl::StringPiece sp;
+    fbl::StringPiece sp;
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
@@ -123,7 +123,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     // convert process handle to process dispatcher
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ProcessDispatcher> process;
+    fbl::RefPtr<ProcessDispatcher> process;
     result = get_process(up, process_handle, &process);
     if (result != MX_OK)
         return result;
@@ -131,9 +131,9 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     uint32_t pid = (uint32_t)process->get_koid();
 
     // create the thread dispatcher
-    mxtl::RefPtr<Dispatcher> thread_dispatcher;
+    fbl::RefPtr<Dispatcher> thread_dispatcher;
     mx_rights_t thread_rights;
-    result = ThreadDispatcher::Create(mxtl::move(process), options, sp,
+    result = ThreadDispatcher::Create(fbl::move(process), options, sp,
                                       &thread_dispatcher, &thread_rights);
     if (result != MX_OK)
         return result;
@@ -142,13 +142,13 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
-    HandleOwner handle(MakeHandle(mxtl::move(thread_dispatcher), thread_rights));
+    HandleOwner handle(MakeHandle(fbl::move(thread_dispatcher), thread_rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
 
     return MX_OK;
 }
@@ -161,7 +161,7 @@ mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ThreadDispatcher> thread;
+    fbl::RefPtr<ThreadDispatcher> thread;
     mx_status_t status = up->GetDispatcherWithRights(thread_handle, MX_RIGHT_WRITE,
                                                      &thread);
     if (status != MX_OK)
@@ -184,7 +184,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     auto up = ProcessDispatcher::GetCurrent();
 
     // TODO(MG-968): debug rights
-    mxtl::RefPtr<ThreadDispatcher> thread;
+    fbl::RefPtr<ThreadDispatcher> thread;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
     if (status != MX_OK)
         return status;
@@ -193,8 +193,8 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     if (buffer_len > kMaxThreadStateSize)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    mxtl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
+    fbl::AllocChecker ac;
+    fbl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -223,7 +223,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
     auto up = ProcessDispatcher::GetCurrent();
 
     // TODO(MG-968): debug rights
-    mxtl::RefPtr<ThreadDispatcher> thread;
+    fbl::RefPtr<ThreadDispatcher> thread;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &thread);
     if (status != MX_OK)
         return status;
@@ -232,8 +232,8 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
     if (buffer_len > kMaxThreadStateSize)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    mxtl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
+    fbl::AllocChecker ac;
+    fbl::InlineArray<uint8_t, kInlineThreadStateSize> bytes(&ac, buffer_len);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -270,7 +270,7 @@ mx_status_t sys_task_suspend(mx_handle_t task_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // TODO(teisenbe): Add support for tasks other than threads
-    mxtl::RefPtr<ThreadDispatcher> thread;
+    fbl::RefPtr<ThreadDispatcher> thread;
     mx_status_t status = up->GetDispatcherWithRights(task_handle, MX_RIGHT_WRITE,
                                                      &thread);
     if (status != MX_OK)
@@ -291,7 +291,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
 
     // copy out the name
     char buf[MX_MAX_NAME_LEN];
-    mxtl::StringPiece sp;
+    fbl::StringPiece sp;
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
@@ -304,17 +304,17 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     // convert job handle to job dispatcher
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<JobDispatcher> job;
+    fbl::RefPtr<JobDispatcher> job;
     // TODO(MG-968): define process creation job rights.
     auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_WRITE, &job);
     if (status != MX_OK)
         return status;
 
     // create a new process dispatcher
-    mxtl::RefPtr<Dispatcher> proc_dispatcher;
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
+    fbl::RefPtr<Dispatcher> proc_dispatcher;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
     mx_rights_t proc_rights, vmar_rights;
-    mx_status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, options,
+    mx_status_t res = ProcessDispatcher::Create(fbl::move(job), sp, options,
                                                 &proc_dispatcher, &proc_rights,
                                                 &vmar_dispatcher, &vmar_rights);
     if (res != MX_OK)
@@ -328,12 +328,12 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     arch_trace_process_create(koid, vmar_dispatcher->vmar()->aspace()->arch_aspace().arch_table_phys());
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner proc_h(MakeHandle(mxtl::move(proc_dispatcher), proc_rights));
+    HandleOwner proc_h(MakeHandle(fbl::move(proc_dispatcher), proc_rights));
     if (!proc_h)
         return MX_ERR_NO_MEMORY;
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner vmar_h(MakeHandle(mxtl::move(vmar_dispatcher), vmar_rights));
+    HandleOwner vmar_h(MakeHandle(fbl::move(vmar_dispatcher), vmar_rights));
     if (!vmar_h)
         return MX_ERR_NO_MEMORY;
 
@@ -343,8 +343,8 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     if (_vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(vmar_h));
-    up->AddHandle(mxtl::move(proc_h));
+    up->AddHandle(fbl::move(vmar_h));
+    up->AddHandle(fbl::move(proc_h));
 
     return MX_OK;
 }
@@ -369,13 +369,13 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     auto up = ProcessDispatcher::GetCurrent();
 
     // get process dispatcher
-    mxtl::RefPtr<ProcessDispatcher> process;
+    fbl::RefPtr<ProcessDispatcher> process;
     mx_status_t status = get_process(up, process_handle, &process);
     if (status != MX_OK)
         return status;
 
     // get thread_dispatcher
-    mxtl::RefPtr<ThreadDispatcher> thread;
+    fbl::RefPtr<ThreadDispatcher> thread;
     status = up->GetDispatcherWithRights(thread_handle, MX_RIGHT_WRITE, &thread);
     if (status != MX_OK)
         return status;
@@ -386,7 +386,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 
     HandleOwner arg_handle;
     {
-        mxtl::AutoLock lock(up->handle_table_lock());
+        fbl::AutoLock lock(up->handle_table_lock());
         auto handle = up->GetHandleLocked(arg_handle_value);
         if (!handle)
             return MX_ERR_BAD_HANDLE;
@@ -396,13 +396,13 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     }
 
     auto arg_nhv = process->MapHandleToValue(arg_handle);
-    process->AddHandle(mxtl::move(arg_handle));
+    process->AddHandle(fbl::move(arg_handle));
 
     status = thread->Start(pc, sp, arg_nhv, arg2, /* initial_thread */ true);
     if (status != MX_OK) {
         // Put back the |arg_handle| into the calling process.
         auto handle = process->RemoveHandle(arg_nhv);
-        up->AddHandle(mxtl::move(handle));
+        up->AddHandle(fbl::move(handle));
         return status;
     }
 
@@ -429,7 +429,7 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ProcessDispatcher> process;
+    fbl::RefPtr<ProcessDispatcher> process;
     mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_READ | MX_RIGHT_WRITE,
                                                      &process);
     if (status != MX_OK)
@@ -495,7 +495,7 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ProcessDispatcher> process;
+    fbl::RefPtr<ProcessDispatcher> process;
     mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_WRITE, &process);
     if (status != MX_OK)
         return status;
@@ -550,7 +550,7 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
 
 // helper routine for sys_task_kill
 template <typename T>
-static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher) {
+static mx_status_t kill_task(fbl::RefPtr<Dispatcher> dispatcher) {
     auto task = DownCastDispatcher<T>(&dispatcher);
     if (!task)
         return MX_ERR_WRONG_TYPE;
@@ -564,7 +564,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     auto status = up->GetDispatcherWithRights(task_handle, MX_RIGHT_DESTROY, &dispatcher);
     if (status != MX_OK)
         return status;
@@ -572,11 +572,11 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     // see if it's a process or thread and dispatch accordingly
     switch (dispatcher->get_type()) {
         case MX_OBJ_TYPE_PROCESS:
-            return kill_task<ProcessDispatcher>(mxtl::move(dispatcher));
+            return kill_task<ProcessDispatcher>(fbl::move(dispatcher));
         case MX_OBJ_TYPE_THREAD:
-            return kill_task<ThreadDispatcher>(mxtl::move(dispatcher));
+            return kill_task<ThreadDispatcher>(fbl::move(dispatcher));
         case MX_OBJ_TYPE_JOB:
-            return kill_task<JobDispatcher>(mxtl::move(dispatcher));
+            return kill_task<JobDispatcher>(fbl::move(dispatcher));
         default:
             return MX_ERR_WRONG_TYPE;
     }
@@ -590,22 +590,22 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t options, user_ptr<mx
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<JobDispatcher> parent;
+    fbl::RefPtr<JobDispatcher> parent;
     mx_status_t status = up->GetDispatcherWithRights(parent_job, MX_RIGHT_WRITE, &parent);
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<Dispatcher> job;
+    fbl::RefPtr<Dispatcher> job;
     mx_rights_t rights;
-    status = JobDispatcher::Create(options, mxtl::move(parent), &job, &rights);
+    status = JobDispatcher::Create(options, fbl::move(parent), &job, &rights);
     if (status != MX_OK)
         return status;
 
-    HandleOwner job_handle(MakeHandle(mxtl::move(job), rights));
+    HandleOwner job_handle(MakeHandle(fbl::move(job), rights));
     if (_out.copy_to_user(up->MapHandleToValue(job_handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(job_handle));
+    up->AddHandle(fbl::move(job_handle));
     return MX_OK;
 }
 
@@ -620,8 +620,8 @@ mx_status_t sys_job_set_policy(mx_handle_t job_handle, uint32_t options,
     if (topic != MX_JOB_POL_BASIC)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    mxtl::InlineArray<
+    fbl::AllocChecker ac;
+    fbl::InlineArray<
         mx_policy_basic, kPolicyBasicInlineCount> policy(&ac, count);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -632,7 +632,7 @@ mx_status_t sys_job_set_policy(mx_handle_t job_handle, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<JobDispatcher> job;
+    fbl::RefPtr<JobDispatcher> job;
     status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_SET_POLICY, &job);
     if (status != MX_OK)
         return status;
@@ -649,7 +649,7 @@ mx_status_t sys_job_set_relative_importance(
     // If the caller has a valid handle to the root resource, let them perform
     // this operation no matter the rights on the job handles.
     {
-        mxtl::RefPtr<ResourceDispatcher> resource;
+        fbl::RefPtr<ResourceDispatcher> resource;
         mx_status_t status = up->GetDispatcherWithRights(
             resource_handle, MX_RIGHT_NONE, &resource);
         if (status != MX_OK)
@@ -658,14 +658,14 @@ mx_status_t sys_job_set_relative_importance(
     }
 
     // Get the job to modify.
-    mxtl::RefPtr<JobDispatcher> job;
+    fbl::RefPtr<JobDispatcher> job;
     mx_status_t status = up->GetDispatcherWithRights(
         job_handle, MX_RIGHT_NONE, &job);
     if (status != MX_OK)
         return status;
 
     // Get its less-important neighbor, or null.
-    mxtl::RefPtr<JobDispatcher> li_job;
+    fbl::RefPtr<JobDispatcher> li_job;
     if (less_important_job_handle != MX_HANDLE_INVALID) {
         status = up->GetDispatcherWithRights(
             less_important_job_handle, MX_RIGHT_NONE, &li_job);
@@ -673,5 +673,5 @@ mx_status_t sys_job_set_relative_importance(
             return status;
     }
 
-    return job->MakeMoreImportantThan(mxtl::move(li_job));
+    return job->MakeMoreImportantThan(fbl::move(li_job));
 }

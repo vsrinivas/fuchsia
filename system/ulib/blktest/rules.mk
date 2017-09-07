@@ -18,7 +18,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/pretty \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \

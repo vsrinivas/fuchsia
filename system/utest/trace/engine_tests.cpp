@@ -7,24 +7,24 @@
 #include <threads.h>
 
 #include <mx/event.h>
-#include <mxtl/function.h>
-#include <mxtl/string.h>
-#include <mxtl/string_printf.h>
-#include <mxtl/vector.h>
+#include <fbl/function.h>
+#include <fbl/string.h>
+#include <fbl/string_printf.h>
+#include <fbl/vector.h>
 #include <trace-engine/instrumentation.h>
 
 namespace {
 int RunClosure(void* arg) {
-    auto closure = static_cast<mxtl::Closure*>(arg);
+    auto closure = static_cast<fbl::Closure*>(arg);
     (*closure)();
     delete closure;
     return 0;
 }
 
-void RunThread(mxtl::Closure closure) {
+void RunThread(fbl::Closure closure) {
     thrd_t thread;
     int result = thrd_create(&thread, RunClosure,
-                             new mxtl::Closure(mxtl::move(closure)));
+                             new fbl::Closure(fbl::move(closure)));
     MX_ASSERT(result == thrd_success);
 
     result = thrd_join(thread, nullptr);
@@ -316,7 +316,7 @@ bool test_register_string_literal_table_overflow() {
 
     fixture_start_tracing();
 
-    mxtl::Vector<mxtl::String> strings;
+    fbl::Vector<fbl::String> strings;
 
     {
         auto context = trace::TraceContext::Acquire();
@@ -324,7 +324,7 @@ bool test_register_string_literal_table_overflow() {
         unsigned n = 0;
         for (n = 0; n < TRACE_ENCODED_STRING_REF_MAX_INDEX; n++) {
             trace_string_ref_t r;
-            mxtl::String string = mxtl::StringPrintf("string%d", n);
+            fbl::String string = fbl::StringPrintf("string%d", n);
             strings.push_back(string);
             trace_context_register_string_literal(context.get(), string.c_str(), &r);
             if (trace_is_inline_string_ref(&r))

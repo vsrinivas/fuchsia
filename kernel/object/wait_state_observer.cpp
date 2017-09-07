@@ -12,7 +12,7 @@
 
 #include <object/state_tracker.h>
 
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 WaitStateObserver::~WaitStateObserver() {
     DEBUG_ASSERT(!dispatcher_);

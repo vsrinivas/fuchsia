@@ -13,7 +13,7 @@
 #include <hypervisor/vcpu.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 
 /* UART configuration masks. */
 static const uint8_t kUartInterruptIdNoFifoMask = bit_mask<uint8_t>(4);
@@ -81,7 +81,7 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
         break;
     case UART_RECEIVE_PORT: {
         vcpu_io->access_size = 1;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->rx_buffer;
         uart->rx_buffer = 0;
         uart->line_status = static_cast<uint8_t>(uart->line_status & ~UART_LINE_STATUS_DATA_READY);
@@ -94,13 +94,13 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     }
     case UART_INTERRUPT_ENABLE_PORT: {
         vcpu_io->access_size = 1;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->interrupt_enable;
         break;
     }
     case UART_INTERRUPT_ID_PORT: {
         vcpu_io->access_size = 1;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = kUartInterruptIdNoFifoMask & uart->interrupt_id;
 
         // Reset THR empty interrupt on IIR read (or THR write).
@@ -110,13 +110,13 @@ mx_status_t uart_read(uart_t* uart, uint16_t port, mx_vcpu_io_t* vcpu_io) {
     }
     case UART_LINE_CONTROL_PORT: {
         vcpu_io->access_size = 1;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->line_control;
         break;
     }
     case UART_LINE_STATUS_PORT: {
         vcpu_io->access_size = 1;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         vcpu_io->u8 = uart->line_status;
         break;
     }
@@ -135,7 +135,7 @@ static void flush_tx_buffer(uart_t* uart) {
 mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     switch (io->port) {
     case UART_RECEIVE_PORT: {
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
             // Ignore writes when divisor latch is enabled.
             return (io->access_size != 1) ? MX_ERR_IO_DATA_INTEGRITY : MX_OK;
@@ -158,7 +158,7 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     case UART_INTERRUPT_ENABLE_PORT: {
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         // Ignore writes when divisor latch is enabled.
         if (uart->line_control & UART_LINE_CONTROL_DIV_LATCH)
             return MX_OK;
@@ -172,7 +172,7 @@ mx_status_t uart_write(uart_t* uart, const mx_packet_guest_io_t* io) {
     case UART_LINE_CONTROL_PORT: {
         if (io->access_size != 1)
             return MX_ERR_IO_DATA_INTEGRITY;
-        mxtl::AutoLock lock(&uart->mutex);
+        fbl::AutoLock lock(&uart->mutex);
         uart->line_control = io->u8;
         return MX_OK;
     }

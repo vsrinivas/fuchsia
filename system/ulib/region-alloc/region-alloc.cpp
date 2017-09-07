@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <region-alloc/region-alloc.h>
 #include <string.h>
 
@@ -12,7 +12,7 @@ RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t m
     if (SLAB_SIZE > max_memory)
         return RefPtr(nullptr);
 
-    return mxtl::AdoptRef(new RegionPool(max_memory / SLAB_SIZE));
+    return fbl::AdoptRef(new RegionPool(max_memory / SLAB_SIZE));
 }
 
 RegionAllocator::~RegionAllocator() {
@@ -36,7 +36,7 @@ RegionAllocator::~RegionAllocator() {
 }
 
 void RegionAllocator::Reset() {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     MX_DEBUG_ASSERT((region_pool_ != nullptr) || avail_regions_by_base_.is_empty());
 
@@ -51,7 +51,7 @@ void RegionAllocator::Reset() {
 }
 
 mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool) {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     if (!allocated_regions_by_base_.is_empty() || !avail_regions_by_base_.is_empty())
         return MX_ERR_BAD_STATE;
@@ -61,7 +61,7 @@ mx_status_t RegionAllocator::SetRegionPool(const RegionPool::RefPtr& region_pool
 }
 
 mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow_overlap) {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     // Start with sanity checks
     mx_status_t ret = AddSubtractSanityCheckLocked(region);
@@ -90,7 +90,7 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
 
 mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
                                             bool allow_incomplete) {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     // Start with sanity checks
     mx_status_t ret = AddSubtractSanityCheckLocked(to_subtract);
@@ -276,7 +276,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
 mx_status_t RegionAllocator::GetRegion(uint64_t size,
                                        uint64_t alignment,
                                        Region::UPtr& out_region) {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     // Check our RegionPool
     if (region_pool_ == nullptr)
@@ -284,7 +284,7 @@ mx_status_t RegionAllocator::GetRegion(uint64_t size,
 
     // Sanity check the arguments.
     out_region = nullptr;
-    if (!size || !alignment || !mxtl::is_pow2(alignment))
+    if (!size || !alignment || !fbl::is_pow2(alignment))
         return MX_ERR_INVALID_ARGS;
 
     // Compute the things we will need round-up align base addresses.
@@ -323,7 +323,7 @@ mx_status_t RegionAllocator::GetRegion(uint64_t size,
 
 mx_status_t RegionAllocator::GetRegion(const ralloc_region_t& requested_region,
                                        Region::UPtr& out_region) {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     // Check our RegionPool
     if (region_pool_ == nullptr)
@@ -391,7 +391,7 @@ mx_status_t RegionAllocator::AddSubtractSanityCheckLocked(const ralloc_region_t&
 }
 
 void RegionAllocator::ReleaseRegion(Region* region) {
-    mxtl::AutoLock alloc_lock(&alloc_lock_);
+    fbl::AutoLock alloc_lock(&alloc_lock_);
 
     MX_DEBUG_ASSERT(region != nullptr);
 
@@ -526,7 +526,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
 
         uint64_t before_end = (before->base + before->size);    // exclusive end
         if (allow_overlap ? (before_end >= region->base) : (before_end == region->base)) {
-            region_end   = mxtl::max(region_end, before_end);
+            region_end   = fbl::max(region_end, before_end);
             region->base = before->base;
 
             auto removed = avail_regions_by_base_.erase(before);
@@ -545,7 +545,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
             break;
 
         uint64_t after_end = (after->base + after->size);
-        region_end = mxtl::max(region_end, after_end);
+        region_end = fbl::max(region_end, after_end);
 
         auto remove_me = after++;
         auto removed  = avail_regions_by_base_.erase(remove_me);

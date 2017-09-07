@@ -32,22 +32,22 @@
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
 // static
-mx_status_t ThreadDispatcher::Create(mxtl::RefPtr<ProcessDispatcher> process, uint32_t flags,
-                                     mxtl::StringPiece name,
-                                     mxtl::RefPtr<Dispatcher>* out_dispatcher,
+mx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
+                                     fbl::StringPiece name,
+                                     fbl::RefPtr<Dispatcher>* out_dispatcher,
                                      mx_rights_t* out_rights) {
-    mxtl::AllocChecker ac;
-    auto disp = mxtl::AdoptRef(new (&ac) ThreadDispatcher(mxtl::move(process), flags));
+    fbl::AllocChecker ac;
+    auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(fbl::move(process), flags));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -56,13 +56,13 @@ mx_status_t ThreadDispatcher::Create(mxtl::RefPtr<ProcessDispatcher> process, ui
         return result;
 
     *out_rights = MX_DEFAULT_THREAD_RIGHTS;
-    *out_dispatcher = mxtl::move(disp);
+    *out_dispatcher = fbl::move(disp);
     return MX_OK;
 }
 
-ThreadDispatcher::ThreadDispatcher(mxtl::RefPtr<ProcessDispatcher> process,
+ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process,
                                    uint32_t flags)
-    : process_(mxtl::move(process)),
+    : process_(fbl::move(process)),
       state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 }
@@ -114,13 +114,13 @@ void ThreadDispatcher::on_zero_handles() {
 
 namespace {
 
-mx_status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
-                           mxtl::RefPtr<VmMapping>* out_kstack_mapping,
-                           mxtl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
+mx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
+                           fbl::RefPtr<VmMapping>* out_kstack_mapping,
+                           fbl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
     LTRACEF("allocating %s stack\n", unsafe ? "unsafe" : "safe");
 
     // Create a VMO for our stack
-    mxtl::RefPtr<VmObject> stack_vmo;
+    fbl::RefPtr<VmObject> stack_vmo;
     mx_status_t status = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE, &stack_vmo);
     if (status != MX_OK) {
         TRACEF("error allocating %s stack for thread\n",
@@ -131,7 +131,7 @@ mx_status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsaf
     // create a vmar with enough padding for a page before and after the stack
     const size_t padding_size = PAGE_SIZE;
 
-    mxtl::RefPtr<VmAddressRegion> kstack_vmar;
+    fbl::RefPtr<VmAddressRegion> kstack_vmar;
     status = vmar->CreateSubVmar(
         0, 2 * padding_size + DEFAULT_STACK_SIZE, 0,
         VMAR_FLAG_CAN_MAP_SPECIFIC |
@@ -144,7 +144,7 @@ mx_status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsaf
 
     // destroy the vmar if we early abort
     // this will also clean up any mappings that may get placed on the vmar
-    auto vmar_cleanup = mxtl::MakeAutoCall([&kstack_vmar]() {
+    auto vmar_cleanup = fbl::MakeAutoCall([&kstack_vmar]() {
             kstack_vmar->Destroy();
         });
 
@@ -152,10 +152,10 @@ mx_status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsaf
             unsafe ? "unsafe" : "safe", kstack_vmar->base());
 
     // create a mapping offset padding_size into the vmar we created
-    mxtl::RefPtr<VmMapping> kstack_mapping;
+    fbl::RefPtr<VmMapping> kstack_mapping;
     status = kstack_vmar->CreateVmMapping(padding_size, DEFAULT_STACK_SIZE, 0,
                                           VMAR_FLAG_SPECIFIC,
-                                          mxtl::move(stack_vmo), 0,
+                                          fbl::move(stack_vmo), 0,
                                           ARCH_MMU_FLAG_PERM_READ |
                                           ARCH_MMU_FLAG_PERM_WRITE,
                                           unsafe ? "unsafe_kstack" : "kstack",
@@ -174,8 +174,8 @@ mx_status_t allocate_stack(const mxtl::RefPtr<VmAddressRegion>& vmar, bool unsaf
     // Cancel the cleanup handler on the vmar since we're about to save a
     // reference to it.
     vmar_cleanup.cancel();
-    *out_kstack_mapping = mxtl::move(kstack_mapping);
-    *out_kstack_vmar = mxtl::move(kstack_vmar);
+    *out_kstack_mapping = fbl::move(kstack_mapping);
+    *out_kstack_vmar = fbl::move(kstack_vmar);
     return MX_OK;
 }
 
@@ -426,7 +426,7 @@ void ThreadDispatcher::Exiting() {
     // N.B. OnThreadExitForDebugger will block in ExceptionHandlerExchange, so
     // don't hold the process's |exception_lock_| across the call.
     {
-        mxtl::RefPtr<ExceptionPort> eport(process_->debugger_exception_port());
+        fbl::RefPtr<ExceptionPort> eport(process_->debugger_exception_port());
         if (eport) {
             eport->OnThreadExitForDebugger(this);
         }
@@ -489,7 +489,7 @@ void ThreadDispatcher::Suspending() {
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely.
     {
-        mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        fbl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
         if (debugger_port) {
             debugger_port->OnThreadSuspending(this);
         }
@@ -516,7 +516,7 @@ void ThreadDispatcher::Resuming() {
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely.
     {
-        mxtl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
+        fbl::RefPtr<ExceptionPort> debugger_port(process_->debugger_exception_port());
         if (debugger_port) {
             debugger_port->OnThreadResuming(this);
         }
@@ -547,7 +547,7 @@ int ThreadDispatcher::StartRoutine(void* arg) {
     // test can be done safely. Note that this function doesn't return so we
     // need the reference to go out of scope before then.
     {
-        mxtl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
+        fbl::RefPtr<ExceptionPort> debugger_port(t->process_->debugger_exception_port());
         if (debugger_port) {
             debugger_port->OnThreadStart(t);
         }
@@ -574,7 +574,7 @@ void ThreadDispatcher::SetStateLocked(State state) {
     state_ = state;
 }
 
-mx_status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+mx_status_t ThreadDispatcher::SetExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     canary_.Assert();
 
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
@@ -595,7 +595,7 @@ mx_status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport
 bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     canary_.Assert();
 
-    mxtl::RefPtr<ExceptionPort> eport;
+    fbl::RefPtr<ExceptionPort> eport;
 
     // Remove the exception handler first. If the thread resumes execution
     // we don't want it to hit another exception and get back into
@@ -633,7 +633,7 @@ bool ThreadDispatcher::ResetExceptionPort(bool quietly) {
     return true;
 }
 
-mxtl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
+fbl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
     canary_.Assert();
 
     AutoLock lock(&exception_lock_);
@@ -641,7 +641,7 @@ mxtl::RefPtr<ExceptionPort> ThreadDispatcher::exception_port() {
 }
 
 mx_status_t ThreadDispatcher::ExceptionHandlerExchange(
-        mxtl::RefPtr<ExceptionPort> eport,
+        fbl::RefPtr<ExceptionPort> eport,
         const mx_exception_report_t* report,
         const arch_exception_context_t* arch_context,
         ExceptionStatus *out_estatus) {
@@ -753,7 +753,7 @@ mx_status_t ThreadDispatcher::MarkExceptionHandled(ExceptionStatus estatus) {
     return MX_OK;
 }
 
-void ThreadDispatcher::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
+void ThreadDispatcher::OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;

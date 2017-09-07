@@ -15,8 +15,8 @@
 #include <object/process_dispatcher.h>
 #include <object/timer_dispatcher.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -24,7 +24,7 @@ mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_ha
     if (clock_id != MX_CLOCK_MONOTONIC)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
 
     mx_status_t result = TimerDispatcher::Create(options, &dispatcher, &rights);
@@ -32,7 +32,7 @@ mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_ha
     if (result != MX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -42,7 +42,7 @@ mx_status_t sys_timer_create(uint32_t options, uint32_t clock_id, user_ptr<mx_ha
     if (_out.copy_to_user(hv) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -50,7 +50,7 @@ mx_status_t sys_timer_set(
     mx_handle_t handle, mx_time_t deadline, mx_duration_t slack) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<TimerDispatcher> timer;
+    fbl::RefPtr<TimerDispatcher> timer;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
     if (status != MX_OK)
         return status;
@@ -62,7 +62,7 @@ mx_status_t sys_timer_set(
 mx_status_t sys_timer_cancel(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<TimerDispatcher> timer;
+    fbl::RefPtr<TimerDispatcher> timer;
     mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &timer);
     if (status != MX_OK)
         return status;

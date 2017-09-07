@@ -8,13 +8,13 @@
 #include <bitmap/storage.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_free_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_free_ptr.h>
 
 #include <magenta/types.h>
 
@@ -80,7 +80,7 @@ constexpr uint64_t BlockMapStartBlock(const blobstore_info_t& info) {
 }
 
 constexpr uint64_t BlockMapBlocks(const blobstore_info_t& info) {
-    return mxtl::roundup(info.block_count, kBlobstoreBlockBits) / kBlobstoreBlockBits;
+    return fbl::roundup(info.block_count, kBlobstoreBlockBits) / kBlobstoreBlockBits;
 }
 
 constexpr uint64_t NodeMapStartBlock(const blobstore_info_t& info) {
@@ -93,7 +93,7 @@ constexpr uint64_t NodeMapStartBlock(const blobstore_info_t& info) {
 }
 
 constexpr uint64_t NodeMapBlocks(const blobstore_info_t& info) {
-    return mxtl::roundup(info.inode_count, kBlobstoreInodesPerBlock) / kBlobstoreInodesPerBlock;
+    return fbl::roundup(info.inode_count, kBlobstoreInodesPerBlock) / kBlobstoreInodesPerBlock;
 }
 
 constexpr uint64_t DataStartBlock(const blobstore_info_t& info) {
@@ -134,7 +134,7 @@ static_assert(kBlobstoreBlockSize % kBlobstoreInodeSize == 0,
 
 // Number of blocks reserved for the blob itself
 constexpr uint64_t BlobDataBlocks(const blobstore_inode_t& blobNode) {
-    return mxtl::roundup(blobNode.blob_size, kBlobstoreBlockSize) / kBlobstoreBlockSize;
+    return fbl::roundup(blobNode.blob_size, kBlobstoreBlockSize) / kBlobstoreBlockSize;
 }
 
 void* GetBlock(const RawBitmap& bitmap, uint32_t blkno);

@@ -22,7 +22,7 @@ source_set("async") {
   libs = [ "magenta" ]
 
   public_deps = [
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   public_configs = [ ":async_config" ]

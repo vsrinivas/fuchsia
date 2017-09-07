@@ -17,7 +17,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 #define MXDEBUG 0
 
@@ -88,11 +88,11 @@ ssize_t VnodeBlob::Write(const void* data, size_t len, size_t off) {
     return actual;
 }
 
-mx_status_t VnodeBlob::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+mx_status_t VnodeBlob::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     assert(memchr(name, '/', len) == nullptr);
     if ((len == 1) && (name[0] == '.') && IsDirectory()) {
         // Special case: Accessing root directory via '.'
-        *out = mxtl::RefPtr<VnodeBlob>(this);
+        *out = fbl::RefPtr<VnodeBlob>(this);
         return MX_OK;
     }
 
@@ -105,11 +105,11 @@ mx_status_t VnodeBlob::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, si
     if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     }
-    mxtl::RefPtr<VnodeBlob> vn;
+    fbl::RefPtr<VnodeBlob> vn;
     if ((status = blobstore_->LookupBlob(digest, &vn)) < 0) {
         return status;
     }
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
     return MX_OK;
 }
 
@@ -126,7 +126,7 @@ mx_status_t VnodeBlob::Getattr(vnattr_t* a) {
     return MX_OK;
 }
 
-mx_status_t VnodeBlob::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
+mx_status_t VnodeBlob::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
     assert(memchr(name, '/', len) == nullptr);
     if (!IsDirectory()) {
         return MX_ERR_NOT_SUPPORTED;
@@ -137,11 +137,11 @@ mx_status_t VnodeBlob::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, si
     if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     }
-    mxtl::RefPtr<VnodeBlob> vn;
+    fbl::RefPtr<VnodeBlob> vn;
     if ((status = blobstore_->NewBlob(digest, &vn)) != MX_OK) {
         return status;
     }
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
     return MX_OK;
 }
 
@@ -202,7 +202,7 @@ mx_status_t VnodeBlob::Unlink(const char* name, size_t len, bool must_be_dir) {
 
     mx_status_t status;
     Digest digest;
-    mxtl::RefPtr<VnodeBlob> out;
+    fbl::RefPtr<VnodeBlob> out;
     if ((status = digest.Parse(name, len)) != MX_OK) {
         return status;
     } else if ((status = blobstore_->LookupBlob(digest, &out)) < 0) {

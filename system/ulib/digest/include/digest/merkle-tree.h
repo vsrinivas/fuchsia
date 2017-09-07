@@ -14,9 +14,9 @@
 #include <stdint.h>
 
 #include <digest/digest.h>
-#include <mxtl/array.h>
-#include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/array.h>
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
 
 namespace digest {
 
@@ -121,7 +121,7 @@ private:
 
     // For each Tree object in the chain, the Tree object managing the next
     // level up is given by |next_|.
-    mxtl::unique_ptr<MerkleTree> next_;
+    fbl::unique_ptr<MerkleTree> next_;
 
     // Indicates the height in the tree of this Tree object, and equals the
     // number of preceding Tree objects in the chain.

@@ -10,7 +10,7 @@
 #include <hypervisor/vcpu.h>
 #include <hypervisor/virtio.h>
 #include <magenta/syscalls/port.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include <virtio/virtio.h>
 #include <virtio/virtio_ring.h>
@@ -129,7 +129,7 @@ typedef struct poll_task_args {
 
 static int virtio_queue_poll_task(void* ctx) {
     mx_status_t result = MX_OK;
-    mxtl::unique_ptr<poll_task_args_t> args(static_cast<poll_task_args_t*>(ctx));
+    fbl::unique_ptr<poll_task_args_t> args(static_cast<poll_task_args_t*>(ctx));
     while (true) {
         uint16_t descriptor;
         virtio_queue_wait(args->queue, &descriptor);

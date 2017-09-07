@@ -13,11 +13,11 @@
 #include <vm/vm_aspace.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_single_list.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
 #include <sys/types.h>
 
@@ -27,12 +27,12 @@ class PciDeviceDispatcher final : public Dispatcher {
 public:
     static mx_status_t Create(uint32_t index,
                               mx_pcie_device_info_t*    out_info,
-                              mxtl::RefPtr<Dispatcher>* out_dispatcher,
+                              fbl::RefPtr<Dispatcher>* out_dispatcher,
                               mx_rights_t* out_rights);
 
     ~PciDeviceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PCI_DEVICE; }
-    const mxtl::RefPtr<PcieDevice>& device() { return device_; }
+    const fbl::RefPtr<PcieDevice>& device() { return device_; }
 
     void ReleaseDevice();
 
@@ -45,7 +45,7 @@ public:
     mx_status_t GetConfig(pci_config_info_t* out);
     mx_status_t ResetDevice();
     mx_status_t MapInterrupt(int32_t which_irq,
-                             mxtl::RefPtr<Dispatcher>* interrupt_dispatcher,
+                             fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
                              mx_rights_t* rights);
     mx_status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
     mx_status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
@@ -53,20 +53,20 @@ public:
     bool irqs_maskable() const TA_REQ(lock_) { return irqs_maskable_; }
 
 private:
-    PciDeviceDispatcher(mxtl::RefPtr<PcieDevice> device,
+    PciDeviceDispatcher(fbl::RefPtr<PcieDevice> device,
                         mx_pcie_device_info_t* out_info);
 
     PciDeviceDispatcher(const PciDeviceDispatcher &) = delete;
     PciDeviceDispatcher& operator=(const PciDeviceDispatcher &) = delete;
 
-    mxtl::Canary<mxtl::magic("PCID")> canary_;
+    fbl::Canary<fbl::magic("PCID")> canary_;
 
     // Lock protecting upward facing APIs.  Generally speaking, this lock is
     // held for the duration of most of our dispatcher API implementations.  It
     // is unsafe to ever attempt to acquire this lock during a callback from the
     // PCI bus driver level.
-    mxtl::Mutex lock_;
-    mxtl::RefPtr<PcieDevice> device_ TA_GUARDED(lock_);
+    fbl::Mutex lock_;
+    fbl::RefPtr<PcieDevice> device_ TA_GUARDED(lock_);
 
     uint irqs_avail_cnt_  TA_GUARDED(lock_) = 0;
     bool irqs_maskable_   TA_GUARDED(lock_) = false;

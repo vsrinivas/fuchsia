@@ -12,7 +12,7 @@
 
 #include <lib/console.h>
 #include <lib/ktrace.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #include <object/handles.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -90,7 +90,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
                                  uint32_t* handle_type, size_t size) {
     uint32_t total = 0;
     pd.ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
-                         mxtl::RefPtr<const Dispatcher> disp) {
+                         fbl::RefPtr<const Dispatcher> disp) {
         if (handle_type) {
             uint32_t type = static_cast<uint32_t>(disp->get_type());
             if (size > type) {
@@ -104,7 +104,7 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
 }
 
 uint32_t ProcessDispatcher::ThreadCount() const {
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
     return static_cast<uint32_t>(thread_list_.size_slow());
 }
 
@@ -175,7 +175,7 @@ void DumpProcessHandles(mx_koid_t id) {
 
     uint32_t total = 0;
     pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
-                          mxtl::RefPtr<const Dispatcher> disp) {
+                          fbl::RefPtr<const Dispatcher> disp) {
         printf("%9x %7" PRIu64 " : %s\n",
             handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
         ++total;
@@ -351,7 +351,7 @@ static void DumpProcessVmObjects(mx_koid_t id, char format_unit) {
     uint64_t total_size = 0;
     uint64_t total_alloc = 0;
     pd->ForEachHandle([&](mx_handle_t handle, mx_rights_t rights,
-                          mxtl::RefPtr<const Dispatcher> disp) {
+                          fbl::RefPtr<const Dispatcher> disp) {
         auto vmod = DownCastDispatcher<const VmObjectDispatcher>(&disp);
         if (vmod == nullptr) {
             return MX_OK;
@@ -514,7 +514,7 @@ private:
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
+mx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
                             user_ptr<mx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
@@ -610,7 +610,7 @@ private:
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
+mx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
                             user_ptr<mx_info_vmo_t> vmos, size_t max,
                             size_t* actual, size_t* available) {
     DEBUG_ASSERT(aspace != nullptr);
@@ -647,7 +647,7 @@ mx_status_t GetProcessVmosViaHandles(ProcessDispatcher* process,
     // do deduping.
     mx_status_t s = process->ForEachHandle([&](mx_handle_t handle,
                                                mx_rights_t rights,
-                                               mxtl::RefPtr<Dispatcher> disp) {
+                                               fbl::RefPtr<Dispatcher> disp) {
         auto vmod = DownCastDispatcher<VmObjectDispatcher>(&disp);
         if (vmod == nullptr) {
             // This handle isn't a VMO; skip it.

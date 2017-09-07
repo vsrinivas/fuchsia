@@ -14,7 +14,7 @@ source_set("audio-proto-utils") {
   ]
 
   public_deps = [
-    "//magenta/system/ulib/mxtl",
+    "//magenta/system/ulib/fbl",
   ]
 
   public_configs = [ ":audio-proto-utils-config" ]

@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"
@@ -24,8 +24,8 @@ bool test_sparse(void) {
     ASSERT_GT(fd, 0);
 
     // Create a random write buffer of data
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> wbuf(new (&ac) uint8_t[WriteSize]);
     ASSERT_EQ(ac.check(), true);
     unsigned int seed = static_cast<unsigned int>(mx_ticks_get());
     unittest_printf("Sparse test using seed: %u\n", seed);
@@ -46,7 +46,7 @@ bool test_sparse(void) {
     constexpr size_t kBytesToRead = (kFileSize - ReadOffset) > WriteSize ?
                                      WriteSize : (kFileSize - ReadOffset);
     static_assert(kBytesToRead > 0, "We want to test writing AND reading");
-    mxtl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[kBytesToRead]);
+    fbl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[kBytesToRead]);
     ASSERT_EQ(ac.check(), true);
     ASSERT_EQ(pread(fd, &rbuf[0], kBytesToRead, ReadOffset), kBytesToRead);
 

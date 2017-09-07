@@ -16,7 +16,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/gpt \
     system/ulib/digest \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     third_party/ulib/cryptolib \
 
 MODULE_LIBS := \

@@ -15,7 +15,7 @@ MODULE_NAME := crashlogger-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \

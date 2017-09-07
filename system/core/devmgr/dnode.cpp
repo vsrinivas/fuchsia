@@ -7,9 +7,9 @@
 #include <string.h>
 
 #include <fs/vfs.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "dnode.h"
 #include "devmgr.h"
@@ -18,19 +18,19 @@
 namespace memfs {
 
 // Create a new dnode and attach it to a vnode
-mxtl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, mxtl::RefPtr<VnodeMemfs> vn) {
+fbl::RefPtr<Dnode> Dnode::Create(const char* name, size_t len, fbl::RefPtr<VnodeMemfs> vn) {
     if ((len > kDnodeNameMax) || (len < 1)) {
         return nullptr;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<char[]> namebuffer (new (&ac) char[len + 1]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<char[]> namebuffer (new (&ac) char[len + 1]);
     if (!ac.check()) {
         return nullptr;
     }
     memcpy(namebuffer.get(), name, len);
     namebuffer[len] = '\0';
-    mxtl::RefPtr<Dnode> dn = mxtl::AdoptRef(new (&ac) Dnode(vn, mxtl::move(namebuffer),
+    fbl::RefPtr<Dnode> dn = fbl::AdoptRef(new (&ac) Dnode(vn, fbl::move(namebuffer),
                                                             static_cast<uint32_t>(len)));
     if (!ac.check()) {
         return nullptr;
@@ -75,7 +75,7 @@ void Dnode::Detach() {
     vnode_ = nullptr;
 }
 
-void Dnode::AddChild(mxtl::RefPtr<Dnode> parent, mxtl::RefPtr<Dnode> child) {
+void Dnode::AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child) {
     MX_DEBUG_ASSERT(parent != nullptr);
     MX_DEBUG_ASSERT(child != nullptr);
     MX_DEBUG_ASSERT(child->parent_ == nullptr); // Child shouldn't have a parent
@@ -94,11 +94,11 @@ void Dnode::AddChild(mxtl::RefPtr<Dnode> parent, mxtl::RefPtr<Dnode> child) {
     } else {
         child->ordering_token_ = parent->children_.back().ordering_token_ + 1;
     }
-    parent->children_.push_back(mxtl::move(child));
+    parent->children_.push_back(fbl::move(child));
     parent->vnode_->UpdateModified();
 }
 
-mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out) const {
+mx_status_t Dnode::Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const {
     auto dn = children_.find_if([&name, &len](const Dnode& elem) -> bool {
         return elem.NameMatch(name, len);
     });
@@ -112,7 +112,7 @@ mx_status_t Dnode::Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out
     return MX_OK;
 }
 
-mxtl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
+fbl::RefPtr<VnodeMemfs> Dnode::AcquireVnode() const {
     return vnode_;
 }
 
@@ -172,7 +172,7 @@ void Dnode::Readdir(fs::DirentFiller* df, void* cookie) const {
 }
 
 // Answers the question: "Is dn a subdirectory of this?"
-bool Dnode::IsSubdirectory(mxtl::RefPtr<Dnode> dn) const {
+bool Dnode::IsSubdirectory(fbl::RefPtr<Dnode> dn) const {
     if (IsDirectory() && dn->IsDirectory()) {
         // Iterate all the way up to root
         while (dn->parent_ != nullptr && dn->parent_ != dn) {
@@ -185,19 +185,19 @@ bool Dnode::IsSubdirectory(mxtl::RefPtr<Dnode> dn) const {
     return false;
 }
 
-mxtl::unique_ptr<char[]> Dnode::TakeName() {
-    return mxtl::move(name_);
+fbl::unique_ptr<char[]> Dnode::TakeName() {
+    return fbl::move(name_);
 }
 
-void Dnode::PutName(mxtl::unique_ptr<char[]> name, size_t len) {
+void Dnode::PutName(fbl::unique_ptr<char[]> name, size_t len) {
     flags_ = static_cast<uint32_t>((flags_ & ~kDnodeNameMax) | len);
-    name_ = mxtl::move(name);
+    name_ = fbl::move(name);
 }
 
 bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
-Dnode::Dnode(mxtl::RefPtr<VnodeMemfs> vn, mxtl::unique_ptr<char[]> name, uint32_t flags) :
-    vnode_(mxtl::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(mxtl::move(name)) {
+Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags) :
+    vnode_(fbl::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(fbl::move(name)) {
 };
 
 size_t Dnode::NameLen() const {

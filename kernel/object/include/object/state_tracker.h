@@ -10,9 +10,9 @@
 
 #include <kernel/spinlock.h>
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/mutex.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <object/state_observer.h>
 
 class Handle;
@@ -55,7 +55,7 @@ public:
 
     mx_signals_t GetSignalsState() { return signals_; }
 
-    using ObserverList = mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
+    using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
 
     // Accessors for CookieJars
     // These live with the state tracker so they can make use of the state tracker's
@@ -69,10 +69,10 @@ private:
     // Returns flag kHandled if one of the observers have been signaled.
     StateObserver::Flags UpdateInternalLocked(ObserverList* obs_to_remove, mx_signals_t signals) TA_REQ(lock_);
 
-    mxtl::Canary<mxtl::magic("STRK")> canary_;
+    fbl::Canary<fbl::magic("STRK")> canary_;
 
     mx_signals_t signals_;
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 
     // Active observers are elements in |observers_|.
     ObserverList observers_ TA_GUARDED(lock_);

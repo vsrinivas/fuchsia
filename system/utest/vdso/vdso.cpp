@@ -11,7 +11,7 @@
 #include <mx/process.h>
 #include <mx/vmar.h>
 #include <mx/vmo.h>
-#include <mxtl/array.h>
+#include <fbl/array.h>
 #include <string.h>
 #include <unittest/unittest.h>
 
@@ -47,7 +47,7 @@ public:
         mx_status_t status = elf_load_prepare(vdso_vmo.get(), nullptr, 0,
                                               &header, &phoff);
         if (status == MX_OK) {
-            mxtl::Array<elf_phdr_t> phdrs(new elf_phdr_t[header.e_phnum],
+            fbl::Array<elf_phdr_t> phdrs(new elf_phdr_t[header.e_phnum],
                                           header.e_phnum);
             status = elf_load_read_phdrs(vdso_vmo.get(), phdrs.get(), phoff,
                                          header.e_phnum);

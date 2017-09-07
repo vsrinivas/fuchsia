@@ -8,7 +8,7 @@
 
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 #include "utils.h"
 
@@ -140,7 +140,7 @@ void try_dump_pt_data() {
         "start",
     };
     mx_status_t status = crashlogger_run("ipt-dump",
-                                         mxtl::count_of(argv_pt_dump), argv_pt_dump);
+                                         fbl::count_of(argv_pt_dump), argv_pt_dump);
     if (status == MX_OK) {
         printf("PT output written to " PT_PATH_FORMAT ".*\n",
                pt_path_prefix, seq_num);

@@ -29,7 +29,7 @@ static constexpr uint32_t WidthMask(size_t width) {
 }
 
 mx_status_t PioCfgRead(uint32_t addr, uint32_t* val, size_t width) {
-    mxtl::AutoLock lock(&pio_lock);
+    fbl::AutoLock lock(&pio_lock);
 
     size_t shift = (addr & 0x3) * 8u;
     if (shift + width > 32) {
@@ -51,7 +51,7 @@ mx_status_t PioCfgRead(uint8_t bus, uint8_t dev, uint8_t func,
 }
 
 mx_status_t PioCfgWrite(uint32_t addr, uint32_t val, size_t width) {
-    mxtl::AutoLock lock(&pio_lock);
+    fbl::AutoLock lock(&pio_lock);
 
     size_t shift = (addr & 0x3) * 8u;
     if (shift + width > 32) {

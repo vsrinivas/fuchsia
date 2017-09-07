@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <mxtl/name.h>
+#include <fbl/name.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -51,7 +51,7 @@ protected:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Collector);
 
-    mxtl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<MX_MAX_NAME_LEN> name_;
 
     size_t entropy_per_1000_bytes_;
 };

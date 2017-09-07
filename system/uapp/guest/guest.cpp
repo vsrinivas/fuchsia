@@ -23,7 +23,7 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/hypervisor.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <virtio/balloon.h>
 
 #include "linux.h"
@@ -89,7 +89,7 @@ typedef struct balloon_task_args {
 } balloon_task_args_t;
 
 static int balloon_stats_task(void* ctx) {
-    mxtl::unique_ptr<balloon_task_args_t> args(static_cast<balloon_task_args_t*>(ctx));
+    fbl::unique_ptr<balloon_task_args_t> args(static_cast<balloon_task_args_t*>(ctx));
     while (true) {
         mx_nanosleep(mx_deadline_after(args->interval));
         balloon_request_stats(args->balloon, &balloon_stats_handler, args->balloon);

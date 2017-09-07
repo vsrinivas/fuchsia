@@ -7,7 +7,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
+#include <fbl/canary.h>
 #include <object/dispatcher.h>
 
 #include <sys/types.h>
@@ -18,8 +18,8 @@ class VmObject;
 
 class VmAddressRegionDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<VmAddressRegion> vmar,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(fbl::RefPtr<VmAddressRegion> vmar,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~VmAddressRegionDispatcher() final;
@@ -27,28 +27,28 @@ public:
 
     // TODO(teisenbe): Make this the planned batch interface
     mx_status_t Allocate(size_t offset, size_t size, uint32_t flags,
-                         mxtl::RefPtr<VmAddressRegionDispatcher>* dispatcher,
+                         fbl::RefPtr<VmAddressRegionDispatcher>* dispatcher,
                          mx_rights_t* rights);
 
     mx_status_t Destroy();
 
     mx_status_t Map(size_t vmar_offset,
-                    mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, size_t len,
-                    uint32_t flags, mxtl::RefPtr<VmMapping>* out);
+                    fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, size_t len,
+                    uint32_t flags, fbl::RefPtr<VmMapping>* out);
 
     mx_status_t Protect(vaddr_t base, size_t len, uint32_t flags);
 
     mx_status_t Unmap(vaddr_t base, size_t len);
 
-    mxtl::RefPtr<VmAddressRegion> vmar() const { return vmar_; }
+    fbl::RefPtr<VmAddressRegion> vmar() const { return vmar_; }
 
     // Check if the given flags define an allowed combination of RWX
     // protections.
     static bool is_valid_mapping_protection(uint32_t flags);
 
 private:
-    explicit VmAddressRegionDispatcher(mxtl::RefPtr<VmAddressRegion> vmar);
+    explicit VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar);
 
-    mxtl::Canary<mxtl::magic("VARD")> canary_;
-    mxtl::RefPtr<VmAddressRegion> vmar_;
+    fbl::Canary<fbl::magic("VARD")> canary_;
+    fbl::RefPtr<VmAddressRegion> vmar_;
 };

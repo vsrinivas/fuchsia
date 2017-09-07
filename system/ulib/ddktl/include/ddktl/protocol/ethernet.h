@@ -7,8 +7,8 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddktl/protocol/ethernet-internal.h>
 #include <magenta/assert.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 
 // DDK ethernet protocol support
 //
@@ -65,7 +65,7 @@
 //
 //   private:
 //     mx_device_t* parent_;
-//     mxtl::unique_ptr<ddk::EthmacProtocolProxy> proxy_;
+//     fbl::unique_ptr<ddk::EthmacProtocolProxy> proxy_;
 // };
 //
 //
@@ -97,7 +97,7 @@
 //         // Device should stop
 //     }
 //
-//     mx_status_t EthmacStart(mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
+//     mx_status_t EthmacStart(fbl::unique_ptr<ddk::EthmacIfcProxy> proxy) {
 //         // Start ethmac operation
 //         proxy_.swap(proxy);
 //         return MX_OK;
@@ -109,7 +109,7 @@
 //
 //   private:
 //     mx_device_t* parent_;
-//     mxtl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
+//     fbl::unique_ptr<ddk::EthmacIfcProxy> proxy_;
 // };
 
 namespace ddk {
@@ -181,8 +181,8 @@ class EthmacProtocol : public internal::base_protocol {
     }
 
     static mx_status_t Start(void* ctx, ethmac_ifc_t* ifc, void* cookie) {
-        auto ifc_proxy = mxtl::unique_ptr<EthmacIfcProxy>(new EthmacIfcProxy(ifc, cookie));
-        return static_cast<D*>(ctx)->EthmacStart(mxtl::move(ifc_proxy));
+        auto ifc_proxy = fbl::unique_ptr<EthmacIfcProxy>(new EthmacIfcProxy(ifc, cookie));
+        return static_cast<D*>(ctx)->EthmacStart(fbl::move(ifc_proxy));
     }
 
     static void Send(void* ctx, uint32_t options, void* data, size_t length) {
@@ -203,7 +203,7 @@ class EthmacProtocolProxy {
 
     template <typename D>
     mx_status_t Start(D* ifc) {
-        static_assert(mxtl::is_base_of<EthmacIfc<D>, D>::value,
+        static_assert(fbl::is_base_of<EthmacIfc<D>, D>::value,
                       "Start must be called with a subclass of EthmacIfc");
         return ops_->start(ctx_, ifc->ethmac_ifc(), ifc);
     }

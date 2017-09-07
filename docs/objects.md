@@ -69,7 +69,7 @@ A kernel object is implemented as a C++ class that derives from `Dispatcher`
 and that overrides the methods it implements. Thus, for example, the code
 of the Thread object is found in `ThreadDispatcher`. There is plenty of
 code that only cares about kernel objects in the generic sense, in that case
-the name you'll see is `mxtl::RefPtr<Dispatcher>`.
+the name you'll see is `fbl::RefPtr<Dispatcher>`.
 
 ## Kernel Object security
 In principle, kernel objects do not have an intrinsic notion of security and

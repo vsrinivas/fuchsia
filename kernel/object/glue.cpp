@@ -33,15 +33,15 @@
 #include <object/resource_dispatcher.h>
 #include <object/state_tracker.h>
 
-#include <mxtl/arena.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/mutex.h>
-#include <mxtl/type_support.h>
+#include <fbl/arena.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
+#include <fbl/type_support.h>
 
 #include <platform.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -53,8 +53,8 @@ constexpr size_t kMaxHandleCount = 256 * 1024u;
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 
 // The handle arena and its mutex. It also guards Dispatcher::handle_count_.
-static mxtl::Mutex handle_mutex;
-static mxtl::Arena TA_GUARDED(handle_mutex) handle_arena;
+static fbl::Mutex handle_mutex;
+static fbl::Arena TA_GUARDED(handle_mutex) handle_arena;
 static size_t outstanding_handles TA_GUARDED(handle_mutex) = 0u;
 
 size_t internal::OutstandingHandles() {
@@ -63,7 +63,7 @@ size_t internal::OutstandingHandles() {
 }
 
 // All jobs and processes are rooted at the |root_job|.
-static mxtl::RefPtr<JobDispatcher> root_job;
+static fbl::RefPtr<JobDispatcher> root_job;
 
 // The singleton policy manager, for jobs and processes. This is
 // a magenta internal class (not a dispatcher-derived).
@@ -150,7 +150,7 @@ static void high_handle_count(size_t count) {
     printf("WARNING: High handle count: %zu handles\n", count);
 }
 
-Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
+Handle* MakeHandle(fbl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     uint32_t* handle_count = nullptr;
     void* addr;
     uint32_t base_value;
@@ -180,11 +180,11 @@ Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     if (state_tracker != nullptr)
         state_tracker->UpdateLastHandleSignal(handle_count);
 
-    return new (addr) Handle(mxtl::move(dispatcher), rights, base_value);
+    return new (addr) Handle(fbl::move(dispatcher), rights, base_value);
 }
 
 Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace) {
-    mxtl::RefPtr<Dispatcher> dispatcher(source->dispatcher());
+    fbl::RefPtr<Dispatcher> dispatcher(source->dispatcher());
     uint32_t* handle_count;
     void* addr;
     uint32_t base_value;
@@ -218,7 +218,7 @@ Handle* DupHandle(Handle* source, mx_rights_t rights, bool is_replace) {
 }
 
 void DeleteHandle(Handle* handle) {
-    mxtl::RefPtr<Dispatcher> dispatcher(handle->dispatcher());
+    fbl::RefPtr<Dispatcher> dispatcher(handle->dispatcher());
     auto state_tracker = dispatcher->get_state_tracker();
 
     if (state_tracker) {
@@ -277,16 +277,16 @@ void internal::DumpHandleTableInfo() {
     handle_arena.Dump();
 }
 
-mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+mx_status_t SetSystemExceptionPort(fbl::RefPtr<ExceptionPort> eport) {
     DEBUG_ASSERT(eport->type() == ExceptionPort::Type::JOB);
-    return root_job->SetExceptionPort(mxtl::move(eport));
+    return root_job->SetExceptionPort(fbl::move(eport));
 }
 
 bool ResetSystemExceptionPort() {
     return root_job->ResetExceptionPort(false /* quietly */);
 }
 
-mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
+fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
     return root_job;
 }
 
@@ -296,7 +296,7 @@ PolicyManager* GetSystemPolicyManager() {
 
 mx_status_t validate_resource(mx_handle_t handle, uint32_t kind) {
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<ResourceDispatcher> resource;
+    fbl::RefPtr<ResourceDispatcher> resource;
     auto status = up->GetDispatcher(handle, &resource);
     if (status != MX_OK) {
         return status;
@@ -311,7 +311,7 @@ mx_status_t validate_resource(mx_handle_t handle, uint32_t kind) {
 mx_status_t validate_ranged_resource(mx_handle_t handle, uint32_t kind, uint64_t low,
                                      uint64_t high) {
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<ResourceDispatcher> resource;
+    fbl::RefPtr<ResourceDispatcher> resource;
     auto status = up->GetDispatcher(handle, &resource);
     if (status != MX_OK) {
         return status;

@@ -15,7 +15,7 @@ MODULE_NAME := entropy-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/mx \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/mxcpp \
 
 MODULE_LIBS := \

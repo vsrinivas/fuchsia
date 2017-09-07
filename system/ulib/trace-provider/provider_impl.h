@@ -8,7 +8,7 @@
 #include <mx/channel.h>
 #include <mx/eventpair.h>
 #include <mx/vmo.h>
-#include <mxtl/macros.h>
+#include <fbl/macros.h>
 #include <trace-provider/provider.h>
 
 // Provide a definition for the opaque type declared in provider.h.

@@ -14,8 +14,8 @@
 #include <inttypes.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +23,7 @@
 #include <vm/fault.h>
 #include <vm/vm_address_region.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -50,8 +50,8 @@ void InitializeVmPage(vm_page_t* p) {
 
 } // namespace
 
-VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, mxtl::RefPtr<VmObject> parent)
-    : VmObject(mxtl::move(parent)), pmm_alloc_flags_(pmm_alloc_flags) {
+VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, fbl::RefPtr<VmObject> parent)
+    : VmObject(fbl::move(parent)), pmm_alloc_flags_(pmm_alloc_flags) {
     LTRACEF("%p\n", this);
 }
 
@@ -73,13 +73,13 @@ VmObjectPaged::~VmObjectPaged() {
     page_list_.FreeAllPages();
 }
 
-mx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, mxtl::RefPtr<VmObject>* obj) {
+mx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject>* obj) {
     // there's a max size to keep indexes within range
     if (size > MAX_SIZE)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    auto vmo = mxtl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, nullptr));
+    fbl::AllocChecker ac;
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, nullptr));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -87,18 +87,18 @@ mx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, mxtl:
     if (err != MX_OK)
         return err;
 
-    *obj = mxtl::move(vmo);
+    *obj = fbl::move(vmo);
 
     return MX_OK;
 }
 
-status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, mxtl::RefPtr<VmObject>* clone_vmo) {
+status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo) {
     LTRACEF("vmo %p offset %#" PRIx64 " size %#" PRIx64 "\n", this, offset, size);
 
     canary_.Assert();
 
-    mxtl::AllocChecker ac;
-    auto vmo = mxtl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, mxtl::WrapRefPtr(this)));
+    fbl::AllocChecker ac;
+    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, fbl::WrapRefPtr(this)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -120,7 +120,7 @@ status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_name,
     if (copy_name)
         vmo->name_ = name_;
 
-    *clone_vmo = mxtl::move(vmo);
+    *clone_vmo = fbl::move(vmo);
 
     return MX_OK;
 }
@@ -205,8 +205,8 @@ status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset) {
     return MX_OK;
 }
 
-mx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, mxtl::RefPtr<VmObject>* obj) {
-    mxtl::RefPtr<VmObject> vmo;
+mx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* obj) {
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != MX_OK)
         return status;
@@ -255,7 +255,7 @@ mx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, mxtl:
         vmo.reset(vmo.leak_ref());
     }
 
-    *obj = mxtl::move(vmo);
+    *obj = fbl::move(vmo);
 
     return MX_OK;
 }

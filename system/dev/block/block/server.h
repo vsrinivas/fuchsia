@@ -17,15 +17,15 @@
 
 #include <mx/fifo.h>
 #include <mx/vmo.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 // Represents the mapping of "vmoid --> VMO"
-class IoBuffer : public mxtl::WAVLTreeContainable<mxtl::RefPtr<IoBuffer>>,
-                 public mxtl::RefCounted<IoBuffer> {
+class IoBuffer : public fbl::WAVLTreeContainable<fbl::RefPtr<IoBuffer>>,
+                 public fbl::RefCounted<IoBuffer> {
 public:
     vmoid_t GetKey() const { return vmoid_; }
 
@@ -51,11 +51,11 @@ constexpr uint32_t kTxnFlagRespond = 0x00000001; // Should a reponse be sent whe
 class BlockTransaction;
 
 typedef struct {
-    mxtl::RefPtr<BlockTransaction> txn;
-    mxtl::RefPtr<IoBuffer> iobuf;
+    fbl::RefPtr<BlockTransaction> txn;
+    fbl::RefPtr<IoBuffer> iobuf;
 } block_msg_t;
 
-class BlockTransaction : public mxtl::RefCounted<BlockTransaction> {
+class BlockTransaction : public fbl::RefCounted<BlockTransaction> {
 public:
     BlockTransaction(mx_handle_t fifo, txnid_t txnid);
     ~BlockTransaction();
@@ -73,7 +73,7 @@ private:
 
     const mx_handle_t fifo_;
 
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
     block_msg_t msgs_[MAX_TXN_MESSAGES] TA_GUARDED(lock_);
     block_fifo_response_t response_ TA_GUARDED(lock_); // The response to be sent back to the client
     uint32_t flags_ TA_GUARDED(lock_);
@@ -103,9 +103,9 @@ private:
 
     mx::fifo fifo_;
 
-    mxtl::Mutex server_lock_;
-    mxtl::WAVLTree<vmoid_t, mxtl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
-    mxtl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
+    fbl::Mutex server_lock_;
+    fbl::WAVLTree<vmoid_t, fbl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
+    fbl::RefPtr<BlockTransaction> txns_[MAX_TXN_COUNT] TA_GUARDED(server_lock_);
     vmoid_t last_id TA_GUARDED(server_lock_);
 };
 

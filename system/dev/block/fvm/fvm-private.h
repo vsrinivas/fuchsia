@@ -20,11 +20,11 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <fs/mapped-vmo.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/mutex.h>
-#include <mxtl/unique_ptr.h>
-#include <mxtl/vector.h>
+#include <fbl/algorithm.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 
 namespace fvm {
 
@@ -35,7 +35,7 @@ class VPartition;
 using PartitionDeviceType = ddk::Device<VPartition, ddk::Ioctlable,
                                         ddk::IotxnQueueable, ddk::GetSizable, ddk::Unbindable>;
 
-class SliceExtent : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<SliceExtent>> {
+class SliceExtent : public fbl::WAVLTreeContainable<fbl::unique_ptr<SliceExtent>> {
 public:
     size_t GetKey() const { return vslice_start_; }
     // Vslice start (inclusive)
@@ -58,7 +58,7 @@ public:
     //   [start(), vslice] and [vslice + 1, end()).
     // Returns the latter extent on success; returns nullptr
     // if a memory allocation failure occurs.
-    mxtl::unique_ptr<SliceExtent> Split(size_t vslice);
+    fbl::unique_ptr<SliceExtent> Split(size_t vslice);
 
     // Combines the other extent into this one.
     // 'other' must immediately follow the current slice.
@@ -66,7 +66,7 @@ public:
 
     bool push_back(uint32_t pslice) {
         MX_DEBUG_ASSERT(pslice != PSLICE_UNALLOCATED);
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         pslices_.push_back(pslice, &ac);
         return ac.check();
     }
@@ -80,19 +80,19 @@ private:
     friend class TypeWAVLTraits;
     DISALLOW_COPY_ASSIGN_AND_MOVE(SliceExtent);
 
-    mxtl::Vector<uint32_t> pslices_;
+    fbl::Vector<uint32_t> pslices_;
     const size_t vslice_start_;
 };
 
 class VPartitionManager : public ManagerDeviceType {
 public:
-    static mx_status_t Create(mx_device_t* dev, mxtl::unique_ptr<VPartitionManager>* out);
+    static mx_status_t Create(mx_device_t* dev, fbl::unique_ptr<VPartitionManager>* out);
 
     // Read the underlying block device, initialize the recorded VPartitions.
     mx_status_t Load();
 
     // Given a VPartition object, add a corresponding ddk device.
-    mx_status_t AddPartition(mxtl::unique_ptr<VPartition> vp) const;
+    mx_status_t AddPartition(fbl::unique_ptr<VPartition> vp) const;
 
     // Update, hash, and write back the current copy of the FVM metadata.
     // Automatically handles alternating writes to primary / backup copy of FVM.
@@ -174,8 +174,8 @@ private:
         return metadata_size_;
     }
 
-    mxtl::Mutex lock_;
-    mxtl::unique_ptr<MappedVmo> metadata_ TA_GUARDED(lock_);
+    fbl::Mutex lock_;
+    fbl::unique_ptr<MappedVmo> metadata_ TA_GUARDED(lock_);
     bool first_metadata_is_primary_ TA_GUARDED(lock_);
     size_t metadata_size_;
     size_t slice_size_;
@@ -184,7 +184,7 @@ private:
 class VPartition : public PartitionDeviceType, public ddk::BlockProtocol<VPartition> {
 public:
     static mx_status_t Create(VPartitionManager* vpm, size_t entry_index,
-                              mxtl::unique_ptr<VPartition>* out);
+                              fbl::unique_ptr<VPartition>* out);
     // Device Protocol
     mx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
                          void* reply, size_t max, size_t* out_actual);
@@ -235,7 +235,7 @@ public:
 
     VPartition(VPartitionManager* vpm, size_t entry_index);
     ~VPartition();
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VPartition);
@@ -250,7 +250,7 @@ private:
     // Physical slice zero is reserved to mean "unmapped", so a zeroed slice_map
     // indicates that the vpartition is completely unmapped, and uses no
     // physical slices.
-    mxtl::WAVLTree<size_t, mxtl::unique_ptr<SliceExtent>> slice_map_ TA_GUARDED(lock_);
+    fbl::WAVLTree<size_t, fbl::unique_ptr<SliceExtent>> slice_map_ TA_GUARDED(lock_);
     block_info_t info_ TA_GUARDED(lock_);
 };
 

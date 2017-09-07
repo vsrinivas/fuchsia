@@ -10,7 +10,7 @@
 
 #include <async/loop.h>
 #include <async/task.h>
-#include <mxtl/array.h>
+#include <fbl/array.h>
 #include <trace/handler.h>
 
 #include "benchmarks.h"
@@ -51,7 +51,7 @@ private:
     }
 
     async::Loop* loop_;
-    mxtl::Array<uint8_t> buffer_;
+    fbl::Array<uint8_t> buffer_;
 };
 
 } // namespace

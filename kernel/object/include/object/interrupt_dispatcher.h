@@ -8,7 +8,7 @@
 
 #include <kernel/event.h>
 #include <magenta/types.h>
-#include <mxtl/canary.h>
+#include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <sys/types.h>
 
@@ -57,6 +57,6 @@ protected:
     }
 
 private:
-    mxtl::Canary<mxtl::magic("INTD")> canary_;
+    fbl::Canary<fbl::magic("INTD")> canary_;
     event_t event_;
 };

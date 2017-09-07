@@ -10,11 +10,11 @@
 #include <fs/mapped-vmo.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
-mx_status_t MappedVmo::Create(size_t size, const char* name, mxtl::unique_ptr<MappedVmo>* out) {
+mx_status_t MappedVmo::Create(size_t size, const char* name, fbl::unique_ptr<MappedVmo>* out) {
     mx_handle_t vmo;
     uintptr_t addr;
     mx_status_t status;
@@ -29,15 +29,15 @@ mx_status_t MappedVmo::Create(size_t size, const char* name, mxtl::unique_ptr<Ma
 
     mx_object_set_property(vmo, MX_PROP_NAME, name, strlen(name));
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<MappedVmo> mvmo(new (&ac) MappedVmo(vmo, addr, size));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<MappedVmo> mvmo(new (&ac) MappedVmo(vmo, addr, size));
     if (!ac.check()) {
         mx_vmar_unmap(mx_vmar_root_self(), addr, size);
         mx_handle_close(vmo);
         return MX_ERR_NO_MEMORY;
     }
 
-    *out = mxtl::move(mvmo);
+    *out = fbl::move(mvmo);
     return MX_OK;
 }
 
@@ -75,7 +75,7 @@ mx_status_t MappedVmo::Grow(size_t len) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    len = mxtl::roundup(len, static_cast<size_t>(PAGE_SIZE));
+    len = fbl::roundup(len, static_cast<size_t>(PAGE_SIZE));
     mx_status_t status;
     uintptr_t addr;
 

@@ -12,25 +12,25 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <lib/crypto/prng.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm_address_region.h>
 
 class VmObject;
 
-class VmAspace : public mxtl::DoublyLinkedListable<VmAspace*>, public mxtl::RefCounted<VmAspace> {
+class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCounted<VmAspace> {
 public:
     // complete initialization, may fail in OOM cases
     status_t Init();
 
     // factory that creates a user/kernel address space based on flags
     // may fail due to resource starvation
-    static mxtl::RefPtr<VmAspace> Create(uint flags, const char* name);
+    static fbl::RefPtr<VmAspace> Create(uint flags, const char* name);
 
     void Rename(const char* name);
 
@@ -53,7 +53,7 @@ public:
     bool is_aslr_enabled() const { return aslr_enabled_; }
 
     // Get the root VMAR (briefly acquires the aspace lock)
-    mxtl::RefPtr<VmAddressRegion> RootVmar();
+    fbl::RefPtr<VmAddressRegion> RootVmar();
 
     // destroy but not free the address space
     status_t Destroy();
@@ -113,7 +113,7 @@ public:
 
     // Convenience method for traversing the tree of VMARs to find the deepest
     // VMAR in the tree that includes *va*.
-    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
+    fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
 
     // For region creation routines
     static const uint VMM_FLAG_VALLOC_SPECIFIC = (1u << 0); // allocate at specific address
@@ -135,7 +135,7 @@ public:
 
     // Internal use function for mapping VMOs.  Do not use.  This is exposed in
     // the public API purely for tests.
-    status_t MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+    status_t MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
                                size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
                                uint arch_mmu_flags);
 
@@ -166,18 +166,18 @@ private:
 
     // private destructor that can only be used from the ref ptr
     ~VmAspace();
-    friend mxtl::RefPtr<VmAspace>;
+    friend fbl::RefPtr<VmAspace>;
 
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
     status_t PageFault(vaddr_t va, uint flags);
     friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
     friend status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags,
-                                                 mxtl::RefPtr<VmAspace> aspace);
+                                                 fbl::RefPtr<VmAspace> aspace);
 
     void InitializeAslr();
 
     // magic
-    mxtl::Canary<mxtl::magic("VMAS")> canary_;
+    fbl::Canary<fbl::magic("VMAS")> canary_;
 
     // members
     vaddr_t base_;
@@ -191,7 +191,7 @@ private:
 
     // root of virtual address space
     // Access to this reference is guarded by lock_.
-    mxtl::RefPtr<VmAddressRegion> root_vmar_;
+    fbl::RefPtr<VmAddressRegion> root_vmar_;
 
     // PRNG used by VMARs for address choices.  We record the seed to enable
     // reproducible debugging.
@@ -202,7 +202,7 @@ private:
     ArchVmAspace arch_aspace_;
 
 #if WITH_LIB_VDSO
-    mxtl::RefPtr<VmMapping> vdso_code_mapping_;
+    fbl::RefPtr<VmMapping> vdso_code_mapping_;
 #endif
 
     // initialization routines need to construct the singleton kernel address space

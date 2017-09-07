@@ -9,8 +9,8 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/dpc.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <object/dispatcher.h>
 #include <object/handles.h>
 #include <trace.h>
@@ -19,24 +19,24 @@
 
 static void ReaperRoutine(dpc_t* dpc);
 
-static mxtl::Mutex reaper_mutex;
-static mxtl::DoublyLinkedList<Handle*> reaper_handles TA_GUARDED(reaper_mutex);
+static fbl::Mutex reaper_mutex;
+static fbl::DoublyLinkedList<Handle*> reaper_handles TA_GUARDED(reaper_mutex);
 static dpc_t reaper_dpc = {
     .node = LIST_INITIAL_CLEARED_VALUE,
     .func = ReaperRoutine,
     .arg = nullptr,
 };
 
-void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
+void ReapHandles(fbl::DoublyLinkedList<Handle*>* handles) {
     LTRACE_ENTRY;
-    mxtl::AutoLock lock(&reaper_mutex);
+    fbl::AutoLock lock(&reaper_mutex);
     reaper_handles.splice(reaper_handles.end(), *handles);
     dpc_queue(&reaper_dpc, false);
 }
 
 void ReapHandles(Handle** handles, uint32_t num_handles) {
     LTRACE_ENTRY;
-    mxtl::DoublyLinkedList<Handle*> list;
+    fbl::DoublyLinkedList<Handle*> list;
     for (uint32_t i = 0; i < num_handles; i++)
         list.push_back(handles[i]);
     ReapHandles(&list);
@@ -44,9 +44,9 @@ void ReapHandles(Handle** handles, uint32_t num_handles) {
 
 static void ReaperRoutine(dpc_t* dpc) {
     LTRACE_ENTRY;
-    mxtl::DoublyLinkedList<Handle*> list;
+    fbl::DoublyLinkedList<Handle*> list;
     {
-        mxtl::AutoLock lock(&reaper_mutex);
+        fbl::AutoLock lock(&reaper_mutex);
         list.swap(reaper_handles);
     }
     Handle* handle;

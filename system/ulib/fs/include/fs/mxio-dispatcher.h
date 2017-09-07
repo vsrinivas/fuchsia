@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #include <magenta/types.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <mxio/dispatcher.h>
 #include <fs/vfs.h>
 
@@ -22,7 +22,7 @@ public:
     // Creates the dispatcher.
     // This should eventually be followed by a call to Start() or Run() depending
     // on which thread the dispatcher should run on.
-    static mx_status_t Create(mxtl::unique_ptr<fs::MxioDispatcher>* out);
+    static mx_status_t Create(fbl::unique_ptr<fs::MxioDispatcher>* out);
 
     // Starts the dispatcher on a new thread.
     mx_status_t StartThread();

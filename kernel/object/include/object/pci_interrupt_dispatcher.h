@@ -17,11 +17,11 @@ class PciDeviceDispatcher;
 
 class PciInterruptDispatcher final : public InterruptDispatcher {
 public:
-    static mx_status_t Create(const mxtl::RefPtr<PcieDevice>& device,
+    static mx_status_t Create(const fbl::RefPtr<PcieDevice>& device,
                               uint32_t irq_id,
                               bool maskable,
                               mx_rights_t* out_rights,
-                              mxtl::RefPtr<Dispatcher>* out_interrupt);
+                              fbl::RefPtr<Dispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
     mx_status_t InterruptComplete() final;
@@ -37,7 +37,7 @@ private:
 
     const uint32_t irq_id_;
     const bool     maskable_;
-    mxtl::RefPtr<PcieDevice> device_;
+    fbl::RefPtr<PcieDevice> device_;
 };
 
 #endif  // if WITH_DEV_PCIE

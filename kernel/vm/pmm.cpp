@@ -27,17 +27,17 @@
 
 #include <magenta/thread_annotations.h>
 #include <mxcpp/new.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/mutex.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
 // the main arena list
-static mxtl::Mutex arena_lock;
-static mxtl::DoublyLinkedList<PmmArena*> arena_list TA_GUARDED(arena_lock);
+static fbl::Mutex arena_lock;
+static fbl::DoublyLinkedList<PmmArena*> arena_list TA_GUARDED(arena_lock);
 static size_t arena_cumulative_size TA_GUARDED(arena_lock);
 
 #if PMM_ENABLE_FREE_FILL

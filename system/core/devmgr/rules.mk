@@ -43,7 +43,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/port \
     system/ulib/acpisvc-client \
     system/ulib/driver-info \

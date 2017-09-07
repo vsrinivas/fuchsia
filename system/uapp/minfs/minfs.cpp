@@ -13,10 +13,10 @@
 #include <bitmap/raw-bitmap.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/limits.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/limits.h>
+#include <fbl/unique_ptr.h>
 #ifdef __Fuchsia__
 #include <fs/vfs-dispatcher.h>
 #endif
@@ -108,7 +108,7 @@ mx_status_t minfs_check_info(const minfs_info_t* info, uint32_t max) {
             FS_TRACE_ERROR("minfs: Not enough slices for data blocks\n");
             return MX_ERR_INVALID_ARGS;
         } else if (dat_blocks_allocated + info->dat_block >
-                   mxtl::numeric_limits<blk_t>::max()) {
+                   fbl::numeric_limits<blk_t>::max()) {
             FS_TRACE_ERROR("minfs: Data blocks overflow blk_t\n");
             return MX_ERR_INVALID_ARGS;
         }
@@ -140,7 +140,7 @@ mx_status_t Minfs::InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inod
     return MX_OK;
 }
 
-Minfs::Minfs(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(mxtl::move(bc)) {
+Minfs::Minfs(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) : bc_(fbl::move(bc)) {
     memcpy(&info_, info, sizeof(minfs_info_t));
 }
 
@@ -305,7 +305,7 @@ mx_status_t Minfs::AddInodes() {
 
     // Update the inode bitmap, write the new blocks back to disk
     // as "zero".
-    if (inode_map_.Grow(mxtl::roundup(inodes, kMinfsBlockBits)) != MX_OK) {
+    if (inode_map_.Grow(fbl::roundup(inodes, kMinfsBlockBits)) != MX_OK) {
         return MX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -345,7 +345,7 @@ mx_status_t Minfs::AddBlocks() {
     request.length = 1;
     request.offset = (kFVMBlockDataStart / kBlocksPerSlice) + info_.dat_slices;
     uint64_t blocks64 = (info_.dat_slices + request.length) * kBlocksPerSlice;
-    MX_DEBUG_ASSERT(blocks64 <= mxtl::numeric_limits<uint32_t>::max());
+    MX_DEBUG_ASSERT(blocks64 <= fbl::numeric_limits<uint32_t>::max());
     uint32_t blocks = static_cast<uint32_t>(blocks64);
     uint32_t abmblks = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
     uint32_t abmblks_old = (info_.block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
@@ -368,7 +368,7 @@ mx_status_t Minfs::AddBlocks() {
 
     // Update the block bitmap, write the new blocks back to disk
     // as "zero".
-    if (block_map_.Grow(mxtl::roundup(blocks, kMinfsBlockBits)) != MX_OK) {
+    if (block_map_.Grow(fbl::roundup(blocks, kMinfsBlockBits)) != MX_OK) {
         return MX_ERR_NO_SPACE;
     }
     // Grow before shrinking to ensure the underlying storage is a multiple
@@ -440,12 +440,12 @@ mx_status_t Minfs::InoNew(WriteTxn* txn, const minfs_inode_t* inode, ino_t* ino_
     return MX_OK;
 }
 
-mx_status_t Minfs::VnodeNew(WriteTxn* txn, mxtl::RefPtr<VnodeMinfs>* out, uint32_t type) {
+mx_status_t Minfs::VnodeNew(WriteTxn* txn, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
     if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::RefPtr<VnodeMinfs> vn;
+    fbl::RefPtr<VnodeMinfs> vn;
     mx_status_t status;
 
     // Allocate the in-memory vnode
@@ -460,7 +460,7 @@ mx_status_t Minfs::VnodeNew(WriteTxn* txn, mxtl::RefPtr<VnodeMinfs>* out, uint32
 
     vnode_hash_.insert(vn.get());
 
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
     return 0;
 }
 
@@ -468,13 +468,13 @@ void Minfs::VnodeRelease(VnodeMinfs* vn) {
     vnode_hash_.erase(*vn);
 }
 
-mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, ino_t ino) {
+mx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
     if ((ino < 1) || (ino >= info_.inode_count)) {
         return MX_ERR_OUT_OF_RANGE;
     }
-    mxtl::RefPtr<VnodeMinfs> vn = mxtl::RefPtr<VnodeMinfs>(vnode_hash_.find(ino).CopyPointer());
+    fbl::RefPtr<VnodeMinfs> vn = fbl::RefPtr<VnodeMinfs>(vnode_hash_.find(ino).CopyPointer());
     if (vn != nullptr) {
-        *out = mxtl::move(vn);
+        *out = fbl::move(vn);
         return MX_OK;
     }
     mx_status_t status;
@@ -495,7 +495,7 @@ mx_status_t Minfs::VnodeGet(mxtl::RefPtr<VnodeMinfs>* out, ino_t ino) {
     vn->ino_ = ino;
     vnode_hash_.insert(vn.get());
 
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
     return MX_OK;
 }
 
@@ -596,14 +596,14 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
     de->name[1] = '.';
 }
 
-mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
+mx_status_t Minfs::Create(Minfs** out, fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     mx_status_t status = minfs_check_info(info, bc->Maxblk());
     if (status < 0) {
         return status;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<Minfs> fs(new (&ac) Minfs(mxtl::move(bc), info));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Minfs> fs(new (&ac) Minfs(fbl::move(bc), info));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -690,7 +690,7 @@ mx_status_t Minfs::Create(Minfs** out, mxtl::unique_ptr<Bcache> bc, const minfs_
     return MX_OK;
 }
 
-mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> bc) {
+mx_status_t minfs_mount(fbl::RefPtr<VnodeMinfs>* out, fbl::unique_ptr<Bcache> bc) {
     mx_status_t status;
 
     char blk[kMinfsBlockSize];
@@ -701,12 +701,12 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
     const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
 
     Minfs* fs;
-    if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) != MX_OK) {
+    if ((status = Minfs::Create(&fs, fbl::move(bc), info)) != MX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
     }
 
-    mxtl::RefPtr<VnodeMinfs> vn;
+    fbl::RefPtr<VnodeMinfs> vn;
     if ((status = fs->VnodeGet(&vn, kMinfsRootIno)) != MX_OK) {
         FS_TRACE_ERROR("minfs: cannot find root inode\n");
         delete fs;
@@ -714,7 +714,7 @@ mx_status_t minfs_mount(mxtl::RefPtr<VnodeMinfs>* out, mxtl::unique_ptr<Bcache> 
     }
 
     MX_DEBUG_ASSERT(vn->IsDirectory());
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
     return MX_OK;
 }
 
@@ -762,7 +762,7 @@ void minfs_free_slices(Bcache* bc, const minfs_info_t* info) {
 #endif
 }
 
-int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
+int minfs_mkfs(fbl::unique_ptr<Bcache> bc) {
     minfs_info_t info;
     memset(&info, 0x00, sizeof(info));
     info.magic0 = kMinfsMagic0;
@@ -841,7 +841,7 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     info.alloc_inode_count = 0;
     if ((info.flags & kMinfsFlagFVM) == 0) {
         // Aligning distinct data areas to 8 block groups.
-        uint32_t non_dat_blocks = (8 + mxtl::roundup(ibmblks, 8u) + inoblks);
+        uint32_t non_dat_blocks = (8 + fbl::roundup(ibmblks, 8u) + inoblks);
         if (non_dat_blocks >= blocks) {
             fprintf(stderr, "mkfs: Partition size (%" PRIu64 " bytes) is too small\n",
                     static_cast<uint64_t>(blocks) * kMinfsBlockSize);
@@ -850,10 +850,10 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
 
         uint32_t dat_block_count = blocks - non_dat_blocks;
         abmblks = (dat_block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
-        info.block_count = dat_block_count - mxtl::roundup(abmblks, 8u);
+        info.block_count = dat_block_count - fbl::roundup(abmblks, 8u);
         info.ibm_block = 8;
-        info.abm_block = info.ibm_block + mxtl::roundup(ibmblks, 8u);
-        info.ino_block = info.abm_block + mxtl::roundup(abmblks, 8u);
+        info.abm_block = info.ibm_block + fbl::roundup(ibmblks, 8u);
+        info.ino_block = info.abm_block + fbl::roundup(abmblks, 8u);
         info.dat_block = info.ino_block + inoblks;
     } else {
         info.block_count = blocks;
@@ -873,12 +873,12 @@ int minfs_mkfs(mxtl::unique_ptr<Bcache> bc) {
     // storage a block multiple but ensure we can't allocate beyond the last
     // real block or inode.
     mx_status_t status;
-    if ((status = abm.Reset(mxtl::roundup(info.block_count, kMinfsBlockBits))) < 0) {
+    if ((status = abm.Reset(fbl::roundup(info.block_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate block bitmap\n");
         minfs_free_slices(bc.get(), &info);
         return status;
     }
-    if ((status = ibm.Reset(mxtl::roundup(info.inode_count, kMinfsBlockBits))) < 0) {
+    if ((status = ibm.Reset(fbl::roundup(info.inode_count, kMinfsBlockBits))) < 0) {
         FS_TRACE_ERROR("mkfs: Failed to allocate inode bitmap\n");
         minfs_free_slices(bc.get(), &info);
         return status;

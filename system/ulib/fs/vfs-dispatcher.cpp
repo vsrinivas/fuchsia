@@ -16,9 +16,9 @@
 #include <mx/port.h>
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <fs/vfs-dispatcher.h>
 
 #define MXDEBUG 0
@@ -136,7 +136,7 @@ void VfsDispatcher::RunOnCurrentThread() {
 
         if (packet.signal.observed & MX_CHANNEL_READABLE) {
             // hit cb multiple times if we know multi packets available
-            for (unsigned ix = 0; ix < mxtl::min(kMaxMessageBatchSize, (unsigned)packet.signal.count); ++ix) {
+            for (unsigned ix = 0; ix < fbl::min(kMaxMessageBatchSize, (unsigned)packet.signal.count); ++ix) {
                 if ((r = handler->ExecuteCallback(cb_)) != MX_OK) {
                     // error or close: invoke callback in case of error
                     DisconnectHandler(handler, r != ERR_DISPATCHER_DONE);
@@ -152,7 +152,7 @@ void VfsDispatcher::RunOnCurrentThread() {
             DisconnectHandler(handler, true);
         free_handler:
             {
-                mxtl::AutoLock md_lock(&lock_);
+                fbl::AutoLock md_lock(&lock_);
                 handlers_.erase(*handler);
             }
         }
@@ -161,9 +161,9 @@ void VfsDispatcher::RunOnCurrentThread() {
 }
 
 mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
-                                  mxtl::unique_ptr<fs::VfsDispatcher>* out) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher(cb, pool_size));
+                                  fbl::unique_ptr<fs::VfsDispatcher>* out) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<fs::VfsDispatcher> dispatcher(new (&ac) fs::VfsDispatcher(cb, pool_size));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -191,7 +191,7 @@ mx_status_t VfsDispatcher::Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
     if ((status = dispatcher->Start("VFS Dispatcher")) != MX_OK) {
         return status;
     }
-    *out = mxtl::move(dispatcher);
+    *out = fbl::move(dispatcher);
     return MX_OK;
 }
 
@@ -204,7 +204,7 @@ static int mxio_dispatcher_thread(void* arg) {
 mx_status_t VfsDispatcher::Start(const char* name) {
     char namebuf[NAME_MAX];
 
-    mxtl::AutoLock md_lock(&lock_);
+    fbl::AutoLock md_lock(&lock_);
     mx_status_t r;
 
     if (n_threads_ != 0) {
@@ -233,20 +233,20 @@ mx_status_t VfsDispatcher::Start(const char* name) {
 }
 
 mx_status_t VfsDispatcher::AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* cookie) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<Handler> handler(new (&ac) Handler(mxtl::move(channel), cb, cookie));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Handler> handler(new (&ac) Handler(fbl::move(channel), cb, cookie));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
 
-    mxtl::AutoLock md_lock(&lock_);
+    fbl::AutoLock md_lock(&lock_);
 
     // set us up to receive read/close callbacks from handler on port_
     mx_status_t status;
     if ((status = handler->SetAsyncCallback(port_)) != MX_OK) {
         return status;
     } else {
-        handlers_.push_back(mxtl::move(handler));
+        handlers_.push_back(fbl::move(handler));
     }
 
     return MX_OK;

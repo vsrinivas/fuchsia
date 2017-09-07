@@ -13,7 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/region-alloc-c-api.cpp
 
 MODULE_STATIC_LIBS := \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/mxcpp
 
 include make/module.mk

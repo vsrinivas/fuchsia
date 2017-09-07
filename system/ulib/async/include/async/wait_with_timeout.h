@@ -9,8 +9,8 @@
 
 #ifdef __cplusplus
 
-#include <mxtl/function.h>
-#include <mxtl/macros.h>
+#include <fbl/function.h>
+#include <fbl/macros.h>
 
 namespace async {
 
@@ -37,7 +37,7 @@ public:
     // The result must be |ASYNC_WAIT_FINISHED| if |status| was not |MX_OK|.
     //
     // It is safe for the handler to destroy itself when returning |ASYNC_WAIT_FINISHED|.
-    using Handler = mxtl::Function<async_wait_result_t(async_t* async,
+    using Handler = fbl::Function<async_wait_result_t(async_t* async,
                                                        mx_status_t status,
                                                        const mx_packet_signal_t* signal)>;
 
@@ -57,7 +57,7 @@ public:
     // Gets or sets the handler to invoke when the wait completes.
     // Must be set before beginning the wait.
     const Handler& handler() const { return handler_; }
-    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
+    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
 
     // The object to wait for signals on.
     mx_handle_t object() const { return async_wait_t::object; }

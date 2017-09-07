@@ -50,14 +50,14 @@ __END_CDECLS
 #include <mx/channel.h>
 #include <mx/event.h>
 #include <mx/vmo.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 #endif  // __Fuchsia__
 
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace fs {
 
@@ -79,7 +79,7 @@ private:
     mx::channel remote_;
 };
 
-struct VnodeWatcher : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<VnodeWatcher>> {
+struct VnodeWatcher : public fbl::DoublyLinkedListable<fbl::unique_ptr<VnodeWatcher>> {
 public:
     VnodeWatcher(mx::channel h, uint32_t mask);
     ~VnodeWatcher();
@@ -110,8 +110,8 @@ public:
     mx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
     void Notify(const char* name, size_t len, unsigned event);
 private:
-    mxtl::Mutex lock_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
+    fbl::Mutex lock_;
+    fbl::DoublyLinkedList<fbl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
 };
 
 // MountChannel functions exactly the same as a channel, except that it
@@ -125,10 +125,10 @@ class MountChannel {
 public:
     constexpr MountChannel() = default;
     explicit MountChannel(mx_handle_t handle) : channel_(handle) {}
-    explicit MountChannel(mx::channel channel) : channel_(mxtl::move(channel)) {}
-    MountChannel(MountChannel&& other) : channel_(mxtl::move(other.channel_)) {}
+    explicit MountChannel(mx::channel channel) : channel_(fbl::move(channel)) {}
+    MountChannel(MountChannel&& other) : channel_(fbl::move(other.channel_)) {}
 
-    mx::channel TakeChannel() { return mxtl::move(channel_); }
+    mx::channel TakeChannel() { return fbl::move(channel_); }
 
     ~MountChannel() {
         if (channel_.is_valid()) {
@@ -181,7 +181,7 @@ inline bool vfs_valid_name(const char* name, size_t len) {
 // The lower half of flags (V_FLAG_RESERVED_MASK) is reserved
 // for usage by fs::Vnode, but the upper half of flags may
 // be used by subclasses of Vnode.
-class Vnode : public mxtl::RefCounted<Vnode> {
+class Vnode : public fbl::RefCounted<Vnode> {
 public:
 #ifdef __Fuchsia__
     // Allocate iostate and register the transferred handle with a dispatcher.
@@ -221,7 +221,7 @@ public:
 
     // Attempt to find child of vn, child returned on success.
     // Name is len bytes long, and does not include a null terminator.
-    virtual mx_status_t Lookup(mxtl::RefPtr<Vnode>* out, const char* name, size_t len) {
+    virtual mx_status_t Lookup(fbl::RefPtr<Vnode>* out, const char* name, size_t len) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -247,7 +247,7 @@ public:
     // Create a new node under vn.
     // Name is len bytes long, and does not include a null terminator.
     // Mode specifies the type of entity to create.
-    virtual mx_status_t Create(mxtl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode) {
+    virtual mx_status_t Create(fbl::RefPtr<Vnode>* out, const char* name, size_t len, uint32_t mode) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -271,7 +271,7 @@ public:
     // Renames the path at oldname in olddir to the path at newname in newdir.
     // Called on the "olddir" vnode.
     // Unlinks any prior newname if it already exists.
-    virtual mx_status_t Rename(mxtl::RefPtr<Vnode> newdir,
+    virtual mx_status_t Rename(fbl::RefPtr<Vnode> newdir,
                                const char* oldname, size_t oldlen,
                                const char* newname, size_t newlen,
                                bool src_must_be_dir, bool dst_must_be_dir) {
@@ -279,7 +279,7 @@ public:
     }
 
     // Creates a hard link to the 'target' vnode with a provided name in vndir
-    virtual mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<Vnode> target) {
+    virtual mx_status_t Link(const char* name, size_t len, fbl::RefPtr<Vnode> target) {
         return MX_ERR_NOT_SUPPORTED;
     }
 
@@ -336,13 +336,13 @@ protected:
 
 #ifdef __Fuchsia__
 // Non-intrusive node in linked list of vnodes acting as mount points
-class MountNode final : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<MountNode>> {
+class MountNode final : public fbl::DoublyLinkedListable<fbl::unique_ptr<MountNode>> {
 public:
-    using ListType = mxtl::DoublyLinkedList<mxtl::unique_ptr<MountNode>>;
+    using ListType = fbl::DoublyLinkedList<fbl::unique_ptr<MountNode>>;
     constexpr MountNode() : vn_(nullptr) {}
     ~MountNode() { MX_DEBUG_ASSERT(vn_ == nullptr); }
 
-    void SetNode(mxtl::RefPtr<Vnode> vn) {
+    void SetNode(fbl::RefPtr<Vnode> vn) {
         MX_DEBUG_ASSERT(vn_ == nullptr);
         vn_ = vn;
     }
@@ -354,13 +354,13 @@ public:
         return h;
     }
 
-    bool VnodeMatch(mxtl::RefPtr<Vnode> vn) const {
+    bool VnodeMatch(fbl::RefPtr<Vnode> vn) const {
         MX_DEBUG_ASSERT(vn_ != nullptr);
         return vn == vn_;
     }
 
 private:
-    mxtl::RefPtr<Vnode> vn_;
+    fbl::RefPtr<Vnode> vn_;
 };
 
 #endif
@@ -374,24 +374,24 @@ public:
     Vfs();
     // Walk from vn --> out until either only one path segment remains or we
     // encounter a remote filesystem.
-    mx_status_t Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+    mx_status_t Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      const char* path, const char** pathout) __TA_REQUIRES(vfs_lock_);
     // Traverse the path to the target vnode, and create / open it using
     // the underlying filesystem functions (lookup, create, open).
-    mx_status_t Open(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+    mx_status_t Open(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                      const char* path, const char** pathout,
                      uint32_t flags, uint32_t mode) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Unlink(mxtl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
-    ssize_t Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
+    mx_status_t Unlink(fbl::RefPtr<Vnode> vn, const char* path, size_t len) __TA_EXCLUDES(vfs_lock_);
+    ssize_t Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                   void* out_buf, size_t out_len) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
     void TokenDiscard(mx::event* ios_token) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t VnodeToToken(mxtl::RefPtr<Vnode> vn, mx::event* ios_token,
+    mx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, mx::event* ios_token,
                              mx::event* out) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Link(mx::event token, mxtl::RefPtr<Vnode> oldparent,
+    mx_status_t Link(mx::event token, fbl::RefPtr<Vnode> oldparent,
                      const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
-    mx_status_t Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
+    mx_status_t Rename(mx::event token, fbl::RefPtr<Vnode> oldparent,
                        const char* oldname, const char* newname) __TA_EXCLUDES(vfs_lock_);
 
     Vfs(Dispatcher* dispatcher);
@@ -402,17 +402,17 @@ public:
     mx_status_t Serve(mx::channel channel, void* ios);
 
     // Serves a Vnode over the specified handle (used for creating new filesystems)
-    mx_status_t ServeDirectory(mxtl::RefPtr<fs::Vnode> vn, mx::channel channel);
+    mx_status_t ServeDirectory(fbl::RefPtr<fs::Vnode> vn, mx::channel channel);
 
     // Pins a handle to a remote filesystem onto a vnode, if possible.
-    mx_status_t InstallRemote(mxtl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
 
     // Create and mount a directory with a provided name
-    mx_status_t MountMkdir(mxtl::RefPtr<Vnode> vn,
+    mx_status_t MountMkdir(fbl::RefPtr<Vnode> vn,
                            const mount_mkdir_config_t* config) __TA_EXCLUDES(vfs_lock_);
 
     // Unpin a handle to a remote filesystem from a vnode, if one exists.
-    mx_status_t UninstallRemote(mxtl::RefPtr<Vnode> vn, mx::channel* h) __TA_EXCLUDES(vfs_lock_);
+    mx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, mx::channel* h) __TA_EXCLUDES(vfs_lock_);
 
     // Unpins all remote filesystems in the current filesystem, and waits for the
     // response of each one with the provided deadline.
@@ -424,19 +424,19 @@ public:
 #endif
 
 private:
-    mx_status_t OpenLocked(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+    mx_status_t OpenLocked(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                            const char* path, const char** pathout,
                            uint32_t flags, uint32_t mode) __TA_REQUIRES(vfs_lock_);
 #ifdef __Fuchsia__
-    mx_status_t TokenToVnode(mx::event token, mxtl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
-    mx_status_t InstallRemoteLocked(mxtl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
-    mx_status_t UninstallRemoteLocked(mxtl::RefPtr<Vnode> vn,
+    mx_status_t TokenToVnode(mx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
+    mx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
+    mx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
                                       mx::channel* h) __TA_REQUIRES(vfs_lock_);
     // Waits for a remote handle on a Vnode to become ready to receive requests.
     // Returns |MX_ERR_PEER_CLOSED| if the remote will never become available, since it is closed.
     // Returns |MX_ERR_UNAVAILABLE| if there is no remote handle, or if the remote handle is not yet ready.
     // On success, returns the remote handle.
-    mx_handle_t WaitForRemoteLocked(mxtl::RefPtr<Vnode> vn) __TA_REQUIRES(vfs_lock_);
+    mx_handle_t WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) __TA_REQUIRES(vfs_lock_);
     // The mount list is a global static variable, but it only uses
     // constexpr constructors during initialization. As a consequence,
     // the .init_array section of the compiled vfs-mount object file is

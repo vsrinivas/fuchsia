@@ -23,5 +23,5 @@ __END_CDECLS
 #include <object/dispatcher.h>
 
 class VmObject;
-status_t udisplay_set_framebuffer_vmo(mxtl::RefPtr<VmObject> vmo);
+status_t udisplay_set_framebuffer_vmo(fbl::RefPtr<VmObject> vmo);
 #endif

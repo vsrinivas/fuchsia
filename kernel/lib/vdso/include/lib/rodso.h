@@ -12,7 +12,7 @@
 // An RoDso object describes one DSO image built with the rodso.ld layout.
 class RoDso {
 public:
-    mxtl::RefPtr<VmObjectDispatcher> vmo() const {
+    fbl::RefPtr<VmObjectDispatcher> vmo() const {
         return vmo_;
     }
     HandleOwner vmo_handle() const;
@@ -23,7 +23,7 @@ public:
         return vmo_offset == code_start_ && size == size_ - code_start_;
     }
 
-    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+    mx_status_t Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                     size_t offset) const;
 
 protected:
@@ -35,14 +35,14 @@ protected:
 
 private:
 
-    mx_status_t MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+    mx_status_t MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
                            bool code,
                            size_t vmar_offset,
                            size_t start_offset,
                            size_t end_offset) const;
 
     const char* name_;
-    mxtl::RefPtr<VmObjectDispatcher> vmo_;
+    fbl::RefPtr<VmObjectDispatcher> vmo_;
     mx_rights_t vmo_rights_;
     uintptr_t code_start_;
     size_t size_;

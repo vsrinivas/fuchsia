@@ -11,8 +11,8 @@
 
 #include <magenta/assert.h>
 #include <magenta/errors.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
 namespace digest {
 
@@ -161,8 +161,8 @@ struct digest_t {
 };
 
 mx_status_t digest_init(digest_t** out) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<digest_t> uptr(new (&ac) digest_t);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<digest_t> uptr(new (&ac) digest_t);
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -177,7 +177,7 @@ void digest_update(digest_t* digest, const void* buf, size_t len) {
 
 mx_status_t digest_final(digest_t* digest, void* out,
                                 size_t out_len) {
-    mxtl::unique_ptr<digest_t> uptr(digest);
+    fbl::unique_ptr<digest_t> uptr(digest);
     uptr->obj.Final();
     return uptr->obj.CopyTo(static_cast<uint8_t*>(out), out_len);
 }

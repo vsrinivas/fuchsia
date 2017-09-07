@@ -7,7 +7,7 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
+#include <fbl/canary.h>
 #include <object/dispatcher.h>
 #include <object/state_tracker.h>
 
@@ -20,7 +20,7 @@ class VmAspace;
 
 class VmObjectDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<VmObject> vmo, mxtl::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(fbl::RefPtr<VmObject> vmo, fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~VmObjectDispatcher() final;
@@ -37,16 +37,16 @@ public:
     mx_status_t SetSize(uint64_t);
     mx_status_t GetSize(uint64_t* size);
     mx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_ptr<void> buffer, size_t buffer_size);
-    mx_status_t Clone(uint32_t options, uint64_t offset, uint64_t size, bool copy_name, mxtl::RefPtr<VmObject>* clone_vmo);
+    mx_status_t Clone(uint32_t options, uint64_t offset, uint64_t size, bool copy_name, fbl::RefPtr<VmObject>* clone_vmo);
     mx_status_t SetMappingCachePolicy(uint32_t cache_policy);
 
-    mxtl::RefPtr<VmObject> vmo() const { return vmo_; }
+    fbl::RefPtr<VmObject> vmo() const { return vmo_; }
 
 private:
-    explicit VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo);
+    explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo);
 
-    mxtl::Canary<mxtl::magic("VMOD")> canary_;
-    mxtl::RefPtr<VmObject> vmo_;
+    fbl::Canary<fbl::magic("VMOD")> canary_;
+    fbl::RefPtr<VmObject> vmo_;
 
     // VMOs do not currently maintain any VMO-specific signal state,
     // but do allow user signals to be set. In addition, the CookieJar

@@ -10,7 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
-    kernel/lib/mxtl \
+    kernel/lib/fbl \
     kernel/lib/pretty \
     kernel/lib/user_copy \
     third_party/lib/cryptolib

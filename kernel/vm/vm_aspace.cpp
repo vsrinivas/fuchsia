@@ -15,11 +15,11 @@
 #include <kernel/vm.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/type_support.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/type_support.h>
 #include <safeint/safe_math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +33,7 @@
 #include <lib/vdso.h>
 #endif
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -45,7 +45,7 @@ static VmAddressRegion* dummy_root_vmar = nullptr;
 
 // list of all address spaces
 static mutex_t aspace_list_lock = MUTEX_INITIAL_VALUE(aspace_list_lock);
-static mxtl::DoublyLinkedList<VmAspace*> aspaces;
+static fbl::DoublyLinkedList<VmAspace*> aspaces;
 
 // called once at boot to initialize the singleton kernel address space
 void VmAspace::KernelAspaceInitPreHeap() {
@@ -64,7 +64,7 @@ void VmAspace::KernelAspaceInitPreHeap() {
 
     static VmAddressRegion _kernel_root_vmar(_kernel_aspace);
 
-    _kernel_aspace.root_vmar_ = mxtl::AdoptRef(&_kernel_root_vmar);
+    _kernel_aspace.root_vmar_ = fbl::AdoptRef(&_kernel_root_vmar);
 
     auto err = _kernel_aspace.Init();
     ASSERT(err >= 0);
@@ -157,7 +157,7 @@ status_t VmAspace::Init() {
     return MX_OK;
 }
 
-mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
+fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     LTRACEF("flags 0x%x, name '%s'\n", flags, name);
 
     vaddr_t base;
@@ -183,8 +183,8 @@ mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
         panic("Invalid aspace type");
     }
 
-    mxtl::AllocChecker ac;
-    auto aspace = mxtl::AdoptRef(new (&ac) VmAspace(base, size, flags, name));
+    fbl::AllocChecker ac;
+    auto aspace = fbl::AdoptRef(new (&ac) VmAspace(base, size, flags, name));
     if (!ac.check())
         return nullptr;
 
@@ -202,7 +202,7 @@ mxtl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     }
 
     // return a ref pointer to the aspace
-    return mxtl::move(aspace);
+    return fbl::move(aspace);
 }
 
 void VmAspace::Rename(const char* name) {
@@ -232,10 +232,10 @@ VmAspace::~VmAspace() {
     arch_aspace_.Destroy();
 }
 
-mxtl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
+fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
     AutoLock guard(&lock_);
-    mxtl::RefPtr<VmAddressRegion> ref(root_vmar_);
-    return mxtl::move(ref);
+    fbl::RefPtr<VmAddressRegion> ref(root_vmar_);
+    return fbl::move(ref);
 }
 
 status_t VmAspace::Destroy() {
@@ -270,7 +270,7 @@ bool VmAspace::is_destroyed() const {
     return aspace_destroyed_;
 }
 
-status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
+status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* name, uint64_t offset,
                                      size_t size, void** ptr, uint8_t align_pow2, uint vmm_flags,
                                      uint arch_mmu_flags) {
 
@@ -316,7 +316,7 @@ status_t VmAspace::MapObjectInternal(mxtl::RefPtr<VmObject> vmo, const char* nam
     vmar_flags |= VMAR_CAN_RWX_FLAGS;
 
     // allocate a region and put it in the aspace list
-    mxtl::RefPtr<VmMapping> r(nullptr);
+    fbl::RefPtr<VmMapping> r(nullptr);
     status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2,
                                                   vmar_flags,
                                                   vmo, offset, arch_mmu_flags, name, &r);
@@ -358,7 +358,7 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     // allocate a zero length vm object to back it
     // TODO: decide if a null vmo object is worth it
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, &vmo);
     if (status != MX_OK)
         return status;
@@ -373,7 +373,7 @@ status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr) {
 
     // map it, creating a new region
     void* ptr = reinterpret_cast<void*>(vaddr);
-    return MapObjectInternal(mxtl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
+    return MapObjectInternal(fbl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
                              arch_mmu_flags);
 }
 
@@ -393,7 +393,7 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
     size = ROUNDUP_PAGE_SIZE(size);
 
     // create a vm object to back it
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status_t status = VmObjectPhysical::Create(paddr, size, &vmo);
     if (status != MX_OK)
         return status;
@@ -407,7 +407,7 @@ status_t VmAspace::AllocPhysical(const char* name, size_t size, void** ptr, uint
         return MX_ERR_INVALID_ARGS;
 
     arch_mmu_flags &= ~ARCH_MMU_FLAG_CACHE_MASK;
-    return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);
 }
 
@@ -426,7 +426,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return MX_ERR_INVALID_ARGS;
 
     // create a vm object to back it
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != MX_OK)
         return status;
@@ -442,7 +442,7 @@ status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr, ui
         return MX_ERR_NO_MEMORY;
     }
 
-    return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);
 }
 
@@ -457,7 +457,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
         return MX_ERR_INVALID_ARGS;
 
     // allocate a vm object to back it
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != MX_OK)
         return status;
@@ -477,14 +477,14 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
     }
 
     // map it, creating a new region
-    return MapObjectInternal(mxtl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
+    return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);
 }
 
 status_t VmAspace::FreeRegion(vaddr_t va) {
     DEBUG_ASSERT(!is_user());
 
-    mxtl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
+    fbl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
     if (!r) {
         return MX_ERR_NOT_FOUND;
     }
@@ -492,10 +492,10 @@ status_t VmAspace::FreeRegion(vaddr_t va) {
     return r->Destroy();
 }
 
-mxtl::RefPtr<VmAddressRegionOrMapping> VmAspace::FindRegion(vaddr_t va) {
-    mxtl::RefPtr<VmAddressRegion> vmar(RootVmar());
+fbl::RefPtr<VmAddressRegionOrMapping> VmAspace::FindRegion(vaddr_t va) {
+    fbl::RefPtr<VmAddressRegion> vmar(RootVmar());
     while (1) {
-        mxtl::RefPtr<VmAddressRegionOrMapping> next(vmar->FindRegion(va));
+        fbl::RefPtr<VmAddressRegionOrMapping> next(vmar->FindRegion(va));
         if (!next) {
             return vmar;
         }

@@ -9,20 +9,20 @@
 #include <err.h>
 
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 #include <object/state_tracker.h>
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
-mx_status_t EventDispatcher::Create(uint32_t options, mxtl::RefPtr<Dispatcher>* dispatcher,
+mx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto disp = new (&ac) EventDispatcher(options);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     *rights = MX_DEFAULT_EVENT_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 

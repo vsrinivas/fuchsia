@@ -15,7 +15,7 @@ MODULE_NAME := libmx-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/mx \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/mxio system/ulib/magenta system/ulib/unittest system/ulib/c

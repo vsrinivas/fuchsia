@@ -16,12 +16,12 @@
 #include <magenta/thread_annotations.h>
 #include <mxio/debug.h>
 #include <mxio/vfs.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/atomic.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/atomic.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "devmgr.h"
 #include "dnode.h"
@@ -33,17 +33,17 @@ namespace memfs {
 namespace {
 
 fs::Vfs vfs;
-mxtl::unique_ptr<fs::MxioDispatcher> global_dispatcher;
+fbl::unique_ptr<fs::MxioDispatcher> global_dispatcher;
 
 }
 
 constexpr size_t kMemfsMaxFileSize = (8192 * 8192);
 
-static mxtl::RefPtr<VnodeDir> vfs_root = nullptr;
-static mxtl::RefPtr<VnodeDir> memfs_root = nullptr;
-static mxtl::RefPtr<VnodeDir> devfs_root = nullptr;
-static mxtl::RefPtr<VnodeDir> bootfs_root = nullptr;
-static mxtl::RefPtr<VnodeDir> systemfs_root = nullptr;
+static fbl::RefPtr<VnodeDir> vfs_root = nullptr;
+static fbl::RefPtr<VnodeDir> memfs_root = nullptr;
+static fbl::RefPtr<VnodeDir> devfs_root = nullptr;
+static fbl::RefPtr<VnodeDir> bootfs_root = nullptr;
+static fbl::RefPtr<VnodeDir> systemfs_root = nullptr;
 
 static bool WindowMatchesVMO(mx_handle_t vmo, mx_off_t offset, mx_off_t length) {
     if (offset != 0)
@@ -54,10 +54,10 @@ static bool WindowMatchesVMO(mx_handle_t vmo, mx_off_t offset, mx_off_t length) 
     return size == length;
 }
 
-mxtl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
+fbl::atomic<uint64_t> VnodeMemfs::ino_ctr_(0);
 
 VnodeMemfs::VnodeMemfs() : dnode_(nullptr), link_count_(0),
-    ino_(ino_ctr_.fetch_add(1, mxtl::memory_order_relaxed)) {
+    ino_(ino_ctr_.fetch_add(1, fbl::memory_order_relaxed)) {
     create_time_ = modify_time_ = mx_time_get(MX_CLOCK_UTC);
 }
 VnodeMemfs::~VnodeMemfs() {
@@ -179,14 +179,14 @@ ssize_t VnodeFile::Write(const void* data, size_t len, size_t off) {
     mx_status_t status;
     size_t newlen = off + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
-    size_t alignedLen = mxtl::roundup(newlen, static_cast<size_t>(PAGE_SIZE));
+    size_t alignedLen = fbl::roundup(newlen, static_cast<size_t>(PAGE_SIZE));
 
     if (vmo_ == MX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
         if ((status = mx_vmo_create(alignedLen, 0, &vmo_)) != MX_OK) {
             return status;
         }
-    } else if (newlen > mxtl::roundup(length_, static_cast<size_t>(PAGE_SIZE))) {
+    } else if (newlen > fbl::roundup(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
         if ((status = mx_vmo_set_size(vmo_, alignedLen)) != MX_OK) {
             return status;
@@ -238,19 +238,19 @@ bool VnodeDir::IsRemote() const { return remoter_.IsRemote(); }
 mx::channel VnodeDir::DetachRemote() { return remoter_.DetachRemote(flags_); }
 mx_handle_t VnodeDir::WaitForRemote() { return remoter_.WaitForRemote(flags_); }
 mx_handle_t VnodeDir::GetRemote() const { return remoter_.GetRemote(); }
-void VnodeDir::SetRemote(mx::channel remote) { return remoter_.SetRemote(mxtl::move(remote)); }
+void VnodeDir::SetRemote(mx::channel remote) { return remoter_.SetRemote(fbl::move(remote)); }
 
-mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+mx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
     if (!IsDirectory()) {
         return MX_ERR_NOT_FOUND;
     }
-    mxtl::RefPtr<Dnode> dn;
+    fbl::RefPtr<Dnode> dn;
     mx_status_t r = dnode_->Lookup(name, len, &dn);
     MX_DEBUG_ASSERT(r <= 0);
     if (r == MX_OK) {
         if (dn == nullptr) {
             // Looking up our own vnode
-            *out = mxtl::RefPtr<VnodeDir>(this);
+            *out = fbl::RefPtr<VnodeDir>(this);
         } else {
             // Looking up a different vnode
             *out = dn->AcquireVnode();
@@ -267,7 +267,7 @@ mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
-    attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -280,7 +280,7 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->size = 0;
     attr->blksize = kMemfsBlksize;
-    attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -293,7 +293,7 @@ mx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
     attr->blksize = kMemfsBlksize;
-    attr->blkcount = mxtl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::roundup(attr->size, kMemfsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = link_count_;
     attr->create_time = create_time_;
     attr->modify_time = modify_time_;
@@ -323,18 +323,18 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
 }
 
 // postcondition: reference taken on vn returned through "out"
-mx_status_t VnodeDir::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
+mx_status_t VnodeDir::Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) {
     mx_status_t status;
     if ((status = CanCreate(name, len)) != MX_OK) {
         return status;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<memfs::VnodeMemfs> vn;
+    fbl::AllocChecker ac;
+    fbl::RefPtr<memfs::VnodeMemfs> vn;
     if (S_ISDIR(mode)) {
-        vn = mxtl::AdoptRef(new (&ac) memfs::VnodeDir());
+        vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir());
     } else {
-        vn = mxtl::AdoptRef(new (&ac) memfs::VnodeFile());
+        vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile());
     }
 
     if (!ac.check()) {
@@ -344,7 +344,7 @@ mx_status_t VnodeDir::Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, siz
     if ((status = AttachVnode(vn, name, len, S_ISDIR(mode))) != MX_OK) {
         return status;
     }
-    *out = mxtl::move(vn);
+    *out = fbl::move(vn);
     return status;
 }
 
@@ -354,7 +354,7 @@ mx_status_t VnodeDir::Unlink(const char* name, size_t len, bool must_be_dir) {
         // Calling unlink from unlinked, empty directory
         return MX_ERR_BAD_STATE;
     }
-    mxtl::RefPtr<Dnode> dn;
+    fbl::RefPtr<Dnode> dn;
     mx_status_t r;
     if ((r = dnode_->Lookup(name, len, &dn)) != MX_OK) {
         return r;
@@ -378,7 +378,7 @@ mx_status_t VnodeFile::Truncate(size_t len) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    size_t alignedLen = mxtl::roundup(len, static_cast<size_t>(PAGE_SIZE));
+    size_t alignedLen = fbl::roundup(len, static_cast<size_t>(PAGE_SIZE));
 
     if (vmo_ == MX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
@@ -410,15 +410,15 @@ mx_status_t VnodeFile::Truncate(size_t len) {
     return MX_OK;
 }
 
-mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldname, size_t oldlen,
+mx_status_t VnodeDir::Rename(fbl::RefPtr<fs::Vnode> _newdir, const char* oldname, size_t oldlen,
                              const char* newname, size_t newlen, bool src_must_be_dir,
                              bool dst_must_be_dir) {
-    auto newdir = mxtl::RefPtr<VnodeMemfs>::Downcast(mxtl::move(_newdir));
+    auto newdir = fbl::RefPtr<VnodeMemfs>::Downcast(fbl::move(_newdir));
 
     if (!IsDirectory() || !newdir->IsDirectory())
         return MX_ERR_BAD_STATE;
 
-    mxtl::RefPtr<Dnode> olddn;
+    fbl::RefPtr<Dnode> olddn;
     mx_status_t r;
     // The source must exist
     if ((r = dnode_->Lookup(oldname, oldlen, &olddn)) != MX_OK) {
@@ -437,7 +437,7 @@ mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldnam
     }
 
     // The destination may or may not exist
-    mxtl::RefPtr<Dnode> targetdn;
+    fbl::RefPtr<Dnode> targetdn;
     r = newdir->dnode_->Lookup(newname, newlen, &targetdn);
     bool target_exists = (r == MX_OK);
     if (target_exists) {
@@ -460,12 +460,12 @@ mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldnam
     // Allocate the new name for the dnode, either by
     // (1) Stealing it from the previous dnode, if it used the same name, or
     // (2) Allocating a new name, if creating a new name.
-    mxtl::unique_ptr<char[]> namebuffer(nullptr);
+    fbl::unique_ptr<char[]> namebuffer(nullptr);
     if (target_exists) {
         targetdn->Detach();
-        namebuffer = mxtl::move(targetdn->TakeName());
+        namebuffer = fbl::move(targetdn->TakeName());
     } else {
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         namebuffer.reset(new (&ac) char[newlen + 1]);
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;
@@ -480,13 +480,13 @@ mx_status_t VnodeDir::Rename(mxtl::RefPtr<fs::Vnode> _newdir, const char* oldnam
     // beyond this point.
 
     olddn->RemoveFromParent();
-    olddn->PutName(mxtl::move(namebuffer), newlen);
-    Dnode::AddChild(newdir->dnode_, mxtl::move(olddn));
+    olddn->PutName(fbl::move(namebuffer), newlen);
+    Dnode::AddChild(newdir->dnode_, fbl::move(olddn));
     return MX_OK;
 }
 
-mx_status_t VnodeDir::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) {
-    auto vn = mxtl::RefPtr<VnodeMemfs>::Downcast(mxtl::move(target));
+mx_status_t VnodeDir::Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) {
+    auto vn = fbl::RefPtr<VnodeMemfs>::Downcast(fbl::move(target));
 
     if (!IsDirectory()) {
         // Empty, unlinked parent
@@ -504,13 +504,13 @@ mx_status_t VnodeDir::Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode>
     }
 
     // Make a new dnode for the new name, attach the target vnode to it
-    mxtl::RefPtr<Dnode> targetdn;
+    fbl::RefPtr<Dnode> targetdn;
     if ((targetdn = Dnode::Create(name, len, vn)) == nullptr) {
         return MX_ERR_NO_MEMORY;
     }
 
     // Attach the new dnode to its parent
-    Dnode::AddChild(dnode_, mxtl::move(targetdn));
+    Dnode::AddChild(dnode_, fbl::move(targetdn));
 
     return MX_OK;
 }
@@ -594,18 +594,18 @@ mx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
     } else if (IsRemote()) {
         return MX_ERR_ALREADY_BOUND;
     }
-    SetRemote(mxtl::move(h.TakeChannel()));
+    SetRemote(fbl::move(h.TakeChannel()));
     return MX_OK;
 }
 
-static mx_status_t memfs_create_fs(const char* name, mxtl::RefPtr<VnodeDir>* out) {
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VnodeDir> fs = mxtl::AdoptRef(new (&ac) VnodeDir());
+static mx_status_t memfs_create_fs(const char* name, fbl::RefPtr<VnodeDir>* out) {
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VnodeDir> fs = fbl::AdoptRef(new (&ac) VnodeDir());
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
 
-    mxtl::RefPtr<Dnode> dn = Dnode::Create(name, strlen(name), fs);
+    fbl::RefPtr<Dnode> dn = Dnode::Create(name, strlen(name), fs);
     if (dn == nullptr) {
         return MX_ERR_NO_MEMORY;
     }
@@ -615,29 +615,29 @@ static mx_status_t memfs_create_fs(const char* name, mxtl::RefPtr<VnodeDir>* out
     return MX_OK;
 }
 
-static void memfs_mount_locked(mxtl::RefPtr<VnodeDir> parent, mxtl::RefPtr<VnodeDir> subtree) {
+static void memfs_mount_locked(fbl::RefPtr<VnodeDir> parent, fbl::RefPtr<VnodeDir> subtree) {
     Dnode::AddChild(parent->dnode_, subtree->dnode_);
 }
 
 mx_status_t VnodeDir::CreateFromVmo(bool vmofile, const char* name, size_t namelen,
                                     mx_handle_t vmo, mx_off_t off, mx_off_t len) {
-    mxtl::AutoLock lock(&memfs::vfs.vfs_lock_);
+    fbl::AutoLock lock(&memfs::vfs.vfs_lock_);
     mx_status_t status;
     if ((status = CanCreate(name, namelen)) != MX_OK) {
         return status;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::RefPtr<VnodeMemfs> vn;
+    fbl::AllocChecker ac;
+    fbl::RefPtr<VnodeMemfs> vn;
     if (vmofile) {
-        vn = mxtl::AdoptRef(new (&ac) VnodeVmo(vmo, off, len));
+        vn = fbl::AdoptRef(new (&ac) VnodeVmo(vmo, off, len));
     } else {
-        vn = mxtl::AdoptRef(new (&ac) VnodeFile(vmo, len));
+        vn = fbl::AdoptRef(new (&ac) VnodeFile(vmo, len));
     }
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
-    if ((status = AttachVnode(mxtl::move(vn), name, namelen, false)) != MX_OK) {
+    if ((status = AttachVnode(fbl::move(vn), name, namelen, false)) != MX_OK) {
         return status;
     }
 
@@ -657,10 +657,10 @@ mx_status_t VnodeDir::CanCreate(const char* name, size_t namelen) const {
     return status;
 }
 
-mx_status_t VnodeDir::AttachVnode(mxtl::RefPtr<VnodeMemfs> vn, const char* name, size_t namelen,
+mx_status_t VnodeDir::AttachVnode(fbl::RefPtr<VnodeMemfs> vn, const char* name, size_t namelen,
                                   bool isdir) {
     // dnode takes a reference to the vnode
-    mxtl::RefPtr<Dnode> dn;
+    fbl::RefPtr<Dnode> dn;
     if ((dn = Dnode::Create(name, namelen, vn)) == nullptr) {
         return MX_ERR_NO_MEMORY;
     }
@@ -673,7 +673,7 @@ mx_status_t VnodeDir::AttachVnode(mxtl::RefPtr<VnodeMemfs> vn, const char* name,
     }
 
     // parent takes first reference
-    Dnode::AddChild(dnode_, mxtl::move(dn));
+    Dnode::AddChild(dnode_, fbl::move(dn));
     return MX_OK;
 }
 
@@ -689,18 +689,18 @@ mx_status_t VnodeDir::AttachVnode(mxtl::RefPtr<VnodeMemfs> vn, const char* name,
 static mx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flags) __TA_NO_THREAD_SAFETY_ANALYSIS {
     mx_status_t r;
     const char* pathout;
-    mxtl::RefPtr<fs::Vnode> parent_vn;
+    fbl::RefPtr<fs::Vnode> parent_vn;
     if ((r = memfs::vfs.Walk(memfs::vfs_root, &parent_vn, path, &pathout)) < 0) {
         return r;
     }
-    mxtl::RefPtr<memfs::VnodeDir> parent =
-            mxtl::RefPtr<memfs::VnodeDir>::Downcast(mxtl::move(parent_vn));
+    fbl::RefPtr<memfs::VnodeDir> parent =
+            fbl::RefPtr<memfs::VnodeDir>::Downcast(fbl::move(parent_vn));
 
     if (strcmp(pathout, "") == 0) {
         return MX_ERR_ALREADY_EXISTS;
     }
 
-    mxtl::RefPtr<fs::Vnode> out;
+    fbl::RefPtr<fs::Vnode> out;
     r = parent->Create(&out, pathout, strlen(pathout), S_IFDIR);
     if (r < 0) {
         return r;
@@ -708,7 +708,7 @@ static mx_status_t memfs_create_directory_unsafe(const char* path, uint32_t flag
     return r;
 }
 
-mxtl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
+fbl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     if (memfs::systemfs_root == nullptr) {
         mx_status_t r = memfs_create_fs("system", &memfs::systemfs_root);
         if (r < 0) {
@@ -719,7 +719,7 @@ mxtl::RefPtr<memfs::VnodeDir> SystemfsRoot() {
     return memfs::systemfs_root;
 }
 
-mxtl::RefPtr<memfs::VnodeDir> MemfsRoot() {
+fbl::RefPtr<memfs::VnodeDir> MemfsRoot() {
     if (memfs::memfs_root == nullptr) {
         mx_status_t r = memfs_create_fs("tmp", &memfs::memfs_root);
         if (r < 0) {
@@ -730,7 +730,7 @@ mxtl::RefPtr<memfs::VnodeDir> MemfsRoot() {
     return memfs::memfs_root;
 }
 
-mxtl::RefPtr<memfs::VnodeDir> DevfsRoot() {
+fbl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     if (memfs::devfs_root == nullptr) {
         mx_status_t r = memfs_create_fs("dev", &memfs::devfs_root);
         if (r < 0) {
@@ -741,7 +741,7 @@ mxtl::RefPtr<memfs::VnodeDir> DevfsRoot() {
     return memfs::devfs_root;
 }
 
-mxtl::RefPtr<memfs::VnodeDir> BootfsRoot() {
+fbl::RefPtr<memfs::VnodeDir> BootfsRoot() {
     if (memfs::bootfs_root == nullptr) {
         mx_status_t r = memfs_create_fs("boot", &memfs::bootfs_root);
         if (r < 0) {
@@ -789,8 +789,8 @@ void devmgr_vfs_exit() {
 }
 
 void memfs_mount(memfs::VnodeDir* parent, memfs::VnodeDir* subtree) {
-    mxtl::AutoLock lock(&memfs::vfs.vfs_lock_);
-    memfs_mount_locked(mxtl::RefPtr<VnodeDir>(parent), mxtl::RefPtr<VnodeDir>(subtree));
+    fbl::AutoLock lock(&memfs::vfs.vfs_lock_);
+    memfs_mount_locked(fbl::RefPtr<VnodeDir>(parent), fbl::RefPtr<VnodeDir>(subtree));
 }
 
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
@@ -800,8 +800,8 @@ mx_handle_t vfs_create_root_handle(VnodeMemfs* vn) {
     if ((r = mx::channel::create(0, &h1, &h2)) != MX_OK) {
         return r;
     }
-    if ((r = memfs::vfs.ServeDirectory(mxtl::RefPtr<fs::Vnode>(vn),
-                                       mxtl::move(h1))) != MX_OK) {
+    if ((r = memfs::vfs.ServeDirectory(fbl::RefPtr<fs::Vnode>(vn),
+                                       fbl::move(h1))) != MX_OK) {
         return r;
     }
     return h2.release();

@@ -109,9 +109,9 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         return MX_ERR_INTERNAL;
     }
 
-    static mxtl::RefPtr<VmAspace> test_aspace;
+    static fbl::RefPtr<VmAspace> test_aspace;
     if (!test_aspace)
-        test_aspace = mxtl::WrapRefPtr(VmAspace::kernel_aspace());
+        test_aspace = fbl::WrapRefPtr(VmAspace::kernel_aspace());
 
     if (!strcmp(argv[1].str, "aspaces")) {
         DumpAllAspaces(true);
@@ -149,10 +149,10 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         status_t err = test_aspace->FreeRegion(reinterpret_cast<vaddr_t>(argv[2].u));
         printf("VmAspace::FreeRegion returns %d\n", err);
     } else if (!strcmp(argv[1].str, "create_aspace")) {
-        mxtl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
+        fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
         printf("VmAspace::Create aspace %p\n", aspace.get());
     } else if (!strcmp(argv[1].str, "create_test_aspace")) {
-        mxtl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
+        fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
         printf("VmAspace::Create aspace %p\n", aspace.get());
 
         test_aspace = aspace;
@@ -162,7 +162,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 2)
             goto notenoughargs;
 
-        mxtl::RefPtr<VmAspace> aspace = mxtl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
+        fbl::RefPtr<VmAspace> aspace = fbl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
         if (test_aspace == aspace)
             test_aspace = nullptr;
 
@@ -177,7 +177,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
         if (argc < 2)
             goto notenoughargs;
 
-        test_aspace = mxtl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
+        test_aspace = fbl::WrapRefPtr((VmAspace*)(void*)argv[2].u);
         get_current_thread()->aspace = reinterpret_cast<vmm_aspace_t*>(test_aspace.get());
         thread_sleep(1); // XXX hack to force it to reschedule and thus load the aspace
     } else {

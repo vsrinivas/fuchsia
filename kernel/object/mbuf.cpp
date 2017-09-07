@@ -8,8 +8,8 @@
 
 #include <lib/user_copy/user_ptr.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 
 #define LOCAL_TRACE 0
 
@@ -77,7 +77,7 @@ mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
     if (len + size_ > kSizeMax)
         return MX_ERR_SHOULD_WAIT;
 
-    mxtl::SinglyLinkedList<MBuf*> bufs;
+    fbl::SinglyLinkedList<MBuf*> bufs;
     for (size_t need = 1 + ((len - 1) / MBuf::kPayloadSize); need != 0; need--) {
         auto buf = AllocMBuf();
         if (buf == nullptr) {
@@ -90,7 +90,7 @@ mx_status_t MBufChain::WriteDatagram(user_ptr<const void> src,
 
     size_t pos = 0;
     for (auto& buf : bufs) {
-        size_t copy_len = mxtl::min(MBuf::kPayloadSize, len - pos);
+        size_t copy_len = fbl::min(MBuf::kPayloadSize, len - pos);
         if (src.byte_offset(pos).copy_array_from_user(buf.data_, copy_len) != MX_OK) {
             while (!bufs.is_empty())
                 FreeMBuf(bufs.pop_front());
@@ -137,7 +137,7 @@ mx_status_t MBufChain::WriteStream(user_ptr<const void> src,
             head_ = next;
         }
         void* dst = head_->data_ + head_->off_ + head_->len_;
-        size_t copy_len = mxtl::min(head_->rem(), len - pos);
+        size_t copy_len = fbl::min(head_->rem(), len - pos);
         if (size_ + copy_len > kSizeMax) {
             copy_len = kSizeMax - size_;
             if (copy_len == 0)
@@ -159,7 +159,7 @@ mx_status_t MBufChain::WriteStream(user_ptr<const void> src,
 
 MBufChain::MBuf* MBufChain::AllocMBuf() {
     if (freelist_.is_empty()) {
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         MBuf* buf = new (&ac) MBuf();
         return (!ac.check()) ? nullptr : buf;
     }

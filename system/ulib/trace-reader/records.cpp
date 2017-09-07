@@ -7,8 +7,8 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include <mxtl/string_buffer.h>
-#include <mxtl/string_printf.h>
+#include <fbl/string_buffer.h>
+#include <fbl/string_printf.h>
 
 namespace trace {
 namespace {
@@ -87,8 +87,8 @@ const char* ObjectTypeToString(mx_obj_type_t type) {
     }
 }
 
-mxtl::String FormatArgumentList(const mxtl::Vector<trace::Argument>& args) {
-    mxtl::StringBuffer<1024> result;
+fbl::String FormatArgumentList(const fbl::Vector<trace::Argument>& args) {
+    fbl::StringBuffer<1024> result;
 
     result.Append('{');
     for (size_t i = 0; i < args.size(); i++) {
@@ -102,8 +102,8 @@ mxtl::String FormatArgumentList(const mxtl::Vector<trace::Argument>& args) {
 }
 } // namespace
 
-mxtl::String ProcessThread::ToString() const {
-    return mxtl::StringPrintf("%" PRIu64 "/%" PRIu64,
+fbl::String ProcessThread::ToString() const {
+    return fbl::StringPrintf("%" PRIu64 "/%" PRIu64,
                               process_koid_, thread_koid_);
 }
 
@@ -146,7 +146,7 @@ void ArgumentValue::MoveFrom(ArgumentValue&& other) {
         double_ = other.double_;
         break;
     case ArgumentType::kString:
-        new (&string_) mxtl::String(mxtl::move(other.string_));
+        new (&string_) fbl::String(fbl::move(other.string_));
         other.string_.~String(); // call destructor because we set other.type_ to kNull
         break;
     case ArgumentType::kPointer:
@@ -158,32 +158,32 @@ void ArgumentValue::MoveFrom(ArgumentValue&& other) {
     }
 }
 
-mxtl::String ArgumentValue::ToString() const {
+fbl::String ArgumentValue::ToString() const {
     switch (type_) {
     case ArgumentType::kNull:
         return "null";
     case ArgumentType::kInt32:
-        return mxtl::StringPrintf("int32(%" PRId32 ")", int32_);
+        return fbl::StringPrintf("int32(%" PRId32 ")", int32_);
     case ArgumentType::kUint32:
-        return mxtl::StringPrintf("uint32(%" PRIu32 ")", uint32_);
+        return fbl::StringPrintf("uint32(%" PRIu32 ")", uint32_);
     case ArgumentType::kInt64:
-        return mxtl::StringPrintf("int64(%" PRId64 ")", int64_);
+        return fbl::StringPrintf("int64(%" PRId64 ")", int64_);
     case ArgumentType::kUint64:
-        return mxtl::StringPrintf("uint64(%" PRIu64 ")", uint64_);
+        return fbl::StringPrintf("uint64(%" PRIu64 ")", uint64_);
     case ArgumentType::kDouble:
-        return mxtl::StringPrintf("double(%f)", double_);
+        return fbl::StringPrintf("double(%f)", double_);
     case ArgumentType::kString:
-        return mxtl::StringPrintf("string(\"%s\")", string_.c_str());
+        return fbl::StringPrintf("string(\"%s\")", string_.c_str());
     case ArgumentType::kPointer:
-        return mxtl::StringPrintf("pointer(%p)", reinterpret_cast<void*>(pointer_));
+        return fbl::StringPrintf("pointer(%p)", reinterpret_cast<void*>(pointer_));
     case ArgumentType::kKoid:
-        return mxtl::StringPrintf("koid(%" PRIu64 ")", koid_);
+        return fbl::StringPrintf("koid(%" PRIu64 ")", koid_);
     }
     MX_ASSERT(false);
 }
 
-mxtl::String Argument::ToString() const {
-    return mxtl::StringPrintf("%s: %s", name_.c_str(), value_.ToString().c_str());
+fbl::String Argument::ToString() const {
+    return fbl::StringPrintf("%s: %s", name_.c_str(), value_.ToString().c_str());
 }
 
 void MetadataContent::Destroy() {
@@ -201,21 +201,21 @@ void MetadataContent::MoveFrom(MetadataContent&& other) {
     type_ = other.type_;
     switch (type_) {
     case MetadataType::kProviderInfo:
-        new (&provider_info_) ProviderInfo(mxtl::move(other.provider_info_));
+        new (&provider_info_) ProviderInfo(fbl::move(other.provider_info_));
         break;
     case MetadataType::kProviderSection:
-        new (&provider_section_) ProviderSection(mxtl::move(other.provider_section_));
+        new (&provider_section_) ProviderSection(fbl::move(other.provider_section_));
         break;
     }
 }
 
-mxtl::String MetadataContent::ToString() const {
+fbl::String MetadataContent::ToString() const {
     switch (type_) {
     case MetadataType::kProviderInfo:
-        return mxtl::StringPrintf("ProviderInfo(id: %" PRId32 ", name: \"%s\")",
+        return fbl::StringPrintf("ProviderInfo(id: %" PRId32 ", name: \"%s\")",
                                   provider_info_.id, provider_info_.name.c_str());
     case MetadataType::kProviderSection:
-        return mxtl::StringPrintf("ProviderSection(id: %" PRId32 ")",
+        return fbl::StringPrintf("ProviderSection(id: %" PRId32 ")",
                                   provider_section_.id);
     }
     MX_ASSERT(false);
@@ -260,67 +260,67 @@ void EventData::MoveFrom(EventData&& other) {
     type_ = other.type_;
     switch (type_) {
     case EventType::kInstant:
-        new (&instant_) Instant(mxtl::move(other.instant_));
+        new (&instant_) Instant(fbl::move(other.instant_));
         break;
     case EventType::kCounter:
-        new (&counter_) Counter(mxtl::move(other.counter_));
+        new (&counter_) Counter(fbl::move(other.counter_));
         break;
     case EventType::kDurationBegin:
-        new (&duration_begin_) DurationBegin(mxtl::move(other.duration_begin_));
+        new (&duration_begin_) DurationBegin(fbl::move(other.duration_begin_));
         break;
     case EventType::kDurationEnd:
-        new (&duration_end_) DurationEnd(mxtl::move(other.duration_end_));
+        new (&duration_end_) DurationEnd(fbl::move(other.duration_end_));
         break;
     case EventType::kAsyncBegin:
-        new (&async_begin_) AsyncBegin(mxtl::move(other.async_begin_));
+        new (&async_begin_) AsyncBegin(fbl::move(other.async_begin_));
         break;
     case EventType::kAsyncInstant:
-        new (&async_instant_) AsyncInstant(mxtl::move(other.async_instant_));
+        new (&async_instant_) AsyncInstant(fbl::move(other.async_instant_));
         break;
     case EventType::kAsyncEnd:
-        new (&async_end_) AsyncEnd(mxtl::move(other.async_end_));
+        new (&async_end_) AsyncEnd(fbl::move(other.async_end_));
         break;
     case EventType::kFlowBegin:
-        new (&flow_begin_) FlowBegin(mxtl::move(other.flow_begin_));
+        new (&flow_begin_) FlowBegin(fbl::move(other.flow_begin_));
         break;
     case EventType::kFlowStep:
-        new (&flow_step_) FlowStep(mxtl::move(other.flow_step_));
+        new (&flow_step_) FlowStep(fbl::move(other.flow_step_));
         break;
     case EventType::kFlowEnd:
-        new (&flow_end_) FlowEnd(mxtl::move(other.flow_end_));
+        new (&flow_end_) FlowEnd(fbl::move(other.flow_end_));
         break;
     }
 }
 
-mxtl::String EventData::ToString() const {
+fbl::String EventData::ToString() const {
     switch (type_) {
     case EventType::kInstant:
-        return mxtl::StringPrintf("Instant(scope: %s)",
+        return fbl::StringPrintf("Instant(scope: %s)",
                                   EventScopeToString(instant_.scope));
     case EventType::kCounter:
-        return mxtl::StringPrintf("Counter(id: %" PRIu64 ")",
+        return fbl::StringPrintf("Counter(id: %" PRIu64 ")",
                                   counter_.id);
     case EventType::kDurationBegin:
         return "DurationBegin";
     case EventType::kDurationEnd:
         return "DurationEnd";
     case EventType::kAsyncBegin:
-        return mxtl::StringPrintf("AsyncBegin(id: %" PRIu64 ")",
+        return fbl::StringPrintf("AsyncBegin(id: %" PRIu64 ")",
                                   async_begin_.id);
     case EventType::kAsyncInstant:
-        return mxtl::StringPrintf("AsyncInstant(id: %" PRIu64 ")",
+        return fbl::StringPrintf("AsyncInstant(id: %" PRIu64 ")",
                                   async_instant_.id);
     case EventType::kAsyncEnd:
-        return mxtl::StringPrintf("AsyncEnd(id: %" PRIu64 ")",
+        return fbl::StringPrintf("AsyncEnd(id: %" PRIu64 ")",
                                   async_end_.id);
     case EventType::kFlowBegin:
-        return mxtl::StringPrintf("FlowBegin(id: %" PRIu64 ")",
+        return fbl::StringPrintf("FlowBegin(id: %" PRIu64 ")",
                                   flow_begin_.id);
     case EventType::kFlowStep:
-        return mxtl::StringPrintf("FlowStep(id: %" PRIu64 ")",
+        return fbl::StringPrintf("FlowStep(id: %" PRIu64 ")",
                                   flow_step_.id);
     case EventType::kFlowEnd:
-        return mxtl::StringPrintf("FlowEnd(id: %" PRIu64 ")",
+        return fbl::StringPrintf("FlowEnd(id: %" PRIu64 ")",
                                   flow_end_.id);
     }
     MX_ASSERT(false);
@@ -359,62 +359,62 @@ void Record::MoveFrom(Record&& other) {
     type_ = other.type_;
     switch (type_) {
     case RecordType::kMetadata:
-        new (&metadata_) Metadata(mxtl::move(other.metadata_));
+        new (&metadata_) Metadata(fbl::move(other.metadata_));
         break;
     case RecordType::kInitialization:
-        new (&initialization_) Initialization(mxtl::move(other.initialization_));
+        new (&initialization_) Initialization(fbl::move(other.initialization_));
         break;
     case RecordType::kString:
-        new (&string_) String(mxtl::move(other.string_));
+        new (&string_) String(fbl::move(other.string_));
         break;
     case RecordType::kThread:
-        new (&thread_) Thread(mxtl::move(other.thread_));
+        new (&thread_) Thread(fbl::move(other.thread_));
         break;
     case RecordType::kEvent:
-        new (&event_) Event(mxtl::move(other.event_));
+        new (&event_) Event(fbl::move(other.event_));
         break;
     case RecordType::kKernelObject:
-        new (&kernel_object_) KernelObject(mxtl::move(other.kernel_object_));
+        new (&kernel_object_) KernelObject(fbl::move(other.kernel_object_));
         break;
     case RecordType::kContextSwitch:
-        new (&context_switch_) ContextSwitch(mxtl::move(other.context_switch_));
+        new (&context_switch_) ContextSwitch(fbl::move(other.context_switch_));
         break;
     case RecordType::kLog:
-        new (&log_) Log(mxtl::move(other.log_));
+        new (&log_) Log(fbl::move(other.log_));
         break;
     }
 }
 
-mxtl::String Record::ToString() const {
+fbl::String Record::ToString() const {
     switch (type_) {
     case RecordType::kMetadata:
-        return mxtl::StringPrintf("Metadata(content: %s)",
+        return fbl::StringPrintf("Metadata(content: %s)",
                                   metadata_.content.ToString().c_str());
     case RecordType::kInitialization:
-        return mxtl::StringPrintf("Initialization(ticks_per_second: %" PRIu64 ")",
+        return fbl::StringPrintf("Initialization(ticks_per_second: %" PRIu64 ")",
                                   initialization_.ticks_per_second);
     case RecordType::kString:
-        return mxtl::StringPrintf("String(index: %" PRIu32 ", \"%s\")",
+        return fbl::StringPrintf("String(index: %" PRIu32 ", \"%s\")",
                                   string_.index, string_.string.c_str());
     case RecordType::kThread:
-        return mxtl::StringPrintf("Thread(index: %" PRIu32 ", %s)",
+        return fbl::StringPrintf("Thread(index: %" PRIu32 ", %s)",
                                   thread_.index, thread_.process_thread.ToString().c_str());
     case RecordType::kEvent:
-        return mxtl::StringPrintf("Event(ts: %" PRIu64 ", pt: %s, category: \"%s\", name: \"%s\", %s, %s)",
+        return fbl::StringPrintf("Event(ts: %" PRIu64 ", pt: %s, category: \"%s\", name: \"%s\", %s, %s)",
                                   event_.timestamp, event_.process_thread.ToString().c_str(),
                                   event_.category.c_str(), event_.name.c_str(),
                                   event_.data.ToString().c_str(),
                                   FormatArgumentList(event_.arguments).c_str());
         break;
     case RecordType::kKernelObject:
-        return mxtl::StringPrintf("KernelObject(koid: %" PRIu64 ", type: %s, name: \"%s\", %s)",
+        return fbl::StringPrintf("KernelObject(koid: %" PRIu64 ", type: %s, name: \"%s\", %s)",
                                   kernel_object_.koid,
                                   ObjectTypeToString(kernel_object_.object_type),
                                   kernel_object_.name.c_str(),
                                   FormatArgumentList(kernel_object_.arguments).c_str());
         break;
     case RecordType::kContextSwitch:
-        return mxtl::StringPrintf("ContextSwitch(ts: %" PRIu64 ", cpu: %" PRIu32
+        return fbl::StringPrintf("ContextSwitch(ts: %" PRIu64 ", cpu: %" PRIu32
                                   ", os: %s, opt: %s, ipt: %s",
                                   context_switch_.timestamp,
                                   context_switch_.cpu_number,
@@ -422,7 +422,7 @@ mxtl::String Record::ToString() const {
                                   context_switch_.outgoing_thread.ToString().c_str(),
                                   context_switch_.incoming_thread.ToString().c_str());
     case RecordType::kLog:
-        return mxtl::StringPrintf("Log(ts: %" PRIu64 ", pt: %s, \"%s\")",
+        return fbl::StringPrintf("Log(ts: %" PRIu64 ", pt: %s, \"%s\")",
                                   log_.timestamp, log_.process_thread.ToString().c_str(),
                                   log_.message.c_str());
     }

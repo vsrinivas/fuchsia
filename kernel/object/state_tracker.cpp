@@ -6,16 +6,16 @@
 
 #include <object/state_tracker.h>
 
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 namespace {
 
 template <typename Func>
 StateObserver::Flags CancelWithFunc(StateTracker::ObserverList* observers,
-                                    mxtl::Mutex* observer_lock, Func f) {
+                                    fbl::Mutex* observer_lock, Func f) {
     StateObserver::Flags flags = 0;
 
     StateTracker::ObserverList obs_to_remove;

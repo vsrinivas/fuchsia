@@ -9,20 +9,20 @@
 #include <kernel/auto_lock.h>
 #include <dev/interrupt.h>
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/mutex.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 
 #include <err.h>
 
 // Static storage
-mxtl::Mutex InterruptEventDispatcher::vectors_lock_;
+fbl::Mutex InterruptEventDispatcher::vectors_lock_;
 InterruptEventDispatcher::VectorCollection InterruptEventDispatcher::vectors_;
 
 // static
 mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
                                              uint32_t flags,
-                                             mxtl::RefPtr<Dispatcher>* dispatcher,
+                                             fbl::RefPtr<Dispatcher>* dispatcher,
                                              mx_rights_t* rights) {
     // Remap the vector if we have been asked to do so.
     if (flags & MX_FLAG_REMAP_IRQ)
@@ -33,7 +33,7 @@ mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
         return MX_ERR_INVALID_ARGS;
 
     // Attempt to construct the dispatcher.
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     InterruptEventDispatcher* disp = new (&ac) InterruptEventDispatcher(vector);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
@@ -41,11 +41,11 @@ mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
     // Hold a ref while we check to see if someone else owns this vector or not.
     // If things go wrong, this ref will be released and the IED will get
     // cleaned up automatically.
-    auto disp_ref = mxtl::AdoptRef<Dispatcher>(disp);
+    auto disp_ref = fbl::AdoptRef<Dispatcher>(disp);
 
     // Attempt to add ourselves to the vector collection.
     {
-        mxtl::AutoLock lock(&vectors_lock_);
+        fbl::AutoLock lock(&vectors_lock_);
         if (!vectors_.insert_or_find(disp))
             return MX_ERR_ALREADY_EXISTS;
     }
@@ -57,7 +57,7 @@ mx_status_t InterruptEventDispatcher::Create(uint32_t vector,
 
     // Transfer control of the new dispatcher to the creator and we are done.
     *rights     = MX_DEFAULT_INTERRUPT_RIGHTS;
-    *dispatcher = mxtl::move(disp_ref);
+    *dispatcher = fbl::move(disp_ref);
 
     return MX_OK;
 }
@@ -71,7 +71,7 @@ InterruptEventDispatcher::~InterruptEventDispatcher() {
         mask_interrupt(vector_);
         register_int_handler(vector_, nullptr, nullptr);
         {
-            mxtl::AutoLock lock(&vectors_lock_);
+            fbl::AutoLock lock(&vectors_lock_);
             vectors_.erase(*this);
         }
     }

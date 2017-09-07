@@ -13,7 +13,7 @@
 #include <kernel/vm.h>
 #include <list.h>
 #include <lk/init.h>
-#include <mxtl/limits.h>
+#include <fbl/limits.h>
 #include <dev/interrupt.h>
 #include <string.h>
 #include <trace.h>
@@ -22,9 +22,9 @@
 #include <dev/pci_config.h>
 #include <dev/pcie_bridge.h>
 
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -38,11 +38,11 @@ PcieBridge::PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint fu
     pio_regions_.SetRegionPool(driver().region_bookkeeping());
 }
 
-mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
+fbl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
                                             uint dev_id,
                                             uint func_id,
                                             uint managed_bus_id) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto raw_bridge = new (&ac) PcieBridge(upstream.driver(),
                                            upstream.managed_bus_id(), dev_id, func_id,
                                            managed_bus_id);
@@ -53,7 +53,7 @@ mxtl::RefPtr<PcieDevice> PcieBridge::Create(PcieUpstreamNode& upstream,
         return nullptr;
     }
 
-    auto bridge = mxtl::AdoptRef(static_cast<PcieDevice*>(raw_bridge));
+    auto bridge = fbl::AdoptRef(static_cast<PcieDevice*>(raw_bridge));
     status_t res = raw_bridge->Init(upstream);
     if (res != MX_OK) {
         TRACEF("Failed to initialize PCIe bridge %02x:%02x.%01x. (res %d)\n",

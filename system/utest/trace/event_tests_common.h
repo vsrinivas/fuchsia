@@ -16,8 +16,8 @@
 #include <unittest/unittest.h>
 
 #ifdef __cplusplus
-#include <mxtl/string.h>
-#include <mxtl/string_piece.h>
+#include <fbl/string.h>
+#include <fbl/string_piece.h>
 #endif // __cplusplus
 
 #include "fixture.h"
@@ -882,8 +882,8 @@ static bool test_string_arguments(void) {
     TRACE_DURATION_BEGIN("+enabled", "name", "key", "");
     TRACE_DURATION_BEGIN("+enabled", "name", "key", "literal");
     TRACE_DURATION_BEGIN("+enabled", "name", "key", string);
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", mxtl::String("dynamic string"));
-    TRACE_DURATION_BEGIN("+enabled", "name", "key", mxtl::StringPiece("piece", 3u));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", fbl::String("dynamic string"));
+    TRACE_DURATION_BEGIN("+enabled", "name", "key", fbl::StringPiece("piece", 3u));
 #endif // __cplusplus
 
     ASSERT_RECORDS("\

@@ -16,7 +16,7 @@
 #include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lk/init.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/initial_map.h>
@@ -191,7 +191,7 @@ void vm_init_postheap(uint level) {
         },
     };
 
-    for (uint i = 0; i < mxtl::count_of(regions); ++i) {
+    for (uint i = 0; i < fbl::count_of(regions); ++i) {
         temp_region* region = &regions[i];
         ASSERT(IS_PAGE_ALIGNED(region->base));
 
@@ -220,7 +220,7 @@ void vm_init_postheap(uint level) {
 
             // Find the kernel code/data region with the lowest start address
             // that is within this mapping.
-            for (uint i = 0; i < mxtl::count_of(regions); ++i) {
+            for (uint i = 0; i < fbl::count_of(regions); ++i) {
                 temp_region* region = &regions[i];
 
                 if (region->base >= vaddr && region->base < map->virt + map->size &&

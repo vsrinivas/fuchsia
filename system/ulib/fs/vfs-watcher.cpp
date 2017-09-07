@@ -11,16 +11,16 @@
 #ifdef __Fuchsia__
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #endif
 
 #include <fs/vfs.h>
 #include <mx/channel.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 namespace fs {
 
-VnodeWatcher::VnodeWatcher(mx::channel h, uint32_t mask) : h(mxtl::move(h)),
+VnodeWatcher::VnodeWatcher(mx::channel h, uint32_t mask) : h(fbl::move(h)),
     mask(mask & ~(VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE)) {}
 
 VnodeWatcher::~VnodeWatcher() {}
@@ -56,8 +56,8 @@ mx_status_t WatchBuffer::Send(const mx::channel& c) {
 }
 
 mx_status_t WatcherContainer::WatchDir(mx::channel* out) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mx::channel(),
                                                                   VFS_WATCH_MASK_ADDED));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
@@ -66,9 +66,9 @@ mx_status_t WatcherContainer::WatchDir(mx::channel* out) {
     if (mx::channel::create(0, &out_channel, &watcher->h) != MX_OK) {
         return MX_ERR_NO_RESOURCES;
     }
-    mxtl::AutoLock lock(&lock_);
-    watch_list_.push_back(mxtl::move(watcher));
-    *out = mxtl::move(out_channel);
+    fbl::AutoLock lock(&lock_);
+    watch_list_.push_back(fbl::move(watcher));
+    *out = fbl::move(out_channel);
     return MX_OK;
 }
 
@@ -79,8 +79,8 @@ mx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_di
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(mxtl::move(c), cmd->mask));
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<VnodeWatcher> watcher(new (&ac) VnodeWatcher(fbl::move(c), cmd->mask));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -92,7 +92,7 @@ mx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_di
         WatchBuffer wb;
         {
             // Send "VFS_WATCH_EVT_EXISTING" for all entries in readdir
-            mxtl::AutoLock lock(&vfs->vfs_lock_);
+            fbl::AutoLock lock(&vfs->vfs_lock_);
             while (true) {
                 mx_status_t status = vn->Readdir(&dircookie, &readdir_buf, sizeof(readdir_buf));
                 if (status <= 0) {
@@ -120,8 +120,8 @@ mx_status_t WatcherContainer::WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_di
         wb.Send(watcher->h);
     }
 
-    mxtl::AutoLock lock(&lock_);
-    watch_list_.push_back(mxtl::move(watcher));
+    fbl::AutoLock lock(&lock_);
+    watch_list_.push_back(fbl::move(watcher));
     return MX_OK;
 }
 
@@ -130,7 +130,7 @@ void WatcherContainer::Notify(const char* name, size_t len, unsigned event) {
         return;
     }
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
     if (watch_list_.is_empty()) {
         return;

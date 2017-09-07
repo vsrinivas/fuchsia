@@ -20,8 +20,8 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/array.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 
 #include "backtrace.h"
 #include "dso-list.h"
@@ -77,14 +77,14 @@ class DebugInfoCache {
         backtrace_state* bt_state = nullptr;
     };
 
-    mxtl::Array<way> ways_;
+    fbl::Array<way> ways_;
 };
 
 // Note: We take ownership of |dso_list|.
 
 DebugInfoCache::DebugInfoCache(dsoinfo_t* dso_list, size_t nr_ways)
     : dso_list_(dso_list) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto ways = new (&ac) way[nr_ways];
     if (!ac.check()) {
         debugf(1, "unable to initialize debug info cache\n");

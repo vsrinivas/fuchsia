@@ -8,8 +8,8 @@
 #include <magenta/syscalls.h>
 
 #include <mxio/util.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/type_support.h>
+#include <fbl/algorithm.h>
+#include <fbl/type_support.h>
 
 #include "handler_impl.h"
 
@@ -58,7 +58,7 @@ namespace trace {
 namespace internal {
 
 TraceProviderImpl::TraceProviderImpl(async_t* async, mx::channel channel)
-    : async_(async), connection_(this, mxtl::move(channel)) {
+    : async_(async), connection_(this, fbl::move(channel)) {
 }
 
 TraceProviderImpl::~TraceProviderImpl() = default;
@@ -68,7 +68,7 @@ bool TraceProviderImpl::Start(mx::vmo buffer, mx::eventpair fence) {
         return false;
 
     mx_status_t status = TraceHandlerImpl::StartEngine(
-        async_, mxtl::move(buffer), mxtl::move(fence));
+        async_, fbl::move(buffer), fbl::move(fence));
     if (status != MX_OK)
         return false;
 
@@ -86,10 +86,10 @@ void TraceProviderImpl::Stop() {
 
 TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
                                           mx::channel channel)
-    : impl_(impl), channel_(mxtl::move(channel)),
+    : impl_(impl), channel_(fbl::move(channel)),
       wait_(channel_.get(),
             MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED) {
-    wait_.set_handler(mxtl::BindMember(this, &Connection::Handle));
+    wait_.set_handler(fbl::BindMember(this, &Connection::Handle));
 
     mx_status_t status = wait_.Begin(impl_->async_);
     MX_DEBUG_ASSERT(status == MX_OK || status == MX_ERR_BAD_STATE);
@@ -127,7 +127,7 @@ bool TraceProviderImpl::Connection::ReadMessage() {
     uint32_t num_handles = 0u;
     mx_status_t status = channel_.read(
         0u, buffer, sizeof(buffer), &num_bytes,
-        unowned_handles, mxtl::count_of(unowned_handles), &num_handles);
+        unowned_handles, fbl::count_of(unowned_handles), &num_handles);
     if (status != MX_OK)
         return false;
 
@@ -177,8 +177,8 @@ bool TraceProviderImpl::Connection::ReadMessage() {
             return false;
 
         bool success = impl_->Start(
-            mx::vmo(mxtl::move(handles[s->buffer])),
-            mx::eventpair(mxtl::move(handles[s->fence])));
+            mx::vmo(fbl::move(handles[s->buffer])),
+            mx::eventpair(fbl::move(handles[s->fence])));
 
         // Send reply.
         struct {
@@ -262,13 +262,13 @@ trace_provider_t* trace_provider_create(async_t* async) {
     call.m.label = 0;
     mx_handle_t handles[] = {provider_client.release()};
     status = registry_client.write(0u, &call, sizeof(call),
-                                   handles, mxtl::count_of(handles));
+                                   handles, fbl::count_of(handles));
     if (status != MX_OK) {
         provider_client.reset(handles[0]); // take back ownership after failure
         return nullptr;
     }
 
-    return new trace::internal::TraceProviderImpl(async, mxtl::move(provider_service));
+    return new trace::internal::TraceProviderImpl(async, fbl::move(provider_service));
 }
 
 void trace_provider_destroy(trace_provider_t* provider) {

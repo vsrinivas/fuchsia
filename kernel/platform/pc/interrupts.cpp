@@ -23,7 +23,7 @@
 #include <platform/pc/acpi.h>
 #include <platform/pic.h>
 #include <lib/pow2_range_allocator.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <pow2.h>
 
 #include "platform_p.h"
@@ -52,7 +52,7 @@ static void platform_init_apic(uint level)
     pic_map(PIC1_BASE, PIC2_BASE);
     pic_disable();
 
-    for (size_t i = 0; i < mxtl::count_of(int_handler_table); ++i)
+    for (size_t i = 0; i < fbl::count_of(int_handler_table); ++i)
         spin_lock_init(&int_handler_table[i].lock);
 
     // Enumerate the IO APICs

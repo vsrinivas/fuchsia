@@ -11,15 +11,15 @@
 #include <unistd.h>
 
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/unique_ptr.h>
 
 class MappedVmo {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(MappedVmo);
     virtual ~MappedVmo();
 
-    static mx_status_t Create(size_t size, const char* name, mxtl::unique_ptr<MappedVmo>* out);
+    static mx_status_t Create(size_t size, const char* name, fbl::unique_ptr<MappedVmo>* out);
 
     // Attempts to reduce both the VMO size and VMAR mapping:
     // From [addr_, addr_ + len_]

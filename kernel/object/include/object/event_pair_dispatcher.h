@@ -7,17 +7,17 @@
 #pragma once
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/mutex.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
+#include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
 #include <object/state_tracker.h>
 #include <sys/types.h>
 
 class EventPairDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
-                              mxtl::RefPtr<Dispatcher>* dispatcher1,
+    static mx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher0,
+                              fbl::RefPtr<Dispatcher>* dispatcher1,
                               mx_rights_t* rights);
 
     ~EventPairDispatcher() final;
@@ -30,11 +30,11 @@ public:
 
 private:
     EventPairDispatcher();
-    void Init(mxtl::RefPtr<EventPairDispatcher> other);
+    void Init(fbl::RefPtr<EventPairDispatcher> other);
 
     CookieJar cookie_jar_;
 
-    mxtl::Canary<mxtl::magic("EVPD")> canary_;
+    fbl::Canary<fbl::magic("EVPD")> canary_;
 
     StateTracker state_tracker_;
 
@@ -42,6 +42,6 @@ private:
     mx_koid_t other_koid_;
 
     // Protects |other_| (except in Init(), where it's not needed).
-    mxtl::Mutex lock_;
-    mxtl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(lock_);
+    fbl::Mutex lock_;
+    fbl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(lock_);
 };

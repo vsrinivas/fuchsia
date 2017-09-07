@@ -42,14 +42,14 @@ mx_status_t BlobstoreChecker::CheckAllocatedCounts() const {
 BlobstoreChecker::BlobstoreChecker()
     : blobstore_(nullptr), alloc_inodes_(0), alloc_blocks_(0){};
 
-void BlobstoreChecker::Init(mxtl::RefPtr<Blobstore> blob) {
+void BlobstoreChecker::Init(fbl::RefPtr<Blobstore> blob) {
     blobstore_.reset(blob.get());
 }
 
-mx_status_t blobstore_check(mxtl::RefPtr<Blobstore> blob) {
+mx_status_t blobstore_check(fbl::RefPtr<Blobstore> blob) {
     mx_status_t status = MX_OK;
     BlobstoreChecker chk;
-    chk.Init(mxtl::move(blob));
+    chk.Init(fbl::move(blob));
     chk.TraverseInodeBitmap();
     chk.TraverseBlockBitmap();
     status |= (status != MX_OK) ? 0 : chk.CheckAllocatedCounts();

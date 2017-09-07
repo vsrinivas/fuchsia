@@ -19,8 +19,8 @@
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-#include <mxtl/auto_call.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/auto_call.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -42,13 +42,13 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         vmar_rights |= MX_RIGHT_EXECUTE;
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcherWithRights(parent_vmar_handle, vmar_rights, &vmar);
     if (status != MX_OK)
         return status;
 
     // Create the new VMAR
-    mxtl::RefPtr<VmAddressRegionDispatcher> new_vmar;
+    fbl::RefPtr<VmAddressRegionDispatcher> new_vmar;
     mx_rights_t new_rights;
     status = vmar->Allocate(offset, size, map_flags, &new_vmar, &new_rights);
     if (status != MX_OK)
@@ -57,7 +57,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     // Setup a handler to destroy the new VMAR if the syscall is unsuccessful.
     // Note that new_vmar is being passed by value, so a new reference is held
     // there.
-    auto cleanup_handler = mxtl::MakeAutoCall([new_vmar]() {
+    auto cleanup_handler = fbl::MakeAutoCall([new_vmar]() {
         new_vmar->Destroy();
     });
 
@@ -65,7 +65,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     uintptr_t base = new_vmar->vmar()->base();
 
     // Create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(mxtl::move(new_vmar), new_rights));
+    HandleOwner handle(MakeHandle(fbl::move(new_vmar), new_rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -75,7 +75,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     if (_child_vmar.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     cleanup_handler.cancel();
     return MX_OK;
 }
@@ -84,7 +84,7 @@ mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
     if (status != MX_OK)
         return status;
@@ -98,14 +98,14 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the VMAR dispatcher from handle
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t vmar_rights;
     mx_status_t status = up->GetDispatcherAndRights(vmar_handle, &vmar, &vmar_rights);
     if (status != MX_OK)
         return status;
 
     // lookup the VMO dispatcher from handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     mx_rights_t vmo_rights;
     status = up->GetDispatcherAndRights(vmo_handle, &vmo, &vmo_rights);
     if (status != MX_OK)
@@ -153,13 +153,13 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     if (can_exec)
         map_flags |= MX_VM_FLAG_CAN_MAP_EXECUTE;
 
-    mxtl::RefPtr<VmMapping> vm_mapping;
+    fbl::RefPtr<VmMapping> vm_mapping;
     status = vmar->Map(vmar_offset, vmo->vmo(), vmo_offset, len, map_flags, &vm_mapping);
     if (status != MX_OK)
         return status;
 
     // Setup a handler to destroy the new mapping if the syscall is unsuccessful.
-    auto cleanup_handler = mxtl::MakeAutoCall([vm_mapping]() {
+    auto cleanup_handler = fbl::MakeAutoCall([vm_mapping]() {
         vm_mapping->Destroy();
     });
 
@@ -181,7 +181,7 @@ mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) 
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
     if (status != MX_OK)
         return status;
@@ -201,7 +201,7 @@ mx_status_t sys_vmar_protect(mx_handle_t vmar_handle, uintptr_t addr, size_t len
         vmar_rights |= MX_RIGHT_EXECUTE;
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_status_t status = up->GetDispatcherWithRights(vmar_handle, vmar_rights, &vmar);
     if (status != MX_OK)
         return status;

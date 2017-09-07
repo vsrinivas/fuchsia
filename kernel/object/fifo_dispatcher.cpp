@@ -10,16 +10,16 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <object/handle.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 // static
 mx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t options,
-                                   mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                   mxtl::RefPtr<Dispatcher>* dispatcher1,
+                                   fbl::RefPtr<Dispatcher>* dispatcher0,
+                                   fbl::RefPtr<Dispatcher>* dispatcher1,
                                    mx_rights_t* rights) {
     // count and elemsize must be nonzero
     // count must be a power of two
@@ -30,20 +30,20 @@ mx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t o
         return MX_ERR_OUT_OF_RANGE;
     }
 
-    mxtl::AllocChecker ac;
-    auto data0 = mxtl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
+    fbl::AllocChecker ac;
+    auto data0 = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto fifo0 = mxtl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, mxtl::move(data0)));
+    auto fifo0 = fbl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, fbl::move(data0)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto data1 = mxtl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
+    auto data1 = fbl::unique_ptr<uint8_t[]>(new (&ac) uint8_t[count * elemsize]);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto fifo1 = mxtl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, mxtl::move(data1)));
+    auto fifo1 = fbl::AdoptRef(new (&ac) FifoDispatcher(options, count, elemsize, fbl::move(data1)));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -51,16 +51,16 @@ mx_status_t FifoDispatcher::Create(uint32_t count, uint32_t elemsize, uint32_t o
     fifo1->Init(fifo0);
 
     *rights = MX_DEFAULT_FIFO_RIGHTS;
-    *dispatcher0 = mxtl::move(fifo0);
-    *dispatcher1 = mxtl::move(fifo1);
+    *dispatcher0 = fbl::move(fifo0);
+    *dispatcher1 = fbl::move(fifo1);
     return MX_OK;
 }
 
 FifoDispatcher::FifoDispatcher(uint32_t /*options*/, uint32_t count, uint32_t elem_size,
-                               mxtl::unique_ptr<uint8_t[]> data)
+                               fbl::unique_ptr<uint8_t[]> data)
     : elem_count_(count), elem_size_(elem_size), mask_(count - 1),
       peer_koid_(0u), state_tracker_(MX_FIFO_WRITABLE),
-      head_(0u), tail_(0u), data_(mxtl::move(data)) {
+      head_(0u), tail_(0u), data_(fbl::move(data)) {
 }
 
 FifoDispatcher::~FifoDispatcher() {
@@ -68,8 +68,8 @@ FifoDispatcher::~FifoDispatcher() {
 
 // Thread safety analysis disabled as this happens during creation only,
 // when no other thread could be accessing the object.
-void FifoDispatcher::Init(mxtl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
-    other_ = mxtl::move(other);
+void FifoDispatcher::Init(fbl::RefPtr<FifoDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
+    other_ = fbl::move(other);
     peer_koid_ = other_->get_koid();
 }
 
@@ -84,7 +84,7 @@ mx_status_t FifoDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, 
         return MX_OK;
     }
 
-    mxtl::RefPtr<FifoDispatcher> other;
+    fbl::RefPtr<FifoDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)
@@ -104,10 +104,10 @@ mx_status_t FifoDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mas
 void FifoDispatcher::on_zero_handles() {
     canary_.Assert();
 
-    mxtl::RefPtr<FifoDispatcher> fifo;
+    fbl::RefPtr<FifoDispatcher> fifo;
     {
         AutoLock lock(&lock_);
-        fifo = mxtl::move(other_);
+        fifo = fbl::move(other_);
     }
     if (fifo)
         fifo->OnPeerZeroHandles();
@@ -155,7 +155,7 @@ mx_status_t FifoDispatcher::Write(const uint8_t* ptr, size_t len, uint32_t* actu
                                   fifo_copy_from_fn_t copy_from_fn) {
     canary_.Assert();
 
-    mxtl::RefPtr<FifoDispatcher> other;
+    fbl::RefPtr<FifoDispatcher> other;
     {
         AutoLock lock(&lock_);
         if (!other_)

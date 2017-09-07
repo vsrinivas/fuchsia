@@ -14,15 +14,15 @@
 #include <assert.h>
 #include <err.h>
 #include <vm/pmm.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_call.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <string.h>
 #include <trace.h>
 
 status_t x86_bootstrap16_prep(
         paddr_t bootstrap_phys_addr,
         uintptr_t entry64,
-        mxtl::RefPtr<VmAspace> *temp_aspace,
+        fbl::RefPtr<VmAspace> *temp_aspace,
         void **bootstrap_aperature)
 {
     // Make sure bootstrap region will be entirely in the first 1MB of physical
@@ -39,7 +39,7 @@ status_t x86_bootstrap16_prep(
     }
 
     VmAspace *kernel_aspace = VmAspace::kernel_aspace();
-    mxtl::RefPtr<VmAspace> bootstrap_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL,
+    fbl::RefPtr<VmAspace> bootstrap_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL,
                                                                "bootstrap16");
     if (!bootstrap_aspace) {
         return MX_ERR_NO_MEMORY;
@@ -47,7 +47,7 @@ status_t x86_bootstrap16_prep(
     void *bootstrap_virt_addr = NULL;
 
     // add an auto caller to clean up the address space on the way out
-    auto ac = mxtl::MakeAutoCall([&]() {
+    auto ac = fbl::MakeAutoCall([&]() {
         bootstrap_aspace->Destroy();
         if (bootstrap_virt_addr) {
             kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(bootstrap_virt_addr));
@@ -77,7 +77,7 @@ status_t x86_bootstrap16_prep(
         // 4) The kernel's version of the bootstrap code page (matched mapping)
         // 5) The page containing the aps_still_booting counter (matched mapping)
     };
-    for (unsigned int i = 0; i < mxtl::count_of(page_mappings); ++i) {
+    for (unsigned int i = 0; i < fbl::count_of(page_mappings); ++i) {
         void *vaddr = (void *)page_mappings[i].start_vaddr;
         status_t status = bootstrap_aspace->AllocPhysical(
                 "bootstrap_mapping",

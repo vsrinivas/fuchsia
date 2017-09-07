@@ -15,13 +15,13 @@
 #include <object/state_tracker.h>
 
 #include <magenta/types.h>
-#include <mxtl/array.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/mutex.h>
-#include <mxtl/name.h>
-#include <mxtl/ref_counted.h>
+#include <fbl/array.h>
+#include <fbl/auto_lock.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
+#include <fbl/name.h>
+#include <fbl/ref_counted.h>
 
 class JobNode;
 
@@ -42,7 +42,7 @@ class JobDispatcher final : public Dispatcher {
 public:
     // Traits to belong to the parent's raw job list.
     struct ListTraitsRaw {
-        static mxtl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
+        static fbl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
             JobDispatcher& obj) {
             return obj.dll_job_raw_;
         }
@@ -50,16 +50,16 @@ public:
 
     // Traits to belong to the parent's job list.
     struct ListTraits {
-        static mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<JobDispatcher>>& node_state(
+        static fbl::SinglyLinkedListNodeState<fbl::RefPtr<JobDispatcher>>& node_state(
             JobDispatcher& obj) {
             return obj.dll_job_;
         }
     };
 
-    static mxtl::RefPtr<JobDispatcher> CreateRootJob();
+    static fbl::RefPtr<JobDispatcher> CreateRootJob();
     static mx_status_t Create(uint32_t flags,
-                              mxtl::RefPtr<JobDispatcher> parent,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                              fbl::RefPtr<JobDispatcher> parent,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~JobDispatcher() final;
@@ -69,7 +69,7 @@ public:
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
     mx_koid_t get_related_koid() const final;
-    mxtl::RefPtr<JobDispatcher> parent() { return mxtl::RefPtr<JobDispatcher>(parent_); }
+    fbl::RefPtr<JobDispatcher> parent() { return fbl::RefPtr<JobDispatcher>(parent_); }
 
     // Job methods.
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
@@ -102,7 +102,7 @@ public:
     // Updates a partial ordering between jobs so that this job will be killed
     // after |other| in low-resource situations. If |other| is null, then this
     // job becomes the least-important job in the system.
-    mx_status_t MakeMoreImportantThan(mxtl::RefPtr<JobDispatcher> other);
+    mx_status_t MakeMoreImportantThan(fbl::RefPtr<JobDispatcher> other);
 
     // Calls the provided |mx_status_t func(JobDispatcher*)| on every
     // JobDispatcher in the system, from least important to most important,
@@ -110,7 +110,7 @@ public:
     // returns an error, returning the error value.
     template <typename T>
     static mx_status_t ForEachJobByImportance(T func) {
-        mxtl::AutoLock lock(&importance_lock_);
+        fbl::AutoLock lock(&importance_lock_);
         for (auto &job : importance_list_) {
             mx_status_t s = func(&job);
             if (s != MX_OK)
@@ -124,14 +124,14 @@ public:
     // false if any methods of |je| return false; returns true otherwise.
     bool EnumerateChildren(JobEnumerator* je, bool recurse);
 
-    mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
-    mxtl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
+    fbl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
+    fbl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
 
     // exception handling support
-    mx_status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
+    mx_status_t SetExceptionPort(fbl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool quietly);
-    mxtl::RefPtr<ExceptionPort> exception_port();
+    fbl::RefPtr<ExceptionPort> exception_port();
 
 private:
     enum class State {
@@ -139,7 +139,7 @@ private:
         KILLING,
     };
 
-    JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
+    JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, pol_cookie_t policy);
 
     // Like get_importance(), but does not resolve inheritance; i.e., this
     // method may return MX_JOB_IMPORTANCE_INHERITED.
@@ -151,20 +151,20 @@ private:
     void UpdateSignalsIncrementLocked() TA_REQ(lock_);
     void UpdateSignalsDecrementLocked() TA_REQ(lock_);
 
-    mxtl::Canary<mxtl::magic("JOBD")> canary_;
+    fbl::Canary<fbl::magic("JOBD")> canary_;
 
-    const mxtl::RefPtr<JobDispatcher> parent_;
+    const fbl::RefPtr<JobDispatcher> parent_;
     const uint32_t max_height_;
 
-    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_raw_;
-    mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<JobDispatcher>> dll_job_;
+    fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_raw_;
+    fbl::SinglyLinkedListNodeState<fbl::RefPtr<JobDispatcher>> dll_job_;
 
     // The user-friendly job name. For debug purposes only. That
     // is, there is no mechanism to mint a handle to a job via this name.
-    mxtl::Name<MX_MAX_NAME_LEN> name_;
+    fbl::Name<MX_MAX_NAME_LEN> name_;
 
     // The |lock_| protects all members below.
-    mutable mxtl::Mutex lock_;
+    mutable fbl::Mutex lock_;
     State state_ TA_GUARDED(lock_);
     uint32_t process_count_ TA_GUARDED(lock_);
     uint32_t job_count_ TA_GUARDED(lock_);
@@ -172,38 +172,38 @@ private:
     StateTracker state_tracker_;
 
     using RawJobList =
-        mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
+        fbl::DoublyLinkedList<JobDispatcher*, ListTraitsRaw>;
     using RawProcessList =
-        mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraitsRaw>;
+        fbl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraitsRaw>;
 
     using ProcessList =
-        mxtl::SinglyLinkedList<mxtl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTraits>;
+        fbl::SinglyLinkedList<fbl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTraits>;
     using JobList =
-        mxtl::SinglyLinkedList<mxtl::RefPtr<JobDispatcher>, ListTraits>;
+        fbl::SinglyLinkedList<fbl::RefPtr<JobDispatcher>, ListTraits>;
 
     RawJobList jobs_ TA_GUARDED(lock_);
     RawProcessList procs_ TA_GUARDED(lock_);
 
     pol_cookie_t policy_ TA_GUARDED(lock_);
 
-    mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(lock_);
+    fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(lock_);
 
     // Global list of JobDispatchers, ordered by relative importance. Used to
     // find victims in low-resource situations.
-    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_importance_;
+    fbl::DoublyLinkedListNodeState<JobDispatcher*> dll_importance_;
     struct ListTraitsImportance {
-        static mxtl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
+        static fbl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
             JobDispatcher& obj) {
             return obj.dll_importance_;
         }
     };
     using JobImportanceList =
-        mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsImportance>;
+        fbl::DoublyLinkedList<JobDispatcher*, ListTraitsImportance>;
 
-    static mxtl::Mutex importance_lock_;
+    static fbl::Mutex importance_lock_;
     // Jobs, ordered by importance, with the least-important job at the front.
     static JobImportanceList importance_list_ TA_GUARDED(importance_lock_);
 };
 
 // Returns the job that is the ancestor of all other tasks.
-mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
+fbl::RefPtr<JobDispatcher> GetRootJobDispatcher();

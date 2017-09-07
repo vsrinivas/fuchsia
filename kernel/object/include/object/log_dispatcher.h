@@ -11,12 +11,12 @@
 #include <object/state_tracker.h>
 
 #include <magenta/types.h>
-#include <mxtl/canary.h>
-#include <mxtl/mutex.h>
+#include <fbl/canary.h>
+#include <fbl/mutex.h>
 
 class LogDispatcher final : public Dispatcher {
 public:
-    static mx_status_t Create(uint32_t flags, mxtl::RefPtr<Dispatcher>* dispatcher,
+    static mx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights);
 
     ~LogDispatcher() final;
@@ -32,11 +32,11 @@ private:
     static void Notify(void* cookie);
     void Signal();
 
-    mxtl::Canary<mxtl::magic("LOGD")> canary_;
+    fbl::Canary<fbl::magic("LOGD")> canary_;
 
     dlog_reader reader_;
     uint32_t flags_;
 
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
     StateTracker state_tracker_;
 };

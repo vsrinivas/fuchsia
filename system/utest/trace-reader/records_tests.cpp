@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <unittest/unittest.h>
 
 #define EXPECT_CSTR_EQ(expected, actual) \
@@ -76,11 +76,11 @@ bool argument_value_test() {
     EXPECT_EQ(trace::ArgumentType::kNull, av.type());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
     }
@@ -98,12 +98,12 @@ bool argument_value_test() {
     EXPECT_EQ(INT32_MAX, av.GetInt32());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kInt32, m.type());
         EXPECT_EQ(INT32_MAX, m.GetInt32());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kInt32, av.type());
         EXPECT_EQ(INT32_MAX, av.GetInt32());
@@ -122,12 +122,12 @@ bool argument_value_test() {
     EXPECT_EQ(UINT32_MAX, av.GetUint32());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kUint32, m.type());
         EXPECT_EQ(UINT32_MAX, m.GetUint32());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kUint32, av.type());
         EXPECT_EQ(UINT32_MAX, av.GetUint32());
@@ -146,12 +146,12 @@ bool argument_value_test() {
     EXPECT_EQ(INT64_MAX, av.GetInt64());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kInt64, m.type());
         EXPECT_EQ(INT64_MAX, m.GetInt64());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kInt64, av.type());
         EXPECT_EQ(INT64_MAX, av.GetInt64());
@@ -170,12 +170,12 @@ bool argument_value_test() {
     EXPECT_EQ(UINT64_MAX, av.GetUint64());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kUint64, m.type());
         EXPECT_EQ(UINT64_MAX, m.GetUint64());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kUint64, av.type());
         EXPECT_EQ(UINT64_MAX, av.GetUint64());
@@ -190,12 +190,12 @@ bool argument_value_test() {
     EXPECT_EQ(-3.14, av.GetDouble());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kDouble, m.type());
         EXPECT_EQ(-3.14, m.GetDouble());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kDouble, av.type());
         EXPECT_EQ(-3.14, av.GetDouble());
@@ -210,12 +210,12 @@ bool argument_value_test() {
     EXPECT_TRUE(av.GetString() == "Hello World!");
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kString, m.type());
         EXPECT_TRUE(m.GetString() == "Hello World!");
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kString, av.type());
         EXPECT_TRUE(av.GetString() == "Hello World!");
@@ -234,12 +234,12 @@ bool argument_value_test() {
     EXPECT_EQ(UINTPTR_MAX, av.GetPointer());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kPointer, m.type());
         EXPECT_EQ(UINTPTR_MAX, m.GetPointer());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kPointer, av.type());
         EXPECT_EQ(UINTPTR_MAX, av.GetPointer());
@@ -258,12 +258,12 @@ bool argument_value_test() {
     EXPECT_EQ(UINT64_MAX, av.GetKoid());
 
     {
-        trace::ArgumentValue m(mxtl::move(av));
+        trace::ArgumentValue m(fbl::move(av));
         EXPECT_EQ(trace::ArgumentType::kNull, av.type());
         EXPECT_EQ(trace::ArgumentType::kKoid, m.type());
         EXPECT_EQ(UINT64_MAX, m.GetKoid());
 
-        av = mxtl::move(m);
+        av = fbl::move(m);
         EXPECT_EQ(trace::ArgumentType::kNull, m.type());
         EXPECT_EQ(trace::ArgumentType::kKoid, av.type());
         EXPECT_EQ(UINT64_MAX, av.GetKoid());
@@ -281,13 +281,13 @@ bool argument_test() {
     EXPECT_TRUE(a.name() == "name");
     EXPECT_EQ(123, a.value().GetInt32());
 
-    trace::Argument m(mxtl::move(a));
+    trace::Argument m(fbl::move(a));
     EXPECT_TRUE(a.name().empty());
     EXPECT_EQ(trace::ArgumentType::kNull, a.value().type());
     EXPECT_TRUE(m.name() == "name");
     EXPECT_EQ(123, m.value().GetInt32());
 
-    a = mxtl::move(m);
+    a = fbl::move(m);
     EXPECT_TRUE(m.name().empty());
     EXPECT_EQ(trace::ArgumentType::kNull, m.value().type());
     EXPECT_TRUE(a.name() == "name");
@@ -309,12 +309,12 @@ bool metadata_data_test() {
         EXPECT_EQ(1, d.GetProviderInfo().id);
         EXPECT_TRUE(d.GetProviderInfo().name == "provider");
 
-        trace::MetadataContent m(mxtl::move(d));
+        trace::MetadataContent m(fbl::move(d));
         EXPECT_EQ(trace::MetadataType::kProviderInfo, m.type());
         EXPECT_EQ(1, m.GetProviderInfo().id);
         EXPECT_TRUE(m.GetProviderInfo().name == "provider");
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::MetadataType::kProviderInfo, d.type());
         EXPECT_EQ(1, d.GetProviderInfo().id);
         EXPECT_TRUE(d.GetProviderInfo().name == "provider");
@@ -329,11 +329,11 @@ bool metadata_data_test() {
         EXPECT_EQ(trace::MetadataType::kProviderSection, d.type());
         EXPECT_EQ(1, d.GetProviderSection().id);
 
-        trace::MetadataContent m(mxtl::move(d));
+        trace::MetadataContent m(fbl::move(d));
         EXPECT_EQ(trace::MetadataType::kProviderSection, m.type());
         EXPECT_EQ(1, m.GetProviderSection().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::MetadataType::kProviderSection, d.type());
         EXPECT_EQ(1, d.GetProviderSection().id);
 
@@ -353,11 +353,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kInstant, d.type());
         EXPECT_EQ(trace::EventScope::kGlobal, d.GetInstant().scope);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kInstant, m.type());
         EXPECT_EQ(trace::EventScope::kGlobal, m.GetInstant().scope);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kInstant, d.type());
         EXPECT_EQ(trace::EventScope::kGlobal, d.GetInstant().scope);
 
@@ -371,11 +371,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kCounter, d.type());
         EXPECT_EQ(123, d.GetCounter().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kCounter, m.type());
         EXPECT_EQ(123, m.GetCounter().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kCounter, d.type());
         EXPECT_EQ(123, d.GetCounter().id);
 
@@ -389,11 +389,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kDurationBegin, d.type());
         EXPECT_NONNULL(&d.GetDurationBegin());
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kDurationBegin, m.type());
         EXPECT_NONNULL(&m.GetDurationBegin());
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kDurationBegin, d.type());
         EXPECT_NONNULL(&d.GetDurationBegin());
 
@@ -407,11 +407,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kDurationEnd, d.type());
         EXPECT_NONNULL(&d.GetDurationEnd());
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kDurationEnd, m.type());
         EXPECT_NONNULL(&m.GetDurationEnd());
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kDurationEnd, d.type());
         EXPECT_NONNULL(&d.GetDurationEnd());
 
@@ -425,11 +425,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kAsyncBegin, d.type());
         EXPECT_EQ(123, d.GetAsyncBegin().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kAsyncBegin, m.type());
         EXPECT_EQ(123, m.GetAsyncBegin().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kAsyncBegin, d.type());
         EXPECT_EQ(123, d.GetAsyncBegin().id);
 
@@ -443,11 +443,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kAsyncInstant, d.type());
         EXPECT_EQ(123, d.GetAsyncInstant().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kAsyncInstant, m.type());
         EXPECT_EQ(123, m.GetAsyncInstant().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kAsyncInstant, d.type());
         EXPECT_EQ(123, d.GetAsyncInstant().id);
 
@@ -461,11 +461,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kAsyncEnd, d.type());
         EXPECT_EQ(123, d.GetAsyncEnd().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kAsyncEnd, m.type());
         EXPECT_EQ(123, m.GetAsyncEnd().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kAsyncEnd, d.type());
         EXPECT_EQ(123, d.GetAsyncEnd().id);
 
@@ -479,11 +479,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kFlowBegin, d.type());
         EXPECT_EQ(123, d.GetFlowBegin().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kFlowBegin, m.type());
         EXPECT_EQ(123, m.GetFlowBegin().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kFlowBegin, d.type());
         EXPECT_EQ(123, d.GetFlowBegin().id);
 
@@ -497,11 +497,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kFlowStep, d.type());
         EXPECT_EQ(123, d.GetFlowStep().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kFlowStep, m.type());
         EXPECT_EQ(123, m.GetFlowStep().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kFlowStep, d.type());
         EXPECT_EQ(123, d.GetFlowStep().id);
 
@@ -515,11 +515,11 @@ bool event_data_test() {
         EXPECT_EQ(trace::EventType::kFlowEnd, d.type());
         EXPECT_EQ(123, d.GetFlowEnd().id);
 
-        trace::EventData m(mxtl::move(d));
+        trace::EventData m(fbl::move(d));
         EXPECT_EQ(trace::EventType::kFlowEnd, m.type());
         EXPECT_EQ(123, m.GetFlowEnd().id);
 
-        d = mxtl::move(m);
+        d = fbl::move(m);
         EXPECT_EQ(trace::EventType::kFlowEnd, d.type());
         EXPECT_EQ(123, d.GetFlowEnd().id);
 
@@ -541,12 +541,12 @@ bool record_test() {
         EXPECT_EQ(trace::MetadataType::kProviderSection, r.GetMetadata().type());
         EXPECT_EQ(123, r.GetMetadata().content.GetProviderSection().id);
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kMetadata, m.type());
         EXPECT_EQ(trace::MetadataType::kProviderSection, m.GetMetadata().type());
         EXPECT_EQ(123, m.GetMetadata().content.GetProviderSection().id);
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kMetadata, r.type());
         EXPECT_EQ(trace::MetadataType::kProviderSection, r.GetMetadata().type());
         EXPECT_EQ(123, r.GetMetadata().content.GetProviderSection().id);
@@ -561,11 +561,11 @@ bool record_test() {
         EXPECT_EQ(trace::RecordType::kInitialization, r.type());
         EXPECT_EQ(123, r.GetInitialization().ticks_per_second);
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kInitialization, m.type());
         EXPECT_EQ(123, m.GetInitialization().ticks_per_second);
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kInitialization, r.type());
         EXPECT_EQ(123, r.GetInitialization().ticks_per_second);
 
@@ -580,12 +580,12 @@ bool record_test() {
         EXPECT_EQ(123, r.GetString().index);
         EXPECT_TRUE(r.GetString().string == "hi!");
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kString, m.type());
         EXPECT_EQ(123, m.GetString().index);
         EXPECT_TRUE(m.GetString().string == "hi!");
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kString, r.type());
         EXPECT_EQ(123, r.GetString().index);
         EXPECT_TRUE(r.GetString().string == "hi!");
@@ -602,13 +602,13 @@ bool record_test() {
         EXPECT_EQ(4, r.GetThread().process_thread.process_koid());
         EXPECT_EQ(5, r.GetThread().process_thread.thread_koid());
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kThread, m.type());
         EXPECT_EQ(123, m.GetThread().index);
         EXPECT_EQ(4, m.GetThread().process_thread.process_koid());
         EXPECT_EQ(5, m.GetThread().process_thread.thread_koid());
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kThread, r.type());
         EXPECT_EQ(123, r.GetThread().index);
         EXPECT_EQ(4, r.GetThread().process_thread.process_koid());
@@ -620,13 +620,13 @@ bool record_test() {
     // event
 
     {
-        mxtl::Vector<trace::Argument> args;
+        fbl::Vector<trace::Argument> args;
         args.push_back(trace::Argument("arg1", trace::ArgumentValue::MakeInt32(11)));
         args.push_back(trace::Argument("arg2", trace::ArgumentValue::MakeDouble(-3.14)));
 
         trace::Record r(trace::Record::Event{
             123, trace::ProcessThread(4, 5),
-            "category", "name", mxtl::move(args),
+            "category", "name", fbl::move(args),
             trace::EventData(trace::EventData::AsyncBegin{678})});
         EXPECT_EQ(trace::RecordType::kEvent, r.type());
         EXPECT_EQ(trace::EventType::kAsyncBegin, r.GetEvent().type());
@@ -642,7 +642,7 @@ bool record_test() {
         EXPECT_TRUE(r.GetEvent().arguments[1].name() == "arg2");
         EXPECT_EQ(-3.14, r.GetEvent().arguments[1].value().GetDouble());
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kEvent, m.type());
         EXPECT_EQ(trace::EventType::kAsyncBegin, m.GetEvent().type());
         EXPECT_EQ(123, m.GetEvent().timestamp);
@@ -657,7 +657,7 @@ bool record_test() {
         EXPECT_TRUE(m.GetEvent().arguments[1].name() == "arg2");
         EXPECT_EQ(-3.14, m.GetEvent().arguments[1].value().GetDouble());
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kEvent, r.type());
         EXPECT_EQ(trace::EventType::kAsyncBegin, r.GetEvent().type());
         EXPECT_EQ(123, r.GetEvent().timestamp);
@@ -680,12 +680,12 @@ bool record_test() {
     // kernel object
 
     {
-        mxtl::Vector<trace::Argument> args;
+        fbl::Vector<trace::Argument> args;
         args.push_back(trace::Argument("arg1", trace::ArgumentValue::MakeInt32(11)));
         args.push_back(trace::Argument("arg2", trace::ArgumentValue::MakeDouble(-3.14)));
 
         trace::Record r(trace::Record::KernelObject{
-            123, MX_OBJ_TYPE_VMO, "name", mxtl::move(args)});
+            123, MX_OBJ_TYPE_VMO, "name", fbl::move(args)});
         EXPECT_EQ(trace::RecordType::kKernelObject, r.type());
         EXPECT_EQ(123, r.GetKernelObject().koid);
         EXPECT_EQ(MX_OBJ_TYPE_VMO, r.GetKernelObject().object_type);
@@ -696,7 +696,7 @@ bool record_test() {
         EXPECT_TRUE(r.GetKernelObject().arguments[1].name() == "arg2");
         EXPECT_EQ(-3.14, r.GetKernelObject().arguments[1].value().GetDouble());
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kKernelObject, m.type());
         EXPECT_EQ(123, m.GetKernelObject().koid);
         EXPECT_EQ(MX_OBJ_TYPE_VMO, m.GetKernelObject().object_type);
@@ -707,7 +707,7 @@ bool record_test() {
         EXPECT_TRUE(m.GetKernelObject().arguments[1].name() == "arg2");
         EXPECT_EQ(-3.14, m.GetKernelObject().arguments[1].value().GetDouble());
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kKernelObject, r.type());
         EXPECT_EQ(123, r.GetKernelObject().koid);
         EXPECT_EQ(MX_OBJ_TYPE_VMO, r.GetKernelObject().object_type);
@@ -738,7 +738,7 @@ bool record_test() {
         EXPECT_EQ(7, r.GetContextSwitch().incoming_thread.process_koid());
         EXPECT_EQ(8, r.GetContextSwitch().incoming_thread.thread_koid());
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kContextSwitch, m.type());
         EXPECT_EQ(123, m.GetContextSwitch().timestamp);
         EXPECT_EQ(4, m.GetContextSwitch().cpu_number);
@@ -748,7 +748,7 @@ bool record_test() {
         EXPECT_EQ(7, m.GetContextSwitch().incoming_thread.process_koid());
         EXPECT_EQ(8, m.GetContextSwitch().incoming_thread.thread_koid());
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kContextSwitch, r.type());
         EXPECT_EQ(123, r.GetContextSwitch().timestamp);
         EXPECT_EQ(4, r.GetContextSwitch().cpu_number);
@@ -772,14 +772,14 @@ bool record_test() {
         EXPECT_EQ(5, r.GetLog().process_thread.thread_koid());
         EXPECT_TRUE(r.GetLog().message == "log message");
 
-        trace::Record m(mxtl::move(r));
+        trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kLog, m.type());
         EXPECT_EQ(123, m.GetLog().timestamp);
         EXPECT_EQ(4, m.GetLog().process_thread.process_koid());
         EXPECT_EQ(5, m.GetLog().process_thread.thread_koid());
         EXPECT_TRUE(m.GetLog().message == "log message");
 
-        r = mxtl::move(m);
+        r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kLog, r.type());
         EXPECT_EQ(123, r.GetLog().timestamp);
         EXPECT_EQ(4, r.GetLog().process_thread.process_koid());

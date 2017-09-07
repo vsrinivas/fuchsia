@@ -7,8 +7,8 @@
 #include <ddk/protocol/block.h>
 #include <ddktl/protocol/block-internal.h>
 #include <magenta/assert.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_ptr.h>
 
 // DDK block protocol support
 //

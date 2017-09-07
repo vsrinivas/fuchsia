@@ -13,10 +13,10 @@
 #include <magenta/syscalls/port.h>
 #include <mx/event.h>
 #include <mx/port.h>
-#include <mxtl/array.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/array.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/unique_ptr.h>
 #include <mxio/dispatcher.h>
 #include <fs/vfs.h>
 
@@ -24,10 +24,10 @@
 
 namespace fs {
 
-class Handler : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<Handler>> {
+class Handler : public fbl::DoublyLinkedListable<fbl::unique_ptr<Handler>> {
 public:
     Handler(mx::channel channel, vfs_dispatcher_cb_t cb, void* cookie) :
-        channel_(mxtl::move(channel)), cb_(cb), cookie_(cookie) {
+        channel_(fbl::move(channel)), cb_(cb), cookie_(cookie) {
     }
     ~Handler();
 
@@ -59,7 +59,7 @@ public:
     ~VfsDispatcher();
 
     static mx_status_t Create(mxio_dispatcher_cb_t cb, uint32_t pool_size,
-                              mxtl::unique_ptr<fs::VfsDispatcher>* out);
+                              fbl::unique_ptr<fs::VfsDispatcher>* out);
     void DisconnectHandler(Handler*, bool);
     void RunOnCurrentThread();
     mx_status_t AddVFSHandler(mx::channel channel, vfs_dispatcher_cb_t cb, void* iostate) final;
@@ -69,11 +69,11 @@ private:
 
     mxio_dispatcher_cb_t cb_;
     uint32_t pool_size_;
-    mxtl::Array<thrd_t> t_;
+    fbl::Array<thrd_t> t_;
     mx::event shutdown_event_;
 
     mtx_t lock_;
-    mxtl::DoublyLinkedList<mxtl::unique_ptr<Handler>> handlers_ __TA_GUARDED(lock_);
+    fbl::DoublyLinkedList<fbl::unique_ptr<Handler>> handlers_ __TA_GUARDED(lock_);
     uint32_t n_threads_;
 
     // NOTE: port_ intentionally declared after handlers_, so it

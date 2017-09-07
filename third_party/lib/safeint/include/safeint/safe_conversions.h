@@ -8,8 +8,8 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include <mxtl/limits.h>
-#include <mxtl/type_support.h>
+#include <fbl/limits.h>
+#include <fbl/type_support.h>
 
 #include <safeint/safe_conversions_impl.h>
 
@@ -26,17 +26,17 @@ inline constexpr bool IsValueInRangeForNumericType(Src value) {
 // Convenience function for determining if a numeric value is negative without
 // throwing compiler warnings on: unsigned(value) < 0.
 template <typename T>
-constexpr typename mxtl::enable_if<mxtl::numeric_limits<T>::is_signed, bool>::type
+constexpr typename fbl::enable_if<fbl::numeric_limits<T>::is_signed, bool>::type
 IsValueNegative(T value) {
-  static_assert(mxtl::numeric_limits<T>::is_specialized,
+  static_assert(fbl::numeric_limits<T>::is_specialized,
                 "Argument must be numeric.");
   return value < 0;
 }
 
 template <typename T>
-constexpr typename mxtl::enable_if<!mxtl::numeric_limits<T>::is_signed,
+constexpr typename fbl::enable_if<!fbl::numeric_limits<T>::is_signed,
                                   bool>::type IsValueNegative(T) {
-  static_assert(mxtl::numeric_limits<T>::is_specialized,
+  static_assert(fbl::numeric_limits<T>::is_specialized,
                 "Argument must be numeric.");
   return false;
 }
@@ -80,10 +80,10 @@ inline Dst saturated_cast(Src value) {
       return static_cast<Dst>(value);
 
     case internal::RANGE_UNDERFLOW:
-      return mxtl::numeric_limits<Dst>::min();
+      return fbl::numeric_limits<Dst>::min();
 
     case internal::RANGE_OVERFLOW:
-      return mxtl::numeric_limits<Dst>::max();
+      return fbl::numeric_limits<Dst>::max();
 
     // Should fail only on attempting to assign NaN to a saturated integer.
     case internal::RANGE_INVALID:
@@ -99,9 +99,9 @@ inline Dst saturated_cast(Src value) {
 // to contain any value in the source type. It performs no runtime checking.
 template <typename Dst, typename Src>
 inline constexpr Dst strict_cast(Src value) {
-  static_assert(mxtl::numeric_limits<Src>::is_specialized,
+  static_assert(fbl::numeric_limits<Src>::is_specialized,
                 "Argument must be numeric.");
-  static_assert(mxtl::numeric_limits<Dst>::is_specialized,
+  static_assert(fbl::numeric_limits<Dst>::is_specialized,
                 "Result must be numeric.");
   static_assert((internal::StaticDstRangeRelationToSrcRange<Dst, Src>::value ==
                  internal::NUMERIC_RANGE_CONTAINED),

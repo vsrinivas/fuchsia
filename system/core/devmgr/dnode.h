@@ -9,10 +9,10 @@
 
 #include <fs/vfs.h>
 #include <mxio/vfs.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 namespace memfs {
 
@@ -25,10 +25,10 @@ static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
 static_assert(((kDnodeNameMax + 1) & kDnodeNameMax) == 0,
               "Expected kDnodeNameMax to be one less than a power of two");
 
-class Dnode : public mxtl::RefCounted<Dnode> {
+class Dnode : public fbl::RefCounted<Dnode> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Dnode);
-    using NodeState = mxtl::DoublyLinkedListNodeState<mxtl::RefPtr<Dnode>>;
+    using NodeState = fbl::DoublyLinkedListNodeState<fbl::RefPtr<Dnode>>;
 
     // ChildTraits is the state used for a Dnode to appear as the child
     // of another dnode.
@@ -39,17 +39,17 @@ public:
     // vnode appear in multiple locations within "/dev".
     struct TypeDeviceTraits { static NodeState& node_state(Dnode& dn) { return dn.type_device_state_; }};
 
-    using ChildList = mxtl::DoublyLinkedList<mxtl::RefPtr<Dnode>, Dnode::TypeChildTraits>;
-    using DeviceList = mxtl::DoublyLinkedList<mxtl::RefPtr<Dnode>, Dnode::TypeDeviceTraits>;
+    using ChildList = fbl::DoublyLinkedList<fbl::RefPtr<Dnode>, Dnode::TypeChildTraits>;
+    using DeviceList = fbl::DoublyLinkedList<fbl::RefPtr<Dnode>, Dnode::TypeDeviceTraits>;
 
     // Allocates a dnode, attached to a vnode
-    static mxtl::RefPtr<Dnode> Create(const char* name, size_t len, mxtl::RefPtr<VnodeMemfs> vn);
+    static fbl::RefPtr<Dnode> Create(const char* name, size_t len, fbl::RefPtr<VnodeMemfs> vn);
 
     // Takes a parent-less node and makes it a child of the parent node.
     //
     // Increments child link count by one.
     // If the child is a directory, increments the parent link count by one.
-    static void AddChild(mxtl::RefPtr<Dnode> parent, mxtl::RefPtr<Dnode> child);
+    static void AddChild(fbl::RefPtr<Dnode> parent, fbl::RefPtr<Dnode> child);
 
     // Removes a dnode from its parent (if dnode has a parent)
     // Decrements parent link count by one.
@@ -68,11 +68,11 @@ public:
     // MX_OK is still returned.
     // If "out" is provided as "nullptr", the returned status appears the
     // same, but the "out" argument is not touched.
-    mx_status_t Lookup(const char* name, size_t len, mxtl::RefPtr<Dnode>* out) const;
+    mx_status_t Lookup(const char* name, size_t len, fbl::RefPtr<Dnode>* out) const;
 
     // Acquire a pointer to the vnode underneath this dnode.
     // Acquires a reference to the underlying vnode.
-    mxtl::RefPtr<VnodeMemfs> AcquireVnode() const;
+    fbl::RefPtr<VnodeMemfs> AcquireVnode() const;
 
     // Returns MX_OK if the dnode may be unlinked
     mx_status_t CanUnlink() const;
@@ -85,11 +85,11 @@ public:
     void Readdir(fs::DirentFiller* df, void* cookie) const;
 
     // Answers the question: "Is dn a subdirectory of this?"
-    bool IsSubdirectory(mxtl::RefPtr<Dnode> dn) const;
+    bool IsSubdirectory(fbl::RefPtr<Dnode> dn) const;
 
     // Functions to take / steal the allocated dnode name.
-    mxtl::unique_ptr<char[]> TakeName();
-    void PutName(mxtl::unique_ptr<char[]> name, size_t len);
+    fbl::unique_ptr<char[]> TakeName();
+    void PutName(fbl::unique_ptr<char[]> name, size_t len);
 
     bool IsDirectory() const;
 
@@ -97,20 +97,20 @@ private:
     friend struct TypeChildTraits;
     friend struct TypeDeviceTraits;
 
-    Dnode(mxtl::RefPtr<VnodeMemfs> vn, mxtl::unique_ptr<char[]> name, uint32_t flags);
+    Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags);
 
     size_t NameLen() const;
     bool NameMatch(const char* name, size_t len) const;
 
     NodeState type_child_state_;
     NodeState type_device_state_;
-    mxtl::RefPtr<VnodeMemfs> vnode_;
-    mxtl::RefPtr<Dnode> parent_;
+    fbl::RefPtr<VnodeMemfs> vnode_;
+    fbl::RefPtr<Dnode> parent_;
     // Used to impose an absolute order on dnodes within a directory.
     size_t ordering_token_;
     ChildList children_;
     uint32_t flags_;
-    mxtl::unique_ptr<char[]> name_;
+    fbl::unique_ptr<char[]> name_;
 };
 
 } // namespace memfs

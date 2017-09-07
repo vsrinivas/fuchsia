@@ -17,9 +17,9 @@
 #include <mxio/debug.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 
 #include "devmgr.h"
 #include "dnode.h"

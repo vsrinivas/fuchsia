@@ -19,7 +19,7 @@
 #include <lib/crypto/entropy/quality_test.h>
 #include <lib/crypto/prng.h>
 #include <mxcpp/new.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <lk/init.h>
 #include <string.h>
 
@@ -46,7 +46,7 @@ static bool IntegrateCmdlineEntropy() {
     }
 
     const size_t kMaxEntropyArgumentLen = 128;
-    const size_t hex_len = mxtl::min(strlen(entropy), kMaxEntropyArgumentLen);
+    const size_t hex_len = fbl::min(strlen(entropy), kMaxEntropyArgumentLen);
 
     for (size_t i = 0; i < hex_len; ++i) {
         if (!isxdigit(entropy[i])) {
@@ -70,7 +70,7 @@ static bool IntegrateCmdlineEntropy() {
                ".redacted=", sizeof(".redacted=") - 1);
     }
 
-    const size_t entropy_added = mxtl::max(hex_len / 2, sizeof(digest));
+    const size_t entropy_added = fbl::max(hex_len / 2, sizeof(digest));
     return (entropy_added >= PRNG::kMinEntropy);
 }
 
@@ -80,7 +80,7 @@ static bool SeedFrom(entropy::Collector* collector) {
     size_t remaining = collector->BytesNeeded(8 * PRNG::kMinEntropy);
     while (remaining > 0) {
         size_t result = collector->DrawEntropy(
-                buf, mxtl::min(sizeof(buf), remaining));
+                buf, fbl::min(sizeof(buf), remaining));
         if (result == 0) {
             return false;
         }

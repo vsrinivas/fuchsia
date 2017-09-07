@@ -9,8 +9,8 @@
 #include <stdint.h>
 
 #include <stdlib.h>
-#include <mxtl/limits.h>
-#include <mxtl/type_support.h>
+#include <fbl/limits.h>
+#include <fbl/type_support.h>
 
 #include <safeint/safe_conversions.h>
 
@@ -71,30 +71,30 @@ struct IntegerForSizeAndSign<8, false> {
 
 template <typename Integer>
 struct UnsignedIntegerForSize {
-  typedef typename mxtl::enable_if<
-      mxtl::numeric_limits<Integer>::is_integer,
+  typedef typename fbl::enable_if<
+      fbl::numeric_limits<Integer>::is_integer,
       typename IntegerForSizeAndSign<sizeof(Integer), false>::type>::type type;
 };
 
 template <typename Integer>
 struct SignedIntegerForSize {
-  typedef typename mxtl::enable_if<
-      mxtl::numeric_limits<Integer>::is_integer,
+  typedef typename fbl::enable_if<
+      fbl::numeric_limits<Integer>::is_integer,
       typename IntegerForSizeAndSign<sizeof(Integer), true>::type>::type type;
 };
 
 template <typename Integer>
 struct TwiceWiderInteger {
-  typedef typename mxtl::enable_if<
-      mxtl::numeric_limits<Integer>::is_integer,
+  typedef typename fbl::enable_if<
+      fbl::numeric_limits<Integer>::is_integer,
       typename IntegerForSizeAndSign<
           sizeof(Integer) * 2,
-          mxtl::numeric_limits<Integer>::is_signed>::type>::type type;
+          fbl::numeric_limits<Integer>::is_signed>::type>::type type;
 };
 
 template <typename Integer>
 struct PositionOfSignBit {
-  static const typename mxtl::enable_if<mxtl::numeric_limits<Integer>::is_integer,
+  static const typename fbl::enable_if<fbl::numeric_limits<Integer>::is_integer,
                                        size_t>::type value =
       8 * sizeof(Integer) - 1;
 };
@@ -104,7 +104,7 @@ struct PositionOfSignBit {
 // However, there is no corresponding implementation of e.g. CheckedUnsignedAbs,
 // so the float versions will not compile.
 template <typename Numeric,
-          bool IsInteger = mxtl::numeric_limits<Numeric>::is_integer>
+          bool IsInteger = fbl::numeric_limits<Numeric>::is_integer>
 struct UnsignedOrFloatForSize;
 
 template <typename Numeric>
@@ -132,7 +132,7 @@ T BinaryComplement(T x) {
 // way to coalesce things into the CheckedNumericState specializations below.
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer, T>::type
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer, T>::type
 CheckedAdd(T x, T y, RangeConstraint* validity) {
   // Since the value of x+y is undefined if we have a signed type, we compute
   // it using the unsigned type of the same size.
@@ -142,7 +142,7 @@ CheckedAdd(T x, T y, RangeConstraint* validity) {
   UnsignedDst uresult = ux + uy;
   // Addition is valid if the sign of (x + y) is equal to either that of x or
   // that of y.
-  if (mxtl::numeric_limits<T>::is_signed) {
+  if (fbl::numeric_limits<T>::is_signed) {
     if (HasSignBit(BinaryComplement((uresult ^ ux) & (uresult ^ uy))))
       *validity = RANGE_VALID;
     else  // Direction of wrap is inverse of result sign.
@@ -155,7 +155,7 @@ CheckedAdd(T x, T y, RangeConstraint* validity) {
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer, T>::type
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer, T>::type
 CheckedSub(T x, T y, RangeConstraint* validity) {
   // Since the value of x+y is undefined if we have a signed type, we compute
   // it using the unsigned type of the same size.
@@ -165,7 +165,7 @@ CheckedSub(T x, T y, RangeConstraint* validity) {
   UnsignedDst uresult = ux - uy;
   // Subtraction is valid if either x and y have same sign, or (x-y) and x have
   // the same sign.
-  if (mxtl::numeric_limits<T>::is_signed) {
+  if (fbl::numeric_limits<T>::is_signed) {
     if (HasSignBit(BinaryComplement((uresult ^ ux) & (ux ^ uy))))
       *validity = RANGE_VALID;
     else  // Direction of wrap is inverse of result sign.
@@ -182,7 +182,7 @@ CheckedSub(T x, T y, RangeConstraint* validity) {
 // slow case we need to manually check that the result won't be truncated by
 // checking with division against the appropriate bound.
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
                             sizeof(T) * 2 <= sizeof(uintmax_t),
                         T>::type
 CheckedMul(T x, T y, RangeConstraint* validity) {
@@ -194,8 +194,8 @@ CheckedMul(T x, T y, RangeConstraint* validity) {
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            mxtl::numeric_limits<T>::is_signed &&
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            fbl::numeric_limits<T>::is_signed &&
                             (sizeof(T) * 2 > sizeof(uintmax_t)),
                         T>::type
 CheckedMul(T x, T y, RangeConstraint* validity) {
@@ -206,30 +206,30 @@ CheckedMul(T x, T y, RangeConstraint* validity) {
   } else if (x > 0) {
     if (y > 0)
       *validity =
-          x <= mxtl::numeric_limits<T>::max() / y ? RANGE_VALID : RANGE_OVERFLOW;
+          x <= fbl::numeric_limits<T>::max() / y ? RANGE_VALID : RANGE_OVERFLOW;
     else
-      *validity = y >= mxtl::numeric_limits<T>::min() / x ? RANGE_VALID
+      *validity = y >= fbl::numeric_limits<T>::min() / x ? RANGE_VALID
                                                          : RANGE_UNDERFLOW;
 
   } else {
     if (y > 0)
-      *validity = x >= mxtl::numeric_limits<T>::min() / y ? RANGE_VALID
+      *validity = x >= fbl::numeric_limits<T>::min() / y ? RANGE_VALID
                                                          : RANGE_UNDERFLOW;
     else
       *validity =
-          y >= mxtl::numeric_limits<T>::max() / x ? RANGE_VALID : RANGE_OVERFLOW;
+          y >= fbl::numeric_limits<T>::max() / x ? RANGE_VALID : RANGE_OVERFLOW;
   }
 
   return x * y;
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            !mxtl::numeric_limits<T>::is_signed &&
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            !fbl::numeric_limits<T>::is_signed &&
                             (sizeof(T) * 2 > sizeof(uintmax_t)),
                         T>::type
 CheckedMul(T x, T y, RangeConstraint* validity) {
-  *validity = (y == 0 || x <= mxtl::numeric_limits<T>::max() / y)
+  *validity = (y == 0 || x <= fbl::numeric_limits<T>::max() / y)
                   ? RANGE_VALID
                   : RANGE_OVERFLOW;
   return x * y;
@@ -240,12 +240,12 @@ template <typename T>
 T CheckedDiv(T x,
              T y,
              RangeConstraint* validity,
-             typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer,
+             typename fbl::enable_if<fbl::numeric_limits<T>::is_integer,
                                      int>::type = 0) {
-  if (mxtl::numeric_limits<T>::is_signed && x == mxtl::numeric_limits<T>::min() &&
+  if (fbl::numeric_limits<T>::is_signed && x == fbl::numeric_limits<T>::min() &&
       y == static_cast<T>(-1)) {
     *validity = RANGE_OVERFLOW;
-    return mxtl::numeric_limits<T>::min();
+    return fbl::numeric_limits<T>::min();
   }
 
   *validity = RANGE_VALID;
@@ -253,8 +253,8 @@ T CheckedDiv(T x,
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedMod(T x, T y, RangeConstraint* validity) {
   *validity = y > 0 ? RANGE_VALID : RANGE_INVALID;
@@ -262,8 +262,8 @@ CheckedMod(T x, T y, RangeConstraint* validity) {
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            !mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            !fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedMod(T x, T y, RangeConstraint* validity) {
   *validity = RANGE_VALID;
@@ -271,19 +271,19 @@ CheckedMod(T x, T y, RangeConstraint* validity) {
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedNeg(T value, RangeConstraint* validity) {
   *validity =
-      value != mxtl::numeric_limits<T>::min() ? RANGE_VALID : RANGE_OVERFLOW;
+      value != fbl::numeric_limits<T>::min() ? RANGE_VALID : RANGE_OVERFLOW;
   // The negation of signed min is min, so catch that one.
   return static_cast<T>(-value);
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            !mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            !fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedNeg(T value, RangeConstraint* validity) {
   // The only legal unsigned negation is zero.
@@ -293,18 +293,18 @@ CheckedNeg(T value, RangeConstraint* validity) {
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedAbs(T value, RangeConstraint* validity) {
   *validity =
-      value != mxtl::numeric_limits<T>::min() ? RANGE_VALID : RANGE_OVERFLOW;
+      value != fbl::numeric_limits<T>::min() ? RANGE_VALID : RANGE_OVERFLOW;
   return static_cast<T>(abs(value));
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            !mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            !fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedAbs(T value, RangeConstraint* validity) {
   // T is unsigned, so |value| must already be positive.
@@ -313,19 +313,19 @@ CheckedAbs(T value, RangeConstraint* validity) {
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            fbl::numeric_limits<T>::is_signed,
                         typename UnsignedIntegerForSize<T>::type>::type
 CheckedUnsignedAbs(T value) {
   typedef typename UnsignedIntegerForSize<T>::type UnsignedT;
-  return value == mxtl::numeric_limits<T>::min()
-             ? static_cast<UnsignedT>(static_cast<UnsignedT>(mxtl::numeric_limits<T>::max()) + 1)
+  return value == fbl::numeric_limits<T>::min()
+             ? static_cast<UnsignedT>(static_cast<UnsignedT>(fbl::numeric_limits<T>::max()) + 1)
              : static_cast<UnsignedT>(abs(value));
 }
 
 template <typename T>
-typename mxtl::enable_if<mxtl::numeric_limits<T>::is_integer &&
-                            !mxtl::numeric_limits<T>::is_signed,
+typename fbl::enable_if<fbl::numeric_limits<T>::is_integer &&
+                            !fbl::numeric_limits<T>::is_signed,
                         T>::type
 CheckedUnsignedAbs(T value) {
   // T is unsigned, so |value| must already be positive.
@@ -343,7 +343,7 @@ enum NumericRepresentation {
 template <typename NumericType>
 struct GetNumericRepresentation {
   static const NumericRepresentation value =
-      mxtl::numeric_limits<NumericType>::is_integer
+      fbl::numeric_limits<NumericType>::is_integer
           ? NUMERIC_INTEGER
           : NUMERIC_UNKNOWN;
 };
@@ -370,7 +370,7 @@ class CheckedNumericState<T, NUMERIC_INTEGER> {
       : value_(static_cast<T>(value)),
         validity_(GetRangeConstraint(validity |
                                      DstRangeRelationToSrcRange<T>(value))) {
-    static_assert(mxtl::numeric_limits<Src>::is_specialized,
+    static_assert(fbl::numeric_limits<Src>::is_specialized,
                   "Argument must be numeric.");
   }
 
@@ -384,7 +384,7 @@ class CheckedNumericState<T, NUMERIC_INTEGER> {
   template <typename Src>
   explicit CheckedNumericState(
       Src value,
-      typename mxtl::enable_if<mxtl::numeric_limits<Src>::is_specialized,
+      typename fbl::enable_if<fbl::numeric_limits<Src>::is_specialized,
                               int>::type = 0)
       : value_(static_cast<T>(value)),
         validity_(DstRangeRelationToSrcRange<T>(value)) {}

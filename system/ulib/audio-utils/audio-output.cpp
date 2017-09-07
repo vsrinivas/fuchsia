@@ -5,26 +5,26 @@
 #include <audio-utils/audio-output.h>
 #include <audio-utils/audio-stream.h>
 #include <magenta/device/audio.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/limits.h>
 #include <stdio.h>
 #include <string.h>
 
 namespace audio {
 namespace utils {
 
-mxtl::unique_ptr<AudioOutput> AudioOutput::Create(uint32_t dev_id) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_id));
+fbl::unique_ptr<AudioOutput> AudioOutput::Create(uint32_t dev_id) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_id));
     if (!ac.check())
         return nullptr;
     return res;
 }
 
-mxtl::unique_ptr<AudioOutput> AudioOutput::Create(const char* dev_path) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_path));
+fbl::unique_ptr<AudioOutput> AudioOutput::Create(const char* dev_path) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<AudioOutput> res(new (&ac) AudioOutput(dev_path));
     if (!ac.check())
         return nullptr;
     return res;
@@ -79,7 +79,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
         // order to handle a ring discontinuity
         for (uint32_t i = 0; i < 2; ++i) {
             uint32_t space = (rb_sz_ + rd - wr - 1) % rb_sz_;
-            uint32_t todo  = mxtl::min(space, rb_sz_ - wr);
+            uint32_t todo  = fbl::min(space, rb_sz_ - wr);
             MX_DEBUG_ASSERT(space < rb_sz_);
 
             if (!todo)
@@ -90,7 +90,7 @@ mx_status_t AudioOutput::Play(AudioSource& source) {
                 wr += todo;
             } else {
                 uint32_t done;
-                res = source.GetFrames(buf + wr, mxtl::min(space, rb_sz_ - wr), &done);
+                res = source.GetFrames(buf + wr, fbl::min(space, rb_sz_ - wr), &done);
                 if (res != MX_OK) {
                     printf("Error packing frames (res %d)\n", res);
                     break;

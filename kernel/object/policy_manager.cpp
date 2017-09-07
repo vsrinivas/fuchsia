@@ -8,7 +8,7 @@
 #include <err.h>
 
 #include <magenta/types.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 namespace {
 
@@ -64,7 +64,7 @@ static_assert(sizeof(Encoding) == sizeof(pol_cookie_t), "bitfield issue");
 static_assert(MX_POL_MAX == 11u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
 
 PolicyManager* PolicyManager::Create(uint32_t default_action) {
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto pm = new (&ac) PolicyManager(default_action);
     return ac.check() ? pm : nullptr;
 }

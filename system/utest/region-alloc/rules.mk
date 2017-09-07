@@ -18,7 +18,7 @@ MODULE_NAME := region-alloc-test
 MODULE_STATIC_LIBS := \
     system/ulib/region-alloc \
     system/ulib/mxcpp \
-    system/ulib/mxtl \
+    system/ulib/fbl \
 
 MODULE_LIBS := \
     system/ulib/c \

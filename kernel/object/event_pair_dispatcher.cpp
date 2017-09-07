@@ -10,21 +10,21 @@
 #include <err.h>
 
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <object/state_tracker.h>
 
 constexpr uint32_t kUserSignalMask = MX_EVENT_SIGNALED | MX_USER_SIGNAL_ALL;
 
-mx_status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
-                                        mxtl::RefPtr<Dispatcher>* dispatcher1,
+mx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
+                                        fbl::RefPtr<Dispatcher>* dispatcher1,
                                         mx_rights_t* rights) {
-    mxtl::AllocChecker ac;
-    auto disp0 = mxtl::AdoptRef(new (&ac) EventPairDispatcher());
+    fbl::AllocChecker ac;
+    auto disp0 = fbl::AdoptRef(new (&ac) EventPairDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    auto disp1 = mxtl::AdoptRef(new (&ac) EventPairDispatcher());
+    auto disp1 = fbl::AdoptRef(new (&ac) EventPairDispatcher());
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -32,8 +32,8 @@ mx_status_t EventPairDispatcher::Create(mxtl::RefPtr<Dispatcher>* dispatcher0,
     disp1->Init(disp0);
 
     *rights = MX_DEFAULT_EVENT_PAIR_RIGHTS;
-    *dispatcher0 = mxtl::move(disp0);
-    *dispatcher1 = mxtl::move(disp1);
+    *dispatcher0 = fbl::move(disp0);
+    *dispatcher1 = fbl::move(disp1);
 
     return MX_OK;
 }
@@ -43,7 +43,7 @@ EventPairDispatcher::~EventPairDispatcher() {}
 void EventPairDispatcher::on_zero_handles() {
     canary_.Assert();
 
-    mxtl::AutoLock locker(&lock_);
+    fbl::AutoLock locker(&lock_);
     DEBUG_ASSERT(other_);
 
     other_->state_tracker_.InvalidateCookie(other_->get_cookie_jar());
@@ -62,7 +62,7 @@ mx_status_t EventPairDispatcher::user_signal(uint32_t clear_mask, uint32_t set_m
         return MX_OK;
     }
 
-    mxtl::AutoLock locker(&lock_);
+    fbl::AutoLock locker(&lock_);
     // object_signal() may race with handle_close() on another thread.
     if (!other_)
         return MX_ERR_PEER_CLOSED;
@@ -76,10 +76,10 @@ EventPairDispatcher::EventPairDispatcher()
 
 // This is called before either EventPairDispatcher is accessible from threads other than the one
 // initializing the event pair, so it does not need locking.
-void EventPairDispatcher::Init(mxtl::RefPtr<EventPairDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
+void EventPairDispatcher::Init(fbl::RefPtr<EventPairDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(other);
     // No need to take |lock_| here.
     DEBUG_ASSERT(!other_);
     other_koid_ = other->get_koid();
-    other_ = mxtl::move(other);
+    other_ = fbl::move(other);
 }

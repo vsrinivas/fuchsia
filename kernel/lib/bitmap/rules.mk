@@ -12,7 +12,7 @@ MODULE := $(LOCAL_DIR)
 
 KERNEL_INCLUDES += $(SRC_DIR)/include
 
-MODULE_DEPS := kernel/lib/mxtl
+MODULE_DEPS := kernel/lib/fbl
 
 MODULE_SRCS := \
     $(SRC_DIR)/raw-bitmap.cpp \

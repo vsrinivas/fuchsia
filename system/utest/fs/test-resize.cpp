@@ -13,8 +13,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
-#include <mxtl/new.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/new.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 #include "filesystems.h"
@@ -73,8 +73,8 @@ bool test_use_all_data(void) {
     constexpr size_t kFileBufCount = (1 << 5);
     constexpr size_t kFileCount = (1 << 5);
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBufSize]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBufSize]);
     ASSERT_TRUE(ac.check(), "");
     memset(buf.get(), 0, kBufSize);
 

@@ -76,14 +76,14 @@ private:
     mx_paddr_t fb_pa_ = 0;
 
     // request condition
-    mxtl::Mutex request_lock_;
+    fbl::Mutex request_lock_;
     cnd_t request_cond_ = {};
 
     // flush thread
     void virtio_gpu_flusher();
     static int virtio_gpu_flusher_entry(void* arg);
     thrd_t flush_thread_ = {};
-    mxtl::Mutex flush_lock_;
+    fbl::Mutex flush_lock_;
     cnd_t flush_cond_ = {};
     bool flush_pending_ = false;
 };

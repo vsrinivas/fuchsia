@@ -4,8 +4,8 @@
 
 #include <magenta/assert.h>
 #include <math.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/limits.h>
+#include <fbl/algorithm.h>
+#include <fbl/limits.h>
 
 #include "sine-source.h"
 
@@ -26,10 +26,10 @@ mx_status_t SineSource::Init(float freq,
     channels_ = channels;
 
     frames_to_produce_ = (duration_secs == 0.0)
-                       ? mxtl::numeric_limits<uint64_t>::max()
+                       ? fbl::numeric_limits<uint64_t>::max()
                        : static_cast<uint64_t>(duration_secs * static_cast<float>(frame_rate_));
     sine_scalar_ = (freq * 2.0 * M_PI) / frame_rate_;
-    amp_ = mxtl::clamp<double>(amp, 0.0, 1.0);
+    amp_ = fbl::clamp<double>(amp, 0.0, 1.0);
 
     switch(static_cast<audio_sample_format_t>(sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK)) {
     case AUDIO_SAMPLE_FORMAT_8BIT:       return InitInternal<AUDIO_SAMPLE_FORMAT_8BIT>();
@@ -113,7 +113,7 @@ mx_status_t SineSource::InitInternal() {
     sample_format_ = SAMPLE_FORMAT;
     get_frames_thunk_ = &SineSource::GetFramesInternal<SAMPLE_FORMAT>;
     frame_size_ = static_cast<uint32_t>(sizeof(SampleType) * channels_);
-    amp_ *= mxtl::numeric_limits<ComputedType>::max() - 1;
+    amp_ *= fbl::numeric_limits<ComputedType>::max() - 1;
 
     return MX_OK;
 }
@@ -131,7 +131,7 @@ mx_status_t SineSource::GetFramesInternal(void* buffer, uint32_t buf_space, uint
         return MX_ERR_BAD_STATE;
 
     MX_DEBUG_ASSERT(frames_produced_ < frames_to_produce_);
-    uint64_t todo = mxtl::min<uint64_t>(frames_to_produce_ - frames_produced_,
+    uint64_t todo = fbl::min<uint64_t>(frames_to_produce_ - frames_produced_,
                                         buf_space / frame_size_);
     double pos = sine_scalar_ * static_cast<double>(frames_produced_);
     auto   buf = reinterpret_cast<SampleType*>(buffer);

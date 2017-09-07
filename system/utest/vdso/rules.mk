@@ -16,7 +16,7 @@ MODULE_NAME := vdso-test
 MODULE_STATIC_LIBS := \
     system/ulib/elfload \
     system/ulib/mx \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/mxcpp \
 
 MODULE_LIBS := \

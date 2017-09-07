@@ -4,15 +4,15 @@
 
 #include <trace-reader/reader.h>
 
-#include <mxtl/string_printf.h>
+#include <fbl/string_printf.h>
 #include <trace-engine/fields.h>
 
 namespace trace {
 
 TraceReader::TraceReader(RecordConsumer record_consumer,
                          ErrorHandler error_handler)
-    : record_consumer_(mxtl::move(record_consumer)),
-      error_handler_(mxtl::move(error_handler)) {
+    : record_consumer_(fbl::move(record_consumer)),
+      error_handler_(fbl::move(error_handler)) {
     RegisterProvider(0u, "");
 }
 
@@ -84,7 +84,7 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
         }
         default: {
             // Ignore unknown record types for forward compatibility.
-            ReportError(mxtl::StringPrintf(
+            ReportError(fbl::StringPrintf(
                 "Skipping record of unknown type %d", static_cast<uint32_t>(type)));
             break;
         }
@@ -101,10 +101,10 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
         auto id = ProviderInfoMetadataRecordFields::Id::Get<ProviderId>(header);
         auto name_length =
             ProviderInfoMetadataRecordFields::NameLength::Get<size_t>(header);
-        mxtl::StringPiece name_view;
+        fbl::StringPiece name_view;
         if (!record.ReadString(name_length, &name_view))
             return false;
-        mxtl::String name(name_view);
+        fbl::String name(name_view);
 
         RegisterProvider(id, name);
         record_consumer_(Record(Record::Metadata{
@@ -122,7 +122,7 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
     }
     default: {
         // Ignore unknown metadata types for forward compatibility.
-        ReportError(mxtl::StringPrintf(
+        ReportError(fbl::StringPrintf(
             "Skipping metadata of unknown type %d", static_cast<uint32_t>(type)));
         break;
     }
@@ -148,13 +148,13 @@ bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
     }
 
     auto length = StringRecordFields::StringLength::Get<size_t>(header);
-    mxtl::StringPiece string_view;
+    fbl::StringPiece string_view;
     if (!record.ReadString(length, &string_view))
         return false;
-    mxtl::String string(string_view);
+    fbl::String string(string_view);
 
     RegisterString(index, string);
-    record_consumer_(Record(Record::String{index, mxtl::move(string)}));
+    record_consumer_(Record(Record::String{index, fbl::move(string)}));
     return true;
 }
 
@@ -188,9 +188,9 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
 
     trace_ticks_t timestamp;
     ProcessThread process_thread;
-    mxtl::String category;
-    mxtl::String name;
-    mxtl::Vector<Argument> arguments;
+    fbl::String category;
+    fbl::String name;
+    fbl::Vector<Argument> arguments;
     if (!record.ReadUint64(&timestamp) ||
         !DecodeThreadRef(record, thread_ref, &process_thread) ||
         !DecodeStringRef(record, category_ref, &category) ||
@@ -204,8 +204,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&scope))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments),
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments),
             EventData(EventData::Instant{static_cast<EventScope>(scope)})}));
         break;
     }
@@ -214,20 +214,20 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::Counter{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::Counter{id})}));
         break;
     }
     case EventType::kDurationBegin: {
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::DurationBegin{})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::DurationBegin{})}));
         break;
     }
     case EventType::kDurationEnd: {
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::DurationEnd{})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::DurationEnd{})}));
         break;
     }
     case EventType::kAsyncBegin: {
@@ -235,8 +235,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::AsyncBegin{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::AsyncBegin{id})}));
         break;
     }
     case EventType::kAsyncInstant: {
@@ -244,8 +244,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::AsyncInstant{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::AsyncInstant{id})}));
         break;
     }
     case EventType::kAsyncEnd: {
@@ -253,8 +253,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::AsyncEnd{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::AsyncEnd{id})}));
         break;
     }
     case EventType::kFlowBegin: {
@@ -262,8 +262,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::FlowBegin{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::FlowBegin{id})}));
         break;
     }
     case EventType::kFlowStep: {
@@ -271,8 +271,8 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::FlowStep{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::FlowStep{id})}));
         break;
     }
     case EventType::kFlowEnd: {
@@ -280,13 +280,13 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         if (!record.ReadUint64(&id))
             return false;
         record_consumer_(Record(Record::Event{
-            timestamp, process_thread, mxtl::move(category), mxtl::move(name),
-            mxtl::move(arguments), EventData(EventData::FlowEnd{id})}));
+            timestamp, process_thread, fbl::move(category), fbl::move(name),
+            fbl::move(arguments), EventData(EventData::FlowEnd{id})}));
         break;
     }
     default: {
         // Ignore unknown event types for forward compatibility.
-        ReportError(mxtl::StringPrintf(
+        ReportError(fbl::StringPrintf(
             "Skipping event of unknown type %d", static_cast<uint32_t>(type)));
         break;
     }
@@ -303,15 +303,15 @@ bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
         KernelObjectRecordFields::ArgumentCount::Get<size_t>(header);
 
     mx_koid_t koid;
-    mxtl::String name;
-    mxtl::Vector<Argument> arguments;
+    fbl::String name;
+    fbl::Vector<Argument> arguments;
     if (!record.ReadUint64(&koid) ||
         !DecodeStringRef(record, name_ref, &name) ||
         !ReadArguments(record, argument_count, &arguments))
         return false;
 
     record_consumer_(
-        Record(Record::KernelObject{koid, object_type, name, mxtl::move(arguments)}));
+        Record(Record::KernelObject{koid, object_type, name, fbl::move(arguments)}));
     return true;
 }
 
@@ -352,19 +352,19 @@ bool TraceReader::ReadLogRecord(Chunk& record, RecordHeader header) {
     auto thread_ref = LogRecordFields::ThreadRef::Get<trace_encoded_thread_ref_t>(header);
     trace_ticks_t timestamp;
     ProcessThread process_thread;
-    mxtl::StringPiece log_message;
+    fbl::StringPiece log_message;
     if (!record.ReadUint64(&timestamp) ||
         !DecodeThreadRef(record, thread_ref, &process_thread) ||
         !record.ReadString(log_message_length, &log_message))
         return false;
     record_consumer_(
-        Record(Record::Log{timestamp, process_thread, mxtl::String(log_message)}));
+        Record(Record::Log{timestamp, process_thread, fbl::String(log_message)}));
     return true;
 }
 
 bool TraceReader::ReadArguments(Chunk& record,
                                 size_t count,
-                                mxtl::Vector<Argument>* out_arguments) {
+                                fbl::Vector<Argument>* out_arguments) {
     while (count-- > 0) {
         ArgumentHeader header;
         if (!record.ReadUint64(&header)) {
@@ -380,7 +380,7 @@ bool TraceReader::ReadArguments(Chunk& record,
         }
 
         auto name_ref = ArgumentFields::NameRef::Get<trace_encoded_string_ref_t>(header);
-        mxtl::String name;
+        fbl::String name;
         if (!DecodeStringRef(arg, name_ref, &name)) {
             ReportError("Failed to read argument name");
             return false;
@@ -389,19 +389,19 @@ bool TraceReader::ReadArguments(Chunk& record,
         auto type = ArgumentFields::Type::Get<ArgumentType>(header);
         switch (type) {
         case ArgumentType::kNull: {
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeNull()});
             break;
         }
         case ArgumentType::kInt32: {
             auto value = Int32ArgumentFields::Value::Get<int32_t>(header);
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeInt32(value)});
             break;
         }
         case ArgumentType::kUint32: {
             auto value = Uint32ArgumentFields::Value::Get<uint32_t>(header);
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeUint32(value)});
             break;
         }
@@ -411,7 +411,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read int64 argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeInt64(value)});
             break;
         }
@@ -421,7 +421,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read uint64 argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeUint64(value)});
             break;
         }
@@ -431,21 +431,21 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read double argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeDouble(value)});
             break;
         }
         case ArgumentType::kString: {
             auto string_ref =
                 StringArgumentFields::Index::Get<trace_encoded_string_ref_t>(header);
-            mxtl::String value;
+            fbl::String value;
             if (!DecodeStringRef(arg, string_ref, &value)) {
                 ReportError("Failed to read string argument value");
                 return false;
             }
             out_arguments->push_back(
-                Argument{mxtl::move(name),
-                         ArgumentValue::MakeString(mxtl::move(value))});
+                Argument{fbl::move(name),
+                         ArgumentValue::MakeString(fbl::move(value))});
             break;
         }
         case ArgumentType::kPointer: {
@@ -454,7 +454,7 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read pointer argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakePointer(value)});
             break;
         }
@@ -464,13 +464,13 @@ bool TraceReader::ReadArguments(Chunk& record,
                 ReportError("Failed to read koid argument value");
                 return false;
             }
-            out_arguments->push_back(Argument{mxtl::move(name),
+            out_arguments->push_back(Argument{fbl::move(name),
                                               ArgumentValue::MakeKoid(value)});
             break;
         }
         default: {
             // Ignore unknown argument types for forward compatibility.
-            ReportError(mxtl::StringPrintf(
+            ReportError(fbl::StringPrintf(
                 "Skipping argument of unknown type %d, argument name %s",
                 static_cast<uint32_t>(type), name.c_str()));
             break;
@@ -480,11 +480,11 @@ bool TraceReader::ReadArguments(Chunk& record,
     return true;
 }
 
-mxtl::String TraceReader::GetProviderName(ProviderId id) const {
+fbl::String TraceReader::GetProviderName(ProviderId id) const {
     auto it = providers_.find(id);
     if (it != providers_.end())
         return it->name;
-    return mxtl::String();
+    return fbl::String();
 }
 
 void TraceReader::SetCurrentProvider(ProviderId id) {
@@ -496,21 +496,21 @@ void TraceReader::SetCurrentProvider(ProviderId id) {
     RegisterProvider(id, "");
 }
 
-void TraceReader::RegisterProvider(ProviderId id, mxtl::String name) {
-    auto provider = mxtl::make_unique<ProviderInfo>();
+void TraceReader::RegisterProvider(ProviderId id, fbl::String name) {
+    auto provider = fbl::make_unique<ProviderInfo>();
     provider->id = id;
     provider->name = name;
     current_provider_ = provider.get();
 
-    providers_.insert_or_replace(mxtl::move(provider));
+    providers_.insert_or_replace(fbl::move(provider));
 }
 
-void TraceReader::RegisterString(trace_string_index_t index, mxtl::String string) {
+void TraceReader::RegisterString(trace_string_index_t index, fbl::String string) {
     MX_DEBUG_ASSERT(index >= TRACE_ENCODED_STRING_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_STRING_REF_MAX_INDEX);
 
-    auto entry = mxtl::make_unique<StringTableEntry>(index, string);
-    current_provider_->string_table.insert_or_replace(mxtl::move(entry));
+    auto entry = fbl::make_unique<StringTableEntry>(index, string);
+    current_provider_->string_table.insert_or_replace(fbl::move(entry));
 }
 
 void TraceReader::RegisterThread(trace_thread_index_t index,
@@ -518,13 +518,13 @@ void TraceReader::RegisterThread(trace_thread_index_t index,
     MX_DEBUG_ASSERT(index >= TRACE_ENCODED_THREAD_REF_MIN_INDEX &&
                     index <= TRACE_ENCODED_THREAD_REF_MAX_INDEX);
 
-    auto entry = mxtl::make_unique<ThreadTableEntry>(index, process_thread);
-    current_provider_->thread_table.insert_or_replace(mxtl::move(entry));
+    auto entry = fbl::make_unique<ThreadTableEntry>(index, process_thread);
+    current_provider_->thread_table.insert_or_replace(fbl::move(entry));
 }
 
 bool TraceReader::DecodeStringRef(Chunk& chunk,
                                   trace_encoded_string_ref_t string_ref,
-                                  mxtl::String* out_string) const {
+                                  fbl::String* out_string) const {
     if (string_ref == TRACE_ENCODED_STRING_REF_EMPTY) {
         out_string->clear();
         return true;
@@ -532,7 +532,7 @@ bool TraceReader::DecodeStringRef(Chunk& chunk,
 
     if (string_ref & TRACE_ENCODED_STRING_REF_INLINE_FLAG) {
         size_t length = string_ref & TRACE_ENCODED_STRING_REF_LENGTH_MASK;
-        mxtl::StringPiece string_view;
+        fbl::StringPiece string_view;
         if (length > TRACE_ENCODED_STRING_REF_MAX_LENGTH ||
             !chunk.ReadString(length, &string_view)) {
             ReportError("Could not read inline string");
@@ -574,9 +574,9 @@ bool TraceReader::DecodeThreadRef(Chunk& chunk,
     return true;
 }
 
-void TraceReader::ReportError(mxtl::String error) const {
+void TraceReader::ReportError(fbl::String error) const {
     if (error_handler_)
-        error_handler_(mxtl::move(error));
+        error_handler_(fbl::move(error));
 }
 
 Chunk::Chunk()
@@ -618,13 +618,13 @@ bool Chunk::ReadChunk(size_t num_words, Chunk* out_chunk) {
     return true;
 }
 
-bool Chunk::ReadString(size_t length, mxtl::StringPiece* out_string) {
+bool Chunk::ReadString(size_t length, fbl::StringPiece* out_string) {
     auto num_words = BytesToWords(length);
     if (current_ + num_words > end_)
         return false;
 
     *out_string =
-        mxtl::StringPiece(reinterpret_cast<const char*>(current_), length);
+        fbl::StringPiece(reinterpret_cast<const char*>(current_), length);
     current_ += num_words;
     return true;
 }

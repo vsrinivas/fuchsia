@@ -13,9 +13,9 @@
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
-#include <mxtl/atomic.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/limits.h>
+#include <fbl/atomic.h>
+#include <fbl/algorithm.h>
+#include <fbl/limits.h>
 #include <unittest/unittest.h>
 #include <sys/mman.h>
 
@@ -54,7 +54,7 @@ bool check_pages_mapped(mx_handle_t process, uintptr_t base, uint64_t bitmap, si
 
 // Thread run by test_local_address, used to attempt an access to memory
 void test_write_address_thread(uintptr_t address, bool* success) {
-    auto p = reinterpret_cast<mxtl::atomic_uint8_t*>(address);
+    auto p = reinterpret_cast<fbl::atomic_uint8_t*>(address);
     p->store(5);
     *success = true;
 
@@ -62,7 +62,7 @@ void test_write_address_thread(uintptr_t address, bool* success) {
 }
 // Thread run by test_local_address, used to attempt an access to memory
 void test_read_address_thread(uintptr_t address, bool* success) {
-    auto p = reinterpret_cast<mxtl::atomic_uint8_t*>(address);
+    auto p = reinterpret_cast<fbl::atomic_uint8_t*>(address);
     (void)p->load();
     *success = true;
 
@@ -753,7 +753,7 @@ bool invalid_args_test() {
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), MX_OK);
 
     // size rounds up to 0
-    constexpr size_t bad_size = mxtl::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
+    constexpr size_t bad_size = fbl::numeric_limits<size_t>::max() - PAGE_SIZE + 2;
     static_assert(((bad_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1)) == 0, "");
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, bad_size,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
@@ -913,7 +913,7 @@ bool rights_drop_test() {
         { MX_RIGHT_READ | MX_RIGHT_WRITE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE },
         { MX_RIGHT_READ | MX_RIGHT_EXECUTE, MX_VM_FLAG_PERM_READ |  MX_VM_FLAG_PERM_EXECUTE },
     };
-    for (size_t i = 0; i < mxtl::count_of(test_rights); ++i) {
+    for (size_t i = 0; i < fbl::count_of(test_rights); ++i) {
         uint32_t right = test_rights[i][0];
         uint32_t perm = test_rights[i][1];
 
@@ -968,7 +968,7 @@ bool protect_test() {
         { MX_RIGHT_READ | MX_RIGHT_WRITE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE },
         { MX_RIGHT_READ | MX_RIGHT_EXECUTE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_EXECUTE },
     };
-    for (size_t i = 0; i < mxtl::count_of(test_rights); ++i) {
+    for (size_t i = 0; i < fbl::count_of(test_rights); ++i) {
         uint32_t right = test_rights[i][0];
         uint32_t perm = test_rights[i][1];
 
@@ -1028,7 +1028,7 @@ bool nested_region_perms_test() {
         { MX_VM_FLAG_CAN_MAP_EXECUTE, MX_VM_FLAG_PERM_EXECUTE },
     };
 
-    for (size_t i = 0; i < mxtl::count_of(test_perm); ++i) {
+    for (size_t i = 0; i < fbl::count_of(test_perm); ++i) {
         const uint32_t excluded_alloc_perm = test_perm[i][0];
         const uint32_t excluded_map_perm = test_perm[i][1];
 
@@ -1697,8 +1697,8 @@ bool protect_over_demand_paged_test() {
               MX_OK);
     EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
-    mxtl::atomic_uint8_t* target =
-        reinterpret_cast<mxtl::atomic_uint8_t*>(mapping_addr);
+    fbl::atomic_uint8_t* target =
+        reinterpret_cast<fbl::atomic_uint8_t*>(mapping_addr);
     target[0].store(5);
     target[size / 2].store(6);
     target[size - 1].store(7);
@@ -1742,8 +1742,8 @@ bool protect_large_uncommitted_test() {
     EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     // Make sure some pages exist
-    mxtl::atomic_uint8_t* target =
-        reinterpret_cast<mxtl::atomic_uint8_t*>(mapping_addr);
+    fbl::atomic_uint8_t* target =
+        reinterpret_cast<fbl::atomic_uint8_t*>(mapping_addr);
     target[0].store(5);
     target[size / 2].store(6);
     target[size - 1].store(7);
@@ -1791,8 +1791,8 @@ bool unmap_large_uncommitted_test() {
     EXPECT_EQ(mx_handle_close(vmo), MX_OK);
 
     // Make sure some pages exist
-    mxtl::atomic_uint8_t* target =
-        reinterpret_cast<mxtl::atomic_uint8_t*>(mapping_addr);
+    fbl::atomic_uint8_t* target =
+        reinterpret_cast<fbl::atomic_uint8_t*>(mapping_addr);
     target[0].store(5);
     target[size / 2].store(6);
     target[size - 1].store(7);

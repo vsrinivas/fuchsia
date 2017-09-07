@@ -54,13 +54,13 @@ mx_status_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
         return status;
     }
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_status_t result = InterruptEventDispatcher::Create(vector, options, &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle);
@@ -69,7 +69,7 @@ mx_status_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t op
         return MX_ERR_INVALID_ARGS;
     }
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -77,7 +77,7 @@ mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<InterruptDispatcher> interrupt;
+    fbl::RefPtr<InterruptDispatcher> interrupt;
     mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
     if (status != MX_OK)
         return status;
@@ -89,7 +89,7 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<InterruptDispatcher> interrupt;
+    fbl::RefPtr<InterruptDispatcher> interrupt;
     mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
     if (status != MX_OK)
         return status;
@@ -101,7 +101,7 @@ mx_status_t sys_interrupt_signal(mx_handle_t handle_value) {
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<InterruptDispatcher> interrupt;
+    fbl::RefPtr<InterruptDispatcher> interrupt;
     mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
     if (status != MX_OK)
         return status;
@@ -130,7 +130,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
 
     size = ROUNDUP_PAGE_SIZE(size);
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
     if (status != MX_OK)
         return status;
@@ -147,14 +147,14 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
     }
 
     // create a Vm Object dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
+    mx_status_t result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -163,7 +163,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -181,21 +181,21 @@ mx_status_t sys_vmo_create_physical(mx_handle_t hrsrc, uintptr_t paddr, size_t s
     size = ROUNDUP_PAGE_SIZE(size);
 
     // create a vm object
-    mxtl::RefPtr<VmObject> vmo;
+    fbl::RefPtr<VmObject> vmo;
     mx_status_t result = VmObjectPhysical::Create(paddr, size, &vmo);
     if (result != MX_OK) {
         return result;
     }
 
     // create a Vm Object dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
+    result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -204,7 +204,7 @@ mx_status_t sys_vmo_create_physical(mx_handle_t hrsrc, uintptr_t paddr, size_t s
     if (_out.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -254,7 +254,7 @@ mx_status_t sys_set_framebuffer_vmo(mx_handle_t hrsrc, mx_handle_t vmo_handle, u
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
-    mxtl::RefPtr<VmObjectDispatcher> vmo;
+    fbl::RefPtr<VmObjectDispatcher> vmo;
     status = up->GetDispatcher(vmo_handle, &vmo);
     if (status != MX_OK)
         return status;

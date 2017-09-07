@@ -13,11 +13,11 @@
 
 #include <async/loop.h>
 #include <mx/event.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/array.h>
-#include <mxtl/string.h>
-#include <mxtl/string_buffer.h>
-#include <mxtl/vector.h>
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
+#include <fbl/string.h>
+#include <fbl/string_buffer.h>
+#include <fbl/vector.h>
 #include <trace-reader/reader.h>
 #include <trace/handler.h>
 #include <unittest/unittest.h>
@@ -80,18 +80,18 @@ public:
         return disposition_;
     }
 
-    bool ReadRecords(mxtl::Vector<trace::Record>* out_records,
-                     mxtl::Vector<mxtl::String>* out_errors) {
+    bool ReadRecords(fbl::Vector<trace::Record>* out_records,
+                     fbl::Vector<fbl::String>* out_errors) {
         trace::TraceReader reader(
-            [out_records](trace::Record record) { out_records->push_back(mxtl::move(record)); },
-            [out_errors](mxtl::String error) { out_errors->push_back(mxtl::move(error)); });
+            [out_records](trace::Record record) { out_records->push_back(fbl::move(record)); },
+            [out_errors](fbl::String error) { out_errors->push_back(fbl::move(error)); });
         trace::Chunk chunk(reinterpret_cast<uint64_t*>(buffer_.get()),
                            buffer_bytes_written_ / 8u);
         if (buffer_bytes_written_ & 7u) {
-            out_errors->push_back(mxtl::String("Buffer contains extraneous bytes"));
+            out_errors->push_back(fbl::String("Buffer contains extraneous bytes"));
         }
         if (!reader.ReadRecords(chunk)) {
-            out_errors->push_back(mxtl::String("Trace data is corrupted"));
+            out_errors->push_back(fbl::String("Trace data is corrupted"));
         }
         return out_errors->is_empty();
     }
@@ -115,7 +115,7 @@ private:
     }
 
     async::Loop loop_;
-    mxtl::Array<uint8_t> buffer_;
+    fbl::Array<uint8_t> buffer_;
     bool trace_running_ = false;
     mx_status_t disposition_ = MX_ERR_INTERNAL;
     size_t buffer_bytes_written_ = 0u;
@@ -164,8 +164,8 @@ bool fixture_compare_records(const char* expected) {
 
     g_fixture->StopTracing(false);
 
-    mxtl::Vector<trace::Record> records;
-    mxtl::Vector<mxtl::String> errors;
+    fbl::Vector<trace::Record> records;
+    fbl::Vector<fbl::String> errors;
     EXPECT_TRUE(g_fixture->ReadRecords(&records, &errors), "read error");
 
     for (const auto& error : errors)
@@ -191,18 +191,18 @@ bool fixture_compare_records(const char* expected) {
                          "|(0x[0-9a-f]+)",
                          REG_EXTENDED | REG_NEWLINE));
 
-    mxtl::StringBuffer<16384u> buf;
+    fbl::StringBuffer<16384u> buf;
     for (const auto& record : records) {
-        mxtl::String str = record.ToString();
+        fbl::String str = record.ToString();
         const char* cur = str.c_str();
         while (*cur) {
             regmatch_t match[6]; // count must be 1 + number of parenthesized subexpressions
-            if (regexec(&regex, cur, mxtl::count_of(match), match, 0) != 0) {
+            if (regexec(&regex, cur, fbl::count_of(match), match, 0) != 0) {
                 buf.Append(cur, str.end() - cur);
                 break;
             }
             size_t offset = 0u;
-            for (size_t i = 1; i < mxtl::count_of(match); i++) {
+            for (size_t i = 1; i < fbl::count_of(match); i++) {
                 if (match[i].rm_so == -1)
                     continue;
                 buf.Append(cur, match[i].rm_so - offset);

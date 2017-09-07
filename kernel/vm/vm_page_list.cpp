@@ -9,7 +9,7 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 #include <trace.h>
 #include <vm/pmm.h>
 
@@ -78,9 +78,9 @@ status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
     // lookup the tree node that holds this page
     auto pln = list_.find(node_offset);
     if (!pln.IsValid()) {
-        mxtl::AllocChecker ac;
-        mxtl::unique_ptr<VmPageListNode> pl =
-            mxtl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<VmPageListNode> pl =
+            fbl::unique_ptr<VmPageListNode>(new (&ac) VmPageListNode(node_offset));
         if (!ac.check())
             return MX_ERR_NO_MEMORY;
 
@@ -88,7 +88,7 @@ status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
         __UNUSED auto status = pl->AddPage(p, index);
         DEBUG_ASSERT(status == MX_OK);
 
-        list_.insert(mxtl::move(pl));
+        list_.insert(fbl::move(pl));
     } else {
         pln->AddPage(p, index);
     }

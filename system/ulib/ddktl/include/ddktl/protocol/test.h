@@ -59,7 +59,7 @@
 //     }
 //
 //   private:
-//     mxtl::unique_ptr<ddk::TestProtocolProxy> proxy_;
+//     fbl::unique_ptr<ddk::TestProtocolProxy> proxy_;
 // };
 
 namespace ddk {

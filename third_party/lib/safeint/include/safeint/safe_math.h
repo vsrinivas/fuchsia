@@ -6,8 +6,8 @@
 #define BASE_NUMERICS_SAFE_MATH_H_
 
 #include <stddef.h>
-#include <mxtl/limits.h>
-#include <mxtl/type_support.h>
+#include <fbl/limits.h>
+#include <fbl/type_support.h>
 
 #include <safeint/safe_math_impl.h>
 
@@ -44,7 +44,7 @@ namespace internal {
 //     Do stuff...
 template <typename T>
 class CheckedNumeric {
-  static_assert(mxtl::numeric_limits<T>::is_specialized,
+  static_assert(fbl::numeric_limits<T>::is_specialized,
                 "Argument must have numeric_limits defined");
  public:
   typedef T type;
@@ -65,7 +65,7 @@ class CheckedNumeric {
   template <typename Src>
   CheckedNumeric(Src value)
       : state_(value) {
-    static_assert(mxtl::numeric_limits<Src>::is_specialized,
+    static_assert(fbl::numeric_limits<Src>::is_specialized,
                   "Argument must be numeric.");
   }
 
@@ -170,7 +170,7 @@ class CheckedNumeric {
   template <typename Src>
   static CheckedNumeric<T> cast(
       Src u,
-      typename mxtl::enable_if<mxtl::numeric_limits<Src>::is_specialized,
+      typename fbl::enable_if<fbl::numeric_limits<Src>::is_specialized,
                               int>::type = 0) {
     return u;
   }
@@ -178,7 +178,7 @@ class CheckedNumeric {
   template <typename Src>
   static CheckedNumeric<T> cast(
       const CheckedNumeric<Src>& u,
-      typename mxtl::enable_if<!mxtl::is_same<Src, T>::value, int>::type = 0) {
+      typename fbl::enable_if<!fbl::is_same<Src, T>::value, int>::type = 0) {
     return u;
   }
 
@@ -246,8 +246,8 @@ class CheckedNumeric {
   }                                                                           \
   /* Binary arithmetic operator for left CheckedNumeric and right numeric. */ \
   template <typename T, typename Src,                                         \
-            typename mxtl::enable_if<                                        \
-                mxtl::numeric_limits<Src>::is_specialized>::type* = nullptr> \
+            typename fbl::enable_if<                                        \
+                fbl::numeric_limits<Src>::is_specialized>::type* = nullptr> \
   CheckedNumeric<typename ArithmeticPromotion<T, Src>::type> operator OP(     \
       const CheckedNumeric<T>& lhs, Src rhs) {                                \
     typedef typename ArithmeticPromotion<T, Src>::type Promotion;             \
@@ -259,8 +259,8 @@ class CheckedNumeric {
   }                                                                           \
   /* Binary arithmetic operator for left numeric and right CheckedNumeric. */ \
   template <typename T, typename Src,                                         \
-            typename mxtl::enable_if<                                        \
-                mxtl::numeric_limits<Src>::is_specialized>::type* = nullptr> \
+            typename fbl::enable_if<                                        \
+                fbl::numeric_limits<Src>::is_specialized>::type* = nullptr> \
   CheckedNumeric<typename ArithmeticPromotion<T, Src>::type> operator OP(     \
       Src lhs, const CheckedNumeric<T>& rhs) {                                \
     typedef typename ArithmeticPromotion<T, Src>::type Promotion;             \

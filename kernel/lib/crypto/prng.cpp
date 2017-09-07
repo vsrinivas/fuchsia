@@ -13,7 +13,7 @@
 #include <lib/crypto/cryptolib.h>
 #include <magenta/compiler.h>
 #include <magenta/types.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #include <openssl/chacha.h>
 #include <pow2.h>
 
@@ -36,7 +36,7 @@ void PRNG::AddEntropy(const void* data, size_t size) {
     if (likely(is_thread_safe_)) {
         uint64_t total;
         {
-            mxtl::AutoLock guard(&lock_);
+            fbl::AutoLock guard(&lock_);
             AddEntropyInternal(data, size);
             total = total_entropy_added_;
         }
@@ -66,7 +66,7 @@ void PRNG::AddEntropyInternal(const void* data, size_t size) {
 void PRNG::Draw(void* out, size_t size) {
     DEBUG_ASSERT(out || size == 0);
     if (likely(is_thread_safe_)) {
-        mxtl::AutoLock guard(&lock_);
+        fbl::AutoLock guard(&lock_);
         if (unlikely(total_entropy_added_ < kMinEntropy)) {
             lock_.Release();
             mx_status_t status = event_wait(&ready_);

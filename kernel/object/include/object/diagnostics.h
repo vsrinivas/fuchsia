@@ -9,7 +9,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 class ProcessDispatcher;
 class VmAspace;
@@ -20,7 +20,7 @@ class VmAspace;
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
+mx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> aspace,
                             user_ptr<mx_info_maps_t> maps, size_t max,
                             size_t* actual, size_t* available);
 
@@ -30,7 +30,7 @@ mx_status_t GetVmAspaceMaps(mxtl::RefPtr<VmAspace> aspace,
 // have been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-mx_status_t GetVmAspaceVmos(mxtl::RefPtr<VmAspace> aspace,
+mx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace,
                             user_ptr<mx_info_vmo_t> vmos, size_t max,
                             size_t* actual, size_t* available);
 

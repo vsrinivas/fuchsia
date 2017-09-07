@@ -14,8 +14,8 @@
 #include <digest/merkle-tree.h>
 #include <fs/block-txn.h>
 #include <mxio/debug.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/limits.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/limits.h>
 
 #define MXDEBUG 0
 
@@ -29,7 +29,7 @@ namespace blobstore {
 // Number of blocks reserved for the Merkle Tree
 uint64_t MerkleTreeBlocks(const blobstore_inode_t& blobNode) {
     uint64_t size_merkle = MerkleTree::GetTreeLength(blobNode.blob_size);
-    return mxtl::roundup(size_merkle, kBlobstoreBlockSize) / kBlobstoreBlockSize;
+    return fbl::roundup(size_merkle, kBlobstoreBlockSize) / kBlobstoreBlockSize;
 }
 
 // Sanity check the metadata for the blobstore, given a maximum number of
@@ -83,7 +83,7 @@ mx_status_t blobstore_check_info(const blobstore_info_t* info, uint64_t max) {
             FS_TRACE_ERROR("blobstore: Not enough slices for data blocks\n");
             return MX_ERR_INVALID_ARGS;
         } else if (dat_blocks_allocated + DataStartBlock(*info) >
-                   mxtl::numeric_limits<uint32_t>::max()) {
+                   fbl::numeric_limits<uint32_t>::max()) {
             FS_TRACE_ERROR("blobstore: Data blocks overflow uint32\n");
             return MX_ERR_INVALID_ARGS;
         }

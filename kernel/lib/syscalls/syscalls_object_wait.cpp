@@ -20,13 +20,13 @@
 #include <object/process_dispatcher.h>
 #include <object/wait_state_observer.h>
 
-#include <mxtl/auto_lock.h>
-#include <mxtl/inline_array.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/auto_lock.h>
+#include <fbl/inline_array.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -105,14 +105,14 @@ mx_status_t sys_object_wait_many(user_ptr<mx_wait_item_t> _items, uint32_t count
     if (count > kMaxWaitHandleCount)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::AllocChecker ac;
-    mxtl::InlineArray<mx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
+    fbl::AllocChecker ac;
+    fbl::InlineArray<mx_wait_item_t, kWaitManyInlineCount> items(&ac, count);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
     if (_items.copy_array_from_user(items.get(), count) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
+    fbl::InlineArray<WaitStateObserver, kWaitManyInlineCount> wait_state_observers(&ac, count);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
@@ -174,7 +174,7 @@ mx_status_t sys_object_wait_async(mx_handle_t handle_value, mx_handle_t port_han
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     auto status = up->GetDispatcherWithRights(port_handle, MX_RIGHT_WRITE, &port);
     if (status != MX_OK)
         return status;

@@ -9,7 +9,7 @@
 #include <lib/crypto/entropy/collector.h>
 #include <lib/jitterentropy/jitterentropy.h>
 #include <magenta/types.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 
 namespace crypto {
 
@@ -52,7 +52,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(JitterentropyCollector);
 
     struct rand_data ec_;
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
     uint32_t mem_loops_, lfsr_loops_;
     bool use_raw_samples_;
 };

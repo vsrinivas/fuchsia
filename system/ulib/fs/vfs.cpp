@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <mxio/remoteio.h>
 #include <mxio/watcher.h>
-#include <mxtl/auto_call.h>
+#include <fbl/auto_call.h>
 
 #ifdef __Fuchsia__
 #include <threads.h>
@@ -17,7 +17,7 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mx/event.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 #endif
 
 #include "vfs-internal.h"
@@ -62,12 +62,12 @@ mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* d
     return MX_OK;
 }
 
-mx_status_t vfs_lookup(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+mx_status_t vfs_lookup(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                        const char* name, size_t len) {
     if (is_dot_dot(name, len)) {
         return MX_ERR_INVALID_ARGS;
     } else if (is_dot(name, len)) {
-        *out = mxtl::move(vn);
+        *out = fbl::move(vn);
         return MX_OK;
     }
     return vn->Lookup(out, name, len);
@@ -99,7 +99,7 @@ bool RemoteContainer::IsRemote() const {
 
 mx::channel RemoteContainer::DetachRemote(uint32_t &flags_) {
     flags_ &= ~V_FLAG_MOUNT_READY;
-    return mxtl::move(remote_);
+    return fbl::move(remote_);
 }
 
 // Access the remote handle if it's ready -- otherwise, return an error.
@@ -131,7 +131,7 @@ mx_handle_t RemoteContainer::GetRemote() const {
 
 void RemoteContainer::SetRemote(mx::channel remote) {
     MX_DEBUG_ASSERT(!remote_.is_valid());
-    remote_ = mxtl::move(remote);
+    remote_ = fbl::move(remote);
 }
 
 #endif
@@ -142,16 +142,16 @@ Vfs::Vfs() = default;
 Vfs::Vfs(Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
 #endif
 
-mx_status_t Vfs::Open(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
+mx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
                       const char* path, const char** pathout, uint32_t flags,
                       uint32_t mode) {
 #ifdef __Fuchsia__
-    mxtl::AutoLock lock(&vfs_lock_);
+    fbl::AutoLock lock(&vfs_lock_);
 #endif
-    return OpenLocked(mxtl::move(vndir), out, path, pathout, flags, mode);
+    return OpenLocked(fbl::move(vndir), out, path, pathout, flags, mode);
 }
 
-mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
+mx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
                             const char* path, const char** pathout, uint32_t flags,
                             uint32_t mode) {
     FS_TRACE(VFS, "VfsOpen: path='%s' flags=%d\n", path, flags);
@@ -169,7 +169,7 @@ mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
     }
 
     size_t len = strlen(path);
-    mxtl::RefPtr<Vnode> vn;
+    fbl::RefPtr<Vnode> vn;
 
     bool must_be_dir = false;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
@@ -199,7 +199,7 @@ mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
         vndir->Notify(path, len, VFS_WATCH_EVT_ADDED);
     } else {
     try_open:
-        r = vfs_lookup(mxtl::move(vndir), &vn, path, len);
+        r = vfs_lookup(fbl::move(vndir), &vn, path, len);
         if (r < 0) {
             return r;
         }
@@ -236,7 +236,7 @@ mx_status_t Vfs::OpenLocked(mxtl::RefPtr<Vnode> vndir, mxtl::RefPtr<Vnode>* out,
     return MX_OK;
 }
 
-mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len) {
+mx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, const char* path, size_t len) {
     bool must_be_dir;
     mx_status_t r;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != MX_OK) {
@@ -249,7 +249,7 @@ mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len)
 
     {
 #ifdef __Fuchsia__
-        mxtl::AutoLock lock(&vfs_lock_);
+        fbl::AutoLock lock(&vfs_lock_);
 #endif
         r = vndir->Unlink(path, len, must_be_dir);
     }
@@ -265,7 +265,7 @@ mx_status_t Vfs::Unlink(mxtl::RefPtr<Vnode> vndir, const char* path, size_t len)
 #define TOKEN_RIGHTS (MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER)
 
 void Vfs::TokenDiscard(mx::event* ios_token) {
-    mxtl::AutoLock lock(&vfs_lock_);
+    fbl::AutoLock lock(&vfs_lock_);
     if (ios_token->is_valid()) {
         // The token is nullified here to prevent the following race condition:
         // 1) Open
@@ -281,12 +281,12 @@ void Vfs::TokenDiscard(mx::event* ios_token) {
     }
 }
 
-mx_status_t Vfs::VnodeToToken(mxtl::RefPtr<Vnode> vn, mx::event* ios_token,
+mx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, mx::event* ios_token,
                               mx::event* out) {
     uint64_t vnode_cookie = reinterpret_cast<uint64_t>(vn.get());
     mx_status_t r;
 
-    mxtl::AutoLock lock(&vfs_lock_);
+    fbl::AutoLock lock(&vfs_lock_);
     if (ios_token->is_valid()) {
         // Token has already been set for this iostate
         if ((r = ios_token->duplicate(TOKEN_RIGHTS, out) != MX_OK)) {
@@ -304,12 +304,12 @@ mx_status_t Vfs::VnodeToToken(mxtl::RefPtr<Vnode> vn, mx::event* ios_token,
     } else if ((r = new_ios_token.set_cookie(mx_process_self(), vnode_cookie)) != MX_OK) {
         return r;
     }
-    *ios_token = mxtl::move(new_ios_token);
-    *out = mxtl::move(new_token);
+    *ios_token = fbl::move(new_ios_token);
+    *out = fbl::move(new_token);
     return MX_OK;
 }
 
-mx_status_t Vfs::TokenToVnode(mx::event token, mxtl::RefPtr<Vnode>* out) {
+mx_status_t Vfs::TokenToVnode(mx::event token, fbl::RefPtr<Vnode>* out) {
     uint64_t vcookie;
     mx_status_t r;
     if ((r = token.get_cookie(mx_process_self(), &vcookie)) < 0) {
@@ -322,11 +322,11 @@ mx_status_t Vfs::TokenToVnode(mx::event token, mxtl::RefPtr<Vnode>* out) {
         return MX_ERR_INVALID_ARGS;
     }
 
-    *out = mxtl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
+    *out = fbl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
     return MX_OK;
 }
 
-mx_status_t Vfs::Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
+mx_status_t Vfs::Rename(mx::event token, fbl::RefPtr<Vnode> oldparent,
                         const char* oldname, const char* newname) {
     // Local filesystem
     size_t oldlen = strlen(oldname);
@@ -349,10 +349,10 @@ mx_status_t Vfs::Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::RefPtr<fs::Vnode> newparent;
+    fbl::RefPtr<fs::Vnode> newparent;
     {
-        mxtl::AutoLock lock(&vfs_lock_);
-        if ((r = TokenToVnode(mxtl::move(token), &newparent)) != MX_OK) {
+        fbl::AutoLock lock(&vfs_lock_);
+        if ((r = TokenToVnode(fbl::move(token), &newparent)) != MX_OK) {
             return r;
         }
 
@@ -367,12 +367,12 @@ mx_status_t Vfs::Rename(mx::event token, mxtl::RefPtr<Vnode> oldparent,
     return MX_OK;
 }
 
-mx_status_t Vfs::Link(mx::event token, mxtl::RefPtr<Vnode> oldparent,
+mx_status_t Vfs::Link(mx::event token, fbl::RefPtr<Vnode> oldparent,
                       const char* oldname, const char* newname) {
-    mxtl::AutoLock lock(&vfs_lock_);
-    mxtl::RefPtr<fs::Vnode> newparent;
+    fbl::AutoLock lock(&vfs_lock_);
+    fbl::RefPtr<fs::Vnode> newparent;
     mx_status_t r;
-    if ((r = TokenToVnode(mxtl::move(token), &newparent)) != MX_OK) {
+    if ((r = TokenToVnode(fbl::move(token), &newparent)) != MX_OK) {
         return r;
     }
     // Local filesystem
@@ -399,7 +399,7 @@ mx_status_t Vfs::Link(mx::event token, mxtl::RefPtr<Vnode> oldparent,
     }
 
     // Look up the target vnode
-    mxtl::RefPtr<Vnode> target;
+    fbl::RefPtr<Vnode> target;
     if ((r = oldparent->Lookup(&target, oldname, oldlen)) < 0) {
         return r;
     }
@@ -411,7 +411,7 @@ mx_status_t Vfs::Link(mx::event token, mxtl::RefPtr<Vnode> oldparent,
     return MX_OK;
 }
 
-mx_handle_t Vfs::WaitForRemoteLocked(mxtl::RefPtr<Vnode> vn) {
+mx_handle_t Vfs::WaitForRemoteLocked(fbl::RefPtr<Vnode> vn) {
     mx_handle_t h = vn->WaitForRemote();
 
     if (h == MX_ERR_PEER_CLOSED) {
@@ -428,7 +428,7 @@ mx_handle_t Vfs::WaitForRemoteLocked(mxtl::RefPtr<Vnode> vn) {
 
 #endif  // idfdef __Fuchsia__
 
-ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
+ssize_t Vfs::Ioctl(fbl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size_t in_len,
                    void* out_buf, size_t out_len) {
     switch (op) {
 #ifdef __Fuchsia__
@@ -444,7 +444,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             return MX_ERR_INVALID_ARGS;
         }
         MountChannel h = MountChannel(*reinterpret_cast<const mx_handle_t*>(in_buf));
-        return Vfs::InstallRemote(vn, mxtl::move(h));
+        return Vfs::InstallRemote(vn, fbl::move(h));
     }
     case IOCTL_VFS_MOUNT_MKDIR_FS: {
         size_t namelen = in_len - sizeof(mount_mkdir_config_t);
@@ -456,7 +456,7 @@ ssize_t Vfs::Ioctl(mxtl::RefPtr<Vnode> vn, uint32_t op, const void* in_buf, size
             return MX_ERR_INVALID_ARGS;
         }
 
-        return Vfs::MountMkdir(mxtl::move(vn), config);
+        return Vfs::MountMkdir(fbl::move(vn), config);
     }
     case IOCTL_VFS_UNMOUNT_NODE: {
         if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
@@ -511,7 +511,7 @@ mx_status_t DirentFiller::Next(const char* name, size_t len, uint32_t type) {
 //
 // If a non-negative status is returned, the vnode at 'out' has been acquired.
 // Otherwise, no net deltas in acquires/releases occur.
-mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
+mx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, fbl::RefPtr<Vnode>* out,
                       const char* path, const char** pathout) {
     mx_status_t r;
 
@@ -556,7 +556,7 @@ mx_status_t Vfs::Walk(mxtl::RefPtr<Vnode> vn, mxtl::RefPtr<Vnode>* out,
             // traverse to the next segment
             size_t len = nextpath - path;
             nextpath++;
-            if ((r = vfs_lookup(mxtl::move(vn), &vn, path, len)) < 0) {
+            if ((r = vfs_lookup(fbl::move(vn), &vn, path, len)) < 0) {
                 return r;
             }
             path = nextpath;

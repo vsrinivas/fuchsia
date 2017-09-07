@@ -11,9 +11,9 @@
 
 #include <magenta/syscalls/object.h>
 #include <magenta/types.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <object/handle.h>
 
 template <typename T> struct DispatchTag;
@@ -49,7 +49,7 @@ class StateTracker;
 class StateObserver;
 class CookieJar;
 
-class Dispatcher : public mxtl::RefCounted<Dispatcher> {
+class Dispatcher : public fbl::RefCounted<Dispatcher> {
 public:
     Dispatcher();
     virtual ~Dispatcher();
@@ -101,29 +101,29 @@ private:
 
 // Dispatcher -> FooDispatcher
 template <typename T>
-mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
+fbl::RefPtr<T> DownCastDispatcher(fbl::RefPtr<Dispatcher>* disp) {
     return (likely(DispatchTag<T>::ID == (*disp)->get_type())) ?
-            mxtl::RefPtr<T>::Downcast(mxtl::move(*disp)) :
+            fbl::RefPtr<T>::Downcast(fbl::move(*disp)) :
             nullptr;
 }
 
 // Dispatcher -> Dispatcher
 template <>
-inline mxtl::RefPtr<Dispatcher> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
-    return mxtl::move(*disp);
+inline fbl::RefPtr<Dispatcher> DownCastDispatcher(fbl::RefPtr<Dispatcher>* disp) {
+    return fbl::move(*disp);
 }
 
 // const Dispatcher -> const FooDispatcher
 template <typename T>
-mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<const Dispatcher>* disp) {
-    static_assert(mxtl::is_const<T>::value, "");
-    return (likely(DispatchTag<typename mxtl::remove_const<T>::type>::ID == (*disp)->get_type())) ?
-            mxtl::RefPtr<T>::Downcast(mxtl::move(*disp)) :
+fbl::RefPtr<T> DownCastDispatcher(fbl::RefPtr<const Dispatcher>* disp) {
+    static_assert(fbl::is_const<T>::value, "");
+    return (likely(DispatchTag<typename fbl::remove_const<T>::type>::ID == (*disp)->get_type())) ?
+            fbl::RefPtr<T>::Downcast(fbl::move(*disp)) :
             nullptr;
 }
 
 // const Dispatcher -> const Dispatcher
 template <>
-inline mxtl::RefPtr<const Dispatcher> DownCastDispatcher(mxtl::RefPtr<const Dispatcher>* disp) {
-    return mxtl::move(*disp);
+inline fbl::RefPtr<const Dispatcher> DownCastDispatcher(fbl::RefPtr<const Dispatcher>* disp) {
+    return fbl::move(*disp);
 }

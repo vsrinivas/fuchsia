@@ -10,9 +10,9 @@
 
 #include <fs/trace.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <magenta/device/device.h>
 
 #include "minfs.h"
@@ -54,9 +54,9 @@ int Bcache::Sync() {
     return fsync(fd_);
 }
 
-mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax));
+mx_status_t Bcache::Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<Bcache> bc(new (&ac) Bcache(fd, blockmax));
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;
     }
@@ -77,7 +77,7 @@ mx_status_t Bcache::Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t block
     }
 #endif
 
-    *out = mxtl::move(bc);
+    *out = fbl::move(bc);
     return MX_OK;
 }
 

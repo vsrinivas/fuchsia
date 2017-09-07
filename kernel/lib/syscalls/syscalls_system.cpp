@@ -51,7 +51,7 @@ static mx_status_t identity_page_allocate(void** result_addr) {
     // mapped since all Kernel Virtual Addresses might be out of range of the
     // physical address space. For this reason, we need to make a new address
     // space.
-    mxtl::RefPtr<VmAspace> identity_aspace =
+    fbl::RefPtr<VmAspace> identity_aspace =
             VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "mexec identity");
     if (!identity_aspace)
         return MX_ERR_INTERNAL;
@@ -90,13 +90,13 @@ static mx_status_t vmo_coalesce_pages(mx_handle_t vmo_hdl, const size_t extra_by
     if (!size) return MX_ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mxtl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
+    fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
     mx_status_t st =
         up->GetDispatcherWithRights(vmo_hdl, MX_RIGHT_READ, &vmo_dispatcher);
     if (st != MX_OK)
         return st;
 
-    mxtl::RefPtr<VmObject> vmo = vmo_dispatcher->vmo();
+    fbl::RefPtr<VmObject> vmo = vmo_dispatcher->vmo();
 
     const size_t vmo_size = vmo->size();
 
@@ -220,8 +220,8 @@ static mx_status_t bootdata_append_cmdline(user_ptr<const char> _cmdlinebuf,
 
     // Allocate a buffer large enough to accomodate the whole command line.
     // Use brace initializers to initialize this buffer to 0.
-    mxtl::AllocChecker ac;
-    auto deleter = mxtl::unique_ptr<char[]>(new (&ac) char[CMDLINE_MAX]{});
+    fbl::AllocChecker ac;
+    auto deleter = fbl::unique_ptr<char[]>(new (&ac) char[CMDLINE_MAX]{});
     char* buffer = deleter.get();
     if (!ac.check()) {
         return MX_ERR_NO_MEMORY;

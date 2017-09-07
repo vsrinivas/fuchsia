@@ -5,8 +5,8 @@
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <unittest/unittest.h>
 
 namespace bitmap {

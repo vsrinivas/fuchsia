@@ -15,8 +15,8 @@
 #include <mx/thread.h>
 #include <mx/vmar.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/type_support.h>
+#include <fbl/algorithm.h>
+#include <fbl/type_support.h>
 
 #include <magenta/process.h>
 #include <magenta/syscalls/debug.h>
@@ -78,22 +78,22 @@ static bool abs_then_rel() {
 
     auto job = make_job();
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, mxtl::count_of(policy)), MX_OK);
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, fbl::count_of(policy)), MX_OK);
 
     // A contradictory policy should fail.
     policy[0].policy = MX_POL_ACTION_EXCEPTION | MX_POL_ACTION_DENY;
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, mxtl::count_of(policy)), MX_ERR_ALREADY_EXISTS);
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, fbl::count_of(policy)), MX_ERR_ALREADY_EXISTS);
 
     // The same again will succeed.
     policy[0].policy = MX_POL_ACTION_KILL;
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, mxtl::count_of(policy)), MX_OK);
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, policy, fbl::count_of(policy)), MX_OK);
 
     // A contradictory relative policy will succeed, but is a no-op
     policy[0].policy = MX_POL_ACTION_ALLOW;
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_RELATIVE, MX_JOB_POL_BASIC, policy, mxtl::count_of(policy)), MX_OK);
+        MX_JOB_POL_RELATIVE, MX_JOB_POL_BASIC, policy, fbl::count_of(policy)), MX_OK);
 
     mx_policy_basic_t more[] = {
         { MX_POL_NEW_CHANNEL, MX_POL_ACTION_ALLOW | MX_POL_ACTION_EXCEPTION },
@@ -102,7 +102,7 @@ static bool abs_then_rel() {
     // An additional absolute policy that doesn't contradict existing
     // policy can be added.
     EXPECT_EQ(job.set_policy(
-        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, more, mxtl::count_of(more)), MX_OK);
+        MX_JOB_POL_ABSOLUTE, MX_JOB_POL_BASIC, more, fbl::count_of(more)), MX_OK);
 
     END_TEST;
 }
@@ -125,21 +125,21 @@ static bool invalid_calls(uint32_t options) {
     };
 
     EXPECT_EQ(job.set_policy(
-        options, MX_JOB_POL_BASIC, policy2, mxtl::count_of(policy2)), MX_ERR_INVALID_ARGS);
+        options, MX_JOB_POL_BASIC, policy2, fbl::count_of(policy2)), MX_ERR_INVALID_ARGS);
 
     mx_policy_basic_t policy3[] = {
         { MX_POL_BAD_HANDLE, 100001u },
     };
 
     EXPECT_EQ(job.set_policy(
-        options, MX_JOB_POL_BASIC, policy3, mxtl::count_of(policy2)), MX_ERR_NOT_SUPPORTED);
+        options, MX_JOB_POL_BASIC, policy3, fbl::count_of(policy2)), MX_ERR_NOT_SUPPORTED);
 
     // The job will still accept a valid combination:
     mx_policy_basic_t policy4[] = {
         { MX_POL_BAD_HANDLE, MX_POL_ACTION_KILL } };
 
     EXPECT_EQ(job.set_policy(
-        options, MX_JOB_POL_BASIC, policy4, mxtl::count_of(policy4)), MX_OK);
+        options, MX_JOB_POL_BASIC, policy4, fbl::count_of(policy4)), MX_OK);
 
     return true;
 }
@@ -184,7 +184,7 @@ static bool enforce_deny_event() {
     BEGIN_TEST;
 
     mx_policy_basic_t policy[] = { { MX_POL_NEW_EVENT, MX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_EVENT,
+    test_invoking_policy(policy, fbl::count_of(policy), MINIP_CMD_CREATE_EVENT,
                          MX_ERR_ACCESS_DENIED);
 
     END_TEST;
@@ -194,7 +194,7 @@ static bool enforce_deny_channel() {
     BEGIN_TEST;
 
     mx_policy_basic_t policy[] = { { MX_POL_NEW_CHANNEL, MX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_CHANNEL,
+    test_invoking_policy(policy, fbl::count_of(policy), MINIP_CMD_CREATE_CHANNEL,
                          MX_ERR_ACCESS_DENIED);
 
     END_TEST;
@@ -204,7 +204,7 @@ static bool enforce_deny_any() {
     BEGIN_TEST;
 
     mx_policy_basic_t policy[] = { { MX_POL_NEW_ANY, MX_POL_ACTION_DENY } };
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_EVENT,
+    test_invoking_policy(policy, fbl::count_of(policy), MINIP_CMD_CREATE_EVENT,
                          MX_ERR_ACCESS_DENIED);
 
     END_TEST;
@@ -214,7 +214,7 @@ static bool enforce_allow_any() {
     BEGIN_TEST;
 
     mx_policy_basic_t policy[] = { { MX_POL_NEW_ANY, MX_POL_ACTION_ALLOW } };
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_EVENT,
+    test_invoking_policy(policy, fbl::count_of(policy), MINIP_CMD_CREATE_EVENT,
                          MX_OK);
 
     END_TEST;
@@ -227,9 +227,9 @@ static bool enforce_deny_but_event() {
         { MX_POL_NEW_ANY, MX_POL_ACTION_DENY },
         { MX_POL_NEW_EVENT, MX_POL_ACTION_ALLOW }
     };
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_EVENT,
+    test_invoking_policy(policy, fbl::count_of(policy), MINIP_CMD_CREATE_EVENT,
                          MX_OK);
-    test_invoking_policy(policy, mxtl::count_of(policy), MINIP_CMD_CREATE_CHANNEL,
+    test_invoking_policy(policy, fbl::count_of(policy), MINIP_CMD_CREATE_CHANNEL,
                          MX_ERR_ACCESS_DENIED);
 
     END_TEST;
@@ -355,7 +355,7 @@ static bool test_exception_on_new_event_and_deny() {
         { MX_POL_NEW_EVENT, MX_POL_ACTION_DENY | MX_POL_ACTION_EXCEPTION },
     };
     test_invoking_policy_with_exception(
-        policy, mxtl::count_of(policy), MINIP_CMD_CREATE_EVENT, MX_ERR_ACCESS_DENIED);
+        policy, fbl::count_of(policy), MINIP_CMD_CREATE_EVENT, MX_ERR_ACCESS_DENIED);
 
     END_TEST;
 }
@@ -367,7 +367,7 @@ static bool test_exception_on_new_event_but_allow() {
         { MX_POL_NEW_EVENT, MX_POL_ACTION_ALLOW | MX_POL_ACTION_EXCEPTION },
     };
     test_invoking_policy_with_exception(
-        policy, mxtl::count_of(policy), MINIP_CMD_CREATE_EVENT, MX_OK);
+        policy, fbl::count_of(policy), MINIP_CMD_CREATE_EVENT, MX_OK);
 
     END_TEST;
 }
@@ -384,10 +384,10 @@ static bool test_error_on_bad_handle() {
             { MX_POL_BAD_HANDLE, action },
         };
         test_invoking_policy(
-            policy, mxtl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_CLOSED,
+            policy, fbl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_CLOSED,
             MX_ERR_BAD_HANDLE);
         test_invoking_policy(
-            policy, mxtl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED,
+            policy, fbl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED,
             MX_ERR_BAD_HANDLE);
     }
 
@@ -406,10 +406,10 @@ static bool test_exception_on_bad_handle() {
             { MX_POL_BAD_HANDLE, action | MX_POL_ACTION_EXCEPTION },
         };
         test_invoking_policy_with_exception(
-            policy, mxtl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_CLOSED,
+            policy, fbl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_CLOSED,
             MX_ERR_BAD_HANDLE);
         test_invoking_policy_with_exception(
-            policy, mxtl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED,
+            policy, fbl::count_of(policy), MINIP_CMD_USE_BAD_HANDLE_TRANSFERRED,
             MX_ERR_BAD_HANDLE);
     }
 

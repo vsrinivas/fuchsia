@@ -121,7 +121,7 @@ mx_status_t MinfsChecker::CheckDirectory(minfs_inode_t* inode, ino_t ino,
     uint32_t dirent_count = 0;
 
     mx_status_t status;
-    mxtl::RefPtr<VnodeMinfs> vn;
+    fbl::RefPtr<VnodeMinfs> vn;
     if ((status = VnodeMinfs::AllocateHollow(fs_.get(), &vn)) != MX_OK) {
         return status;
     }
@@ -352,7 +352,7 @@ mx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
         n = next_n;
     }
     if (next_blk) {
-        unsigned max_blocks = mxtl::roundup(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
+        unsigned max_blocks = fbl::roundup(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
         if (next_blk > max_blocks) {
             FS_TRACE_WARN("check: ino#%u: filesize too small\n", ino);
             conforming_ = false;
@@ -489,7 +489,7 @@ mx_status_t MinfsChecker::CheckAllocatedCounts() const {
 MinfsChecker::MinfsChecker()
     : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {};
 
-mx_status_t MinfsChecker::Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
+mx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info) {
     links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);
     links_[0] = -1;
 
@@ -504,14 +504,14 @@ mx_status_t MinfsChecker::Init(mxtl::unique_ptr<Bcache> bc, const minfs_info_t* 
         return status;
     }
     Minfs* fs;
-    if ((status = Minfs::Create(&fs, mxtl::move(bc), info)) < 0) {
+    if ((status = Minfs::Create(&fs, fbl::move(bc), info)) < 0) {
         return status;
     }
     fs_.reset(fs);
     return MX_OK;
 }
 
-mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
+mx_status_t minfs_check(fbl::unique_ptr<Bcache> bc) {
     mx_status_t status;
 
     char data[kMinfsBlockSize];
@@ -526,7 +526,7 @@ mx_status_t minfs_check(mxtl::unique_ptr<Bcache> bc) {
     }
 
     MinfsChecker chk;
-    if ((status = chk.Init(mxtl::move(bc), info)) != MX_OK) {
+    if ((status = chk.Init(fbl::move(bc), info)) != MX_OK) {
         return status;
     }
 

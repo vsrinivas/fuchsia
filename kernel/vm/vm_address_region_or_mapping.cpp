@@ -11,13 +11,13 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/vm.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/vm_aspace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
@@ -56,20 +56,20 @@ bool VmAddressRegionOrMapping::IsAliveLocked() const {
     return state_ == LifeCycleState::ALIVE;
 }
 
-mxtl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
+fbl::RefPtr<VmAddressRegion> VmAddressRegionOrMapping::as_vm_address_region() {
     canary_.Assert();
     if (is_mapping()) {
         return nullptr;
     }
-    return mxtl::RefPtr<VmAddressRegion>(static_cast<VmAddressRegion*>(this));
+    return fbl::RefPtr<VmAddressRegion>(static_cast<VmAddressRegion*>(this));
 }
 
-mxtl::RefPtr<VmMapping> VmAddressRegionOrMapping::as_vm_mapping() {
+fbl::RefPtr<VmMapping> VmAddressRegionOrMapping::as_vm_mapping() {
     canary_.Assert();
     if (!is_mapping()) {
         return nullptr;
     }
-    return mxtl::RefPtr<VmMapping>(static_cast<VmMapping*>(this));
+    return fbl::RefPtr<VmMapping>(static_cast<VmMapping*>(this));
 }
 
 bool VmAddressRegionOrMapping::is_valid_mapping_flags(uint arch_mmu_flags) {

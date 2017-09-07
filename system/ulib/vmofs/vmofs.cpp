@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
 #include <magenta/syscalls.h>
 
 namespace vmofs {
@@ -86,7 +86,7 @@ mx_status_t VnodeFile::Getattr(vnattr_t* attr) {
     attr->mode = V_TYPE_FILE | V_IRUSR;
     attr->size = length_;
     attr->blksize = kVmofsBlksize;
-    attr->blkcount = mxtl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
     return MX_OK;
 }
@@ -125,10 +125,10 @@ mx_status_t VnodeFile::GetHandles(uint32_t flags, mx_handle_t* hnds,
 
 // VnodeDir --------------------------------------------------------------------
 
-VnodeDir::VnodeDir(mxtl::Array<mxtl::StringPiece> names,
-                   mxtl::Array<mxtl::RefPtr<Vnode>> children)
-    : names_(mxtl::move(names)),
-      children_(mxtl::move(children)) {
+VnodeDir::VnodeDir(fbl::Array<fbl::StringPiece> names,
+                   fbl::Array<fbl::RefPtr<Vnode>> children)
+    : names_(fbl::move(names)),
+      children_(fbl::move(children)) {
     MX_DEBUG_ASSERT(names_.size() == children_.size());
 }
 
@@ -142,9 +142,9 @@ mx_status_t VnodeDir::Open(uint32_t flags) {
     return MX_OK;
 }
 
-mx_status_t VnodeDir::Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
-    mxtl::StringPiece value(name, len);
-    auto* it = mxtl::lower_bound(names_.begin(), names_.end(), value);
+mx_status_t VnodeDir::Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) {
+    fbl::StringPiece value(name, len);
+    auto* it = fbl::lower_bound(names_.begin(), names_.end(), value);
     if (it == names_.end() || *it != value) {
         return MX_ERR_NOT_FOUND;
     }
@@ -156,7 +156,7 @@ mx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
     attr->blksize = kVmofsBlksize;
-    attr->blkcount = mxtl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
+    attr->blkcount = fbl::roundup(attr->size, kVmofsBlksize) / VNATTR_BLKSIZE;
     attr->nlink = 1;
     return MX_OK;
 }
@@ -173,7 +173,7 @@ mx_status_t VnodeDir::Readdir(void* cookie, void* data, size_t len) {
     }
 
     for (size_t i = c->last_id - 2; i < children_.size(); ++i) {
-        mxtl::StringPiece name = names_[i];
+        fbl::StringPiece name = names_[i];
         const auto& child = children_[i];
         uint32_t vtype = child->GetVType();
         if ((r = df.Next(name.data(), name.length(), VTYPE_TO_DTYPE(vtype))) != MX_OK) {

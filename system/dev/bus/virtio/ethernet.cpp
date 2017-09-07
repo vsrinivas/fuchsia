@@ -13,11 +13,11 @@
 #include <magenta/assert.h>
 #include <magenta/status.h>
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 #include <pretty/hexdump.h>
 #include <virtio/net.h>
 #include <virtio/virtio.h>
@@ -45,7 +45,7 @@ const size_t kL1EthHdrLen = 26;
 // The goal here is to allocate single-page I/O buffers.
 const size_t kFrameSize = sizeof(virtio_net_hdr_t) + kL1EthHdrLen + kVirtioMtu;
 const size_t kFramesInBuf = PAGE_SIZE / kFrameSize;
-const size_t kNumIoBufs = mxtl::roundup(kBacklog * 2, kFramesInBuf) / kFramesInBuf;
+const size_t kNumIoBufs = fbl::roundup(kBacklog * 2, kFramesInBuf) / kFramesInBuf;
 
 const uint16_t kRxId = 0u;
 const uint16_t kTxId = 1u;
@@ -60,7 +60,7 @@ void virtio_net_unbind(void* ctx) {
 }
 
 void virtio_net_release(void* ctx) {
-    mxtl::unique_ptr<virtio::EthernetDevice> eth(static_cast<virtio::EthernetDevice*>(ctx));
+    fbl::unique_ptr<virtio::EthernetDevice> eth(static_cast<virtio::EthernetDevice*>(ctx));
     eth->Release();
 }
 
@@ -109,10 +109,10 @@ ethmac_protocol_ops_t kProtoOps = {
 };
 
 // I/O buffer helpers
-mx_status_t InitBuffers(mxtl::unique_ptr<io_buffer_t[]>* out) {
+mx_status_t InitBuffers(fbl::unique_ptr<io_buffer_t[]>* out) {
     mx_status_t rc;
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<io_buffer_t[]> bufs(new (&ac) io_buffer_t[kNumIoBufs]);
     if (!ac.check()) {
         VIRTIO_ERROR("out of memory!\n");
         return MX_ERR_NO_MEMORY;
@@ -125,11 +125,11 @@ mx_status_t InitBuffers(mxtl::unique_ptr<io_buffer_t[]>* out) {
             return rc;
         }
     }
-    *out = mxtl::move(bufs);
+    *out = fbl::move(bufs);
     return MX_OK;
 }
 
-void ReleaseBuffers(mxtl::unique_ptr<io_buffer_t[]> bufs) {
+void ReleaseBuffers(fbl::unique_ptr<io_buffer_t[]> bufs) {
     if (!bufs) {
         return;
     }
@@ -188,7 +188,7 @@ mx_status_t EthernetDevice::Init() {
         mtx_init(&tx_lock_, mtx_plain) != thrd_success) {
         return MX_ERR_NO_RESOURCES;
     }
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
 
     // Reset the device and read our configuration
     Reset();
@@ -204,7 +204,7 @@ mx_status_t EthernetDevice::Init() {
     // TODO(aarongreen): Check features bits and ack/nak them
 
     // Plan to clean up unless everything goes right.
-    auto cleanup = mxtl::MakeAutoCall([this]() { Release(); });
+    auto cleanup = fbl::MakeAutoCall([this]() { Release(); });
 
     // Allocate I/O buffers and virtqueues.
     uint16_t num_descs = static_cast<uint16_t>(kBacklog & 0xffff);
@@ -265,13 +265,13 @@ mx_status_t EthernetDevice::Init() {
 
 void EthernetDevice::Release() {
     LTRACE_ENTRY;
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
     ReleaseLocked();
 }
 
 void EthernetDevice::ReleaseLocked() {
     ifc_ = nullptr;
-    ReleaseBuffers(mxtl::move(bufs_));
+    ReleaseBuffers(fbl::move(bufs_));
     Device::Release();
 }
 
@@ -279,7 +279,7 @@ void EthernetDevice::IrqRingUpdate() {
     LTRACE_ENTRY;
     // Lock to prevent changes to ifc_.
     {
-        mxtl::AutoLock lock(&state_lock_);
+        fbl::AutoLock lock(&state_lock_);
         if (!ifc_) {
             return;
         }
@@ -325,7 +325,7 @@ void EthernetDevice::IrqRingUpdate() {
 
 void EthernetDevice::IrqConfigChange() {
     LTRACE_ENTRY;
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
     if (!ifc_) {
         return;
     }
@@ -340,7 +340,7 @@ mx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
     if (options) {
         return MX_ERR_INVALID_ARGS;
     }
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
     if (info) {
         // TODO(aarongreen): Add info->features = GetFeatures();
         info->mtu = kVirtioMtu;
@@ -351,7 +351,7 @@ mx_status_t EthernetDevice::Query(uint32_t options, ethmac_info_t* info) {
 
 void EthernetDevice::Stop() {
     LTRACE_ENTRY;
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
     ifc_ = nullptr;
 }
 
@@ -360,7 +360,7 @@ mx_status_t EthernetDevice::Start(ethmac_ifc_t* ifc, void* cookie) {
     if (!ifc) {
         return MX_ERR_INVALID_ARGS;
     }
-    mxtl::AutoLock lock(&state_lock_);
+    fbl::AutoLock lock(&state_lock_);
     if (!bufs_ || ifc_) {
         return MX_ERR_BAD_STATE;
     }
@@ -378,7 +378,7 @@ void EthernetDevice::Send(uint32_t options, void* data, size_t length) {
         return;
     }
 
-    mxtl::AutoLock lock(&tx_lock_);
+    fbl::AutoLock lock(&tx_lock_);
 
     // Flush outstanding descriptors.  Ring::IrqRingUpdate will call this lambda
     // on each sent tx_buffer, allowing us to reclaim them.

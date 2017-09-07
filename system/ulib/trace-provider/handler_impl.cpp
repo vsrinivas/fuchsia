@@ -8,14 +8,14 @@
 #include <magenta/syscalls.h>
 
 #include <mx/vmar.h>
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 
 namespace trace {
 namespace internal {
 
 TraceHandlerImpl::TraceHandlerImpl(void* buffer, size_t buffer_num_bytes,
                                    mx::eventpair fence)
-    : buffer_(buffer), buffer_num_bytes_(buffer_num_bytes), fence_(mxtl::move(fence)) {}
+    : buffer_(buffer), buffer_num_bytes_(buffer_num_bytes), fence_(fbl::move(fence)) {}
 
 TraceHandlerImpl::~TraceHandlerImpl() {
     mx_status_t status = mx::vmar::root_self().unmap(
@@ -41,7 +41,7 @@ mx_status_t TraceHandlerImpl::StartEngine(async_t* async,
         return status;
 
     auto handler = new TraceHandlerImpl(reinterpret_cast<void*>(buffer_ptr),
-                                        buffer_num_bytes, mxtl::move(fence));
+                                        buffer_num_bytes, fbl::move(fence));
     status = trace_start_engine(async, handler,
                                 handler->buffer_, handler->buffer_num_bytes_);
     if (status != MX_OK) {

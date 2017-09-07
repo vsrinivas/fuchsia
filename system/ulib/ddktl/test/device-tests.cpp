@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <ddktl/device.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 //#define TEST_WILL_NOT_COMPILE 1
@@ -86,8 +86,8 @@ template <typename T>
 static bool do_test() {
     BEGIN_TEST;
 
-    mxtl::AllocChecker ac;
-    auto dev = mxtl::unique_ptr<T>(new (&ac) T);
+    fbl::AllocChecker ac;
+    auto dev = fbl::unique_ptr<T>(new (&ac) T);
     ASSERT_TRUE(ac.check(), "");
 
     END_TEST;
@@ -182,8 +182,8 @@ struct TestDispatch : public ddk::FullDevice<TestDispatch> {
 static bool test_dispatch() {
     BEGIN_TEST;
 
-    mxtl::AllocChecker ac;
-    auto dev = mxtl::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
+    fbl::AllocChecker ac;
+    auto dev = fbl::unique_ptr<TestDispatch>(new (&ac) TestDispatch);
     ASSERT_TRUE(ac.check(), "");
 
     // Since we're not adding the device to devmgr, we don't have a valid mx_device_t.

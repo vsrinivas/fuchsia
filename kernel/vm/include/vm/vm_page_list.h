@@ -8,14 +8,14 @@
 
 #include <err.h>
 #include <kernel/vm.h>
-#include <mxtl/canary.h>
-#include <mxtl/intrusive_wavl_tree.h>
-#include <mxtl/macros.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/canary.h>
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/macros.h>
+#include <fbl/unique_ptr.h>
 
 struct vm_page;
 
-class VmPageListNode final : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<VmPageListNode>> {
+class VmPageListNode final : public fbl::WAVLTreeContainable<fbl::unique_ptr<VmPageListNode>> {
 public:
     explicit VmPageListNode(uint64_t offset);
     ~VmPageListNode();
@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    mxtl::Canary<mxtl::magic("PLST")> canary_;
+    fbl::Canary<fbl::magic("PLST")> canary_;
 
     uint64_t obj_offset_ = 0;
     vm_page* pages_[kPageFanOut] = {};
@@ -192,5 +192,5 @@ public:
     size_t FreeAllPages();
 
 private:
-    mxtl::WAVLTree<uint64_t, mxtl::unique_ptr<VmPageListNode>> list_;
+    fbl::WAVLTree<uint64_t, fbl::unique_ptr<VmPageListNode>> list_;
 };

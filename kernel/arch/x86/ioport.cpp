@@ -19,8 +19,8 @@
 #include <malloc.h>
 #include <string.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
 
 void x86_reset_tss_io_bitmap(void) {
     DEBUG_ASSERT(arch_ints_disabled());
@@ -104,12 +104,12 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
     if ((port + len < port) || (port + len > IO_BITMAP_BITS))
         return MX_ERR_INVALID_ARGS;
 
-    mxtl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
+    fbl::unique_ptr<bitmap::RleBitmap> optimistic_bitmap;
     if (!bitmap_) {
         // Optimistically allocate a bitmap structure if we don't have one, and
         // we'll see if we actually need this allocation later.  In the common
         // case, when we make the allocation we will use it.
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         optimistic_bitmap.reset(new (&ac) bitmap::RleBitmap());
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;
@@ -122,8 +122,8 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
 
     // Optimistically allocate an element for the bitmap, in case we need one.
     {
-        mxtl::AllocChecker ac;
-        bitmap_freelist.push_back(mxtl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
+        fbl::AllocChecker ac;
+        bitmap_freelist.push_back(fbl::unique_ptr<bitmap::RleBitmapElement>(new (&ac) bitmap::RleBitmapElement()));
         if (!ac.check()) {
             return MX_ERR_NO_MEMORY;
         }
@@ -137,7 +137,7 @@ int IoBitmap::SetIoBitmap(uint32_t port, uint32_t len, bool enable) {
         AutoSpinLock guard(&lock_);
 
         if (!bitmap_) {
-            bitmap_ = mxtl::move(optimistic_bitmap);
+            bitmap_ = fbl::move(optimistic_bitmap);
         }
         DEBUG_ASSERT(bitmap_);
 

@@ -7,8 +7,8 @@
 #include <ddk/protocol/block.h>
 #include <inttypes.h>
 #include <magenta/compiler.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -302,8 +302,8 @@ static void ScatterGatherHelper(const iotxn_t *txn, callback callback_new_run) {
             run_len = 0;
         }
 
-        run_len += mxtl::min(PAGE_SIZE - page_offset, remaining_len);
-        remaining_len -= mxtl::min(PAGE_SIZE - page_offset, remaining_len);
+        run_len += fbl::min(PAGE_SIZE - page_offset, remaining_len);
+        remaining_len -= fbl::min(PAGE_SIZE - page_offset, remaining_len);
         offset += PAGE_SIZE - page_offset;
     }
 
@@ -319,7 +319,7 @@ static void ScatterGatherHelper(const iotxn_t *txn, callback callback_new_run) {
 void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     LTRACEF("txn %p, pflags %#x\n", txn, txn->pflags);
 
-    mxtl::AutoLock lock(&lock_);
+    fbl::AutoLock lock(&lock_);
 
     bool write = (txn->opcode == IOTXN_OP_WRITE);
 
@@ -336,7 +336,7 @@ void BlockDevice::QueueReadWriteTxn(iotxn_t* txn) {
     }
 
     // constrain to device capacity
-    txn->length = mxtl::min(txn->length, GetSize() - txn->offset);
+    txn->length = fbl::min(txn->length, GetSize() - txn->offset);
     if (txn->length == 0) {
         iotxn_complete(txn, MX_OK, 0);
         return;

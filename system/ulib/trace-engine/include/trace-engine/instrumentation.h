@@ -167,7 +167,7 @@ mx_status_t trace_unregister_observer(mx_handle_t event);
 __END_CDECLS
 
 #ifdef __cplusplus
-#include <mxtl/macros.h>
+#include <fbl/macros.h>
 
 namespace trace {
 

@@ -6,13 +6,13 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/intrusive_hash_table.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/type_support.h>
-#include <mxtl/unique_free_ptr.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/macros.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/type_support.h>
+#include <fbl/unique_free_ptr.h>
 
 #include <magenta/types.h>
 
@@ -195,7 +195,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
     friend class BlockNode;
 
-    static mx_status_t Create(mxtl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax);
+    static mx_status_t Create(fbl::unique_ptr<Bcache>* out, int fd, uint32_t blockmax);
 
     // Raw block read functions.
     // These do not track blocks (or attempt to access the block cache)

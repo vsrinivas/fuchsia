@@ -12,7 +12,7 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 
-#include <mxtl/auto_lock.h>
+#include <fbl/auto_lock.h>
 
 #include "vc.h"
 

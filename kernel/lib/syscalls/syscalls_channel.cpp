@@ -17,13 +17,13 @@
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 
-#include <mxtl/algorithm.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 #include "syscalls_priv.h"
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -39,7 +39,7 @@ mx_status_t sys_channel_create(
     if (res != MX_OK)
         return res;
 
-    mxtl::RefPtr<Dispatcher> mpd0, mpd1;
+    fbl::RefPtr<Dispatcher> mpd0, mpd1;
     mx_rights_t rights;
     mx_status_t result = ChannelDispatcher::Create(&mpd0, &mpd1, &rights);
     if (result != MX_OK)
@@ -48,11 +48,11 @@ mx_status_t sys_channel_create(
     uint64_t id0 = mpd0->get_koid();
     uint64_t id1 = mpd1->get_koid();
 
-    HandleOwner h0(MakeHandle(mxtl::move(mpd0), rights));
+    HandleOwner h0(MakeHandle(fbl::move(mpd0), rights));
     if (!h0)
         return MX_ERR_NO_MEMORY;
 
-    HandleOwner h1(MakeHandle(mxtl::move(mpd1), rights));
+    HandleOwner h1(MakeHandle(fbl::move(mpd1), rights));
     if (!h1)
         return MX_ERR_NO_MEMORY;
 
@@ -61,8 +61,8 @@ mx_status_t sys_channel_create(
     if (out1.copy_to_user(up->MapHandleToValue(h1)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(h0));
-    up->AddHandle(mxtl::move(h1));
+    up->AddHandle(fbl::move(h0));
+    up->AddHandle(fbl::move(h1));
 
     ktrace(TAG_CHANNEL_CREATE, (uint32_t)id0, (uint32_t)id1, options, 0);
     return MX_OK;
@@ -84,7 +84,7 @@ static void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
             handle_list[i]->dispatcher()->get_state_tracker()->Cancel(handle_list[i]);
         HandleOwner handle(handle_list[i]);
         // TODO(MG-969): This takes a lock per call. Consider doing these in a batch.
-        up->AddHandle(mxtl::move(handle));
+        up->AddHandle(fbl::move(handle));
     }
 }
 
@@ -97,7 +97,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ChannelDispatcher> channel;
+    fbl::RefPtr<ChannelDispatcher> channel;
     mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_READ, &channel);
     if (result != MX_OK)
         return result;
@@ -106,7 +106,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
     if (options & ~MX_CHANNEL_READ_MAY_DISCARD)
         return MX_ERR_NOT_SUPPORTED;
 
-    mxtl::unique_ptr<MessagePacket> msg;
+    fbl::unique_ptr<MessagePacket> msg;
     result = channel->Read(&num_bytes, &num_handles, &msg,
                            options & MX_CHANNEL_READ_MAY_DISCARD);
     if (result != MX_OK && result != MX_ERR_BUFFER_TOO_SMALL)
@@ -141,7 +141,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t options,
 }
 
 static mx_status_t channel_read_out(ProcessDispatcher* up,
-                                    mxtl::unique_ptr<MessagePacket> reply,
+                                    fbl::unique_ptr<MessagePacket> reply,
                                     mx_channel_call_args_t* args,
                                     user_ptr<uint32_t> actual_bytes,
                                     user_ptr<uint32_t> actual_handles) {
@@ -173,7 +173,7 @@ static mx_status_t channel_read_out(ProcessDispatcher* up,
 
 // Handles generating the final results for call successes and read-half failures.
 static mx_status_t channel_call_epilogue(ProcessDispatcher* up,
-                                         mxtl::unique_ptr<MessagePacket> reply,
+                                         fbl::unique_ptr<MessagePacket> reply,
                                          mx_channel_call_args_t* args,
                                          mx_status_t call_status,
                                          user_ptr<uint32_t> actual_bytes,
@@ -185,7 +185,7 @@ static mx_status_t channel_call_epilogue(ProcessDispatcher* up,
     }
 
     if (call_status == MX_OK) {
-        call_status = channel_read_out(up, mxtl::move(reply), args, actual_bytes, actual_handles);
+        call_status = channel_read_out(up, fbl::move(reply), args, actual_bytes, actual_handles);
     }
 
     if (call_status != MX_OK) {
@@ -258,13 +258,13 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ChannelDispatcher> channel;
+    fbl::RefPtr<ChannelDispatcher> channel;
     mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
     if (result != MX_OK)
         return result;
 
 
-    mxtl::unique_ptr<MessagePacket> msg;
+    fbl::unique_ptr<MessagePacket> msg;
     result = MessagePacket::Create(user_bytes, num_bytes, num_handles, &msg);
     if (result != MX_OK)
         return result;
@@ -277,7 +277,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t options,
             return result;
     }
 
-    result = channel->Write(mxtl::move(msg));
+    result = channel->Write(fbl::move(msg));
     if (result != MX_OK) {
         // Write failed, put back the handles into this process.
         AutoLock lock(up->handle_table_lock());
@@ -310,14 +310,14 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<ChannelDispatcher> channel;
+    fbl::RefPtr<ChannelDispatcher> channel;
     mx_status_t result =
         up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE | MX_RIGHT_READ, &channel);
     if (result != MX_OK)
         return result;
 
     // Prepare a MessagePacket for writing
-    mxtl::unique_ptr<MessagePacket> msg;
+    fbl::unique_ptr<MessagePacket> msg;
     result = MessagePacket::Create(make_user_ptr<const void>(args.wr_bytes),
                                    num_bytes, num_handles, &msg);
     if (result != MX_OK)
@@ -336,8 +336,8 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
 
     // Write message and wait for reply, deadline, or cancelation
     bool return_handles = false;
-    mxtl::unique_ptr<MessagePacket> reply;
-    if ((result = channel->Call(mxtl::move(msg), deadline, &return_handles, &reply)) != MX_OK) {
+    fbl::unique_ptr<MessagePacket> reply;
+    if ((result = channel->Call(fbl::move(msg), deadline, &return_handles, &reply)) != MX_OK) {
         if (return_handles) {
             // Write phase failed:
             // 1. Put back the handles into this process.
@@ -351,7 +351,7 @@ mx_status_t sys_channel_call_noretry(mx_handle_t handle_value, uint32_t options,
             return result;
         }
     }
-    return channel_call_epilogue(up, mxtl::move(reply), &args, result,
+    return channel_call_epilogue(up, fbl::move(reply), &args, result,
                                  actual_bytes, actual_handles, read_status);
 }
 
@@ -368,14 +368,14 @@ mx_status_t sys_channel_call_finish(mx_time_t deadline,
     auto up = ProcessDispatcher::GetCurrent();
 
     auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
-    mxtl::RefPtr<ChannelDispatcher> channel = waiter->get_channel();
+    fbl::RefPtr<ChannelDispatcher> channel = waiter->get_channel();
     if (!channel)
         return MX_ERR_BAD_STATE;
 
-    mxtl::unique_ptr<MessagePacket> reply;
+    fbl::unique_ptr<MessagePacket> reply;
     mx_status_t result = channel->ResumeInterruptedCall(
         waiter, deadline, &reply);
-    return channel_call_epilogue(up, mxtl::move(reply), &args, result,
+    return channel_call_epilogue(up, fbl::move(reply), &args, result,
                                  actual_bytes, actual_handles, read_status);
 
 }

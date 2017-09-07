@@ -22,10 +22,10 @@
 #include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -59,7 +59,7 @@ status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
         irq_.handlers      = &irq_.singleton_handler;
         irq_.handler_count = 1;
     } else {
-        mxtl::AllocChecker ac;
+        fbl::AllocChecker ac;
         irq_.handlers = new (&ac) pcie_irq_handler_state_t[requested_irqs];
 
         if (!ac.check())
@@ -85,8 +85,8 @@ status_t PcieDevice::AllocIrqHandlers(uint requested_irqs, bool is_masked) {
  * Legacy IRQ mode routines.
  *
  ******************************************************************************/
-mxtl::RefPtr<SharedLegacyIrqHandler> SharedLegacyIrqHandler::Create(uint irq_id) {
-    mxtl::AllocChecker ac;
+fbl::RefPtr<SharedLegacyIrqHandler> SharedLegacyIrqHandler::Create(uint irq_id) {
+    fbl::AllocChecker ac;
 
     SharedLegacyIrqHandler* handler = new (&ac) SharedLegacyIrqHandler(irq_id);
     if (!ac.check()) {
@@ -94,7 +94,7 @@ mxtl::RefPtr<SharedLegacyIrqHandler> SharedLegacyIrqHandler::Create(uint irq_id)
         return nullptr;
     }
 
-    return mxtl::AdoptRef(handler);
+    return fbl::AdoptRef(handler);
 }
 
 SharedLegacyIrqHandler::SharedLegacyIrqHandler(uint irq_id)
@@ -810,13 +810,13 @@ status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
 // Platform dependent remapping is an exercise for the reader.  FWIW: PC
 // architectures use the _PRT tables in ACPI to perform the remapping.
 //
-status_t PcieDevice::MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream) {
+status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
     if (!legacy_irq_pin() || (legacy_irq_pin() > PCIE_MAX_LEGACY_IRQ_PINS))
         return MX_ERR_BAD_STATE;
 
-    auto dev = mxtl::WrapRefPtr(this);
+    auto dev = fbl::WrapRefPtr(this);
     uint pin = legacy_irq_pin() - 1;  // Change to 0s indexing
 
     // Walk up the PCI/PCIe tree, applying the swizzling rules as we go.  Stop
@@ -838,7 +838,7 @@ status_t PcieDevice::MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream
         // 2) Wait until GCC becomes smart enough to figure this out.
         // 3) Switch completely to clang (assuming that clang does not have
         //    similar problems).
-        auto bridge = mxtl::RefPtr<PcieBridge>::Downcast(mxtl::move(upstream));
+        auto bridge = fbl::RefPtr<PcieBridge>::Downcast(fbl::move(upstream));
         if (bridge == nullptr)
             return MX_ERR_INTERNAL;
 
@@ -873,7 +873,7 @@ status_t PcieDevice::MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream
         }
 
         // Climb one branch higher up the tree
-        dev = mxtl::move(bridge);
+        dev = fbl::move(bridge);
         upstream = dev->GetUpstream();
     }
 
@@ -896,7 +896,7 @@ status_t PcieDevice::MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream
 
     // TODO(johngro) : Eliminate the null-check of root below.  See the TODO for
     // the downcast of upstream -> bridge above for details.
-    auto root = mxtl::RefPtr<PcieRoot>::Downcast(mxtl::move(upstream));
+    auto root = fbl::RefPtr<PcieRoot>::Downcast(fbl::move(upstream));
     if (root == nullptr)
         return MX_ERR_INTERNAL;
     return root->Swizzle(dev->dev_id(), dev->func_id(), pin, &irq_.legacy.irq_id);
@@ -915,7 +915,7 @@ status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     // handler.
     irq_.legacy.pin = cfg_->Read(PciConfig::kInterruptPin);
     if (irq_.legacy.pin) {
-        status_t res = MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>(&upstream));
+        status_t res = MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>(&upstream));
         if (res != MX_OK) {
             TRACEF("Failed to map legacy pin to platform IRQ ID for "
                    "dev %02x:%02x.%01x (pin %u)\n",
@@ -943,7 +943,7 @@ void PcieBusDriver::ShutdownIrqs() {
     legacy_irq_list_.clear();
 }
 
-mxtl::RefPtr<SharedLegacyIrqHandler> PcieBusDriver::FindLegacyIrqHandler(uint irq_id) {
+fbl::RefPtr<SharedLegacyIrqHandler> PcieBusDriver::FindLegacyIrqHandler(uint irq_id) {
     /* Search to see if we have already created a shared handler for this system
      * level IRQ id already */
     AutoLock lock(&legacy_irq_list_lock_);

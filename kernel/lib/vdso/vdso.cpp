@@ -12,8 +12,8 @@
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/type_support.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/type_support.h>
 #include <object/handles.h>
 #include <platform.h>
 
@@ -31,11 +31,11 @@ namespace {
 template<typename T>
 class KernelVmoWindow {
 public:
-    static_assert(mxtl::is_pod<T>::value,
+    static_assert(fbl::is_pod<T>::value,
                   "this is for C-compatible types only!");
 
     KernelVmoWindow(const char* name,
-                    mxtl::RefPtr<VmObject> vmo, uint64_t offset)
+                    fbl::RefPtr<VmObject> vmo, uint64_t offset)
         : mapping_(nullptr) {
         uint64_t page_offset = ROUNDDOWN(offset, PAGE_SIZE);
         size_t offset_in_page = static_cast<size_t>(offset % PAGE_SIZE);
@@ -45,7 +45,7 @@ public:
         const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
         mx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
                 0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */,
-                mxtl::move(vmo), page_offset, arch_mmu_flags, name, &mapping_);
+                fbl::move(vmo), page_offset, arch_mmu_flags, name, &mapping_);
         ASSERT(status == MX_OK);
         data_ = reinterpret_cast<T*>(mapping_->base() + offset_in_page);
     }
@@ -60,7 +60,7 @@ public:
     T* data() const { return data_; }
 
 private:
-    mxtl::RefPtr<VmMapping> mapping_;
+    fbl::RefPtr<VmMapping> mapping_;
     T* data_;
 };
 
@@ -82,8 +82,8 @@ public:
                   VDSO_DATA_END_dynsym - VDSO_DATA_START_dynsym,
                   "either VDsoDynsym or gen-rodso-code.sh is suspect");
 
-    explicit VDsoDynSymWindow(mxtl::RefPtr<VmObject> vmo) :
-        window_("vDSO .dynsym", mxtl::move(vmo), VDSO_DATA_START_dynsym) {}
+    explicit VDsoDynSymWindow(fbl::RefPtr<VmObject> vmo) :
+        window_("vDSO .dynsym", fbl::move(vmo), VDSO_DATA_START_dynsym) {}
 
     void get_symbol_entry(size_t i, uintptr_t* value, size_t* size) {
         *value = window_.data()->table[i].value;
@@ -121,8 +121,8 @@ public:
 
     using CodeBuffer = uint8_t[VDSO_CODE_END - VDSO_CODE_START];
 
-    explicit VDsoCodeWindow(mxtl::RefPtr<VmObject> vmo) :
-        window_("vDSO code segment", mxtl::move(vmo), VDSO_CODE_START) {}
+    explicit VDsoCodeWindow(fbl::RefPtr<VmObject> vmo) :
+        window_("vDSO code segment", fbl::move(vmo), VDSO_CODE_START) {}
 
     // Fill the given code region (a whole function) with safely invalid code.
     // This code should never be run, and any attempt to use it should crash.
@@ -210,7 +210,7 @@ VDso::VDso() : RoDso("vdso/full", vdso_image,
 const VDso* VDso::Create() {
     ASSERT(!instance_);
 
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     VDso* vdso = new(&ac) VDso();
     ASSERT(ac.check());
 
@@ -253,7 +253,7 @@ const VDso* VDso::Create() {
     return instance_;
 }
 
-uintptr_t VDso::base_address(const mxtl::RefPtr<VmMapping>& code_mapping) {
+uintptr_t VDso::base_address(const fbl::RefPtr<VmMapping>& code_mapping) {
     return code_mapping ? code_mapping->base() - VDSO_CODE_START : 0;
 }
 
@@ -284,7 +284,7 @@ void VDso::CreateVariant(Variant variant) {
     DEBUG_ASSERT(variant < Variant::COUNT);
     DEBUG_ASSERT(!variant_vmo_[variant_index(variant)]);
 
-    mxtl::RefPtr<VmObject> new_vmo;
+    fbl::RefPtr<VmObject> new_vmo;
     mx_status_t status = vmo()->Clone(MX_VMO_CLONE_COPY_ON_WRITE, 0, size(),
                                       false, &new_vmo);
     ASSERT(status == MX_OK);
@@ -310,9 +310,9 @@ void VDso::CreateVariant(Variant variant) {
         PANIC("VDso::CreateVariant called with bad variant");
     }
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    status = VmObjectDispatcher::Create(mxtl::move(new_vmo),
+    status = VmObjectDispatcher::Create(fbl::move(new_vmo),
                                         &dispatcher, &rights);
     ASSERT(status == MX_OK);
 

@@ -200,7 +200,7 @@ endif
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
-    system/ulib/mxtl \
+    system/ulib/fbl \
     system/ulib/mxcpp \
 
 MODULE_LIBS := \

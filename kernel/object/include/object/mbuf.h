@@ -10,7 +10,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/types.h>
-#include <mxtl/intrusive_single_list.h>
+#include <fbl/intrusive_single_list.h>
 
 class MBufChain {
 public:
@@ -26,7 +26,7 @@ public:
 
 private:
     // An MBuf is a small fixed-size chainable memory buffer.
-    struct MBuf : public mxtl::SinglyLinkedListable<MBuf*> {
+    struct MBuf : public fbl::SinglyLinkedListable<MBuf*> {
         // 8 for the linked list and 4 for the explicit uint32_t fields.
         static constexpr size_t kHeaderSize = 8 + (4 * 4);
         // 16 is for the malloc header.
@@ -54,8 +54,8 @@ private:
     MBuf* AllocMBuf();
     void FreeMBuf(MBuf* buf);
 
-    mxtl::SinglyLinkedList<MBuf*> freelist_;
-    mxtl::SinglyLinkedList<MBuf*> tail_;
+    fbl::SinglyLinkedList<MBuf*> freelist_;
+    fbl::SinglyLinkedList<MBuf*> tail_;
     MBuf* head_ = nullptr;;
     size_t size_ = 0u;
 };

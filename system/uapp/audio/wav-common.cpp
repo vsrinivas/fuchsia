@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <magenta/assert.h>
-#include <mxtl/auto_call.h>
-#include <mxtl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/algorithm.h>
 #include <mxio/io.h>
 #include <stdio.h>
 

@@ -8,7 +8,7 @@
 
 #include <lib/crypto/entropy/collector.h>
 #include <magenta/types.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 
 namespace crypto {
 
@@ -41,7 +41,7 @@ private:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(HwRngCollector);
 
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 };
 
 } // namespace entropy

@@ -12,7 +12,7 @@
 
 #include <magenta/rights.h>
 
-#include <mxtl/alloc_checker.h>
+#include <fbl/alloc_checker.h>
 
 #include <assert.h>
 #include <err.h>
@@ -86,8 +86,8 @@ mx_status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch
 
 } // namespace
 
-mx_status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar,
-                                              mxtl::RefPtr<Dispatcher>* dispatcher,
+mx_status_t VmAddressRegionDispatcher::Create(fbl::RefPtr<VmAddressRegion> vmar,
+                                              fbl::RefPtr<Dispatcher>* dispatcher,
                                               mx_rights_t* rights) {
 
     // The initial rights should match the VMAR's creation permissions
@@ -103,24 +103,24 @@ mx_status_t VmAddressRegionDispatcher::Create(mxtl::RefPtr<VmAddressRegion> vmar
         vmar_rights |= MX_RIGHT_EXECUTE;
     }
 
-    mxtl::AllocChecker ac;
-    auto disp = new (&ac) VmAddressRegionDispatcher(mxtl::move(vmar));
+    fbl::AllocChecker ac;
+    auto disp = new (&ac) VmAddressRegionDispatcher(fbl::move(vmar));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     *rights = vmar_rights;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 
-VmAddressRegionDispatcher::VmAddressRegionDispatcher(mxtl::RefPtr<VmAddressRegion> vmar)
-    : vmar_(mxtl::move(vmar)) {}
+VmAddressRegionDispatcher::VmAddressRegionDispatcher(fbl::RefPtr<VmAddressRegion> vmar)
+    : vmar_(fbl::move(vmar)) {}
 
 VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {}
 
 mx_status_t VmAddressRegionDispatcher::Allocate(
     size_t offset, size_t size, uint32_t flags,
-    mxtl::RefPtr<VmAddressRegionDispatcher>* new_dispatcher,
+    fbl::RefPtr<VmAddressRegionDispatcher>* new_dispatcher,
     mx_rights_t* new_rights) {
 
     canary_.Assert();
@@ -136,15 +136,15 @@ mx_status_t VmAddressRegionDispatcher::Allocate(
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::RefPtr<VmAddressRegion> new_vmar;
+    fbl::RefPtr<VmAddressRegion> new_vmar;
     status = vmar_->CreateSubVmar(offset, size, /* align_pow2 */ 0 , vmar_flags,
                                   "useralloc", &new_vmar);
     if (status != MX_OK)
         return status;
 
     // Create the dispatcher.
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    status = VmAddressRegionDispatcher::Create(mxtl::move(new_vmar),
+    fbl::RefPtr<Dispatcher> dispatcher;
+    status = VmAddressRegionDispatcher::Create(fbl::move(new_vmar),
                                                &dispatcher, new_rights);
     if (status != MX_OK)
         return status;
@@ -160,9 +160,9 @@ mx_status_t VmAddressRegionDispatcher::Destroy() {
     return vmar_->Destroy();
 }
 
-mx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, mxtl::RefPtr<VmObject> vmo,
+mx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, fbl::RefPtr<VmObject> vmo,
                                            uint64_t vmo_offset, size_t len, uint32_t flags,
-                                           mxtl::RefPtr<VmMapping>* out) {
+                                           fbl::RefPtr<VmMapping>* out) {
     canary_.Assert();
 
     if (!is_valid_mapping_protection(flags))
@@ -175,16 +175,16 @@ mx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, mxtl::RefPtr<VmOb
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<VmMapping> result(nullptr);
+    fbl::RefPtr<VmMapping> result(nullptr);
     status = vmar_->CreateVmMapping(vmar_offset, len, /* align_pow2 */ 0,
-                                    vmar_flags, mxtl::move(vmo), vmo_offset,
+                                    vmar_flags, fbl::move(vmo), vmo_offset,
                                     arch_mmu_flags, "useralloc",
                                     &result);
     if (status != MX_OK) {
         return status;
     }
 
-    *out = mxtl::move(result);
+    *out = fbl::move(result);
     return MX_OK;
 }
 

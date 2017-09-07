@@ -10,7 +10,7 @@
 #include <magenta/syscalls/policy.h>
 #include <magenta/types.h>
 
-#include <mxtl/ref_ptr.h>
+#include <fbl/ref_ptr.h>
 
 struct mx_policy_basic;
 class PortDispatcher;

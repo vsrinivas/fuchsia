@@ -10,7 +10,7 @@
 #include <mx/process.h>
 #include <mx/vmar.h>
 #include <mx/vmo.h>
-#include <mxtl/auto_call.h>
+#include <fbl/auto_call.h>
 
 #include "trace.h"
 
@@ -35,7 +35,7 @@ mx_status_t map_contiguous_memory(size_t size, uintptr_t* _va, mx_paddr_t* _pa) 
         return r;
     }
 
-    auto ac = mxtl::MakeAutoCall([va, size]() {
+    auto ac = fbl::MakeAutoCall([va, size]() {
         mx::vmar::root_self().unmap(va, size);
     });
 

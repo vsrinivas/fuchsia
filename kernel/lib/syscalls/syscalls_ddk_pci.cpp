@@ -23,11 +23,11 @@
 #include <object/vm_object_dispatcher.h>
 
 #include <magenta/syscalls/pci.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/limits.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_free_ptr.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/limits.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_free_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -56,11 +56,11 @@ static inline void shutdown_early_init_console() {}
 // suitable for use with ACPI style swizzle definitions.
 class PcieRootLUTSwizzle : public PcieRoot {
 public:
-    static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv,
+    static fbl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv,
                                          uint managed_bus_id,
                                          const mx_pci_irq_swizzle_lut_t& lut) {
-        mxtl::AllocChecker ac;
-        auto root = mxtl::AdoptRef(new (&ac) PcieRootLUTSwizzle(bus_drv,
+        fbl::AllocChecker ac;
+        auto root = fbl::AdoptRef(new (&ac) PcieRootLUTSwizzle(bus_drv,
                                                                 managed_bus_id,
                                                                 lut));
         if (!ac.check()) {
@@ -74,9 +74,9 @@ public:
 
     mx_status_t Swizzle(uint dev_id, uint func_id, uint pin, uint* irq) override {
         if ((irq == nullptr) ||
-            (dev_id >= mxtl::count_of(lut_)) ||
-            (func_id >= mxtl::count_of(lut_[dev_id])) ||
-            (pin >= mxtl::count_of(lut_[dev_id][func_id])))
+            (dev_id >= fbl::count_of(lut_)) ||
+            (func_id >= fbl::count_of(lut_[dev_id])) ||
+            (pin >= fbl::count_of(lut_[dev_id][func_id])))
             return MX_ERR_INVALID_ARGS;
 
         *irq = lut_[dev_id][func_id][pin];
@@ -127,7 +127,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
         return status;
     }
 
-    mxtl::unique_free_ptr<mx_pci_init_arg_t> arg;
+    fbl::unique_free_ptr<mx_pci_init_arg_t> arg;
 
     if (len < sizeof(*arg) || len > MX_PCI_INIT_ARG_MAX_SIZE) {
         return MX_ERR_INVALID_ARGS;
@@ -167,7 +167,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
         return MX_ERR_INVALID_ARGS;
     }
 
-    if (arg->num_irqs > mxtl::count_of(arg->irqs)) {
+    if (arg->num_irqs > fbl::count_of(arg->irqs)) {
         return MX_ERR_INVALID_ARGS;
     }
 
@@ -237,7 +237,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
         }
 
         // TODO(johngro): Update the syscall to pass a paddr_t for base instead of a uint64_t
-        ASSERT(arg->addr_windows[0].base < mxtl::numeric_limits<paddr_t>::max());
+        ASSERT(arg->addr_windows[0].base < fbl::numeric_limits<paddr_t>::max());
 
         // TODO(johngro): Do not limit this to a single range.  Instead, fetch all
         // of the ECAM ranges from ACPI, as well as the appropriate bus start/end
@@ -266,7 +266,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> _
     // Enable PIO config space if the address window was not MMIO
     pcie->EnablePIOWorkaround(!arg->addr_windows[0].is_mmio);
 
-    mx_status_t ret = pcie->AddRoot(mxtl::move(root));
+    mx_status_t ret = pcie->AddRoot(fbl::move(root));
     if (ret != MX_OK) {
         TRACEF("Failed to add root complex to PCIe bus driver! (ret %d)\n", ret);
         return ret;
@@ -303,7 +303,7 @@ mx_status_t sys_pci_get_nth_device(mx_handle_t hrsrc,
         return MX_ERR_INVALID_ARGS;
     }
 
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
     mx_pcie_device_info_t info;
     mx_status_t result = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
@@ -311,7 +311,7 @@ mx_status_t sys_pci_get_nth_device(mx_handle_t hrsrc,
         return result;
     }
 
-    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(dispatcher), rights));
     if (!handle) {
         return MX_ERR_NO_MEMORY;
     }
@@ -325,7 +325,7 @@ mx_status_t sys_pci_get_nth_device(mx_handle_t hrsrc,
         return MX_ERR_INVALID_ARGS;
     }
 
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
     return MX_OK;
 }
 
@@ -367,7 +367,7 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t dev_handle, bool enable) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_WRITE, &pci_device);
     if (status != MX_OK)
         return status;
@@ -385,7 +385,7 @@ mx_status_t sys_pci_enable_pio(mx_handle_t dev_handle, bool enable) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_WRITE, &pci_device);
     if (status != MX_OK)
         return status;
@@ -402,7 +402,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t dev_handle) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_WRITE, &pci_device);
     if (status != MX_OK)
         return status;
@@ -411,8 +411,8 @@ mx_status_t sys_pci_reset_device(mx_handle_t dev_handle) {
 }
 
 mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<mx_pci_resource_t> out_bar) {
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<Dispatcher> dispatcher;
     HandleOwner mmio_handle;
     mx_pci_resource_t bar;
     mx_status_t status;
@@ -446,9 +446,9 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
     } else if (info->is_mmio) {
         // Create a VMO mapping to the address / size of the mmio region this bar
         // was allocated at
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status = VmObjectPhysical::Create(info->bus_addr,
-                                            mxtl::max<uint64_t>(info->size, PAGE_SIZE), &vmo);
+                                            fbl::max<uint64_t>(info->size, PAGE_SIZE), &vmo);
         if (status != MX_OK) {
             return status;
         }
@@ -467,7 +467,7 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
             return status;
         }
 
-        mmio_handle = HandleOwner(MakeHandle(mxtl::move(dispatcher), rights));
+        mmio_handle = HandleOwner(MakeHandle(fbl::move(dispatcher), rights));
         if (!mmio_handle) {
             return MX_ERR_NO_MEMORY;
         }
@@ -486,7 +486,7 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
     /* If the bar is an mmio the VMO handle still needs to be accounted for */
     if (info->is_mmio) {
         pci_device->EnableMmio(true);
-        up->AddHandle(mxtl::move(mmio_handle));
+        up->AddHandle(fbl::move(mmio_handle));
     } else {
         pci_device->EnablePio(true);
     }
@@ -495,8 +495,8 @@ mx_status_t sys_pci_get_bar(mx_handle_t dev_handle, uint32_t bar_num, user_ptr<m
 }
 
 mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_t> out_config) {
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mxtl::RefPtr<Dispatcher> dispatcher;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<Dispatcher> dispatcher;
     pci_config_info_t pci_config;
     mx_pci_resource_t config;
     HandleOwner mmio_handle;
@@ -528,7 +528,7 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
     // VMO vs PIO
     if (pci_config.is_mmio) {
         auto dev = pci_device->device();
-        mxtl::RefPtr<VmObject> vmo;
+        fbl::RefPtr<VmObject> vmo;
         status = VmObjectPhysical::Create(dev->config_phys(), PAGE_SIZE, &vmo);
         if (status != MX_OK) {
             return status;
@@ -558,7 +558,7 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
         // Drivers are not granted access to write to their own config space. It is
         // restricted to the bus driver.
         rights &= ~MX_RIGHT_WRITE;
-        mmio_handle = HandleOwner(MakeHandle(mxtl::move(dispatcher), rights));
+        mmio_handle = HandleOwner(MakeHandle(fbl::move(dispatcher), rights));
         if (!mmio_handle) {
             return MX_ERR_NO_MEMORY;
         }
@@ -577,7 +577,7 @@ mx_status_t sys_pci_get_config(mx_handle_t dev_handle, user_ptr<mx_pci_resource_
     // If we created an MMIO handle it needs to be held by the process
     if (pci_config.is_mmio) {
         pci_device->EnableMmio(true);
-        up->AddHandle(mxtl::move(mmio_handle));
+        up->AddHandle(fbl::move(mmio_handle));
     }
 
     return MX_OK;
@@ -626,19 +626,19 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status =
         up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ, &pci_device);
     if (status != MX_OK)
         return status;
 
-    mxtl::RefPtr<Dispatcher> interrupt_dispatcher;
+    fbl::RefPtr<Dispatcher> interrupt_dispatcher;
     mx_rights_t rights;
     mx_status_t result = pci_device->MapInterrupt(which_irq, &interrupt_dispatcher, &rights);
     if (result != MX_OK)
         return result;
 
-    HandleOwner handle(MakeHandle(mxtl::move(interrupt_dispatcher), rights));
+    HandleOwner handle(MakeHandle(fbl::move(interrupt_dispatcher), rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
 
@@ -646,7 +646,7 @@ mx_status_t sys_pci_map_interrupt(mx_handle_t dev_handle,
     if (status != MX_OK) {
         return status;
     }
-    up->AddHandle(mxtl::move(handle));
+    up->AddHandle(fbl::move(handle));
 
     return MX_OK;
 }
@@ -664,7 +664,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t dev_handle,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_READ, &pci_device);
     if (status != MX_OK)
         return status;
@@ -693,7 +693,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t dev_handle,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    fbl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status = up->GetDispatcherWithRights(dev_handle, MX_RIGHT_WRITE, &pci_device);
     if (status != MX_OK)
         return status;

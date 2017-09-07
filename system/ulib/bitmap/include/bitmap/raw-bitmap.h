@@ -13,9 +13,9 @@
 
 #include <magenta/assert.h>
 #include <magenta/types.h>
-#include <mxtl/algorithm.h>
-#include <mxtl/macros.h>
-#include <mxtl/type_support.h>
+#include <fbl/algorithm.h>
+#include <fbl/macros.h>
+#include <fbl/type_support.h>
 
 namespace bitmap {
 namespace internal {
@@ -98,7 +98,7 @@ public:
 
     // Increases the bitmap size
     template <typename U = Storage>
-    typename mxtl::enable_if<internal::has_grow<U>::value, mx_status_t>::type
+    typename fbl::enable_if<internal::has_grow<U>::value, mx_status_t>::type
     Grow(size_t size) {
         if (size < size_) {
             return MX_ERR_INVALID_ARGS;
@@ -124,12 +124,12 @@ public:
         size_ = size;
 
         // Clear the partial bits not included in the new "size_t"s.
-        Clear(old_size, mxtl::min(old_len * kBits, size_));
+        Clear(old_size, fbl::min(old_len * kBits, size_));
         return MX_OK;
     }
 
     template <typename U = Storage>
-    typename mxtl::enable_if<!internal::has_grow<U>::value, mx_status_t>::type
+    typename fbl::enable_if<!internal::has_grow<U>::value, mx_status_t>::type
     Grow(size_t size) {
         return MX_ERR_NO_RESOURCES;
     }

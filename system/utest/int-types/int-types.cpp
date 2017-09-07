@@ -7,7 +7,7 @@
 #include <signal.h>
 #include <stdint.h>
 
-#include <mxtl/type_support.h>
+#include <fbl/type_support.h>
 #include <unittest/unittest.h>
 
 // stdint.h defines the following types:
@@ -107,7 +107,7 @@ static_assert(sizeof(size_t) == sizeof(void*), "");
 #define CHECK_MAX_UNSIGNED(type, TYPE) CHECK_MAX_TYPE(type, TYPE, uintmax_t, UINTMAX_MAX)
 #define CHECK_MAX_SIGNED(type, TYPE) CHECK_MAX_TYPE(type, TYPE, intmax_t, INTMAX_MAX)
 
-#define CHECK_MAX(type, TYPE) static_assert(mxtl::is_signed<type>::value ? CHECK_MAX_SIGNED(type, TYPE) : CHECK_MAX_UNSIGNED(type, TYPE), "");
+#define CHECK_MAX(type, TYPE) static_assert(fbl::is_signed<type>::value ? CHECK_MAX_SIGNED(type, TYPE) : CHECK_MAX_UNSIGNED(type, TYPE), "");
 
 CHECK_MAX(int8_t, INT8);
 CHECK_MAX(int16_t, INT16);
@@ -174,59 +174,59 @@ CHECK_MIN(intptr_t, INTPTR);
 CHECK_MIN(intmax_t, INTMAX);
 
 CHECK_MIN(ptrdiff_t, PTRDIFF);
-static_assert(mxtl::is_signed<wchar_t>::value ? CHECK_MIN_TYPE(wchar_t, WCHAR) : (WCHAR_MIN == 0), "");
+static_assert(fbl::is_signed<wchar_t>::value ? CHECK_MIN_TYPE(wchar_t, WCHAR) : (WCHAR_MIN == 0), "");
 
-static_assert(mxtl::is_signed<sig_atomic_t>::value ? CHECK_MIN_TYPE(sig_atomic_t, SIG_ATOMIC) : (SIG_ATOMIC_MIN == 0), "");
+static_assert(fbl::is_signed<sig_atomic_t>::value ? CHECK_MIN_TYPE(sig_atomic_t, SIG_ATOMIC) : (SIG_ATOMIC_MIN == 0), "");
 
 // The INTN_C and UINTN_C macros expand into integer constants
 // "corresponding to the type int_leastN_t" and "uint_leastN_t"
 // respectively.
 
-static_assert(INT8_C(0) == mxtl::integral_constant<int_least8_t, 0>::value, "");
-static_assert(INT8_C(-0x7f - 1) == mxtl::integral_constant<int_least8_t, -0x7f - 1>::value, "");
-static_assert(INT8_C(0x7f) == mxtl::integral_constant<int_least8_t, 0x7f>::value, "");
+static_assert(INT8_C(0) == fbl::integral_constant<int_least8_t, 0>::value, "");
+static_assert(INT8_C(-0x7f - 1) == fbl::integral_constant<int_least8_t, -0x7f - 1>::value, "");
+static_assert(INT8_C(0x7f) == fbl::integral_constant<int_least8_t, 0x7f>::value, "");
 
-static_assert(INT16_C(0) == mxtl::integral_constant<int_least16_t, 0>::value, "");
-static_assert(INT16_C(-0x7fff - 1) == mxtl::integral_constant<int_least16_t, -0x7fff - 1>::value, "");
-static_assert(INT16_C(0x7fff) == mxtl::integral_constant<int_least16_t, 0x7fff>::value, "");
+static_assert(INT16_C(0) == fbl::integral_constant<int_least16_t, 0>::value, "");
+static_assert(INT16_C(-0x7fff - 1) == fbl::integral_constant<int_least16_t, -0x7fff - 1>::value, "");
+static_assert(INT16_C(0x7fff) == fbl::integral_constant<int_least16_t, 0x7fff>::value, "");
 
-static_assert(INT32_C(0) == mxtl::integral_constant<int_least32_t, 0>::value, "");
-static_assert(INT32_C(-0x7fffffff - 1) == mxtl::integral_constant<int_least32_t, -0x7fffffff - 1>::value, "");
-static_assert(INT32_C(0x7fffffff) == mxtl::integral_constant<int_least32_t, 0x7fffffff>::value, "");
+static_assert(INT32_C(0) == fbl::integral_constant<int_least32_t, 0>::value, "");
+static_assert(INT32_C(-0x7fffffff - 1) == fbl::integral_constant<int_least32_t, -0x7fffffff - 1>::value, "");
+static_assert(INT32_C(0x7fffffff) == fbl::integral_constant<int_least32_t, 0x7fffffff>::value, "");
 
-static_assert(INT64_C(0) == mxtl::integral_constant<int_least64_t, 0>::value, "");
-static_assert(INT64_C(-0x7fffffffffffffff - 1) == mxtl::integral_constant<int_least64_t, -0x7fffffffffffffff - 1>::value, "");
-static_assert(INT64_C(0x7fffffffffffffff) == mxtl::integral_constant<int_least64_t, 0x7fffffffffffffff>::value, "");
+static_assert(INT64_C(0) == fbl::integral_constant<int_least64_t, 0>::value, "");
+static_assert(INT64_C(-0x7fffffffffffffff - 1) == fbl::integral_constant<int_least64_t, -0x7fffffffffffffff - 1>::value, "");
+static_assert(INT64_C(0x7fffffffffffffff) == fbl::integral_constant<int_least64_t, 0x7fffffffffffffff>::value, "");
 
 
-static_assert(UINT8_C(0) == mxtl::integral_constant<uint_least8_t, 0>::value, "");
-static_assert(UINT8_C(0xff) == mxtl::integral_constant<uint_least8_t, 0xff>::value, "");
+static_assert(UINT8_C(0) == fbl::integral_constant<uint_least8_t, 0>::value, "");
+static_assert(UINT8_C(0xff) == fbl::integral_constant<uint_least8_t, 0xff>::value, "");
 
-static_assert(UINT16_C(0) == mxtl::integral_constant<uint_least16_t, 0>::value, "");
-static_assert(UINT16_C(0xffff) == mxtl::integral_constant<uint_least16_t, 0xffff>::value, "");
+static_assert(UINT16_C(0) == fbl::integral_constant<uint_least16_t, 0>::value, "");
+static_assert(UINT16_C(0xffff) == fbl::integral_constant<uint_least16_t, 0xffff>::value, "");
 
-static_assert(UINT32_C(0) == mxtl::integral_constant<uint_least32_t, 0>::value, "");
-static_assert(UINT32_C(0xffffffff) == mxtl::integral_constant<uint_least32_t, 0xffffffff>::value, "");
+static_assert(UINT32_C(0) == fbl::integral_constant<uint_least32_t, 0>::value, "");
+static_assert(UINT32_C(0xffffffff) == fbl::integral_constant<uint_least32_t, 0xffffffff>::value, "");
 
-static_assert(UINT64_C(0) == mxtl::integral_constant<uint_least64_t, 0>::value, "");
-static_assert(UINT64_C(0xffffffffffffffff) == mxtl::integral_constant<uint_least64_t, 0xffffffffffffffff>::value, "");
+static_assert(UINT64_C(0) == fbl::integral_constant<uint_least64_t, 0>::value, "");
+static_assert(UINT64_C(0xffffffffffffffff) == fbl::integral_constant<uint_least64_t, 0xffffffffffffffff>::value, "");
 
 
 // Unlike the above, the INTMAX_C and UINTMAX_C macros explicitly
 // produce values of type intmax_t and uintmax_t respectively, not
 // just compatible values.
 
-static_assert(mxtl::is_same<intmax_t, decltype(INTMAX_C(0))>::value, "");
-static_assert(mxtl::is_same<intmax_t, decltype(INTMAX_C(-0x7fffffffffffffff - 1))>::value, "");
-static_assert(mxtl::is_same<intmax_t, decltype(INTMAX_C(0x7fffffffffffffff))>::value, "");
-static_assert(INTMAX_C(0) == mxtl::integral_constant<intmax_t, 0>::value, "");
-static_assert(INTMAX_C(-0xffffffffffffffff - 1) == mxtl::integral_constant<intmax_t, -0xffffffffffffffff - 1>::value, "");
-static_assert(INTMAX_C(0x7fffffffffffffff) == mxtl::integral_constant<intmax_t, 0x7fffffffffffffff>::value, "");
+static_assert(fbl::is_same<intmax_t, decltype(INTMAX_C(0))>::value, "");
+static_assert(fbl::is_same<intmax_t, decltype(INTMAX_C(-0x7fffffffffffffff - 1))>::value, "");
+static_assert(fbl::is_same<intmax_t, decltype(INTMAX_C(0x7fffffffffffffff))>::value, "");
+static_assert(INTMAX_C(0) == fbl::integral_constant<intmax_t, 0>::value, "");
+static_assert(INTMAX_C(-0xffffffffffffffff - 1) == fbl::integral_constant<intmax_t, -0xffffffffffffffff - 1>::value, "");
+static_assert(INTMAX_C(0x7fffffffffffffff) == fbl::integral_constant<intmax_t, 0x7fffffffffffffff>::value, "");
 
-static_assert(mxtl::is_same<uintmax_t, decltype(UINTMAX_C(0))>::value, "");
-static_assert(mxtl::is_same<uintmax_t, decltype(UINTMAX_C(0xffffffffffffffff))>::value, "");
-static_assert(UINTMAX_C(0) == mxtl::integral_constant<uintmax_t, 0>::value, "");
-static_assert(UINTMAX_C(0xffffffffffffffff) == mxtl::integral_constant<uintmax_t, 0xffffffffffffffff>::value, "");
+static_assert(fbl::is_same<uintmax_t, decltype(UINTMAX_C(0))>::value, "");
+static_assert(fbl::is_same<uintmax_t, decltype(UINTMAX_C(0xffffffffffffffff))>::value, "");
+static_assert(UINTMAX_C(0) == fbl::integral_constant<uintmax_t, 0>::value, "");
+static_assert(UINTMAX_C(0xffffffffffffffff) == fbl::integral_constant<uintmax_t, 0xffffffffffffffff>::value, "");
 
 
 // Check PRI* and SCN* format strings.
@@ -268,7 +268,7 @@ static_assert(UINTMAX_C(0xffffffffffffffff) == mxtl::integral_constant<uintmax_t
     } while (0)
 
 #define CHECK_FORMATS(size, type, max) do {             \
-        if (mxtl::is_signed<type>::value) {             \
+        if (fbl::is_signed<type>::value) {             \
             CHECK_SIGNED_FORMATS(size, type, max);      \
         } else {                                        \
             CHECK_UNSIGNED_FORMATS(size, type, max);    \

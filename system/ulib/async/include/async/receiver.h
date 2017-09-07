@@ -65,8 +65,8 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <mxtl/function.h>
-#include <mxtl/macros.h>
+#include <fbl/function.h>
+#include <fbl/macros.h>
 
 namespace async {
 
@@ -82,7 +82,7 @@ public:
     //
     // It is safe for the handler to destroy itself when there are no remaining
     // packets pending delivery to it.
-    using Handler = mxtl::Function<void(async_t* async,
+    using Handler = fbl::Function<void(async_t* async,
                                         mx_status_t status,
                                         const mx_packet_user_t* data)>;
 
@@ -99,7 +99,7 @@ public:
     // Gets or sets the handler to invoke when a packet is received.
     // Must be set before queuing any packets.
     const Handler& handler() const { return handler_; }
-    void set_handler(Handler handler) { handler_ = mxtl::move(handler); }
+    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
 
     // Valid flags: None, set to zero.
     uint32_t flags() const { return async_receiver_t::flags; }

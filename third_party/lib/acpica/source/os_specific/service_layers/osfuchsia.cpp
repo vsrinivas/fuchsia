@@ -15,9 +15,9 @@
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
 #include <mxcpp/new.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/intrusive_hash_table.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/auto_lock.h>
+#include <fbl/intrusive_hash_table.h>
+#include <fbl/unique_ptr.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"
@@ -42,10 +42,10 @@ static cnd_t os_execute_cond;
 static int os_execute_tasks = 0;
 
 class AcpiOsMappingNode :
-      public mxtl::SinglyLinkedListable<mxtl::unique_ptr<AcpiOsMappingNode>> {
+      public fbl::SinglyLinkedListable<fbl::unique_ptr<AcpiOsMappingNode>> {
 public:
     using HashTable =
-        mxtl::HashTable<uintptr_t, mxtl::unique_ptr<AcpiOsMappingNode>>;
+        fbl::HashTable<uintptr_t, fbl::unique_ptr<AcpiOsMappingNode>>;
 
     // @param vaddr Virtual address returned to ACPI, used as key to the hashtable.
     // @param vaddr_actual Actual virtual address of the mapping. May be different than
@@ -56,7 +56,7 @@ public:
                       size_t length, mx_handle_t vmo_handle);
     ~AcpiOsMappingNode();
 
-    // Trait implementation for mxtl::HashTable
+    // Trait implementation for fbl::HashTable
     uintptr_t GetKey() const { return vaddr_; }
     static size_t GetHash(uintptr_t key) { return key; }
 
@@ -67,7 +67,7 @@ private:
     mx_handle_t vmo_handle_;
 };
 
-mxtl::Mutex os_mapping_lock;
+fbl::Mutex os_mapping_lock;
 
 AcpiOsMappingNode::HashTable os_mapping_tbl;
 
@@ -320,7 +320,7 @@ void *AcpiOsMapMemory(
         ACPI_PHYSICAL_ADDRESS PhysicalAddress,
         ACPI_SIZE Length) {
 
-    mxtl::AutoLock lock(&os_mapping_lock);
+    fbl::AutoLock lock(&os_mapping_lock);
 
     // Caution: PhysicalAddress might not be page-aligned, Length might not
     // be a page multiple.
@@ -338,10 +338,10 @@ void *AcpiOsMapMemory(
     }
 
     void* out_addr = (void*)(vaddr + (PhysicalAddress - aligned_address));
-    mxtl::unique_ptr<AcpiOsMappingNode> mn(
+    fbl::unique_ptr<AcpiOsMappingNode> mn(
             new AcpiOsMappingNode(reinterpret_cast<uintptr_t>(out_addr),
                                   vaddr, length, vmo));
-    os_mapping_tbl.insert(mxtl::move(mn));
+    os_mapping_tbl.insert(fbl::move(mn));
 
     return out_addr;
 }
@@ -355,8 +355,8 @@ void *AcpiOsMapMemory(
  *        identical to the value used in the call to AcpiOsMapMemory.
  */
 void AcpiOsUnmapMemory(void *LogicalAddress, ACPI_SIZE Length) {
-    mxtl::AutoLock lock(&os_mapping_lock);
-    mxtl::unique_ptr<AcpiOsMappingNode> mn = os_mapping_tbl.erase((uintptr_t)LogicalAddress);
+    fbl::AutoLock lock(&os_mapping_lock);
+    fbl::unique_ptr<AcpiOsMappingNode> mn = os_mapping_tbl.erase((uintptr_t)LogicalAddress);
     if (mn == NULL) {
         printf("AcpiOsUnmapMemory nonexisting mapping %p\n", LogicalAddress);
     }

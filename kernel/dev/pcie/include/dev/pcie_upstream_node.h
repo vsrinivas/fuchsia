@@ -10,8 +10,8 @@
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 #include <dev/pcie_ref_counted.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 #include <sys/types.h>
 
 struct pcie_config_t;
@@ -35,7 +35,7 @@ public:
     // Require that derived classes implement ref counting.
     PCIE_REQUIRE_REFCOUNTED;
 
-    mxtl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
+    fbl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
     PcieBusDriver& driver() { return bus_drv_; }
 
     Type type()           const { return type_; }
@@ -57,7 +57,7 @@ protected:
     void ScanDownstream();
     void UnplugDownstream();
 
-    mxtl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
+    fbl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 
 private:
 
@@ -70,5 +70,5 @@ private:
     //
     // TODO(johngro): Consider making this into a WAVLTree, indexed by the
     // concatenation of device and function ID instead of an array.
-    mxtl::RefPtr<PcieDevice> downstream_[PCIE_MAX_FUNCTIONS_PER_BUS];
+    fbl::RefPtr<PcieDevice> downstream_[PCIE_MAX_FUNCTIONS_PER_BUS];
 };

@@ -15,9 +15,9 @@
 
 #include <magenta/device/vfs.h>
 #include <magenta/syscalls.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/string_piece.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/string_piece.h>
+#include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
 #define MOUNT_POINT "/benchmark"
@@ -66,8 +66,8 @@ bool benchmark_write_read(void) {
     }
     printf("\nBenchmarking Write + Read (%lu MB)\n", size_mb);
 
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[DataSize]);
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> data(new (&ac) uint8_t[DataSize]);
     ASSERT_EQ(ac.check(), true);
     memset(data.get(), kMagicByte, DataSize);
 
@@ -107,7 +107,7 @@ bool benchmark_write_read(void) {
 
 #define START_STRING "/aaa"
 
-size_t constexpr kComponentLength = mxtl::constexpr_strlen(START_STRING);
+size_t constexpr kComponentLength = fbl::constexpr_strlen(START_STRING);
 
 template <size_t len>
 void increment_str(char* str) {
@@ -125,7 +125,7 @@ void increment_str(char* str) {
 
 template <size_t MaxComponents>
 bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
-    static_assert(MaxComponents * kComponentLength + mxtl::constexpr_strlen(MOUNT_POINT) < PATH_MAX,
+    static_assert(MaxComponents * kComponentLength + fbl::constexpr_strlen(MOUNT_POINT) < PATH_MAX,
                   "Path depth is too long");
     size_t path_len = strlen(path);
     char path_component[kComponentLength + 1];
@@ -144,7 +144,7 @@ bool walk_down_path_components(char* path, bool (*cb)(const char* path)) {
 bool walk_up_path_components(char* path, bool (*cb)(const char* path)) {
     size_t path_len = strlen(path);
 
-    while (path_len != mxtl::constexpr_strlen(MOUNT_POINT)) {
+    while (path_len != fbl::constexpr_strlen(MOUNT_POINT)) {
         ASSERT_TRUE(cb(path), "Callback failure");
         path[path_len - kComponentLength] = 0;
         path_len -= kComponentLength;

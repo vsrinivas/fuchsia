@@ -8,7 +8,7 @@
 
 #include <lib/user_copy/user_ptr.h>
 #include <magenta/types.h>
-#include <mxtl/mutex.h>
+#include <fbl/mutex.h>
 #include <object/futex_node.h>
 
 // FutexContext is a class that encapsulates support for futex operations.
@@ -56,7 +56,7 @@ private:
     bool UnqueueNodeLocked(FutexNode* node) TA_REQ(lock_);
 
     // protects futex_table_
-    mxtl::Mutex lock_;
+    fbl::Mutex lock_;
 
     // Hash table for futexes in this context.
     // Key is futex address, value is the FutexNode for the head of futex's blocked thread list.

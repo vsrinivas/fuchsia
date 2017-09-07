@@ -12,7 +12,7 @@
 #include <iovec.h>
 #include <kernel/cmdline.h>
 #include <kernel/vm.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -97,7 +97,7 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
             uintptr_t r_base = ctx->ramdisk_base;
             uintptr_t r_end = r_base + ctx->ramdisk_size;
             LTRACEF("ramdisk base %" PRIxPTR " size %" PRIxPTR "\n", r_base, ctx->ramdisk_size);
-            tmp = mxtl::min(ctx->memory_limit, ctx->ramdisk_size);
+            tmp = fbl::min(ctx->memory_limit, ctx->ramdisk_size);
             if (tmp != ctx->ramdisk_size) {
                 size_t diff = ctx->ramdisk_size - ctx->memory_limit;
                 printf("WARNING: ramdisk forces the system to exceed the system memory limit"
@@ -123,7 +123,7 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
         // We've created our kernel and ramdisk vecs, and now we expand them as
         // much as possible within the imposed limit, starting with the k_high
         // gap between the kernel and ramdisk_iov.
-        tmp = mxtl::min(ctx->memory_limit, k_high);
+        tmp = fbl::min(ctx->memory_limit, k_high);
         if (tmp) {
             LTRACEF("growing low iov by %zu bytes.\n", tmp);
             low_len += tmp;
@@ -131,7 +131,7 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
         }
 
         // Handle space between the start of the range and the kernel base
-        tmp = mxtl::min(ctx->memory_limit, k_low);
+        tmp = fbl::min(ctx->memory_limit, k_low);
         if (tmp) {
             low_base -= tmp;
             low_len += tmp;
@@ -146,7 +146,7 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
         // limit. If we still have any memory left that we're allowed to use and
         // there's space between the end of the ramdisk and end of the range,
         // then we can attempt to grow that the high vector by the difference.
-        tmp = mxtl::min(ctx->memory_limit, r_high);
+        tmp = fbl::min(ctx->memory_limit, r_high);
         if (tmp) {
             LTRACEF("growing high iov by %zu bytes.\n", tmp);
             high_len += tmp;
@@ -172,15 +172,15 @@ mx_status_t mem_limit_get_iovs(mem_limit_ctx_t* ctx, uintptr_t range_base, size_
         size_t adjusted_limit = ctx->memory_limit;
 
         if (!ctx->found_kernel) {
-            adjusted_limit -= mxtl::min(ctx->kernel_size, adjusted_limit);
+            adjusted_limit -= fbl::min(ctx->kernel_size, adjusted_limit);
             if (ctx->ramdisk_size) {
-                adjusted_limit -= mxtl::min(ctx->ramdisk_size, adjusted_limit);
+                adjusted_limit -= fbl::min(ctx->ramdisk_size, adjusted_limit);
             }
         }
 
         LTRACEF("adjusted limit of %zu being used (found_kernel: %d, found_ramdisk: %d)\n", adjusted_limit, ctx->found_kernel, ctx->found_ramdisk);
         // No kernel here, presumably no ramdisk. Just add what we can.
-        uint64_t tmp = mxtl::min(adjusted_limit, range_size);
+        uint64_t tmp = fbl::min(adjusted_limit, range_size);
         low_base = range_base;
         low_len = tmp;
         ctx->memory_limit -= tmp;

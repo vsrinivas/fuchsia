@@ -15,7 +15,7 @@
 
 // static
 mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
-                                     mxtl::unique_ptr<MessagePacket>* msg) {
+                                     fbl::unique_ptr<MessagePacket>* msg) {
     // Although the API uses uint32_t, we pack the handle count into a smaller
     // field internally. Make sure it fits.
     static_assert(kMaxMessageHandles <= UINT16_MAX, "");
@@ -48,7 +48,7 @@ mx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
 // static
 mx_status_t MessagePacket::Create(user_ptr<const void> data, uint32_t data_size,
                                   uint32_t num_handles,
-                                  mxtl::unique_ptr<MessagePacket>* msg) {
+                                  fbl::unique_ptr<MessagePacket>* msg) {
     mx_status_t status = NewPacket(data_size, num_handles, msg);
     if (status != MX_OK) {
         return status;
@@ -65,7 +65,7 @@ mx_status_t MessagePacket::Create(user_ptr<const void> data, uint32_t data_size,
 // static
 mx_status_t MessagePacket::Create(const void* data, uint32_t data_size,
                                   uint32_t num_handles,
-                                  mxtl::unique_ptr<MessagePacket>* msg) {
+                                  fbl::unique_ptr<MessagePacket>* msg) {
     mx_status_t status = NewPacket(data_size, num_handles, msg);
     if (status != MX_OK) {
         return status;

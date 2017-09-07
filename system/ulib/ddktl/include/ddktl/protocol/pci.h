@@ -53,7 +53,7 @@
 //     }
 //
 //   private:
-//     mxtl::unique_ptr<ddk::PciProtocolProxy> pci_;
+//     fbl::unique_ptr<ddk::PciProtocolProxy> pci_;
 // };
 
 namespace ddk {

@@ -18,6 +18,6 @@ MODULE_NAME := port2-test
 MODULE_LIBS := \
     system/ulib/unittest system/ulib/mxio system/ulib/magenta system/ulib/c
 
-MODULE_STATIC_LIBS := system/ulib/mxtl
+MODULE_STATIC_LIBS := system/ulib/fbl
 
 include make/module.mk

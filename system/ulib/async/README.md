@@ -201,7 +201,7 @@ See [async/default.h](include/async/default.h) for details.
 ## Using the C++ helpers
 
 `libasync.a` includes `Wait`, `Task`, and `Receiver` helper classes which wrap
-the C API with a more convenient mxtl::Function<> callback based interface
+the C API with a more convenient fbl::Function<> callback based interface
 for use in C++.
 
 There is also a special `WaitWithTimeout` helper defined in

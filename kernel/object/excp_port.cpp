@@ -16,12 +16,12 @@
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
 #include <trace.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -44,20 +44,20 @@ static PortPacket* MakePacket(uint64_t key, uint32_t type, mx_koid_t pid, mx_koi
 }
 
 // static
-mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
-                                  mxtl::RefPtr<ExceptionPort>* out_eport) {
-    mxtl::AllocChecker ac;
-    auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
+mx_status_t ExceptionPort::Create(Type type, fbl::RefPtr<PortDispatcher> port, uint64_t port_key,
+                                  fbl::RefPtr<ExceptionPort>* out_eport) {
+    fbl::AllocChecker ac;
+    auto eport = new (&ac) ExceptionPort(type, fbl::move(port), port_key);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     // ExceptionPort's ctor causes the first ref to be adopted,
     // so we should only wrap.
-    *out_eport = mxtl::WrapRefPtr<ExceptionPort>(eport);
+    *out_eport = fbl::WrapRefPtr<ExceptionPort>(eport);
     return MX_OK;
 }
 
-ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
+ExceptionPort::ExceptionPort(Type type, fbl::RefPtr<PortDispatcher> port, uint64_t port_key)
     : type_(type), port_key_(port_key), port_(port) {
     LTRACE_ENTRY_OBJ;
     DEBUG_ASSERT(port_ != nullptr);
@@ -71,7 +71,7 @@ ExceptionPort::~ExceptionPort() {
     DEBUG_ASSERT(!IsBoundLocked());
 }
 
-void ExceptionPort::SetTarget(const mxtl::RefPtr<JobDispatcher>& target) {
+void ExceptionPort::SetTarget(const fbl::RefPtr<JobDispatcher>& target) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -84,7 +84,7 @@ void ExceptionPort::SetTarget(const mxtl::RefPtr<JobDispatcher>& target) {
     target_ = target;
 }
 
-void ExceptionPort::SetTarget(const mxtl::RefPtr<ProcessDispatcher>& target) {
+void ExceptionPort::SetTarget(const fbl::RefPtr<ProcessDispatcher>& target) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -97,7 +97,7 @@ void ExceptionPort::SetTarget(const mxtl::RefPtr<ProcessDispatcher>& target) {
     target_ = target;
 }
 
-void ExceptionPort::SetTarget(const mxtl::RefPtr<ThreadDispatcher>& target) {
+void ExceptionPort::SetTarget(const fbl::RefPtr<ThreadDispatcher>& target) {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
@@ -190,7 +190,7 @@ void ExceptionPort::OnTargetUnbind() {
     canary_.Assert();
 
     LTRACE_ENTRY_OBJ;
-    mxtl::RefPtr<PortDispatcher> port;
+    fbl::RefPtr<PortDispatcher> port;
     {
         AutoLock lock(&lock_);
         if (port_ == nullptr) {
@@ -276,7 +276,7 @@ void ExceptionPort::OnThreadStart(ThreadDispatcher* thread) {
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
     ThreadDispatcher::ExceptionStatus estatus;
-    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
+    auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != MX_OK) {
         // Ignore any errors. There's nothing we can do here, and
         // we still want the thread to run. It's possible the thread was
@@ -363,7 +363,7 @@ void ExceptionPort::OnThreadExitForDebugger(ThreadDispatcher* thread) {
     // N.B. If the process is exiting it will have killed all threads. That
     // means all threads get marked with THREAD_SIGNAL_KILL which means this
     // exchange will return immediately with MX_ERR_INTERNAL_INTR_KILLED.
-    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
+    auto status = thread->ExceptionHandlerExchange(fbl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != MX_OK) {
         // Ignore any errors, we still want the thread to continue exiting.
     }

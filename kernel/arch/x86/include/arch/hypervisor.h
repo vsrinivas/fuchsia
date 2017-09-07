@@ -15,9 +15,9 @@
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <magenta/types.h>
-#include <mxtl/array.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/array.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 static const uint16_t kNumInterrupts = X86_MAX_INT + 1;
 
@@ -51,12 +51,12 @@ private:
 /* Represents a guest within the hypervisor. */
 class Guest {
 public:
-    static status_t Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out);
+    static status_t Create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* out);
     ~Guest();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
 
     status_t SetTrap(uint32_t kind, mx_vaddr_t addr, size_t len,
-                     mxtl::RefPtr<PortDispatcher> port, uint64_t key);
+                     fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
     GuestPhysicalAddressSpace* AddressSpace() const { return gpas_.get(); }
     PacketMux& Mux() { return mux_; }
@@ -64,7 +64,7 @@ public:
     paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
 private:
-    mxtl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
+    fbl::unique_ptr<GuestPhysicalAddressSpace> gpas_;
     PacketMux mux_;
     VmxPage apic_access_page_;
     VmxPage msr_bitmaps_page_;
@@ -89,10 +89,10 @@ struct LocalApicState {
 /* Represents a virtual CPU within a guest. */
 class Vcpu {
 public:
-    static status_t Create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+    static status_t Create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                            paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                            GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                           mxtl::unique_ptr<Vcpu>* out);
+                           fbl::unique_ptr<Vcpu>* out);
     ~Vcpu();
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
@@ -106,7 +106,7 @@ public:
 private:
     const thread_t* thread_;
     const uint16_t vpid_;
-    mxtl::RefPtr<VmObject> apic_vmo_;
+    fbl::RefPtr<VmObject> apic_vmo_;
     LocalApicState local_apic_state_;
     GuestPhysicalAddressSpace* gpas_;
     PacketMux& mux_;
@@ -115,22 +115,22 @@ private:
     VmxPage guest_msr_page_;
     VmxPage vmcs_page_;
 
-    Vcpu(const thread_t* thread, uint16_t vpid, mxtl::RefPtr<VmObject> apic_vmo,
+    Vcpu(const thread_t* thread, uint16_t vpid, fbl::RefPtr<VmObject> apic_vmo,
          GuestPhysicalAddressSpace* gpas, PacketMux& mux);
 };
 
 /* Create a guest. */
-status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* guest);
+status_t arch_guest_create(fbl::RefPtr<VmObject> physmem, fbl::unique_ptr<Guest>* guest);
 
 /* Set a trap within a guest. */
 status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
-                             mxtl::RefPtr<PortDispatcher> port, uint64_t key);
+                             fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
 /* Create a VCPU. */
-status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, mxtl::RefPtr<VmObject> apic_vmo,
+status_t x86_vcpu_create(mx_vaddr_t ip, mx_vaddr_t cr3, fbl::RefPtr<VmObject> apic_vmo,
                          paddr_t apic_access_address, paddr_t msr_bitmaps_address,
                          GuestPhysicalAddressSpace* gpas, PacketMux& mux,
-                         mxtl::unique_ptr<Vcpu>* out);
+                         fbl::unique_ptr<Vcpu>* out);
 
 /* Resume execution of a VCPU. */
 status_t arch_vcpu_resume(Vcpu* vcpu, mx_port_packet_t* packet);

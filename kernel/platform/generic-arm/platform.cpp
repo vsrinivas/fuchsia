@@ -7,9 +7,9 @@
 
 #include <debug.h>
 #include <err.h>
-#include <mxtl/auto_lock.h>
-#include <mxtl/atomic.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/auto_lock.h>
+#include <fbl/atomic.h>
+#include <fbl/ref_ptr.h>
 #include <reg.h>
 #include <trace.h>
 
@@ -296,8 +296,8 @@ __END_CDECLS
 // The first CPU to halt will setup the halt_aspace and map a WFE spin loop into
 // the halt aspace.
 // Subsequent CPUs will reuse this aspace and mapping.
-static mxtl::Mutex cpu_halt_lock;
-static mxtl::RefPtr<VmAspace> halt_aspace = nullptr;
+static fbl::Mutex cpu_halt_lock;
+static fbl::RefPtr<VmAspace> halt_aspace = nullptr;
 static bool mapped_boot_pages = false;
 
 void platform_halt_cpu(void) {
@@ -306,7 +306,7 @@ void platform_halt_cpu(void) {
     thread_t *self = get_current_thread();
     const uint cpuid = thread_last_cpu(self);
 
-    mxtl::AutoLock lock(&cpu_halt_lock);
+    fbl::AutoLock lock(&cpu_halt_lock);
     // If we're the first CPU to halt then we need to create an address space to
     // park the CPUs in. Any subsequent calls to platform_halt_cpu will also
     // share this address space.
@@ -353,7 +353,7 @@ void platform_halt_cpu(void) {
                reinterpret_cast<const void*>(bcm28xx_park_cpu),
                bcm28xx_park_cpu_length);
 
-        mxtl::atomic_signal_fence();
+        fbl::atomic_signal_fence();
         arch_clean_cache_range(KERNEL_ASPACE_BASE, 4096);     // clean out all the VC bootstrap area
         arch_sync_cache_range(KERNEL_ASPACE_BASE, 4096);     // clean out all the VC bootstrap area
 

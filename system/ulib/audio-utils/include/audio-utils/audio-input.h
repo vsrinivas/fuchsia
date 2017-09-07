@@ -14,12 +14,12 @@ class AudioSink;
 
 class AudioInput : public AudioDeviceStream {
 public:
-    static mxtl::unique_ptr<AudioInput> Create(uint32_t dev_id);
-    static mxtl::unique_ptr<AudioInput> Create(const char* dev_path);
+    static fbl::unique_ptr<AudioInput> Create(uint32_t dev_id);
+    static fbl::unique_ptr<AudioInput> Create(const char* dev_path);
     mx_status_t Record(AudioSink& sink, float duration_seconds);
 
 private:
-    friend class mxtl::unique_ptr<AudioInput>;
+    friend class fbl::unique_ptr<AudioInput>;
     friend class AudioDeviceStream;
 
     explicit AudioInput(uint32_t dev_id) : AudioDeviceStream(true, dev_id) { }

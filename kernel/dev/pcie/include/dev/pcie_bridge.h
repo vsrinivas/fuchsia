@@ -15,15 +15,15 @@
 #include <dev/pcie_upstream_node.h>
 
 #include <region-alloc/region-alloc.h>
-#include <mxtl/macros.h>
-#include <mxtl/ref_ptr.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 #include <sys/types.h>
 
 class PciConfig;
 class PcieBridge : public PcieDevice,
                    public PcieUpstreamNode {
 public:
-    static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream,
+    static fbl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream,
                                            uint dev_id,
                                            uint func_id,
                                            uint managed_bus_id);
@@ -80,5 +80,5 @@ private:
     uint32_t io_base_;
     uint32_t io_limit_;
     bool     supports_32bit_pio_;
-    mxtl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
+    fbl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 };

@@ -12,7 +12,7 @@
 #include <magenta/compiler.h>
 #include <magenta/process.h>
 #include <magenta/syscalls.h>
-#include <mxtl/algorithm.h>
+#include <fbl/algorithm.h>
 
 #include "bench.h"
 
@@ -50,14 +50,14 @@ int vmo_run_benchmark() {
         }
     });
 
-    printf("\ttook %" PRIu64 " nsecs to create %zu vmos of size %zu\n", t, mxtl::count_of(vmos), size);
+    printf("\ttook %" PRIu64 " nsecs to create %zu vmos of size %zu\n", t, fbl::count_of(vmos), size);
 
     t = time_it([&](){
         for (auto& vmo : vmos) {
             mx_handle_close(vmo);
         }
     });
-    printf("\ttook %" PRIu64 " nsecs to delete %zu vmos of size %zu\n", t, mxtl::count_of(vmos), size);
+    printf("\ttook %" PRIu64 " nsecs to delete %zu vmos of size %zu\n", t, fbl::count_of(vmos), size);
 
     // create a vmo and demand fault it in
     mx_handle_t vmo;

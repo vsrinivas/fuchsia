@@ -16,10 +16,10 @@
 
 #ifdef __cplusplus
 
-#include <mxtl/atomic.h>
-#include <mxtl/intrusive_double_list.h>
-#include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <fbl/atomic.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "dnode.h"
 
@@ -42,7 +42,7 @@ public:
 
     virtual ~VnodeMemfs();
 
-    mxtl::RefPtr<Dnode> dnode_;
+    fbl::RefPtr<Dnode> dnode_;
     uint32_t link_count_;
 
 protected:
@@ -53,7 +53,7 @@ protected:
     uint64_t modify_time_;
 
 private:
-    static mxtl::atomic<uint64_t> ino_ctr_;
+    static fbl::atomic<uint64_t> ino_ctr_;
 };
 
 class VnodeFile final : public VnodeMemfs {
@@ -81,8 +81,8 @@ public:
     virtual ~VnodeDir();
 
     virtual mx_status_t Open(uint32_t flags) final;
-    mx_status_t Lookup(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
-    mx_status_t Create(mxtl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
+    mx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len) final;
+    mx_status_t Create(fbl::RefPtr<fs::Vnode>* out, const char* name, size_t len, uint32_t mode) final;
 
     // Create a vnode from a VMO.
     // Fails if the vnode already exists.
@@ -111,15 +111,15 @@ private:
 
     // Creates a dnode for the Vnode, attaches vnode to dnode, (if directory) attaches
     // dnode to vnode, and adds dnode to parent directory.
-    mx_status_t AttachVnode(mxtl::RefPtr<memfs::VnodeMemfs> vn, const char* name, size_t namelen,
+    mx_status_t AttachVnode(fbl::RefPtr<memfs::VnodeMemfs> vn, const char* name, size_t namelen,
                             bool isdir);
 
     mx_status_t Unlink(const char* name, size_t len, bool must_be_dir) final;
-    mx_status_t Rename(mxtl::RefPtr<fs::Vnode> newdir,
+    mx_status_t Rename(fbl::RefPtr<fs::Vnode> newdir,
                        const char* oldname, size_t oldlen,
                        const char* newname, size_t newlen,
                        bool src_must_be_dir, bool dst_must_be_dir) final;
-    mx_status_t Link(const char* name, size_t len, mxtl::RefPtr<fs::Vnode> target) final;
+    mx_status_t Link(const char* name, size_t len, fbl::RefPtr<fs::Vnode> target) final;
     mx_status_t Getattr(vnattr_t* a) final;
     mx_status_t Mmap(int flags, size_t len, size_t* off, mx_handle_t* out) final;
     ssize_t Ioctl(uint32_t op, const void* in_buf,
@@ -154,10 +154,10 @@ private:
 using VnodeMemfs = memfs::VnodeMemfs;
 using VnodeDir = memfs::VnodeDir;
 
-mxtl::RefPtr<VnodeDir> BootfsRoot();
-mxtl::RefPtr<VnodeDir> MemfsRoot();
-mxtl::RefPtr<VnodeDir> SystemfsRoot();
-mxtl::RefPtr<VnodeDir> DevfsRoot();
+fbl::RefPtr<VnodeDir> BootfsRoot();
+fbl::RefPtr<VnodeDir> MemfsRoot();
+fbl::RefPtr<VnodeDir> SystemfsRoot();
+fbl::RefPtr<VnodeDir> DevfsRoot();
 
 #else
 

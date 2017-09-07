@@ -14,10 +14,10 @@
 
 #include <magenta/compiler.h>
 #include <magenta/rights.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
-using mxtl::AutoLock;
+using fbl::AutoLock;
 
 static handler_return timer_irq_callback(timer* timer, lk_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we
@@ -31,7 +31,7 @@ static void dpc_callback(dpc_t* d) {
 }
 
 mx_status_t TimerDispatcher::Create(uint32_t options,
-                                    mxtl::RefPtr<Dispatcher>* dispatcher,
+                                    fbl::RefPtr<Dispatcher>* dispatcher,
                                     mx_rights_t* rights) {
     if (options > MX_TIMER_SLACK_LATE)
         return MX_ERR_INVALID_ARGS;
@@ -49,13 +49,13 @@ mx_status_t TimerDispatcher::Create(uint32_t options,
         return MX_ERR_INVALID_ARGS;
     };
 
-    mxtl::AllocChecker ac;
+    fbl::AllocChecker ac;
     auto disp = new (&ac) TimerDispatcher(slack_mode);
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
     *rights = MX_DEFAULT_TIMERS_RIGHTS;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
     return MX_OK;
 }
 

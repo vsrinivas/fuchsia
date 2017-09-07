@@ -7,8 +7,8 @@
 #include <hypervisor/packet_mux.h>
 
 #include <magenta/syscalls/hypervisor.h>
-#include <mxtl/alloc_checker.h>
-#include <mxtl/auto_lock.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 
 __UNUSED static const size_t kMaxPacketsPerRange = 256;
 
@@ -42,8 +42,8 @@ void BlockingPortAllocator::Free(PortPacket* port_packet) {
         thread_reschedule();
 }
 
-PortRange::PortRange(mx_vaddr_t addr, size_t len, mxtl::RefPtr<PortDispatcher> port, uint64_t key)
-    : addr_(addr), len_(len), port_(mxtl::move(port)), key_(key) {
+PortRange::PortRange(mx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port, uint64_t key)
+    : addr_(addr), len_(len), port_(fbl::move(port)), key_(key) {
     (void) key_;
 }
 
@@ -65,17 +65,17 @@ mx_status_t PortRange::Queue(const mx_port_packet_t& packet, StateReloader* relo
 }
 
 mx_status_t PacketMux::AddPortRange(mx_vaddr_t addr, size_t len,
-                                    mxtl::RefPtr<PortDispatcher> port, uint64_t key) {
-    mxtl::AllocChecker ac;
-    mxtl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, mxtl::move(port), key));
+                                    fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<PortRange> range(new (&ac) PortRange(addr, len, fbl::move(port), key));
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
     mx_status_t status = range->Init();
     if (status != MX_OK)
         return status;
     {
-        mxtl::AutoLock lock(&mutex_);
-        ports_.insert(mxtl::move(range));
+        fbl::AutoLock lock(&mutex_);
+        ports_.insert(fbl::move(range));
     }
     return MX_OK;
 }
@@ -83,7 +83,7 @@ mx_status_t PacketMux::AddPortRange(mx_vaddr_t addr, size_t len,
 mx_status_t PacketMux::FindPortRange(mx_vaddr_t addr, PortRange** port_range) {
     PortTree::iterator iter;
     {
-        mxtl::AutoLock lock(&mutex_);
+        fbl::AutoLock lock(&mutex_);
         iter = ports_.upper_bound(addr);
     }
     --iter;
