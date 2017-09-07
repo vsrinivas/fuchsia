@@ -22,6 +22,25 @@ DT_OFFSET=0x07a00000
 
 CMDLINE="TERM=uart"
 
+function HELP {
+    echo "help:"
+    echo "-m : Add mexec option to command line"
+    echo "-h for help"
+    exit 1
+}
+
+while getopts "mf" FLAG; do
+    case $FLAG in
+        m) CMDLINE+=" netsvc.netboot=true";;
+        h) HELP;;
+        \?)
+            echo unrecognized option
+            HELP
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
 # mkdtimg and mkbootimg can be found at:
 #  https://github.com/96boards-hikey/tools-images-hikey960/tree/master/build-from-source
 
@@ -33,7 +52,7 @@ mkbootimg --kernel $KERNEL \
 --ramdisk_offset $RAMDISK_OFFSET \
 --ramdisk $RAMDISK \
 --tags_offset $DT_OFFSET \
---cmdline $CMDLINE \
+--cmdline "$CMDLINE" \
 -o $OUT_IMAGE || exit 1
 
 fastboot flash dts $DT_IMAGE || exit 1
