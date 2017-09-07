@@ -19,20 +19,20 @@ FUNCTION(x86_uspace_entry)
     ALL_CFI_UNDEFINED
 
     // Clear registers
-    xor %rax, %rax
-    xor %rbx, %rbx
-    xor %rcx, %rcx
-    xor %rdx, %rdx
+    xorl %eax, %eax /* set %rax = 0 */
+    xorl %ebx, %ebx
+    xorl %ecx, %ecx
+    xorl %edx, %edx
     // Don't clear rdi or rsi, since they have the user arguments.
-    xor %rbp, %rbp
-    xor %r8, %r8
-    xor %r9, %r9
-    xor %r10, %r10
-    xor %r11, %r11
-    xor %r12, %r12
-    xor %r13, %r13
-    xor %r14, %r14
-    xor %r15, %r15
+    xorl %ebp, %ebp
+    xorl %r8d, %r8d
+    xorl %r9d, %r9d
+    xorl %r10d, %r10d
+    xorl %r11d, %r11d
+    xorl %r12d, %r12d
+    xorl %r13d, %r13d
+    xorl %r14d, %r14d
+    xorl %r15d, %r15d
 
     // We do not need to clear extended register state, since the kernel only
     // uses the general purpose registers, and the extended state is initialized

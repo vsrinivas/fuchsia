@@ -321,12 +321,12 @@ FUNCTION_LABEL(x86_syscall)
     pop_value %r11 /* user RFLAGS */
 
     /* zero out trashed arg registers */
-    xor     %rdi, %rdi
-    xor     %rsi, %rsi
-    /*xor     %rdx, %rdx - can't yet, contains "is signaled" indicator */
-    xor     %r10, %r10
-    xor     %r8, %r8
-    xor     %r9, %r9
+    xorl    %edi, %edi
+    xorl    %esi, %esi
+    /* Don't zero %rdx yet -- it contains the "is_signaled" indicator */
+    xorl    %r10d, %r10d
+    xorl    %r8d, %r8d
+    xorl    %r9d, %r9d
 
     cmp     $0, %rdx
     jnz     .Lthread_signaled

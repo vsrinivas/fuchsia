@@ -72,7 +72,7 @@ END_FUNCTION(arch_spin_unlock)
 
 /* rep stos version of page zero */
 FUNCTION(arch_zero_page)
-    xor     %rax, %rax
+    xorl    %eax, %eax /* set %rax = 0 */
     mov     $PAGE_SIZE >> 3, %rcx
     cld
 
