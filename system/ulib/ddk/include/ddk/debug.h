@@ -55,7 +55,7 @@ __BEGIN_CDECLS
 // spiral out of control as it logs about packets about logging...
 #define DDK_LOG_LERROR   (MX_LOG_ERROR | MX_LOG_LOCAL)
 #define DDK_LOG_LINFO    (MX_LOG_INFO | MX_LOG_LOCAL)
-#define DDK_LOG_LTRACE   (MX_LOG_INFO | MX_LOG_LOCAL)
+#define DDK_LOG_LTRACE   (MX_LOG_TRACE | MX_LOG_LOCAL)
 #define DDK_LOG_LSPEW    (MX_LOG_SPEW | MX_LOG_LOCAL)
 #define DDK_LOG_LDEBUG1  (MX_LOG_DEBUG1 | MX_LOG_LOCAL)
 #define DDK_LOG_LDEBUG2  (MX_LOG_DEBUG2 | MX_LOG_LOCAL)
