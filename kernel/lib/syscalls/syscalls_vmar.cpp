@@ -61,13 +61,16 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         new_vmar->Destroy();
     });
 
-    if (_child_addr.copy_to_user(new_vmar->vmar()->base()) != MX_OK)
-        return MX_ERR_INVALID_ARGS;
+    // Extract the base address before we give away the ref.
+    uintptr_t base = new_vmar->vmar()->base();
 
     // Create a handle and attach the dispatcher to it
     HandleOwner handle(MakeHandle(mxtl::move(new_vmar), new_rights));
     if (!handle)
         return MX_ERR_NO_MEMORY;
+
+    if (_child_addr.copy_to_user(base) != MX_OK)
+        return MX_ERR_INVALID_ARGS;
 
     if (_child_vmar.copy_to_user(up->MapHandleToValue(handle)) != MX_OK)
         return MX_ERR_INVALID_ARGS;
