@@ -212,6 +212,11 @@ static int uart_input_loop(void* arg) {
         mtx_unlock(&uart->mutex);
 
         int pending_char = getchar();
+        if (pending_char == '\b')
+            // Replace BS with DEL to make Linux happy.
+            // TODO(andymutton): Better input handling / terminal emulation.
+            pending_char = 0x7f;
+
         if (pending_char == EOF)
             status = MX_ERR_PEER_CLOSED;
         else {
