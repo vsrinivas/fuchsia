@@ -33,13 +33,6 @@ source_set("array_to_string") {
   ]
 }
 
-source_set("bottleneck") {
-  sources = [
-    "bottleneck.cc",
-    "bottleneck.h",
-  ]
-}
-
 source_set("context") {
   sources = [
     "context.h",
