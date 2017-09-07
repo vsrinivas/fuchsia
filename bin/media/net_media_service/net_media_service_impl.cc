@@ -9,8 +9,10 @@
 
 namespace media {
 
-NetMediaServiceImpl::NetMediaServiceImpl() {
-  application_context()->outgoing_services()->AddService<NetMediaService>(
+NetMediaServiceImpl::NetMediaServiceImpl(
+    std::unique_ptr<app::ApplicationContext> application_context)
+    : FactoryServiceBase(std::move(application_context)) {
+    this->application_context()->outgoing_services()->AddService<NetMediaService>(
       [this](fidl::InterfaceRequest<NetMediaService> request) {
         bindings_.AddBinding(this, std::move(request));
       });

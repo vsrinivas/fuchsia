@@ -15,8 +15,8 @@ namespace media {
 class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
                             public NetMediaService {
  public:
-  NetMediaServiceImpl();
-
+  NetMediaServiceImpl(
+      std::unique_ptr<app::ApplicationContext> application_context);
   ~NetMediaServiceImpl() override;
 
   // NetMediaService implementation.

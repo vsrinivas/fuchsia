@@ -23,7 +23,7 @@ namespace audio {
 
 class AudioServerImpl : public AudioServer {
  public:
-  AudioServerImpl();
+  AudioServerImpl(std::unique_ptr<app::ApplicationContext> application_context);
   ~AudioServerImpl() override;
 
   // AudioServer

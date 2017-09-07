@@ -11,7 +11,7 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
-  media::MediaServiceImpl impl;
+  media::MediaServiceImpl impl(app::ApplicationContext::CreateFromStartupInfo());
 
   loop.Run();
   return 0;

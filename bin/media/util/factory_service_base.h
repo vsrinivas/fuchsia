@@ -98,8 +98,8 @@ class FactoryServiceBase {
     fidl::Binding<Interface> binding_;
   };
 
-  FactoryServiceBase()
-      : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+  FactoryServiceBase(std::unique_ptr<app::ApplicationContext> application_context)
+      : application_context_(std::move(application_context)),
         task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()) {}
 
   virtual ~FactoryServiceBase() {}

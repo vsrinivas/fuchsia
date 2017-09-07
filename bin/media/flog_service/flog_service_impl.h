@@ -19,8 +19,7 @@ namespace flog {
 class FlogServiceImpl : public FactoryServiceBase<FlogServiceImpl>,
                         public FlogService {
  public:
-  FlogServiceImpl();
-
+  FlogServiceImpl(std::unique_ptr<app::ApplicationContext> application_context);
   ~FlogServiceImpl() override;
 
   // FlogService implementation.

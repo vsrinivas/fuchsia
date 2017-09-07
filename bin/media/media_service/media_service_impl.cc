@@ -24,7 +24,9 @@
 
 namespace media {
 
-MediaServiceImpl::MediaServiceImpl() {
+MediaServiceImpl::MediaServiceImpl(
+    std::unique_ptr<app::ApplicationContext> context)
+    : FactoryServiceBase(std::move(context)) {
   FLOG_INITIALIZE(application_context(), "media_service");
 
   multiproc_task_runner_ =

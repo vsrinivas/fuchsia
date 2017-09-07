@@ -18,8 +18,7 @@ namespace media {
 
 class AudioPolicyServiceImpl : public AudioPolicyService {
  public:
-  AudioPolicyServiceImpl();
-
+  AudioPolicyServiceImpl(std::unique_ptr<app::ApplicationContext> application_context);
   ~AudioPolicyServiceImpl() override;
 
   // AudioPolicyService implementation.

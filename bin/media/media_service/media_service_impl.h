@@ -36,8 +36,8 @@ namespace media {
 class MediaServiceImpl : public FactoryServiceBase<MediaServiceImpl>,
                          public MediaService {
  public:
-  MediaServiceImpl();
-
+  MediaServiceImpl(
+      std::unique_ptr<app::ApplicationContext> application_context);
   ~MediaServiceImpl() override;
 
   ftl::RefPtr<ftl::TaskRunner> multiproc_task_runner() {

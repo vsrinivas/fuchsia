@@ -12,8 +12,8 @@
 namespace media {
 namespace audio {
 
-AudioServerImpl::AudioServerImpl()
-    : application_context_(app::ApplicationContext::CreateFromStartupInfo()),
+AudioServerImpl::AudioServerImpl(std::unique_ptr<app::ApplicationContext> application_context)
+    : application_context_(std::move(application_context)),
       output_manager_(this),
       cleanup_queue_(new CleanupQueue) {
   FTL_DCHECK(application_context_);
