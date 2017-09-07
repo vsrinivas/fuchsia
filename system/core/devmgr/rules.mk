@@ -37,8 +37,10 @@ MODULE_HEADER_DEPS := \
 	system/ulib/ddk
 
 MODULE_STATIC_LIBS := \
-    system/ulib/gpt \
     system/ulib/fs \
+    system/ulib/async \
+    system/ulib/async.loop \
+    system/ulib/gpt \
     system/ulib/mx \
     system/ulib/bootdata \
     third_party/ulib/lz4 \
@@ -49,6 +51,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/driver-info \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/fs-management \
     system/ulib/launchpad \
     system/ulib/mxio \

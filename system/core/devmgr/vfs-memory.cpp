@@ -9,19 +9,20 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include <async/loop.h>
 #include <ddk/device.h>
-#include <fs/mxio-dispatcher.h>
-#include <fs/vfs.h>
-#include <magenta/device/vfs.h>
-#include <magenta/thread_annotations.h>
-#include <mxio/debug.h>
-#include <mxio/vfs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fs/async-dispatcher.h>
+#include <fs/vfs.h>
+#include <magenta/device/vfs.h>
+#include <magenta/thread_annotations.h>
+#include <mxio/debug.h>
+#include <mxio/vfs.h>
 
 #include "devmgr.h"
 #include "dnode.h"
@@ -33,7 +34,8 @@ namespace memfs {
 namespace {
 
 fs::Vfs vfs;
-fbl::unique_ptr<fs::MxioDispatcher> global_dispatcher;
+fbl::unique_ptr<async::Loop> global_loop;
+fbl::unique_ptr<fs::AsyncDispatcher> global_dispatcher;
 
 }
 
@@ -777,8 +779,9 @@ VnodeDir* vfs_create_global_root() {
         memfs_create_directory_unsafe("/volume", 0);
         memfs_create_directory_unsafe("/dev/socket", 0);
 
-        fs::MxioDispatcher::Create(&memfs::global_dispatcher);
-        memfs::global_dispatcher->StartThread();
+        memfs::global_loop.reset(new async::Loop());
+        memfs::global_dispatcher.reset(new fs::AsyncDispatcher(memfs::global_loop->async()));
+        memfs::global_loop->StartThread("root-dispatcher");
         memfs::vfs.SetDispatcher(memfs::global_dispatcher.get());
     }
     return memfs::vfs_root.get();
