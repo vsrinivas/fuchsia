@@ -11,7 +11,6 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/async-dispatcher.cpp \
     $(LOCAL_DIR)/mapped-vmo.cpp \
-    $(LOCAL_DIR)/mxio-dispatcher.cpp \
     $(LOCAL_DIR)/vfs.cpp \
     $(LOCAL_DIR)/vfs-mount.cpp \
     $(LOCAL_DIR)/vfs-unmount.cpp \
