@@ -4,7 +4,6 @@
     ],
     "imports": [
         "boringssl_libssl",
-        "default",
         "ftl",
         "magentix",
         "mtl",
