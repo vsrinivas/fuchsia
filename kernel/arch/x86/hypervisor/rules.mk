@@ -5,7 +5,6 @@
 # https://opensource.org/licenses/MIT
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
-SUBARCH_DIR := $(LOCAL_DIR)/../64
 
 MODULE := $(LOCAL_DIR)
 
@@ -13,8 +12,7 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/guest.cpp \
 	$(LOCAL_DIR)/vcpu.cpp \
 	$(LOCAL_DIR)/vmexit.cpp \
+	$(LOCAL_DIR)/vmx.S \
 	$(LOCAL_DIR)/vmx_cpu_state.cpp \
-\
-	$(SUBARCH_DIR)/hypervisor.S \
 
 include make/module.mk
