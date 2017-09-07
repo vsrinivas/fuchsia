@@ -317,6 +317,7 @@ Usage: fset x86-64|arm64|rpi3|odroidc2|hikey960
                               [--goma|--no-goma] [--no-ensure-goma]
                               [--goma-dir path]
                               [--ccache|--no-ccache]
+                              [--dart-analysis]
 Sets fuchsia build options.
 END
 }
@@ -361,6 +362,7 @@ function fset() {
   local goma_dir
   local ensure_goma=1
   local ccache
+  local dart_analysis=0
   while [[ $# -ne 0 ]]; do
     case $1 in
       --release)
@@ -401,6 +403,9 @@ function fset() {
         ;;
       --no-ccache)
         ccache=0
+        ;;
+      --dart-analysis)
+        dart_analysis=1
         ;;
       *)
         fset-usage
@@ -451,6 +456,10 @@ function fset() {
   elif [[ "${ccache}" -eq 1 ]]; then
     fset-add-gen-arg --ccache
     builder="-ccache"
+  fi
+
+  if [[ "${dart_analysis}" -eq 1 ]]; then
+    fset-add-gen-arg --with-dart-analysis
   fi
 
   export ENVPROMPT_INFO="${ENVPROMPT_INFO}-${FUCHSIA_VARIANT}${builder}"
