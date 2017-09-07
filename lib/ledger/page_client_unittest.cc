@@ -27,7 +27,7 @@ class PageClientImpl : PageClient {
 
     values_[key] = value;
 
-    FTL_LOG(INFO) << "OnPageChange " << prefix()
+    FTL_LOG(INFO) << "OnPageChange \"" << prefix() << "\""
                   << " " << change_count_
                   << " " << key << " " << value;
   }
@@ -133,43 +133,29 @@ class PageClientTest : public TestWithMessageLoop {
     finished_ = true;
   }
 
-  // Continues to run until all page watcher notifications are delivered. Uses
-  // the behavior of ledger that a transaction does not start before all watcher
-  // notifications are delivered and the watchers have returned. This must be
-  // called only when all transactions have finished, if there are any, and
-  // after conflicts created by these transactions are merged. Otherwise conflit
-  // resolution is forced to be abandoned and unmerged values are sent to
-  // watchers.
-  void NotifyWatchers() {
-    page_client_->page()->StartTransaction([this](ledger::Status) {
-        page_->StartTransaction([this](ledger::Status) {
-            page_client_->page()->Rollback([this](ledger::Status) {
-                page_->Rollback([this](ledger::Status) {
-                    notify_done_ = true;
-                  });
-              });
-          });
-      });
-  }
-
-  // Runs the message loop until after Finish() completes, then after the merge
-  // condition is true, and then again until after all watchers are notified.
-  void Run() {
-    RunLoopUntil([this] {
+  // Runs the message loop until after Finish() completes, then optionally until
+  // conflicts are resolved, then until the observed |condition| becomes true.
+  void Run(const bool wait_for_resolved, std::function<bool()> condition) {
+    RunLoopUntil([this, wait_for_resolved, condition = std::move(condition)] {
         // First wait for Finish() to be called.
         if (!finished_) {
           return false;
         }
 
         // Then wait for conflict resolution to complete.
-        if (!notify_pending_ && resolved_) {
-          notify_pending_ = true;
-          NotifyWatchers();
+        if (wait_for_resolved && !resolved_) {
           return false;
         }
 
-        // Finally, wait for watchers to be notified.
-        return notify_done_;
+        // Finally, wait for the observed condition. TODO(mesch): This is lame,
+        // because test failure now requires us to time out, however the actual
+        // condition to wait for -- that the conflict is resolved and watcher
+        // notifications are dispatched -- is not observable from here.
+        if (!condition()) {
+          return false;
+        }
+
+        return true;
       });
   }
 
@@ -194,8 +180,6 @@ class PageClientTest : public TestWithMessageLoop {
   // Used by Finish() and Run();
   bool finished_{};
   bool resolved_{};
-  bool notify_pending_{};
-  bool notify_done_{};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageClientTest);
 };
@@ -204,7 +188,7 @@ TEST_F(PageClientTest, SimpleWrite) {
   page1()->Put(to_array("key"), to_array("value"), log("Put"));
   Finish();
 
-  Run();
+  Run(false, [this] { return page_client()->value("key") == "value"; });
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ("value", page_client()->value("key"));
@@ -215,7 +199,10 @@ TEST_F(PageClientTest, PrefixWrite) {
   page2()->Put(to_array("b/key"), to_array("value"), log("Put"));
   Finish();
 
-  Run();
+  Run(false, [this] {
+      return page_client_a()->value("a/key") == "value"
+          && page_client_b()->value("b/key") == "value";
+    });
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ(0, page_client_a()->conflict_count());
@@ -229,7 +216,10 @@ TEST_F(PageClientTest, ConcurrentWrite) {
   page2()->Put(to_array("key2"), to_array("value2"), log("Put key2"));
   Finish();
 
-  Run();
+  Run(false, [this] {
+      return page_client()->value("key1") == "value1"
+          && page_client()->value("key2") == "value2";
+    });
 
   EXPECT_EQ(0, page_client()->conflict_count());
   EXPECT_EQ("value1", page_client()->value("key1"));
@@ -237,7 +227,7 @@ TEST_F(PageClientTest, ConcurrentWrite) {
 }
 
 
-TEST_F(PageClientTest, DISABLED_ConflictWrite) {
+TEST_F(PageClientTest, ConflictWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page2()->Put(to_array("key"), to_array("value2"), [this](ledger::Status status) {
@@ -258,13 +248,15 @@ TEST_F(PageClientTest, DISABLED_ConflictWrite) {
         });
     });
 
-  Run();
+  Run(true, [this] {
+      return page_client()->value("key") == "value3";
+    });
 
   EXPECT_EQ(1, page_client()->conflict_count());
   EXPECT_EQ("value3", page_client()->value("key"));
 }
 
-TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
+TEST_F(PageClientTest, ConflictPrefixWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page2()->Put(to_array("a/key"), to_array("value2"), [this](ledger::Status status) {
@@ -285,14 +277,16 @@ TEST_F(PageClientTest, DISABLED_ConflictPrefixWrite) {
         });
     });
 
-  Run();
+  Run(true, [this] {
+      return page_client_a()->value("a/key") == "value3";
+    });
 
   EXPECT_EQ(1, page_client_a()->conflict_count());
   EXPECT_EQ(0, page_client_b()->conflict_count());
   EXPECT_EQ("value3", page_client_a()->value("a/key"));
 }
 
-TEST_F(PageClientTest, DISABLED_ConcurrentConflictWrite) {
+TEST_F(PageClientTest, ConcurrentConflictWrite) {
   page2()->StartTransaction([this](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
       page2()->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
@@ -315,7 +309,11 @@ TEST_F(PageClientTest, DISABLED_ConcurrentConflictWrite) {
         });
     });
 
-  Run();
+  Run(true, [this] {
+      return page_client()->value("key") == "value3"
+          && page_client()->value("key1") == "value1"
+          && page_client()->value("key2") == "value2";
+    });
 
   EXPECT_EQ(1, page_client()->conflict_count());
   EXPECT_EQ("value1", page_client()->value("key1"));
