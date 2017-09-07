@@ -97,7 +97,7 @@ PageStorageImpl::~PageStorageImpl() {
 void PageStorageImpl::Init(std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](coroutine::CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -227,7 +227,7 @@ void PageStorageImpl::StartCommit(
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([
     this, commit_id, journal_type, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](coroutine::CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -244,7 +244,7 @@ void PageStorageImpl::StartMergeCommit(
     std::function<void(Status, std::unique_ptr<Journal>)> callback) {
   coroutine_service_->StartCoroutine([
     this, left, right, final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](coroutine::CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -336,7 +336,7 @@ void PageStorageImpl::MarkPieceSynced(ObjectIdView object_id,
                                       std::function<void(Status)> callback) {
   coroutine_service_->StartCoroutine([
     this, object_id = object_id.ToString(), final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](coroutine::CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
@@ -488,7 +488,7 @@ void PageStorageImpl::SetSyncMetadata(ftl::StringView key,
   coroutine_service_->StartCoroutine([
     this, key = key.ToString(), value = value.ToString(),
     final_callback = std::move(callback)
-  ](coroutine::CoroutineHandler * handler) {
+  ](coroutine::CoroutineHandler * handler) mutable {
     auto callback =
         UpdateActiveHandlersCallback(handler, std::move(final_callback));
 
