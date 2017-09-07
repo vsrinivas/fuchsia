@@ -19,8 +19,15 @@ typedef struct mx_port_packet mx_port_packet_t;
 
 class Guest {
 public:
+    static status_t Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest>* out);
+    ~Guest() = default;
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Guest);
+
     GuestPhysicalAddressSpace* AddressSpace() const { return nullptr; }
     const PacketMux* Mux() const { return nullptr; }
+
+private:
+    Guest() = default;
 };
 
 class Vcpu {};

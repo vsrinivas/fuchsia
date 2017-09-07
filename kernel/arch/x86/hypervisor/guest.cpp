@@ -38,7 +38,7 @@ mx_status_t Guest::Create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<Guest
     if (!ac.check())
         return MX_ERR_NO_MEMORY;
 
-    mx_status_t status = GuestPhysicalAddressSpace::Create(physmem, &guest->gpas_);
+    mx_status_t status = GuestPhysicalAddressSpace::Create(mxtl::move(physmem), &guest->gpas_);
     if (status != MX_OK)
         return status;
 
@@ -109,7 +109,7 @@ mx_status_t arch_guest_create(mxtl::RefPtr<VmObject> physmem, mxtl::unique_ptr<G
     if (!x86_feature_test(X86_FEATURE_VMX))
         return MX_ERR_NOT_SUPPORTED;
 
-    return Guest::Create(physmem, guest);
+    return Guest::Create(mxtl::move(physmem), guest);
 }
 
 mx_status_t arch_guest_set_trap(Guest* guest, uint32_t kind, mx_vaddr_t addr, size_t len,
