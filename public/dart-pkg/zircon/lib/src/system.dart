@@ -16,9 +16,9 @@ class _Result {
   final int status;
   const _Result(this.status);
 
-  /// Throw an |MxStatusException| if the |status| is not |MX_OK|.
+  /// Throw an |MxStatusException| if the |status| is not |ZX_OK|.
   void checkStatus() {
-    if (status != 0) {
+    if (status != ZX.OK) {
       throw new MxStatusException(status);
     }
   }
@@ -84,7 +84,7 @@ class System extends NativeFieldWrapperClass2 {
       native "System_EventpairCreate";
 
   // Socket operations.
-  static HandlePairResult socketCreate([int options = MX_SOCKET_STREAM])
+  static HandlePairResult socketCreate([int options = ZX.SOCKET_STREAM])
       native "System_SocketCreate";
   static WriteResult socketWrite(Handle socket, ByteData data, int options)
       native "System_SocketWrite";

@@ -82,7 +82,7 @@ class Message {
         handles = result.handles,
         dataLength = result.bytes.lengthInBytes,
         handlesLength = result.handles.length {
-    assert(result.status == core.NO_ERROR);
+    assert(result.status == ZX.OK);
   }
 
   final ByteData buffer;

@@ -10,14 +10,14 @@ class Channel {
   Channel(this.handle);
 
   int write(ByteData data, [List<Handle> handles]) {
-    if (handle == null) return ERR_INVALID_ARGS;
+    if (handle == null) return ZX.ERR_INVALID_ARGS;
 
     return System.channelWrite(handle, data, handles);
   }
 
   ReadResult queryAndRead() {
     if (handle == null) {
-      return const ReadResult(ERR_INVALID_ARGS);
+      return const ReadResult(ZX.ERR_INVALID_ARGS);
     }
     return System.channelQueryAndRead(handle);
   }
@@ -35,7 +35,7 @@ class ChannelPair {
   factory ChannelPair() {
     HandlePairResult result = System.channelCreate();
 
-    if (result.status == NO_ERROR) {
+    if (result.status == ZX.OK) {
       return new ChannelPair._(
         status: result.status,
         channel0: new Channel(result.first),
@@ -51,7 +51,7 @@ class ChannelPair {
   }
 
   ChannelPair._({
-    this.status: NO_ERROR,
+    this.status: ZX.OK,
     this.channel0,
     this.channel1,
   });

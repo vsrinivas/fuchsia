@@ -17,7 +17,7 @@ class Eventpair {
   }
 
   Eventpair._({
-    this.status: NO_ERROR,
+    this.status: ZX.OK,
     this.endpoint0,
     this.endpoint1,
   });

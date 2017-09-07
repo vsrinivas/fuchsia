@@ -10,25 +10,25 @@ class Vmo {
   Vmo(this.handle);
 
   GetSizeResult getSize() {
-    if (handle == null) return const GetSizeResult(ERR_INVALID_ARGS);
+    if (handle == null) return const GetSizeResult(ZX.ERR_INVALID_ARGS);
 
     return System.vmoGetSize(handle);
   }
 
   int setSize(int size) {
-    if (handle == null || size < 0) return ERR_INVALID_ARGS;
+    if (handle == null || size < 0) return ZX.ERR_INVALID_ARGS;
 
     return System.vmoSetSize(handle, size);
   }
 
   WriteResult write(ByteData data, [int vmoOffset = 0]) {
-    if (handle == null) return const WriteResult(ERR_INVALID_ARGS);
+    if (handle == null) return const WriteResult(ZX.ERR_INVALID_ARGS);
 
     return System.vmoWrite(handle, vmoOffset, data);
   }
 
   ReadResult read(int numBytes, [int vmoOffset = 0]) {
-    if (handle == null) return const ReadResult(ERR_INVALID_ARGS);
+    if (handle == null) return const ReadResult(ZX.ERR_INVALID_ARGS);
 
     return System.vmoRead(handle, vmoOffset, numBytes);
   }

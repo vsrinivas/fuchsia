@@ -7,7 +7,6 @@ import 'dart:zircon';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:lib.fidl.dart/core.dart' as core;
 
 /// Helper method to turn a [String] into a [ByteData] containing the
 /// text of the string encoded as UTF-8.
@@ -18,7 +17,7 @@ ByteData utf8Bytes(final String text) {
 void main() {
   test('create channel', () {
     final pair = System.channelCreate();
-    expect(pair.status, equals(core.NO_ERROR));
+    expect(pair.status, equals(ZX.OK));
     expect(pair.first.isValid, isTrue);
     expect(pair.second.isValid, isTrue);
   });
@@ -29,26 +28,26 @@ void main() {
     expect(pair.first.isValid, isFalse);
     expect(pair.second.isValid, isTrue);
     expect(System.channelWrite(pair.first, new ByteData(1), []),
-        equals(core.ERR_BAD_HANDLE));
+        equals(ZX.ERR_BAD_HANDLE));
     expect(System.channelWrite(pair.second, new ByteData(1), []),
-        equals(core.ERR_PEER_CLOSED));
+        equals(ZX.ERR_PEER_CLOSED));
   });
 
   test('channel bytes', () {
     final pair = System.channelCreate();
 
-    // When no data is available, ERR_SHOULD_WAIT is returned.
+    // When no data is available, ZX.ERR_SHOULD_WAIT is returned.
     expect(System.channelQueryAndRead(pair.second).status,
-        equals(core.ERR_SHOULD_WAIT));
+        equals(ZX.ERR_SHOULD_WAIT));
 
     // Write bytes.
     final data = utf8Bytes("Hello, world");
     final status = System.channelWrite(pair.first, data, []);
-    expect(status, equals(core.NO_ERROR));
+    expect(status, equals(ZX.OK));
 
     // Read bytes.
     final readResult = System.channelQueryAndRead(pair.second);
-    expect(readResult.status, equals(core.NO_ERROR));
+    expect(readResult.status, equals(ZX.OK));
     expect(readResult.numBytes, equals(data.lengthInBytes));
     expect(readResult.bytes.lengthInBytes, equals(data.lengthInBytes));
     expect(readResult.bytesAsUTF8String(), equals("Hello, world"));
@@ -60,11 +59,11 @@ void main() {
     final data = utf8Bytes("");
     final eventPair = System.eventpairCreate();
     final status = System.channelWrite(pair.first, data, [eventPair.first]);
-    expect(status, equals(core.NO_ERROR));
+    expect(status, equals(ZX.OK));
     expect(eventPair.first.isValid, isFalse);
 
     final readResult = System.channelQueryAndRead(pair.second);
-    expect(readResult.status, equals(core.NO_ERROR));
+    expect(readResult.status, equals(ZX.OK));
     expect(readResult.numBytes, equals(0));
     expect(readResult.bytes.lengthInBytes, equals(0));
     expect(readResult.bytesAsUTF8String(), equals(""));
@@ -75,7 +74,7 @@ void main() {
   test('async wait channel read', () async {
     final pair = System.channelCreate();
     final Completer<List<int>> completer = new Completer();
-    pair.first.asyncWait(core.MX_CHANNEL_READABLE, (int status, int pending) {
+    pair.first.asyncWait(ZX.CHANNEL_READABLE, (int status, int pending) {
       completer.complete([status, pending]);
     });
 
@@ -84,15 +83,15 @@ void main() {
     System.channelWrite(pair.second, utf8Bytes("Hi"), []);
 
     final List<int> result = await completer.future;
-    expect(result[0], equals(core.NO_ERROR)); // status
-    expect(result[1] & core.MX_CHANNEL_READABLE,
-        equals(core.MX_CHANNEL_READABLE)); // pending
+    expect(result[0], equals(ZX.OK)); // status
+    expect(result[1] & ZX.CHANNEL_READABLE,
+        equals(ZX.CHANNEL_READABLE)); // pending
   });
 
   test('async wait channel closed', () async {
     final pair = System.channelCreate();
     final Completer<int> completer = new Completer();
-    pair.first.asyncWait(core.MX_CHANNEL_PEER_CLOSED,
+    pair.first.asyncWait(ZX.CHANNEL_PEER_CLOSED,
         (int status, int pending) {
       completer.complete(status);
     });
@@ -102,6 +101,6 @@ void main() {
     pair.second.close();
 
     final int status = await completer.future;
-    expect(status, equals(core.NO_ERROR));
+    expect(status, equals(ZX.OK));
   });
 }

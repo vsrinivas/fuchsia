@@ -50,7 +50,7 @@ class ChannelReader {
 
   void _asyncWait() {
     _waiter = _channel.handle.asyncWait(
-        MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, _handleWaitComplete);
+        ZX.CHANNEL_READABLE | ZX.CHANNEL_PEER_CLOSED, _handleWaitComplete);
   }
 
   void _errorSoon(ChannelReaderError error) {
@@ -67,7 +67,7 @@ class ChannelReader {
 
   void _handleWaitComplete(int status, int pending) {
     assert(isBound);
-    if (status != NO_ERROR) {
+    if (status != ZX.OK) {
       close();
       _errorSoon(new ChannelReaderError(
           'Wait completed with status ${getStringForStatus(status)} ($status)',
@@ -77,10 +77,10 @@ class ChannelReader {
     // TODO(abarth): Change this try/catch pattern now that we don't use
     // RawReceivePort any more.
     try {
-      if ((pending & MX_SIGNAL_READABLE) != 0) {
+      if ((pending & ZX.CHANNEL_READABLE) != 0) {
         if (onReadable != null) onReadable();
         if (isBound) _asyncWait();
-      } else if ((pending & MX_SIGNAL_PEER_CLOSED) != 0) {
+      } else if ((pending & ZX.CHANNEL_PEER_CLOSED) != 0) {
         close();
         _errorSoon(null);
       }

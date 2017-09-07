@@ -184,7 +184,7 @@ abstract class Binding<T> {
   InterfaceHandle<T> wrap(T impl) {
     assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
-    if (pair.status != core.NO_ERROR) return null;
+    if (pair.status != ZX.OK) return null;
     _impl = impl;
     _reader.bind(pair.passChannel0());
     return new InterfaceHandle<T>(pair.passChannel1(), version);
@@ -276,10 +276,10 @@ abstract class Binding<T> {
   void _sendResponse(Message response) {
     if (!_reader.isBound) return;
     final int status = _reader.channel.write(response.buffer, response.handles);
-    // ERR_BAD_STATE is only used to indicate that the other end of
+    // ZX.ERR_BAD_STATE is only used to indicate that the other end of
     // the pipe has been closed. We can ignore the close here and wait for
     // the PeerClosed signal on the event stream.
-    assert((status == core.NO_ERROR) || (status == core.ERR_BAD_STATE));
+    assert((status == ZX.OK) || (status == ZX.ERR_BAD_STATE));
   }
 
   final core.ChannelReader _reader = new core.ChannelReader();
@@ -348,7 +348,7 @@ class ProxyController<T> {
     assert(version != null);
     assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
-    assert(pair.status == core.NO_ERROR);
+    assert(pair.status == ZX.OK);
     _version = version;
     _reader.bind(pair.passChannel0());
     return new InterfaceRequest<T>(pair.passChannel1());
@@ -467,7 +467,7 @@ class ProxyController<T> {
         message.serializeWithHeader(new MessageHeader(name));
     final int status =
         _reader.channel.write(serialized.buffer, serialized.handles);
-    if (status != core.NO_ERROR)
+    if (status != ZX.OK)
       proxyError(
           'Failed to write to channel: ${_reader.channel} (status: $status)');
   }
@@ -492,7 +492,7 @@ class ProxyController<T> {
     final int status =
         _reader.channel.write(serialized.buffer, serialized.handles);
 
-    if (status != core.NO_ERROR) {
+    if (status != ZX.OK) {
       proxyError(
           'Failed to write to channel: ${_reader.channel} (status: $status)');
       return;

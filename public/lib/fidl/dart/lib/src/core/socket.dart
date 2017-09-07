@@ -11,14 +11,14 @@ class Socket {
 
   WriteResult write(ByteData data) {
     if (handle == null)
-      return const WriteResult(ERR_INVALID_ARGS);
+      return const WriteResult(ZX.ERR_INVALID_ARGS);
 
     return System.socketWrite(handle, data, 0);
   }
 
   ReadResult read(int numBytes) {
     if (handle == null)
-      return const ReadResult(ERR_INVALID_ARGS);
+      return const ReadResult(ZX.ERR_INVALID_ARGS);
 
     return System.socketRead(handle, numBytes);
   }
@@ -34,7 +34,7 @@ class Socket {
 
 class SocketPair {
   factory SocketPair() {
-    final HandlePairResult result = System.socketCreate(MX_SOCKET_STREAM);
+    final HandlePairResult result = System.socketCreate(ZX.SOCKET_STREAM);
 
     return new SocketPair._(
       status: result.status,
@@ -44,7 +44,7 @@ class SocketPair {
   }
 
   SocketPair._({
-    this.status: NO_ERROR,
+    this.status: ZX.OK,
     this.socket0,
     this.socket1,
   });

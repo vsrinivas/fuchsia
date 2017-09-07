@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:zircon';
 
 import 'package:lib.fidl.dart/core.dart' as core;
 import 'package:meta/meta.dart';

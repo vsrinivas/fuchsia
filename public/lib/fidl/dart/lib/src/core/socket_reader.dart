@@ -53,7 +53,7 @@ class SocketReader {
 
   void _asyncWait() {
     _waiter = _socket.handle.asyncWait(
-        MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED, _handleWaitComplete);
+        ZX.SOCKET_READABLE | ZX.SOCKET_PEER_CLOSED, _handleWaitComplete);
   }
 
   void _errorSoon(SocketReaderError error) {
@@ -72,7 +72,7 @@ class SocketReader {
 
   void _handleWaitComplete(int status, int pending) {
     assert(isBound);
-    if (status != NO_ERROR) {
+    if (status != ZX.OK) {
       close();
       _errorSoon(new SocketReaderError(
           'Wait completed with status ${getStringForStatus(status)} ($status)',
@@ -82,12 +82,12 @@ class SocketReader {
     // TODO(abarth): Change this try/catch pattern now that we don't use
     // RawReceivePort any more.
     try {
-      if ((pending & MX_SIGNAL_READABLE) != 0) {
+      if ((pending & ZX.CHANNEL_READABLE) != 0) {
         if (onReadable != null)
           onReadable();
         if (isBound)
           _asyncWait();
-      } else if ((pending & MX_SIGNAL_PEER_CLOSED) != 0) {
+      } else if ((pending & ZX.CHANNEL_PEER_CLOSED) != 0) {
         close();
         _errorSoon(null);
       }
