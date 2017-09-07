@@ -15,7 +15,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-mount.cpp \
     $(LOCAL_DIR)/vfs-unmount.cpp \
     $(LOCAL_DIR)/vfs-rpc.cpp \
-    $(LOCAL_DIR)/vfs-dispatcher.cpp \
     $(LOCAL_DIR)/vfs-watcher.cpp \
 
 MODULE_STATIC_LIBS := \
