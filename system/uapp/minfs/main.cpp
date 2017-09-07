@@ -19,7 +19,8 @@
 #include <fbl/unique_ptr.h>
 
 #ifdef __Fuchsia__
-#include "fs/mxio-dispatcher.h"
+#include <async/loop.h>
+#include <fs/async-dispatcher.h>
 #endif
 
 #include "minfs-private.h"
@@ -58,18 +59,15 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, int argc, char** argv) {
         return MX_ERR_BAD_STATE;
     }
 
-    static const uint32_t kPoolSize = 4;
-    fbl::unique_ptr<fs::VfsDispatcher> dispatcher;
+    async::Loop loop;
+    fs::AsyncDispatcher dispatcher(loop.async());
+    minfs::vfs.SetDispatcher(&dispatcher);
     mx_status_t status;
-    if ((status = fs::VfsDispatcher::Create(mxrio_handler, kPoolSize, &dispatcher)) != MX_OK) {
-        return status;
-    }
-    minfs::vfs.SetDispatcher(dispatcher.get());
     if ((status = minfs::vfs.ServeDirectory(fbl::move(vn),
                                             mx::channel(h))) != MX_OK) {
         return status;
     }
-    dispatcher->RunOnCurrentThread(); // Blocks
+    loop.Run();
     return 0;
 }
 #else

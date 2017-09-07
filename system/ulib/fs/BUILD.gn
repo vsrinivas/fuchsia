@@ -9,6 +9,7 @@ config("fs_config") {
 static_library("fs") {
   # Don't forget to update rules.mk as well for the Magenta build.
   sources = [
+    "include/fs/async-dispatcher.h",
     "include/fs/block-txn.h",
     "include/fs/dispatcher.h",
     "include/fs/mapped-vmo.h",
@@ -17,6 +18,7 @@ static_library("fs") {
     "include/fs/vfs-client.h",
     "include/fs/vfs-dispatcher.h",
     "include/fs/vfs.h",
+    "async-dispatcher.cpp",
     "mapped-vmo.cpp",
     "mxio-dispatcher.cpp",
     "vfs-dispatcher.cpp",
@@ -37,6 +39,9 @@ static_library("fs") {
   include_dirs = [ "//magenta/system/private" ]
 
   deps = [
+    "//magenta/system/ulib/async",
+    "//magenta/system/ulib/async:default",
+    "//magenta/system/ulib/async:loop",
     "//magenta/system/ulib/mx",
     "//magenta/system/ulib/mxcpp",
     "//magenta/system/ulib/fbl",

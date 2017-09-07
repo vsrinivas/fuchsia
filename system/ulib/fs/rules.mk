@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/async-dispatcher.cpp \
     $(LOCAL_DIR)/mapped-vmo.cpp \
     $(LOCAL_DIR)/mxio-dispatcher.cpp \
     $(LOCAL_DIR)/vfs.cpp \
@@ -19,11 +20,14 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vfs-watcher.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
+    system/ulib/async.loop \
     system/ulib/mx \
     system/ulib/mxcpp \
     system/ulib/fbl \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/c \
     system/ulib/magenta \
     system/ulib/mxio \

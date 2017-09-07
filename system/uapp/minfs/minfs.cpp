@@ -17,9 +17,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/limits.h>
 #include <fbl/unique_ptr.h>
-#ifdef __Fuchsia__
-#include <fs/vfs-dispatcher.h>
-#endif
 
 #include "minfs-private.h"
 

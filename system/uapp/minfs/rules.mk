@@ -24,14 +24,17 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/minfs-check.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/block-client \
     system/ulib/fs \
+    system/ulib/async \
+    system/ulib/async.loop \
+    system/ulib/block-client \
     system/ulib/mx \
     system/ulib/mxcpp \
     system/ulib/fbl \
     system/ulib/sync \
 
 MODULE_LIBS := \
+    system/ulib/async.default \
     system/ulib/bitmap \
     system/ulib/magenta \
     system/ulib/mxio \

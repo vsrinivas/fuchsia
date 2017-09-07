@@ -19,10 +19,6 @@
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
 
-#ifdef __Fuchsia__
-#include <fs/vfs-dispatcher.h>
-#endif
-
 #include <fs/vfs.h>
 
 #include "minfs.h"
