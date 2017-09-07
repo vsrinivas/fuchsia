@@ -504,9 +504,11 @@ static ssize_t _devhost_log_write(uint32_t flags, const void* _data, size_t len)
     while (len-- > 0) {
         char c = *data++;
         if (c == '\n') {
+            if (ctx->next) {
 flush_ctx:
-            mx_log_write(ctx->handle, ctx->next, ctx->data, flags);
-            ctx->next = 0;
+                mx_log_write(ctx->handle, ctx->next, ctx->data, flags);
+                ctx->next = 0;
+            }
             continue;
         }
         if (c < ' ') {
