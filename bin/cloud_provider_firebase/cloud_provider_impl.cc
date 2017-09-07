@@ -51,10 +51,10 @@ void CloudProviderImpl::GetDeviceSet(
 void CloudProviderImpl::GetPageCloud(
     fidl::Array<uint8_t> /*app_id*/,
     fidl::Array<uint8_t> /*page_id*/,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
+    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
-  FTL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  page_clouds_.emplace(auth_provider_.get(), std::move(page_cloud));
+  callback(cloud_provider::Status::OK);
 }
 
 }  // namespace cloud_provider_firebase

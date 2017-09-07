@@ -28,6 +28,8 @@ source_set("lib") {
     "device_set_impl.h",
     "factory_impl.cc",
     "factory_impl.h",
+    "page_cloud_impl.cc",
+    "page_cloud_impl.h",
   ]
 
   public_deps = [
@@ -53,6 +55,7 @@ executable("cloud_provider_firebase_unittests") {
     "cloud_provider_impl_unittest.cc",
     "device_set_impl_unittest.cc",
     "factory_impl_unittest.cc",
+    "page_cloud_impl_unittest.cc",
   ]
 
   deps = [

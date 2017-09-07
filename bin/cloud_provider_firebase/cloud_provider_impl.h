@@ -6,6 +6,7 @@
 #define APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_CLOUD_PROVIDER_IMPL_H_
 
 #include "apps/ledger/cloud_provider_firebase/device_set_impl.h"
+#include "apps/ledger/cloud_provider_firebase/page_cloud_impl.h"
 #include "apps/ledger/cloud_provider_firebase/services/factory.fidl.h"
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
@@ -50,6 +51,8 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   ftl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
+
+  callback::AutoCleanableSet<PageCloudImpl> page_clouds_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
 };
