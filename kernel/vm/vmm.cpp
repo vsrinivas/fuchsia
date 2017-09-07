@@ -81,11 +81,10 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace) {
         return;
 
     // grab the thread lock and switch to the new address space
-    THREAD_LOCK(state);
+    AutoThreadLock lock;
     vmm_aspace_t* old = t->aspace;
     t->aspace = aspace;
     vmm_context_switch(old, t->aspace);
-    THREAD_UNLOCK(state);
 }
 
 vmm_aspace_t* vmm_get_kernel_aspace(void) {

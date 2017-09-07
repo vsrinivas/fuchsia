@@ -513,14 +513,13 @@ void VmAspace::AttachToThread(thread_t* t) {
     DEBUG_ASSERT(t);
 
     // point the lk thread at our object via the dummy C vmm_aspace_t struct
-    THREAD_LOCK(state);
+    AutoThreadLock lock;
 
     // not prepared to handle setting a new address space or one on a running thread
     DEBUG_ASSERT(!t->aspace);
     DEBUG_ASSERT(t->state != THREAD_RUNNING);
 
     t->aspace = reinterpret_cast<vmm_aspace_t*>(this);
-    THREAD_UNLOCK(state);
 }
 
 status_t VmAspace::PageFault(vaddr_t va, uint flags) {

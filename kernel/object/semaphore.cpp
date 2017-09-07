@@ -20,12 +20,10 @@ Semaphore::~Semaphore() {
 int Semaphore::Post() {
     // If the count is or was negative then a thread is waiting for a resource,
     // otherwise it's safe to just increase the count available with no downsides.
-    int ret = 0;
-    THREAD_LOCK(state);
+    AutoThreadLock lock;
     if (unlikely(++count_ <= 0))
-        ret = wait_queue_wake_one(&waitq_, false, MX_OK);
-    THREAD_UNLOCK(state);
-    return ret;
+        return wait_queue_wake_one(&waitq_, false, MX_OK);
+    return 0;
 }
 
 mx_status_t Semaphore::Wait(lk_time_t deadline) {
@@ -34,7 +32,7 @@ mx_status_t Semaphore::Wait(lk_time_t deadline) {
      // If there are no resources available then we need to
      // sit in the wait queue until sem_post adds some.
     mx_status_t ret = MX_OK;
-    THREAD_LOCK(state);
+    AutoThreadLock lock;
     current_thread->interruptable = true;
 
     if (unlikely(--count_ < 0)) {
@@ -46,6 +44,5 @@ mx_status_t Semaphore::Wait(lk_time_t deadline) {
     }
 
     current_thread->interruptable = false;
-    THREAD_UNLOCK(state);
     return ret;
 }

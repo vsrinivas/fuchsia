@@ -304,5 +304,26 @@ static inline void* tls_set(uint entry, void* val) {
     return oldval;
 }
 
-
 __END_CDECLS
+
+#ifdef __cplusplus
+
+#include <mxtl/macros.h>
+
+class AutoThreadLock {
+public:
+    AutoThreadLock() {
+        spin_lock_irqsave(&thread_lock, state_);
+    }
+
+    ~AutoThreadLock() {
+        spin_unlock_irqrestore(&thread_lock, state_);
+    }
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoThreadLock);
+
+private:
+    spin_lock_saved_state_t state_;
+};
+
+#endif  // __cplusplus

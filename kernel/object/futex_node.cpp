@@ -149,7 +149,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
 mx_status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
-    THREAD_LOCK(state);
+    AutoThreadLock lock;
 
     // We specifically want reschedule=false here, otherwise the
     // combination of releasing the mutex and enqueuing the current thread
@@ -161,8 +161,6 @@ mx_status_t FutexNode::BlockThread(mxtl::Mutex* mutex, mx_time_t deadline) TA_NO
     current_thread->interruptable = true;
     result = wait_queue_block(&wait_queue_, deadline);
     current_thread->interruptable = false;
-
-    THREAD_UNLOCK(state);
 
     return result;
 }
@@ -193,11 +191,8 @@ bool FutexNode::WakeThread() {
     // indicate that the thread was woken during this process, our caller
     // will release the lock and then arrange for a reschedule operation
     // (which leads to a smoother transition).
-    THREAD_LOCK(state);
-    bool woken = wait_queue_wake_one(
-        &wait_queue_, /* reschedule */ false, MX_OK);
-    THREAD_UNLOCK(state);
-    return woken;
+    AutoThreadLock lock;
+    return wait_queue_wake_one(&wait_queue_, /* reschedule */ false, MX_OK);
 }
 
 // Set |node1| and |node2|'s list pointers so that |node1| is immediately
