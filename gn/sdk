@@ -1,9 +1,9 @@
 {
     "imports": [
-        "netstack"
+        "netstack",
         "openssh",
         "runtime",
         "runtime_config",
-        "sbase",
+        "sbase"
     ]
 }
