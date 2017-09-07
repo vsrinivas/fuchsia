@@ -111,10 +111,9 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
     // |this| must be deleted after the callbacks so that the |done()| calls
     // above can be dispatched while the bindings still exist in case they are
     // FIDL method callbacks.
-    // Destructing |this| will delete |app_client_|, which will kill the
+    //
+    // The destructor of |this| deletes |app_client_|, which will kill the
     // related application if it's still running.
-    // TODO(jimbe) This line needs review if (someday) we add support in
-    // Modular for multi-tenancy of Modules in ELF executables.
     delete this;
   };
 
