@@ -18,8 +18,8 @@ void FactoryImpl::GetCloudProvider(
     fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
     const GetCloudProviderCallback& callback) {
-  providers_.emplace(main_runner_, std::move(cloud_provider), std::move(config),
-                     std::move(token_provider));
+  providers_.emplace(main_runner_, std::move(config), std::move(token_provider),
+                     std::move(cloud_provider));
   callback(cloud_provider::Status::OK);
 }
 

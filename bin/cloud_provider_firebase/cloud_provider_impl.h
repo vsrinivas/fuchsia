@@ -5,9 +5,11 @@
 #ifndef APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_CLOUD_PROVIDER_IMPL_H_
 #define APPS_LEDGER_CLOUD_PROVIDER_FIREBASE_CLOUD_PROVIDER_IMPL_H_
 
+#include "apps/ledger/cloud_provider_firebase/device_set_impl.h"
 #include "apps/ledger/cloud_provider_firebase/services/factory.fidl.h"
 #include "apps/ledger/services/cloud_provider/cloud_provider.fidl.h"
 #include "apps/ledger/src/auth_provider/auth_provider_impl.h"
+#include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/modular/services/auth/token_provider.fidl.h"
 #include "garnet/public/lib/fidl/cpp/bindings/binding.h"
 #include "garnet/public/lib/ftl/functional/closure.h"
@@ -16,13 +18,17 @@
 
 namespace cloud_provider_firebase {
 
+// Implementation of cloud_provider::CloudProvider.
+//
+// If the |on_empty| callback is set, it is called when the client connection is
+// closed.
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
       ftl::RefPtr<ftl::TaskRunner> main_runner,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request,
       ConfigPtr config,
-      fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider);
+      fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
   void set_on_empty(const ftl::Closure& on_empty) { on_empty_ = on_empty; }
@@ -42,6 +48,8 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   std::unique_ptr<auth_provider::AuthProviderImpl> auth_provider_;
   ftl::Closure on_empty_;
+
+  callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
 };

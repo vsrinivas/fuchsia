@@ -12,9 +12,9 @@ namespace cloud_provider_firebase {
 
 CloudProviderImpl::CloudProviderImpl(
     ftl::RefPtr<ftl::TaskRunner> main_runner,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider> request,
     ConfigPtr config,
-    fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider)
+    fidl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)), binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
   binding_.set_connection_error_handler([this] {
@@ -42,10 +42,10 @@ CloudProviderImpl::CloudProviderImpl(
 CloudProviderImpl::~CloudProviderImpl() {}
 
 void CloudProviderImpl::GetDeviceSet(
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> /*device_set*/,
+    fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
     const GetDeviceSetCallback& callback) {
-  FTL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  device_sets_.emplace(auth_provider_.get(), std::move(device_set));
+  callback(cloud_provider::Status::OK);
 }
 
 void CloudProviderImpl::GetPageCloud(

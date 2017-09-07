@@ -24,6 +24,8 @@ source_set("lib") {
   sources = [
     "cloud_provider_impl.cc",
     "cloud_provider_impl.h",
+    "device_set_impl.cc",
+    "device_set_impl.h",
     "factory_impl.cc",
     "factory_impl.h",
   ]
@@ -48,6 +50,8 @@ executable("cloud_provider_firebase_unittests") {
   testonly = true
 
   sources = [
+    "cloud_provider_impl_unittest.cc",
+    "device_set_impl_unittest.cc",
     "factory_impl_unittest.cc",
   ]
 
@@ -55,6 +59,7 @@ executable("cloud_provider_firebase_unittests") {
     ":lib",
     "//apps/ledger/cloud_provider_firebase/services",
     "//apps/ledger/services/cloud_provider",
+    "//apps/ledger/src/auth_provider/test",
     "//apps/ledger/src/test:lib",
     "//apps/modular/services/auth",
     "//apps/test_runner/src:gtest_main",
