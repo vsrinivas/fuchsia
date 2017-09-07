@@ -28,5 +28,6 @@ pub use message::{EncodeBuf, DecodeBuf, MsgType};
 pub use error::{Error, Result};
 pub use server::{Stub, Server};
 pub use interface::InterfacePtr;
-pub use client::Client;
+pub use client::{Client, FidlService};
 pub use endpoints::{ClientEnd, ServerEnd};
+pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Send>;

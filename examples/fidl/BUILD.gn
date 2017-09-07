@@ -6,8 +6,10 @@ group("examples") {
   deps = [
     "echo_client_cpp",
     "echo_client_go",
+    "echo_client_rust",
     "echo_server_cpp",
     "echo_server_go",
+    "echo_server_rust",
     "hello_fidl",
   ]
 }

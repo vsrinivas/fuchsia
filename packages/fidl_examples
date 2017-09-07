@@ -1,12 +1,15 @@
 {
     "languages": [
         "cpp",
-        "go"
+        "go",
+        "rust"
     ],
     "packages": {
         "echo_client_cpp": "//garnet/examples/fidl/echo_client_cpp",
         "echo_client_go": "//garnet/examples/fidl/echo_client_go",
+        "echo_client_rust": "//garnet/examples/fidl/echo_client_rust",
         "echo_server_cpp": "//garnet/examples/fidl/echo_server_cpp",
-        "echo_server_go": "//garnet/examples/fidl/echo_server_go"
+        "echo_server_go": "//garnet/examples/fidl/echo_server_go",
+        "echo_server_rust": "//garnet/examples/fidl/echo_server_rust"
     }
 }

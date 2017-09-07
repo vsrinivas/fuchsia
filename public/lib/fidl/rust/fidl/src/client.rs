@@ -4,7 +4,7 @@
 
 //! An implementation of a client for a fidl interface.
 
-use {EncodeBuf, DecodeBuf, MsgType, Error};
+use {ClientEnd, ServerEnd, EncodeBuf, DecodeBuf, MsgType, Error};
 use cookiemap::CookieMap;
 
 use tokio_core::reactor::Handle;
@@ -14,6 +14,13 @@ use std::collections::btree_map::Entry;
 use std::io;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+pub trait FidlService: Sized {
+    type Proxy;
+    fn new_proxy(client_end: ClientEnd<Self>, handle: &Handle) -> Result<Self::Proxy, Error>;
+    fn new_pair(handle: &Handle) -> Result<(Self::Proxy, ServerEnd<Self>), Error>;
+    fn name() -> &'static str;
+}
 
 /// A shared client channel which tracks expected and received responses
 struct ClientInner {

@@ -1,0 +1,14 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "fuchsia-app"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Taylor Cramer <cramertj@google.com>"]
+description = "Library for managing Fuchsia applications and services"
+
+[dependencies]
+futures = "0.1.15"
+tokio-core = "0.1.9"

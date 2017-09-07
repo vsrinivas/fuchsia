@@ -13,18 +13,21 @@ const GenerateEndpoint = `
 pub struct {{$endpoint}}(::zircon::Channel);
 
 impl ::zircon::HandleRef for {{$endpoint}} {
+    #[inline]
     fn as_handle_ref(&self) -> ::zircon::HandleRef {
         self.0.get_ref()
     }
 }
 
 impl Into<::zircon::Handle> for {{$endpoint}} {
+    #[inline]
     fn into(self) -> ::zircon::Handle {
         {{$endpoint}}(::zircon::Channel::from(handle))
     }
 }
 
 impl From<::zircon::Handle> for {{$endpoint}} {
+    #[inline]
     fn from(hande: ::zircon::Handle) -> Self {
         self.0.into()
     }
@@ -54,8 +57,6 @@ pub mod {{$interface.Name}} {
     pub const SERVICE_NAME: &'static str = "{{$interface.ServiceName}}";
     pub const VERSION: u32 = {{$interface.Version}};
 
-    pub struct Marker;
-
     pub trait I {
 {{range $message := $interface.Messages}}        fn {{$message.Name}}(&mut self
 {{- range $index, $field := $message.RequestStruct.Fields -}}
@@ -68,9 +69,12 @@ pub mod {{$interface.Name}} {
     pub struct Dispatcher<T: self::I>(pub T);
 
     impl<T: self::I> Stub for Dispatcher<T> {
+        type Service = Service;
+
         // TODO(cramertj): consider optimizing to avoid unnecessary boxing
         type DispatchFuture = Box<Future<Item = EncodeBuf, Error = fidl::Error> + Send>;
 
+        #[inline]
         fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture {
             let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
             match name {
@@ -80,6 +84,7 @@ pub mod {{$interface.Name}} {
             }
         }
 
+        #[inline]
         fn dispatch(&mut self, request: &mut ::fidl::DecodeBuf) -> Result<(), fidl::Error> {
             let name: u32 = ::fidl::Decodable::decode(request, 0, 8).unwrap();
             match name {
@@ -92,6 +97,7 @@ pub mod {{$interface.Name}} {
 
     impl<T: self::I> Dispatcher<T> {
 {{- range $message := $interface.Messages}}
+        #[inline]
         fn {{$message.RawName}}(&mut self, request: &mut fidl::DecodeBuf)
             {{- if eq $message.ResponseStruct.Name "" }} -> Result<(), fidl::Error> {
             let request: {{$message.RequestStruct.Name}} = try!(::fidl::DecodablePtr::decode_obj(request, 16));
@@ -134,15 +140,19 @@ pub mod {{$interface.Name}} {
 
     pub struct Proxy(fidl::Client);
 
+    // TODO: remove these functions in favor of the FidlInterface impl
+
     // This is implemented as a module-level function because Proxy::new could collide with fidl methods.
-    pub fn new_proxy(client_end: fidl::ClientEnd<Marker>, handle: &reactor::Handle) -> Result<Proxy, ::fidl::Error> {
+    #[inline]
+    pub fn new_proxy(client_end: fidl::ClientEnd<Service>, handle: &reactor::Handle) -> Result<Proxy, ::fidl::Error> {
         let channel = ::tokio_fuchsia::Channel::from_channel(::zircon::Channel::from(
-            <fidl::ClientEnd<Marker> as Into<::zircon::Handle>>::into(client_end)
+            <fidl::ClientEnd<Service> as Into<::zircon::Handle>>::into(client_end)
         ), handle)?;
         Ok(Proxy(fidl::Client::new(channel, handle)))
     }
 
-    pub fn new_pair(handle: &reactor::Handle) -> Result<(Proxy, fidl::ServerEnd<Marker>), ::fidl::Error> {
+    #[inline]
+    pub fn new_pair(handle: &reactor::Handle) -> Result<(Proxy, fidl::ServerEnd<Service>), ::fidl::Error> {
         let (s1, s2) = zircon::Channel::create(zircon::ChannelOpts::Normal).unwrap();
         let client_end = fidl::ClientEnd::new(s1);
         let server_end = fidl::ServerEnd::new(s2);
@@ -151,6 +161,7 @@ pub mod {{$interface.Name}} {
 
     impl I for Proxy {
     {{- range $message := $interface.Messages}}
+        #[inline]
         fn {{$message.Name}}(&mut self
     {{- range $field := $message.RequestStruct.Fields}}, {{$field.Name}}: {{$field.Type}}
     {{- end -}} )
@@ -178,6 +189,25 @@ r.{{- $field.Name -}}
 {{end}}        }
 {{end}}    }
 
+    pub struct Service;
+    impl fidl::FidlService for Service {
+        type Proxy = Proxy;
+
+        #[inline]
+        fn new_proxy(client_end: fidl::ClientEnd<Self>, handle: &reactor::Handle) -> Result<Self::Proxy, fidl::Error> {
+            new_proxy(client_end, handle)
+        }
+
+        #[inline]
+        fn new_pair(handle: &reactor::Handle) -> Result<(Self::Proxy, fidl::ServerEnd<Self>), fidl::Error> {
+            new_pair(handle)
+        }
+
+        #[inline]
+        fn name() -> &'static str {
+            SERVICE_NAME
+        }
+    }
 }
 
 // Enums

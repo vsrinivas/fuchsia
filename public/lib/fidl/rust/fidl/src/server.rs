@@ -4,7 +4,7 @@
 
 //! An implementation of a server for a fidl interface.
 
-use {DecodeBuf, EncodeBuf, Error, Result, MsgType};
+use {DecodeBuf, EncodeBuf, Error, FidlService, Result, MsgType};
 
 use std::io;
 
@@ -16,6 +16,8 @@ use zircon::Channel;
 use tokio_fuchsia;
 
 pub trait Stub {
+    type Service: FidlService;
+
     type DispatchFuture: Future<Item = EncodeBuf, Error = Error>;
 
     fn dispatch_with_response(&mut self, request: &mut DecodeBuf) -> Self::DispatchFuture;
@@ -96,10 +98,27 @@ mod tests {
     use futures::future;
     use byteorder::{ByteOrder, LittleEndian};
     use super::*;
+    use {ClientEnd, ServerEnd};
 
     struct DummyDispatcher;
+    struct DummyService;
+
+    impl FidlService for DummyService {
+        type Proxy = ();
+        fn new_proxy(_: ClientEnd<Self>, _: &Handle) -> Result<Self::Proxy> {
+            unimplemented!()
+        }
+        fn new_pair(_: &Handle) -> Result<(Self::Proxy, ServerEnd<Self>)> {
+            unimplemented!()
+        }
+        fn name() -> &'static str {
+            "DUMMY_SERVICE"
+        }
+    }
 
     impl Stub for DummyDispatcher {
+        type Service = DummyService;
+
         type DispatchFuture = future::FutureResult<EncodeBuf, Error>;
 
         fn dispatch_with_response(&mut self, _request: &mut DecodeBuf) -> Self::DispatchFuture {
