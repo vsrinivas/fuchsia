@@ -182,7 +182,7 @@ Fuchsia's standard C library (libc) is based on Musl Libc.
 #### **MX**
 
 MX is an abbreviation of "Magenta" used in Magenta C APIs/ABIs (`mx_channel_create()`, `mx_handle_t`,
- `MX_EVENT_SIGNALED`, etc) and libraries (mxio, mxtl, etc).
+ `MX_EVENT_SIGNALED`, etc) and libraries (libmx in particular).
 
 #### **mxio**
 

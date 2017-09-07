@@ -24,7 +24,7 @@ handles. It otherwise takes no opinions around naming or policy.
 For more information about libmx, see
 [its documentation](https://fuchsia.googlesource.com/magenta/+/master/system/ulib/mx/README.md).
 
-## MXTL
+## FDL
 
 Much of Magenta is written in C++, both in kernel and in
 userspace. Linking against the C++ standard library is not especially
@@ -33,13 +33,13 @@ exceptions, etc., and the library itself is large). There are a number
 of useful constructs in the standard libary that we would wish to use,
 like type traits and unique pointers. However, C++ standard libraries
 are not really to be consumed piecemeal like this. So we built a
-library which provides similar constructs named mxtl. This library
+library which provides similar constructs named fdl. This library
 also includes constructs not present in the standard library but which
 are useful library code for kernel and device driver environments (for
 instance, slab allocation).
 
-For more information about MXTL,
-[read its overview](https://fuchsia.googlesource.com/magenta/+/master/docs/cxx.md#mxtl).
+For more information about FDL,
+[read its overview](https://fuchsia.googlesource.com/magenta/+/master/docs/cxx.md#fdl).
 
 # Fuchsia Template Library (FTL)
 
