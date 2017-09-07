@@ -17,6 +17,8 @@ source_set("lib") {
     "fake_token_provider.h",
     "get_ledger.cc",
     "get_ledger.h",
+    "test_with_coroutines.cc",
+    "test_with_coroutines.h",
     "test_with_message_loop.cc",
     "test_with_message_loop.h",
   ]
@@ -37,6 +39,7 @@ source_set("lib") {
     "//apps/ledger/services/internal",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/coroutine",
     "//garnet/public/lib/ftl",
     "//garnet/public/lib/mtl",
   ]

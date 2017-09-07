@@ -10,7 +10,7 @@
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "apps/ledger/src/test/test_with_coroutines.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/mtl/socket/strings.h"
 
@@ -66,7 +66,7 @@ EntryChange NewRemoveEntryChange(std::string key);
 //     ASSERT_TRUE(AddObject("value", &object));
 // or an EXPECT/ASSERT_FALSE if the function is expected to fail.
 //     ASSERT_FALSE(AddObject("value", &object));
-class StorageTest : public ::test::TestWithMessageLoop {
+class StorageTest : public ::test::TestWithCoroutines {
  protected:
   StorageTest();
 

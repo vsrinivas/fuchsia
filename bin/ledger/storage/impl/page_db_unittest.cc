@@ -11,7 +11,6 @@
 #include <utility>
 #include <vector>
 
-#include "apps/ledger/src/coroutine/coroutine_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/commit_random_impl.h"
@@ -20,7 +19,7 @@
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/impl/storage_test_utils.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/test/test_with_message_loop.h"
+#include "apps/ledger/src/test/test_with_coroutines.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
@@ -39,7 +38,7 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   }
 }
 
-class PageDbTest : public ::test::TestWithMessageLoop {
+class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
       : page_storage_(&coroutine_service_, tmp_dir_.path(), "page_id"),
@@ -55,7 +54,6 @@ class PageDbTest : public ::test::TestWithMessageLoop {
 
  protected:
   files::ScopedTempDir tmp_dir_;
-  coroutine::CoroutineServiceImpl coroutine_service_;
   PageStorageImpl page_storage_;
   PageDbImpl page_db_;
 
@@ -63,7 +61,7 @@ class PageDbTest : public ::test::TestWithMessageLoop {
 };
 
 TEST_F(PageDbTest, HeadCommits) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::vector<CommitId> heads;
     EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
     EXPECT_TRUE(heads.empty());
@@ -77,11 +75,11 @@ TEST_F(PageDbTest, HeadCommits) {
     EXPECT_EQ(Status::OK, page_db_.RemoveHead(handler, cid));
     EXPECT_EQ(Status::OK, page_db_.GetHeads(&heads));
     EXPECT_TRUE(heads.empty());
-  });
+  }));
 }
 
 TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::vector<int64_t> timestamps = {std::numeric_limits<int64_t>::min(),
                                        std::numeric_limits<int64_t>::max(), 0};
 
@@ -114,11 +112,11 @@ TEST_F(PageDbTest, OrderHeadCommitsByTimestamp) {
     for (size_t i = 0; i < heads.size(); ++i) {
       EXPECT_EQ(commits[sorted_timestamps[i]], heads[i]);
     }
-  });
+  }));
 }
 
 TEST_F(PageDbTest, Commits) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::vector<std::unique_ptr<const Commit>> parents;
     parents.emplace_back(new test::CommitRandomImpl());
 
@@ -140,11 +138,11 @@ TEST_F(PageDbTest, Commits) {
     EXPECT_EQ(Status::OK, page_db_.RemoveCommit(handler, commit->GetId()));
     EXPECT_EQ(Status::NOT_FOUND,
               page_db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
-  });
+  }));
 }
 
 TEST_F(PageDbTest, Journals) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
 
     std::unique_ptr<Journal> implicit_journal;
@@ -169,11 +167,11 @@ TEST_F(PageDbTest, Journals) {
               page_db_.GetImplicitJournal(journal_ids[0], &found_journal));
     EXPECT_EQ(Status::OK, page_db_.GetImplicitJournalIds(&journal_ids));
     EXPECT_EQ(0u, journal_ids.size());
-  });
+  }));
 }
 
 TEST_F(PageDbTest, JournalEntries) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     CommitId commit_id = RandomCommitId();
 
     std::unique_ptr<Journal> implicit_journal;
@@ -204,11 +202,11 @@ TEST_F(PageDbTest, JournalEntries) {
     }
     EXPECT_FALSE(entries->Valid());
     EXPECT_EQ(Status::OK, entries->GetStatus());
-  });
+  }));
 }
 
 TEST_F(PageDbTest, ObjectStorage) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     ObjectId object_id = RandomObjectId();
     std::string content = RandomString(32 * 1024);
     std::unique_ptr<const Object> object;
@@ -227,7 +225,7 @@ TEST_F(PageDbTest, ObjectStorage) {
     EXPECT_EQ(content, object_content);
     EXPECT_EQ(Status::OK, page_db_.DeleteObject(handler, object_id));
     EXPECT_EQ(Status::NOT_FOUND, page_db_.ReadObject(object_id, &object));
-  });
+  }));
 }
 
 TEST_F(PageDbTest, UnsyncedCommits) {
@@ -269,7 +267,7 @@ TEST_F(PageDbTest, OrderUnsyncedCommitsByTimestamp) {
 }
 
 TEST_F(PageDbTest, UnsyncedPieces) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     ObjectId object_id = RandomObjectId();
     std::vector<ObjectId> object_ids;
     EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
@@ -294,11 +292,11 @@ TEST_F(PageDbTest, UnsyncedPieces) {
     EXPECT_TRUE(object_ids.empty());
     EXPECT_EQ(Status::OK, page_db_.GetObjectStatus(object_id, &object_status));
     EXPECT_EQ(PageDbObjectStatus::SYNCED, object_status);
-  });
+  }));
 }
 
 TEST_F(PageDbTest, Batch) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::unique_ptr<PageDb::Batch> batch = page_db_.StartBatch();
 
     ObjectId object_id = RandomObjectId();
@@ -315,11 +313,11 @@ TEST_F(PageDbTest, Batch) {
     EXPECT_EQ(Status::OK, page_db_.GetUnsyncedPieces(&object_ids));
     EXPECT_EQ(1u, object_ids.size());
     EXPECT_EQ(object_id, object_ids[0]);
-  });
+  }));
 }
 
 TEST_F(PageDbTest, PageDbObjectStatus) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     ObjectId object_id = RandomObjectId();
     PageDbObjectStatus object_status;
 
@@ -351,11 +349,11 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
         EXPECT_EQ(expected_status, object_status);
       }
     }
-  });
+  }));
 }
 
 TEST_F(PageDbTest, SyncMetadata) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::vector<std::pair<ftl::StringView, ftl::StringView>> keys_and_values = {
         {"foo1", "foo2"}, {"bar1", " bar2 "}};
     for (auto key_and_value : keys_and_values) {
@@ -369,7 +367,7 @@ TEST_F(PageDbTest, SyncMetadata) {
       EXPECT_EQ(Status::OK, page_db_.GetSyncMetadata(key, &returned_value));
       EXPECT_EQ(value, returned_value);
     }
-  });
+  }));
 }
 
 }  // namespace

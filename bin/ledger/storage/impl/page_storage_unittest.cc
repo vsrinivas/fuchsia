@@ -460,7 +460,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrder) {
 }
 
 TEST_F(PageStorageTest, AddGetSyncedCommits) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     FakeSyncDelegate sync;
     storage_->SetSyncDelegate(&sync);
 
@@ -525,7 +525,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     // Check that the commit is not marked as unsynced.
     std::vector<std::unique_ptr<const Commit>> commits = GetUnsyncedCommits();
     EXPECT_TRUE(commits.empty());
-  });
+  }));
 }
 
 // Check that receiving a remote commit that is already present locally but not
@@ -698,7 +698,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
 }
 
 TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     FakePageDbImpl db(&coroutine_service_, storage_.get());
 
     std::unique_ptr<Journal> journal;
@@ -730,7 +730,7 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
                               message_loop_.PostQuitTask();
                             });
     ASSERT_FALSE(RunLoopWithTimeout());
-  });
+  }));
 }
 
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
@@ -856,7 +856,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
 }
 
 TEST_F(PageStorageTest, GetObject) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     ObjectData data("Some data");
     ASSERT_EQ(Status::OK, WriteObject(handler, &data));
 
@@ -866,7 +866,7 @@ TEST_F(PageStorageTest, GetObject) {
     ftl::StringView object_data;
     ASSERT_EQ(Status::OK, object->GetData(&object_data));
     EXPECT_EQ(data.value, convert::ToString(object_data));
-  });
+  }));
 }
 
 TEST_F(PageStorageTest, GetObjectFromSync) {
@@ -1157,7 +1157,7 @@ TEST_F(PageStorageTest, SyncMetadata) {
 }
 
 TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     FakeSyncDelegate sync;
     storage_->SetSyncDelegate(&sync);
 
@@ -1222,7 +1222,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
               sync.object_requests.end());
     EXPECT_NE(sync.object_requests.find(object_ids[2]),
               sync.object_requests.end());
-  });
+  }));
 }
 
 TEST_F(PageStorageTest, Generation) {
