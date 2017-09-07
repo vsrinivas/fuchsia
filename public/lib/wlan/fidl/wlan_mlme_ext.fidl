@@ -22,7 +22,7 @@ struct SignalReportIndication {
 struct EapolIndication {
     array<uint8, 6> src_addr;
     array<uint8, 6> dst_addr;
-    EapolPdu data;
+    array<uint8> data;
 };
 
 // Method ordinals are defined in wlan_mlme.fidl to prevent error prone overlaps with official
