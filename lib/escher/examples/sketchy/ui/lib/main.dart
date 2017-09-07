@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:isolate';
+
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/service_provider.fidl.dart';
+import 'package:apps.modular.services.lifecycle/lifecycle.fidl.dart';
 import 'package:apps.modular.services.module/module.fidl.dart';
 import 'package:apps.modular.services.module/module_controller.fidl.dart';
 import 'package:apps.modular.services.module/module_context.fidl.dart';
@@ -16,16 +19,23 @@ import 'src/app.dart';
 
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
-EscherDemoModule _module;
+EscherDemoModule _module = new EscherDemoModule();
 
 /// An implementation of the [Module] interface.
-class EscherDemoModule extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
+class EscherDemoModule implements Module, Lifecycle {
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LifecycleBinding _lifecycleBinding = new LifecycleBinding();
+
   final ModuleContextProxy _moduleContext = new ModuleContextProxy();
 
   /// Bind an [InterfaceRequest] for a [Module] interface to this object.
-  void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+  void bindModule(InterfaceRequest<Module> request) {
+    _moduleBinding.bind(this, request);
+  }
+
+  /// Bind an [InterfaceRequest] for a [Lifecycle] interface to this object.
+  void bindLifecycle(InterfaceRequest<Lifecycle> request) {
+    _lifecycleBinding.bind(this, request);
   }
 
   @override
@@ -39,24 +49,27 @@ class EscherDemoModule extends Module {
   }
 
   @override
-  void stop(void callback()) {
+  void terminate() {
     _moduleContext.ctrl.close();
-
-    callback();
+    _moduleBinding.close();
+    _lifecycleBinding.close();
+    Isolate.current.kill();
   }
 }
 
 /// Entry point for this module.
 void main() {
-  _appContext.outgoingServices.addServiceForName(
+  _appContext.outgoingServices
+  ..addServiceForName(
     (InterfaceRequest<Module> request) {
-      if (_module == null) {
-        _module = new EscherDemoModule();
-      }
-
-      _module.bind(request);
+      _module.bindModule(request);
     },
     Module.serviceName,
+  )..addServiceForName(
+    (InterfaceRequest<Lifecycle> request) {
+      _module.bindLifecycle(request);
+    },
+    Lifecycle.serviceName,
   );
 
   runApp(new App((String appName) {

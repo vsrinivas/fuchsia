@@ -8,6 +8,7 @@
 
 #include "application/lib/app/application_context.h"
 #include "apps/modular/services/module/module.fidl.h"
+#include "apps/modular/services/lifecycle/lifecycle.fidl.h"
 #include "apps/modular/services/module/module_context.fidl.h"
 #include "examples/common/demo_harness.h"
 #include "garnet/lib/escher/examples/common/services/escher_demo.fidl.h"
@@ -16,7 +17,8 @@
 
 class DemoHarnessFuchsia : public DemoHarness,
                            public escher_demo::EscherDemo,
-                           public modular::Module {
+                           modular::Module,
+                           modular::Lifecycle {
  public:
   DemoHarnessFuchsia(WindowParams window_params);
 
@@ -37,14 +39,14 @@ class DemoHarnessFuchsia : public DemoHarness,
       fidl::InterfaceHandle<app::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<app::ServiceProvider> outgoing_services) override;
 
-  // |Module|
-  void Stop(const StopCallback& done) override;
-
   app::ApplicationContext* application_context() {
     return application_context_.get();
   }
 
  private:
+  // |Lifecycle|
+  void Terminate() override;
+
   // Called by Init().
   void InitWindowSystem() override;
   vk::SurfaceKHR CreateWindowAndSurface(

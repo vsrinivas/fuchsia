@@ -114,8 +114,7 @@ void DemoHarnessFuchsia::Initialize(
       });
 }
 
-// |Module|
-void DemoHarnessFuchsia::Stop(const StopCallback& done) {
-  module_context_.reset();
-  done();
+// |Lifecycle|
+void DemoHarnessFuchsia::Terminate() {
+  mtl::MessageLoop::GetCurrent()->QuitNow();
 }
