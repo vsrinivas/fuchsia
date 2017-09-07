@@ -13,9 +13,9 @@ void magma_indriver_test(mx_device_t* device)
 {
     DLOG("running magma unit tests");
     TestPlatformDevice::SetInstance(magma::PlatformDevice::Create(device));
-    int argc = 1;
-    char* argv[] = {(char*)"magma_indriver_test", nullptr};
-    testing::InitGoogleTest(&argc, argv);
+    const int kArgc = 2;
+    const char* argv[kArgc] = {"magma_indriver_test", "--gtest_output=xml:/data/test_out/"};
+    testing::InitGoogleTest(const_cast<int*>(&kArgc), const_cast<char**>(argv));
 
     printf("[DRV START=]\n");
     (void)RUN_ALL_TESTS();
