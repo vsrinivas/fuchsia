@@ -136,6 +136,8 @@ typedef struct pci_bus {
     pci_device_t root_complex;
     // Next pio window to be allocated to connected devices.
     uint32_t pio_base;
+    // Next mmio window to be allocated to connected devices.
+    uint32_t mmio_base;
 } pci_bus_t;
 
 zx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic);
@@ -170,7 +172,7 @@ zx_status_t pci_device_write(pci_device_t* device, uint16_t reg, uint8_t len, ui
  * If a mapping is found, the bar number is written to |bar| and the offset
  * into that bar is written to |off|.
  */
-pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint8_t* bar,
+pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uintptr_t addr, uint8_t* bar,
                                 uint16_t* off);
 
 /* Returns the base address for the BAR. */

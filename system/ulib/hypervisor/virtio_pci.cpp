@@ -449,12 +449,14 @@ static void virtio_pci_setup_caps(virtio_device_t* device) {
     static_assert(VirtioPciBar::MODERN < PCI_MAX_BARS, "Not enough BAR registers available.");
     device->pci_device.bar[VirtioPciBar::MODERN].size = static_cast<uint32_t>(
           kVirtioPciDeviceCfgBase + device->config_size);
+    device->pci_device.bar[VirtioPciBar::MODERN].io_type = PCI_BAR_IO_TYPE_MMIO;
 }
 
 static void virtio_pci_setup_legacy_bar(virtio_device_t* device) {
     uint16_t legacy_config_size = static_cast<uint16_t>(
         sizeof(virtio_pci_legacy_config_t) + device->config_size);
     device->pci_device.bar[0].size = legacy_config_size;
+    device->pci_device.bar[0].io_type = PCI_BAR_IO_TYPE_PIO;
 }
 
 static constexpr uint16_t virtio_pci_id(VirtioPciMode mode, uint16_t virtio_id) {

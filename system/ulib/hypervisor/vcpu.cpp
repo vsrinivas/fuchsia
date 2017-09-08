@@ -129,18 +129,35 @@ static zx_status_t handle_mmio_read(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, uint8
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return pci_ecam_read(vcpu_ctx->guest_ctx->bus, addr, access_size, io);
-    default:
-        return ZX_ERR_NOT_FOUND;
     }
+
+    uint8_t bar;
+    uint16_t device_offset;
+    pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
+    pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_MMIO, addr, &bar,
+                                                 &device_offset);
+    if (pci_device) {
+        return pci_device->ops->read_bar(pci_device, bar, device_offset, io->access_size, io);
+    }
+    return ZX_ERR_NOT_FOUND;
 }
 
 static zx_status_t handle_mmio_write(vcpu_ctx_t* vcpu_ctx, zx_vaddr_t addr, zx_vcpu_io_t* io) {
     switch (addr) {
     case PCI_ECAM_PHYS_BASE ... PCI_ECAM_PHYS_TOP:
         return pci_ecam_write(vcpu_ctx->guest_ctx->bus, addr, io);
-    default:
-        return ZX_ERR_NOT_FOUND;
     }
+
+    uint8_t bar;
+    uint16_t device_offset;
+    pci_bus_t* bus = vcpu_ctx->guest_ctx->bus;
+    pci_device_t* pci_device = pci_mapped_device(bus, PCI_BAR_IO_TYPE_MMIO, addr, &bar,
+                                                 &device_offset);
+    if (pci_device) {
+        return pci_device->ops->write_bar(pci_device, bar, device_offset, io);
+    }
+
+    return ZX_ERR_NOT_FOUND;
 }
 
 static zx_status_t handle_mmio(vcpu_ctx_t* vcpu_ctx, const zx_packet_guest_mem_t* mem, const instruction_t* inst) {

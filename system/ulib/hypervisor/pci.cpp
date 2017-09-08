@@ -29,8 +29,8 @@
 #define PCI_REGISTER_CAP_BASE 0xa4
 #define PCI_REGISTER_CAP_TOP UINT8_MAX
 
-static const uint32_t kPioBase = 0x8000;
-static const uint32_t kMaxBarSize = 1 << 8;
+static const uint32_t kPioBarBase = 0x8000;
+static const uint32_t kMmioBarBase = 0xf0000000;
 static const uint32_t kPioAddressMask = ~bit_mask<uint32_t>(2);
 static const uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
 
@@ -70,13 +70,15 @@ static void pci_root_complex_init(pci_device_t* host_bridge) {
     host_bridge->subsystem_id = 0;
     host_bridge->class_code = PCI_CLASS_BRIDGE_HOST;
     host_bridge->bar[0].size = 0x10;
+    host_bridge->bar[0].io_type = PCI_BAR_IO_TYPE_PIO;
     host_bridge->ops = &kRootComplexDeviceOps;
 }
 
 zx_status_t pci_bus_init(pci_bus_t* bus, const io_apic_t* io_apic) {
     memset(bus, 0, sizeof(*bus));
     bus->io_apic = io_apic;
-    bus->pio_base = kPioBase;
+    bus->pio_base = kPioBarBase;
+    bus->mmio_base = kMmioBarBase;
     pci_root_complex_init(&bus->root_complex);
     return pci_bus_connect(bus, &bus->root_complex, PCI_DEVICE_ROOT_COMPLEX);
 }
@@ -93,21 +95,26 @@ zx_status_t pci_bus_connect(pci_bus_t* bus, pci_device_t* device, uint8_t slot) 
         if (!pci_bar_implemented(device, bar_num))
             continue;
 
-        // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
-        //
-        // This design implies that all address spaces used are a power of two in
-        // size and are naturally aligned.
-        uint32_t bar_size = round_up_pow2(device->bar[bar_num].size);
-        if (bar_size > kMaxBarSize)
-            return ZX_ERR_NOT_SUPPORTED;
-
         device->bus = bus;
-        device->bar[bar_num].size = static_cast<uint16_t>(bar_size);
-        device->bar[bar_num].addr = bus->pio_base;
-        device->bar[bar_num].io_type = PCI_BAR_IO_TYPE_PIO;
-        bus->pio_base += kMaxBarSize;
+        if (device->bar[bar_num].io_type == PCI_BAR_IO_TYPE_PIO) {
+            // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
+            //
+            // This design implies that all address spaces used are a power of two in
+            // size and are naturally aligned.
+            uint32_t bar_size = round_up_pow2(device->bar[bar_num].size);
+            uint32_t bar_base = align(bus->pio_base, bar_size);
+
+            device->bar[bar_num].addr = bar_base;
+            device->bar[bar_num].size = bar_size;
+            bus->pio_base = bar_base + bar_size;
+        } else {
+            uint32_t bar_size = align(device->bar[bar_num].size, PAGE_SIZE);
+            device->bar[bar_num].addr = bus->mmio_base;
+            device->bar[bar_num].size = static_cast<uint16_t>(bar_size);
+            bus->mmio_base += bar_size;
+        }
     }
-    device->command = PCI_COMMAND_IO_EN;
+    device->command = PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN;
     device->global_irq = kPciGlobalIrqAssigments[slot];
     bus->device[slot] = device;
     return ZX_OK;
@@ -471,7 +478,7 @@ static bool pci_device_io_enabled(uint8_t io_type, uint16_t command) {
     }
 }
 
-pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, uint8_t* bar_out,
+pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uintptr_t addr, uint8_t* bar_out,
                                 uint16_t* off) {
     for (uint8_t i = 0; i < PCI_MAX_DEVICES; i++) {
         pci_device_t* device = bus->device[i];
@@ -482,7 +489,7 @@ pci_device_t* pci_mapped_device(pci_bus_t* bus, uint8_t io_type, uint16_t addr, 
             mtx_lock(&device->mutex);
             uint16_t command = device->command;
             pci_bar_t* bar = &device->bar[bar_num];
-            uint32_t bar_base = pci_bar_base(bar);
+            uintptr_t bar_base = pci_bar_base(bar);
             uint16_t bar_size = pci_bar_size(bar);
             mtx_unlock(&device->mutex);
 

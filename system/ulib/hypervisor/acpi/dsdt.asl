@@ -58,6 +58,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
                 )
 
                 // Allocated port ranges that this bridge can map devices to.
+                // This is used for mapping PIO BARs.
                 WORDIO(                                             // Produce resource (8000-8FFF)
                     ResourceProducer,
                     MinFixed,
@@ -69,6 +70,22 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
                     0x8fff,                                         // AddressMax
                     0x0000,                                         // AddressTranslation
                     0x1000                                          // RangeLength
+                )
+
+                // Allocated memory ranges that this bridge can map devices to.
+                // This is used for mapping MMIO BARs.
+                DWORDMemory(
+                    ResourceProducer,                               // Produce resource (0xf0000000 - 0xffffffff)
+                    PosDecode,
+                    MinFixed,
+                    MaxFixed,
+                    Cacheable,
+                    ReadWrite,
+                    0x00000000,                                     // AddressGranularity
+                    0xf0000000,                                     // AddressMin
+                    0xffffffff,                                     // AddressMax
+                    0x00000000,                                     // AddressTranslation
+                    0x10000000                                      // Range Length
                 )
             })
         }
