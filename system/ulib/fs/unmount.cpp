@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/vfs.h>
 #include <mxio/debug.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
@@ -9,8 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#include "vfs-internal.h"
 
 // Sends an 'unmount' signal on the srv handle, and waits until it is closed.
 // Consumes 'srv'.

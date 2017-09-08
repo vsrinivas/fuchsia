@@ -18,9 +18,11 @@
 #include <magenta/syscalls.h>
 #include <mx/event.h>
 #include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
+#include <fs/remote.h>
 #endif
 
-#include "vfs-internal.h"
+#include <fs/vfs.h>
 
 uint32_t __trace_bits;
 
@@ -98,7 +100,7 @@ bool RemoteContainer::IsRemote() const {
 }
 
 mx::channel RemoteContainer::DetachRemote(uint32_t &flags_) {
-    flags_ &= ~V_FLAG_MOUNT_READY;
+    flags_ &= ~VFS_FLAG_MOUNT_READY;
     return fbl::move(remote_);
 }
 
@@ -107,7 +109,7 @@ mx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
     if (!remote_.is_valid()) {
         // Trying to get remote on a non-remote vnode
         return MX_ERR_UNAVAILABLE;
-    } else if (!(flags_ & V_FLAG_MOUNT_READY)) {
+    } else if (!(flags_ & VFS_FLAG_MOUNT_READY)) {
         mx_signals_t observed;
         mx_status_t status = remote_.wait_one(MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
                                               0,
@@ -120,7 +122,7 @@ mx_handle_t RemoteContainer::WaitForRemote(uint32_t &flags_) {
             return MX_ERR_UNAVAILABLE;
         }
 
-        flags_ |= V_FLAG_MOUNT_READY;
+        flags_ |= VFS_FLAG_MOUNT_READY;
     }
     return remote_.get();
 }

@@ -6,6 +6,7 @@
 
 #include <fs/dispatcher.h>
 #include <fs/vfs.h>
+#include <fs/watcher.h>
 #include <magenta/types.h>
 #include <mx/channel.h>
 #include <fbl/array.h>

@@ -20,8 +20,6 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 
-#include "vfs-internal.h"
-
 namespace fs {
 
 // Installs a remote filesystem on vn and adds it to the remote_list_.

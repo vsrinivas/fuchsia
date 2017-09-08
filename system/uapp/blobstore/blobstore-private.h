@@ -59,7 +59,7 @@ constexpr BlobFlags kBlobOtherMask        = 0xFF000000;
 
 // clang-format on
 
-static_assert(((kBlobStateMask | kBlobOtherMask) & V_FLAG_RESERVED_MASK) == 0,
+static_assert(((kBlobStateMask | kBlobOtherMask) & VFS_FLAG_RESERVED_MASK) == 0,
               "Blobstore flags conflict with VFS-reserved flags");
 
 #ifdef __Fuchsia__

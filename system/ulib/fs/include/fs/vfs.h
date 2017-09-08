@@ -27,10 +27,10 @@
 
 // VFS Helpers (vfs.c)
 // clang-format off
-#define V_FLAG_DEVICE          0x00000001
-#define V_FLAG_MOUNT_READY     0x00000002
-#define V_FLAG_DEVICE_DETACHED 0x00000004
-#define V_FLAG_RESERVED_MASK   0x0000FFFF
+#define VFS_FLAG_DEVICE          0x00000001
+#define VFS_FLAG_MOUNT_READY     0x00000002
+#define VFS_FLAG_DEVICE_DETACHED 0x00000004
+#define VFS_FLAG_RESERVED_MASK   0x0000FFFF
 // clang-format on
 
 __BEGIN_CDECLS
@@ -64,54 +64,6 @@ class Vnode;
 class Vfs;
 
 #ifdef __Fuchsia__
-// RemoteContainer adds support for mounting remote handles on nodes.
-class RemoteContainer {
-public:
-    bool IsRemote() const;
-    mx::channel DetachRemote(uint32_t &flags_);
-    // Access the remote handle if it's ready -- otherwise, return an error.
-    mx_handle_t WaitForRemote(uint32_t &flags_);
-    mx_handle_t GetRemote() const;
-    void SetRemote(mx::channel remote);
-    constexpr RemoteContainer() {};
-private:
-    mx::channel remote_;
-};
-
-struct VnodeWatcher : public fbl::DoublyLinkedListable<fbl::unique_ptr<VnodeWatcher>> {
-public:
-    VnodeWatcher(mx::channel h, uint32_t mask);
-    ~VnodeWatcher();
-
-    mx::channel h;
-    uint32_t mask;
-};
-
-// Transmission buffer for sending directory watcher notifications to clients.
-// Allows enqueueing multiple messages in a buffer before sending an IPC message
-// to a client.
-class WatchBuffer {
-public:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
-    WatchBuffer() = default;
-
-    mx_status_t AddMsg(const mx::channel& c, unsigned event, const char* name);
-    mx_status_t Send(const mx::channel& c);
-
-private:
-    size_t watch_buf_size_ = 0;
-    char watch_buf_[VFS_WATCH_MSG_MAX]{};
-};
-
-class WatcherContainer {
-public:
-    mx_status_t WatchDir(mx::channel* out);
-    mx_status_t WatchDirV2(Vfs* vfs, Vnode* vn, const vfs_watch_dir_t* cmd);
-    void Notify(const char* name, size_t len, unsigned event);
-private:
-    fbl::Mutex lock_;
-    fbl::DoublyLinkedList<fbl::unique_ptr<VnodeWatcher>> watch_list_ __TA_GUARDED(lock_);
-};
 
 // MountChannel functions exactly the same as a channel, except that it
 // intentionally destructs by sending a clean "shutdown" signal to the
@@ -177,7 +129,7 @@ inline bool vfs_valid_name(const char* name, size_t len) {
 //
 // All names passed to the Vnode class are valid according to "vfs_valid_name".
 //
-// The lower half of flags (V_FLAG_RESERVED_MASK) is reserved
+// The lower half of flags (VFS_FLAG_RESERVED_MASK) is reserved
 // for usage by fs::Vnode, but the upper half of flags may
 // be used by subclasses of Vnode.
 class Vnode : public fbl::RefCounted<Vnode> {
@@ -319,12 +271,12 @@ public:
     // or endpoints, depending on context. For the purposes of our VFS layer,
     // during path traversal, devices are NOT treated as mount points, even though
     // they contain remote handles.
-    bool IsDevice() const { return (flags_ & V_FLAG_DEVICE) && IsRemote(); }
+    bool IsDevice() const { return (flags_ & VFS_FLAG_DEVICE) && IsRemote(); }
     void DetachDevice() {
-        MX_DEBUG_ASSERT(flags_ & V_FLAG_DEVICE);
-        flags_ |= V_FLAG_DEVICE_DETACHED;
+        MX_DEBUG_ASSERT(flags_ & VFS_FLAG_DEVICE);
+        flags_ |= VFS_FLAG_DEVICE_DETACHED;
     }
-    bool IsDetachedDevice() const { return (flags_ & V_FLAG_DEVICE_DETACHED); }
+    bool IsDetachedDevice() const { return (flags_ & VFS_FLAG_DEVICE_DETACHED); }
 #endif
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);

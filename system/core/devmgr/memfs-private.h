@@ -20,6 +20,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fs/remote.h>
+#include <fs/watcher.h>
 
 #include "dnode.h"
 

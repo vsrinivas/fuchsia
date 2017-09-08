@@ -6,6 +6,8 @@
 
 #ifdef __Fuchsia__
 #include <fs/dispatcher.h>
+#include <fs/remote.h>
+#include <fs/watcher.h>
 #include <mx/vmo.h>
 #endif
 
@@ -151,7 +153,7 @@ constexpr uint32_t kMinfsFlagDeletedDirectory = 0x00010000;
 constexpr uint32_t kMinfsFlagReservedMask     = 0xFFFF0000;
 // clang-format on
 
-static_assert((kMinfsFlagReservedMask & V_FLAG_RESERVED_MASK) == 0,
+static_assert((kMinfsFlagReservedMask & VFS_FLAG_RESERVED_MASK) == 0,
               "MinFS should not be using any Vnode flags which are reserved");
 
 class VnodeMinfs final : public fs::Vnode, public fbl::SinglyLinkedListable<VnodeMinfs*> {

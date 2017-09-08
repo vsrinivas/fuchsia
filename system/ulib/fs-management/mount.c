@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fs-management/mount.h>
-#include <fs/vfs-client.h>
+#include <fs/client.h>
 
 #include <errno.h>
 #include <fcntl.h>

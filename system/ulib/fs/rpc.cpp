@@ -19,8 +19,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
-#include "vfs-internal.h"
-
 #define MXDEBUG 0
 
 typedef struct vfs_iostate {

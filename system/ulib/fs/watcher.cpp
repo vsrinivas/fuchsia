@@ -14,16 +14,36 @@
 #include <fbl/auto_lock.h>
 #endif
 
-#include <fs/vfs.h>
-#include <mx/channel.h>
 #include <fbl/alloc_checker.h>
+#include <fs/vfs.h>
+#include <fs/watcher.h>
+#include <mx/channel.h>
 
 namespace fs {
 
-VnodeWatcher::VnodeWatcher(mx::channel h, uint32_t mask) : h(fbl::move(h)),
+WatcherContainer::WatcherContainer() = default;
+WatcherContainer::~WatcherContainer() = default;
+
+WatcherContainer::VnodeWatcher::VnodeWatcher(mx::channel h, uint32_t mask) : h(fbl::move(h)),
     mask(mask & ~(VFS_WATCH_MASK_EXISTING | VFS_WATCH_MASK_IDLE)) {}
 
-VnodeWatcher::~VnodeWatcher() {}
+WatcherContainer::VnodeWatcher::~VnodeWatcher() {}
+
+// Transmission buffer for sending directory watcher notifications to clients.
+// Allows enqueueing multiple messages in a buffer before sending an IPC message
+// to a client.
+class WatchBuffer {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(WatchBuffer);
+    WatchBuffer() = default;
+
+    mx_status_t AddMsg(const mx::channel& c, unsigned event, const char* name);
+    mx_status_t Send(const mx::channel& c);
+
+private:
+    size_t watch_buf_size_ = 0;
+    char watch_buf_[VFS_WATCH_MSG_MAX]{};
+};
 
 mx_status_t WatchBuffer::AddMsg(const mx::channel& c, unsigned event, const char* name) {
     size_t slen = strlen(name);
