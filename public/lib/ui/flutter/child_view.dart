@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:mozart.internal';
 import 'dart:ui' as ui;
-import 'dart:zircon' show ZX;
+import 'dart:zircon';
 
 import 'package:application.lib.app.dart/app.dart';
 import 'package:application.services/application_controller.fidl.dart';
@@ -20,16 +20,15 @@ import 'package:lib.ui.views.fidl/view_token.fidl.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lib.fidl.dart/bindings.dart';
-import 'package:lib.fidl.dart/core.dart' as core;
 import 'package:meta/meta.dart';
 
 export 'package:lib.ui.views.fidl/view_token.fidl.dart' show ViewOwner;
 
 ViewContainerProxy _initViewContainer() {
-  final core.Handle handle = MozartStartupInfo.takeViewContainer();
+  final Handle handle = MozartStartupInfo.takeViewContainer();
   if (handle == null) return null;
   final ViewContainerProxy proxy = new ViewContainerProxy()
-    ..ctrl.bind(new InterfaceHandle<ViewContainer>(new core.Channel(handle), 0))
+    ..ctrl.bind(new InterfaceHandle<ViewContainer>(new Channel(handle), 0))
     ..setListener(_ViewContainerListenerImpl.instance.createInterfaceHandle());
 
   assert(() {
@@ -157,11 +156,11 @@ class ChildViewConnection {
     assert(_viewKey == null);
     assert(_viewInfo == null);
     assert(_sceneHost == null);
-    final core.Eventpair pair = new core.Eventpair();
+    final HandlePairResult pair = System.eventpairCreate();
     assert(pair.status == ZX.OK);
-    _sceneHost = new ui.SceneHost(pair.passEndpoint0());
+    _sceneHost = new ui.SceneHost(pair.first);
     _viewKey = _nextViewKey++;
-    _viewContainer.addChild(_viewKey, _viewOwner, pair.passEndpoint1());
+    _viewContainer.addChild(_viewKey, _viewOwner, pair.second);
     _viewOwner = null;
     assert(!_ViewContainerListenerImpl.instance._connections
         .containsKey(_viewKey));
@@ -175,12 +174,12 @@ class ChildViewConnection {
     assert(_viewKey != null);
     assert(_sceneHost != null);
     assert(_ViewContainerListenerImpl.instance._connections[_viewKey] == this);
-    final core.ChannelPair pair = new core.ChannelPair();
+    final ChannelPair pair = new ChannelPair();
     assert(pair.status == ZX.OK);
     _ViewContainerListenerImpl.instance._connections.remove(_viewKey);
-    _viewOwner = new InterfaceHandle<ViewOwner>(pair.channel0, 0);
+    _viewOwner = new InterfaceHandle<ViewOwner>(pair.first, 0);
     _viewContainer.removeChild(
-        _viewKey, new InterfaceRequest<ViewOwner>(pair.channel1));
+        _viewKey, new InterfaceRequest<ViewOwner>(pair.second));
     _viewKey = null;
     _viewInfo = null;
     _currentViewProperties = null;

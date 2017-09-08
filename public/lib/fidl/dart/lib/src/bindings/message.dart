@@ -77,7 +77,7 @@ class MessageHeader {
 
 class Message {
   Message(this.buffer, this.handles, this.dataLength, this.handlesLength);
-  Message.fromReadResult(core.ReadResult result)
+  Message.fromReadResult(ReadResult result)
       : buffer = result.bytes,
         handles = result.handles,
         dataLength = result.bytes.lengthInBytes,
@@ -86,7 +86,7 @@ class Message {
   }
 
   final ByteData buffer;
-  final List<core.Handle> handles;
+  final List<Handle> handles;
   final int dataLength;
   final int handlesLength;
 

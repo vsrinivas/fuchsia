@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of core;
+part of zircon;
 
 class ChannelReaderError {
   final Object error;
@@ -14,6 +14,7 @@ class ChannelReaderError {
   String toString() => error.toString();
 }
 
+typedef void ChannelReaderReadableHandler();
 typedef void ChannelReaderErrorHandler(ChannelReaderError error);
 
 class ChannelReader {
@@ -24,17 +25,17 @@ class ChannelReader {
 
   HandleWaiter _waiter;
 
-  VoidCallback onReadable;
+  ChannelReaderReadableHandler onReadable;
   ChannelReaderErrorHandler onError;
 
   void bind(Channel channel) {
-    if (isBound) throw new FidlApiError('ChannelReader is already bound.');
+    if (isBound) throw new ZirconApiError('ChannelReader is already bound.');
     _channel = channel;
     _asyncWait();
   }
 
   Channel unbind() {
-    if (!isBound) throw new FidlApiError("ChannelReader is not bound");
+    if (!isBound) throw new ZirconApiError("ChannelReader is not bound");
     _waiter?.cancel();
     final Channel result = _channel;
     _channel = null;
@@ -50,7 +51,7 @@ class ChannelReader {
 
   void _asyncWait() {
     _waiter = _channel.handle.asyncWait(
-        ZX.CHANNEL_READABLE | ZX.CHANNEL_PEER_CLOSED, _handleWaitComplete);
+        Channel.READABLE | Channel.PEER_CLOSED, _handleWaitComplete);
   }
 
   void _errorSoon(ChannelReaderError error) {
@@ -77,10 +78,10 @@ class ChannelReader {
     // TODO(abarth): Change this try/catch pattern now that we don't use
     // RawReceivePort any more.
     try {
-      if ((pending & ZX.CHANNEL_READABLE) != 0) {
+      if ((pending & Channel.READABLE) != 0) {
         if (onReadable != null) onReadable();
         if (isBound) _asyncWait();
-      } else if ((pending & ZX.CHANNEL_PEER_CLOSED) != 0) {
+      } else if ((pending & Channel.PEER_CLOSED) != 0) {
         close();
         _errorSoon(null);
       }

@@ -21,7 +21,7 @@ import 'package:lib.fidl.dart/bindings.dart' as bindings;
 {%- endif %}
 {%- if module.interfaces or has_handles %}
 // ignore: UNUSED_IMPORT
-import 'package:lib.fidl.dart/core.dart' as core;
+import 'dart:zircon' as zircon;
 {%- endif %}
 {%- if should_gen_fidl_types %}
 {{fidl_types_import}}

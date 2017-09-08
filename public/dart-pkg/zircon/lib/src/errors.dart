@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of core;
+part of zircon;
 
-// ignore_for_file: constant_identifier_names
+class ZirconApiError extends Error {
+  final String message;
+  ZirconApiError(this.message) : super();
 
-typedef void VoidCallback();
+  @override
+  String toString() => message;
+}

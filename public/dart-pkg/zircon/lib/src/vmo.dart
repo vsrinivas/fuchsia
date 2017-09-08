@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of core;
+part of zircon;
 
-class Vmo {
-  Handle handle;
-
-  Vmo(this.handle);
+class Vmo extends _HandleWrapper<Vmo> {
+  Vmo(Handle handle) : super(handle);
 
   GetSizeResult getSize() {
     if (handle == null) return const GetSizeResult(ZX.ERR_INVALID_ARGS);
@@ -32,12 +30,4 @@ class Vmo {
 
     return System.vmoRead(handle, vmoOffset, numBytes);
   }
-
-  void close() {
-    handle.close();
-    handle = null;
-  }
-
-  @override
-  String toString() => 'Vmo($handle)';
 }

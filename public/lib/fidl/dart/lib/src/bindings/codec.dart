@@ -60,7 +60,7 @@ class FidlCodecError extends Error {
 
 class _EncoderBuffer {
   ByteData buffer;
-  List<core.Handle> handles;
+  List<Handle> handles;
   int extent;
 
   static const int kInitialBufferSize = 1024;
@@ -188,7 +188,7 @@ class Encoder {
   void encodeDouble(double value, int offset) => _buffer.buffer
       .setFloat64(_base + offset, value, Endianness.LITTLE_ENDIAN);
 
-  void encodeHandle(core.Handle value, int offset, bool nullable) {
+  void encodeHandle(Handle value, int offset, bool nullable) {
     if ((value == null) || !value.isValid) {
       encodeInvalidHandle(offset, nullable);
     } else {
@@ -197,7 +197,7 @@ class Encoder {
     }
   }
 
-  void encodeChannel(core.Channel value, int offset, bool nullable) =>
+  void encodeChannel(Channel value, int offset, bool nullable) =>
     encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeInterfaceHandle(
@@ -221,10 +221,10 @@ class Encoder {
     }
   }
 
-  void encodeSocket(core.Socket value, int offset, bool nullable) =>
+  void encodeSocket(Socket value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
-  void encodeVmo(core.Vmo value, int offset, bool nullable) =>
+  void encodeVmo(Vmo value, int offset, bool nullable) =>
       encodeHandle(value != null ? value.handle : null, offset, nullable);
 
   void encodeNullPointer(int offset, bool nullable) {
@@ -403,12 +403,12 @@ class Encoder {
     }
   }
 
-  void encodeHandleArray(List<core.Handle> value, int offset, int nullability,
+  void encodeHandleArray(List<Handle> value, int offset, int nullability,
           int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeHandle(v, o, n), value,
           offset, kSerializedHandleSize, nullability, expectedLength);
 
-  void encodeChannelArray(List<core.Channel> value, int offset, int nullability,
+  void encodeChannelArray(List<Channel> value, int offset, int nullability,
           int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeChannel(v, o, n), value,
           offset, kSerializedHandleSize, nullability, expectedLength);
@@ -428,7 +428,7 @@ class Encoder {
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeInterfaceHandle(v, o, n),
           value, offset, kSerializedInterfaceSize, nullability, expectedLength);
 
-  void encodeSocketArray(List<core.Socket> value, int offset, int nullability,
+  void encodeSocketArray(List<Socket> value, int offset, int nullability,
           int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeSocket(v, o, n), value,
           offset, kSerializedHandleSize, nullability, expectedLength);
@@ -611,10 +611,10 @@ class Decoder {
       new Decoder(_message, offset, _validator);
 
   ByteData get _buffer => _message.buffer;
-  List<core.Handle> get _handles => _message.handles;
-  List<core.Handle> get excessHandles {
+  List<Handle> get _handles => _message.handles;
+  List<Handle> get excessHandles {
     if (_message.handlesLength == 0) return null;
-    List<core.Handle> handles = new List();
+    List<Handle> handles = new List();
     for (int i = _validator._minNextClaimedHandle;
         i < _message.handlesLength;
         i++) {
@@ -648,24 +648,24 @@ class Decoder {
   bool decodeBool(int offset, int bit) =>
       (decodeUint8(offset) & (1 << bit)) != 0;
 
-  core.Handle decodeHandle(int offset, bool nullable) {
+  Handle decodeHandle(int offset, bool nullable) {
     int index = decodeInt32(offset);
     if (index == -1) {
       if (!nullable) {
         throw new FidlCodecError(
             'Cannot decode an invalid handle from a non-nullable type.');
       }
-      return new core.Handle.invalid();
+      return new Handle.invalid();
     }
     _validator.claimHandle(index);
     return _handles[index];
   }
 
-  core.Channel decodeChannel(int offset, bool nullable) =>
-      new core.Channel(decodeHandle(offset, nullable));
+  Channel decodeChannel(int offset, bool nullable) =>
+      new Channel(decodeHandle(offset, nullable));
 
   InterfaceHandle decodeInterfaceHandle(int offset, bool nullable) {
-    final core.Channel channel = decodeChannel(offset, nullable);
+    final Channel channel = decodeChannel(offset, nullable);
     final int version = decodeUint32(offset + kSerializedHandleSize);
     if (!channel.handle.isValid) {
       return null;
@@ -674,16 +674,16 @@ class Decoder {
   }
 
   InterfaceRequest decodeInterfaceRequest(int offset, bool nullable) {
-    final core.Channel channel = decodeChannel(offset, nullable);
+    final Channel channel = decodeChannel(offset, nullable);
     if (!channel.handle.isValid) return null;
     return new InterfaceRequest(channel);
   }
 
-  core.Socket decodeSocket(int offset, bool nullable) =>
-      new core.Socket(decodeHandle(offset, nullable));
+  Socket decodeSocket(int offset, bool nullable) =>
+      new Socket(decodeHandle(offset, nullable));
 
-  core.Vmo decodeVmo(int offset, bool nullable) =>
-      new core.Vmo(decodeHandle(offset, nullable));
+  Vmo decodeVmo(int offset, bool nullable) =>
+      new Vmo(decodeHandle(offset, nullable));
 
   Decoder decodePointer(int offset, bool nullable) {
     int basePosition = _base + offset;
@@ -985,12 +985,12 @@ class Decoder {
     return result;
   }
 
-  List<core.Handle> decodeHandleArray(
+  List<Handle> decodeHandleArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeHandle(o, n), offset,
           kSerializedHandleSize, nullability, expectedLength);
 
-  List<core.Channel> decodeChannelArray(
+  List<Channel> decodeChannelArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeChannel(o, n), offset,
           kSerializedHandleSize, nullability, expectedLength);
@@ -1007,7 +1007,7 @@ class Decoder {
         offset, kSerializedInterfaceSize, nullability, expectedLength);
   }
 
-  List<core.Socket> decodeSocketArray(
+  List<Socket> decodeSocketArray(
           int offset, int nullability, int expectedLength) =>
       _handleArrayDecodeHelper((d, o, n) => d.decodeSocket(o, n), offset,
           kSerializedHandleSize, nullability, expectedLength);
