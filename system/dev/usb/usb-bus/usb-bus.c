@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb-bus.h>
@@ -42,7 +43,7 @@ static mx_status_t bus_add_device(void* ctx, uint32_t device_id, uint32_t hub_id
 static void bus_remove_device(void* ctx, uint32_t device_id) {
     usb_bus_t* bus = ctx;
     if (device_id >= bus->max_device_count) {
-        printf("device_id out of range in usb_bus_remove_device\n");
+        dprintf(ERROR, "device_id out of range in usb_bus_remove_device\n");
         return;
     }
     usb_device_t* device = bus->devices[device_id];
@@ -120,7 +121,7 @@ static mx_protocol_device_t usb_bus_device_proto = {
 static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
     usb_bus_t* bus = calloc(1, sizeof(usb_bus_t));
     if (!bus) {
-        printf("Not enough memory for usb_bus_t.\n");
+        dprintf(ERROR, "Not enough memory for usb_bus_t.\n");
         return MX_ERR_NO_MEMORY;
     }
 
@@ -133,7 +134,7 @@ static mx_status_t usb_bus_bind(void* ctx, mx_device_t* device, void** cookie) {
     bus->max_device_count = usb_hci_get_max_device_count(&bus->hci);
     bus->devices = calloc(bus->max_device_count, sizeof(usb_device_t *));
     if (!bus->devices) {
-        printf("Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
+        dprintf(ERROR, "Not enough memory for usb_bus_t->devices. max_device_count: %zu\n",
                bus->max_device_count);
         free(bus);
         return MX_ERR_NO_MEMORY;

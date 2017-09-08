@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -154,7 +155,7 @@ static mx_status_t usb_interface_enable_endpoint(usb_interface_t* intf,
     mx_status_t status = usb_hci_enable_endpoint(&intf->hci, intf->device_id, ep, ss_comp_desc,
                                                  enable);
     if (status != MX_OK) {
-        printf("usb_interface_enable_endpoint failed\n");
+        dprintf(ERROR, "usb_interface_enable_endpoint failed: %d\n", status);
     }
     return status;
 }
