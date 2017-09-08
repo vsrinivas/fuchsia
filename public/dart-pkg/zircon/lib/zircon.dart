@@ -16,7 +16,6 @@ part 'src/errors.dart';
 part 'src/handle.dart';
 part 'src/handle_waiter.dart';
 part 'src/handle_wrapper.dart';
-part 'src/natives.dart';
 part 'src/socket.dart';
 part 'src/socket_reader.dart';
 part 'src/system.dart';

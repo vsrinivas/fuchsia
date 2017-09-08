@@ -100,4 +100,7 @@ class System extends NativeFieldWrapperClass2 {
       native "System_VmoWrite";
   static ReadResult vmoRead(Handle vmo, int offset, int size)
       native "System_VmoRead";
+
+  // Time operations.
+  static int timeGet(int clockId) native "System_TimeGet";
 }

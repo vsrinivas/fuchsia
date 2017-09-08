@@ -316,6 +316,10 @@ Dart_Handle System::VmoRead(ftl::RefPtr<Handle> vmo,
   }
 }
 
+uint64_t System::TimeGet(uint32_t clock_id) {
+  return mx_time_get(clock_id);
+}
+
   // clang-format: off
 
 #define FOR_EACH_STATIC_BINDING(V) \
@@ -330,7 +334,8 @@ Dart_Handle System::VmoRead(ftl::RefPtr<Handle> vmo,
   V(System, VmoGetSize)            \
   V(System, VmoSetSize)            \
   V(System, VmoRead)               \
-  V(System, VmoWrite)
+  V(System, VmoWrite)              \
+  V(System, TimeGet)
 
 // clang-format: on
 

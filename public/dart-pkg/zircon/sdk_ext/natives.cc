@@ -44,23 +44,6 @@ tonic::DartLibraryNatives* InitNatives() {
   return natives;
 }
 
-#define REGISTER_FUNCTION(name, count) \
-  { "" #name, name, count }            \
-  ,
-#define DECLARE_FUNCTION(name, count) \
-  extern void name(Dart_NativeArguments args);
-
-#define FIDL_NATIVE_LIST(V)    \
-  V(MxTime_Get, 1)
-
-FIDL_NATIVE_LIST(DECLARE_FUNCTION);
-
-static struct NativeEntries {
-  const char* name;
-  Dart_NativeFunction function;
-  int argument_count;
-} Entries[] = {FIDL_NATIVE_LIST(REGISTER_FUNCTION)};
-
 Dart_NativeFunction NativeLookup(Dart_Handle name,
                                  int argument_count,
                                  bool* auto_setup_scope) {
@@ -70,53 +53,15 @@ Dart_NativeFunction NativeLookup(Dart_Handle name,
   assert(function_name != nullptr);
   assert(auto_setup_scope != nullptr);
   *auto_setup_scope = true;
-  size_t num_entries = arraysize(Entries);
-  for (size_t i = 0; i < num_entries; ++i) {
-    const struct NativeEntries& entry = Entries[i];
-    if (!strcmp(function_name, entry.name) &&
-        (entry.argument_count == argument_count)) {
-      return entry.function;
-    }
-  }
   if (!g_natives)
     g_natives = InitNatives();
   return g_natives->GetNativeFunction(name, argument_count, auto_setup_scope);
 }
 
 const uint8_t* NativeSymbol(Dart_NativeFunction native_function) {
-  size_t num_entries = arraysize(Entries);
-  for (size_t i = 0; i < num_entries; ++i) {
-    const struct NativeEntries& entry = Entries[i];
-    if (entry.function == native_function) {
-      return reinterpret_cast<const uint8_t*>(entry.name);
-    }
-  }
   if (!g_natives)
     g_natives = InitNatives();
   return g_natives->GetSymbol(native_function);
-}
-
-static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
-  Dart_SetIntegerReturnValue(arguments,
-                             static_cast<int64_t>(MX_ERR_INVALID_ARGS));
-}
-
-#define CHECK_INTEGER_ARGUMENT(num, result, failure)                  \
-  {                                                                   \
-    Dart_Handle __status;                                             \
-    __status = Dart_GetNativeIntegerArgument(arguments, num, result); \
-    if (Dart_IsError(__status)) {                                     \
-      Set##failure##Return(arguments);                                \
-      return;                                                         \
-    }                                                                 \
-  }
-
-void MxTime_Get(Dart_NativeArguments arguments) {
-  int64_t clock_id;
-  CHECK_INTEGER_ARGUMENT(0, &clock_id, InvalidArgument);
-
-  mx_time_t time = mx_time_get(clock_id);
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(time));
 }
 
 }  // namespace

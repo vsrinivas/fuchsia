@@ -6,9 +6,15 @@ zircon_sdk_ext_lib = "//garnet/public/dart-pkg/zircon/lib/zircon.dart"
 
 zircon_sdk_ext_files = [
   zircon_sdk_ext_lib,
+  "//garnet/public/dart-pkg/zircon/lib/src/channel.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/channel_reader.dart",
   "//garnet/public/dart-pkg/zircon/lib/src/constants.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/errors.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/handle.dart",
   "//garnet/public/dart-pkg/zircon/lib/src/handle_waiter.dart",
-  "//garnet/public/dart-pkg/zircon/lib/src/handle_waiter.dart",
-  "//garnet/public/dart-pkg/zircon/lib/src/natives.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/handle_wrapper.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/socket.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/socket_reader.dart",
   "//garnet/public/dart-pkg/zircon/lib/src/system.dart",
+  "//garnet/public/dart-pkg/zircon/lib/src/vmo.dart",
 ]
