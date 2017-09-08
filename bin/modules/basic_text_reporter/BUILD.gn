@@ -14,7 +14,7 @@ flutter_app("basic_text_reporter") {
     "//apps/modular/services/lifecycle:lifecycle_dart",
     "//apps/modular/services/module:module_dart",
     "//apps/modular/services/story:story_dart",
-    "//apps/mozart/services/views:views_dart",
+    "//garnet/public/lib/ui/views/fidl:fidl_dart",
     "//garnet/public/lib/fidl/dart",
     "//lib/flutter/packages/flutter",
   ]
