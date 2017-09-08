@@ -45,6 +45,7 @@ private:
 #if defined(MAGMA_TEST_IMPORT_EXPORT)
     VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
     uint32_t device_memory_handle_ = 0;
+    PFN_vkGetMemoryFdKHR vk_get_memory_fd_khr_{};
 #endif
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
@@ -143,6 +144,11 @@ bool VkReadbackTest::InitVulkan()
                                                      .queueFamilyIndex = 0,
                                                  .queueCount = 1,
                                                  .pQueuePriorities = queue_priorities};
+
+    std::vector<const char*> enabled_extension_names;
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    enabled_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME);
+#endif
     VkDeviceCreateInfo createInfo = {.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
                                      .pNext = nullptr,
                                      .flags = 0,
@@ -150,14 +156,22 @@ bool VkReadbackTest::InitVulkan()
                                      .pQueueCreateInfos = &queue_create_info,
                                      .enabledLayerCount = 0,
                                      .ppEnabledLayerNames = nullptr,
-                                     .enabledExtensionCount = 0,
-                                     .ppEnabledExtensionNames = nullptr,
+                                     .enabledExtensionCount =
+                                         static_cast<uint32_t>(enabled_extension_names.size()),
+                                     .ppEnabledExtensionNames = enabled_extension_names.data(),
                                      .pEnabledFeatures = nullptr};
     VkDevice vkdevice;
 
     if ((result = vkCreateDevice(physical_devices[0], &createInfo,
                                  nullptr /* allocationcallbacks */, &vkdevice)) != VK_SUCCESS)
         return DRETF(false, "vkCreateDevice failed: %d", result);
+
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    vk_get_memory_fd_khr_ =
+        reinterpret_cast<PFN_vkGetMemoryFdKHR>(vkGetInstanceProcAddr(instance, "vkGetMemoryFdKHR"));
+    if (!vk_get_memory_fd_khr_)
+        return DRETF(false, "Couldn't find vkGetMemoryFdKHR");
+#endif
 
     vk_physical_device_ = physical_devices[0];
     vk_device_ = vkdevice;
@@ -239,14 +253,14 @@ bool VkReadbackTest::InitImage()
             VK_SUCCESS)
             return DRETF(false, "vkAllocateMemory failed");
     } else {
-        DASSERT(vkGetMemoryFdKHR);
         mx_handle_t vmo_handle = 0;
         int fd = 0;
         VkMemoryGetFdInfoKHR get_fd_info = {VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR, nullptr,
                                             vk_device_memory_,
                                             VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR};
-        if ((result = vkGetMemoryFdKHR(vk_device_, &get_fd_info, &fd)) != VK_SUCCESS)
+        if ((result = vk_get_memory_fd_khr_(vk_device_, &get_fd_info, &fd)) != VK_SUCCESS)
             return DRETF(false, "vkGetMemoryFdKHR failed");
+
         mx_status_t status = mxio_get_exact_vmo(fd, &vmo_handle);
         if (status != MX_OK)
             return DRETF(false, "mxio_get_exact_vmo failed");

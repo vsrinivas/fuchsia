@@ -178,15 +178,8 @@ extern PFN_vkCreateDisplayModeKHR vkCreateDisplayModeKHR;
 extern PFN_vkGetDisplayPlaneCapabilitiesKHR vkGetDisplayPlaneCapabilitiesKHR;
 extern PFN_vkCreateDisplayPlaneSurfaceKHR vkCreateDisplayPlaneSurfaceKHR;
 
-// VK_MAGMA_import_export
-extern PFN_vkExportDeviceMemoryMAGMA vkExportDeviceMemoryMAGMA;
-extern PFN_vkImportDeviceMemoryMAGMA vkImportDeviceMemoryMAGMA;
-
 // VK_KHR_display_swapchain
 extern PFN_vkCreateSharedSwapchainsKHR vkCreateSharedSwapchainsKHR;
-
-// VK_KHR_external_memory_fd
-extern PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR;
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 // VK_KHR_xlib_surface

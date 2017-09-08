@@ -359,14 +359,6 @@ VkResult VulkanShimInit()
     vkCreateSharedSwapchainsKHR = reinterpret_cast<PFN_vkCreateSharedSwapchainsKHR>(
         vulkan_shim_get_proc_addr(instance, "vkCreateSharedSwapchainsKHR"));
 
-    vkGetMemoryFdKHR = reinterpret_cast<PFN_vkGetMemoryFdKHR>(
-        vulkan_shim_get_proc_addr(instance, "vkGetMemoryFdKHR"));
-
-    vkExportDeviceMemoryMAGMA = reinterpret_cast<PFN_vkExportDeviceMemoryMAGMA>(
-        vulkan_shim_get_proc_addr(instance, "vkExportDeviceMemoryMAGMA"));
-    vkImportDeviceMemoryMAGMA = reinterpret_cast<PFN_vkImportDeviceMemoryMAGMA>(
-        vulkan_shim_get_proc_addr(instance, "vkImportDeviceMemoryMAGMA"));
-
 #ifdef VK_USE_PLATFORM_XLIB_KHR
     vkCreateXlibSurfaceKHR = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
         vulkan_shim_get_proc_addr(instance, "vkCreateXlibSurfaceKHR"));
@@ -582,11 +574,6 @@ PFN_vkCreateDisplayModeKHR vkCreateDisplayModeKHR;
 PFN_vkGetDisplayPlaneCapabilitiesKHR vkGetDisplayPlaneCapabilitiesKHR;
 PFN_vkCreateDisplayPlaneSurfaceKHR vkCreateDisplayPlaneSurfaceKHR;
 PFN_vkCreateSharedSwapchainsKHR vkCreateSharedSwapchainsKHR;
-
-PFN_vkGetMemoryFdKHR vkGetMemoryFdKHR;
-
-PFN_vkExportDeviceMemoryMAGMA vkExportDeviceMemoryMAGMA;
-PFN_vkImportDeviceMemoryMAGMA vkImportDeviceMemoryMAGMA;
 
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR;
