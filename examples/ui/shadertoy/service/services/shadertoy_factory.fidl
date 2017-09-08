@@ -1,0 +1,27 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart.example;
+
+import "apps/mozart/examples/shadertoy/service/services/shadertoy.fidl";
+import "apps/mozart/services/images/image_pipe.fidl";
+import "apps/mozart/services/views/view_token.fidl";
+
+// ShadertoyFactory provides a number of methods for creating |Shadertoy|
+// instances.
+[ServiceName="mozart::example::ShadertoyFactory"]
+interface ShadertoyFactory {
+  // Create a new Shadertoy that will present its rendered content to
+  // |image_pipe|.
+  NewImagePipeShadertoy(Shadertoy& toy, scenic.ImagePipe image_pipe);
+
+  // Create a new Shadertoy and a new view for it to render into.
+  // If |handle_input_events| is true, then mouse/touch events will be
+  // automatically handled by the Shadertoy; in this case, invocations of
+  // Shadertoy.SetMouse() will be ignored.  Otherwise, the view will ignore
+  // input events, and SetMouse() will behave normally.
+  // TODO(MZ-227): not implemented.
+  NewViewShadertoy(Shadertoy& toy, mozart.ViewOwner& view_owner,
+                   bool handle_input_events);
+};

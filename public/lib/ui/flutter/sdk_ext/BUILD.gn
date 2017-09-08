@@ -1,0 +1,19 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("sdk_ext") {
+  sources = [
+    "src/natives.cc",
+    "src/natives.h",
+  ]
+
+  deps = [
+    "//apps/mozart/services/views",
+    "//dart/runtime:dart_api",
+    "//garnet/public/dart-pkg/zircon",
+    "//garnet/public/lib/ftl",
+    "//lib/tonic",
+    "//magenta/system/ulib/mx",
+  ]
+}

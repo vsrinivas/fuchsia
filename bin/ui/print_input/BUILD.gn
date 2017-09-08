@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("print_input") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//apps/mozart/lib/input",
+    "//apps/mozart/services/input/cpp",
+    "//apps/mozart/src/input_reader",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+}

@@ -1,0 +1,25 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("input") {
+  sources = [
+    "input_connection_impl.cc",
+    "input_connection_impl.h",
+    "input_dispatcher_impl.cc",
+    "input_dispatcher_impl.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+    "//apps/mozart/services/geometry/cpp",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
+    "//apps/mozart/services/views",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/src/view_manager/internal",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+}

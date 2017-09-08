@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("input_reader") {
+  sources = [
+    "input_interpreter.cc",
+    "input_interpreter.h",
+    "input_reader.cc",
+    "input_reader.h",
+  ]
+
+  deps = [
+    "//apps/mozart/lib/input",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/mx",
+    "//magenta/system/ulib/trace",
+  ]
+
+  libs = [
+    "mxio",
+    "hid",
+  ]
+}

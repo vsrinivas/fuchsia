@@ -1,0 +1,34 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("sketchy") {
+  output_name = "sketchy_service"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "buffer.cc",
+    "buffer.h",
+    "canvas.cc",
+    "canvas.h",
+    "main.cc",
+    "resources/import_node.cc",
+    "resources/import_node.h",
+    "resources/resource.cc",
+    "resources/resource.h",
+    "resources/resource_map.cc",
+    "resources/resource_map.h",
+    "resources/stroke_group.cc",
+    "resources/stroke_group.h",
+    "resources/types.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/services/fun/sketchy",
+    "//garnet/lib/escher/escher",
+    "//magenta/system/ulib/trace-provider",
+  ]
+}

@@ -1,0 +1,3 @@
+{
+  "dart:mozart.internal": "sdk_ext/mozart.dart"
+}

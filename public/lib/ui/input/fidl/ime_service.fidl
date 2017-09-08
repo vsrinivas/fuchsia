@@ -1,0 +1,29 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+import "apps/mozart/services/input/text_editing.fidl";
+import "apps/mozart/services/input/text_input.fidl";
+import "apps/mozart/services/input/input_events.fidl";
+
+// The service provided by an IME
+[ServiceName="mozart::ImeService"]
+interface ImeService {
+  GetInputMethodEditor(KeyboardType keyboard_type,
+                       InputMethodAction action,
+                       TextInputState initial_state,
+                       InputMethodEditorClient client,
+                       InputMethodEditor& editor);
+};
+
+// This is the service a view should expose when it can show and hide a
+// software keyboard.
+//
+// View can use the |OfferServiceProvider| API to expose that service.
+[ServiceName="mozart::SoftKeyboardContainer"]
+interface SoftKeyboardContainer {
+  Show() => (bool shown);
+  Hide();
+};

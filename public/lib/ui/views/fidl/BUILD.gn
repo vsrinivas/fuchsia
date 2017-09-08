@@ -1,0 +1,31 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("views") {
+  sources = [
+    "view_containers.fidl",
+    "view_manager.fidl",
+    "view_properties.fidl",
+    "view_provider.fidl",
+    "view_tree_token.fidl",
+    "view_trees.fidl",
+    "views.fidl",
+  ]
+
+  public_deps = [
+    ":view_token",
+    "//application/services:service_provider",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/scenic",
+  ]
+}
+
+fidl("view_token") {
+  sources = [
+    "view_token.fidl",
+  ]
+}

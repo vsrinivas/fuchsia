@@ -1,0 +1,31 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("scenic") {
+  sources = [
+    "display_info.fidl",
+    "events.fidl",
+    "nodes.fidl",
+    "ops.fidl",
+    "resources.fidl",
+    "scene_manager.fidl",
+    "session.fidl",
+    "shapes.fidl",
+    "types.fidl",
+  ]
+
+  public_deps = [
+    ":presentation_info",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/images",
+  ]
+}
+
+fidl("presentation_info") {
+  sources = [
+    "presentation_info.fidl",
+  ]
+}

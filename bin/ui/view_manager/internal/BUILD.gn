@@ -1,0 +1,16 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("internal") {
+  sources = [
+    "input_owner.h",
+    "view_inspector.h",
+  ]
+
+  public_deps = [
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/views",
+    "//apps/mozart/services/views/cpp",
+  ]
+}

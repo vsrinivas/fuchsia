@@ -1,0 +1,35 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+import "apps/mozart/services/scenic/types.fidl";
+import "apps/mozart/services/geometry/geometry.fidl";
+
+// The shapes defined in this file can be used to define the rendered shape of
+// an |ObjectNode|, and to define the clip region of a |ClipNode|.
+
+// Rectangle centered at (0,0).
+struct Rectangle {
+  Value width;  // float
+  Value height; // float
+};
+
+// RoundedRectangle centered at (0,0).
+struct RoundedRectangle {
+  Value width;                // float
+  Value height;               // float
+  Value top_left_radius;      // float
+  Value top_right_radius;     // float
+  Value bottom_right_radius;  // float
+  Value bottom_left_radius;   // float
+};
+
+struct Circle {
+  Value radius;  // float
+};
+
+// A Mesh cannot be rendered until it has been bound to vertex/index buffers;
+// see BindMeshBuffersOp.
+struct Mesh {};

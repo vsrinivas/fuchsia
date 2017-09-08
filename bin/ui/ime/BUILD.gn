@@ -1,0 +1,25 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("ime") {
+  output_name = "ime_service"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "ime_impl.cc",
+    "ime_impl.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/lib/input",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+}

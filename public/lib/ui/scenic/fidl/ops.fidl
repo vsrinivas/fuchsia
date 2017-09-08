@@ -1,0 +1,490 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+import "apps/mozart/services/scenic/events.fidl";
+import "apps/mozart/services/scenic/resources.fidl";
+
+// Operations that are used to modify the state of a |Session|.
+// TODO(MZ-237): reorder Op definitions to match the order in this union.
+union Op {
+  CreateResourceOp create_resource;
+  ReleaseResourceOp release_resource;
+  ExportResourceOp export_resource;
+  ImportResourceOp import_resource;
+
+  // Tagging operations.
+  SetTagOp set_tag;
+
+  // Grouping operations.
+  DetachOp detach;
+
+  // Spatial operations.
+  SetTranslationOp set_translation;
+  SetScaleOp set_scale;
+  SetRotationOp set_rotation;
+  SetAnchorOp set_anchor;
+  SetSizeOp set_size;
+
+  // Node-specific operations.
+  AddChildOp add_child; // TODO: Should we require a DetachOp before re-parenting?
+  AddPartOp add_part;
+  DetachChildrenOp detach_children;
+  SetShapeOp set_shape;
+  SetMaterialOp set_material;
+  SetClipOp set_clip;
+  SetHitTestBehaviorOp set_hit_test_behavior;
+
+  // Camera and lighting operations.
+  SetCameraOp set_camera;
+  SetCameraProjectionOp set_camera_projection;
+  SetLightIntensityOp set_light_intensity;
+
+  SetTextureOp set_texture;
+  SetColorOp set_color;
+
+  // Mesh operations.
+  BindMeshBuffersOp bind_mesh_buffers;
+
+  // Layer operations.
+  AddLayerOp add_layer;
+  SetLayerStackOp set_layer_stack;
+  SetRendererOp set_renderer;
+
+  // Events.
+  SetEventMaskOp set_event_mask;
+
+  // Diagnostic operations.
+  SetLabelOp set_label;
+};
+
+// Instructs the compositor to create the specified |Resource|, and to register
+// it in a table so that it can be referenced by subsequent operations.
+struct CreateResourceOp {
+  // An ID that is currently not used within the session.
+  uint32 id;
+  Resource resource;
+};
+
+// Releases the client's reference to the resource; it is then illegal to use
+// the ID in subsequent Ops.  Other references to the resource may exist, so
+// releasing the resource does not result in its immediate destruction; it is
+// only destroyed once the last reference is released.  For example, the
+// resource may be required to render an in-progress frame, or it may be
+// referred to by another resource).  However, the ID will be immediately
+// unregistered, and may be reused to create a new resource.
+struct ReleaseResourceOp {
+  // ID of the resource to be dereferenced.
+  uint32 id;
+};
+
+// Create an external reference to the specified resource, which can then be
+// imported into another Session by passing a handle to |token|'s peer to
+// ImportResourceOp; see that comment for more details.
+//
+// The importing client is typically in a different process than the exporter.
+// No specific mechanism is provided for transferring a token from an exporter
+// to an importer; collaborators may choose any out-of-band API they wish to do
+// so.
+struct ExportResourceOp {
+  uint32 id;
+  handle<eventpair> token;
+};
+
+// Import a resource that was exported via ExportResourceOp().  |token| is a
+// handle to the eventpair peer that was used to export the resource, and |spec|
+// describes the type of the imported resource, and the ops which can legally be
+// applied to it.  Afterward, |id| can be used to refer to the resource in an
+// Op, similarly (but not identically: see below) to a resource that was created
+// in the session.  For example, you can add children to an imported EntityNode
+// via AddChildOp.
+//
+// However, note that the importer does not gain full access to the imported
+// resource, but rather to an attenuated subset of its capabilities.  For
+// example, you cannot use a DetachOp to detach an imported EntityNode from its
+// parent.
+//
+// Unlike ExportResourceOp, there is no configurable timeout.  There is an
+// expectation that the exported resource will become available in a short
+// amount of time.  TODO: this needs elaboration... e.g. we might notify via the
+// SessionListener when we know that the link will never be made (e.g. if the
+// peer of the import token is destroyed).
+//
+// TODO: describe how the imported resource behaves if the exported resource
+// isn't yet available, or becomes unavailable (e.g. an imported Material might
+// act as a plain white texture).
+struct ImportResourceOp {
+  uint32 id;
+  handle<eventpair> token;
+  ImportSpec spec;
+};
+
+// Maximum length for a resource label.
+const uint32 kLabelMaxLength = 32;
+
+// Sets/clears a label to help developers identify the purpose of the resource
+// when using diagnostic tools.
+//
+// The label serves no functional purpose in the scene graph.  It exists only
+// to help developers understand its structure.  The scene manager may truncate
+// or discard labels at will.
+//
+// Constraints:
+// - The label's maximum length is |kLabelMaxLength| characters.
+// - Setting the label to an empty string clears it.
+struct SetLabelOp {
+  uint32 id;
+  string label;
+};
+
+// Add a node as a child to another node.
+//
+// Constraints:
+// - |id| refs a Node with the has_children characteristic.
+// - |child_id| refs any Node.
+//
+// Discussion:
+// The child node is first removed from its existing parent, as if DetachOp
+// was applied first.
+struct AddChildOp {
+  uint32 node_id;
+  uint32 child_id;
+};
+
+// Add a node as a part of another node.  The implications of being a part
+// rather than a child differ based on the type of the part.  However, one
+// implication is constant: removing all of a node's children (e.g. via
+// DetachChildrenOp) does not affect its parts.  This is similar to the "shadow
+// DOM" in a web browser: the controls of a <video> element are implemented as
+// using the shadow DOM, and do no show up amongst the children of that element.
+//
+// Constraints:
+// - |id| refs a Node with the has_parts characteristic.
+// - |part_id| refs any Node.
+//
+// Discussion:
+// The part node is first removed from its existing parent, as if DetachOp
+// was applied first.
+struct AddPartOp {
+  uint32 node_id;
+  uint32 part_id;
+};
+
+// Detaches a parentable object from its parent (e.g. a node from a parent node,
+// or a layer from a layer stack).  It is illegal to apply this op to a
+// non-parentable object.  No-op if the target object currently has no parent.
+//
+// Constraints:
+// - |id| refs a parentable object
+//
+// Discussion:
+// For nodes, this op will detach a node from its parent, regardless of whether
+// it is a part or a child of its parent.
+struct DetachOp {
+  uint32 id;
+};
+
+// Detaches all of a node's children (but not its parts).
+struct DetachChildrenOp {
+  uint32 node_id;
+};
+
+// Sets/clears a node's tag value.
+//
+// A session can apply a tag value to any node to which it has access, including
+// imported nodes.  These tags are private to the session and cannot be read
+// or modified by other sessions.  When multiple sessions import the same node,
+// each session will only observe its own tag values.
+//
+// Hit test results for a session only include nodes which the session has
+// tagged with a non-zero value.  Therefore a session can use tag values to
+// associate nodes with their functional purpose when picked.
+//
+// Constraints:
+// - |node_id| refs a |Node|.
+// - |tag_value| is the tag value to assign, or 0 to remove the tag.
+struct SetTagOp {
+  uint32 node_id;
+  uint32 tag_value;
+};
+
+// Sets a Resource's (typically a Node's) translation.
+//
+// Constraints:
+// - |id| refs a Resource with the has_transform characteristic.
+struct SetTranslationOp {
+  uint32 id;
+  Vector3Value value;
+};
+
+// Sets a Resource's (typically a Node's) scale.
+//
+// Constraints:
+// - |id| refs a Resource with the has_transform characteristic.
+struct SetScaleOp {
+  uint32 id;
+  Vector3Value value;
+};
+
+// Sets a Resource's (typically a Node's) rotation.
+//
+// Constraints:
+// - |id| refs a Resource with the has_transform characteristic.
+struct SetRotationOp {
+  uint32 id;
+  QuaternionValue value;
+};
+
+// Sets a Resource's (typically a Node's) anchor point.
+//
+// Constraints:
+// - |id| refs a Resource with the has_transform characteristic.
+struct SetAnchorOp {
+  uint32 id;
+  Vector3Value value;
+};
+
+// Sets an object's size.
+//
+// Constraints:
+// - |id| refs a resizeable object.
+// - some objects that support this op may have additional constraints (e.g.
+//   in some cases |depth| must be zero).
+struct SetSizeOp {
+  uint32 id;
+  Vector2Value value;
+};
+
+// Sets/clears a node's shape.
+//
+// Constraints:
+// - |node_id| refs a |Node| with the has_shape characteristic.
+// - |shape_id| refs a |Shape|, or nothing.
+// - if this op causes the target to have both a |Shape| and a |Material|,
+//   then these must be compatible with each other (see README.md regarding
+//   "Shape/Material Compatibility").
+// TODO: add "Shape/Material Compatibility section"
+//
+// Discussion:
+// In order to be painted, a node requires both a |Shape| and a |Material|.
+// Without a material, a node can still participate in hit-testing and clipping.
+// Without a shape, a node cannot do any of the above.
+struct SetShapeOp {
+  uint32 node_id;
+  uint32 shape_id;
+};
+
+// Sets/clears a node's material.
+//
+// Constraints:
+// - |node_id| refs a |Node| with the has_material characteristic.
+// - |material_id| refs a |Material|, or nothing.
+// - if this op causes the target to have both a |Shape| and a |Material|,
+//   then these must be compatible with each other (see README.md regarding
+//   "Shape/Material Compatibility").
+// TODO: add "Shape/Material Compatibility section"
+//
+// Discussion:
+// In order to be painted, a node requires both a |Shape| and a |Material|.
+// Without a material, a node can still participate in hit-testing and clipping.
+// Without a shape, a node cannot do any of the above.
+struct SetMaterialOp {
+  uint32 node_id;
+  uint32 material_id;
+};
+
+// Sets/clears a node's clip.
+//
+// Constraints:
+// - |node_id| refs a |Node| with the has_clip characteristic.
+// - |clip_id| a |Node| with the is_clip characteristic, or nothing.  If the
+//   referenced node is not rooted, then it will have no effect (since its
+//   full world-transform cannot be determined).
+// - |clip_to_self| If false, children are only clipped to the region specified
+//   by |clip_id|.  If true, children are additionally clipped to the node's
+//   shape (as determined by its ShapeNode parts).
+//
+// Discussion:
+// If a node has a clip, it will be applied to both the parts and the children
+// of the node.  Under some circumstances (TBD), a clip will not be applicable
+// to a node; in such cases it will be as though no clip has been specified for
+// the node.
+// TODO: elaborate on the circumstances under which a clip is inapplicable.
+// For example, consider a 3D space that looks through a portal into a 2D space
+// that uses a clip for a circular reveal.  It would not be meaningful to clip
+// objects on the outside (i.e. in the 3D space).
+struct SetClipOp {
+  uint32 node_id;
+  uint32 clip_id;
+  bool clip_to_self;
+};
+
+// Sets a node's hit test behavior.
+//
+// Discussion:
+// By default, hit testing is performed on the node's content, its parts,
+// and its children.
+struct SetHitTestBehaviorOp {
+  uint32 node_id;
+  HitTestBehavior hit_test_behavior;
+};
+
+// Sets a renderer's camera.
+//
+// Constraints:
+// - |renderer_id| refs a |Renderer|.
+// - |camera_id| refs a |Camera|, or stops rendering by passing zero.
+// - |matrix| is a value or variable of type kMatrix4x4.
+struct SetCameraOp {
+  uint32 renderer_id;
+  uint32 camera_id;
+};
+
+// Sets a camera's projection matrix.
+//
+// Constraints:
+// - |camera_id| refs a |Camera|.
+// - |eye_position| is the position of the eye.
+// - |eye_look_at| is the point is the scene the that eye is pointed at.
+// - |eye_up| defines the camera's "up" vector.
+// - |fovy| is the Y-axis field of view, in radians.
+//
+// NOTE: A default orthographic projection is specified by setting |fovy| to
+// zero.  In this case, all other parameters are ignored.
+struct SetCameraProjectionOp {
+  uint32 camera_id;
+  Vector3Value eye_position;
+  Vector3Value eye_look_at;
+  Vector3Value eye_up;
+  FloatValue fovy;  // Y-axis field of view, in radians.
+};
+
+// Sets the intensity of a Light.
+//
+// Constraints:
+// - |light_id| refs a |Light|.
+// - |intensity| is a value or variable of type kFloat..
+struct SetLightIntensityOp {
+  uint32 light_id;
+  Value intensity;  // type: kFloat
+};
+
+// Sets/clears a material's texture.
+//
+// Constraints:
+// - |material_id| refs a |Material|.
+// - |texture_id| refs a |Image|, |ImagePipe|, or nothing.
+//
+// If no texture is provided (i.e. |texture_id| is zero), a solid color is used.
+// If a texture is provided, then the value sampled from the texture is
+// multiplied by the color.
+struct SetTextureOp {
+  uint32 material_id;
+  uint32 texture_id;  // Refers to an Image resource.  May be zero (no texture).
+};
+
+// Sets a material's color.
+//
+// Constraints:
+// - |material_id| refs a |Material|.
+//
+// If a texture is set on the material, then the value sampled from the texture
+// is multiplied by the color.
+struct SetColorOp {
+  uint32 material_id;
+  ColorRgbaValue color;
+};
+
+
+
+// Set a mesh's indices and vertices.
+//
+// |mesh_id| refs the Mesh to be updated.
+// |index_buffer_id| refs a Buffer that contains the mesh indices.
+// |index_format| defines how the index buffer data is to be interpreted.
+// |index_offset| number of bytes from the start of the index Buffer.
+// |index_count| number of indices.
+// |vertex_buffer_id| refs a Buffer that contains the mesh vertices.
+// |vertex_format| defines how the vertex buffer data is to be interpreted.
+// |vertex_offset| number of bytes from the start of the vertex Buffer.
+// |vertex_count| number of vertices.
+// |bounding_box| must contain all vertices within the specified range.
+//
+// The MeshVertexFormat defines which per-vertex attributes are provided by the
+// mesh, and the size of each attribute (and therefore the size of each vertex).
+// The attributes are ordered within the vertex in the same order that they
+// appear within the MeshVertexFormat struct.  For example, if the values are
+// kVector3, kNone and kVector2, then:
+//   - each vertex has a position and UV-coordinates, but no surface normal.
+//   - the 3D position occupies bytes 0-11 (3 dimensions * 4 bytes per float).
+//   - the UV coords occupy bytes 12-19, since no surface normal is provided.
+enum MeshIndexFormat {
+  // TODO(MZ-275): only kUint32 is currently supported.
+  kUint16 = 1,
+  kUint32,
+};
+struct MeshVertexFormat {
+  // kVector2 or kVector3.
+  ValueType position_type;
+  // kVector2 or kVector3 (must match position_type), or kNone.
+  ValueType normal_type;
+  // kVector2 or kNone.
+  ValueType tex_coord_type;
+};
+struct BindMeshBuffersOp {
+  uint32 mesh_id;
+  uint32 index_buffer_id;
+  MeshIndexFormat index_format;
+  uint64 index_offset;
+  uint32 index_count;
+  uint32 vertex_buffer_id;
+  MeshVertexFormat vertex_format;
+  uint64 vertex_offset;
+  uint32 vertex_count;
+  BoundingBox bounding_box;
+};
+
+// Add a layer to a layer stack.
+// Constraints:
+// - |layer_stack_id| refs a |LayerStack|.
+// - |layer_id| refs a |Layer|.
+// - The layer must not already belong to a different stack; it must first be
+//   detached.
+struct AddLayerOp {
+  uint32 layer_stack_id;
+  uint32 layer_id;
+};
+
+// Set a compositor's layer stack, replacing the current stack (if any).
+// Constraints:
+// - |compositor_id| refs a |DisplayCompositor| or |ImagePipeCompositor|.
+// - |layer_stack_id| refs a |LayerStack|.
+struct SetLayerStackOp {
+  uint32 compositor_id;
+  uint32 layer_stack_id;
+};
+
+// Set a layer's renderer, replacing the current renderer (if any).
+// Constraints:
+// - |layer_id| refs a |Layer|.
+// - |renderer_id| refs a |Renderer|.
+struct SetRendererOp {
+  uint32 layer_id;
+  uint32 renderer_id;
+};
+
+// Sets which events a resource should deliver to the session listener.
+// This operation replaces any prior event mask for the resource.
+//
+// The initial event mask for a resource is zero, meaning no events are
+// reported.
+//
+// Constraints:
+// - |resource_id| is a valid resource id
+// - |event_mask| is zero or a combination of |k*EventMask| bits OR'ed together.
+struct SetEventMaskOp {
+  uint32 id;
+  uint32 event_mask;
+};

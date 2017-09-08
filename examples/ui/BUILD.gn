@@ -1,0 +1,20 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("examples") {
+  public_deps = [
+    "basic_wm",
+    "hello_material",
+    "hello_scene_manager",
+    "jank",
+    "noodles",
+    "paint",
+    "shadertoy/client",
+    "shadertoy/service",
+    "shapes",
+    "sketchy",
+    "spinning_square",
+    "tile",
+  ]
+}

@@ -1,0 +1,49 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart.example;
+
+import "apps/mozart/services/scenic/types.fidl";
+import "apps/mozart/services/images/image_pipe.fidl";
+
+// Shadertoy (www.shadertoy.com) is an online community and tool for creating
+// and sharing GLSL shaders.  The genius of Shadertoy is that it side-steps the
+// need for tedious glue code to bind assets such and meshs to GPU shader code.
+// Instead, users simply provide GLSL fragment shader coder, which is bound to
+// a predefined set of inputs (see https://www.shadertoy.com/howto).
+//
+// Shadertoy is also a FIDL interface to a Fuchsia service which provides a host
+// environment for GLSL shaders conforming to the specification defined by the
+// website (again, see https://www.shadertoy.com/howto), and for binding input
+// data to these shaders.
+//
+// This interface does not concern itself with how to display the images
+// rendered by the GLSL code; this is the responsibility of |ShadertoyFactory|,
+// which is used to create Shadertoy instances.
+interface Shadertoy {
+  // Set whether rendering is paused or not.
+  SetPaused(bool paused);
+
+  // Set the GLSL shader code for the Shadertoy.  Return true if compilation was
+  // successful and false otherwise.
+  // TODO: provide better error reporting when compilation fails.
+  SetShaderCode(string glsl) => (bool successful);
+
+  // Corresponds to Shadertoy's 'iResolution' shader parameter.
+  SetResolution(uint32 width, uint32 height);
+
+  // Corresponds to Shadertoy's 'iMouse' shader parameter.  The value is
+  // interpreted as follows:
+  // i_mouse.xy:
+  //   - the position of the last mouse-down event
+  // i_mouse.zw
+  //   - (when mouse is down) the current position of the mouse
+  //   - (when mouse is up) the position of the last mouse-up event
+  SetMouse(scenic.vec4 i_mouse);
+
+  // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
+  // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
+  // TODO: implement cubemap support.
+  SetImage(uint32 channel, scenic.ImagePipe& image_pipe);
+};

@@ -1,0 +1,10 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/vulkan/config.gni")
+
+declare_args() {
+  mozart_use_vulkan = fuchsia_use_vulkan
+  mozart_examples_use_scene_manager = false
+}

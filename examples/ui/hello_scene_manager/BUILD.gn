@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hello_scene_manager") {
+  output_name = "hello_scene_manager"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/lib/scenic:fidl_helpers",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/src/scene_manager/tests:util",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//garnet/lib/escher/escher",
+  ]
+
+  include_dirs = [
+    "//garnet/lib/escher",
+    "//third_party/glm",
+    "//lib",
+  ]
+
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}

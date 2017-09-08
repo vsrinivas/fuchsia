@@ -1,0 +1,90 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module sketchy;
+
+// Specifies the type of a resource created via CreateResourceOp, along with
+// any other required data.
+union ResourceArgs {
+  Stroke stroke;
+  StrokeGroup stroke_group;
+  Pen pen;
+
+  WobblyStyle wobbly_style;
+  ExplicitWidthStyle explicit_width_style;
+};
+
+// A stroke has a path which is tessellated and rendered as a Mesh when its
+// containing stroke-group is inserted into the Scenic scene-graph by attaching
+// it to an imported Scenic node.  A stroke can belong to at most a single
+// stroke-group; to add a stroke to another group it must first be detached from
+// the current one.
+//
+// A stroke is said to be 'empty' when its path has not been changed (via
+// SetPath or Begin/Extend/FinishStroke) since it was created, or the last time
+// that Clear was called.
+//
+// Ops:
+// - ClearStroke
+// - SetStrokePath
+// - SetStrokeStyle
+// - AddStroke (as arg)
+// - BeginStroke (as arg)
+// - ExtendStroke (as arg)
+// - FinishStroke (as arg)
+struct Stroke {
+};
+
+// A stroke-group is a container of strokes, which can be inserted into a Scenic
+// scene-graph by importing adding it as a child of an imported |scenic.Node|.
+//
+// Ops:
+// - ClearGroup
+// - AddStroke
+// - RemoveStroke
+// - scenic.Detach
+// - scenic.AddChild (as arg)
+struct StrokeGroup {
+};
+
+
+// A pen handles user input to create a path for a stroke.
+// TODO(MZ-246): expose access to stroke-fitter parameters.
+//
+// Ops:
+// - BeginStroke
+// - ExtendStroke
+// - FinishStroke
+// - SetPenStyle
+struct Pen {
+};
+
+
+// The classic Escher Sketcy Demo wobbly style that you know and love.
+//
+// Ops:
+// - SetPenStyle (as arg).
+// - SetStrokeStyle (as arg).
+struct WobblyStyle {
+  float speed1;
+  float amplitude1;
+  float frequency1;
+  float speed2;
+  float amplitude2;
+  float frequency2;
+  float speed3;
+  float amplitude3;
+  float frequency3;
+};
+
+// Allows clients to provide a list of floats that are sampled along the stroke,
+// proportionally to the arc-length of the stroke.  An example use-case is a
+// to visualize the frequency spectrum of an audio signal.
+//
+// Ops:
+// - SetPenStyle (as arg)
+// - SetStrokeStyle (as arg).
+struct ExplicitWidthStyle {
+  array<float> vals;
+};

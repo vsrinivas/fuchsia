@@ -1,0 +1,36 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("root_presenter") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "main.cc",
+    "presentation.cc",
+    "presentation.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/lib/input",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
+    "//apps/mozart/services/presentation",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/src/input_reader",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
+  ]
+
+  libs = [ "hid" ]
+
+  include_dirs = [ "//third_party/glm" ]
+
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}

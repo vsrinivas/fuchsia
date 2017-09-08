@@ -1,0 +1,41 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module scenic;
+
+// These are the types of nodes that can be created within a Mozart |Session|.
+//
+// Node Characteristics:
+// These are characteristics that each type of |Node| either has or doesn't.
+// These constrain operations that reference nodes; violations will cause the
+// |Session| connection to be closed.  For example, |NodeAddChildOp| must target
+// a node with the "has_children" characteristic.  These characteristics are not
+// explicitly reflected in the Session API; instead, they must be enforced by
+// implementations of the API.
+// - has_transform:
+// - has_children:
+// - has_parts:
+// - has_clip:
+// - is_clip:
+// - has_shape:
+// - has_material:
+
+// Characteristics:
+// - has_transform
+// - is_clip
+// - has_parts
+struct ClipNode {};
+
+// Characteristics:
+// - has_transform
+// - has_children
+// - has_parts
+// - has_clip
+struct EntityNode {};
+
+// Characteristics:
+// - has_transform
+// - has_shape
+// - has_material
+struct ShapeNode {};

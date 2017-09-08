@@ -1,0 +1,64 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+// Whether a TextPosition is visually upstream or downstream of its offset.
+//
+// For example, when a text position exists at a line break, a single offset has
+// two visual positions, one prior to the line break (at the end of the first
+// line) and one after the line break (at the start of the second line). A text
+// affinity disambiguates between those cases. (Something similar happens with
+// between runs of bidirectional text.)
+enum TextAffinity {
+  // The position has affinity for the upstream side of the text position.
+  //
+  // For example, if the offset of the text position is a line break, the
+  // position represents the end of the first line.
+  UPSTREAM,
+
+  // The position has affinity for the downstream side of the text position.
+  //
+  // For example, if the offset of the text position is a line break, the
+  // position represents the start of the second line.
+  DOWNSTREAM,
+};
+
+// A range of characters in a string of text.
+struct TextRange {
+  // The index of the first UTF-16 character in the range.
+  //
+  // If |start| and |end| are both -1, the text range is empty.
+  int64 start;
+
+  // The next index after the UTF-16 characters in this range.
+  //
+  // If |start| and |end| are both -1, the text range is empty.
+  int64 end;
+};
+
+// A range of text that represents a selection.
+//
+// Text selection is always directional. Direction should be determined by
+// comparing base and extent.
+struct TextSelection {
+  // The offset at which the selection originates.
+  //
+  // Might be larger than, smaller than, or equal to extent.
+  int64 base;
+
+  // The offset at which the selection terminates.
+  //
+  // When the user uses the arrow keys to adjust the selection, this is the
+  // value that changes. Similarly, if the current theme paints a caret on one
+  // side of the selection, this is the location at which to paint the caret.
+  //
+  // Might be larger than, smaller than, or equal to base.
+  int64 extent;
+
+  // If the the text range is collapsed and has more than one visual location
+  // (e.g., occurs at a line break), which of the two locations to use when
+  // painting the caret.
+  TextAffinity affinity;
+};

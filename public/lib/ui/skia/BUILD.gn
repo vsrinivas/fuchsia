@@ -1,0 +1,56 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+group("skia") {
+  public_deps = [
+    ":fonts",
+    ":type_converters",
+    ":vmo",
+  ]
+}
+
+source_set("fonts") {
+  sources = [
+    "skia_font_loader.cc",
+    "skia_font_loader.h",
+  ]
+
+  deps = [
+    ":type_converters",
+    ":vmo",
+    "//garnet/public/lib/fonts/fidl",
+    "//garnet/public/lib/ftl",
+    "//third_party/skia",
+  ]
+}
+
+source_set("type_converters") {
+  sources = [
+    "type_converters.cc",
+    "type_converters.h",
+  ]
+
+  public_deps = [
+    "//apps/mozart/services/geometry",
+    "//third_party/skia",
+  ]
+}
+
+source_set("vmo") {
+  sources = [
+    "skia_vmo_data.cc",
+    "skia_vmo_data.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/mx",
+    "//third_party/skia",
+  ]
+
+  deps = [ "//magenta/system/ulib/trace" ]
+}

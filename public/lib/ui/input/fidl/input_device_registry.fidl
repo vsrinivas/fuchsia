@@ -1,0 +1,24 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+import "apps/mozart/services/input/input_reports.fidl";
+
+// Service to receive input events.
+//
+// Input devices can describe their capabilities using |DeviceDescriptor|
+// and register themselves with the |InputDeviceRegistry|. They will receive
+// a |DeviceToken| which can be used to send |InputReports| and unregister
+// the device.
+[ServiceName="mozart::InputDeviceRegistry"]
+interface InputDeviceRegistry {
+  // Register a device with the capabilities described by |DeviceDescriptor|
+  RegisterDevice(DeviceDescriptor descriptor, InputDevice& input_device);
+};
+
+interface InputDevice {
+  // Dispatch an |InputReport| from the device |token|
+  DispatchReport(InputReport report);
+};

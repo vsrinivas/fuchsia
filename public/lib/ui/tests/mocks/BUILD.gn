@@ -1,0 +1,27 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  sources = [
+    "mock_input_device.cc",
+    "mock_input_device.h",
+    "mock_input_device_registry.cc",
+    "mock_input_device_registry.h",
+    "mock_view_container_listener.cc",
+    "mock_view_container_listener.h",
+    "mock_view_listener.cc",
+    "mock_view_listener.h",
+    "mock_view_tree_listener.cc",
+    "mock_view_tree_listener.h",
+  ]
+
+  deps = [
+    "//apps/mozart/src/view_manager:lib",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings:bindings",
+    "//third_party/gtest",
+  ]
+}

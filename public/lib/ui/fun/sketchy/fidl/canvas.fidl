@@ -1,0 +1,40 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module sketchy;
+
+import "apps/mozart/services/fun/sketchy/ops.fidl";
+import "apps/mozart/services/fun/sketchy/types.fidl";
+import "apps/mozart/services/scenic/presentation_info.fidl";
+
+// A Canvas allows clients to draw strokes, which are dynamically tessellated
+// and inserted into the global Scenic scene-graph.
+[ServiceName="sketchy::Canvas"]
+interface Canvas {
+  // Init() must be called once, before invoking any other operations.
+  Init(CanvasListener? listener);
+
+  // Enqueue a list of operations, which will not take effect until Present() is
+  // called.  It is allowable to call Enqueue() several times before calling
+  // Present(); the effect is the same as if all operations had been
+  // concatenated into a single Enqueue() call.
+  //
+  // Akin to scenic::Session.Enqueue(); see scenic/session.fidl for details.
+  Enqueue(array<Op> ops);
+
+  // Present all previously enqueued operations.  In order to pipeline the
+  // preparation of the resources required to render the scene, two lists of
+  // fences (implemented as events) are passed.
+  //
+  // Akin to scenic::Session.Present(); see scenic/session.fidl for details.
+  Present(uint64 presentation_time) =>
+      (scenic.PresentationInfo presentation_info);
+};
+
+// Allows clients to observe canvas events.
+interface CanvasListener {
+  OnError(string description);
+  OnStrokeFinished(uint32 stroke_id, StrokePath path);
+  OnPageViewerInvalidated(uint32 viewer_id);
+};

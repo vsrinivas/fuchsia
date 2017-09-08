@@ -1,0 +1,162 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+executable("scene_manager") {
+  output_name = "scene_manager"
+
+  sources = [
+    "main.cc",
+    "scene_manager_app.cc",
+    "scene_manager_app.h",
+  ]
+
+  deps = [
+    ":common",
+    "//garnet/lib/escher/examples/common",
+    "//magenta/system/ulib/trace-provider",
+  ]
+}
+
+config("common_include_dirs") {
+  include_dirs = [
+    "//garnet",
+    "//third_party/glm",
+  ]
+}
+
+source_set("common") {
+  sources = [
+    "acquire_fence.cc",
+    "acquire_fence.h",
+    "acquire_fence_set.cc",
+    "acquire_fence_set.h",
+    "displays/display.cc",
+    "displays/display.h",
+    "displays/display_manager.cc",
+    "displays/display_manager.h",
+    "displays/display_watcher.cc",
+    "displays/display_watcher.h",
+    "engine/display_swapchain.cc",
+    "engine/display_swapchain.h",
+    "engine/engine.cc",
+    "engine/engine.h",
+    "engine/event_reporter.h",
+    "engine/frame_scheduler.cc",
+    "engine/frame_scheduler.h",
+    "engine/frame_timings.cc",
+    "engine/frame_timings.h",
+    "engine/hit.h",
+    "engine/hit_tester.cc",
+    "engine/hit_tester.h",
+    "engine/session.cc",
+    "engine/session.h",
+    "engine/session_handler.cc",
+    "engine/session_handler.h",
+    "engine/swapchain.h",
+    "fence.h",
+    "print_op.cc",
+    "print_op.h",
+    "release_fence_signaller.cc",
+    "release_fence_signaller.h",
+    "resources/buffer.cc",
+    "resources/buffer.h",
+    "resources/camera.cc",
+    "resources/camera.h",
+    "resources/compositor/compositor.cc",
+    "resources/compositor/compositor.h",
+    "resources/compositor/display_compositor.cc",
+    "resources/compositor/display_compositor.h",
+    "resources/compositor/layer.cc",
+    "resources/compositor/layer.h",
+    "resources/compositor/layer_stack.cc",
+    "resources/compositor/layer_stack.h",
+    "resources/dump_visitor.cc",
+    "resources/dump_visitor.h",
+    "resources/gpu_memory.cc",
+    "resources/gpu_memory.h",
+    "resources/host_memory.cc",
+    "resources/host_memory.h",
+    "resources/image.cc",
+    "resources/image.h",
+    "resources/image_base.cc",
+    "resources/image_base.h",
+    "resources/image_pipe.cc",
+    "resources/image_pipe.h",
+    "resources/image_pipe_handler.cc",
+    "resources/image_pipe_handler.h",
+    "resources/import.cc",
+    "resources/import.h",
+    "resources/lights/directional_light.cc",
+    "resources/lights/directional_light.h",
+    "resources/material.cc",
+    "resources/material.h",
+    "resources/memory.cc",
+    "resources/memory.h",
+    "resources/nodes/entity_node.cc",
+    "resources/nodes/entity_node.h",
+    "resources/nodes/node.cc",
+    "resources/nodes/node.h",
+    "resources/nodes/scene.cc",
+    "resources/nodes/scene.h",
+    "resources/nodes/shape_node.cc",
+    "resources/nodes/shape_node.h",
+    "resources/nodes/traversal.h",
+    "resources/renderers/renderer.cc",
+    "resources/renderers/renderer.h",
+    "resources/resource.cc",
+    "resources/resource.h",
+    "resources/resource_linker.cc",
+    "resources/resource_linker.h",
+    "resources/resource_map.cc",
+    "resources/resource_map.h",
+    "resources/resource_type_info.h",
+    "resources/resource_visitor.cc",
+    "resources/resource_visitor.h",
+    "resources/shapes/circle_shape.cc",
+    "resources/shapes/circle_shape.h",
+    "resources/shapes/mesh_shape.cc",
+    "resources/shapes/mesh_shape.h",
+    "resources/shapes/planar_shape.cc",
+    "resources/shapes/planar_shape.h",
+    "resources/shapes/rectangle_shape.cc",
+    "resources/shapes/rectangle_shape.h",
+    "resources/shapes/rounded_rectangle_shape.cc",
+    "resources/shapes/rounded_rectangle_shape.h",
+    "resources/shapes/shape.cc",
+    "resources/shapes/shape.h",
+    "resources/unresolved_imports.cc",
+    "resources/unresolved_imports.h",
+    "scene_manager_impl.cc",
+    "scene_manager_impl.h",
+    "util/error_reporter.cc",
+    "util/error_reporter.h",
+    "util/escher_utils.cc",
+    "util/escher_utils.h",
+    "util/event_timestamper.cc",
+    "util/event_timestamper.h",
+    "util/unwrap.h",
+    "util/wrap.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/geometry/cpp",
+    "//apps/mozart/services/scenic",
+    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher/examples/common",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+
+  public_configs = [ ":common_include_dirs" ]
+
+  deps = [
+    "//magenta/system/ulib/trace",
+    "//magma:vulkan",
+  ]
+}

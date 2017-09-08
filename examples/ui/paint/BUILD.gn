@@ -1,0 +1,27 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+executable("paint") {
+  output_name = "paint_view"
+
+  sources = [
+    "main.cc",
+    "paint_view.cc",
+    "paint_view.h",
+  ]
+
+  deps = [
+    "//apps/mozart/lib/view_framework:skia",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
+    "//third_party/skia",
+  ]
+}

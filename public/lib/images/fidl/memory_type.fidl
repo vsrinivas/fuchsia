@@ -1,0 +1,10 @@
+module scenic;
+
+// Specifies the type of VMO's memory.
+enum MemoryType {
+  // VMO is regular host CPU memory.
+  HOST_MEMORY = 0,
+
+  // VMO can be imported as a VkDeviceMemory using vkImportDeviceMemoryMAGMA.
+  VK_DEVICE_MEMORY = 1,
+};

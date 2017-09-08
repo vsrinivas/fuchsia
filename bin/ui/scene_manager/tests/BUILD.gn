@@ -1,0 +1,105 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//apps/mozart/config.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":apptests",
+    ":unittests",
+    ":unittests_using_escher",
+  ]
+}
+
+source_set("testing_deps") {
+  testonly = true
+  sources = [
+    "mocks.cc",
+    "mocks.h",
+  ]
+  public_deps = [
+    ":util",
+    "//apps/mozart/lib/scenic:fidl_helpers",
+    "//apps/mozart/lib/tests",
+    "//apps/mozart/src/scene_manager:common",
+    "//third_party/gtest",
+  ]
+}
+
+source_set("util") {
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+}
+
+executable("apptests") {
+  output_name = "scene_manager_apptests"
+
+  testonly = true
+
+  sources = [
+    "scene_manager_apptest.cc",
+    "scene_manager_test.cc",
+    "scene_manager_test.h",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/mozart/src/tests:main",
+  ]
+}
+
+executable("unittests") {
+  output_name = "scene_manager_unittests"
+
+  testonly = true
+
+  sources = [
+    "acquire_fence_set_unittest.cc",
+    "event_timestamper_unittest.cc",
+    "hittest_unittest.cc",
+    "imagepipe_unittest.cc",
+    "import_unittest.cc",
+    "node_unittest.cc",
+    "release_fence_signaller_unittest.cc",
+    "resource_linker_unittest.cc",
+    "session_test.cc",
+    "session_test.h",
+    "session_unittest.cc",
+    "shape_unittest.cc",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/mozart/src/tests:main",
+  ]
+}
+
+executable("unittests_using_escher") {
+  output_name = "scene_manager_unittests_using_escher"
+
+  testonly = true
+
+  sources = [
+    "escher_test_environment.cc",
+    "escher_test_environment.h",
+    "session_test.cc",
+    "session_test.h",
+    "session_unittest_using_escher.cc",
+  ]
+
+  deps = [
+    ":testing_deps",
+    "//apps/test_runner/lib/reporting",
+    "//garnet/lib/escher/escher",
+    "//garnet/lib/escher/examples/common",
+  ]
+}

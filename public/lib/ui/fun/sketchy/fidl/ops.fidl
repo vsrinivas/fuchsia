@@ -1,0 +1,164 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module sketchy;
+
+import "apps/mozart/services/fun/sketchy/resources.fidl";
+import "apps/mozart/services/fun/sketchy/types.fidl";
+import "apps/mozart/services/scenic/ops.fidl";
+
+union Op {
+  // Resource creation and lifecycle.
+  CreateResourceOp create_resource;
+  ReleaseResourceOp release_resource;
+
+  // Stroke operations.
+  ClearStrokeOp clear_stroke;
+  BeginStrokeOp begin_stroke;
+  ExtendStrokeOp extend_stroke;
+  FinishStrokeOp finish_stroke;
+  SetStrokeStyleOp set_style;
+  SetStrokePathOp set_path;
+
+  // StrokeGroup operations.
+  AddStrokeOp add_stroke;
+  RemoveStrokeOp remove_stroke;
+  ClearGroupOp clear_group;
+
+  // Pen operations.
+  SetPenStyleOp set_pen_style;
+
+  // Interaction with Scenic scene-graph:
+
+  // Import the specified Scenic resource.  Currently only the following
+  // resource types are supported:
+  // - NODE: imported nodes enable the use of scenic.AddChildOp to insert
+  //         stroke-groups into a Scenic scene-graph.
+  // - MATERIAL: imported materials can be applied to a stroke-style.
+  scenic.ImportResourceOp scenic_import_resource;
+
+  // Attach a stroke-group as a child of the specified imported Scenic node.
+  scenic.AddChildOp scenic_add_child;
+
+  // Detach a stroke-group from the Scenic node that it is attached to, if any.
+  scenic.DetachOp scenic_detach;
+
+  // Set the material of a stroke-style.  This material will be applied to any
+  // strokes/stroke-groups that use this style.
+  scenic.SetMaterialOp scenic_set_material;
+};
+
+// Instantiates a new resource.
+struct CreateResourceOp {
+  // The ID of the resource to create; this ID must not currently be used within
+  // the session.  The client may use this ID to refer to the resource in
+  // subsequent operations.
+  uint32 id;
+  // Specifies the type of resource to construct, as well as any other required
+  // data.
+  ResourceArgs args;
+};
+
+// Releases the client's reference to the resource; it is then illegal to use
+// the ID in subsequent Ops.  Other references to the resource may exist, so
+// releasing the resource does not result in its immediate destruction; it is
+// only destroyed once the last reference is released.  For example, after a
+// stroke is added to a stroke-group, the group will keep the it alive even
+// after the client releases the stroke.
+//
+// TODO: edge cases.  What about releasing a stroke that is currently being
+// drawn by Begin/Extend/FinishStrokeOp?
+struct ReleaseResourceOp {
+  // The ID of the resource to be dereferenced.  The ID must currently reference
+  // a resource (i.e. it must match one from a previous CreateResourceOp, and
+  // must not have match one from a subsequent ReleaseResourceOp).
+  uint32 id;
+};
+
+// Clear the path of the specified stroke.  Must not be called in the middle of
+// Begin/Extend/FinishStroke.
+struct ClearStrokeOp {
+  uint32 stroke_id;
+};
+
+// Start drawing a stroke with a pen.
+struct BeginStrokeOp {
+  // ID of the stroke to draw with the pen.  This must be a new stroke, or one
+  // which has been cleared via ClearStrokeOp.
+  uint32 stroke_id;
+  // ID of the pen to draw the stroke with.
+  uint32 pen_id;
+  // Describes the time, position, etc. that the stroke was started.
+  Touch touch;
+};
+
+// Continue drawing a stroke with a pen.  The stroke must have previously been
+// started (via BeginStrokeOp), but not finished.
+struct ExtendStrokeOp {
+  // ID of the stroke that is being drawn.
+  uint32 stroke_id;
+  // ID of the pen that is drawing the stroke.  Must match the ID provided
+  // to BeginStrokeOp.
+  uint32 pen_id;
+  // Touch events that describe the trajectory of the stroke since the previous
+  // BeginStrokeOp or ExtendStrokeOp.
+  array<Touch> touches;
+  // Procedurally-generated touch events that describe the predicted future
+  // trajectory of the stroke.  Sketchy uses these to improve perceived latency
+  // while the stroke is being drawn, but they have no impact on the finished
+  // stroke.
+  // TODO: this may change to reflect however Mozart exposes predicted events.
+  array<Touch> predicted_touches;
+};
+
+// Finish drawing a stroke with a pen.
+struct FinishStrokeOp {
+  // ID of the stroke that is being drawn.
+  uint32 stroke_id;
+  // ID of the pen that is drawing the stroke.  Must match the ID provided
+  // to BeginStrokeOp.
+  uint32 pen_id;
+};
+
+// Set the style of the specified stroke.
+struct SetStrokeStyleOp {
+  uint32 stroke_id;
+  uint32 style_id;
+};
+
+// Set the path of a stroke.  This cannot be applied to a stroke that is in the
+// middle of Begin/Extend/FinishStroke.
+struct SetStrokePathOp {
+  // ID of the stroke whose path is to be set.
+  uint32 stroke_id;
+  // Describes the stroke's new path.
+  StrokePath path;
+};
+
+// Add a stroke to a stroke-group.  The stroke must not currently be a member of
+// any group, including the specified group.
+struct AddStrokeOp {
+  uint32 group_id;
+  uint32 stroke_id;
+};
+
+// Remove a stroke from a stroke-group.  The stroke must currently be a member
+// of that group.
+struct RemoveStrokeOp {
+  uint32 group_id;
+  uint32 stroke_id;
+};
+
+// Remove all strokes from the specified stroke-group.  These strokes may be
+// re-added later to the same group, or a different one.
+struct ClearGroupOp {
+  uint32 group_id;
+};
+
+// Set the style that is applied to strokes that are subsequently drawn by the
+// specified pen.
+struct SetPenStyleOp {
+  uint32 pen_id;
+  uint32 style_id;
+};

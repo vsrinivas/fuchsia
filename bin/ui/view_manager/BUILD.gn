@@ -1,0 +1,56 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("view_manager") {
+  output_name = "view_manager"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//magenta/system/ulib/trace-provider",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "view_container_state.cc",
+    "view_container_state.h",
+    "view_impl.cc",
+    "view_impl.h",
+    "view_manager_app.cc",
+    "view_manager_app.h",
+    "view_manager_impl.cc",
+    "view_manager_impl.h",
+    "view_registry.cc",
+    "view_registry.h",
+    "view_state.cc",
+    "view_state.h",
+    "view_stub.cc",
+    "view_stub.h",
+    "view_tree_impl.cc",
+    "view_tree_impl.h",
+    "view_tree_state.cc",
+    "view_tree_state.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+    "//apps/modular/lib/rapidjson",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/services/geometry/cpp",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//apps/mozart/services/views/cpp",
+    "//apps/mozart/src/view_manager/input",
+    "//apps/mozart/src/view_manager/internal",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+  ]
+}

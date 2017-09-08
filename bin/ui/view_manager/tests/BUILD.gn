@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":view_manager_apptests",
+  ]
+}
+
+executable("view_manager_apptests") {
+  output_name = "view_manager_apptests"
+
+  testonly = true
+
+  #  TODO(MZ-177): These tests need to be rewritten for the new API.
+  #  sources = [
+  #    "view_manager_test.cc",
+  #  ]
+
+  deps = [
+    "//apps/mozart/lib/tests",
+    "//apps/mozart/lib/tests/mocks",
+    "//apps/mozart/src/tests:main",
+    "//apps/mozart/src/view_manager:lib",
+    "//apps/mozart/src/view_manager/input",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/fidl/cpp/bindings:bindings",
+    "//third_party/gtest",
+  ]
+}

@@ -1,0 +1,25 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/lib/fidl/fidl.gni")
+
+fidl("input") {
+  sources = [
+    "ime_service.fidl",
+    "input_connection.fidl",
+    "input_device_registry.fidl",
+    "input_dispatcher.fidl",
+    "input_event_constants.fidl",
+    "input_events.fidl",
+    "input_reports.fidl",
+    "text_editing.fidl",
+    "text_input.fidl",
+    "usages.fidl",
+  ]
+
+  public_deps = [
+    "//apps/mozart/services/geometry",
+    "//apps/mozart/services/views:view_token",
+  ]
+}

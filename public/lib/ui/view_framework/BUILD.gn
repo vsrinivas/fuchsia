@@ -1,0 +1,50 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("view_framework") {
+  sources = [
+    "base_view.cc",
+    "base_view.h",
+  ]
+
+  public_deps = [
+    "//application/lib/app",
+    "//application/services",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/lib/scenic:fidl_helpers",
+    "//apps/mozart/services/input",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+  ]
+
+  deps = [ "//magenta/system/ulib/trace" ]
+}
+
+source_set("view_provider") {
+  sources = [
+    "view_provider_app.cc",
+    "view_provider_app.h",
+    "view_provider_service.cc",
+    "view_provider_service.h",
+  ]
+
+  public_deps = [
+    ":view_framework",
+  ]
+}
+
+source_set("skia") {
+  sources = [
+    "skia_view.cc",
+    "skia_view.h",
+  ]
+
+  public_deps = [
+    ":view_framework",
+    "//apps/mozart/lib/scenic:skia",
+    "//third_party/skia",
+  ]
+}

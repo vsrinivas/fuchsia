@@ -1,0 +1,13 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+// Common mouse buttons report constants
+const uint32  kMouseButtonPrimary   = 1;
+const uint32  kMouseButtonSecondary = 2;
+const uint32  kMouseButtonTertiary  = 4;
+
+// Common stylus buttons report constants
+const uint32  kStylusBarrel = 1;

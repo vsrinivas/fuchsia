@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("jank") {
+  output_name = "jank_view"
+
+  sources = [
+    "jank_view.cc",
+    "jank_view.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//apps/mozart/lib/skia:fonts",
+    "//apps/mozart/lib/view_framework:skia",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//garnet/public/lib/ftl",
+    "//garnet/public/lib/mtl",
+    "//magenta/system/ulib/trace-provider",
+    "//third_party/skia",
+  ]
+}

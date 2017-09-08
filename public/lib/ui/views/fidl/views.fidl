@@ -1,0 +1,85 @@
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+import "application/services/service_provider.fidl";
+import "apps/mozart/services/views/view_containers.fidl";
+import "apps/mozart/services/views/view_properties.fidl";
+import "apps/mozart/services/views/view_token.fidl";
+
+// A view is a graphical user interface component which is responsible
+// for drawing and supporting user interactions in the area of the screen
+// that it occupies.
+//
+// A view may also act as a container for other views (known as the
+// view's children) which it may freely layout and position anywhere
+// within its bounds to form a composite user interface.  The hierarchy
+// of views thus formed is called a view tree.
+//
+// LIFECYCLE
+//
+// Use |ViewManager.CreateView()| to create a view.  The application
+// uses the |View| interface to manage the view's content and implements
+// the |ViewListener| interface to handle events.
+//
+// To destroy a view, simply close the |View| channel.
+//
+// ADDING CHILD VIEWS
+//
+// Use |GetContainer()| to obtain an interface for manipulating child views.
+//
+// See |ViewContainer| for more information.
+//
+// GETTING SERVICES
+//
+// The view's |app::ServiceProvider| offers access to many services which
+// are not directly expressed by the |View| interface itself, such
+// as input, accessiblity, and editing capabilities.
+//
+// For example, perform the following actions to receive input events:
+//
+// 1. Call |GetServiceProvider()| to obtain the view's service provider.
+//
+// 2. Ask the service provider for its |InputConnection|.
+//
+// 3. Set listeners on the input connection to receive events.
+interface View {
+  // Gets the view's token.
+  GetToken() => (ViewToken token);
+
+  // Gets a service provider to access services which are associated with
+  // the view such as input, accessibility and editing capabilities.
+  // The view service provider is private to the view and should not be
+  // shared with anyone else.
+  //
+  // See |InputConnection|.
+  GetServiceProvider(app.ServiceProvider& service_provider);
+
+  // This is a way for an app to offer services that are associated with a
+  // particular view. Used to expose services to the compositor
+  //
+  // In particular this should be used to let know which view is implementing
+  // the ability to show an IME
+  //
+  // |service_names| should contain a list of service names as defined with the
+  // FIDL syntax [ServiceName="service_name"]
+  //
+  // The list of services will be used by the compositor to filter service
+  // providers when looking for a particular service.
+  OfferServiceProvider(app.ServiceProvider service_provider,
+                       array<string> service_names);
+
+  // Gets an interface for managing the view's children.
+  GetContainer(ViewContainer& container);
+};
+
+// An interface clients may implement to receive events from a view.
+interface ViewListener {
+  // Called when the view receives new properties from its ancestors.
+  // Initially the view has no properties so this method will be called
+  // as soon as properties first become available and whenever they change
+  // thereafter.
+  OnPropertiesChanged(ViewProperties properties) => ();
+};

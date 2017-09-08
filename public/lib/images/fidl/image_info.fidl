@@ -1,0 +1,61 @@
+module scenic;
+
+// Information about a graphical image (texture) including its format and size.
+struct ImageInfo {
+  // Specifies how pixels are represented in the image buffer.
+  enum PixelFormat {
+    // A 32-bit four-component unsigned integer format.
+    // Byte order: B, G, R, A (little-endian ARGB packed 32-bit word).
+    // Equivalent to Skia |kBGRA_8888_SkColorType| color type.
+    // Equivalent to Magenta |ARGB_8888| pixel format on little-endian arch.
+    BGRA_8 = 0,
+  };
+
+  // Specifies how pixel color information should be interpreted.
+  enum ColorSpace {
+    SRGB = 0,
+  };
+
+  // Specifies how pixels are arranged in memory.
+  enum Tiling {
+    // Pixels are packed linearly.
+    // Equivalent to |VK_IMAGE_TILING_LINEAR|.
+    LINEAR = 0,
+
+    // Pixels are packed in a GPU-dependent optimal format.
+    // Equivalent to |VK_IMAGE_TILING_OPTIMAL|.
+    GPU_OPTIMAL = 1,
+  };
+
+  // Specifies how alpha information should be interpreted.
+  enum AlphaFormat {
+    // Image is considered to be opaque.  Alpha channel is ignored.
+    // Blend function is: src.RGB
+    OPAQUE = 0,
+    // Color channels have been premultiplied by alpha.
+    // Blend function is: src.RGB + (dest.RGB * (1 - src.A))
+    PREMULTIPLIED = 1,
+    // Color channels have not been premultiplied by alpha.
+    // Blend function is: (src.RGB * src.A) + (dest.RGB * (1 - src.A))
+    NON_PREMULTIPLIED = 2,
+  };
+
+  // The width and height of the image in pixels.
+  uint32 width;
+  uint32 height;
+
+  // The number of bytes per row in the image buffer.
+  uint32 stride;
+
+  // The pixel format of the image.
+  PixelFormat pixel_format = PixelFormat.BGRA_8;
+
+  // The pixel color space.
+  ColorSpace color_space = ColorSpace.SRGB;
+
+  // The pixel arrangement in memory.
+  Tiling tiling = Tiling.LINEAR;
+
+  // Specifies the interpretion of the alpha channel, if one exists.
+  AlphaFormat alpha_format = AlphaFormat.OPAQUE;
+};

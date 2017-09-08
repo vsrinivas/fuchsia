@@ -1,0 +1,56 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module mozart;
+
+import "apps/mozart/services/input/text_editing.fidl";
+import "apps/mozart/services/input/input_events.fidl";
+
+enum KeyboardType {
+  TEXT,
+  NUMBER,
+  PHONE,
+  DATETIME,
+};
+
+enum InputMethodAction {
+  UNSPECIFIED = 0,
+  NONE = 1,
+  GO = 2,
+  SEARCH = 3,
+  SEND = 4,
+  NEXT = 5,
+  DONE = 6,
+  PREVIOUS = 7,
+};
+
+// The current text, selection, and composing state for editing a run of text.
+struct TextInputState {
+  // Current state revision to avoid race conditions.
+  uint32 revision;
+
+  // The current text being edited.
+  string text;
+
+  // The range of text that is currently selected.
+  TextSelection selection;
+
+  // The range of text that is still being composed.
+  TextRange composing;
+};
+
+// A interface for interacting with a text input control.
+interface InputMethodEditor {
+  SetKeyboardType(KeyboardType keyboard_type);
+  SetState(TextInputState state);
+  InjectInput(InputEvent event);
+  Show();
+  Hide();
+};
+
+// An interface to receive information from |TextInputService|.
+interface InputMethodEditorClient {
+  DidUpdateState(TextInputState state, InputEvent? event);
+  OnAction(InputMethodAction action);
+};

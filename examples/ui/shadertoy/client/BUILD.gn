@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("client") {
+  output_name = "shadertoy_client"
+
+  sources = [
+    "glsl_strings.cc",
+    "glsl_strings.h",
+    "main.cc",
+    "view.cc",
+    "view.h",
+  ]
+
+  deps = [
+    "//application/lib/app",
+    "//apps/mozart/examples/shadertoy/service",
+    "//apps/mozart/examples/shadertoy/service/services",
+    "//apps/mozart/lib/scenic:client",
+    "//apps/mozart/lib/scenic:fidl_helpers",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/scenic",
+    "//apps/mozart/services/views",
+    "//garnet/public/lib/fidl/cpp/bindings",
+    "//magenta/system/ulib/trace-provider",
+  ]
+
+  include_dirs = [
+    "//third_party/glm",
+    "//lib",
+  ]
+}
